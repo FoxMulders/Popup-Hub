@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { Switch } from '@/components/ui/switch'
 import { Loader2, MapPin, Calendar, Settings2, Upload, Gavel } from 'lucide-react'
 import { CategoryLimitEditor, type CategoryLimit } from './category-limit-editor'
 import type { Category, Event } from '@/types/database'
@@ -51,6 +52,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   )
   const [coverImageUrl, setCoverImageUrl] = useState(existing?.cover_image_url ?? '')
   const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
 
   const [lat, setLat] = useState(existing?.latitude ?? 39.5)
   const [lng, setLng] = useState(existing?.longitude ?? -98.35)
@@ -122,6 +124,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         booking_mode: bookingMode,
         status: publishStatus ?? status,
         cover_image_url: finalCoverUrl || null,
+        allow_mlm: allowMlm,
       }
 
       let eventId = existing?.id
@@ -258,6 +261,20 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
               </div>
             </div>
 
+            <div className="flex items-center justify-between rounded-xl border p-4">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Allow Direct Sales / MLM Vendors</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  When enabled, MLM brands (Scentsy, Norwex, doTERRA, etc.) appear as selectable categories.
+                </p>
+              </div>
+              <Switch
+                checked={allowMlm}
+                onCheckedChange={setAllowMlm}
+                className="ml-4 shrink-0"
+              />
+            </div>
+
             <div className="space-y-1">
               <Label>Cover Image</Label>
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
@@ -292,6 +309,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
               categories={categories}
               value={categoryLimits}
               onChange={setCategoryLimits}
+              allowMlm={allowMlm}
             />
           </CardContent>
         </Card>

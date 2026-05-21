@@ -64,8 +64,11 @@ export function ApplyButton({ event, passportId, userId, alreadyApplied }: Apply
   async function loadSlots() {
     setSlotsLoading(true)
     try {
+      const limits = (event.category_limits ?? []).filter(
+        (cl: EventCategoryLimit) => event.allow_mlm || !cl.category?.is_mlm
+      )
       const results = await Promise.all(
-        (event.category_limits ?? []).map(async (cl: EventCategoryLimit) => {
+        limits.map(async (cl: EventCategoryLimit) => {
           const { data } = await supabase
             .rpc('get_available_slots', {
               p_event_id: event.id,

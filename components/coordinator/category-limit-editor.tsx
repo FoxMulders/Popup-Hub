@@ -21,15 +21,18 @@ interface CategoryLimitEditorProps {
   categories: Category[]
   value: CategoryLimit[]
   onChange: (limits: CategoryLimit[]) => void
+  allowMlm?: boolean
 }
 
-export function CategoryLimitEditor({ categories, value, onChange }: CategoryLimitEditorProps) {
+export function CategoryLimitEditor({ categories, value, onChange, allowMlm = false }: CategoryLimitEditorProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [slots, setSlots] = useState(3)
   const [priceDollars, setPriceDollars] = useState(0)
 
   const usedCategoryIds = new Set(value.map((v) => v.categoryId))
-  const availableCategories = categories.filter((c) => !usedCategoryIds.has(c.id))
+  const availableCategories = categories.filter(
+    (c) => !usedCategoryIds.has(c.id) && (allowMlm || !c.is_mlm)
+  )
 
   function addLimit() {
     const cat = categories.find((c) => c.id === selectedCategoryId)
@@ -157,7 +160,12 @@ export function CategoryLimitEditor({ categories, value, onChange }: CategoryLim
                 <SelectContent>
                   {availableCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
+                      <span className="flex items-center gap-2">
+                        {cat.name}
+                        {cat.is_mlm && (
+                          <span className="text-[10px] bg-purple-100 text-purple-700 rounded px-1 font-medium">MLM</span>
+                        )}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

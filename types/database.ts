@@ -27,6 +27,7 @@ export interface Category {
   id: string
   name: string
   icon_url: string | null
+  is_mlm: boolean
 }
 
 export interface VendorPassport {
@@ -59,6 +60,7 @@ export interface Event {
   status: EventStatus
   cover_image_url: string | null
   square_merchant_id: string | null
+  allow_mlm: boolean
   created_at: string
   coordinator?: Profile
   category_limits?: EventCategoryLimit[]
