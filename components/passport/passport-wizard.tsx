@@ -1,0 +1,308 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Progress } from '@/components/ui/progress'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
+import { Loader2, Upload, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react'
+import type { Category, VendorPassport } from '@/types/database'
+
+interface PassportWizardProps {
+  categories: Category[]
+  existing?: VendorPassport | null
+  userId: string
+}
+
+const STEPS = ['Business Info', 'Category', 'Tax & Compliance', 'Photos']
+
+export function PassportWizard({ categories, existing, userId }: PassportWizardProps) {
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [step, setStep] = useState(0)
+  const [loading, setLoading] = useState(false)
+
+  const [businessName, setBusinessName] = useState(existing?.business_name ?? '')
+  const [bio, setBio] = useState(existing?.bio ?? '')
+  const [categoryId, setCategoryId] = useState(existing?.primary_category_id ?? '')
+  const [taxId, setTaxId] = useState('')
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState(existing?.logo_url ?? '')
+  const [itemFiles, setItemFiles] = useState<File[]>([])
+  const [itemPreviews, setItemPreviews] = useState<string[]>(existing?.item_image_urls ?? [])
+
+  async function uploadFile(file: File, bucket: string, path: string): Promise<string | null> {
+    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+    if (error) return null
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+    return data.publicUrl
+  }
+
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  function handleItemChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).slice(0, 6)
+    setItemFiles(files)
+    setItemPreviews(files.map((f) => URL.createObjectURL(f)))
+  }
+
+  async function handleSubmit() {
+    if (!businessName.trim()) {
+      toast.error('Business name is required')
+      return
+    }
+    setLoading(true)
+
+    try {
+      let logoUrl = existing?.logo_url ?? null
+      if (logoFile) {
+        const url = await uploadFile(logoFile, 'vendor-assets', `${userId}/logo-${Date.now()}`)
+        if (url) logoUrl = url
+      }
+
+      const uploadedItemUrls: string[] = [...(existing?.item_image_urls ?? [])]
+      for (const file of itemFiles) {
+        const url = await uploadFile(file, 'vendor-assets', `${userId}/item-${Date.now()}-${file.name}`)
+        if (url) uploadedItemUrls.push(url)
+      }
+
+      const passportData = {
+        user_id: userId,
+        business_name: businessName,
+        bio: bio || null,
+        primary_category_id: categoryId || null,
+        logo_url: logoUrl,
+        item_image_urls: uploadedItemUrls.slice(0, 6),
+        tax_id_encrypted: taxId ? btoa(taxId) : existing?.tax_id_encrypted ?? null,
+      }
+
+      if (existing) {
+        const { error } = await supabase
+          .from('vendor_passports')
+          .update(passportData)
+          .eq('id', existing.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('vendor_passports')
+          .insert(passportData)
+        if (error) throw error
+      }
+
+      toast.success('Passport saved! Ready to apply to events.')
+      router.push('/vendor/events')
+      router.refresh()
+    } catch (err) {
+      toast.error('Failed to save passport. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const progress = ((step + 1) / STEPS.length) * 100
+
+  return (
+    <div className="mx-auto max-w-xl">
+      {/* Step indicators */}
+      <div className="mb-6">
+        <div className="mb-2 flex justify-between text-xs text-gray-500">
+          <span>Step {step + 1} of {STEPS.length}: {STEPS[step]}</span>
+          <span>{Math.round(progress)}% complete</span>
+        </div>
+        <Progress value={progress} className="h-2" />
+        <div className="mt-2 flex gap-1">
+          {STEPS.map((s, i) => (
+            <div
+              key={s}
+              className={`h-1 flex-1 rounded-full transition-all ${
+                i <= step ? 'bg-amber-500' : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle>{STEPS[step]}</CardTitle>
+          <CardDescription>
+            {step === 0 && 'Tell markets who you are and what you sell'}
+            {step === 1 && 'Choose your primary product category'}
+            {step === 2 && 'Tax identification for compliance purposes'}
+            {step === 3 && 'Upload your logo and product photos'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Step 0: Business Info */}
+          {step === 0 && (
+            <>
+              <div className="space-y-1">
+                <Label htmlFor="biz-name">Business Name *</Label>
+                <Input
+                  id="biz-name"
+                  placeholder="e.g. Sweet Petal Candles"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="bio">Business Bio</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="Tell shoppers what makes your products unique…"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={4}
+                  maxLength={500}
+                />
+                <p className="text-right text-xs text-gray-400">{bio.length}/500</p>
+              </div>
+            </>
+          )}
+
+          {/* Step 1: Category */}
+          {step === 1 && (
+            <div className="space-y-1">
+              <Label htmlFor="category">Primary Category *</Label>
+                <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? '')}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select a category…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                You can apply to any category slot at events — this is just your primary identity.
+              </p>
+            </div>
+          )}
+
+          {/* Step 2: Tax */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="tax">EIN / Tax ID</Label>
+                <Input
+                  id="tax"
+                  placeholder="XX-XXXXXXX"
+                  value={taxId}
+                  onChange={(e) => setTaxId(e.target.value)}
+                  autoComplete="off"
+                  type="password"
+                />
+                <p className="text-xs text-gray-500">
+                  Encrypted and stored securely. Required by some coordinators. Leave blank if not applicable.
+                </p>
+              </div>
+              {existing?.tax_id_encrypted && !taxId && (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Tax ID on file
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Photos */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label>Business Logo</Label>
+                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo preview" className="h-24 w-24 rounded-full object-cover" />
+                  ) : (
+                    <Upload className="h-8 w-8 text-gray-400" />
+                  )}
+                  <span className="text-xs text-gray-500">Click to upload logo (JPG, PNG, max 2MB)</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleLogoChange}
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-1">
+                <Label>Product Photos (up to 6)</Label>
+                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
+                  <Upload className="h-8 w-8 text-gray-400" />
+                  <span className="text-xs text-gray-500">Click to upload product photos</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={handleItemChange}
+                  />
+                </label>
+                {itemPreviews.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {itemPreviews.slice(0, 6).map((url, i) => (
+                      <img
+                        key={i}
+                        src={url}
+                        alt={`Product ${i + 1}`}
+                        className="aspect-square rounded-lg object-cover"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setStep((s) => s - 1)}
+              disabled={step === 0}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+
+            {step < STEPS.length - 1 ? (
+              <Button
+                onClick={() => setStep((s) => s + 1)}
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+                disabled={step === 0 && !businessName.trim()}
+              >
+                Next
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSubmit}
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+                disabled={loading || !businessName.trim()}
+              >
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                Save Passport
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
