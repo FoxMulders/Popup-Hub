@@ -56,6 +56,7 @@ export async function updateSession(request: NextRequest) {
     '/signup',
     '/auth/callback',
     '/auth/confirm',
+    '/api/auth/callback',
   ]
 
   const isPublicPath =
