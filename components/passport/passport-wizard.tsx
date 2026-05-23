@@ -332,7 +332,7 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
                       src={logoPreview}
                       alt="Logo preview"
                       size="xl"
-                      className="mx-auto max-w-full border-dashed"
+                      className="mx-auto w-full max-w-md border-dashed"
                     />
                   ) : (
                     <Upload className="h-8 w-8 text-gray-400" />
