@@ -1,4 +1,8 @@
+'use client'
+
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
+import { resolvePublicAssetUrl } from '@/lib/storage/public-url'
 
 const SIZE_CLASSES = {
   xs: 'h-8 w-16',
@@ -25,6 +29,8 @@ export function VendorLogo({
   size = 'sm',
   className,
 }: VendorLogoProps) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const resolvedSrc = resolvePublicAssetUrl(src)
   const frameClass = cn(
     'box-border flex min-h-0 min-w-0 shrink items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-white p-1',
     SIZE_CLASSES[size],
@@ -32,13 +38,14 @@ export function VendorLogo({
     className
   )
 
-  if (src) {
+  if (resolvedSrc && !imageFailed) {
     return (
       <div className={frameClass}>
         <img
-          src={src}
+          src={resolvedSrc}
           alt={alt}
           className="block h-full w-full object-contain object-center"
+          onError={() => setImageFailed(true)}
         />
       </div>
     )

@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   const [{ data: passport }, { data: event }, { data: existing }] = await Promise.all([
     supabase
       .from('vendor_passports')
-      .select('id, business_name, primary_category_id, is_verified')
+      .select('id, business_name, primary_category_id, category_ids, is_verified')
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase

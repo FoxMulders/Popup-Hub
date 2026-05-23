@@ -94,6 +94,7 @@ export interface VendorPassport {
   user_id: string
   business_name: string
   primary_category_id: string
+  category_ids: string[]
   bio: string
   tax_id_encrypted: string | null
   logo_url: string | null

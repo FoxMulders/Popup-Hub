@@ -37,6 +37,10 @@ import {
   toPassportApplicationPreview,
   type VendorPassportApplicationPreview,
 } from '@/lib/vendor/passport-application'
+import {
+  categoryNamesForIds,
+  resolvePassportCategoryIds,
+} from '@/lib/vendor/passport-categories'
 import type { ApplicationStatus, Event, EventCategoryLimit } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
@@ -134,7 +138,7 @@ export function ApplyButton({
       const { data: passport, error } = await supabase
         .from('vendor_passports')
         .select(
-          'id, business_name, logo_url, primary_category_id, tax_id_encrypted, is_verified, category:categories(name)'
+          'id, business_name, logo_url, primary_category_id, category_ids, tax_id_encrypted, is_verified, category:categories(name)'
         )
         .eq('user_id', userId)
         .maybeSingle()
@@ -150,7 +154,18 @@ export function ApplyButton({
         return
       }
 
-      setPassportPreview(toPassportApplicationPreview(passport))
+      const categoryIds = resolvePassportCategoryIds(passport)
+      const { data: categoryRows } = await supabase
+        .from('categories')
+        .select('id, name')
+        .in('id', categoryIds)
+
+      setPassportPreview(
+        toPassportApplicationPreview(
+          passport,
+          categoryNamesForIds(categoryIds, categoryRows ?? [])
+        )
+      )
       setOpen(true)
     } finally {
       setPassportLoading(false)

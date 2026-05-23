@@ -37,10 +37,24 @@ export function PassportApplyPreview({ passport }: PassportApplyPreviewProps) {
           ) : null}
         </div>
       </div>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+      <dl className="space-y-3 text-sm">
         <div>
-          <dt className="text-muted-foreground">Category</dt>
-          <dd className="font-medium">{passport.category_name ?? '—'}</dd>
+          <dt className="text-muted-foreground">Categories</dt>
+          <dd className="mt-1.5 flex flex-wrap gap-1.5">
+            {passport.category_names.length > 0 ? (
+              passport.category_names.map((name) => (
+                <Badge
+                  key={name}
+                  variant="secondary"
+                  className="max-w-full truncate bg-violet-50 text-violet-800"
+                >
+                  {name}
+                </Badge>
+              ))
+            ) : (
+              <span className="font-medium">—</span>
+            )}
+          </dd>
         </div>
         <div>
           <dt className="text-muted-foreground">Tax ID</dt>

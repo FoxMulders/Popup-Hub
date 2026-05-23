@@ -9,14 +9,15 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Loader2, Upload, ArrowRight, ArrowLeft, CheckCircle, HelpCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Category, VendorPassport } from '@/types/database'
 import { sortCategoriesByName } from '@/lib/categories'
 import { normalizeUrl } from '@/lib/vendor/normalize-url'
+import { resolvePassportCategoryIds, toggleCategoryId } from '@/lib/vendor/passport-categories'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
+import { cn } from '@/lib/utils'
 
 interface PassportWizardProps {
   categories: Category[]
@@ -36,7 +37,9 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
 
   const [businessName, setBusinessName] = useState(existing?.business_name ?? '')
   const [bio, setBio] = useState(existing?.bio ?? '')
-  const [categoryId, setCategoryId] = useState(existing?.primary_category_id ?? '')
+  const [categoryIds, setCategoryIds] = useState<string[]>(() =>
+    resolvePassportCategoryIds(existing ?? {})
+  )
   const [taxId, setTaxId] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState(existing?.logo_url ?? '')
@@ -71,6 +74,10 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
       toast.error('Business name is required')
       return
     }
+    if (categoryIds.length === 0) {
+      toast.error('Select at least one business category')
+      return
+    }
     setLoading(true)
 
     try {
@@ -90,7 +97,8 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
         user_id: userId,
         business_name: businessName,
         bio: bio || null,
-        primary_category_id: categoryId || null,
+        primary_category_id: categoryIds[0] ?? null,
+        category_ids: categoryIds,
         logo_url: logoUrl,
         item_image_urls: uploadedItemUrls.slice(0, 6),
         tax_id_encrypted: taxId ? btoa(taxId) : existing?.tax_id_encrypted ?? null,
@@ -150,7 +158,7 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
           <CardTitle>{STEPS[step]}</CardTitle>
           <CardDescription>
             {step === 0 && 'Tell markets who you are and what you sell'}
-            {step === 1 && 'Choose your primary product category'}
+            {step === 1 && 'Select all categories that apply to your business'}
             {step === 2 && 'Tax identification for compliance purposes'}
             {step === 3 && 'Upload your logo and product photos'}
           </CardDescription>
@@ -230,29 +238,47 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
 
           {/* Step 1: Category */}
           {step === 1 && (
-            <div className="space-y-1">
+            <div className="space-y-3">
               <div className="flex items-center gap-1.5">
-                <Label htmlFor="category">Primary Category *</Label>
+                <Label>Business Categories *</Label>
                 <Tooltip>
                   <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
-                  <TooltipContent className="max-w-xs">The main type of products you sell. This helps coordinators match you to the right events.</TooltipContent>
+                  <TooltipContent className="max-w-xs">
+                    Select every category that describes what you sell. Coordinators use this to match you to the right booth slots.
+                  </TooltipContent>
                 </Tooltip>
               </div>
-                <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? '')}>
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select a category…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortedCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                You can apply to any category slot at events — this is just your primary identity.
+              <p className="text-sm text-gray-600">
+                Select all categories that apply to your business.
               </p>
+              <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto rounded-xl border p-3 sm:grid-cols-2">
+                {sortedCategories.map((cat) => {
+                  const selected = categoryIds.includes(cat.id)
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategoryIds((prev) => toggleCategoryId(prev, cat.id))}
+                      className={cn(
+                        'rounded-lg border px-3 py-2 text-left text-sm transition',
+                        selected
+                          ? 'border-amber-400 bg-amber-50 font-medium text-amber-900'
+                          : 'border-stone-200 bg-white text-gray-700 hover:border-amber-200'
+                      )}
+                      aria-pressed={selected}
+                    >
+                      {cat.name}
+                    </button>
+                  )
+                })}
+              </div>
+              {categoryIds.length > 0 ? (
+                <p className="text-xs text-gray-500">
+                  {categoryIds.length} categor{categoryIds.length === 1 ? 'y' : 'ies'} selected
+                </p>
+              ) : (
+                <p className="text-xs text-amber-700">Choose at least one category to continue.</p>
+              )}
             </div>
           )}
 
@@ -374,7 +400,10 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
               <Button
                 onClick={() => setStep((s) => s + 1)}
                 className="bg-amber-500 hover:bg-amber-600 text-white"
-                disabled={step === 0 && !businessName.trim()}
+                disabled={
+                  (step === 0 && !businessName.trim()) ||
+                  (step === 1 && categoryIds.length === 0)
+                }
               >
                 Next
                 <ArrowRight className="ml-2 h-4 w-4" />
