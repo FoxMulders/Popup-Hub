@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -12,13 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
-import { Loader2, CheckCircle, Send, HelpCircle, Clock } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Loader2, CheckCircle, Send, Clock, AlertTriangle } from 'lucide-react'
 import { PayBoothModal } from '@/components/events/pay-booth-modal'
 import { PassportApplyPreview } from '@/components/events/passport-apply-preview'
 import {
@@ -41,6 +39,11 @@ import {
   categoryNamesForIds,
   resolvePassportCategoryIds,
 } from '@/lib/vendor/passport-categories'
+import {
+  evaluatePassportCategoryMatch,
+  formatCategoryOverflowLabel,
+  type CategorySlotInfo,
+} from '@/lib/vendor/application-category-match'
 import type { ApplicationStatus, Event, EventCategoryLimit } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
@@ -50,14 +53,6 @@ interface ApplyButtonProps {
   userId: string
   applicationStatus?: ApplicationStatus | null
   applicationsOpen?: boolean
-}
-
-interface SlotInfo {
-  categoryId: string
-  categoryName: string
-  maxSlots: number
-  availableSlots: number
-  pricePerBooth: number
 }
 
 export function ApplyButton({
@@ -72,9 +67,8 @@ export function ApplyButton({
   const [open, setOpen] = useState(false)
   const [passportLoading, setPassportLoading] = useState(false)
   const [passportPreview, setPassportPreview] = useState<VendorPassportApplicationPreview | null>(null)
-  const [slots, setSlots] = useState<SlotInfo[]>([])
+  const [slots, setSlots] = useState<CategorySlotInfo[]>([])
   const [slotsLoading, setSlotsLoading] = useState(false)
-  const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [standBeside, setStandBeside] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [squareConnected, setSquareConnected] = useState(true)
@@ -90,9 +84,25 @@ export function ApplyButton({
     setLocalApplicationStatus(applicationStatus)
   }, [applicationStatus])
 
-  const selectedSlot = slots.find((s) => s.categoryId === selectedCategoryId)
-  const selectedCategoryFull = (selectedSlot?.availableSlots ?? 0) <= 0
-  const requiresPayment = (selectedSlot?.pricePerBooth ?? 0) > 0 && !selectedCategoryFull
+  const categoryMatch = useMemo(() => {
+    if (!passportPreview) return null
+    return evaluatePassportCategoryMatch(
+      {
+        category_ids: passportPreview.category_ids,
+        primary_category_id: passportPreview.primary_category_id,
+      },
+      slots
+    )
+  }, [passportPreview, slots])
+
+  const applySlot = categoryMatch?.allCategoriesFull
+    ? categoryMatch.passportSlots.find((slot) => slot.categoryId === categoryMatch.waitlistCategoryId) ??
+      categoryMatch.passportSlots[0] ??
+      null
+    : categoryMatch?.resolvedSlot ?? null
+
+  const allCategoriesFull = categoryMatch?.allCategoriesFull ?? false
+  const requiresPayment = (applySlot?.pricePerBooth ?? 0) > 0 && !allCategoriesFull
   const isInstant = event.booking_mode === 'instant'
 
   async function loadSlots() {
@@ -178,7 +188,6 @@ export function ApplyButton({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         eventId: event.id,
-        categoryId: selectedCategoryId,
         neighborPreference: standBeside.trim() || null,
         joinWaitlist,
       }),
@@ -196,6 +205,7 @@ export function ApplyButton({
       requiresPayment?: boolean
       boothPriceCents?: number
       waitlisted?: boolean
+      hasCategoryOverflow?: boolean
     }
 
     if (!res.ok) {
@@ -237,7 +247,9 @@ export function ApplyButton({
     toast.success(
       isInstant
         ? '🎉 Booth confirmed! See you at the market.'
-        : '✅ Application submitted! You will pay after the coordinator approves.'
+        : data.hasCategoryOverflow
+          ? 'Application submitted — coordinator will review your multi-category placement.'
+          : '✅ Application submitted! You will pay after the coordinator approves.'
     )
     setOpen(false)
     setWaitlistConfirmOpen(false)
@@ -245,12 +257,12 @@ export function ApplyButton({
   }
 
   async function handleConfirmSubmit() {
-    if (!selectedCategoryId) {
-      toast.error('Please select a category')
+    if (!categoryMatch || categoryMatch.passportSlots.length === 0) {
+      toast.error('Your passport categories are not offered at this market')
       return
     }
 
-    if (selectedCategoryFull) {
+    if (allCategoriesFull) {
       setWaitlistConfirmOpen(true)
       return
     }
@@ -320,8 +332,8 @@ export function ApplyButton({
   }
 
   const feePreview =
-    selectedSlot && requiresPayment
-      ? computePlatformFeeCents(selectedSlot.pricePerBooth, {
+    applySlot && requiresPayment
+      ? computePlatformFeeCents(applySlot.pricePerBooth, {
           mode: 'percent_plus_flat',
           flatCents: 100,
           bps: 300,
@@ -349,59 +361,43 @@ export function ApplyButton({
           <DialogHeader>
             <DialogTitle>Apply to {event.name}</DialogTitle>
             <DialogDescription>
-              Review your passport and booth details, then submit your application.
+              Your passport categories are checked automatically against open booth spots.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             {passportPreview ? <PassportApplyPreview passport={passportPreview} /> : null}
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <Label>Category</Label>
-                <Tooltip>
-                  <TooltipTrigger type="button">
-                    <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    Select the category that best matches what you&apos;re selling.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+            <div className="space-y-2">
+              <Label>Your categories at this market</Label>
               {slotsLoading ? (
-                <Skeleton className="h-10 w-full rounded-md" />
-              ) : (
-                <Select
-                  value={selectedCategoryId}
-                  onValueChange={(v) => setSelectedCategoryId(v ?? '')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {slots.map((slot) => (
-                      <SelectItem
-                        key={slot.categoryId}
-                        value={slot.categoryId}
+                <Skeleton className="h-20 w-full rounded-md" />
+              ) : categoryMatch && categoryMatch.passportSlots.length > 0 ? (
+                <ul className="space-y-1.5 rounded-lg border bg-stone-50 p-3">
+                  {categoryMatch.passportSlots.map((slot) => (
+                    <li
+                      key={slot.categoryId}
+                      className="flex items-center justify-between gap-3 text-sm"
+                    >
+                      <span className="font-medium text-foreground">{slot.categoryName}</span>
+                      <span
+                        className={
+                          slot.availableSlots > 0
+                            ? 'text-xs text-green-700'
+                            : 'text-xs font-medium text-amber-800'
+                        }
                       >
-                        <div className="flex w-full items-center justify-between gap-4">
-                          <span>{slot.categoryName}</span>
-                          <span
-                            className={`text-xs ${
-                              slot.availableSlots > 0
-                                ? 'text-green-600'
-                                : 'text-amber-700 font-medium'
-                            }`}
-                          >
-                            {slot.availableSlots > 0
-                              ? `${slot.availableSlots} of ${slot.maxSlots} spots left`
-                              : `Full · ${slot.maxSlots} max (waitlist)`}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        {slot.availableSlots > 0
+                          ? `${slot.availableSlots} of ${slot.maxSlots} spots left`
+                          : `Full · ${slot.maxSlots} max`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  None of your passport categories are offered at this market.
+                </p>
               )}
             </div>
 
@@ -415,21 +411,38 @@ export function ApplyButton({
               />
             </div>
 
-            {selectedCategoryFull ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                This category is currently full. You can join the waitlist and we&apos;ll notify you
-                if a spot opens due to a cancellation.
+            {categoryMatch?.hasCategoryOverflow && applySlot ? (
+              <div className="rounded-lg border border-violet-300 bg-violet-50 p-3 text-sm text-violet-950">
+                <p className="flex items-start gap-2 font-medium">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-violet-700" />
+                  Applying under {applySlot.categoryName}
+                </p>
+                <p className="mt-1 text-violet-900/90">
+                  {formatCategoryOverflowLabel(categoryMatch.fullCategoryNames)} — the coordinator
+                  will review your placement.
+                </p>
               </div>
             ) : null}
 
-            {selectedSlot && !selectedCategoryFull && (
+            {allCategoriesFull ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                All of your passport categories are full at this market. You can join the waitlist
+                and we&apos;ll notify you if a spot opens due to a cancellation.
+              </div>
+            ) : null}
+
+            {applySlot && !allCategoriesFull && (
               <div className="rounded-lg bg-gray-50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Applying as</span>
+                  <span className="font-semibold">{applySlot.categoryName}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Booth fee</span>
                   <span className="font-semibold">
-                    {selectedSlot.pricePerBooth === 0
+                    {applySlot.pricePerBooth === 0
                       ? 'Free'
-                      : formatCents(selectedSlot.pricePerBooth)}
+                      : formatCents(applySlot.pricePerBooth)}
                   </span>
                 </div>
                 {requiresPayment && (
@@ -458,13 +471,14 @@ export function ApplyButton({
               onClick={handleConfirmSubmit}
               disabled={
                 submitting ||
-                !selectedCategoryId ||
                 slotsLoading ||
-                (!selectedCategoryFull && requiresPayment && !squareConnected)
+                !categoryMatch ||
+                categoryMatch.passportSlots.length === 0 ||
+                (!allCategoriesFull && requiresPayment && !squareConnected)
               }
             >
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {selectedCategoryFull ? 'Join Waitlist' : 'Confirm & Submit Application'}
+              {allCategoriesFull ? 'Join Waitlist' : 'Confirm & Submit Application'}
             </Button>
           </div>
         </DialogContent>
@@ -475,9 +489,8 @@ export function ApplyButton({
           <AlertDialogHeader>
             <AlertDialogTitle>Join the waitlist?</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedSlot?.categoryName ?? 'This category'} is full for {event.name}. Would you
-              like to join the waitlist? We&apos;ll notify you if a vendor cancels and a booth
-              opens up.
+              All of your passport categories are full for {event.name}. Would you like to join the
+              waitlist? We&apos;ll notify you if a vendor cancels and a booth opens up.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -503,4 +516,3 @@ export function ApplyButton({
     </>
   )
 }
-

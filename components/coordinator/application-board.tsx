@@ -10,9 +10,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { CheckCircle, XCircle, Clock, Users, Eye } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { marketChip, marketStatusBadge } from '@/lib/theme/market'
+import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
 import type { BoothApplication, ApplicationStatus } from '@/types/database'
 
 interface ApplicationBoardProps {
@@ -25,6 +26,19 @@ interface ApplicationBoardProps {
     price_per_booth?: number
     category?: { name: string } | null
   }>
+}
+
+function CategoryOverflowBadge({ app }: { app: BoothApplication }) {
+  if (!app.has_category_overflow) return null
+
+  const label = formatCategoryOverflowLabel(app.overflow_category_names ?? [])
+
+  return (
+    <Badge className="w-full justify-center gap-1 border border-violet-400 bg-violet-100 text-violet-950 text-[10px] font-semibold py-1">
+      <AlertTriangle className="h-3 w-3 shrink-0" />
+      {label || 'Multi-Category Exception'}
+    </Badge>
+  )
 }
 
 const COLUMNS: { status: ApplicationStatus; label: string; color: string }[] = [
@@ -390,6 +404,8 @@ function ApplicationCard({
           </Badge>
         )}
 
+        <CategoryOverflowBadge app={app} />
+
         <div className="flex gap-2 flex-wrap">
           <Button
             size="sm"
@@ -461,6 +477,13 @@ function VendorDetailModal({
           Applied to: {app.category?.name}
         </DialogDescription>
       </DialogHeader>
+      {app.has_category_overflow ? (
+        <Badge className="mb-2 w-fit gap-1 border border-violet-400 bg-violet-100 text-violet-950 text-xs font-semibold">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          {formatCategoryOverflowLabel(app.overflow_category_names ?? []) ||
+            'Multi-Category Exception'}
+        </Badge>
+      ) : null}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
         <div className="space-y-4">
           <div className="flex items-center gap-3">

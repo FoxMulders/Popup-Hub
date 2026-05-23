@@ -179,6 +179,8 @@ export interface BoothApplication {
   square_payment_id: string | null
   payment_status: PaymentStatus
   waitlist_position: number | null
+  has_category_overflow: boolean
+  overflow_category_names: string[]
   applied_at: string
   approved_at: string | null
   checked_in: boolean

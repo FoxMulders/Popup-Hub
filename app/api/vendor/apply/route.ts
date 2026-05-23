@@ -6,6 +6,11 @@ import {
 } from '@/lib/queries/events'
 import { fetchCategoryAvailableSlots } from '@/lib/queries/event-capacity'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
+import {
+  evaluatePassportCategoryMatch,
+  type CategorySlotInfo,
+} from '@/lib/vendor/application-category-match'
+import { resolvePassportCategoryIds } from '@/lib/vendor/passport-categories'
 import type { Event, Role } from '@/types/database'
 
 async function nextWaitlistPosition(
@@ -24,6 +29,40 @@ async function nextWaitlistPosition(
     .maybeSingle()
 
   return (data?.waitlist_position ?? 0) + 1
+}
+
+async function loadEventCategorySlots(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string,
+  allowMlm: boolean
+): Promise<CategorySlotInfo[]> {
+  const { data: limits } = await supabase
+    .from('event_category_limits')
+    .select('category_id, max_slots, price_per_booth, category:categories(name, is_mlm)')
+    .eq('event_id', eventId)
+
+  const eligible = (limits ?? []).filter((limit) => {
+    const category = Array.isArray(limit.category) ? limit.category[0] : limit.category
+    return allowMlm || !category?.is_mlm
+  })
+
+  return Promise.all(
+    eligible.map(async (limit) => {
+      const category = Array.isArray(limit.category) ? limit.category[0] : limit.category
+      const availableSlots = await fetchCategoryAvailableSlots(
+        supabase,
+        eventId,
+        limit.category_id
+      )
+      return {
+        categoryId: limit.category_id,
+        categoryName: category?.name ?? 'Unknown',
+        maxSlots: limit.max_slots,
+        availableSlots,
+        pricePerBooth: limit.price_per_booth ?? 0,
+      }
+    })
+  )
 }
 
 export async function POST(request: Request) {
@@ -53,15 +92,17 @@ export async function POST(request: Request) {
     joinWaitlist?: boolean
   }
 
-  const { eventId, categoryId, neighborPreference, joinWaitlist } = body
-  if (!eventId || !categoryId) {
-    return NextResponse.json({ error: 'eventId and categoryId are required' }, { status: 400 })
+  const { eventId, categoryId: requestedCategoryId, neighborPreference, joinWaitlist } = body
+  if (!eventId) {
+    return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
   }
 
   const [{ data: passport }, { data: event }, { data: existing }] = await Promise.all([
     supabase
       .from('vendor_passports')
-      .select('id, business_name, primary_category_id, category_ids, is_verified')
+      .select(
+        'id, business_name, primary_category_id, category_ids, is_verified'
+      )
       .eq('user_id', user.id)
       .maybeSingle(),
     supabase
@@ -113,9 +154,38 @@ export async function POST(request: Request) {
     )
   }
 
+  const eventSlots = await loadEventCategorySlots(supabase, eventId, !!event.allow_mlm)
+  const match = evaluatePassportCategoryMatch(passport, eventSlots)
+
+  if (match.passportSlots.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          'None of your passport categories are offered at this market. Update your passport or choose another event.',
+      },
+      { status: 400 }
+    )
+  }
+
+  const passportCategoryIds = resolvePassportCategoryIds(passport)
+  if (requestedCategoryId && !passportCategoryIds.includes(requestedCategoryId)) {
+    return NextResponse.json(
+      { error: 'Selected category is not on your Vendor Passport.' },
+      { status: 400 }
+    )
+  }
+
+  const categoryId = match.allCategoriesFull
+    ? match.waitlistCategoryId
+    : requestedCategoryId ?? match.resolvedCategoryId
+
+  if (!categoryId) {
+    return NextResponse.json({ error: 'Could not resolve an application category.' }, { status: 400 })
+  }
+
   const { data: categoryLimit } = await supabase
     .from('event_category_limits')
-    .select('price_per_booth, category:categories(is_mlm)')
+    .select('price_per_booth, category:categories(is_mlm, name)')
     .eq('event_id', eventId)
     .eq('category_id', categoryId)
     .maybeSingle()
@@ -135,7 +205,18 @@ export async function POST(request: Request) {
   const availableSlots = await fetchCategoryAvailableSlots(supabase, eventId, categoryId)
   const categoryIsFull = availableSlots <= 0
 
-  if (categoryIsFull && !joinWaitlist) {
+  if (match.allCategoriesFull && !joinWaitlist) {
+    return NextResponse.json(
+      {
+        error:
+          'All of your passport categories are full at this market. Confirm waitlist to be notified if a spot opens.',
+        requiresWaitlist: true,
+      },
+      { status: 409 }
+    )
+  }
+
+  if (categoryIsFull && !joinWaitlist && !match.allCategoriesFull) {
     return NextResponse.json(
       {
         error: 'This category is full. Confirm waitlist to be notified if a spot opens.',
@@ -154,13 +235,15 @@ export async function POST(request: Request) {
   let waitlistPosition: number | null = null
   const now = new Date().toISOString()
 
-  if (categoryIsFull) {
+  if (categoryIsFull || match.allCategoriesFull) {
     status = 'waitlisted'
     waitlistPosition = await nextWaitlistPosition(supabase, eventId, categoryId)
   } else if (isInstant) {
     status = 'approved'
     if (requiresPayment) paymentStatus = 'payment_required'
   }
+
+  const hasCategoryOverflow = match.hasCategoryOverflow && !match.allCategoriesFull
 
   const { data: inserted, error } = await supabase
     .from('booth_applications')
@@ -172,9 +255,11 @@ export async function POST(request: Request) {
       payment_status: paymentStatus,
       neighbor_preference: neighborPreference?.trim() || null,
       waitlist_position: waitlistPosition,
+      has_category_overflow: hasCategoryOverflow,
+      overflow_category_names: hasCategoryOverflow ? match.fullCategoryNames : [],
       ...(status === 'approved' ? { approved_at: now } : {}),
     })
-    .select('id, status, payment_status, waitlist_position')
+    .select('id, status, payment_status, waitlist_position, has_category_overflow, overflow_category_names')
     .single()
 
   if (error) {
@@ -190,5 +275,6 @@ export async function POST(request: Request) {
     requiresPayment: requiresPayment && status === 'approved',
     boothPriceCents: boothPrice,
     waitlisted: status === 'waitlisted',
+    hasCategoryOverflow,
   })
 }
