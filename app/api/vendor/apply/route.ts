@@ -4,8 +4,27 @@ import {
   isEventOpenForApplications,
   OPEN_EVENT_STATUSES,
 } from '@/lib/queries/events'
+import { fetchCategoryAvailableSlots } from '@/lib/queries/event-capacity'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
 import type { Event, Role } from '@/types/database'
+
+async function nextWaitlistPosition(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string,
+  categoryId: string
+) {
+  const { data } = await supabase
+    .from('booth_applications')
+    .select('waitlist_position')
+    .eq('event_id', eventId)
+    .eq('category_id', categoryId)
+    .eq('status', 'waitlisted')
+    .order('waitlist_position', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  return (data?.waitlist_position ?? 0) + 1
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -31,9 +50,10 @@ export async function POST(request: Request) {
     eventId?: string
     categoryId?: string
     neighborPreference?: string | null
+    joinWaitlist?: boolean
   }
 
-  const { eventId, categoryId, neighborPreference } = body
+  const { eventId, categoryId, neighborPreference, joinWaitlist } = body
   if (!eventId || !categoryId) {
     return NextResponse.json({ error: 'eventId and categoryId are required' }, { status: 400 })
   }
@@ -105,11 +125,35 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This category is not available for this market' }, { status: 400 })
   }
 
+  const availableSlots = await fetchCategoryAvailableSlots(supabase, eventId, categoryId)
+  const categoryIsFull = availableSlots <= 0
+
+  if (categoryIsFull && !joinWaitlist) {
+    return NextResponse.json(
+      {
+        error: 'This category is full. Confirm waitlist to be notified if a spot opens.',
+        requiresWaitlist: true,
+      },
+      { status: 409 }
+    )
+  }
+
   const isInstant = event.booking_mode === 'instant'
   const boothPrice = categoryLimit.price_per_booth ?? 0
   const requiresPayment = boothPrice > 0
-  const paymentStatus = requiresPayment && isInstant ? 'payment_required' : 'unpaid'
+
+  let status: 'pending' | 'approved' | 'waitlisted' = 'pending'
+  let paymentStatus: 'unpaid' | 'payment_required' = 'unpaid'
+  let waitlistPosition: number | null = null
   const now = new Date().toISOString()
+
+  if (categoryIsFull) {
+    status = 'waitlisted'
+    waitlistPosition = await nextWaitlistPosition(supabase, eventId, categoryId)
+  } else if (isInstant) {
+    status = 'approved'
+    if (requiresPayment) paymentStatus = 'payment_required'
+  }
 
   const { data: inserted, error } = await supabase
     .from('booth_applications')
@@ -117,12 +161,13 @@ export async function POST(request: Request) {
       event_id: eventId,
       vendor_id: user.id,
       category_id: categoryId,
-      status: isInstant ? 'approved' : 'pending',
+      status,
       payment_status: paymentStatus,
       neighbor_preference: neighborPreference?.trim() || null,
-      ...(isInstant ? { approved_at: now } : {}),
+      waitlist_position: waitlistPosition,
+      ...(status === 'approved' ? { approved_at: now } : {}),
     })
-    .select('id, status, payment_status')
+    .select('id, status, payment_status, waitlist_position')
     .single()
 
   if (error) {
@@ -135,7 +180,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     application: inserted,
-    requiresPayment: requiresPayment && isInstant,
+    requiresPayment: requiresPayment && status === 'approved',
     boothPriceCents: boothPrice,
+    waitlisted: status === 'waitlisted',
   })
 }

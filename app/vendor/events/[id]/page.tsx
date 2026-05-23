@@ -7,6 +7,7 @@ import { ApplyButton } from '@/components/events/apply-button'
 import { MarketFeedbackWidget } from '@/components/coordinator/market-feedback-widget'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { formatCents } from '@/lib/square/client'
+import { fetchEventCapacitySummary } from '@/lib/queries/event-capacity'
 import {
   getEventDisplayStatus,
   isEventOpenForApplications,
@@ -46,8 +47,11 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
   if (!event) notFound()
 
+  const capacity = await fetchEventCapacitySummary(supabase, event as Event)
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
-  const displayStatus = getEventDisplayStatus(event)
+  const displayStatus = getEventDisplayStatus(event, undefined, {
+    isFullyBooked: capacity.isFullyBooked,
+  })
   const applicationsOpen = isEventOpenForApplications(event)
 
   const sortedLimits = [...(event.category_limits ?? [])].sort(
@@ -77,7 +81,11 @@ export default async function VendorEventDetailPage({ params }: Props) {
             <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
             <div className="flex flex-wrap gap-2">
               <Badge className="capitalize">
-                {displayStatus === 'archived' ? 'Archived' : displayStatus}
+                {displayStatus === 'archived'
+                  ? 'Archived'
+                  : displayStatus === 'full'
+                    ? 'Full'
+                    : displayStatus}
               </Badge>
               <Badge className="capitalize">
                 {event.booking_mode === 'juried' ? 'Juried review' : 'Instant book'}

@@ -5,6 +5,7 @@ import { EventCard } from '@/components/events/event-card'
 import { ApplyButton } from '@/components/events/apply-button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { EventCapacitySummary } from '@/lib/queries/event-capacity'
 import {
   getEventDisplayStatus,
   isEventOpenForApplications,
@@ -18,6 +19,7 @@ interface VendorMarketGridProps {
   archivedEvents: Event[]
   userId: string
   applicationStatuses: Record<string, ApplicationStatus>
+  capacityByEventId: Record<string, EventCapacitySummary>
 }
 
 function filterEvents(events: Event[], query: string): Event[] {
@@ -41,11 +43,13 @@ function MarketGrid({
   events,
   userId,
   applicationStatuses,
+  capacityByEventId,
   emptyMessage,
 }: {
   events: Event[]
   userId: string
   applicationStatuses: Record<string, ApplicationStatus>
+  capacityByEventId: Record<string, EventCapacitySummary>
   emptyMessage: string
 }) {
   if (events.length === 0) {
@@ -59,7 +63,9 @@ function MarketGrid({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {events.map((event) => {
-        const displayStatus: EventDisplayStatus = getEventDisplayStatus(event)
+        const displayStatus: EventDisplayStatus = getEventDisplayStatus(event, undefined, {
+          isFullyBooked: capacityByEventId[event.id]?.isFullyBooked ?? false,
+        })
         const applicationsOpen = isEventOpenForApplications(event)
 
         return (
@@ -89,6 +95,7 @@ export function VendorMarketGrid({
   archivedEvents,
   userId,
   applicationStatuses,
+  capacityByEventId,
 }: VendorMarketGridProps) {
   const [search, setSearch] = useState('')
 
@@ -128,6 +135,7 @@ export function VendorMarketGrid({
             events={filteredActive}
             userId={userId}
             applicationStatuses={applicationStatuses}
+            capacityByEventId={capacityByEventId}
             emptyMessage={
               search
                 ? 'No open markets match your search.'
@@ -141,6 +149,7 @@ export function VendorMarketGrid({
             events={filteredArchived}
             userId={userId}
             applicationStatuses={applicationStatuses}
+            capacityByEventId={capacityByEventId}
             emptyMessage={
               search
                 ? 'No past events match your search.'

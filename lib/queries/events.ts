@@ -4,7 +4,7 @@ export const OPEN_EVENT_STATUSES = ['published', 'active'] as const satisfies re
 
 export type OpenEventStatus = (typeof OPEN_EVENT_STATUSES)[number]
 
-export type EventDisplayStatus = EventStatus | 'archived'
+export type EventDisplayStatus = EventStatus | 'archived' | 'full'
 
 type EventTimingFields = Pick<Event, 'start_at' | 'end_at' | 'status'>
 
@@ -41,10 +41,15 @@ export function isEventOpenForApplications(
 
 export function getEventDisplayStatus(
   event: EventTimingFields,
-  now?: Date
+  now?: Date,
+  options?: { isFullyBooked?: boolean }
 ): EventDisplayStatus {
   if (isEventArchived(event, now)) {
     return 'archived'
+  }
+
+  if (options?.isFullyBooked && isEventOpenForApplications(event, now)) {
+    return 'full'
   }
 
   return event.status

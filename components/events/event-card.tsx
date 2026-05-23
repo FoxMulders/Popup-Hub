@@ -27,10 +27,12 @@ const STATUS_BADGE: Record<string, string> = {
   completed: marketStatusBadge.neutral,
   cancelled: marketStatusBadge.error,
   archived: marketStatusBadge.neutral,
+  full: marketStatusBadge.error,
 }
 
 const STATUS_LABEL: Record<string, string> = {
   archived: 'Archived',
+  full: 'Full',
 }
 
 export function EventCard({
