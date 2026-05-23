@@ -11,7 +11,8 @@ import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { MapPin, Loader2 } from 'lucide-react'
+import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
+import { Loader2 } from 'lucide-react'
 
 export default function LoginForm() {
   const router = useRouter()
@@ -97,10 +98,8 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-md space-y-6">
       <div className="text-center">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest shadow-[var(--shadow-market-lift)]">
-            <MapPin className="h-6 w-6 text-white" />
-          </div>
+        <div className="mb-4 flex justify-center">
+          <BrandLogoMark size="auth" />
         </div>
         <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">Welcome back</h1>
         <p className="text-muted-foreground mt-1">Sign in to your Popup Hub account</p>

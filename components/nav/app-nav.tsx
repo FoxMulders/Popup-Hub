@@ -13,7 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { Bell, LogOut, Menu, MapPin } from 'lucide-react'
+import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
+import { Bell, LogOut, Menu } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { Profile } from '@/types/database'
 import { PortalSwitcherMenuItems } from '@/components/nav/portal-switcher'
@@ -72,9 +73,7 @@ export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: App
         {/* Logo */}
         <div className="flex items-center gap-8">
           <Link href={homeHref} className="flex items-center gap-2.5 shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest shadow-[var(--shadow-market-lift)]">
-              <MapPin className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <BrandLogoMark />
             <span className="font-heading text-xl font-semibold text-foreground tracking-tight">
               Popup Hub
             </span>

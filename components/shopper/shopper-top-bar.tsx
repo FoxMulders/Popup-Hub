@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { MapPin, Menu, LogOut } from 'lucide-react'
+import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
+import { Menu, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/profile/user-avatar'
 import {
@@ -51,9 +52,7 @@ export function ShopperTopBar({ profile, vendorAccessCount = 0 }: ShopperTopBarP
     <header className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <Link href="/discover" className="flex shrink-0 items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest shadow-[var(--shadow-market-lift)]">
-            <MapPin className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <BrandLogoMark />
           <span className="font-heading text-lg font-semibold tracking-tight text-foreground sm:text-xl">
             Popup Hub
           </span>

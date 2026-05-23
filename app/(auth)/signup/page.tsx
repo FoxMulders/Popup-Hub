@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { MapPin, Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
+import { BrandLogoMark, PopupHubLogo } from '@/components/brand/popup-hub-logo'
+import { Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { SIGNUP_ROLES, type SignupRole } from '@/lib/auth/rbac'
 
@@ -93,8 +94,8 @@ function SignupForm() {
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-4">
         <Card className="w-full max-w-md shadow-lg text-center">
           <CardContent className="pt-10 pb-8 px-8">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-              <MapPin className="h-8 w-8 text-amber-500" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <PopupHubLogo className="h-9 w-9" title="Popup Hub" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
             <p className="text-gray-500 mb-1">
@@ -125,8 +126,8 @@ function SignupForm() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-4 py-10">
       <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500">
-            <MapPin className="h-6 w-6 text-white" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <BrandLogoMark size="auth" />
           </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Choose how you&apos;ll use Popup Hub</CardDescription>
