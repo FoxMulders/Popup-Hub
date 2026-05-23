@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { MapPin, Menu, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/profile/user-avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,13 +27,13 @@ export function ShopperTopBar({ profile, vendorAccessCount = 0 }: ShopperTopBarP
   const router = useRouter()
   const supabase = createClient()
 
-  const initials =
-    (profile?.full_name || ' ')
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '?'
+  const avatarProfile = profile
+    ? {
+        role: profile.role,
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+      }
+    : null
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -79,12 +79,14 @@ export function ShopperTopBar({ profile, vendorAccessCount = 0 }: ShopperTopBarP
               <DropdownMenuTrigger
                 render={
                   <button className="h-9 w-9 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={profile.avatar_url ?? undefined} />
-                      <AvatarFallback className="bg-sage-100 text-xs font-bold text-forest">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
+                    {avatarProfile ? (
+                      <UserAvatar
+                        userId={profile.id}
+                        profile={avatarProfile}
+                        className="h-9 w-9"
+                        fallbackClassName="text-xs"
+                      />
+                    ) : null}
                   </button>
                 }
               />

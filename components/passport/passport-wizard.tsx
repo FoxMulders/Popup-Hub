@@ -16,8 +16,9 @@ import type { Category, VendorPassport } from '@/types/database'
 import { sortCategoriesByName } from '@/lib/categories'
 import { normalizeUrl } from '@/lib/vendor/normalize-url'
 import { resolvePassportCategoryIds, toggleCategoryId } from '@/lib/vendor/passport-categories'
-import { VendorLogo } from '@/components/vendor/vendor-logo'
+import { dispatchAvatarChanged } from '@/lib/profile/avatar-sync'
 import { cn } from '@/lib/utils'
+import { VendorLogo } from '@/components/vendor/vendor-logo'
 
 interface PassportWizardProps {
   categories: Category[]
@@ -121,6 +122,7 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
       }
 
       toast.success('Passport saved! Ready to apply to events.')
+      dispatchAvatarChanged(userId)
       router.push('/vendor/events')
       router.refresh()
     } catch (err) {

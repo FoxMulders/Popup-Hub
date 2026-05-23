@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { AvatarPicker } from '@/components/profile/avatar-picker'
 import { toast } from 'sonner'
 import { Loader2, User } from 'lucide-react'
 import type { Profile } from '@/types/database'
@@ -18,14 +18,8 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   const supabase = createClient()
   const [fullName, setFullName] = useState(profile.full_name ?? '')
   const [phone, setPhone] = useState(profile.phone ?? '')
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url)
   const [loading, setLoading] = useState(false)
-
-  const initials = fullName
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || '?'
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -47,19 +41,10 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
   return (
     <form onSubmit={handleSave} className="rounded-2xl border bg-white p-8 space-y-8">
-      {/* Avatar preview */}
-      <div className="flex items-center gap-6">
-        <Avatar className="h-20 w-20">
-          <AvatarImage src={profile.avatar_url ?? undefined} />
-          <AvatarFallback className="bg-amber-100 text-amber-700 text-2xl font-bold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-semibold text-gray-900 text-lg">{profile.full_name || 'Your Name'}</p>
-          <p className="text-gray-500 text-sm">{profile.email}</p>
-        </div>
-      </div>
+      <AvatarPicker
+        profile={{ ...profile, avatar_url: avatarUrl }}
+        onAvatarChange={setAvatarUrl}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">

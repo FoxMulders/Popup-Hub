@@ -2,7 +2,10 @@
  * Normalize vendor/event asset URLs for display.
  * Accepts full public URLs, blob previews, or storage object paths.
  */
-export function resolvePublicAssetUrl(url: string | null | undefined): string | null {
+export function resolvePublicAssetUrl(
+  url: string | null | undefined,
+  bucket: 'vendor-assets' | 'avatars' | 'event-covers' = 'vendor-assets'
+): string | null {
   const trimmed = url?.trim()
   if (!trimmed) return null
 
@@ -23,5 +26,5 @@ export function resolvePublicAssetUrl(url: string | null | undefined): string | 
     return `${base}/${path}`
   }
 
-  return `${base}/storage/v1/object/public/vendor-assets/${path}`
+  return `${base}/storage/v1/object/public/${bucket}/${path}`
 }

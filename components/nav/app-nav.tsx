@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/profile/user-avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,13 +60,11 @@ export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: App
     router.refresh()
   }
 
-  const initials =
-    (profile.full_name || ' ')
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '?'
+  const avatarProfile = {
+    role: profile.role,
+    full_name: profile.full_name,
+    avatar_url: profile.avatar_url,
+  }
 
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
@@ -117,12 +115,12 @@ export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: App
             <DropdownMenuTrigger
               render={
                 <button className="h-9 w-9 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9">
-                    <AvatarImage src={profile.avatar_url ?? undefined} />
-                    <AvatarFallback className="bg-sage-100 text-forest text-xs font-bold">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    userId={profile.id}
+                    profile={avatarProfile}
+                    className="h-9 w-9"
+                    fallbackClassName="text-xs"
+                  />
                 </button>
               }
             />
