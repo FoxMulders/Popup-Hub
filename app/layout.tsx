@@ -44,6 +44,9 @@ const baseMetadata = {
     title: 'Popup Hub',
     statusBarStyle: 'default' as const,
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 } satisfies Omit<Metadata, 'title'>
 
 export async function generateMetadata(): Promise<Metadata> {
