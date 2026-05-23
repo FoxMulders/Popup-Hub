@@ -47,6 +47,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
   if (!event) notFound()
 
+  const isGarageSale = (event.listing_type ?? 'community_market') === 'garage_yard_sale'
   const capacity = await fetchEventCapacitySummary(supabase, event as Event)
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const displayStatus = getEventDisplayStatus(event, undefined, {
@@ -157,17 +158,25 @@ export default async function VendorEventDetailPage({ params }: Props) {
       ) : null}
 
       <div className="rounded-2xl border bg-white p-6">
-        <ApplyButton
-          event={event as Event}
-          userId={user.id}
-          applicationStatus={existingApp?.status ?? null}
-          applicationsOpen={applicationsOpen}
-        />
-        {existingApp ? (
-          <p className="mt-3 text-center text-xs text-gray-500 capitalize">
-            Application status: {existingApp.status}
+        {isGarageSale ? (
+          <p className="text-sm text-muted-foreground">
+            This is a garage or yard sale listing — vendor booth applications are not used for this event type.
           </p>
-        ) : null}
+        ) : (
+          <>
+            <ApplyButton
+              event={event as Event}
+              userId={user.id}
+              applicationStatus={existingApp?.status ?? null}
+              applicationsOpen={applicationsOpen}
+            />
+            {existingApp ? (
+              <p className="mt-3 text-center text-xs text-gray-500 capitalize">
+                Application status: {existingApp.status}
+              </p>
+            ) : null}
+          </>
+        )}
       </div>
 
       <MarketFeedbackWidget marketId={id} />

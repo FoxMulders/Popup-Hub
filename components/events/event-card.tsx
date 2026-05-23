@@ -49,6 +49,7 @@ export function EventCard({
   showBookingMode = false,
 }: EventCardProps) {
   const badgeStatus = displayStatus ?? event.status
+  const isGarageSale = (event.listing_type ?? 'community_market') === 'garage_yard_sale'
   const hours =
     hoursLabel ??
     `${format(new Date(event.start_at), 'h:mm a')} – ${format(new Date(event.end_at), 'h:mm a')}`
@@ -73,6 +74,11 @@ export function EventCard({
           >
             {STATUS_LABEL[badgeStatus] ?? badgeStatus}
           </Badge>
+          {isGarageSale ? (
+            <Badge className="absolute right-2 top-10 border bg-indigo-100 text-[10px] text-indigo-800">
+              🏡 Garage / Yard Sale
+            </Badge>
+          ) : null}
           {distanceLabel ? (
             <Badge className="absolute left-2 top-2 border bg-white/90 text-[10px] text-foreground">
               {distanceLabel}

@@ -7,7 +7,7 @@ import {
   parseISO,
   startOfDay,
 } from 'date-fns'
-import type { Event, EventDay } from '@/types/database'
+import type { Event, EventDay, EventListingType } from '@/types/database'
 import { distanceKm, type LatLng } from '@/lib/shopper/geo'
 
 export interface EventWithMeta extends Event {
@@ -77,6 +77,18 @@ export function getEventDateLabel(event: Event, selectedDate?: Date): string {
 
 export function filterEventsByDate(events: Event[], date: Date): Event[] {
   return events.filter((e) => eventOccursOnDate(e, date))
+}
+
+export function filterEventsByWeekend(events: Event[], weekendAnchor: Date): Event[] {
+  const days = getWeekendDates(weekendAnchor)
+  return events.filter((e) => days.some((day) => eventOccursOnDate(e, day)))
+}
+
+export function filterEventsByListingType(
+  events: Event[],
+  listingType: EventListingType
+): Event[] {
+  return events.filter((e) => (e.listing_type ?? 'community_market') === listingType)
 }
 
 export function sortEventsByDistance(

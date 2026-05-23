@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { BoothClearancePolicy } from '@/types/database'
+import type { BoothClearancePolicy, EventListingType } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
 
@@ -21,6 +21,7 @@ export interface EventDraftPayload {
   endAt: string
   coverImageUrl?: string | null
   status?: 'draft' | 'published'
+  listingType?: EventListingType
 }
 
 export interface DayRowPayload {
@@ -96,6 +97,7 @@ export async function persistEventDraft(
     start_at: draft.startAt,
     end_at: draft.endAt,
     booking_mode: draft.bookingMode,
+    listing_type: draft.listingType ?? 'community_market',
     status: draft.status ?? 'draft',
     cover_image_url: draft.coverImageUrl ?? null,
     allow_mlm: draft.allowMlm,

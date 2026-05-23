@@ -1,4 +1,5 @@
 export type Role = 'shopper' | 'vendor' | 'coordinator'
+export type EventListingType = 'community_market' | 'garage_yard_sale'
 export type BookingMode = 'instant' | 'juried'
 export type BoothClearancePolicy = 'not_required' | 'leave_furniture' | 'pack_furniture'
 export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'
@@ -129,6 +130,7 @@ export interface Event {
   start_at: string
   end_at: string
   booking_mode: BookingMode
+  listing_type: EventListingType
   status: EventStatus
   cover_image_url: string | null
   square_merchant_id: string | null

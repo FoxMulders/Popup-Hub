@@ -33,7 +33,7 @@ import {
   WIZARD_TOGGLE_OPTION_INACTIVE,
 } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
-import type { BoothClearancePolicy } from '@/types/database'
+import type { BoothClearancePolicy, EventListingType } from '@/types/database'
 import { WIZARD_TIME_OPTIONS } from './wizard-time-options'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
 
@@ -70,6 +70,8 @@ export interface WizardStepEventDetailsProps {
   onRaffleDonationRequirementChange: (v: string) => void
   coverImageUrl: string
   onCoverChange: (file: File) => void
+  listingType: EventListingType
+  onListingTypeChange: (v: EventListingType) => void
 }
 
 export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
@@ -97,6 +99,41 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
           Step 1 — Core Market Setup
         </h2>
         <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">Draft</span>
+      </div>
+
+      <div className="space-y-2">
+        <Label className={WIZARD_FIELD_LABEL}>Listing Type</Label>
+        <div className={WIZARD_TOGGLE_GROUP}>
+          <button
+            type="button"
+            onClick={() => props.onListingTypeChange('community_market')}
+            className={cn(
+              WIZARD_TOGGLE_OPTION,
+              props.listingType === 'community_market'
+                ? WIZARD_TOGGLE_OPTION_ACTIVE
+                : WIZARD_TOGGLE_OPTION_INACTIVE
+            )}
+          >
+            🎪 Community Market
+          </button>
+          <button
+            type="button"
+            onClick={() => props.onListingTypeChange('garage_yard_sale')}
+            className={cn(
+              WIZARD_TOGGLE_OPTION,
+              props.listingType === 'garage_yard_sale'
+                ? WIZARD_TOGGLE_OPTION_ACTIVE
+                : WIZARD_TOGGLE_OPTION_INACTIVE
+            )}
+          >
+            🏡 Garage / Yard Sale
+          </button>
+        </div>
+        {props.listingType === 'garage_yard_sale' ? (
+          <p className={WIZARD_INFO_BOX}>
+            Garage and yard sales go live on the patron map when published — no vendor booth applications or juried review required.
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-1">
@@ -289,6 +326,8 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         </div>
       )}
 
+      {props.listingType === 'community_market' ? (
+        <>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
           <Label htmlFor="wizard-booking-mode" className={WIZARD_FIELD_LABEL}>Booking Mode</Label>
@@ -371,6 +410,8 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
           className={WIZARD_TEXTAREA}
         />
       </div>
+        </>
+      ) : null}
 
       <div className="space-y-1">
         <Label className={WIZARD_FIELD_LABEL}>Cover Image</Label>

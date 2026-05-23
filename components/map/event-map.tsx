@@ -28,6 +28,23 @@ const STATUS_COLORS: Record<string, string> = {
   completed: '#9ca3af',
 }
 
+function markerStyle(event: Event) {
+  const isGarage = (event.listing_type ?? 'community_market') === 'garage_yard_sale'
+  if (isGarage) {
+    return {
+      background: '#6366f1',
+      glyph: '🏡',
+      label: 'Garage / Yard Sale',
+    }
+  }
+
+  return {
+    background: STATUS_COLORS[event.status] ?? '#f59e0b',
+    glyph: '🎪',
+    label: 'Community Market',
+  }
+}
+
 export function EventMap({ events, center: centerProp }: EventMapProps) {
   const [selected, setSelected] = useState<Event | null>(null)
 
@@ -46,19 +63,23 @@ export function EventMap({ events, center: centerProp }: EventMapProps) {
         mapId="popup-hub-map"
         gestureHandling="greedy"
       >
-        {events.map((event) => (
-          <AdvancedMarker
-            key={event.id}
-            position={{ lat: event.latitude, lng: event.longitude }}
-            onClick={() => setSelected(event)}
-          >
-            <Pin
-              background={STATUS_COLORS[event.status] ?? '#f59e0b'}
-              borderColor="white"
-              glyphColor="white"
-            />
-          </AdvancedMarker>
-        ))}
+        {events.map((event) => {
+          const style = markerStyle(event)
+          return (
+            <AdvancedMarker
+              key={event.id}
+              position={{ lat: event.latitude, lng: event.longitude }}
+              onClick={() => setSelected(event)}
+            >
+              <Pin
+                background={style.background}
+                borderColor="white"
+                glyphColor="white"
+                glyph={style.glyph}
+              />
+            </AdvancedMarker>
+          )
+        })}
 
         {selected && (
           <InfoWindow
@@ -75,18 +96,15 @@ export function EventMap({ events, center: centerProp }: EventMapProps) {
                 />
               )}
               <div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <h3 className="text-sm font-bold leading-tight text-gray-900">{selected.name}</h3>
-                  <Badge
-                    className={`capitalize text-[10px] ${
-                      selected.status === 'active'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
-                    }`}
-                  >
+                  <Badge className="shrink-0 text-[10px] capitalize">
                     {selected.status}
                   </Badge>
                 </div>
+                <Badge variant="outline" className="mt-1 text-[10px]">
+                  {markerStyle(selected).label}
+                </Badge>
                 <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
                   <MapPin className="h-3 w-3 shrink-0" />
                   {selected.location_name}

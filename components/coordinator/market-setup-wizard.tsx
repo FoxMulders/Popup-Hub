@@ -46,7 +46,7 @@ import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wi
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
 import { formatTimeLabel, formatShortDate } from '@/components/coordinator/wizard/wizard-time-options'
-import type { BoothLayout, BoothClearancePolicy, Category, Event, EventDay } from '@/types/database'
+import type { BoothLayout, BoothClearancePolicy, Category, Event, EventDay, EventListingType } from '@/types/database'
 
 type ApplicationInput = Parameters<typeof BoothPlanner>[0]['applications']
 
@@ -127,6 +127,9 @@ export function MarketSetupWizard({
   const [endTime, setEndTime] = useState(existing?.end_at ? existing.end_at.slice(11, 16) : DEFAULT_MARKET_END)
   const [dayRows, setDayRows] = useState<DayRow[]>(() => buildDayRows(existing))
   const [bookingMode, setBookingMode] = useState<'instant' | 'juried'>(existing?.booking_mode ?? 'juried')
+  const [listingType, setListingType] = useState<EventListingType>(
+    existing?.listing_type ?? 'community_market'
+  )
   const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
   const [globalMlmCap, setGlobalMlmCap] = useState(existing?.max_mlm_slots ?? DEFAULT_GLOBAL_MLM_CAP)
   const [boothClearancePolicy, setBoothClearancePolicy] = useState<BoothClearancePolicy>(
@@ -367,6 +370,7 @@ export function MarketSetupWizard({
             latitude: lat,
             longitude: lng,
             bookingMode,
+            listingType,
             allowMlm,
             maxMlmSlots: globalMlmCap,
             boothClearancePolicy,
@@ -427,6 +431,7 @@ export function MarketSetupWizard({
       globalMlmCap,
       lat,
       lng,
+      listingType,
       locationName,
       name,
       raffleDonationRequirement,
@@ -609,6 +614,8 @@ export function MarketSetupWizard({
                 onDayRowsChange={setDayRows}
                 bookingMode={bookingMode}
                 onBookingModeChange={setBookingMode}
+                listingType={listingType}
+                onListingTypeChange={setListingType}
                 allowMlm={allowMlm}
                 onAllowMlmChange={setAllowMlm}
                 boothClearancePolicy={boothClearancePolicy}
