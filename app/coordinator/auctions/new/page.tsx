@@ -85,8 +85,8 @@ function NewAuctionForm() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900">Create Auction</h1>
-        <p className="mt-1.5 text-lg text-gray-500">
+        <h1 className="font-heading text-4xl font-semibold text-foreground">Create Auction</h1>
+        <p className="mt-1.5 text-lg text-muted-foreground">
           Set up a digital quarter auction for your event.
         </p>
       </div>
@@ -94,7 +94,7 @@ function NewAuctionForm() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Gavel className="h-5 w-5 text-amber-500" />
+            <Gavel className="h-5 w-5 text-harvest-600" />
             Auction Details
           </CardTitle>
         </CardHeader>
@@ -120,7 +120,7 @@ function NewAuctionForm() {
 
           <div className="space-y-1.5">
             <Label>Item Photo</Label>
-            <label className="flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
+            <label className="flex cursor-pointer items-center gap-4 rounded-xl border-2 border-dashed border-stone-200 p-4 hover:border-forest/40 transition">
               {imagePreview ? (
                 <img src={imagePreview} alt="Item" className="h-20 w-20 rounded-lg object-cover shrink-0" />
               ) : (
@@ -129,10 +129,10 @@ function NewAuctionForm() {
                 </div>
               )}
               <div>
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium text-foreground">
                   {imagePreview ? 'Change photo' : 'Upload photo'}
                 </p>
-                <p className="text-xs text-gray-400">JPG, PNG, WebP</p>
+                <p className="text-xs text-muted-foreground">JPG, PNG, WebP</p>
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
             </label>
@@ -149,7 +149,7 @@ function NewAuctionForm() {
                 value={timerSeconds}
                 onChange={(e) => setTimerSeconds(parseInt(e.target.value) || 60)}
               />
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 {Math.floor(timerSeconds / 60)}m {timerSeconds % 60}s
               </p>
             </div>
@@ -163,7 +163,7 @@ function NewAuctionForm() {
                 value={minDrop}
                 onChange={(e) => setMinDrop(parseInt(e.target.value) || 25)}
               />
-              <p className="text-xs text-gray-400">${(minDrop / 100).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">${(minDrop / 100).toFixed(2)}</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="max-drop">Max Drop (¢)</Label>
@@ -175,12 +175,12 @@ function NewAuctionForm() {
                 value={maxDrop}
                 onChange={(e) => setMaxDrop(parseInt(e.target.value) || 100)}
               />
-              <p className="text-xs text-gray-400">${(maxDrop / 100).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">${(maxDrop / 100).toFixed(2)}</p>
             </div>
           </div>
 
           <Button
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white h-11 text-base gap-2"
+            className="w-full min-h-11 text-base gap-2"
             onClick={handleCreate}
             disabled={saving}
           >

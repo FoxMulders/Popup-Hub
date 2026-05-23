@@ -5,7 +5,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { format } from 'date-fns'
 import { Suspense } from 'react'
 import { Calendar, MapPin } from 'lucide-react'
-import type { BoothApplication } from '@/types/database'
+import { QRButton } from '@/components/vendor/qr-button'
+import { CancellationDetails } from '@/components/vendor/cancellation-details'
+import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
+import type { BoothApplication, EventCancellationReason, PaymentStatus } from '@/types/database'
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
   pending: { label: 'Pending', class: 'bg-yellow-100 text-yellow-700' },
@@ -21,7 +24,10 @@ async function ApplicationsList({ userId }: { userId: string }) {
     .from('booth_applications')
     .select(`
       *,
-      event:events(name, location_name, start_at, end_at, status, cover_image_url),
+      event:events(
+        id, name, location_name, start_at, end_at, status, cover_image_url,
+        cancellation_reason, cancellation_reason_notes
+      ),
       category:categories(name)
     `)
     .eq('vendor_id', userId)
@@ -40,9 +46,33 @@ async function ApplicationsList({ userId }: { userId: string }) {
     <div className="space-y-3">
       {(applications as BoothApplication[]).map((app) => {
         const config = STATUS_CONFIG[app.status]
-        const event = app.event as { name: string; location_name: string; start_at: string; cover_image_url: string | null }
+        const event = app.event as {
+          id: string
+          name: string
+          location_name: string
+          start_at: string
+          cover_image_url: string | null
+          status?: string
+          cancellation_reason?: EventCancellationReason | null
+          cancellation_reason_notes?: string | null
+        }
+        const eventCancelled = event?.status === 'cancelled'
+        const cancellationReasonLabel =
+          app.event_cancellation_reason_label ??
+          (eventCancelled && event?.cancellation_reason
+            ? getCancellationReasonLabel(
+                event.cancellation_reason,
+                event.cancellation_reason_notes
+              )
+            : null)
+
         return (
-          <div key={app.id} className="flex items-center gap-4 rounded-xl border bg-white p-4 shadow-sm">
+          <div
+            key={app.id}
+            className={`flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border bg-white p-4 shadow-sm ${
+              eventCancelled ? 'border-red-200' : ''
+            }`}
+          >
             <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-amber-50">
               {event?.cover_image_url ? (
                 <img src={event.cover_image_url} alt="" className="h-full w-full object-cover" />
@@ -61,19 +91,37 @@ async function ApplicationsList({ userId }: { userId: string }) {
                 {app.category && (
                   <Badge variant="outline" className="text-[10px]">{app.category.name}</Badge>
                 )}
-                <Badge className={`text-[10px] ${config.class}`}>{config.label}</Badge>
+                {!eventCancelled && (
+                  <Badge className={`text-[10px] ${config.class}`}>{config.label}</Badge>
+                )}
               </div>
+              {eventCancelled && (
+                <CancellationDetails
+                  reasonLabel={cancellationReasonLabel}
+                  paymentStatus={app.payment_status as PaymentStatus}
+                />
+              )}
             </div>
-            {app.waitlist_position && (
-              <span className="text-xs font-medium text-blue-600">
-                Queue #{app.waitlist_position}
-              </span>
-            )}
-            {app.booth_number && (
-              <span className="text-xs font-medium text-green-600">
-                Booth #{app.booth_number}
-              </span>
-            )}
+            <div className="flex flex-col items-end gap-1.5 shrink-0 sm:ml-auto">
+              {app.waitlist_position && (
+                <span className="text-xs font-medium text-blue-600">
+                  Queue #{app.waitlist_position}
+                </span>
+              )}
+              {app.booth_number && (
+                <span className="text-xs font-medium text-green-600">
+                  Booth #{app.booth_number}
+                </span>
+              )}
+              {app.status === 'approved' && event?.id && !eventCancelled && (
+                <QRButton
+                  eventId={event.id}
+                  applicationId={app.id}
+                  eventName={event.name}
+                  boothNumber={app.booth_number}
+                />
+              )}
+            </div>
           </div>
         )
       })}

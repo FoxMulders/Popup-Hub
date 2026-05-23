@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -8,6 +8,7 @@ import {
   Map,
   AdvancedMarker,
   type MapMouseEvent,
+  useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,9 +22,47 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, MapPin, Calendar, Settings2, Upload, Gavel } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Loader2, MapPin, Calendar, Settings2, Upload, Gavel, Trash2, HelpCircle } from 'lucide-react'
 import { CategoryLimitEditor, type CategoryLimit } from './category-limit-editor'
-import type { Category, Event } from '@/types/database'
+import { SmartPopulateBoothCaps } from './smart-populate-booth-caps'
+import { EdmontonHallSelector } from './edmonton-hall-selector'
+import { getEdmontonHallById } from '@/lib/data/edmonton-halls'
+import type { EdmontonHall } from '@/lib/data/edmonton-halls'
+import { CLEARANCE_POLICY_OPTIONS } from '@/lib/booth-clearance-policy'
+import { sortCategoriesByName } from '@/lib/categories'
+import { selectValueOrNull } from '@/lib/wizard/wizard-autosave'
+import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
+import { marketStatusBadge, marketTheme } from '@/lib/theme/market'
+import { cn } from '@/lib/utils'
+import type { BoothClearancePolicy, Category, Event, EventDay } from '@/types/database'
+
+const TIME_OPTIONS: { value: string; label: string }[] = (() => {
+  const opts = []
+  for (let h = 6; h <= 23; h++) {
+    for (const m of [0, 30]) {
+      if (h === 23 && m === 30) break
+      const hh = String(h).padStart(2, '0')
+      const mm = String(m).padStart(2, '0')
+      const period = h < 12 ? 'AM' : 'PM'
+      const displayH = h % 12 === 0 ? 12 : h % 12
+      opts.push({ value: `${hh}:${mm}`, label: `${displayH}:${mm} ${period}` })
+    }
+  }
+  return opts
+})()
+
+interface DayRow {
+  date: string
+  start_time: string
+  end_time: string
+}
+
+function formatShortDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
 interface EventFormProps {
   categories: Category[]
@@ -32,9 +71,14 @@ interface EventFormProps {
 }
 
 export function EventForm({ categories, coordinatorId: userId, existing }: EventFormProps) {
+  const sortedCategories = sortCategoriesByName(categories)
   const router = useRouter()
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
+
+  const [scheduleType, setScheduleType] = useState<'single' | 'multi'>(
+    existing?.is_multi_day ? 'multi' : 'single'
+  )
 
   const [name, setName] = useState(existing?.name ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
@@ -43,20 +87,62 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   const [bookingMode, setBookingMode] = useState<'instant' | 'juried'>(
     existing?.booking_mode ?? 'juried'
   )
-  const [status, setStatus] = useState<string>(existing?.status ?? 'draft')
-  const [startAt, setStartAt] = useState(
-    existing?.start_at ? existing.start_at.slice(0, 16) : ''
+  const [status] = useState<string>(existing?.status ?? 'draft')
+  const [startDate, setStartDate] = useState(
+    existing?.start_at ? existing.start_at.slice(0, 10) : ''
   )
-  const [endAt, setEndAt] = useState(
-    existing?.end_at ? existing.end_at.slice(0, 16) : ''
+  const [startTime, setStartTime] = useState(
+    existing?.start_at ? existing.start_at.slice(11, 16) : ''
+  )
+  const [endDate, setEndDate] = useState(
+    existing?.end_at ? existing.end_at.slice(0, 10) : ''
+  )
+  const [endTime, setEndTime] = useState(
+    existing?.end_at ? existing.end_at.slice(11, 16) : ''
   )
   const [coverImageUrl, setCoverImageUrl] = useState(existing?.cover_image_url ?? '')
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
+  const [boothClearancePolicy, setBoothClearancePolicy] = useState<BoothClearancePolicy>(
+    existing?.booth_clearance_policy ?? 'leave_furniture'
+  )
+  const [raffleDonationRequirement, setRaffleDonationRequirement] = useState(
+    existing?.raffle_donation_requirement ?? ''
+  )
 
-  const [lat, setLat] = useState(existing?.latitude ?? 39.5)
-  const [lng, setLng] = useState(existing?.longitude ?? -98.35)
+  const [dayRows, setDayRows] = useState<DayRow[]>(() => {
+    if (existing?.event_days && existing.event_days.length > 0) {
+      return [...existing.event_days]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((d: EventDay) => ({ date: d.date, start_time: d.start_time, end_time: d.end_time }))
+    }
+    return [{ date: '', start_time: '', end_time: '' }]
+  })
+
+  const [lat, setLat] = useState(existing?.latitude ?? 53.5461)
+  const [lng, setLng] = useState(existing?.longitude ?? -113.4938)
   const [pinDropped, setPinDropped] = useState(!!existing?.latitude)
+
+  useEffect(() => {
+    if (!existing?.id) return
+    let cancelled = false
+    void (async () => {
+      const { data } = await supabase
+        .from('booth_layouts')
+        .select('venue_width, venue_length')
+        .eq('event_id', existing.id)
+        .maybeSingle()
+      if (cancelled || !data) return
+      if (data.venue_width) setPlannerVenueWidth(data.venue_width as number)
+      if (data.venue_length) setPlannerVenueLength(data.venue_length as number)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [existing?.id, supabase])
+
+  const [plannerVenueWidth, setPlannerVenueWidth] = useState(100)
+  const [plannerVenueLength, setPlannerVenueLength] = useState(100)
 
   const [categoryLimits, setCategoryLimits] = useState<CategoryLimit[]>(() => {
     if (!existing) return []
@@ -66,6 +152,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         category?: { name: string }
         max_slots: number
         price_per_booth: number
+        table_length_ft: number | null
       }>
     }).category_limits
     return (limits ?? []).map((cl) => ({
@@ -73,6 +160,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
       categoryName: cl.category?.name ?? '',
       maxSlots: cl.max_slots,
       pricePerBooth: cl.price_per_booth,
+      tableLengthFt: cl.table_length_ft ?? null,
     }))
   })
 
@@ -83,6 +171,19 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     setPinDropped(true)
   }, [])
 
+  function handleHallSelect(hall: EdmontonHall | null) {
+    if (!hall) return
+    const full = getEdmontonHallById(hall.id)
+    if (!full) return
+    setLocationName(full.name)
+    setAddress(full.location)
+    setLat(full.latitude)
+    setLng(full.longitude)
+    setPinDropped(true)
+    setPlannerVenueWidth(full.widthFt)
+    setPlannerVenueLength(full.lengthFt)
+  }
+
   async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -90,11 +191,79 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     setCoverImageUrl(URL.createObjectURL(file))
   }
 
+  function updateDayRow(index: number, field: keyof DayRow, value: string) {
+    setDayRows((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], [field]: value }
+      return next
+    })
+  }
+
+  function addDayRow() {
+    setDayRows((prev) => [...prev, { date: '', start_time: '08:00', end_time: '15:00' }])
+  }
+
+  function removeDayRow(index: number) {
+    setDayRows((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function sortedDayRows(): DayRow[] {
+    return [...dayRows].sort((a, b) => {
+      if (!a.date) return 1
+      if (!b.date) return -1
+      return a.date.localeCompare(b.date)
+    })
+  }
+
   async function handleSave(publishStatus?: string) {
     if (!name.trim()) { toast.error('Event name is required'); return }
-    if (!startAt || !endAt) { toast.error('Start and end date/time are required'); return }
-    if (new Date(endAt) <= new Date(startAt)) { toast.error('End time must be after start time'); return }
     if (!pinDropped) { toast.error('Please drop a map pin for the venue location'); return }
+
+    const hasPaidBooths = categoryLimits.some((cl) => cl.pricePerBooth > 0)
+    if (publishStatus === 'published' && hasPaidBooths) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('payout_onboarding_status, payout_account_id')
+        .eq('id', userId)
+        .single()
+
+      const squareReady =
+        profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
+
+      if (!squareReady) {
+        toast.error('Connect Square before publishing an event with paid booth fees.')
+        return
+      }
+    }
+
+    let startAt: string
+    let endAt: string
+
+    if (scheduleType === 'multi') {
+      const filledRows = dayRows.filter((r) => r.date && r.start_time && r.end_time)
+      if (filledRows.length === 0) {
+        toast.error('Add at least one complete day with date, start time, and end time')
+        return
+      }
+      if (dayRows.some((r) => !r.date || !r.start_time || !r.end_time)) {
+        toast.error('All day rows must have a date, start time, and end time filled in')
+        return
+      }
+      const sorted = sortedDayRows()
+      startAt = new Date(`${sorted[0].date}T${sorted[0].start_time}`).toISOString()
+      endAt = new Date(`${sorted[sorted.length - 1].date}T${sorted[sorted.length - 1].end_time}`).toISOString()
+    } else {
+      if (!startDate || !startTime || !endDate || !endTime) {
+        toast.error('Start and end date/time are required')
+        return
+      }
+      if (new Date(`${endDate}T${endTime}`) <= new Date(`${startDate}T${startTime}`)) {
+        toast.error('End time must be after start time')
+        return
+      }
+      startAt = new Date(`${startDate}T${startTime}`).toISOString()
+      endAt = new Date(`${endDate}T${endTime}`).toISOString()
+    }
 
     setSaving(true)
     try {
@@ -119,12 +288,15 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         address: address.trim(),
         latitude: lat,
         longitude: lng,
-        start_at: new Date(startAt).toISOString(),
-        end_at: new Date(endAt).toISOString(),
+        start_at: startAt,
+        end_at: endAt,
         booking_mode: bookingMode,
         status: publishStatus ?? status,
         cover_image_url: finalCoverUrl || null,
         allow_mlm: allowMlm,
+        is_multi_day: scheduleType === 'multi',
+        booth_clearance_policy: boothClearancePolicy,
+        raffle_donation_requirement: raffleDonationRequirement.trim() || null,
       }
 
       let eventId = existing?.id
@@ -153,8 +325,25 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
             category_id: cl.categoryId,
             max_slots: cl.maxSlots,
             price_per_booth: cl.pricePerBooth,
+            table_length_ft: cl.tableLengthFt ?? null,
           }))
         )
+      }
+
+      if (eventId && scheduleType === 'multi') {
+        await supabase.from('event_days').delete().eq('event_id', eventId)
+        const sorted = sortedDayRows()
+        await supabase.from('event_days').insert(
+          sorted.map((row, i) => ({
+            event_id: eventId,
+            date: row.date,
+            start_time: row.start_time,
+            end_time: row.end_time,
+            sort_order: i,
+          }))
+        )
+      } else if (eventId) {
+        await supabase.from('event_days').delete().eq('event_id', eventId)
       }
 
       toast.success(
@@ -170,14 +359,30 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     }
   }
 
+  const multiDaySummary = (() => {
+    if (scheduleType !== 'multi') return null
+    const filled = dayRows.filter((r) => r.date)
+    if (filled.length === 0) return null
+    const sorted = [...filled].sort((a, b) => a.date.localeCompare(b.date))
+    if (sorted.length === 1) return { count: 1, range: formatShortDate(sorted[0].date) }
+    return {
+      count: sorted.length,
+      range: `${formatShortDate(sorted[0].date)} – ${formatShortDate(sorted[sorted.length - 1].date)}`,
+    }
+  })()
+
   return (
+    <APIProvider
+      apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
+      libraries={['places']}
+    >
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-8 items-start">
       {/* Left column */}
       <div className="space-y-6">
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Calendar className="h-4 w-4 text-amber-500" />
+              <Calendar className="h-4 w-4 text-forest" />
               Event Details
             </CardTitle>
           </CardHeader>
@@ -192,6 +397,34 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                 className="text-base"
               />
             </div>
+
+            {/* Schedule Type segmented control */}
+            <div className="space-y-1">
+              <Label>Schedule Type</Label>
+              <div className={cn(marketTheme.segmentTrack, 'p-1 gap-1')}>
+                <button
+                  type="button"
+                  onClick={() => setScheduleType('single')}
+                  className={cn(
+                    'px-4 py-2 rounded-lg text-sm font-medium min-h-11',
+                    scheduleType === 'single' ? marketTheme.segmentActive : marketTheme.segmentIdle
+                  )}
+                >
+                  Single Day
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleType('multi')}
+                  className={cn(
+                    'px-4 py-2 rounded-lg text-sm font-medium min-h-11',
+                    scheduleType === 'multi' ? marketTheme.segmentActive : marketTheme.segmentIdle
+                  )}
+                >
+                  Multi-Day
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-1">
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -202,35 +435,126 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                 rows={3}
                 maxLength={800}
               />
-              <p className="text-right text-xs text-gray-400">{description.length}/800</p>
+              <p className="text-right text-xs text-muted-foreground">{description.length}/800</p>
             </div>
+
+            {scheduleType === 'single' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="start-date">Start Date & Time *</Label>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                  <Select value={startTime} onValueChange={(v) => { const next = selectValueOrNull(v); if (next) setStartTime(next) }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="end-date">End Date & Time *</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                  <Select value={endTime} onValueChange={(v) => { const next = selectValueOrNull(v); if (next) setEndTime(next) }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIME_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Label>Market Days *</Label>
+                {dayRows.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={row.date}
+                      onChange={(e) => updateDayRow(i, 'date', e.target.value)}
+                      className="w-40 shrink-0"
+                    />
+                    <Select
+                      value={row.start_time}
+                      onValueChange={(v) => { const next = selectValueOrNull(v); if (next) updateDayRow(i, 'start_time', next) }}
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="Start time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-muted-foreground text-sm shrink-0">to</span>
+                    <Select
+                      value={row.end_time}
+                      onValueChange={(v) => { const next = selectValueOrNull(v); if (next) updateDayRow(i, 'end_time', next) }}
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue placeholder="End time" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIME_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {dayRows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeDayRow(i)}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                        aria-label="Remove day"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addDayRow}
+                  className="w-full rounded-lg border-2 border-dashed border-stone-200 py-2 text-sm text-muted-foreground hover:border-forest/50 hover:text-forest transition-colors"
+                >
+                  + Add Another Day
+                </button>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="start">Start Date & Time *</Label>
-                <Input
-                  id="start"
-                  type="datetime-local"
-                  value={startAt}
-                  onChange={(e) => setStartAt(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="end">End Date & Time *</Label>
-                <Input
-                  id="end"
-                  type="datetime-local"
-                  value={endAt}
-                  onChange={(e) => setEndAt(e.target.value)}
-                  min={startAt}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="booking-mode">Booking Mode</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="booking-mode">Booking Mode</Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p><strong>Instant Book</strong> — vendors are approved automatically the moment they apply. Best for open, low-curation markets.</p>
+                      <p className="mt-1"><strong>Juried Approval</strong> — you manually review and approve or reject each application. Best for curated markets where you control the vendor mix.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Select
                   value={bookingMode}
-                  onValueChange={(v) => v !== null && setBookingMode(v as 'instant' | 'juried')}
+                  onValueChange={(v) => { const next = selectValueOrNull(v); if (next === 'instant' || next === 'juried') setBookingMode(next) }}
                 >
                   <SelectTrigger id="booking-mode">
                     <SelectValue />
@@ -242,29 +566,26 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="event-status">Status</Label>
-                <Select
-                  value={status}
-                  onValueChange={(v) => v !== null && setStatus(v)}
-                >
-                  <SelectTrigger id="event-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="active">Active / Live</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Status</Label>
+                <span className={WIZARD_DRAFT_BADGE}>Draft</span>
+                <p className="text-xs text-muted-foreground">
+                  Publish from the setup wizard floor plan step when your layout is ready.
+                </p>
               </div>
             </div>
 
             <div className="flex items-center justify-between rounded-xl border p-4">
               <div>
-                <p className="text-sm font-medium text-gray-800">Allow Direct Sales / MLM Vendors</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground">Allow Direct Sales / MLM Vendors</p>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      When enabled, MLM brand categories (Scentsy, Norwex, doTERRA, The Super Patch Company, etc.) become available in the category selector. Each coordinator chooses whether to allow them at their event.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
                   When enabled, MLM brands (Scentsy, Norwex, doTERRA, etc.) appear as selectable categories.
                 </p>
               </div>
@@ -276,20 +597,71 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
             </div>
 
             <div className="space-y-1">
-              <Label>Cover Image</Label>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="clearance-policy-form">Clean up and/or tear down</Label>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Choose whether vendors must submit a photo when leaving, and whether venue tables and chairs stay in place or must be packed away.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Select
+                value={boothClearancePolicy}
+                onValueChange={(v) => { const next = selectValueOrNull(v); if (next) setBoothClearancePolicy(next as BoothClearancePolicy) }}
+              >
+                <SelectTrigger id="clearance-policy-form">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLEARANCE_POLICY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {CLEARANCE_POLICY_OPTIONS.find((o) => o.value === boothClearancePolicy)?.description}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="raffle-requirement">Raffle donation requirement (optional)</Label>
+              <Textarea
+                id="raffle-requirement"
+                placeholder="e.g. One handmade item valued at $25+ for the door prize table"
+                value={raffleDonationRequirement}
+                onChange={(e) => setRaffleDonationRequirement(e.target.value)}
+                rows={2}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown on the market-day operations grid while coordinators track raffle drop-offs.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Cover Image</Label>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                  <TooltipContent>Shown on the event listing and shopper discovery map. Recommended size: 1200 × 400px.</TooltipContent>
+                </Tooltip>
+              </div>
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-stone-200 p-4 hover:border-forest/40 transition">
                 {coverImageUrl ? (
                   <img src={coverImageUrl} alt="Cover" className="h-16 w-24 rounded-lg object-cover" />
                 ) : (
-                  <div className="h-16 w-24 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <Upload className="h-5 w-5 text-gray-400" />
+                  <div className="h-16 w-24 rounded-lg bg-canvas flex items-center justify-center">
+                    <Upload className="h-5 w-5 text-muted-foreground" />
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-sm font-medium text-foreground">
                     {coverImageUrl ? 'Change cover image' : 'Upload cover image'}
                   </p>
-                  <p className="text-xs text-gray-400">JPG, PNG, WebP · Recommended 1200×400</p>
+                  <p className="text-xs text-muted-foreground">JPG, PNG, WebP · Recommended 1200×400</p>
                 </div>
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverChange} />
               </label>
@@ -297,16 +669,32 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="categories" className="scroll-mt-24">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Settings2 className="h-4 w-4 text-amber-500" />
+            <CardTitle className="flex items-center gap-2 text-base font-heading">
+              <Settings2 className="h-4 w-4 text-forest" />
               Vendor Categories & Booth Caps
+              <Tooltip>
+                <TooltipTrigger type="button" className="ml-1"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  Add categories to control how many vendors of each type can attend and what they pay for a booth. Vendors will only see categories you add here when applying.
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <SmartPopulateBoothCaps
+              categories={sortedCategories}
+              allowMlm={allowMlm}
+              venueWidthFt={plannerVenueWidth}
+              venueLengthFt={plannerVenueLength}
+              onVenueWidthChange={setPlannerVenueWidth}
+              onVenueLengthChange={setPlannerVenueLength}
+              existingLimits={categoryLimits}
+              onPopulate={setCategoryLimits}
+            />
             <CategoryLimitEditor
-              categories={categories}
+              categories={sortedCategories}
               value={categoryLimits}
               onChange={setCategoryLimits}
               allowMlm={allowMlm}
@@ -320,41 +708,56 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <MapPin className="h-4 w-4 text-amber-500" />
+              <MapPin className="h-4 w-4 text-forest" />
               Venue Location
               {pinDropped && (
-                <Badge className="ml-auto bg-green-100 text-green-700 text-xs">Pin dropped</Badge>
+                <Badge className={`ml-auto ${marketStatusBadge.success} text-xs`}>Pin dropped</Badge>
               )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
+            <EdmontonHallSelector onHallSelect={handleHallSelect} />
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
                 <Label htmlFor="loc-name">Venue Name</Label>
-                <Input
-                  id="loc-name"
-                  placeholder="e.g. Riverside Park"
-                  value={locationName}
-                  onChange={(e) => setLocationName(e.target.value)}
-                />
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                  <TooltipContent>The display name shown to shoppers and vendors (e.g. "Riverside Park" or "Edmonton Expo Centre").</TooltipContent>
+                </Tooltip>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  placeholder="123 Main St, City"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
-              </div>
+              <Input
+                id="loc-name"
+                placeholder="e.g. Riverside Park"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+              />
             </div>
-            <p className="text-xs text-gray-500">Click anywhere on the map to drop your event pin.</p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="address">Address</Label>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                  <TooltipContent>Start typing to search. Selecting an address will automatically drop the map pin.</TooltipContent>
+                </Tooltip>
+              </div>
+              <AddressAutocomplete
+                value={address}
+                onChange={setAddress}
+                onPlaceSelect={(place) => {
+                  setAddress(place.address)
+                  setLat(place.lat)
+                  setLng(place.lng)
+                  setPinDropped(true)
+                  if (!locationName) setLocationName(place.name)
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Or click anywhere on the map to drop your event pin.</p>
             <div className="h-64 rounded-xl overflow-hidden border">
-              <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
                 <Map
                   mapId="event-form-map"
                   defaultCenter={{ lat, lng }}
-                  defaultZoom={pinDropped ? 13 : 4}
+                  defaultZoom={pinDropped ? 13 : 11}
                   gestureHandling="greedy"
                   disableDefaultUI
                   onClick={handleMapClick}
@@ -362,35 +765,54 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                 >
                   {pinDropped && (
                     <AdvancedMarker position={{ lat, lng }}>
-                      <div className="bg-amber-500 text-white rounded-full p-1.5 shadow-lg">
+                      <div className="bg-forest text-primary-foreground rounded-full p-1.5 shadow-[var(--shadow-market-lift)]">
                         <MapPin className="h-4 w-4" />
                       </div>
                     </AdvancedMarker>
                   )}
                 </Map>
-              </APIProvider>
             </div>
             {pinDropped && (
-              <p className="text-xs text-gray-500 font-mono">{lat.toFixed(5)}, {lng.toFixed(5)}</p>
+              <p className="text-xs text-muted-foreground font-mono">{lat.toFixed(5)}, {lng.toFixed(5)}</p>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-amber-100 bg-amber-50/50">
+        <Card className="border-harvest-200 bg-harvest-50/50">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Gavel className="h-4 w-4 text-amber-500" />
+              <Gavel className="h-4 w-4 text-harvest-600" />
               Publish
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="text-sm text-gray-600 space-y-1">
+            <div className="text-sm text-muted-foreground space-y-1">
               <div className="flex justify-between">
                 <span>Booking mode</span>
                 <Badge variant="outline" className="capitalize text-xs">
                   {bookingMode === 'instant' ? '⚡ Instant' : '🔍 Juried'}
                 </Badge>
               </div>
+              {scheduleType === 'single' ? (
+                startDate && (
+                  <div className="flex justify-between">
+                    <span>Date</span>
+                    <span className="font-medium">
+                      {formatShortDate(startDate)}
+                      {endDate && endDate !== startDate ? ` – ${formatShortDate(endDate)}` : ''}
+                    </span>
+                  </div>
+                )
+              ) : (
+                multiDaySummary && (
+                  <div className="flex justify-between">
+                    <span>Schedule</span>
+                    <span className="font-medium">
+                      {multiDaySummary.count} Market {multiDaySummary.count === 1 ? 'Day' : 'Days'} · {multiDaySummary.range}
+                    </span>
+                  </div>
+                )
+              )}
               <div className="flex justify-between">
                 <span>Category slots</span>
                 <span className="font-medium">{categoryLimits.length} categories</span>
@@ -405,7 +827,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
             <Separator />
             <div className="space-y-2">
               <Button
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                className={cn('w-full min-h-11', marketTheme.cta)}
                 onClick={() => handleSave('published')}
                 disabled={saving}
               >
@@ -424,6 +846,114 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
           </CardContent>
         </Card>
       </div>
+    </div>
+    </APIProvider>
+  )
+}
+
+// ── Address Autocomplete ──────────────────────────────────────────────────────
+interface PlaceResult {
+  address: string
+  lat: number
+  lng: number
+  name: string
+}
+
+function AddressAutocomplete({
+  value,
+  onChange,
+  onPlaceSelect,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onPlaceSelect: (place: PlaceResult) => void
+}) {
+  const apiLoaded = useApiIsLoaded()
+  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([])
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const serviceRef = useRef<google.maps.places.AutocompleteService | null>(null)
+
+  useEffect(() => {
+    if (apiLoaded && window.google?.maps?.places) {
+      serviceRef.current = new window.google.maps.places.AutocompleteService()
+    }
+  }, [apiLoaded])
+
+  useEffect(() => {
+    if (!serviceRef.current || !value || value.length < 3) {
+      setPredictions([])
+      return
+    }
+    serviceRef.current.getPlacePredictions(
+      { input: value, componentRestrictions: { country: ['ca', 'us'] } },
+      (results, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+          setPredictions(results)
+          setOpen(true)
+        } else {
+          setPredictions([])
+        }
+      }
+    )
+  }, [value])
+
+  function selectPrediction(prediction: google.maps.places.AutocompletePrediction) {
+    setOpen(false)
+    setPredictions([])
+    onChange(prediction.description)
+
+    const mapDiv = document.createElement('div')
+    const placesService = new window.google.maps.places.PlacesService(mapDiv)
+    placesService.getDetails(
+      { placeId: prediction.place_id, fields: ['formatted_address', 'geometry', 'name'] },
+      (place, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          onPlaceSelect({
+            address: place.formatted_address ?? prediction.description,
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+            name: place.name ?? '',
+          })
+        }
+      }
+    )
+  }
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        id="address"
+        placeholder="Start typing an address…"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete="off"
+        className="text-foreground"
+      />
+      {open && predictions.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full rounded-lg border-2 border-stone-200 bg-card shadow-[var(--shadow-market)] overflow-hidden">
+          {predictions.map((p) => (
+            <li
+              key={p.place_id}
+              className="cursor-pointer px-4 py-2.5 text-sm text-foreground hover:bg-sage-50 hover:text-forest border-b last:border-0"
+              onMouseDown={(e) => { e.preventDefault(); selectPrediction(p) }}
+            >
+              <span className="font-medium">{p.structured_formatting.main_text}</span>
+              <span className="text-muted-foreground ml-1">{p.structured_formatting.secondary_text}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

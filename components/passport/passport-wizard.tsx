@@ -11,8 +11,11 @@ import { Progress } from '@/components/ui/progress'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Loader2, Upload, ArrowRight, ArrowLeft, CheckCircle } from 'lucide-react'
+import { Loader2, Upload, ArrowRight, ArrowLeft, CheckCircle, HelpCircle } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Category, VendorPassport } from '@/types/database'
+import { sortCategoriesByName } from '@/lib/categories'
+import { normalizeUrl } from '@/lib/vendor/normalize-url'
 
 interface PassportWizardProps {
   categories: Category[]
@@ -23,6 +26,7 @@ interface PassportWizardProps {
 const STEPS = ['Business Info', 'Category', 'Tax & Compliance', 'Photos']
 
 export function PassportWizard({ categories, existing, userId }: PassportWizardProps) {
+  const sortedCategories = sortCategoriesByName(categories)
   const router = useRouter()
   const supabase = createClient()
 
@@ -37,6 +41,9 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
   const [logoPreview, setLogoPreview] = useState(existing?.logo_url ?? '')
   const [itemFiles, setItemFiles] = useState<File[]>([])
   const [itemPreviews, setItemPreviews] = useState<string[]>(existing?.item_image_urls ?? [])
+  const [websiteUrl, setWebsiteUrl] = useState(existing?.website_url ?? '')
+  const [shopUrl, setShopUrl] = useState(existing?.shop_url ?? '')
+  const [instagramUrl, setInstagramUrl] = useState(existing?.instagram_url ?? '')
 
   async function uploadFile(file: File, bucket: string, path: string): Promise<string | null> {
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
@@ -86,6 +93,9 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
         logo_url: logoUrl,
         item_image_urls: uploadedItemUrls.slice(0, 6),
         tax_id_encrypted: taxId ? btoa(taxId) : existing?.tax_id_encrypted ?? null,
+        website_url: normalizeUrl(websiteUrl),
+        shop_url: normalizeUrl(shopUrl),
+        instagram_url: normalizeUrl(instagramUrl),
       }
 
       if (existing) {
@@ -149,7 +159,13 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
           {step === 0 && (
             <>
               <div className="space-y-1">
-                <Label htmlFor="biz-name">Business Name *</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="biz-name">Business Name *</Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">Your official business or brand name as it will appear to shoppers and coordinators.</TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="biz-name"
                   placeholder="e.g. Sweet Petal Candles"
@@ -159,7 +175,13 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="bio">Business Bio</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="bio">Business Bio</Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">Tell shoppers and coordinators what makes your business unique. Include what you sell, your story, and what sets you apart.</TooltipContent>
+                  </Tooltip>
+                </div>
                 <Textarea
                   id="bio"
                   placeholder="Tell shoppers what makes your products unique…"
@@ -170,19 +192,57 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
                 />
                 <p className="text-right text-xs text-gray-400">{bio.length}/500</p>
               </div>
+              <div className="space-y-3 border-t pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Online presence (optional — shown to shoppers)
+                </p>
+                <div className="space-y-1">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    placeholder="https://yourbusiness.com"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="shop">Online shop</Label>
+                  <Input
+                    id="shop"
+                    placeholder="Etsy, Shopify, etc."
+                    value={shopUrl}
+                    onChange={(e) => setShopUrl(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="instagram">Instagram</Label>
+                  <Input
+                    id="instagram"
+                    placeholder="https://instagram.com/yourbrand"
+                    value={instagramUrl}
+                    onChange={(e) => setInstagramUrl(e.target.value)}
+                  />
+                </div>
+              </div>
             </>
           )}
 
           {/* Step 1: Category */}
           {step === 1 && (
             <div className="space-y-1">
-              <Label htmlFor="category">Primary Category *</Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="category">Primary Category *</Label>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">The main type of products you sell. This helps coordinators match you to the right events.</TooltipContent>
+                </Tooltip>
+              </div>
                 <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? '')}>
                 <SelectTrigger id="category">
                   <SelectValue placeholder="Select a category…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
+                  {sortedCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
                     </SelectItem>
@@ -199,7 +259,13 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="tax">EIN / Tax ID</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="tax">EIN / Tax ID</Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">Your CRA Business Number (Canada) or EIN (US). This is encrypted and only visible to you. Required for payouts.</TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="tax"
                   placeholder="XX-XXXXXXX"
@@ -224,7 +290,13 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
           {step === 3 && (
             <div className="space-y-4">
               <div className="space-y-1">
-                <Label>Business Logo</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Business Logo</Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">Your brand logo shown on your vendor profile and booth roster. Square images work best.</TooltipContent>
+                  </Tooltip>
+                </div>
                 <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
                   {logoPreview ? (
                     <img src={logoPreview} alt="Logo preview" className="h-24 w-24 rounded-full object-cover" />
@@ -242,7 +314,13 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
               </div>
 
               <div className="space-y-1">
-                <Label>Product Photos (up to 6)</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Product Photos (up to 6)</Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">Photos of your actual products. Add up to 6 images to showcase what you sell at markets.</TooltipContent>
+                  </Tooltip>
+                </div>
                 <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
                   <Upload className="h-8 w-8 text-gray-400" />
                   <span className="text-xs text-gray-500">Click to upload product photos</span>

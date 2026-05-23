@@ -8,7 +8,8 @@ import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
 import type { Wallet, WalletTransaction } from '@/types/database'
-import { Wallet as WalletIcon, Plus, ArrowDownLeft, ArrowUpRight, Coins, Trophy, RefreshCcw, Loader2 } from 'lucide-react'
+import { Wallet as WalletIcon, Plus, ArrowDownLeft, ArrowUpRight, Coins, Trophy, RefreshCcw, Loader2, HelpCircle } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import Script from 'next/script'
 import { format } from 'date-fns'
 
@@ -28,14 +29,22 @@ const TX_ICONS: Record<string, React.ReactNode> = {
   refund: <RefreshCcw className="h-4 w-4 text-blue-500" />,
 }
 
+interface SquareCardInstance {
+  attach: (element: HTMLElement) => Promise<void>
+  tokenize: () => Promise<{
+    status: string
+    token?: string
+    errors?: { message: string }[]
+  }>
+}
+
 export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
   const [squareLoaded, setSquareLoaded] = useState(false)
   const [depositAmount, setDepositAmount] = useState(1000)
   const [depositing, setDepositing] = useState(false)
   const [showCard, setShowCard] = useState(false)
   const cardContainerRef = useRef<HTMLDivElement>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [card, setCard] = useState<any>(null)
+  const [card, setCard] = useState<SquareCardInstance | null>(null)
 
   useEffect(() => {
     if (showCard && squareLoaded && cardContainerRef.current) {
@@ -111,7 +120,13 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
               <WalletIcon className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Available Balance</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm text-gray-500">Available Balance</p>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">Your Popup Hub wallet balance. Used to pay quarter auction drops. Top up with a credit or debit card.</TooltipContent>
+                </Tooltip>
+              </div>
               <p className="text-3xl font-bold text-gray-900">{formatCents(balance)}</p>
             </div>
           </div>
@@ -136,6 +151,10 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
           <CardTitle className="flex items-center gap-2 text-base">
             <Plus className="h-4 w-4 text-green-500" />
             Add Funds
+            <Tooltip>
+              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+              <TooltipContent className="max-w-xs">Add funds to your wallet. Minimum $5. Funds are available immediately.</TooltipContent>
+            </Tooltip>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -196,7 +215,13 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
       {/* Transaction history */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Transaction History</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            Transaction History
+            <Tooltip>
+              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+              <TooltipContent className="max-w-xs">A record of all deposits, withdrawals, auction drops, and winnings.</TooltipContent>
+            </Tooltip>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (

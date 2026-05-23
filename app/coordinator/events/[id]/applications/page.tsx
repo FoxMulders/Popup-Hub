@@ -43,15 +43,15 @@ export default async function ApplicationsPage({ params }: Props) {
     <div className="mx-auto max-w-[1500px] px-6 py-10 xl:px-10">
       <div className="mb-8 space-y-2">
         <Link href={`/coordinator/events/${id}`}>
-          <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-gray-500 mb-2">
+          <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground mb-2">
             <ArrowLeft className="h-4 w-4" />
             Back to Event
           </Button>
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">{event.name}</h1>
-            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+            <h1 className="font-heading text-4xl font-semibold text-foreground">{event.name}</h1>
+            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
                 {format(new Date(event.start_at), 'EEE, MMM d, yyyy')}

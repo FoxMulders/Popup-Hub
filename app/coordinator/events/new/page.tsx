@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { EventForm } from '@/components/coordinator/event-form'
+import { MarketSetupWizard } from '@/components/coordinator/market-setup-wizard'
 import type { Category } from '@/types/database'
 
 export default async function NewEventPage() {
@@ -11,15 +11,20 @@ export default async function NewEventPage() {
   const { data: categories } = await supabase
     .from('categories')
     .select('*')
-    .order('sort_order')
+    .order('name')
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Create New Event</h1>
-        <p className="mt-1 text-gray-500">Drop a pin, set category slots, and deploy your market.</p>
+        <h1 className="font-heading text-3xl font-semibold text-foreground">Create New Event</h1>
+        <p className="mt-1 text-muted-foreground">
+          Four-step wizard — core details, venue, capacity, then floor plan canvas.
+        </p>
       </div>
-      <EventForm categories={(categories as Category[]) ?? []} coordinatorId={user.id} />
+      <MarketSetupWizard
+        categories={(categories as Category[]) ?? []}
+        coordinatorId={user.id}
+      />
     </div>
   )
 }

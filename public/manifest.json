@@ -1,0 +1,17 @@
+{
+  "name": "Popup Hub",
+  "short_name": "Popup Hub",
+  "description": "Discover local popup markets, vendors, and events near you.",
+  "start_url": "/discover",
+  "display": "standalone",
+  "background_color": "#faf8f5",
+  "theme_color": "#2d5016",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

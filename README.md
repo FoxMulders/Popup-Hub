@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Popup Hub
 
-## Getting Started
+Local market marketplace for coordinators, vendors, and shoppers — booth applications, Square payments, market-day operations, and floor-plan layout.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 20+
+- [Supabase](https://supabase.com) project linked via `.env.local`
+- [Square](https://developer.squareup.com) sandbox credentials for paid booth testing
+
+## Environment variables
+
+Copy `.env.local.example` or pull from Vercel. Required keys:
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server/webhook jobs |
+| `NEXT_PUBLIC_APP_URL` | e.g. `http://localhost:3000` |
+| `NEXT_PUBLIC_SQUARE_APP_ID` | Square Web Payments |
+| `NEXT_PUBLIC_SQUARE_LOCATION_ID` | Square location |
+| `SQUARE_ACCESS_TOKEN` | Server-side Square API |
+| `SQUARE_WEBHOOK_SIGNATURE_KEY` | Webhook HMAC validation |
+
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Guests see a public landing; coordinators and vendors route to their dashboards after sign-in.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Public pages (no login)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| URL | Purpose |
+|-----|---------|
+| `/` | Landing for guests |
+| `/discover` | Map + list of published markets |
+| `/events/[id]` | Shareable market detail + vendor lineup |
+| `/coordinators/[id]` | Organizer public profile |
 
-## Learn More
+Apply migration `022_public_vendor_roster.sql` so anonymous users can read approved vendor rosters on published events.
 
-To learn more about Next.js, take a look at the following resources:
+Database migrations:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run db:push
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Layout math smoke tests (optional):
 
-## Deploy on Vercel
+```bash
+npm run qa:layout
+npm run qa:regression
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Coordinator runbook — create & publish a market
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Sign in** as a coordinator (`/login` → signup with role coordinator).
+2. **Connect Square** at `/coordinator/square-connect` if any category has a paid booth price.
+3. **Create event** at `/coordinator/events/new`:
+   - **Step 1** — name, schedule, booking mode (juried vs instant), policies.
+   - **Step 2** — venue template, map pin, dimensions.
+   - **Step 3** — category caps, table length, MLM tier cap if enabled.
+   - **Step 4** — floor plan: use **Save blank floor plan** or **Auto-place vendors & save**, then **Save floor plan & deploy**.
+4. **Event hub** (`/coordinator/events/[id]`) — readiness checklist, approve applications, send announcements.
+5. **Market day** — `/coordinator/events/[id]/operations` (live grid, FCFS, clearance) and `/coordinator/events/[id]/checkin` (QR codes).
+6. **Print** — roster and layout from event hub or `/coordinator/events/[id]/print`.
+7. **Cancel** — use cancel dialog on event hub; retry failed refunds from the exceptions panel.
+
+See [docs/COORDINATOR_QA.md](docs/COORDINATOR_QA.md) for a manual E2E checklist.
+
+## Layout work (on hold)
+
+Interactive SVG canvas polish, venue photo tuning, and live QA desk wiring are deferred. Step 4 only requires a saved non-overlapping layout (blank shell or auto-populate is fine).
+
+## Deploy
+
+Production builds use `output: 'standalone'`. Deploy on [Vercel](https://vercel.com) with the env vars above and Square webhook URL `https://YOUR_DOMAIN/api/square/webhook`.

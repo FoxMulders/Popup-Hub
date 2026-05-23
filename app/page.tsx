@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getDefaultDashboard } from '@/lib/portals/active-portal'
+import { countCoordinatorApprovals } from '@/lib/vendor/access'
 
 export default async function RootPage() {
   const supabase = await createClient()
@@ -8,7 +10,14 @@ export default async function RootPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/discover')
+    const { GuestNav } = await import('@/components/nav/guest-nav')
+    const { PublicLanding } = await import('@/components/public/public-landing')
+    return (
+      <div className="flex min-h-screen flex-col bg-cream">
+        <GuestNav />
+        <PublicLanding />
+      </div>
+    )
   }
 
   const { data: profile } = await supabase
@@ -17,7 +26,6 @@ export default async function RootPage() {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role === 'vendor') redirect('/vendor/dashboard')
-  if (profile?.role === 'coordinator') redirect('/coordinator/dashboard')
-  redirect('/discover')
+  const approvalCount = await countCoordinatorApprovals(supabase, user.id)
+  redirect(getDefaultDashboard(profile?.role ?? 'shopper', approvalCount))
 }

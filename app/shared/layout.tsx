@@ -16,7 +16,7 @@ export default async function SharedLayout({ children }: { children: React.React
   if (!profile) redirect('/login')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="market-page min-h-screen">
       <AppNav profile={profile as Profile} />
       <main>{children}</main>
     </div>

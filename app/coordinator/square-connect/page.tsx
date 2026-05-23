@@ -2,8 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, ExternalLink, DollarSign } from 'lucide-react'
+import { CheckCircle, DollarSign } from 'lucide-react'
 import Link from 'next/link'
+import { ConnectSquareButton } from './connect-button'
 
 export default async function SquareConnectPage() {
   const supabase = await createClient()
@@ -27,18 +28,18 @@ export default async function SquareConnectPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-8">
-      <h1 className="mb-2 text-2xl font-bold text-gray-900">Connect Square Account</h1>
-      <p className="mb-6 text-gray-500">Link your Square seller account to collect booth payments.</p>
+      <h1 className="mb-2 font-heading text-2xl font-semibold text-foreground">Connect Square Account</h1>
+      <p className="mb-6 text-muted-foreground">Link your Square seller account to collect booth payments.</p>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <DollarSign className="h-5 w-5 text-green-500" />
+            <DollarSign className="h-5 w-5 text-sage-600" />
             Square Payments
           </CardTitle>
           <CardDescription>
-            Vendors pay booth fees through Square. The platform fee is automatically split.
-            You receive the rest directly in your Square account.
+            Vendors pay booth fees through Square after you approve their application.
+            Popup Hub retains a platform fee of 3% + $1.00 per paid booth; you receive the rest directly in your Square account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -52,22 +53,17 @@ export default async function SquareConnectPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-lg bg-amber-50 p-3">
-                <p className="text-sm text-amber-700">No Square account connected yet.</p>
+              <div className="rounded-lg bg-harvest-50 border border-harvest-200 p-3">
+                <p className="text-sm text-harvest-800">No Square account connected yet.</p>
               </div>
-              <a href={oauthUrl} className="block">
-                <Button className="w-full bg-[#006AFF] hover:bg-[#0057CC] text-white">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Connect with Square
-                </Button>
-              </a>
+              <ConnectSquareButton oauthUrl={oauthUrl} />
             </>
           )}
 
-          <div className="space-y-2 text-xs text-gray-500">
+          <div className="space-y-2 text-xs text-muted-foreground">
             {['Direct deposits to your Square bank account', 'Platform fee automatically split on each payment', 'Full transaction history in your Square dashboard'].map((item) => (
               <div key={item} className="flex items-center gap-2">
-                <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
+                <CheckCircle className="h-3 w-3 text-sage-600 flex-shrink-0" />
                 {item}
               </div>
             ))}

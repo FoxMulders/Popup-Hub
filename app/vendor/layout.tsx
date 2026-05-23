@@ -1,25 +1,34 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { AppNav } from '@/components/nav/app-nav'
+import { VendorShell } from '@/components/vendor/vendor-shell'
+import { countCoordinatorApprovals } from '@/lib/vendor/access'
 import type { Profile } from '@/types/database'
 
 export default async function VendorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login?redirectTo=/vendor/dashboard')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile) redirect('/login')
-  if (profile.role !== 'vendor') redirect(`/${profile.role === 'coordinator' ? 'coordinator' : 'discover'}`)
+
+  if (profile.role === 'coordinator') redirect('/coordinator/dashboard')
+
+  // Shoppers may only reach /vendor/activate (middleware blocks all other /vendor/* paths).
+  if (profile.role === 'shopper') {
+    return <div className="min-h-screen bg-cream">{children}</div>
+  }
+
+  const approvalCount = await countCoordinatorApprovals(supabase, user.id)
+  if (approvalCount === 0) {
+    redirect('/discover?vendor=locked')
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AppNav profile={profile as Profile} />
-      <main>{children}</main>
-    </div>
+    <VendorShell profile={profile as Profile} approvalCount={approvalCount}>
+      {children}
+    </VendorShell>
   )
 }

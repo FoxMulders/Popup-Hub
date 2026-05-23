@@ -6,17 +6,9 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { format } from 'date-fns'
 import { Store, Calendar, CheckCircle, Clock, AlertTriangle, ArrowRight } from 'lucide-react'
+import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
 import type { BoothApplication } from '@/types/database'
-
-const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
-  pending: { label: 'Pending Review', class: 'bg-yellow-100 text-yellow-700' },
-  approved: { label: 'Approved', class: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Declined', class: 'bg-red-100 text-red-600' },
-  waitlisted: { label: 'Waitlisted', class: 'bg-blue-100 text-blue-700' },
-  cancelled: { label: 'Cancelled', class: 'bg-gray-100 text-gray-500' },
-}
 
 async function ApplicationsSection({ userId }: { userId: string }) {
   const supabase = await createClient()
@@ -24,63 +16,36 @@ async function ApplicationsSection({ userId }: { userId: string }) {
     .from('booth_applications')
     .select(`
       *,
-      event:events(name, location_name, start_at, end_at, status),
+      event:events(
+        id,
+        name, location_name, start_at, end_at, status,
+        cancellation_reason, cancellation_reason_notes
+      ),
       category:categories(name)
     `)
     .eq('vendor_id', userId)
     .order('applied_at', { ascending: false })
     .limit(10)
 
-  if (!applications || applications.length === 0) {
-    return (
-      <div className="rounded-2xl border bg-white py-12 text-center">
-        <Calendar className="mx-auto mb-3 h-8 w-8 text-gray-300" />
-        <p className="text-gray-500 text-sm">No applications yet.</p>
-        <Link href="/vendor/events">
-          <Button size="sm" className="mt-4 bg-amber-500 hover:bg-amber-600 text-white">
-            Browse Open Markets
-          </Button>
-        </Link>
-      </div>
-    )
+  const eventIds = [...new Set((applications ?? []).map((a) => a.event_id))]
+  const categoryPrices: Record<string, number> = {}
+
+  if (eventIds.length > 0) {
+    const { data: limits } = await supabase
+      .from('event_category_limits')
+      .select('event_id, category_id, price_per_booth')
+      .in('event_id', eventIds)
+
+    for (const limit of limits ?? []) {
+      categoryPrices[`${limit.event_id}:${limit.category_id}`] = limit.price_per_booth
+    }
   }
 
   return (
-    <div className="space-y-3">
-      {(applications as BoothApplication[]).map((app) => {
-        const config = STATUS_CONFIG[app.status]
-        return (
-          <div
-            key={app.id}
-            className="flex items-center justify-between rounded-xl border bg-white p-4"
-          >
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-gray-900 text-sm">
-                {app.event?.name}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-gray-500">
-                  {app.event?.start_at
-                    ? format(new Date(app.event.start_at), 'MMM d, yyyy')
-                    : ''}
-                </span>
-                <Badge className={`text-[10px] ${config.class}`}>{config.label}</Badge>
-                {app.category && (
-                  <Badge variant="outline" className="text-[10px]">
-                    {app.category.name}
-                  </Badge>
-                )}
-              </div>
-            </div>
-            {app.waitlist_position && (
-              <span className="text-xs text-blue-600 font-medium ml-2">
-                #{app.waitlist_position} in queue
-              </span>
-            )}
-          </div>
-        )
-      })}
-    </div>
+    <VendorApplicationsList
+      applications={(applications ?? []) as BoothApplication[]}
+      categoryPrices={categoryPrices}
+    />
   )
 }
 

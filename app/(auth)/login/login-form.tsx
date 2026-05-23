@@ -45,12 +45,17 @@ export default function LoginForm() {
         .eq('id', user.id)
         .single()
 
+      const { count } = await supabase
+        .from('coordinator_vendor_approvals')
+        .select('id', { count: 'exact', head: true })
+        .eq('vendor_user_id', user.id)
+
       const dashboard =
-        profile?.role === 'vendor'
-          ? '/vendor/dashboard'
-          : profile?.role === 'coordinator'
+        profile?.role === 'coordinator'
           ? '/coordinator/dashboard'
-          : redirectTo
+          : (count ?? 0) > 0 && profile?.role === 'vendor'
+            ? '/vendor/dashboard'
+            : redirectTo
 
       router.push(dashboard)
     }
@@ -59,7 +64,7 @@ export default function LoginForm() {
   async function handleGoogleSignIn() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/api/auth/callback` },
     })
   }
 
@@ -67,12 +72,12 @@ export default function LoginForm() {
     <div className="w-full max-w-md space-y-6">
       <div className="text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 shadow-md">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest shadow-[var(--shadow-market-lift)]">
             <MapPin className="h-6 w-6 text-white" />
           </div>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Welcome back</h1>
-        <p className="text-gray-500 mt-1">Sign in to your Popup Hub account</p>
+        <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">Welcome back</h1>
+        <p className="text-muted-foreground mt-1">Sign in to your Popup Hub account</p>
       </div>
 
       <Card className="shadow-sm">
@@ -125,7 +130,7 @@ export default function LoginForm() {
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white h-10" disabled={loading}>
+            <Button type="submit" className="w-full h-10" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
             </Button>
           </form>
@@ -133,7 +138,7 @@ export default function LoginForm() {
         <CardFooter className="flex justify-center border-t pt-4">
           <p className="text-sm text-gray-500">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-semibold text-amber-600 hover:underline">
+            <Link href="/signup" className="font-semibold text-forest hover:underline">
               Sign up free
             </Link>
           </p>

@@ -16,15 +16,19 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Bell, LogOut, Menu, MapPin } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { Profile } from '@/types/database'
+import { PortalSwitcherMenuItems } from '@/components/nav/portal-switcher'
 import { useNotificationCount } from '@/hooks/use-notification-count'
 
 interface AppNavProps {
   profile: Profile
+  vendorPortal?: boolean
+  approvalCount?: number
 }
 
 const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
   shopper: [
-    { href: '/shopper/dashboard', label: 'Discover Markets' },
+    { href: '/discover', label: 'Discover Markets' },
+    { href: '/favorites', label: 'Favorites' },
     { href: '/wallet', label: 'Wallet' },
   ],
   vendor: [
@@ -41,12 +45,14 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
   ],
 }
 
-export function AppNav({ profile }: AppNavProps) {
+export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: AppNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
   const unreadCount = useNotificationCount(profile.id)
-  const links = NAV_LINKS[profile.role] ?? []
+  const navRole = vendorPortal ? 'vendor' : profile.role
+  const links = NAV_LINKS[navRole] ?? []
+  const homeHref = vendorPortal ? '/vendor/dashboard' : profile.role === 'coordinator' ? '/coordinator/dashboard' : '/discover'
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -63,15 +69,17 @@ export function AppNav({ profile }: AppNavProps) {
       .slice(0, 2) || '?'
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur-md shadow-sm">
+    <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
       <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-3 xl:px-10">
         {/* Logo */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 shadow-sm">
-              <MapPin className="h-5 w-5 text-white" />
+          <Link href={homeHref} className="flex items-center gap-2.5 shrink-0">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest shadow-[var(--shadow-market-lift)]">
+              <MapPin className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight">Popup Hub</span>
+            <span className="font-heading text-xl font-semibold text-foreground tracking-tight">
+              Popup Hub
+            </span>
           </Link>
 
           {/* Desktop nav links */}
@@ -111,7 +119,7 @@ export function AppNav({ profile }: AppNavProps) {
                 <button className="h-9 w-9 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={profile.avatar_url ?? undefined} />
-                    <AvatarFallback className="bg-amber-100 text-amber-700 text-xs font-bold">
+                    <AvatarFallback className="bg-sage-100 text-forest text-xs font-bold">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
@@ -136,6 +144,12 @@ export function AppNav({ profile }: AppNavProps) {
                 >
                   Wallet
                 </DropdownMenuItem>
+                {vendorPortal && (
+                  <PortalSwitcherMenuItems
+                    hasVendorAccess={approvalCount > 0}
+                    currentPortal="vendor"
+                  />
+                )}
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -151,7 +165,7 @@ export function AppNav({ profile }: AppNavProps) {
           <Sheet>
             <SheetTrigger
               render={
-                <button className="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg hover:bg-gray-100">
+                <button className="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg hover:bg-canvas">
                   <Menu className="h-5 w-5" />
                 </button>
               }

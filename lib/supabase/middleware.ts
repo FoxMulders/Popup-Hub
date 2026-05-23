@@ -1,5 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getDefaultDashboard } from '@/lib/portals/active-portal'
+import {
+  isShopperBlockedPath,
+  isShopperRole,
+  SHOPPER_BLOCKED_REDIRECT,
+} from '@/lib/auth/rbac'
+import type { Role } from '@/types/database'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -41,9 +48,14 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicPath =
     publicPaths.includes(pathname) ||
+    pathname.startsWith('/discover') ||
     pathname.startsWith('/events/') ||
+    pathname.startsWith('/auctions/') ||
+    pathname.startsWith('/coordinators/') ||
+    pathname.startsWith('/checkin/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/square/webhook') ||
+    pathname.startsWith('/api/reminders/') ||
     pathname.startsWith('/favicon')
 
   if (!user && !isPublicPath) {
@@ -53,29 +65,36 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  let profileRole: Role | null = null
+
+  if (user) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    const role = profile?.role ?? 'shopper'
+    profileRole = (profile?.role as Role | undefined) ?? 'shopper'
+
+    if (isShopperRole(profileRole) && isShopperBlockedPath(pathname)) {
+      const url = request.nextUrl.clone()
+      url.pathname = SHOPPER_BLOCKED_REDIRECT
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+  }
+
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    const role = profileRole ?? 'shopper'
+    const { count } = await supabase
+      .from('coordinator_vendor_approvals')
+      .select('id', { count: 'exact', head: true })
+      .eq('vendor_user_id', user.id)
+
     const url = request.nextUrl.clone()
-    url.pathname = getRoleDashboard(role)
+    url.pathname = getDefaultDashboard(role, count ?? 0)
     return NextResponse.redirect(url)
   }
 
   return supabaseResponse
-}
-
-function getRoleDashboard(role: string): string {
-  switch (role) {
-    case 'vendor':
-      return '/vendor/dashboard'
-    case 'coordinator':
-      return '/coordinator/dashboard'
-    default:
-      return '/shopper/dashboard'
-  }
 }

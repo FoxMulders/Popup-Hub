@@ -1,30 +1,40 @@
-import { paymentsApi } from './client'
 import { randomUUID } from 'crypto'
+import { createSellerSquareClient } from './oauth'
+import { paymentsApi } from './client'
 
 interface CreateBoothPaymentParams {
   sourceId: string
   amountCents: number
-  vendorId: string
   eventId: string
   applicationId: string
-  coordinatorMerchantId: string | null
-  platformFeeBps: number
+  coordinatorAccessToken: string
+  platformFeeCents: number
 }
 
 export async function createBoothPayment(params: CreateBoothPaymentParams) {
-  const { sourceId, amountCents, vendorId, eventId, applicationId, platformFeeBps } = params
-  const appFeeAmount = Math.round((amountCents * platformFeeBps) / 10000)
+  const {
+    sourceId,
+    amountCents,
+    eventId,
+    applicationId,
+    coordinatorAccessToken,
+    platformFeeCents,
+  } = params
+
+  const sellerClient = createSellerSquareClient(coordinatorAccessToken)
+  const appFeeAmount = Math.min(Math.max(platformFeeCents, 0), amountCents)
 
   try {
-    const response = await paymentsApi.create({
+    const response = await sellerClient.payments.create({
       sourceId,
       idempotencyKey: randomUUID(),
       amountMoney: { amount: BigInt(amountCents), currency: 'USD' },
-      appFeeMoney: appFeeAmount > 0
-        ? { amount: BigInt(appFeeAmount), currency: 'USD' }
-        : undefined,
+      appFeeMoney:
+        appFeeAmount > 0
+          ? { amount: BigInt(appFeeAmount), currency: 'USD' }
+          : undefined,
       note: `Popup Hub booth booking — event ${eventId}`,
-      referenceId: applicationId,
+      referenceId: applicationId.slice(0, 40),
     })
 
     return { paymentId: response.payment?.id ?? null, error: null }

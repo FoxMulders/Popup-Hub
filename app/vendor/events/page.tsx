@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EventCard } from '@/components/events/event-card'
 import { ApplyButton } from '@/components/events/apply-button'
+import { getApprovedCoordinatorIds } from '@/lib/vendor/access'
 import type { Event } from '@/types/database'
 import { redirect } from 'next/navigation'
 import { AlertTriangle } from 'lucide-react'
@@ -12,11 +13,14 @@ import { Button } from '@/components/ui/button'
 async function EventsWithApplications({ userId }: { userId: string }) {
   const supabase = await createClient()
 
+  const approvedCoordinatorIds = await getApprovedCoordinatorIds(supabase, userId)
+
   const [{ data: events }, { data: myApplications }, { data: passport }] = await Promise.all([
     supabase
       .from('events')
       .select(`
         *,
+        coordinator:profiles(id, full_name),
         category_limits:event_category_limits(
           *,
           category:categories(id, name)
@@ -52,10 +56,31 @@ async function EventsWithApplications({ userId }: { userId: string }) {
     )
   }
 
-  if (!events || events.length === 0) {
+  if (approvedCoordinatorIds.length === 0) {
+    return (
+      <div className="rounded-2xl border bg-white p-6 text-center">
+        <h3 className="font-semibold text-gray-900">No organizer approvals yet</h3>
+        <p className="mt-1 text-sm text-gray-600">
+          Request vendor access from a market organizer before you can apply for booths.
+        </p>
+        <Link href="/discover">
+          <Button className="mt-4" size="sm" variant="outline">
+            Browse markets
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
+  const approvedSet = new Set(approvedCoordinatorIds)
+  const approvedEvents = (events ?? []).filter((event) =>
+    approvedSet.has(event.coordinator_id)
+  )
+
+  if (approvedEvents.length === 0) {
     return (
       <div className="rounded-2xl border bg-white py-16 text-center">
-        <p className="text-gray-500">No open events accepting vendors right now.</p>
+        <p className="text-gray-500">No open events from your approved organizers right now.</p>
       </div>
     )
   }
@@ -64,19 +89,24 @@ async function EventsWithApplications({ userId }: { userId: string }) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {(events as Event[]).map((event) => {
+      {(approvedEvents as Event[]).map((event) => {
+        const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
         const alreadyApplied = appliedEventIds.has(event.id)
         return (
           <EventCard
             key={event.id}
             event={event}
             href={`/vendor/events/${event.id}`}
+            showBookingMode
             actions={
               <ApplyButton
                 event={event}
                 passportId={passport.id}
                 userId={userId}
                 alreadyApplied={alreadyApplied}
+                hasCoordinatorApproval
+                coordinatorId={event.coordinator_id}
+                coordinatorName={coordinator?.full_name ?? 'Organizer'}
               />
             }
           />
@@ -88,19 +118,25 @@ async function EventsWithApplications({ userId }: { userId: string }) {
 
 export default async function VendorEventsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Browse Open Markets</h1>
-        <p className="mt-1 text-gray-500">Find events accepting vendor applications</p>
+        <p className="mt-1 text-gray-500">
+          Events from organizers who approved you to sell
+        </p>
       </div>
       <Suspense
         fallback={
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-56 rounded-2xl" />)}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-56 rounded-2xl" />
+            ))}
           </div>
         }
       >

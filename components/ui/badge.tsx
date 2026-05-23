@@ -13,7 +13,11 @@ const badgeVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
+          "bg-terracotta-50 text-terracotta-800 border-terracotta-200 border focus-visible:ring-destructive/20 [a]:hover:bg-terracotta-100",
+        success:
+          "bg-sage-100 text-sage-800 border border-sage-200 [a]:hover:bg-sage-200/80",
+        warning:
+          "bg-harvest-100 text-harvest-800 border border-harvest-200 [a]:hover:bg-harvest-200/80",
         outline:
           "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost:

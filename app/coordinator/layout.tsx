@@ -15,10 +15,12 @@ export default async function CoordinatorLayout({ children }: { children: React.
     .single()
 
   if (!profile) redirect('/login')
-  if (profile.role !== 'coordinator') redirect(`/${profile.role}/dashboard`)
+  if (profile.role !== 'coordinator') {
+    redirect(profile.role === 'vendor' ? '/vendor/dashboard' : '/discover')
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="market-page min-h-screen">
       <AppNav profile={profile} />
       <main>{children}</main>
     </div>

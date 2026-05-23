@@ -1,0 +1,141 @@
+'use client'
+
+import Link from 'next/link'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { CheckCircle, Globe, ShoppingBag, Camera, MapPin } from 'lucide-react'
+import type { VendorLineupEntry } from '@/lib/shopper/vendors'
+import { getVendorLinks } from '@/lib/shopper/vendors'
+import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
+
+interface VendorSheetProps {
+  vendor: VendorLineupEntry | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  eventId: string
+  mapHref?: string
+  userId: string | null
+  initialFollowing?: boolean
+}
+
+const LINK_ICONS = {
+  website_url: Globe,
+  shop_url: ShoppingBag,
+  instagram_url: Camera,
+} as const
+
+export function VendorSheet({
+  vendor,
+  open,
+  onOpenChange,
+  eventId,
+  mapHref,
+  userId,
+  initialFollowing = false,
+}: VendorSheetProps) {
+  if (!vendor) return null
+
+  const passport = vendor.passport
+  const displayName = vendor.displayName
+  const links = getVendorLinks(passport)
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
+        <SheetHeader>
+          <SheetTitle className="text-left">{displayName}</SheetTitle>
+        </SheetHeader>
+        <div className="mt-4 space-y-4">
+          <div className="flex items-start gap-3">
+            <Avatar className="h-14 w-14">
+              <AvatarImage src={passport?.logo_url ?? vendor.vendor?.avatar_url ?? undefined} />
+              <AvatarFallback className="bg-amber-100 text-lg font-bold text-amber-700">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="flex items-center gap-1">
+                {passport?.is_verified && (
+                  <CheckCircle className="h-4 w-4 text-blue-500" />
+                )}
+                {vendor.category && (
+                  <Badge variant="outline">{vendor.category.name}</Badge>
+                )}
+              </div>
+              {vendor.booth_number != null && (
+                <p className="mt-1 text-sm text-muted-foreground">Booth #{vendor.booth_number}</p>
+              )}
+            </div>
+          </div>
+
+          {passport?.bio && (
+            <p className="text-sm leading-relaxed text-muted-foreground">{passport.bio}</p>
+          )}
+
+          {passport?.item_image_urls && passport.item_image_urls.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto">
+              {passport.item_image_urls.map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt=""
+                  className="h-24 w-24 shrink-0 rounded-lg object-cover"
+                />
+              ))}
+            </div>
+          )}
+
+          {links.length > 0 && (
+            <div className="space-y-2">
+              {links.map((link) => {
+                const Icon = LINK_ICONS[link.field] ?? Globe
+                return (
+                  <a
+                    key={link.field}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-h-11 w-full items-center justify-start gap-2 rounded-lg border-2 border-stone-200 bg-card px-3 text-sm font-medium shadow-[var(--shadow-market)] hover:bg-canvas"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </a>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            {vendor.vendor_id && userId && (
+              <VendorFollowButton
+                vendorId={vendor.vendor_id}
+                initialFollowing={initialFollowing}
+              />
+            )}
+            {mapHref && vendor.booth_number != null && (
+              <Link href={mapHref}>
+                <Button variant="secondary" className="min-h-11 gap-1">
+                  <MapPin className="h-4 w-4" />
+                  Find on map
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { validateSquareWebhook } from '@/lib/square/webhook'
 import { createServiceClient } from '@/lib/supabase/server'
+import { computePlatformFeeCents } from '@/lib/monetization/fees'
+import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
+import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
 
 export async function POST(request: Request) {
   const rawBody = await request.text()
@@ -20,16 +23,53 @@ export async function POST(request: Request) {
       const payment = event.data?.object?.payment
       if (!payment) break
 
-      const referenceId: string = payment.reference_id ?? ''
       const squarePaymentId: string = payment.id
+      const amountCents = Number(payment.amount_money?.amount ?? 0)
 
-      // Update booth application payment status by square_payment_id reference
-      await supabase
+      const { data: application } = await supabase
         .from('booth_applications')
-        .update({ payment_status: 'paid', square_payment_id: squarePaymentId })
+        .select(`
+          id,
+          event_id,
+          vendor_id,
+          category_id,
+          event:events(
+            coordinator_id,
+            platform_fee_mode,
+            platform_fee_flat_cents,
+            platform_fee_bps
+          )
+        `)
         .eq('square_payment_id', squarePaymentId)
+        .maybeSingle()
 
-      // Update wallet transaction if this was a wallet deposit
+      if (application) {
+        const eventRow = Array.isArray(application.event)
+          ? application.event[0]
+          : application.event
+
+        const feeConfig = resolveEventFeeConfig(eventRow)
+        const platformFeeCents = computePlatformFeeCents(amountCents || 0, feeConfig)
+
+        await recordPlatformTransaction(supabase, {
+          boothApplicationId: application.id,
+          eventId: application.event_id,
+          vendorId: application.vendor_id,
+          coordinatorId: eventRow?.coordinator_id ?? '',
+          categoryId: application.category_id,
+          totalAmountCents: amountCents,
+          platformFeeCents,
+          feeModeUsed: feeConfig.mode,
+          processorChargeId: squarePaymentId,
+          status: 'completed',
+        })
+      } else {
+        await supabase
+          .from('booth_applications')
+          .update({ payment_status: 'paid', square_payment_id: squarePaymentId })
+          .eq('square_payment_id', squarePaymentId)
+      }
+
       const { data: wtx } = await supabase
         .from('wallet_transactions')
         .select('id, wallet_id, amount')
@@ -52,7 +92,7 @@ export async function POST(request: Request) {
         }
       }
 
-      console.log(`[Square webhook] payment.completed: ${squarePaymentId} ref=${referenceId}`)
+      console.log(`[Square webhook] payment.completed: ${squarePaymentId}`)
       break
     }
 
@@ -65,6 +105,11 @@ export async function POST(request: Request) {
         .update({ payment_status: 'unpaid' })
         .eq('square_payment_id', payment.id)
 
+      await supabase
+        .from('platform_transactions')
+        .update({ status: 'failed' })
+        .eq('processor_charge_id', payment.id)
+
       break
     }
 
@@ -75,6 +120,32 @@ export async function POST(request: Request) {
       await supabase
         .from('booth_applications')
         .update({ payment_status: 'refunded' })
+        .eq('square_payment_id', refund.payment_id)
+
+      await supabase
+        .from('platform_transactions')
+        .update({ status: 'refunded' })
+        .eq('processor_charge_id', refund.payment_id)
+
+      await supabase
+        .from('refund_exceptions')
+        .update({ status: 'resolved', resolved_at: new Date().toISOString() })
+        .eq('square_payment_id', refund.payment_id)
+
+      break
+    }
+
+    case 'refund.failed': {
+      const refund = event.data?.object?.refund
+      if (!refund?.payment_id) break
+
+      await supabase
+        .from('refund_exceptions')
+        .update({
+          status: 'pending_retry',
+          error_message: refund.status ?? 'Square refund failed',
+          last_retry_at: new Date().toISOString(),
+        })
         .eq('square_payment_id', refund.payment_id)
 
       break

@@ -12,21 +12,29 @@ import {
 import { toast } from 'sonner'
 import { CheckCircle, XCircle, Clock, Users, Eye } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { marketChip, marketStatusBadge } from '@/lib/theme/market'
 import type { BoothApplication, ApplicationStatus } from '@/types/database'
 
 interface ApplicationBoardProps {
   applications: BoothApplication[]
   bookingMode: 'instant' | 'juried'
+  eventCancelled?: boolean
+  categoryLimits?: Array<{
+    category_id: string
+    max_slots: number
+    price_per_booth?: number
+    category?: { name: string } | null
+  }>
 }
 
 const COLUMNS: { status: ApplicationStatus; label: string; color: string }[] = [
-  { status: 'pending', label: 'Pending Review', color: 'text-yellow-700 bg-yellow-50 border-yellow-100' },
-  { status: 'approved', label: 'Approved', color: 'text-green-700 bg-green-50 border-green-100' },
-  { status: 'waitlisted', label: 'Waitlisted', color: 'text-blue-700 bg-blue-50 border-blue-100' },
-  { status: 'rejected', label: 'Declined', color: 'text-red-700 bg-red-50 border-red-100' },
+  { status: 'pending', label: 'Pending Review', color: 'text-harvest-800 bg-harvest-50 border-harvest-200' },
+  { status: 'approved', label: 'Approved', color: 'text-sage-800 bg-sage-50 border-sage-200' },
+  { status: 'waitlisted', label: 'Waitlisted', color: 'text-muted-foreground bg-canvas border-stone-200' },
+  { status: 'rejected', label: 'Declined', color: 'text-terracotta-800 bg-terracotta-50 border-terracotta-200' },
 ]
 
-export function ApplicationBoard({ applications, bookingMode }: ApplicationBoardProps) {
+export function ApplicationBoard({ applications, bookingMode, eventCancelled, categoryLimits = [] }: ApplicationBoardProps) {
   const supabase = createClient()
   const [apps, setApps] = useState<BoothApplication[]>(applications)
   const [viewingApp, setViewingApp] = useState<BoothApplication | null>(null)
@@ -42,9 +50,32 @@ export function ApplicationBoard({ applications, bookingMode }: ApplicationBoard
 
   async function updateStatus(appId: string, newStatus: ApplicationStatus) {
     startTransition(async () => {
+      const app = apps.find((a) => a.id === appId)
+      if (!app) return
+
+      if (newStatus === 'approved' && app.category_id && categoryLimits.length > 0) {
+        const limit = categoryLimits.find((cl) => cl.category_id === app.category_id)
+        if (limit) {
+          const approvedInCategory = apps.filter(
+            (a) => a.status === 'approved' && a.category_id === app.category_id
+          ).length
+          if (approvedInCategory >= limit.max_slots) {
+            toast.error(
+              `${limit.category?.name ?? 'This category'} is full (${limit.max_slots} slots)`
+            )
+            return
+          }
+        }
+      }
+
       const updates: Partial<BoothApplication> = { status: newStatus }
       if (newStatus === 'approved') {
         updates.approved_at = new Date().toISOString()
+        const limit = categoryLimits.find((cl) => cl.category_id === app.category_id)
+        const boothPrice = limit?.price_per_booth ?? 0
+        if (boothPrice > 0) {
+          updates.payment_status = 'payment_required'
+        }
       }
 
       const { error } = await supabase
@@ -62,10 +93,12 @@ export function ApplicationBoard({ applications, bookingMode }: ApplicationBoard
       )
 
       // Send in-app + SMS notification to vendor
-      const app = apps.find((a) => a.id === appId)
-      if (app?.vendor_id && (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'waitlisted')) {
+      if (app.vendor_id && (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'waitlisted')) {
         const notifMessages: Partial<Record<ApplicationStatus, string>> = {
-          approved: `✅ Your booth application has been approved! See you at the event.`,
+          approved:
+            updates.payment_status === 'payment_required'
+              ? '✅ Your booth application has been approved! Complete your payment to secure your spot.'
+              : '✅ Your booth application has been approved! See you at the event.',
           rejected: `Your booth application was not selected this time. Keep an eye out for future events!`,
           waitlisted: `Your application has been waitlisted. We'll notify you if a spot opens up.`,
         }
@@ -78,7 +111,11 @@ export function ApplicationBoard({ applications, bookingMode }: ApplicationBoard
               user_id: app.vendor_id,
               type: newStatus === 'approved' ? 'application_approved' : newStatus === 'rejected' ? 'application_rejected' : 'waitlist_triggered',
               message,
-              metadata: { application_id: appId },
+              metadata: {
+                application_id: appId,
+                event_id: app.event_id,
+                payment_required: updates.payment_status === 'payment_required',
+              },
               send_sms: true,
             }),
           })
@@ -102,27 +139,40 @@ export function ApplicationBoard({ applications, bookingMode }: ApplicationBoard
 
   return (
     <div className="space-y-6">
+      {eventCancelled && (
+        <div className="rounded-xl border-2 border-terracotta-200 bg-terracotta-50 px-4 py-3 text-center">
+          <p className="text-sm font-heading font-bold uppercase tracking-wide text-terracotta-800">
+            Event Canceled — Refunds Processed
+          </p>
+          <p className="mt-1 text-xs text-terracotta-700">
+            This market is closed. Vendor applications are read-only.
+          </p>
+        </div>
+      )}
+
       {/* Summary bar */}
-      <div className="flex flex-wrap gap-4 p-4 bg-gray-50 rounded-xl border">
+      <dl className="flex flex-wrap gap-4 p-4 market-panel rounded-xl">
         <div className="flex items-center gap-2 text-sm">
-          <Users className="h-4 w-4 text-gray-400" />
-          <span className="font-medium">{totalApps}</span>
-          <span className="text-gray-500">total applications</span>
+          <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
+          <dt className="sr-only">Total applications</dt>
+          <dd className="font-medium text-foreground">{totalApps} total applications</dd>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <CheckCircle className="h-4 w-4 text-green-500" />
-          <span className="font-medium text-green-700">{approvedCount} approved</span>
+          <CheckCircle className="h-4 w-4 text-sage-600" aria-hidden />
+          <dt className="sr-only">Approved</dt>
+          <dd className="font-medium text-sage-800">{approvedCount} approved</dd>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Clock className="h-4 w-4 text-yellow-500" />
-          <span className="font-medium text-yellow-700">{pendingCount} awaiting review</span>
+          <Clock className="h-4 w-4 text-harvest-500" aria-hidden />
+          <dt className="sr-only">Pending</dt>
+          <dd className="font-medium text-harvest-800">{pendingCount} awaiting review</dd>
         </div>
         {bookingMode === 'instant' && (
-          <Badge className="bg-amber-100 text-amber-700 text-xs">
+          <Badge className={`${marketStatusBadge.warning} text-xs`}>
             ⚡ Instant booking — applications auto-approve
           </Badge>
         )}
-      </div>
+      </dl>
 
       {/* Kanban columns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
@@ -137,14 +187,15 @@ export function ApplicationBoard({ applications, bookingMode }: ApplicationBoard
 
               <div className="space-y-2">
                 {colApps.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center">
-                    <p className="text-xs text-gray-400">None here</p>
+                  <div className="rounded-xl border-2 border-dashed border-stone-200 py-8 text-center bg-canvas/50">
+                    <p className="text-xs text-muted-foreground">None here</p>
                   </div>
                 ) : (
                   colApps.map((app) => (
                     <ApplicationCard
                       key={app.id}
                       app={app}
+                      eventCancelled={eventCancelled}
                       onView={() => setViewingApp(app)}
                       onApprove={() => updateStatus(app.id, 'approved')}
                       onReject={() => updateStatus(app.id, 'rejected')}
@@ -171,6 +222,7 @@ export function ApplicationBoard({ applications, bookingMode }: ApplicationBoard
 
 function ApplicationCard({
   app,
+  eventCancelled,
   onView,
   onApprove,
   onReject,
@@ -178,6 +230,7 @@ function ApplicationCard({
   loading,
 }: {
   app: BoothApplication
+  eventCancelled?: boolean
   onView: () => void
   onApprove: () => void
   onReject: () => void
@@ -204,7 +257,7 @@ function ApplicationCard({
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarImage src={passport?.logo_url ?? vendor?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-amber-100 text-amber-700 text-[10px] font-bold">
+            <AvatarFallback className="bg-harvest-100 text-harvest-800 text-[10px] font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -218,51 +271,69 @@ function ApplicationCard({
           </div>
         </div>
 
-        <p className="text-[10px] text-gray-400">
+        <p className="text-[10px] text-muted-foreground">
           Applied {formatDistanceToNow(new Date(app.applied_at), { addSuffix: true })}
         </p>
 
-        <div className="flex gap-1.5 flex-wrap">
+        {app.status === 'approved' && app.payment_status === 'payment_required' && (
+          <Badge className="w-full justify-center bg-amber-100 text-amber-800 text-[10px] py-1">
+            Awaiting vendor payment
+          </Badge>
+        )}
+
+        {app.status === 'approved' && app.payment_status === 'paid' && (
+          <Badge className="w-full justify-center bg-sage-100 text-sage-800 text-[10px] py-1">
+            Paid
+          </Badge>
+        )}
+
+        {eventCancelled && (
+          <Badge className="w-full justify-center bg-terracotta-600 text-primary-foreground text-[10px] font-bold uppercase tracking-wide py-1 min-h-11">
+            Event Canceled — Refund Processed
+          </Badge>
+        )}
+
+        <div className="flex gap-2 flex-wrap">
           <Button
             size="sm"
-            variant="ghost"
-            className="h-6 text-[10px] px-2 gap-1 text-gray-600"
+            variant="outline"
+            className="min-h-11 text-xs px-3 gap-1.5"
             onClick={onView}
           >
-            <Eye className="h-3 w-3" />
+            <Eye className="h-4 w-4" />
             View
           </Button>
-          {app.status !== 'approved' && (
+          {!eventCancelled && app.status !== 'approved' && (
             <Button
               size="sm"
-              className="h-6 text-[10px] px-2 gap-1 bg-green-500 hover:bg-green-600 text-white"
+              className="min-h-11 text-xs px-3 gap-1.5"
               onClick={onApprove}
               disabled={loading}
             >
-              <CheckCircle className="h-3 w-3" />
+              <CheckCircle className="h-4 w-4" />
               Approve
             </Button>
           )}
-          {app.status !== 'waitlisted' && app.status !== 'rejected' && (
+          {!eventCancelled && app.status !== 'waitlisted' && app.status !== 'rejected' && (
             <Button
               size="sm"
               variant="outline"
-              className="h-6 text-[10px] px-2 gap-1 text-blue-600 border-blue-200"
+              className="min-h-11 text-xs px-3 gap-1.5 text-harvest-800 border-harvest-300"
               onClick={onWaitlist}
               disabled={loading}
             >
               Waitlist
             </Button>
           )}
-          {app.status !== 'rejected' && (
+          {!eventCancelled && app.status !== 'rejected' && (
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 text-[10px] px-2 gap-1 text-red-500 hover:bg-red-50"
+              className="min-h-11 text-xs px-3 gap-1.5 text-terracotta-700 hover:bg-terracotta-50"
               onClick={onReject}
               disabled={loading}
             >
-              <XCircle className="h-3 w-3" />
+              <XCircle className="h-4 w-4" />
               Decline
             </Button>
           )}
@@ -290,38 +361,43 @@ function VendorDetailModal({ app }: { app: BoothApplication }) {
           <div className="flex items-center gap-3">
             <Avatar className="h-14 w-14">
               <AvatarImage src={passport?.logo_url ?? vendor?.avatar_url ?? undefined} />
-              <AvatarFallback className="text-lg bg-amber-100 text-amber-700 font-bold">
+              <AvatarFallback className="text-lg bg-harvest-100 text-harvest-800 font-bold">
                 {displayName[0]}
               </AvatarFallback>
             </Avatar>
             <div>
               <p className="font-semibold text-lg">{displayName}</p>
-              {passport?.is_verified && (
-                <Badge className="bg-blue-100 text-blue-700 text-xs mt-1">
+            {passport?.is_verified && (
+                <Badge className={`${marketStatusBadge.neutral} text-xs mt-1`}>
                   <CheckCircle className="h-3 w-3 mr-1" />
                   Verified Vendor
+                </Badge>
+              )}
+              {app.vendor?.reliability_score != null && (
+                <Badge className={`${marketStatusBadge.success} text-xs mt-1`}>
+                  Reliability {app.vendor.reliability_score}%
                 </Badge>
               )}
             </div>
           </div>
           {passport?.bio && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">About</p>
-              <p className="text-sm text-gray-700 leading-relaxed">{passport.bio}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">About</p>
+              <p className="text-sm text-foreground leading-relaxed">{passport.bio}</p>
             </div>
           )}
           <div className="space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Category</span>
+              <span className="text-muted-foreground">Category</span>
               <Badge variant="outline">{app.category?.name}</Badge>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Payment</span>
+              <span className="text-muted-foreground">Payment</span>
               <Badge
                 className={
                   app.payment_status === 'paid'
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-600'
+                    ? marketChip.paid
+                    : marketChip.unpaid
                 }
               >
                 {app.payment_status}
@@ -329,7 +405,7 @@ function VendorDetailModal({ app }: { app: BoothApplication }) {
             </div>
             {app.waitlist_position && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Waitlist position</span>
+                <span className="text-muted-foreground">Waitlist position</span>
                 <span className="font-medium">#{app.waitlist_position}</span>
               </div>
             )}
@@ -338,7 +414,7 @@ function VendorDetailModal({ app }: { app: BoothApplication }) {
 
         {passport?.item_image_urls && passport.item_image_urls.length > 0 && (
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Product Photos</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Product Photos</p>
             <div className="grid grid-cols-2 gap-2">
               {passport.item_image_urls.slice(0, 4).map((url, i) => (
                 <img

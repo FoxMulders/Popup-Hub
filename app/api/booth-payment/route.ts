@@ -1,64 +1,163 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { computePlatformFeeCents } from '@/lib/monetization/fees'
+import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
+import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
 import { createBoothPayment } from '@/lib/square/payments'
+import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 
 export async function POST(request: Request) {
   const supabase = await createServiceClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { sourceId, eventId, categoryId } = body
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-  if (!sourceId || !eventId || !categoryId) {
+  if (profile?.role !== 'vendor') {
+    return NextResponse.json({ error: 'Vendor account required' }, { status: 403 })
+  }
+
+  const body = await request.json()
+  const { sourceId, applicationId } = body
+
+  if (!sourceId || !applicationId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  // Get the price for this category/event
-  const { data: limit } = await supabase
-    .from('event_category_limits')
-    .select('price_per_booth, events(coordinator_id, square_merchant_id)')
-    .eq('event_id', eventId)
-    .eq('category_id', categoryId)
+  const { data: application } = await supabase
+    .from('booth_applications')
+    .select(`
+      id,
+      vendor_id,
+      event_id,
+      category_id,
+      status,
+      payment_status,
+      event:events(
+        coordinator_id,
+        square_merchant_id,
+        platform_fee_mode,
+        platform_fee_flat_cents,
+        platform_fee_bps
+      )
+    `)
+    .eq('id', applicationId)
     .single()
 
-  if (!limit) {
-    return NextResponse.json({ error: 'Category not found for this event' }, { status: 404 })
+  if (!application) {
+    return NextResponse.json({ error: 'Application not found' }, { status: 404 })
   }
 
-  const amountCents = limit.price_per_booth as number
+  if (application.vendor_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  if (application.status !== 'approved') {
+    return NextResponse.json(
+      { error: 'Payment is only available after approval' },
+      { status: 400 }
+    )
+  }
+
+  if (application.payment_status === 'paid') {
+    return NextResponse.json({ error: 'This booth is already paid' }, { status: 400 })
+  }
+
+  if (
+    application.payment_status !== 'payment_required' &&
+    application.payment_status !== 'processing'
+  ) {
+    return NextResponse.json({ error: 'Payment not available for this application' }, { status: 400 })
+  }
+
+  const { data: limit } = await supabase
+    .from('event_category_limits')
+    .select('price_per_booth')
+    .eq('event_id', application.event_id)
+    .eq('category_id', application.category_id)
+    .single()
+
+  const amountCents = (limit?.price_per_booth as number) ?? 0
   if (amountCents <= 0) {
-    // Free booth — no payment needed
+    await supabase
+      .from('booth_applications')
+      .update({ payment_status: 'paid' })
+      .eq('id', applicationId)
     return NextResponse.json({ paymentId: null, free: true })
   }
 
-  const platformFeeBps = Math.round(
-    parseFloat(process.env.PLATFORM_FEE_PERCENT ?? '5') * 100
-  )
+  const eventRow = Array.isArray(application.event)
+    ? application.event[0]
+    : application.event
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const eventData = (limit as any).events
-  const coordinatorMerchantId: string | null = eventData?.square_merchant_id ?? null
+  const feeConfig = resolveEventFeeConfig(eventRow)
+  const platformFeeCents = computePlatformFeeCents(amountCents, feeConfig)
+  const coordinatorId = eventRow?.coordinator_id as string
 
-  // Create a placeholder application ID for idempotency (will be replaced on insert)
-  const applicationRef = `${user.id}-${eventId}-${Date.now()}`
+  const credentials = await getCoordinatorAccessToken(supabase, coordinatorId)
+  if (!credentials?.accessToken) {
+    return NextResponse.json(
+      { error: 'Coordinator has not connected Square for payouts' },
+      { status: 422 }
+    )
+  }
+
+  await supabase
+    .from('booth_applications')
+    .update({ payment_status: 'processing' })
+    .eq('id', applicationId)
 
   const { paymentId, error } = await createBoothPayment({
     sourceId,
     amountCents,
-    vendorId: user.id,
-    eventId,
-    applicationId: applicationRef,
-    coordinatorMerchantId,
-    platformFeeBps,
+    eventId: application.event_id,
+    applicationId,
+    coordinatorAccessToken: credentials.accessToken,
+    platformFeeCents,
   })
 
-  if (error) {
-    return NextResponse.json({ error }, { status: 402 })
+  if (error || !paymentId) {
+    await supabase
+      .from('booth_applications')
+      .update({ payment_status: 'payment_required' })
+      .eq('id', applicationId)
+    return NextResponse.json({ error: error ?? 'Payment failed' }, { status: 402 })
   }
 
-  return NextResponse.json({ paymentId })
+  await supabase
+    .from('booth_applications')
+    .update({
+      square_payment_id: paymentId,
+      payment_status: 'paid',
+    })
+    .eq('id', applicationId)
+
+  await recordPlatformTransaction(supabase, {
+    boothApplicationId: applicationId,
+    eventId: application.event_id,
+    vendorId: application.vendor_id,
+    coordinatorId,
+    categoryId: application.category_id,
+    totalAmountCents: amountCents,
+    platformFeeCents,
+    feeModeUsed: feeConfig.mode,
+    processorChargeId: paymentId,
+    status: 'completed',
+  })
+
+  return NextResponse.json({
+    paymentId,
+    boothPriceCents: amountCents,
+    platformFeeCents,
+    coordinatorPayoutCents: amountCents - platformFeeCents,
+  })
 }

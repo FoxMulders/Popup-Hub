@@ -10,7 +10,8 @@ import { toast } from 'sonner'
 import { buildLeaderboard } from '@/lib/auction/winner'
 import type { Auction, AuctionDrop, Wallet } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
-import { Trophy, Zap, Clock, Users, Coins } from 'lucide-react'
+import { Trophy, Zap, Clock, Users, Coins, HelpCircle } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface AuctionRoomProps {
   auction: Auction
@@ -141,6 +142,10 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1 text-sm text-gray-500">
                   <Clock className="h-4 w-4" />Time Remaining
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">When the timer runs out, a winner is selected randomly from all paddle entries. More drops give you more entries.</TooltipContent>
+                  </Tooltip>
                 </span>
                 <span className={`text-2xl font-mono font-bold ${timeLeft < 30 ? 'text-red-500 animate-pulse' : 'text-gray-900'}`}>
                   {formatTime(timeLeft)}
@@ -164,7 +169,13 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
 
           <div className="mt-4 grid grid-cols-3 gap-4 rounded-xl bg-gray-50 p-4">
             <div className="text-center">
-              <p className="text-xs text-gray-500">Total Pot</p>
+              <div className="flex items-center justify-center gap-1">
+                <p className="text-xs text-gray-500">Total Pot</p>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">The total value of all quarters dropped so far. The winner takes this prize.</TooltipContent>
+                </Tooltip>
+              </div>
               <p className="text-lg font-bold text-amber-600">{formatCents(totalPotCents)}</p>
             </div>
             <div className="text-center">
@@ -185,6 +196,10 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
             <CardTitle className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-amber-500" />Drop Your Quarter
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">Drop quarters from your wallet into the auction. More drops = more paddle entries = better odds of winning.</TooltipContent>
+                </Tooltip>
               </span>
               <span className="text-sm font-normal text-gray-500">
                 Balance: <span className="font-semibold text-gray-900">{formatCents(wallet?.balance ?? 0)}</span>
@@ -207,7 +222,13 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
             )}
 
             <div className="space-y-2">
-              <p className="text-xs text-gray-500">Drop Amount</p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs text-gray-500">Drop Amount</p>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                  <TooltipContent className="max-w-xs">The minimum and maximum number of quarters you can drop in a single turn.</TooltipContent>
+                </Tooltip>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {dropOptions.map((amount) => (
                   <button

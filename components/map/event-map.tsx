@@ -13,10 +13,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import Link from 'next/link'
-import { MapPin, Clock, Calendar } from 'lucide-react'
+import { MapPin, Clock, Calendar, Navigation } from 'lucide-react'
+import { openDirections, type LatLng } from '@/lib/shopper/geo'
+import { DEFAULT_REGION } from '@/lib/shopper/geo'
 
 interface EventMapProps {
   events: Event[]
+  center?: LatLng
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -25,20 +28,21 @@ const STATUS_COLORS: Record<string, string> = {
   completed: '#9ca3af',
 }
 
-export function EventMap({ events }: EventMapProps) {
+export function EventMap({ events, center: centerProp }: EventMapProps) {
   const [selected, setSelected] = useState<Event | null>(null)
 
   const center =
-    events.length > 0
+    centerProp ??
+    (events.length > 0
       ? { lat: events[0].latitude, lng: events[0].longitude }
-      : { lat: 39.8283, lng: -98.5795 }
+      : DEFAULT_REGION)
 
   return (
     <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
       <Map
         style={{ width: '100%', height: '100%' }}
         defaultCenter={center}
-        defaultZoom={events.length > 0 ? 11 : 4}
+        defaultZoom={events.length > 0 ? 11 : 10}
         mapId="popup-hub-map"
         gestureHandling="greedy"
       >
@@ -72,7 +76,7 @@ export function EventMap({ events }: EventMapProps) {
               )}
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-gray-900 leading-tight">{selected.name}</h3>
+                  <h3 className="text-sm font-bold leading-tight text-gray-900">{selected.name}</h3>
                   <Badge
                     className={`capitalize text-[10px] ${
                       selected.status === 'active'
@@ -84,24 +88,37 @@ export function EventMap({ events }: EventMapProps) {
                   </Badge>
                 </div>
                 <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
-                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <MapPin className="h-3 w-3 shrink-0" />
                   {selected.location_name}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
-                  <Calendar className="h-3 w-3 flex-shrink-0" />
+                  <Calendar className="h-3 w-3 shrink-0" />
                   {format(new Date(selected.start_at), 'EEE, MMM d')}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
-                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  <Clock className="h-3 w-3 shrink-0" />
                   {format(new Date(selected.start_at), 'h:mm a')} –{' '}
                   {format(new Date(selected.end_at), 'h:mm a')}
                 </p>
               </div>
-              <Link href={`/shopper/events/${selected.id}`} className="block">
-                <Button size="sm" className="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs">
-                  View Event
+              <div className="flex gap-2">
+                <Link href={`/events/${selected.id}`} className="flex-1">
+                  <Button size="sm" className="w-full bg-forest text-xs text-white hover:bg-forest-deep">
+                    View
+                  </Button>
+                </Link>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 text-xs"
+                  onClick={() =>
+                    openDirections(selected.latitude, selected.longitude, selected.address)
+                  }
+                >
+                  <Navigation className="h-3 w-3" />
                 </Button>
-              </Link>
+              </div>
             </div>
           </InfoWindow>
         )}
