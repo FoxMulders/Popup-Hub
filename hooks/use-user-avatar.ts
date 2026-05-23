@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { subscribeAvatarRealtime } from '@/lib/profile/avatar-realtime'
 import { AVATAR_BROADCAST, AVATAR_CHANGED } from '@/lib/profile/avatar-sync'
 import { avatarInitials, resolveDisplayAvatarUrl } from '@/lib/profile/resolve-avatar'
 import type { Role } from '@/types/database'
@@ -43,67 +44,25 @@ export function useUserAvatar(userId: string, initial: UserAvatarSource) {
     }
   }, [userId, role])
 
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
+  const refreshRef = useRef(refresh)
+  refreshRef.current = refresh
 
   useEffect(() => {
-    const supabase = createClient()
+    void refreshRef.current()
+  }, [userId, role])
 
-    const profileChannel = supabase
-      .channel(`profile-avatar:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${userId}`,
-        },
-        (payload) => {
-          const next = payload.new as { avatar_url?: string | null; full_name?: string }
-          if ('avatar_url' in next) setAvatarUrl(next.avatar_url ?? null)
-          if (next.full_name) setFullName(next.full_name)
-        }
-      )
-      .subscribe()
-
-    let passportChannel: ReturnType<typeof supabase.channel> | null = null
-    if (role === 'vendor') {
-      passportChannel = supabase
-        .channel(`passport-logo:${userId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'vendor_passports',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            const next = payload.new as { logo_url?: string | null }
-            if ('logo_url' in next) setPassportLogoUrl(next.logo_url ?? null)
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'vendor_passports',
-            filter: `user_id=eq.${userId}`,
-          },
-          (payload) => {
-            const next = payload.new as { logo_url?: string | null }
-            setPassportLogoUrl(next.logo_url ?? null)
-          }
-        )
-        .subscribe()
-    }
+  useEffect(() => {
+    const unsubscribeRealtime = subscribeAvatarRealtime(userId, role, {
+      onProfile: ({ avatar_url, full_name }) => {
+        setAvatarUrl(avatar_url)
+        if (full_name) setFullName(full_name)
+      },
+      onPassport: role === 'vendor' ? setPassportLogoUrl : undefined,
+    })
 
     function onAvatarChanged(event: Event) {
       const detail = (event as CustomEvent<{ userId: string }>).detail
-      if (detail?.userId === userId) void refresh()
+      if (detail?.userId === userId) void refreshRef.current()
     }
 
     window.addEventListener(AVATAR_CHANGED, onAvatarChanged)
@@ -112,19 +71,18 @@ export function useUserAvatar(userId: string, initial: UserAvatarSource) {
     try {
       broadcast = new BroadcastChannel(AVATAR_BROADCAST)
       broadcast.onmessage = (event) => {
-        if (event.data?.userId === userId) void refresh()
+        if (event.data?.userId === userId) void refreshRef.current()
       }
     } catch {
       // ignore
     }
 
     return () => {
+      unsubscribeRealtime()
       window.removeEventListener(AVATAR_CHANGED, onAvatarChanged)
       broadcast?.close()
-      supabase.removeChannel(profileChannel)
-      if (passportChannel) supabase.removeChannel(passportChannel)
     }
-  }, [userId, role, refresh])
+  }, [userId, role])
 
   const displayUrl = useMemo(
     () =>
