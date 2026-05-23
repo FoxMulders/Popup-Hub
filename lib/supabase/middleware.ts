@@ -69,6 +69,9 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/api/square/webhook') ||
     pathname.startsWith('/api/reminders/') ||
     pathname.startsWith('/favicon') ||
+    pathname === '/sw.js' ||
+    pathname === '/manifest.json' ||
+    pathname.startsWith('/icons/') ||
     (isDevMockAuthEnabled() && pathname.startsWith('/api/dev/mock-login'))
 
   if (!user && !isPublicPath) {
