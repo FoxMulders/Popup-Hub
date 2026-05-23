@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Wand2, Users } from 'lucide-react'
 import { compareFcfsApplicationOrder } from '@/lib/applications/fcfs-sort'
+import { hasPriorityQueueAccess } from '@/lib/profile/premium-access'
 import { findNeighborPairKeys, isNeighborPair } from '@/lib/booth-planner/neighbor-matches'
 import type { BoothApplication, BoothCell } from '@/types/database'
 
@@ -17,14 +18,14 @@ interface FCFSApplication {
   booth_number: number | null
   requested_booth_type: BoothApplication['requested_booth_type']
   neighbor_preference: string | null
-  vendor: { full_name: string }
+  vendor: { full_name: string; is_beta_tester?: boolean }
   passport: { business_name: string } | null
 }
 
 interface FCFSQueueProps {
   applications: FCFSApplication[]
   boothCells: BoothCell[]
-  onAssign: (applicationId: string, boothCellId: string) => void
+  onAssign?: (applicationId: string, boothCellId: string) => void
 }
 
 const BOOTH_TYPE_COLORS: Record<string, string> = {
@@ -54,8 +55,16 @@ export function FCFSQueue({ applications, boothCells, onAssign }: FCFSQueueProps
     () =>
       [...localApps].sort((a, b) =>
         compareFcfsApplicationOrder(
-          { id: a.id, appliedAt: a.applied_at },
-          { id: b.id, appliedAt: b.applied_at }
+          {
+            id: a.id,
+            appliedAt: a.applied_at,
+            priorityBoost: hasPriorityQueueAccess({ is_beta_tester: !!a.vendor.is_beta_tester }),
+          },
+          {
+            id: b.id,
+            appliedAt: b.applied_at,
+            priorityBoost: hasPriorityQueueAccess({ is_beta_tester: !!b.vendor.is_beta_tester }),
+          }
         )
       ),
     [localApps]
@@ -97,7 +106,7 @@ export function FCFSQueue({ applications, boothCells, onAssign }: FCFSQueueProps
     setLocalApps((prev) =>
       prev.map((a) => (a.id === appId ? { ...a, booth_number: cell.boothNumber } : a))
     )
-    onAssign(appId, cellId)
+    onAssign?.(appId, cellId)
     toast.success(`Booth #${cell.boothNumber} assigned ✓`)
   }
 
@@ -124,7 +133,7 @@ export function FCFSQueue({ applications, boothCells, onAssign }: FCFSQueueProps
         setLocalApps((prev) =>
           prev.map((a) => (a.id === app.id ? { ...a, booth_number: cell.boothNumber } : a))
         )
-        onAssign(app.id, cell.id)
+        onAssign?.(app.id, cell.id)
         assignCount++
       }
     }
