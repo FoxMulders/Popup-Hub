@@ -4,20 +4,25 @@
 
 DROP POLICY IF EXISTS "passports: owner full access" ON vendor_passports;
 
+DROP POLICY IF EXISTS "passports: users can read own passport" ON vendor_passports;
 CREATE POLICY "passports: users can read own passport" ON vendor_passports
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "passports: owner insert" ON vendor_passports;
 CREATE POLICY "passports: owner insert" ON vendor_passports
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "passports: owner update" ON vendor_passports;
 CREATE POLICY "passports: owner update" ON vendor_passports
   FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "passports: owner delete" ON vendor_passports;
 CREATE POLICY "passports: owner delete" ON vendor_passports
   FOR DELETE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "passports: coordinator verify event vendors" ON vendor_passports;
 CREATE POLICY "passports: coordinator verify event vendors" ON vendor_passports
   FOR UPDATE
   USING (
