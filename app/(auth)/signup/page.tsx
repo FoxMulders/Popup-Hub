@@ -12,22 +12,43 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { MapPin, Loader2, ShoppingBag, Calendar } from 'lucide-react'
+import { MapPin, Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
 import { toast } from 'sonner'
-import type { Role } from '@/types/database'
+import { SIGNUP_ROLES, type SignupRole } from '@/lib/auth/rbac'
 
-const ROLES = [
-  { id: 'shopper' as Role, label: 'Shopper', desc: 'Find markets & browse vendors', icon: ShoppingBag },
-  { id: 'coordinator' as Role, label: 'Coordinator', desc: 'Organize & manage markets', icon: Calendar },
-]
+const ROLE_OPTIONS = [
+  {
+    id: 'shopper' as SignupRole,
+    label: 'Patron',
+    desc: 'Discover markets, maps & favorites',
+    icon: ShoppingBag,
+  },
+  {
+    id: 'vendor' as SignupRole,
+    label: 'Vendor',
+    desc: 'Apply for open markets',
+    icon: Store,
+  },
+  {
+    id: 'coordinator' as SignupRole,
+    label: 'Coordinator',
+    desc: 'Create events & manage vendors',
+    icon: Calendar,
+  },
+] as const
 
 function SignupForm() {
   const router = useRouter()
   const params = useSearchParams()
   const supabase = createClient()
 
-  const defaultRole = (params.get('role') as Role) ?? 'shopper'
-  const [role, setRole] = useState<Role>(defaultRole)
+  const paramRole = params.get('role')
+  const defaultRole: SignupRole =
+    paramRole && SIGNUP_ROLES.includes(paramRole as SignupRole)
+      ? (paramRole as SignupRole)
+      : 'shopper'
+
+  const [role, setRole] = useState<SignupRole>(defaultRole)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,7 +74,7 @@ function SignupForm() {
       password,
       options: {
         data: { full_name: fullName, role },
-        emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/api/auth/callback?role=${role}`,
       },
     })
     if (error) {
@@ -64,6 +85,8 @@ function SignupForm() {
     setSubmitted(true)
     setLoading(false)
   }
+
+  const selectedLabel = ROLE_OPTIONS.find((option) => option.id === role)?.label ?? role
 
   if (submitted) {
     return (
@@ -79,7 +102,8 @@ function SignupForm() {
             </p>
             <p className="font-semibold text-gray-800 mb-6">{email}</p>
             <p className="text-sm text-gray-400 mb-6">
-              Click the link in the email to activate your Popup Hub account. It may take a minute or two to arrive.
+              Click the link in the email to activate your Popup Hub account as a{' '}
+              <span className="font-medium text-gray-600">{selectedLabel}</span>.
             </p>
             <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-800">
               Can&apos;t find it? Check your spam folder or{' '}
@@ -99,36 +123,48 @@ function SignupForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-4 py-10">
-      <Card className="w-full max-w-md shadow-lg">
+      <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500">
             <MapPin className="h-6 w-6 text-white" />
           </div>
           <CardTitle className="text-2xl">Create your account</CardTitle>
-          <CardDescription>Join the local market ecosystem</CardDescription>
+          <CardDescription>Choose how you&apos;ll use Popup Hub</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
-            <Label className="mb-2 block text-sm font-medium">I am a…</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {ROLES.map(({ id, label, desc, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setRole(id)}
-                  className={`flex flex-col items-center rounded-xl border-2 p-3 text-center transition ${role === id ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}
-                >
-                  <Icon className={`mb-1 h-5 w-5 ${role === id ? 'text-amber-600' : 'text-gray-400'}`} />
-                  <span className="text-xs font-semibold">{label}</span>
-                  <span className="hidden text-[10px] text-gray-400 sm:block">{desc}</span>
-                </button>
-              ))}
+          <fieldset className="mb-6">
+            <legend className="mb-2 block text-sm font-medium">I am a… *</legend>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {ROLE_OPTIONS.map(({ id, label, desc, icon: Icon }) => {
+                const selected = role === id
+                return (
+                  <label
+                    key={id}
+                    className={`flex cursor-pointer flex-col items-center rounded-xl border-2 p-3 text-center transition ${
+                      selected
+                        ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-200'
+                        : 'border-gray-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="signup-role"
+                      value={id}
+                      checked={selected}
+                      onChange={() => setRole(id)}
+                      className="sr-only"
+                      required
+                    />
+                    <Icon
+                      className={`mb-1.5 h-5 w-5 ${selected ? 'text-amber-600' : 'text-gray-400'}`}
+                    />
+                    <span className="text-xs font-semibold">{label}</span>
+                    <span className="mt-0.5 text-[10px] leading-snug text-gray-500">{desc}</span>
+                  </label>
+                )
+              })}
             </div>
-          </div>
-          <p className="mb-4 text-xs text-muted-foreground">
-            Browse markets, save favorites, and plan your weekend. Vendors join through organizer
-            invitations — not self-serve signup.
-          </p>
+          </fieldset>
           <Button
             type="button"
             variant="outline"
@@ -165,7 +201,7 @@ function SignupForm() {
             </div>
             <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white" disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Account as <Badge className="ml-1 bg-white/20 text-white capitalize">{role}</Badge>
+              Create Account as <Badge className="ml-1 bg-white/20 text-white">{selectedLabel}</Badge>
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-gray-500">

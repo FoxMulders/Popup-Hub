@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { VendorLogo } from '@/components/vendor/vendor-logo'
 import type { BoothApplication } from '@/types/database'
 import { CheckCircle } from 'lucide-react'
 
@@ -38,12 +38,12 @@ export function VendorRosterCard({ application }: VendorRosterCardProps) {
       )}
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Avatar className="h-10 w-10 flex-shrink-0">
-            <AvatarImage src={passport?.logo_url ?? vendor?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-amber-100 text-amber-700 text-xs font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <VendorLogo
+            src={passport?.logo_url ?? vendor?.avatar_url}
+            alt={`${displayName} logo`}
+            fallback={initials}
+            size="sm"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
               <p className="truncate font-semibold text-gray-900 text-sm">{displayName}</p>

@@ -6,7 +6,6 @@ import {
   LAYOUT_BASELINE_TABLE_LENGTHS_FT,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
-import { TABLE_LENGTH_OPTIONS_FT } from '@/lib/booth-planner/table-space'
 
 export const FAKE_VENDOR_ID_PREFIX = 'fake-'
 
@@ -120,7 +119,7 @@ export function createRandomFakeVendors(options: RandomFakeVendorFillOptions): F
     categoryNames,
     allowsTentVendors = false,
     tentShare = 0.25,
-    tableLengthOptions = TABLE_LENGTH_OPTIONS_FT,
+    tableLengthOptions = LAYOUT_BASELINE_TABLE_LENGTHS_FT,
   } = options
 
   if (count <= 0) return []
@@ -131,7 +130,7 @@ export function createRandomFakeVendors(options: RandomFakeVendorFillOptions): F
   return Array.from({ length: count }, (_, i) => {
     const category = pickRandom(categories)
     const unitType: VendorUnitType = 'table'
-    const tableLengthFt = pickRandom(tableLengthOptions)
+    const tableLengthFt = DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
 
     return {
       id: `${FAKE_VENDOR_ID_PREFIX}${crypto.randomUUID()}`,

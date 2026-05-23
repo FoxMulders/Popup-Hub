@@ -44,7 +44,7 @@ export function VendorApplicationsList({
         <p className="text-gray-500 text-sm">No applications yet.</p>
         <Link href="/vendor/events">
           <Button size="sm" className="mt-4 bg-amber-500 hover:bg-amber-600 text-white">
-            Browse Open Markets
+            Apply for open markets
           </Button>
         </Link>
       </div>

@@ -8,7 +8,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Globe, ShoppingBag, Camera, MapPin } from 'lucide-react'
 import type { VendorLineupEntry } from '@/lib/shopper/vendors'
@@ -60,12 +60,12 @@ export function VendorSheet({
         </SheetHeader>
         <div className="mt-4 space-y-4">
           <div className="flex items-start gap-3">
-            <Avatar className="h-14 w-14">
-              <AvatarImage src={passport?.logo_url ?? vendor.vendor?.avatar_url ?? undefined} />
-              <AvatarFallback className="bg-amber-100 text-lg font-bold text-amber-700">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
+            <VendorLogo
+              src={passport?.logo_url ?? vendor.vendor?.avatar_url}
+              alt={`${displayName} logo`}
+              fallback={initials}
+              size="md"
+            />
             <div>
               <div className="flex items-center gap-1">
                 {passport?.is_verified && (

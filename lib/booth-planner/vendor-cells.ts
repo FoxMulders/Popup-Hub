@@ -1,7 +1,8 @@
 import type { BoothCell, LayoutSpacingMode } from '@/types/database'
-import { isTentVendor } from '@/lib/booth-planner/vendor-unit-types'
+import { DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT } from '@/lib/booth-planner/layout-table-size'
 import { gridSpansForTableOrientation, type TableOrientation } from '@/lib/booth-planner/table-orientation'
-import { resolveVendorPersonaFootprint } from '@/lib/booth-planner/vendor-footprint'
+import { resolveVenueTableFootprint } from '@/lib/booth-planner/vendor-footprint'
+import { isTentVendor } from '@/lib/booth-planner/vendor-unit-types'
 
 export interface VendorCellSource {
   id: string
@@ -19,10 +20,16 @@ export interface VendorCellSource {
 export function syncCellsWithVendors(
   vendors: VendorCellSource[],
   cells: BoothCell[],
-  options?: { hiddenIds?: Set<string>; spacingMode?: LayoutSpacingMode }
+  options?: {
+    hiddenIds?: Set<string>
+    spacingMode?: LayoutSpacingMode
+    baselineTableLengthFt?: number
+  }
 ): BoothCell[] {
   const hidden = options?.hiddenIds ?? new Set<string>()
   const spacingMode = options?.spacingMode ?? 'one_foot'
+  const baselineTableLengthFt =
+    options?.baselineTableLengthFt ?? DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
   const visibleVendors = vendors.filter((v) => !hidden.has(v.id))
   const visibleCells = cells.filter((c) => !hidden.has(c.id))
   const byId = new Map(visibleCells.map((c) => [c.id, c]))
@@ -33,45 +40,33 @@ export function syncCellsWithVendors(
     const existing = byId.get(v.id)
     const placed = existing != null && existing.col >= 0
     const vendorUnitType = v.vendorUnitType ?? existing?.vendorUnitType ?? 'table'
-    const tableLengthFt = isTentVendor(vendorUnitType)
-      ? null
-      : (v.tableLengthFt ?? existing?.tableLengthFt ?? null)
     const tableOrientation = placed
       ? (v.tableOrientation ?? existing?.tableOrientation ?? null)
       : null
+
+    const venueUnit = resolveVenueTableFootprint({
+      spacingMode,
+      baselineTableLengthFt,
+      vendorUnitType,
+      tableOrientation: placed ? tableOrientation : null,
+    })
 
     let colSpan = v.colSpan
     let rowSpan = v.rowSpan
 
     if (!placed && !isTentVendor(vendorUnitType)) {
-      const locked = resolveVendorPersonaFootprint(
-        {
-          vendorUnitType,
-          tableLengthFt,
-          tableOrientation: null,
-          colSpan,
-          rowSpan,
-        },
-        spacingMode
-      )
-      if (v.colSpan <= locked.colSpan) {
-        colSpan = locked.colSpan
-        rowSpan = locked.rowSpan
+      if (v.colSpan <= venueUnit.colSpan) {
+        colSpan = venueUnit.colSpan
+        rowSpan = venueUnit.rowSpan
       }
     } else if (existing && existing.col >= 0) {
-      if (tableOrientation && tableLengthFt != null && !isTentVendor(vendorUnitType)) {
-        const unit = resolveVendorPersonaFootprint(
-          {
-            vendorUnitType,
-            tableLengthFt,
-            tableOrientation,
-            colSpan: existing.colSpan,
-            rowSpan: existing.rowSpan,
-          },
-          spacingMode
+      if (tableOrientation && !isTentVendor(vendorUnitType)) {
+        const slotCount = Math.max(1, Math.round(existing.colSpan / venueUnit.colSpan))
+        const oriented = gridSpansForTableOrientation(
+          baselineTableLengthFt,
+          spacingMode,
+          tableOrientation
         )
-        const slotCount = Math.max(1, Math.round(existing.colSpan / unit.colSpan))
-        const oriented = gridSpansForTableOrientation(tableLengthFt, spacingMode, tableOrientation)
         colSpan = oriented.colSpan * slotCount
         rowSpan = oriented.rowSpan
       } else if (!tableOrientation) {
@@ -79,6 +74,8 @@ export function syncCellsWithVendors(
         rowSpan = existing.rowSpan
       }
     }
+
+    const tableLengthFt = isTentVendor(vendorUnitType) ? null : baselineTableLengthFt
 
     if (existing) {
       return {

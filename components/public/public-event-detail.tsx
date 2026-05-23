@@ -27,7 +27,7 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
     .from('events')
     .select(`
       *,
-      coordinator:profiles(
+      coordinator:profiles!events_coordinator_id_fkey(
         id, full_name, avatar_url,
         reliability_score, recent_late_cancellation_at
       ),

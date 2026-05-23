@@ -34,7 +34,7 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
   vendor: [
     { href: '/vendor/dashboard', label: 'Dashboard' },
     { href: '/vendor/passport', label: 'My Passport' },
-    { href: '/vendor/events', label: 'Browse Events' },
+    { href: '/vendor/events', label: 'Apply for open markets' },
     { href: '/vendor/applications', label: 'Applications' },
     { href: '/wallet', label: 'Wallet' },
   ],

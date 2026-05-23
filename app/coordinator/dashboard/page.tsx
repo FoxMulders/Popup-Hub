@@ -3,7 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EventCard } from '@/components/events/event-card'
+import { CoordinatorEventFeed } from '@/components/coordinator/coordinator-event-feed'
+import {
+  partitionEventsByPhase,
+  sortEventsByStartAsc,
+  sortEventsByStartDesc,
+} from '@/lib/queries/events'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus, Calendar, Clock, DollarSign } from 'lucide-react'
@@ -92,27 +97,15 @@ async function MyEvents({ userId }: { userId: string }) {
     .from('events')
     .select('*')
     .eq('coordinator_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(9)
+    .order('start_at', { ascending: false })
 
-  if (!events || events.length === 0) {
-    return (
-      <div className="market-panel py-16 text-center">
-        <Calendar className="mx-auto mb-3 h-8 w-8 text-stone-300" />
-        <p className="text-muted-foreground text-sm">No events created yet.</p>
-        <Link href="/coordinator/events/new">
-          <Button size="sm" className="mt-4">Create First Event</Button>
-        </Link>
-      </div>
-    )
-  }
+  const { active, archived } = partitionEventsByPhase((events ?? []) as Event[])
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {(events as Event[]).map((event) => (
-        <EventCard key={event.id} event={event} href={`/coordinator/events/${event.id}`} />
-      ))}
-    </div>
+    <CoordinatorEventFeed
+      activeEvents={sortEventsByStartAsc(active)}
+      archivedEvents={sortEventsByStartDesc(archived)}
+    />
   )
 }
 

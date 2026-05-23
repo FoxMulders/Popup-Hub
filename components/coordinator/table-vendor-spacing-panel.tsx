@@ -30,6 +30,8 @@ interface TableVendorSpacingPanelProps {
   onTableLengthChange: (vendorId: string, tableLengthFt: number) => void
   onTableOrientationChange?: (vendorId: string, orientation: TableOrientation) => void
   showOrientation?: boolean
+  /** When set, table length is controlled venue-wide — hide per-vendor length pickers. */
+  venueTableLengthFt?: number
 }
 
 export function TableVendorSpacingPanel({
@@ -37,6 +39,7 @@ export function TableVendorSpacingPanel({
   onTableLengthChange,
   onTableOrientationChange,
   showOrientation = false,
+  venueTableLengthFt,
 }: TableVendorSpacingPanelProps) {
   if (vendors.length === 0) return null
 
@@ -47,8 +50,17 @@ export function TableVendorSpacingPanel({
         <div>
           <p className="text-sm font-semibold text-amber-900">Table booth sizes</p>
           <p className="text-xs text-amber-800 mt-0.5">
-            Market-provided tables: every booth is <strong>(4&apos; + L + 3&apos;) × 4&apos;</strong>{' '}
-            (e.g. 6&apos; table → 13&apos;×4&apos; space).
+            {venueTableLengthFt != null ? (
+              <>
+                All vendors use the hall table size ({venueTableLengthFt}&apos;). Change it with the{' '}
+                <strong>Table Size</strong> control above.
+              </>
+            ) : (
+              <>
+                Market-provided tables: every booth is <strong>(4&apos; + L + 3&apos;) × 4&apos;</strong>{' '}
+                (e.g. 6&apos; table → 13&apos;×4&apos; space).
+              </>
+            )}
             {showOrientation && (
               <>
                 {' '}
@@ -109,26 +121,34 @@ export function TableVendorSpacingPanel({
                     </Button>
                   </div>
                 )}
-                <Label htmlFor={`table-len-${v.id}`} className="sr-only">
-                  Table length for {v.vendorName}
-                </Label>
-                <Select
-                  value={String(v.tableLengthFt)}
-                  onValueChange={(val) => {
-                    if (val !== null) onTableLengthChange(v.id, Number(val))
-                  }}
-                >
-                  <SelectTrigger id={`table-len-${v.id}`} className="h-8 w-[88px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TABLE_LENGTH_OPTIONS_FT.map((ft) => (
-                      <SelectItem key={ft} value={String(ft)}>
-                        {ft}&apos; table
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {venueTableLengthFt == null ? (
+                  <>
+                    <Label htmlFor={`table-len-${v.id}`} className="sr-only">
+                      Table length for {v.vendorName}
+                    </Label>
+                    <Select
+                      value={String(v.tableLengthFt)}
+                      onValueChange={(val) => {
+                        if (val !== null) onTableLengthChange(v.id, Number(val))
+                      }}
+                    >
+                      <SelectTrigger id={`table-len-${v.id}`} className="h-8 w-[88px] text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TABLE_LENGTH_OPTIONS_FT.map((ft) => (
+                          <SelectItem key={ft} value={String(ft)}>
+                            {ft}&apos; table
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                ) : (
+                  <span className="text-xs font-medium text-amber-900 tabular-nums">
+                    {venueTableLengthFt}&apos; table
+                  </span>
+                )}
                 <span className="text-[10px] font-medium text-amber-800 whitespace-nowrap">
                   {footprint}
                 </span>

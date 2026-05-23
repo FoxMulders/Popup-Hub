@@ -82,7 +82,7 @@ export default async function VendorDashboard() {
         </div>
         <Link href="/vendor/events">
           <Button className="bg-amber-500 hover:bg-amber-600 text-white">
-            Browse Markets
+            Apply for open markets
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ShopperShell } from '@/components/shopper/shopper-shell'
 import { VendorShell } from '@/components/vendor/vendor-shell'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
+import { canAccessVendorPortal } from '@/lib/auth/rbac'
 import { countCoordinatorApprovals } from '@/lib/vendor/access'
 import type { Profile } from '@/types/database'
 
@@ -32,7 +33,7 @@ export async function PortalAwareShell({ children }: PortalAwareShellProps) {
     approvalCount
   )
 
-  if (portal === 'vendor' && profile && approvalCount > 0) {
+  if (portal === 'vendor' && profile && canAccessVendorPortal(profile.role, approvalCount)) {
     return (
       <VendorShell profile={profile} approvalCount={approvalCount}>
         {children}

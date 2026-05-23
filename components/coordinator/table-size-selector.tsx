@@ -66,7 +66,7 @@ export function TableSizeSelector({
         })}
       </div>
       <p className="text-[10px] text-muted-foreground leading-snug">
-        1′ grid units: {value}′ table × 2′ equipment ({value * 2} sq ft core) + 8′ co-aisle.
+        One size for this hall — applies to every table vendor ({value}′ × 2′ equipment core + 8′ co-aisle).
       </p>
     </div>
   )

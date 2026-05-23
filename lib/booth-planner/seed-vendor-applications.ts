@@ -3,7 +3,7 @@ import {
   fakeVendorsToMultiSlotMembers,
   groupMultiSlotTableVendorsForPlan,
 } from '@/lib/booth-planner/approved-application-groups'
-import { DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT } from '@/lib/booth-planner/layout-table-size'
+import { DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT, type LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 
 /** Hard ceilings for diverse seed suites (tables at 6′×2′). */
 export const SEED_TABLE_CEILINGS = {
@@ -34,7 +34,7 @@ export interface SeededApplicationSlot {
   id: string
   vendorName: string
   categoryName: string
-  tableLengthFt: 6
+  tableLengthFt: LayoutBaselineTableLengthFt
   requestedBoothType: 'inside' | 'power'
   seedGroupId: string
   slotIndex: number

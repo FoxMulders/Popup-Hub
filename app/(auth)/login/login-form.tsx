@@ -17,12 +17,35 @@ export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') ?? '/discover'
+  const authError = searchParams.get('error')
+  const authErrorDetail = searchParams.get('detail')
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(() => {
+    if (!authError) return null
+    if (authError === 'dev_mock_sign_in_failed') {
+      return authErrorDetail
+        ? `Dev mock sign-in failed: ${authErrorDetail}`
+        : 'Dev mock sign-in failed. Check DEV_MOCK_* credentials in .env.local.'
+    }
+    if (authError.startsWith('dev_mock_missing_credentials_')) {
+      const role = authError.replace('dev_mock_missing_credentials_', '')
+      const envPrefix =
+        role === 'coordinator'
+          ? 'DEV_MOCK_COORDINATOR'
+          : role === 'vendor'
+            ? 'DEV_MOCK_VENDOR'
+            : 'DEV_MOCK_SHOPPER'
+      return `Set ${envPrefix}_EMAIL and ${envPrefix}_PASSWORD in .env.local.`
+    }
+    if (authError === 'invalid_mock_role') {
+      return 'Invalid mock_role. Use coordinator, vendor, or shopper.'
+    }
+    return authError
+  })
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()

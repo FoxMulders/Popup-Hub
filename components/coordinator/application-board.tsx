@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -39,6 +39,49 @@ export function ApplicationBoard({ applications, bookingMode, eventCancelled, ca
   const [apps, setApps] = useState<BoothApplication[]>(applications)
   const [viewingApp, setViewingApp] = useState<BoothApplication | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [verifyingVendorId, setVerifyingVendorId] = useState<string | null>(null)
+
+  function markVendorVerified(vendorId: string) {
+    const patch = (a: BoothApplication) =>
+      a.vendor_id === vendorId && a.passport
+        ? { ...a, passport: { ...a.passport, is_verified: true } }
+        : a
+
+    setApps((prev) => prev.map(patch))
+    setViewingApp((prev) => (prev ? patch(prev) : null))
+  }
+
+  async function verifyVendor(vendorId: string, eventId: string) {
+    const previousApps = apps
+    const previousViewing = viewingApp
+
+    markVendorVerified(vendorId)
+    setVerifyingVendorId(vendorId)
+
+    try {
+      const res = await fetch('/api/coordinator/verify-vendor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendorId, eventId }),
+      })
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        setApps(previousApps)
+        setViewingApp(previousViewing)
+        toast.error(data.error ?? 'Failed to verify vendor passport')
+        return
+      }
+
+      toast.success('Vendor passport verified')
+    } catch {
+      setApps(previousApps)
+      setViewingApp(previousViewing)
+      toast.error('Failed to verify vendor passport')
+    } finally {
+      setVerifyingVendorId(null)
+    }
+  }
 
   const grouped = COLUMNS.reduce<Record<ApplicationStatus, BoothApplication[]>>(
     (acc, col) => {
@@ -200,6 +243,8 @@ export function ApplicationBoard({ applications, bookingMode, eventCancelled, ca
                       onApprove={() => updateStatus(app.id, 'approved')}
                       onReject={() => updateStatus(app.id, 'rejected')}
                       onWaitlist={() => updateStatus(app.id, 'waitlisted')}
+                      onVerify={() => verifyVendor(app.vendor_id, app.event_id)}
+                      verifying={verifyingVendorId === app.vendor_id}
                       loading={isPending}
                     />
                   ))
@@ -213,9 +258,57 @@ export function ApplicationBoard({ applications, bookingMode, eventCancelled, ca
       {/* Vendor detail modal */}
       <Dialog open={!!viewingApp} onOpenChange={(o) => !o && setViewingApp(null)}>
         <DialogContent className="max-w-2xl">
-          {viewingApp && <VendorDetailModal app={viewingApp} />}
+          {viewingApp && (
+            <VendorDetailModal
+              app={viewingApp}
+              onVerify={() => verifyVendor(viewingApp.vendor_id, viewingApp.event_id)}
+              verifying={verifyingVendorId === viewingApp.vendor_id}
+            />
+          )}
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function PassportVerificationBadge({
+  isVerified,
+  onVerify,
+  verifying,
+  compact,
+}: {
+  isVerified: boolean
+  onVerify: () => void
+  verifying: boolean
+  compact?: boolean
+}) {
+  if (isVerified) {
+    return (
+      <Badge className={`${marketStatusBadge.neutral} ${compact ? 'text-[10px]' : 'text-xs'}`}>
+        <CheckCircle className={`${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
+        Verified
+      </Badge>
+    )
+  }
+
+  return (
+    <div className={`flex ${compact ? 'flex-col gap-1.5' : 'flex-wrap items-center gap-2'}`}>
+      <Badge className={`bg-stone-100 text-stone-600 ${compact ? 'text-[10px]' : 'text-xs'}`}>
+        Unverified
+      </Badge>
+      <Button
+        size="sm"
+        variant="outline"
+        className={`${compact ? 'min-h-9 text-[10px] px-2' : 'min-h-10 text-xs'} gap-1.5`}
+        onClick={onVerify}
+        disabled={verifying}
+      >
+        {verifying ? (
+          <span className="animate-pulse">Verifying…</span>
+        ) : (
+          'Verify Vendor Passport'
+        )}
+      </Button>
     </div>
   )
 }
@@ -227,6 +320,8 @@ function ApplicationCard({
   onApprove,
   onReject,
   onWaitlist,
+  onVerify,
+  verifying,
   loading,
 }: {
   app: BoothApplication
@@ -235,6 +330,8 @@ function ApplicationCard({
   onApprove: () => void
   onReject: () => void
   onWaitlist: () => void
+  onVerify: () => void
+  verifying: boolean
   loading: boolean
 }) {
   const passport = app.passport
@@ -255,12 +352,12 @@ function ApplicationCard({
       )}
       <CardContent className="p-3 space-y-2">
         <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8 shrink-0">
-            <AvatarImage src={passport?.logo_url ?? vendor?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-harvest-100 text-harvest-800 text-[10px] font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <VendorLogo
+            src={passport?.logo_url ?? vendor?.avatar_url}
+            alt={`${displayName} logo`}
+            fallback={initials}
+            size="xs"
+          />
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">{displayName}</p>
             {app.category && (
@@ -343,7 +440,15 @@ function ApplicationCard({
   )
 }
 
-function VendorDetailModal({ app }: { app: BoothApplication }) {
+function VendorDetailModal({
+  app,
+  onVerify,
+  verifying,
+}: {
+  app: BoothApplication
+  onVerify: () => void
+  verifying: boolean
+}) {
   const passport = app.passport
   const vendor = app.vendor
   const displayName = passport?.business_name ?? vendor?.full_name ?? 'Vendor'
@@ -359,20 +464,21 @@ function VendorDetailModal({ app }: { app: BoothApplication }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <Avatar className="h-14 w-14">
-              <AvatarImage src={passport?.logo_url ?? vendor?.avatar_url ?? undefined} />
-              <AvatarFallback className="text-lg bg-harvest-100 text-harvest-800 font-bold">
-                {displayName[0]}
-              </AvatarFallback>
-            </Avatar>
+            <VendorLogo
+              src={passport?.logo_url ?? vendor?.avatar_url}
+              alt={`${displayName} logo`}
+              fallback={displayName[0]}
+              size="md"
+            />
             <div>
               <p className="font-semibold text-lg">{displayName}</p>
-            {passport?.is_verified && (
-                <Badge className={`${marketStatusBadge.neutral} text-xs mt-1`}>
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Verified Vendor
-                </Badge>
-              )}
+              <div className="mt-1">
+                <PassportVerificationBadge
+                  isVerified={!!passport?.is_verified}
+                  onVerify={onVerify}
+                  verifying={verifying}
+                />
+              </div>
               {app.vendor?.reliability_score != null && (
                 <Badge className={`${marketStatusBadge.success} text-xs mt-1`}>
                   Reliability {app.vendor.reliability_score}%

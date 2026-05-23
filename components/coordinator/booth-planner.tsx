@@ -76,10 +76,7 @@ import {
   buildVendorPlacementGuard,
   vendorCategoryAdjacencyMessage,
 } from '@/lib/booth-planner/vendor-placement-guards'
-import {
-  clampVendorTableLengthFt,
-  resolveVendorPersonaFootprint,
-} from '@/lib/booth-planner/vendor-footprint'
+import { resolveVenueTableFootprint } from '@/lib/booth-planner/vendor-footprint'
 import {
   normalizePlacedCellsForPathfinding,
   vendorPathfindingBlockMessage,
@@ -619,20 +616,24 @@ export function BoothPlanner({
 
   const handleUndo = useCallback(() => {
     const current = makeSnapshot()
+    let nextSnapshot: PlannerSnapshot | null = null
     setLayoutHistory((h) => {
       const result = undoHistory(h, current)
-      if (result.snapshot) applySnapshot(result.snapshot)
+      nextSnapshot = result.snapshot
       return result.history
     })
+    if (nextSnapshot) applySnapshot(nextSnapshot)
   }, [makeSnapshot, applySnapshot])
 
   const handleRedo = useCallback(() => {
     const current = makeSnapshot()
+    let nextSnapshot: PlannerSnapshot | null = null
     setLayoutHistory((h) => {
       const result = redoHistory(h, current)
-      if (result.snapshot) applySnapshot(result.snapshot)
+      nextSnapshot = result.snapshot
       return result.history
     })
+    if (nextSnapshot) applySnapshot(nextSnapshot)
   }, [makeSnapshot, applySnapshot])
 
   const patchActiveRoom = useCallback(
@@ -855,7 +856,7 @@ export function BoothPlanner({
         placedCells: normalizePlacedCellsForPathfinding(
           cells.filter((c) => c.col >= 0),
           spacingMode,
-          { baselineTableLengthFt }
+          baselineTableLengthFt
         ),
       }),
     [venueElementsWithDoors, gridCols, gridRows, entrance, cells, spacingMode, baselineTableLengthFt]
@@ -1042,13 +1043,8 @@ export function BoothPlanner({
   })
   const approvedApps = applications.filter((a) => a.status === 'approved')
 
-  function resolveTableLengthFt(app: ApplicationInput): number {
-    return (
-      vendorTableLengths[app.id] ??
-      app.table_length_ft ??
-      categoryTableLengths[app.category_id] ??
-      baselineTableLengthFt
-    )
+  function resolveTableLengthFt(_app: ApplicationInput): number {
+    return baselineTableLengthFt
   }
 
   function resolveTableOrientation(
@@ -1219,6 +1215,7 @@ export function BoothPlanner({
       const synced = syncCellsWithVendors(visibleVendorInputs, room.cells, {
         hiddenIds: layoutHiddenIds,
         spacingMode,
+        baselineTableLengthFt,
       })
       if (
         synced.length === room.cells.length &&
@@ -1234,7 +1231,7 @@ export function BoothPlanner({
       }
       return updateRoomInList(prev, activeRoomId, { cells: synced })
     })
-  }, [vendorSyncKey, activeRoomId, visibleVendorInputs, layoutHiddenIds])
+  }, [vendorSyncKey, activeRoomId, visibleVendorInputs, layoutHiddenIds, spacingMode, baselineTableLengthFt])
 
   function handleUnplaceVendor(cell: BoothCell) {
     patchActiveRoom({
@@ -1278,13 +1275,10 @@ export function BoothPlanner({
 
   function multiSlotCount(srcCell: BoothCell): number {
     if (isTentVendor(srcCell.vendorUnitType)) return 1
-    const tableLengthFt =
-      srcCell.tableLengthFt ??
-      (isOneFootGrid ? baselineTableLengthFt : DEFAULT_TABLE_LENGTH_FT)
-    const unit = resolveVendorGridSpans({
-      unitType: srcCell.vendorUnitType ?? 'table',
-      tableLengthFt,
+    const unit = resolveVenueTableFootprint({
       spacingMode,
+      baselineTableLengthFt,
+      vendorUnitType: srcCell.vendorUnitType ?? 'table',
       tableOrientation: srcCell.tableOrientation ?? resolveTableOrientation(srcCell.id, srcCell),
     })
     if (unit.colSpan <= 0) return 1
@@ -1297,16 +1291,12 @@ export function BoothPlanner({
     targetRow: number
   ): ReturnType<typeof resolveManualFacingPlacement> | null {
     if (!isOneFootGrid || isTentVendor(srcCell.vendorUnitType)) return null
-    const ft = clampVendorTableLengthFt(
-      srcCell.tableLengthFt,
-      isOneFootGrid ? baselineTableLengthFt : DEFAULT_TABLE_LENGTH_FT
-    )
     const facingTarget = resolveFacingTargetForPlacement(srcCell, targetCol, targetRow)
     return resolveManualFacingPlacement(
       facingTarget,
       targetRow,
       targetCol,
-      ft,
+      baselineTableLengthFt,
       spacingMode,
       gridRows,
       gridCols
@@ -1319,8 +1309,11 @@ export function BoothPlanner({
     targetRow: number
   ): { colSpan: number; rowSpan: number } {
     const slotCount = multiSlotCount(srcCell)
-    const lockedFootprint = resolveVendorPersonaFootprint(srcCell, spacingMode, {
+    const venueFootprint = resolveVenueTableFootprint({
+      spacingMode,
       baselineTableLengthFt,
+      vendorUnitType: srcCell.vendorUnitType,
+      tableOrientation: srcCell.tableOrientation ?? resolveTableOrientation(srcCell.id, srcCell),
     })
     const manual = resolveManualPlacement(srcCell, targetCol, targetRow)
     if (manual) {
@@ -1329,7 +1322,7 @@ export function BoothPlanner({
       }
       return { colSpan: manual.colSpan, rowSpan: manual.rowSpan }
     }
-    const ft = lockedFootprint.tableLengthFt ?? baselineTableLengthFt
+    const ft = baselineTableLengthFt
     if (isOneFootGrid && !isTentVendor(srcCell.vendorUnitType)) {
       const orientation =
         srcCell.tableOrientation ?? resolveTableOrientation(srcCell.id, srcCell)
@@ -1354,8 +1347,8 @@ export function BoothPlanner({
       }
     }
     return {
-      colSpan: lockedFootprint.colSpan * slotCount,
-      rowSpan: lockedFootprint.rowSpan,
+      colSpan: venueFootprint.colSpan * slotCount,
+      rowSpan: venueFootprint.rowSpan,
     }
   }
 
@@ -1449,7 +1442,6 @@ export function BoothPlanner({
       return false
     }
 
-    const locked = resolveVendorPersonaFootprint(srcCell, spacingMode, { baselineTableLengthFt })
     const pathCheck = vendorPathfindingUnobstructed({
       rows: canvasRows,
       cols: gridCols,
@@ -1462,7 +1454,7 @@ export function BoothPlanner({
         col: targetCol,
         colSpan,
         rowSpan,
-        tableLengthFt: locked.tableLengthFt ?? srcCell.tableLengthFt,
+        tableLengthFt: isTentVendor(srcCell.vendorUnitType) ? null : baselineTableLengthFt,
       },
       excludeBoothId: srcCell.col >= 0 ? srcCell.id : undefined,
       spacingMode,
@@ -1537,10 +1529,7 @@ export function BoothPlanner({
               colSpan,
               rowSpan,
               boothNumber: boothNum,
-              tableLengthFt:
-                resolveVendorPersonaFootprint(srcCell, spacingMode, {
-                  baselineTableLengthFt,
-                }).tableLengthFt ?? cell.tableLengthFt,
+              tableLengthFt: isTentVendor(srcCell.vendorUnitType) ? null : baselineTableLengthFt,
               tableOrientation: manual?.tableOrientation ??
                 srcCell.tableOrientation ??
                 resolveTableOrientation(srcCell.id, srcCell) ??
@@ -1974,6 +1963,13 @@ export function BoothPlanner({
   }
 
   function handleTableLengthChange(applicationId: string, tableLengthFt: number) {
+    if (usesTableUnits) {
+      if (isLayoutBaselineTableLengthFt(tableLengthFt)) {
+        handleBaselineTableSizeChange(tableLengthFt)
+      }
+      return
+    }
+
     if (spacingMode === 'standard') {
       setVendorTableLengths((prev) => ({ ...prev, [applicationId]: tableLengthFt }))
       return
@@ -2028,10 +2024,7 @@ export function BoothPlanner({
     if (spacingMode === 'standard') return
 
     const cell = cells.find((c) => c.id === applicationId)
-    const tableLengthFt =
-      cell?.tableLengthFt ??
-      vendorTableLengths[applicationId] ??
-      (isOneFootGrid ? baselineTableLengthFt : DEFAULT_TABLE_LENGTH_FT)
+    const tableLengthFt = baselineTableLengthFt
 
     const { colSpan, rowSpan } = gridSpansForTableOrientation(
       tableLengthFt,
@@ -3093,7 +3086,7 @@ export function BoothPlanner({
               <TableVendorSpacingPanel
                 vendors={[
                   ...approvedApps.map((app) => {
-                    const tableLengthFt = resolveTableLengthFt(app)
+                    const tableLengthFt = baselineTableLengthFt
                     const tableOrientation = resolveTableOrientation(app.id)
                     const cell = cells.find((c) => c.id === app.id)
                     return {
@@ -3108,7 +3101,7 @@ export function BoothPlanner({
                   ...fakeVendors
                     .filter((v) => v.vendorUnitType !== 'tent')
                     .map((v) => {
-                      const tableLengthFt = v.tableLengthFt ?? DEFAULT_TABLE_LENGTH_FT
+                      const tableLengthFt = baselineTableLengthFt
                       const tableOrientation =
                         v.tableOrientation ?? resolveTableOrientation(v.id)
                       return {
@@ -3121,6 +3114,7 @@ export function BoothPlanner({
                       }
                     }),
                 ]}
+                venueTableLengthFt={usesTableUnits ? baselineTableLengthFt : undefined}
                 onTableLengthChange={handleTableLengthChange}
                 onTableOrientationChange={handleTableOrientationChange}
                 showOrientation={isOneFootGrid || spacingMode === 'table_provided'}

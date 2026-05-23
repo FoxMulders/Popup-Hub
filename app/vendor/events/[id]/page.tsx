@@ -5,9 +5,14 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ApplyButton } from '@/components/events/apply-button'
 import { MarketFeedbackWidget } from '@/components/coordinator/market-feedback-widget'
-import { hasCoordinatorApproval } from '@/lib/vendor/access'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { formatCents } from '@/lib/square/client'
+import {
+  getEventDisplayStatus,
+  isEventOpenForApplications,
+  VENDOR_EVENT_SELECT,
+  VENDOR_MARKET_STATUSES,
+} from '@/lib/queries/events'
 import { format } from 'date-fns'
 import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react'
 import type { Event, EventCategoryLimit } from '@/types/database'
@@ -24,21 +29,13 @@ export default async function VendorEventDetailPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event }, { data: passport }, { data: existingApp }] = await Promise.all([
+  const [{ data: event }, { data: existingApp }] = await Promise.all([
     supabase
       .from('events')
-      .select(`
-        *,
-        coordinator:profiles(
-          id, full_name, avatar_url,
-          reliability_score, recent_late_cancellation_at
-        ),
-        category_limits:event_category_limits(*, category:categories(id, name, is_mlm))
-      `)
+      .select(VENDOR_EVENT_SELECT)
       .eq('id', id)
-      .in('status', ['published', 'active'])
+      .in('status', VENDOR_MARKET_STATUSES)
       .single(),
-    supabase.from('vendor_passports').select('id').eq('user_id', user.id).maybeSingle(),
     supabase
       .from('booth_applications')
       .select('id, status')
@@ -50,7 +47,8 @@ export default async function VendorEventDetailPage({ params }: Props) {
   if (!event) notFound()
 
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
-  const approved = await hasCoordinatorApproval(supabase, user.id, event.coordinator_id)
+  const displayStatus = getEventDisplayStatus(event)
+  const applicationsOpen = isEventOpenForApplications(event)
 
   const sortedLimits = [...(event.category_limits ?? [])].sort(
     (a: EventCategoryLimit, b: EventCategoryLimit) =>
@@ -77,7 +75,14 @@ export default async function VendorEventDetailPage({ params }: Props) {
         <div className="space-y-4 p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
-            <Badge className="capitalize">{event.booking_mode === 'juried' ? 'Juried review' : 'Instant book'}</Badge>
+            <div className="flex flex-wrap gap-2">
+              <Badge className="capitalize">
+                {displayStatus === 'archived' ? 'Archived' : displayStatus}
+              </Badge>
+              <Badge className="capitalize">
+                {event.booking_mode === 'juried' ? 'Juried review' : 'Instant book'}
+              </Badge>
+            </div>
           </div>
           {event.description ? <p className="text-sm text-gray-600">{event.description}</p> : null}
           <div className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
@@ -135,26 +140,12 @@ export default async function VendorEventDetailPage({ params }: Props) {
       ) : null}
 
       <div className="rounded-2xl border bg-white p-6">
-        {!passport ? (
-          <div className="text-center">
-            <p className="text-sm text-gray-600">Create your vendor passport before applying.</p>
-            <Link href="/vendor/passport">
-              <Button className="mt-3" size="sm">
-                Create passport
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <ApplyButton
-            event={event as Event}
-            passportId={passport.id}
-            userId={user.id}
-            alreadyApplied={existingApp != null}
-            hasCoordinatorApproval={approved}
-            coordinatorId={event.coordinator_id}
-            coordinatorName={coordinator?.full_name ?? 'Organizer'}
-          />
-        )}
+        <ApplyButton
+          event={event as Event}
+          userId={user.id}
+          applicationStatus={existingApp?.status ?? null}
+          applicationsOpen={applicationsOpen}
+        />
         {existingApp ? (
           <p className="mt-3 text-center text-xs text-gray-500 capitalize">
             Application status: {existingApp.status}

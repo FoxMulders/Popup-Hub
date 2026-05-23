@@ -2,6 +2,8 @@
  * Dev/CI layout math smoke tests — run: npx tsx lib/booth-planner/qa-scenarios.ts
  */
 import { autoLayout } from '@/lib/booth-planner/algorithm'
+import { VendorPlacementGuard } from '@/lib/booth-planner/vendor-placement-guards'
+import { normalizeCategoryKey } from '@/lib/booth-planner/category-isolation'
 import { validateAutoLayoutPlacement } from '@/lib/booth-planner/layout-validation'
 import { applyGenericRowLayout, type GenericRowLayoutMode } from '@/lib/booth-planner/generic-row-layouts'
 import {
@@ -876,7 +878,46 @@ function runMultiSlotAndClearanceQa() {
   console.log('✓ multi-slot + clearance overlay QA passed')
 }
 
+function runVendorPlacementGuardQa(): void {
+  const mk = (
+    id: string,
+    cat: string,
+    row: number,
+    col: number
+  ) => ({
+    id,
+    vendorName: id,
+    categoryName: cat,
+    categoryColor: '#fff',
+    boothNumber: 1,
+    row,
+    col,
+    rowSpan: 2,
+    colSpan: 6,
+    vendorUnitType: 'table' as const,
+    tableLengthFt: 6,
+    tableOrientation: null,
+    facingTarget: null,
+  })
+
+  const placed = [mk('a', 'Epoxy Resin', 4, 4)]
+  const guard = VendorPlacementGuard.fromPlacedCells({ cols: 48, rows: 48, placedCells: placed })
+  const key = normalizeCategoryKey('Epoxy Resin')
+
+  assert(
+    guard.rejectsAutoPlacement({ categoryKey: key, row: 4, col: 10, rowSpan: 2, colSpan: 6 }),
+    'same category edge-adjacent auto placement should be rejected'
+  )
+  assert(
+    !guard.rejectsAutoPlacement({ categoryKey: key, row: 30, col: 30, rowSpan: 2, colSpan: 6 }),
+    'same category in open quadrant should be allowed'
+  )
+
+  console.log('✓ vendor placement guard QA passed')
+}
+
 if (typeof process !== 'undefined' && process.argv[1]?.includes('qa-scenarios')) {
   runLayoutQaScenarios()
   runMultiSlotAndClearanceQa()
+  runVendorPlacementGuardQa()
 }

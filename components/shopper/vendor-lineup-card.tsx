@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { CheckCircle } from 'lucide-react'
 import type { VendorLineupEntry } from '@/lib/shopper/vendors'
 import { getVendorLinks } from '@/lib/shopper/vendors'
@@ -40,12 +40,12 @@ export function VendorLineupCard({ vendor, onClick }: VendorLineupCardProps) {
       )}
       <CardContent className="p-3">
         <div className="flex items-start gap-2">
-          <Avatar className="h-9 w-9 shrink-0">
-            <AvatarImage src={passport?.logo_url ?? vendor.vendor?.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-amber-100 text-xs font-bold text-amber-700">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <VendorLogo
+            src={passport?.logo_url ?? vendor.vendor?.avatar_url}
+            alt={`${displayName} logo`}
+            fallback={initials}
+            size="xs"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
               <p className="truncate text-sm font-semibold">{displayName}</p>

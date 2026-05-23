@@ -22,7 +22,7 @@ export async function DiscoverMarketsList({ limit = 20 }: { limit?: number }) {
   const supabase = await createClient()
   const { data: events } = await supabase
     .from('events')
-    .select('*, coordinator:profiles(full_name, avatar_url)')
+    .select('*, coordinator:profiles!events_coordinator_id_fkey(full_name, avatar_url)')
     .in('status', ['published', 'active'])
     .order('start_at', { ascending: true })
     .limit(limit)

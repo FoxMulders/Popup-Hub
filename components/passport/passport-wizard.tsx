@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { Category, VendorPassport } from '@/types/database'
 import { sortCategoriesByName } from '@/lib/categories'
 import { normalizeUrl } from '@/lib/vendor/normalize-url'
+import { VendorLogo } from '@/components/vendor/vendor-logo'
 
 interface PassportWizardProps {
   categories: Category[]
@@ -294,16 +295,26 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
                   <Label>Business Logo</Label>
                   <Tooltip>
                     <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
-                    <TooltipContent className="max-w-xs">Your brand logo shown on your vendor profile and booth roster. Square images work best.</TooltipContent>
+                    <TooltipContent className="max-w-xs">
+                      Your full logo is shown as-is on your profile, roster, and promotional materials.
+                      PNG or JPG with a transparent or white background works well.
+                    </TooltipContent>
                   </Tooltip>
                 </div>
                 <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
                   {logoPreview ? (
-                    <img src={logoPreview} alt="Logo preview" className="h-24 w-24 rounded-full object-cover" />
+                    <VendorLogo
+                      src={logoPreview}
+                      alt="Logo preview"
+                      size="xl"
+                      className="mx-auto max-w-full border-dashed"
+                    />
                   ) : (
                     <Upload className="h-8 w-8 text-gray-400" />
                   )}
-                  <span className="text-xs text-gray-500">Click to upload logo (JPG, PNG, max 2MB)</span>
+                  <span className="text-xs text-gray-500 text-center">
+                    Click to upload your full logo (JPG, PNG, max 2MB)
+                  </span>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"

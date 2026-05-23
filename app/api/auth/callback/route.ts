@@ -5,9 +5,7 @@ import { getDefaultDashboard } from '@/lib/portals/active-portal'
 import { countCoordinatorApprovals } from '@/lib/vendor/access'
 import type { Role } from '@/types/database'
 
-const VALID_SIGNUP_ROLES: Role[] = ['shopper', 'coordinator']
-
-/** Vendor role is assigned only via coordinator invitation activation — never at signup. */
+const VALID_SIGNUP_ROLES: Role[] = ['shopper', 'vendor', 'coordinator']
 
 /** Supabase SSR auth cookie prefix — clear stale session before magic-link exchange. */
 function isSupabaseAuthCookie(name: string): boolean {
@@ -42,8 +40,6 @@ export async function GET(request: Request) {
             .from('profiles')
             .update({ role: roleParam as Role })
             .eq('id', user.id)
-        } else if (roleParam === 'vendor') {
-          // Ignore self-serve vendor signup; role promotion requires invitation RPC.
         }
 
         const { data: profile } = await supabase

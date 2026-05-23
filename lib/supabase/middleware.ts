@@ -2,9 +2,14 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getDefaultDashboard } from '@/lib/portals/active-portal'
 import {
-  isShopperBlockedPath,
-  isShopperRole,
-  SHOPPER_BLOCKED_REDIRECT,
+  DEV_MOCK_ROLE_PARAM,
+  devMockLoginPath,
+  isDevMockAuthEnabled,
+  parseDevMockRole,
+} from '@/lib/auth/dev-mock-session'
+import {
+  accessDeniedRedirect,
+  isPathAccessAllowed,
 } from '@/lib/auth/rbac'
 import type { Role } from '@/types/database'
 
@@ -38,6 +43,13 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  if (isDevMockAuthEnabled()) {
+    const mockRole = parseDevMockRole(request.nextUrl.searchParams.get(DEV_MOCK_ROLE_PARAM))
+    if (mockRole && pathname === '/login') {
+      return NextResponse.redirect(new URL(devMockLoginPath(mockRole), request.url))
+    }
+  }
+
   const publicPaths = [
     '/',
     '/login',
@@ -56,7 +68,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/square/webhook') ||
     pathname.startsWith('/api/reminders/') ||
-    pathname.startsWith('/favicon')
+    pathname.startsWith('/favicon') ||
+    (isDevMockAuthEnabled() && pathname.startsWith('/api/dev/mock-login'))
 
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone()
@@ -76,9 +89,9 @@ export async function updateSession(request: NextRequest) {
 
     profileRole = (profile?.role as Role | undefined) ?? 'shopper'
 
-    if (isShopperRole(profileRole) && isShopperBlockedPath(pathname)) {
+    if (!isPathAccessAllowed(pathname, profileRole)) {
       const url = request.nextUrl.clone()
-      url.pathname = SHOPPER_BLOCKED_REDIRECT
+      url.pathname = accessDeniedRedirect(profileRole)
       url.search = ''
       return NextResponse.redirect(url)
     }

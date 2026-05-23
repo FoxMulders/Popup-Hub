@@ -9,8 +9,8 @@ import {
 import { cellKey } from '@/lib/booth-planner/venue-elements'
 import { isTentVendor } from '@/lib/booth-planner/vendor-unit-types'
 import {
-  resolveVendorPersonaFootprint,
-  vendorFootprintMismatch,
+  resolveVenueTableFootprint,
+  venueFootprintMismatch,
 } from '@/lib/booth-planner/vendor-footprint'
 
 export interface VendorPathfindingGuardInput {
@@ -22,7 +22,7 @@ export interface VendorPathfindingGuardInput {
   candidate: BoothCell
   excludeBoothId?: string
   spacingMode: LayoutSpacingMode
-  baselineTableLengthFt?: number
+  baselineTableLengthFt: number
   storefront?: FrontSide | null
 }
 
@@ -31,35 +31,41 @@ export interface VendorPathfindingGuardResult {
   reason?: 'no_patron_path' | 'storefront_blocked' | 'flow_vector_blocked'
 }
 
-/** Re-apply locked vendor table footprints so walkability math uses true 5′–10′ spans. */
+/** Re-apply venue baseline footprints so walkability math matches the hall table size. */
 export function normalizePlacedCellsForPathfinding(
   cells: BoothCell[],
   spacingMode: LayoutSpacingMode,
-  options?: { baselineTableLengthFt?: number }
+  baselineTableLengthFt: number
 ): BoothCell[] {
   return cells.map((cell) => {
     if (cell.col < 0 || cell.row < 0 || isTentVendor(cell.vendorUnitType)) return cell
-    if (!vendorFootprintMismatch(cell, spacingMode, options)) return cell
-    const locked = resolveVendorPersonaFootprint(cell, spacingMode, options)
+    if (!venueFootprintMismatch(cell, spacingMode, baselineTableLengthFt)) return cell
+    const locked = resolveVenueTableFootprint({
+      spacingMode,
+      baselineTableLengthFt,
+      vendorUnitType: cell.vendorUnitType,
+      tableOrientation: cell.tableOrientation,
+    })
     return {
       ...cell,
       colSpan: locked.colSpan,
       rowSpan: locked.rowSpan,
-      tableLengthFt: locked.tableLengthFt ?? cell.tableLengthFt,
+      tableLengthFt: locked.tableLengthFt,
     }
   })
 }
 
 function mergePlacedWithCandidate(input: VendorPathfindingGuardInput): BoothCell[] {
   const { placedCells, candidate, excludeBoothId, spacingMode, baselineTableLengthFt } = input
-  const normalized = normalizePlacedCellsForPathfinding(placedCells, spacingMode, {
-    baselineTableLengthFt,
-  }).filter((c) => c.col >= 0 && c.row >= 0 && c.id !== excludeBoothId)
+  const normalized = normalizePlacedCellsForPathfinding(
+    placedCells,
+    spacingMode,
+    baselineTableLengthFt
+  ).filter((c) => c.col >= 0 && c.row >= 0 && c.id !== excludeBoothId)
 
-  const locked = resolveVendorPersonaFootprint(candidate, spacingMode, { baselineTableLengthFt })
   const probe: BoothCell = {
     ...candidate,
-    tableLengthFt: locked.tableLengthFt ?? candidate.tableLengthFt,
+    tableLengthFt: isTentVendor(candidate.vendorUnitType) ? null : baselineTableLengthFt,
   }
 
   return [...normalized, probe]
@@ -87,7 +93,6 @@ function storefrontWalkable(
   return true
 }
 
-/** True when patron path segments near the candidate retain a non-zero flow direction. */
 function flowVectorsUnobstructedNearBooth(
   trace: PatronPathTrace,
   row: number,
@@ -116,10 +121,7 @@ function flowVectorsUnobstructedNearBooth(
   return checked > 0
 }
 
-/**
- * Validate vendor placement using locked footprints so pathfinding vectors stay mathematically
- * consistent with 5′–10′ table equipment spans.
- */
+/** Validate vendor placement using the venue-wide table footprint for pathfinding math. */
 export function vendorPathfindingUnobstructed(
   input: VendorPathfindingGuardInput
 ): VendorPathfindingGuardResult {
@@ -162,7 +164,6 @@ export function vendorPathfindingBlockMessage(reason?: VendorPathfindingGuardRes
   }
 }
 
-/** Walkability keys occupied by a vendor probe (core + safety buffer). */
 export function vendorPathfindingOccupiedKeys(
   cell: Pick<BoothCell, 'row' | 'col' | 'rowSpan' | 'colSpan'>,
   bufferCells = 2

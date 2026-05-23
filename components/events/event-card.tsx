@@ -5,6 +5,7 @@ import { MapPin, Calendar, Clock, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { marketStatusBadge } from '@/lib/theme/market'
 import type { Event } from '@/types/database'
+import type { EventDisplayStatus } from '@/lib/queries/events'
 
 interface EventCardProps {
   event: Event
@@ -13,6 +14,8 @@ interface EventCardProps {
   hoursLabel?: string
   distanceLabel?: string
   vendorCount?: number
+  /** Override badge when UI treats past markets as archived. */
+  displayStatus?: EventDisplayStatus
   /** Vendor-only: show booking mode / pricing tier badge. Hidden for shopper discovery. */
   showBookingMode?: boolean
 }
@@ -23,6 +26,11 @@ const STATUS_BADGE: Record<string, string> = {
   draft: marketStatusBadge.neutral,
   completed: marketStatusBadge.neutral,
   cancelled: marketStatusBadge.error,
+  archived: marketStatusBadge.neutral,
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  archived: 'Archived',
 }
 
 export function EventCard({
@@ -32,8 +40,10 @@ export function EventCard({
   hoursLabel,
   distanceLabel,
   vendorCount,
+  displayStatus,
   showBookingMode = false,
 }: EventCardProps) {
+  const badgeStatus = displayStatus ?? event.status
   const hours =
     hoursLabel ??
     `${format(new Date(event.start_at), 'h:mm a')} – ${format(new Date(event.end_at), 'h:mm a')}`
@@ -54,9 +64,9 @@ export function EventCard({
             </div>
           )}
           <Badge
-            className={`absolute right-2 top-2 border capitalize text-xs ${STATUS_BADGE[event.status]}`}
+            className={`absolute right-2 top-2 border capitalize text-xs ${STATUS_BADGE[badgeStatus] ?? marketStatusBadge.neutral}`}
           >
-            {event.status}
+            {STATUS_LABEL[badgeStatus] ?? badgeStatus}
           </Badge>
           {distanceLabel ? (
             <Badge className="absolute left-2 top-2 border bg-white/90 text-[10px] text-foreground">
