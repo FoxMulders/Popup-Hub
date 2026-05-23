@@ -16,6 +16,8 @@ import type { Category, VendorPassport } from '@/types/database'
 import { sortCategoriesByName } from '@/lib/categories'
 import { normalizeUrl } from '@/lib/vendor/normalize-url'
 import { resolvePassportCategoryIds, toggleCategoryId } from '@/lib/vendor/passport-categories'
+import { buildPassportSavePayload, formatSupabaseError } from '@/lib/vendor/passport-payload'
+import { uploadVendorAsset } from '@/lib/vendor/upload-vendor-asset'
 import { dispatchAvatarChanged } from '@/lib/profile/avatar-sync'
 import { cn } from '@/lib/utils'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
@@ -50,13 +52,6 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
   const [shopUrl, setShopUrl] = useState(existing?.shop_url ?? '')
   const [instagramUrl, setInstagramUrl] = useState(existing?.instagram_url ?? '')
 
-  async function uploadFile(file: File, bucket: string, path: string): Promise<string | null> {
-    const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-    if (error) return null
-    const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-    return data.publicUrl
-  }
-
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -84,41 +79,41 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
     try {
       let logoUrl = existing?.logo_url ?? null
       if (logoFile) {
-        const url = await uploadFile(logoFile, 'vendor-assets', `${userId}/logo-${Date.now()}`)
-        if (url) logoUrl = url
+        logoUrl = await uploadVendorAsset(supabase, userId, logoFile, 'logo')
       }
 
       const uploadedItemUrls: string[] = [...(existing?.item_image_urls ?? [])]
       for (const file of itemFiles) {
-        const url = await uploadFile(file, 'vendor-assets', `${userId}/item-${Date.now()}-${file.name}`)
-        if (url) uploadedItemUrls.push(url)
+        const url = await uploadVendorAsset(supabase, userId, file, 'item')
+        uploadedItemUrls.push(url)
       }
 
-      const passportData = {
-        user_id: userId,
-        business_name: businessName,
-        bio: bio || null,
-        primary_category_id: categoryIds[0] ?? null,
-        category_ids: categoryIds,
-        logo_url: logoUrl,
-        item_image_urls: uploadedItemUrls.slice(0, 6),
-        tax_id_encrypted: taxId ? btoa(taxId) : existing?.tax_id_encrypted ?? null,
-        website_url: normalizeUrl(websiteUrl),
-        shop_url: normalizeUrl(shopUrl),
-        instagram_url: normalizeUrl(instagramUrl),
-      }
+      const passportData = buildPassportSavePayload({
+        userId,
+        businessName,
+        bio,
+        categoryIds,
+        logoUrl,
+        itemImageUrls: uploadedItemUrls,
+        taxIdEncrypted: taxId ? btoa(taxId) : existing?.tax_id_encrypted ?? null,
+        websiteUrl: normalizeUrl(websiteUrl),
+        shopUrl: normalizeUrl(shopUrl),
+        instagramUrl: normalizeUrl(instagramUrl),
+      })
 
-      if (existing) {
-        const { error } = await supabase
-          .from('vendor_passports')
-          .update(passportData)
-          .eq('id', existing.id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('vendor_passports')
-          .insert(passportData)
-        if (error) throw error
+      const { error } = existing
+        ? await supabase.from('vendor_passports').update(passportData).eq('id', existing.id)
+        : await supabase.from('vendor_passports').insert(passportData)
+
+      if (error) {
+        console.error(
+          'CRITICAL PASSPORT SAVE ERROR:',
+          error.message,
+          error.details,
+          error.hint,
+          error.code
+        )
+        throw new Error(formatSupabaseError(error))
       }
 
       toast.success('Passport saved! Ready to apply to events.')
@@ -126,7 +121,9 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
       router.push('/vendor/events')
       router.refresh()
     } catch (err) {
-      toast.error('Failed to save passport. Please try again.')
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.error('Passport save failed:', err)
+      toast.error(message.includes('upload') ? message : 'Failed to save passport. Please try again.')
     } finally {
       setLoading(false)
     }
