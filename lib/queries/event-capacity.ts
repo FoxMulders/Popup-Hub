@@ -11,7 +11,20 @@ export type AvailableSlotsRow = {
 export type EventCapacitySummary = {
   isFullyBooked: boolean
   totalAvailable: number
+  totalMaxSlots: number
   slotsByCategoryId: Record<string, number>
+  maxSlotsByCategoryId: Record<string, number>
+}
+
+export function formatCapacityRemaining(available: number, max: number): string {
+  if (max <= 0) return 'Capacity not set'
+  if (available <= 0) return `Full · ${max} max`
+  return `${available} of ${max} spots left`
+}
+
+export function formatEventCapacitySummary(summary: EventCapacitySummary | undefined): string | null {
+  if (!summary || summary.totalMaxSlots <= 0) return null
+  return formatCapacityRemaining(summary.totalAvailable, summary.totalMaxSlots)
 }
 
 export function getVendorEligibleCategoryLimits(event: Pick<Event, 'allow_mlm' | 'category_limits'>) {
@@ -48,21 +61,37 @@ export async function fetchEventCapacitySummary(
 ): Promise<EventCapacitySummary> {
   const limits = getVendorEligibleCategoryLimits(event)
   if (limits.length === 0) {
-    return { isFullyBooked: false, totalAvailable: 0, slotsByCategoryId: {} }
+    return {
+      isFullyBooked: false,
+      totalAvailable: 0,
+      totalMaxSlots: 0,
+      slotsByCategoryId: {},
+      maxSlotsByCategoryId: {},
+    }
   }
 
   const entries = await Promise.all(
     limits.map(async (limit) => {
       const available = await fetchCategoryAvailableSlots(supabase, event.id, limit.category_id)
-      return [limit.category_id, available] as const
+      return {
+        categoryId: limit.category_id,
+        available,
+        maxSlots: limit.max_slots,
+      }
     })
   )
 
-  const slotsByCategoryId = Object.fromEntries(entries)
-  const totalAvailable = entries.reduce((sum, [, available]) => sum + available, 0)
-  const isFullyBooked = limits.every((limit) => (slotsByCategoryId[limit.category_id] ?? 0) <= 0)
+  const slotsByCategoryId = Object.fromEntries(
+    entries.map((entry) => [entry.categoryId, entry.available])
+  )
+  const maxSlotsByCategoryId = Object.fromEntries(
+    entries.map((entry) => [entry.categoryId, entry.maxSlots])
+  )
+  const totalAvailable = entries.reduce((sum, entry) => sum + entry.available, 0)
+  const totalMaxSlots = entries.reduce((sum, entry) => sum + entry.maxSlots, 0)
+  const isFullyBooked = entries.every((entry) => entry.available <= 0)
 
-  return { isFullyBooked, totalAvailable, slotsByCategoryId }
+  return { isFullyBooked, totalAvailable, totalMaxSlots, slotsByCategoryId, maxSlotsByCategoryId }
 }
 
 export async function fetchCapacitySummariesForEvents(

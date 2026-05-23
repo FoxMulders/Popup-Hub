@@ -20,6 +20,7 @@ import { toast } from 'sonner'
 import { Loader2, CheckCircle, Send, HelpCircle, Clock } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PayBoothModal } from '@/components/events/pay-booth-modal'
+import { PassportApplyPreview } from '@/components/events/passport-apply-preview'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -378,8 +379,8 @@ export function ApplyButton({
                             }`}
                           >
                             {slot.availableSlots > 0
-                              ? `${slot.availableSlots} spot${slot.availableSlots !== 1 ? 's' : ''} left`
-                              : 'Full — waitlist available'}
+                              ? `${slot.availableSlots} of ${slot.maxSlots} spots left`
+                              : `Full · ${slot.maxSlots} max (waitlist)`}
                           </span>
                         </div>
                       </SelectItem>

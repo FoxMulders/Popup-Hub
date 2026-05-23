@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { Notification } from '@/types/database'
 import { format } from 'date-fns'
-import { Bell, CheckCheck, Trophy, Store, Calendar, AlertCircle, Info } from 'lucide-react'
+import { Bell, CheckCheck, Trophy, Store, Calendar, AlertCircle, Info, MessageSquare } from 'lucide-react'
+import { dispatchNotificationsChanged } from '@/lib/notifications/sync'
 
 interface NotificationListProps {
   initialNotifications: Notification[]
@@ -21,6 +22,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   vendor_sold_out: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-orange-600 bg-orange-50' },
   vendor_access_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-600 bg-green-50' },
   vendor_access_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-600 bg-red-50' },
+  market_feedback: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-violet-600 bg-violet-50' },
   feedback_addressed: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-green-50' },
   application_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-500 bg-green-50' },
   application_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
@@ -30,11 +32,11 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
 }
 
 export function NotificationList({ initialNotifications, userId }: NotificationListProps) {
-  const supabase = createClient()
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   const [markingAll, setMarkingAll] = useState(false)
 
   useEffect(() => {
+    const supabase = createClient()
     const channel = supabase
       .channel(`notifications-list:${userId}`)
       .on(
@@ -66,16 +68,20 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [userId, supabase])
+  }, [userId])
 
   async function markAsRead(id: string) {
+    const supabase = createClient()
+    const wasUnread = notifications.some((n) => n.id === id && !n.is_read)
     await supabase.from('notifications').update({ is_read: true }).eq('id', id)
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     )
+    if (wasUnread) dispatchNotificationsChanged()
   }
 
   async function markAllRead() {
+    const supabase = createClient()
     setMarkingAll(true)
     const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id)
     if (unreadIds.length > 0) {
@@ -84,6 +90,7 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
         .update({ is_read: true })
         .in('id', unreadIds)
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+      dispatchNotificationsChanged()
     }
     setMarkingAll(false)
   }

@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Bell } from 'lucide-react'
 import type { Notification } from '@/types/database'
 import { NotificationList } from '@/components/notifications/notification-list'
+import { NotificationPageHeader } from '@/components/notifications/notification-page-header'
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
@@ -16,22 +16,9 @@ export default async function NotificationsPage() {
     .order('created_at', { ascending: false })
     .limit(100)
 
-  const unreadCount = (notifications ?? []).filter((n) => !n.is_read).length
-
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
-      {/* Header */}
-      <div className="mb-10">
-        <div className="flex items-center gap-3 mb-1.5">
-          <Bell className="h-7 w-7 text-amber-500" />
-          <h1 className="text-4xl font-bold text-gray-900">Notifications</h1>
-        </div>
-        <p className="text-lg text-gray-500">
-          {unreadCount > 0
-            ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
-            : 'You\'re all caught up'}
-        </p>
-      </div>
+      <NotificationPageHeader userId={user.id} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8">
         {/* Main notification feed */}
@@ -66,6 +53,10 @@ export default async function NotificationsPage() {
               <li className="flex items-center gap-2.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-purple-400 shrink-0" />
                 Payment received
+              </li>
+              <li className="flex items-center gap-2.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-violet-400 shrink-0" />
+                Market feedback
               </li>
             </ul>
             <p className="mt-6 text-xs text-gray-400 leading-relaxed">

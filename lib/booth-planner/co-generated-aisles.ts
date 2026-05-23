@@ -198,6 +198,7 @@ export function canPlaceCoGeneratedUnit(
     for (let c = startCol; c < startCol + colSpan; c++) {
       if (grid[r][c] !== 'empty') return false
       if (ctx.placementForbidden?.has(cellKey(r, c))) return false
+      if (ctx.walkway.has(cellKey(r, c))) return false
     }
   }
 

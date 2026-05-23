@@ -24,6 +24,7 @@ export type NotificationType =
   | 'vendor_sold_out'
   | 'vendor_access_approved'
   | 'vendor_access_rejected'
+  | 'market_feedback'
   | 'feedback_addressed'
 
 export type VendorAccessRequestStatus = 'pending' | 'approved' | 'rejected'

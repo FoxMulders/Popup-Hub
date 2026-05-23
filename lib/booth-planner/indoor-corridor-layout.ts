@@ -407,7 +407,6 @@ function paintIndoorSerpentineSpine(
   bounds: InteriorBounds,
   skip: Set<string>
 ): void {
-  const midRow = Math.floor((bounds.minRow + bounds.maxRow) / 2)
   let blockStart = bounds.minCol + CORRIDOR_BOOTH_BLOCK_DEPTH_CELLS
   let flip = false
 
@@ -420,11 +419,6 @@ function paintIndoorSerpentineSpine(
     }
     blockStart += CORRIDOR_AISLE_WIDTH_CELLS + CORRIDOR_BOOTH_BLOCK_DEPTH_CELLS
     flip = !flip
-  }
-
-  for (let c = bounds.minCol; c <= bounds.maxCol; c++) {
-    if (skip.has(`${midRow}-${c}`)) continue
-    elements.push(aisleCell(midRow, c, 'Cross flow'))
   }
 }
 

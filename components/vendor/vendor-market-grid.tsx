@@ -3,14 +3,22 @@
 import { useMemo, useState } from 'react'
 import { EventCard } from '@/components/events/event-card'
 import { ApplyButton } from '@/components/events/apply-button'
+import { MarketAreaFilter } from '@/components/markets/market-area-filter'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { EventCapacitySummary } from '@/lib/queries/event-capacity'
+import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
+import { formatEventCapacitySummary, type EventCapacitySummary } from '@/lib/queries/event-capacity'
 import {
   getEventDisplayStatus,
   isEventOpenForApplications,
   type EventDisplayStatus,
 } from '@/lib/queries/events'
+import { formatDistance } from '@/lib/shopper/geo'
+import {
+  filterEventsByRadius,
+  sortEventsByDistance,
+  type EventWithMeta,
+} from '@/lib/shopper/events'
 import type { ApplicationStatus, Event } from '@/types/database'
 import { Search } from 'lucide-react'
 
@@ -45,12 +53,14 @@ function MarketGrid({
   applicationStatuses,
   capacityByEventId,
   emptyMessage,
+  showDistance,
 }: {
-  events: Event[]
+  events: EventWithMeta[]
   userId: string
   applicationStatuses: Record<string, ApplicationStatus>
   capacityByEventId: Record<string, EventCapacitySummary>
   emptyMessage: string
+  showDistance: boolean
 }) {
   if (events.length === 0) {
     return (
@@ -68,6 +78,8 @@ function MarketGrid({
         })
         const applicationsOpen = isEventOpenForApplications(event)
 
+        const capacityLabel = formatEventCapacitySummary(capacityByEventId[event.id])
+
         return (
           <EventCard
             key={event.id}
@@ -75,6 +87,12 @@ function MarketGrid({
             href={`/vendor/events/${event.id}`}
             showBookingMode
             displayStatus={displayStatus}
+            capacityLabel={capacityLabel}
+            distanceLabel={
+              showDistance && event.distance_km != null
+                ? formatDistance(event.distance_km)
+                : undefined
+            }
             actions={
               <ApplyButton
                 event={event}
@@ -98,18 +116,45 @@ export function VendorMarketGrid({
   capacityByEventId,
 }: VendorMarketGridProps) {
   const [search, setSearch] = useState('')
+  const {
+    origin,
+    radiusKm,
+    setRadiusKm,
+    locationLabel,
+    locating,
+    useMyLocation,
+  } = useMarketAreaFilter()
+
+  const withDistance = useMemo(() => {
+    const toMeta = (list: Event[]): EventWithMeta[] =>
+      list.map((e) => ({ ...e, vendor_count: 0 }))
+    const activeMeta = sortEventsByDistance(toMeta(activeEvents), origin)
+    const archivedMeta = sortEventsByDistance(toMeta(archivedEvents), origin)
+    return {
+      active: filterEventsByRadius(activeMeta, radiusKm),
+      archived: filterEventsByRadius(archivedMeta, radiusKm),
+    }
+  }, [activeEvents, archivedEvents, origin, radiusKm])
 
   const filteredActive = useMemo(
-    () => filterEvents(activeEvents, search),
-    [activeEvents, search]
+    () => filterEvents(withDistance.active, search),
+    [withDistance.active, search]
   )
   const filteredArchived = useMemo(
-    () => filterEvents(archivedEvents, search),
-    [archivedEvents, search]
+    () => filterEvents(withDistance.archived, search),
+    [withDistance.archived, search]
   )
 
   return (
     <div className="space-y-4">
+      <MarketAreaFilter
+        radiusKm={radiusKm}
+        onRadiusChange={setRadiusKm}
+        locationLabel={locationLabel}
+        locating={locating}
+        onUseMyLocation={useMyLocation}
+      />
+
       <div className="relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -139,8 +184,9 @@ export function VendorMarketGrid({
             emptyMessage={
               search
                 ? 'No open markets match your search.'
-                : 'No active open markets available right now.'
+                : 'No active open markets within this distance.'
             }
+            showDistance
           />
         </TabsContent>
 
@@ -153,8 +199,9 @@ export function VendorMarketGrid({
             emptyMessage={
               search
                 ? 'No past events match your search.'
-                : 'No past events in your history yet.'
+                : 'No past events within this distance.'
             }
+            showDistance
           />
         </TabsContent>
       </Tabs>

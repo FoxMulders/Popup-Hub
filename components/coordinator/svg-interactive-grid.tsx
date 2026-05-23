@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
 import type { DragEvent } from 'react'
 import type { BoothCell, VenueElement } from '@/types/database'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
@@ -15,6 +15,10 @@ import { isTentVendor, vendorUnitLabel } from '@/lib/booth-planner/vendor-unit-t
 import { inferTableOrientation } from '@/lib/booth-planner/table-orientation'
 import { effectiveStorefrontSide } from '@/lib/booth-planner/facing-target'
 import { clientFrontageSide } from '@/lib/booth-planner/grid-glyphs'
+import {
+  storefrontLabelLineOffsets,
+  storefrontLabelTransform,
+} from '@/lib/booth-planner/booth-label-layout'
 import type { FrontSide } from '@/lib/booth-planner/co-generated-aisles'
 import type { LayoutTool } from '@/lib/booth-planner/layout-tool-shortcuts'
 import type { DualRingOverlayResult } from '@/lib/booth-planner/clearance-ring-overlay'
@@ -216,6 +220,17 @@ export function SvgInteractiveGrid({
               <rect x={x} y={y} width={w} height={h} fill="#F59E0B" fillOpacity={0.35} pointerEvents="none" />
             ) : null}
             {renderStorefrontIndicator(x, y, w, h, storefrontSide, cellPx)}
+            {renderBoothLabels(
+              x,
+              y,
+              w,
+              h,
+              storefrontSide,
+              booth.vendorName,
+              vendorUnitLabel(booth.vendorUnitType, booth.tableLengthFt, tableDirection),
+              booth.boothNumber,
+              cellPx
+            )}
             <foreignObject x={x} y={y} width={w} height={h}>
               <TooltipWrapper text={boothTip}>
                 <div
@@ -260,39 +275,6 @@ export function SvgInteractiveGrid({
                 />
               </TooltipWrapper>
             </foreignObject>
-            <text
-              x={x + w / 2}
-              y={y + h / 2 - 4}
-              textAnchor="middle"
-              fontSize={Math.min(11, cellPx * 0.55)}
-              fontWeight={900}
-              fill="#000000"
-              pointerEvents="none"
-            >
-              {truncate(booth.vendorName, 14)}
-            </text>
-            <text
-              x={x + w / 2}
-              y={y + h / 2 + 8}
-              textAnchor="middle"
-              fontSize={Math.min(9, cellPx * 0.45)}
-              fontWeight={700}
-              fill="#000000"
-              pointerEvents="none"
-            >
-              {vendorUnitLabel(booth.vendorUnitType, booth.tableLengthFt, tableDirection)}
-            </text>
-            <text
-              x={x + w / 2}
-              y={y + h - 4}
-              textAnchor="middle"
-              fontSize={8}
-              fontWeight={800}
-              fill="#000000"
-              pointerEvents="none"
-            >
-              #{booth.boothNumber}
-            </text>
             {activeTool === 'vendor' && !isTentVendor(booth.vendorUnitType) ? (
               <text
                 x={x + 6}
@@ -622,6 +604,53 @@ function storefrontSideForBooth(
     return effectiveStorefrontSide(booth.facingTarget, entrance, row, col, hallRows, cols)
   }
   return clientFrontageSide(entrance)
+}
+
+function renderBoothLabels(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  side: FrontSide,
+  vendorName: string,
+  unitLabel: string,
+  boothNumber: number,
+  cellPx: number
+): ReactElement {
+  const { cx, cy, rotate } = storefrontLabelTransform(side, x, y, w, h, Math.min(8, cellPx * 0.4))
+  const { nameDy, unitDy, boothDy } = storefrontLabelLineOffsets()
+  const nameSize = Math.min(11, cellPx * 0.55)
+  const unitSize = Math.min(9, cellPx * 0.45)
+
+  return (
+    <g
+      transform={`translate(${cx} ${cy}) rotate(${rotate})`}
+      pointerEvents="none"
+      aria-hidden
+    >
+      <text
+        y={nameDy}
+        textAnchor="middle"
+        fontSize={nameSize}
+        fontWeight={900}
+        fill="#000000"
+      >
+        {truncate(vendorName, 14)}
+      </text>
+      <text
+        y={unitDy}
+        textAnchor="middle"
+        fontSize={unitSize}
+        fontWeight={700}
+        fill="#000000"
+      >
+        {unitLabel}
+      </text>
+      <text y={boothDy} textAnchor="middle" fontSize={8} fontWeight={800} fill="#000000">
+        #{boothNumber}
+      </text>
+    </g>
+  )
 }
 
 function renderStorefrontIndicator(

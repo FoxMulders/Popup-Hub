@@ -14,6 +14,8 @@ interface EventCardProps {
   hoursLabel?: string
   distanceLabel?: string
   vendorCount?: number
+  /** e.g. "8 of 20 spots left" */
+  capacityLabel?: string | null
   /** Override badge when UI treats past markets as archived. */
   displayStatus?: EventDisplayStatus
   /** Vendor-only: show booking mode / pricing tier badge. Hidden for shopper discovery. */
@@ -42,6 +44,7 @@ export function EventCard({
   hoursLabel,
   distanceLabel,
   vendorCount,
+  capacityLabel,
   displayStatus,
   showBookingMode = false,
 }: EventCardProps) {
@@ -93,6 +96,12 @@ export function EventCard({
               <Clock className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
               {hours}
             </p>
+            {capacityLabel ? (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
+                {capacityLabel}
+              </p>
+            ) : null}
             {vendorCount != null && vendorCount > 0 ? (
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Users className="h-3.5 w-3.5 shrink-0 text-harvest-500" />

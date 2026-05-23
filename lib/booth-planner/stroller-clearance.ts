@@ -336,6 +336,67 @@ export function buildOccupancyWithBoothRects(
   return { grid, boothRects }
 }
 
+function gapCellsBetweenRects(
+  newR0: number,
+  newR1: number,
+  newC0: number,
+  newC1: number,
+  bR0: number,
+  bR1: number,
+  bC0: number,
+  bC1: number
+): { r: number; c: number }[] {
+  const rowsOverlap = !(newR1 < bR0 || bR1 < newR0)
+  const colsOverlap = !(newC1 < bC0 || bC1 < newC0)
+  const cells: { r: number; c: number }[] = []
+
+  if (rowsOverlap && newC1 < bC0) {
+    const cStart = newC1 + 1
+    const cEnd = bC0 - 1
+    for (let c = cStart; c <= cEnd; c++) {
+      for (let r = Math.max(newR0, bR0); r <= Math.min(newR1, bR1); r++) {
+        cells.push({ r, c })
+      }
+    }
+  } else if (rowsOverlap && bC1 < newC0) {
+    const cStart = bC1 + 1
+    const cEnd = newC0 - 1
+    for (let c = cStart; c <= cEnd; c++) {
+      for (let r = Math.max(newR0, bR0); r <= Math.min(newR1, bR1); r++) {
+        cells.push({ r, c })
+      }
+    }
+  }
+
+  if (colsOverlap && newR1 < bR0) {
+    const rStart = newR1 + 1
+    const rEnd = bR0 - 1
+    for (let r = rStart; r <= rEnd; r++) {
+      for (let c = Math.max(newC0, bC0); c <= Math.min(newC1, bC1); c++) {
+        cells.push({ r, c })
+      }
+    }
+  } else if (colsOverlap && bR1 < newR0) {
+    const rStart = bR1 + 1
+    const rEnd = newR0 - 1
+    for (let r = rStart; r <= rEnd; r++) {
+      for (let c = Math.max(newC0, bC0); c <= Math.min(newC1, bC1); c++) {
+        cells.push({ r, c })
+      }
+    }
+  }
+
+  return cells
+}
+
+function gapFilledByWalkway(
+  cells: { r: number; c: number }[],
+  walkway: Set<string>
+): boolean {
+  if (cells.length === 0) return false
+  return cells.every(({ r, c }) => walkway.has(cellKey(r, c)))
+}
+
 export function placementViolatesStrollerSeparation(
   boothRects: { r0: number; c0: number; r1: number; c1: number }[],
   startRow: number,
@@ -345,7 +406,8 @@ export function placementViolatesStrollerSeparation(
   boothWidthFt: number,
   boothLengthFt: number,
   minColsOverride?: number,
-  minRowsOverride?: number
+  minRowsOverride?: number,
+  walkway?: Set<string>
 ): boolean {
   const defaults = minBoothSeparationCells(boothWidthFt, boothLengthFt)
   const minCols = minColsOverride ?? defaults.minCols
@@ -363,8 +425,15 @@ export function placementViolatesStrollerSeparation(
     const rowsOverlap = !(newR1 < b.r0 || b.r1 < newR0)
     const colsOverlap = !(newC1 < b.c0 || b.c1 < newC0)
     if (rowsOverlap && colsOverlap) continue
-    if (rowsOverlap && colGap >= 0 && colGap < minCols) return true
-    if (colsOverlap && rowGap >= 0 && rowGap < minRows) return true
+
+    if (rowsOverlap && colGap >= 0 && colGap < minCols) {
+      const gapCells = gapCellsBetweenRects(newR0, newR1, newC0, newC1, b.r0, b.r1, b.c0, b.c1)
+      if (!(walkway && gapFilledByWalkway(gapCells, walkway))) return true
+    }
+    if (colsOverlap && rowGap >= 0 && rowGap < minRows) {
+      const gapCells = gapCellsBetweenRects(newR0, newR1, newC0, newC1, b.r0, b.r1, b.c0, b.c1)
+      if (!(walkway && gapFilledByWalkway(gapCells, walkway))) return true
+    }
   }
   return false
 }

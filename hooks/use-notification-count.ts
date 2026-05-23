@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { NOTIFICATIONS_CHANGED } from '@/lib/notifications/sync'
 
 export function useNotificationCount(userId: string): number {
   const [count, setCount] = useState(0)
-  const supabase = createClient()
 
   useEffect(() => {
+    const supabase = createClient()
+
     async function fetchCount() {
       const { count: c } = await supabase
         .from('notifications')
@@ -34,10 +36,13 @@ export function useNotificationCount(userId: string): number {
       )
       .subscribe()
 
+    window.addEventListener(NOTIFICATIONS_CHANGED, fetchCount)
+
     return () => {
+      window.removeEventListener(NOTIFICATIONS_CHANGED, fetchCount)
       supabase.removeChannel(channel)
     }
-  }, [userId, supabase])
+  }, [userId])
 
   return count
 }

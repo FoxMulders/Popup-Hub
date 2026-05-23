@@ -5,6 +5,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { autoLayoutAsync } from '@/lib/booth-planner/auto-layout-async'
 import { resolveAutoPlanStrategy } from '@/lib/booth-planner/auto-plan-strategy'
+import {
+  storefrontLabelCssPosition,
+  storefrontLabelCssTransform,
+} from '@/lib/booth-planner/booth-label-layout'
 import { AUTO_PLAN_CAPACITY_LIMIT_MESSAGE } from '@/lib/booth-planner/placement-guard'
 import { sortVendorsFcfs } from '@/lib/applications/fcfs-sort'
 import {
@@ -3986,20 +3990,42 @@ function renderGrid({
               }
             />
             {tableDirection && <TableLengthDirectionIndicator orientation={tableDirection} />}
-            <div className="flex flex-1 flex-col items-center justify-center gap-0.5 min-h-0 px-0.5">
+            {(() => {
+              const labelSide =
+                isOneFootGrid && !isTentVendor(booth.vendorUnitType)
+                  ? effectiveStorefrontSide(
+                      booth.facingTarget,
+                      entrance,
+                      r,
+                      c,
+                      hallRows,
+                      cols
+                    )
+                  : clientFrontageSide(entrance)
+              const labelPos = storefrontLabelCssPosition(labelSide)
+              return (
+                <div
+                  className="absolute z-[1] flex max-w-[92%] flex-col items-center gap-0.5 text-center leading-tight"
+                  style={{
+                    ...labelPos,
+                    transform: storefrontLabelCssTransform(labelSide),
+                  }}
+                >
+                  <p className="max-w-full truncate text-[9px] font-bold">{booth.vendorName}</p>
+                  <span className="max-w-full truncate text-[7px] font-semibold opacity-70">
+                    {vendorUnitLabel(booth.vendorUnitType, booth.tableLengthFt, tableDirection)}
+                  </span>
+                  <span className="text-[8px] font-bold opacity-60">#{booth.boothNumber}</span>
+                </div>
+              )
+            })()}
+            <div className="pointer-events-none flex flex-1 items-center justify-center min-h-0 px-0.5 opacity-40">
               <MarketStallIcon
                 className={cn(
-                  'h-[1cm] w-[1cm] max-h-[70%] max-w-[70%] shrink-0 opacity-80',
+                  'h-[1cm] w-[1cm] max-h-[50%] max-w-[50%] shrink-0',
                   tableDirection === 'vertical' && 'rotate-90'
                 )}
               />
-              <p className="text-[9px] font-bold leading-tight truncate w-full text-center">
-                {booth.vendorName}
-              </p>
-              <span className="text-[7px] font-semibold opacity-70 truncate w-full text-center">
-                {vendorUnitLabel(booth.vendorUnitType, booth.tableLengthFt, tableDirection)}
-              </span>
-              <span className="text-[8px] font-bold opacity-60">#{booth.boothNumber}</span>
             </div>
           </div>
         )

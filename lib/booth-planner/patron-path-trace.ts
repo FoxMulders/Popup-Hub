@@ -2,7 +2,12 @@ import type { BoothCell, VenueElement } from '@/types/database'
 import { buildWalkwayCells } from '@/lib/booth-planner/accessible-placement'
 import { clearanceRingCells } from '@/lib/booth-planner/co-generated-aisles'
 import { BOOTH_SAFETY_BUFFER_CELLS } from '@/lib/booth-planner/layout-clearance-constants'
+import {
+  computeInteriorBounds,
+  indoorVerticalAisleColumns,
+} from '@/lib/booth-planner/indoor-corridor-layout'
 import { isOuterPerimeterCell } from '@/lib/booth-planner/perimeter-clearance'
+import { sharedAisleRowsToPaint } from '@/lib/booth-planner/shared-aisle'
 import { cellKey } from '@/lib/booth-planner/venue-elements'
 
 export interface PatronPathPoint {
@@ -165,6 +170,174 @@ function primaryExitCenter(
     row: best.row + (spanR - 1) / 2,
     col: best.col + (spanC - 1) / 2,
   }
+}
+
+function hasStructuredCorridorNetwork(venueElements: VenueElement[]): boolean {
+  return venueElements.some(
+    (e) =>
+      e.type === 'aisle' &&
+      (e.label === 'Row aisle' ||
+        e.label === 'Shared aisle' ||
+        e.label === 'Customer spine aisle')
+  )
+}
+
+function dedupeConsecutivePoints(points: PatronPathPoint[]): PatronPathPoint[] {
+  if (points.length === 0) return points
+  const out: PatronPathPoint[] = [points[0]]
+  for (let i = 1; i < points.length; i++) {
+    const prev = out[out.length - 1]
+    const cur = points[i]
+    if (prev.row !== cur.row || prev.col !== cur.col) out.push(cur)
+  }
+  return out
+}
+
+function collectWalkableRowSegment(
+  walkable: boolean[][],
+  row: number,
+  c0: number,
+  c1: number,
+  reverse: boolean
+): PatronPathPoint[] {
+  const segment: PatronPathPoint[] = []
+  for (let c = c0; c <= c1; c++) {
+    if (walkable[row]?.[c]) segment.push({ row, col: c })
+  }
+  return reverse ? [...segment].reverse() : segment
+}
+
+function collectWalkableColSegment(
+  walkable: boolean[][],
+  col: number,
+  r0: number,
+  r1: number
+): PatronPathPoint[] {
+  const segment: PatronPathPoint[] = []
+  for (let r = r0; r <= r1; r++) {
+    if (walkable[r]?.[col]) segment.push({ row: r, col })
+  }
+  return segment
+}
+
+/** Serpentine waypoints through shared + row aisles so patrons pass vendor storefronts. */
+function buildCorridorSerpentineWaypoints(
+  cols: number,
+  rows: number,
+  entrance: 'north' | 'south' | 'east' | 'west',
+  walkable: boolean[][],
+  start: PatronPathPoint,
+  end: PatronPathPoint
+): PatronPathPoint[] {
+  const bounds = computeInteriorBounds(cols, rows)
+  const waypoints: PatronPathPoint[] = [start]
+
+  const westCol = bounds.minCol
+  const eastCol = bounds.maxCol
+  const sharedRows = sharedAisleRowsToPaint(bounds)
+  const rowOrder =
+    entrance === 'north' || entrance === 'west' ? sharedRows : [...sharedRows].reverse()
+
+  const startRow = Math.round(start.row)
+  const endRow = Math.round(end.row)
+
+  if (rowOrder.length > 0) {
+    const firstSharedRow = rowOrder[0]
+    const leadInFrom = entrance === 'north' ? Math.min(startRow, firstSharedRow) : startRow
+    const leadInTo = entrance === 'north' ? Math.max(startRow, firstSharedRow) : firstSharedRow
+    waypoints.push(
+      ...collectWalkableColSegment(walkable, westCol, leadInFrom, leadInTo)
+    )
+  }
+
+  let flip = false
+  for (const r of rowOrder) {
+    waypoints.push(
+      ...collectWalkableRowSegment(walkable, r, bounds.minCol, bounds.maxCol, flip)
+    )
+    flip = !flip
+  }
+
+  const verticalAisleCols = indoorVerticalAisleColumns(cols, bounds)
+  if (verticalAisleCols.length > 0 && rowOrder.length > 0) {
+    const midAisleCol = verticalAisleCols[Math.floor(verticalAisleCols.length / 2)]
+    const lastSharedRow = rowOrder[rowOrder.length - 1]
+    waypoints.push(
+      ...collectWalkableColSegment(walkable, midAisleCol, lastSharedRow, endRow)
+    )
+  } else if (rowOrder.length > 0) {
+    waypoints.push(...collectWalkableColSegment(walkable, eastCol, rowOrder[rowOrder.length - 1], endRow))
+  }
+
+  waypoints.push(end)
+  return dedupeConsecutivePoints(waypoints)
+}
+
+function connectPatronWaypoints(
+  venueElements: VenueElement[],
+  cols: number,
+  rows: number,
+  waypoints: PatronPathPoint[],
+  placedCells: BoothCell[]
+): PatronPathPoint[] {
+  if (waypoints.length < 2) return waypoints
+
+  const full: PatronPathPoint[] = []
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const seg =
+      computeWalkableRoute(
+        venueElements,
+        cols,
+        rows,
+        waypoints[i],
+        waypoints[i + 1],
+        placedCells
+      ) ?? [waypoints[i], waypoints[i + 1]]
+    if (full.length === 0) full.push(...seg)
+    else full.push(...seg.slice(1))
+  }
+  return simplifyPath(full)
+}
+
+function computeSerpentineCorridorPatronPath(
+  venueElements: VenueElement[],
+  cols: number,
+  rows: number,
+  entrance: 'north' | 'south' | 'east' | 'west',
+  options?: PatronPathOptions
+): PatronPathTrace | null {
+  const placedCells = options?.placedCells ?? []
+  const destination = options?.destination ?? 'exit'
+  const walkable = buildWalkability(rows, cols, venueElements, placedCells)
+  const startCenter = entranceCenter(venueElements, entrance)
+  if (!startCenter) return null
+
+  const start =
+    getEntranceWalkPoint(venueElements, entrance, walkable, rows, cols) ??
+    snapToWalkableCell(startCenter.row, startCenter.col, walkable, rows, cols)
+  if (!start) return null
+
+  const end =
+    destination === 'stage'
+      ? stageApproachPoint(venueElements, walkable, entrance, rows, cols) ??
+        primaryExitCenter(venueElements, entrance, rows, cols)
+      : primaryExitCenter(venueElements, entrance, rows, cols)
+  if (!end) return null
+
+  const endWalk =
+    snapToWalkableCell(end.row, end.col, walkable, rows, cols) ?? end
+  const waypoints = buildCorridorSerpentineWaypoints(
+    cols,
+    rows,
+    entrance,
+    walkable,
+    start,
+    endWalk
+  )
+  const points = connectPatronWaypoints(venueElements, cols, rows, waypoints, placedCells)
+  if (points.length < 2) return null
+
+  return { points, arrows: arrowsAlongPath(points, 8) }
 }
 
 function centerlineWalkwayKeys(elements: VenueElement[]): Set<string> {
@@ -436,6 +609,17 @@ export function computePatronPathTrace(
   entrance: 'north' | 'south' | 'east' | 'west',
   options?: PatronPathOptions
 ): PatronPathTrace | null {
+  if (hasStructuredCorridorNetwork(venueElements)) {
+    const serpentine = computeSerpentineCorridorPatronPath(
+      venueElements,
+      cols,
+      rows,
+      entrance,
+      options
+    )
+    if (serpentine) return serpentine
+  }
+
   const placedCells = options?.placedCells ?? []
   const destination = options?.destination ?? 'exit'
   const start = entranceCenter(venueElements, entrance)

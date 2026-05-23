@@ -1,18 +1,14 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { addDays, format, startOfDay } from 'date-fns'
-import { MapPin, Navigation, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EventMap } from '@/components/map/event-map'
 import { DiscoverEventCards } from '@/components/shopper/discover-event-cards'
-import {
-  DEFAULT_REGION,
-  formatDistance,
-  type LatLng,
-} from '@/lib/shopper/geo'
+import { MarketAreaFilter } from '@/components/markets/market-area-filter'
+import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
 import {
   filterEventsByDate,
   filterEventsByRadius,
@@ -24,14 +20,6 @@ import {
 import type { Event } from '@/types/database'
 import { cn } from '@/lib/utils'
 
-const RADIUS_OPTIONS = [
-  { label: 'Any distance', km: null },
-  { label: '10 km', km: 10 },
-  { label: '25 km', km: 25 },
-] as const
-
-const STORAGE_KEY = 'popup-hub:last-location'
-
 interface DiscoverScreenProps {
   events: Event[]
   vendorCounts: Record<string, number>
@@ -42,28 +30,19 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
   const router = useRouter()
   const searchParams = useSearchParams()
   const [view, setView] = useState<'list' | 'map'>('list')
-  const [origin, setOrigin] = useState<LatLng>(DEFAULT_REGION)
-  const [locating, setLocating] = useState(false)
-  const [radiusKm, setRadiusKm] = useState<number | null>(null)
-  const [locationLabel, setLocationLabel] = useState('Edmonton area')
+  const {
+    origin,
+    radiusKm,
+    setRadiusKm,
+    locationLabel,
+    locating,
+    useMyLocation,
+  } = useMarketAreaFilter()
 
   const selectedDate = useMemo(
     () => parseDateParam(searchParams.get('date')),
     [searchParams]
   )
-
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored) as LatLng & { label?: string }
-        setOrigin({ lat: parsed.lat, lng: parsed.lng })
-        if (parsed.label) setLocationLabel(parsed.label)
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [])
 
   const setDate = useCallback(
     (date: Date) => {
@@ -73,24 +52,6 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
     },
     [router, searchParams]
   )
-
-  const useMyLocation = useCallback(() => {
-    if (!navigator.geolocation) return
-    setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        setOrigin(next)
-        setLocationLabel('Near you')
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ ...next, label: 'Near you' }))
-        setLocating(false)
-      },
-      () => {
-        setLocating(false)
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    )
-  }, [])
 
   const filtered = useMemo(() => {
     const byDate = filterEventsByDate(events, selectedDate)
@@ -167,47 +128,13 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
         </p>
       </div>
 
-      {/* Location */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Area
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-h-10 gap-1.5"
-            onClick={useMyLocation}
-            disabled={locating}
-          >
-            {locating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Navigation className="h-4 w-4" />
-            )}
-            Use my location
-          </Button>
-          <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" />
-            {locationLabel}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {RADIUS_OPTIONS.map(({ label, km }) => (
-            <Button
-              key={label}
-              type="button"
-              size="sm"
-              variant={radiusKm === km ? 'secondary' : 'outline'}
-              className="min-h-9"
-              onClick={() => setRadiusKm(km)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <MarketAreaFilter
+        radiusKm={radiusKm}
+        onRadiusChange={setRadiusKm}
+        locationLabel={locationLabel}
+        locating={locating}
+        onUseMyLocation={useMyLocation}
+      />
 
       {/* Map / List toggle — mobile first */}
       <Tabs value={view} onValueChange={(v) => setView(v as 'list' | 'map')}>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { assertEventCoordinator } from '@/lib/events/coordinator-access'
 
 /**
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id')
+    .select('id, name, coordinator_id')
     .eq('id', market_id)
     .maybeSingle()
 
@@ -101,6 +101,33 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  const { data: reporter } = await supabase
+    .from('profiles')
+    .select('full_name, role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const reporterLabel = reporter?.full_name?.trim() || 'A user'
+  const roleLabel =
+    reporter?.role === 'vendor' ? 'vendor' : reporter?.role === 'coordinator' ? 'coordinator' : 'shopper'
+  const preview =
+    comment_text.trim().length > 120
+      ? `${comment_text.trim().slice(0, 117)}…`
+      : comment_text.trim()
+
+  const service = await createServiceClient()
+  await service.from('notifications').insert({
+    user_id: event.coordinator_id,
+    type: 'market_feedback',
+    message: `${reporterLabel} (${roleLabel}) submitted feedback for ${event.name}: "${preview}"`,
+    metadata: {
+      feedback_id: row.id,
+      market_id,
+      market_name: event.name,
+      reporter_id: user.id,
+    },
+  })
 
   return NextResponse.json({ ok: true, id: row.id })
 }

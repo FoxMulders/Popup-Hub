@@ -7,7 +7,7 @@ import { ApplyButton } from '@/components/events/apply-button'
 import { MarketFeedbackWidget } from '@/components/coordinator/market-feedback-widget'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { formatCents } from '@/lib/square/client'
-import { fetchEventCapacitySummary } from '@/lib/queries/event-capacity'
+import { fetchEventCapacitySummary, formatCapacityRemaining, getVendorEligibleCategoryLimits } from '@/lib/queries/event-capacity'
 import {
   getEventDisplayStatus,
   isEventOpenForApplications,
@@ -54,10 +54,11 @@ export default async function VendorEventDetailPage({ params }: Props) {
   })
   const applicationsOpen = isEventOpenForApplications(event)
 
-  const sortedLimits = [...(event.category_limits ?? [])].sort(
+  const sortedLimits = getVendorEligibleCategoryLimits(event as Event).sort(
     (a: EventCategoryLimit, b: EventCategoryLimit) =>
       (a.category?.name ?? '').localeCompare(b.category?.name ?? '')
   )
+  const eventCapacityLabel = formatCapacityRemaining(capacity.totalAvailable, capacity.totalMaxSlots)
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -92,6 +93,9 @@ export default async function VendorEventDetailPage({ params }: Props) {
               </Badge>
             </div>
           </div>
+          {capacity.totalMaxSlots > 0 ? (
+            <p className="text-sm font-medium text-gray-700">{eventCapacityLabel}</p>
+          ) : null}
           {event.description ? <p className="text-sm text-gray-600">{event.description}</p> : null}
           <div className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
             <div className="flex items-center gap-2">
@@ -139,7 +143,12 @@ export default async function VendorEventDetailPage({ params }: Props) {
               >
                 <span className="font-medium">{cl.category?.name}</span>
                 <span className="text-gray-500">
-                  {cl.max_slots} slots · {cl.price_per_booth > 0 ? formatCents(cl.price_per_booth) : 'Free'}
+                  {formatCapacityRemaining(
+                    capacity.slotsByCategoryId[cl.category_id] ?? 0,
+                    capacity.maxSlotsByCategoryId[cl.category_id] ?? cl.max_slots
+                  )}
+                  {' · '}
+                  {cl.price_per_booth > 0 ? formatCents(cl.price_per_booth) : 'Free'}
                 </span>
               </li>
             ))}

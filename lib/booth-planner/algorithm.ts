@@ -52,6 +52,7 @@ import {
 } from '@/lib/booth-planner/shared-aisle'
 import { findVenueAnchors } from '@/lib/booth-planner/venue-anchors'
 import { mergeSafetyBlockedKeys } from '@/lib/booth-planner/placement-safety-zones'
+import { placementViolatesStrollerSeparation } from '@/lib/booth-planner/stroller-clearance'
 import {
   collectPowerRoutingTargets,
   powerRoutingScore,
@@ -796,7 +797,12 @@ export class AutoLayoutSession {
       if (bestCo) return bestCo
     }
 
-    const tryPhases = this.usePerimeterOnly || this.useOutdoorClusters ? [true] : [true, false]
+    const tryPhases =
+      this.usePerimeterOnly || (this.useOutdoorClusters && !this.useIndoorCorridor && !this.genericRowMode)
+        ? [true]
+        : this.useIndoorCorridor || this.genericRowMode != null
+          ? [false]
+          : [true, false]
 
     for (let phase = 0; phase < tryPhases.length; phase++) {
       const preferWall = tryPhases[phase]
@@ -857,6 +863,22 @@ export class AutoLayoutSession {
                   for (let c = col; c < col + colSpan; c++) {
                     if (this.grid[r][c] !== 'empty') return false
                   }
+                }
+                if (
+                  placementViolatesStrollerSeparation(
+                    this.boothRects,
+                    row,
+                    col,
+                    rowSpan,
+                    colSpan,
+                    this.boothWidth,
+                    this.boothLength,
+                    1,
+                    1,
+                    this.walkway
+                  )
+                ) {
+                  return false
                 }
                 const r1 = row + rowSpan - 1
                 const c1 = col + colSpan - 1

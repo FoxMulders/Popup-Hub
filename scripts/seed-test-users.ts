@@ -12,8 +12,10 @@
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Role } from '../types/database'
+
+type ServiceClient = SupabaseClient<any>
 
 type TestAccount = {
   email: string
@@ -72,7 +74,7 @@ function requireEnv(name: string): string {
 }
 
 async function findUserIdByEmail(
-  admin: ReturnType<typeof createClient>['auth']['admin'],
+  admin: ServiceClient['auth']['admin'],
   email: string
 ): Promise<string | null> {
   let page = 1
@@ -95,7 +97,7 @@ async function findUserIdByEmail(
 }
 
 async function upsertVerifiedUser(
-  admin: ReturnType<typeof createClient>['auth']['admin'],
+  admin: ServiceClient['auth']['admin'],
   account: TestAccount
 ): Promise<string> {
   const existingId = await findUserIdByEmail(admin, account.email)
@@ -128,7 +130,7 @@ async function upsertVerifiedUser(
 }
 
 async function syncProfile(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   userId: string,
   account: TestAccount
 ) {
@@ -176,7 +178,7 @@ async function verifyPasswordSignIn(email: string, password: string) {
 }
 
 async function linkVendorApproval(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ServiceClient,
   coordinatorId: string,
   vendorId: string
 ) {

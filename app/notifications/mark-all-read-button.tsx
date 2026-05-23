@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { CheckCheck } from 'lucide-react'
+import { dispatchNotificationsChanged } from '@/lib/notifications/sync'
 
 export default function MarkAllReadButton({ userId }: { userId: string }) {
   const router = useRouter()
@@ -18,6 +19,7 @@ export default function MarkAllReadButton({ userId }: { userId: string }) {
       .update({ is_read: true })
       .eq('user_id', userId)
       .eq('is_read', false)
+    dispatchNotificationsChanged()
     setLoading(false)
     router.refresh()
   }
