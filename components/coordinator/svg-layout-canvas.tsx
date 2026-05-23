@@ -4,6 +4,8 @@ import { useId, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
   CanvasPerimeterFacingControls,
+  FACING_CONTROL_DEFAULT_MARGIN,
+  facingControlGutter,
   type CanvasPerimeterFacingControlsProps,
 } from '@/components/coordinator/canvas-perimeter-facing-controls'
 
@@ -69,6 +71,13 @@ export function SvgLayoutCanvas({
   const hallHeightPx = hallRows * cellPx
   const gridHeightPx = rows * cellPx
 
+  const facingMargin = perimeterFacing?.margin ?? FACING_CONTROL_DEFAULT_MARGIN
+  const controlGutter = perimeterFacing ? facingControlGutter(facingMargin) : 0
+  const wrapperWidth = widthPx + controlGutter * 2
+  const wrapperHeight = heightPx + controlGutter * 2
+  const hallLeftForControls = hallOriginX + controlGutter
+  const hallTopForControls = hallOriginY + controlGutter
+
   return (
     <div className={cn('flex w-full flex-col', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-2 py-1.5">
@@ -85,17 +94,21 @@ export function SvgLayoutCanvas({
           </div>
         ) : null}
       </div>
-      <div className="relative w-full bg-zinc-100">
+      <div className="relative w-full overflow-x-auto bg-zinc-100">
         {viewportOverlay ? (
           <div className="pointer-events-none absolute inset-0 z-20 overflow-visible">{viewportOverlay}</div>
         ) : null}
-        <div className="relative inline-block min-w-0 max-w-full" style={{ width: widthPx, height: heightPx }}>
+        <div
+          className="relative inline-block min-w-0 max-w-full"
+          style={{ width: wrapperWidth, height: wrapperHeight }}
+        >
           {perimeterFacing ? (
             <CanvasPerimeterFacingControls
-              hallLeft={hallOriginX}
-              hallTop={hallOriginY}
+              hallLeft={hallLeftForControls}
+              hallTop={hallTopForControls}
               hallWidth={hallWidthPx}
               hallHeight={hallHeightPx}
+              margin={facingMargin}
               {...perimeterFacing}
             />
           ) : null}
@@ -104,7 +117,8 @@ export function SvgLayoutCanvas({
             height={heightPx}
             viewBox={`0 0 ${widthPx} ${heightPx}`}
             xmlns="http://www.w3.org/2000/svg"
-            className="block max-w-full h-auto select-none"
+            className="absolute block max-w-full select-none"
+            style={{ left: controlGutter, top: controlGutter, height: 'auto' }}
             role="img"
             aria-label={`Floor plan ${cols} by ${rows} feet`}
           >

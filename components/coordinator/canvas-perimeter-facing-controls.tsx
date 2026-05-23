@@ -21,6 +21,17 @@ const PERIMETER_TARGETS: FacingTarget[] = [
   'se',
 ]
 
+/** Footprint of each direction pad (matches h-7 min-w-7 + border). */
+export const FACING_CONTROL_BUTTON_PX = 28
+
+/** Default gap between hall edge and control cluster. */
+export const FACING_CONTROL_DEFAULT_MARGIN = 18
+
+/** Reserved padding around the SVG so perimeter controls do not overlap each other or the grid. */
+export function facingControlGutter(margin = FACING_CONTROL_DEFAULT_MARGIN): number {
+  return margin + FACING_CONTROL_BUTTON_PX + 10
+}
+
 export interface CanvasPerimeterFacingControlsProps {
   /** Hall interior origin within the canvas wrapper (px). */
   hallLeft: number
@@ -48,25 +59,42 @@ function positionForTarget(
 ): CSSProperties {
   const cx = hallLeft + hallWidth / 2
   const cy = hallTop + hallHeight / 2
-  const corner = margin + 2
+  const cornerOutset = margin
+  const edgeOutset = margin + FACING_CONTROL_BUTTON_PX * 0.35
 
   switch (target) {
     case 'north':
-      return { left: cx, top: hallTop - margin, transform: 'translate(-50%, -100%)' }
+      return { left: cx, top: hallTop - edgeOutset, transform: 'translate(-50%, -100%)' }
     case 'south':
-      return { left: cx, top: hallTop + hallHeight + margin, transform: 'translate(-50%, 0)' }
+      return { left: cx, top: hallTop + hallHeight + edgeOutset, transform: 'translate(-50%, 0)' }
     case 'west':
-      return { left: hallLeft - margin, top: cy, transform: 'translate(-100%, -50%)' }
+      return { left: hallLeft - edgeOutset, top: cy, transform: 'translate(-100%, -50%)' }
     case 'east':
-      return { left: hallLeft + hallWidth + margin, top: cy, transform: 'translate(0, -50%)' }
+      return { left: hallLeft + hallWidth + edgeOutset, top: cy, transform: 'translate(0, -50%)' }
     case 'nw':
-      return { left: hallLeft - corner, top: hallTop - corner, transform: 'translate(-100%, -100%)' }
+      return {
+        left: hallLeft - cornerOutset,
+        top: hallTop - cornerOutset,
+        transform: 'translate(-100%, -100%)',
+      }
     case 'ne':
-      return { left: hallLeft + hallWidth + corner, top: hallTop - corner, transform: 'translate(0, -100%)' }
+      return {
+        left: hallLeft + hallWidth + cornerOutset,
+        top: hallTop - cornerOutset,
+        transform: 'translate(0, -100%)',
+      }
     case 'sw':
-      return { left: hallLeft - corner, top: hallTop + hallHeight + corner, transform: 'translate(-100%, 0)' }
+      return {
+        left: hallLeft - cornerOutset,
+        top: hallTop + hallHeight + cornerOutset,
+        transform: 'translate(-100%, 0)',
+      }
     case 'se':
-      return { left: hallLeft + hallWidth + corner, top: hallTop + hallHeight + corner, transform: 'translate(0, 0)' }
+      return {
+        left: hallLeft + hallWidth + cornerOutset,
+        top: hallTop + hallHeight + cornerOutset,
+        transform: 'translate(0, 0)',
+      }
   }
 }
 
@@ -83,16 +111,18 @@ export function CanvasPerimeterFacingControls({
   suggestedTarget,
   autoMode = false,
   selectionLabel,
-  margin = 10,
+  margin = FACING_CONTROL_DEFAULT_MARGIN,
 }: CanvasPerimeterFacingControlsProps) {
+  const labelTop = hallTop - facingControlGutter(margin) + 4
+
   return (
     <div className="pointer-events-none absolute inset-0 z-30" aria-label="Storefront facing controls">
       {selectionLabel ? (
         <div
-          className="pointer-events-none absolute z-40 max-w-[140px] truncate rounded border border-stone-300/90 bg-white/95 px-1.5 py-0.5 text-[9px] font-semibold text-forest shadow-sm"
+          className="pointer-events-none absolute z-40 max-w-[min(220px,40vw)] truncate rounded border border-stone-300/90 bg-white/95 px-2 py-1 text-[9px] font-semibold text-forest shadow-sm"
           style={{
             left: hallLeft + hallWidth / 2,
-            top: hallTop - margin - 22,
+            top: labelTop,
             transform: 'translate(-50%, -100%)',
           }}
           title={selectionLabel}
@@ -114,7 +144,7 @@ export function CanvasPerimeterFacingControls({
               onClick={() => onFacingClick(target)}
               style={positionForTarget(target, hallLeft, hallTop, hallWidth, hallHeight, margin)}
               className={cn(
-                'pointer-events-auto absolute z-40 flex h-7 min-w-7 items-center justify-center rounded border px-1 text-[10px] font-black uppercase tracking-tight shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-colors',
+                'pointer-events-auto absolute z-40 flex h-7 min-w-7 items-center justify-center rounded border px-1.5 text-[10px] font-black uppercase tracking-tight shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-colors',
                 selected || suggested
                   ? 'border-forest bg-forest text-primary-foreground'
                   : 'border-black bg-white text-black hover:bg-canvas'
