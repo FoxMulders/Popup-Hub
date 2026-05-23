@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { marketChip, marketStatusBadge } from '@/lib/theme/market'
+import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
 import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
 import type { BoothApplication, ApplicationStatus } from '@/types/database'
 
@@ -385,6 +386,11 @@ function ApplicationCard({
         <p className="text-[10px] text-muted-foreground">
           Applied {formatDistanceToNow(new Date(app.applied_at), { addSuffix: true })}
         </p>
+        {app.attending_dates?.length ? (
+          <p className="text-[10px] text-muted-foreground">
+            Days: {formatAttendanceDayLabels(app.attending_dates).join(', ')}
+          </p>
+        ) : null}
 
         {app.status === 'approved' && app.payment_status === 'payment_required' && (
           <Badge className="w-full justify-center bg-amber-100 text-amber-800 text-[10px] py-1">
@@ -538,6 +544,14 @@ function VendorDetailModal({
                 <span className="font-medium">#{app.waitlist_position}</span>
               </div>
             )}
+            {app.attending_dates?.length ? (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground shrink-0">Attendance</span>
+                <span className="font-medium text-right">
+                  {formatAttendanceDayLabels(app.attending_dates).join(', ')}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
 

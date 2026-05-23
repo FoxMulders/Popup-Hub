@@ -44,6 +44,10 @@ import {
   formatCategoryOverflowLabel,
   type CategorySlotInfo,
 } from '@/lib/vendor/application-category-match'
+import {
+  daySelectionKey,
+  resolveEventScheduleDays,
+} from '@/lib/events/event-schedule-days'
 import type { ApplicationStatus, Event, EventCategoryLimit } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
@@ -79,10 +83,25 @@ export function ApplyButton({
     applicationStatus
   )
   const [waitlistConfirmOpen, setWaitlistConfirmOpen] = useState(false)
+  const [selectedDayKeys, setSelectedDayKeys] = useState<Set<string>>(new Set())
+  const [termsAcknowledged, setTermsAcknowledged] = useState(false)
+
+  const requireFullAttendance = event.require_full_attendance ?? true
+  const scheduleDays = useMemo(() => resolveEventScheduleDays(event), [event])
 
   useEffect(() => {
     setLocalApplicationStatus(applicationStatus)
   }, [applicationStatus])
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedDayKeys(new Set())
+      setTermsAcknowledged(false)
+      return
+    }
+
+    setSelectedDayKeys(new Set(scheduleDays.map((day) => daySelectionKey(day))))
+  }, [open, scheduleDays])
 
   const categoryMatch = useMemo(() => {
     if (!passportPreview) return null
@@ -104,6 +123,36 @@ export function ApplyButton({
   const allCategoriesFull = categoryMatch?.allCategoriesFull ?? false
   const requiresPayment = (applySlot?.pricePerBooth ?? 0) > 0 && !allCategoriesFull
   const isInstant = event.booking_mode === 'instant'
+  const partialDaySelectionReady =
+    requireFullAttendance || selectedDayKeys.size > 0
+  const canSubmitApplication =
+    termsAcknowledged &&
+    partialDaySelectionReady &&
+    !submitting &&
+    !slotsLoading &&
+    categoryMatch &&
+    categoryMatch.passportSlots.length > 0 &&
+    (allCategoriesFull || !requiresPayment || squareConnected)
+
+  function toggleDaySelection(dayKey: string) {
+    if (requireFullAttendance) return
+    setSelectedDayKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(dayKey)) next.delete(dayKey)
+      else next.add(dayKey)
+      return next
+    })
+  }
+
+  function buildAttendancePayload() {
+    const selectedDays = scheduleDays.filter((day) => selectedDayKeys.has(daySelectionKey(day)))
+    return {
+      attendingEventDayIds: selectedDays
+        .map((day) => day.dayId)
+        .filter((dayId): dayId is string => Boolean(dayId)),
+      attendingDates: selectedDays.map((day) => day.date),
+    }
+  }
 
   async function loadSlots() {
     setSlotsLoading(true)
@@ -183,6 +232,7 @@ export function ApplyButton({
   }
 
   async function submitApplication(joinWaitlist: boolean) {
+    const attendance = buildAttendancePayload()
     const res = await fetch('/api/vendor/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -190,6 +240,9 @@ export function ApplyButton({
         eventId: event.id,
         neighborPreference: standBeside.trim() || null,
         joinWaitlist,
+        attendanceTermsAcknowledged: termsAcknowledged,
+        attendingEventDayIds: attendance.attendingEventDayIds,
+        attendingDates: attendance.attendingDates,
       }),
     })
 
@@ -267,6 +320,16 @@ export function ApplyButton({
       return
     }
 
+    if (!termsAcknowledged) {
+      toast.error('Please agree to the attendance terms before submitting')
+      return
+    }
+
+    if (!partialDaySelectionReady) {
+      toast.error('Select at least one day you plan to attend')
+      return
+    }
+
     if (requiresPayment && !squareConnected) {
       toast.error('Coordinator has not connected Square for paid booths yet')
       return
@@ -281,6 +344,11 @@ export function ApplyButton({
   }
 
   async function handleConfirmWaitlist() {
+    if (!termsAcknowledged) {
+      toast.error('Please agree to the attendance terms before joining the waitlist')
+      return
+    }
+
     setSubmitting(true)
     try {
       await submitApplication(true)
@@ -401,6 +469,44 @@ export function ApplyButton({
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label>Attendance days</Label>
+              {requireFullAttendance ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  ⚠️ This organizer requires participation for the full duration of the event.
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Select each day you plan to attend.
+                </p>
+              )}
+              <ul className="space-y-2 rounded-lg border bg-stone-50 p-3">
+                {scheduleDays.map((day) => {
+                  const key = daySelectionKey(day)
+                  const checked = selectedDayKeys.has(key)
+                  return (
+                    <li key={key} className="flex items-start gap-3 text-sm">
+                      <input
+                        id={`attendance-day-${key}`}
+                        type="checkbox"
+                        checked={checked}
+                        disabled={requireFullAttendance}
+                        onChange={() => toggleDaySelection(key)}
+                        className="mt-1 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 disabled:opacity-70"
+                      />
+                      <label
+                        htmlFor={`attendance-day-${key}`}
+                        className={requireFullAttendance ? 'text-foreground' : 'cursor-pointer'}
+                      >
+                        <span className="font-medium">{day.label}</span>
+                        <span className="block text-xs text-muted-foreground">{day.hours}</span>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+
             <div className="space-y-1">
               <Label htmlFor="stand-beside">Stand beside (optional)</Label>
               <Input
@@ -466,16 +572,26 @@ export function ApplyButton({
               </p>
             )}
 
+            <div className="rounded-lg border bg-stone-50 p-3">
+              <label className="flex items-start gap-3 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={termsAcknowledged}
+                  onChange={(e) => setTermsAcknowledged(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span>
+                  {requireFullAttendance
+                    ? 'I agree to attend all scheduled days of this market. I understand that arriving late or packing up early violates organizer policy.'
+                    : 'I confirm my selected attendance days and agree to be present during the operating hours of those specific dates.'}
+                </span>
+              </label>
+            </div>
+
             <Button
               className="w-full bg-amber-500 hover:bg-amber-600 text-white"
               onClick={handleConfirmSubmit}
-              disabled={
-                submitting ||
-                slotsLoading ||
-                !categoryMatch ||
-                categoryMatch.passportSlots.length === 0 ||
-                (!allCategoriesFull && requiresPayment && !squareConnected)
-              }
+              disabled={!canSubmitApplication}
             >
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {allCategoriesFull ? 'Join Waitlist' : 'Confirm & Submit Application'}

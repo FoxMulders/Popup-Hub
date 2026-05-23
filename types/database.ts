@@ -137,6 +137,7 @@ export interface Event {
   allow_mlm: boolean
   max_mlm_slots: number | null
   is_multi_day?: boolean
+  require_full_attendance: boolean
   booth_clearance_policy: BoothClearancePolicy
   platform_fee_mode: PlatformFeeMode
   platform_fee_flat_cents: number
@@ -181,6 +182,9 @@ export interface BoothApplication {
   waitlist_position: number | null
   has_category_overflow: boolean
   overflow_category_names: string[]
+  attending_event_day_ids: string[]
+  attending_dates: string[]
+  attendance_terms_acknowledged_at: string | null
   applied_at: string
   approved_at: string | null
   checked_in: boolean

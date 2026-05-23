@@ -72,6 +72,8 @@ export interface WizardStepEventDetailsProps {
   onCoverChange: (file: File) => void
   listingType: EventListingType
   onListingTypeChange: (v: EventListingType) => void
+  requireFullAttendance: boolean
+  onRequireFullAttendanceChange: (v: boolean) => void
 }
 
 export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
@@ -325,6 +327,24 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
           </button>
         </div>
       )}
+
+      {props.scheduleType === 'multi' ? (
+        <div className="flex items-start justify-between gap-4 rounded-xl border border-stone-200 bg-canvas px-4 py-3">
+          <div className="space-y-1">
+            <Label htmlFor="wizard-require-full-attendance" className={WIZARD_FIELD_LABEL}>
+              Require attendance for all event days
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Turn this off if vendors are allowed to apply for single or partial days.
+            </p>
+          </div>
+          <Switch
+            id="wizard-require-full-attendance"
+            checked={props.requireFullAttendance}
+            onCheckedChange={props.onRequireFullAttendanceChange}
+          />
+        </div>
+      ) : null}
 
       {props.listingType === 'community_market' ? (
         <>

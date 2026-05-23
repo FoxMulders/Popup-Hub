@@ -11,6 +11,12 @@ import {
   type CategorySlotInfo,
 } from '@/lib/vendor/application-category-match'
 import { resolvePassportCategoryIds } from '@/lib/vendor/passport-categories'
+import {
+  resolveEventScheduleDays,
+  daySelectionKey,
+  normalizeAttendanceSelection,
+  type EventScheduleDayOption,
+} from '@/lib/events/event-schedule-days'
 import type { Event, Role } from '@/types/database'
 
 async function nextWaitlistPosition(
@@ -90,9 +96,20 @@ export async function POST(request: Request) {
     categoryId?: string
     neighborPreference?: string | null
     joinWaitlist?: boolean
+    attendanceTermsAcknowledged?: boolean
+    attendingEventDayIds?: string[]
+    attendingDates?: string[]
   }
 
-  const { eventId, categoryId: requestedCategoryId, neighborPreference, joinWaitlist } = body
+  const {
+    eventId,
+    categoryId: requestedCategoryId,
+    neighborPreference,
+    joinWaitlist,
+    attendanceTermsAcknowledged,
+    attendingEventDayIds,
+    attendingDates,
+  } = body
   if (!eventId) {
     return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
   }
@@ -107,7 +124,9 @@ export async function POST(request: Request) {
       .maybeSingle(),
     supabase
       .from('events')
-      .select('id, booking_mode, status, start_at, end_at, allow_mlm, listing_type')
+      .select(
+        'id, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, event_days(id, date, start_time, end_time, sort_order)'
+      )
       .eq('id', eventId)
       .maybeSingle(),
     supabase
@@ -152,6 +171,24 @@ export async function POST(request: Request) {
       },
       { status: 409 }
     )
+  }
+
+  if (!attendanceTermsAcknowledged) {
+    return NextResponse.json(
+      { error: 'You must agree to the attendance terms before submitting.' },
+      { status: 400 }
+    )
+  }
+
+  const scheduleDays = resolveEventScheduleDays(event as Event)
+  const attendanceSelection = normalizeAttendanceSelection(
+    scheduleDays,
+    event.require_full_attendance ?? true,
+    { attendingEventDayIds, attendingDates }
+  )
+
+  if ('error' in attendanceSelection) {
+    return NextResponse.json({ error: attendanceSelection.error }, { status: 400 })
   }
 
   const eventSlots = await loadEventCategorySlots(supabase, eventId, !!event.allow_mlm)
@@ -257,9 +294,14 @@ export async function POST(request: Request) {
       waitlist_position: waitlistPosition,
       has_category_overflow: hasCategoryOverflow,
       overflow_category_names: hasCategoryOverflow ? match.fullCategoryNames : [],
+      attending_event_day_ids: attendanceSelection.attendingEventDayIds,
+      attending_dates: attendanceSelection.attendingDates,
+      attendance_terms_acknowledged_at: now,
       ...(status === 'approved' ? { approved_at: now } : {}),
     })
-    .select('id, status, payment_status, waitlist_position, has_category_overflow, overflow_category_names')
+    .select(
+      'id, status, payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'
+    )
     .single()
 
   if (error) {

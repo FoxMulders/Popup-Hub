@@ -22,6 +22,7 @@ export interface EventDraftPayload {
   coverImageUrl?: string | null
   status?: 'draft' | 'published'
   listingType?: EventListingType
+  requireFullAttendance?: boolean
 }
 
 export interface DayRowPayload {
@@ -102,6 +103,7 @@ export async function persistEventDraft(
     cover_image_url: draft.coverImageUrl ?? null,
     allow_mlm: draft.allowMlm,
     is_multi_day: scheduleType === 'multi',
+    require_full_attendance: draft.requireFullAttendance ?? true,
     booth_clearance_policy: draft.boothClearancePolicy,
   }
 

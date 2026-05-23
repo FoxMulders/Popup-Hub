@@ -98,5 +98,6 @@ export const VENDOR_EVENT_SELECT = `
   category_limits:event_category_limits(
     *,
     category:categories(id, name)
-  )
+  ),
+  event_days(*)
 `

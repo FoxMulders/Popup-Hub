@@ -130,6 +130,9 @@ export function MarketSetupWizard({
   const [listingType, setListingType] = useState<EventListingType>(
     existing?.listing_type ?? 'community_market'
   )
+  const [requireFullAttendance, setRequireFullAttendance] = useState(
+    existing?.require_full_attendance ?? true
+  )
   const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
   const [globalMlmCap, setGlobalMlmCap] = useState(existing?.max_mlm_slots ?? DEFAULT_GLOBAL_MLM_CAP)
   const [boothClearancePolicy, setBoothClearancePolicy] = useState<BoothClearancePolicy>(
@@ -373,6 +376,7 @@ export function MarketSetupWizard({
             listingType,
             allowMlm,
             maxMlmSlots: globalMlmCap,
+            requireFullAttendance,
             boothClearancePolicy,
             raffleDonationRequirement,
             scheduleType,
@@ -435,6 +439,7 @@ export function MarketSetupWizard({
       locationName,
       name,
       raffleDonationRequirement,
+      requireFullAttendance,
       rooms,
       scheduleType,
       startDate,
@@ -616,6 +621,8 @@ export function MarketSetupWizard({
                 onBookingModeChange={setBookingMode}
                 listingType={listingType}
                 onListingTypeChange={setListingType}
+                requireFullAttendance={requireFullAttendance}
+                onRequireFullAttendanceChange={setRequireFullAttendance}
                 allowMlm={allowMlm}
                 onAllowMlmChange={setAllowMlm}
                 boothClearancePolicy={boothClearancePolicy}
