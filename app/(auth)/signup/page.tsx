@@ -265,9 +265,9 @@ function SignupForm() {
                   onChange={(e) => setShareContactWithVendors(e.target.checked)}
                 />
                 <span>
-                  <span className="font-medium">Share contact info with vendors if I win</span>
+                  <span className="font-medium">Share contact info with vendors (Quarter Auctions only)</span>
                   <span className="mt-0.5 block text-xs text-gray-500">
-                    Optional. Lets donating vendors reach you after a quarter auction win.
+                    When enabled, donating vendors can see your name, email, and phone after you win a quarter auction item.
                   </span>
                 </span>
               </label>

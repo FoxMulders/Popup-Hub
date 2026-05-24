@@ -108,11 +108,10 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
           />
           <span>
             <span className="text-sm font-medium text-gray-900">
-              Share contact info with vendors if I win
+              Share contact info with vendors (Quarter Auctions only)
             </span>
             <span className="block text-xs text-gray-500 mt-0.5">
-              When enabled, donating vendors can see your name, email, and phone after you win a
-              quarter auction item.
+              When enabled, donating vendors can see your name, email, and phone after you win a quarter auction item.
             </span>
           </span>
         </label>
