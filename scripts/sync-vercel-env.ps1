@@ -1,9 +1,9 @@
 # sync-vercel-env.ps1
-# Pushes environment variables from .env.local to Vercel (production + preview).
+# Pushes environment variables from .env.local to Vercel production.
 #
 # Usage:
 #   .\scripts\sync-vercel-env.ps1           # sync all production keys
-#   .\scripts\sync-vercel-env.ps1 -DryRun   # list keys only, no writes
+#   .\scripts\sync-vercel-env.ps1 -Environments production,preview  # preview may need Vercel dashboard
 #
 # Prerequisites:
 #   - .env.local with real values
@@ -14,7 +14,7 @@ param(
     [switch]$DryRun,
     [string]$ProductionAppUrl = 'https://popup-hub.vercel.app',
     [ValidateSet('production', 'preview', 'development', 'all')]
-    [string[]]$Environments = @('production', 'preview')
+    [string[]]$Environments = @('production')
 )
 
 $ErrorActionPreference = 'Stop'
