@@ -121,6 +121,11 @@ export function subscribeAvatarRealtime(
     onPassport?: PassportLogoHandler
   }
 ): () => void {
+  // Patrons browsing public markets use cached SSR data — no live avatar channels.
+  if (role !== 'coordinator' && role !== 'vendor') {
+    return () => {}
+  }
+
   const sub = getSubscription(userId)
   sub.profileHandlers.add(handlers.onProfile)
   ensureProfileChannel(userId, sub)

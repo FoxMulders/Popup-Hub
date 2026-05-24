@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { notifyAuctionStarting } from '@/lib/auction/notify-auction-starting'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -14,7 +15,7 @@ export async function POST(_request: Request, { params }: Props) {
 
   const { data: auction } = await supabase
     .from('auctions')
-    .select('id, coordinator_id, status, timer_duration_seconds')
+    .select('id, coordinator_id, status, timer_duration_seconds, title, event_id')
     .eq('id', id)
     .single()
 
@@ -24,6 +25,22 @@ export async function POST(_request: Request, { params }: Props) {
   }
   if (auction.status !== 'upcoming') {
     return NextResponse.json({ error: `Auction is already ${auction.status}` }, { status: 409 })
+  }
+
+  if (auction.event_id) {
+    const { data: existingActive } = await supabase
+      .from('auctions')
+      .select('id')
+      .eq('event_id', auction.event_id)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (existingActive) {
+      return NextResponse.json(
+        { error: 'Another auction is already active for this event' },
+        { status: 409 }
+      )
+    }
   }
 
   const timerEndsAt = new Date(
@@ -36,6 +53,12 @@ export async function POST(_request: Request, { params }: Props) {
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await notifyAuctionStarting(supabase, {
+    auctionId: id,
+    auctionTitle: auction.title,
+    eventId: auction.event_id,
+  })
 
   return NextResponse.json({ timerEndsAt })
 }

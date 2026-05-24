@@ -83,6 +83,34 @@ interface BrandLogoMarkProps {
   className?: string
 }
 
+/** Logo mark + wordmark lockup for nav headers (replaces plain text). */
+export function BrandLogoLockup({ className }: { className?: string }) {
+  return (
+    <div className={cn('flex shrink-0 items-center gap-2', className)}>
+      <BrandLogoMark />
+      <svg
+        viewBox="0 0 120 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-5 w-auto text-emerald-600 sm:h-6"
+        role="img"
+        aria-label="Popup Hub"
+      >
+        <text
+          x="0"
+          y="18"
+          fill="currentColor"
+          fontFamily="var(--font-display), Georgia, serif"
+          fontSize="18"
+          fontWeight="600"
+        >
+          Popup Hub
+        </text>
+      </svg>
+    </div>
+  )
+}
+
 /** Logo inside the standard forest-green brand tile. */
 export function BrandLogoMark({ size = 'nav', className }: BrandLogoMarkProps) {
   const styles = MARK_SIZES[size]

@@ -18,6 +18,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   const supabase = createClient()
   const [fullName, setFullName] = useState(profile.full_name ?? '')
   const [phone, setPhone] = useState(profile.phone ?? '')
+  const [shareContact, setShareContact] = useState(profile.share_contact_with_vendors ?? false)
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url)
   const [loading, setLoading] = useState(false)
 
@@ -27,7 +28,11 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: fullName, phone: phone || null })
+      .update({
+        full_name: fullName,
+        phone: phone || null,
+        share_contact_with_vendors: shareContact,
+      })
       .eq('id', profile.id)
 
     setLoading(false)
@@ -87,6 +92,27 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             className="h-11"
           />
         </div>
+      </div>
+
+      <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4 space-y-2">
+        <label htmlFor="share-contact" className="flex items-start gap-3 cursor-pointer">
+          <input
+            id="share-contact"
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-gray-300"
+            checked={shareContact}
+            onChange={(e) => setShareContact(e.target.checked)}
+          />
+          <span>
+            <span className="text-sm font-medium text-gray-900">
+              Share contact info with vendors if I win
+            </span>
+            <span className="block text-xs text-gray-500 mt-0.5">
+              When enabled, donating vendors can see your name, email, and phone after you win a
+              quarter auction item.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="flex items-center gap-4 pt-2">

@@ -194,13 +194,16 @@ export function ApplyButton({
   async function handleApplyClick() {
     setPassportLoading(true)
     try {
-      const { data: passport, error } = await supabase
-        .from('vendor_passports')
-        .select(
-          'id, business_name, logo_url, primary_category_id, category_ids, tax_id_encrypted, is_verified, category:categories(name)'
-        )
-        .eq('user_id', userId)
-        .maybeSingle()
+      const [{ data: passport, error }, { data: profile }] = await Promise.all([
+        supabase
+          .from('vendor_passports')
+          .select(
+            'id, business_name, logo_url, primary_category_id, category_ids, tax_id_encrypted, is_verified, category:categories(name)'
+          )
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase.from('profiles').select('is_beta_tester').eq('id', userId).maybeSingle(),
+      ])
 
       if (error) {
         toast.error('Could not load your Vendor Passport')
@@ -222,7 +225,8 @@ export function ApplyButton({
       setPassportPreview(
         toPassportApplicationPreview(
           passport,
-          categoryNamesForIds(categoryIds, categoryRows ?? [])
+          categoryNamesForIds(categoryIds, categoryRows ?? []),
+          { is_beta_tester: profile?.is_beta_tester ?? false }
         )
       )
       setOpen(true)

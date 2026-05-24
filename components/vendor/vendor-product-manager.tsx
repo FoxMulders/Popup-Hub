@@ -9,13 +9,22 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import type { VendorProduct } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
+import {
+  canAddFeaturedProduct,
+  FREE_TIER_FEATURED_PRODUCT_LIMIT,
+} from '@/lib/profile/premium-access'
 
 interface VendorProductManagerProps {
   userId: string
   products: VendorProduct[]
+  isBetaTester?: boolean
 }
 
-export function VendorProductManager({ userId, products: initial }: VendorProductManagerProps) {
+export function VendorProductManager({
+  userId,
+  products: initial,
+  isBetaTester = false,
+}: VendorProductManagerProps) {
   const router = useRouter()
   const supabase = createClient()
   const [products, setProducts] = useState(initial)
@@ -25,6 +34,15 @@ export function VendorProductManager({ userId, products: initial }: VendorProduc
 
   async function addProduct() {
     if (!name.trim()) return
+
+    const featuredCount = products.filter((product) => product.is_featured).length
+    if (!canAddFeaturedProduct({ is_beta_tester: isBetaTester }, featuredCount)) {
+      toast.error(
+        `Free vendors can list up to ${FREE_TIER_FEATURED_PRODUCT_LIMIT} featured products. Founding vendors have unlimited slots.`
+      )
+      return
+    }
+
     setSaving(true)
     const minCents = priceMin ? Math.round(parseFloat(priceMin) * 100) : null
     const { data, error } = await supabase
@@ -91,6 +109,9 @@ export function VendorProductManager({ userId, products: initial }: VendorProduc
       <h2 className="text-lg font-semibold">Featured products</h2>
       <p className="mt-1 text-sm text-gray-500">
         Shoppers see these on market pages before they visit your booth.
+        {isBetaTester
+          ? ' Founding vendor — unlimited featured listings.'
+          : ` Free tier: ${FREE_TIER_FEATURED_PRODUCT_LIMIT} featured products.`}
       </p>
       <ul className="mt-4 space-y-2">
         {products.map((p) => (
@@ -147,7 +168,17 @@ export function VendorProductManager({ userId, products: initial }: VendorProduc
             onChange={(e) => setPriceMin(e.target.value)}
           />
         </div>
-        <Button type="button" disabled={saving} onClick={addProduct}>
+        <Button
+          type="button"
+          disabled={
+            saving ||
+            !canAddFeaturedProduct(
+              { is_beta_tester: isBetaTester },
+              products.filter((product) => product.is_featured).length
+            )
+          }
+          onClick={addProduct}
+        >
           Add
         </Button>
       </div>

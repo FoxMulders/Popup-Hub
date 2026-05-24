@@ -6,6 +6,7 @@ import { Check, Stamp, ArrowRight, Copy, ExternalLink } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { MarketPanel, MarketPanelHeader, MarketPanelTitle } from '@/components/ui/market-panel'
 import { cn } from '@/lib/utils'
+import { publicAppUrl } from '@/lib/url/public-app-url'
 import { marketTheme } from '@/lib/theme/market'
 import { toast } from 'sonner'
 import type { Event, EventCategoryLimit } from '@/types/database'
@@ -42,10 +43,7 @@ export function EventReadinessChecklist({
   pendingCount,
 }: EventReadinessChecklistProps) {
   const requiresSquare = (event.category_limits ?? []).some((cl) => cl.price_per_booth > 0)
-  const vendorListingUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/events/${eventId}`
-      : `/events/${eventId}`
+  const vendorListingUrl = publicAppUrl(`/events/${eventId}`)
 
   const items: ChecklistItem[] = [
     { key: 'created', label: 'Event created', done: true },
@@ -89,10 +87,7 @@ export function EventReadinessChecklist({
       },
       applied: {
         type: 'copy',
-        getText: () =>
-          typeof window !== 'undefined'
-            ? `${window.location.origin}/events/${eventId}`
-            : `/events/${eventId}`,
+        getText: () => publicAppUrl(`/events/${eventId}`),
         label: 'Copy public listing link',
       },
       approved: {

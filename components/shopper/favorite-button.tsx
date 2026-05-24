@@ -14,6 +14,7 @@ interface FavoriteButtonProps {
   initialFavorited?: boolean
   size?: 'sm' | 'default'
   className?: string
+  iconOnly?: boolean
 }
 
 export function FavoriteButton({
@@ -21,6 +22,7 @@ export function FavoriteButton({
   initialFavorited = false,
   size = 'default',
   className,
+  iconOnly = false,
 }: FavoriteButtonProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -74,8 +76,9 @@ export function FavoriteButton({
       variant="outline"
       size={size === 'sm' ? 'sm' : 'default'}
       className={cn(
-        'gap-1',
+        'gap-1 touch-manipulation',
         favorited && 'border-red-200 bg-red-50 text-red-600',
+        iconOnly && 'px-0',
         className
       )}
       disabled={pending}
@@ -84,7 +87,7 @@ export function FavoriteButton({
       aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
     >
       <Heart className={cn('h-4 w-4', favorited && 'fill-current')} />
-      {size !== 'sm' && (favorited ? 'Saved' : 'Favorite')}
+      {!iconOnly && size !== 'sm' && (favorited ? 'Saved' : 'Favorite')}
     </Button>
   )
 }

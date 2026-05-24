@@ -15,15 +15,22 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 interface AuctionRoomProps {
   auction: Auction
+  drops?: AuctionDrop[]
   wallet: Wallet | null
   userId: string
+  eventId?: string | null
 }
 
-export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, userId }: AuctionRoomProps) {
+export function AuctionRoom({
+  auction: initialAuction,
+  drops: initialDrops,
+  wallet: initialWallet,
+  userId,
+}: AuctionRoomProps) {
   const supabase = createClient()
 
   const [auction, setAuction] = useState<Auction>(initialAuction)
-  const [drops, setDrops] = useState<AuctionDrop[]>(initialAuction.drops ?? [])
+  const [drops, setDrops] = useState<AuctionDrop[]>(initialDrops ?? initialAuction.drops ?? [])
   const [wallet, setWallet] = useState<Wallet | null>(initialWallet)
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [dropping, setDropping] = useState(false)
@@ -65,12 +72,16 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
         { event: 'UPDATE', schema: 'public', table: 'auctions', filter: `id=eq.${auction.id}` },
         (payload) => {
           setAuction((prev) => ({ ...prev, ...(payload.new as Auction) }))
-          if (payload.new.status === 'ended' && payload.new.winning_paddle_id) {
-            const isWinner = payload.new.winning_paddle_id === paddleId
-            if (isWinner) {
-              toast.success('🎉 You won the auction!', { duration: 8000 })
+          if (payload.new.status === 'ended') {
+            if (payload.new.winning_paddle_id) {
+              const isWinner = payload.new.winning_paddle_id === paddleId
+              if (isWinner) {
+                toast.success('🎉 You won the auction!', { duration: 8000 })
+              } else {
+                toast.info(`Auction ended! Winner: Paddle #${payload.new.winning_paddle_id}`)
+              }
             } else {
-              toast.info(`Auction ended! Winner: Paddle #${payload.new.winning_paddle_id}`)
+              toast.info('Auction ended with no drops.')
             }
           }
         }
@@ -119,6 +130,8 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
     new Set([auction.min_drop_amount, Math.round((auction.min_drop_amount + auction.max_drop_amount) / 2), auction.max_drop_amount])
   )
 
+  const isDrawing = auction.status === 'active' && timeLeft === 0
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <Card className={`overflow-hidden border-2 ${auction.status === 'active' ? 'border-amber-400' : 'border-gray-200'}`}>
@@ -137,7 +150,13 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
           <h2 className="text-2xl font-bold text-gray-900">{auction.title}</h2>
           <p className="text-gray-500">{auction.item_name}</p>
 
-          {auction.status === 'active' && (
+          {auction.status === 'upcoming' && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              This auction hasn&apos;t started yet. Check back when the coordinator goes live.
+            </div>
+          )}
+
+          {auction.status === 'active' && !isDrawing && (
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1 text-sm text-gray-500">
@@ -155,6 +174,13 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
             </div>
           )}
 
+          {isDrawing && (
+            <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+              <p className="font-semibold text-green-900">Drawing winner…</p>
+              <p className="mt-1 text-sm text-green-700">Hang tight while we pick a paddle.</p>
+            </div>
+          )}
+
           {auction.status === 'ended' && auction.winning_paddle_id && (
             <div className="mt-4 flex items-center gap-3 rounded-xl bg-amber-50 p-4">
               <Trophy className="h-8 w-8 text-amber-500 flex-shrink-0" />
@@ -164,6 +190,12 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
                   Winner: <span className="font-semibold text-amber-700">Paddle #{auction.winning_paddle_id}</span>
                 </p>
               </div>
+            </div>
+          )}
+
+          {auction.status === 'ended' && !auction.winning_paddle_id && (
+            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-gray-600">
+              Auction ended with no drops — no winner was selected.
             </div>
           )}
 
@@ -210,7 +242,7 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
             {!paddleId ? (
               <div className="rounded-lg bg-amber-50 p-4 text-center">
                 <p className="text-sm text-amber-700">Add funds to your wallet to get a Paddle ID and participate.</p>
-                <Button className="mt-3 bg-amber-500 hover:bg-amber-600 text-white" size="sm" onClick={() => window.location.href = '/shared/wallet'}>
+                <Button className="mt-3 bg-amber-500 hover:bg-amber-600 text-white" size="sm" onClick={() => { window.location.href = '/wallet' }}>
                   Top Up Wallet
                 </Button>
               </div>
@@ -248,7 +280,7 @@ export function AuctionRoom({ auction: initialAuction, wallet: initialWallet, us
             <Button
               className="w-full bg-amber-500 hover:bg-amber-600 text-white"
               onClick={handleDrop}
-              disabled={dropping || auction.status !== 'active' || !paddleId || (wallet?.balance ?? 0) < dropAmount || timeLeft === 0}
+              disabled={dropping || auction.status !== 'active' || !paddleId || (wallet?.balance ?? 0) < dropAmount || isDrawing}
               size="lg"
             >
               {dropping ? <span className="animate-pulse">Dropping…</span> : (

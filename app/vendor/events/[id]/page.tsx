@@ -16,7 +16,10 @@ import {
 } from '@/lib/queries/events'
 import { format } from 'date-fns'
 import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react'
-import type { Event, EventCategoryLimit } from '@/types/database'
+import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
+import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-banner'
+import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
+import type { Auction, Event, EventCategoryLimit } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -30,7 +33,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event }, { data: existingApp }] = await Promise.all([
+  const [{ data: event }, { data: existingApp }, { data: eventAuctions }] = await Promise.all([
     supabase
       .from('events')
       .select(VENDOR_EVENT_SELECT)
@@ -43,6 +46,12 @@ export default async function VendorEventDetailPage({ params }: Props) {
       .eq('event_id', id)
       .eq('vendor_id', user.id)
       .maybeSingle(),
+    supabase
+      .from('auctions')
+      .select('*')
+      .eq('event_id', id)
+      .in('status', ['upcoming', 'active', 'ended'])
+      .order('created_at', { ascending: false }),
   ])
 
   if (!event) notFound()
@@ -60,6 +69,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
       (a.category?.name ?? '').localeCompare(b.category?.name ?? '')
   )
   const eventCapacityLabel = formatCapacityRemaining(capacity.totalAvailable, capacity.totalMaxSlots)
+  const auctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -72,7 +82,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
       <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
         {event.cover_image_url ? (
-          <img src={event.cover_image_url} alt={event.name} className="h-48 w-full object-cover" />
+          <img src={event.cover_image_url} alt={event.name} className="h-48 w-full object-contain bg-slate-50" />
         ) : (
           <div className="flex h-32 items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
             <MapPin className="h-12 w-12 text-amber-300" />
@@ -130,6 +140,12 @@ export default async function VendorEventDetailPage({ params }: Props) {
               </div>
             </div>
           ) : null}
+          <LiveAuctionBanner
+            activeAuction={auctionSummary.active}
+            upcomingAuction={auctionSummary.upcoming}
+            lastEndedAuction={auctionSummary.lastEnded}
+          />
+          <QuarterAuctionEventBanner eventId={id} variant="vendor" />
         </div>
       </div>
 

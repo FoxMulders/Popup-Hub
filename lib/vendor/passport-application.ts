@@ -8,6 +8,7 @@ export type VendorPassportApplicationPreview = Pick<
   tax_id_on_file: boolean
   category_ids: string[]
   category_names: string[]
+  is_beta_tester?: boolean
 }
 
 export function isPassportReadyForApplication(
@@ -31,7 +32,8 @@ export function toPassportApplicationPreview(
     is_verified: boolean
     category?: { name: string } | { name: string }[] | null
   },
-  categoryNames: string[] = []
+  categoryNames: string[] = [],
+  options?: { is_beta_tester?: boolean }
 ): VendorPassportApplicationPreview {
   const categoryIds = resolvePassportCategoryIds(row)
   const fallbackCategory = Array.isArray(row.category) ? row.category[0] : row.category
@@ -51,5 +53,6 @@ export function toPassportApplicationPreview(
     tax_id_on_file: Boolean(row.tax_id_encrypted),
     category_ids: categoryIds,
     category_names: names,
+    is_beta_tester: options?.is_beta_tester ?? false,
   }
 }

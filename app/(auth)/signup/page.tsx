@@ -55,8 +55,15 @@ function SignupForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+
+  const canSubmit = termsAccepted && !loading
 
   async function handleGoogleSignUp() {
+    if (!termsAccepted) {
+      toast.error('Please accept the terms and conditions first.')
+      return
+    }
     localStorage.setItem('signup_role', role)
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
@@ -69,6 +76,10 @@ function SignupForm() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
+    if (!termsAccepted) {
+      toast.error('Please accept the terms and conditions first.')
+      return
+    }
     setLoading(true)
     const { error } = await supabase.auth.signUp({
       email,
@@ -124,7 +135,7 @@ function SignupForm() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-4 py-10">
-      <Card className="w-full max-w-lg shadow-lg">
+      <Card className="flex w-full max-w-lg flex-col shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex justify-center">
             <BrandLogoMark size="auth" />
@@ -132,7 +143,7 @@ function SignupForm() {
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>Choose how you&apos;ll use Popup Hub</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-1 flex-col">
           <fieldset className="mb-6">
             <legend className="mb-2 block text-sm font-medium">I am a… *</legend>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -169,8 +180,9 @@ function SignupForm() {
           <Button
             type="button"
             variant="outline"
-            className="w-full h-10 gap-2"
+            className="w-full h-11 gap-2 touch-manipulation"
             onClick={handleGoogleSignUp}
+            disabled={!canSubmit}
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -187,7 +199,7 @@ function SignupForm() {
             <Separator className="flex-1" />
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-4">
+          <form onSubmit={handleSignup} className="flex flex-col space-y-4">
             <div className="space-y-1">
               <Label htmlFor="name">Full name</Label>
               <Input id="name" placeholder="Jane Smith" value={fullName} onChange={(e) => setFullName(e.target.value)} required autoComplete="name" />
@@ -200,10 +212,31 @@ function SignupForm() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" placeholder="Min 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
             </div>
-            <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white" disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Account as <Badge className="ml-1 bg-white/20 text-white">{selectedLabel}</Badge>
-            </Button>
+            <label className="flex items-start gap-2 rounded-lg border bg-white px-3 py-3 text-sm">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 touch-manipulation"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+              />
+              <span>
+                I agree to the{' '}
+                <Link href="/legal/terms" className="font-medium text-forest underline" target="_blank">
+                  Terms &amp; Conditions
+                </Link>{' '}
+                and{' '}
+                <Link href="/legal/privacy" className="font-medium text-forest underline" target="_blank">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+            <div className="sticky bottom-0 bg-white pt-2">
+              <Button type="submit" className="w-full min-h-11 bg-amber-500 hover:bg-amber-600 text-white touch-manipulation" disabled={!canSubmit}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Create Account as <Badge className="ml-1 bg-white/20 text-white">{selectedLabel}</Badge>
+              </Button>
+            </div>
           </form>
           <p className="mt-4 text-center text-sm text-gray-500">
             Already have an account?{' '}

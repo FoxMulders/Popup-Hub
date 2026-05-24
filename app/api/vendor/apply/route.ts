@@ -17,7 +17,11 @@ import {
   normalizeAttendanceSelection,
   type EventScheduleDayOption,
 } from '@/lib/events/event-schedule-days'
-import type { Event, Role } from '@/types/database'
+import {
+  buildMarketApplicationEmailFromEvent,
+  sendMarketApplicationReceivedEmail,
+} from '@/lib/email/application-received'
+import type { Role } from '@/types/database'
 
 async function nextWaitlistPosition(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -83,7 +87,7 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, full_name, email')
     .eq('id', user.id)
     .single()
 
@@ -125,7 +129,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, event_days(id, date, start_time, end_time, sort_order)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -159,7 +163,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This market is not open for applications' }, { status: 400 })
   }
 
-  if (!isEventOpenForApplications(event as Event)) {
+  if (!isEventOpenForApplications(event)) {
     return NextResponse.json({ error: 'Applications are closed for this market' }, { status: 400 })
   }
 
@@ -180,7 +184,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const scheduleDays = resolveEventScheduleDays(event as Event)
+  const scheduleDays = resolveEventScheduleDays(event)
   const attendanceSelection = normalizeAttendanceSelection(
     scheduleDays,
     event.require_full_attendance ?? true,
@@ -309,6 +313,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You have already applied to this event' }, { status: 409 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  try {
+    await sendMarketApplicationReceivedEmail(
+      buildMarketApplicationEmailFromEvent({
+        vendorEmail: user.email ?? profile?.email ?? '',
+        passport,
+        profile,
+        event: {
+          name: event.name,
+          start_at: event.start_at,
+          end_at: event.end_at,
+          is_multi_day: event.is_multi_day,
+          event_days: event.event_days,
+          coordinator: event.coordinator,
+        },
+      })
+    )
+  } catch (emailErr) {
+    console.error('[email] market application received unexpected error:', emailErr, {
+      eventId,
+      vendorId: user.id,
+    })
   }
 
   return NextResponse.json({

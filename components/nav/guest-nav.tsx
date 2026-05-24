@@ -2,10 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
-import { Menu } from 'lucide-react'
+import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
+import { MobileNavSheet } from '@/components/nav/mobile-nav-sheet'
 import { Button } from '@/components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 
 const NAV_LINKS = [
   { href: '/discover', label: 'Discover Markets' },
@@ -18,12 +17,9 @@ export function GuestNav() {
 
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-3 xl:px-10">
-        <Link href="/discover" className="flex shrink-0 items-center gap-2.5">
-          <BrandLogoMark />
-          <span className="font-heading text-xl font-semibold tracking-tight text-foreground">
-            Popup Hub
-          </span>
+      <div className="mx-auto flex max-w-full items-center justify-between overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
+        <Link href="/discover" className="shrink-0">
+          <BrandLogoLockup />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">
@@ -40,58 +36,34 @@ export function GuestNav() {
 
         <div className="flex items-center gap-2">
           <Link href="/login" className="hidden sm:block">
-            <button
-              type="button"
-              className="h-9 rounded-lg border-2 border-stone-200 px-4 text-sm font-medium text-foreground transition-all hover:bg-canvas active:translate-y-0.5"
-            >
+            <Button variant="outline" size="sm" className="min-h-9">
               Sign in
-            </button>
+            </Button>
           </Link>
           <Link href="/signup" className="hidden sm:block">
-            <button
-              type="button"
-              className="btn-tactile h-9 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-[var(--shadow-market-lift)] transition-all hover:bg-forest-deep active:translate-y-0.5 active:shadow-none"
-            >
+            <Button size="sm" className="min-h-9">
               Get started
-            </button>
+            </Button>
           </Link>
 
-          <Sheet>
-            <SheetTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-canvas md:hidden"
-                  aria-label="Open menu"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              }
-            />
-            <SheetContent side="right" className="w-72">
-              <div className="mt-8 flex flex-col gap-1">
-                {NAV_LINKS.map(({ href, label }) => (
-                  <Link key={href} href={href}>
-                    <Button
-                      variant={pathname.startsWith(href) ? 'secondary' : 'ghost'}
-                      className="w-full justify-start"
-                      size="sm"
-                    >
-                      {label}
-                    </Button>
-                  </Link>
-                ))}
+          <MobileNavSheet
+            links={NAV_LINKS}
+            pathname={pathname}
+            side="right"
+            className="md:hidden"
+            footer={
+              <>
                 <Link href="/login">
-                  <Button variant="outline" className="mt-4 w-full">
+                  <Button variant="outline" className="w-full min-h-11">
                     Sign in
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button className="w-full">Get started</Button>
+                  <Button className="w-full min-h-11">Get started</Button>
                 </Link>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </>
+            }
+          />
         </div>
       </div>
     </nav>

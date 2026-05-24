@@ -73,7 +73,11 @@ function NewAuctionForm() {
       if (error) throw error
 
       toast.success('Auction created!')
-      router.push(`/shared/auction/${data.id}`)
+      if (eventId) {
+        router.push(`/coordinator/events/${eventId}/auctions`)
+      } else {
+        router.push(`/auctions/${data.id}`)
+      }
     } catch (err) {
       toast.error('Failed to create auction')
       console.error(err)

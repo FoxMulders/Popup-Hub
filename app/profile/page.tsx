@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { Profile } from '@/types/database'
+import { FoundingVendorBadge } from '@/components/vendor/founding-vendor-badge'
 import { ProfileForm } from './profile-form'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { PurchaseHistory } from '@/components/shopper/purchase-history'
@@ -56,6 +57,14 @@ export default async function ProfilePage() {
             <div className="rounded-2xl border bg-amber-50 border-amber-100 p-6">
               <h3 className="font-semibold text-amber-900 mb-2">Account Role</h3>
               <p className="text-sm text-amber-700 capitalize font-medium">{profile.role}</p>
+              {profile.is_beta_tester ? (
+                <div className="mt-3">
+                  <FoundingVendorBadge />
+                  <p className="text-xs text-amber-700 mt-2 leading-relaxed">
+                    Early adopter perks are active — premium placement and priority queue bypass included.
+                  </p>
+                </div>
+              ) : null}
               <p className="text-xs text-amber-600 mt-1.5">
                 Contact support to change your account role.
               </p>
@@ -88,7 +97,7 @@ export default async function ProfilePage() {
               </div>
             )}
 
-            <PurchaseHistory userId={profile.id} />
+            <PurchaseHistory userId={profile.id} hidden />
             <VendorAccessStatus userId={profile.id} />
           </aside>
         </div>

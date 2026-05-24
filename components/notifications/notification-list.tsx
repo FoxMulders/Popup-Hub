@@ -28,6 +28,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   application_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
   payment_failed: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
   auction_won: { icon: <Trophy className="h-4 w-4" />, color: 'text-amber-500 bg-amber-50' },
+  auction_starting: { icon: <Trophy className="h-4 w-4" />, color: 'text-harvest-600 bg-harvest-50' },
   default: { icon: <Info className="h-4 w-4" />, color: 'text-gray-500 bg-gray-100' },
 }
 

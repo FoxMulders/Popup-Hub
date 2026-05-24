@@ -12,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
-import { Bell, LogOut, Menu } from 'lucide-react'
+import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
+import { MobileNavSheet } from '@/components/nav/mobile-nav-sheet'
+import { Bell, LogOut } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import type { Profile } from '@/types/database'
 import { PortalSwitcherMenuItems } from '@/components/nav/portal-switcher'
@@ -69,17 +69,12 @@ export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: App
 
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-3 xl:px-10">
-        {/* Logo */}
-        <div className="flex items-center gap-8">
-          <Link href={homeHref} className="flex items-center gap-2.5 shrink-0">
-            <BrandLogoMark />
-            <span className="font-heading text-xl font-semibold text-foreground tracking-tight">
-              Popup Hub
-            </span>
+      <div className="mx-auto flex max-w-full items-center justify-between overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
+        <div className="flex min-w-0 items-center gap-8">
+          <Link href={homeHref} className="shrink-0">
+            <BrandLogoLockup />
           </Link>
 
-          {/* Desktop nav links */}
           <div className="hidden lg:flex items-center gap-0.5">
             {links.map(({ href, label }) => (
               <Link key={href} href={href}>
@@ -95,9 +90,7 @@ export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: App
           </div>
         </div>
 
-        {/* Right side */}
         <div className="flex items-center gap-2">
-          {/* Notification bell */}
           <Link href="/notifications">
             <Button variant="ghost" size="icon" className="relative h-9 w-9">
               <Bell className="h-5 w-5" />
@@ -109,7 +102,6 @@ export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: App
             </Button>
           </Link>
 
-          {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -158,31 +150,7 @@ export function AppNav({ profile, vendorPortal = false, approvalCount = 0 }: App
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Mobile hamburger */}
-          <Sheet>
-            <SheetTrigger
-              render={
-                <button className="lg:hidden h-9 w-9 flex items-center justify-center rounded-lg hover:bg-canvas">
-                  <Menu className="h-5 w-5" />
-                </button>
-              }
-            />
-            <SheetContent side="left" className="w-64">
-              <div className="flex flex-col gap-1 mt-6">
-                {links.map(({ href, label }) => (
-                  <Link key={href} href={href}>
-                    <Button
-                      variant={pathname.startsWith(href) ? 'secondary' : 'ghost'}
-                      className="w-full justify-start"
-                      size="sm"
-                    >
-                      {label}
-                    </Button>
-                  </Link>
-                ))}
-              </div>
-            </SheetContent>
-          </Sheet>
+          <MobileNavSheet links={links} pathname={pathname} side="left" className="lg:hidden" />
         </div>
       </div>
     </nav>

@@ -17,6 +17,7 @@ import { VendorReviewsPanel } from '@/components/shopper/vendor-reviews-panel'
 import { buildScheduleLines } from '@/lib/shopper/events'
 import { buildVendorLineup, type VendorLineupEntry } from '@/lib/shopper/vendors'
 import { VendorAccessRequestForm } from '@/components/shopper/vendor-access-request-form'
+import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import type {
   Auction,
   BoothApplication,
@@ -41,11 +42,14 @@ interface EventDetailClientProps {
   products: (VendorProduct & { vendor_name?: string; vendor_id: string })[]
   scheduleItems: EventScheduleItem[]
   activeAuction: Auction | null
+  upcomingAuction: Auction | null
+  lastEndedAuction: Auction | null
   existingReviewRating: number | null
   coordinatorId: string | null
   coordinatorName: string
   vendorAccessRequest: VendorAccessRequest | null
   userRole: Role | null
+  quarterAuctionBanner?: React.ReactNode
 }
 
 export function EventDetailClient({
@@ -60,11 +64,14 @@ export function EventDetailClient({
   products,
   scheduleItems,
   activeAuction,
+  upcomingAuction,
+  lastEndedAuction,
   existingReviewRating,
   coordinatorId,
   coordinatorName,
   vendorAccessRequest,
   userRole,
+  quarterAuctionBanner,
 }: EventDetailClientProps) {
   const [selectedVendor, setSelectedVendor] = useState<VendorLineupEntry | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -83,7 +90,7 @@ export function EventDetailClient({
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 pb-32">
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
           {event.cover_image_url ? (
-            <img src={event.cover_image_url} alt={event.name} className="h-56 w-full object-cover sm:h-64" />
+            <img src={event.cover_image_url} alt={event.name} className="h-56 w-full object-contain bg-slate-50 sm:h-64" />
           ) : (
             <div className="flex h-40 items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
               <MapPin className="h-16 w-16 text-amber-300" />
@@ -156,20 +163,18 @@ export function EventDetailClient({
               </div>
             )}
 
-            {activeAuction && (
-              <div className="mt-4 rounded-xl border border-harvest-200 bg-harvest-50 px-4 py-3">
-                <p className="text-sm font-semibold text-harvest-900">Live auction happening now</p>
-                <Link href={`/auctions/${activeAuction.id}`} className="mt-2 inline-block text-sm font-medium text-forest underline">
-                  Join {activeAuction.title} →
-                </Link>
-              </div>
-            )}
+            <LiveAuctionBanner
+              activeAuction={activeAuction}
+              upcomingAuction={upcomingAuction}
+              lastEndedAuction={lastEndedAuction}
+            />
+            {quarterAuctionBanner}
           </div>
         </div>
 
         <GoodToKnowPanel event={event} strollerBadge={strollerBadge} />
 
-        <EventSchedulePanel items={scheduleItems} />
+        <EventSchedulePanel items={scheduleItems} eventLocation={event.location_name} />
 
         <section>
           <div className="mb-4 flex items-center justify-between">

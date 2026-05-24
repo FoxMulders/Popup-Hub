@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { selectWinner } from '@/lib/auction/winner'
-import { sendSms } from '@/lib/twilio'
-import type { AuctionDrop } from '@/types/database'
+import { endAuction } from '@/lib/auction/end-auction'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -29,67 +27,15 @@ export async function POST(_request: Request, { params }: Props) {
     return NextResponse.json({ error: `Auction is ${auction.status}` }, { status: 409 })
   }
 
-  // Fetch all drops
-  const { data: drops } = await supabase
-    .from('auction_drops')
-    .select('*')
-    .eq('auction_id', id)
-
-  const winningPaddleId = selectWinner((drops ?? []) as AuctionDrop[])
-
-  // Find winner's user_id
-  let winnerUserId: string | null = null
-  if (winningPaddleId) {
-    const { data: wallet } = await supabase
-      .from('wallets')
-      .select('user_id')
-      .eq('paddle_id', winningPaddleId)
-      .single()
-    winnerUserId = wallet?.user_id ?? null
-  }
-
-  const totalPot = (drops ?? []).reduce((sum: number, d) => sum + (d.amount as number), 0)
-
-  await supabase
-    .from('auctions')
-    .update({
-      status: 'ended',
-      winning_paddle_id: winningPaddleId,
-      winner_user_id: winnerUserId,
-      pot_amount: totalPot,
+  try {
+    const result = await endAuction(supabase, id)
+    return NextResponse.json({
+      winningPaddleId: result.winningPaddleId,
+      winnerUserId: result.winnerUserId,
+      totalPot: result.totalPot,
     })
-    .eq('id', id)
-
-  // Notify winner in-app + SMS
-  if (winnerUserId) {
-    const { data: auctionDetails } = await supabase
-      .from('auctions')
-      .select('title')
-      .eq('id', id)
-      .single()
-    const auctionTitle = auctionDetails?.title ?? 'the auction'
-
-    await supabase.from('notifications').insert({
-      user_id: winnerUserId,
-      type: 'auction_won',
-      message: `🎉 You won ${auctionTitle}! Your paddle ${winningPaddleId} was drawn as the winner.`,
-      metadata: { auction_id: id, winning_paddle_id: winningPaddleId },
-    })
-
-    // Fetch winner's phone for optional SMS
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('phone, full_name')
-      .eq('id', winnerUserId)
-      .single()
-
-    if (profile?.phone) {
-      await sendSms(
-        profile.phone,
-        `🎉 Congratulations${profile.full_name ? ` ${profile.full_name}` : ''}! You won ${auctionTitle} on Popup Hub. Your paddle ${winningPaddleId} was the lucky draw winner!`
-      )
-    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Failed to end auction'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-
-  return NextResponse.json({ winningPaddleId, winnerUserId, totalPot })
 }

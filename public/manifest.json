@@ -2,12 +2,13 @@
   "short_name": "Popup Hub",
   "name": "Popup Hub Market Manager",
   "description": "Discover local popup markets, manage vendor booths, and run market day operations.",
-  "start_url": "/",
+  "start_url": "/discover",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "orientation": "any",
+  "background_color": "#faf8f5",
+  "theme_color": "#059669",
+  "categories": ["shopping", "business"],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

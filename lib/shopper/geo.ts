@@ -25,13 +25,16 @@ export function formatDistance(km: number): string {
 }
 
 export function directionsUrl(lat: number, lng: number, address?: string): string {
-  const dest = address?.trim()
-    ? encodeURIComponent(address)
-    : `${lat},${lng}`
-  return `https://www.google.com/maps/dir/?api=1&destination=${dest}`
+  const query = address?.trim()
+    ? encodeURIComponent(address.trim())
+    : encodeURIComponent(`${lat},${lng}`)
+  return `https://www.google.com/maps/search/?api=1&query=${query}`
 }
 
-export function appleMapsUrl(lat: number, lng: number): string {
+export function appleMapsUrl(lat: number, lng: number, address?: string): string {
+  if (address?.trim()) {
+    return `maps://?q=${encodeURIComponent(address.trim())}`
+  }
   return `maps://?daddr=${lat},${lng}`
 }
 
@@ -41,6 +44,6 @@ export function isIOS(): boolean {
 }
 
 export function openDirections(lat: number, lng: number, address?: string): void {
-  const url = isIOS() ? appleMapsUrl(lat, lng) : directionsUrl(lat, lng, address)
-  window.open(url, '_blank', 'noopener,noreferrer')
+  const url = isIOS() ? appleMapsUrl(lat, lng, address) : directionsUrl(lat, lng, address)
+  window.location.href = url
 }

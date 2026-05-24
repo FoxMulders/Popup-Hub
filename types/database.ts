@@ -10,7 +10,23 @@ export type PayoutOnboardingStatus = 'not_started' | 'pending' | 'complete' | 'r
 export type PlatformFeeMode = 'percent' | 'flat' | 'greater_of' | 'percent_plus_flat'
 export type PlatformTransactionStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded'
 export type AuctionStatus = 'upcoming' | 'active' | 'ended' | 'cancelled'
-export type TransactionType = 'deposit' | 'withdrawal' | 'quarter_drop' | 'auction_win' | 'refund'
+export type TransactionType =
+  | 'deposit'
+  | 'withdrawal'
+  | 'quarter_drop'
+  | 'auction_win'
+  | 'refund'
+  | 'paddle_purchase'
+  | 'bid_entry'
+export type AuctionItemStatus =
+  | 'draft'
+  | 'queued'
+  | 'active_price_setting'
+  | 'bidding_open'
+  | 'bidding_closed'
+  | 'drawing'
+  | 'completed'
+  | 'cancelled'
 export type NotificationType =
   | 'waitlist_triggered'
   | 'application_approved'
@@ -67,6 +83,7 @@ export interface Profile {
   email: string
   phone: string | null
   avatar_url: string | null
+  is_beta_tester: boolean
   created_at: string
   reliability_score: number
   total_markets: number
@@ -78,8 +95,10 @@ export interface Profile {
   coordinator_late_cancellation_count?: number
   recent_late_cancellation_at?: string | null
   payout_account_id: string | null
+  stripe_connected_id: string | null
   payout_onboarding_status: PayoutOnboardingStatus
   square_location_id?: string | null
+  share_contact_with_vendors?: boolean
   updated_at: string
 }
 
@@ -257,6 +276,58 @@ export interface AuctionDrop {
   paddle_id: string
   amount: number
   dropped_at: string
+}
+
+export interface QuarterAuctionSettings {
+  event_id: string
+  enabled: boolean
+  paddle_purchase_credits: number
+  default_entry_credits: number
+  created_at: string
+  updated_at: string
+}
+
+export interface AuctionCatalogItem {
+  id: string
+  event_id: string
+  vendor_id: string
+  title: string
+  description: string | null
+  image_url: string | null
+  retail_value_cents: number | null
+  queue_position: number
+  status: AuctionItemStatus
+  entry_cost_credits: number | null
+  pool_credits: number
+  winning_paddle_number: string | null
+  winner_user_id: string | null
+  approved_at: string | null
+  bidding_opened_at: string | null
+  bidding_closed_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+  vendor?: Profile
+  entries?: AuctionItemEntry[]
+}
+
+export interface EventPaddle {
+  id: string
+  event_id: string
+  user_id: string
+  paddle_number: string
+  purchase_credits: number
+  purchased_at: string
+}
+
+export interface AuctionItemEntry {
+  id: string
+  catalog_item_id: string
+  paddle_id: string
+  user_id: string
+  paddle_number: string
+  credits_spent: number
+  entered_at: string
 }
 
 export interface Notification {

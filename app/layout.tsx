@@ -77,7 +77,7 @@ export default async function RootLayout({
       lang="en"
       className={`${display.variable} ${body.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
         <DocumentTitleSync initialRole={sessionRole} />
         <ServiceWorkerRegister />
         <TooltipProvider>

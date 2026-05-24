@@ -26,7 +26,7 @@ export default async function CoordinatorLayout({ children }: { children: React.
   }
 
   return (
-    <div className="market-page min-h-screen">
+    <div className="market-page min-h-screen max-w-full overflow-x-hidden">
       <AppNav profile={profile} />
       <main>{children}</main>
     </div>

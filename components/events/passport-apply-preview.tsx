@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
+import { FoundingVendorBadge } from '@/components/vendor/founding-vendor-badge'
 import type { VendorPassportApplicationPreview } from '@/lib/vendor/passport-application'
 import { CheckCircle } from 'lucide-react'
 
@@ -21,12 +22,15 @@ export function PassportApplyPreview({ passport }: PassportApplyPreviewProps) {
         Vendor Passport Preview
       </p>
       <div className="flex items-start gap-3">
-        <VendorLogo
-          src={passport.logo_url}
-          alt={`${passport.business_name} logo`}
-          fallback={initials}
-          size="sm"
-        />
+        <div className="flex flex-col items-start gap-1.5">
+          <VendorLogo
+            src={passport.logo_url}
+            alt={`${passport.business_name} logo`}
+            fallback={initials}
+            size="sm"
+          />
+          {passport.is_beta_tester ? <FoundingVendorBadge /> : null}
+        </div>
         <div className="min-w-0 space-y-1">
           <p className="font-semibold text-foreground">{passport.business_name}</p>
           {passport.is_verified ? (

@@ -1,12 +1,18 @@
+'use client'
+
 import { format, isWithinInterval } from 'date-fns'
+import { CalendarPlus } from 'lucide-react'
 import type { EventScheduleItem } from '@/types/database'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { openScheduleInCalendar } from '@/lib/shopper/calendar-export'
 
 interface EventSchedulePanelProps {
   items: EventScheduleItem[]
+  eventLocation?: string | null
 }
 
-export function EventSchedulePanel({ items }: EventSchedulePanelProps) {
+export function EventSchedulePanel({ items, eventLocation }: EventSchedulePanelProps) {
   if (items.length === 0) return null
 
   const now = new Date()
@@ -26,10 +32,13 @@ export function EventSchedulePanel({ items }: EventSchedulePanelProps) {
               ? isWithinInterval(now, { start, end })
               : Math.abs(now.getTime() - start.getTime()) < 30 * 60 * 1000
 
+          const location = item.location_label ?? eventLocation ?? undefined
+          const description = [item.description, location].filter(Boolean).join(' · ')
+
           return (
             <li
               key={item.id}
-              className="flex gap-3 rounded-lg border border-stone-100 px-3 py-2"
+              className="flex flex-col gap-2 rounded-lg border border-stone-100 px-3 py-2 sm:flex-row sm:items-start sm:gap-3"
             >
               <div className="min-w-[4.5rem] shrink-0 text-sm font-medium text-muted-foreground">
                 {format(start, 'h:mm a')}
@@ -47,6 +56,25 @@ export function EventSchedulePanel({ items }: EventSchedulePanelProps) {
                 {item.description && (
                   <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                 )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 min-h-9 gap-1.5 touch-manipulation"
+                  onClick={() =>
+                    openScheduleInCalendar({
+                      title: item.title,
+                      description,
+                      location,
+                      startsAt: start,
+                      endsAt: end,
+                      uid: `schedule-${item.id}@popup-hub`,
+                    })
+                  }
+                >
+                  <CalendarPlus className="h-3.5 w-3.5" />
+                  Add to calendar
+                </Button>
               </div>
             </li>
           )

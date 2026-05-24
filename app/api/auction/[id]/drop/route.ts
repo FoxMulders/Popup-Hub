@@ -20,10 +20,9 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Invalid drop amount' }, { status: 400 })
   }
 
-  // Verify auction is active
   const { data: auction } = await supabase
     .from('auctions')
-    .select('status, min_drop_amount, max_drop_amount, timer_ends_at')
+    .select('status, min_drop_amount, max_drop_amount, timer_ends_at, pot_amount')
     .eq('id', auctionId)
     .single()
 
@@ -39,7 +38,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Drop amount out of range' }, { status: 422 })
   }
 
-  // Check wallet balance and get paddle ID — use service client for atomic update
   const service = await createServiceClient()
   const { data: wallet } = await service
     .from('wallets')
@@ -57,18 +55,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Insufficient balance' }, { status: 422 })
   }
 
-  // Deduct from wallet
   const { error: walletError } = await service
     .from('wallets')
     .update({ balance: wallet.balance - amount })
     .eq('id', wallet.id)
-    .eq('balance', wallet.balance) // optimistic lock
+    .eq('balance', wallet.balance)
 
   if (walletError) {
     return NextResponse.json({ error: 'Balance update conflict, please retry' }, { status: 409 })
   }
 
-  // Record transaction
   await service.from('wallet_transactions').insert({
     wallet_id: wallet.id,
     type: 'quarter_drop',
@@ -76,7 +72,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     metadata: { auction_id: auctionId },
   })
 
-  // Insert drop
   const { error: dropError } = await service.from('auction_drops').insert({
     auction_id: auctionId,
     user_id: user.id,
@@ -85,15 +80,13 @@ export async function POST(request: Request, { params }: RouteParams) {
   })
 
   if (dropError) {
-    // Refund
     await service.from('wallets').update({ balance: wallet.balance }).eq('id', wallet.id)
     return NextResponse.json({ error: 'Failed to record drop' }, { status: 500 })
   }
 
-  // Update auction pot
   await service
     .from('auctions')
-    .update({ pot_amount: auction.min_drop_amount + amount }) // triggers realtime
+    .update({ pot_amount: (auction.pot_amount ?? 0) + amount })
     .eq('id', auctionId)
 
   return NextResponse.json({ success: true })

@@ -284,7 +284,7 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
               aria-selected={routeMode === id}
               onClick={() => {
                 setRouteMode(id)
-                if (id !== 'vendor') setShowPatronFlow(true)
+                setShowPatronFlow(true)
               }}
               className={cn(
                 'min-h-9 rounded-lg border px-2.5 text-xs font-medium transition-colors',

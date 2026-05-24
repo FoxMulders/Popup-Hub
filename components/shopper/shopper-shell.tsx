@@ -26,9 +26,9 @@ export async function ShopperShell({ children, hideBottomNav }: ShopperShellProp
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-cream">
+    <div className="flex min-h-screen flex-col bg-cream max-w-full overflow-x-hidden">
       <ShopperTopBar profile={profile} vendorAccessCount={hasVendorPortal ? 1 : 0} />
-      <main className="flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+      <main className="flex-1 max-w-full overflow-x-hidden pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
         {children}
       </main>
       <ShopperBottomNav hide={hideBottomNav} />

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, ClipboardList, LayoutDashboard, ListOrdered, CheckSquare, QrCode } from 'lucide-react'
+import { ArrowLeft, ClipboardList, LayoutDashboard, ListOrdered, CheckSquare, QrCode, Gavel } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -11,11 +11,12 @@ interface MarketDayShellProps {
   eventName: string
   children: React.ReactNode
   /** Active section for sub-nav highlighting */
-  activeSection?: 'operations' | 'layout' | 'checkin'
+  activeSection?: 'operations' | 'layout' | 'checkin' | 'auctions'
 }
 
 const SECTIONS = [
   { id: 'operations' as const, label: 'Operations', href: (id: string) => `/coordinator/events/${id}/operations`, icon: ClipboardList },
+  { id: 'auctions' as const, label: 'Auctions', href: (id: string) => `/coordinator/events/${id}/auctions`, icon: Gavel },
   { id: 'layout' as const, label: 'Spatial Planner', href: (id: string) => `/coordinator/events/${id}/layout`, icon: LayoutDashboard },
   { id: 'checkin' as const, label: 'Check-In QR', href: (id: string) => `/coordinator/events/${id}/checkin`, icon: QrCode },
 ]
@@ -55,7 +56,8 @@ export function MarketDayShell({
               {SECTIONS.map(({ id, label, href, icon: Icon }) => {
                 const isActive =
                   activeSection === id ||
-                  (id === 'operations' && pathname?.includes('/operations'))
+                  (id === 'operations' && pathname?.includes('/operations')) ||
+                  (id === 'auctions' && pathname?.includes('/auctions'))
                 return (
                   <Link
                     key={id}

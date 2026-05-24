@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
-import { Menu, LogOut } from 'lucide-react'
+import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
+import { MobileNavSheet } from '@/components/nav/mobile-nav-sheet'
+import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/profile/user-avatar'
 import {
@@ -14,7 +15,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { PortalSwitcherMenuItems } from '@/components/nav/portal-switcher'
 import type { Profile } from '@/types/database'
 
@@ -50,12 +50,9 @@ export function ShopperTopBar({ profile, vendorAccessCount = 0 }: ShopperTopBarP
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
-        <Link href="/discover" className="flex shrink-0 items-center gap-2.5">
-          <BrandLogoMark />
-          <span className="font-heading text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-            Popup Hub
-          </span>
+      <div className="mx-auto flex max-w-full items-center justify-between overflow-x-hidden px-4 py-3 sm:max-w-7xl sm:px-6">
+        <Link href="/discover" className="shrink-0">
+          <BrandLogoLockup />
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">
@@ -124,46 +121,26 @@ export function ShopperTopBar({ profile, vendorAccessCount = 0 }: ShopperTopBarP
             </>
           )}
 
-          <Sheet>
-            <SheetTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-canvas md:hidden"
-                  aria-label="Open menu"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              }
-            />
-            <SheetContent side="right" className="w-72">
-              <div className="mt-8 flex flex-col gap-1">
-                {navLinks.map(({ href, label }) => (
-                  <Link key={href} href={href}>
-                    <Button
-                      variant={pathname.startsWith(href) ? 'secondary' : 'ghost'}
-                      className="w-full justify-start"
-                      size="sm"
-                    >
-                      {label}
+          <MobileNavSheet
+            links={navLinks}
+            pathname={pathname}
+            side="right"
+            className="md:hidden"
+            footer={
+              !profile ? (
+                <>
+                  <Link href="/login">
+                    <Button variant="outline" className="w-full min-h-11">
+                      Sign in
                     </Button>
                   </Link>
-                ))}
-                {!profile && (
-                  <>
-                    <Link href="/login">
-                      <Button variant="outline" className="mt-4 w-full">
-                        Sign in
-                      </Button>
-                    </Link>
-                    <Link href="/signup">
-                      <Button className="w-full">Get started</Button>
-                    </Link>
-                  </>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+                  <Link href="/signup">
+                    <Button className="w-full min-h-11">Get started</Button>
+                  </Link>
+                </>
+              ) : undefined
+            }
+          />
         </div>
       </div>
     </header>

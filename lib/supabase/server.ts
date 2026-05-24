@@ -1,5 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { assertTransactionPoolerConfigured } from '@/lib/supabase/pooler'
+
+assertTransactionPoolerConfigured()
 
 export async function createClient() {
   const cookieStore = await cookies()

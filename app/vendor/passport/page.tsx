@@ -9,7 +9,8 @@ export default async function VendorPassportPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: categories }, { data: existing }, { data: products }] = await Promise.all([
+  const [{ data: categories }, { data: existing }, { data: products }, { data: profile }] =
+    await Promise.all([
     supabase.from('categories').select('*').order('name'),
     supabase
       .from('vendor_passports')
@@ -21,6 +22,7 @@ export default async function VendorPassportPage() {
       .select('*')
       .eq('vendor_id', user.id)
       .order('created_at', { ascending: false }),
+    supabase.from('profiles').select('is_beta_tester').eq('id', user.id).maybeSingle(),
   ])
 
   return (
@@ -42,6 +44,7 @@ export default async function VendorPassportPage() {
         <VendorProductManager
           userId={user.id}
           products={(products as VendorProduct[]) ?? []}
+          isBetaTester={profile?.is_beta_tester ?? false}
         />
       )}
     </div>

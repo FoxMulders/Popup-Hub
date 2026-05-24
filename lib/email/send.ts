@@ -3,6 +3,7 @@ interface SendEmailParams {
   subject: string
   html: string
   text?: string
+  replyTo?: string
 }
 
 export interface SendEmailResult {
@@ -36,6 +37,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
         subject: params.subject,
         html: params.html,
         text: params.text,
+        ...(params.replyTo ? { reply_to: params.replyTo } : {}),
       }),
     })
 

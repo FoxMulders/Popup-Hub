@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, MapPin } from 'lucide-react'
 import { format } from 'date-fns'
+import { COORDINATOR_APPLICATION_SELECT } from '@/lib/applications/coordinator-application-select'
+import { normalizeCoordinatorApplication } from '@/lib/applications/normalize-coordinator-application'
+import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import type { BoothApplication, Event } from '@/types/database'
 
 interface Props {
@@ -18,7 +21,7 @@ export default async function ApplicationsPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event }, { data: applications }] = await Promise.all([
+  const [{ data: event }, { data: rawApplications }, { data: allCategories }] = await Promise.all([
     supabase
       .from('events')
       .select('*')
@@ -27,17 +30,19 @@ export default async function ApplicationsPage({ params }: Props) {
       .single(),
     supabase
       .from('booth_applications')
-      .select(`
-        *,
-        vendor:profiles(id, full_name, avatar_url),
-        passport:vendor_passports(business_name, bio, logo_url, item_image_urls, is_verified),
-        category:categories(name)
-      `)
+      .select(COORDINATOR_APPLICATION_SELECT)
       .eq('event_id', id)
       .order('applied_at', { ascending: true }),
+    supabase.from('categories').select('id, name'),
   ])
 
   if (!event) notFound()
+
+  const applications = (rawApplications ?? []).map((row) =>
+    normalizeCoordinatorApplication(row as Record<string, unknown>)
+  ) as BoothApplication[]
+
+  const categoryNameById = buildCategoryNameMap(allCategories ?? [])
 
   return (
     <div className="mx-auto max-w-[1500px] px-6 py-10 xl:px-10">
@@ -69,8 +74,9 @@ export default async function ApplicationsPage({ params }: Props) {
       </div>
 
       <ApplicationBoard
-        applications={(applications ?? []) as BoothApplication[]}
+        applications={applications}
         bookingMode={(event as Event).booking_mode}
+        categoryNameById={Object.fromEntries(categoryNameById)}
       />
     </div>
   )

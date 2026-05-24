@@ -2,6 +2,10 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { DiscoverScreen } from '@/components/shopper/discover-screen'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  getCachedApprovedVendorCounts,
+  getCachedDiscoverMarkets,
+} from '@/lib/queries/cached-public-markets'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -9,30 +13,18 @@ export const metadata: Metadata = {
   description: 'Browse upcoming popup markets near you — see vendors before you go.',
 }
 
+export const revalidate = 60
+
 async function DiscoverContent() {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { data: events } = await supabase
-    .from('events')
-    .select('*, event_days(*)')
-    .in('status', ['published', 'active'])
-    .order('start_at', { ascending: true })
-
-  const eventIds = (events ?? []).map((e) => e.id)
-  let vendorCounts: Record<string, number> = {}
-  if (eventIds.length > 0) {
-    const { data: counts } = await supabase
-      .from('booth_applications')
-      .select('event_id')
-      .in('event_id', eventIds)
-      .eq('status', 'approved')
-    for (const row of counts ?? []) {
-      vendorCounts[row.event_id] = (vendorCounts[row.event_id] ?? 0) + 1
-    }
-  }
+  const [events, vendorCounts] = await Promise.all([
+    getCachedDiscoverMarkets(),
+    getCachedApprovedVendorCounts(),
+  ])
 
   let favoriteIds: string[] = []
   if (user) {
@@ -45,7 +37,7 @@ async function DiscoverContent() {
 
   return (
     <DiscoverScreen
-      events={events ?? []}
+      events={events}
       vendorCounts={vendorCounts}
       favoriteIds={favoriteIds}
     />

@@ -8,12 +8,17 @@ import { EventLogisticsEditor } from '@/components/coordinator/event-logistics-e
 import { EventScheduleEditor } from '@/components/coordinator/event-schedule-editor'
 import { RefundExceptionsPanel } from '@/components/coordinator/refund-exceptions-panel'
 import { VendorAnnouncement } from '@/components/coordinator/vendor-announcement'
+import { CategoryCapacityMatrix } from '@/components/coordinator/category-capacity-matrix'
+import { buildCategoryCapacityRows } from '@/lib/coordinator/category-capacity-rows'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { LayoutDashboard, ClipboardCheck, Printer, Gauge } from 'lucide-react'
+import { LayoutDashboard, ClipboardCheck, Printer, Gauge, Gavel } from 'lucide-react'
 import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
-import type { Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
+import { COORDINATOR_APPLICATION_SELECT } from '@/lib/applications/coordinator-application-select'
+import { normalizeCoordinatorApplication } from '@/lib/applications/normalize-coordinator-application'
+import { buildCategoryNameMap } from '@/lib/applications/display-categories'
+import type { BoothApplication, Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -39,18 +44,22 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
       (a.category?.name ?? '').localeCompare(b.category?.name ?? '')
   )
 
-  const { data: applications } = await supabase
-    .from('booth_applications')
-    .select(`
-      *,
-      vendor:profiles(id, full_name, email, phone, avatar_url),
-      passport:vendor_passports(business_name, bio, logo_url, item_image_urls, is_verified, tax_id_encrypted),
-      category:categories(name)
-    `)
-    .eq('event_id', id)
-    .order('applied_at', { ascending: true })
+  const [{ data: rawApplications }, { data: allCategories }] = await Promise.all([
+    supabase
+      .from('booth_applications')
+      .select(COORDINATOR_APPLICATION_SELECT)
+      .eq('event_id', id)
+      .order('applied_at', { ascending: true }),
+    supabase.from('categories').select('id, name'),
+  ])
 
-  const [{ data: layoutRow }, { data: squareLinked }, { data: scheduleItems }, { data: revenueRows }] = await Promise.all([
+  const applications = (rawApplications ?? []).map((row) =>
+    normalizeCoordinatorApplication(row as Record<string, unknown>)
+  ) as BoothApplication[]
+
+  const categoryNameById = buildCategoryNameMap(allCategories ?? [])
+
+  const [{ data: layoutRow }, { data: squareLinked }, { data: scheduleItems }, { data: revenueRows }, { data: eventAuctions }] = await Promise.all([
     supabase.from('booth_layouts').select('id').eq('event_id', id).maybeSingle(),
     supabase
       .from('events')
@@ -69,6 +78,11 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
       .select('organizer_payout_amount')
       .eq('event_id', id)
       .eq('status', 'completed'),
+    supabase
+      .from('auctions')
+      .select('id, title, status, pot_amount, winning_paddle_id')
+      .eq('event_id', id)
+      .order('created_at', { ascending: false }),
   ])
 
   const hasSquare = !!event.square_merchant_id || !!squareLinked
@@ -100,6 +114,8 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         .eq('status', 'pending_retry')
         .order('created_at', { ascending: true })
     : { data: [] }
+
+  const categoryCapacityRows = buildCategoryCapacityRows(sortedCategoryLimits, applications ?? [])
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
@@ -144,6 +160,13 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
                   <Gauge className="h-4 w-4" />
                   Market Day Dashboard
                 </Link>
+                <Link
+                  href={`/coordinator/events/${id}/auctions`}
+                  className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
+                >
+                  <Gavel className="h-4 w-4" />
+                  Auctions
+                </Link>
               </>
             )}
           </div>
@@ -176,15 +199,8 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
           <RefundExceptionsPanel eventId={id} exceptions={refundExceptions} />
         )}
 
-        {sortedCategoryLimits.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {sortedCategoryLimits.map((cl: { id: string; category?: { name: string }; max_slots: number; price_per_booth: number }) => (
-              <Badge key={cl.id} variant="outline" className="text-xs">
-                {cl.category?.name}: {cl.max_slots} slots
-                {cl.price_per_booth > 0 ? ` · $${(cl.price_per_booth / 100).toFixed(2)}` : ' · Free'}
-              </Badge>
-            ))}
-          </div>
+        {categoryCapacityRows.length > 0 && (
+          <CategoryCapacityMatrix rows={categoryCapacityRows} />
         )}
       </div>
 
@@ -221,14 +237,60 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         />
       )}
 
+      {!isCancelled && (
+        <div className="market-panel p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="market-section-title">Quarter Auctions</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Run digital quarter auctions during market day.
+              </p>
+            </div>
+            <Link
+              href={`/coordinator/events/${id}/auctions`}
+              className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
+            >
+              <Gavel className="h-4 w-4" />
+              Manage auctions
+            </Link>
+          </div>
+          {(eventAuctions ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No auctions yet.{' '}
+              <Link href={`/coordinator/auctions/new?eventId=${id}`} className="font-medium text-forest underline">
+                Create one
+              </Link>
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {(eventAuctions ?? []).slice(0, 5).map((a: { id: string; title: string; status: string; pot_amount: number; winning_paddle_id: string | null }) => (
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
+                  <span className="font-medium">{a.title}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="capitalize">{a.status}</Badge>
+                    {a.status === 'ended' && a.winning_paddle_id && (
+                      <span className="text-xs text-muted-foreground">Paddle #{a.winning_paddle_id}</span>
+                    )}
+                    <Link href={`/coordinator/events/${id}/auctions`} className="text-xs font-medium text-forest underline">
+                      Open
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       <div id="applications" className="scroll-mt-24">
         <h2 className="market-section-title mb-4">
           Applications ({applications?.length ?? 0})
         </h2>
         <ApplicationBoard
-          applications={(applications as never[]) ?? []}
+          applications={applications}
           bookingMode={event.booking_mode}
           eventCancelled={isCancelled}
+          categoryNameById={Object.fromEntries(categoryNameById)}
           categoryLimits={sortedCategoryLimits as Array<{
             category_id: string
             max_slots: number

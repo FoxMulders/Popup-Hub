@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { EventDetailClient } from '@/components/shopper/event-detail-client'
 import { getStrollerBadge } from '@/lib/shopper/layout'
 import { getVendorAccessRequest } from '@/lib/vendor/access'
+import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
+import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-banner'
 import type {
   Auction,
   BoothApplication,
@@ -44,7 +46,7 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
     { data: applications },
     { data: layoutRow },
     { data: scheduleItems },
-    { data: activeAuction },
+    { data: eventAuctions },
     favResult,
     remindersResult,
     followsResult,
@@ -74,8 +76,8 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
       .from('auctions')
       .select('*')
       .eq('event_id', eventId)
-      .eq('status', 'active')
-      .maybeSingle(),
+      .in('status', ['upcoming', 'active', 'ended'])
+      .order('created_at', { ascending: false }),
     user
       ? supabase
           .from('shopper_favorites')
@@ -149,6 +151,8 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
     }
   }
 
+  const auctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
+
   return (
     <EventDetailClient
       event={event as Event}
@@ -163,12 +167,15 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
       followVendorIds={(followsResult.data ?? []).map((f: { vendor_id: string }) => f.vendor_id)}
       products={products}
       scheduleItems={(scheduleItems ?? []) as EventScheduleItem[]}
-      activeAuction={(activeAuction as Auction | null) ?? null}
+      activeAuction={auctionSummary.active}
+      upcomingAuction={auctionSummary.upcoming}
+      lastEndedAuction={auctionSummary.lastEnded}
       existingReviewRating={reviewResult.data?.rating ?? null}
       coordinatorId={coordinator?.id ?? null}
       coordinatorName={coordinator?.full_name ?? 'Organizer'}
       vendorAccessRequest={vendorAccessRequest}
       userRole={userRole}
+      quarterAuctionBanner={<QuarterAuctionEventBanner eventId={eventId} />}
     />
   )
 }

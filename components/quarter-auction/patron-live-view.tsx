@@ -1,0 +1,378 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
+import { Loader2, Plus, Wallet } from 'lucide-react'
+import type {
+  AuctionCatalogItem,
+  AuctionItemEntry,
+  EventPaddle,
+  QuarterAuctionSettings,
+  Wallet as WalletType,
+} from '@/types/database'
+import { statusLabel } from '@/lib/quarter-auction/state-machine'
+import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
+import { PaddleHoldScreen } from '@/components/quarter-auction/paddle-hold-screen'
+import { WinCelebration } from '@/components/quarter-auction/win-celebration'
+
+interface PatronQuarterAuctionLiveProps {
+  eventId: string
+  userId: string
+  initialItems: AuctionCatalogItem[]
+  initialPaddles: EventPaddle[]
+  initialWallet: WalletType | null
+  settings: QuarterAuctionSettings
+}
+
+export function PatronQuarterAuctionLive({
+  eventId,
+  userId,
+  initialItems,
+  initialPaddles,
+  initialWallet,
+  settings,
+}: PatronQuarterAuctionLiveProps) {
+  const supabase = createClient()
+  const [items, setItems] = useState(initialItems)
+  const [paddles, setPaddles] = useState(initialPaddles)
+  const [wallet, setWallet] = useState(initialWallet)
+  const [entries, setEntries] = useState<AuctionItemEntry[]>([])
+  const [selectedPaddleIds, setSelectedPaddleIds] = useState<Set<string>>(new Set())
+  const [bidding, setBidding] = useState(false)
+  const [buyingPaddle, setBuyingPaddle] = useState(false)
+  const [showWin, setShowWin] = useState(false)
+  const [vendorInfo, setVendorInfo] = useState<{
+    name: string
+    email?: string | null
+    phone?: string | null
+  } | null>(null)
+
+  const liveItem = useMemo(
+    () =>
+      items.find((i) =>
+        ['active_price_setting', 'bidding_open', 'bidding_closed', 'drawing', 'completed'].includes(
+          i.status
+        )
+      ) ?? null,
+    [items]
+  )
+
+  const myEntries = useMemo(
+    () => entries.filter((e) => e.user_id === userId),
+    [entries, userId]
+  )
+
+  const myActivePaddleNumbers = myEntries.map((e) => e.paddle_number)
+  const balanceCredits = centsToCredits(wallet?.balance ?? 0)
+
+  const loadEntries = useCallback(
+    async (itemId: string) => {
+      const res = await fetch(`/api/quarter-auction/items/${itemId}/bid`)
+      const json = await res.json()
+      setEntries(json.entries ?? [])
+    },
+    []
+  )
+
+  useEffect(() => {
+    if (liveItem?.id) loadEntries(liveItem.id)
+  }, [liveItem?.id, loadEntries])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`qa-patron:${eventId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'auction_catalog_items', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          const row = payload.new as AuctionCatalogItem
+          setItems((prev) => {
+            const idx = prev.findIndex((i) => i.id === row.id)
+            if (idx === -1) return [...prev, row]
+            const next = [...prev]
+            next[idx] = { ...next[idx], ...row }
+            return next
+          })
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'event_paddles', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          const row = payload.new as EventPaddle
+          if (row.user_id === userId) {
+            setPaddles((prev) => [...prev, row])
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [eventId, supabase, userId])
+
+  useEffect(() => {
+    if (!liveItem?.id) return
+    const channel = supabase
+      .channel(`qa-entries:${liveItem.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'auction_item_entries', filter: `catalog_item_id=eq.${liveItem.id}` },
+        (payload) => {
+          setEntries((prev) => [...prev, payload.new as AuctionItemEntry])
+        }
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [liveItem?.id, supabase])
+
+  useEffect(() => {
+    if (!liveItem || liveItem.status !== 'completed' || !liveItem.winner_user_id) return
+    if (liveItem.winner_user_id !== userId) return
+
+    async function loadVendor() {
+      const { data: vendor } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone')
+        .eq('id', liveItem!.vendor_id)
+        .single()
+      if (vendor) {
+        setVendorInfo({
+          name: vendor.full_name,
+          email: vendor.email,
+          phone: vendor.phone,
+        })
+      }
+      setShowWin(true)
+    }
+    loadVendor()
+  }, [liveItem, userId, supabase])
+
+  async function buyPaddle() {
+    setBuyingPaddle(true)
+    try {
+      const res = await fetch(`/api/quarter-auction/${eventId}/paddles`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Could not purchase paddle')
+        return
+      }
+      setPaddles((prev) => [...prev, json.paddle])
+      if (wallet) {
+        setWallet({ ...wallet, balance: json.newBalance })
+      }
+      toast.success(`Paddle #${json.paddle.paddle_number} purchased!`)
+    } finally {
+      setBuyingPaddle(false)
+    }
+  }
+
+  async function placeBid() {
+    if (!liveItem || selectedPaddleIds.size === 0) {
+      toast.error('Select at least one paddle')
+      return
+    }
+    setBidding(true)
+    try {
+      const res = await fetch(`/api/quarter-auction/items/${liveItem.id}/bid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paddle_ids: Array.from(selectedPaddleIds) }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Bid failed')
+        return
+      }
+      setEntries((prev) => [...prev, ...(json.entries ?? [])])
+      if (wallet) setWallet({ ...wallet, balance: json.newBalance })
+      setSelectedPaddleIds(new Set())
+      toast.success('Paddles locked in — hold up your phone!')
+    } finally {
+      setBidding(false)
+    }
+  }
+
+  const enteredPaddleIds = new Set(myEntries.map((e) => e.paddle_id))
+  const availablePaddles = paddles.filter((p) => !enteredPaddleIds.has(p.id))
+  const showHoldScreen =
+    liveItem &&
+    myEntries.length > 0 &&
+    ['bidding_closed', 'drawing'].includes(liveItem.status)
+
+  const wonPaddle = liveItem?.winning_paddle_number
+  const iWon =
+    liveItem?.status === 'completed' &&
+    liveItem.winner_user_id === userId &&
+    wonPaddle != null
+
+  return (
+    <div className="mx-auto max-w-lg space-y-4 px-4 py-6 pb-24">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">Quarter Auction</h1>
+          <p className="text-sm text-muted-foreground">
+            Balance: {balanceCredits} credits ({formatCredits(balanceCredits).split('(')[1]?.replace(')', '')})
+          </p>
+        </div>
+        <Link href="/wallet" className="text-sm text-forest underline flex items-center gap-1">
+          <Wallet className="h-4 w-4" />
+          Top up
+        </Link>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Your paddles</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {paddles.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Buy a virtual paddle to play.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {paddles.map((p) => (
+                <Badge key={p.id} variant="secondary" className="font-mono text-sm px-3 py-1">
+                  #{p.paddle_number}
+                </Badge>
+              ))}
+            </div>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 w-full"
+            disabled={buyingPaddle}
+            onClick={buyPaddle}
+          >
+            {buyingPaddle ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            Buy paddle ({formatCredits(settings.paddle_purchase_credits)})
+          </Button>
+        </CardContent>
+      </Card>
+
+      {!liveItem ? (
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            Waiting for the coordinator to start the next item…
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="overflow-hidden">
+          {liveItem.image_url && (
+            <div className="relative aspect-video bg-slate-50">
+              <Image
+                src={liveItem.image_url}
+                alt={liveItem.title}
+                fill
+                className="object-contain"
+                sizes="(max-width: 512px) 100vw, 512px"
+              />
+            </div>
+          )}
+          <CardHeader>
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="text-lg">{liveItem.title}</CardTitle>
+              <Badge>{statusLabel(liveItem.status)}</Badge>
+            </div>
+            {liveItem.description && (
+              <p className="text-sm text-muted-foreground">{liveItem.description}</p>
+            )}
+            {liveItem.entry_cost_credits != null && liveItem.status === 'bidding_open' && (
+              <p className="text-sm font-medium">
+                Entry: {formatCredits(liveItem.entry_cost_credits)} per paddle
+              </p>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {liveItem.status === 'active_price_setting' && (
+              <p className="text-sm text-center text-muted-foreground" role="status">
+                Coordinator is setting the entry price…
+              </p>
+            )}
+
+            {liveItem.status === 'bidding_open' && myEntries.length === 0 && (
+              <>
+                {availablePaddles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    All your paddles are entered or you need to buy a paddle.
+                  </p>
+                ) : (
+                  <fieldset className="space-y-3">
+                    <legend className="text-sm font-medium">Select paddles for this item</legend>
+                    {availablePaddles.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5 rounded border-gray-300"
+                          checked={selectedPaddleIds.has(p.id)}
+                          onChange={(e) => {
+                            setSelectedPaddleIds((prev) => {
+                              const next = new Set(prev)
+                              if (e.target.checked) next.add(p.id)
+                              else next.delete(p.id)
+                              return next
+                            })
+                          }}
+                          aria-label={`Paddle number ${p.paddle_number}`}
+                        />
+                        <span className="font-mono font-bold">#{p.paddle_number}</span>
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
+                <Button
+                  className="w-full min-h-12 text-lg"
+                  disabled={bidding || selectedPaddleIds.size === 0}
+                  onClick={placeBid}
+                >
+                  {bidding ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Bid'}
+                </Button>
+              </>
+            )}
+
+            {myEntries.length > 0 && liveItem.status === 'bidding_open' && (
+              <p className="text-sm text-center text-forest font-medium" role="status">
+                {myEntries.length} paddle(s) locked in — hold up your phone when bidding closes!
+              </p>
+            )}
+
+            {liveItem.status === 'completed' && !iWon && (
+              <p className="text-center text-sm" role="status">
+                Winner: Paddle #{liveItem.winning_paddle_number ?? '—'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {showHoldScreen && !showWin && (
+        <PaddleHoldScreen paddleNumbers={myActivePaddleNumbers} itemTitle={liveItem!.title} />
+      )}
+
+      <WinCelebration
+        active={showWin && iWon}
+        paddleNumber={wonPaddle ?? ''}
+        itemTitle={liveItem?.title ?? ''}
+        vendorName={vendorInfo?.name}
+        vendorContact={vendorInfo ?? undefined}
+        onDismiss={() => setShowWin(false)}
+      />
+    </div>
+  )
+}

@@ -6,30 +6,26 @@ import {
   partitionEventsByPhase,
   sortEventsByStartAsc,
   sortEventsByStartDesc,
-  VENDOR_EVENT_SELECT,
-  VENDOR_MARKET_STATUSES,
 } from '@/lib/queries/events'
-import { fetchCapacitySummariesForEvents } from '@/lib/queries/event-capacity'
+import {
+  getCachedVendorDirectoryCapacitySummaries,
+  getCachedVendorDirectoryMarkets,
+} from '@/lib/queries/cached-public-markets'
 import type { ApplicationStatus, Event } from '@/types/database'
 import { redirect } from 'next/navigation'
+
+export const revalidate = 60
 
 async function VendorMarkets({ userId }: { userId: string }) {
   const supabase = await createClient()
 
-  const [{ data: events }, { data: myApplications }] = await Promise.all([
-    supabase
-      .from('events')
-      .select(VENDOR_EVENT_SELECT)
-      .in('status', VENDOR_MARKET_STATUSES)
-      .order('start_at', { ascending: true }),
+  const [events, capacityByEventId, { data: myApplications }] = await Promise.all([
+    getCachedVendorDirectoryMarkets(),
+    getCachedVendorDirectoryCapacitySummaries(),
     supabase.from('booth_applications').select('event_id, status').eq('vendor_id', userId),
   ])
 
-  const { active, archived } = partitionEventsByPhase((events ?? []) as Event[])
-  const capacityByEventId = await fetchCapacitySummariesForEvents(
-    supabase,
-    (events ?? []) as Event[]
-  )
+  const { active, archived } = partitionEventsByPhase(events as Event[])
 
   const applicationStatuses = Object.fromEntries(
     (myApplications ?? []).map((row) => [row.event_id, row.status as ApplicationStatus])

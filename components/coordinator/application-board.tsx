@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Badge } from '@/components/ui/badge'
@@ -15,18 +15,42 @@ import { formatDistanceToNow } from 'date-fns'
 import { marketChip, marketStatusBadge } from '@/lib/theme/market'
 import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
 import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
+import { resolveApplicationDisplayCategories } from '@/lib/applications/display-categories'
 import type { BoothApplication, ApplicationStatus } from '@/types/database'
 
 interface ApplicationBoardProps {
   applications: BoothApplication[]
   bookingMode: 'instant' | 'juried'
   eventCancelled?: boolean
+  categoryNameById?: Record<string, string>
   categoryLimits?: Array<{
     category_id: string
     max_slots: number
     price_per_booth?: number
     category?: { name: string } | null
   }>
+}
+
+function ApplicationCategoryBadges({
+  app,
+  categoryNameById,
+  compact,
+}: {
+  app: BoothApplication
+  categoryNameById: Record<string, string>
+  compact?: boolean
+}) {
+  const displayCategories = resolveApplicationDisplayCategories(app, categoryNameById)
+
+  return (
+    <div className={`flex flex-wrap gap-1 ${compact ? 'mt-0.5' : 'mt-1'}`}>
+      {displayCategories.map((name) => (
+        <Badge key={`${app.id}-${name}`} variant="outline" className={compact ? 'text-[9px]' : 'text-xs'}>
+          {name}
+        </Badge>
+      ))}
+    </div>
+  )
 }
 
 function CategoryOverflowBadge({ app }: { app: BoothApplication }) {
@@ -49,12 +73,23 @@ const COLUMNS: { status: ApplicationStatus; label: string; color: string }[] = [
   { status: 'rejected', label: 'Declined', color: 'text-terracotta-800 bg-terracotta-50 border-terracotta-200' },
 ]
 
-export function ApplicationBoard({ applications, bookingMode, eventCancelled, categoryLimits = [] }: ApplicationBoardProps) {
+export function ApplicationBoard({
+  applications,
+  bookingMode,
+  eventCancelled,
+  categoryNameById,
+  categoryLimits = [],
+}: ApplicationBoardProps) {
   const supabase = createClient()
   const [apps, setApps] = useState<BoothApplication[]>(applications)
+  const categoryLookup = categoryNameById ?? {}
   const [viewingApp, setViewingApp] = useState<BoothApplication | null>(null)
   const [isPending, startTransition] = useTransition()
   const [verifyingVendorId, setVerifyingVendorId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setApps(applications)
+  }, [applications])
 
   function markVendorVerified(vendorId: string) {
     const patch = (a: BoothApplication) =>
@@ -253,6 +288,7 @@ export function ApplicationBoard({ applications, bookingMode, eventCancelled, ca
                     <ApplicationCard
                       key={app.id}
                       app={app}
+                      categoryNameById={categoryLookup}
                       eventCancelled={eventCancelled}
                       onView={() => setViewingApp(app)}
                       onApprove={() => updateStatus(app.id, 'approved')}
@@ -276,6 +312,7 @@ export function ApplicationBoard({ applications, bookingMode, eventCancelled, ca
           {viewingApp && (
             <VendorDetailModal
               app={viewingApp}
+              categoryNameById={categoryLookup}
               onVerify={() => verifyVendor(viewingApp.vendor_id, viewingApp.event_id)}
               verifying={verifyingVendorId === viewingApp.vendor_id}
             />
@@ -330,6 +367,7 @@ function PassportVerificationBadge({
 
 function ApplicationCard({
   app,
+  categoryNameById,
   eventCancelled,
   onView,
   onApprove,
@@ -340,6 +378,7 @@ function ApplicationCard({
   loading,
 }: {
   app: BoothApplication
+  categoryNameById: Record<string, string>
   eventCancelled?: boolean
   onView: () => void
   onApprove: () => void
@@ -375,11 +414,7 @@ function ApplicationCard({
           />
           <div className="min-w-0">
             <p className="text-sm font-semibold truncate">{displayName}</p>
-            {app.category && (
-              <Badge variant="outline" className="text-[9px] mt-0.5">
-                {app.category.name}
-              </Badge>
-            )}
+            <ApplicationCategoryBadges app={app} categoryNameById={categoryNameById} compact />
           </div>
         </div>
 
@@ -464,23 +499,26 @@ function ApplicationCard({
 
 function VendorDetailModal({
   app,
+  categoryNameById,
   onVerify,
   verifying,
 }: {
   app: BoothApplication
+  categoryNameById: Record<string, string>
   onVerify: () => void
   verifying: boolean
 }) {
   const passport = app.passport
   const vendor = app.vendor
   const displayName = passport?.business_name ?? vendor?.full_name ?? 'Vendor'
+  const displayCategories = resolveApplicationDisplayCategories(app, categoryNameById)
 
   return (
     <>
       <DialogHeader>
         <DialogTitle>{displayName}</DialogTitle>
         <DialogDescription>
-          Applied to: {app.category?.name}
+          Applied to: {displayCategories.join(', ')}
         </DialogDescription>
       </DialogHeader>
       {app.has_category_overflow ? (
@@ -522,9 +560,15 @@ function VendorDetailModal({
             </div>
           )}
           <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Category</span>
-              <Badge variant="outline">{app.category?.name}</Badge>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground shrink-0">Categories</span>
+              <div className="flex flex-wrap justify-end gap-1">
+                {displayCategories.map((name) => (
+                  <Badge key={`${app.id}-detail-${name}`} variant="outline">
+                    {name}
+                  </Badge>
+                ))}
+              </div>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Payment</span>
