@@ -87,10 +87,18 @@ export function AppNav({
     <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-4 lg:gap-8">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 lg:gap-6">
             <Link href={homeHref} className="shrink-0">
               <BrandLogoLockup />
             </Link>
+
+            {availablePortals.length > 1 ? (
+              <PortalTabs
+                availablePortals={availablePortals}
+                activePortal={activePortal}
+                className="hidden lg:inline-flex"
+              />
+            ) : null}
 
             <div className="hidden lg:flex items-center gap-0.5">
               {links.map(({ href, label }) => (
@@ -176,7 +184,7 @@ export function AppNav({
             availablePortals={availablePortals}
             activePortal={activePortal}
             compact
-            className="w-full sm:w-auto"
+            className="w-full lg:hidden"
           />
         ) : null}
       </div>

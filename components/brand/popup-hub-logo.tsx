@@ -1,7 +1,10 @@
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
-const LOGO_VERSION = process.env.NEXT_PUBLIC_BUILD_COMMIT ?? '1'
+const LOGO_VERSION =
+  process.env.NEXT_PUBLIC_BUILD_NUMBER ??
+  process.env.NEXT_PUBLIC_BUILD_COMMIT ??
+  '1'
 /** Direct public path — avoids stale _next/image optimization cache */
 const LOGO_SRC = `/popup-hub-brand.png?v=${LOGO_VERSION}`
 const ICON_SRC = `/popup-hub-icon.png?v=${LOGO_VERSION}`

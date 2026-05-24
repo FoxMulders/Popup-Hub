@@ -63,22 +63,32 @@ export function ShopperTopBar({
     <header className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 sm:max-w-7xl sm:px-6">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/discover" className="shrink-0">
-            <BrandLogoLockup />
-          </Link>
+          <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-4 lg:gap-6">
+            <Link href="/discover" className="shrink-0">
+              <BrandLogoLockup />
+            </Link>
 
-          <div className="hidden items-center gap-1 md:flex">
-            {navLinks.map(({ href, label }) => (
-              <Link key={href} href={href}>
-                <Button
-                  variant={pathname.startsWith(href) ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="h-8 text-sm"
-                >
-                  {label}
-                </Button>
-              </Link>
-            ))}
+            {profile && availablePortals.length > 1 ? (
+              <PortalTabs
+                availablePortals={availablePortals}
+                activePortal={activePortal}
+                className="hidden md:inline-flex"
+              />
+            ) : null}
+
+            <div className="hidden items-center gap-1 md:flex">
+              {navLinks.map(({ href, label }) => (
+                <Link key={href} href={href}>
+                  <Button
+                    variant={pathname.startsWith(href) ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-8 text-sm"
+                  >
+                    {label}
+                  </Button>
+                </Link>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -157,7 +167,7 @@ export function ShopperTopBar({
             availablePortals={availablePortals}
             activePortal={activePortal}
             compact
-            className="w-full sm:w-auto"
+            className="w-full md:hidden"
           />
         ) : null}
       </div>
