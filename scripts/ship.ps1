@@ -39,7 +39,7 @@ try {
         $status = git status --porcelain
         if ($status) {
             Write-Step "Commit: $Message"
-            git commit -m $Message
+            git commit -m "$Message"
             if ($LASTEXITCODE -ne 0) { throw "Commit failed" }
         } else {
             Write-Host "Nothing to commit." -ForegroundColor Yellow
