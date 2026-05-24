@@ -16,6 +16,14 @@ import { marketChip, marketStatusBadge } from '@/lib/theme/market'
 import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
 import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
 import { resolveApplicationDisplayCategories } from '@/lib/applications/display-categories'
+import {
+  formatApplicationPaymentLabel,
+  isApplicationPaid,
+  needsEtransferCoordinatorReview,
+  needsSquareCheckout,
+  PAYMENT_METHOD_LABELS,
+  resolvePaymentFieldsForPaidApplication,
+} from '@/lib/applications/payment-fields'
 import type { BoothApplication, ApplicationStatus } from '@/types/database'
 
 interface ApplicationBoardProps {
@@ -141,6 +149,21 @@ export function ApplicationBoard({
     { pending: [], approved: [], waitlisted: [], rejected: [], cancelled: [] }
   )
 
+  async function confirmEtransferPayment(appId: string) {
+    startTransition(async () => {
+      const res = await fetch(`/api/coordinator/confirm-etransfer/${appId}`, { method: 'POST' })
+      const data = (await res.json()) as { error?: string }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to confirm e-transfer payment')
+        return
+      }
+
+      setApps((prev) => prev.filter((a) => a.id !== appId))
+      setViewingApp((prev) => (prev?.id === appId ? null : prev))
+      toast.success('E-transfer marked as received')
+    })
+  }
+
   async function updateStatus(appId: string, newStatus: ApplicationStatus) {
     startTransition(async () => {
       const app = apps.find((a) => a.id === appId)
@@ -167,7 +190,14 @@ export function ApplicationBoard({
         const limit = categoryLimits.find((cl) => cl.category_id === app.category_id)
         const boothPrice = limit?.price_per_booth ?? 0
         if (boothPrice > 0) {
-          updates.payment_status = 'payment_required'
+          const paymentFields = resolvePaymentFieldsForPaidApplication({
+            paymentMethod: app.payment_method ?? 'SQUARE',
+            requiresPayment: true,
+            approved: true,
+          })
+          updates.payment_method = paymentFields.payment_method
+          updates.payment_status = paymentFields.payment_status
+          updates.application_payment_status = paymentFields.application_payment_status
         }
       }
 
@@ -185,13 +215,19 @@ export function ApplicationBoard({
         prev.map((a) => (a.id === appId ? { ...a, ...updates } : a))
       )
 
+      if (updates.application_payment_status === 'PENDING_REVIEW') {
+        void fetch(`/api/coordinator/etransfer-instructions/${appId}`, { method: 'POST' })
+      }
+
       // Send in-app + SMS notification to vendor
       if (app.vendor_id && (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'waitlisted')) {
         const notifMessages: Partial<Record<ApplicationStatus, string>> = {
           approved:
             updates.payment_status === 'payment_required'
               ? '✅ Your booth application has been approved! Complete your payment to secure your spot.'
-              : '✅ Your booth application has been approved! See you at the event.',
+              : updates.application_payment_status === 'PENDING_REVIEW'
+                ? '✅ Your booth application has been approved! Send your e-transfer — the coordinator will confirm payment.'
+                : '✅ Your booth application has been approved! See you at the event.',
           rejected: `Your booth application was not selected this time. Keep an eye out for future events!`,
           waitlisted: `Your application has been waitlisted. We'll notify you if a spot opens up.`,
         }
@@ -294,6 +330,7 @@ export function ApplicationBoard({
                       onApprove={() => updateStatus(app.id, 'approved')}
                       onReject={() => updateStatus(app.id, 'rejected')}
                       onWaitlist={() => updateStatus(app.id, 'waitlisted')}
+                      onConfirmEtransfer={() => confirmEtransferPayment(app.id)}
                       onVerify={() => verifyVendor(app.vendor_id, app.event_id)}
                       verifying={verifyingVendorId === app.vendor_id}
                       loading={isPending}
@@ -314,7 +351,9 @@ export function ApplicationBoard({
               app={viewingApp}
               categoryNameById={categoryLookup}
               onVerify={() => verifyVendor(viewingApp.vendor_id, viewingApp.event_id)}
+              onConfirmEtransfer={() => confirmEtransferPayment(viewingApp.id)}
               verifying={verifyingVendorId === viewingApp.vendor_id}
+              confirming={isPending}
             />
           )}
         </DialogContent>
@@ -373,6 +412,7 @@ function ApplicationCard({
   onApprove,
   onReject,
   onWaitlist,
+  onConfirmEtransfer,
   onVerify,
   verifying,
   loading,
@@ -384,6 +424,7 @@ function ApplicationCard({
   onApprove: () => void
   onReject: () => void
   onWaitlist: () => void
+  onConfirmEtransfer: () => void
   onVerify: () => void
   verifying: boolean
   loading: boolean
@@ -427,15 +468,27 @@ function ApplicationCard({
           </p>
         ) : null}
 
-        {app.status === 'approved' && app.payment_status === 'payment_required' && (
+        {needsSquareCheckout(app) && (
           <Badge className="w-full justify-center bg-amber-100 text-amber-800 text-[10px] py-1">
-            Awaiting vendor payment
+            Awaiting Square payment
           </Badge>
         )}
 
-        {app.status === 'approved' && app.payment_status === 'paid' && (
+        {needsEtransferCoordinatorReview(app) && (
+          <Badge className="w-full justify-center bg-sky-100 text-sky-900 text-[10px] py-1">
+            E-transfer pending review
+          </Badge>
+        )}
+
+        {app.status === 'approved' && isApplicationPaid(app) && (
           <Badge className="w-full justify-center bg-sage-100 text-sage-800 text-[10px] py-1">
-            Paid
+            {app.payment_method === 'ETRANSFER' ? 'E-transfer confirmed' : 'Paid'}
+          </Badge>
+        )}
+
+        {app.application_payment_status === 'EXPIRED' && (
+          <Badge className="w-full justify-center bg-stone-200 text-stone-700 text-[10px] py-1">
+            Payment expired
           </Badge>
         )}
 
@@ -457,6 +510,16 @@ function ApplicationCard({
             <Eye className="h-4 w-4" />
             View
           </Button>
+          {!eventCancelled && needsEtransferCoordinatorReview(app) && (
+            <Button
+              size="sm"
+              className="min-h-11 text-xs px-3 gap-1.5 bg-sky-700 hover:bg-sky-800"
+              onClick={onConfirmEtransfer}
+              disabled={loading}
+            >
+              Confirm e-transfer
+            </Button>
+          )}
           {!eventCancelled && app.status !== 'approved' && (
             <Button
               size="sm"
@@ -501,12 +564,16 @@ function VendorDetailModal({
   app,
   categoryNameById,
   onVerify,
+  onConfirmEtransfer,
   verifying,
+  confirming,
 }: {
   app: BoothApplication
   categoryNameById: Record<string, string>
   onVerify: () => void
+  onConfirmEtransfer: () => void
   verifying: boolean
+  confirming: boolean
 }) {
   const passport = app.passport
   const vendor = app.vendor
@@ -570,18 +637,34 @@ function VendorDetailModal({
                 ))}
               </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Payment</span>
+            <div className="flex justify-between gap-3">
+              <span className="text-muted-foreground shrink-0">Payment</span>
               <Badge
                 className={
-                  app.payment_status === 'paid'
-                    ? marketChip.paid
-                    : marketChip.unpaid
+                  isApplicationPaid(app) ? marketChip.paid : marketChip.unpaid
                 }
               >
-                {app.payment_status}
+                {formatApplicationPaymentLabel(app)}
               </Badge>
             </div>
+            {app.payment_method ? (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted-foreground shrink-0">Method</span>
+                <span className="font-medium text-right">
+                  {PAYMENT_METHOD_LABELS[app.payment_method]}
+                </span>
+              </div>
+            ) : null}
+            {needsEtransferCoordinatorReview(app) ? (
+              <Button
+                size="sm"
+                className="w-full bg-sky-700 hover:bg-sky-800"
+                onClick={onConfirmEtransfer}
+                disabled={confirming}
+              >
+                Confirm e-transfer received
+              </Button>
+            ) : null}
             {app.waitlist_position && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Waitlist position</span>

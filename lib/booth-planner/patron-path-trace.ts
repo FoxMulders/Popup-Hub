@@ -717,8 +717,11 @@ export function getEntranceWalkPoint(
   return snapToWalkableCell(center.row, center.col, walkable, rows, cols)
 }
 
-export function buildPathTrace(points: PatronPathPoint[]): PatronPathTrace | null {
-  const simplified = simplifyPath(points)
+export function buildPathTrace(
+  points: PatronPathPoint[],
+  options?: { simplify?: boolean }
+): PatronPathTrace | null {
+  const simplified = options?.simplify === false ? points : simplifyPath(points)
   if (simplified.length < 2) return null
   return { points: simplified, arrows: arrowsAlongPath(simplified, 8) }
 }

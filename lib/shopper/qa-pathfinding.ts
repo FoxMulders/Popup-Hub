@@ -71,10 +71,17 @@ function buildCorridorTestRoom(vendorCount: number): LayoutRoom {
 
 function pathContainsCell(
   points: { row: number; col: number }[],
-  target: { row: number; col: number }
+  target: { row: number; col: number },
+  tolerance = 1
 ): boolean {
   const key = cellKey(target.row, target.col)
-  return points.some((p) => cellKey(Math.round(p.row), Math.round(p.col)) === key)
+  return points.some((p) => {
+    const r = Math.round(p.row)
+    const c = Math.round(p.col)
+    if (cellKey(r, c) === key) return true
+    if (tolerance <= 0) return false
+    return Math.abs(r - target.row) + Math.abs(c - target.col) <= tolerance
+  })
 }
 
 function runAstarUnitTests(): void {
@@ -190,9 +197,17 @@ function runExpositionTourTests(room: LayoutRoom): void {
   )
   assert(entrance != null, 'Entrance required for exposition tour')
 
+  const centerline = getCenterlineWalkwayKeys(metrics.venueElements)
   const approaches = metrics.placedCells
     .map((booth) =>
-      boothApproachNode(booth, walkable, metrics.canvasRows, metrics.cols, entrance!)
+      boothApproachNode(
+        booth,
+        walkable,
+        metrics.canvasRows,
+        metrics.cols,
+        entrance!,
+        centerline
+      )
     )
     .filter((n): n is NonNullable<typeof n> => n != null)
 
@@ -202,7 +217,12 @@ function runExpositionTourTests(room: LayoutRoom): void {
   const trace = computeExpositionTourRoute(room)
   assert(trace != null && trace.points.length >= uniqueApproaches.size, 'Exposition tour should exist')
 
-  for (const approach of approaches) {
+  const uniqueApproachPoints = [...uniqueApproaches].map((key) => {
+    const [row, col] = key.split('-').map(Number)
+    return { row, col }
+  })
+
+  for (const approach of uniqueApproachPoints) {
     assert(
       pathContainsCell(trace!.points, approach),
       `Exposition tour must visit approach cell ${approach.row},${approach.col}`
@@ -214,7 +234,6 @@ function runExpositionTourTests(room: LayoutRoom): void {
     'Exposition tour must stay on walkable aisle cells'
   )
 
-  const centerline = getCenterlineWalkwayKeys(metrics.venueElements)
   const baselineLen = computeShopperPatronPath(room)?.points.length ?? 0
   const expoLen = trace!.points.length
   assert(

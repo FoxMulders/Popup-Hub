@@ -26,6 +26,7 @@ export function AuctionRoom({
   drops: initialDrops,
   wallet: initialWallet,
   userId,
+  eventId,
 }: AuctionRoomProps) {
   const supabase = createClient()
 
@@ -35,6 +36,13 @@ export function AuctionRoom({
   const [timeLeft, setTimeLeft] = useState<number>(0)
   const [dropping, setDropping] = useState(false)
   const [dropAmount, setDropAmount] = useState(auction.min_drop_amount)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const dismissed = localStorage.getItem('auction_onboarding_dismissed')
+    if (!dismissed && !wallet?.paddle_id) setShowOnboarding(true)
+  }, [wallet?.paddle_id])
 
   const leaderboard = buildLeaderboard(drops)
   const totalPotCents = drops.reduce((sum, d) => sum + d.amount, 0)
@@ -134,6 +142,48 @@ export function AuctionRoom({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
+      {showOnboarding && (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+          role="note"
+          aria-label="How quarter auctions work"
+        >
+          <p className="font-semibold text-amber-900">New to quarter auctions?</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-amber-800">
+            <li>Top up your wallet to get a permanent Paddle ID.</li>
+            <li>Drop quarters during the live timer — each drop is an entry to win.</li>
+            <li>When time runs out, a random paddle is drawn from all entries.</li>
+          </ol>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={() => { window.location.href = '/wallet' }}
+            >
+              Top up wallet
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                localStorage.setItem('auction_onboarding_dismissed', '1')
+                setShowOnboarding(false)
+              }}
+            >
+              Got it
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {eventId && (
+        <p className="text-sm text-muted-foreground">
+          <a href={`/events/${eventId}`} className="font-medium text-forest underline">
+            ← Back to event listing
+          </a>
+        </p>
+      )}
+
       <Card className={`overflow-hidden border-2 ${auction.status === 'active' ? 'border-amber-400' : 'border-gray-200'}`}>
         <div className="relative">
           {auction.item_image_url && (

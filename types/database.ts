@@ -6,6 +6,8 @@ export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'
 export type EventStatus = 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'cancelled'
 export type PaymentStatus = 'unpaid' | 'pending' | 'payment_required' | 'processing' | 'paid' | 'refunded'
+export type PaymentMethod = 'SQUARE' | 'ETRANSFER'
+export type ApplicationPaymentStatus = 'PENDING_REVIEW' | 'COMPLETED' | 'EXPIRED'
 export type PayoutOnboardingStatus = 'not_started' | 'pending' | 'complete' | 'restricted'
 export type PlatformFeeMode = 'percent' | 'flat' | 'greater_of' | 'percent_plus_flat'
 export type PlatformTransactionStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'refunded'
@@ -95,10 +97,13 @@ export interface Profile {
   coordinator_late_cancellation_count?: number
   recent_late_cancellation_at?: string | null
   payout_account_id: string | null
-  stripe_connected_id: string | null
   payout_onboarding_status: PayoutOnboardingStatus
+  square_access_token?: string | null
+  square_refresh_token?: string | null
+  square_token_expires_at?: string | null
   square_location_id?: string | null
   share_contact_with_vendors?: boolean
+  etransfer_payment_email?: string | null
   updated_at: string
 }
 
@@ -198,6 +203,10 @@ export interface BoothApplication {
   booth_number: number | null
   square_payment_id: string | null
   payment_status: PaymentStatus
+  payment_method: PaymentMethod | null
+  application_payment_status: ApplicationPaymentStatus | null
+  etransfer_reference_code: string | null
+  etransfer_expires_at: string | null
   waitlist_position: number | null
   has_category_overflow: boolean
   overflow_category_names: string[]

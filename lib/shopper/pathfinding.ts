@@ -262,20 +262,25 @@ function stitchRouteSegments(
   cols: number,
   centerline: Set<string>
 ): PatronPathPoint[] {
-  const stitched: PatronPathPoint[] = []
+  if (waypoints.length === 0) return []
+  const stitched: PatronPathPoint[] = [waypoints[0]]
+
   for (let i = 0; i < waypoints.length - 1; i++) {
-    const segment = astarWalkRoute(
-      walkable,
-      waypoints[i],
-      waypoints[i + 1],
-      rows,
-      cols,
-      centerline
-    )
-    if (!segment || segment.length < 2) continue
-    if (stitched.length === 0) stitched.push(...segment)
-    else stitched.push(...segment.slice(1))
+    const from = waypoints[i]
+    const to = waypoints[i + 1]
+    const segment = astarWalkRoute(walkable, from, to, rows, cols, centerline)
+
+    if (!segment || segment.length < 2) {
+      const last = stitched[stitched.length - 1]
+      if (cellKey(last.row, last.col) !== cellKey(to.row, to.col)) {
+        stitched.push(to)
+      }
+      continue
+    }
+
+    stitched.push(...segment.slice(1))
   }
+
   return stitched
 }
 
@@ -324,7 +329,7 @@ export function computeVendorDirectRoute(
 }
 
 /** Option B — TSP-style serpentine tour visiting every booth approach node once. */
-export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | null {
+export function computeExpositionTourWaypoints(room: LayoutRoom): PatronPathPoint[] | null {
   const metrics = getRoomCanvasMetrics(room)
   const walkable = buildWalkabilityGrid(
     metrics.canvasRows,
@@ -363,6 +368,26 @@ export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | 
   let tour = nearestNeighborTour(entrance, serpentineSeed, metrics, room, centerline)
   tour = twoOptImprove(tour, metrics, room, centerline)
 
+  const lastStop = tour[tour.length - 1]
+  if (cellKey(lastStop.row, lastStop.col) !== cellKey(entrance.row, entrance.col)) {
+    tour.push(entrance)
+  }
+
+  return tour
+}
+
+export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | null {
+  const metrics = getRoomCanvasMetrics(room)
+  const walkable = buildWalkabilityGrid(
+    metrics.canvasRows,
+    metrics.cols,
+    metrics.venueElements,
+    metrics.placedCells
+  )
+  const centerline = getCenterlineWalkwayKeys(metrics.venueElements)
+  const tour = computeExpositionTourWaypoints(room)
+  if (!tour) return null
+
   const stitched = stitchRouteSegments(
     tour,
     walkable,
@@ -371,5 +396,5 @@ export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | 
     centerline
   )
   if (stitched.length < 2) return null
-  return buildPathTrace(stitched)
+  return buildPathTrace(stitched, { simplify: false })
 }

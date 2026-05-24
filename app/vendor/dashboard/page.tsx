@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Store, Calendar, CheckCircle, Clock, AlertTriangle, ArrowRight } from 'lucide-react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
-import type { BoothApplication } from '@/types/database'
+import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
+import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
+import type { Auction, BoothApplication } from '@/types/database'
 
 async function ApplicationsSection({ userId }: { userId: string }) {
   const supabase = await createClient()
@@ -54,7 +56,7 @@ export default async function VendorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: passport }, { count: approvedCount }, { count: pendingCount }] =
+  const [{ data: passport }, { count: approvedCount }, { count: pendingCount }, { data: approvedApps }] =
     await Promise.all([
       supabase
         .from('vendor_passports')
@@ -71,7 +73,26 @@ export default async function VendorDashboard() {
         .select('id', { count: 'exact', head: true })
         .eq('vendor_id', user.id)
         .eq('status', 'pending'),
+      supabase
+        .from('booth_applications')
+        .select('event_id')
+        .eq('vendor_id', user.id)
+        .eq('status', 'approved'),
     ])
+
+  const approvedEventIds = [...new Set((approvedApps ?? []).map((a) => a.event_id))]
+  let liveAuctionSummary = { active: null as Auction | null, upcoming: null as Auction | null, lastEnded: null as Auction | null }
+
+  if (approvedEventIds.length > 0) {
+    const { data: eventAuctions } = await supabase
+      .from('auctions')
+      .select('*')
+      .in('event_id', approvedEventIds)
+      .in('status', ['upcoming', 'active', 'ended'])
+      .order('created_at', { ascending: false })
+
+    liveAuctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
@@ -87,6 +108,14 @@ export default async function VendorDashboard() {
           </Button>
         </Link>
       </div>
+
+      {(liveAuctionSummary.active || liveAuctionSummary.upcoming) && (
+        <LiveAuctionBanner
+          activeAuction={liveAuctionSummary.active}
+          upcomingAuction={liveAuctionSummary.upcoming}
+          lastEndedAuction={null}
+        />
+      )}
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">

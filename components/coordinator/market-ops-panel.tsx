@@ -19,7 +19,8 @@ import {
   computeVendorReliabilityScore,
   type VendorReliabilityInputs,
 } from '@/lib/vendor-reliability'
-import type { BoothApplication, Profile, VendorPassport } from '@/types/database'
+import { isApplicationPaid } from '@/lib/applications/payment-fields'
+import type { BoothApplication, PaymentStatus, Profile, VendorPassport } from '@/types/database'
 
 type OpsApplication = Omit<BoothApplication, 'vendor' | 'passport' | 'category'> & {
   vendor: Profile
@@ -92,17 +93,25 @@ export function MarketOpsPanel({
 
   async function togglePayment(app: OpsApplication) {
     setBusyFor(app.id, true)
-    const next = app.payment_status === 'paid' ? 'unpaid' : 'paid'
+    const currentlyPaid = isApplicationPaid(app)
+    const nextPaid = !currentlyPaid
+    const updates: Partial<OpsApplication> =
+      app.payment_method === 'ETRANSFER'
+        ? {
+            application_payment_status: nextPaid ? 'COMPLETED' : 'PENDING_REVIEW',
+            payment_status: (nextPaid ? 'paid' : 'pending') as PaymentStatus,
+          }
+        : { payment_status: (nextPaid ? 'paid' : 'unpaid') as PaymentStatus }
     const { error } = await supabase
       .from('booth_applications')
-      .update({ payment_status: next })
+      .update(updates)
       .eq('id', app.id)
       .eq('event_id', eventId)
     if (error) {
       toast.error('Failed to update payment status')
     } else {
-      patchApp(app.id, { payment_status: next })
-      toast.success(next === 'paid' ? 'Marked as paid ✓' : 'Marked as unpaid')
+      patchApp(app.id, updates)
+      toast.success(nextPaid ? 'Marked as paid ✓' : 'Marked as unpaid')
     }
     setBusyFor(app.id, false)
   }
@@ -216,7 +225,7 @@ export function MarketOpsPanel({
   }
 
   const checkedInCount = apps.filter((a) => a.checked_in).length
-  const paidCount = apps.filter((a) => a.payment_status === 'paid').length
+  const paidCount = apps.filter((a) => isApplicationPaid(a)).length
   const clearedCount = apps.filter((a) => a.booth_cleared).length
 
   return (
@@ -305,12 +314,18 @@ export function MarketOpsPanel({
                       onClick={() => togglePayment(app)}
                       disabled={isRowBusy}
                       className={`min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-all duration-200 active:translate-y-0.5 ${
-                        app.payment_status === 'paid'
+                        isApplicationPaid(app)
                           ? 'bg-sage-100 text-sage-800 border-sage-300 hover:bg-sage-200'
                           : 'bg-harvest-50 text-harvest-800 border-harvest-200 hover:bg-harvest-100'
                       }`}
                     >
-                      {app.payment_status === 'paid' ? 'Paid ✓' : 'Unpaid'}
+                      {isApplicationPaid(app)
+                        ? app.payment_method === 'ETRANSFER'
+                          ? 'E-transfer ✓'
+                          : 'Paid ✓'
+                        : app.payment_method === 'ETRANSFER'
+                          ? 'E-transfer pending'
+                          : 'Unpaid'}
                     </button>
                   </td>
 

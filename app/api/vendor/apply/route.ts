@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import {
   isEventOpenForApplications,
   OPEN_EVENT_STATUSES,
@@ -21,6 +22,15 @@ import {
   buildMarketApplicationEmailFromEvent,
   sendMarketApplicationReceivedEmail,
 } from '@/lib/email/application-received'
+import {
+  normalizePaymentMethod,
+  resolvePaymentFieldsForPaidApplication,
+} from '@/lib/applications/payment-fields'
+import {
+  etransferHoldExpiresAt,
+  generateEtransferReferenceCode,
+} from '@/lib/applications/etransfer-reference'
+import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-instructions-service'
 import type { Role } from '@/types/database'
 
 async function nextWaitlistPosition(
@@ -103,6 +113,7 @@ export async function POST(request: Request) {
     attendanceTermsAcknowledged?: boolean
     attendingEventDayIds?: string[]
     attendingDates?: string[]
+    paymentMethod?: 'SQUARE' | 'ETRANSFER'
   }
 
   const {
@@ -113,6 +124,7 @@ export async function POST(request: Request) {
     attendanceTermsAcknowledged,
     attendingEventDayIds,
     attendingDates,
+    paymentMethod: rawPaymentMethod,
   } = body
   if (!eventId) {
     return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
@@ -129,7 +141,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, coordinator_id, square_merchant_id, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -270,9 +282,27 @@ export async function POST(request: Request) {
   const isInstant = event.booking_mode === 'instant'
   const boothPrice = categoryLimit.price_per_booth ?? 0
   const requiresPayment = boothPrice > 0
+  const paymentMethod = normalizePaymentMethod(rawPaymentMethod)
+
+  if (requiresPayment && paymentMethod === 'SQUARE') {
+    const serviceSupabase = await createServiceClient()
+    const credentials = await getCoordinatorAccessToken(
+      serviceSupabase,
+      event.coordinator_id as string
+    )
+    const squareReady =
+      !!event.square_merchant_id ||
+      (!!credentials?.accessToken && !!credentials.merchantId)
+
+    if (!squareReady) {
+      return NextResponse.json(
+        { error: 'Coordinator has not connected Square for paid booths yet' },
+        { status: 422 }
+      )
+    }
+  }
 
   let status: 'pending' | 'approved' | 'waitlisted' = 'pending'
-  let paymentStatus: 'unpaid' | 'payment_required' = 'unpaid'
   let waitlistPosition: number | null = null
   const now = new Date().toISOString()
 
@@ -281,10 +311,20 @@ export async function POST(request: Request) {
     waitlistPosition = await nextWaitlistPosition(supabase, eventId, categoryId)
   } else if (isInstant) {
     status = 'approved'
-    if (requiresPayment) paymentStatus = 'payment_required'
   }
 
+  const paymentFields = resolvePaymentFieldsForPaidApplication({
+    paymentMethod,
+    requiresPayment,
+    approved: status === 'approved',
+  })
+
   const hasCategoryOverflow = match.hasCategoryOverflow && !match.allCategoriesFull
+  const etransferPending =
+    paymentMethod === 'ETRANSFER' &&
+    paymentFields.application_payment_status === 'PENDING_REVIEW'
+  const etransferReferenceCode = etransferPending ? generateEtransferReferenceCode() : null
+  const etransferExpiresAt = etransferPending ? etransferHoldExpiresAt() : null
 
   const { data: inserted, error } = await supabase
     .from('booth_applications')
@@ -293,7 +333,11 @@ export async function POST(request: Request) {
       vendor_id: user.id,
       category_id: categoryId,
       status,
-      payment_status: paymentStatus,
+      payment_status: paymentFields.payment_status,
+      payment_method: paymentFields.payment_method,
+      application_payment_status: paymentFields.application_payment_status,
+      etransfer_reference_code: etransferReferenceCode,
+      etransfer_expires_at: etransferExpiresAt,
       neighbor_preference: neighborPreference?.trim() || null,
       waitlist_position: waitlistPosition,
       has_category_overflow: hasCategoryOverflow,
@@ -304,7 +348,7 @@ export async function POST(request: Request) {
       ...(status === 'approved' ? { approved_at: now } : {}),
     })
     .select(
-      'id, status, payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'
+      'id, status, payment_status, payment_method, application_payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'
     )
     .single()
 
@@ -338,12 +382,37 @@ export async function POST(request: Request) {
     })
   }
 
+  if (etransferPending && inserted?.id && requiresPayment) {
+    const serviceSupabase = await createServiceClient()
+    dispatchEtransferInstructions(serviceSupabase, {
+      applicationId: inserted.id,
+      eventId,
+      vendorId: user.id,
+      boothPriceCents: boothPrice,
+      referenceCode: etransferReferenceCode,
+      expiresAt: etransferExpiresAt,
+    }).catch((err) => {
+      console.error('[etransfer] instruction email failed:', err, {
+        applicationId: inserted.id,
+      })
+    })
+  }
+
   return NextResponse.json({
     ok: true,
     application: inserted,
-    requiresPayment: requiresPayment && status === 'approved',
+    requiresPayment:
+      requiresPayment &&
+      status === 'approved' &&
+      paymentMethod === 'SQUARE' &&
+      paymentFields.payment_status === 'payment_required',
+    paymentMethod: paymentFields.payment_method,
+    paymentStatus: paymentFields.application_payment_status,
     boothPriceCents: boothPrice,
     waitlisted: status === 'waitlisted',
     hasCategoryOverflow,
+    eTransferPendingReview:
+      paymentMethod === 'ETRANSFER' &&
+      paymentFields.application_payment_status === 'PENDING_REVIEW',
   })
 }

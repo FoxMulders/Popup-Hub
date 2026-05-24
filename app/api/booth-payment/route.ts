@@ -42,6 +42,8 @@ export async function POST(request: Request) {
       category_id,
       status,
       payment_status,
+      payment_method,
+      application_payment_status,
       event:events(
         coordinator_id,
         square_merchant_id,
@@ -64,6 +66,13 @@ export async function POST(request: Request) {
   if (application.status !== 'approved') {
     return NextResponse.json(
       { error: 'Payment is only available after approval' },
+      { status: 400 }
+    )
+  }
+
+  if (application.payment_method === 'ETRANSFER') {
+    return NextResponse.json(
+      { error: 'This application uses e-transfer. The coordinator will confirm payment manually.' },
       { status: 400 }
     )
   }

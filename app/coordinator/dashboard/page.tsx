@@ -14,6 +14,8 @@ import Link from 'next/link'
 import { Plus, Calendar, Clock, DollarSign } from 'lucide-react'
 import type { Event } from '@/types/database'
 import { VendorAccessRequestsPanel } from '@/components/coordinator/vendor-access-requests-panel'
+import { PendingEtransferPanel } from '@/components/coordinator/pending-etransfer-panel'
+import type { PendingEtransferApplication } from '@/components/coordinator/pending-etransfer-panel'
 
 async function CoordinatorStats({ userId }: { userId: string }) {
   const supabase = await createClient()
@@ -127,6 +129,52 @@ export default async function CoordinatorDashboard() {
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
 
+  const { data: myEvents } = await supabase
+    .from('events')
+    .select('id')
+    .eq('coordinator_id', user.id)
+
+  const eventIds = myEvents?.map((e) => e.id) ?? []
+
+  let pendingEtransfers: PendingEtransferApplication[] = []
+  if (eventIds.length > 0) {
+    const { data: etransferApps } = await supabase
+      .from('booth_applications')
+      .select(`
+        *,
+        vendor:profiles!booth_applications_vendor_id_fkey(full_name, email),
+        event:events(id, name),
+        category:categories(name)
+      `)
+      .in('event_id', eventIds)
+      .eq('payment_method', 'ETRANSFER')
+      .eq('application_payment_status', 'PENDING_REVIEW')
+      .eq('status', 'approved')
+      .order('applied_at', { ascending: false })
+
+    if (etransferApps?.length) {
+      const categoryPairs = etransferApps.map((app) => ({
+        event_id: app.event_id,
+        category_id: app.category_id,
+      }))
+      const uniqueEventIds = [...new Set(categoryPairs.map((p) => p.event_id))]
+      const { data: limits } = await supabase
+        .from('event_category_limits')
+        .select('event_id, category_id, price_per_booth')
+        .in('event_id', uniqueEventIds)
+
+      const priceByKey = new Map(
+        (limits ?? []).map((row) => [`${row.event_id}:${row.category_id}`, row.price_per_booth ?? 0])
+      )
+
+      pendingEtransfers = etransferApps.map((app) => ({
+        ...(app as PendingEtransferApplication),
+        booth_price_cents:
+          priceByKey.get(`${app.event_id}:${app.category_id}`) ?? 0,
+      }))
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -151,6 +199,8 @@ export default async function CoordinatorDashboard() {
       </Suspense>
 
       <VendorAccessRequestsPanel requests={accessRequests ?? []} />
+
+      <PendingEtransferPanel applications={pendingEtransfers} />
 
       <div>
         <h2 className="market-section-title mb-4">My Events</h2>

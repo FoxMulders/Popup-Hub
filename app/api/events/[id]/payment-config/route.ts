@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
+import { resolveCoordinatorEtransferEmail } from '@/lib/coordinator/etransfer-email'
 
 export async function GET(
   _request: Request,
@@ -20,7 +21,8 @@ export async function GET(
       status,
       platform_fee_mode,
       platform_fee_flat_cents,
-      platform_fee_bps
+      platform_fee_bps,
+      coordinator:profiles!events_coordinator_id_fkey(email, etransfer_payment_email)
     `)
     .eq('id', eventId)
     .single()
@@ -43,6 +45,8 @@ export async function GET(
     null
 
   const feeConfig = resolveEventFeeConfig(event)
+  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
+  const coordinatorEtransferEmail = resolveCoordinatorEtransferEmail(coordinator)
 
   return NextResponse.json({
     eventId: event.id,
@@ -50,5 +54,6 @@ export async function GET(
     squareLocationId: locationId,
     squareConnected,
     feeConfig,
+    coordinatorEtransferEmail,
   })
 }

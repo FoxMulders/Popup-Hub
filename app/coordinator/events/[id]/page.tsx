@@ -9,6 +9,7 @@ import { EventScheduleEditor } from '@/components/coordinator/event-schedule-edi
 import { RefundExceptionsPanel } from '@/components/coordinator/refund-exceptions-panel'
 import { VendorAnnouncement } from '@/components/coordinator/vendor-announcement'
 import { CategoryCapacityMatrix } from '@/components/coordinator/category-capacity-matrix'
+import { AuctionCard } from '@/components/auction/auction-card'
 import { buildCategoryCapacityRows } from '@/lib/coordinator/category-capacity-rows'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -80,7 +81,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
       .eq('status', 'completed'),
     supabase
       .from('auctions')
-      .select('id, title, status, pot_amount, winning_paddle_id')
+      .select('id, title, item_name, status, pot_amount, winning_paddle_id')
       .eq('event_id', id)
       .order('created_at', { ascending: false }),
   ])
@@ -226,6 +227,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         hasLayout={hasLayout}
         hasSquare={hasSquare}
         pendingCount={pendingCount}
+        hasAuction={(eventAuctions ?? []).length > 0}
       />
 
       {!isCancelled && <EventLogisticsEditor event={event as Event} />}
@@ -263,18 +265,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
             </p>
           ) : (
             <ul className="space-y-2">
-              {(eventAuctions ?? []).slice(0, 5).map((a: { id: string; title: string; status: string; pot_amount: number; winning_paddle_id: string | null }) => (
-                <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm">
-                  <span className="font-medium">{a.title}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="capitalize">{a.status}</Badge>
-                    {a.status === 'ended' && a.winning_paddle_id && (
-                      <span className="text-xs text-muted-foreground">Paddle #{a.winning_paddle_id}</span>
-                    )}
-                    <Link href={`/coordinator/events/${id}/auctions`} className="text-xs font-medium text-forest underline">
-                      Open
-                    </Link>
-                  </div>
+              {(eventAuctions ?? []).slice(0, 5).map((a) => (
+                <li key={a.id}>
+                  <AuctionCard auction={a} eventId={id} href={`/coordinator/events/${id}/auctions`} />
                 </li>
               ))}
             </ul>

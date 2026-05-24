@@ -48,9 +48,11 @@ import {
   daySelectionKey,
   resolveEventScheduleDays,
 } from '@/lib/events/event-schedule-days'
-import type { ApplicationStatus, Event, EventCategoryLimit } from '@/types/database'
+import type { ApplicationStatus, Event, EventCategoryLimit, PaymentMethod } from '@/types/database'
+import { VendorPaymentMethodSelector } from '@/components/vendor/vendor-payment-method-selector'
 import { formatCents } from '@/lib/square/client'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
+import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 
 interface ApplyButtonProps {
   event: Event
@@ -76,6 +78,7 @@ export function ApplyButton({
   const [standBeside, setStandBeside] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [squareConnected, setSquareConnected] = useState(true)
+  const [coordinatorEtransferEmail, setCoordinatorEtransferEmail] = useState<string | null>(null)
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [pendingApplicationId, setPendingApplicationId] = useState<string | null>(null)
   const [pendingBoothPrice, setPendingBoothPrice] = useState(0)
@@ -85,6 +88,7 @@ export function ApplyButton({
   const [waitlistConfirmOpen, setWaitlistConfirmOpen] = useState(false)
   const [selectedDayKeys, setSelectedDayKeys] = useState<Set<string>>(new Set())
   const [termsAcknowledged, setTermsAcknowledged] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('SQUARE')
 
   const requireFullAttendance = event.require_full_attendance ?? true
   const scheduleDays = useMemo(() => resolveEventScheduleDays(event), [event])
@@ -132,7 +136,7 @@ export function ApplyButton({
     !slotsLoading &&
     categoryMatch &&
     categoryMatch.passportSlots.length > 0 &&
-    (allCategoriesFull || !requiresPayment || squareConnected)
+    (allCategoriesFull || !requiresPayment || paymentMethod === 'ETRANSFER' || squareConnected)
 
   function toggleDaySelection(dayKey: string) {
     if (requireFullAttendance) return
@@ -186,10 +190,20 @@ export function ApplyButton({
     loadSlots()
     fetch(`/api/events/${event.id}/payment-config`)
       .then((res) => res.json())
-      .then((data) => setSquareConnected(!!data.squareConnected))
+      .then((data: { squareConnected?: boolean; coordinatorEtransferEmail?: string | null }) => {
+        setSquareConnected(!!data.squareConnected)
+        setCoordinatorEtransferEmail(data.coordinatorEtransferEmail ?? null)
+      })
       .catch(() => setSquareConnected(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    if (!squareConnected && requiresPayment) {
+      setPaymentMethod('ETRANSFER')
+    }
+  }, [open, squareConnected, requiresPayment])
 
   async function handleApplyClick() {
     setPassportLoading(true)
@@ -247,6 +261,7 @@ export function ApplyButton({
         attendanceTermsAcknowledged: termsAcknowledged,
         attendingEventDayIds: attendance.attendingEventDayIds,
         attendingDates: attendance.attendingDates,
+        paymentMethod,
       }),
     })
 
@@ -260,6 +275,9 @@ export function ApplyButton({
         waitlist_position?: number | null
       }
       requiresPayment?: boolean
+      paymentMethod?: PaymentMethod | null
+      paymentStatus?: string | null
+      eTransferPendingReview?: boolean
       boothPriceCents?: number
       waitlisted?: boolean
       hasCategoryOverflow?: boolean
@@ -285,6 +303,16 @@ export function ApplyButton({
         data.application?.waitlist_position
           ? `Added to the waitlist (#${data.application.waitlist_position}). We'll notify you if a spot opens.`
           : "Added to the waitlist. We'll notify you if a spot opens from a cancellation."
+      )
+      setOpen(false)
+      setWaitlistConfirmOpen(false)
+      router.refresh()
+      return
+    }
+
+    if (data.eTransferPendingReview) {
+      toast.success(
+        'Application approved — send your e-transfer. The coordinator will confirm payment.'
       )
       setOpen(false)
       setWaitlistConfirmOpen(false)
@@ -334,7 +362,7 @@ export function ApplyButton({
       return
     }
 
-    if (requiresPayment && !squareConnected) {
+    if (requiresPayment && paymentMethod === 'SQUARE' && !squareConnected) {
       toast.error('Coordinator has not connected Square for paid booths yet')
       return
     }
@@ -405,11 +433,7 @@ export function ApplyButton({
 
   const feePreview =
     applySlot && requiresPayment
-      ? computePlatformFeeCents(applySlot.pricePerBooth, {
-          mode: 'percent_plus_flat',
-          flatCents: 100,
-          bps: 300,
-        })
+      ? computePlatformFeeCents(applySlot.pricePerBooth, resolveEventFeeConfig(event))
       : 0
 
   return (
@@ -570,10 +594,16 @@ export function ApplyButton({
               </div>
             )}
 
-            {requiresPayment && !squareConnected && (
-              <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
-                This event has paid booths, but the coordinator has not connected Square yet.
-              </p>
+            {requiresPayment && (
+              <VendorPaymentMethodSelector
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                boothPriceCents={applySlot?.pricePerBooth ?? 0}
+                platformFeeCents={feePreview}
+                coordinatorEtransferEmail={coordinatorEtransferEmail}
+                squareConnected={squareConnected}
+                disabled={submitting}
+              />
             )}
 
             <div className="rounded-lg border bg-stone-50 p-3">

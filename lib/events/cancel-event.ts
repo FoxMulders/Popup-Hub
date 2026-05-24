@@ -28,6 +28,8 @@ interface PaidApplicationRow {
   vendor_id: string
   square_payment_id: string | null
   payment_status: string
+  payment_method?: string | null
+  application_payment_status?: string | null
   platform_transaction_id: string | null
 }
 
@@ -128,7 +130,9 @@ export async function cancelEventWithRefunds(
 
   const { data: paidApps, error: appsError } = await supabase
     .from('booth_applications')
-    .select('id, vendor_id, event_id, category_id, square_payment_id, payment_status, platform_transaction_id')
+    .select(
+      'id, vendor_id, event_id, category_id, square_payment_id, payment_status, payment_method, application_payment_status, platform_transaction_id'
+    )
     .eq('event_id', eventId)
     .eq('status', 'approved')
     .eq('payment_status', 'paid')
@@ -143,6 +147,21 @@ export async function cancelEventWithRefunds(
 
   for (const app of (paidApps ?? []) as PaidApplicationRow[]) {
     try {
+      if (app.payment_method === 'ETRANSFER') {
+        await supabase
+          .from('booth_applications')
+          .update({
+            payment_status: 'refunded',
+            application_payment_status: 'EXPIRED',
+            status: 'cancelled',
+            event_cancellation_reason: reason,
+            event_cancellation_reason_label: reasonLabel,
+          })
+          .eq('id', app.id)
+        refundsSucceeded++
+        continue
+      }
+
       if (!app.square_payment_id) {
         await supabase.from('refund_exceptions').insert({
           event_id: eventId,

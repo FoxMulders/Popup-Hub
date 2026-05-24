@@ -8,6 +8,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar, CreditCard } from 'lucide-react'
 import { PayBoothModal } from '@/components/events/pay-booth-modal'
+import {
+  isApplicationPaid,
+  needsEtransferCoordinatorReview,
+  needsSquareCheckout,
+} from '@/lib/applications/payment-fields'
 import type { BoothApplication, EventCancellationReason, PaymentStatus } from '@/types/database'
 import { CancellationDetails } from '@/components/vendor/cancellation-details'
 import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
@@ -73,7 +78,8 @@ export function VendorApplicationsList({
           const boothPrice = app.category_id
             ? categoryPrices[`${app.event_id}:${app.category_id}`] ?? 0
             : 0
-          const needsPayment = app.payment_status === 'payment_required'
+          const needsPayment = needsSquareCheckout(app)
+          const eTransferPending = needsEtransferCoordinatorReview(app)
 
           return (
             <div
@@ -99,8 +105,15 @@ export function VendorApplicationsList({
                         Payment required
                       </Badge>
                     )}
-                    {app.payment_status === 'paid' && (
-                      <Badge className="text-[10px] bg-green-100 text-green-700">Paid</Badge>
+                    {eTransferPending && (
+                      <Badge className="text-[10px] bg-sky-100 text-sky-900">
+                        E-transfer pending review
+                      </Badge>
+                    )}
+                    {isApplicationPaid(app) && (
+                      <Badge className="text-[10px] bg-green-100 text-green-700">
+                        {app.payment_method === 'ETRANSFER' ? 'E-transfer confirmed' : 'Paid'}
+                      </Badge>
                     )}
                     {app.category && (
                       <Badge variant="outline" className="text-[10px]">

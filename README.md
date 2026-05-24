@@ -30,7 +30,23 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Guests see a public landing; coordinators and vendors route to their dashboards after sign-in.
+Open **[http://localhost:3000](http://localhost:3000)**. Guests see a public landing; coordinators and vendors route to their dashboards after sign-in.
+
+**Square / card payments in dev** require HTTPS:
+
+```bash
+npm run dev:certs   # once, if .cert/ is missing
+npm run dev:https   # https://localhost:3000
+```
+
+### Troubleshooting localhost
+
+| Symptom | Fix |
+|---------|-----|
+| Browser can't connect | Start the server: `npm run dev` (see PowerShell note below) |
+| Blank page / connection refused on `http://` | Default dev is HTTP on port 3000. If you used `dev:https`, open **https://localhost:3000** instead |
+| PowerShell blocks `npm` | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, or use **cmd**: `npm run dev`, or: `npx next dev` |
+| HTTPS certificate warning | Expected for `dev:https` — use Advanced → Proceed, or use `npm run dev` for plain HTTP |
 
 ### Public pages (no login)
 

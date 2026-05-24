@@ -61,7 +61,7 @@ export default async function SquareConnectPage() {
           )}
 
           <div className="space-y-2 text-xs text-muted-foreground">
-            {['Direct deposits to your Square bank account', 'Platform fee automatically split on each payment', 'Full transaction history in your Square dashboard'].map((item) => (
+            {['Direct deposits to your Square bank account', 'Platform fee of 3% + $1.00 retained automatically on each paid booth', 'Full transaction history in your Square dashboard'].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle className="h-3 w-3 text-sage-600 flex-shrink-0" />
                 {item}

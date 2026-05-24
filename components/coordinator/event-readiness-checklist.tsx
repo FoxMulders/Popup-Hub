@@ -19,6 +19,7 @@ interface EventReadinessChecklistProps {
   hasLayout: boolean
   hasSquare: boolean
   pendingCount: number
+  hasAuction?: boolean
 }
 
 interface ChecklistItem {
@@ -41,6 +42,7 @@ export function EventReadinessChecklist({
   hasLayout,
   hasSquare,
   pendingCount,
+  hasAuction = false,
 }: EventReadinessChecklistProps) {
   const requiresSquare = (event.category_limits ?? []).some((cl) => cl.price_per_booth > 0)
   const vendorListingUrl = publicAppUrl(`/events/${eventId}`)
@@ -62,6 +64,12 @@ export function EventReadinessChecklist({
     { key: 'applied', label: 'Vendors applied', done: applicationCount > 0 },
     { key: 'approved', label: 'Vendors approved', done: approvedCount > 0 },
     { key: 'layout', label: 'Booth layout saved', done: hasLayout },
+    {
+      key: 'auction',
+      label: 'Quarter auction configured',
+      done: hasAuction,
+      skippable: true,
+    },
   ]
 
   const completedCount = items.filter((i) => i.done).length
@@ -103,6 +111,11 @@ export function EventReadinessChecklist({
         href: `/coordinator/events/${eventId}/layout`,
         label: 'Open spatial planner',
       },
+      auction: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/auctions`,
+        label: 'Set up quarter auction',
+      },
     }
   }, [eventId, pendingCount])
 
@@ -117,6 +130,7 @@ export function EventReadinessChecklist({
     applied: 'Share your public event listing link with vendors.',
     approved: 'Approve vendors from the applications board below.',
     layout: 'Place booths in the layout planner and save.',
+    auction: 'Create at least one quarter auction for market day, or skip if you are not running one.',
   }
 
   const runAction = useCallback((action: StepAction) => {
