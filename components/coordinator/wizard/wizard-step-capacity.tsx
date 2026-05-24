@@ -82,7 +82,8 @@ export function WizardStepCapacity({
             />
           ) : (
             <p className={WIZARD_INFO_BOX}>
-              Floor plan planning is off for this event — set vendor category caps manually below.
+              Floor plan planning is off for this event — set vendor category caps manually below. Approved vendors
+              are not placed on a floor plan; applications still control who may participate.
             </p>
           )}
           {allowMlm ? (

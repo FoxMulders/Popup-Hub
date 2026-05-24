@@ -29,7 +29,6 @@ import { hydrateVenuePreset, resolveTemplateAnchoredDimensions } from '@/lib/boo
 import {
   getEdmontonVenueById,
   isEdmontonVenueId,
-  type EdmontonQuadrantFilter,
 } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { sortCategoriesByName } from '@/lib/categories'
@@ -40,7 +39,15 @@ import {
   hydrateMlmCategoryLimits,
 } from '@/lib/categories/mlm-constraints'
 import { useWizardCritiqueAgents } from '@/lib/wizard/critique/use-wizard-critique-agents'
-import { DEFAULT_MARKET_END, DEFAULT_MARKET_START, WIZARD_PAGE_KICKER, WIZARD_PAGE_TITLE, WIZARD_PANEL } from '@/lib/wizard/wizard-panel-styles'
+import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity } from '@/lib/wizard/market-cities'
+import { isQuarterAuctionListing } from '@/lib/events/listing-type'
+import {
+  DEFAULT_MARKET_END,
+  DEFAULT_MARKET_START,
+  WIZARD_PAGE_KICKER,
+  WIZARD_PAGE_TITLE,
+  WIZARD_PANEL,
+} from '@/lib/wizard/wizard-panel-styles'
 import { WizardCritiqueDrawer } from '@/components/coordinator/wizard/wizard-critique-drawer'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
@@ -143,6 +150,9 @@ export function MarketSetupWizard({
   const [requireFullAttendance, setRequireFullAttendance] = useState(
     existing?.require_full_attendance ?? true
   )
+  const [marketInsuranceRequired, setMarketInsuranceRequired] = useState(
+    existing?.market_insurance_required ?? false
+  )
   const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
   const [globalMlmCap, setGlobalMlmCap] = useState(existing?.max_mlm_slots ?? DEFAULT_GLOBAL_MLM_CAP)
   const [boothClearancePolicy, setBoothClearancePolicy] = useState<BoothClearancePolicy>(
@@ -211,10 +221,7 @@ export function MarketSetupWizard({
   const venuePresetId: VenuePresetId =
     (activeRoom.venue_preset_id as VenuePresetId | null | undefined) ?? 'blank'
 
-  const [cityQuadrant, setCityQuadrant] = useState<EdmontonQuadrantFilter>(() => {
-    if (venuePresetId === 'blank') return 'all'
-    return getEdmontonVenueById(venuePresetId)?.quadrant ?? 'all'
-  })
+  const [marketCity, setMarketCity] = useState(DEFAULT_MARKET_CITY_ID)
 
   const templateAnchor = useMemo(
     () => resolveTemplateAnchoredDimensions(venuePresetId, activeRoom.venue_width, activeRoom.venue_length),
@@ -277,27 +284,38 @@ export function MarketSetupWizard({
   }, [scheduleType, dayRows, startDate, startTime, endTime])
 
   const selectedVenue = useMemo(() => {
-    if (skipVenueLayout && locationName.trim() && address.trim()) {
+    if (currentStep < 2) return null
+
+    const trimmedName = locationName.trim()
+    const trimmedAddress = address.trim() || undefined
+
+    if (skipVenueLayout && trimmedName) {
       return {
-        name: locationName.trim(),
-        address: address.trim(),
+        name: trimmedName,
+        address: trimmedAddress,
         locationOnly: true as const,
       }
     }
+
     if (templateAnchor.isAnchored && templateAnchor.preset) {
       return {
-        name: locationName.trim() || templateAnchor.preset.label,
+        name: trimmedName || templateAnchor.preset.label,
+        address: trimmedAddress,
         width: templateAnchor.width,
         length: templateAnchor.length,
       }
     }
-    if (pinDropped && locationName.trim() && currentStep >= 2) {
+
+    if (trimmedName) {
       return {
-        name: locationName.trim(),
-        width: templateAnchor.width,
-        length: templateAnchor.length,
+        name: trimmedName,
+        address: trimmedAddress,
+        ...(pinDropped
+          ? { width: templateAnchor.width, length: templateAnchor.length }
+          : {}),
       }
     }
+
     return null
   }, [templateAnchor, locationName, address, pinDropped, currentStep, skipVenueLayout])
 
@@ -397,6 +415,7 @@ export function MarketSetupWizard({
             allowMlm,
             maxMlmSlots: globalMlmCap,
             requireFullAttendance,
+            marketInsuranceRequired,
             skipVenueLayout,
             boothClearancePolicy,
             raffleDonationRequirement,
@@ -461,6 +480,7 @@ export function MarketSetupWizard({
       name,
       raffleDonationRequirement,
       requireFullAttendance,
+      marketInsuranceRequired,
       rooms,
       scheduleType,
       skipVenueLayout,
@@ -469,6 +489,13 @@ export function MarketSetupWizard({
       supabase,
     ]
   )
+
+  function handleListingTypeChange(next: EventListingType) {
+    setListingType(next)
+    if (isQuarterAuctionListing(next)) {
+      setSkipVenueLayout(true)
+    }
+  }
 
   function handleGlobalMlmCapChange(cap: number) {
     setGlobalMlmCap(cap)
@@ -497,14 +524,18 @@ export function MarketSetupWizard({
     setLat(blueprint.latitude)
     setLng(blueprint.longitude)
     setPinDropped(true)
-    setCityQuadrant(blueprint.quadrant)
+    setMarketCity(DEFAULT_MARKET_CITY_ID)
+  }
+
+  function handleMarketCityChange(cityId: string) {
+    setMarketCity(cityId)
+    if (!isEdmontonMarketCity(cityId) && isEdmontonVenueId(venuePresetId)) {
+      handleVenuePresetChange('blank')
+    }
   }
 
   function handleApplySavedVenue(venue: CoordinatorSavedVenue) {
     setSkipVenueLayout(venue.skip_venue_layout)
-    if (venue.city_quadrant) {
-      setCityQuadrant(venue.city_quadrant as EdmontonQuadrantFilter)
-    }
 
     const presetId = venue.venue_preset_id
     if (presetId && presetId !== 'blank' && isEdmontonVenueId(presetId)) {
@@ -694,9 +725,11 @@ export function MarketSetupWizard({
                 bookingMode={bookingMode}
                 onBookingModeChange={setBookingMode}
                 listingType={listingType}
-                onListingTypeChange={setListingType}
+                onListingTypeChange={handleListingTypeChange}
                 requireFullAttendance={requireFullAttendance}
                 onRequireFullAttendanceChange={setRequireFullAttendance}
+                marketInsuranceRequired={marketInsuranceRequired}
+                onMarketInsuranceRequiredChange={setMarketInsuranceRequired}
                 allowMlm={allowMlm}
                 onAllowMlmChange={setAllowMlm}
                 boothClearancePolicy={boothClearancePolicy}
@@ -718,8 +751,8 @@ export function MarketSetupWizard({
               <WizardStepVenueWithMapsProvider
                 venuePresetId={venuePresetId}
                 onVenuePresetChange={handleVenuePresetChange}
-                cityQuadrant={cityQuadrant}
-                onCityQuadrantChange={setCityQuadrant}
+                city={marketCity}
+                onCityChange={handleMarketCityChange}
                 locationName={locationName}
                 onLocationNameChange={setLocationName}
                 address={address}

@@ -74,6 +74,8 @@ export interface WizardStepEventDetailsProps {
   onListingTypeChange: (v: EventListingType) => void
   requireFullAttendance: boolean
   onRequireFullAttendanceChange: (v: boolean) => void
+  marketInsuranceRequired: boolean
+  onMarketInsuranceRequiredChange: (v: boolean) => void
 }
 
 export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
@@ -133,8 +135,9 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         </div>
         {props.listingType === 'garage_yard_sale' ? (
           <p className={WIZARD_INFO_BOX}>
-            Quarter auctions appear on the patron map when published. Vendors apply for booths the same way as community
-            markets — instant book or juried review, depending on your booking mode.
+            Quarter auctions appear on the patron map when published. Vendor booth applications are required —
+            instant book or juried review, depending on booking mode below. There is no assigned floor-plan booth
+            placement; set category caps on step 3 and run the live quarter auction from the coordinator dashboard.
           </p>
         ) : null}
       </div>
@@ -347,8 +350,22 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         </div>
       ) : null}
 
-      {props.listingType === 'community_market' ? (
-        <>
+      <div className="flex items-start justify-between gap-4 rounded-xl border border-stone-200 bg-canvas px-4 py-3">
+        <div className="space-y-1">
+          <Label htmlFor="wizard-market-insurance-required" className={WIZARD_FIELD_LABEL}>
+            Require Market Insurance from Vendors?
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Approved vendors must upload proof of insurance before their booth is finalized.
+          </p>
+        </div>
+        <Switch
+          id="wizard-market-insurance-required"
+          checked={props.marketInsuranceRequired}
+          onCheckedChange={props.onMarketInsuranceRequiredChange}
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
           <Label htmlFor="wizard-booking-mode" className={WIZARD_FIELD_LABEL}>Booking Mode</Label>
@@ -374,6 +391,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             </SelectContent>
           </Select>
         </div>
+        {props.listingType === 'community_market' ? (
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
             <Label htmlFor="wizard-clearance" className={WIZARD_FIELD_LABEL}>Clean up and/or tear down</Label>
@@ -408,8 +426,11 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             </SelectContent>
           </Select>
         </div>
+        ) : null}
       </div>
 
+      {props.listingType === 'community_market' ? (
+        <>
       <div className="flex items-center justify-between rounded-lg border border-stone-200 bg-card p-4">
         <div>
           <p className="text-sm font-medium">Allow Direct Sales / MLM Vendors</p>

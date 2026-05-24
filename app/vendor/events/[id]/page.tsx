@@ -23,6 +23,7 @@ import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
+import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import type { Auction, Event, EventCategoryLimit } from '@/types/database'
 
 interface Props {
@@ -67,6 +68,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
   if (!event) notFound()
 
+  const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
   const capacity = await fetchEventCapacitySummary(supabase, event as Event)
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const displayStatus = getEventDisplayStatus(event, undefined, {
@@ -210,6 +212,12 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
       <div className="rounded-2xl border bg-white p-6">
         <h2 className="mb-3 text-lg font-semibold text-foreground">Apply for this market</h2>
+        {isQuarterAuction ? (
+          <p className="mb-4 text-sm text-muted-foreground">
+            Vendor applications are required for this quarter auction. Apply, get approved, and pay any booth fee —
+            there is no assigned floor-plan booth placement.
+          </p>
+        ) : null}
         {!passportReady ? (
           <div className="mb-4 rounded-xl border border-harvest-200 bg-harvest-50 p-4 text-sm text-harvest-800">
             <p className="flex items-start gap-2 font-medium">
