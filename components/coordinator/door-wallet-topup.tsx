@@ -21,10 +21,11 @@ interface PendingRow extends WalletDepositRequest {
 
 interface DoorWalletTopUpProps {
   eventId?: string
+  initialUserId?: string | null
 }
 
-export function DoorWalletTopUp({ eventId }: DoorWalletTopUpProps) {
-  const [scanInput, setScanInput] = useState('')
+export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps) {
+  const [scanInput, setScanInput] = useState(initialUserId ?? '')
   const [amountCents, setAmountCents] = useState(1000)
   const [customDollars, setCustomDollars] = useState('')
   const [crediting, setCrediting] = useState(false)
@@ -50,6 +51,12 @@ export function DoorWalletTopUp({ eventId }: DoorWalletTopUpProps) {
   useEffect(() => {
     void loadPending()
   }, [loadPending])
+
+  useEffect(() => {
+    if (initialUserId) {
+      setScanInput(initialUserId)
+    }
+  }, [initialUserId])
 
   async function creditCash() {
     const dollars = customDollars ? parseFloat(customDollars) : amountCents / 100

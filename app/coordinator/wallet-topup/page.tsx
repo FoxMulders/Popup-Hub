@@ -1,8 +1,15 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { DoorWalletTopUp } from '@/components/coordinator/door-wallet-topup'
+import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 
-export default async function CoordinatorWalletTopUpPage() {
+interface Props {
+  searchParams: Promise<{ u?: string; user?: string }>
+}
+
+export default async function CoordinatorWalletTopUpPage({ searchParams }: Props) {
+  const query = await searchParams
+  const initialUserId = parseWalletTopUpQrPayload(query.u ?? query.user ?? '')
   const supabase = await createClient()
   const {
     data: { user },
@@ -27,7 +34,7 @@ export default async function CoordinatorWalletTopUpPage() {
           Credit patron wallets from cash at the door or confirm pending Interac e-transfers.
         </p>
       </div>
-      <DoorWalletTopUp />
+      <DoorWalletTopUp initialUserId={initialUserId} />
     </div>
   )
 }

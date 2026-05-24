@@ -11,6 +11,7 @@ import {
 } from '@/lib/wallet/etransfer-config'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
 import { buildWalletTopUpQrPayload, walletTopUpQrImageUrl } from '@/lib/wallet/wallet-qr'
+import { WalletDoorCopyButton } from '@/components/wallet/wallet-door-copy-button'
 import type { WalletDepositRequest } from '@/types/database'
 import { Banknote, Copy, ExternalLink, Loader2, QrCode, Send } from 'lucide-react'
 
@@ -101,16 +102,7 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
               className="mx-auto rounded-lg border bg-white p-2"
             />
             <p className="mt-3 break-all font-mono text-[10px] text-muted-foreground">{qrPayload}</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-3 gap-1.5"
-              onClick={() => copyText('Wallet code', userId)}
-            >
-              <Copy className="h-3.5 w-3.5" />
-              Copy wallet ID
-            </Button>
+            <WalletDoorCopyButton value={userId} className="mt-3" />
           </div>
         </CardContent>
       </Card>
