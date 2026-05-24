@@ -64,6 +64,23 @@ async function fetchApprovedVendorCounts(): Promise<Record<string, number>> {
   return vendorCounts
 }
 
+async function fetchActiveAuctionIdsByEvent(): Promise<Record<string, string>> {
+  const supabase = createPublicSupabaseClient()
+  const { data, error } = await supabase
+    .from('auctions')
+    .select('id, event_id')
+    .eq('status', 'active')
+    .not('event_id', 'is', null)
+
+  if (error) throw new Error(`active auctions: ${error.message}`)
+
+  const byEvent: Record<string, string> = {}
+  for (const row of data ?? []) {
+    if (row.event_id) byEvent[row.event_id] = row.id
+  }
+  return byEvent
+}
+
 async function fetchVendorDirectoryCapacitySummaries(): Promise<Record<string, EventCapacitySummary>> {
   const events = await fetchVendorDirectoryMarkets()
   const supabase = createPublicSupabaseClient()
@@ -91,6 +108,15 @@ export const getCachedVendorDirectoryMarkets = unstable_cache(
 export const getCachedApprovedVendorCounts = unstable_cache(
   fetchApprovedVendorCounts,
   ['public-approved-vendor-counts'],
+  {
+    revalidate: PUBLIC_MARKETS_REVALIDATE_SECONDS,
+    tags: [PUBLIC_MARKETS_CACHE_TAG],
+  }
+)
+
+export const getCachedActiveAuctionIdsByEvent = unstable_cache(
+  fetchActiveAuctionIdsByEvent,
+  ['public-active-auction-event-ids'],
   {
     revalidate: PUBLIC_MARKETS_REVALIDATE_SECONDS,
     tags: [PUBLIC_MARKETS_CACHE_TAG],

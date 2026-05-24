@@ -4,14 +4,16 @@ import { DiscoverScreen } from '@/components/shopper/discover-screen'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   getCachedApprovedVendorCounts,
+  getCachedActiveAuctionIdsByEvent,
   getCachedDiscoverMarkets,
 } from '@/lib/queries/cached-public-markets'
-import type { Metadata } from 'next'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
-export const metadata: Metadata = {
+export const metadata = buildPublicMetadata({
   title: 'Discover Markets — Popup Hub',
-  description: 'Browse upcoming popup markets near you — see vendors before you go.',
-}
+  description: 'Browse upcoming popup markets near you — see confirmed vendors before you go.',
+  path: '/discover',
+})
 
 export const revalidate = 60
 
@@ -21,9 +23,10 @@ async function DiscoverContent() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [events, vendorCounts] = await Promise.all([
+  const [events, vendorCounts, activeAuctionByEventId] = await Promise.all([
     getCachedDiscoverMarkets(),
     getCachedApprovedVendorCounts(),
+    getCachedActiveAuctionIdsByEvent(),
   ])
 
   let favoriteIds: string[] = []
@@ -40,6 +43,7 @@ async function DiscoverContent() {
       events={events}
       vendorCounts={vendorCounts}
       favoriteIds={favoriteIds}
+      activeAuctionByEventId={activeAuctionByEventId}
     />
   )
 }

@@ -19,6 +19,7 @@ interface EventCardProps {
   displayStatus?: EventDisplayStatus
   showBookingMode?: boolean
   selectedDate?: Date
+  liveAuctionId?: string
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -47,6 +48,7 @@ export function EventCard({
   displayStatus,
   showBookingMode = false,
   selectedDate,
+  liveAuctionId,
 }: EventCardProps) {
   const badgeStatus = displayStatus ?? event.status
   const hours =
@@ -80,6 +82,14 @@ export function EventCard({
             <Badge className="absolute left-2 top-2 border bg-white/90 text-[10px] text-foreground">
               {distanceLabel}
             </Badge>
+          ) : null}
+          {liveAuctionId ? (
+            <span
+              className="absolute bottom-2 left-2 z-10 inline-flex items-center rounded-md border border-harvest-300 bg-harvest-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm"
+              aria-label="Live quarter auction at this market"
+            >
+              Live auction
+            </span>
           ) : null}
         </div>
         <CardContent className="p-4">

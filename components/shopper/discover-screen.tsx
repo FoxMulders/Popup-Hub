@@ -27,14 +27,21 @@ import {
 } from '@/lib/shopper/events'
 import type { Event } from '@/types/database'
 import { cn } from '@/lib/utils'
+import { Gavel } from 'lucide-react'
 
 interface DiscoverScreenProps {
   events: Event[]
   vendorCounts: Record<string, number>
   favoriteIds: string[]
+  activeAuctionByEventId?: Record<string, string>
 }
 
-export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverScreenProps) {
+export function DiscoverScreen({
+  events,
+  vendorCounts,
+  favoriteIds,
+  activeAuctionByEventId = {},
+}: DiscoverScreenProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [view, setView] = useState<'list' | 'map'>(() =>
@@ -53,6 +60,8 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
     () => resolveDiscoverFilterDate(searchParams.get('when'), searchParams.get('date')),
     [searchParams]
   )
+
+  const liveAuctionsOnly = searchParams.get('live') === 'auctions'
 
   const replaceParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -93,8 +102,10 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
       vendor_count: vendorCounts[e.id] ?? 0,
     }))
     const sorted = sortEventsByDistance(withMeta, origin)
-    return filterEventsByRadius(sorted, radiusKm)
-  }, [events, datePreset, filterDate, origin, radiusKm, vendorCounts])
+    const inRadius = filterEventsByRadius(sorted, radiusKm)
+    if (!liveAuctionsOnly) return inRadius
+    return inRadius.filter((e) => activeAuctionByEventId[e.id] != null)
+  }, [events, datePreset, filterDate, origin, radiusKm, vendorCounts, liveAuctionsOnly, activeAuctionByEventId])
 
   const dateSummary = useMemo(() => {
     if (datePreset === 'weekend') {
@@ -170,10 +181,30 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
               }}
             />
           </label>
+          <Button
+            type="button"
+            size="sm"
+            variant={liveAuctionsOnly ? 'default' : 'outline'}
+            className="min-h-11 touch-manipulation gap-1.5"
+            onClick={() => replaceParams({ live: liveAuctionsOnly ? null : 'auctions' })}
+          >
+            <Gavel className="h-3.5 w-3.5" aria-hidden />
+            Live auctions
+          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Showing community markets for{' '}
-          <span className="font-medium text-foreground">{dateSummary}</span>
+          {liveAuctionsOnly ? (
+            <>
+              Showing markets with a{' '}
+              <span className="font-medium text-foreground">live quarter auction</span> for{' '}
+              <span className="font-medium text-foreground">{dateSummary}</span>
+            </>
+          ) : (
+            <>
+              Showing community markets for{' '}
+              <span className="font-medium text-foreground">{dateSummary}</span>
+            </>
+          )}
         </p>
       </div>
 
@@ -201,7 +232,9 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
       {filtered.length === 0 ? (
         <div className="mt-4 rounded-2xl border bg-white py-16 text-center">
           <p className="text-muted-foreground">
-            No community markets on this day within your area. Try another date or widen the radius.
+            {liveAuctionsOnly
+              ? 'No live quarter auctions on this day within your area. Try another date or turn off the Live auctions filter.'
+              : 'No community markets on this day within your area. Try another date or widen the radius.'}
           </p>
         </div>
       ) : view === 'map' ? (
@@ -218,6 +251,7 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
           events={filtered}
           selectedDate={filterDate}
           favoriteIds={favoriteIds}
+          activeAuctionByEventId={activeAuctionByEventId}
         />
       )}
     </div>

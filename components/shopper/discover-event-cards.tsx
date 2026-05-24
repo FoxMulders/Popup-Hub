@@ -11,12 +11,14 @@ interface DiscoverEventCardsProps {
   events: EventWithMeta[]
   selectedDate: Date
   favoriteIds: string[]
+  activeAuctionByEventId?: Record<string, string>
 }
 
 export function DiscoverEventCards({
   events,
   selectedDate,
   favoriteIds,
+  activeAuctionByEventId = {},
 }: DiscoverEventCardsProps) {
   return (
     <div className="mt-4 grid max-w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -40,6 +42,7 @@ export function DiscoverEventCards({
               event.distance_km != null ? formatDistance(event.distance_km) : undefined
             }
             vendorCount={event.vendor_count}
+            liveAuctionId={activeAuctionByEventId[event.id]}
             actions={
               <Button
                 type="button"

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Store, Calendar, CheckCircle, Clock, AlertTriangle, ArrowRight } from 'lucide-react'
+import { Store, Calendar, CheckCircle, Clock, AlertTriangle, ArrowRight, CreditCard } from 'lucide-react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
@@ -56,7 +56,7 @@ export default async function VendorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: passport }, { count: approvedCount }, { count: pendingCount }, { data: approvedApps }] =
+  const [{ data: passport }, { count: approvedCount }, { count: pendingCount }, { data: approvedApps }, { data: wallet }, { data: paymentDueApps }] =
     await Promise.all([
       supabase
         .from('vendor_passports')
@@ -78,7 +78,16 @@ export default async function VendorDashboard() {
         .select('event_id')
         .eq('vendor_id', user.id)
         .eq('status', 'approved'),
+      supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
+      supabase
+        .from('booth_applications')
+        .select('id')
+        .eq('vendor_id', user.id)
+        .eq('status', 'approved')
+        .eq('payment_status', 'payment_required'),
     ])
+
+  const paymentDueCount = paymentDueApps?.length ?? 0
 
   const approvedEventIds = [...new Set((approvedApps ?? []).map((a) => a.event_id))]
   let liveAuctionSummary = { active: null as Auction | null, upcoming: null as Auction | null, lastEnded: null as Auction | null }
@@ -114,11 +123,12 @@ export default async function VendorDashboard() {
           activeAuction={liveAuctionSummary.active}
           upcomingAuction={liveAuctionSummary.upcoming}
           lastEndedAuction={null}
+          walletBalanceCents={wallet?.balance ?? 0}
         />
       )}
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">Passport Status</CardTitle>
@@ -171,6 +181,25 @@ export default async function VendorDashboard() {
               <Clock className="h-5 w-5 text-yellow-500" />
               <span className="text-2xl font-bold">{pendingCount ?? 0}</span>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className={paymentDueCount > 0 ? 'border-amber-200 bg-amber-50/40' : undefined}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">Payment Due</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <CreditCard className={`h-5 w-5 ${paymentDueCount > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
+              <span className="text-2xl font-bold">{paymentDueCount}</span>
+            </div>
+            {paymentDueCount > 0 ? (
+              <Link href="/vendor/applications">
+                <Button size="sm" variant="link" className="h-auto p-0 text-xs text-amber-700">
+                  Pay now →
+                </Button>
+              </Link>
+            ) : null}
           </CardContent>
         </Card>
       </div>

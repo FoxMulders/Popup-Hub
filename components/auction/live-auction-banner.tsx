@@ -7,14 +7,26 @@ interface LiveAuctionBannerProps {
   activeAuction: Auction | null
   upcomingAuction: Auction | null
   lastEndedAuction: Auction | null
+  /** When set, shows a top-up nudge if balance is below the auction min drop. */
+  walletBalanceCents?: number | null
+}
+
+function needsWalletTopUp(
+  balanceCents: number | null | undefined,
+  minDropCents: number
+): boolean {
+  if (balanceCents == null) return true
+  return balanceCents < minDropCents
 }
 
 export function LiveAuctionBanner({
   activeAuction,
   upcomingAuction,
   lastEndedAuction,
+  walletBalanceCents,
 }: LiveAuctionBannerProps) {
   if (activeAuction) {
+    const lowBalance = needsWalletTopUp(walletBalanceCents, activeAuction.min_drop_amount)
     return (
       <div className="mt-4 rounded-xl border border-harvest-200 bg-harvest-50 px-4 py-3">
         <div className="flex items-start gap-3">
@@ -27,12 +39,24 @@ export function LiveAuctionBanner({
                 Pot: {formatCents(activeAuction.pot_amount)}
               </p>
             )}
-            <Link
-              href={`/auctions/${activeAuction.id}`}
-              className="mt-2 inline-block text-sm font-medium text-forest underline"
-            >
-              Join now →
-            </Link>
+            {lowBalance ? (
+              <p className="mt-2 text-xs font-medium text-amber-800">
+                Wallet low — top up to drop quarters (min {formatCents(activeAuction.min_drop_amount)}).
+              </p>
+            ) : null}
+            <div className="mt-2 flex flex-wrap gap-3">
+              <Link
+                href={`/auctions/${activeAuction.id}`}
+                className="text-sm font-medium text-forest underline"
+              >
+                Join now →
+              </Link>
+              {lowBalance ? (
+                <Link href="/wallet" className="text-sm font-medium text-forest underline">
+                  Top up wallet →
+                </Link>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -40,6 +64,7 @@ export function LiveAuctionBanner({
   }
 
   if (upcomingAuction) {
+    const lowBalance = needsWalletTopUp(walletBalanceCents, upcomingAuction.min_drop_amount)
     return (
       <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
         <div className="flex items-start gap-3">
@@ -48,7 +73,9 @@ export function LiveAuctionBanner({
             <p className="text-sm font-semibold text-amber-900">Quarter auction coming up</p>
             <p className="mt-0.5 text-sm text-amber-800">{upcomingAuction.title}</p>
             <p className="mt-1 text-xs text-amber-700">
-              Top up your wallet to get ready — you&apos;ll need a paddle ID to drop quarters.
+              {lowBalance
+                ? `Top up your wallet — you'll need at least ${formatCents(upcomingAuction.min_drop_amount)} per drop.`
+                : "Top up your wallet to get ready — you'll need a paddle ID to drop quarters."}
             </p>
             <div className="mt-2 flex flex-wrap gap-3">
               <Link href="/wallet" className="text-sm font-medium text-forest underline">

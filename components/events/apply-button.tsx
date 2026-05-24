@@ -48,16 +48,39 @@ import {
   daySelectionKey,
   resolveEventScheduleDays,
 } from '@/lib/events/event-schedule-days'
-import type { ApplicationStatus, Event, EventCategoryLimit, PaymentMethod } from '@/types/database'
+import type {
+  ApplicationPaymentStatus,
+  ApplicationStatus,
+  Event,
+  EventCategoryLimit,
+  PaymentMethod,
+  PaymentStatus,
+} from '@/types/database'
 import { VendorPaymentMethodSelector } from '@/components/vendor/vendor-payment-method-selector'
 import { formatCents } from '@/lib/square/client'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
+import {
+  formatApplicationPaymentLabel,
+  isApplicationPaid,
+  needsEtransferCoordinatorReview,
+  needsSquareCheckout,
+} from '@/lib/applications/payment-fields'
+
+interface ExistingApplication {
+  id: string
+  status: ApplicationStatus
+  payment_status: PaymentStatus
+  payment_method: PaymentMethod | null
+  application_payment_status: ApplicationPaymentStatus | null
+}
 
 interface ApplyButtonProps {
   event: Event
   userId: string
   applicationStatus?: ApplicationStatus | null
+  existingApplication?: ExistingApplication | null
+  boothPriceCents?: number
   applicationsOpen?: boolean
 }
 
@@ -65,6 +88,8 @@ export function ApplyButton({
   event,
   userId,
   applicationStatus = null,
+  existingApplication = null,
+  boothPriceCents = 0,
   applicationsOpen = true,
 }: ApplyButtonProps) {
   const router = useRouter()
@@ -96,6 +121,13 @@ export function ApplyButton({
   useEffect(() => {
     setLocalApplicationStatus(applicationStatus)
   }, [applicationStatus])
+
+  useEffect(() => {
+    if (existingApplication && needsSquareCheckout(existingApplication)) {
+      setPendingApplicationId(existingApplication.id)
+      setPendingBoothPrice(boothPriceCents)
+    }
+  }, [existingApplication, boothPriceCents])
 
   useEffect(() => {
     if (!open) {
@@ -399,26 +431,117 @@ export function ApplyButton({
 
   if (localApplicationStatus === 'pending') {
     return (
-      <Button size="sm" className="w-full" variant="secondary" disabled>
-        <Clock className="mr-2 h-3.5 w-3.5" />
-        Application Pending
-      </Button>
+      <div className="space-y-2">
+        <Button size="sm" className="w-full" variant="secondary" disabled>
+          <Clock className="mr-2 h-3.5 w-3.5" />
+          Application Pending
+        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          The organizer is reviewing your application. You&apos;ll be notified when approved.
+        </p>
+      </div>
     )
   }
 
   if (localApplicationStatus === 'waitlisted') {
     return (
-      <Badge className="w-full justify-center bg-amber-100 text-amber-800 py-1.5">
-        Waitlisted
-      </Badge>
+      <div className="space-y-2">
+        <Badge className="w-full justify-center bg-amber-100 text-amber-800 py-1.5">
+          Waitlisted
+        </Badge>
+        <p className="text-center text-xs text-muted-foreground">
+          We&apos;ll notify you if a booth opens from a cancellation.
+        </p>
+      </div>
     )
   }
 
-  if (localApplicationStatus === 'approved' || localApplicationStatus === 'cancelled') {
+  if (localApplicationStatus === 'approved') {
+    const paymentApp = existingApplication ?? null
+    const requiresPaymentNow = paymentApp ? needsSquareCheckout(paymentApp) : false
+    const eTransferPending = paymentApp ? needsEtransferCoordinatorReview(paymentApp) : false
+    const paid = paymentApp ? isApplicationPaid(paymentApp) : false
+    const feePreview =
+      requiresPaymentNow && boothPriceCents > 0
+        ? computePlatformFeeCents(boothPriceCents, resolveEventFeeConfig(event))
+        : 0
+
+    if (requiresPaymentNow) {
+      return (
+        <>
+          <div className="mb-3 space-y-1 rounded-lg bg-amber-50 p-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Booth fee</span>
+              <span className="font-semibold">{formatCents(boothPriceCents)}</span>
+            </div>
+            {feePreview > 0 ? (
+              <div className="flex justify-between text-gray-500">
+                <span>Platform fee (3% + $1)</span>
+                <span>{formatCents(feePreview)}</span>
+              </div>
+            ) : null}
+            <div className="flex justify-between border-t border-amber-100 pt-1 font-medium">
+              <span>Total due</span>
+              <span>{formatCents(boothPriceCents + feePreview)}</span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+            onClick={() => setPayModalOpen(true)}
+          >
+            Pay Now to Secure Booth
+          </Button>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Approved — complete payment to confirm your booth.
+          </p>
+          {pendingApplicationId ? (
+            <PayBoothModal
+              open={payModalOpen}
+              onOpenChange={setPayModalOpen}
+              applicationId={pendingApplicationId}
+              eventId={event.id}
+              eventName={event.name}
+              boothPriceCents={pendingBoothPrice}
+              onSuccess={() => router.refresh()}
+            />
+          ) : null}
+        </>
+      )
+    }
+
+    if (eTransferPending) {
+      return (
+        <div className="space-y-2">
+          <Badge className="w-full justify-center bg-sky-100 text-sky-900 py-1.5">
+            E-transfer pending review
+          </Badge>
+          <p className="text-center text-xs text-muted-foreground">
+            Send your e-transfer if you haven&apos;t already. The organizer will confirm payment.
+          </p>
+        </div>
+      )
+    }
+
     return (
-      <Badge className="w-full justify-center bg-green-100 text-green-700 py-1.5">
-        <CheckCircle className="mr-1 h-3 w-3" />
-        Applied
+      <div className="space-y-2">
+        <Badge className="w-full justify-center bg-green-100 text-green-700 py-1.5">
+          <CheckCircle className="mr-1 h-3 w-3" />
+          {paid ? 'Booth confirmed' : 'Approved'}
+        </Badge>
+        {paymentApp ? (
+          <p className="text-center text-xs text-muted-foreground capitalize">
+            {formatApplicationPaymentLabel(paymentApp)}
+          </p>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (localApplicationStatus === 'cancelled') {
+    return (
+      <Badge className="w-full justify-center bg-gray-100 text-gray-600 py-1.5">
+        Application cancelled
       </Badge>
     )
   }

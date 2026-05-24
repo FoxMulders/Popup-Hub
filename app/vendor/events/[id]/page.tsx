@@ -15,10 +15,13 @@ import {
   VENDOR_MARKET_STATUSES,
 } from '@/lib/queries/events'
 import { format } from 'date-fns'
-import { ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, MapPin, AlertTriangle } from 'lucide-react'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-banner'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
+import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
+import { computePlatformFeeCents } from '@/lib/monetization/fees'
+import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import type { Auction, Event, EventCategoryLimit } from '@/types/database'
 
 interface Props {
@@ -33,7 +36,8 @@ export default async function VendorEventDetailPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event }, { data: existingApp }, { data: eventAuctions }] = await Promise.all([
+  const [{ data: event }, { data: existingApp }, { data: eventAuctions }, { data: wallet }, { data: passport }] =
+    await Promise.all([
     supabase
       .from('events')
       .select(VENDOR_EVENT_SELECT)
@@ -42,7 +46,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
       .single(),
     supabase
       .from('booth_applications')
-      .select('id, status')
+      .select('id, status, payment_status, payment_method, application_payment_status, category_id')
       .eq('event_id', id)
       .eq('vendor_id', user.id)
       .maybeSingle(),
@@ -52,6 +56,12 @@ export default async function VendorEventDetailPage({ params }: Props) {
       .eq('event_id', id)
       .in('status', ['upcoming', 'active', 'ended'])
       .order('created_at', { ascending: false }),
+    supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
+    supabase
+      .from('vendor_passports')
+      .select('business_name, primary_category_id, category_ids')
+      .eq('user_id', user.id)
+      .maybeSingle(),
   ])
 
   if (!event) notFound()
@@ -71,15 +81,35 @@ export default async function VendorEventDetailPage({ params }: Props) {
   )
   const eventCapacityLabel = formatCapacityRemaining(capacity.totalAvailable, capacity.totalMaxSlots)
   const auctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
+  const passportReady = isPassportReadyForApplication(passport)
+  const boothPriceCents = existingApp?.category_id
+    ? sortedLimits.find((cl) => cl.category_id === existingApp.category_id)?.price_per_booth ?? 0
+    : 0
+  const paidCategoryLimits = sortedLimits.filter((cl) => cl.price_per_booth > 0)
+  const minBoothFee = paidCategoryLimits.length
+    ? Math.min(...paidCategoryLimits.map((cl) => cl.price_per_booth))
+    : 0
+  const maxBoothFee = paidCategoryLimits.length
+    ? Math.max(...paidCategoryLimits.map((cl) => cl.price_per_booth))
+    : 0
+  const sampleFeePreview =
+    minBoothFee > 0 ? computePlatformFeeCents(minBoothFee, resolveEventFeeConfig(event as Event)) : 0
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-      <Link href="/vendor/events">
-        <Button variant="ghost" size="sm" className="gap-1.5 -ml-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back to markets
-        </Button>
-      </Link>
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href="/vendor/dashboard">
+          <Button variant="ghost" size="sm" className="gap-1.5 -ml-2">
+            <ArrowLeft className="h-4 w-4" />
+            Dashboard
+          </Button>
+        </Link>
+        <Link href="/vendor/events">
+          <Button variant="ghost" size="sm" className="gap-1.5">
+            All markets
+          </Button>
+        </Link>
+      </div>
 
       <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
         {event.cover_image_url ? (
@@ -145,6 +175,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
             activeAuction={auctionSummary.active}
             upcomingAuction={auctionSummary.upcoming}
             lastEndedAuction={auctionSummary.lastEnded}
+            walletBalanceCents={wallet?.balance ?? 0}
           />
           <QuarterAuctionEventBanner eventId={id} variant="vendor" />
         </div>
@@ -175,23 +206,55 @@ export default async function VendorEventDetailPage({ params }: Props) {
       ) : null}
 
       <div className="rounded-2xl border bg-white p-6">
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">Apply for this market</h2>
         {isQuarterAuctionListing ? (
           <p className="text-sm text-muted-foreground">
             This is a quarter auction listing — vendor booth applications are not used for this event type.
           </p>
         ) : (
           <>
+            {!passportReady ? (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <p className="flex items-start gap-2 font-medium">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  Complete your Vendor Passport before applying
+                </p>
+                <p className="mt-1 text-amber-900/90">
+                  Add your business name and at least one category so organizers can review your fit.
+                </p>
+                <Link href="/profile/passport" className="mt-3 inline-block">
+                  <Button size="sm" variant="outline" className="border-amber-300 bg-white">
+                    Set up passport
+                  </Button>
+                </Link>
+              </div>
+            ) : null}
+            {!existingApp && paidCategoryLimits.length > 0 ? (
+              <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Booth fee range</span>
+                  <span className="font-semibold">
+                    {minBoothFee === maxBoothFee
+                      ? formatCents(minBoothFee)
+                      : `${formatCents(minBoothFee)} – ${formatCents(maxBoothFee)}`}
+                  </span>
+                </div>
+                {sampleFeePreview > 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Platform fee (3% + $1) applies on paid booths — e.g. {formatCents(sampleFeePreview)} on{' '}
+                    {formatCents(minBoothFee)}.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <ApplyButton
               event={event as Event}
               userId={user.id}
               applicationStatus={existingApp?.status ?? null}
+              existingApplication={existingApp ?? null}
+              boothPriceCents={boothPriceCents}
               applicationsOpen={applicationsOpen}
             />
-            {existingApp ? (
-              <p className="mt-3 text-center text-xs text-gray-500 capitalize">
-                Application status: {existingApp.status}
-              </p>
-            ) : null}
           </>
         )}
       </div>
