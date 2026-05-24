@@ -15,6 +15,7 @@ import {
   VENDOR_MARKET_STATUSES,
 } from '@/lib/queries/events'
 import { format } from 'date-fns'
+import { ExpandableImage } from '@/components/ui/expandable-image'
 import { ArrowLeft, Calendar, Clock, MapPin, AlertTriangle } from 'lucide-react'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-banner'
@@ -66,8 +67,6 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
   if (!event) notFound()
 
-  const isQuarterAuctionListing =
-    (event.listing_type ?? 'community_market') === 'garage_yard_sale'
   const capacity = await fetchEventCapacitySummary(supabase, event as Event)
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const displayStatus = getEventDisplayStatus(event, undefined, {
@@ -113,15 +112,19 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
       <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
         {event.cover_image_url ? (
-          <img src={event.cover_image_url} alt={event.name} className="h-48 w-full object-contain bg-slate-50" />
+          <ExpandableImage
+            src={event.cover_image_url}
+            alt={event.name}
+            className="h-48 w-full object-contain bg-canvas"
+          />
         ) : (
-          <div className="flex h-32 items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
-            <MapPin className="h-12 w-12 text-amber-300" />
+          <div className="flex h-32 items-center justify-center bg-gradient-to-br from-harvest-100 to-harvest-50">
+            <MapPin className="h-12 w-12 text-harvest-400" />
           </div>
         )}
         <div className="space-y-4 p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
+            <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
             <div className="flex flex-wrap gap-2">
               <Badge className="capitalize">
                 {displayStatus === 'archived'
@@ -136,29 +139,29 @@ export default async function VendorEventDetailPage({ params }: Props) {
             </div>
           </div>
           {capacity.totalMaxSlots > 0 ? (
-            <p className="text-sm font-medium text-gray-700">{eventCapacityLabel}</p>
+            <p className="text-sm font-medium text-foreground">{eventCapacityLabel}</p>
           ) : null}
-          {event.description ? <p className="text-sm text-gray-600">{event.description}</p> : null}
-          <div className="grid gap-2 text-sm text-gray-600 sm:grid-cols-2">
+          {event.description ? <p className="text-sm text-muted-foreground">{event.description}</p> : null}
+          <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
             <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 shrink-0 text-amber-500" />
+              <MapPin className="h-4 w-4 shrink-0 text-harvest-500" />
               <span>{event.location_name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 shrink-0 text-amber-500" />
+              <Calendar className="h-4 w-4 shrink-0 text-harvest-500" />
               {format(new Date(event.start_at), 'EEE, MMM d, yyyy')}
             </div>
             <div className="flex items-center gap-2 sm:col-span-2">
-              <Clock className="h-4 w-4 shrink-0 text-amber-500" />
+              <Clock className="h-4 w-4 shrink-0 text-harvest-500" />
               {format(new Date(event.start_at), 'h:mm a')} – {format(new Date(event.end_at), 'h:mm a')}
             </div>
           </div>
           {coordinator ? (
-            <div className="rounded-xl border bg-gray-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Organizer</p>
+            <div className="rounded-xl border bg-canvas px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Organizer</p>
               <Link
                 href={`/coordinators/${coordinator.id}`}
-                className="text-sm font-medium text-amber-800 hover:underline"
+                className="text-sm font-medium text-harvest-700 hover:underline"
               >
                 {coordinator.full_name}
               </Link>
@@ -183,7 +186,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
       {sortedLimits.length > 0 ? (
         <div className="rounded-2xl border bg-white p-6">
-          <h2 className="mb-3 text-lg font-semibold text-gray-900">Booth categories</h2>
+          <h2 className="mb-3 text-lg font-semibold text-foreground">Booth categories</h2>
           <ul className="space-y-2">
             {sortedLimits.map((cl: EventCategoryLimit) => (
               <li
@@ -191,7 +194,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
               >
                 <span className="font-medium">{cl.category?.name}</span>
-                <span className="text-gray-500">
+                <span className="text-muted-foreground">
                   {formatCapacityRemaining(
                     capacity.slotsByCategoryId[cl.category_id] ?? 0,
                     capacity.maxSlotsByCategoryId[cl.category_id] ?? cl.max_slots
@@ -206,57 +209,49 @@ export default async function VendorEventDetailPage({ params }: Props) {
       ) : null}
 
       <div className="rounded-2xl border bg-white p-6">
-        <h2 className="mb-3 text-lg font-semibold text-gray-900">Apply for this market</h2>
-        {isQuarterAuctionListing ? (
-          <p className="text-sm text-muted-foreground">
-            This is a quarter auction listing — vendor booth applications are not used for this event type.
-          </p>
-        ) : (
-          <>
-            {!passportReady ? (
-              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-                <p className="flex items-start gap-2 font-medium">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  Complete your Vendor Passport before applying
-                </p>
-                <p className="mt-1 text-amber-900/90">
-                  Add your business name and at least one category so organizers can review your fit.
-                </p>
-                <Link href="/profile/passport" className="mt-3 inline-block">
-                  <Button size="sm" variant="outline" className="border-amber-300 bg-white">
-                    Set up passport
-                  </Button>
-                </Link>
-              </div>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">Apply for this market</h2>
+        {!passportReady ? (
+          <div className="mb-4 rounded-xl border border-harvest-200 bg-harvest-50 p-4 text-sm text-harvest-800">
+            <p className="flex items-start gap-2 font-medium">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              Complete your Vendor Passport before applying
+            </p>
+            <p className="mt-1 text-harvest-800/90">
+              Add your business name and at least one category so organizers can review your fit.
+            </p>
+            <Link href="/profile/passport" className="mt-3 inline-block">
+              <Button size="sm" variant="outline" className="border-harvest-400 bg-white">
+                Set up passport
+              </Button>
+            </Link>
+          </div>
+        ) : null}
+        {!existingApp && paidCategoryLimits.length > 0 ? (
+          <div className="mb-4 rounded-lg bg-canvas p-3 text-sm space-y-1">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Booth fee range</span>
+              <span className="font-semibold">
+                {minBoothFee === maxBoothFee
+                  ? formatCents(minBoothFee)
+                  : `${formatCents(minBoothFee)} – ${formatCents(maxBoothFee)}`}
+              </span>
+            </div>
+            {sampleFeePreview > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Platform fee (3% + $1) applies on paid booths — e.g. {formatCents(sampleFeePreview)} on{' '}
+                {formatCents(minBoothFee)}.
+              </p>
             ) : null}
-            {!existingApp && paidCategoryLimits.length > 0 ? (
-              <div className="mb-4 rounded-lg bg-gray-50 p-3 text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Booth fee range</span>
-                  <span className="font-semibold">
-                    {minBoothFee === maxBoothFee
-                      ? formatCents(minBoothFee)
-                      : `${formatCents(minBoothFee)} – ${formatCents(maxBoothFee)}`}
-                  </span>
-                </div>
-                {sampleFeePreview > 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    Platform fee (3% + $1) applies on paid booths — e.g. {formatCents(sampleFeePreview)} on{' '}
-                    {formatCents(minBoothFee)}.
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <ApplyButton
-              event={event as Event}
-              userId={user.id}
-              applicationStatus={existingApp?.status ?? null}
-              existingApplication={existingApp ?? null}
-              boothPriceCents={boothPriceCents}
-              applicationsOpen={applicationsOpen}
-            />
-          </>
-        )}
+          </div>
+        ) : null}
+        <ApplyButton
+          event={event as Event}
+          userId={user.id}
+          applicationStatus={existingApp?.status ?? null}
+          existingApplication={existingApp ?? null}
+          boothPriceCents={boothPriceCents}
+          applicationsOpen={applicationsOpen}
+        />
       </div>
 
       <MarketFeedbackWidget marketId={id} />

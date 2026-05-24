@@ -133,7 +133,8 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         </div>
         {props.listingType === 'garage_yard_sale' ? (
           <p className={WIZARD_INFO_BOX}>
-            Quarter auctions go live on the patron map when published — no vendor booth applications or juried review required.
+            Quarter auctions appear on the patron map when published. Vendors apply for booths the same way as community
+            markets — instant book or juried review, depending on your booking mode.
           </p>
         ) : null}
       </div>
@@ -185,7 +186,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
           className={cn(
             'text-xs text-right tabular-nums',
             props.description.trim().length < DESCRIPTION_MIN_LENGTH
-              ? 'text-amber-800'
+              ? 'text-harvest-700'
               : 'text-muted-foreground'
           )}
         >

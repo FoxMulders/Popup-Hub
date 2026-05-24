@@ -14,9 +14,7 @@ import {
 import { resolvePassportCategoryIds } from '@/lib/vendor/passport-categories'
 import {
   resolveEventScheduleDays,
-  daySelectionKey,
   normalizeAttendanceSelection,
-  type EventScheduleDayOption,
 } from '@/lib/events/event-schedule-days'
 import {
   buildMarketApplicationEmailFromEvent,
@@ -31,6 +29,7 @@ import {
   generateEtransferReferenceCode,
 } from '@/lib/applications/etransfer-reference'
 import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-instructions-service'
+import { isCategoryCapacityError } from '@/lib/applications/booth-payment-processing'
 import type { Role } from '@/types/database'
 
 async function nextWaitlistPosition(
@@ -95,10 +94,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const vendorId = user.id
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, full_name, email')
-    .eq('id', user.id)
+    .eq('id', vendorId)
     .single()
 
   if ((profile?.role as Role | undefined) !== 'vendor') {
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
       .select(
         'id, business_name, primary_category_id, category_ids, is_verified'
       )
-      .eq('user_id', user.id)
+      .eq('user_id', vendorId)
       .maybeSingle(),
     supabase
       .from('events')
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
       .from('booth_applications')
       .select('id, status')
       .eq('event_id', eventId)
-      .eq('vendor_id', user.id)
+      .eq('vendor_id', vendorId)
       .maybeSingle(),
   ])
 
@@ -162,13 +163,6 @@ export async function POST(request: Request) {
 
   if (!event) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
-  }
-
-  if ((event.listing_type ?? 'community_market') === 'garage_yard_sale') {
-    return NextResponse.json(
-      { error: 'Quarter auctions do not accept vendor booth applications.' },
-      { status: 400 }
-    )
   }
 
   if (!OPEN_EVENT_STATUSES.includes(event.status as (typeof OPEN_EVENT_STATUSES)[number])) {
@@ -206,6 +200,9 @@ export async function POST(request: Request) {
   if ('error' in attendanceSelection) {
     return NextResponse.json({ error: attendanceSelection.error }, { status: 400 })
   }
+
+  const selectedAttendanceEventDayIds = attendanceSelection.attendingEventDayIds
+  const selectedAttendanceDates = attendanceSelection.attendingDates
 
   const eventSlots = await loadEventCategorySlots(supabase, eventId, !!event.allow_mlm)
   const match = evaluatePassportCategoryMatch(passport, eventSlots)
@@ -310,7 +307,23 @@ export async function POST(request: Request) {
     status = 'waitlisted'
     waitlistPosition = await nextWaitlistPosition(supabase, eventId, categoryId)
   } else if (isInstant) {
-    status = 'approved'
+    const freshAvailable = await fetchCategoryAvailableSlots(supabase, eventId, categoryId)
+    if (freshAvailable <= 0) {
+      if (joinWaitlist) {
+        status = 'waitlisted'
+        waitlistPosition = await nextWaitlistPosition(supabase, eventId, categoryId)
+      } else {
+        return NextResponse.json(
+          {
+            error: 'This category is full. Confirm waitlist to be notified if a spot opens.',
+            requiresWaitlist: true,
+          },
+          { status: 409 }
+        )
+      }
+    } else {
+      status = 'approved'
+    }
   }
 
   const paymentFields = resolvePaymentFieldsForPaidApplication({
@@ -326,31 +339,81 @@ export async function POST(request: Request) {
   const etransferReferenceCode = etransferPending ? generateEtransferReferenceCode() : null
   const etransferExpiresAt = etransferPending ? etransferHoldExpiresAt() : null
 
-  const { data: inserted, error } = await supabase
-    .from('booth_applications')
-    .insert({
-      event_id: eventId,
-      vendor_id: user.id,
-      category_id: categoryId,
-      status,
-      payment_status: paymentFields.payment_status,
-      payment_method: paymentFields.payment_method,
-      application_payment_status: paymentFields.application_payment_status,
-      etransfer_reference_code: etransferReferenceCode,
-      etransfer_expires_at: etransferExpiresAt,
-      neighbor_preference: neighborPreference?.trim() || null,
-      waitlist_position: waitlistPosition,
-      has_category_overflow: hasCategoryOverflow,
-      overflow_category_names: hasCategoryOverflow ? match.fullCategoryNames : [],
-      attending_event_day_ids: attendanceSelection.attendingEventDayIds,
-      attending_dates: attendanceSelection.attendingDates,
-      attendance_terms_acknowledged_at: now,
-      ...(status === 'approved' ? { approved_at: now } : {}),
-    })
-    .select(
-      'id, status, payment_status, payment_method, application_payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'
-    )
-    .single()
+  async function insertApplication() {
+    return supabase
+      .from('booth_applications')
+      .insert({
+        event_id: eventId,
+        vendor_id: vendorId,
+        category_id: categoryId,
+        status,
+        payment_status: paymentFields.payment_status,
+        payment_method: paymentFields.payment_method,
+        application_payment_status: paymentFields.application_payment_status,
+        etransfer_reference_code: etransferReferenceCode,
+        etransfer_expires_at: etransferExpiresAt,
+        neighbor_preference: neighborPreference?.trim() || null,
+        waitlist_position: waitlistPosition,
+        has_category_overflow: hasCategoryOverflow,
+        overflow_category_names: hasCategoryOverflow ? match.fullCategoryNames : [],
+        attending_event_day_ids: selectedAttendanceEventDayIds,
+        attending_dates: selectedAttendanceDates,
+        attendance_terms_acknowledged_at: now,
+        ...(status === 'approved' ? { approved_at: now } : {}),
+      })
+      .select(
+        'id, status, payment_status, payment_method, application_payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'
+      )
+      .single()
+  }
+
+  let { data: inserted, error } = await insertApplication()
+
+  if (error && isCategoryCapacityError(error) && status === 'approved') {
+    if (joinWaitlist) {
+      status = 'waitlisted'
+      waitlistPosition = await nextWaitlistPosition(supabase, eventId, categoryId)
+      const waitlistedPaymentFields = resolvePaymentFieldsForPaidApplication({
+        paymentMethod,
+        requiresPayment,
+        approved: false,
+      })
+      Object.assign(paymentFields, waitlistedPaymentFields)
+
+      ;({ data: inserted, error } = await supabase
+        .from('booth_applications')
+        .insert({
+          event_id: eventId,
+          vendor_id: vendorId,
+          category_id: categoryId,
+          status: 'waitlisted',
+          payment_status: waitlistedPaymentFields.payment_status,
+          payment_method: waitlistedPaymentFields.payment_method,
+          application_payment_status: waitlistedPaymentFields.application_payment_status,
+          etransfer_reference_code: null,
+          etransfer_expires_at: null,
+          neighbor_preference: neighborPreference?.trim() || null,
+          waitlist_position: waitlistPosition,
+          has_category_overflow: hasCategoryOverflow,
+          overflow_category_names: hasCategoryOverflow ? match.fullCategoryNames : [],
+          attending_event_day_ids: selectedAttendanceEventDayIds,
+          attending_dates: selectedAttendanceDates,
+          attendance_terms_acknowledged_at: now,
+        })
+        .select(
+          'id, status, payment_status, payment_method, application_payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'
+        )
+        .single())
+    } else {
+      return NextResponse.json(
+        {
+          error: 'This category is full. Confirm waitlist to be notified if a spot opens.',
+          requiresWaitlist: true,
+        },
+        { status: 409 }
+      )
+    }
+  }
 
   if (error) {
     if (error.code === '23505') {
@@ -378,7 +441,7 @@ export async function POST(request: Request) {
   } catch (emailErr) {
     console.error('[email] market application received unexpected error:', emailErr, {
       eventId,
-      vendorId: user.id,
+      vendorId,
     })
   }
 
@@ -387,7 +450,7 @@ export async function POST(request: Request) {
     dispatchEtransferInstructions(serviceSupabase, {
       applicationId: inserted.id,
       eventId,
-      vendorId: user.id,
+      vendorId,
       boothPriceCents: boothPrice,
       referenceCode: etransferReferenceCode,
       expiresAt: etransferExpiresAt,
