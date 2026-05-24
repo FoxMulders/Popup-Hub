@@ -69,6 +69,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/square/webhook') ||
     pathname.startsWith('/api/reminders/') ||
+    pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/favicon') ||
     pathname === '/sw.js' ||
     pathname === '/manifest.json' ||

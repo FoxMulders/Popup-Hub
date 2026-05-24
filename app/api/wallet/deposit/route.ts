@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createWalletDeposit } from '@/lib/square/payments'
-import { randomUUID } from 'crypto'
+import { applyWalletDepositCredit } from '@/lib/wallet/adjust-balance'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -37,28 +37,43 @@ export async function POST(request: Request) {
     squareCustomerId: wallet.square_customer_id ?? undefined,
   })
 
-  if (error) {
-    return NextResponse.json({ error }, { status: 422 })
+  if (error || !paymentId) {
+    return NextResponse.json({ error: error ?? 'Payment failed' }, { status: 422 })
   }
 
-  // Credit balance
-  const newBalance = wallet.balance + amountCents
-  await service.from('wallets').update({ balance: newBalance }).eq('id', wallet.id)
+  const { data: transaction, error: txError } = await service
+    .from('wallet_transactions')
+    .insert({
+      wallet_id: wallet.id,
+      type: 'deposit',
+      amount: amountCents,
+      square_payment_id: paymentId,
+      metadata: { user_id: user.id, balance_applied: false },
+    })
+    .select('id')
+    .single()
 
-  // Assign paddle ID on first deposit
+  if (txError || !transaction) {
+    return NextResponse.json({ error: 'Could not record deposit' }, { status: 500 })
+  }
+
+  const credit = await applyWalletDepositCredit(service, {
+    walletId: wallet.id,
+    amountCents,
+    transactionId: transaction.id,
+  })
+
+  if (!credit.ok) {
+    return NextResponse.json(
+      { error: 'Balance update conflict — your payment was received; balance will sync shortly.' },
+      { status: 409 }
+    )
+  }
+
   if (!wallet.paddle_id) {
     const paddleId = Math.floor(1000 + Math.random() * 9000).toString()
     await service.from('wallets').update({ paddle_id: paddleId }).eq('id', wallet.id)
   }
 
-  // Record transaction
-  await service.from('wallet_transactions').insert({
-    wallet_id: wallet.id,
-    type: 'deposit',
-    amount: amountCents,
-    square_payment_id: paymentId,
-    metadata: { user_id: user.id },
-  })
-
-  return NextResponse.json({ success: true, newBalance })
+  return NextResponse.json({ success: true, newBalance: credit.newBalance })
 }

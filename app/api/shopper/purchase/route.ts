@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { adjustWalletBalanceForUser } from '@/lib/wallet/adjust-balance'
 
 /** Record a shopper purchase at a vendor booth (wallet debit). V2 unified checkout. */
 export async function POST(request: Request) {
@@ -24,29 +25,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid purchase data' }, { status: 400 })
   }
 
-  const { data: wallet } = await supabase
-    .from('wallets')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
+  const debit = await adjustWalletBalanceForUser(supabase, user.id, -amount_cents)
 
-  if (!wallet || wallet.balance < amount_cents) {
-    return NextResponse.json({ error: 'Insufficient wallet balance' }, { status: 402 })
-  }
-
-  const newBalance = wallet.balance - amount_cents
-
-  const { error: walletError } = await supabase
-    .from('wallets')
-    .update({ balance: newBalance })
-    .eq('id', wallet.id)
-
-  if (walletError) {
-    return NextResponse.json({ error: 'Payment failed' }, { status: 500 })
+  if (!debit.ok) {
+    if (debit.error === 'insufficient') {
+      return NextResponse.json({ error: 'Insufficient wallet balance' }, { status: 402 })
+    }
+    if (debit.error === 'not_found') {
+      return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
+    }
+    return NextResponse.json({ error: 'Payment failed — please retry' }, { status: 409 })
   }
 
   await supabase.from('wallet_transactions').insert({
-    wallet_id: wallet.id,
+    wallet_id: debit.walletId,
     type: 'withdrawal',
     amount: amount_cents,
     square_payment_id: square_payment_id ?? null,
@@ -67,8 +59,17 @@ export async function POST(request: Request) {
     .single()
 
   if (purchaseError) {
+    const refund = await adjustWalletBalanceForUser(supabase, user.id, amount_cents)
+    if (!refund.ok) {
+      console.error('[shopper/purchase] purchase insert failed and refund failed', {
+        userId: user.id,
+        amount_cents,
+        purchaseError,
+        refundError: refund.error,
+      })
+    }
     return NextResponse.json({ error: 'Could not record purchase' }, { status: 500 })
   }
 
-  return NextResponse.json({ purchase_id: purchase.id, balance: newBalance })
+  return NextResponse.json({ purchase_id: purchase.id, balance: debit.newBalance })
 }

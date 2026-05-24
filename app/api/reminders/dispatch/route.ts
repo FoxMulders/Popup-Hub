@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/twilio'
+import { authorizeCronRequest } from '@/lib/cron/authorize-cron'
 
 /** Cron: dispatch due market reminders (in-app + optional SMS). */
 export async function POST(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = authorizeCronRequest(request)
+  if (denied) return denied
 
   const supabase = await createServiceClient()
   const now = new Date().toISOString()

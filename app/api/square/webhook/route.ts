@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
+import { applyWalletDepositCredit, isDepositBalanceApplied } from '@/lib/wallet/adjust-balance'
 
 export async function POST(request: Request) {
   const rawBody = await request.text()
@@ -72,23 +73,24 @@ export async function POST(request: Request) {
 
       const { data: wtx } = await supabase
         .from('wallet_transactions')
-        .select('id, wallet_id, amount')
+        .select('id, wallet_id, amount, metadata')
         .eq('square_payment_id', squarePaymentId)
         .eq('type', 'deposit')
         .maybeSingle()
 
-      if (wtx) {
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('id', wtx.wallet_id)
-          .single()
+      if (wtx && !isDepositBalanceApplied(wtx.metadata as Record<string, unknown>)) {
+        const credit = await applyWalletDepositCredit(supabase, {
+          walletId: wtx.wallet_id,
+          amountCents: wtx.amount,
+          transactionId: wtx.id,
+        })
 
-        if (wallet) {
-          await supabase
-            .from('wallets')
-            .update({ balance: wallet.balance + wtx.amount })
-            .eq('id', wtx.wallet_id)
+        if (!credit.ok) {
+          console.error('[Square webhook] wallet deposit credit failed', {
+            squarePaymentId,
+            walletId: wtx.wallet_id,
+            error: credit.error,
+          })
         }
       }
 
