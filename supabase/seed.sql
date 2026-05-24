@@ -16,5 +16,5 @@ INSERT INTO categories (id, name, icon_url) VALUES
   (gen_random_uuid(), 'Food & Beverage', NULL),
   (gen_random_uuid(), 'Kids & Baby', NULL),
   (gen_random_uuid(), 'Books & Paper Goods', NULL),
-  (gen_random_uuid(), 'Woodworking & Furniture', NULL)
+  (gen_random_uuid(), 'Woodworking', NULL)
 ON CONFLICT (name) DO NOTHING;

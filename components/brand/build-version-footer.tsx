@@ -17,19 +17,14 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
       )}
       aria-label="Application version"
     >
-      <div className="mx-auto flex max-w-[1600px] items-center justify-center gap-2.5 px-4 py-2.5 sm:gap-3 sm:py-3">
-        <PopupHubLogo className="h-14 w-auto shrink-0 sm:h-16" title="Popup Hub" />
-        <div className="min-w-0 text-center">
-          <p className="sr-only font-heading text-xs font-semibold text-forest sm:text-sm">
-            Popup Hub
-          </p>
-          <p
-            className="font-mono text-[10px] leading-snug text-muted-foreground sm:text-[11px]"
-            title={`Version ${build.version}, commit ${build.commit}, built ${build.builtAt}`}
-          >
-            {build.label}
-          </p>
-        </div>
+      <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-1.5 px-4 py-3 sm:py-3.5">
+        <PopupHubLogo className="h-7 w-auto shrink-0 sm:h-8" title="Popup Hub" />
+        <p
+          className="font-mono text-[10px] leading-snug text-muted-foreground sm:text-[11px]"
+          title={`Version ${build.version}, commit ${build.commit}, built ${build.builtAt}`}
+        >
+          {build.label}
+        </p>
       </div>
     </footer>
   )
