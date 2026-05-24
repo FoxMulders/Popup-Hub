@@ -18,7 +18,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
       aria-label="Application version"
     >
       <div className="mx-auto flex max-w-[1600px] items-center justify-center gap-2.5 px-4 py-2.5 sm:gap-3 sm:py-3">
-        <PopupHubLogo className="h-7 w-auto shrink-0 sm:h-8" title="Popup Hub" />
+        <PopupHubLogo className="h-14 w-auto shrink-0 sm:h-16" title="Popup Hub" />
         <div className="min-w-0 text-center">
           <p className="sr-only font-heading text-xs font-semibold text-forest sm:text-sm">
             Popup Hub

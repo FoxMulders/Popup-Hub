@@ -56,8 +56,8 @@ export function PopupHubIcon({
 type BrandLogoMarkSize = 'nav' | 'auth'
 
 const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
-  nav: 'h-9 w-auto sm:h-10',
-  auth: 'h-20 w-auto sm:h-24',
+  nav: 'h-18 w-auto sm:h-20',
+  auth: 'h-40 w-auto sm:h-48',
 }
 
 interface BrandLogoMarkProps {
