@@ -25,19 +25,23 @@ function readGitCommit(): string {
   }
 }
 
-/** Unique per deploy — Vercel deployment id or local build timestamp. */
-function readBuildNumber(): string {
-  const deploymentId = process.env.VERCEL_DEPLOYMENT_ID?.trim()
-  if (deploymentId) return deploymentId.slice(-8)
-  return new Date().toISOString().replace(/\D/g, '').slice(0, 14)
+function readBuildNumber(): number {
+  try {
+    const raw = readFileSync(join(process.cwd(), 'build-number.json'), 'utf8')
+    const data = JSON.parse(raw) as { build?: number }
+    if (Number.isFinite(data.build)) return data.build as number
+  } catch {
+    // fall through
+  }
+  return 0
 }
 
 const buildTime = new Date().toISOString()
 const buildCommit = readGitCommit()
 const buildNumber = readBuildNumber()
 const baseVersion = readPackageVersion()
-/** Semver + commit metadata; changes when source changes. */
-const appVersion = `${baseVersion}+${buildCommit}`
+/** Semver + monotonic build counter; build increments on each production deploy. */
+const appVersion = `${baseVersion}+${buildNumber}`
 
 const nextConfig: NextConfig = {
   // All pages are dynamic — no static prerendering for an auth-protected marketplace
@@ -49,7 +53,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_VERSION: appVersion,
     NEXT_PUBLIC_APP_VERSION_BASE: baseVersion,
     NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
-    NEXT_PUBLIC_BUILD_NUMBER: buildNumber,
+    NEXT_PUBLIC_BUILD_NUMBER: String(buildNumber),
     NEXT_PUBLIC_BUILD_TIME: buildTime,
   },
   images: {

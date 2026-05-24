@@ -25,6 +25,7 @@ function Write-Step($text) {
 
 try {
     Write-Step "Building (next build)"
+    $env:BUMP_BUILD_NUMBER = "1"
     npm run build
     if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
