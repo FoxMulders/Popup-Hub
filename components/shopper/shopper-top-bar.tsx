@@ -49,7 +49,7 @@ export function ShopperTopBar({
 
   async function signOut() {
     await supabase.auth.signOut()
-    router.push('/discover')
+    router.push('/login')
     router.refresh()
   }
 

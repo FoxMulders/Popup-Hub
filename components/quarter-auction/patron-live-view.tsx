@@ -221,7 +221,7 @@ export function PatronQuarterAuctionLive({
           <div>
             <h1 className="text-xl font-bold">Quarter Auction</h1>
             <p className="text-sm text-muted-foreground">
-              Balance: {balanceCredits} credits ({formatCredits(balanceCredits).split('(')[1]?.replace(')', '')})
+              Balance: {formatCredits(balanceCredits)}
             </p>
           </div>
           <Link href="/wallet" className="text-sm text-forest underline flex items-center gap-1">

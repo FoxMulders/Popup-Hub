@@ -4,11 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
-import { VendorAccessRequestForm } from '@/components/shopper/vendor-access-request-form'
-import { getVendorAccessRequest } from '@/lib/vendor/access'
 import { format } from 'date-fns'
 import { Calendar, MapPin, ArrowLeft } from 'lucide-react'
-import type { Event, Role } from '@/types/database'
+import type { Event } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -32,25 +30,6 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
     .single()
 
   if (!profile) notFound()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  let viewerRole: Role | null = null
-  if (user) {
-    const { data: viewerProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-    viewerRole = (viewerProfile?.role as Role | undefined) ?? 'shopper'
-  }
-
-  const existingRequest =
-    user != null && viewerRole === 'vendor'
-      ? await getVendorAccessRequest(supabase, user.id, id)
-      : null
 
   const { data: events } = await supabase
     .from('events')
@@ -119,15 +98,6 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
           </p>
         )}
       </div>
-
-      {viewerRole === 'vendor' ? (
-        <VendorAccessRequestForm
-          coordinatorId={profile.id}
-          coordinatorName={profile.full_name}
-          userId={user?.id ?? null}
-          existingRequest={existingRequest}
-        />
-      ) : null}
 
       <section>
         <h2 className="text-lg font-semibold text-foreground mb-3">Markets</h2>

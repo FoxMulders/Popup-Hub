@@ -20,8 +20,9 @@ async function ApplicationsSection({ userId }: { userId: string }) {
       *,
       event:events(
         id,
-        name, location_name, start_at, end_at, status,
-        cancellation_reason, cancellation_reason_notes
+        name, location_name, start_at, end_at, status, booking_mode,
+        cancellation_reason, cancellation_reason_notes,
+        coordinator:profiles!events_coordinator_id_fkey(id, full_name, email, avatar_url)
       ),
       category:categories(name)
     `)
@@ -48,6 +49,7 @@ async function ApplicationsSection({ userId }: { userId: string }) {
       applications={(applications ?? []) as BoothApplication[]}
       categoryPrices={categoryPrices}
       userId={userId}
+      showFilters={false}
     />
   )
 }
@@ -57,7 +59,7 @@ export default async function VendorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: passport }, { count: approvedCount }, { count: pendingCount }, { data: approvedApps }, { data: wallet }, { data: paymentDueApps }] =
+  const [{ data: passport }, { count: approvedCount }, { count: pendingCount }, { count: pendingInsuranceCount }, { data: approvedApps }, { data: wallet }, { data: paymentDueApps }] =
     await Promise.all([
       supabase
         .from('vendor_passports')
@@ -76,6 +78,11 @@ export default async function VendorDashboard() {
         .eq('status', 'pending'),
       supabase
         .from('booth_applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('vendor_id', user.id)
+        .eq('status', 'pending_insurance'),
+      supabase
+        .from('booth_applications')
         .select('event_id')
         .eq('vendor_id', user.id)
         .eq('status', 'approved'),
@@ -89,6 +96,7 @@ export default async function VendorDashboard() {
     ])
 
   const paymentDueCount = paymentDueApps?.length ?? 0
+  const awaitingReviewCount = (pendingCount ?? 0) + (pendingInsuranceCount ?? 0)
 
   const approvedEventIds = [...new Set((approvedApps ?? []).map((a) => a.event_id))]
   let liveAuctionSummary = { active: null as Auction | null, upcoming: null as Auction | null, lastEnded: null as Auction | null }
@@ -173,17 +181,22 @@ export default async function VendorDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-yellow-500" />
-              <span className="text-2xl font-bold">{pendingCount ?? 0}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/vendor/applications?filter=pending">
+          <Card className="h-full transition-colors hover:border-harvest-300 hover:bg-harvest-50/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-yellow-500" />
+                <span className="text-2xl font-bold">{awaitingReviewCount}</span>
+              </div>
+              {awaitingReviewCount > 0 ? (
+                <p className="mt-1 text-xs font-medium text-harvest-700">View applications →</p>
+              ) : null}
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card className={paymentDueCount > 0 ? 'border-harvest-200 bg-harvest-50/40' : undefined}>
           <CardHeader className="pb-2">
@@ -207,7 +220,14 @@ export default async function VendorDashboard() {
 
       {/* Applications list */}
       <div>
-        <h2 className="mb-4 text-xl font-semibold text-foreground">Recent Applications</h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold text-foreground">Recent Applications</h2>
+          <Link href="/vendor/applications">
+            <Button variant="link" size="sm" className="h-auto p-0 text-sm">
+              View all →
+            </Button>
+          </Link>
+        </div>
         <Suspense
           fallback={
             <div className="space-y-3">

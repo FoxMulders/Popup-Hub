@@ -15,12 +15,12 @@ const AUDIENCE_CARDS = [
     cta: 'Discover markets',
   },
   {
-    href: '/vendor/activate',
+    href: '/signup?role=vendor',
     icon: Store,
     title: 'For vendors',
     description:
-      'Organizers invite vendors directly — build your passport and apply for booths after activation.',
-    cta: 'Activate vendor access',
+      'Create a vendor account, build your passport, and apply to open markets. Juried events review each application.',
+    cta: 'Sign up as a vendor',
   },
   {
     href: '/signup?role=coordinator',

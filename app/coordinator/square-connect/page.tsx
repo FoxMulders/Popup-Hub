@@ -5,6 +5,12 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { ConnectSquareButton } from './connect-button'
+import {
+  buildSquareOAuthAuthorizeUrl,
+  getSquareAppId,
+  getSquareOAuthRedirectUri,
+  isSquareProductionEnvironment,
+} from '@/lib/square/connect-url'
 
 export default async function SquareConnectPage() {
   const supabase = await createClient()
@@ -21,10 +27,16 @@ export default async function SquareConnectPage() {
 
   const isConnected = !!connectedEvent?.square_merchant_id
 
-  const appId = process.env.NEXT_PUBLIC_SQUARE_APP_ID!
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/square/oauth/callback`
-  const scope = 'MERCHANT_PROFILE_READ PAYMENTS_WRITE ORDERS_WRITE'
-  const oauthUrl = `https://connect.squareup.com/oauth2/authorize?client_id=${appId}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${user.id}`
+  const appId = getSquareAppId()
+  const redirectUri = getSquareOAuthRedirectUri()
+  const oauthUrl = appId
+    ? buildSquareOAuthAuthorizeUrl({
+        clientId: appId,
+        redirectUri,
+        state: user.id,
+      })
+    : null
+  const squareEnvironmentLabel = isSquareProductionEnvironment() ? 'Production' : 'Sandbox'
 
   return (
     <div className="mx-auto max-w-xl px-4 py-8">
@@ -53,10 +65,23 @@ export default async function SquareConnectPage() {
             </div>
           ) : (
             <>
-              <div className="rounded-lg bg-harvest-50 border border-harvest-200 p-3">
+              <div className="rounded-lg bg-harvest-50 border border-harvest-200 p-3 space-y-1">
                 <p className="text-sm text-harvest-800">No Square account connected yet.</p>
+                <p className="text-xs text-harvest-700/90">
+                  Square environment: <span className="font-medium">{squareEnvironmentLabel}</span>
+                  {!isSquareProductionEnvironment()
+                    ? ' — OAuth uses the Square Sandbox connect URL. Use your Sandbox Application ID from the Square Developer Dashboard.'
+                    : ' — OAuth uses the production Square connect URL.'}
+                </p>
               </div>
-              <ConnectSquareButton oauthUrl={oauthUrl} />
+              {!appId || !oauthUrl ? (
+                <div className="rounded-lg border border-terracotta-200 bg-terracotta-50 p-3 text-sm text-terracotta-900">
+                  Missing <code className="text-xs">NEXT_PUBLIC_SQUARE_APP_ID</code>. Add your Square
+                  Application ID to <code className="text-xs">.env.local</code> and restart the dev server.
+                </div>
+              ) : (
+                <ConnectSquareButton oauthUrl={oauthUrl} />
+              )}
             </>
           )}
 

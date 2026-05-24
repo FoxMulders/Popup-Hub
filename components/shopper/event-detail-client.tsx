@@ -18,8 +18,8 @@ import { ReviewSection } from '@/components/shopper/review-section'
 import { VendorReviewsPanel } from '@/components/shopper/vendor-reviews-panel'
 import { buildScheduleLines } from '@/lib/shopper/events'
 import { buildVendorLineup, type VendorLineupEntry } from '@/lib/shopper/vendors'
-import { VendorAccessRequestForm } from '@/components/shopper/vendor-access-request-form'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
+import { Button } from '@/components/ui/button'
 import type {
   Auction,
   BoothApplication,
@@ -27,7 +27,6 @@ import type {
   Event,
   EventScheduleItem,
   Role,
-  VendorAccessRequest,
   VendorProduct,
 } from '@/types/database'
 import type { StrollerBadge } from '@/lib/shopper/layout'
@@ -49,7 +48,6 @@ interface EventDetailClientProps {
   existingReviewRating: number | null
   coordinatorId: string | null
   coordinatorName: string
-  vendorAccessRequest: VendorAccessRequest | null
   userRole: Role | null
   quarterAuctionBanner?: React.ReactNode
 }
@@ -71,7 +69,6 @@ export function EventDetailClient({
   existingReviewRating,
   coordinatorId,
   coordinatorName,
-  vendorAccessRequest,
   userRole,
   quarterAuctionBanner,
 }: EventDetailClientProps) {
@@ -225,13 +222,24 @@ export function EventDetailClient({
           </>
         )}
 
-        {userRole === 'vendor' && coordinatorId && event.status !== 'completed' ? (
-          <VendorAccessRequestForm
-            coordinatorId={coordinatorId}
-            coordinatorName={coordinatorName}
-            userId={userId}
-            existingRequest={vendorAccessRequest}
-          />
+        {userRole === 'shopper' && userId && event.status !== 'completed' ? (
+          <div className="rounded-xl border bg-white p-4">
+            <p className="text-sm font-medium">Want to sell at this market?</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Sign up as a vendor or enable vendor access on your profile, then apply from the vendor
+              portal. Juried markets review each booth application individually.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href="/profile">
+                <Button size="sm" variant="outline">
+                  Enable vendor access
+                </Button>
+              </Link>
+              <Link href={`/vendor/events/${event.id}`}>
+                <Button size="sm">Vendor event page</Button>
+              </Link>
+            </div>
+          </div>
         ) : null}
       </div>
 

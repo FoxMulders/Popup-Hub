@@ -21,6 +21,7 @@ interface EventCardProps {
   showBookingMode?: boolean
   selectedDate?: Date
   liveAuctionId?: string
+  showMarketOwner?: boolean
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -50,8 +51,10 @@ export function EventCard({
   showBookingMode = false,
   selectedDate,
   liveAuctionId,
+  showMarketOwner = false,
 }: EventCardProps) {
   const badgeStatus = displayStatus ?? event.status
+  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const hours =
     hoursLabel ??
     `${format(new Date(event.start_at), 'h:mm a')} – ${format(new Date(event.end_at), 'h:mm a')}`
@@ -93,44 +96,59 @@ export function EventCard({
           </span>
         ) : null}
       </div>
-      <Link href={href} className="block flex-1">
-        <CardContent className="p-4">
-          <h3 className="line-clamp-1 font-heading font-semibold leading-tight text-foreground">
-            {event.name}
-          </h3>
-          <div className="mt-2 space-y-1">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
-              <span className="truncate">{event.location_name}</span>
-            </p>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
-              {dateLabel}
-            </p>
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
-              {hours}
-            </p>
-            {capacityLabel ? (
+      <div className="flex flex-1 flex-col">
+        <Link href={href} className="block flex-1">
+          <CardContent className="p-4 pb-2">
+            <h3 className="line-clamp-1 font-heading font-semibold leading-tight text-foreground">
+              {event.name}
+            </h3>
+            <div className="mt-2 space-y-1">
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Users className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
-                {capacityLabel}
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
+                <span className="truncate">{event.location_name}</span>
               </p>
-            ) : null}
-            {vendorCount != null && vendorCount > 0 ? (
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Users className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
-                {vendorCount} vendor{vendorCount !== 1 ? 's' : ''} confirmed
+                <Calendar className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
+                {dateLabel}
               </p>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
+                {hours}
+              </p>
+              {capacityLabel ? (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
+                  {capacityLabel}
+                </p>
+              ) : null}
+              {vendorCount != null && vendorCount > 0 ? (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
+                  {vendorCount} vendor{vendorCount !== 1 ? 's' : ''} confirmed
+                </p>
+              ) : null}
+            </div>
+            {showBookingMode ? (
+              <Badge variant="outline" className="mt-3 capitalize text-xs">
+                {event.booking_mode === 'instant' ? '⚡ Instant Book' : '🔍 Juried Approval'}
+              </Badge>
             ) : null}
+          </CardContent>
+        </Link>
+        {showMarketOwner && coordinator?.full_name ? (
+          <div className="px-4 pb-3">
+            <p className="text-xs text-muted-foreground">
+              Market owner:{' '}
+              <Link
+                href={`/coordinators/${coordinator.id}`}
+                className="font-medium text-harvest-700 hover:underline"
+              >
+                {coordinator.full_name}
+              </Link>
+            </p>
           </div>
-          {showBookingMode ? (
-            <Badge variant="outline" className="mt-3 capitalize text-xs">
-              {event.booking_mode === 'instant' ? '⚡ Instant Book' : '🔍 Juried Approval'}
-            </Badge>
-          ) : null}
-        </CardContent>
-      </Link>
+        ) : null}
+      </div>
       {actions ? <div className="border-t px-4 pb-4 pt-0">{actions}</div> : null}
     </Card>
   )

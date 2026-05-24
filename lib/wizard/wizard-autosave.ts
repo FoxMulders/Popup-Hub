@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { BoothClearancePolicy, EventListingType } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
+import { effectiveScheduleTypeForListing } from '@/lib/events/listing-type'
 
 export interface EventDraftPayload {
   coordinatorId: string
@@ -90,6 +91,11 @@ export async function persistEventDraft(
   dayRows: DayRowPayload[],
   scheduleType: 'single' | 'multi'
 ): Promise<{ eventId: string; error: Error | null }> {
+  const effectiveScheduleType = effectiveScheduleTypeForListing(
+    draft.listingType,
+    scheduleType
+  )
+
   const sanitizedPayload = {
     coordinator_id: draft.coordinatorId,
     name: safeTrim(draft.name),
@@ -105,7 +111,7 @@ export async function persistEventDraft(
     status: draft.status ?? 'draft',
     cover_image_url: draft.coverImageUrl ?? null,
     allow_mlm: draft.allowMlm,
-    is_multi_day: scheduleType === 'multi',
+    is_multi_day: effectiveScheduleType === 'multi',
     require_full_attendance: draft.requireFullAttendance ?? true,
     market_insurance_required: draft.marketInsuranceRequired ?? false,
     skip_venue_layout: draft.skipVenueLayout ?? false,
@@ -152,7 +158,7 @@ export async function persistEventDraft(
     }
   }
 
-  if (scheduleType === 'multi') {
+  if (effectiveScheduleType === 'multi') {
     await supabase.from('event_days').delete().eq('event_id', resolvedId)
     const sorted = [...dayRows]
       .filter((r) => r.date && r.start_time && r.end_time)

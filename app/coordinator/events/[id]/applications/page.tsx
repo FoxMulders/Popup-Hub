@@ -24,7 +24,7 @@ export default async function ApplicationsPage({ params }: Props) {
   const [{ data: event }, { data: rawApplications }, { data: allCategories }] = await Promise.all([
     supabase
       .from('events')
-      .select('*')
+      .select('*, category_limits:event_category_limits(*, category:categories(name))')
       .eq('id', id)
       .eq('coordinator_id', user.id)
       .single(),

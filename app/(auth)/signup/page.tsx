@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
-import { Loader2, ShoppingBag, Calendar } from 'lucide-react'
+import { Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { type SignupRole } from '@/lib/auth/rbac'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
@@ -25,6 +25,12 @@ const ROLE_OPTIONS = [
     label: 'Patron',
     desc: 'Discover markets, maps & favorites',
     icon: ShoppingBag,
+  },
+  {
+    id: 'vendor' as SignupRole,
+    label: 'Vendor',
+    desc: 'Apply for booths — juried markets review each application',
+    icon: Store,
   },
   {
     id: 'coordinator' as SignupRole,
@@ -39,7 +45,8 @@ function SignupForm() {
   const supabase = createClient()
 
   const paramRole = params.get('role')
-  const defaultRole: SignupRole = paramRole === 'coordinator' ? 'coordinator' : 'shopper'
+  const defaultRole: SignupRole =
+    paramRole === 'coordinator' ? 'coordinator' : paramRole === 'vendor' ? 'vendor' : 'shopper'
 
   const [role, setRole] = useState<SignupRole>(defaultRole)
   const [fullName, setFullName] = useState('')
@@ -160,7 +167,7 @@ function SignupForm() {
         <CardContent className="flex flex-1 flex-col">
           <fieldset className="mb-6">
             <legend className="mb-2 block text-sm font-medium">I am a… *</legend>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {ROLE_OPTIONS.map(({ id, label, desc, icon: Icon }) => {
                 const selected = role === id
                 return (
@@ -192,11 +199,8 @@ function SignupForm() {
             </div>
           </fieldset>
           <p className="mb-4 text-xs text-muted-foreground leading-snug">
-            Vendors join by coordinator invitation. Already have a link?{' '}
-            <Link href="/vendor/activate" className="font-medium text-forest underline">
-              Activate vendor access
-            </Link>
-            .
+            Vendors can sign up directly and apply to open markets. Organizers only review applications
+            for <strong>juried</strong> events — instant-book markets approve automatically.
           </p>
           <Button
             type="button"

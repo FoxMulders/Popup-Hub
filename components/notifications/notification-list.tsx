@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +27,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   feedback_addressed: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   application_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-500 bg-sage-50' },
   application_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
+  application_follow_up: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-harvest-700 bg-harvest-50' },
   payment_failed: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
   auction_won: { icon: <Trophy className="h-4 w-4" />, color: 'text-harvest-500 bg-harvest-50' },
   auction_starting: { icon: <Trophy className="h-4 w-4" />, color: 'text-harvest-600 bg-harvest-50' },
@@ -33,6 +35,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
 }
 
 export function NotificationList({ initialNotifications, userId }: NotificationListProps) {
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   const [markingAll, setMarkingAll] = useState(false)
 
@@ -96,6 +99,17 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
     setMarkingAll(false)
   }
 
+  async function handleNotificationClick(notification: Notification) {
+    if (!notification.is_read) {
+      await markAsRead(notification.id)
+    }
+
+    const metadata = notification.metadata as { event_id?: string } | null
+    if (notification.type === 'application_follow_up' && metadata?.event_id) {
+      router.push(`/coordinator/events/${metadata.event_id}/applications`)
+    }
+  }
+
   const unreadCount = notifications.filter((n) => !n.is_read).length
 
   return (
@@ -132,7 +146,7 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
                 className={`w-full rounded-xl border bg-white p-4 text-left transition hover:shadow-sm ${
                   !notification.is_read ? 'ring-1 ring-harvest-400' : ''
                 }`}
-                onClick={() => !notification.is_read && markAsRead(notification.id)}
+                onClick={() => void handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-3">
                   <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${config.color}`}>

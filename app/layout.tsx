@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { Lora, Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
+import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
 import { BuildVersionFooter } from '@/components/brand/build-version-footer'
 import { InstallPrompt } from '@/components/navigation/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
@@ -83,6 +84,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
         <DocumentTitleSync initialRole={sessionRole} />
+        <AuthSessionGuard />
         <ServiceWorkerRegister />
         <div className="flex min-h-full flex-1 flex-col">
           <TooltipProvider>

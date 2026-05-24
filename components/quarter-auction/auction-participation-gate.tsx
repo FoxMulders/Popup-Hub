@@ -26,12 +26,15 @@ export function AuctionParticipationGate({
   const [participated, setParticipated] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  const loginReturnPath = loginNext ?? `/events/${eventId}/quarter-auction`
+
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/quarter-auction/${eventId}/participate`)
       if (res.status === 401) {
         setParticipated(false)
+        window.location.href = `/login?redirectTo=${encodeURIComponent(loginReturnPath)}`
         return
       }
       const json = await res.json()
@@ -40,7 +43,7 @@ export function AuctionParticipationGate({
     } finally {
       setLoading(false)
     }
-  }, [eventId, onParticipated])
+  }, [eventId, loginReturnPath, onParticipated])
 
   useEffect(() => {
     void refresh()
@@ -91,7 +94,7 @@ export function AuctionParticipationGate({
     return <>{children}</>
   }
 
-  const next = loginNext ?? `/events/${eventId}/quarter-auction`
+  const next = loginReturnPath
 
   return (
     <Card className="border-harvest-200 bg-harvest-50/40">
@@ -135,7 +138,7 @@ export function AuctionParticipationGate({
 
         <p className="text-xs text-muted-foreground text-center">
           Not signed in?{' '}
-          <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-forest underline">
+          <Link href={`/login?redirectTo=${encodeURIComponent(next)}`} className="text-forest underline">
             Log in
           </Link>
         </p>

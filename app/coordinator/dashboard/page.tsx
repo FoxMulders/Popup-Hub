@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus, Calendar, Clock, DollarSign } from 'lucide-react'
 import type { Event } from '@/types/database'
-import { VendorAccessRequestsPanel } from '@/components/coordinator/vendor-access-requests-panel'
+import { PendingBoothApplicationsPanel } from '@/components/coordinator/pending-booth-applications-panel'
+import type { PendingBoothApplicationRow } from '@/components/coordinator/pending-booth-applications-panel'
 import { PendingEtransferPanel } from '@/components/coordinator/pending-etransfer-panel'
 import type { PendingEtransferApplication } from '@/components/coordinator/pending-etransfer-panel'
 
@@ -25,6 +26,8 @@ async function CoordinatorStats({ userId }: { userId: string }) {
   const [
     { count: totalEvents },
     { count: pendingApplications },
+    { count: pendingInsuranceApplications },
+    { data: firstPendingApplication },
     { data: revenueRows },
     { data: profile },
   ] = await Promise.all([
@@ -36,6 +39,23 @@ async function CoordinatorStats({ userId }: { userId: string }) {
           .eq('status', 'pending')
           .in('event_id', eventIds)
       : Promise.resolve({ count: 0 }),
+    eventIds.length > 0
+      ? supabase
+          .from('booth_applications')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending_insurance')
+          .in('event_id', eventIds)
+      : Promise.resolve({ count: 0 }),
+    eventIds.length > 0
+      ? supabase
+          .from('booth_applications')
+          .select('event_id, event:events(name)')
+          .in('status', ['pending', 'pending_insurance'])
+          .in('event_id', eventIds)
+          .order('applied_at', { ascending: true })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     supabase
       .from('platform_transactions')
       .select('organizer_payout_amount')
@@ -58,6 +78,37 @@ async function CoordinatorStats({ userId }: { userId: string }) {
   const squareConnected =
     profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
 
+  const pendingCount = (pendingApplications ?? 0) + (pendingInsuranceApplications ?? 0)
+  const pendingEventId = firstPendingApplication?.event_id as string | undefined
+  const pendingEvent = Array.isArray(firstPendingApplication?.event)
+    ? firstPendingApplication?.event[0]
+    : firstPendingApplication?.event
+  const pendingEventName = pendingEvent?.name as string | undefined
+  const pendingHref = pendingEventId
+    ? `/coordinator/events/${pendingEventId}/applications`
+    : null
+
+  const pendingCard = (
+    <>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          Booth Applications
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-harvest-500" />
+          <span className="text-2xl font-bold">{pendingCount}</span>
+        </div>
+        {pendingCount > 0 && pendingHref ? (
+          <p className="text-xs font-medium text-harvest-700">
+            Review{pendingEventName ? ` · ${pendingEventName}` : ''} →
+          </p>
+        ) : null}
+      </CardContent>
+    </>
+  )
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -67,13 +118,15 @@ async function CoordinatorStats({ userId }: { userId: string }) {
           <span className="text-2xl font-bold">{totalEvents ?? 0}</span>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pending Applications</CardTitle></CardHeader>
-        <CardContent className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-harvest-500" />
-          <span className="text-2xl font-bold">{pendingApplications ?? 0}</span>
-        </CardContent>
-      </Card>
+      {pendingCount > 0 && pendingHref ? (
+        <Link href={pendingHref} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-harvest-400">
+          <Card className="h-full transition-colors group-hover:border-harvest-300 group-hover:bg-harvest-50/40">
+            {pendingCard}
+          </Card>
+        </Link>
+      ) : (
+        <Card>{pendingCard}</Card>
+      )}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Booth Revenue</CardTitle></CardHeader>
         <CardContent className="flex items-center gap-2">
@@ -122,19 +175,32 @@ export default async function CoordinatorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: accessRequests } = await supabase
-    .from('vendor_access_requests')
-    .select('*, shopper:profiles!vendor_access_requests_shopper_id_fkey(full_name, email)')
-    .eq('coordinator_id', user.id)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
-
   const { data: myEvents } = await supabase
     .from('events')
-    .select('id')
+    .select('id, name')
     .eq('coordinator_id', user.id)
+    .order('start_at', { ascending: false })
 
   const eventIds = myEvents?.map((e) => e.id) ?? []
+  const firstEventApplicationsHref =
+    myEvents?.[0]?.id != null ? `/coordinator/events/${myEvents[0].id}/applications` : null
+
+  let pendingBoothApplications: PendingBoothApplicationRow[] = []
+  if (eventIds.length > 0) {
+    const { data: boothApps } = await supabase
+      .from('booth_applications')
+      .select(`
+        *,
+        vendor:profiles!booth_applications_vendor_id_fkey(full_name, email),
+        event:events(id, name, booking_mode),
+        category:categories(name)
+      `)
+      .in('event_id', eventIds)
+      .in('status', ['pending', 'pending_insurance'])
+      .order('applied_at', { ascending: true })
+
+    pendingBoothApplications = (boothApps ?? []) as PendingBoothApplicationRow[]
+  }
 
   let pendingEtransfers: PendingEtransferApplication[] = []
   if (eventIds.length > 0) {
@@ -198,7 +264,11 @@ export default async function CoordinatorDashboard() {
         <CoordinatorStats userId={user.id} />
       </Suspense>
 
-      <VendorAccessRequestsPanel requests={accessRequests ?? []} />
+      <PendingBoothApplicationsPanel
+        applications={pendingBoothApplications}
+        hasEvents={eventIds.length > 0}
+        firstEventApplicationsHref={firstEventApplicationsHref}
+      />
 
       <PendingEtransferPanel applications={pendingEtransfers} />
 

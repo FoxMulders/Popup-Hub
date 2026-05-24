@@ -166,7 +166,7 @@ export function PaddleChipPicker({
         <CardTitle className="text-base">Choose your paddle numbers</CardTitle>
         <p className="text-xs text-muted-foreground leading-relaxed">
           Tap chips to add to cart — numbers stay open until paid. {formatCredits(priceCredits)} each.
-          Item bids use separate per-item entry credits when bidding opens.
+          Item bids use separate per-item entry quarters when bidding opens.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -240,7 +240,7 @@ export function PaddleChipPicker({
             )}
           </Button>
           {cart.size > 0 && !canAfford ? (
-            <p className="text-xs text-destructive text-center">Not enough credits in your wallet.</p>
+            <p className="text-xs text-destructive text-center">Not enough quarters in your wallet.</p>
           ) : null}
         </div>
 

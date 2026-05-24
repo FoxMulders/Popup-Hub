@@ -24,6 +24,7 @@ import { isPassportReadyForApplication } from '@/lib/vendor/passport-application
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
+import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
 import type { Auction, Event, EventCategoryLimit } from '@/types/database'
 
 interface Props {
@@ -213,8 +214,27 @@ export default async function VendorEventDetailPage({ params }: Props) {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border bg-white p-6">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">Apply for this market</h2>
+      <div id="your-application" className="scroll-mt-24 rounded-2xl border bg-white p-6">
+        <h2 className="mb-3 text-lg font-semibold text-foreground">
+          {existingApp ? 'Your application' : 'Apply for this market'}
+        </h2>
+        {existingApp && coordinator ? (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-canvas px-4 py-3">
+            <MarketOwnerLink
+              owner={{
+                id: coordinator.id,
+                full_name: coordinator.full_name,
+                avatar_url: coordinator.avatar_url,
+              }}
+              compact
+            />
+            <Link href="/vendor/applications">
+              <Button size="sm" variant="outline" className="h-8 text-xs">
+                All applications
+              </Button>
+            </Link>
+          </div>
+        ) : null}
         {isQuarterAuction ? (
           <p className="mb-4 text-sm text-muted-foreground">
             Vendor applications are required for this quarter auction. Apply, get approved, and pay any booth fee —

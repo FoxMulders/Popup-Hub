@@ -40,7 +40,7 @@ import {
 } from '@/lib/categories/mlm-constraints'
 import { useWizardCritiqueAgents } from '@/lib/wizard/critique/use-wizard-critique-agents'
 import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity, resolveMarketCityId } from '@/lib/wizard/market-cities'
-import { isQuarterAuctionListing } from '@/lib/events/listing-type'
+import { effectiveScheduleTypeForListing, isQuarterAuctionListing } from '@/lib/events/listing-type'
 import {
   DEFAULT_MARKET_END,
   DEFAULT_MARKET_START,
@@ -178,9 +178,10 @@ export function MarketSetupWizard({
 
   const [name, setName] = useState(existing?.name ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
-  const [scheduleType, setScheduleType] = useState<'single' | 'multi'>(
-    existing?.is_multi_day ? 'multi' : 'single'
-  )
+  const [scheduleType, setScheduleType] = useState<'single' | 'multi'>(() => {
+    if (existing && isQuarterAuctionListing(existing.listing_type)) return 'single'
+    return existing?.is_multi_day ? 'multi' : 'single'
+  })
   const [startDate, setStartDate] = useState(existing?.start_at ? existing.start_at.slice(0, 10) : '')
   const [startTime, setStartTime] = useState(existing?.start_at ? existing.start_at.slice(11, 16) : DEFAULT_MARKET_START)
   const [endDate, setEndDate] = useState(existing?.end_at ? existing.end_at.slice(0, 10) : '')
@@ -417,7 +418,8 @@ export function MarketSetupWizard({
   }
 
   function resolveScheduleBounds(): { startAt: string; endAt: string } | null {
-    if (scheduleType === 'multi') {
+    const effectiveSchedule = effectiveScheduleTypeForListing(listingType, scheduleType)
+    if (effectiveSchedule === 'multi') {
       const filledRows = dayRows.filter((r) => r.date && r.start_time && r.end_time)
       if (filledRows.length === 0) return null
       if (dayRows.some((r) => !r.date || !r.start_time || !r.end_time)) return null
@@ -556,7 +558,16 @@ export function MarketSetupWizard({
     setListingType(next)
     if (isQuarterAuctionListing(next)) {
       setSkipVenueLayout(true)
+      setScheduleType('single')
     }
+  }
+
+  function handleScheduleTypeChange(next: 'single' | 'multi') {
+    if (isQuarterAuctionListing(listingType) && next === 'multi') {
+      toast.error('Quarter auctions must be single-day events.')
+      return
+    }
+    setScheduleType(next)
   }
 
   function handleGlobalMlmCapChange(cap: number) {
@@ -811,7 +822,7 @@ export function MarketSetupWizard({
                 description={description}
                 onDescriptionChange={setDescription}
                 scheduleType={scheduleType}
-                onScheduleTypeChange={setScheduleType}
+                onScheduleTypeChange={handleScheduleTypeChange}
                 startDate={startDate}
                 onStartDateChange={setStartDate}
                 startTime={startTime}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -69,6 +70,7 @@ import {
 } from '@/lib/applications/payment-fields'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
+import { ApplicationStatusActions, ApplicationStatusBadgeLink } from '@/components/vendor/application-status-actions'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
 
 interface ExistingApplication {
@@ -83,6 +85,7 @@ interface ApplyButtonProps {
   event: Event
   userId: string
   applicationStatus?: ApplicationStatus | null
+  applicationId?: string | null
   existingApplication?: ExistingApplication | null
   boothPriceCents?: number
   applicationsOpen?: boolean
@@ -92,6 +95,7 @@ export function ApplyButton({
   event,
   userId,
   applicationStatus = null,
+  applicationId = null,
   existingApplication = null,
   boothPriceCents = 0,
   applicationsOpen = true,
@@ -478,44 +482,55 @@ export function ApplyButton({
     )
   }
 
+  const resolvedApplicationId = applicationId ?? existingApplication?.id ?? null
+
+  if (localApplicationStatus === 'pending' && resolvedApplicationId) {
+    return (
+      <ApplicationStatusActions
+        event={event}
+        applicationId={resolvedApplicationId}
+        status="pending"
+      />
+    )
+  }
+
   if (localApplicationStatus === 'pending') {
     return (
       <div className="space-y-2">
-        <Button size="sm" className="w-full" variant="secondary" disabled>
-          <Clock className="mr-2 h-3.5 w-3.5" />
-          Application Pending
-        </Button>
+        <ApplicationStatusBadgeLink event={event} status="pending" />
         <p className="text-center text-xs text-muted-foreground">
-          The organizer is reviewing your application. You&apos;ll be notified when approved.
+          The organizer is reviewing your application.
         </p>
       </div>
+    )
+  }
+
+  if (localApplicationStatus === 'waitlisted' && resolvedApplicationId) {
+    return (
+      <ApplicationStatusActions
+        event={event}
+        applicationId={resolvedApplicationId}
+        status="waitlisted"
+      />
     )
   }
 
   if (localApplicationStatus === 'waitlisted') {
+    return <ApplicationStatusBadgeLink event={event} status="waitlisted" />
+  }
+
+  if (localApplicationStatus === 'pending_insurance' && resolvedApplicationId) {
     return (
-      <div className="space-y-2">
-        <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.warning}`}>
-          Waitlisted
-        </Badge>
-        <p className="text-center text-xs text-muted-foreground">
-          We&apos;ll notify you if a booth opens from a cancellation.
-        </p>
-      </div>
+      <ApplicationStatusActions
+        event={event}
+        applicationId={resolvedApplicationId}
+        status="pending_insurance"
+      />
     )
   }
 
   if (localApplicationStatus === 'pending_insurance') {
-    return (
-      <div className="space-y-2">
-        <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.warning}`}>
-          Pending Proof of Insurance
-        </Badge>
-        <p className="text-center text-xs text-muted-foreground">
-          Upload market insurance from My Applications to finalize your booth.
-        </p>
-      </div>
-    )
+    return <ApplicationStatusBadgeLink event={event} status="pending_insurance" />
   }
 
   if (localApplicationStatus === 'approved') {

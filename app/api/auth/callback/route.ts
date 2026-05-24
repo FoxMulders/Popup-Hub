@@ -99,6 +99,10 @@ export async function GET(request: Request) {
     await supabase.rpc('apply_signup_role', { p_role: 'coordinator' })
   }
 
+  if (roleParam === 'vendor') {
+    await supabase.rpc('apply_signup_role', { p_role: 'vendor' })
+  }
+
   const shareCookie = cookieStore.get('signup_share_contact')?.value
   if (shareCookie === '1' || shareCookie === '0') {
     await supabase

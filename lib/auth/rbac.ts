@@ -9,7 +9,7 @@ export const ROLE_LEVEL = {
 
 export type SignupRole = Role
 
-export const SIGNUP_ROLES: readonly SignupRole[] = ['shopper', 'coordinator'] as const
+export const SIGNUP_ROLES: readonly SignupRole[] = ['shopper', 'vendor', 'coordinator'] as const
 
 /** Vendor portal paths allowed before role promotion (invitation acceptance). */
 export const SHOPPER_ALLOWED_VENDOR_PREFIXES = ['/vendor/activate'] as const

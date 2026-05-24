@@ -22,7 +22,7 @@ export default async function PatronQuarterAuctionPage({ params }: Props) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?next=/events/${eventId}/quarter-auction`)
+  if (!user) redirect(`/login?redirectTo=${encodeURIComponent(`/events/${eventId}/quarter-auction`)}`)
 
   const { data: event } = await supabase
     .from('events')

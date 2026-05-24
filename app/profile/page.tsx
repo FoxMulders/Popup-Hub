@@ -6,7 +6,7 @@ import { FoundingVendorBadge } from '@/components/vendor/founding-vendor-badge'
 import { ProfileForm } from './profile-form'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { PurchaseHistory } from '@/components/shopper/purchase-history'
-import { VendorAccessStatus } from '@/components/shopper/vendor-access-status'
+import { AccountAccessPanel } from '@/components/profile/account-access-panel'
 import { PASSPORT_PATH, passportCompletionSummary } from '@/lib/passport/requirements'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,14 @@ export default async function ProfilePage() {
   if (!profile) redirect('/login')
 
   const completion = passportCompletionSummary(profile.role, passport, profile as Profile)
+
+  const { count: ownedEventCount } =
+    profile.role === 'coordinator'
+      ? await supabase
+          .from('events')
+          .select('id', { count: 'exact', head: true })
+          .eq('coordinator_id', user.id)
+      : { count: 0 }
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
@@ -105,21 +113,21 @@ export default async function ProfilePage() {
               </ul>
             </div>
 
-            <div className="rounded-2xl border bg-harvest-50 border-harvest-100 p-6">
-              <h3 className="font-semibold text-harvest-800 mb-2">Account Role</h3>
-              <p className="text-sm text-harvest-700 capitalize font-medium">{profile.role}</p>
-              {profile.is_beta_tester ? (
-                <div className="mt-3">
-                  <FoundingVendorBadge />
-                  <p className="text-xs text-harvest-700 mt-2 leading-relaxed">
-                    Early adopter perks are active — premium placement and priority queue bypass included.
-                  </p>
-                </div>
-              ) : null}
-              <p className="text-xs text-harvest-600 mt-1.5">
-                Contact support to change your account role.
-              </p>
-            </div>
+            <AccountAccessPanel
+              email={profile.email}
+              role={profile.role}
+              ownedEventCount={ownedEventCount ?? 0}
+            />
+
+            {profile.is_beta_tester ? (
+              <div className="rounded-2xl border bg-harvest-50 border-harvest-100 p-6">
+                <h3 className="font-semibold text-harvest-800 mb-2">Early adopter</h3>
+                <FoundingVendorBadge />
+                <p className="text-xs text-harvest-700 mt-2 leading-relaxed">
+                  Early adopter perks are active — premium placement and priority queue bypass included.
+                </p>
+              </div>
+            ) : null}
 
             {profile.role === 'coordinator' && (
               <div className="rounded-2xl border bg-white p-6 space-y-3">
@@ -149,7 +157,6 @@ export default async function ProfilePage() {
             )}
 
             <PurchaseHistory userId={profile.id} hidden />
-            <VendorAccessStatus userId={profile.id} />
           </aside>
         </div>
     </div>

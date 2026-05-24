@@ -22,11 +22,16 @@ import {
 import type { ApplicationStatus, Event } from '@/types/database'
 import { Search } from 'lucide-react'
 
+export type VendorEventApplication = {
+  id: string
+  status: ApplicationStatus
+}
+
 interface VendorMarketGridProps {
   activeEvents: Event[]
   archivedEvents: Event[]
   userId: string
-  applicationStatuses: Record<string, ApplicationStatus>
+  applicationsByEventId: Record<string, VendorEventApplication>
   capacityByEventId: Record<string, EventCapacitySummary>
 }
 
@@ -50,14 +55,14 @@ function filterEvents(events: Event[], query: string): Event[] {
 function MarketGrid({
   events,
   userId,
-  applicationStatuses,
+  applicationsByEventId,
   capacityByEventId,
   emptyMessage,
   showDistance,
 }: {
   events: EventWithMeta[]
   userId: string
-  applicationStatuses: Record<string, ApplicationStatus>
+  applicationsByEventId: Record<string, VendorEventApplication>
   capacityByEventId: Record<string, EventCapacitySummary>
   emptyMessage: string
   showDistance: boolean
@@ -86,6 +91,7 @@ function MarketGrid({
             event={event}
             href={`/vendor/events/${event.id}`}
             showBookingMode
+            showMarketOwner
             displayStatus={displayStatus}
             capacityLabel={capacityLabel}
             distanceLabel={
@@ -97,7 +103,8 @@ function MarketGrid({
               <ApplyButton
                 event={event}
                 userId={userId}
-                applicationStatus={applicationStatuses[event.id] ?? null}
+                applicationStatus={applicationsByEventId[event.id]?.status ?? null}
+                applicationId={applicationsByEventId[event.id]?.id ?? null}
                 applicationsOpen={applicationsOpen}
               />
             }
@@ -112,7 +119,7 @@ export function VendorMarketGrid({
   activeEvents,
   archivedEvents,
   userId,
-  applicationStatuses,
+  applicationsByEventId,
   capacityByEventId,
 }: VendorMarketGridProps) {
   const [search, setSearch] = useState('')
@@ -179,7 +186,7 @@ export function VendorMarketGrid({
           <MarketGrid
             events={filteredActive}
             userId={userId}
-            applicationStatuses={applicationStatuses}
+            applicationsByEventId={applicationsByEventId}
             capacityByEventId={capacityByEventId}
             emptyMessage={
               search
@@ -194,12 +201,12 @@ export function VendorMarketGrid({
           <MarketGrid
             events={filteredArchived}
             userId={userId}
-            applicationStatuses={applicationStatuses}
+            applicationsByEventId={applicationsByEventId}
             capacityByEventId={capacityByEventId}
             emptyMessage={
               search
                 ? 'No past events match your search.'
-                : 'No past events within this distance.'
+                : 'Past markets you applied to will appear here.'
             }
             showDistance
           />

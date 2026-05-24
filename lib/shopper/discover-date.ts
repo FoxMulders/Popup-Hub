@@ -1,11 +1,15 @@
 import { addDays, startOfDay } from 'date-fns'
 import { formatDateParam, parseDateParam } from '@/lib/shopper/events'
 
-export type DateFilterPreset = 'today' | 'tomorrow' | 'weekend' | 'custom'
+export type DateFilterPreset = 'today' | 'tomorrow' | 'weekend' | 'next_weekend' | 'custom'
 
 function weekendAnchorDate(base: Date): Date {
   const day = base.getDay()
   return addDays(base, day === 6 ? 0 : day === 0 ? -1 : 6 - day)
+}
+
+function nextWeekendAnchorDate(base: Date): Date {
+  return addDays(weekendAnchorDate(base), 7)
 }
 
 /** Resolve the calendar day used for filtering from URL preset + date param. */
@@ -14,7 +18,12 @@ export function resolveDiscoverFilterDate(
   dateParam: string | null
 ): { preset: DateFilterPreset; date: Date } {
   const preset: DateFilterPreset =
-    when === 'tomorrow' || when === 'weekend' || when === 'custom' ? when : 'today'
+    when === 'tomorrow' ||
+    when === 'weekend' ||
+    when === 'next_weekend' ||
+    when === 'custom'
+      ? when
+      : 'today'
 
   const today = startOfDay(new Date())
 
@@ -26,6 +35,9 @@ export function resolveDiscoverFilterDate(
   }
   if (preset === 'weekend') {
     return { preset, date: weekendAnchorDate(today) }
+  }
+  if (preset === 'next_weekend') {
+    return { preset, date: nextWeekendAnchorDate(today) }
   }
 
   return { preset, date: parseDateParam(dateParam) }

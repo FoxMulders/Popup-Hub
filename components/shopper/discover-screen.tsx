@@ -110,7 +110,7 @@ export function DiscoverScreen({
   const filtered = useMemo(() => {
     const scoped = filterEventsByListingType(events, 'community_market')
     const byDate =
-      datePreset === 'weekend'
+      datePreset === 'weekend' || datePreset === 'next_weekend'
         ? filterEventsByWeekend(scoped, filterDate)
         : filterEventsByDate(scoped, filterDate)
     const withMeta: EventWithMeta[] = byDate.map((e) => ({
@@ -124,9 +124,10 @@ export function DiscoverScreen({
   }, [events, datePreset, filterDate, origin, radiusKm, vendorCounts, liveAuctionsOnly, activeAuctionByEventId])
 
   const dateSummary = useMemo(() => {
-    if (datePreset === 'weekend') {
+    if (datePreset === 'weekend' || datePreset === 'next_weekend') {
       const [sat, sun] = getWeekendDates(filterDate)
-      return `${format(sat, 'EEEE, MMMM d')} – ${format(sun, 'MMMM d, yyyy')}`
+      const prefix = datePreset === 'next_weekend' ? 'Next weekend' : 'This weekend'
+      return `${prefix}: ${format(sat, 'EEEE, MMMM d')} – ${format(sun, 'MMMM d, yyyy')}`
     }
     return format(filterDate, 'EEEE, MMMM d, yyyy')
   }, [datePreset, filterDate])
@@ -181,6 +182,15 @@ export function DiscoverScreen({
             onClick={() => setDatePreset('weekend')}
           >
             This Weekend
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={datePreset === 'next_weekend' ? 'default' : 'outline'}
+            className="min-h-11 touch-manipulation"
+            onClick={() => setDatePreset('next_weekend')}
+          >
+            Next Weekend
           </Button>
           <label
             className={cn(

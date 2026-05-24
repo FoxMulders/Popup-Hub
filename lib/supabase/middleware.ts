@@ -11,6 +11,7 @@ import {
   accessDeniedRedirect,
   isPathAccessAllowed,
 } from '@/lib/auth/rbac'
+import { isPublicPath } from '@/lib/auth/public-paths'
 import type { Role } from '@/types/database'
 
 /** Supabase may redirect to Site URL root with ?code= instead of /api/auth/callback. */
@@ -72,34 +73,11 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const publicPaths = [
-    '/',
-    '/login',
-    '/signup',
-    '/auth/callback',
-    '/auth/confirm',
-    '/api/auth/callback',
-  ]
-
-  const isPublicPath =
-    publicPaths.includes(pathname) ||
-    pathname.startsWith('/discover') ||
-    pathname.startsWith('/events/') ||
-    pathname.startsWith('/auctions/') ||
-    pathname.startsWith('/coordinators/') ||
-    pathname.startsWith('/checkin/') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/square/webhook') ||
-    pathname.startsWith('/api/square/oauth/callback') ||
-    pathname.startsWith('/api/reminders/') ||
-    pathname.startsWith('/api/cron/') ||
-    pathname.startsWith('/favicon') ||
-    pathname === '/sw.js' ||
-    pathname === '/manifest.json' ||
-    pathname.startsWith('/icons/') ||
+  const isPublicPathMatch =
+    isPublicPath(pathname) ||
     (isDevMockAuthEnabled() && pathname.startsWith('/api/dev/mock-login'))
 
-  if (!user && !isPublicPath) {
+  if (!user && !isPublicPathMatch) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirectTo', pathname)

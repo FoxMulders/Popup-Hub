@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EventDetailClient } from '@/components/shopper/event-detail-client'
 import { getStrollerBadge } from '@/lib/shopper/layout'
-import { getVendorAccessRequest } from '@/lib/vendor/access'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
 import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-banner'
 import type {
@@ -138,7 +137,6 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
 
   let userRole: Role | null = null
-  let vendorAccessRequest = null
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -146,9 +144,6 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
       .eq('id', user.id)
       .single()
     userRole = (profile?.role as Role | undefined) ?? 'shopper'
-    if (userRole === 'vendor' && coordinator?.id) {
-      vendorAccessRequest = await getVendorAccessRequest(supabase, user.id, coordinator.id)
-    }
   }
 
   const auctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
@@ -173,7 +168,6 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
       existingReviewRating={reviewResult.data?.rating ?? null}
       coordinatorId={coordinator?.id ?? null}
       coordinatorName={coordinator?.full_name ?? 'Organizer'}
-      vendorAccessRequest={vendorAccessRequest}
       userRole={userRole}
       quarterAuctionBanner={<QuarterAuctionEventBanner eventId={eventId} />}
     />

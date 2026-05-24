@@ -37,7 +37,7 @@ interface WalletViewProps {
 }
 
 const TX_LABELS: Record<string, string> = {
-  deposit: 'Credit purchase',
+  deposit: 'Quarter purchase',
   withdrawal: 'Withdrawal',
   quarter_drop: 'Quarter drop',
   auction_win: 'Auction win',
@@ -166,7 +166,7 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
                 <Tooltip>
                   <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    Credits for quarter auctions. 1 credit = $0.25. Used for virtual paddles and bid
+                    Quarters for quarter auctions. 1 quarter = $0.25. Used for virtual paddles and bid
                     entries.
                   </TooltipContent>
                 </Tooltip>

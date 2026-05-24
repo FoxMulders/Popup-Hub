@@ -93,7 +93,7 @@ export async function purchaseEventPaddles(
     .eq('balance', wallet.balance)
 
   if (walletError) {
-    return { ok: false, error: 'Could not deduct credits — please retry' }
+    return { ok: false, error: 'Could not deduct quarters — please retry' }
   }
 
   const rows = unique.map((n) => ({

@@ -21,9 +21,9 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
       )}
       aria-label="Site footer"
     >
-      <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-3 px-4 py-4 sm:gap-4 sm:py-5 xl:px-10">
+      <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-1.5 px-4 py-3 sm:gap-2 sm:py-3.5 xl:px-10">
         <nav aria-label="Legal and help">
-          <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-x-5">
+          <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:gap-x-5">
             {LEGAL_LINKS.map(({ href, label }) => (
               <li key={href}>
                 <Link
@@ -39,7 +39,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
 
         <BrandLogoLockup className="shrink-0" />
 
-        <div className="flex flex-col items-center gap-1 text-center">
+        <div className="flex flex-col items-center gap-0.5 text-center">
           <p className="text-xs text-muted-foreground sm:text-sm">
             © {year} Popup Hub. All rights reserved.
           </p>

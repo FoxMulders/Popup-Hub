@@ -73,6 +73,15 @@ export function partitionEventsByPhase<T extends EventTimingFields>(
   return { active, archived }
 }
 
+/** Past vendor directory markets the signed-in vendor applied to (any booth application). */
+export function filterVendorParticipatedArchivedEvents<T extends { id: string }>(
+  archivedEvents: T[],
+  vendorEventIds: Iterable<string>,
+): T[] {
+  const participated = new Set(vendorEventIds)
+  return archivedEvents.filter((event) => participated.has(event.id))
+}
+
 export function sortEventsByStartAsc<T extends Pick<Event, 'start_at'>>(events: T[]): T[] {
   return [...events].sort(
     (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
@@ -94,7 +103,7 @@ export const VENDOR_MARKET_STATUSES: EventStatus[] = [
 
 export const VENDOR_EVENT_SELECT = `
   *,
-  coordinator:profiles!events_coordinator_id_fkey(id, full_name),
+  coordinator:profiles!events_coordinator_id_fkey(id, full_name, email, avatar_url, reliability_score, recent_late_cancellation_at),
   category_limits:event_category_limits(
     *,
     category:categories(id, name)

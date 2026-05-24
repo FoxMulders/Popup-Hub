@@ -155,23 +155,30 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
 
       <div className="space-y-2">
         <Label className={WIZARD_FIELD_LABEL}>Schedule Type</Label>
-        <div className={WIZARD_TOGGLE_GROUP}>
-          {(['single', 'multi'] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => props.onScheduleTypeChange(type)}
-              className={cn(
-                WIZARD_TOGGLE_OPTION,
-                props.scheduleType === type
-                  ? WIZARD_TOGGLE_OPTION_ACTIVE
-                  : WIZARD_TOGGLE_OPTION_INACTIVE
-              )}
-            >
-              {type === 'single' ? 'Single Day' : 'Multi-Day'}
-            </button>
-          ))}
-        </div>
+        {props.listingType === 'garage_yard_sale' ? (
+          <p className={WIZARD_INFO_BOX}>
+            Quarter auctions are limited to a single day. Multi-day scheduling is not available for this
+            listing type.
+          </p>
+        ) : (
+          <div className={WIZARD_TOGGLE_GROUP}>
+            {(['single', 'multi'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => props.onScheduleTypeChange(type)}
+                className={cn(
+                  WIZARD_TOGGLE_OPTION,
+                  props.scheduleType === type
+                    ? WIZARD_TOGGLE_OPTION_ACTIVE
+                    : WIZARD_TOGGLE_OPTION_INACTIVE
+                )}
+              >
+                {type === 'single' ? 'Single Day' : 'Multi-Day'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-1">

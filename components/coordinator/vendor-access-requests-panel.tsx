@@ -48,20 +48,16 @@ export function VendorAccessRequestsPanel({ requests: initial }: VendorAccessReq
   const pendingRequests = requests.filter((r) => r.status === 'pending')
 
   if (pendingRequests.length === 0) {
-    return (
-      <div className="market-panel p-5">
-        <h3 className="font-heading font-semibold">Vendor access requests</h3>
-        <p className="mt-1 text-sm text-muted-foreground">No pending requests right now.</p>
-      </div>
-    )
+    return null
   }
 
   return (
     <div className="market-panel space-y-4 p-5">
       <div>
-        <h3 className="font-heading font-semibold">Vendor access requests</h3>
+        <h3 className="font-heading font-semibold">Patron vendor-access requests</h3>
         <p className="text-sm text-muted-foreground">
-          Approve patrons who want to sell at your markets before they can apply for booths.
+          Patrons asking to become vendors under your organizer profile — not booth applications for a
+          specific market. Booth applications appear in the section above.
         </p>
       </div>
       <ul className="space-y-3">

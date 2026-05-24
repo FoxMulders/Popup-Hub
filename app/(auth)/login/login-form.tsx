@@ -18,7 +18,7 @@ import { Loader2 } from 'lucide-react'
 export default function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? '/discover'
+  const redirectTo = searchParams.get('redirectTo') ?? searchParams.get('next') ?? '/discover'
   const authError = searchParams.get('error')
   const authErrorDetail = searchParams.get('detail')
   const supabase = createClient()
@@ -111,15 +111,10 @@ export default function LoginForm() {
         .eq('id', user.id)
         .single()
 
-      const { count } = await supabase
-        .from('coordinator_vendor_approvals')
-        .select('id', { count: 'exact', head: true })
-        .eq('vendor_user_id', user.id)
-
       const dashboard =
         profile?.role === 'coordinator'
           ? '/coordinator/dashboard'
-          : (count ?? 0) > 0 && profile?.role === 'vendor'
+          : profile?.role === 'vendor'
             ? '/vendor/dashboard'
             : redirectTo
 

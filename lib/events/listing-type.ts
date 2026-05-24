@@ -5,3 +5,11 @@ export function isQuarterAuctionListing(
 ): boolean {
   return (listingType ?? 'community_market') === 'garage_yard_sale'
 }
+
+/** Quarter auctions must always be single-day events. */
+export function effectiveScheduleTypeForListing(
+  listingType: EventListingType | null | undefined,
+  scheduleType: 'single' | 'multi'
+): 'single' | 'multi' {
+  return isQuarterAuctionListing(listingType) ? 'single' : scheduleType
+}

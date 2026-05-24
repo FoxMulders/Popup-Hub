@@ -40,7 +40,7 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
     { href: '/vendor/dashboard', label: 'Dashboard' },
     { href: '/vendor/passport', label: 'My Passport' },
     { href: '/vendor/events', label: 'Apply for open markets' },
-    { href: '/vendor/applications', label: 'Applications' },
+    { href: '/vendor/applications', label: 'My Applications' },
     { href: '/wallet', label: 'Wallet' },
   ],
   coordinator: [

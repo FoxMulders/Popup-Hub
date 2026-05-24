@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Skeleton } from '@/components/ui/skeleton'
 import { VendorMarketGrid } from '@/components/vendor/vendor-market-grid'
 import {
+  filterVendorParticipatedArchivedEvents,
   partitionEventsByPhase,
   sortEventsByStartAsc,
   sortEventsByStartDesc,
@@ -22,21 +23,29 @@ async function VendorMarkets({ userId }: { userId: string }) {
   const [events, capacityByEventId, { data: myApplications }] = await Promise.all([
     getCachedVendorDirectoryMarkets(),
     getCachedVendorDirectoryCapacitySummaries(),
-    supabase.from('booth_applications').select('event_id, status').eq('vendor_id', userId),
+    supabase.from('booth_applications').select('id, event_id, status').eq('vendor_id', userId),
   ])
 
   const { active, archived } = partitionEventsByPhase(events as Event[])
 
-  const applicationStatuses = Object.fromEntries(
-    (myApplications ?? []).map((row) => [row.event_id, row.status as ApplicationStatus])
-  ) as Record<string, ApplicationStatus>
+  const applicationsByEventId = Object.fromEntries(
+    (myApplications ?? []).map((row) => [
+      row.event_id,
+      { id: row.id, status: row.status as ApplicationStatus },
+    ]),
+  ) as Record<string, { id: string; status: ApplicationStatus }>
+
+  const vendorArchived = filterVendorParticipatedArchivedEvents(
+    archived,
+    Object.keys(applicationsByEventId),
+  )
 
   return (
     <VendorMarketGrid
       activeEvents={sortEventsByStartAsc(active)}
-      archivedEvents={sortEventsByStartDesc(archived)}
+      archivedEvents={sortEventsByStartDesc(vendorArchived)}
       userId={userId}
-      applicationStatuses={applicationStatuses}
+      applicationsByEventId={applicationsByEventId}
       capacityByEventId={capacityByEventId}
     />
   )

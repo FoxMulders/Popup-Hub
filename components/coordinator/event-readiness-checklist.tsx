@@ -101,8 +101,8 @@ export function EventReadinessChecklist({
         label: 'Copy public listing link',
       },
       approved: {
-        type: 'scroll',
-        targetId: 'applications',
+        type: 'link',
+        href: `/coordinator/events/${eventId}/applications`,
         label:
           pendingCount > 0
             ? `Review ${pendingCount} pending application${pendingCount === 1 ? '' : 's'}`
@@ -149,8 +149,8 @@ export function EventReadinessChecklist({
         label: 'Copy listing link',
       },
       approved: {
-        type: 'scroll',
-        targetId: 'applications',
+        type: 'link',
+        href: `/coordinator/events/${eventId}/applications`,
         label: 'Review applications',
       },
       layout: {

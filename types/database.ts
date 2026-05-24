@@ -43,6 +43,7 @@ export type NotificationType =
   | 'vendor_sold_out'
   | 'vendor_access_approved'
   | 'vendor_access_rejected'
+  | 'application_follow_up'
   | 'market_feedback'
   | 'feedback_addressed'
 

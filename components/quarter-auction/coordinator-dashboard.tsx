@@ -214,7 +214,7 @@ export function CoordinatorQuarterAuction({
   async function setItemEntryCost(itemId: string) {
     const credits = parseInt(entryCost, 10)
     if (!credits || credits < 1) {
-      toast.error('Enter a valid entry cost in credits')
+      toast.error('Enter a valid entry cost in quarters')
       return
     }
     setBusy(`cost:${itemId}`)
@@ -354,7 +354,7 @@ export function CoordinatorQuarterAuction({
         <CardContent>
           <form onSubmit={saveSettings} className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label htmlFor="paddle-cost">Paddle purchase (credits)</Label>
+              <Label htmlFor="paddle-cost">Paddle purchase (quarters)</Label>
               <Input
                 id="paddle-cost"
                 type="number"
@@ -369,7 +369,7 @@ export function CoordinatorQuarterAuction({
               </p>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="default-entry">Default item entry (credits)</Label>
+              <Label htmlFor="default-entry">Default item entry (quarters)</Label>
               <Input
                 id="default-entry"
                 type="number"
@@ -380,7 +380,7 @@ export function CoordinatorQuarterAuction({
                 }
               />
               <p className="text-xs text-muted-foreground">
-                Starting value when activating items — each item can be 1, 2, or more credits.
+                Starting value when activating items — each item can be 1, 2, or more quarters.
               </p>
             </div>
             <div className="space-y-1 sm:col-span-2">
@@ -516,7 +516,7 @@ export function CoordinatorQuarterAuction({
             {activeItem.status === 'active_price_setting' && (
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="entry-cost">Item entry (credits per paddle)</Label>
+                  <Label htmlFor="entry-cost">Item entry (quarters per paddle)</Label>
                   <Input
                     id="entry-cost"
                     type="number"

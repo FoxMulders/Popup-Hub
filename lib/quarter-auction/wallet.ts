@@ -21,7 +21,7 @@ export async function deductWalletCredits(
     return { ok: false, error: 'Wallet not found' }
   }
   if (wallet.balance < amountCents) {
-    return { ok: false, error: 'Insufficient credits' }
+    return { ok: false, error: 'Insufficient quarters' }
   }
 
   const newBalance = wallet.balance - amountCents
@@ -32,7 +32,7 @@ export async function deductWalletCredits(
     .eq('balance', wallet.balance)
 
   if (walletError) {
-    return { ok: false, error: 'Could not deduct credits — please retry' }
+    return { ok: false, error: 'Could not deduct quarters — please retry' }
   }
 
   await supabase.from('wallet_transactions').insert({

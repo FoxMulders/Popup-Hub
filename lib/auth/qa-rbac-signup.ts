@@ -8,7 +8,7 @@ function assert(condition: boolean, message: string): void {
 }
 
 export function runSignupRbacQa(): void {
-  assert(!SIGNUP_ROLES.some((role) => role === 'vendor'), 'Vendor must not be a self-signup role')
+  assert(SIGNUP_ROLES.includes('vendor'), 'Vendor self-signup must be available')
   assert(SIGNUP_ROLES.includes('shopper'), 'Patron signup must remain available')
   assert(SIGNUP_ROLES.includes('coordinator'), 'Coordinator signup must remain available')
   console.log('✓ signup RBAC QA passed')
