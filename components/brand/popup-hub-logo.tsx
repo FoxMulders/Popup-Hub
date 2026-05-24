@@ -2,7 +2,8 @@ import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 const LOGO_VERSION = process.env.NEXT_PUBLIC_BUILD_COMMIT ?? '1'
-const LOGO_SRC = `/popup-hub-logo.png?v=${LOGO_VERSION}`
+/** Direct public path — avoids stale _next/image optimization cache */
+const LOGO_SRC = `/popup-hub-brand.png?v=${LOGO_VERSION}`
 const ICON_SRC = `/popup-hub-icon.png?v=${LOGO_VERSION}`
 const LOGO_WIDTH = 1024
 const LOGO_HEIGHT = 559
@@ -26,6 +27,7 @@ export function PopupHubLogo({
       alt={title}
       width={LOGO_WIDTH}
       height={LOGO_HEIGHT}
+      unoptimized
       className={cn('h-auto w-auto bg-transparent object-contain', className)}
       priority={priority}
     />
@@ -44,6 +46,7 @@ export function PopupHubIcon({
       alt={title}
       width={ICON_SIZE}
       height={ICON_SIZE}
+      unoptimized
       className={cn('h-auto w-auto bg-transparent object-contain', className)}
       priority={priority}
     />

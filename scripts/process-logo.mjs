@@ -53,6 +53,8 @@ async function makeTransparentLogo() {
     .png()
     .toFile(outputLogo)
 
+  await sharp(outputLogo).toFile(path.join(root, 'public', 'popup-hub-brand.png'))
+
   const meta = await sharp(outputLogo).metadata()
   console.log('Wrote transparent logo:', outputLogo, `${meta.width}x${meta.height}`, `alpha=${meta.hasAlpha}`)
 }
