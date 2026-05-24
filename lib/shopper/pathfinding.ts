@@ -1,4 +1,5 @@
 import { cellKey } from '@/lib/booth-planner/venue-elements'
+import { BOOTH_SAFETY_BUFFER_CELLS } from '@/lib/booth-planner/layout-clearance-constants'
 import {
   buildPathTrace,
   buildWalkabilityGrid,
@@ -116,32 +117,54 @@ function astarDistance(
   return dist
 }
 
-/** Nearest walkable aisle cell in front of a vendor booth footprint. */
+/** Nearest reachable walkable aisle cell in front of a vendor booth footprint. */
 export function boothApproachNode(
   booth: BoothCell,
   walkable: boolean[][],
   rows: number,
   cols: number,
-  preferFrom: PatronPathPoint
+  preferFrom: PatronPathPoint,
+  centerline?: Set<string>
 ): PatronPathPoint | null {
-  let best: PatronPathPoint | null = null
-  let bestScore = Infinity
+  const boothCenter = {
+    row: booth.row + booth.rowSpan / 2,
+    col: booth.col + booth.colSpan / 2,
+  }
+  const pad = BOOTH_SAFETY_BUFFER_CELLS + 4
+  const r0 = Math.max(0, booth.row - pad)
+  const r1 = Math.min(rows - 1, booth.row + booth.rowSpan - 1 + pad)
+  const c0 = Math.max(0, booth.col - pad)
+  const c1 = Math.min(cols - 1, booth.col + booth.colSpan - 1 + pad)
 
-  for (let r = booth.row; r < booth.row + booth.rowSpan; r++) {
-    for (let c = booth.col; c < booth.col + booth.colSpan; c++) {
-      for (const { dr, dc } of CARDINAL) {
-        const nr = r + dr
-        const nc = c + dc
-        if (nr < 0 || nc < 0 || nr >= rows || nc >= cols || !walkable[nr][nc]) continue
-        const score = manhattan({ row: nr, col: nc }, preferFrom)
-        if (score < bestScore) {
-          bestScore = score
-          best = { row: nr, col: nc }
-        }
-      }
+  const candidates: PatronPathPoint[] = []
+  for (let r = r0; r <= r1; r++) {
+    for (let c = c0; c <= c1; c++) {
+      if (walkable[r][c]) candidates.push({ row: r, col: c })
     }
   }
-  return best
+  if (candidates.length === 0) return null
+
+  candidates.sort((a, b) => {
+    const scoreA =
+      manhattan(a, preferFrom) + manhattan(a, boothCenter) * 0.15
+    const scoreB =
+      manhattan(b, preferFrom) + manhattan(b, boothCenter) * 0.15
+    return scoreA - scoreB
+  })
+
+  for (const candidate of candidates) {
+    const path = astarWalkRoute(
+      walkable,
+      preferFrom,
+      candidate,
+      rows,
+      cols,
+      centerline
+    )
+    if (path) return candidate
+  }
+
+  return candidates[0] ?? null
 }
 
 function dedupeApproachNodes(nodes: PatronPathPoint[]): PatronPathPoint[] {
@@ -283,7 +306,8 @@ export function computeVendorDirectRoute(
     walkable,
     metrics.canvasRows,
     metrics.cols,
-    entrance
+    entrance,
+    centerline
   )
   if (!approach) return null
 
@@ -321,7 +345,14 @@ export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | 
   const approaches = dedupeApproachNodes(
     metrics.placedCells
       .map((booth) =>
-        boothApproachNode(booth, walkable, metrics.canvasRows, metrics.cols, entrance)
+        boothApproachNode(
+          booth,
+          walkable,
+          metrics.canvasRows,
+          metrics.cols,
+          entrance,
+          centerline
+        )
       )
       .filter((n): n is PatronPathPoint => n != null)
   )

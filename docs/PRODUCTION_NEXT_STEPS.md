@@ -123,7 +123,17 @@ Minimum smoke test:
 
 ---
 
-## 5. Known deferred items (not production blockers)
+## 5. Vercel Hobby cron limit
+
+Auction auto-end cron runs **once daily** at 09:00 UTC (`vercel.json`). Vercel Hobby rejects schedules more frequent than daily.
+
+For tighter auction timing, either:
+- Upgrade to Vercel Pro and change schedule in `vercel.json`, or
+- Ping `GET /api/cron/auction-auto-end` with `Authorization: Bearer $CRON_SECRET` from an external scheduler.
+
+---
+
+## 6. Known deferred items (not production blockers)
 
 - Clearance rings on virtualized canvas (only active with 1′ grid overlay)
 - Table spacing panel lists each application separately for multi-slot groups

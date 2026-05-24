@@ -90,3 +90,5 @@ Production: [popup-hub.vercel.app](https://popup-hub.vercel.app). Pushes to `mas
 | Smoke-check live site | `npm run verify:prod` |
 
 Production builds use `output: 'standalone'`. Set Square webhook URL to `https://popup-hub.vercel.app/api/square/webhook`.
+
+**Vercel Hobby:** Cron jobs are limited to once per day (`vercel.json` uses `0 9 * * *` for auction auto-end). For sub-minute auction endings, use an external cron ping or upgrade to Pro.

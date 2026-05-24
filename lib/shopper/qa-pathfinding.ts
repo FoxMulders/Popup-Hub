@@ -151,12 +151,14 @@ function runVendorDirectRouteTests(room: LayoutRoom): void {
   )
   assert(entrance != null, 'South entrance walk point should exist')
 
+  const centerline = getCenterlineWalkwayKeys(metrics.venueElements)
   const approach = boothApproachNode(
     target,
     walkable,
     metrics.canvasRows,
     metrics.cols,
-    entrance!
+    entrance!,
+    centerline
   )
   assert(approach != null, 'Target booth should have an aisle approach node')
   assert(
