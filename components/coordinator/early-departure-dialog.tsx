@@ -50,7 +50,7 @@ export function EarlyDepartureDialog({
             Log early departure
           </DialogTitle>
           <DialogDescription>
-            Confirm that <span className="font-medium text-gray-900">{vendorName}</span> packed up
+            Confirm that <span className="font-medium text-foreground">{vendorName}</span> packed up
             before the market ended. This reduces their reliability score and is recorded on their
             vendor profile.
           </DialogDescription>

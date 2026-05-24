@@ -9,12 +9,12 @@ interface PaddleHoldScreenProps {
 export function PaddleHoldScreen({ paddleNumbers, itemTitle }: PaddleHoldScreenProps) {
   return (
     <div
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-gradient-to-b from-amber-400 to-amber-600 p-6 text-center"
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-gradient-to-b from-harvest-400 to-harvest-600 p-6 text-center"
       role="status"
       aria-live="polite"
       aria-label={`Hold up phone showing paddle numbers for ${itemTitle}`}
     >
-      <p className="text-sm font-semibold uppercase tracking-widest text-amber-950/80 mb-4">
+      <p className="text-sm font-semibold uppercase tracking-widest text-harvest-800/80 mb-4">
         Hold up your phone!
       </p>
       <div className="space-y-4 w-full max-w-xs">
@@ -28,7 +28,7 @@ export function PaddleHoldScreen({ paddleNumbers, itemTitle }: PaddleHoldScreenP
           </div>
         ))}
       </div>
-      <p className="mt-6 text-sm text-amber-950/90 max-w-xs">{itemTitle}</p>
+      <p className="mt-6 text-sm text-harvest-800/90 max-w-xs">{itemTitle}</p>
     </div>
   )
 }

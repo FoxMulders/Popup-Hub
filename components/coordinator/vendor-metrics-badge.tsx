@@ -22,7 +22,7 @@ export function VendorMetricsBadge({ vendor, compact }: VendorMetricsBadgeProps)
     score >= 90
       ? 'bg-sage-100 text-sage-800 border-sage-200'
       : score >= 70
-        ? 'bg-amber-50 text-amber-900 border-amber-200'
+        ? 'bg-harvest-50 text-harvest-800 border-harvest-200'
         : 'bg-terracotta-50 text-terracotta-800 border-terracotta-200'
 
   return (
@@ -37,7 +37,7 @@ export function VendorMetricsBadge({ vendor, compact }: VendorMetricsBadgeProps)
           {strikes.map((flag) => (
             <span
               key={flag}
-              className="rounded-md border border-amber-200/80 bg-white/80 px-1.5 py-0.5 text-[9px] font-medium text-amber-900"
+              className="rounded-md border border-harvest-200/80 bg-white/80 px-1.5 py-0.5 text-[9px] font-medium text-harvest-800"
             >
               {STRIKE_LABELS[flag]}
             </span>

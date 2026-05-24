@@ -38,14 +38,14 @@ interface MarketOpsPanelProps {
 
 const LOAD_IN_STATUSES: { value: LoadInStatus; label: string; className: string }[] = [
   { value: 'on_time', label: 'On-Time', className: 'bg-sage-100 text-sage-800 border-sage-300' },
-  { value: 'late', label: 'Late', className: 'bg-amber-100 text-amber-900 border-amber-300' },
+  { value: 'late', label: 'Late', className: 'bg-harvest-100 text-harvest-800 border-harvest-400' },
   { value: 'missed', label: 'Missed', className: 'bg-terracotta-50 text-terracotta-800 border-terracotta-200' },
 ]
 
 function boothTypeBadge(type: string | null | undefined) {
   if (!type) return null
   const map: Record<string, string> = {
-    wall: 'bg-amber-100 text-amber-800 border border-amber-200',
+    wall: 'bg-harvest-100 text-harvest-700 border border-harvest-200',
     power: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
     inside: 'bg-sage-50 text-sage-800 border border-sage-200',
     any: 'bg-canvas text-muted-foreground border border-stone-200',
@@ -231,16 +231,16 @@ export function MarketOpsPanel({
   return (
     <div className="space-y-4">
       {raffleDonationRequirement && (
-        <div className="market-card border-amber-200/80 bg-amber-50/50 px-4 py-3 text-sm text-amber-950">
-          <p className="font-semibold text-amber-900">Raffle donation required</p>
-          <p className="mt-1 text-amber-800/90">{raffleDonationRequirement}</p>
+        <div className="market-card border-harvest-200/80 bg-harvest-50/50 px-4 py-3 text-sm text-harvest-800">
+          <p className="font-semibold text-harvest-800">Raffle donation required</p>
+          <p className="mt-1 text-harvest-700/90">{raffleDonationRequirement}</p>
         </div>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
           { label: 'Checked In', value: `${checkedInCount}/${apps.length}`, color: 'text-sage-700' },
-          { label: 'Paid (Square)', value: `${paidCount}/${apps.length}`, color: 'text-amber-700' },
+          { label: 'Paid (Square)', value: `${paidCount}/${apps.length}`, color: 'text-harvest-700' },
           { label: 'Booths Cleared', value: `${clearedCount}/${apps.length}`, color: 'text-terracotta-700' },
         ].map(({ label, value, color }) => (
           <div key={label} className="market-card p-3 text-center">
@@ -284,7 +284,7 @@ export function MarketOpsPanel({
                 >
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {app.booth_number != null ? (
-                      <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-800 border border-amber-200 flex items-center justify-center text-xs font-bold">
+                      <div className="h-8 w-8 rounded-lg bg-harvest-100 text-harvest-700 border border-harvest-200 flex items-center justify-center text-xs font-bold">
                         {app.booth_number}
                       </div>
                     ) : (
@@ -388,7 +388,7 @@ export function MarketOpsPanel({
                         </span>
                       </span>
                       {!app.raffle_donation_received && raffleDonationRequirement && (
-                        <span className="text-[9px] text-amber-800/80 max-w-[140px] line-clamp-2">
+                        <span className="text-[9px] text-harvest-700/80 max-w-[140px] line-clamp-2">
                           {raffleDonationRequirement}
                         </span>
                       )}
@@ -442,7 +442,7 @@ export function MarketOpsPanel({
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-amber-700 font-medium">Pending</span>
+                      <span className="text-xs text-harvest-700 font-medium">Pending</span>
                     )}
                   </td>
                 </tr>

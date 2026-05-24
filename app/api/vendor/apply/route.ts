@@ -30,6 +30,8 @@ import {
 } from '@/lib/applications/etransfer-reference'
 import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-instructions-service'
 import { isCategoryCapacityError } from '@/lib/applications/booth-payment-processing'
+import { resolvePostApprovalStatus, isReservedBoothStatus } from '@/lib/applications/resolve-approval-status'
+import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import type { Role } from '@/types/database'
 
 async function nextWaitlistPosition(
@@ -57,7 +59,7 @@ async function loadEventCategorySlots(
 ): Promise<CategorySlotInfo[]> {
   const { data: limits } = await supabase
     .from('event_category_limits')
-    .select('category_id, max_slots, price_per_booth, category:categories(name, is_mlm)')
+    .select('category_id, max_slots, price_per_booth, category:categories(name, is_mlm, requires_documentation)')
     .eq('event_id', eventId)
 
   const eligible = (limits ?? []).filter((limit) => {
@@ -79,6 +81,7 @@ async function loadEventCategorySlots(
         maxSlots: limit.max_slots,
         availableSlots,
         pricePerBooth: limit.price_per_booth ?? 0,
+        requiresDocumentation: categoryRequiresDocumentation(category ?? undefined),
       }
     })
   )
@@ -115,6 +118,7 @@ export async function POST(request: Request) {
     attendingEventDayIds?: string[]
     attendingDates?: string[]
     paymentMethod?: 'SQUARE' | 'ETRANSFER'
+    applicableDocumentationUrl?: string | null
   }
 
   const {
@@ -126,6 +130,7 @@ export async function POST(request: Request) {
     attendingEventDayIds,
     attendingDates,
     paymentMethod: rawPaymentMethod,
+    applicableDocumentationUrl,
   } = body
   if (!eventId) {
     return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
@@ -142,7 +147,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, coordinator_id, square_merchant_id, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -252,6 +257,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This category is not available for this market' }, { status: 400 })
   }
 
+  if (categoryRequiresDocumentation(category ?? undefined) && !applicableDocumentationUrl?.trim()) {
+    return NextResponse.json(
+      { error: 'Please upload required permits/documentation for this vendor category.' },
+      { status: 400 },
+    )
+  }
+
   const availableSlots = await fetchCategoryAvailableSlots(supabase, eventId, categoryId)
   const categoryIsFull = availableSlots <= 0
 
@@ -299,7 +311,7 @@ export async function POST(request: Request) {
     }
   }
 
-  let status: 'pending' | 'approved' | 'waitlisted' = 'pending'
+  let status: 'pending' | 'approved' | 'waitlisted' | 'pending_insurance' = 'pending'
   let waitlistPosition: number | null = null
   const now = new Date().toISOString()
 
@@ -322,14 +334,15 @@ export async function POST(request: Request) {
         )
       }
     } else {
-      status = 'approved'
+      status = resolvePostApprovalStatus(event.market_insurance_required)
     }
   }
 
+  const paymentApproved = status === 'approved'
   const paymentFields = resolvePaymentFieldsForPaidApplication({
     paymentMethod,
     requiresPayment,
-    approved: status === 'approved',
+    approved: paymentApproved,
   })
 
   const hasCategoryOverflow = match.hasCategoryOverflow && !match.allCategoriesFull
@@ -359,7 +372,8 @@ export async function POST(request: Request) {
         attending_event_day_ids: selectedAttendanceEventDayIds,
         attending_dates: selectedAttendanceDates,
         attendance_terms_acknowledged_at: now,
-        ...(status === 'approved' ? { approved_at: now } : {}),
+        applicable_documentation_url: applicableDocumentationUrl?.trim() || null,
+        ...(isReservedBoothStatus(status) ? { approved_at: now } : {}),
       })
       .select(
         'id, status, payment_status, payment_method, application_payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'
@@ -369,7 +383,7 @@ export async function POST(request: Request) {
 
   let { data: inserted, error } = await insertApplication()
 
-  if (error && isCategoryCapacityError(error) && status === 'approved') {
+  if (error && isCategoryCapacityError(error) && (status === 'approved' || status === 'pending_insurance')) {
     if (joinWaitlist) {
       status = 'waitlisted'
       waitlistPosition = await nextWaitlistPosition(supabase, eventId, categoryId)
@@ -466,7 +480,7 @@ export async function POST(request: Request) {
     application: inserted,
     requiresPayment:
       requiresPayment &&
-      status === 'approved' &&
+      paymentApproved &&
       paymentMethod === 'SQUARE' &&
       paymentFields.payment_status === 'payment_required',
     paymentMethod: paymentFields.payment_method,

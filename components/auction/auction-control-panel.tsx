@@ -99,12 +99,12 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
           <Badge
             className={`capitalize ${
               auction.status === 'active'
-                ? 'bg-green-500 text-white'
+                ? 'bg-sage-500 text-white'
                 : auction.status === 'ended'
-                  ? 'bg-gray-500 text-white'
+                  ? 'bg-stone-500 text-white'
                   : auction.status === 'cancelled'
                     ? 'bg-red-400 text-white'
-                    : 'bg-amber-500 text-white'
+                    : 'bg-harvest-500 text-white'
             }`}
           >
             {auction.status === 'active' ? 'LIVE' : auction.status}
@@ -112,24 +112,24 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-3 rounded-lg bg-gray-50 p-3 text-center text-sm">
+        <div className="grid grid-cols-3 gap-3 rounded-lg bg-canvas p-3 text-center text-sm">
           <div>
-            <p className="text-xs text-gray-500">Pot</p>
-            <p className="font-bold text-amber-600">{formatCents(totalPotCents)}</p>
+            <p className="text-xs text-muted-foreground">Pot</p>
+            <p className="font-bold text-harvest-600">{formatCents(totalPotCents)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Participants</p>
+            <p className="text-xs text-muted-foreground">Participants</p>
             <p className="font-bold">{leaderboard.length}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Drops</p>
+            <p className="text-xs text-muted-foreground">Drops</p>
             <p className="font-bold">{drops.length}</p>
           </div>
         </div>
 
         {auction.status === 'active' && (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-center">
-            <p className="text-xs text-green-700">Time remaining</p>
+          <div className="rounded-lg border border-sage-200 bg-sage-50 px-3 py-2 text-center">
+            <p className="text-xs text-sage-700">Time remaining</p>
             <p className="font-mono text-2xl font-bold text-green-900">
               {timeLeft > 0 ? formatTime(timeLeft) : 'Drawing…'}
             </p>
@@ -137,13 +137,13 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
         )}
 
         {auction.status === 'ended' && auction.winning_paddle_id && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
-            <p className="font-semibold text-amber-900">Winner: Paddle #{auction.winning_paddle_id}</p>
+          <div className="rounded-lg border border-harvest-200 bg-harvest-50 px-3 py-2 text-sm">
+            <p className="font-semibold text-harvest-800">Winner: Paddle #{auction.winning_paddle_id}</p>
           </div>
         )}
 
         {auction.status === 'ended' && !auction.winning_paddle_id && (
-          <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-gray-600">
+          <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-muted-foreground">
             No drops — no winner selected.
           </div>
         )}
@@ -198,7 +198,7 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
         {drops.length > 0 && (
           <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border p-2 text-xs">
             {drops.slice(-20).reverse().map((d) => (
-              <div key={d.id} className="flex justify-between font-mono text-gray-600">
+              <div key={d.id} className="flex justify-between font-mono text-muted-foreground">
                 <span>Paddle #{d.paddle_id}</span>
                 <span>{formatCents(d.amount)}</span>
               </div>

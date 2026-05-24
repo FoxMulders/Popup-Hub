@@ -30,7 +30,7 @@ export function VendorAccessRequestForm({
 
   if (existingRequest?.status === 'approved') {
     return (
-      <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+      <div className="rounded-xl border border-sage-200 bg-sage-50 p-4">
         <p className="text-sm font-medium text-green-900">
           You&apos;re approved to sell at {coordinatorName}&apos;s markets.
         </p>

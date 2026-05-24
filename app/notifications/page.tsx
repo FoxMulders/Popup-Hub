@@ -30,10 +30,10 @@ export default async function NotificationsPage() {
         {/* Sidebar: key */}
         <aside className="hidden xl:block">
           <div className="rounded-2xl border bg-white p-6 sticky top-24">
-            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
               Notification Types
             </h2>
-            <ul className="space-y-3 text-sm text-gray-600">
+            <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex items-center gap-2.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-green-400 shrink-0" />
                 Application approved
@@ -47,7 +47,7 @@ export default async function NotificationsPage() {
                 Moved off waitlist
               </li>
               <li className="flex items-center gap-2.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-400 shrink-0" />
+                <span className="h-2.5 w-2.5 rounded-full bg-harvest-400 shrink-0" />
                 Auction won
               </li>
               <li className="flex items-center gap-2.5">
@@ -59,7 +59,7 @@ export default async function NotificationsPage() {
                 Market feedback
               </li>
             </ul>
-            <p className="mt-6 text-xs text-gray-400 leading-relaxed">
+            <p className="mt-6 text-xs text-muted-foreground leading-relaxed">
               Clicking a notification marks it as read. You can also receive SMS alerts — add your
               phone number in Profile settings.
             </p>

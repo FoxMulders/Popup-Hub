@@ -27,7 +27,7 @@ export function buildCategoryCapacityRows(
   const approvedByCategory = new Map<string, number>()
 
   for (const application of applications) {
-    if (application.status !== 'approved') continue
+    if (application.status !== 'approved' && application.status !== 'pending_insurance') continue
     approvedByCategory.set(
       application.category_id,
       (approvedByCategory.get(application.category_id) ?? 0) + 1

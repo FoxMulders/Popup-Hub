@@ -9,7 +9,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle, FileText } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { marketChip, marketStatusBadge } from '@/lib/theme/market'
 import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
@@ -22,6 +22,7 @@ import {
   needsSquareCheckout,
   PAYMENT_METHOD_LABELS,
 } from '@/lib/applications/payment-fields'
+import { ApplicationDocumentLink } from '@/components/applications/application-document-link'
 import type { BoothApplication, ApplicationStatus } from '@/types/database'
 
 interface ApplicationBoardProps {
@@ -68,6 +69,7 @@ function CategoryOverflowBadge({ app }: { app: BoothApplication }) {
 
 const COLUMNS: { status: ApplicationStatus; label: string; color: string }[] = [
   { status: 'pending', label: 'Pending Review', color: 'text-harvest-800 bg-harvest-50 border-harvest-200' },
+  { status: 'pending_insurance', label: 'Pending Insurance', color: 'text-harvest-800 bg-harvest-100 border-harvest-300' },
   { status: 'approved', label: 'Approved', color: 'text-sage-800 bg-sage-50 border-sage-200' },
   { status: 'waitlisted', label: 'Waitlisted', color: 'text-muted-foreground bg-canvas border-stone-200' },
   { status: 'rejected', label: 'Declined', color: 'text-terracotta-800 bg-terracotta-50 border-terracotta-200' },
@@ -136,7 +138,7 @@ export function ApplicationBoard({
       acc[col.status] = apps.filter((a) => a.status === col.status)
       return acc
     },
-    { pending: [], approved: [], waitlisted: [], rejected: [], cancelled: [] }
+    { pending: [], pending_insurance: [], approved: [], waitlisted: [], rejected: [], cancelled: [] }
   )
 
   async function confirmEtransferPayment(appId: string) {
@@ -187,6 +189,7 @@ export function ApplicationBoard({
 
       // Send in-app + SMS notification to vendor
       if (app.vendor_id && (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'waitlisted')) {
+        const resolvedStatus = (updates.status ?? newStatus) as ApplicationStatus
         const notifMessages: Partial<Record<ApplicationStatus, string>> = {
           approved:
             updates.payment_status === 'payment_required'
@@ -194,17 +197,24 @@ export function ApplicationBoard({
               : updates.application_payment_status === 'PENDING_REVIEW'
                 ? '✅ Your booth application has been approved! Send your e-transfer — the coordinator will confirm payment.'
                 : '✅ Your booth application has been approved! See you at the event.',
+          pending_insurance:
+            '✅ Your booth application has been approved! Upload your market insurance proof to finalize your spot.',
           rejected: `Your booth application was not selected this time. Keep an eye out for future events!`,
           waitlisted: `Your application has been waitlisted. We'll notify you if a spot opens up.`,
         }
-        const message = notifMessages[newStatus]
+        const message = notifMessages[resolvedStatus]
         if (message) {
           await fetch('/api/notifications', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               user_id: app.vendor_id,
-              type: newStatus === 'approved' ? 'application_approved' : newStatus === 'rejected' ? 'application_rejected' : 'waitlist_triggered',
+              type:
+                resolvedStatus === 'approved' || resolvedStatus === 'pending_insurance'
+                  ? 'application_approved'
+                  : resolvedStatus === 'rejected'
+                    ? 'application_rejected'
+                    : 'waitlist_triggered',
               message,
               metadata: {
                 application_id: appId,
@@ -217,14 +227,16 @@ export function ApplicationBoard({
         }
       }
 
+      const resolvedLabel = (updates.status ?? newStatus) as ApplicationStatus
       const labels: Record<ApplicationStatus, string> = {
         approved: '✅ Application approved — vendor notified',
+        pending_insurance: '✅ Approved — vendor must upload insurance proof',
         rejected: 'Application declined — vendor notified',
         waitlisted: 'Moved to waitlist — vendor notified',
         pending: 'Moved back to pending',
         cancelled: 'Application cancelled',
       }
-      toast.success(labels[newStatus])
+      toast.success(labels[resolvedLabel])
     })
   }
 
@@ -429,7 +441,7 @@ function ApplicationCard({
         ) : null}
 
         {needsSquareCheckout(app) && (
-          <Badge className="w-full justify-center bg-amber-100 text-amber-800 text-[10px] py-1">
+          <Badge className="w-full justify-center bg-harvest-100 text-harvest-700 text-[10px] py-1">
             Awaiting Square payment
           </Badge>
         )}
@@ -460,6 +472,13 @@ function ApplicationCard({
 
         <CategoryOverflowBadge app={app} />
 
+        {app.applicable_documentation_url ? (
+          <Badge className="w-full justify-center gap-1 bg-canvas text-[10px] text-foreground border-stone-200 py-1">
+            <FileText className="h-3 w-3 shrink-0" aria-hidden />
+            Permits on file
+          </Badge>
+        ) : null}
+
         <div className="flex gap-2 flex-wrap">
           <Button
             size="sm"
@@ -480,7 +499,7 @@ function ApplicationCard({
               Confirm e-transfer
             </Button>
           )}
-          {!eventCancelled && app.status !== 'approved' && (
+          {!eventCancelled && app.status !== 'approved' && app.status !== 'pending_insurance' && (
             <Button
               size="sm"
               className="min-h-11 text-xs px-3 gap-1.5"
@@ -639,6 +658,14 @@ function VendorDetailModal({
                 </span>
               </div>
             ) : null}
+            <ApplicationDocumentLink
+              label="Permits / documentation"
+              url={app.applicable_documentation_url}
+            />
+            <ApplicationDocumentLink
+              label="Market insurance proof"
+              url={app.market_insurance_url}
+            />
           </div>
         </div>
 

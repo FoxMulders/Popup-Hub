@@ -19,17 +19,17 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   waitlist_promoted: { icon: <Calendar className="h-4 w-4" />, color: 'text-blue-500 bg-blue-50' },
   market_reminder: { icon: <Bell className="h-4 w-4" />, color: 'text-forest bg-sage-50' },
   vendor_flash_sale: { icon: <Store className="h-4 w-4" />, color: 'text-harvest-600 bg-harvest-50' },
-  vendor_sold_out: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-orange-600 bg-orange-50' },
-  vendor_access_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-600 bg-green-50' },
+  vendor_sold_out: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-terracotta-600 bg-terracotta-50' },
+  vendor_access_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   vendor_access_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-600 bg-red-50' },
   market_feedback: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-violet-600 bg-violet-50' },
-  feedback_addressed: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-green-50' },
-  application_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-500 bg-green-50' },
+  feedback_addressed: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
+  application_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-500 bg-sage-50' },
   application_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
   payment_failed: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
-  auction_won: { icon: <Trophy className="h-4 w-4" />, color: 'text-amber-500 bg-amber-50' },
+  auction_won: { icon: <Trophy className="h-4 w-4" />, color: 'text-harvest-500 bg-harvest-50' },
   auction_starting: { icon: <Trophy className="h-4 w-4" />, color: 'text-harvest-600 bg-harvest-50' },
-  default: { icon: <Info className="h-4 w-4" />, color: 'text-gray-500 bg-gray-100' },
+  default: { icon: <Info className="h-4 w-4" />, color: 'text-muted-foreground bg-stone-100' },
 }
 
 export function NotificationList({ initialNotifications, userId }: NotificationListProps) {
@@ -119,8 +119,8 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
 
       {notifications.length === 0 ? (
         <div className="rounded-2xl border bg-white py-16 text-center">
-          <Bell className="mx-auto mb-3 h-8 w-8 text-gray-200" />
-          <p className="text-gray-400 text-sm">No notifications yet</p>
+          <Bell className="mx-auto mb-3 h-8 w-8 text-stone-200" />
+          <p className="text-muted-foreground text-sm">No notifications yet</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -130,7 +130,7 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
               <button
                 key={notification.id}
                 className={`w-full rounded-xl border bg-white p-4 text-left transition hover:shadow-sm ${
-                  !notification.is_read ? 'ring-1 ring-amber-300' : ''
+                  !notification.is_read ? 'ring-1 ring-harvest-400' : ''
                 }`}
                 onClick={() => !notification.is_read && markAsRead(notification.id)}
               >
@@ -139,15 +139,15 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
                     {config.icon}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm ${!notification.is_read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                    <p className={`text-sm ${!notification.is_read ? 'font-semibold text-foreground' : 'text-foreground'}`}>
                       {notification.message}
                     </p>
-                    <p className="mt-0.5 text-xs text-gray-400">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
                   {!notification.is_read && (
-                    <div className="h-2 w-2 flex-shrink-0 rounded-full bg-amber-500 mt-1.5" />
+                    <div className="h-2 w-2 flex-shrink-0 rounded-full bg-harvest-500 mt-1.5" />
                   )}
                 </div>
               </button>

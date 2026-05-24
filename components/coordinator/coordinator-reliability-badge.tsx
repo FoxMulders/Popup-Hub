@@ -22,8 +22,8 @@ export function CoordinatorReliabilityBadge({
   const showLateWarning = hasRecentLateCancellation(recentLateCancellationAt)
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm'
 
-  let scoreClass = 'bg-green-100 text-green-800'
-  if (score < 70) scoreClass = 'bg-amber-100 text-amber-800'
+  let scoreClass = 'bg-sage-100 text-sage-800'
+  if (score < 70) scoreClass = 'bg-harvest-100 text-harvest-700'
   if (score < 50) scoreClass = 'bg-red-100 text-red-800'
 
   return (

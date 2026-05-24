@@ -23,7 +23,9 @@ export interface EventDraftPayload {
   status?: 'draft' | 'published'
   listingType?: EventListingType
   requireFullAttendance?: boolean
+  marketInsuranceRequired?: boolean
   skipVenueLayout?: boolean
+  marketCity?: string
 }
 
 export interface DayRowPayload {
@@ -105,7 +107,9 @@ export async function persistEventDraft(
     allow_mlm: draft.allowMlm,
     is_multi_day: scheduleType === 'multi',
     require_full_attendance: draft.requireFullAttendance ?? true,
+    market_insurance_required: draft.marketInsuranceRequired ?? false,
     skip_venue_layout: draft.skipVenueLayout ?? false,
+    market_city: draft.marketCity ?? 'edmonton',
     booth_clearance_policy: draft.boothClearancePolicy,
   }
 

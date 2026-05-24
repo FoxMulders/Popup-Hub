@@ -39,7 +39,7 @@ import {
   hydrateMlmCategoryLimits,
 } from '@/lib/categories/mlm-constraints'
 import { useWizardCritiqueAgents } from '@/lib/wizard/critique/use-wizard-critique-agents'
-import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity } from '@/lib/wizard/market-cities'
+import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity, resolveMarketCityId } from '@/lib/wizard/market-cities'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import {
   DEFAULT_MARKET_END,
@@ -221,7 +221,9 @@ export function MarketSetupWizard({
   const venuePresetId: VenuePresetId =
     (activeRoom.venue_preset_id as VenuePresetId | null | undefined) ?? 'blank'
 
-  const [marketCity, setMarketCity] = useState(DEFAULT_MARKET_CITY_ID)
+  const [marketCity, setMarketCity] = useState(() =>
+    resolveMarketCityId(existing?.market_city, existing?.address)
+  )
 
   const templateAnchor = useMemo(
     () => resolveTemplateAnchoredDimensions(venuePresetId, activeRoom.venue_width, activeRoom.venue_length),
@@ -417,6 +419,7 @@ export function MarketSetupWizard({
             requireFullAttendance,
             marketInsuranceRequired,
             skipVenueLayout,
+            marketCity,
             boothClearancePolicy,
             raffleDonationRequirement,
             scheduleType,
@@ -481,6 +484,7 @@ export function MarketSetupWizard({
       raffleDonationRequirement,
       requireFullAttendance,
       marketInsuranceRequired,
+      marketCity,
       rooms,
       scheduleType,
       skipVenueLayout,
@@ -548,6 +552,7 @@ export function MarketSetupWizard({
     setLat(venue.latitude)
     setLng(venue.longitude)
     setPinDropped(true)
+    setMarketCity(resolveMarketCityId(venue.market_city, venue.address))
   }
 
   function handleBaselineTableLengthChange(ft: LayoutBaselineTableLengthFt) {

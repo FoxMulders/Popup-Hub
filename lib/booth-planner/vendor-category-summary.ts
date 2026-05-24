@@ -12,7 +12,7 @@ export interface CategoryVendorSummary {
 function emptySummary(categoryName: string): CategoryVendorSummary {
   return {
     categoryName,
-    categoryColor: 'bg-gray-100 border-gray-300 text-gray-700',
+    categoryColor: 'bg-stone-100 border-stone-300 text-foreground',
     total: 0,
     placed: 0,
     unplaced: 0,

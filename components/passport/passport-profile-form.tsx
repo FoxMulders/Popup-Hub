@@ -69,13 +69,13 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
       <div>
         <Link
           href="/profile"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to profile
         </Link>
-        <h1 className="mt-3 text-3xl font-bold text-gray-900">{passportTitle(role)}</h1>
-        <p className="mt-1.5 text-gray-500">{passportDescription(role)}</p>
+        <h1 className="mt-3 text-3xl font-bold text-foreground">{passportTitle(role)}</h1>
+        <p className="mt-1.5 text-muted-foreground">{passportDescription(role)}</p>
       </div>
 
       <Card className="shadow-sm">
@@ -114,10 +114,10 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
                 rows={4}
                 maxLength={500}
               />
-              <p className="text-right text-xs text-gray-400">{bio.length}/500</p>
+              <p className="text-right text-xs text-muted-foreground">{bio.length}/500</p>
             </div>
 
-            <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4 text-sm text-gray-600">
+            <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4 text-sm text-muted-foreground">
               {role === 'shopper' ? (
                 <>
                   Phone and auction contact preferences live on your{' '}
@@ -140,7 +140,7 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
             <div className="flex justify-end pt-2">
               <Button
                 type="submit"
-                className="bg-amber-500 hover:bg-amber-600 text-white"
+                className=""
                 disabled={loading || !displayName.trim()}
               >
                 {loading ? (

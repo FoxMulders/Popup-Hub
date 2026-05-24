@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolvePostApprovalStatus } from '@/lib/applications/resolve-approval-status'
 import { resolvePaymentFieldsForPaidApplication } from '@/lib/applications/payment-fields'
+
 import type { ApplicationStatus, BoothApplication } from '@/types/database'
 
 const ALLOWED_STATUSES: ApplicationStatus[] = [
@@ -50,7 +52,7 @@ export async function POST(
       category_id,
       status,
       payment_method,
-      event:events(id, coordinator_id, status)
+      event:events(id, coordinator_id, status, market_insurance_required)
     `)
     .eq('id', applicationId)
     .single()
@@ -71,47 +73,54 @@ export async function POST(
     return NextResponse.json({ error: 'Event is cancelled' }, { status: 409 })
   }
 
-  if (newStatus === 'approved' && application.category_id) {
-    const { data: limit } = await supabase
-      .from('event_category_limits')
-      .select('max_slots, price_per_booth, category:categories(name)')
-      .eq('event_id', application.event_id)
-      .eq('category_id', application.category_id)
-      .maybeSingle()
+  const resolvedStatus =
+    newStatus === 'approved'
+      ? resolvePostApprovalStatus(eventRow.market_insurance_required)
+      : newStatus
 
-    if (limit) {
-      const { count, error: countError } = await supabase
-        .from('booth_applications')
-        .select('id', { count: 'exact', head: true })
+  if (resolvedStatus === 'approved' || resolvedStatus === 'pending_insurance') {
+    if (application.category_id) {
+      const { data: limit } = await supabase
+        .from('event_category_limits')
+        .select('max_slots, price_per_booth, category:categories(name)')
         .eq('event_id', application.event_id)
         .eq('category_id', application.category_id)
-        .eq('status', 'approved')
-        .neq('id', applicationId)
+        .maybeSingle()
 
-      if (countError) {
-        return NextResponse.json({ error: countError.message }, { status: 500 })
-      }
+      if (limit) {
+        const { count, error: countError } = await supabase
+          .from('booth_applications')
+          .select('id', { count: 'exact', head: true })
+          .eq('event_id', application.event_id)
+          .eq('category_id', application.category_id)
+          .in('status', ['approved', 'pending_insurance'])
+          .neq('id', applicationId)
 
-      const approvedInCategory = count ?? 0
-      if (approvedInCategory >= limit.max_slots) {
-        const category = Array.isArray(limit.category)
-          ? limit.category[0]
-          : limit.category
-        const categoryName = category?.name ?? 'This category'
-        return NextResponse.json(
-          {
-            error: `${categoryName} is full (${limit.max_slots} slots)`,
-            code: 'category_full',
-          },
-          { status: 409 }
-        )
+        if (countError) {
+          return NextResponse.json({ error: countError.message }, { status: 500 })
+        }
+
+        const reservedInCategory = count ?? 0
+        if (reservedInCategory >= limit.max_slots) {
+          const category = Array.isArray(limit.category)
+            ? limit.category[0]
+            : limit.category
+          const categoryName = category?.name ?? 'This category'
+          return NextResponse.json(
+            {
+              error: `${categoryName} is full (${limit.max_slots} slots)`,
+              code: 'category_full',
+            },
+            { status: 409 }
+          )
+        }
       }
     }
   }
 
-  const updates: Partial<BoothApplication> = { status: newStatus }
+  const updates: Partial<BoothApplication> = { status: resolvedStatus }
 
-  if (newStatus === 'approved') {
+  if (resolvedStatus === 'approved' || resolvedStatus === 'pending_insurance') {
     updates.approved_at = new Date().toISOString()
 
     const { data: limit } = await supabase
@@ -126,7 +135,7 @@ export async function POST(
       const paymentFields = resolvePaymentFieldsForPaidApplication({
         paymentMethod: application.payment_method ?? 'SQUARE',
         requiresPayment: true,
-        approved: true,
+        approved: resolvedStatus === 'approved',
       })
       updates.payment_method = paymentFields.payment_method
       updates.payment_status = paymentFields.payment_status
@@ -149,5 +158,7 @@ export async function POST(
     ok: true,
     application: updated,
     updates,
+    requestedStatus: newStatus,
+    resolvedStatus,
   })
 }

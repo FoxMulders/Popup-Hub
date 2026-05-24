@@ -30,7 +30,7 @@ export function LayoutPresetPicker({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value as LayoutPreset)}
-          className="min-w-[8.5rem] max-w-[11rem] rounded-lg border-2 border-black px-1.5 py-0.5 text-[11px] font-semibold text-black focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="min-w-[8.5rem] max-w-[11rem] rounded-lg border-2 border-black px-1.5 py-0.5 text-[11px] font-semibold text-black focus:outline-none focus:ring-2 focus:ring-harvest-400"
         >
           {options.map((opt) => (
             <option key={opt.id} value={opt.id}>

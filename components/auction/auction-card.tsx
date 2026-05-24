@@ -16,7 +16,7 @@ interface AuctionCardProps {
 
 const STATUS_STYLES: Record<string, string> = {
   active: 'border-harvest-300 bg-harvest-50',
-  upcoming: 'border-amber-200 bg-amber-50/50',
+  upcoming: 'border-harvest-200 bg-harvest-50/50',
   ended: 'border-stone-200 bg-stone-50',
   cancelled: 'border-stone-200 bg-stone-50 opacity-60',
 }
@@ -43,7 +43,7 @@ export function AuctionCard({ auction, eventId, href, className }: AuctionCardPr
         )}
         {auction.status === 'ended' && auction.winning_paddle_id && (
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-            <Trophy className="h-3 w-3 text-amber-500" aria-hidden />
+            <Trophy className="h-3 w-3 text-harvest-500" aria-hidden />
             Winner: Paddle #{auction.winning_paddle_id}
             {auction.pot_amount > 0 && <> · {formatCents(auction.pot_amount)}</>}
           </p>

@@ -4,6 +4,7 @@ import { format, isWithinInterval } from 'date-fns'
 import { CalendarPlus } from 'lucide-react'
 import type { EventScheduleItem } from '@/types/database'
 import { Badge } from '@/components/ui/badge'
+import { marketStatusBadge } from '@/lib/theme/market'
 import { Button } from '@/components/ui/button'
 import { openScheduleInCalendar } from '@/lib/shopper/calendar-export'
 
@@ -47,7 +48,7 @@ export function EventSchedulePanel({ items, eventLocation }: EventSchedulePanelP
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-foreground">{item.title}</p>
                   {live && (
-                    <Badge className="bg-green-100 text-green-800">Happening now</Badge>
+                    <Badge className={marketStatusBadge.success}>Happening now</Badge>
                   )}
                 </div>
                 {item.location_label && (

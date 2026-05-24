@@ -6,6 +6,7 @@ import { TouchFileInput } from '@/components/ui/touch-file-input'
 import { parseFlyerImage, type FlyerExtractedDetails } from '@/lib/shopper/parse-flyer-image'
 import type { Event } from '@/types/database'
 import { cn } from '@/lib/utils'
+import { ExpandableImage } from '@/components/ui/expandable-image'
 import { ImageIcon, Loader2, X } from 'lucide-react'
 
 interface DiscoverFlyerUploadProps {
@@ -120,9 +121,8 @@ export function DiscoverFlyerUpload({
         </div>
       ) : (
         <div className="mt-4 space-y-4">
-          <figure className="overflow-hidden rounded-xl border border-stone-200 bg-slate-50">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+          <figure className="overflow-hidden rounded-xl border border-stone-200 bg-canvas">
+            <ExpandableImage
               src={previewUrl}
               alt={fileName ? `Uploaded flyer: ${fileName}` : 'Uploaded market flyer'}
               className="mx-auto max-h-[min(60vh,520px)] w-full object-contain"
@@ -192,7 +192,7 @@ export function DiscoverFlyerUpload({
               {filtersWouldChange && !promptDismissed ? (
                 <div
                   className={cn(
-                    'rounded-xl border border-amber-200 bg-amber-50 px-4 py-3',
+                    'rounded-xl border border-harvest-200 bg-harvest-50 px-4 py-3',
                     extracted.confidence === 'high' && 'border-forest/30 bg-forest/5'
                   )}
                   role="status"

@@ -52,8 +52,8 @@ export default async function VendorEventsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Apply for open markets</h1>
-        <p className="mt-1 text-gray-500">
+        <h1 className="text-3xl font-bold text-foreground">Apply for open markets</h1>
+        <p className="mt-1 text-muted-foreground">
           Browse every published market and apply directly — no organizer pre-approval required.
         </p>
       </div>

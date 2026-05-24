@@ -15,7 +15,7 @@ interface VenueFixturesCatalogProps {
   onToolChange: (tool: LayoutTool) => void
 }
 
-const VENDOR_SWATCH_CLASS = 'bg-amber-50 border-2 border-amber-700'
+const VENDOR_SWATCH_CLASS = 'bg-harvest-50 border-2 border-harvest-700'
 
 /** Single-line catalog labels for the 20% left rail (tooltips keep full names). */
 const CATALOG_DISPLAY_LABEL: Partial<Record<LayoutTool, string>> = {
@@ -86,7 +86,7 @@ export function VenueFixturesCatalog({ activeTool, onToolChange }: VenueFixtures
                       swatchClassName
                     )}
                   >
-                    <LayoutGrid className="h-3 w-3 text-amber-800" />
+                    <LayoutGrid className="h-3 w-3 text-harvest-700" />
                   </span>
                 ) : (
                   <span className={cn('h-5 w-8 shrink-0 rounded', swatchClassName)} />

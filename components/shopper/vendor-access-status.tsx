@@ -15,7 +15,7 @@ export async function VendorAccessStatus({ userId }: { userId: string }) {
 
   return (
     <div className="rounded-2xl border bg-white p-6">
-      <h3 className="font-semibold text-gray-900 mb-3">Vendor access requests</h3>
+      <h3 className="font-semibold text-foreground mb-3">Vendor access requests</h3>
       <ul className="space-y-2 text-sm">
         {requests.map((request) => {
           const coordinator = Array.isArray(request.coordinator)

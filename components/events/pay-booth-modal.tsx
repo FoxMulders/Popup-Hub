@@ -176,12 +176,12 @@ export function PayBoothModal({
             <Skeleton className="h-40 w-full rounded-lg" />
           ) : (
             <div className="space-y-4 py-2">
-              <div className="rounded-lg bg-gray-50 p-3 text-sm space-y-1.5">
+              <div className="rounded-lg bg-canvas p-3 text-sm space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Booth fee</span>
+                  <span className="text-muted-foreground">Booth fee</span>
                   <span className="font-semibold">{formatCents(boothPriceCents)}</span>
                 </div>
-                <div className="flex justify-between text-gray-500">
+                <div className="flex justify-between text-muted-foreground">
                   <span>Platform fee (3% + $1)</span>
                   <span>{formatCents(platformFeeCents)}</span>
                 </div>
@@ -189,14 +189,14 @@ export function PayBoothModal({
                   <span>You pay</span>
                   <span>{formatCents(boothPriceCents)}</span>
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Coordinator receives</span>
                   <span>{formatCents(coordinatorPayoutCents)}</span>
                 </div>
               </div>
 
               {!config?.squareConnected ? (
-                <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+                <p className="text-sm text-harvest-700 bg-harvest-50 rounded-lg p-3">
                   The coordinator has not connected Square yet. Payment will be available once they finish setup.
                 </p>
               ) : (
@@ -207,12 +207,12 @@ export function PayBoothModal({
                       ref={setCardContainer}
                       className="min-h-[100px] rounded-lg border p-3"
                     />
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       Secured by Square — card details never touch our servers
                     </p>
                   </div>
                   <Button
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                    className="w-full"
                     onClick={handlePay}
                     disabled={paying || !card}
                   >

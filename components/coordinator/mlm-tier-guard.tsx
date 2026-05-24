@@ -16,7 +16,7 @@ export function MlmTierGuard({
       <h4 className="font-bold uppercase tracking-wide text-sm flex items-center gap-2">
         🛡️ MLM Tier Curation Guard
       </h4>
-      <p className="text-xs text-gray-700 mt-1 whitespace-normal break-words">
+      <p className="text-xs text-foreground mt-1 whitespace-normal break-words">
         Brands are capped at 1 slot each to prevent internal competition. Set the maximum total MLM
         profiles allowed in this showcase:
       </p>
@@ -33,7 +33,7 @@ export function MlmTierGuard({
           onChange={(e) => onGlobalMlmCapChange(Math.max(0, Number(e.target.value) || 0))}
           className="border-2 border-black p-1 w-16 text-center font-bold bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
         />
-        <span className="text-xs text-gray-500 italic whitespace-normal break-words">
+        <span className="text-xs text-muted-foreground italic whitespace-normal break-words">
           (Remaining brands queue as FCFS waitlist once met — {activeMlmSlots}/{globalMlmCap} active)
         </span>
       </div>

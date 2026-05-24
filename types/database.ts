@@ -165,6 +165,7 @@ export interface Event {
   require_full_attendance: boolean
   market_insurance_required?: boolean
   skip_venue_layout?: boolean
+  market_city?: string
   booth_clearance_policy: BoothClearancePolicy
   platform_fee_mode: PlatformFeeMode
   platform_fee_flat_cents: number
@@ -595,6 +596,7 @@ export interface CoordinatorSavedVenue {
   longitude: number
   venue_preset_id: string | null
   skip_venue_layout: boolean
+  market_city: string
   last_used_at: string
   created_at: string
   updated_at: string

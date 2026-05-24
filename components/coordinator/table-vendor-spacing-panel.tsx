@@ -44,12 +44,12 @@ export function TableVendorSpacingPanel({
   if (vendors.length === 0) return null
 
   return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+    <div className="rounded-2xl border border-harvest-200 bg-harvest-50/60 p-4 space-y-3">
       <div className="flex items-start gap-2">
-        <Ruler className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <Ruler className="h-5 w-5 text-harvest-600 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-amber-900">Table booth sizes</p>
-          <p className="text-xs text-amber-800 mt-0.5">
+          <p className="text-sm font-semibold text-harvest-800">Table booth sizes</p>
+          <p className="text-xs text-harvest-700 mt-0.5">
             {venueTableLengthFt != null ? (
               <>
                 All vendors use the hall table size ({venueTableLengthFt}&apos;). Change it with the{' '}
@@ -77,11 +77,11 @@ export function TableVendorSpacingPanel({
           return (
             <li
               key={v.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2 text-sm"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-harvest-100 bg-white px-3 py-2 text-sm"
             >
               <div className="min-w-0">
-                <p className="font-medium text-gray-900 truncate">{v.vendorName}</p>
-                <dl className="mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-[10px] text-gray-500 leading-snug">
+                <p className="font-medium text-foreground truncate">{v.vendorName}</p>
+                <dl className="mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-[10px] text-muted-foreground leading-snug">
                   <dt>Booth</dt>
                   <dd className="truncate tabular-nums">{v.boothLabel}</dd>
                   <dt>Unit</dt>
@@ -145,11 +145,11 @@ export function TableVendorSpacingPanel({
                     </Select>
                   </>
                 ) : (
-                  <span className="text-xs font-medium text-amber-900 tabular-nums">
+                  <span className="text-xs font-medium text-harvest-800 tabular-nums">
                     {venueTableLengthFt}&apos; table
                   </span>
                 )}
-                <span className="text-[10px] font-medium text-amber-800 whitespace-nowrap">
+                <span className="text-[10px] font-medium text-harvest-700 whitespace-nowrap">
                   {footprint}
                 </span>
               </div>

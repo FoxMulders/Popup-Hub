@@ -44,10 +44,10 @@ export default async function SquareConnectPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isConnected ? (
-            <div className="flex items-center gap-2 rounded-lg bg-green-50 p-3">
+            <div className="flex items-center gap-2 rounded-lg bg-sage-50 p-3">
               <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-green-700">Square account connected</p>
+                <p className="text-sm font-medium text-sage-700">Square account connected</p>
                 <p className="text-xs text-green-600">You can now collect booth payments.</p>
               </div>
             </div>

@@ -130,7 +130,7 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
           </p>
 
           {!paymentEmail && !pending ? (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p className="rounded-lg border border-harvest-200 bg-harvest-50 px-3 py-2 text-sm text-harvest-800">
               E-transfer top-up is not configured yet — use cash at the door or card payment below.
             </p>
           ) : null}
@@ -216,7 +216,7 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
                     className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition ${
                       amountCents === amount
                         ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-300'
+                        : 'border-stone-200 hover:border-blue-300'
                     }`}
                   >
                     {formatCents(amount)}

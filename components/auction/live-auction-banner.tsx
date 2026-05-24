@@ -40,7 +40,7 @@ export function LiveAuctionBanner({
               </p>
             )}
             {lowBalance ? (
-              <p className="mt-2 text-xs font-medium text-amber-800">
+              <p className="mt-2 text-xs font-medium text-harvest-700">
                 Wallet low — top up to drop quarters (min {formatCents(activeAuction.min_drop_amount)}).
               </p>
             ) : null}
@@ -66,13 +66,13 @@ export function LiveAuctionBanner({
   if (upcomingAuction) {
     const lowBalance = needsWalletTopUp(walletBalanceCents, upcomingAuction.min_drop_amount)
     return (
-      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <div className="mt-4 rounded-xl border border-harvest-200 bg-harvest-50 px-4 py-3">
         <div className="flex items-start gap-3">
-          <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+          <Clock className="mt-0.5 h-5 w-5 shrink-0 text-harvest-700" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-amber-900">Quarter auction coming up</p>
-            <p className="mt-0.5 text-sm text-amber-800">{upcomingAuction.title}</p>
-            <p className="mt-1 text-xs text-amber-700">
+            <p className="text-sm font-semibold text-harvest-800">Quarter auction coming up</p>
+            <p className="mt-0.5 text-sm text-harvest-700">{upcomingAuction.title}</p>
+            <p className="mt-1 text-xs text-harvest-700">
               {lowBalance
                 ? `Top up your wallet — you'll need at least ${formatCents(upcomingAuction.min_drop_amount)} per drop.`
                 : "Top up your wallet to get ready — you'll need a paddle ID to drop quarters."}
@@ -98,11 +98,11 @@ export function LiveAuctionBanner({
     return (
       <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 px-4 py-3">
         <div className="flex items-start gap-3">
-          <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+          <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-harvest-600" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-gray-900">Auction ended</p>
-            <p className="mt-0.5 text-sm text-gray-600">{lastEndedAuction.title}</p>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="text-sm font-semibold text-foreground">Auction ended</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{lastEndedAuction.title}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
               Winner: Paddle #{lastEndedAuction.winning_paddle_id}
               {lastEndedAuction.pot_amount > 0
                 ? ` · Pot ${formatCents(lastEndedAuction.pot_amount)}`

@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import type { PaymentStatus } from '@/types/database'
+import { marketStatusBadge } from '@/lib/theme/market'
 
 interface CancellationDetailsProps {
   reasonLabel: string | null
@@ -10,14 +11,14 @@ interface CancellationDetailsProps {
 function refundStatusLabel(paymentStatus: PaymentStatus): { label: string; className: string } {
   switch (paymentStatus) {
     case 'refunded':
-      return { label: 'Refund completed', className: 'bg-green-100 text-green-800' }
+      return { label: 'Refund completed', className: marketStatusBadge.success }
     case 'paid':
     case 'processing':
-      return { label: 'Refund processing', className: 'bg-amber-100 text-amber-800' }
+      return { label: 'Refund processing', className: marketStatusBadge.warning }
     case 'unpaid':
-      return { label: 'No booth fee charged', className: 'bg-gray-100 text-gray-600' }
+      return { label: 'No booth fee charged', className: marketStatusBadge.neutral }
     default:
-      return { label: 'Refund pending', className: 'bg-gray-100 text-gray-600' }
+      return { label: 'Refund pending', className: marketStatusBadge.neutral }
   }
 }
 

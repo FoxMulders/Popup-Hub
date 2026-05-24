@@ -52,9 +52,9 @@ export function TouchFileInput({
         )}
         aria-labelledby={id}
       >
-        {preview ?? <Upload className="h-8 w-8 text-gray-400" />}
+        {preview ?? <Upload className="h-8 w-8 text-muted-foreground" />}
         {children ?? (
-          <span className="text-xs text-gray-500 text-center">{label}</span>
+          <span className="text-xs text-muted-foreground text-center">{label}</span>
         )}
       </button>
     </div>

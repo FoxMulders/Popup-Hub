@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { CoordinatorSavedVenue } from '@/types/database'
-import type { EdmontonQuadrantFilter } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 
 export interface SavedVenueInput {
@@ -10,7 +9,7 @@ export interface SavedVenueInput {
   longitude: number
   venuePresetId: VenuePresetId
   skipVenueLayout: boolean
-  cityQuadrant: EdmontonQuadrantFilter
+  marketCity: string
 }
 
 function trim(value: string): string {
@@ -51,7 +50,7 @@ export async function saveCoordinatorVenue(
     longitude: input.longitude,
     venue_preset_id: input.venuePresetId === 'blank' ? null : input.venuePresetId,
     skip_venue_layout: input.skipVenueLayout,
-    city_quadrant: input.cityQuadrant === 'all' ? null : input.cityQuadrant,
+    market_city: input.marketCity,
     last_used_at: new Date().toISOString(),
   }
 

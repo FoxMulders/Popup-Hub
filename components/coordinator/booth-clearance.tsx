@@ -197,7 +197,7 @@ function BoothClearanceDialogInner({
     return (
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground font-medium">Review photo before confirming:</p>
-        <div className="relative rounded-xl overflow-hidden border border-gray-200">
+        <div className="relative rounded-xl overflow-hidden border border-stone-200">
           <img src={capturedDataUrl} alt="Clearance preview" className="w-full object-cover max-h-64" />
         </div>
         <div className="flex gap-2">
@@ -224,8 +224,8 @@ function BoothClearanceDialogInner({
       <div
         className={`rounded-lg border p-3 text-sm ${
           clearancePolicy === 'pack_furniture'
-            ? 'bg-orange-50 border-orange-200 text-orange-900'
-            : 'bg-amber-50 border-amber-200 text-amber-800'
+            ? 'bg-terracotta-50 border-terracotta-200 text-terracotta-800'
+            : 'bg-harvest-50 border-harvest-200 text-harvest-700'
         }`}
       >
         <p className="font-semibold mb-1">{instructions.title}</p>
@@ -241,7 +241,7 @@ function BoothClearanceDialogInner({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="relative rounded-xl overflow-hidden bg-black border border-gray-200 aspect-video">
+          <div className="relative rounded-xl overflow-hidden bg-black border border-stone-200 aspect-video">
             <video
               ref={videoRef}
               autoPlay

@@ -144,12 +144,12 @@ export function AuctionRoom({
     <div className="mx-auto max-w-5xl space-y-6">
       {showOnboarding && (
         <div
-          className="rounded-xl border border-amber-200 bg-amber-50 p-4"
+          className="rounded-xl border border-harvest-200 bg-harvest-50 p-4"
           role="note"
           aria-label="How quarter auctions work"
         >
-          <p className="font-semibold text-amber-900">New to quarter auctions?</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-amber-800">
+          <p className="font-semibold text-harvest-800">New to quarter auctions?</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-harvest-700">
             <li>Top up your wallet to get a permanent Paddle ID.</li>
             <li>Drop quarters during the live timer — each drop is an entry to win.</li>
             <li>When time runs out, a random paddle is drawn from all entries.</li>
@@ -157,7 +157,7 @@ export function AuctionRoom({
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               size="sm"
-              className="bg-amber-600 hover:bg-amber-700"
+              className="bg-harvest-600 hover:bg-harvest-700"
               onClick={() => { window.location.href = '/wallet' }}
             >
               Top up wallet
@@ -184,24 +184,24 @@ export function AuctionRoom({
         </p>
       )}
 
-      <Card className={`overflow-hidden border-2 ${auction.status === 'active' ? 'border-amber-400' : 'border-gray-200'}`}>
+      <Card className={`overflow-hidden border-2 ${auction.status === 'active' ? 'border-harvest-400' : 'border-stone-200'}`}>
         <div className="relative">
           {auction.item_image_url && (
             <img src={auction.item_image_url} alt={auction.item_name} className="h-56 w-full object-cover" />
           )}
           <Badge className={`absolute left-3 top-3 text-sm capitalize ${
-            auction.status === 'active' ? 'bg-green-500 text-white' :
-            auction.status === 'ended' ? 'bg-gray-500 text-white' : 'bg-amber-500 text-white'
+            auction.status === 'active' ? 'bg-sage-500 text-white' :
+            auction.status === 'ended' ? 'bg-stone-500 text-white' : 'bg-harvest-500 text-white'
           }`}>
             {auction.status === 'active' ? '🔴 LIVE' : auction.status}
           </Badge>
         </div>
         <CardContent className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900">{auction.title}</h2>
-          <p className="text-gray-500">{auction.item_name}</p>
+          <h2 className="text-2xl font-bold text-foreground">{auction.title}</h2>
+          <p className="text-muted-foreground">{auction.item_name}</p>
 
           {auction.status === 'upcoming' && (
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <div className="mt-4 rounded-xl border border-harvest-200 bg-harvest-50 p-4 text-sm text-harvest-700">
               This auction hasn&apos;t started yet. Check back when the coordinator goes live.
             </div>
           )}
@@ -209,14 +209,14 @@ export function AuctionRoom({
           {auction.status === 'active' && !isDrawing && (
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 text-sm text-gray-500">
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />Time Remaining
                   <Tooltip>
-                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">When the timer runs out, a winner is selected randomly from all paddle entries. More drops give you more entries.</TooltipContent>
                   </Tooltip>
                 </span>
-                <span className={`text-2xl font-mono font-bold ${timeLeft < 30 ? 'text-red-500 animate-pulse' : 'text-gray-900'}`}>
+                <span className={`text-2xl font-mono font-bold ${timeLeft < 30 ? 'text-red-500 animate-pulse' : 'text-foreground'}`}>
                   {formatTime(timeLeft)}
                 </span>
               </div>
@@ -225,47 +225,47 @@ export function AuctionRoom({
           )}
 
           {isDrawing && (
-            <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+            <div className="mt-4 rounded-xl border border-sage-200 bg-sage-50 p-4 text-center">
               <p className="font-semibold text-green-900">Drawing winner…</p>
-              <p className="mt-1 text-sm text-green-700">Hang tight while we pick a paddle.</p>
+              <p className="mt-1 text-sm text-sage-700">Hang tight while we pick a paddle.</p>
             </div>
           )}
 
           {auction.status === 'ended' && auction.winning_paddle_id && (
-            <div className="mt-4 flex items-center gap-3 rounded-xl bg-amber-50 p-4">
-              <Trophy className="h-8 w-8 text-amber-500 flex-shrink-0" />
+            <div className="mt-4 flex items-center gap-3 rounded-xl bg-harvest-50 p-4">
+              <Trophy className="h-8 w-8 text-harvest-500 flex-shrink-0" />
               <div>
-                <p className="font-bold text-gray-900">Auction Ended!</p>
-                <p className="text-sm text-gray-600">
-                  Winner: <span className="font-semibold text-amber-700">Paddle #{auction.winning_paddle_id}</span>
+                <p className="font-bold text-foreground">Auction Ended!</p>
+                <p className="text-sm text-muted-foreground">
+                  Winner: <span className="font-semibold text-harvest-700">Paddle #{auction.winning_paddle_id}</span>
                 </p>
               </div>
             </div>
           )}
 
           {auction.status === 'ended' && !auction.winning_paddle_id && (
-            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-gray-600">
+            <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-muted-foreground">
               Auction ended with no drops — no winner was selected.
             </div>
           )}
 
-          <div className="mt-4 grid grid-cols-3 gap-4 rounded-xl bg-gray-50 p-4">
+          <div className="mt-4 grid grid-cols-3 gap-4 rounded-xl bg-canvas p-4">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1">
-                <p className="text-xs text-gray-500">Total Pot</p>
+                <p className="text-xs text-muted-foreground">Total Pot</p>
                 <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3 w-3 text-muted-foreground" /></TooltipTrigger>
                   <TooltipContent className="max-w-xs">The total value of all quarters dropped so far. The winner takes this prize.</TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-lg font-bold text-amber-600">{formatCents(totalPotCents)}</p>
+              <p className="text-lg font-bold text-harvest-600">{formatCents(totalPotCents)}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500">Participants</p>
+              <p className="text-xs text-muted-foreground">Participants</p>
               <p className="text-lg font-bold">{leaderboard.length}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500">Total Drops</p>
+              <p className="text-xs text-muted-foreground">Total Drops</p>
               <p className="text-lg font-bold">{drops.length}</p>
             </div>
           </div>
@@ -277,37 +277,37 @@ export function AuctionRoom({
           <CardHeader>
             <CardTitle className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-amber-500" />Drop Your Quarter
+                <Zap className="h-4 w-4 text-harvest-500" />Drop Your Quarter
                 <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                   <TooltipContent className="max-w-xs">Drop quarters from your wallet into the auction. More drops = more paddle entries = better odds of winning.</TooltipContent>
                 </Tooltip>
               </span>
-              <span className="text-sm font-normal text-gray-500">
-                Balance: <span className="font-semibold text-gray-900">{formatCents(wallet?.balance ?? 0)}</span>
+              <span className="text-sm font-normal text-muted-foreground">
+                Balance: <span className="font-semibold text-foreground">{formatCents(wallet?.balance ?? 0)}</span>
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {!paddleId ? (
-              <div className="rounded-lg bg-amber-50 p-4 text-center">
-                <p className="text-sm text-amber-700">Add funds to your wallet to get a Paddle ID and participate.</p>
-                <Button className="mt-3 bg-amber-500 hover:bg-amber-600 text-white" size="sm" onClick={() => { window.location.href = '/wallet' }}>
+              <div className="rounded-lg bg-harvest-50 p-4 text-center">
+                <p className="text-sm text-harvest-700">Add funds to your wallet to get a Paddle ID and participate.</p>
+                <Button className="mt-3" size="sm" onClick={() => { window.location.href = '/wallet' }}>
                   Top Up Wallet
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-lg bg-green-50 p-2">
-                <span className="text-xs text-green-700">Your Paddle:</span>
-                <span className="font-mono font-bold text-green-800">#{paddleId}</span>
+              <div className="flex items-center gap-2 rounded-lg bg-sage-50 p-2">
+                <span className="text-xs text-sage-700">Your Paddle:</span>
+                <span className="font-mono font-bold text-sage-800">#{paddleId}</span>
               </div>
             )}
 
             <div className="space-y-2">
               <div className="flex items-center gap-1">
-                <p className="text-xs text-gray-500">Drop Amount</p>
+                <p className="text-xs text-muted-foreground">Drop Amount</p>
                 <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3 w-3 text-gray-400" /></TooltipTrigger>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3 w-3 text-muted-foreground" /></TooltipTrigger>
                   <TooltipContent className="max-w-xs">The minimum and maximum number of quarters you can drop in a single turn.</TooltipContent>
                 </Tooltip>
               </div>
@@ -318,7 +318,7 @@ export function AuctionRoom({
                     type="button"
                     onClick={() => setDropAmount(amount)}
                     className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition ${
-                      dropAmount === amount ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-gray-200 hover:border-amber-300'
+                      dropAmount === amount ? 'border-harvest-500 bg-harvest-50 text-harvest-700' : 'border-stone-200 hover:border-harvest-400'
                     }`}
                   >
                     {formatCents(amount)}
@@ -328,7 +328,7 @@ export function AuctionRoom({
             </div>
 
             <Button
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+              className="w-full"
               onClick={handleDrop}
               disabled={dropping || auction.status !== 'active' || !paddleId || (wallet?.balance ?? 0) < dropAmount || isDrawing}
               size="lg"
@@ -339,10 +339,10 @@ export function AuctionRoom({
             </Button>
 
             {myDrops.length > 0 && (
-              <div className="rounded-lg bg-gray-50 p-3 text-center text-sm">
-                <p className="text-gray-500">Your total in pot</p>
-                <p className="text-lg font-bold text-gray-900">{formatCents(myTotalCents)}</p>
-                <p className="text-xs text-gray-400">{myDrops.length} drop{myDrops.length !== 1 ? 's' : ''}</p>
+              <div className="rounded-lg bg-canvas p-3 text-center text-sm">
+                <p className="text-muted-foreground">Your total in pot</p>
+                <p className="text-lg font-bold text-foreground">{formatCents(myTotalCents)}</p>
+                <p className="text-xs text-muted-foreground">{myDrops.length} drop{myDrops.length !== 1 ? 's' : ''}</p>
               </div>
             )}
           </CardContent>
@@ -351,28 +351,28 @@ export function AuctionRoom({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Users className="h-4 w-4 text-amber-500" />Live Leaderboard
+              <Users className="h-4 w-4 text-harvest-500" />Live Leaderboard
             </CardTitle>
           </CardHeader>
           <CardContent>
             {leaderboard.length === 0 ? (
-              <div className="py-8 text-center text-sm text-gray-400">No drops yet — be the first!</div>
+              <div className="py-8 text-center text-sm text-muted-foreground">No drops yet — be the first!</div>
             ) : (
               <div className="space-y-2">
                 {leaderboard.slice(0, 10).map((entry, i) => {
                   const isMe = paddleId === entry.paddleId
                   return (
-                    <div key={entry.paddleId} className={`flex items-center gap-3 rounded-lg p-2 ${isMe ? 'bg-amber-50 ring-1 ring-amber-300' : 'bg-gray-50'}`}>
-                      <span className={`w-6 text-center text-sm font-bold ${i === 0 ? 'text-amber-500' : 'text-gray-400'}`}>
+                    <div key={entry.paddleId} className={`flex items-center gap-3 rounded-lg p-2 ${isMe ? 'bg-harvest-50 ring-1 ring-harvest-400' : 'bg-canvas'}`}>
+                      <span className={`w-6 text-center text-sm font-bold ${i === 0 ? 'text-harvest-500' : 'text-muted-foreground'}`}>
                         {i === 0 ? '👑' : `#${i + 1}`}
                       </span>
                       <span className="flex-1 font-mono text-sm">
                         Paddle #{entry.paddleId}
-                        {isMe && <span className="ml-1 text-xs text-amber-600">(you)</span>}
+                        {isMe && <span className="ml-1 text-xs text-harvest-600">(you)</span>}
                       </span>
                       <div className="text-right">
                         <p className="text-xs font-semibold">{formatCents(entry.totalCents)}</p>
-                        <p className="text-[10px] text-gray-400">{entry.dropCount} drop{entry.dropCount !== 1 ? 's' : ''}</p>
+                        <p className="text-[10px] text-muted-foreground">{entry.dropCount} drop{entry.dropCount !== 1 ? 's' : ''}</p>
                       </div>
                     </div>
                   )

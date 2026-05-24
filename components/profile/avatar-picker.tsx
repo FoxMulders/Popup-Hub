@@ -105,12 +105,12 @@ export function AvatarPicker({ profile, onAvatarChange }: AvatarPickerProps) {
           avatar_url: profile.avatar_url,
         }}
         className="h-20 w-20"
-        fallbackClassName="text-2xl text-amber-700 bg-amber-100"
+        fallbackClassName="text-2xl text-harvest-700 bg-harvest-100"
       />
 
       <div className="space-y-2">
-        <p className="font-semibold text-gray-900 text-lg">{profile.full_name || 'Your Name'}</p>
-        <p className="text-gray-500 text-sm">{profile.email}</p>
+        <p className="font-semibold text-foreground text-lg">{profile.full_name || 'Your Name'}</p>
+        <p className="text-muted-foreground text-sm">{profile.email}</p>
         {profile.role === 'vendor' && !profile.avatar_url ? (
           <p className="text-xs text-muted-foreground">
             No custom photo yet — your passport business logo is shown by default.
@@ -149,7 +149,7 @@ export function AvatarPicker({ profile, onAvatarChange }: AvatarPickerProps) {
             </Button>
           ) : null}
         </div>
-        <p className="text-xs text-gray-400">JPG, PNG, or WebP · max 2MB · auto-cropped to square</p>
+        <p className="text-xs text-muted-foreground">JPG, PNG, or WebP · max 2MB · auto-cropped to square</p>
         <input
           ref={inputRef}
           type="file"

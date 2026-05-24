@@ -199,7 +199,7 @@ export function VendorCheckin({ eventId, applications: initial }: VendorCheckinP
         })}
 
         {sorted.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">
+          <div className="rounded-xl border border-dashed border-stone-200 py-12 text-center">
             <p className="text-sm text-muted-foreground">No approved vendors yet.</p>
           </div>
         )}

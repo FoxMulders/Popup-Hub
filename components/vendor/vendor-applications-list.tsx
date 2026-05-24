@@ -16,23 +16,28 @@ import {
 import type { BoothApplication, EventCancellationReason, PaymentStatus } from '@/types/database'
 import { CancellationDetails } from '@/components/vendor/cancellation-details'
 import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
+import { MarketInsuranceUpload } from '@/components/vendor/market-insurance-upload'
+import { marketStatusBadge } from '@/lib/theme/market'
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
-  pending: { label: 'Pending Review', class: 'bg-yellow-100 text-yellow-700' },
-  approved: { label: 'Approved', class: 'bg-green-100 text-green-700' },
-  rejected: { label: 'Declined', class: 'bg-red-100 text-red-600' },
-  waitlisted: { label: 'Waitlisted', class: 'bg-blue-100 text-blue-700' },
-  cancelled: { label: 'Cancelled', class: 'bg-gray-100 text-gray-500' },
+  pending: { label: 'Pending Review', class: marketStatusBadge.warning },
+  pending_insurance: { label: 'Pending Proof of Insurance', class: marketStatusBadge.warning },
+  approved: { label: 'Approved', class: marketStatusBadge.success },
+  rejected: { label: 'Declined', class: marketStatusBadge.error },
+  waitlisted: { label: 'Waitlisted', class: marketStatusBadge.warning },
+  cancelled: { label: 'Cancelled', class: marketStatusBadge.neutral },
 }
 
 interface VendorApplicationsListProps {
   applications: BoothApplication[]
   categoryPrices: Record<string, number>
+  userId: string
 }
 
 export function VendorApplicationsList({
   applications,
   categoryPrices,
+  userId,
 }: VendorApplicationsListProps) {
   const router = useRouter()
   const [payTarget, setPayTarget] = useState<{
@@ -45,10 +50,10 @@ export function VendorApplicationsList({
   if (applications.length === 0) {
     return (
       <div className="rounded-2xl border bg-white py-12 text-center">
-        <Calendar className="mx-auto mb-3 h-8 w-8 text-gray-300" />
-        <p className="text-gray-500 text-sm">No applications yet.</p>
+        <Calendar className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+        <p className="text-muted-foreground text-sm">No applications yet.</p>
         <Link href="/vendor/events">
-          <Button size="sm" className="mt-4 bg-amber-500 hover:bg-amber-600 text-white">
+          <Button size="sm" className="mt-4">
             Apply for open markets
           </Button>
         </Link>
@@ -88,11 +93,11 @@ export function VendorApplicationsList({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-gray-900 text-sm">
+                  <p className="truncate font-semibold text-foreground text-sm">
                     {app.event?.name}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">
                       {app.event?.start_at
                         ? format(new Date(app.event.start_at), 'MMM d, yyyy')
                         : ''}
@@ -101,7 +106,7 @@ export function VendorApplicationsList({
                       <Badge className={`text-[10px] ${config.class}`}>{config.label}</Badge>
                     )}
                     {needsPayment && (
-                      <Badge className="text-[10px] bg-amber-100 text-amber-800">
+                      <Badge className="text-[10px] bg-harvest-100 text-harvest-700">
                         Payment required
                       </Badge>
                     )}
@@ -111,7 +116,7 @@ export function VendorApplicationsList({
                       </Badge>
                     )}
                     {isApplicationPaid(app) && (
-                      <Badge className="text-[10px] bg-green-100 text-green-700">
+                      <Badge className="text-[10px] bg-sage-100 text-sage-800">
                         {app.payment_method === 'ETRANSFER' ? 'E-transfer confirmed' : 'Paid'}
                       </Badge>
                     )}
@@ -128,6 +133,14 @@ export function VendorApplicationsList({
                       compact
                     />
                   )}
+                  {app.status === 'pending_insurance' && !eventCancelled ? (
+                    <MarketInsuranceUpload
+                      applicationId={app.id}
+                      userId={userId}
+                      eventName={ev?.name ?? 'this market'}
+                      onComplete={() => router.refresh()}
+                    />
+                  ) : null}
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   {app.waitlist_position && !eventCancelled && (
@@ -138,7 +151,7 @@ export function VendorApplicationsList({
                   {needsPayment && ev?.id && (
                     <Button
                       size="sm"
-                      className="bg-amber-500 hover:bg-amber-600 text-white h-8 text-xs"
+                      className=" h-8 text-xs"
                       onClick={() =>
                         setPayTarget({
                           applicationId: app.id,

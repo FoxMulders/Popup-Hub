@@ -84,7 +84,13 @@ Migrations run through `052_quarter_auction_notifications.sql` as of this doc.
 
 - **Storage buckets:** `booth-clearance-photos`, `avatars`, `vendor-assets` (if not created by migrations)
 - **Realtime:** enable for `notifications`, `auctions`, `auction_drops` (Database → Replication)
-- **Auth redirect URLs:** add `https://popup-hub.vercel.app/api/auth/callback` in Supabase Auth settings
+- **Auth URL configuration** (Supabase → Authentication → [URL Configuration](https://supabase.com/dashboard/project/ensbggtbgabogvynqsqt/auth/url-configuration)):
+  - **Site URL:** `https://popup-hub.vercel.app` (must NOT be `http://localhost:3000` — that causes Google sign-in to redirect users to localhost)
+  - **Redirect URLs** (add all):
+    - `https://popup-hub.vercel.app/**`
+    - `http://localhost:3000/**`
+    - `https://localhost:3000/**`
+  - Google Cloud Console → OAuth client → Authorized redirect URIs must include your Supabase callback: `https://ensbggtbgabogvynqsqt.supabase.co/auth/v1/callback`
 
 ---
 

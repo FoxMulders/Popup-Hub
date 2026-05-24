@@ -75,11 +75,14 @@ export function WizardSummaryRail({
             <span className={WIZARD_SUMMARY_META_LABEL}>Venue</span>
             <div className={WIZARD_SUMMARY_VALUE_SAGE}>
               <p className="font-medium whitespace-normal break-words">{selectedVenue.name}</p>
-              {selectedVenue.locationOnly ? (
+              {selectedVenue.address ? (
                 <p className="text-xs text-muted-foreground mt-0.5 whitespace-normal break-words">
                   {selectedVenue.address}
                 </p>
-              ) : selectedVenue.width != null && selectedVenue.length != null ? (
+              ) : null}
+              {!selectedVenue.locationOnly &&
+              selectedVenue.width != null &&
+              selectedVenue.length != null ? (
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {selectedVenue.width} × {selectedVenue.length} ft
                 </p>

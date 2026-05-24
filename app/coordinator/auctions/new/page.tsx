@@ -128,8 +128,8 @@ function NewAuctionForm() {
               {imagePreview ? (
                 <img src={imagePreview} alt="Item" className="h-20 w-20 rounded-lg object-cover shrink-0" />
               ) : (
-                <div className="h-20 w-20 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                  <Upload className="h-6 w-6 text-gray-400" />
+                <div className="h-20 w-20 rounded-lg bg-stone-100 flex items-center justify-center shrink-0">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
                 </div>
               )}
               <div>
@@ -199,7 +199,7 @@ function NewAuctionForm() {
 
 export default function NewAuctionPage() {
   return (
-    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-amber-500" /></div>}>
+    <Suspense fallback={<div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-harvest-500" /></div>}>
       <NewAuctionForm />
     </Suspense>
   )

@@ -34,6 +34,7 @@ export async function POST(request: Request) {
           event_id,
           vendor_id,
           category_id,
+          payment_status,
           event:events(
             coordinator_id,
             platform_fee_mode,
@@ -45,6 +46,11 @@ export async function POST(request: Request) {
         .maybeSingle()
 
       if (application) {
+        if (application.payment_status === 'paid') {
+          console.log(`[Square webhook] payment.completed already settled: ${squarePaymentId}`)
+          break
+        }
+
         const eventRow = Array.isArray(application.event)
           ? application.event[0]
           : application.event
@@ -52,7 +58,7 @@ export async function POST(request: Request) {
         const feeConfig = resolveEventFeeConfig(eventRow)
         const platformFeeCents = computePlatformFeeCents(amountCents || 0, feeConfig)
 
-        await recordPlatformTransaction(supabase, {
+        const { error: txError } = await recordPlatformTransaction(supabase, {
           boothApplicationId: application.id,
           eventId: application.event_id,
           vendorId: application.vendor_id,
@@ -64,11 +70,13 @@ export async function POST(request: Request) {
           processorChargeId: squarePaymentId,
           status: 'completed',
         })
-      } else {
-        await supabase
-          .from('booth_applications')
-          .update({ payment_status: 'paid', square_payment_id: squarePaymentId })
-          .eq('square_payment_id', squarePaymentId)
+
+        if (txError) {
+          console.error('[Square webhook] platform transaction failed:', txError, {
+            squarePaymentId,
+            applicationId: application.id,
+          })
+        }
       }
 
       const { data: wtx } = await supabase

@@ -41,7 +41,7 @@ export function MarkClearedWithoutPhoto({ applicationId, onCleared }: MarkCleare
       variant="outline"
       onClick={handleMark}
       disabled={loading}
-      className="gap-1.5 border-green-200 text-green-700 hover:bg-green-50"
+      className="gap-1.5 border-sage-200 text-sage-800 hover:bg-sage-50"
     >
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
       Mark cleared

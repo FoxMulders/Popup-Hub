@@ -24,9 +24,9 @@ export function DevRoleSwitcher() {
   return (
     <div
       id="dev-role-switcher"
-      className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 rounded-xl border border-amber-300 bg-amber-50/95 p-3 shadow-lg backdrop-blur-sm max-w-[240px]"
+      className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 rounded-xl border border-harvest-400 bg-harvest-50/95 p-3 shadow-lg backdrop-blur-sm max-w-[240px]"
     >
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-900">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-harvest-800">
         Dev role switcher
       </p>
       {ROLES.map(({ role, label }) => (
@@ -35,7 +35,7 @@ export function DevRoleSwitcher() {
           type="button"
           size="sm"
           variant="outline"
-          className="h-8 justify-start border-amber-200 bg-white text-xs hover:bg-amber-100"
+          className="h-8 justify-start border-harvest-200 bg-white text-xs hover:bg-harvest-100"
           onClick={() => {
             window.location.href = devMockLoginPath(role)
           }}
@@ -43,11 +43,11 @@ export function DevRoleSwitcher() {
           {label}
         </Button>
       ))}
-      <p className="text-[10px] leading-snug text-amber-800/90">
+      <p className="text-[10px] leading-snug text-harvest-700/90">
         Parallel testing: open one role per browser profile, then log in once and leave that
         profile alone. Switching roles here only affects this profile.
       </p>
-      <div className="space-y-1 border-t border-amber-200/80 pt-2 text-[10px] text-amber-900/90">
+      <div className="space-y-1 border-t border-harvest-200/80 pt-2 text-[10px] text-harvest-800/90">
         <p className="font-semibold">Bookmark per profile</p>
         {ROLES.map(({ role, label }) => (
           <a

@@ -111,7 +111,7 @@ export function SmartPopulateBoothCaps({
 
   return (
     <div
-      className={`rounded-xl border border-sage-200 bg-gradient-to-br from-sage-50/90 to-amber-50/40 ${
+      className={`rounded-xl border border-sage-200 bg-gradient-to-br from-sage-50/90 to-harvest-50/40 ${
         compact ? 'p-3 space-y-3' : 'p-4 space-y-4'
       }`}
     >
@@ -223,7 +223,7 @@ export function SmartPopulateBoothCaps({
           </div>
           <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-base">
             <span className="font-bold text-sage-900">C_max (max booths)</span>
-            <span className="font-bold text-amber-800 tabular-nums">{preview.breakdown.cMax}</span>
+            <span className="font-bold text-harvest-700 tabular-nums">{preview.breakdown.cMax}</span>
           </div>
           <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-0.5 pt-1 text-[10px] text-sage-800">
             {preview.breakdown.buckets.map((b) => (

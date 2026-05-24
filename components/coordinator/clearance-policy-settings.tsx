@@ -57,18 +57,18 @@ export function ClearancePolicySettings({
   return (
     <div className="rounded-xl border bg-white p-4 shadow-sm space-y-3">
       <div className="flex items-center gap-1.5">
-        <Label htmlFor="clearance-policy" className="text-sm font-semibold text-gray-800">
+        <Label htmlFor="clearance-policy" className="text-sm font-semibold text-foreground">
           Booth clearance policy
         </Label>
         <Tooltip>
           <TooltipTrigger type="button">
-            <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             Controls whether vendors need photo proof at teardown, and whether venue tables and chairs must stay or be packed away.
           </TooltipContent>
         </Tooltip>
-        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500 ml-auto" />}
+        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-harvest-500 ml-auto" />}
         {saved && !saving && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 ml-auto" />}
       </div>
 
@@ -86,7 +86,7 @@ export function ClearancePolicySettings({
       </Select>
 
       {selected && (
-        <p className="text-xs text-gray-500 leading-relaxed">{selected.description}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">{selected.description}</p>
       )}
     </div>
   )

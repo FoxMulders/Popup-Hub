@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import {
-  EDMONTON_QUADRANT_OPTIONS,
-  filterEdmontonVenues,
-  type EdmontonQuadrantFilter,
-} from '@/lib/booth-planner/edmonton-venue-registry'
+import { useMemo } from 'react'
+import { filterEdmontonVenues } from '@/lib/booth-planner/edmonton-venue-registry'
 import { VENUE_PRESET_OPTIONS, type VenuePresetId } from '@/lib/booth-planner/venue-presets'
+import {
+  DEFAULT_MARKET_CITY_ID,
+  MARKET_CITIES,
+  isEdmontonMarketCity,
+} from '@/lib/wizard/market-cities'
 import { cn } from '@/lib/utils'
 import { WIZARD_SELECT_TRIGGER } from '@/lib/wizard/wizard-panel-styles'
 import { WizardFilterTooltip } from '@/components/coordinator/wizard/wizard-filter-tooltip'
@@ -19,72 +20,58 @@ const selectClassName = cn(
 interface EdmontonVenueTemplateBarProps {
   value: VenuePresetId
   onChange: (presetId: VenuePresetId) => void
-  quadrant?: EdmontonQuadrantFilter
-  onQuadrantChange?: (quadrant: EdmontonQuadrantFilter) => void
+  city?: string
+  onCityChange?: (cityId: string) => void
   className?: string
 }
 
 export function EdmontonVenueTemplateBar({
   value,
   onChange,
-  quadrant: quadrantProp,
-  onQuadrantChange,
+  city: cityProp,
+  onCityChange,
   className,
 }: EdmontonVenueTemplateBarProps) {
-  const [internalQuadrant, setInternalQuadrant] = useState<EdmontonQuadrantFilter>('all')
-  const quadrant = quadrantProp ?? internalQuadrant
-
-  function handleQuadrantChange(next: EdmontonQuadrantFilter) {
-    onQuadrantChange?.(next)
-    if (quadrantProp === undefined) setInternalQuadrant(next)
-  }
-
-  const filteredVenues = useMemo(() => filterEdmontonVenues(quadrant, ''), [quadrant])
+  const city = cityProp ?? DEFAULT_MARKET_CITY_ID
+  const showEdmontonTemplates = isEdmontonMarketCity(city)
 
   const templateOptions = useMemo(() => {
     const blank = VENUE_PRESET_OPTIONS.filter((o) => o.id === 'blank')
-    const dynamic = filteredVenues.map((v) => ({ id: v.id as VenuePresetId, label: v.label }))
+    if (!showEdmontonTemplates) return blank
+
+    const edmontonVenues = filterEdmontonVenues('all', '')
+    const dynamic = edmontonVenues.map((v) => ({ id: v.id as VenuePresetId, label: v.label }))
     return [...blank, ...dynamic]
-  }, [filteredVenues])
+  }, [showEdmontonTemplates])
 
   const selectedStillVisible =
-    value === 'blank' || filteredVenues.some((v) => v.id === value)
+    value === 'blank' || templateOptions.some((option) => option.id === value)
 
   return (
     <div
       className={cn(
-        'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-5 mb-4',
+        'grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5 mb-4',
         className
       )}
     >
       <WizardFilterTooltip
         label="City"
-        htmlFor="edmonton-city-select"
-        tooltip="Location is locked to Edmonton, AB for regional consistency."
+        htmlFor="market-city-select"
+        tooltip="Select the city for this market. Edmonton venue templates are available only for Edmonton."
       >
         <select
-          id="edmonton-city-select"
-          value="edmonton-ab"
-          disabled
-          aria-disabled
-          className={cn(selectClassName, 'cursor-not-allowed opacity-90 w-full')}
+          id="market-city-select"
+          value={city}
+          onChange={(e) => onCityChange?.(e.target.value)}
+          disabled={!onCityChange}
+          aria-disabled={!onCityChange}
+          className={cn(
+            selectClassName,
+            'w-full',
+            !onCityChange && 'cursor-not-allowed opacity-90'
+          )}
         >
-          <option value="edmonton-ab">Edmonton, AB</option>
-        </select>
-      </WizardFilterTooltip>
-
-      <WizardFilterTooltip
-        label="City Quadrant"
-        htmlFor="edmonton-quadrant-select"
-        tooltip="Filters local venues. Automatically snaps to match your selected venue's district."
-      >
-        <select
-          id="edmonton-quadrant-select"
-          value={quadrant}
-          onChange={(e) => handleQuadrantChange(e.target.value as EdmontonQuadrantFilter)}
-          className={cn(selectClassName, 'w-full')}
-        >
-          {EDMONTON_QUADRANT_OPTIONS.map((option) => (
+          {MARKET_CITIES.map((option) => (
             <option key={option.id} value={option.id} className="whitespace-normal">
               {option.label}
             </option>
@@ -95,8 +82,11 @@ export function EdmontonVenueTemplateBar({
       <WizardFilterTooltip
         label="Venue Template"
         htmlFor="edmonton-venue-template"
-        tooltip="Loads a pre-configured Edmonton community hall profile, auto-populating layout matrix rules, physical wall constraints, and coordinates."
-        className="sm:col-span-2 lg:col-span-1"
+        tooltip={
+          showEdmontonTemplates
+            ? 'Loads a pre-configured Edmonton community hall profile, auto-populating layout matrix rules, physical wall constraints, and coordinates.'
+            : 'Edmonton venue templates are only available when Edmonton is selected. Use a blank template for other cities.'
+        }
       >
         <select
           id="edmonton-venue-template"
@@ -112,7 +102,7 @@ export function EdmontonVenueTemplateBar({
         </select>
         {!selectedStillVisible ? (
           <p className="text-[10px] text-muted-foreground whitespace-normal break-words mt-1">
-            Active template hidden by quadrant filter — switch quadrant to re-select.
+            Active template is unavailable for this city — switched to blank.
           </p>
         ) : null}
       </WizardFilterTooltip>

@@ -22,7 +22,7 @@ export async function DiscoverMarketsList({ limit = 20 }: { limit?: number }) {
   if (visible.length === 0) {
     return (
       <div className="rounded-2xl border bg-white py-16 text-center">
-        <p className="text-gray-500">No upcoming markets in the area yet. Check back soon!</p>
+        <p className="text-muted-foreground">No upcoming markets in the area yet. Check back soon!</p>
       </div>
     )
   }

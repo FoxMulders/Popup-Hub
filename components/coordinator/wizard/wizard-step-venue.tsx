@@ -8,17 +8,20 @@ import {
   type MapMouseEvent,
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
-import { MapPin } from 'lucide-react'
+import { Loader2, MapPin } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { EdmontonVenueTemplateBar } from '@/components/coordinator/edmonton-venue-template-bar'
 import { SavedVenuePicker } from '@/components/coordinator/wizard/saved-venue-picker'
-import type { EdmontonQuadrantFilter } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { resolveTemplateAnchoredDimensions } from '@/lib/booth-planner/venue-presets'
 import { marketStatusBadge } from '@/lib/theme/market'
+import {
+  getMarketCityById,
+  isEdmontonMarketCity,
+} from '@/lib/wizard/market-cities'
 import {
   WIZARD_CALLOUT,
   WIZARD_FIELD_LABEL,
@@ -41,52 +44,96 @@ function AddressAutocomplete({
   value,
   onChange,
   onPlaceSelect,
+  cityId,
 }: {
   value: string
   onChange: (v: string) => void
   onPlaceSelect: (place: PlaceResult) => void
+  cityId: string
 }) {
   const apiLoaded = useApiIsLoaded()
+  const city = getMarketCityById(cityId)
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([])
   const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [highlightIndex, setHighlightIndex] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const serviceRef = useRef<google.maps.places.AutocompleteService | null>(null)
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     if (apiLoaded && window.google?.maps?.places) {
       serviceRef.current = new window.google.maps.places.AutocompleteService()
+      const mapDiv = document.createElement('div')
+      placesServiceRef.current = new window.google.maps.places.PlacesService(mapDiv)
     }
   }, [apiLoaded])
 
   useEffect(() => {
     if (!serviceRef.current || !value || value.length < 3) {
       setPredictions([])
+      setOpen(false)
+      setLoading(false)
+      setHighlightIndex(-1)
       return
     }
-    serviceRef.current.getPlacePredictions(
-      { input: value, componentRestrictions: { country: ['ca'] } },
-      (results, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-          setPredictions(results)
-          setOpen(true)
-        } else {
-          setPredictions([])
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    setLoading(true)
+
+    debounceRef.current = setTimeout(() => {
+      const requestId = ++requestIdRef.current
+      serviceRef.current!.getPlacePredictions(
+        {
+          input: value,
+          componentRestrictions: { country: ['ca'] },
+          locationBias: {
+            center: { lat: city.lat, lng: city.lng },
+            radius: 50000,
+          },
+        },
+        (results, status) => {
+          if (requestId !== requestIdRef.current) return
+          setLoading(false)
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+            setPredictions(results)
+            setOpen(true)
+            setHighlightIndex(-1)
+          } else {
+            setPredictions([])
+            setOpen(false)
+            setHighlightIndex(-1)
+          }
         }
-      }
-    )
-  }, [value])
+      )
+    }, 300)
 
-  function selectPrediction(prediction: google.maps.places.AutocompletePrediction) {
-    setOpen(false)
-    setPredictions([])
-    onChange(prediction.description)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [value, city.lat, city.lng])
 
-    const mapDiv = document.createElement('div')
-    const placesService = new window.google.maps.places.PlacesService(mapDiv)
-    placesService.getDetails(
-      { placeId: prediction.place_id, fields: ['formatted_address', 'geometry', 'name'] },
-      (place, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+  const selectPrediction = useCallback(
+    (prediction: google.maps.places.AutocompletePrediction) => {
+      setOpen(false)
+      setPredictions([])
+      setHighlightIndex(-1)
+      onChange(prediction.description)
+
+      if (!placesServiceRef.current) return
+
+      placesServiceRef.current.getDetails(
+        {
+          placeId: prediction.place_id,
+          fields: ['formatted_address', 'geometry', 'name'],
+        },
+        (place, status) => {
+          if (status !== window.google.maps.places.PlacesServiceStatus.OK || !place?.geometry?.location) {
+            return
+          }
           onPlaceSelect({
             address: place.formatted_address ?? prediction.description,
             lat: place.geometry.location.lat(),
@@ -94,35 +141,85 @@ function AddressAutocomplete({
             name: place.name ?? '',
           })
         }
-      }
-    )
-  }
+      )
+    },
+    [onChange, onPlaceSelect]
+  )
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
+        setHighlightIndex(-1)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!open || predictions.length === 0) {
+      if (e.key === 'Escape') setOpen(false)
+      return
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightIndex((prev) => (prev + 1) % predictions.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightIndex((prev) => (prev <= 0 ? predictions.length - 1 : prev - 1))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const target = highlightIndex >= 0 ? predictions[highlightIndex] : predictions[0]
+      if (target) selectPrediction(target)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      setOpen(false)
+      setHighlightIndex(-1)
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative">
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Search address in Edmonton area…"
-        className={cn(WIZARD_INPUT, 'w-full min-w-[200px] h-auto whitespace-normal break-words py-2')}
-      />
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => {
+            if (predictions.length > 0) setOpen(true)
+          }}
+          placeholder={`Search address near ${city.label}…`}
+          className={cn(WIZARD_INPUT, 'w-full min-w-[200px] h-auto whitespace-normal break-words py-2 pr-9')}
+          aria-autocomplete="list"
+          aria-expanded={open && predictions.length > 0}
+          aria-controls="wizard-address-predictions"
+          role="combobox"
+        />
+        {loading ? (
+          <Loader2
+            className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground pointer-events-none"
+            aria-hidden
+          />
+        ) : null}
+      </div>
       {open && predictions.length > 0 ? (
-        <ul className="absolute z-20 mt-1 w-full rounded-lg border-2 border-stone-200 bg-card shadow-[var(--shadow-market)] max-h-48 overflow-y-auto">
-          {predictions.map((p) => (
-            <li key={p.place_id}>
+        <ul
+          id="wizard-address-predictions"
+          role="listbox"
+          className="absolute z-20 mt-1 w-full rounded-lg border-2 border-stone-200 bg-card shadow-[var(--shadow-market)] max-h-48 overflow-y-auto"
+        >
+          {predictions.map((p, index) => (
+            <li key={p.place_id} role="option" aria-selected={index === highlightIndex}>
               <button
                 type="button"
-                className="w-full text-left px-3 py-2 text-sm whitespace-normal break-words hover:bg-canvas"
+                className={cn(
+                  'w-full text-left px-3 py-2 text-sm whitespace-normal break-words hover:bg-canvas',
+                  index === highlightIndex && 'bg-canvas'
+                )}
+                onMouseEnter={() => setHighlightIndex(index)}
                 onClick={() => selectPrediction(p)}
               >
                 {p.description}
@@ -138,13 +235,15 @@ function AddressAutocomplete({
 function VenueMapPin({
   venueName,
   address,
+  cityLabel,
 }: {
   venueName: string
   address: string
+  cityLabel: string
 }) {
   const [hovered, setHovered] = useState(false)
   const displayName = venueName.trim() || 'Venue location'
-  const displayAddress = address.trim() || 'Edmonton, AB'
+  const displayAddress = address.trim() || cityLabel
   const nativeTitle = `🏢 ${displayName}\n📍 ${displayAddress}`
 
   return (
@@ -191,8 +290,8 @@ function VenueMapPin({
 export interface WizardStepVenueProps {
   venuePresetId: VenuePresetId
   onVenuePresetChange: (id: VenuePresetId) => void
-  cityQuadrant: EdmontonQuadrantFilter
-  onCityQuadrantChange: (quadrant: EdmontonQuadrantFilter) => void
+  city: string
+  onCityChange: (cityId: string) => void
   locationName: string
   onLocationNameChange: (v: string) => void
   address: string
@@ -213,8 +312,8 @@ export interface WizardStepVenueProps {
 export function WizardStepVenue({
   venuePresetId,
   onVenuePresetChange,
-  cityQuadrant,
-  onCityQuadrantChange,
+  city,
+  onCityChange,
   locationName,
   onLocationNameChange,
   address,
@@ -231,6 +330,18 @@ export function WizardStepVenue({
   coordinatorId,
   onApplySavedVenue,
 }: WizardStepVenueProps) {
+  const marketCity = getMarketCityById(city)
+  const cityLabel = marketCity.label
+  const prevCityRef = useRef(city)
+
+  useEffect(() => {
+    if (prevCityRef.current === city) return
+    prevCityRef.current = city
+    if (!pinDropped) {
+      onCoordinatesChange(marketCity.lat, marketCity.lng)
+    }
+  }, [city, marketCity.lat, marketCity.lng, pinDropped, onCoordinatesChange])
+
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
       if (!e.detail?.latLng) return
@@ -241,13 +352,19 @@ export function WizardStepVenue({
   )
 
   const anchor = resolveTemplateAnchoredDimensions(venuePresetId, venueWidth, venueLength)
-  const markerTitle = `🏢 ${locationName.trim() || 'Venue location'}\n📍 ${address.trim() || 'Edmonton, AB'}`
+  const displayName = locationName.trim() || 'Venue location'
+  const displayAddress = address.trim() || cityLabel
+  const markerTitle = `🏢 ${displayName}\n📍 ${displayAddress}`
 
   return (
     <div className={WIZARD_PANEL_INNER}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className={WIZARD_STEP_TITLE}>
-          {skipVenueLayout ? 'Step 2 — Venue Location' : 'Step 2 — Edmonton Venue Registry & Map'}
+          {skipVenueLayout
+            ? 'Step 2 — Venue Location'
+            : isEdmontonMarketCity(city)
+              ? 'Step 2 — Edmonton Venue Registry & Map'
+              : `Step 2 — Venue Registry & Map (${cityLabel})`}
         </h2>
         {pinDropped ? (
           <Badge className={`${marketStatusBadge.success} text-xs`}>Pin dropped</Badge>
@@ -274,7 +391,9 @@ export function WizardStepVenue({
 
       {skipVenueLayout ? (
         <p className={WIZARD_INFO_BOX}>
-          Choose an Edmonton venue below to auto-fill the name and address, or type them in and drop a map pin.
+          {isEdmontonMarketCity(city)
+            ? 'Choose an Edmonton venue below to auto-fill the name and address, or type them in and drop a map pin.'
+            : `Enter the venue name and address for ${cityLabel}, then drop a map pin.`}
         </p>
       ) : null}
 
@@ -287,15 +406,15 @@ export function WizardStepVenue({
         pinDropped={pinDropped}
         venuePresetId={venuePresetId}
         skipVenueLayout={skipVenueLayout}
-        cityQuadrant={cityQuadrant}
+        marketCity={city}
         onApply={onApplySavedVenue}
       />
 
       <EdmontonVenueTemplateBar
         value={venuePresetId}
         onChange={onVenuePresetChange}
-        quadrant={cityQuadrant}
-        onQuadrantChange={onCityQuadrantChange}
+        city={city}
+        onCityChange={onCityChange}
       />
 
       {anchor.isAnchored && anchor.preset && !skipVenueLayout ? (
@@ -320,6 +439,7 @@ export function WizardStepVenue({
           <AddressAutocomplete
             value={address}
             onChange={onAddressChange}
+            cityId={city}
             onPlaceSelect={(place) => {
               onAddressChange(place.address)
               onCoordinatesChange(place.lat, place.lng)
@@ -350,7 +470,7 @@ export function WizardStepVenue({
         >
           {pinDropped ? (
             <AdvancedMarker position={{ lat, lng }} title={markerTitle} zIndex={9999}>
-              <VenueMapPin venueName={locationName} address={address} />
+              <VenueMapPin venueName={locationName} address={address} cityLabel={cityLabel} />
             </AdvancedMarker>
           ) : null}
         </Map>

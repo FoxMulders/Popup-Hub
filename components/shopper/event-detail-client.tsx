@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { MapPin, Calendar, Clock, Users, Map } from 'lucide-react'
+import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Badge } from '@/components/ui/badge'
+import { marketStatusBadge } from '@/lib/theme/market'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { EventActionBar } from '@/components/shopper/event-action-bar'
 import { VendorLineup } from '@/components/shopper/vendor-lineup'
@@ -90,23 +92,27 @@ export function EventDetailClient({
       <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 pb-32">
         <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
           {event.cover_image_url ? (
-            <img src={event.cover_image_url} alt={event.name} className="h-56 w-full object-contain bg-slate-50 sm:h-64" />
+            <ExpandableImage
+              src={event.cover_image_url}
+              alt={event.name}
+              className="h-56 w-full object-contain bg-canvas sm:h-64"
+            />
           ) : (
-            <div className="flex h-40 items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
-              <MapPin className="h-16 w-16 text-amber-300" />
+            <div className="flex h-40 items-center justify-center bg-gradient-to-br from-harvest-100 to-harvest-50">
+              <MapPin className="h-16 w-16 text-harvest-400" />
             </div>
           )}
           <div className="p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h1 className="font-heading text-2xl font-bold text-gray-900 sm:text-3xl">{event.name}</h1>
+                <h1 className="font-heading text-2xl font-bold text-foreground sm:text-3xl">{event.name}</h1>
                 {event.description && (
-                  <p className="mt-2 max-w-2xl text-gray-600">{event.description}</p>
+                  <p className="mt-2 max-w-2xl text-muted-foreground">{event.description}</p>
                 )}
               </div>
               <Badge
                 className={`capitalize ${
-                  event.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  event.status === 'active' ? marketStatusBadge.success : marketStatusBadge.warning
                 }`}
               >
                 {event.status}
@@ -114,18 +120,18 @@ export function EventDetailClient({
             </div>
 
             <div className="mt-4 space-y-2">
-              <p className="flex items-center gap-2 text-sm text-gray-600">
-                <MapPin className="h-4 w-4 shrink-0 text-amber-500" />
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 shrink-0 text-harvest-500" />
                 {event.location_name}
                 {event.address ? ` · ${event.address}` : ''}
               </p>
-              <div className="rounded-lg border bg-gray-50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Schedule</p>
+              <div className="rounded-lg border bg-canvas p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Schedule</p>
                 <ul className="space-y-1">
                   {scheduleLines.map((line) => (
-                    <li key={line.label} className="flex flex-wrap gap-x-3 text-sm text-gray-700">
+                    <li key={line.label} className="flex flex-wrap gap-x-3 text-sm text-foreground">
                       <span className="flex items-center gap-1 font-medium">
-                        <Calendar className="h-3.5 w-3.5 text-amber-500" />
+                        <Calendar className="h-3.5 w-3.5 text-harvest-500" />
                         {line.label}
                       </span>
                       <span className="flex items-center gap-1 text-muted-foreground">
@@ -136,20 +142,20 @@ export function EventDetailClient({
                   ))}
                 </ul>
               </div>
-              <p className="flex items-center gap-2 text-sm text-gray-600">
-                <Users className="h-4 w-4 shrink-0 text-amber-500" />
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4 shrink-0 text-harvest-500" />
                 {vendorCount} vendor{vendorCount !== 1 ? 's' : ''} confirmed
               </p>
             </div>
 
             {coordinator && (
-              <div className="mt-4 rounded-xl border bg-gray-50 px-4 py-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <div className="mt-4 rounded-xl border bg-canvas px-4 py-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Organized by
                 </p>
                 <Link
                   href={`/coordinators/${coordinator.id}`}
-                  className="text-sm font-medium text-amber-800 hover:underline"
+                  className="text-sm font-medium text-harvest-700 hover:underline"
                 >
                   {coordinator.full_name}
                 </Link>

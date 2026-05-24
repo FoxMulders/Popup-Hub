@@ -29,7 +29,7 @@ export function QRButton({ eventId, applicationId, eventName, boothNumber }: QRB
           <Button
             size="sm"
             variant="outline"
-            className="gap-1.5 text-xs border-amber-200 text-amber-700 hover:bg-amber-50"
+            className="gap-1.5 text-xs border-harvest-200 text-harvest-700 hover:bg-harvest-50"
           />
         }
       >

@@ -105,7 +105,7 @@ export function VendorAnnouncement({
             <div className="space-y-1.5">
               <div className="flex justify-between">
                 <Label htmlFor="message">Message</Label>
-                <span className="text-xs text-gray-400">{message.length}/500</span>
+                <span className="text-xs text-muted-foreground">{message.length}/500</span>
               </div>
               <Textarea
                 id="message"
@@ -118,7 +118,7 @@ export function VendorAnnouncement({
             </div>
 
             <Button
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+              className="w-full"
               onClick={handleSend}
               disabled={sending || !subject.trim() || !message.trim()}
             >

@@ -47,6 +47,7 @@ async function ApplicationsSection({ userId }: { userId: string }) {
     <VendorApplicationsList
       applications={(applications ?? []) as BoothApplication[]}
       categoryPrices={categoryPrices}
+      userId={userId}
     />
   )
 }
@@ -107,11 +108,11 @@ export default async function VendorDashboard() {
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Vendor Dashboard</h1>
-          <p className="mt-1 text-gray-500">Manage your bookings and passport</p>
+          <h1 className="text-3xl font-bold text-foreground">Vendor Dashboard</h1>
+          <p className="mt-1 text-muted-foreground">Manage your bookings and passport</p>
         </div>
         <Link href="/vendor/events">
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white">
+          <Button className="">
             Apply for open markets
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
@@ -131,26 +132,26 @@ export default async function VendorDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Passport Status</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Passport Status</CardTitle>
           </CardHeader>
           <CardContent>
             {passport ? (
               <div className="flex items-center gap-2">
-                <Store className="h-5 w-5 text-amber-500" />
+                <Store className="h-5 w-5 text-harvest-500" />
                 <div>
                   <p className="text-sm font-semibold">{passport.business_name}</p>
-                  <Badge className={`text-[10px] ${passport.is_verified ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <Badge className={`text-[10px] ${passport.is_verified ? 'bg-blue-100 text-blue-700' : 'bg-stone-100 text-muted-foreground'}`}>
                     {passport.is_verified ? '✓ Verified' : 'Unverified'}
                   </Badge>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <AlertTriangle className="h-5 w-5 text-harvest-500" />
                 <div>
-                  <p className="text-sm font-semibold text-gray-700">Not created</p>
+                  <p className="text-sm font-semibold text-foreground">Not created</p>
                   <Link href="/profile/passport">
-                    <Button size="sm" variant="link" className="h-auto p-0 text-xs text-amber-600">
+                    <Button size="sm" variant="link" className="h-auto p-0 text-xs text-harvest-600">
                       Create now →
                     </Button>
                   </Link>
@@ -162,7 +163,7 @@ export default async function VendorDashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Confirmed Bookings</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Confirmed Bookings</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -174,7 +175,7 @@ export default async function VendorDashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Pending Review</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Review</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
@@ -184,18 +185,18 @@ export default async function VendorDashboard() {
           </CardContent>
         </Card>
 
-        <Card className={paymentDueCount > 0 ? 'border-amber-200 bg-amber-50/40' : undefined}>
+        <Card className={paymentDueCount > 0 ? 'border-harvest-200 bg-harvest-50/40' : undefined}>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Payment Due</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Payment Due</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <CreditCard className={`h-5 w-5 ${paymentDueCount > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
+              <CreditCard className={`h-5 w-5 ${paymentDueCount > 0 ? 'text-harvest-600' : 'text-muted-foreground'}`} />
               <span className="text-2xl font-bold">{paymentDueCount}</span>
             </div>
             {paymentDueCount > 0 ? (
               <Link href="/vendor/applications">
-                <Button size="sm" variant="link" className="h-auto p-0 text-xs text-amber-700">
+                <Button size="sm" variant="link" className="h-auto p-0 text-xs text-harvest-700">
                   Pay now →
                 </Button>
               </Link>
@@ -206,7 +207,7 @@ export default async function VendorDashboard() {
 
       {/* Applications list */}
       <div>
-        <h2 className="mb-4 text-xl font-semibold text-gray-900">Recent Applications</h2>
+        <h2 className="mb-4 text-xl font-semibold text-foreground">Recent Applications</h2>
         <Suspense
           fallback={
             <div className="space-y-3">

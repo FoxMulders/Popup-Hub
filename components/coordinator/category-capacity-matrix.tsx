@@ -18,19 +18,19 @@ const TONE_STYLES = {
     card: 'border-emerald-200 bg-emerald-50/40',
     pill: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     bar: 'bg-emerald-500',
-    name: 'text-gray-800',
+    name: 'text-foreground',
   },
   low: {
-    card: 'border-amber-200 bg-amber-50/50',
-    pill: 'border-amber-200 bg-amber-50 text-amber-700',
-    bar: 'bg-amber-500',
-    name: 'text-gray-800',
+    card: 'border-harvest-200 bg-harvest-50/50',
+    pill: 'border-harvest-200 bg-harvest-50 text-harvest-700',
+    bar: 'bg-harvest-500',
+    name: 'text-foreground',
   },
   full: {
-    card: 'border-gray-200 bg-gray-50/80',
-    pill: 'border-gray-200 bg-gray-100 text-gray-400',
-    bar: 'bg-gray-300',
-    name: 'text-gray-400 line-through',
+    card: 'border-stone-200 bg-canvas/80',
+    pill: 'border-stone-200 bg-stone-100 text-muted-foreground',
+    bar: 'bg-stone-300',
+    name: 'text-muted-foreground line-through',
   },
 } as const
 

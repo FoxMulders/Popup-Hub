@@ -17,11 +17,36 @@ export interface RecordPlatformTransactionParams {
 
 /**
  * Persist fee split audit row and link to booth_application when applicable.
+ * Idempotent on processor_charge_id — safe for webhook + direct payment races.
  */
 export async function recordPlatformTransaction(
   supabase: SupabaseClient,
   params: RecordPlatformTransactionParams
 ) {
+  if (params.processorChargeId) {
+    const { data: existing } = await supabase
+      .from('platform_transactions')
+      .select('id')
+      .eq('processor_charge_id', params.processorChargeId)
+      .maybeSingle()
+
+    if (existing) {
+      if (params.boothApplicationId) {
+        await supabase
+          .from('booth_applications')
+          .update({
+            platform_transaction_id: existing.id,
+            payment_status: 'paid',
+            square_payment_id: params.processorChargeId,
+            payment_processing_at: null,
+          })
+          .eq('id', params.boothApplicationId)
+      }
+
+      return { transactionId: existing.id, error: null, duplicate: true as const }
+    }
+  }
+
   const organizerPayout = params.totalAmountCents - params.platformFeeCents
 
   const { data: tx, error: txError } = await supabase
@@ -44,6 +69,30 @@ export async function recordPlatformTransaction(
     .single()
 
   if (txError || !tx) {
+    if (txError?.code === '23505' && params.processorChargeId) {
+      const { data: raced } = await supabase
+        .from('platform_transactions')
+        .select('id')
+        .eq('processor_charge_id', params.processorChargeId)
+        .maybeSingle()
+
+      if (raced) {
+        if (params.boothApplicationId) {
+          await supabase
+            .from('booth_applications')
+            .update({
+              platform_transaction_id: raced.id,
+              payment_status: 'paid',
+              square_payment_id: params.processorChargeId,
+              payment_processing_at: null,
+            })
+            .eq('id', params.boothApplicationId)
+        }
+
+        return { transactionId: raced.id, error: null, duplicate: true as const }
+      }
+    }
+
     return { transactionId: null, error: txError?.message ?? 'Failed to record transaction' }
   }
 
@@ -54,9 +103,10 @@ export async function recordPlatformTransaction(
         platform_transaction_id: tx.id,
         payment_status: 'paid',
         square_payment_id: params.processorChargeId,
+        payment_processing_at: null,
       })
       .eq('id', params.boothApplicationId)
   }
 
-  return { transactionId: tx.id, error: null }
+  return { transactionId: tx.id, error: null, duplicate: false as const }
 }

@@ -66,7 +66,7 @@ export function VendorLogo({
     <div
       className={cn(
         frameClass,
-        'bg-amber-100 text-amber-800 font-bold text-xs'
+        'bg-harvest-100 text-harvest-700 font-bold text-xs'
       )}
       aria-hidden={!fallback}
     >

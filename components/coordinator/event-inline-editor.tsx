@@ -124,7 +124,7 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
         className="opacity-0 group-hover:opacity-100 ml-1.5 transition-opacity focus:opacity-100"
         onClick={() => startEditing(field)}
       >
-        <Pencil className="h-3.5 w-3.5 text-gray-400 hover:text-amber-500" />
+        <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-harvest-500" />
       </button>
     )
   }
@@ -139,7 +139,7 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
       <div className="mt-2 flex items-center gap-2">
         <Button
           size="sm"
-          className="h-7 bg-amber-500 px-3 text-xs text-white hover:bg-amber-600"
+          className="h-7 bg-harvest-500 px-3 text-xs text-white hover:bg-harvest-600"
           onClick={() => saveField(field)}
           disabled={saving || !canSave}
         >
@@ -176,7 +176,7 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
           </div>
         ) : (
           <div className="group flex items-center">
-            <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
+            <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
             {pencilButton('title', 'event title')}
             {savedCheck('title')}
           </div>
@@ -197,20 +197,20 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
             </div>
           ) : event.description ? (
             <div className="group flex items-start">
-              <p className="text-sm text-gray-500">{event.description}</p>
+              <p className="text-sm text-muted-foreground">{event.description}</p>
               {pencilButton('description', 'description')}
               {savedCheck('description')}
             </div>
           ) : (
             <div className="group flex items-center">
-              <span className="text-sm italic text-gray-400">No description</span>
+              <span className="text-sm italic text-muted-foreground">No description</span>
               {pencilButton('description', 'description')}
             </div>
           )}
         </div>
 
         {/* ── Location + Dates row ───────────────── */}
-        <div className="mt-2 flex flex-wrap items-start gap-3 text-sm text-gray-500">
+        <div className="mt-2 flex flex-wrap items-start gap-3 text-sm text-muted-foreground">
           {/* Location */}
           {editing === 'location' ? (
             <div className="w-full">
@@ -235,7 +235,7 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
             </div>
           ) : (
             <div className="group flex items-center gap-1">
-              <MapPin className="h-3.5 w-3.5 text-amber-500" />
+              <MapPin className="h-3.5 w-3.5 text-harvest-500" />
               <span>{event.location_name}</span>
               {pencilButton('location', 'location')}
               {savedCheck('location')}
@@ -246,7 +246,7 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
           {editing === 'dates' ? (
             <div className="w-full">
               {isPublishedOrActive && (
-                <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <div className="mb-2 rounded-lg border border-harvest-200 bg-harvest-50 p-3 text-sm text-harvest-700">
                   <p>⚠ Changing dates on a published event will notify all applied vendors.</p>
                   <label className="mt-2 flex cursor-pointer items-center gap-2">
                     <input
@@ -280,7 +280,7 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                <span className="self-center text-gray-400">–</span>
+                <span className="self-center text-muted-foreground">–</span>
                 <div className="flex items-center gap-1">
                   <Input
                     type="date"
@@ -308,13 +308,13 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
           ) : (
             <>
               <div className="group flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5 text-amber-500" />
+                <Calendar className="h-3.5 w-3.5 text-harvest-500" />
                 <span>{format(new Date(event.start_at), 'EEE, MMM d, yyyy')}</span>
                 {pencilButton('dates', 'dates')}
                 {savedCheck('dates')}
               </div>
               <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5 text-amber-500" />
+                <Clock className="h-3.5 w-3.5 text-harvest-500" />
                 {format(new Date(event.start_at), 'h:mm a')} –{' '}
                 {format(new Date(event.end_at), 'h:mm a')}
               </span>

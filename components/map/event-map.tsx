@@ -10,6 +10,7 @@ import {
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
 import type { Event } from '@/types/database'
+import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
@@ -167,29 +168,29 @@ function GoogleEventMap({ events, center }: { events: Event[]; center: LatLng })
         >
           <div className="w-56 space-y-2 p-1">
             {selected.cover_image_url && (
-              <img
+              <ExpandableImage
                 src={selected.cover_image_url}
                 alt={selected.name}
-                className="h-28 w-full rounded-lg object-cover"
+                className="h-28 w-full rounded-lg object-contain bg-canvas"
               />
             )}
             <div>
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold leading-tight text-gray-900">{selected.name}</h3>
+                <h3 className="text-sm font-bold leading-tight text-foreground">{selected.name}</h3>
                 <Badge className="shrink-0 text-[10px] capitalize">{selected.status}</Badge>
               </div>
               <Badge variant="outline" className="mt-1 text-[10px]">
                 {markerStyle(selected).label}
               </Badge>
-              <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3 shrink-0" />
                 {selected.location_name}
               </p>
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3 shrink-0" />
                 {format(new Date(selected.start_at), 'EEE, MMM d')}
               </p>
-              <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3 shrink-0" />
                 {format(new Date(selected.start_at), 'h:mm a')} –{' '}
                 {format(new Date(selected.end_at), 'h:mm a')}

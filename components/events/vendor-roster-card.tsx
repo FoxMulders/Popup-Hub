@@ -46,23 +46,23 @@ export function VendorRosterCard({ application }: VendorRosterCardProps) {
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
-              <p className="truncate font-semibold text-gray-900 text-sm">{displayName}</p>
+              <p className="truncate font-semibold text-foreground text-sm">{displayName}</p>
               {passport?.is_verified && (
                 <CheckCircle className="h-3.5 w-3.5 flex-shrink-0 text-blue-500" />
               )}
             </div>
             {category && (
-              <Badge className="mt-0.5 bg-amber-50 text-amber-700 text-[10px] hover:bg-amber-50">
+              <Badge className="mt-0.5 bg-harvest-50 text-harvest-700 text-[10px] hover:bg-harvest-50">
                 {category.name}
               </Badge>
             )}
             {passport?.bio && (
-              <p className="mt-1 text-xs text-gray-500 line-clamp-2">{passport.bio}</p>
+              <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{passport.bio}</p>
             )}
           </div>
         </div>
         {application.booth_number && (
-          <p className="mt-2 text-right text-xs text-gray-400">Booth #{application.booth_number}</p>
+          <p className="mt-2 text-right text-xs text-muted-foreground">Booth #{application.booth_number}</p>
         )}
       </CardContent>
     </Card>

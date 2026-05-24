@@ -141,7 +141,7 @@ export function PassportWizard({
     <div className="mx-auto max-w-xl">
       {/* Step indicators */}
       <div className="mb-6">
-        <div className="mb-2 flex justify-between text-xs text-gray-500">
+        <div className="mb-2 flex justify-between text-xs text-muted-foreground">
           <span>Step {step + 1} of {STEPS.length}: {STEPS[step]}</span>
           <span>{Math.round(progress)}% complete</span>
         </div>
@@ -151,7 +151,7 @@ export function PassportWizard({
             <div
               key={s}
               className={`h-1 flex-1 rounded-full transition-all ${
-                i <= step ? 'bg-amber-500' : 'bg-gray-200'
+                i <= step ? 'bg-harvest-500' : 'bg-stone-200'
               }`}
             />
           ))}
@@ -176,7 +176,7 @@ export function PassportWizard({
                 <div className="flex items-center gap-1.5">
                   <Label htmlFor="biz-name">Business Name *</Label>
                   <Tooltip>
-                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">Your official business or brand name as it will appear to shoppers and coordinators.</TooltipContent>
                   </Tooltip>
                 </div>
@@ -192,7 +192,7 @@ export function PassportWizard({
                 <div className="flex items-center gap-1.5">
                   <Label htmlFor="bio">Business Bio</Label>
                   <Tooltip>
-                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">Tell shoppers and coordinators what makes your business unique. Include what you sell, your story, and what sets you apart.</TooltipContent>
                   </Tooltip>
                 </div>
@@ -204,10 +204,10 @@ export function PassportWizard({
                   rows={4}
                   maxLength={500}
                 />
-                <p className="text-right text-xs text-gray-400">{bio.length}/500</p>
+                <p className="text-right text-xs text-muted-foreground">{bio.length}/500</p>
               </div>
               <div className="space-y-3 border-t pt-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Online presence (optional — shown to shoppers)
                 </p>
                 <div className="space-y-1">
@@ -247,13 +247,13 @@ export function PassportWizard({
               <div className="flex items-center gap-1.5">
                 <Label>Business Categories *</Label>
                 <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     Select every category that describes what you sell. Coordinators use this to match you to the right booth slots.
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Select all categories that apply to your business.
               </p>
               <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto rounded-xl border p-3 sm:grid-cols-2">
@@ -267,8 +267,8 @@ export function PassportWizard({
                       className={cn(
                         'rounded-lg border px-3 py-2 text-left text-sm transition',
                         selected
-                          ? 'border-amber-400 bg-amber-50 font-medium text-amber-900'
-                          : 'border-stone-200 bg-white text-gray-700 hover:border-amber-200'
+                          ? 'border-harvest-400 bg-harvest-50 font-medium text-harvest-800'
+                          : 'border-stone-200 bg-white text-foreground hover:border-harvest-200'
                       )}
                       aria-pressed={selected}
                     >
@@ -278,11 +278,11 @@ export function PassportWizard({
                 })}
               </div>
               {categoryIds.length > 0 ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {categoryIds.length} categor{categoryIds.length === 1 ? 'y' : 'ies'} selected
                 </p>
               ) : (
-                <p className="text-xs text-amber-700">Choose at least one category to continue.</p>
+                <p className="text-xs text-harvest-700">Choose at least one category to continue.</p>
               )}
             </div>
           )}
@@ -294,7 +294,7 @@ export function PassportWizard({
                 <div className="flex items-center gap-1.5">
                   <Label htmlFor="tax">EIN / Tax ID</Label>
                   <Tooltip>
-                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">Your CRA Business Number (Canada) or EIN (US). This is encrypted and only visible to you. Required for payouts.</TooltipContent>
                   </Tooltip>
                 </div>
@@ -306,7 +306,7 @@ export function PassportWizard({
                   autoComplete="off"
                   type="password"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Encrypted and stored securely. Required by some coordinators. Leave blank if not applicable.
                 </p>
               </div>
@@ -325,14 +325,14 @@ export function PassportWizard({
                 <div className="flex items-center gap-1.5">
                   <Label>Business Logo</Label>
                   <Tooltip>
-                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       Your full logo is shown as-is on your profile, roster, and promotional materials.
                       PNG or JPG with a transparent or white background works well.
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
+                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-stone-200 p-4 hover:border-harvest-400 transition">
                   {logoPreview ? (
                     <VendorLogo
                       src={logoPreview}
@@ -341,9 +341,9 @@ export function PassportWizard({
                       className="mx-auto w-full max-w-md border-dashed"
                     />
                   ) : (
-                    <Upload className="h-8 w-8 text-gray-400" />
+                    <Upload className="h-8 w-8 text-muted-foreground" />
                   )}
-                  <span className="text-xs text-gray-500 text-center">
+                  <span className="text-xs text-muted-foreground text-center">
                     Click to upload your full logo (JPG, PNG, max 2MB)
                   </span>
                   <input
@@ -359,13 +359,13 @@ export function PassportWizard({
                 <div className="flex items-center gap-1.5">
                   <Label>Product Photos (up to 6)</Label>
                   <Tooltip>
-                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">Photos of your actual products. Add up to 6 images to showcase what you sell at markets.</TooltipContent>
                   </Tooltip>
                 </div>
-                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 hover:border-amber-400 transition">
-                  <Upload className="h-8 w-8 text-gray-400" />
-                  <span className="text-xs text-gray-500">Click to upload product photos</span>
+                <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-stone-200 p-4 hover:border-harvest-400 transition">
+                  <Upload className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Click to upload product photos</span>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
@@ -404,7 +404,7 @@ export function PassportWizard({
             {step < STEPS.length - 1 ? (
               <Button
                 onClick={() => setStep((s) => s + 1)}
-                className="bg-amber-500 hover:bg-amber-600 text-white"
+                className=""
                 disabled={
                   (step === 0 && !businessName.trim()) ||
                   (step === 1 && categoryIds.length === 0)
@@ -416,7 +416,7 @@ export function PassportWizard({
             ) : (
               <Button
                 onClick={handleSubmit}
-                className="bg-amber-500 hover:bg-amber-600 text-white"
+                className=""
                 disabled={loading || !businessName.trim()}
               >
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}

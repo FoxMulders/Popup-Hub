@@ -29,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { marketStatusBadge } from '@/lib/theme/market'
 import { parseAvailableSlots } from '@/lib/queries/event-capacity'
 import {
   isPassportReadyForApplication,
@@ -66,6 +67,9 @@ import {
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
 } from '@/lib/applications/payment-fields'
+import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
+import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
+import { TouchFileInput } from '@/components/ui/touch-file-input'
 
 interface ExistingApplication {
   id: string
@@ -114,6 +118,7 @@ export function ApplyButton({
   const [selectedDayKeys, setSelectedDayKeys] = useState<Set<string>>(new Set())
   const [termsAcknowledged, setTermsAcknowledged] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('SQUARE')
+  const [permitFile, setPermitFile] = useState<File | null>(null)
 
   const requireFullAttendance = event.require_full_attendance ?? true
   const scheduleDays = useMemo(() => resolveEventScheduleDays(event), [event])
@@ -133,6 +138,7 @@ export function ApplyButton({
     if (!open) {
       setSelectedDayKeys(new Set())
       setTermsAcknowledged(false)
+      setPermitFile(null)
       return
     }
 
@@ -156,6 +162,14 @@ export function ApplyButton({
       null
     : categoryMatch?.resolvedSlot ?? null
 
+  const requiresDocumentation =
+    applySlot != null &&
+    (applySlot.requiresDocumentation ??
+      categoryRequiresDocumentation({
+        name: applySlot.categoryName,
+        requires_documentation: false,
+      }))
+
   const allCategoriesFull = categoryMatch?.allCategoriesFull ?? false
   const requiresPayment = (applySlot?.pricePerBooth ?? 0) > 0 && !allCategoriesFull
   const isInstant = event.booking_mode === 'instant'
@@ -168,6 +182,7 @@ export function ApplyButton({
     !slotsLoading &&
     categoryMatch &&
     categoryMatch.passportSlots.length > 0 &&
+    (!requiresDocumentation || !!permitFile) &&
     (allCategoriesFull || !requiresPayment || paymentMethod === 'ETRANSFER' || squareConnected)
 
   function toggleDaySelection(dayKey: string) {
@@ -196,18 +211,30 @@ export function ApplyButton({
       const limits = (event.category_limits ?? []).filter(
         (cl: EventCategoryLimit) => event.allow_mlm || !cl.category?.is_mlm
       )
+      const categoryIds = limits.map((cl) => cl.category_id)
+      const { data: categoryMeta } = await supabase
+        .from('categories')
+        .select('id, name, requires_documentation')
+        .in('id', categoryIds)
+
+      const metaById = Object.fromEntries((categoryMeta ?? []).map((row) => [row.id, row]))
+
       const results = await Promise.all(
         limits.map(async (cl: EventCategoryLimit) => {
           const { data } = await supabase.rpc('get_available_slots', {
             p_event_id: event.id,
             p_category_id: cl.category_id,
           })
+          const meta = metaById[cl.category_id]
           return {
             categoryId: cl.category_id,
-            categoryName: cl.category?.name ?? 'Unknown',
+            categoryName: cl.category?.name ?? meta?.name ?? 'Unknown',
             maxSlots: cl.max_slots,
             availableSlots: parseAvailableSlots(data),
             pricePerBooth: cl.price_per_booth,
+            requiresDocumentation: categoryRequiresDocumentation(
+              meta ?? { name: cl.category?.name ?? '', requires_documentation: false },
+            ),
           }
         })
       )
@@ -283,6 +310,17 @@ export function ApplyButton({
 
   async function submitApplication(joinWaitlist: boolean) {
     const attendance = buildAttendancePayload()
+
+    let applicableDocumentationUrl: string | null = null
+    if (requiresDocumentation && permitFile) {
+      applicableDocumentationUrl = await uploadApplicationDocument(
+        supabase,
+        userId,
+        permitFile,
+        'permit',
+      )
+    }
+
     const res = await fetch('/api/vendor/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -294,6 +332,7 @@ export function ApplyButton({
         attendingEventDayIds: attendance.attendingEventDayIds,
         attendingDates: attendance.attendingDates,
         paymentMethod,
+        applicableDocumentationUrl,
       }),
     })
 
@@ -345,6 +384,16 @@ export function ApplyButton({
     if (data.eTransferPendingReview) {
       toast.success(
         'Application approved — send your e-transfer. The coordinator will confirm payment.'
+      )
+      setOpen(false)
+      setWaitlistConfirmOpen(false)
+      router.refresh()
+      return
+    }
+
+    if (submittedStatus === 'pending_insurance') {
+      toast.success(
+        'Application approved — upload your market insurance proof from My Applications to finalize your booth.',
       )
       setOpen(false)
       setWaitlistConfirmOpen(false)
@@ -423,7 +472,7 @@ export function ApplyButton({
 
   if (!applicationsOpen) {
     return (
-      <Badge className="w-full justify-center bg-stone-100 text-stone-600 py-1.5">
+      <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
         Applications closed
       </Badge>
     )
@@ -446,11 +495,24 @@ export function ApplyButton({
   if (localApplicationStatus === 'waitlisted') {
     return (
       <div className="space-y-2">
-        <Badge className="w-full justify-center bg-amber-100 text-amber-800 py-1.5">
+        <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.warning}`}>
           Waitlisted
         </Badge>
         <p className="text-center text-xs text-muted-foreground">
           We&apos;ll notify you if a booth opens from a cancellation.
+        </p>
+      </div>
+    )
+  }
+
+  if (localApplicationStatus === 'pending_insurance') {
+    return (
+      <div className="space-y-2">
+        <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.warning}`}>
+          Pending Proof of Insurance
+        </Badge>
+        <p className="text-center text-xs text-muted-foreground">
+          Upload market insurance from My Applications to finalize your booth.
         </p>
       </div>
     )
@@ -469,25 +531,25 @@ export function ApplyButton({
     if (requiresPaymentNow) {
       return (
         <>
-          <div className="mb-3 space-y-1 rounded-lg bg-amber-50 p-3 text-sm">
+          <div className="mb-3 space-y-1 rounded-lg bg-harvest-50 p-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Booth fee</span>
+              <span className="text-muted-foreground">Booth fee</span>
               <span className="font-semibold">{formatCents(boothPriceCents)}</span>
             </div>
             {feePreview > 0 ? (
-              <div className="flex justify-between text-gray-500">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Platform fee (3% + $1)</span>
                 <span>{formatCents(feePreview)}</span>
               </div>
             ) : null}
-            <div className="flex justify-between border-t border-amber-100 pt-1 font-medium">
+            <div className="flex justify-between border-t border-harvest-100 pt-1 font-medium">
               <span>Total due</span>
               <span>{formatCents(boothPriceCents + feePreview)}</span>
             </div>
           </div>
           <Button
             size="sm"
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+            className="w-full"
             onClick={() => setPayModalOpen(true)}
           >
             Pay Now to Secure Booth
@@ -525,7 +587,7 @@ export function ApplyButton({
 
     return (
       <div className="space-y-2">
-        <Badge className="w-full justify-center bg-green-100 text-green-700 py-1.5">
+        <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.success}`}>
           <CheckCircle className="mr-1 h-3 w-3" />
           {paid ? 'Booth confirmed' : 'Approved'}
         </Badge>
@@ -540,7 +602,7 @@ export function ApplyButton({
 
   if (localApplicationStatus === 'cancelled') {
     return (
-      <Badge className="w-full justify-center bg-gray-100 text-gray-600 py-1.5">
+      <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
         Application cancelled
       </Badge>
     )
@@ -548,7 +610,7 @@ export function ApplyButton({
 
   if (localApplicationStatus === 'rejected') {
     return (
-      <Badge className="w-full justify-center bg-stone-100 text-stone-600 py-1.5">
+      <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
         Not selected
       </Badge>
     )
@@ -563,7 +625,7 @@ export function ApplyButton({
     <>
       <Button
         size="sm"
-        className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+        className="w-full"
         onClick={handleApplyClick}
         disabled={passportLoading}
       >
@@ -602,8 +664,8 @@ export function ApplyButton({
                       <span
                         className={
                           slot.availableSlots > 0
-                            ? 'text-xs text-green-700'
-                            : 'text-xs font-medium text-amber-800'
+                            ? 'text-xs text-sage-700'
+                            : 'text-xs font-medium text-harvest-700'
                         }
                       >
                         {slot.availableSlots > 0
@@ -614,7 +676,7 @@ export function ApplyButton({
                   ))}
                 </ul>
               ) : (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="rounded-lg border border-harvest-200 bg-harvest-50 p-3 text-sm text-harvest-800">
                   None of your passport categories are offered at this market.
                 </p>
               )}
@@ -623,7 +685,7 @@ export function ApplyButton({
             <div className="space-y-2">
               <Label>Attendance days</Label>
               {requireFullAttendance ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <div className="rounded-lg border border-harvest-200 bg-harvest-50 p-3 text-sm text-harvest-800">
                   ⚠️ This organizer requires participation for the full duration of the event.
                 </div>
               ) : (
@@ -643,7 +705,7 @@ export function ApplyButton({
                         checked={checked}
                         disabled={requireFullAttendance}
                         onChange={() => toggleDaySelection(key)}
-                        className="mt-1 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 disabled:opacity-70"
+                        className="mt-1 h-4 w-4 rounded border-stone-300 text-harvest-600 focus:ring-harvest-500 disabled:opacity-70"
                       />
                       <label
                         htmlFor={`attendance-day-${key}`}
@@ -682,20 +744,20 @@ export function ApplyButton({
             ) : null}
 
             {allCategoriesFull ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="rounded-lg border border-harvest-200 bg-harvest-50 p-3 text-sm text-harvest-800">
                 All of your passport categories are full at this market. You can join the waitlist
                 and we&apos;ll notify you if a spot opens due to a cancellation.
               </div>
             ) : null}
 
             {applySlot && !allCategoriesFull && (
-              <div className="rounded-lg bg-gray-50 p-3 text-sm space-y-1">
+              <div className="rounded-lg bg-canvas p-3 text-sm space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Applying as</span>
+                  <span className="text-muted-foreground">Applying as</span>
                   <span className="font-semibold">{applySlot.categoryName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Booth fee</span>
+                  <span className="text-muted-foreground">Booth fee</span>
                   <span className="font-semibold">
                     {applySlot.pricePerBooth === 0
                       ? 'Free'
@@ -703,13 +765,13 @@ export function ApplyButton({
                   </span>
                 </div>
                 {requiresPayment && (
-                  <div className="flex justify-between text-gray-500">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Platform fee (3% + $1)</span>
                     <span>{formatCents(feePreview)}</span>
                   </div>
                 )}
                 <div className="flex justify-between mt-1">
-                  <span className="text-gray-600">Mode</span>
+                  <span className="text-muted-foreground">Mode</span>
                   <Badge variant="outline" className="text-xs capitalize">
                     {isInstant ? '⚡ Instant' : '🔍 Juried'}
                   </Badge>
@@ -729,13 +791,32 @@ export function ApplyButton({
               />
             )}
 
+            {requiresDocumentation && !allCategoriesFull ? (
+              <div className="space-y-2">
+                <Label>Please upload required permits/documentation *</Label>
+                <TouchFileInput
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  onChange={(files) => setPermitFile(files?.[0] ?? null)}
+                  disabled={submitting}
+                  label={
+                    permitFile
+                      ? `Selected: ${permitFile.name}`
+                      : 'Tap to upload permits or documentation (PDF or image)'
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required for {applySlot?.categoryName} vendors at this market.
+                </p>
+              </div>
+            ) : null}
+
             <div className="rounded-lg border bg-stone-50 p-3">
               <label className="flex items-start gap-3 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={termsAcknowledged}
                   onChange={(e) => setTermsAcknowledged(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                  className="mt-0.5 h-4 w-4 rounded border-stone-300 text-harvest-600 focus:ring-harvest-500"
                 />
                 <span>
                   {requireFullAttendance
@@ -746,7 +827,7 @@ export function ApplyButton({
             </div>
 
             <Button
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+              className="w-full"
               onClick={handleConfirmSubmit}
               disabled={!canSubmitApplication}
             >

@@ -107,7 +107,7 @@ export function VendorProductManager({
   return (
     <div className="mt-8 rounded-2xl border bg-white p-6">
       <h2 className="text-lg font-semibold">Featured products</h2>
-      <p className="mt-1 text-sm text-gray-500">
+      <p className="mt-1 text-sm text-muted-foreground">
         Shoppers see these on market pages before they visit your booth.
         {isBetaTester
           ? ' Founding vendor — unlimited featured listings.'

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { X, MapPin, Calendar, Clock } from 'lucide-react'
+import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { Event } from '@/types/database'
@@ -29,11 +30,12 @@ export default function EventMapPopover({ event, onClose }: EventMapPopoverProps
       </div>
 
       {event.cover_image_url && (
-        <div className="mt-3 rounded-lg overflow-hidden h-32">
-          <img
+        <div className="mt-3 h-32 overflow-hidden rounded-lg">
+          <ExpandableImage
             src={event.cover_image_url}
             alt={event.name}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-contain bg-canvas"
+            containerClassName="h-full"
           />
         </div>
       )}

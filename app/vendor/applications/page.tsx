@@ -38,6 +38,7 @@ async function ApplicationsList({ userId }: { userId: string }) {
     <VendorApplicationsList
       applications={(applications ?? []) as BoothApplication[]}
       categoryPrices={categoryPrices}
+      userId={userId}
     />
   )
 }
@@ -49,7 +50,7 @@ export default async function VendorApplicationsPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">My Applications</h1>
+      <h1 className="mb-6 text-2xl font-bold text-foreground">My Applications</h1>
       <Suspense
         fallback={
           <div className="space-y-3">

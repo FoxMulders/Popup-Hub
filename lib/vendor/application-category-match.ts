@@ -6,6 +6,7 @@ export type CategorySlotInfo = {
   maxSlots: number
   availableSlots: number
   pricePerBooth: number
+  requiresDocumentation?: boolean
 }
 
 export type PassportCategoryMatch = {

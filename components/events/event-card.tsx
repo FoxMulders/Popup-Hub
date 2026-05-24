@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { ExpandableImage } from '@/components/ui/expandable-image'
 import { MapPin, Calendar, Clock, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { getEventDateLabel } from '@/lib/shopper/events'
@@ -60,38 +61,39 @@ export function EventCard({
 
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition hover:shadow-[var(--shadow-market-md)]">
-      <Link href={href} className="block flex-1">
-        <div className="relative h-48 w-full overflow-hidden rounded-t-xl border-b border-gray-100 bg-slate-50">
-          {event.cover_image_url ? (
-            <img
-              src={event.cover_image_url}
-              alt={event.name}
-              className="h-full w-full object-contain bg-slate-50 transition-transform duration-300 group-hover:scale-[1.02]"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-slate-50">
-              <MapPin className="h-12 w-12 text-harvest-300" />
-            </div>
-          )}
-          <Badge
-            className={`absolute right-2 top-2 border capitalize text-xs ${STATUS_BADGE[badgeStatus] ?? marketStatusBadge.neutral}`}
-          >
-            {STATUS_LABEL[badgeStatus] ?? badgeStatus}
+      <div className="relative h-48 w-full overflow-hidden rounded-t-xl border-b border-stone-200 bg-canvas">
+        {event.cover_image_url ? (
+          <ExpandableImage
+            src={event.cover_image_url}
+            alt={event.name}
+            className="h-full w-full object-contain bg-canvas transition-transform duration-300 group-hover:scale-[1.02]"
+            containerClassName="h-full"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-canvas">
+            <MapPin className="h-12 w-12 text-harvest-300" />
+          </div>
+        )}
+        <Badge
+          className={`pointer-events-none absolute right-2 top-2 z-10 border capitalize text-xs ${STATUS_BADGE[badgeStatus] ?? marketStatusBadge.neutral}`}
+        >
+          {STATUS_LABEL[badgeStatus] ?? badgeStatus}
+        </Badge>
+        {distanceLabel ? (
+          <Badge className="pointer-events-none absolute left-2 top-2 z-10 border bg-white/90 text-[10px] text-foreground">
+            {distanceLabel}
           </Badge>
-          {distanceLabel ? (
-            <Badge className="absolute left-2 top-2 border bg-white/90 text-[10px] text-foreground">
-              {distanceLabel}
-            </Badge>
-          ) : null}
-          {liveAuctionId ? (
-            <span
-              className="absolute bottom-2 left-2 z-10 inline-flex items-center rounded-md border border-harvest-300 bg-harvest-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm"
-              aria-label="Live quarter auction at this market"
-            >
-              Live auction
-            </span>
-          ) : null}
-        </div>
+        ) : null}
+        {liveAuctionId ? (
+          <span
+            className="absolute bottom-2 left-2 z-10 inline-flex items-center rounded-md border border-harvest-300 bg-harvest-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm"
+            aria-label="Live quarter auction at this market"
+          >
+            Live auction
+          </span>
+        ) : null}
+      </div>
+      <Link href={href} className="block flex-1">
         <CardContent className="p-4">
           <h3 className="line-clamp-1 font-heading font-semibold leading-tight text-foreground">
             {event.name}

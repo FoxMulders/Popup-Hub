@@ -25,7 +25,7 @@ export function StrollerClearancePanel({
     if (hasBottleneck && !dismissed) {
       return (
         <TooltipWrapper text={`${bottleneckCount} aisle cell(s) below ${MIN_STROLLER_AISLE_WIDTH_FT}ft — widen walkways`}>
-          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/60 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-900">
+          <span className="inline-flex items-center gap-1 rounded-full border border-harvest-500/60 bg-harvest-50 px-2 py-0.5 text-[10px] font-semibold text-harvest-800">
             <AlertTriangle className="h-3 w-3" aria-hidden />
             Stroller bottleneck ({bottleneckCount})
           </span>

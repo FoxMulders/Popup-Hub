@@ -18,6 +18,29 @@ export async function GET(request: Request) {
     )
   }
 
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user || user.id !== state) {
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/square-connect?error=session_mismatch`
+    )
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'coordinator') {
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/square-connect?error=forbidden`
+    )
+  }
+
   try {
     const response = await squareClient.oAuth.obtainToken({
       clientId: process.env.NEXT_PUBLIC_SQUARE_APP_ID!,
@@ -39,29 +62,6 @@ export async function GET(request: Request) {
     const expiresAt = response.expiresAt
       ? new Date(response.expiresAt).toISOString()
       : null
-
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user || user.id !== state) {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/square-connect?error=session_mismatch`
-      )
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role !== 'coordinator') {
-      return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/square-connect?error=forbidden`
-      )
-    }
 
     await supabase
       .from('profiles')

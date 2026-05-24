@@ -32,7 +32,7 @@ export function MarketDayGuide() {
                     {section.steps.map((step) => (
                       <li
                         key={step}
-                        className="flex gap-2 text-sm text-gray-700 leading-relaxed before:content-[''] before:mt-2 before:h-1.5 before:w-1.5 before:shrink-0 before:rounded-full before:bg-harvest-500"
+                        className="flex gap-2 text-sm text-foreground leading-relaxed before:content-[''] before:mt-2 before:h-1.5 before:w-1.5 before:shrink-0 before:rounded-full before:bg-harvest-500"
                       >
                         <span>{step}</span>
                       </li>
@@ -46,9 +46,9 @@ export function MarketDayGuide() {
       </section>
 
       <section className="market-card overflow-hidden">
-        <div className="border-b border-sage-100 bg-amber-50/60 px-5 py-4">
+        <div className="border-b border-sage-100 bg-harvest-50/60 px-5 py-4">
           <div className="flex items-center gap-2">
-            <CircleHelp className="h-5 w-5 text-amber-800" />
+            <CircleHelp className="h-5 w-5 text-harvest-700" />
             <h2 className="text-lg font-semibold text-foreground">Frequently asked questions</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">

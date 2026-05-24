@@ -85,7 +85,7 @@ export function UnplacedVendorsPanel({
               type="button"
               title="Remove from layout plan"
               aria-label={`Remove ${cell.vendorName}`}
-              className="absolute top-1 right-1 rounded p-0.5 text-gray-500 hover:bg-white/80 hover:text-red-600"
+              className="absolute top-1 right-1 rounded p-0.5 text-muted-foreground hover:bg-white/80 hover:text-red-600"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()

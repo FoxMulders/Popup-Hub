@@ -49,11 +49,11 @@ const TX_LABELS: Record<string, string> = {
 const TX_ICONS: Record<string, React.ReactNode> = {
   deposit: <ArrowDownLeft className="h-4 w-4 text-green-500" />,
   withdrawal: <ArrowUpRight className="h-4 w-4 text-red-500" />,
-  quarter_drop: <Coins className="h-4 w-4 text-amber-500" />,
+  quarter_drop: <Coins className="h-4 w-4 text-harvest-500" />,
   auction_win: <Trophy className="h-4 w-4 text-yellow-500" />,
   refund: <RefreshCcw className="h-4 w-4 text-blue-500" />,
   paddle_purchase: <Coins className="h-4 w-4 text-forest" />,
-  bid_entry: <Gavel className="h-4 w-4 text-amber-600" />,
+  bid_entry: <Gavel className="h-4 w-4 text-harvest-600" />,
 }
 
 function txLabel(tx: WalletTransaction): string {
@@ -154,36 +154,36 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
       />
 
       {/* Balance card */}
-      <Card className="overflow-hidden border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
+      <Card className="overflow-hidden border-2 border-harvest-200 bg-gradient-to-br from-linen via-canvas to-harvest-50">
         <CardContent className="p-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-harvest-500">
               <WalletIcon className="h-6 w-6 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <p className="text-sm text-gray-500">Available Balance</p>
+                <p className="text-sm text-muted-foreground">Available Balance</p>
                 <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                   <TooltipContent className="max-w-xs">
                     Credits for quarter auctions. 1 credit = $0.25. Used for virtual paddles and bid
                     entries.
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-3xl font-bold text-gray-900">{formatCents(balance)}</p>
-              <p className="text-sm text-gray-600">{formatCredits(centsToCredits(balance))}</p>
+              <p className="text-3xl font-bold text-foreground">{formatCents(balance)}</p>
+              <p className="text-sm text-muted-foreground">{formatCredits(centsToCredits(balance))}</p>
             </div>
           </div>
 
           {paddleId ? (
             <div className="mt-4 flex items-center gap-2">
-              <Coins className="h-4 w-4 text-amber-500" />
-              <span className="text-sm text-gray-600">Paddle ID:</span>
-              <Badge className="bg-amber-500 font-mono text-white">#{paddleId}</Badge>
+              <Coins className="h-4 w-4 text-harvest-500" />
+              <span className="text-sm text-muted-foreground">Paddle ID:</span>
+              <Badge className="bg-harvest-500 font-mono text-white">#{paddleId}</Badge>
             </div>
           ) : (
-            <p className="mt-3 text-xs text-gray-400">
+            <p className="mt-3 text-xs text-muted-foreground">
               Add funds to get a permanent Paddle ID for auctions.
             </p>
           )}
@@ -199,7 +199,7 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
             <Plus className="h-4 w-4 text-green-500" />
             Add Funds with Card
             <Tooltip>
-              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
               <TooltipContent className="max-w-xs">Add funds to your wallet. Minimum $5. Funds are available immediately.</TooltipContent>
             </Tooltip>
           </CardTitle>
@@ -213,8 +213,8 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
                 onClick={() => setDepositAmount(amount)}
                 className={`rounded-lg border-2 px-4 py-2 text-sm font-semibold transition ${
                   depositAmount === amount
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 hover:border-green-300'
+                    ? 'border-sage-500 bg-sage-50 text-sage-800'
+                    : 'border-stone-200 hover:border-green-300'
                 }`}
               >
                 {formatCents(amount)}
@@ -224,7 +224,7 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
 
           {!showCard ? (
             <Button
-              className="w-full bg-green-500 hover:bg-green-600 text-white"
+              className="w-full bg-sage-500 hover:bg-green-600 text-white"
               onClick={() => setShowCard(true)}
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -233,7 +233,7 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
           ) : (
             <div className="space-y-3">
               <div ref={cardContainerRef} className="min-h-[100px] rounded-lg border p-3" />
-              <p className="text-xs text-gray-400 text-center">Secured by Square</p>
+              <p className="text-xs text-muted-foreground text-center">Secured by Square</p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -246,7 +246,7 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                  className="flex-1 bg-sage-500 hover:bg-green-600 text-white"
                   onClick={handleDeposit}
                   disabled={depositing || !card}
                 >
@@ -265,24 +265,24 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
           <CardTitle className="flex items-center gap-2 text-base">
             Transaction History
             <Tooltip>
-              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
+              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
               <TooltipContent className="max-w-xs">A record of all deposits, withdrawals, auction drops, and winnings.</TooltipContent>
             </Tooltip>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-400">No transactions yet.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">No transactions yet.</p>
           ) : (
             <div className="space-y-1">
               {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-gray-50">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 flex-shrink-0">
+                <div key={tx.id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-canvas">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 flex-shrink-0">
                     {txIcon(tx)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900">{txLabel(tx)}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-sm font-medium text-foreground">{txLabel(tx)}</p>
+                    <p className="text-xs text-muted-foreground">
                       {format(new Date(tx.created_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>

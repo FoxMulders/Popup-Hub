@@ -12,7 +12,6 @@ import {
   saveCoordinatorVenue,
   touchCoordinatorSavedVenue,
 } from '@/lib/coordinator/saved-venues'
-import type { EdmontonQuadrantFilter } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { WIZARD_FIELD_LABEL, WIZARD_SELECT_TRIGGER } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
@@ -27,7 +26,7 @@ interface SavedVenuePickerProps {
   pinDropped: boolean
   venuePresetId: VenuePresetId
   skipVenueLayout: boolean
-  cityQuadrant: EdmontonQuadrantFilter
+  marketCity: string
   onApply: (venue: CoordinatorSavedVenue) => void
 }
 
@@ -40,7 +39,7 @@ export function SavedVenuePicker({
   pinDropped,
   venuePresetId,
   skipVenueLayout,
-  cityQuadrant,
+  marketCity,
   onApply,
 }: SavedVenuePickerProps) {
   const supabase = createClient()
@@ -97,7 +96,7 @@ export function SavedVenuePicker({
       longitude: lng,
       venuePresetId,
       skipVenueLayout,
-      cityQuadrant,
+      marketCity,
     })
     setSaving(false)
 

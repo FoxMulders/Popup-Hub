@@ -49,8 +49,8 @@ export function RefundExceptionsPanel({ eventId, exceptions }: RefundExceptionsP
   }
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
-      <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+    <div className="rounded-xl border border-harvest-200 bg-harvest-50 p-4 space-y-3">
+      <div className="flex items-center gap-2 text-harvest-700 font-semibold text-sm">
         <AlertTriangle className="h-4 w-4" />
         {exceptions.length} refund{exceptions.length === 1 ? '' : 's'} need manual retry
       </div>
@@ -58,13 +58,13 @@ export function RefundExceptionsPanel({ eventId, exceptions }: RefundExceptionsP
         {exceptions.map((ex) => (
           <li
             key={ex.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2 text-xs"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-harvest-100 bg-white px-3 py-2 text-xs"
           >
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-gray-800 truncate">
+              <p className="font-medium text-foreground truncate">
                 Payment {ex.square_payment_id.slice(0, 12)}… · ${(ex.amount_cents / 100).toFixed(2)}
               </p>
-              <p className="text-gray-500 truncate">{ex.error_message}</p>
+              <p className="text-muted-foreground truncate">{ex.error_message}</p>
             </div>
             <Button
               size="sm"

@@ -13,7 +13,22 @@ import {
 } from '@/lib/auth/rbac'
 import type { Role } from '@/types/database'
 
+/** Supabase may redirect to Site URL root with ?code= instead of /api/auth/callback. */
+function redirectOAuthCodeToCallback(request: NextRequest): NextResponse | null {
+  const { pathname, searchParams } = request.nextUrl
+  const code = searchParams.get('code')
+  if (!code || pathname === '/api/auth/callback') return null
+  if (pathname.startsWith('/api/square/oauth/callback')) return null
+
+  const url = request.nextUrl.clone()
+  url.pathname = '/api/auth/callback'
+  return NextResponse.redirect(url)
+}
+
 export async function updateSession(request: NextRequest) {
+  const oauthRedirect = redirectOAuthCodeToCallback(request)
+  if (oauthRedirect) return oauthRedirect
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -75,6 +90,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/checkin/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/square/webhook') ||
+    pathname.startsWith('/api/square/oauth/callback') ||
     pathname.startsWith('/api/reminders/') ||
     pathname.startsWith('/api/cron/') ||
     pathname.startsWith('/favicon') ||

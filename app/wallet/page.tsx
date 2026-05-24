@@ -30,7 +30,7 @@ export default async function WalletPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Digital Wallet</h1>
+      <h1 className="mb-6 text-2xl font-bold text-foreground">Digital Wallet</h1>
       <WalletView
         wallet={walletRow as Wallet | null}
         transactions={(transactions as WalletTransaction[]) ?? []}

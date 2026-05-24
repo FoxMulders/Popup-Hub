@@ -86,9 +86,14 @@ foreach ($key in $SyncKeys) {
     $toSync += @{ Key = $key; Value = $val }
 }
 
-if ($toSync.Count -eq 0) {
+if ($toSync.Count -eq 0 -and -not ($Environments -contains 'production')) {
     Write-Host "No keys to sync (all empty or placeholder). Fill .env.local first." -ForegroundColor Yellow
     exit 0
+}
+
+# Always ensure production app URL when syncing production (OAuth + Square webhooks).
+if ($Environments -contains 'production' -and -not ($toSync | Where-Object { $_.Key -eq 'NEXT_PUBLIC_APP_URL' })) {
+    $toSync += @{ Key = 'NEXT_PUBLIC_APP_URL'; Value = $ProductionAppUrl }
 }
 
 foreach ($entry in $toSync) {

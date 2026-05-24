@@ -143,7 +143,7 @@ export function CancelEventDialog({
             <AlertTriangle className="h-5 w-5 shrink-0" />
             <AlertDialogTitle className="text-red-700">Cancel Event</AlertDialogTitle>
           </div>
-          <AlertDialogDescription className="space-y-4 text-left text-sm text-gray-700">
+          <AlertDialogDescription className="space-y-4 text-left text-sm text-foreground">
             <div className="space-y-4">
               <p className="rounded-lg border border-red-200 bg-red-50 p-3 font-medium text-red-800">
                 Danger: This action is permanent. Canceling this event will immediately initiate
@@ -151,7 +151,7 @@ export function CancelEventDialog({
               </p>
 
               {noticeDays < NOTICE_WINDOW_DAYS && (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 text-xs">
+                <p className="rounded-lg border border-harvest-200 bg-harvest-50 p-3 text-harvest-800 text-xs">
                   <strong>Notice window:</strong> This event starts in{' '}
                   {noticeDays < 1
                     ? 'less than 1 day'
@@ -167,7 +167,7 @@ export function CancelEventDialog({
               </p>
 
               <div className="space-y-2">
-                <Label htmlFor="cancel-reason" className="text-gray-900">
+                <Label htmlFor="cancel-reason" className="text-foreground">
                   Cancellation reason <span className="text-red-600">*</span>
                 </Label>
                 <Select
@@ -186,7 +186,7 @@ export function CancelEventDialog({
                   </SelectContent>
                 </Select>
                 {reason && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     {CANCELLATION_REASONS.find((r) => r.value === reason)?.description}
                   </p>
                 )}
@@ -199,7 +199,7 @@ export function CancelEventDialog({
 
               {reason === 'other' && (
                 <div className="space-y-2">
-                  <Label htmlFor="cancel-notes" className="text-gray-900">
+                  <Label htmlFor="cancel-notes" className="text-foreground">
                     Details <span className="text-red-600">*</span>
                   </Label>
                   <Textarea
@@ -214,7 +214,7 @@ export function CancelEventDialog({
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="cancel-confirm" className="text-gray-900">
+                <Label htmlFor="cancel-confirm" className="text-foreground">
                   Type <span className="font-mono font-bold">{CONFIRM_WORD}</span> to confirm
                 </Label>
                 <Input

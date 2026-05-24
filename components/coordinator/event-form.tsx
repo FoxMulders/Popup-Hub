@@ -110,6 +110,9 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   const [raffleDonationRequirement, setRaffleDonationRequirement] = useState(
     existing?.raffle_donation_requirement ?? ''
   )
+  const [marketInsuranceRequired, setMarketInsuranceRequired] = useState(
+    existing?.market_insurance_required ?? false
+  )
 
   const [dayRows, setDayRows] = useState<DayRow[]>(() => {
     if (existing?.event_days && existing.event_days.length > 0) {
@@ -298,6 +301,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         is_multi_day: scheduleType === 'multi',
         booth_clearance_policy: boothClearancePolicy,
         raffle_donation_requirement: raffleDonationRequirement.trim() || null,
+        market_insurance_required: marketInsuranceRequired,
       }
 
       let eventId = existing?.id
@@ -644,6 +648,20 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
               <p className="text-xs text-muted-foreground">
                 Shown on the market-day operations grid while coordinators track raffle drop-offs.
               </p>
+            </div>
+
+            <div className="flex items-start justify-between gap-4 rounded-xl border border-stone-200 bg-canvas px-4 py-3">
+              <div className="space-y-1">
+                <Label htmlFor="market-insurance-required">Require Market Insurance from Vendors?</Label>
+                <p className="text-xs text-muted-foreground">
+                  Approved vendors must upload proof of insurance before their booth is finalized.
+                </p>
+              </div>
+              <Switch
+                id="market-insurance-required"
+                checked={marketInsuranceRequired}
+                onCheckedChange={setMarketInsuranceRequired}
+              />
             </div>
 
             <div className="space-y-1">

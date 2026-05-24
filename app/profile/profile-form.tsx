@@ -76,15 +76,15 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
             id="email"
             value={profile.email}
             disabled
-            className="h-11 bg-gray-50 text-gray-500"
+            className="h-11 bg-canvas text-muted-foreground"
           />
-          <p className="text-xs text-gray-400">Email cannot be changed here</p>
+          <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="phone" className="text-sm font-medium">
             Phone Number
-            <span className="ml-2 text-xs text-gray-400 font-normal">(optional — for SMS alerts)</span>
+            <span className="ml-2 text-xs text-muted-foreground font-normal">(optional — for SMS alerts)</span>
           </Label>
           <Input
             id="phone"
@@ -107,10 +107,10 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
             onChange={(e) => setShareContact(e.target.checked)}
           />
           <span>
-            <span className="text-sm font-medium text-gray-900">
+            <span className="text-sm font-medium text-foreground">
               Share contact info with vendors (Quarter Auctions only)
             </span>
-            <span className="block text-xs text-gray-500 mt-0.5">
+            <span className="block text-xs text-muted-foreground mt-0.5">
               When enabled, donating vendors can see your name, email, and phone after you win a quarter auction item.
             </span>
           </span>
@@ -118,15 +118,15 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
       </div>
 
       {!passportComplete ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="rounded-xl border border-harvest-200 bg-harvest-50/70 p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-amber-900">Complete your passport</p>
-            <p className="text-xs text-amber-800 mt-0.5">
+            <p className="text-sm font-medium text-harvest-800">Complete your passport</p>
+            <p className="text-xs text-harvest-700 mt-0.5">
               Add the details required for your {profile.role} account.
             </p>
           </div>
           <Link href={PASSPORT_PATH}>
-            <Button variant="outline" size="sm" className="gap-1.5 border-amber-300 bg-white">
+            <Button variant="outline" size="sm" className="gap-1.5 border-harvest-400 bg-white">
               <IdCard className="h-4 w-4" />
               Open passport
               <ArrowRight className="h-3.5 w-3.5" />
@@ -136,7 +136,7 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
       ) : null}
 
       <div className="flex items-center gap-4 pt-2">
-        <Button type="submit" disabled={loading} className="h-11 px-8 bg-amber-500 hover:bg-amber-600 text-white">
+        <Button type="submit" disabled={loading} className="h-11 px-8">
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

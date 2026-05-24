@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { reclaimStalePaymentProcessing } from '@/lib/applications/booth-payment-processing'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
@@ -25,34 +26,18 @@ async function finalizePaidApplication(
     feeMode: ReturnType<typeof resolveEventFeeConfig>['mode']
   }
 ) {
-  const { data: existingTx } = await supabase
-    .from('platform_transactions')
-    .select('id')
-    .eq('processor_charge_id', params.paymentId)
-    .maybeSingle()
-
-  if (!existingTx) {
-    await recordPlatformTransaction(supabase, {
-      boothApplicationId: params.applicationId,
-      eventId: params.eventId,
-      vendorId: params.vendorId,
-      coordinatorId: params.coordinatorId,
-      categoryId: params.categoryId,
-      totalAmountCents: params.amountCents,
-      platformFeeCents: params.platformFeeCents,
-      feeModeUsed: params.feeMode,
-      processorChargeId: params.paymentId,
-      status: 'completed',
-    })
-  } else {
-    await supabase
-      .from('booth_applications')
-      .update({
-        square_payment_id: params.paymentId,
-        payment_status: 'paid',
-      })
-      .eq('id', params.applicationId)
-  }
+  await recordPlatformTransaction(supabase, {
+    boothApplicationId: params.applicationId,
+    eventId: params.eventId,
+    vendorId: params.vendorId,
+    coordinatorId: params.coordinatorId,
+    categoryId: params.categoryId,
+    totalAmountCents: params.amountCents,
+    platformFeeCents: params.platformFeeCents,
+    feeModeUsed: params.feeMode,
+    processorChargeId: params.paymentId,
+    status: 'completed',
+  })
 
   return {
     paymentId: params.paymentId,
@@ -101,6 +86,7 @@ export async function POST(request: Request) {
       payment_method,
       application_payment_status,
       square_payment_id,
+      payment_processing_at,
       event:events(
         coordinator_id,
         square_merchant_id,
@@ -149,7 +135,7 @@ export async function POST(request: Request) {
   if (amountCents <= 0) {
     await supabase
       .from('booth_applications')
-      .update({ payment_status: 'paid' })
+      .update({ payment_status: 'paid', payment_processing_at: null })
       .eq('id', applicationId)
       .eq('payment_status', 'payment_required')
     return NextResponse.json({ paymentId: null, free: true })
@@ -171,48 +157,58 @@ export async function POST(request: Request) {
     )
   }
 
-  if (application.payment_status === 'processing') {
+  let paymentStatus = application.payment_status as string
+
+  if (paymentStatus === 'processing') {
     const knownPaymentId = application.square_payment_id as string | null
     if (!knownPaymentId) {
+      const reclaimed = await reclaimStalePaymentProcessing(supabase, applicationId)
+      if (reclaimed) {
+        paymentStatus = 'payment_required'
+      } else {
+        return NextResponse.json(
+          { error: 'Payment is already in progress. Please wait a moment and refresh.' },
+          { status: 409 }
+        )
+      }
+    } else {
+      const squarePayment = await getBoothPayment(credentials.accessToken, knownPaymentId)
+
+      if (
+        squarePayment?.id &&
+        COMPLETED_PAYMENT_STATUSES.has(squarePayment.status ?? '')
+      ) {
+        const result = await finalizePaidApplication(supabase, {
+          applicationId,
+          paymentId: squarePayment.id,
+          eventId: application.event_id,
+          vendorId: application.vendor_id,
+          coordinatorId,
+          categoryId: application.category_id,
+          amountCents,
+          platformFeeCents,
+          feeMode: feeConfig.mode,
+        })
+        return NextResponse.json(result)
+      }
+
       return NextResponse.json(
         { error: 'Payment is already in progress. Please wait a moment and refresh.' },
         { status: 409 }
       )
     }
-
-    const squarePayment = await getBoothPayment(credentials.accessToken, knownPaymentId)
-
-    if (
-      squarePayment?.id &&
-      COMPLETED_PAYMENT_STATUSES.has(squarePayment.status ?? '')
-    ) {
-      const result = await finalizePaidApplication(supabase, {
-        applicationId,
-        paymentId: squarePayment.id,
-        eventId: application.event_id,
-        vendorId: application.vendor_id,
-        coordinatorId,
-        categoryId: application.category_id,
-        amountCents,
-        platformFeeCents,
-        feeMode: feeConfig.mode,
-      })
-      return NextResponse.json(result)
-    }
-
-    return NextResponse.json(
-      { error: 'Payment is already in progress. Please wait a moment and refresh.' },
-      { status: 409 }
-    )
   }
 
-  if (application.payment_status !== 'payment_required') {
+  if (paymentStatus !== 'payment_required') {
     return NextResponse.json({ error: 'Payment not available for this application' }, { status: 400 })
   }
 
   const { data: claimed } = await supabase
     .from('booth_applications')
-    .update({ payment_status: 'processing' })
+    .update({
+      payment_status: 'processing',
+      payment_processing_at: new Date().toISOString(),
+    })
     .eq('id', applicationId)
     .eq('payment_status', 'payment_required')
     .select('id')
@@ -247,7 +243,10 @@ export async function POST(request: Request) {
   if (error || !paymentId) {
     await supabase
       .from('booth_applications')
-      .update({ payment_status: 'payment_required' })
+      .update({
+        payment_status: 'payment_required',
+        payment_processing_at: null,
+      })
       .eq('id', applicationId)
       .eq('payment_status', 'processing')
     return NextResponse.json({ error: error ?? 'Payment failed' }, { status: 402 })

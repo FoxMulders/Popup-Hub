@@ -139,7 +139,7 @@ export function DoorWalletTopUp({ eventId }: DoorWalletTopUpProps) {
               />
             </div>
             {resolvedUserId ? (
-              <p className="text-xs text-green-700">Patron ID recognized</p>
+              <p className="text-xs text-sage-700">Patron ID recognized</p>
             ) : scanInput.trim() ? (
               <p className="text-xs text-destructive">Could not read a wallet ID from this code</p>
             ) : null}
@@ -159,7 +159,7 @@ export function DoorWalletTopUp({ eventId }: DoorWalletTopUpProps) {
                   className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold ${
                     !customDollars && amountCents === cents
                       ? 'border-forest bg-forest/10 text-forest'
-                      : 'border-gray-200'
+                      : 'border-stone-200'
                   }`}
                 >
                   {formatCents(cents)}
@@ -188,12 +188,12 @@ export function DoorWalletTopUp({ eventId }: DoorWalletTopUpProps) {
           </Button>
 
           {lastCredit ? (
-            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm">
+            <div className="rounded-lg border border-sage-200 bg-sage-50 px-4 py-3 text-sm">
               <p className="font-medium text-green-900">
                 <CheckCircle className="mr-1 inline h-4 w-4" />
                 {lastCredit.name} — {formatCents(lastCredit.amountCents)} added
               </p>
-              <p className="text-green-800">New balance: {formatCents(lastCredit.newBalance)}</p>
+              <p className="text-sage-800">New balance: {formatCents(lastCredit.newBalance)}</p>
             </div>
           ) : null}
         </CardContent>

@@ -17,6 +17,7 @@ import { Loader2, ShoppingBag, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { type SignupRole } from '@/lib/auth/rbac'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
+import { marketStatusBadge } from '@/lib/theme/market'
 
 const ROLE_OPTIONS = [
   {
@@ -118,45 +119,42 @@ function SignupForm() {
 
   if (submitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-4">
-        <Card className="w-full max-w-md shadow-lg text-center">
-          <CardContent className="pt-10 pb-8 px-8">
-            <div className="mx-auto mb-4 flex justify-center">
-              <BrandLogoMark size="auth" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
-            <p className="text-gray-500 mb-1">
-              We sent a confirmation link to
-            </p>
-            <p className="font-semibold text-gray-800 mb-6">{email}</p>
-            <p className="text-sm text-gray-400 mb-6">
-              Click the link in the email to activate your Popup Hub account as a{' '}
-              <span className="font-medium text-gray-600">{selectedLabel}</span>.
-            </p>
-            <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-800">
-              Can&apos;t find it? Check your spam folder or{' '}
-              <button
-                className="underline font-medium"
-                onClick={() => setSubmitted(false)}
-              >
-                try again
-              </button>
-              .
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="w-full max-w-md shadow-sm text-center">
+        <CardContent className="pt-10 pb-8 px-8">
+          <div className="mx-auto mb-4 flex justify-center">
+            <BrandLogoMark size="auth" />
+          </div>
+          <h2 className="font-heading text-2xl font-semibold text-foreground mb-2">Check your email</h2>
+          <p className="text-muted-foreground mb-1">
+            We sent a confirmation link to
+          </p>
+          <p className="font-semibold text-foreground mb-6">{email}</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            Click the link in the email to activate your Popup Hub account as a{' '}
+            <span className="font-medium text-foreground">{selectedLabel}</span>.
+          </p>
+          <div className={`rounded-xl p-4 text-sm ${marketStatusBadge.warning}`}>
+            Can&apos;t find it? Check your spam folder or{' '}
+            <button
+              className="underline font-medium"
+              onClick={() => setSubmitted(false)}
+            >
+              try again
+            </button>
+            .
+          </div>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-4 py-10">
-      <Card className="flex w-full max-w-lg flex-col shadow-lg">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex justify-center">
-            <BrandLogoMark size="auth" />
-          </div>
-          <CardTitle className="text-2xl">Create your account</CardTitle>
+    <Card className="flex w-full max-w-lg flex-col shadow-sm">
+      <CardHeader className="text-center">
+        <div className="mx-auto mb-4 flex justify-center">
+          <BrandLogoMark size="auth" />
+        </div>
+        <CardTitle className="font-heading text-2xl">Create your account</CardTitle>
           <CardDescription>Choose how you&apos;ll use Popup Hub</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-1 flex-col">
@@ -170,8 +168,8 @@ function SignupForm() {
                     key={id}
                     className={`flex min-h-[4.5rem] cursor-pointer touch-manipulation flex-col items-center rounded-xl border-2 p-3 text-center transition ${
                       selected
-                        ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-200'
-                        : 'border-gray-200 hover:border-amber-300'
+                        ? 'border-harvest-500 bg-harvest-50 ring-2 ring-harvest-200'
+                        : 'border-stone-200 hover:border-harvest-400'
                     }`}
                   >
                     <input
@@ -184,10 +182,10 @@ function SignupForm() {
                       required
                     />
                     <Icon
-                      className={`mb-1.5 h-5 w-5 ${selected ? 'text-amber-600' : 'text-gray-400'}`}
+                      className={`mb-1.5 h-5 w-5 ${selected ? 'text-harvest-600' : 'text-muted-foreground'}`}
                     />
                     <span className="text-xs font-semibold">{label}</span>
-                    <span className="mt-0.5 text-[10px] leading-snug text-gray-500">{desc}</span>
+                    <span className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{desc}</span>
                   </label>
                 )
               })}
@@ -218,7 +216,7 @@ function SignupForm() {
 
           <div className="relative flex items-center my-2">
             <Separator className="flex-1" />
-            <span className="mx-3 text-xs text-gray-400">or sign up with email</span>
+            <span className="mx-3 text-xs text-muted-foreground">or sign up with email</span>
             <Separator className="flex-1" />
           </div>
 
@@ -264,29 +262,34 @@ function SignupForm() {
                 />
                 <span>
                   <span className="font-medium">Share contact info with vendors (Quarter Auctions only)</span>
-                  <span className="mt-0.5 block text-xs text-gray-500">
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
                     When enabled, donating vendors can see your name, email, and phone after you win a quarter auction item.
                   </span>
                 </span>
               </label>
             )}
             <div className="sticky bottom-0 bg-white pt-2">
-              <Button type="submit" className="w-full min-h-11 bg-amber-500 hover:bg-amber-600 text-white touch-manipulation" disabled={!canSubmit}>
+              <Button type="submit" className="w-full min-h-11 touch-manipulation" disabled={!canSubmit}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Create Account as <Badge className="ml-1 bg-white/20 text-white">{selectedLabel}</Badge>
               </Button>
             </div>
           </form>
-          <p className="mt-4 text-center text-sm text-gray-500">
+          <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-amber-600 hover:underline">Sign in</Link>
+            <Link href="/login" className="font-semibold text-forest hover:underline">Sign in</Link>
           </p>
         </CardContent>
       </Card>
-    </div>
   )
 }
 
 export default function SignupPage() {
-  return <Suspense><SignupForm /></Suspense>
+  return (
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-linen via-canvas to-harvest-50 p-4 py-10">
+      <Suspense fallback={<div className="w-full max-w-lg h-[32rem] animate-pulse market-panel rounded-2xl" />}>
+        <SignupForm />
+      </Suspense>
+    </div>
+  )
 }

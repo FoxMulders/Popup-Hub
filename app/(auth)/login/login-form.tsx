@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
+import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { Loader2 } from 'lucide-react'
 
 export default function LoginForm() {
@@ -128,11 +129,10 @@ export default function LoginForm() {
 
   async function handleGoogleSignIn() {
     setError(null)
-    const params = new URLSearchParams({ next: redirectTo })
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?${params.toString()}`,
+        redirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), { next: redirectTo }),
         queryParams: {
           prompt: 'select_account',
         },
@@ -176,7 +176,7 @@ export default function LoginForm() {
 
           <div className="relative flex items-center">
             <Separator className="flex-1" />
-            <span className="mx-3 text-xs text-gray-400">or</span>
+            <span className="mx-3 text-xs text-muted-foreground">or</span>
             <Separator className="flex-1" />
           </div>
 
@@ -209,7 +209,7 @@ export default function LoginForm() {
           </form>
         </CardContent>
         <CardFooter className="flex justify-center border-t pt-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <Link href="/signup" className="font-semibold text-forest hover:underline">
               Sign up free

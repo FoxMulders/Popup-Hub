@@ -69,7 +69,7 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
-      <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+      <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" />
         Back
       </Link>
@@ -78,14 +78,14 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
             <AvatarImage src={profile.avatar_url ?? undefined} />
-            <AvatarFallback className="bg-amber-100 text-amber-800 text-lg font-bold">
+            <AvatarFallback className="bg-harvest-100 text-harvest-700 text-lg font-bold">
               {initials}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-gray-900 truncate">{profile.full_name}</h1>
-            <p className="text-sm text-gray-500">Market Organizer</p>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <h1 className="text-2xl font-bold text-foreground truncate">{profile.full_name}</h1>
+            <p className="text-sm text-muted-foreground">Market Organizer</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Member since {format(new Date(profile.created_at), 'MMMM yyyy')}
             </p>
           </div>
@@ -97,22 +97,22 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
         />
 
         <div className="grid grid-cols-2 gap-3 pt-2 text-center text-sm">
-          <div className="rounded-xl border bg-gray-50 p-3">
-            <p className="text-xl font-bold text-gray-900">
+          <div className="rounded-xl border bg-canvas p-3">
+            <p className="text-xl font-bold text-foreground">
               {(events ?? []).length}
             </p>
-            <p className="text-xs text-gray-500">Active & past markets</p>
+            <p className="text-xs text-muted-foreground">Active & past markets</p>
           </div>
-          <div className="rounded-xl border bg-gray-50 p-3">
-            <p className="text-xl font-bold text-gray-900">
+          <div className="rounded-xl border bg-canvas p-3">
+            <p className="text-xl font-bold text-foreground">
               {profile.coordinator_cancellation_count as number}
             </p>
-            <p className="text-xs text-gray-500">Total cancellations</p>
+            <p className="text-xs text-muted-foreground">Total cancellations</p>
           </div>
         </div>
 
         {(profile.coordinator_late_cancellation_count as number) > 0 && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             {profile.coordinator_late_cancellation_count as number} cancellation
             {(profile.coordinator_late_cancellation_count as number) === 1 ? '' : 's'} occurred
             with less than 7 days notice (non-emergency).
@@ -130,9 +130,9 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
       ) : null}
 
       <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Markets</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">Markets</h2>
         {!events || events.length === 0 ? (
-          <p className="text-sm text-gray-400">No public markets listed yet.</p>
+          <p className="text-sm text-muted-foreground">No public markets listed yet.</p>
         ) : (
           <ul className="space-y-2">
             {(events as Pick<Event, 'id' | 'name' | 'location_name' | 'start_at' | 'status'>[]).map(
@@ -140,17 +140,17 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
                 <li key={ev.id}>
                   <Link
                     href={`/events/${ev.id}`}
-                    className="flex items-center justify-between rounded-xl border bg-white px-4 py-3 hover:bg-amber-50/50 transition-colors"
+                    className="flex items-center justify-between rounded-xl border bg-white px-4 py-3 hover:bg-harvest-50/50 transition-colors"
                   >
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{ev.name}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                      <p className="font-medium text-foreground truncate">{ev.name}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <MapPin className="h-3 w-3 shrink-0" />
                         {ev.location_name}
                       </p>
                     </div>
                     <div className="text-right shrink-0 ml-3">
-                      <p className="text-xs text-gray-500 flex items-center gap-1 justify-end">
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                         <Calendar className="h-3 w-3" />
                         {format(new Date(ev.start_at), 'MMM d, yyyy')}
                       </p>

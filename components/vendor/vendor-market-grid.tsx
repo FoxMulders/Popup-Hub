@@ -65,7 +65,7 @@ function MarketGrid({
   if (events.length === 0) {
     return (
       <div className="rounded-2xl border bg-white py-16 text-center">
-        <p className="text-gray-500">{emptyMessage}</p>
+        <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
     )
   }

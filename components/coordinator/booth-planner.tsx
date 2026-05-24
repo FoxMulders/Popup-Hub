@@ -3038,7 +3038,7 @@ export function BoothPlanner({
                   </button>
                 </div>
                 {spacingMode === 'standard' && (
-                  <p className="text-[10px] text-amber-800">
+                  <p className="text-[10px] text-harvest-700">
                     Legacy 10′ spacing — switch to Table vendors (1′ grid) for market table units.
                   </p>
                 )}
@@ -3736,7 +3736,7 @@ function renderClearanceRingDiv(
         overlap
           ? 'animate-pulse border-red-700 bg-red-500/40'
           : isActive
-            ? 'border-amber-600 bg-amber-400/30'
+            ? 'border-harvest-600 bg-harvest-400/30'
             : 'border-blue-600 bg-blue-400/30'
       )}
     />
@@ -3860,7 +3860,7 @@ function renderGrid({
         }
         const boothTypeBorder =
           booth.boothType === 'wall'
-            ? 'border-amber-700 border-2'
+            ? 'border-harvest-700 border-2'
             : booth.boothType === 'power'
             ? 'border-yellow-400 border-2'
             : 'border-2'

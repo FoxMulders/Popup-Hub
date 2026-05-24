@@ -58,9 +58,9 @@ export function VendorPaymentMethodSelector({
               key={id}
               className={cn(
                 'relative flex cursor-pointer flex-col rounded-xl border-2 p-4 transition-all',
-                'focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-2',
+                'focus-within:ring-2 focus-within:ring-harvest-500 focus-within:ring-offset-2',
                 selected
-                  ? 'border-amber-500 bg-amber-50/80 shadow-sm'
+                  ? 'border-harvest-500 bg-harvest-50/80 shadow-sm'
                   : 'border-stone-200 bg-white hover:border-stone-300',
                 (disabled || squareDisabled) && id === 'SQUARE' && 'cursor-not-allowed opacity-60'
               )}
@@ -79,7 +79,7 @@ export function VendorPaymentMethodSelector({
                 <span
                   className={cn(
                     'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                    selected ? 'bg-amber-500 text-white' : 'bg-stone-100 text-stone-600'
+                    selected ? 'bg-harvest-500 text-white' : 'bg-stone-100 text-stone-600'
                   )}
                 >
                   <Icon className="h-5 w-5" aria-hidden />
@@ -118,11 +118,11 @@ export function VendorPaymentMethodSelector({
                           <span className="font-medium">{coordinatorEtransferEmail}</span>
                         </p>
                       ) : (
-                        <p className="text-xs text-amber-800">
+                        <p className="text-xs text-harvest-700">
                           Coordinator payment email will be included in your instructions.
                         </p>
                       )}
-                      <p className="inline-flex items-start gap-1 rounded-md bg-orange-50 px-2 py-1.5 text-[11px] font-medium text-orange-900 leading-snug">
+                      <p className="inline-flex items-start gap-1 rounded-md bg-terracotta-50 px-2 py-1.5 text-[11px] font-medium text-terracotta-800 leading-snug">
                         <Timer className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
                         Spot held 24 hours pending manual verification
                       </p>
@@ -133,7 +133,7 @@ export function VendorPaymentMethodSelector({
 
               {selected && (
                 <span
-                  className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-amber-500"
+                  className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-harvest-500"
                   aria-hidden
                 />
               )}

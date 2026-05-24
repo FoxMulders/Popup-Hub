@@ -115,7 +115,7 @@ export function PendingEtransferPanel({ applications: initial }: PendingEtransfe
                     ) : null}
                   </div>
                   {countdown ? (
-                    <p className="inline-flex items-center gap-1 text-[11px] font-medium text-orange-800">
+                    <p className="inline-flex items-center gap-1 text-[11px] font-medium text-terracotta-700">
                       <Timer className="h-3 w-3" aria-hidden />
                       {countdown}
                     </p>

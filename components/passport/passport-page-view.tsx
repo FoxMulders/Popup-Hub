@@ -21,26 +21,26 @@ export function PassportPageView({ profile, passport, categories, products }: Pa
         <div className="mb-8 space-y-3">
           <Link
             href="/profile"
-            className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to profile
           </Link>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-4xl font-bold text-gray-900">
+            <h1 className="text-4xl font-bold text-foreground">
               {passport ? 'Update Your Passport' : 'Create Your Vendor Passport'}
             </h1>
             <Badge
               className={
                 completion.complete
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-amber-100 text-amber-800'
+                  ? 'bg-sage-100 text-sage-800'
+                  : 'bg-harvest-100 text-harvest-700'
               }
             >
               {completion.complete ? 'Complete' : 'Incomplete'}
             </Badge>
           </div>
-          <p className="text-lg text-gray-500">{passportDescription('vendor')}</p>
+          <p className="text-lg text-muted-foreground">{passportDescription('vendor')}</p>
         </div>
         <PassportWizard
           categories={categories}

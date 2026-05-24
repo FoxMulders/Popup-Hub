@@ -9,10 +9,10 @@ export function NotificationPageHeader({ userId }: { userId: string }) {
   return (
     <div className="mb-10">
       <div className="mb-1.5 flex items-center gap-3">
-        <Bell className="h-7 w-7 text-amber-500" />
-        <h1 className="text-4xl font-bold text-gray-900">Notifications</h1>
+        <Bell className="h-7 w-7 text-harvest-500" />
+        <h1 className="text-4xl font-bold text-foreground">Notifications</h1>
       </div>
-      <p className="text-lg text-gray-500">
+      <p className="text-lg text-muted-foreground">
         {unreadCount > 0
           ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
           : "You're all caught up"}
