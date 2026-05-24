@@ -21,9 +21,15 @@ import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
 import { PaddleChipPicker } from '@/components/quarter-auction/paddle-chip-picker'
 import { PaddleHoldScreen } from '@/components/quarter-auction/paddle-hold-screen'
 import { WinCelebration } from '@/components/quarter-auction/win-celebration'
+import {
+  AuctionStartCountdown,
+  useAuctionCanStart,
+} from '@/components/quarter-auction/auction-start-countdown'
+import { DismissibleAuctionBanner } from '@/components/auction/dismissible-auction-banner'
 
 interface PatronQuarterAuctionLiveProps {
   eventId: string
+  eventStartAt: string
   userId: string
   initialItems: AuctionCatalogItem[]
   initialPaddles: EventPaddle[]
@@ -33,6 +39,7 @@ interface PatronQuarterAuctionLiveProps {
 
 export function PatronQuarterAuctionLive({
   eventId,
+  eventStartAt,
   userId,
   initialItems,
   initialPaddles,
@@ -40,6 +47,7 @@ export function PatronQuarterAuctionLive({
   settings,
 }: PatronQuarterAuctionLiveProps) {
   const supabase = createClient()
+  const canStartAuction = useAuctionCanStart(settings.scheduled_start_at, eventStartAt)
   const [items, setItems] = useState(initialItems)
   const [paddles, setPaddles] = useState(initialPaddles)
   const [wallet, setWallet] = useState(initialWallet)
@@ -207,18 +215,25 @@ export function PatronQuarterAuctionLive({
 
   return (
     <div className="mx-auto max-w-lg space-y-4 px-4 py-6 pb-24">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-bold">Quarter Auction</h1>
-          <p className="text-sm text-muted-foreground">
-            Balance: {balanceCredits} credits ({formatCredits(balanceCredits).split('(')[1]?.replace(')', '')})
-          </p>
+      <DismissibleAuctionBanner scope="quarter-patron-room" id={eventId}>
+        <div className="flex items-center justify-between gap-2 rounded-xl border bg-white px-4 py-3">
+          <div>
+            <h1 className="text-xl font-bold">Quarter Auction</h1>
+            <p className="text-sm text-muted-foreground">
+              Balance: {balanceCredits} credits ({formatCredits(balanceCredits).split('(')[1]?.replace(')', '')})
+            </p>
+          </div>
+          <Link href="/wallet" className="text-sm text-forest underline flex items-center gap-1">
+            <Wallet className="h-4 w-4" />
+            Top up
+          </Link>
         </div>
-        <Link href="/wallet" className="text-sm text-forest underline flex items-center gap-1">
-          <Wallet className="h-4 w-4" />
-          Top up
-        </Link>
-      </div>
+      </DismissibleAuctionBanner>
+
+      <AuctionStartCountdown
+        scheduledStartAt={settings.scheduled_start_at}
+        eventStartAt={eventStartAt}
+      />
 
       <PaddleChipPicker
         eventId={eventId}
@@ -284,7 +299,13 @@ export function PatronQuarterAuctionLive({
               </p>
             )}
 
-            {liveItem.status === 'bidding_open' && myEntries.length === 0 && (
+            {liveItem.status === 'bidding_open' && !canStartAuction && (
+              <p className="text-sm text-center text-muted-foreground" role="status">
+                Bidding opens at the advertised start time.
+              </p>
+            )}
+
+            {liveItem.status === 'bidding_open' && myEntries.length === 0 && canStartAuction && (
               <>
                 {availablePaddles.length === 0 ? (
                   <p className="text-sm text-muted-foreground">

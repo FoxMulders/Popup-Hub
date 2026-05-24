@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { notifyAuctionStarting } from '@/lib/auction/notify-auction-starting'
+import {
+  canStartQuarterAuctionNow,
+  quarterAuctionStartBlockedMessage,
+} from '@/lib/quarter-auction/schedule'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -15,7 +19,7 @@ export async function POST(_request: Request, { params }: Props) {
 
   const { data: auction } = await supabase
     .from('auctions')
-    .select('id, coordinator_id, status, timer_duration_seconds, title, event_id')
+    .select('id, coordinator_id, status, timer_duration_seconds, title, event_id, scheduled_start_at, event:events(start_at)')
     .eq('id', id)
     .single()
 
@@ -25,6 +29,23 @@ export async function POST(_request: Request, { params }: Props) {
   }
   if (auction.status !== 'upcoming') {
     return NextResponse.json({ error: `Auction is already ${auction.status}` }, { status: 409 })
+  }
+
+  const eventRow = auction.event as { start_at: string } | { start_at: string }[] | null
+  const eventStartAt = Array.isArray(eventRow) ? eventRow[0]?.start_at : eventRow?.start_at
+
+  if (
+    !canStartQuarterAuctionNow(auction.scheduled_start_at, eventStartAt ?? null)
+  ) {
+    return NextResponse.json(
+      {
+        error: quarterAuctionStartBlockedMessage(
+          auction.scheduled_start_at,
+          eventStartAt ?? null
+        ),
+      },
+      { status: 422 }
+    )
   }
 
   if (auction.event_id) {

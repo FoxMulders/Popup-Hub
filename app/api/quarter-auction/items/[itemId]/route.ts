@@ -7,6 +7,12 @@ interface RouteParams {
   params: Promise<{ itemId: string }>
 }
 
+const REMOVABLE_STATUSES = new Set(['draft', 'queued', 'cancelled', 'completed'])
+
+function isLiveCatalogStatus(status: string): boolean {
+  return ['active_price_setting', 'bidding_open', 'bidding_closed', 'drawing'].includes(status)
+}
+
 export async function PATCH(request: Request, { params }: RouteParams) {
   const { itemId } = await params
   const supabase = await createClient()
@@ -138,6 +144,11 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json({ item })
     }
 
+    if (action === 'cancel') {
+      const item = await transitionCatalogItem(service, itemId, 'cancelled', user.id)
+      return NextResponse.json({ item })
+    }
+
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Action failed'
@@ -168,12 +179,19 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
   const eventRow = item.event as { coordinator_id: string } | { coordinator_id: string }[] | null
   const coordinatorId = Array.isArray(eventRow) ? eventRow[0]?.coordinator_id : eventRow?.coordinator_id
-  const canDelete =
-    (item.vendor_id === user.id && item.status === 'draft') ||
-    coordinatorId === user.id
+  const isCoordinator = coordinatorId === user.id
+  const isVendor = item.vendor_id === user.id
 
-  if (!canDelete) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const canVendorRemove =
+    isVendor && (item.status === 'draft' || item.status === 'queued') && !isLiveCatalogStatus(item.status)
+  const canCoordinatorRemove =
+    isCoordinator && REMOVABLE_STATUSES.has(item.status) && !isLiveCatalogStatus(item.status)
+
+  if (!canVendorRemove && !canCoordinatorRemove) {
+    return NextResponse.json(
+      { error: 'This item cannot be removed while live — cancel it first' },
+      { status: 403 }
+    )
   }
 
   const service = await createServiceClient()

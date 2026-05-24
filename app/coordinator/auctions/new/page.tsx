@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,22 @@ function NewAuctionForm() {
   const [timerSeconds, setTimerSeconds] = useState(120)
   const [minDrop, setMinDrop] = useState(25)
   const [maxDrop, setMaxDrop] = useState(100)
+  const [scheduledStartAt, setScheduledStartAt] = useState('')
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!eventId) return
+    supabase
+      .from('events')
+      .select('start_at')
+      .eq('id', eventId)
+      .single()
+      .then(({ data }) => {
+        if (data?.start_at) {
+          setScheduledStartAt(data.start_at.slice(0, 16))
+        }
+      })
+  }, [eventId, supabase])
 
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -65,6 +80,9 @@ function NewAuctionForm() {
           timer_duration_seconds: timerSeconds,
           min_drop_amount: minDrop,
           max_drop_amount: maxDrop,
+          scheduled_start_at: scheduledStartAt
+            ? new Date(scheduledStartAt).toISOString()
+            : null,
           status: 'upcoming',
         })
         .select('id')
@@ -140,6 +158,19 @@ function NewAuctionForm() {
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
             </label>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="scheduled-start">Advertised start time</Label>
+            <Input
+              id="scheduled-start"
+              type="datetime-local"
+              value={scheduledStartAt}
+              onChange={(e) => setScheduledStartAt(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Manual start is blocked until this time.
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

@@ -173,6 +173,9 @@ export function EventDetailClient({
               activeAuction={activeAuction}
               upcomingAuction={upcomingAuction}
               lastEndedAuction={lastEndedAuction}
+              dismissScope="timer-patron"
+              eventId={event.id}
+              eventStartAt={event.start_at}
             />
             {quarterAuctionBanner}
           </div>

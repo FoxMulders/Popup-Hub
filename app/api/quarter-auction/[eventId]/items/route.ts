@@ -62,3 +62,78 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   return NextResponse.json({ item })
 }
+
+const REMOVABLE_STATUSES = new Set(['draft', 'queued', 'cancelled', 'completed'])
+
+function isLiveCatalogStatus(status: string): boolean {
+  return ['active_price_setting', 'bidding_open', 'bidding_closed', 'drawing'].includes(status)
+}
+
+export async function DELETE(request: Request, { params }: RouteParams) {
+  const { eventId } = await params
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('coordinator_id')
+    .eq('id', eventId)
+    .single()
+
+  if (!event || event.coordinator_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const body = await request.json().catch(() => ({}))
+  const itemIds = Array.isArray(body.item_ids) ? (body.item_ids as string[]) : null
+  const clearAll = body.clear_all === true
+
+  const service = await createServiceClient()
+
+  let query = service
+    .from('auction_catalog_items')
+    .select('id, status')
+    .eq('event_id', eventId)
+
+  if (itemIds?.length) {
+    query = query.in('id', itemIds)
+  } else if (clearAll) {
+    query = query.in('status', ['draft', 'queued', 'cancelled'])
+  } else {
+    return NextResponse.json({ error: 'Provide item_ids or clear_all' }, { status: 400 })
+  }
+
+  const { data: targets, error: fetchError } = await query
+
+  if (fetchError) {
+    return NextResponse.json({ error: fetchError.message }, { status: 422 })
+  }
+
+  const removable = (targets ?? []).filter(
+    (row) => REMOVABLE_STATUSES.has(row.status) && !isLiveCatalogStatus(row.status)
+  )
+
+  if (removable.length === 0) {
+    return NextResponse.json({ error: 'No removable items found', removed: 0 }, { status: 422 })
+  }
+
+  const { error: deleteError } = await service
+    .from('auction_catalog_items')
+    .delete()
+    .in(
+      'id',
+      removable.map((r) => r.id)
+    )
+
+  if (deleteError) {
+    return NextResponse.json({ error: deleteError.message }, { status: 422 })
+  }
+
+  return NextResponse.json({ removed: removable.length, ids: removable.map((r) => r.id) })
+}

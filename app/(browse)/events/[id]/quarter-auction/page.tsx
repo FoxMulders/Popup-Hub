@@ -26,7 +26,7 @@ export default async function PatronQuarterAuctionPage({ params }: Props) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, status')
+    .select('id, name, status, start_at')
     .eq('id', eventId)
     .in('status', ['published', 'active', 'completed'])
     .single()
@@ -64,6 +64,7 @@ export default async function PatronQuarterAuctionPage({ params }: Props) {
       </div>
       <PatronQuarterAuctionLive
         eventId={eventId}
+        eventStartAt={event.start_at}
         userId={user.id}
         initialItems={(items ?? []) as AuctionCatalogItem[]}
         initialPaddles={(paddles ?? []) as EventPaddle[]}

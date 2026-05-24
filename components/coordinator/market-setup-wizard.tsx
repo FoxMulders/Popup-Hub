@@ -50,6 +50,11 @@ import {
 } from '@/lib/wizard/wizard-panel-styles'
 import { WizardCritiqueDrawer } from '@/components/coordinator/wizard/wizard-critique-drawer'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
+import {
+  MARKET_WIZARD_STEPS_FULL,
+  MARKET_WIZARD_STEPS_SHORT,
+  WizardStepStepper,
+} from '@/components/coordinator/wizard/wizard-step-stepper'
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
@@ -114,6 +119,40 @@ function buildDayRows(existing: Event | null | undefined): DayRow[] {
   return [{ date: '', start_time: DEFAULT_MARKET_START, end_time: DEFAULT_MARKET_END }]
 }
 
+function inferInitialMaxReachedStep(
+  existing: Event | null | undefined,
+  existingLayout: BoothLayout | null | undefined,
+  skipVenueLayout: boolean,
+  initialStep: WizardStep
+): WizardStep {
+  let max = initialStep
+
+  if (existing?.name?.trim() && existing.start_at && existing.end_at) {
+    max = Math.max(max, 2) as WizardStep
+  }
+  if (
+    existing?.location_name?.trim() &&
+    existing.address?.trim() &&
+    existing.latitude != null
+  ) {
+    max = Math.max(max, 3) as WizardStep
+  }
+
+  if (skipVenueLayout) {
+    return Math.min(max, 3) as WizardStep
+  }
+
+  const limits = (existing as Event & { category_limits?: unknown[] })?.category_limits
+  if (limits && limits.length > 0) {
+    max = Math.max(max, 4) as WizardStep
+  }
+  if (existingLayout) {
+    max = Math.max(max, 4) as WizardStep
+  }
+
+  return max
+}
+
 export function MarketSetupWizard({
   coordinatorId,
   categories,
@@ -130,6 +169,10 @@ export function MarketSetupWizard({
 
   const [eventId, setEventId] = useState<string | null>(existing?.id ?? null)
   const [currentStep, setCurrentStep] = useState<WizardStep>(initialStep)
+  const isDraftMode = !existing || existing.status === 'draft'
+  const [maxReachedStep, setMaxReachedStep] = useState<WizardStep>(() =>
+    inferInitialMaxReachedStep(existing, existingLayout ?? null, existing?.skip_venue_layout ?? false, initialStep)
+  )
   const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [transitioning, setTransitioning] = useState(false)
 
@@ -172,6 +215,21 @@ export function MarketSetupWizard({
   const [skipVenueLayout, setSkipVenueLayout] = useState(existing?.skip_venue_layout ?? false)
 
   const totalSteps = skipVenueLayout ? 3 : 4
+  const wizardSteps = skipVenueLayout ? MARKET_WIZARD_STEPS_SHORT : MARKET_WIZARD_STEPS_FULL
+
+  function syncStepInUrl(step: WizardStep, resolvedEventId?: string | null) {
+    const id = resolvedEventId ?? eventId
+    if (!id || typeof window === 'undefined') return
+    const url = new URL(window.location.href)
+    url.searchParams.set('step', String(step))
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`)
+  }
+
+  function advanceToStep(nextStep: WizardStep, resolvedEventId?: string | null) {
+    setCurrentStep(nextStep)
+    setMaxReachedStep((prev) => Math.max(prev, nextStep) as WizardStep)
+    syncStepInUrl(nextStep, resolvedEventId)
+  }
 
   const [rooms, setRooms] = useState(initialRoomsState.rooms)
   const [activeRoomId, setActiveRoomId] = useState(initialRoomsState.activeRoomId)
@@ -610,7 +668,7 @@ export function MarketSetupWizard({
           toast.error('Could not save draft — check schedule fields')
           return
         }
-        setCurrentStep(2)
+        advanceToStep(2, result.eventId)
         return
       }
       if (currentStep === 2) {
@@ -620,7 +678,7 @@ export function MarketSetupWizard({
           toast.error('Could not save venue — try again')
           return
         }
-        setCurrentStep(3)
+        advanceToStep(3, result.eventId)
         return
       }
       if (currentStep === 3) {
@@ -640,7 +698,7 @@ export function MarketSetupWizard({
           toast.error('Could not save capacity settings')
           return
         }
-        setCurrentStep(4)
+        advanceToStep(4, result.eventId)
         return
       }
       if (currentStep === 4) {
@@ -668,8 +726,35 @@ export function MarketSetupWizard({
   }
 
   function goBack() {
-    if (currentStep > 1) setCurrentStep((s) => (s - 1) as WizardStep)
+    if (currentStep > 1) {
+      const prev = (currentStep - 1) as WizardStep
+      setCurrentStep(prev)
+      syncStepInUrl(prev)
+    }
   }
+
+  async function goToStep(step: WizardStep) {
+    if (!isDraftMode || step > maxReachedStep || step === currentStep || transitioning) return
+    if (skipVenueLayout && step === 4) return
+
+    setTransitioning(true)
+    try {
+      const result = await autosave()
+      if (!result.ok) {
+        toast.error('Could not save draft before switching steps')
+        return
+      }
+      setCurrentStep(step)
+      syncStepInUrl(step)
+    } finally {
+      setTransitioning(false)
+    }
+  }
+
+  useEffect(() => {
+    const cap = skipVenueLayout ? 3 : 4
+    setMaxReachedStep((prev) => Math.min(prev, cap) as WizardStep)
+  }, [skipVenueLayout])
 
   useEffect(() => {
     if (skipVenueLayout && currentStep === 4) {
@@ -694,6 +779,16 @@ export function MarketSetupWizard({
           {existing ? 'Edit Market' : 'Create New Market'}
         </h1>
       </header>
+
+      {isDraftMode ? (
+        <WizardStepStepper
+          steps={wizardSteps}
+          currentStep={currentStep}
+          maxReachedStep={maxReachedStep}
+          allowNavigation
+          onStepChange={(step) => void goToStep(step)}
+        />
+      ) : null}
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div className={WIZARD_PANEL + ' flex-1 min-w-0 p-4 sm:p-5 space-y-4'}>

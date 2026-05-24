@@ -21,7 +21,7 @@ export default async function VendorQuarterAuctionPage({ params }: Props) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, status')
+    .select('id, name, status, start_at')
     .eq('id', eventId)
     .single()
 
@@ -59,6 +59,7 @@ export default async function VendorQuarterAuctionPage({ params }: Props) {
       </div>
       <VendorQuarterAuction
         eventId={eventId}
+        eventStartAt={event.start_at}
         vendorId={user.id}
         isApproved={!!approval}
         items={(items ?? []) as AuctionCatalogItem[]}

@@ -298,6 +298,7 @@ export interface Auction {
   max_drop_amount: number
   winning_paddle_id: string | null
   winner_user_id: string | null
+  scheduled_start_at: string | null
   created_at: string
   drops?: AuctionDrop[]
   event?: Event
@@ -319,6 +320,7 @@ export interface QuarterAuctionSettings {
   paddle_purchase_credits: number
   default_entry_credits: number
   paddle_pool_size: number
+  scheduled_start_at: string | null
   created_at: string
   updated_at: string
 }

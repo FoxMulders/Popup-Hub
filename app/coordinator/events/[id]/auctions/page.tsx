@@ -23,7 +23,7 @@ export default async function CoordinatorEventAuctionsPage({ params }: Props) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, coordinator_id, status')
+    .select('id, name, coordinator_id, status, start_at')
     .eq('id', id)
     .eq('coordinator_id', user.id)
     .single()
@@ -67,6 +67,7 @@ export default async function CoordinatorEventAuctionsPage({ params }: Props) {
 
         <CoordinatorQuarterAuction
           eventId={id}
+          eventStartAt={event.start_at}
           initialItems={(catalogItems ?? []) as AuctionCatalogItem[]}
           initialSettings={settings as QuarterAuctionSettings}
         />
@@ -85,7 +86,11 @@ export default async function CoordinatorEventAuctionsPage({ params }: Props) {
               Create timer auction
             </Link>
           </div>
-          <AuctionList auctions={(auctions ?? []) as Auction[]} eventId={id} />
+          <AuctionList
+            auctions={(auctions ?? []) as Auction[]}
+            eventId={id}
+            eventStartAt={event.start_at}
+          />
         </div>
       </div>
     </MarketDayShell>

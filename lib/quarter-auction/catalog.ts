@@ -4,6 +4,10 @@ import { canTransition } from '@/lib/quarter-auction/state-machine'
 import { drawWinnerFromEntries } from '@/lib/quarter-auction/draw'
 import { notifyQuarterAuctionWinner } from '@/lib/quarter-auction/notify-winner'
 import { notifyQuarterAuctionBiddingOpen } from '@/lib/quarter-auction/notify-bidding-open'
+import {
+  canStartQuarterAuctionNow,
+  quarterAuctionStartBlockedMessage,
+} from '@/lib/quarter-auction/schedule'
 import type { AuctionItemStatus } from '@/types/database'
 
 export async function getOrCreateSettings(
@@ -60,13 +64,13 @@ export async function transitionCatalogItem(
 ): Promise<AuctionCatalogItem> {
   const { data: item } = await supabase
     .from('auction_catalog_items')
-    .select('*, event:events(coordinator_id)')
+    .select('*, event:events(coordinator_id, start_at)')
     .eq('id', itemId)
     .single()
 
   if (!item) throw new Error('Item not found')
 
-  const event = item.event as { coordinator_id: string } | null
+  const event = item.event as { coordinator_id: string; start_at: string } | null
   if (event?.coordinator_id !== coordinatorId) {
     throw new Error('Not authorized')
   }
@@ -74,6 +78,17 @@ export async function transitionCatalogItem(
   const fromStatus = item.status as AuctionItemStatus
   if (!canTransition(fromStatus, toStatus)) {
     throw new Error(`Cannot move from ${fromStatus} to ${toStatus}`)
+  }
+
+  if (toStatus === 'active_price_setting' || toStatus === 'bidding_open') {
+    const settings = await getOrCreateSettings(supabase, item.event_id as string)
+    if (
+      !canStartQuarterAuctionNow(settings.scheduled_start_at, event?.start_at ?? null)
+    ) {
+      throw new Error(
+        quarterAuctionStartBlockedMessage(settings.scheduled_start_at, event?.start_at ?? null)
+      )
+    }
   }
 
   if (toStatus === 'active_price_setting') {

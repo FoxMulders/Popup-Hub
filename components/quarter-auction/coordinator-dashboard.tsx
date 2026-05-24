@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,14 +9,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { GripVertical, Loader2, Play, Square, Dices, Check, UserCheck } from 'lucide-react'
+import { GripVertical, Loader2, Play, Square, Dices, Check, UserCheck, Trash2 } from 'lucide-react'
 import type { AuctionCatalogItem, QuarterAuctionSettings } from '@/types/database'
 import { statusLabel } from '@/lib/quarter-auction/state-machine'
 import { formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-auction/credits'
+import {
+  AuctionStartCountdown,
+  useAuctionCanStart,
+} from '@/components/quarter-auction/auction-start-countdown'
 import { cn } from '@/lib/utils'
 
 interface CoordinatorQuarterAuctionProps {
   eventId: string
+  eventStartAt: string
   initialItems: AuctionCatalogItem[]
   initialSettings: QuarterAuctionSettings
 }
@@ -28,6 +33,7 @@ interface VendorRow {
 
 export function CoordinatorQuarterAuction({
   eventId,
+  eventStartAt,
   initialItems,
   initialSettings,
 }: CoordinatorQuarterAuctionProps) {
@@ -38,7 +44,12 @@ export function CoordinatorQuarterAuction({
     paddle_purchase_credits: String(initialSettings.paddle_purchase_credits),
     default_entry_credits: String(initialSettings.default_entry_credits),
     paddle_pool_size: String(initialSettings.paddle_pool_size ?? 100),
+    scheduled_start_at: initialSettings.scheduled_start_at
+      ? initialSettings.scheduled_start_at.slice(0, 16)
+      : eventStartAt.slice(0, 16),
   })
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const canStartAuction = useAuctionCanStart(settings.scheduled_start_at, eventStartAt)
   const [vendors, setVendors] = useState<VendorRow[]>([])
   const [approvals, setApprovals] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState<string | null>(null)
@@ -60,6 +71,11 @@ export function CoordinatorQuarterAuction({
   const queuedItems = items
     .filter((i) => i.status === 'queued' || i.status === 'draft')
     .sort((a, b) => a.queue_position - b.queue_position)
+
+  const removableQueued = useMemo(
+    () => queuedItems.filter((i) => i.status === 'draft' || i.status === 'queued'),
+    [queuedItems]
+  )
 
   const loadVendors = useCallback(async () => {
     const res = await fetch(`/api/quarter-auction/${eventId}/vendors`)
@@ -111,6 +127,9 @@ export function CoordinatorQuarterAuction({
           paddle_purchase_credits: parseInt(settingsForm.paddle_purchase_credits, 10),
           default_entry_credits: parseInt(settingsForm.default_entry_credits, 10),
           paddle_pool_size: parseInt(settingsForm.paddle_pool_size, 10),
+          scheduled_start_at: settingsForm.scheduled_start_at
+            ? new Date(settingsForm.scheduled_start_at).toISOString()
+            : null,
         }),
       })
       const json = await res.json()
@@ -266,8 +285,68 @@ export function CoordinatorQuarterAuction({
     setDragId(null)
   }
 
+  async function removeItem(itemId: string) {
+    setBusy(`remove:${itemId}`)
+    try {
+      const res = await fetch(`/api/quarter-auction/items/${itemId}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Could not remove item')
+        return
+      }
+      setItems((prev) => prev.filter((i) => i.id !== itemId))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(itemId)
+        return next
+      })
+      toast.success('Item removed')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function removeSelected(clearAll = false) {
+    setBusy(clearAll ? 'clear-all' : 'remove-selected')
+    try {
+      const res = await fetch(`/api/quarter-auction/${eventId}/items`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          clearAll
+            ? { clear_all: true }
+            : { item_ids: Array.from(selectedIds) }
+        ),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Could not remove items')
+        return
+      }
+      const removed = new Set((json.ids ?? []) as string[])
+      setItems((prev) => prev.filter((i) => !removed.has(i.id)))
+      setSelectedIds(new Set())
+      toast.success(`Removed ${json.removed ?? 0} item(s)`)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  function toggleSelected(itemId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+  }
+
   return (
     <div className="space-y-6">
+      <AuctionStartCountdown
+        scheduledStartAt={settings.scheduled_start_at}
+        eventStartAt={eventStartAt}
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Auction settings</CardTitle>
@@ -302,6 +381,20 @@ export function CoordinatorQuarterAuction({
               />
               <p className="text-xs text-muted-foreground">
                 Starting value when activating items — each item can be 1, 2, or more credits.
+              </p>
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="scheduled-start">Advertised auction start</Label>
+              <Input
+                id="scheduled-start"
+                type="datetime-local"
+                value={settingsForm.scheduled_start_at}
+                onChange={(e) =>
+                  setSettingsForm((s) => ({ ...s, scheduled_start_at: e.target.value }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Catalog items cannot activate or open bidding before this time.
               </p>
             </div>
             <div className="space-y-1 sm:col-span-2">
@@ -441,7 +534,7 @@ export function CoordinatorQuarterAuction({
                 </Button>
                 <Button
                   className="gap-1.5"
-                  disabled={!!busy}
+                  disabled={!!busy || !canStartAuction}
                   onClick={async () => {
                     const credits = parseInt(entryCost, 10) || settings.default_entry_credits
                     await setItemEntryCost(activeItem.id)
@@ -451,6 +544,11 @@ export function CoordinatorQuarterAuction({
                   <Play className="h-4 w-4" />
                   Start bidding
                 </Button>
+                {!canStartAuction && (
+                  <p className="w-full text-xs text-harvest-800">
+                    Waiting for advertised start time before bidding can open.
+                  </p>
+                )}
               </div>
             )}
 
@@ -502,9 +600,37 @@ export function CoordinatorQuarterAuction({
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Catalog queue</CardTitle>
-          <p className="text-sm text-muted-foreground">Drag to reorder. Approve drafts to queue them.</p>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-lg">Catalog queue</CardTitle>
+            <p className="text-sm text-muted-foreground">Drag to reorder. Approve drafts to queue them.</p>
+          </div>
+          {removableQueued.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selectedIds.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 text-red-600"
+                  disabled={!!busy}
+                  onClick={() => removeSelected(false)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove selected ({selectedIds.size})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-red-600"
+                disabled={!!busy}
+                onClick={() => removeSelected(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear queue
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
           {queuedItems.length === 0 ? (
@@ -522,6 +648,13 @@ export function CoordinatorQuarterAuction({
                   dragId === item.id && 'opacity-50'
                 )}
               >
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 shrink-0 rounded border-stone-300"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggleSelected(item.id)}
+                  aria-label={`Select ${item.title} for removal`}
+                />
                 {item.status === 'queued' && (
                   <GripVertical className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
                 )}
@@ -552,7 +685,7 @@ export function CoordinatorQuarterAuction({
                 {item.status === 'queued' && !activeItem && (
                   <Button
                     size="sm"
-                    disabled={!!busy}
+                    disabled={!!busy || !canStartAuction}
                     onClick={() =>
                       itemAction(item.id, 'transition', {
                         to_status: 'active_price_setting',
@@ -563,6 +696,20 @@ export function CoordinatorQuarterAuction({
                     Activate
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-600"
+                  disabled={!!busy}
+                  onClick={() => removeItem(item.id)}
+                  aria-label={`Remove ${item.title}`}
+                >
+                  {busy === `remove:${item.id}` ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
             ))
           )}

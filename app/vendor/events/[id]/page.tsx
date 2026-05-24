@@ -181,6 +181,9 @@ export default async function VendorEventDetailPage({ params }: Props) {
             upcomingAuction={auctionSummary.upcoming}
             lastEndedAuction={auctionSummary.lastEnded}
             walletBalanceCents={wallet?.balance ?? 0}
+            dismissScope="timer-vendor"
+            eventId={id}
+            eventStartAt={event.start_at}
           />
           <QuarterAuctionEventBanner eventId={id} variant="vendor" />
         </div>

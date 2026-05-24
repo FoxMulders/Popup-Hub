@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -12,18 +13,31 @@ import { formatCents } from '@/lib/square/client'
 import { cn } from '@/lib/utils'
 import type { Auction, AuctionDrop } from '@/types/database'
 import { Gavel, Play, Square, Loader2, ExternalLink, Trash2 } from 'lucide-react'
+import { useAuctionCanStart } from '@/components/quarter-auction/auction-start-countdown'
+import { effectiveQuarterAuctionStart } from '@/lib/quarter-auction/schedule'
 
 interface AuctionControlPanelProps {
   auction: Auction
   eventId: string
+  eventStartAt?: string | null
+  onRemoved?: (auctionId: string) => void
 }
 
-export function AuctionControlPanel({ auction: initialAuction }: AuctionControlPanelProps) {
+export function AuctionControlPanel({
+  auction: initialAuction,
+  eventStartAt,
+  onRemoved,
+}: AuctionControlPanelProps) {
   const supabase = createClient()
   const [auction, setAuction] = useState(initialAuction)
   const [drops, setDrops] = useState<AuctionDrop[]>(initialAuction.drops ?? [])
   const [busy, setBusy] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
+  const canStart = useAuctionCanStart(auction.scheduled_start_at, eventStartAt ?? null)
+  const advertisedStart = effectiveQuarterAuctionStart(
+    auction.scheduled_start_at,
+    eventStartAt ?? null
+  )
 
   const leaderboard = buildLeaderboard(drops)
   const totalPotCents = drops.reduce((sum, d) => sum + d.amount, 0)
@@ -66,9 +80,21 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
     }
   }, [auction.id, supabase])
 
-  async function callAction(action: 'start' | 'end' | 'cancel') {
+  async function callAction(action: 'start' | 'end' | 'cancel' | 'delete') {
     setBusy(action)
     try {
+      if (action === 'delete') {
+        const res = await fetch(`/api/auction/${auction.id}`, { method: 'DELETE' })
+        const json = await res.json()
+        if (!res.ok) {
+          toast.error(json.error ?? 'Failed to remove auction')
+          return
+        }
+        toast.success('Auction removed')
+        onRemoved?.(auction.id)
+        return
+      }
+
       const res = await fetch(`/api/auction/${auction.id}/${action}`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok) {
@@ -95,6 +121,11 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
               {auction.title}
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">{auction.item_name}</p>
+            {advertisedStart && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Advertised start: {format(advertisedStart, 'MMM d · h:mm a')}
+              </p>
+            )}
           </div>
           <Badge
             className={`capitalize ${
@@ -155,11 +186,16 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
                 size="sm"
                 className="gap-1.5"
                 onClick={() => callAction('start')}
-                disabled={busy !== null}
+                disabled={busy !== null || !canStart}
               >
                 {busy === 'start' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 Start auction
               </Button>
+              {!canStart && advertisedStart && (
+                <p className="w-full text-xs text-muted-foreground">
+                  Cannot start until {format(advertisedStart, 'h:mm a')}.
+                </p>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -169,6 +205,16 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
               >
                 {busy === 'cancel' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 text-red-600"
+                onClick={() => callAction('delete')}
+                disabled={busy !== null}
+              >
+                {busy === 'delete' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Remove
               </Button>
             </>
           )}
@@ -182,6 +228,18 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
             >
               {busy === 'end' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
               End early
+            </Button>
+          )}
+          {auction.status === 'ended' && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1.5 text-red-600"
+              onClick={() => callAction('delete')}
+              disabled={busy !== null}
+            >
+              {busy === 'delete' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              Remove
             </Button>
           )}
           <Link
@@ -219,9 +277,32 @@ export function AuctionControlPanel({ auction: initialAuction }: AuctionControlP
 interface AuctionListProps {
   auctions: Auction[]
   eventId: string
+  eventStartAt?: string | null
 }
 
-export function AuctionList({ auctions, eventId }: AuctionListProps) {
+export function AuctionList({ auctions: initialAuctions, eventId, eventStartAt }: AuctionListProps) {
+  const [auctions, setAuctions] = useState(initialAuctions)
+  const [busy, setBusy] = useState(false)
+
+  async function removeAllRemovable() {
+    const removable = auctions.filter((a) => a.status !== 'active')
+    if (removable.length === 0) {
+      toast.error('No removable timer auctions')
+      return
+    }
+    setBusy(true)
+    try {
+      const results = await Promise.all(
+        removable.map((a) => fetch(`/api/auction/${a.id}`, { method: 'DELETE' }))
+      )
+      const removedIds = removable.filter((_, i) => results[i].ok).map((a) => a.id)
+      setAuctions((prev) => prev.filter((a) => !removedIds.includes(a.id)))
+      toast.success(`Removed ${removedIds.length} auction(s)`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (auctions.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-stone-200 p-8 text-center">
@@ -248,7 +329,19 @@ export function AuctionList({ auctions, eventId }: AuctionListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {auctions.some((a) => a.status !== 'active') && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-red-600"
+            disabled={busy}
+            onClick={removeAllRemovable}
+          >
+            <Trash2 className="h-4 w-4" />
+            Remove all
+          </Button>
+        )}
         <Link
           href={`/coordinator/auctions/new?eventId=${eventId}`}
           className={cn(buttonVariants({ size: 'sm', variant: 'outline' }), 'gap-1.5 inline-flex')}
@@ -258,7 +351,13 @@ export function AuctionList({ auctions, eventId }: AuctionListProps) {
         </Link>
       </div>
       {sorted.map((auction) => (
-        <AuctionControlPanel key={auction.id} auction={auction} eventId={eventId} />
+        <AuctionControlPanel
+          key={auction.id}
+          auction={auction}
+          eventId={eventId}
+          eventStartAt={eventStartAt}
+          onRemoved={(id) => setAuctions((prev) => prev.filter((a) => a.id !== id))}
+        />
       ))}
     </div>
   )

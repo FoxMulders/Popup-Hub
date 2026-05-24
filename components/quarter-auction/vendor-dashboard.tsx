@@ -10,16 +10,18 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Loader2, Upload, Trophy } from 'lucide-react'
+import { Loader2, Upload, Trophy, Trash2 } from 'lucide-react'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
 import type { AuctionCatalogItem, Profile, QuarterAuctionSettings } from '@/types/database'
 import { statusLabel } from '@/lib/quarter-auction/state-machine'
 import { formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-auction/credits'
+import { AuctionStartCountdown } from '@/components/quarter-auction/auction-start-countdown'
 import { formatCents } from '@/lib/square/client'
 import { cn } from '@/lib/utils'
 
 interface VendorQuarterAuctionProps {
   eventId: string
+  eventStartAt: string
   vendorId: string
   isApproved: boolean
   items: AuctionCatalogItem[]
@@ -28,6 +30,7 @@ interface VendorQuarterAuctionProps {
 
 export function VendorQuarterAuction({
   eventId,
+  eventStartAt,
   vendorId,
   isApproved,
   items: initialItems,
@@ -41,6 +44,7 @@ export function VendorQuarterAuction({
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const myItems = items.filter((i) => i.vendor_id === vendorId)
   const sortedAll = [...items].sort((a, b) => a.queue_position - b.queue_position)
@@ -128,6 +132,22 @@ export function VendorQuarterAuction({
     }
   }
 
+  async function removeMyItem(itemId: string) {
+    setRemovingId(itemId)
+    try {
+      const res = await fetch(`/api/quarter-auction/items/${itemId}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Could not remove item')
+        return
+      }
+      setItems((prev) => prev.filter((i) => i.id !== itemId))
+      toast.success('Item removed from catalog')
+    } finally {
+      setRemovingId(null)
+    }
+  }
+
   if (!isApproved) {
     return (
       <Card>
@@ -140,6 +160,10 @@ export function VendorQuarterAuction({
 
   return (
     <div className="space-y-6">
+      <AuctionStartCountdown
+        scheduledStartAt={settings.scheduled_start_at}
+        eventStartAt={eventStartAt}
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Live queue</CardTitle>
@@ -182,6 +206,24 @@ export function VendorQuarterAuction({
                   </div>
                   {isCurrent && <Badge className="bg-harvest-500">Live now</Badge>}
                   {isUpcoming && <Badge variant="secondary">Up next</Badge>}
+                  {isMine && (item.status === 'draft' || item.status === 'queued') && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-red-600 shrink-0"
+                      disabled={removingId === item.id}
+                      onClick={() => removeMyItem(item.id)}
+                    >
+                      {removingId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Remove</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               )
             })

@@ -1,7 +1,7 @@
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { Gavel } from 'lucide-react'
-import { statusLabel, patronStatusHeadline } from '@/lib/quarter-auction/state-machine'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getOrCreateSettings } from '@/lib/quarter-auction/catalog'
+import { QuarterAuctionEventBannerClient } from '@/components/quarter-auction/event-banner-client'
+import type { QuarterAuctionSettings } from '@/types/database'
 
 interface QuarterAuctionEventBannerProps {
   eventId: string
@@ -14,8 +14,9 @@ export async function QuarterAuctionEventBanner({
   variant = 'patron',
 }: QuarterAuctionEventBannerProps) {
   const supabase = await createClient()
+  const service = await createServiceClient()
 
-  const [{ data: live }, { count }] = await Promise.all([
+  const [{ data: live }, { count }, { data: event }, settings] = await Promise.all([
     supabase
       .from('auction_catalog_items')
       .select('id, title, status')
@@ -29,46 +30,20 @@ export async function QuarterAuctionEventBanner({
       .select('id', { count: 'exact', head: true })
       .eq('event_id', eventId)
       .not('status', 'eq', 'cancelled'),
+    supabase.from('events').select('start_at').eq('id', eventId).single(),
+    getOrCreateSettings(service, eventId),
   ])
 
   if (!count && !live) return null
 
-  const href =
-    variant === 'vendor'
-      ? `/vendor/events/${eventId}/quarter-auction`
-      : `/events/${eventId}/quarter-auction`
-
-  const isLive = live && ['bidding_open', 'bidding_closed', 'drawing'].includes(live.status)
-
   return (
-    <div
-      className={`mt-4 rounded-xl border px-4 py-3 ${
-        isLive ? 'border-harvest-200 bg-harvest-50' : 'border-forest/20 bg-forest/5'
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <Gavel className="mt-0.5 h-5 w-5 shrink-0 text-forest" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">
-            {isLive ? 'Live charity quarter auction' : 'Quarter auction catalog'}
-          </p>
-          {live ? (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {live.title} ·{' '}
-              {variant === 'patron' && live.status === 'bidding_open'
-                ? patronStatusHeadline('bidding_open')
-                : statusLabel(live.status)}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {count} item{count === 1 ? '' : 's'} in the lineup
-            </p>
-          )}
-          <Link href={href} className="mt-2 inline-block text-sm font-medium text-forest underline">
-            {variant === 'vendor' ? 'Vendor dashboard →' : 'Join live auction →'}
-          </Link>
-        </div>
-      </div>
-    </div>
+    <QuarterAuctionEventBannerClient
+      eventId={eventId}
+      eventStartAt={event?.start_at ?? new Date().toISOString()}
+      settings={settings as QuarterAuctionSettings}
+      variant={variant}
+      initialLive={live}
+      initialCount={count ?? 0}
+    />
   )
 }
