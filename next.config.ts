@@ -43,6 +43,24 @@ const baseVersion = readPackageVersion()
 /** Semver + monotonic build counter; build increments on each production deploy. */
 const appVersion = `${baseVersion}+${buildNumber}`
 
+function resolvePublicAppUrlEnv(): string {
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (configured) return configured.replace(/\/$/, '')
+
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+    process.env.VERCEL_URL
+  if (vercelHost) {
+    return vercelHost.startsWith('http')
+      ? vercelHost.replace(/\/$/, '')
+      : `https://${vercelHost.replace(/\/$/, '')}`
+  }
+
+  return process.env.NODE_ENV === 'production'
+    ? 'https://popup-hub.vercel.app'
+    : 'http://localhost:3000'
+}
+
 const nextConfig: NextConfig = {
   // All pages are dynamic — no static prerendering for an auth-protected marketplace
   output: 'standalone',
@@ -50,6 +68,7 @@ const nextConfig: NextConfig = {
   // Allow phone/tablet on LAN to load dev HMR (e.g. https://192.168.x.x:3000)
   allowedDevOrigins: ['192.168.1.113', '127.0.0.1', 'localhost'],
   env: {
+    NEXT_PUBLIC_APP_URL: resolvePublicAppUrlEnv(),
     NEXT_PUBLIC_APP_VERSION: appVersion,
     NEXT_PUBLIC_APP_VERSION_BASE: baseVersion,
     NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
