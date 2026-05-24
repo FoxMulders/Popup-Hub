@@ -28,6 +28,7 @@ import {
 import { hydrateVenuePreset, resolveTemplateAnchoredDimensions } from '@/lib/booth-planner/venue-presets'
 import {
   getEdmontonVenueById,
+  isEdmontonVenueId,
   type EdmontonQuadrantFilter,
 } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
@@ -47,7 +48,15 @@ import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wi
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
 import { formatTimeLabel, formatShortDate } from '@/components/coordinator/wizard/wizard-time-options'
-import type { BoothLayout, BoothClearancePolicy, Category, Event, EventDay, EventListingType } from '@/types/database'
+import type {
+  BoothLayout,
+  BoothClearancePolicy,
+  Category,
+  CoordinatorSavedVenue,
+  Event,
+  EventDay,
+  EventListingType,
+} from '@/types/database'
 
 type ApplicationInput = Parameters<typeof BoothPlanner>[0]['applications']
 
@@ -491,6 +500,25 @@ export function MarketSetupWizard({
     setCityQuadrant(blueprint.quadrant)
   }
 
+  function handleApplySavedVenue(venue: CoordinatorSavedVenue) {
+    setSkipVenueLayout(venue.skip_venue_layout)
+    if (venue.city_quadrant) {
+      setCityQuadrant(venue.city_quadrant as EdmontonQuadrantFilter)
+    }
+
+    const presetId = venue.venue_preset_id
+    if (presetId && presetId !== 'blank' && isEdmontonVenueId(presetId)) {
+      handleVenuePresetChange(presetId as VenuePresetId)
+      return
+    }
+
+    setLocationName(venue.location_name)
+    setAddress(venue.address)
+    setLat(venue.latitude)
+    setLng(venue.longitude)
+    setPinDropped(true)
+  }
+
   function handleBaselineTableLengthChange(ft: LayoutBaselineTableLengthFt) {
     setRooms((prev) => updateRoomInList(prev, activeRoomId, { baseline_table_length_ft: ft }))
   }
@@ -708,6 +736,8 @@ export function MarketSetupWizard({
                 venueLength={templateAnchor.length}
                 skipVenueLayout={skipVenueLayout}
                 onSkipVenueLayoutChange={setSkipVenueLayout}
+                coordinatorId={coordinatorId}
+                onApplySavedVenue={handleApplySavedVenue}
               />
               <WizardNav step={2} onBack={goBack} onNext={goNext} nextDisabled={transitioning} />
             </>

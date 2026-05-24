@@ -581,6 +581,21 @@ export interface EventReview {
   created_at: string
 }
 
+export interface CoordinatorSavedVenue {
+  id: string
+  coordinator_id: string
+  location_name: string
+  address: string
+  latitude: number
+  longitude: number
+  venue_preset_id: string | null
+  skip_venue_layout: boolean
+  city_quadrant: string | null
+  last_used_at: string
+  created_at: string
+  updated_at: string
+}
+
 export interface VendorReview {
   id: string
   vendor_id: string

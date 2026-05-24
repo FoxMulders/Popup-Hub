@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { EdmontonVenueTemplateBar } from '@/components/coordinator/edmonton-venue-template-bar'
+import { SavedVenuePicker } from '@/components/coordinator/wizard/saved-venue-picker'
 import type { EdmontonQuadrantFilter } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { resolveTemplateAnchoredDimensions } from '@/lib/booth-planner/venue-presets'
@@ -27,6 +28,7 @@ import {
   WIZARD_STEP_TITLE,
 } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
+import type { CoordinatorSavedVenue } from '@/types/database'
 
 interface PlaceResult {
   address: string
@@ -204,6 +206,8 @@ export interface WizardStepVenueProps {
   venueLength: number
   skipVenueLayout: boolean
   onSkipVenueLayoutChange: (v: boolean) => void
+  coordinatorId: string
+  onApplySavedVenue: (venue: CoordinatorSavedVenue) => void
 }
 
 export function WizardStepVenue({
@@ -224,6 +228,8 @@ export function WizardStepVenue({
   venueLength,
   skipVenueLayout,
   onSkipVenueLayoutChange,
+  coordinatorId,
+  onApplySavedVenue,
 }: WizardStepVenueProps) {
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -271,6 +277,19 @@ export function WizardStepVenue({
           Choose an Edmonton venue below to auto-fill the name and address, or type them in and drop a map pin.
         </p>
       ) : null}
+
+      <SavedVenuePicker
+        coordinatorId={coordinatorId}
+        locationName={locationName}
+        address={address}
+        lat={lat}
+        lng={lng}
+        pinDropped={pinDropped}
+        venuePresetId={venuePresetId}
+        skipVenueLayout={skipVenueLayout}
+        cityQuadrant={cityQuadrant}
+        onApply={onApplySavedVenue}
+      />
 
       <EdmontonVenueTemplateBar
         value={venuePresetId}
