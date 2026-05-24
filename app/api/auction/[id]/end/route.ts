@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { endAuction } from '@/lib/auction/end-auction'
 import { assertLegacyAuctionManager } from '@/lib/auction/coordinator-access'
 
@@ -16,8 +16,8 @@ export async function POST(_request: Request, { params }: Props) {
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const service = await createServiceClient()
-  const access = await assertLegacyAuctionManager(service, id, user.id)
+  const admin = createAdminClient()
+  const access = await assertLegacyAuctionManager(admin, id, user.id)
 
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status })
@@ -28,7 +28,7 @@ export async function POST(_request: Request, { params }: Props) {
   }
 
   try {
-    const result = await endAuction(service, id)
+    const result = await endAuction(admin, id)
     return NextResponse.json({
       winningPaddleId: result.winningPaddleId,
       winnerUserId: result.winnerUserId,

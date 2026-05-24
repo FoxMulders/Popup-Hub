@@ -293,11 +293,21 @@ export function AuctionList({ auctions: initialAuctions, eventId, eventStartAt }
     setBusy(true)
     try {
       const results = await Promise.all(
-        removable.map((a) => fetch(`/api/auction/${a.id}`, { method: 'DELETE' }))
+        removable.map(async (a) => {
+          const res = await fetch(`/api/auction/${a.id}`, { method: 'DELETE' })
+          const json = (await res.json().catch(() => ({}))) as { error?: string }
+          return { ok: res.ok, id: a.id, error: json.error }
+        })
       )
-      const removedIds = removable.filter((_, i) => results[i].ok).map((a) => a.id)
+      const removedIds = results.filter((r) => r.ok).map((r) => r.id)
+      const failed = results.filter((r) => !r.ok)
       setAuctions((prev) => prev.filter((a) => !removedIds.includes(a.id)))
-      toast.success(`Removed ${removedIds.length} auction(s)`)
+      if (removedIds.length > 0) {
+        toast.success(`Removed ${removedIds.length} auction(s)`)
+      }
+      if (failed.length > 0) {
+        toast.error(failed[0].error ?? `Failed to remove ${failed.length} auction(s)`)
+      }
     } finally {
       setBusy(false)
     }

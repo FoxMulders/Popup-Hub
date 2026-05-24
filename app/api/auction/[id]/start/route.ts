@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { notifyAuctionStarting } from '@/lib/auction/notify-auction-starting'
 import { assertLegacyAuctionManager } from '@/lib/auction/coordinator-access'
 import {
@@ -20,8 +20,8 @@ export async function POST(_request: Request, { params }: Props) {
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const service = await createServiceClient()
-  const access = await assertLegacyAuctionManager(service, id, user.id)
+  const admin = createAdminClient()
+  const access = await assertLegacyAuctionManager(admin, id, user.id)
 
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status })
@@ -34,7 +34,7 @@ export async function POST(_request: Request, { params }: Props) {
     )
   }
 
-  const { data: auction } = await service
+  const { data: auction } = await admin
     .from('auctions')
     .select('id, status, timer_duration_seconds, title, event_id, scheduled_start_at, event:events(start_at)')
     .eq('id', id)
@@ -79,14 +79,14 @@ export async function POST(_request: Request, { params }: Props) {
     Date.now() + auction.timer_duration_seconds * 1000
   ).toISOString()
 
-  const { error } = await service
+  const { error } = await admin
     .from('auctions')
     .update({ status: 'active', timer_ends_at: timerEndsAt })
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await notifyAuctionStarting(service, {
+  await notifyAuctionStarting(admin, {
     auctionId: id,
     auctionTitle: auction.title,
     eventId: auction.event_id,

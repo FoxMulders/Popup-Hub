@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { assertLegacyAuctionManager } from '@/lib/auction/coordinator-access'
 
 interface Props {
@@ -15,8 +15,8 @@ export async function DELETE(_request: Request, { params }: Props) {
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const service = await createServiceClient()
-  const access = await assertLegacyAuctionManager(service, id, user.id)
+  const admin = createAdminClient()
+  const access = await assertLegacyAuctionManager(admin, id, user.id)
 
   if (!access.ok) {
     return NextResponse.json({ error: access.error }, { status: access.status })
@@ -29,7 +29,7 @@ export async function DELETE(_request: Request, { params }: Props) {
     )
   }
 
-  const { error } = await service.from('auctions').delete().eq('id', id)
+  const { error } = await admin.from('auctions').delete().eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
