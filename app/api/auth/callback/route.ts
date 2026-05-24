@@ -2,9 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getDefaultDashboard, parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
-import type { Role } from '@/types/database'
-
-const VALID_SIGNUP_ROLES: Role[] = ['shopper', 'vendor', 'coordinator']
 
 function safeRedirectPath(value: string | null, fallback = '/'): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
@@ -98,11 +95,8 @@ export async function GET(request: Request) {
     )
   }
 
-  if (roleParam && VALID_SIGNUP_ROLES.includes(roleParam as Role)) {
-    await supabase
-      .from('profiles')
-      .update({ role: roleParam as Role })
-      .eq('id', user.id)
+  if (roleParam === 'coordinator') {
+    await supabase.rpc('apply_signup_role', { p_role: 'coordinator' })
   }
 
   const shareCookie = cookieStore.get('signup_share_contact')?.value

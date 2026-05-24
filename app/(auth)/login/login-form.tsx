@@ -25,12 +25,18 @@ export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(() => {
-    if (!authError) return null
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!authError) return
+
     if (authError === 'dev_mock_sign_in_failed') {
-      return authErrorDetail
-        ? `Dev mock sign-in failed: ${authErrorDetail}`
-        : 'Dev mock sign-in failed. Check DEV_MOCK_* credentials in .env.local.'
+      setError(
+        authErrorDetail
+          ? `Dev mock sign-in failed: ${authErrorDetail}`
+          : 'Dev mock sign-in failed. Check DEV_MOCK_* credentials in .env.local.'
+      )
+      return
     }
     if (authError.startsWith('dev_mock_missing_credentials_')) {
       const role = authError.replace('dev_mock_missing_credentials_', '')
@@ -40,29 +46,39 @@ export default function LoginForm() {
           : role === 'vendor'
             ? 'DEV_MOCK_VENDOR'
             : 'DEV_MOCK_SHOPPER'
-      return `Set ${envPrefix}_EMAIL and ${envPrefix}_PASSWORD in .env.local.`
+      setError(`Set ${envPrefix}_EMAIL and ${envPrefix}_PASSWORD in .env.local.`)
+      return
     }
     if (authError === 'invalid_mock_role') {
-      return 'Invalid mock_role. Use coordinator, vendor, or shopper.'
+      setError('Invalid mock_role. Use coordinator, vendor, or shopper.')
+      return
     }
     if (authError === 'auth_callback_failed') {
-      return authErrorDetail
-        ? `Google sign-in could not be completed: ${authErrorDetail}`
-        : 'Google sign-in could not be completed. Please try again.'
+      setError(
+        authErrorDetail
+          ? `Google sign-in could not be completed: ${authErrorDetail}`
+          : 'Google sign-in could not be completed. Please try again.'
+      )
+      return
     }
     if (authError === 'auth_callback_missing_code') {
-      return 'Sign-in link was incomplete. Please try again.'
+      setError('Sign-in link was incomplete. Please try again.')
+      return
     }
     if (authError === 'oauth_cancelled') {
-      return 'Sign-in was cancelled.'
+      setError('Sign-in was cancelled.')
+      return
     }
     if (authError === 'oauth_failed') {
-      return authErrorDetail
-        ? `Google sign-in failed: ${authErrorDetail}`
-        : 'Google sign-in failed. Please try again or use email sign-in.'
+      setError(
+        authErrorDetail
+          ? `Google sign-in failed: ${authErrorDetail}`
+          : 'Google sign-in failed. Please try again or use email sign-in.'
+      )
+      return
     }
-    return authError
-  })
+    setError(authError)
+  }, [authError, authErrorDetail])
 
   useEffect(() => {
     const code = searchParams.get('code')

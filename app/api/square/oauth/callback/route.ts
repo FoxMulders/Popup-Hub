@@ -41,6 +41,27 @@ export async function GET(request: Request) {
       : null
 
     const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user || user.id !== state) {
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/square-connect?error=session_mismatch`
+      )
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'coordinator') {
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/square-connect?error=forbidden`
+      )
+    }
 
     await supabase
       .from('profiles')
@@ -52,12 +73,12 @@ export async function GET(request: Request) {
         square_token_expires_at: expiresAt,
         square_location_id: locationId,
       })
-      .eq('id', state)
+      .eq('id', user.id)
 
     await supabase
       .from('events')
       .update({ square_merchant_id: merchantId })
-      .eq('coordinator_id', state)
+      .eq('coordinator_id', user.id)
       .is('square_merchant_id', null)
 
     return NextResponse.redirect(

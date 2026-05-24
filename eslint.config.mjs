@@ -5,9 +5,31 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Override default ignores of eslint-config-next.
+  {
+    rules: {
+      // React 19 compiler hook rules — warn until existing patterns are migrated.
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/immutability": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/static-components": "warn",
+      "react/no-unescaped-entities": "warn",
+    },
+  },
+  {
+    files: ["scripts/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    files: ["tests/e2e/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
+  },
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",

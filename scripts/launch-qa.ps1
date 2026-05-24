@@ -25,6 +25,7 @@ Write-Host "===================================" -ForegroundColor DarkGray
 try {
     Run-Step "TypeScript" "npx tsc --noEmit"
     Run-Step "Layout math" "npm run qa:layout"
+    Run-Step "Signup RBAC" "npm run test:rbac-signup"
     Run-Step "Shopper routing (synthetic)" "npm run test:shopper-routing"
     Run-Step "Shopper routing (live layout)" "npm run test:shopper-routing:live"
 

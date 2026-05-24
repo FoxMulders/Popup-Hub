@@ -79,7 +79,7 @@ export async function runLiveLayoutRoutingQa(): Promise<void> {
   const supabase = createClient(url, key)
   const eventNameFilter = process.env.SHOPPER_QA_EVENT_NAME ?? 'Market Test 3'
 
-  let query = supabase
+  const query = supabase
     .from('events')
     .select('id, name')
     .in('status', ['published', 'active', 'completed'])

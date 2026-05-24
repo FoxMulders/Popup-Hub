@@ -1,6 +1,18 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:3000'
+const certPath = path.join(__dirname, '.cert', 'localhost.pem')
+const localHttpsAvailable = fs.existsSync(certPath)
+const useHttps =
+  process.env.PLAYWRIGHT_USE_HTTPS === '1' ||
+  (process.env.PLAYWRIGHT_USE_HTTPS !== '0' && localHttpsAvailable)
+
+const baseURL =
+  process.env.PLAYWRIGHT_BASE_URL ??
+  (useHttps ? 'https://localhost:3000' : 'http://localhost:3000')
+
+const devCommand = useHttps ? 'npm run dev:https' : 'npm run dev'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -39,7 +51,7 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: 'npm run dev',
+        command: devCommand,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         ignoreHTTPSErrors: true,

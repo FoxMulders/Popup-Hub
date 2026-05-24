@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Script from 'next/script'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -71,6 +71,7 @@ export function PayBoothModal({
   const [cardContainer, setCardContainer] = useState<HTMLDivElement | null>(null)
   const [card, setCard] = useState<SquareCardInstance | null>(null)
   const [paying, setPaying] = useState(false)
+  const payingRef = useRef(false)
 
   const platformFeeCents = config
     ? computePlatformFeeCents(boothPriceCents, config.feeConfig)
@@ -110,6 +111,7 @@ export function PayBoothModal({
   }, [open, squareLoaded, config, cardContainer])
 
   async function handlePay() {
+    if (payingRef.current) return
     if (!card) {
       toast.error('Card form not ready')
       return
@@ -119,6 +121,7 @@ export function PayBoothModal({
       return
     }
 
+    payingRef.current = true
     setPaying(true)
     try {
       const result = await card.tokenize()
@@ -145,6 +148,7 @@ export function PayBoothModal({
       onOpenChange(false)
       onSuccess?.()
     } finally {
+      payingRef.current = false
       setPaying(false)
     }
   }
@@ -155,7 +159,13 @@ export function PayBoothModal({
         src="https://web.squarecdn.com/v1/square.js"
         onLoad={() => setSquareLoaded(true)}
       />
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (paying && !nextOpen) return
+          onOpenChange(nextOpen)
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Complete booth payment</DialogTitle>

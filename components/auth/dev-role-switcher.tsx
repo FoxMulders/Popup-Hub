@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { devMockLoginPath, loginWithMockRolePath, type DevMockRole } from '@/lib/auth/dev-mock-session'
 
@@ -10,7 +11,13 @@ const ROLES: { role: DevMockRole; label: string }[] = [
 ]
 
 export function DevRoleSwitcher() {
-  if (process.env.NODE_ENV !== 'development') {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || process.env.NODE_ENV !== 'development') {
     return null
   }
 

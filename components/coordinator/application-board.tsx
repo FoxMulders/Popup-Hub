@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,7 +21,6 @@ import {
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
   PAYMENT_METHOD_LABELS,
-  resolvePaymentFieldsForPaidApplication,
 } from '@/lib/applications/payment-fields'
 import type { BoothApplication, ApplicationStatus } from '@/types/database'
 
@@ -88,7 +86,6 @@ export function ApplicationBoard({
   categoryNameById,
   categoryLimits = [],
 }: ApplicationBoardProps) {
-  const supabase = createClient()
   const [apps, setApps] = useState<BoothApplication[]>(applications)
   const categoryLookup = categoryNameById ?? {}
   const [viewingApp, setViewingApp] = useState<BoothApplication | null>(null)
@@ -169,47 +166,23 @@ export function ApplicationBoard({
       const app = apps.find((a) => a.id === appId)
       if (!app) return
 
-      if (newStatus === 'approved' && app.category_id && categoryLimits.length > 0) {
-        const limit = categoryLimits.find((cl) => cl.category_id === app.category_id)
-        if (limit) {
-          const approvedInCategory = apps.filter(
-            (a) => a.status === 'approved' && a.category_id === app.category_id
-          ).length
-          if (approvedInCategory >= limit.max_slots) {
-            toast.error(
-              `${limit.category?.name ?? 'This category'} is full (${limit.max_slots} slots)`
-            )
-            return
-          }
-        }
+      const res = await fetch(`/api/coordinator/applications/${appId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        updates?: Partial<BoothApplication>
       }
 
-      const updates: Partial<BoothApplication> = { status: newStatus }
-      if (newStatus === 'approved') {
-        updates.approved_at = new Date().toISOString()
-        const limit = categoryLimits.find((cl) => cl.category_id === app.category_id)
-        const boothPrice = limit?.price_per_booth ?? 0
-        if (boothPrice > 0) {
-          const paymentFields = resolvePaymentFieldsForPaidApplication({
-            paymentMethod: app.payment_method ?? 'SQUARE',
-            requiresPayment: true,
-            approved: true,
-          })
-          updates.payment_method = paymentFields.payment_method
-          updates.payment_status = paymentFields.payment_status
-          updates.application_payment_status = paymentFields.application_payment_status
-        }
-      }
-
-      const { error } = await supabase
-        .from('booth_applications')
-        .update(updates)
-        .eq('id', appId)
-
-      if (error) {
-        toast.error('Failed to update application status')
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to update application status')
         return
       }
+
+      const updates = data.updates ?? { status: newStatus }
 
       setApps((prev) =>
         prev.map((a) => (a.id === appId ? { ...a, ...updates } : a))

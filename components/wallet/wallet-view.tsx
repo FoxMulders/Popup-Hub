@@ -91,7 +91,7 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
     if (showCard && squareLoaded && cardContainerRef.current) {
       initCard()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [showCard, squareLoaded])
 
   async function initCard() {

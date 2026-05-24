@@ -11,6 +11,23 @@ interface CreateBoothPaymentParams {
   platformFeeCents: number
 }
 
+export function boothPaymentIdempotencyKey(applicationId: string): string {
+  return `booth-${applicationId}`
+}
+
+export async function getBoothPayment(
+  coordinatorAccessToken: string,
+  paymentId: string
+) {
+  try {
+    const sellerClient = createSellerSquareClient(coordinatorAccessToken)
+    const response = await sellerClient.payments.get({ paymentId })
+    return response.payment ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function createBoothPayment(params: CreateBoothPaymentParams) {
   const {
     sourceId,
@@ -27,7 +44,7 @@ export async function createBoothPayment(params: CreateBoothPaymentParams) {
   try {
     const response = await sellerClient.payments.create({
       sourceId,
-      idempotencyKey: randomUUID(),
+      idempotencyKey: boothPaymentIdempotencyKey(applicationId),
       amountMoney: { amount: BigInt(amountCents), currency: 'USD' },
       appFeeMoney:
         appFeeAmount > 0

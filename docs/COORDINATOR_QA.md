@@ -64,5 +64,7 @@ npm run qa:layout
 npm run test:shopper-routing
 npm run test:shopper-routing:live
 npm run verify:prod        # HTTP smoke against popup-hub.vercel.app
-npm run test:e2e:shopper-floorplan   # Playwright (requires HTTPS dev server)
+npm run test:e2e:shopper-floorplan   # Playwright floor plan routing
+npm run test:e2e:public-discovery    # Playwright discover + legacy redirect smoke
+# Playwright auto-picks http vs https when .cert/localhost.pem exists (override with PLAYWRIGHT_BASE_URL)
 ```

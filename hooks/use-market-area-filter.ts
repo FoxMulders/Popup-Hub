@@ -6,9 +6,13 @@ import {
   MARKET_RADIUS_STORAGE_KEY,
   type DistanceRadiusKm,
 } from '@/lib/markets/distance-radius'
+import {
+  DEFAULT_LOCATION_LABEL,
+  NEAR_YOU_LABEL,
+  readStoredUserLocation,
+  storeUserLocation,
+} from '@/lib/markets/user-location'
 import { DEFAULT_REGION, type LatLng } from '@/lib/shopper/geo'
-
-const LOCATION_STORAGE_KEY = 'popup-hub:last-location'
 
 function readStoredRadius(): number | null {
   if (typeof sessionStorage === 'undefined') return DEFAULT_DISTANCE_RADIUS_KM
@@ -28,20 +32,15 @@ function readStoredRadius(): number | null {
 export function useMarketAreaFilter() {
   const [origin, setOrigin] = useState<LatLng>(DEFAULT_REGION)
   const [radiusKm, setRadiusKmState] = useState<number | null>(DEFAULT_DISTANCE_RADIUS_KM)
-  const [locationLabel, setLocationLabel] = useState('Edmonton area')
+  const [locationLabel, setLocationLabel] = useState(DEFAULT_LOCATION_LABEL)
   const [locating, setLocating] = useState(false)
 
   useEffect(() => {
     setRadiusKmState(readStoredRadius())
-    try {
-      const stored = sessionStorage.getItem(LOCATION_STORAGE_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored) as LatLng & { label?: string }
-        setOrigin({ lat: parsed.lat, lng: parsed.lng })
-        if (parsed.label) setLocationLabel(parsed.label)
-      }
-    } catch {
-      /* ignore */
+    const stored = readStoredUserLocation()
+    if (stored) {
+      setOrigin({ lat: stored.lat, lng: stored.lng })
+      setLocationLabel(stored.label ?? NEAR_YOU_LABEL)
     }
   }, [])
 
@@ -61,11 +60,8 @@ export function useMarketAreaFilter() {
       (pos) => {
         const next = { lat: pos.coords.latitude, lng: pos.coords.longitude }
         setOrigin(next)
-        setLocationLabel('Near you')
-        sessionStorage.setItem(
-          LOCATION_STORAGE_KEY,
-          JSON.stringify({ ...next, label: 'Near you' })
-        )
+        setLocationLabel(NEAR_YOU_LABEL)
+        storeUserLocation({ ...next, label: NEAR_YOU_LABEL })
         setLocating(false)
       },
       () => {

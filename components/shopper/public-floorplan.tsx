@@ -1,11 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { displayLabel, isElementOrigin } from '@/lib/booth-planner/venue-elements'
+import type { PatronPathTrace } from '@/lib/booth-planner/patron-path-trace'
+import {
+  computeRouteTraceAsync,
+  isShopperRouteAvailable,
+} from '@/lib/shopper/compute-route-async'
 import {
   getLayoutRooms,
   getRoomCanvasMetrics,
-  resolveShopperRouteTrace,
   responsiveCellPx,
   type ShopperRouteMode,
 } from '@/lib/shopper/layout'
@@ -16,6 +20,12 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PatronFlowOverlay } from '@/components/shopper/patron-flow-overlay'
+import {
+  collectOriginBoothCells,
+  FloorplanBoothPin,
+  FloorplanFixture,
+  useStableBoothSelectHandler,
+} from '@/components/shopper/floorplan-booth-pin'
 import { Map, Route, Search, Store } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -61,6 +71,8 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
     highlightBoothNumber ?? null
   )
   const [cellPx, setCellPx] = useState(8)
+  const [activeTrace, setActiveTrace] = useState<PatronPathTrace | null>(null)
+  const [routeComputing, setRouteComputing] = useState(false)
   const canvasRef = useRef<HTMLDivElement>(null)
 
   const room = rooms.find((r) => r.id === activeRoomId) ?? rooms[0]
@@ -76,18 +88,45 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
     return (room.cells ?? []).find((c) => c.boothNumber === selectedBoothNumber) ?? null
   }, [room, selectedBoothNumber])
 
-  const activeTrace = useMemo(() => {
-    if (!room) return null
-    return resolveShopperRouteTrace(room, routeMode, selectedBooth)
-  }, [room, routeMode, selectedBooth])
+  const deferredRoom = useDeferredValue(room)
+  const deferredRouteMode = useDeferredValue(routeMode)
+  const deferredSelectedBooth = useDeferredValue(selectedBooth)
+
+  useEffect(() => {
+    if (!deferredRoom) {
+      setActiveTrace(null)
+      setRouteComputing(false)
+      return
+    }
+
+    let cancelled = false
+    setRouteComputing(true)
+
+    void computeRouteTraceAsync(deferredRoom, deferredRouteMode, deferredSelectedBooth).then(
+      (trace) => {
+        if (!cancelled) {
+          setActiveTrace(trace)
+          setRouteComputing(false)
+        }
+      }
+    )
+
+    return () => {
+      cancelled = true
+    }
+  }, [deferredRoom, deferredRouteMode, deferredSelectedBooth])
 
   const routeAvailable = useMemo(() => {
     if (!room) return false
-    if (routeMode === 'vendor') return selectedBooth != null
-    return resolveShopperRouteTrace(room, routeMode, null) != null
+    return isShopperRouteAvailable(room, routeMode, selectedBooth)
   }, [room, routeMode, selectedBooth])
 
   const hasRoute = activeTrace != null && activeTrace.points.length >= 2
+  const routeStale =
+    routeComputing ||
+    deferredRoom !== room ||
+    deferredRouteMode !== routeMode ||
+    deferredSelectedBooth !== selectedBooth
   const routeModeMeta = ROUTE_MODES.find((m) => m.id === routeMode) ?? ROUTE_MODES[0]
 
   const updateCellPx = useCallback(() => {
@@ -132,13 +171,62 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
     return s
   }, [selectedBoothNumber, matchingBooths])
 
-  const toggleBoothSelection = useCallback(
-    (boothNumber: number) => {
-      setSelectedBoothNumber((prev) => (prev === boothNumber ? null : boothNumber))
-      if (routeMode === 'vendor') setShowPatronFlow(true)
-    },
-    [routeMode]
+  const toggleBoothSelection = useStableBoothSelectHandler(
+    routeMode,
+    setSelectedBoothNumber,
+    setShowPatronFlow
   )
+
+  const originBooths = useMemo(
+    () => collectOriginBoothCells(room?.cells ?? []),
+    [room?.cells]
+  )
+
+  const boothElements = useMemo(() => {
+    if (!room) return null
+    return originBooths.map((cell) => (
+      <FloorplanBoothPin
+        key={`${cell.row}-${cell.col}`}
+        cell={cell}
+        cellPx={cellPx}
+        highlighted={highlightSet.has(cell.boothNumber)}
+        selected={selectedBoothNumber === cell.boothNumber}
+        onSelect={toggleBoothSelection}
+      />
+    ))
+  }, [originBooths, cellPx, highlightSet, selectedBoothNumber, toggleBoothSelection, room])
+
+  const fixtureElements = useMemo(() => {
+    if (!metrics) return null
+    const fixtureRendered = new Set<string>()
+    const elements: ReactElement[] = []
+
+    for (const el of metrics.venueElements) {
+      if (!isElementOrigin(el, el.row, el.col)) continue
+      const key = `${el.row}-${el.col}`
+      if (fixtureRendered.has(key)) continue
+      fixtureRendered.add(key)
+      const focused = focusElementType === el.type
+      const isStage = el.type === 'stage' || /raised stage/i.test(el.label ?? '')
+      const isAnnex = el.row >= metrics.hallRows
+      elements.push(
+        <FloorplanFixture
+          key={el.id}
+          id={el.id}
+          label={displayLabel(el)}
+          row={el.row}
+          col={el.col}
+          colSpan={el.colSpan ?? 1}
+          rowSpan={el.rowSpan ?? 1}
+          cellPx={cellPx}
+          focused={focused}
+          isStageAnnex={isStage && isAnnex}
+        />
+      )
+    }
+
+    return elements
+  }, [metrics, focusElementType, cellPx])
 
   if (!room || !metrics) {
     return (
@@ -146,93 +234,14 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
     )
   }
 
-  const { cols, canvasRows, hallRows, venueElements, placedCells } = metrics
-  const rendered = new Set<string>()
-  const boothElements: React.ReactElement[] = []
-
-  for (const cell of room.cells ?? []) {
-    if (cell.col < 0 || cell.row < 0) continue
-    const key = `${cell.row}-${cell.col}`
-    if (rendered.has(key)) continue
-    for (let dr = 0; dr < cell.rowSpan; dr++) {
-      for (let dc = 0; dc < cell.colSpan; dc++) {
-        rendered.add(`${cell.row + dr}-${cell.col + dc}`)
-      }
-    }
-    const highlighted = highlightSet.has(cell.boothNumber)
-    const selected = selectedBoothNumber === cell.boothNumber
-    boothElements.push(
-      <button
-        key={key}
-        type="button"
-        aria-label={`Booth ${cell.boothNumber}, ${cell.vendorName}`}
-        aria-pressed={selected}
-        onClick={() => toggleBoothSelection(cell.boothNumber)}
-        className={cn(
-          'absolute flex flex-col items-center justify-center overflow-hidden rounded border text-center transition-all touch-manipulation',
-          selected
-            ? 'z-20 border-forest bg-forest/25 ring-2 ring-forest shadow-md scale-[1.02]'
-            : highlighted
-              ? 'z-10 border-forest bg-forest/20 ring-2 ring-forest/70'
-              : 'z-[1] border-stone-300 bg-white/90 hover:ring-1 hover:ring-stone-400'
-        )}
-        style={{
-          left: cell.col * cellPx,
-          top: cell.row * cellPx,
-          width: cell.colSpan * cellPx,
-          height: cell.rowSpan * cellPx,
-          minWidth: Math.max(cell.colSpan * cellPx, 40),
-          minHeight: Math.max(cell.rowSpan * cellPx, 40),
-          fontSize: Math.max(7, cellPx - 1),
-        }}
-        title={cell.vendorName}
-      >
-        <span className="font-bold leading-none">#{cell.boothNumber}</span>
-        {cellPx >= 9 ? (
-          <span className="line-clamp-2 px-0.5 leading-tight">{cell.vendorName}</span>
-        ) : null}
-      </button>
-    )
-  }
-
-  const fixtureElements: React.ReactElement[] = []
-  const fixtureRendered = new Set<string>()
-  for (const el of venueElements) {
-    if (!isElementOrigin(el, el.row, el.col)) continue
-    const key = `${el.row}-${el.col}`
-    if (fixtureRendered.has(key)) continue
-    fixtureRendered.add(key)
-    const focused = focusElementType === el.type
-    const isStage = el.type === 'stage' || /raised stage/i.test(el.label ?? '')
-    const isAnnex = el.row >= hallRows
-    fixtureElements.push(
-      <div
-        key={el.id}
-        className={cn(
-          'absolute flex items-center justify-center rounded border text-center font-semibold pointer-events-none',
-          isStage && isAnnex
-            ? 'border-violet-500 bg-violet-100/90 text-violet-900'
-            : focused
-              ? 'z-20 border-forest bg-harvest-100 ring-2 ring-forest'
-              : 'border-stone-400 bg-stone-100 text-stone-800'
-        )}
-        style={{
-          left: el.col * cellPx,
-          top: el.row * cellPx,
-          width: (el.colSpan ?? 1) * cellPx,
-          height: (el.rowSpan ?? 1) * cellPx,
-          fontSize: Math.max(7, cellPx - 1),
-        }}
-      >
-        {displayLabel(el)}
-      </div>
-    )
-  }
+  const { cols, canvasRows, hallRows, placedCells } = metrics
 
   const routeHint =
-    routeMode === 'vendor' && !selectedBooth
-      ? 'Select a booth on the map to plot the quickest aisle path from the entrance.'
-      : routeModeMeta.hint
+    routeStale && showPatronFlow
+      ? 'Calculating route…'
+      : routeMode === 'vendor' && !selectedBooth
+        ? 'Select a booth on the map to plot the quickest aisle path from the entrance.'
+        : routeModeMeta.hint
 
   return (
     <div className="space-y-3">
@@ -355,7 +364,7 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
           ) : null}
           {fixtureElements}
           {boothElements}
-          {showPatronFlow && activeTrace && hasRoute ? (
+          {showPatronFlow && activeTrace && hasRoute && !routeStale ? (
             <PatronFlowOverlay
               trace={activeTrace}
               mode={routeMode}

@@ -63,7 +63,7 @@ export default async function FavoritesPage() {
   }
 
   const followedVendorIds = (followRows ?? []).map((r) => r.vendor_id)
-  let vendorUpcoming: Array<{
+  const vendorUpcoming: Array<{
     vendorId: string
     vendorName: string
     event: Event

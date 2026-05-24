@@ -43,6 +43,13 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  const legacyShopperEvent = pathname.match(/^\/shopper\/events\/([^/]+)\/?$/)
+  if (legacyShopperEvent) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/events/${legacyShopperEvent[1]}`
+    return NextResponse.redirect(url, 308)
+  }
+
   if (isDevMockAuthEnabled()) {
     const mockRole = parseDevMockRole(request.nextUrl.searchParams.get(DEV_MOCK_ROLE_PARAM))
     if (mockRole && pathname === '/login') {
