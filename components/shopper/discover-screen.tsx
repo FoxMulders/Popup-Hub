@@ -4,9 +4,9 @@ import { useCallback, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EventMap } from '@/components/map/event-map'
 import { DiscoverEventCards } from '@/components/shopper/discover-event-cards'
+import { DiscoverFlyerUpload } from '@/components/shopper/discover-flyer-upload'
 import { MarketAreaFilter } from '@/components/markets/market-area-filter'
 import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
 import {
@@ -91,6 +91,22 @@ export function DiscoverScreen({
     [replaceParams]
   )
 
+  const applyFlyerFilters = useCallback(
+    (updates: { date?: Date; quarterAuctions?: boolean }) => {
+      const params: Record<string, string | null> = {}
+      if (updates.date) {
+        const whenDate = discoverDateSearchParams('custom', updates.date)
+        params.when = whenDate.when
+        params.date = whenDate.date
+      }
+      if (updates.quarterAuctions) {
+        params.live = 'auctions'
+      }
+      replaceParams(params)
+    },
+    [replaceParams]
+  )
+
   const filtered = useMemo(() => {
     const scoped = filterEventsByListingType(events, 'community_market')
     const byDate =
@@ -119,12 +135,20 @@ export function DiscoverScreen({
     <div className="mx-auto w-full max-w-full overflow-x-hidden px-4 py-6 sm:max-w-7xl sm:py-8">
       <div>
         <h1 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
-          Discover Community Markets
+          {liveAuctionsOnly ? 'Quarter Auctions (QAs)' : 'Discover Community Markets'}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Find popup markets near you — browse vendors before you go
+          {liveAuctionsOnly
+            ? 'Find live quarter auction markets near you — drop quarters and win vendor prizes'
+            : 'Find popup markets near you — browse vendors before you go'}
         </p>
       </div>
+
+      <DiscoverFlyerUpload
+        events={events}
+        quarterAuctionsOnly={liveAuctionsOnly}
+        onApplyFilters={applyFlyerFilters}
+      />
 
       <div className="mt-4 space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -189,14 +213,14 @@ export function DiscoverScreen({
             onClick={() => replaceParams({ live: liveAuctionsOnly ? null : 'auctions' })}
           >
             <Gavel className="h-3.5 w-3.5" aria-hidden />
-            Live auctions
+            Quarter auctions
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           {liveAuctionsOnly ? (
             <>
-              Showing markets with a{' '}
-              <span className="font-medium text-foreground">live quarter auction</span> for{' '}
+              Showing{' '}
+              <span className="font-medium text-foreground">quarter auction markets</span> for{' '}
               <span className="font-medium text-foreground">{dateSummary}</span>
             </>
           ) : (
@@ -218,22 +242,44 @@ export function DiscoverScreen({
         />
       </div>
 
-      <Tabs value={view} onValueChange={(v) => setViewMode(v as 'list' | 'map')} className="mt-4">
-        <TabsList className="grid w-full max-w-xs grid-cols-2">
-          <TabsTrigger value="list" className="min-h-11 touch-manipulation">
-            List
-          </TabsTrigger>
-          <TabsTrigger value="map" className="min-h-11 touch-manipulation">
-            Map
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div
+        className="mt-4 inline-flex w-full max-w-xs rounded-lg border border-input bg-muted p-1"
+        role="tablist"
+        aria-label="Discover view"
+      >
+        <Button
+          type="button"
+          role="tab"
+          aria-selected={view === 'list'}
+          variant={view === 'list' ? 'default' : 'ghost'}
+          className={cn(
+            'min-h-11 flex-1 touch-manipulation rounded-md shadow-none',
+            view === 'list' && 'shadow-sm'
+          )}
+          onClick={() => setViewMode('list')}
+        >
+          List
+        </Button>
+        <Button
+          type="button"
+          role="tab"
+          aria-selected={view === 'map'}
+          variant={view === 'map' ? 'default' : 'ghost'}
+          className={cn(
+            'min-h-11 flex-1 touch-manipulation rounded-md shadow-none',
+            view === 'map' && 'shadow-sm'
+          )}
+          onClick={() => setViewMode('map')}
+        >
+          Map
+        </Button>
+      </div>
 
       {filtered.length === 0 ? (
         <div className="mt-4 rounded-2xl border bg-white py-16 text-center">
           <p className="text-muted-foreground">
             {liveAuctionsOnly
-              ? 'No live quarter auctions on this day within your area. Try another date or turn off the Live auctions filter.'
+              ? 'No quarter auctions on this day within your area. Try another date or turn off the Quarter auctions filter.'
               : 'No community markets on this day within your area. Try another date or widen the radius.'}
           </p>
         </div>
