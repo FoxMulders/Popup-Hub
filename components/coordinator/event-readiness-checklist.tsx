@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useMemo } from 'react'
-import { Check, Stamp, ArrowRight, Copy, ExternalLink } from 'lucide-react'
+import { Check, Stamp, ArrowRight, Copy, ExternalLink, Pencil } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { MarketPanel, MarketPanelHeader, MarketPanelTitle } from '@/components/ui/market-panel'
 import { cn } from '@/lib/utils'
@@ -121,6 +121,51 @@ export function EventReadinessChecklist({
     }
   }, [eventId, pendingCount])
 
+  const editStepActions = useMemo((): Record<string, StepAction> => {
+    return {
+      created: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/edit`,
+        label: 'Edit event details',
+      },
+      categories: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/edit#categories`,
+        label: 'Edit categories & caps',
+      },
+      published: {
+        type: 'scroll',
+        targetId: 'event-status',
+        label: 'Change publish status',
+      },
+      square: {
+        type: 'link',
+        href: '/coordinator/square-connect',
+        label: 'Manage Square connection',
+      },
+      applied: {
+        type: 'copy',
+        getText: () => publicAppUrl(`/events/${eventId}`),
+        label: 'Copy listing link',
+      },
+      approved: {
+        type: 'scroll',
+        targetId: 'applications',
+        label: 'Review applications',
+      },
+      layout: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/layout`,
+        label: 'Edit booth layout',
+      },
+      auction: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/auctions`,
+        label: 'Manage quarter auction',
+      },
+    }
+  }, [eventId])
+
   const nextStepHints: Record<string, string> = {
     published:
       'Use the status dropdown at the top of this page and choose “Publish Event” so vendors can discover and apply.',
@@ -158,15 +203,35 @@ export function EventReadinessChecklist({
     }
   }, [])
 
-  function ContinueButton({ stepKey }: { stepKey: string }) {
-    const action = stepActions[stepKey]
-    if (!action) return null
-
+  function StepActionControl({
+    action,
+    variant,
+    className,
+  }: {
+    action: StepAction
+    variant: 'inline' | 'button'
+    className?: string
+  }) {
     if (action.type === 'link') {
+      if (variant === 'inline') {
+        return (
+          <Link
+            href={action.href}
+            className={cn(
+              'mt-1.5 flex items-center gap-1 text-xs font-medium hover:underline',
+              className
+            )}
+          >
+            <Pencil className="h-3 w-3 shrink-0" />
+            {action.label}
+            <ExternalLink className="h-3 w-3 shrink-0" />
+          </Link>
+        )
+      }
       return (
         <Link
           href={action.href}
-          className={cn(buttonVariants({ size: 'sm' }), 'mt-3 w-full sm:w-auto gap-1.5 inline-flex')}
+          className={cn(buttonVariants({ size: 'sm' }), 'mt-3 w-full sm:w-auto gap-1.5 inline-flex', className)}
         >
           {action.label}
           <ArrowRight className="h-4 w-4" />
@@ -174,21 +239,41 @@ export function EventReadinessChecklist({
       )
     }
 
+    const Icon = action.type === 'copy' ? Copy : ArrowRight
+    if (variant === 'inline') {
+      return (
+        <button
+          type="button"
+          className={cn(
+            'mt-1.5 flex items-center gap-1 text-xs font-medium hover:underline',
+            className
+          )}
+          onClick={() => runAction(action)}
+        >
+          <Pencil className="h-3 w-3 shrink-0" />
+          {action.label}
+          <Icon className="h-3 w-3 shrink-0" />
+        </button>
+      )
+    }
+
     return (
       <Button
         type="button"
         size="sm"
-        className="mt-3 w-full sm:w-auto gap-1.5"
+        className={cn('mt-3 w-full sm:w-auto gap-1.5', className)}
         onClick={() => runAction(action)}
       >
         {action.label}
-        {action.type === 'copy' ? (
-          <Copy className="h-4 w-4" />
-        ) : (
-          <ArrowRight className="h-4 w-4" />
-        )}
+        <Icon className="h-4 w-4" />
       </Button>
     )
+  }
+
+  function ContinueButton({ stepKey }: { stepKey: string }) {
+    const action = stepActions[stepKey]
+    if (!action) return null
+    return <StepActionControl action={action} variant="button" />
   }
 
   return (
@@ -224,6 +309,7 @@ export function EventReadinessChecklist({
         {items.map((item) => {
           const isNext = firstIncomplete?.key === item.key
           const action = !item.done ? stepActions[item.key] : undefined
+          const editAction = item.done ? editStepActions[item.key] : undefined
           const tagClass = item.done
             ? marketTheme.checklistTagDone
             : isNext
@@ -279,14 +365,19 @@ export function EventReadinessChecklist({
                   {item.skippable && !item.done && (
                     <span className="text-[10px] text-muted-foreground">(optional)</span>
                   )}
-                  {isNext && action?.type === 'link' && (
-                    <Link
-                      href={action.href}
-                      className="mt-1.5 flex items-center gap-1 text-xs text-harvest-700 hover:underline font-medium"
-                    >
-                      {action.label}
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
+                  {isNext && action && (
+                    <StepActionControl
+                      action={action}
+                      variant="inline"
+                      className="text-harvest-700"
+                    />
+                  )}
+                  {editAction && (
+                    <StepActionControl
+                      action={editAction}
+                      variant="inline"
+                      className="text-primary-foreground/85 hover:text-primary-foreground"
+                    />
                   )}
                 </div>
               </div>
