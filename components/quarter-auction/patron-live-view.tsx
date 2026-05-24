@@ -26,6 +26,7 @@ import {
   useAuctionCanStart,
 } from '@/components/quarter-auction/auction-start-countdown'
 import { DismissibleAuctionBanner } from '@/components/auction/dismissible-auction-banner'
+import { AuctionParticipationGate } from '@/components/quarter-auction/auction-participation-gate'
 
 interface PatronQuarterAuctionLiveProps {
   eventId: string
@@ -235,6 +236,8 @@ export function PatronQuarterAuctionLive({
         eventStartAt={eventStartAt}
       />
 
+      <AuctionParticipationGate eventId={eventId} loginNext={`/events/${eventId}/quarter-auction`}>
+        <>
       <PaddleChipPicker
         eventId={eventId}
         settings={settings}
@@ -376,6 +379,8 @@ export function PatronQuarterAuctionLive({
         vendorContact={vendorInfo ?? undefined}
         onDismiss={() => setShowWin(false)}
       />
+        </>
+      </AuctionParticipationGate>
     </div>
   )
 }

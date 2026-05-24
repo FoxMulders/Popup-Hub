@@ -1,0 +1,145 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import { MapPin, Loader2, CheckCircle2, LogIn } from 'lucide-react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { toast } from 'sonner'
+import { requestUserLocation } from '@/lib/markets/user-location'
+import { AUCTION_PRESENCE_RADIUS_METERS } from '@/lib/quarter-auction/participation'
+
+interface AuctionParticipationGateProps {
+  eventId: string
+  loginNext?: string
+  onParticipated?: () => void
+  children?: React.ReactNode
+}
+
+export function AuctionParticipationGate({
+  eventId,
+  loginNext,
+  onParticipated,
+  children,
+}: AuctionParticipationGateProps) {
+  const [loading, setLoading] = useState(true)
+  const [participated, setParticipated] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/quarter-auction/${eventId}/participate`)
+      if (res.status === 401) {
+        setParticipated(false)
+        return
+      }
+      const json = await res.json()
+      setParticipated(!!json.participated)
+      if (json.participated) onParticipated?.()
+    } finally {
+      setLoading(false)
+    }
+  }, [eventId, onParticipated])
+
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
+  async function handleParticipate() {
+    setSubmitting(true)
+    try {
+      const location = await requestUserLocation()
+      if (!location) {
+        toast.error('Allow location access so we can confirm you are at the event.')
+        return
+      }
+
+      const res = await fetch(`/api/quarter-auction/${eventId}/participate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: location.lat, lng: location.lng }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Could not confirm participation')
+        return
+      }
+
+      setParticipated(true)
+      onParticipated?.()
+      toast.success(
+        json.alreadyRegistered ? 'You are already participating' : 'You are in — good luck!'
+      )
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Checking participation…
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (participated) {
+    return <>{children}</>
+  }
+
+  const next = loginNext ?? `/events/${eventId}/quarter-auction`
+
+  return (
+    <Card className="border-harvest-200 bg-harvest-50/40">
+      <CardHeader>
+        <CardTitle className="text-lg">Join this auction</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Auctions are in-person only. Sign in, verify you are at the venue, then tap participate.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ol className="space-y-2 text-sm">
+          <li className="flex items-start gap-2">
+            <LogIn className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+            <span>You must be signed in (required to open this page).</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+            <span>
+              You must be at the event venue (within about{' '}
+              {AUCTION_PRESENCE_RADIUS_METERS} m of the map pin).
+            </span>
+          </li>
+          <li className="flex items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-forest" aria-hidden />
+            <span>Tap participate below to enter the auction room.</span>
+          </li>
+        </ol>
+
+        <Button
+          className="w-full min-h-12 text-base gap-2"
+          disabled={submitting}
+          onClick={handleParticipate}
+        >
+          {submitting ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <MapPin className="h-5 w-5" />
+          )}
+          Participate at this event
+        </Button>
+
+        <p className="text-xs text-muted-foreground text-center">
+          Not signed in?{' '}
+          <Link href={`/login?next=${encodeURIComponent(next)}`} className="text-forest underline">
+            Log in
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
+  )
+}

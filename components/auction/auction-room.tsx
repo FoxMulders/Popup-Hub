@@ -12,6 +12,7 @@ import type { Auction, AuctionDrop, Wallet } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import { Trophy, Zap, Clock, Users, Coins, HelpCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AuctionParticipationGate } from '@/components/quarter-auction/auction-participation-gate'
 
 interface AuctionRoomProps {
   auction: Auction
@@ -140,42 +141,8 @@ export function AuctionRoom({
 
   const isDrawing = auction.status === 'active' && timeLeft === 0
 
-  return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      {showOnboarding && (
-        <div
-          className="rounded-xl border border-harvest-200 bg-harvest-50 p-4"
-          role="note"
-          aria-label="How quarter auctions work"
-        >
-          <p className="font-semibold text-harvest-800">New to quarter auctions?</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-harvest-700">
-            <li>Top up your wallet to get a permanent Paddle ID.</li>
-            <li>Drop quarters during the live timer — each drop is an entry to win.</li>
-            <li>When time runs out, a random paddle is drawn from all entries.</li>
-          </ol>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              className="bg-harvest-600 hover:bg-harvest-700"
-              onClick={() => { window.location.href = '/wallet' }}
-            >
-              Top up wallet
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                localStorage.setItem('auction_onboarding_dismissed', '1')
-                setShowOnboarding(false)
-              }}
-            >
-              Got it
-            </Button>
-          </div>
-        </div>
-      )}
-
+  const roomContent = (
+    <>
       {eventId && (
         <p className="text-sm text-muted-foreground">
           <a href={`/events/${eventId}`} className="font-medium text-forest underline">
@@ -382,6 +349,60 @@ export function AuctionRoom({
           </CardContent>
         </Card>
       </div>
+    </>
+  )
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      {showOnboarding && (
+        <div
+          className="rounded-xl border border-harvest-200 bg-harvest-50 p-4"
+          role="note"
+          aria-label="How quarter auctions work"
+        >
+          <p className="font-semibold text-harvest-800">New to quarter auctions?</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-harvest-700">
+            <li>Top up your wallet to get a permanent Paddle ID.</li>
+            <li>Participate at the event venue, then drop quarters during the live timer.</li>
+            <li>When time runs out, a random paddle is drawn from all entries.</li>
+          </ol>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              className="bg-harvest-600 hover:bg-harvest-700"
+              onClick={() => { window.location.href = '/wallet' }}
+            >
+              Top up wallet
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                localStorage.setItem('auction_onboarding_dismissed', '1')
+                setShowOnboarding(false)
+              }}
+            >
+              Got it
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {eventId ? (
+        <AuctionParticipationGate
+          eventId={eventId}
+          loginNext={`/auctions/${auction.id}`}
+        >
+          {roomContent}
+        </AuctionParticipationGate>
+      ) : (
+        <>
+          {roomContent}
+          <p className="text-sm text-muted-foreground">
+            This standalone auction is not linked to an event — contact the coordinator if you cannot drop.
+          </p>
+        </>
+      )}
     </div>
   )
 }

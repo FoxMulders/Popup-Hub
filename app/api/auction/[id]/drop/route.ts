@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { assertAuctionParticipant } from '@/lib/quarter-auction/participation'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -22,12 +23,22 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   const { data: auction } = await supabase
     .from('auctions')
-    .select('status, min_drop_amount, max_drop_amount, timer_ends_at, pot_amount')
+    .select('status, min_drop_amount, max_drop_amount, timer_ends_at, pot_amount, event_id')
     .eq('id', auctionId)
     .single()
 
   if (!auction || auction.status !== 'active') {
     return NextResponse.json({ error: 'Auction is not active' }, { status: 422 })
+  }
+
+  if (!auction.event_id) {
+    return NextResponse.json({ error: 'This auction is not tied to an event' }, { status: 422 })
+  }
+
+  const service = await createServiceClient()
+  const participation = await assertAuctionParticipant(service, auction.event_id, user.id)
+  if (!participation.ok) {
+    return NextResponse.json({ error: participation.error }, { status: participation.status })
   }
 
   if (auction.timer_ends_at && new Date(auction.timer_ends_at) <= new Date()) {
@@ -38,7 +49,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Drop amount out of range' }, { status: 422 })
   }
 
-  const service = await createServiceClient()
   const { data: wallet } = await service
     .from('wallets')
     .select('id, balance, paddle_id')

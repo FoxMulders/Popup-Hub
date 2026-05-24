@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { deductWalletCredits } from '@/lib/quarter-auction/wallet'
+import { assertAuctionParticipant } from '@/lib/quarter-auction/participation'
 
 interface RouteParams {
   params: Promise<{ itemId: string }>
@@ -40,6 +41,11 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
   if (!item.entry_cost_credits || item.entry_cost_credits <= 0) {
     return NextResponse.json({ error: 'Entry cost not set' }, { status: 422 })
+  }
+
+  const participation = await assertAuctionParticipant(service, item.event_id as string, user.id)
+  if (!participation.ok) {
+    return NextResponse.json({ error: participation.error }, { status: participation.status })
   }
 
   const { data: paddles } = await service

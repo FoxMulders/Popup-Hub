@@ -6,6 +6,7 @@ import {
   fetchTakenPaddleNumbers,
   purchaseEventPaddles,
 } from '@/lib/quarter-auction/purchase-paddles'
+import { assertAuctionParticipant } from '@/lib/quarter-auction/participation'
 
 interface RouteParams {
   params: Promise<{ eventId: string }>
@@ -34,6 +35,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (!settings.enabled) {
     return NextResponse.json({ error: 'Quarter auction is not enabled for this event' }, { status: 422 })
+  }
+
+  const participation = await assertAuctionParticipant(service, eventId, user.id)
+  if (!participation.ok) {
+    return NextResponse.json({ error: participation.error }, { status: participation.status })
   }
 
   const result = await purchaseEventPaddles(service, {

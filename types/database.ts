@@ -358,6 +358,15 @@ export interface EventPaddle {
   purchased_at: string
 }
 
+export interface EventAuctionParticipant {
+  event_id: string
+  user_id: string
+  participated_at: string
+  check_in_lat: number
+  check_in_lng: number
+  distance_meters: number | null
+}
+
 export interface AuctionItemEntry {
   id: string
   catalog_item_id: string
