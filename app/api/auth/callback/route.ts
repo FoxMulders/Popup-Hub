@@ -42,6 +42,15 @@ export async function GET(request: Request) {
             .eq('id', user.id)
         }
 
+        const shareCookie = cookieStore.get('signup_share_contact')?.value
+        if (shareCookie === '1' || shareCookie === '0') {
+          await supabase
+            .from('profiles')
+            .update({ share_contact_with_vendors: shareCookie === '1' })
+            .eq('id', user.id)
+          cookieStore.delete('signup_share_contact')
+        }
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('role')

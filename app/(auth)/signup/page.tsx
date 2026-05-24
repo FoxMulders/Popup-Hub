@@ -56,6 +56,7 @@ function SignupForm() {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
+  const [shareContactWithVendors, setShareContactWithVendors] = useState(false)
 
   const canSubmit = termsAccepted && !loading
 
@@ -65,6 +66,9 @@ function SignupForm() {
       return
     }
     localStorage.setItem('signup_role', role)
+    if (role === 'shopper') {
+      document.cookie = `signup_share_contact=${shareContactWithVendors ? '1' : '0'}; path=/; max-age=600; SameSite=Lax`
+    }
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -85,7 +89,13 @@ function SignupForm() {
       email,
       password,
       options: {
-        data: { full_name: fullName, role },
+        data: {
+          full_name: fullName,
+          role,
+          ...(role === 'shopper'
+            ? { share_contact_with_vendors: shareContactWithVendors }
+            : {}),
+        },
         emailRedirectTo: `${window.location.origin}/api/auth/callback?role=${role}`,
       },
     })
@@ -231,6 +241,22 @@ function SignupForm() {
                 .
               </span>
             </label>
+            {role === 'shopper' && (
+              <label className="flex items-start gap-2 rounded-lg border border-sage-200 bg-sage-50/50 px-3 py-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 shrink-0 touch-manipulation"
+                  checked={shareContactWithVendors}
+                  onChange={(e) => setShareContactWithVendors(e.target.checked)}
+                />
+                <span>
+                  <span className="font-medium">Share contact info with vendors if I win</span>
+                  <span className="mt-0.5 block text-xs text-gray-500">
+                    Optional. Lets donating vendors reach you after a quarter auction win.
+                  </span>
+                </span>
+              </label>
+            )}
             <div className="sticky bottom-0 bg-white pt-2">
               <Button type="submit" className="w-full min-h-11 bg-amber-500 hover:bg-amber-600 text-white touch-manipulation" disabled={!canSubmit}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

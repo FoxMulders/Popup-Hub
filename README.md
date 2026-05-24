@@ -78,4 +78,15 @@ Interactive SVG canvas polish, venue photo tuning, and live QA desk wiring are d
 
 ## Deploy
 
-Production builds use `output: 'standalone'`. Deploy on [Vercel](https://vercel.com) with the env vars above and Square webhook URL `https://YOUR_DOMAIN/api/square/webhook`.
+Production: [popup-hub.vercel.app](https://popup-hub.vercel.app). Pushes to `master` auto-deploy on Vercel.
+
+**First-time production setup:** [docs/PRODUCTION_NEXT_STEPS.md](docs/PRODUCTION_NEXT_STEPS.md)
+
+| Task | Command |
+|------|---------|
+| Sync `.env.local` → Vercel | `npm run env:vercel` |
+| Apply Supabase migrations | `npm run db:push` |
+| Build + commit + push + deploy | `npm run ship -- "your message"` |
+| Smoke-check live site | `npm run verify:prod` |
+
+Production builds use `output: 'standalone'`. Set Square webhook URL to `https://popup-hub.vercel.app/api/square/webhook`.

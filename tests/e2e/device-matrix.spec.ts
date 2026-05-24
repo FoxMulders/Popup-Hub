@@ -9,9 +9,8 @@ test.describe('Popup Hub Multi-Platform Rendering Verification', () => {
     const mainHeader = page.getByRole('heading', { name: 'Coordinator Dashboard', level: 1 })
     await expect(mainHeader).toBeVisible()
 
-    const stripeConnect = page.getByRole('link', { name: /Connect Payouts \(Stripe\)/ }).first()
-    const stripeActive = page.getByText('Payout Account Active (Stripe Connected)').first()
-    await expect(stripeConnect.or(stripeActive)).toBeVisible()
+    const squareConnect = page.getByRole('link', { name: /Connect Square/i }).first()
+    await expect(squareConnect).toBeVisible()
 
     const myEventsHeading = page.getByRole('heading', { name: 'My Events', level: 2 })
     await expect(myEventsHeading).toBeVisible()

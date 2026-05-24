@@ -33,11 +33,16 @@ export function CoordinatorQuarterAuction({
 }: CoordinatorQuarterAuctionProps) {
   const supabase = createClient()
   const [items, setItems] = useState(initialItems)
-  const [settings] = useState(initialSettings)
+  const [settings, setSettings] = useState(initialSettings)
+  const [settingsForm, setSettingsForm] = useState({
+    paddle_purchase_credits: String(initialSettings.paddle_purchase_credits),
+    default_entry_credits: String(initialSettings.default_entry_credits),
+  })
   const [vendors, setVendors] = useState<VendorRow[]>([])
   const [approvals, setApprovals] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
+  const [entryCount, setEntryCount] = useState(0)
   const [entryCost, setEntryCost] = useState<string>(
     String(initialSettings.default_entry_credits)
   )
@@ -65,6 +70,78 @@ export function CoordinatorQuarterAuction({
   useEffect(() => {
     loadVendors()
   }, [loadVendors])
+
+  useEffect(() => {
+    if (!activeItem?.id) {
+      setEntryCount(0)
+      return
+    }
+    fetch(`/api/quarter-auction/items/${activeItem.id}/bid`)
+      .then((r) => r.json())
+      .then((json) => setEntryCount((json.entries ?? []).length))
+
+    const channel = supabase
+      .channel(`qa-entries-coord:${activeItem.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'auction_item_entries',
+          filter: `catalog_item_id=eq.${activeItem.id}`,
+        },
+        () => setEntryCount((c) => c + 1)
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [activeItem?.id, supabase])
+
+  async function saveSettings(e: React.FormEvent) {
+    e.preventDefault()
+    setBusy('settings')
+    try {
+      const res = await fetch(`/api/quarter-auction/${eventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paddle_purchase_credits: parseInt(settingsForm.paddle_purchase_credits, 10),
+          default_entry_credits: parseInt(settingsForm.default_entry_credits, 10),
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Could not save settings')
+        return
+      }
+      setSettings(json.settings)
+      toast.success('Auction settings saved')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function approveAllVendors() {
+    setBusy('approve-all')
+    try {
+      const res = await fetch(`/api/quarter-auction/${eventId}/vendors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve_all' }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Bulk approve failed')
+        return
+      }
+      await loadVendors()
+      toast.success(`Approved ${json.count ?? 0} vendor(s) for the auction`)
+    } finally {
+      setBusy(null)
+    }
+  }
 
   useEffect(() => {
     const channel = supabase
@@ -191,7 +268,54 @@ export function CoordinatorQuarterAuction({
     <div className="space-y-6">
       <Card>
         <CardHeader>
+          <CardTitle className="text-lg">Auction settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={saveSettings} className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="paddle-cost">Paddle purchase (credits)</Label>
+              <Input
+                id="paddle-cost"
+                type="number"
+                min={1}
+                value={settingsForm.paddle_purchase_credits}
+                onChange={(e) =>
+                  setSettingsForm((s) => ({ ...s, paddle_purchase_credits: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="default-entry">Default entry cost (credits)</Label>
+              <Input
+                id="default-entry"
+                type="number"
+                min={1}
+                value={settingsForm.default_entry_credits}
+                onChange={(e) =>
+                  setSettingsForm((s) => ({ ...s, default_entry_credits: e.target.value }))
+                }
+              />
+            </div>
+            <Button type="submit" disabled={busy === 'settings'} className="sm:col-span-2">
+              {busy === 'settings' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save settings'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="text-lg">Vendor approvals</CardTitle>
+          {vendors.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy === 'approve-all'}
+              onClick={approveAllVendors}
+            >
+              Approve all booth vendors
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
           {vendors.length === 0 ? (
@@ -259,6 +383,9 @@ export function CoordinatorQuarterAuction({
                 <p className="font-semibold">{activeItem.title}</p>
                 <p className="text-sm text-muted-foreground">
                   Pool: {formatCredits(activeItem.pool_credits)}
+                  {entryCount > 0 && (
+                    <> · {entryCount} paddle{entryCount === 1 ? '' : 's'} in draw pool</>
+                  )}
                 </p>
                 {activeItem.entry_cost_credits != null && (
                   <p className="text-sm">
@@ -418,8 +545,8 @@ export function CoordinatorQuarterAuction({
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Paddle purchase: {formatCredits(settings.paddle_purchase_credits)} each · Default entry:{' '}
-        {formatCredits(settings.default_entry_credits)}
+        Patrons buy paddles for {formatCredits(settings.paddle_purchase_credits)} each · Default
+        entry: {formatCredits(settings.default_entry_credits)}
       </p>
     </div>
   )

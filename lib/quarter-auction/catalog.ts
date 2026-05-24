@@ -2,6 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AuctionCatalogItem, QuarterAuctionSettings } from '@/types/database'
 import { canTransition } from '@/lib/quarter-auction/state-machine'
 import { drawWinnerFromEntries } from '@/lib/quarter-auction/draw'
+import { notifyQuarterAuctionWinner } from '@/lib/quarter-auction/notify-winner'
+import { notifyQuarterAuctionBiddingOpen } from '@/lib/quarter-auction/notify-bidding-open'
 import type { AuctionItemStatus } from '@/types/database'
 
 export async function getOrCreateSettings(
@@ -106,6 +108,20 @@ export async function transitionCatalogItem(
     .single()
 
   if (error || !updated) throw new Error('Transition failed')
+
+  if (toStatus === 'bidding_open') {
+    const entryCredits =
+      (updated as AuctionCatalogItem).entry_cost_credits ??
+      extra?.entry_cost_credits ??
+      1
+    await notifyQuarterAuctionBiddingOpen(supabase, {
+      catalogItemId: itemId,
+      itemTitle: (updated as AuctionCatalogItem).title,
+      eventId: item.event_id as string,
+      entryCostCredits: entryCredits,
+    })
+  }
+
   return updated as AuctionCatalogItem
 }
 
@@ -155,5 +171,10 @@ export async function rollDraw(
     .single()
 
   if (error || !completed) throw new Error('Draw failed')
+
+  if (completed.winner_user_id && completed.winning_paddle_number) {
+    await notifyQuarterAuctionWinner(supabase, completed as AuctionCatalogItem)
+  }
+
   return completed as AuctionCatalogItem
 }

@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { Loader2, Upload, Trophy } from 'lucide-react'
+import { TouchFileInput } from '@/components/ui/touch-file-input'
 import type { AuctionCatalogItem, Profile, QuarterAuctionSettings } from '@/types/database'
 import { statusLabel } from '@/lib/quarter-auction/state-machine'
 import { formatCredits } from '@/lib/quarter-auction/credits'
@@ -50,8 +51,31 @@ export function VendorQuarterAuction({
 
   const completedMine = myItems.filter((i) => i.status === 'completed')
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  useEffect(() => {
+    const channel = supabase
+      .channel(`qa-vendor:${eventId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'auction_catalog_items', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          const row = payload.new as AuctionCatalogItem
+          setItems((prev) => {
+            const idx = prev.findIndex((i) => i.id === row.id)
+            if (idx === -1) return [...prev, row].sort((a, b) => a.queue_position - b.queue_position)
+            const next = [...prev]
+            next[idx] = { ...next[idx], ...row }
+            return next.sort((a, b) => a.queue_position - b.queue_position)
+          })
+        }
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [eventId, supabase])
+
+  async function handleImageUpload(files: FileList | null) {
+    const file = files?.[0]
     if (!file) return
     setUploading(true)
     try {
@@ -203,25 +227,25 @@ export function VendorQuarterAuction({
             </div>
             <div className="space-y-1">
               <Label htmlFor="item-image">Image</Label>
-              <Input
-                id="item-image"
-                type="file"
+              <TouchFileInput
                 accept="image/jpeg,image/png,image/webp"
-                onChange={handleImageUpload}
                 disabled={uploading}
-                aria-describedby="item-image-hint"
+                onChange={handleImageUpload}
+                label="Tap to upload item photo (JPEG, PNG, or WebP)"
+                preview={
+                  imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt="Preview of uploaded auction item"
+                      width={80}
+                      height={80}
+                      className="rounded-lg object-contain bg-slate-50"
+                    />
+                  ) : undefined
+                }
               />
-              <p id="item-image-hint" className="text-xs text-muted-foreground">
-                JPEG, PNG, or WebP up to 5 MB
-              </p>
-              {imageUrl && (
-                <Image
-                  src={imageUrl}
-                  alt="Preview of uploaded auction item"
-                  width={120}
-                  height={120}
-                  className="mt-2 rounded-lg object-contain bg-slate-50"
-                />
+              {imageUrl && !uploading && (
+                <p className="text-xs text-green-700">Image ready</p>
               )}
             </div>
             <Button type="submit" disabled={submitting || uploading} className="gap-1.5">

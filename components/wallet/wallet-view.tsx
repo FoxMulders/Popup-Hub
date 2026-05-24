@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
+import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
 import type { Wallet, WalletTransaction } from '@/types/database'
-import { Wallet as WalletIcon, Plus, ArrowDownLeft, ArrowUpRight, Coins, Trophy, RefreshCcw, Loader2, HelpCircle } from 'lucide-react'
+import { Wallet as WalletIcon, Plus, ArrowDownLeft, ArrowUpRight, Coins, Trophy, RefreshCcw, Loader2, HelpCircle, Gavel } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import Script from 'next/script'
 import { format } from 'date-fns'
@@ -27,6 +28,18 @@ const TX_ICONS: Record<string, React.ReactNode> = {
   quarter_drop: <Coins className="h-4 w-4 text-amber-500" />,
   auction_win: <Trophy className="h-4 w-4 text-yellow-500" />,
   refund: <RefreshCcw className="h-4 w-4 text-blue-500" />,
+  paddle_purchase: <Coins className="h-4 w-4 text-forest" />,
+  bid_entry: <Gavel className="h-4 w-4 text-amber-600" />,
+}
+
+const TX_LABELS: Record<string, string> = {
+  deposit: 'Credit purchase',
+  withdrawal: 'Withdrawal',
+  quarter_drop: 'Quarter drop',
+  auction_win: 'Auction win',
+  refund: 'Refund',
+  paddle_purchase: 'Virtual paddle',
+  bid_entry: 'Auction bid entry',
 }
 
 interface SquareCardInstance {
@@ -124,10 +137,14 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
                 <p className="text-sm text-gray-500">Available Balance</p>
                 <Tooltip>
                   <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-gray-400" /></TooltipTrigger>
-                  <TooltipContent className="max-w-xs">Your Popup Hub wallet balance. Used to pay quarter auction drops. Top up with a credit or debit card.</TooltipContent>
+                  <TooltipContent className="max-w-xs">
+                    Credits for quarter auctions. 1 credit = $0.25. Used for virtual paddles and bid
+                    entries.
+                  </TooltipContent>
                 </Tooltip>
               </div>
               <p className="text-3xl font-bold text-gray-900">{formatCents(balance)}</p>
+              <p className="text-sm text-gray-600">{formatCredits(centsToCredits(balance))}</p>
             </div>
           </div>
 
@@ -234,8 +251,8 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
                     {TX_ICONS[tx.type]}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium capitalize text-gray-900">
-                      {tx.type.replace(/_/g, ' ')}
+                    <p className="text-sm font-medium text-gray-900">
+                      {TX_LABELS[tx.type] ?? tx.type.replace(/_/g, ' ')}
                     </p>
                     <p className="text-xs text-gray-400">
                       {format(new Date(tx.created_at), 'MMM d, yyyy h:mm a')}

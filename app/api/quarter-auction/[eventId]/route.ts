@@ -55,16 +55,28 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const body = await request.json()
   const service = await createServiceClient()
+  const existing = await getOrCreateSettings(service, eventId)
+
+  const patch: Record<string, unknown> = {
+    event_id: eventId,
+    updated_at: new Date().toISOString(),
+  }
+  if (body.enabled !== undefined) patch.enabled = body.enabled
+  if (body.paddle_purchase_credits !== undefined) {
+    patch.paddle_purchase_credits = body.paddle_purchase_credits
+  }
+  if (body.default_entry_credits !== undefined) {
+    patch.default_entry_credits = body.default_entry_credits
+  }
 
   const { data, error } = await service
     .from('quarter_auction_settings')
     .upsert(
       {
-        event_id: eventId,
-        enabled: body.enabled ?? true,
-        paddle_purchase_credits: body.paddle_purchase_credits,
-        default_entry_credits: body.default_entry_credits,
-        updated_at: new Date().toISOString(),
+        enabled: existing.enabled,
+        paddle_purchase_credits: existing.paddle_purchase_credits,
+        default_entry_credits: existing.default_entry_credits,
+        ...patch,
       },
       { onConflict: 'event_id' }
     )

@@ -14,32 +14,37 @@ import Link from 'next/link'
 import { Plus, Calendar, Clock, DollarSign } from 'lucide-react'
 import type { Event } from '@/types/database'
 import { VendorAccessRequestsPanel } from '@/components/coordinator/vendor-access-requests-panel'
-import {
-  CoordinatorStripePayout,
-  CoordinatorStripeReturnNotice,
-} from '@/components/coordinator/coordinator-stripe-payout'
 
 async function CoordinatorStats({ userId }: { userId: string }) {
   const supabase = await createClient()
   const { data: myEventIds } = await supabase.from('events').select('id').eq('coordinator_id', userId)
   const eventIds = myEventIds?.map((e) => e.id) ?? []
 
-  const [{ count: totalEvents }, { count: pendingApplications }, { data: revenueRows }] =
-    await Promise.all([
-      supabase.from('events').select('id', { count: 'exact', head: true }).eq('coordinator_id', userId),
-      eventIds.length > 0
-        ? supabase
-            .from('booth_applications')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'pending')
-            .in('event_id', eventIds)
-        : Promise.resolve({ count: 0 }),
-      supabase
-        .from('platform_transactions')
-        .select('organizer_payout_amount')
-        .eq('coordinator_id', userId)
-        .eq('status', 'completed'),
-    ])
+  const [
+    { count: totalEvents },
+    { count: pendingApplications },
+    { data: revenueRows },
+    { data: profile },
+  ] = await Promise.all([
+    supabase.from('events').select('id', { count: 'exact', head: true }).eq('coordinator_id', userId),
+    eventIds.length > 0
+      ? supabase
+          .from('booth_applications')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending')
+          .in('event_id', eventIds)
+      : Promise.resolve({ count: 0 }),
+    supabase
+      .from('platform_transactions')
+      .select('organizer_payout_amount')
+      .eq('coordinator_id', userId)
+      .eq('status', 'completed'),
+    supabase
+      .from('profiles')
+      .select('payout_onboarding_status, payout_account_id')
+      .eq('id', userId)
+      .single(),
+  ])
 
   const totalRevenueCents =
     revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
@@ -47,6 +52,9 @@ async function CoordinatorStats({ userId }: { userId: string }) {
     style: 'currency',
     currency: 'CAD',
   }).format(totalRevenueCents / 100)
+
+  const squareConnected =
+    profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -72,9 +80,17 @@ async function CoordinatorStats({ userId }: { userId: string }) {
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Stripe Payouts</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Square Payouts</CardTitle></CardHeader>
         <CardContent className="flex items-center gap-2">
-          <CoordinatorStripePayout userId={userId} variant="card" />
+          {squareConnected ? (
+            <span className="text-sm font-medium text-sage-700">Connected</span>
+          ) : (
+            <Link href="/coordinator/square-connect">
+              <Button variant="link" size="sm" className="h-auto p-0 text-sm text-sage-700">
+                Connect Square →
+              </Button>
+            </Link>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -99,12 +115,7 @@ async function MyEvents({ userId }: { userId: string }) {
   )
 }
 
-export default async function CoordinatorDashboard({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string }>
-}) {
-  const { status } = await searchParams
+export default async function CoordinatorDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -123,16 +134,15 @@ export default async function CoordinatorDashboard({
           <h1 className="font-heading text-3xl font-semibold text-foreground">Coordinator Dashboard</h1>
           <p className="mt-1 text-muted-foreground">Manage your markets and vendors</p>
         </div>
-        <div className="flex flex-col items-stretch gap-2 sm:items-end">
-          <CoordinatorStripeReturnNotice userId={user.id} status={status} />
-          <div className="flex items-center gap-2">
-            <CoordinatorStripePayout userId={user.id} />
-            <Link href="/coordinator/events/new">
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />New Event
-              </Button>
-            </Link>
-          </div>
+        <div className="flex items-center gap-2">
+          <Link href="/coordinator/square-connect">
+            <Button variant="outline" size="sm">Connect Square</Button>
+          </Link>
+          <Link href="/coordinator/events/new">
+            <Button size="sm">
+              <Plus className="mr-2 h-4 w-4" />New Event
+            </Button>
+          </Link>
         </div>
       </div>
 

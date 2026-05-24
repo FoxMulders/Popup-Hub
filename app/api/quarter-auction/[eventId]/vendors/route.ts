@@ -17,6 +17,42 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json()
+
+  if (body.action === 'approve_all') {
+    const { data: event } = await supabase
+      .from('events')
+      .select('coordinator_id')
+      .eq('id', eventId)
+      .single()
+
+    if (!event || event.coordinator_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const service = await createServiceClient()
+    const { data: apps } = await service
+      .from('booth_applications')
+      .select('vendor_id')
+      .eq('event_id', eventId)
+      .eq('status', 'approved')
+
+    const rows = (apps ?? []).map((a) => ({
+      event_id: eventId,
+      vendor_id: a.vendor_id,
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+    }))
+
+    if (rows.length > 0) {
+      const { error } = await service.from('quarter_auction_vendor_approvals').upsert(rows)
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 422 })
+      }
+    }
+
+    return NextResponse.json({ success: true, count: rows.length })
+  }
+
   const { vendor_id, approved } = body as { vendor_id: string; approved: boolean }
 
   if (!vendor_id) {
