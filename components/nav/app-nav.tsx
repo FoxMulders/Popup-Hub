@@ -109,7 +109,7 @@ export function AppNav({
 
           <div className="flex items-center gap-2">
             <Link href="/notifications">
-              <Button variant="ghost" size="icon" className="relative h-9 w-9">
+              <Button variant="ghost" size="icon" className="relative min-h-11 min-w-11">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <Badge className="absolute -right-0.5 -top-0.5 h-4 min-w-4 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white leading-none flex items-center justify-center">
@@ -122,7 +122,7 @@ export function AppNav({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <button className="h-9 w-9 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <button className="min-h-11 min-w-11 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <UserAvatar
                       userId={profile.id}
                       profile={avatarProfile}

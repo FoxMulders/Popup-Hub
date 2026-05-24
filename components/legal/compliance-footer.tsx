@@ -1,10 +1,5 @@
 import Link from 'next/link'
-
-const LEGAL_LINKS = [
-  { href: '/legal/privacy', label: 'Privacy Policy' },
-  { href: '/legal/terms', label: 'Terms of Service' },
-  { href: '/legal/accessibility', label: 'Accessibility' },
-] as const
+import { LEGAL_LINKS } from '@/lib/legal/links'
 
 export function ComplianceFooter() {
   return (
@@ -15,7 +10,10 @@ export function ComplianceFooter() {
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {LEGAL_LINKS.map(({ href, label }) => (
               <li key={href}>
-                <Link href={href} className="font-medium text-foreground/80 hover:text-sage-700 hover:underline">
+                <Link
+                  href={href}
+                  className="inline-flex min-h-11 items-center font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation"
+                >
                   {label}
                 </Link>
               </li>

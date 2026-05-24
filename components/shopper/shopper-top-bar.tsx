@@ -86,7 +86,7 @@ export function ShopperTopBar({
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <button className="h-9 w-9 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <button className="min-h-11 min-w-11 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       {avatarProfile ? (
                         <UserAvatar
                           userId={profile.id}

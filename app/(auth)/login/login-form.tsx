@@ -145,7 +145,7 @@ export default function LoginForm() {
         <CardContent className="space-y-4">
           <Button
             variant="outline"
-            className="w-full h-10 gap-2"
+            className="w-full min-h-11 gap-2 touch-manipulation"
             onClick={handleGoogleSignIn}
             type="button"
           >
@@ -187,7 +187,7 @@ export default function LoginForm() {
               />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full h-10" disabled={loading}>
+            <Button type="submit" className="w-full min-h-11 touch-manipulation" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
             </Button>
           </form>

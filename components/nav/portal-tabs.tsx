@@ -69,7 +69,7 @@ export function PortalTabs({
             disabled={pending}
             onClick={() => void switchPortal(portal)}
             className={cn(
-              'shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors touch-manipulation sm:px-3 sm:text-sm',
+              'shrink-0 rounded-md px-2.5 py-2 text-xs font-medium transition-colors touch-manipulation min-h-11 sm:px-3 sm:text-sm',
               selected
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground',

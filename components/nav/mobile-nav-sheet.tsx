@@ -34,7 +34,7 @@ export function MobileNavSheet({
       <button
         type="button"
         className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-lg hover:bg-canvas touch-manipulation',
+          'flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-canvas touch-manipulation',
           className
         )}
         aria-label={open ? 'Close menu' : 'Open menu'}

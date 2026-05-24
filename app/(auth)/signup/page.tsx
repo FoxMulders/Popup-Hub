@@ -177,7 +177,7 @@ function SignupForm() {
                 return (
                   <label
                     key={id}
-                    className={`flex cursor-pointer flex-col items-center rounded-xl border-2 p-3 text-center transition ${
+                    className={`flex min-h-[4.5rem] cursor-pointer touch-manipulation flex-col items-center rounded-xl border-2 p-3 text-center transition ${
                       selected
                         ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-200'
                         : 'border-gray-200 hover:border-amber-300'
