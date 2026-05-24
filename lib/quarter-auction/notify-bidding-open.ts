@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { QUARTERS_IN_HEADLINE } from '@/lib/quarter-auction/credits'
 
 interface NotifyBiddingOpenParams {
   catalogItemId: string
@@ -24,7 +25,7 @@ export async function notifyQuarterAuctionBiddingOpen(
 
   if (userIds.size === 0) return 0
 
-  const message = `🔴 Bidding is open for "${itemTitle}" — ${entryCostCredits} credit${entryCostCredits === 1 ? '' : 's'} per paddle. Select your paddles now!`
+  const message = `🔴 ${QUARTERS_IN_HEADLINE} "${itemTitle}" — ${entryCostCredits} credit${entryCostCredits === 1 ? '' : 's'} per paddle. Select your paddles now!`
 
   const rows = Array.from(userIds).map((userId) => ({
     user_id: userId,

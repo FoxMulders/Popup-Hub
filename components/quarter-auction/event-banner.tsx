@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Gavel } from 'lucide-react'
-import { statusLabel } from '@/lib/quarter-auction/state-machine'
+import { statusLabel, patronStatusHeadline } from '@/lib/quarter-auction/state-machine'
 
 interface QuarterAuctionEventBannerProps {
   eventId: string
@@ -54,7 +54,10 @@ export async function QuarterAuctionEventBanner({
           </p>
           {live ? (
             <p className="mt-0.5 text-sm text-muted-foreground">
-              {live.title} · {statusLabel(live.status)}
+              {live.title} ·{' '}
+              {variant === 'patron' && live.status === 'bidding_open'
+                ? patronStatusHeadline('bidding_open')
+                : statusLabel(live.status)}
             </p>
           ) : (
             <p className="mt-0.5 text-sm text-muted-foreground">

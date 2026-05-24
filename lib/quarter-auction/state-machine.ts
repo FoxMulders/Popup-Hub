@@ -1,4 +1,5 @@
 import type { AuctionItemStatus } from '@/types/database'
+import { QUARTERS_IN_HEADLINE } from '@/lib/quarter-auction/credits'
 
 const TRANSITIONS: Record<AuctionItemStatus, AuctionItemStatus[]> = {
   draft: ['queued', 'cancelled'],
@@ -36,6 +37,11 @@ export function statusLabel(status: AuctionItemStatus): string {
     cancelled: 'Cancelled',
   }
   return labels[status]
+}
+
+export function patronStatusHeadline(status: AuctionItemStatus): string | null {
+  if (status === 'bidding_open') return QUARTERS_IN_HEADLINE
+  return null
 }
 
 export function patronScreenForStatus(status: AuctionItemStatus): string {

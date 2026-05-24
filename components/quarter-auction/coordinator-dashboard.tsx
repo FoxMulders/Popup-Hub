@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 import { GripVertical, Loader2, Play, Square, Dices, Check, UserCheck } from 'lucide-react'
 import type { AuctionCatalogItem, QuarterAuctionSettings } from '@/types/database'
 import { statusLabel } from '@/lib/quarter-auction/state-machine'
-import { formatCredits } from '@/lib/quarter-auction/credits'
+import { formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-auction/credits'
 import { cn } from '@/lib/utils'
 
 interface CoordinatorQuarterAuctionProps {
@@ -283,6 +283,9 @@ export function CoordinatorQuarterAuction({
                   setSettingsForm((s) => ({ ...s, paddle_purchase_credits: e.target.value }))
                 }
               />
+              <p className="text-xs text-muted-foreground">
+                Default: {formatCredits(DEFAULT_PADDLE_PURCHASE_CREDITS)} per paddle
+              </p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="default-entry">Default entry cost (credits)</Label>
@@ -443,7 +446,7 @@ export function CoordinatorQuarterAuction({
 
             {activeItem.status === 'bidding_closed' && (
               <Button
-                className="gap-1.5 bg-amber-600 hover:bg-amber-700"
+                className="gap-1.5 bg-harvest-600 hover:bg-harvest-700"
                 disabled={!!busy}
                 onClick={() => itemAction(activeItem.id, 'draw')}
               >
@@ -506,7 +509,7 @@ export function CoordinatorQuarterAuction({
                     alt=""
                     width={48}
                     height={48}
-                    className="rounded object-contain bg-slate-50"
+                    className="rounded object-contain bg-canvas"
                   />
                 )}
                 <div className="min-w-0 flex-1">
@@ -545,8 +548,8 @@ export function CoordinatorQuarterAuction({
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Patrons buy paddles for {formatCredits(settings.paddle_purchase_credits)} each · Default
-        entry: {formatCredits(settings.default_entry_credits)}
+        Paddles: {formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)} each
+        · Default entry: {formatCredits(settings.default_entry_credits)} per paddle per item
       </p>
     </div>
   )

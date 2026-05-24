@@ -16,8 +16,8 @@ import type {
   QuarterAuctionSettings,
   Wallet as WalletType,
 } from '@/types/database'
-import { statusLabel } from '@/lib/quarter-auction/state-machine'
-import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
+import { statusLabel, patronStatusHeadline } from '@/lib/quarter-auction/state-machine'
+import { centsToCredits, formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-auction/credits'
 import { PaddleHoldScreen } from '@/components/quarter-auction/paddle-hold-screen'
 import { WinCelebration } from '@/components/quarter-auction/win-celebration'
 
@@ -215,6 +215,8 @@ export function PatronQuarterAuctionLive({
     liveItem.winner_user_id === userId &&
     wonPaddle != null
 
+  const biddingHeadline = liveItem ? patronStatusHeadline(liveItem.status) : null
+
   return (
     <div className="mx-auto max-w-lg space-y-4 px-4 py-6 pb-24">
       <div className="flex items-center justify-between gap-2">
@@ -258,7 +260,7 @@ export function PatronQuarterAuctionLive({
             ) : (
               <Plus className="h-4 w-4" />
             )}
-            Buy paddle ({formatCredits(settings.paddle_purchase_credits)})
+            Buy paddle ({formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)})
           </Button>
         </CardContent>
       </Card>
@@ -270,9 +272,25 @@ export function PatronQuarterAuctionLive({
           </CardContent>
         </Card>
       ) : (
+        <>
+          {biddingHeadline ? (
+            <div
+              className="rounded-xl border-2 border-harvest-400 bg-harvest-100 px-4 py-5 text-center shadow-[var(--shadow-market)]"
+              role="status"
+              aria-live="polite"
+            >
+              <p className="text-xl font-heading font-bold tracking-wide text-harvest-900 sm:text-2xl">
+                {biddingHeadline}
+              </p>
+              <p className="mt-1 text-sm text-harvest-800/90">
+                Select your paddles and tap Bid before bidding closes.
+              </p>
+            </div>
+          ) : null}
+
         <Card className="overflow-hidden">
           {liveItem.image_url && (
-            <div className="relative aspect-video bg-slate-50">
+            <div className="relative aspect-video bg-canvas">
               <Image
                 src={liveItem.image_url}
                 alt={liveItem.title}
@@ -285,7 +303,7 @@ export function PatronQuarterAuctionLive({
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
               <CardTitle className="text-lg">{liveItem.title}</CardTitle>
-              <Badge>{statusLabel(liveItem.status)}</Badge>
+              <Badge>{biddingHeadline ?? statusLabel(liveItem.status)}</Badge>
             </div>
             {liveItem.description && (
               <p className="text-sm text-muted-foreground">{liveItem.description}</p>
@@ -299,7 +317,7 @@ export function PatronQuarterAuctionLive({
           <CardContent className="space-y-4">
             {liveItem.status === 'active_price_setting' && (
               <p className="text-sm text-center text-muted-foreground" role="status">
-                Coordinator is setting the entry price…
+                Vendor presentation — bidding opens when the coordinator starts the timer.
               </p>
             )}
 
@@ -348,7 +366,7 @@ export function PatronQuarterAuctionLive({
 
             {myEntries.length > 0 && liveItem.status === 'bidding_open' && (
               <p className="text-sm text-center text-forest font-medium" role="status">
-                {myEntries.length} paddle(s) locked in — hold up your phone when bidding closes!
+                {myEntries.length} paddle(s) locked in — keep {biddingHeadline ?? 'your phone ready'}!
               </p>
             )}
 
@@ -359,6 +377,7 @@ export function PatronQuarterAuctionLive({
             )}
           </CardContent>
         </Card>
+        </>
       )}
 
       {showHoldScreen && !showWin && (

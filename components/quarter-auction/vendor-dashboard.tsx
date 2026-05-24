@@ -14,7 +14,7 @@ import { Loader2, Upload, Trophy } from 'lucide-react'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
 import type { AuctionCatalogItem, Profile, QuarterAuctionSettings } from '@/types/database'
 import { statusLabel } from '@/lib/quarter-auction/state-machine'
-import { formatCredits } from '@/lib/quarter-auction/credits'
+import { formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-auction/credits'
 import { formatCents } from '@/lib/square/client'
 import { cn } from '@/lib/utils'
 
@@ -157,7 +157,7 @@ export function VendorQuarterAuction({
                   key={item.id}
                   className={cn(
                     'flex items-center gap-3 rounded-lg border p-3',
-                    isCurrent && 'border-amber-400 bg-amber-50',
+                    isCurrent && 'border-harvest-400 bg-harvest-50',
                     isUpcoming && 'border-forest/40 bg-forest/5'
                   )}
                 >
@@ -180,7 +180,7 @@ export function VendorQuarterAuction({
                       {statusLabel(item.status)}
                     </Badge>
                   </div>
-                  {isCurrent && <Badge className="bg-amber-500">Live now</Badge>}
+                  {isCurrent && <Badge className="bg-harvest-500">Live now</Badge>}
                   {isUpcoming && <Badge variant="secondary">Up next</Badge>}
                 </div>
               )
@@ -239,13 +239,13 @@ export function VendorQuarterAuction({
                       alt="Preview of uploaded auction item"
                       width={80}
                       height={80}
-                      className="rounded-lg object-contain bg-slate-50"
+                      className="rounded-lg object-contain bg-canvas"
                     />
                   ) : undefined
                 }
               />
               {imageUrl && !uploading && (
-                <p className="text-xs text-green-700">Image ready</p>
+                <p className="text-xs text-sage-700">Image ready</p>
               )}
             </div>
             <Button type="submit" disabled={submitting || uploading} className="gap-1.5">
@@ -260,7 +260,7 @@ export function VendorQuarterAuction({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Trophy className="h-5 w-5 text-amber-500" />
+              <Trophy className="h-5 w-5 text-harvest-500" />
               Completed items
             </CardTitle>
           </CardHeader>
@@ -273,7 +273,8 @@ export function VendorQuarterAuction({
       )}
 
       <p className="text-xs text-muted-foreground">
-        Patrons buy paddles for {formatCredits(settings.paddle_purchase_credits)} each.
+        Patrons buy paddles for{' '}
+        {formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)} each.
       </p>
     </div>
   )
@@ -306,7 +307,7 @@ function VendorWinPanel({ item }: { item: AuctionCatalogItem }) {
         )}
       </p>
       {winner && winner.share_contact_with_vendors ? (
-        <div className="text-sm bg-green-50 border border-green-200 rounded p-3" role="status">
+        <div className="text-sm bg-sage-50 border border-sage-200 rounded p-3" role="status">
           <p className="font-medium text-green-900">Winner contact (opt-in)</p>
           <p>{winner.full_name}</p>
           {winner.email && <p>{winner.email}</p>}
