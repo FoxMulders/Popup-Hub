@@ -19,6 +19,8 @@ import type {
 import { statusLabel, patronStatusHeadline } from '@/lib/quarter-auction/state-machine'
 import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
 import { PaddleChipPicker } from '@/components/quarter-auction/paddle-chip-picker'
+import { PaddleChip } from '@/components/quarter-auction/paddle-chip'
+import { paddleChipTier } from '@/lib/quarter-auction/paddle-pool'
 import { PaddleHoldScreen } from '@/components/quarter-auction/paddle-hold-screen'
 import { WinCelebration } from '@/components/quarter-auction/win-celebration'
 import {
@@ -61,6 +63,14 @@ export function PatronQuarterAuctionLive({
     email?: string | null
     phone?: string | null
   } | null>(null)
+  const [participated, setParticipated] = useState(false)
+
+  useEffect(() => {
+    void fetch(`/api/quarter-auction/${eventId}/participate`)
+      .then((res) => res.json())
+      .then((json) => setParticipated(!!json.participated))
+      .catch(() => setParticipated(false))
+  }, [eventId])
 
   const liveItem = useMemo(
     () =>
@@ -236,16 +246,21 @@ export function PatronQuarterAuctionLive({
         eventStartAt={eventStartAt}
       />
 
-      <AuctionParticipationGate eventId={eventId} loginNext={`/events/${eventId}/quarter-auction`}>
-        <>
       <PaddleChipPicker
         eventId={eventId}
         settings={settings}
         ownedPaddles={paddles}
         walletBalanceCents={wallet?.balance ?? 0}
+        canCheckout={participated}
         onPurchased={handlePaddlesPurchased}
       />
 
+      <AuctionParticipationGate
+        eventId={eventId}
+        loginNext={`/events/${eventId}/quarter-auction`}
+        onParticipated={() => setParticipated(true)}
+      >
+        <>
       {!liveItem ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
@@ -316,29 +331,32 @@ export function PatronQuarterAuctionLive({
                   </p>
                 ) : (
                   <fieldset className="space-y-3">
-                    <legend className="text-sm font-medium">Select paddles for this item</legend>
-                    {availablePaddles.map((p) => (
-                      <label
-                        key={p.id}
-                        className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-5 w-5 rounded border-gray-300"
-                          checked={selectedPaddleIds.has(p.id)}
-                          onChange={(e) => {
-                            setSelectedPaddleIds((prev) => {
-                              const next = new Set(prev)
-                              if (e.target.checked) next.add(p.id)
-                              else next.delete(p.id)
-                              return next
-                            })
-                          }}
-                          aria-label={`Paddle number ${p.paddle_number}`}
-                        />
-                        <span className="font-mono font-bold">#{p.paddle_number}</span>
-                      </label>
-                    ))}
+                    <legend className="text-sm font-medium">Tap your paddle chips for this item</legend>
+                    <div className="flex flex-wrap gap-2">
+                      {availablePaddles.map((p) => {
+                        const num = parseInt(p.paddle_number, 10)
+                        const tier = Number.isFinite(num) ? paddleChipTier(num) : 'white'
+                        const selected = selectedPaddleIds.has(p.id)
+                        return (
+                          <PaddleChip
+                            key={p.id}
+                            number={p.paddle_number}
+                            tier={tier}
+                            state={selected ? 'selected' : 'owned'}
+                            size="lg"
+                            selectableOwned
+                            onClick={() => {
+                              setSelectedPaddleIds((prev) => {
+                                const next = new Set(prev)
+                                if (next.has(p.id)) next.delete(p.id)
+                                else next.add(p.id)
+                                return next
+                              })
+                            }}
+                          />
+                        )
+                      })}
+                    </div>
                   </fieldset>
                 )}
                 <Button

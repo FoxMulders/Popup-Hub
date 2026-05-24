@@ -20,6 +20,7 @@ interface PaddleChipPickerProps {
   settings: QuarterAuctionSettings
   ownedPaddles: EventPaddle[]
   walletBalanceCents: number
+  canCheckout?: boolean
   onPurchased: (paddles: EventPaddle[], newBalanceCents: number) => void
 }
 
@@ -28,6 +29,7 @@ export function PaddleChipPicker({
   settings,
   ownedPaddles,
   walletBalanceCents,
+  canCheckout = true,
   onPurchased,
 }: PaddleChipPickerProps) {
   const poolSize = settings.paddle_pool_size ?? 100
@@ -85,6 +87,10 @@ export function PaddleChipPicker({
   }
 
   async function checkout() {
+    if (!canCheckout) {
+      toast.error('Tap Participate at this event before purchasing paddles')
+      return
+    }
     if (cart.size === 0) {
       toast.error('Add paddle chips to your cart first')
       return
@@ -151,6 +157,7 @@ export function PaddleChipPicker({
               number={label}
               tier={paddleChipTier(n)}
               state={chipState(n)}
+              size="lg"
               onClick={() => toggleCart(n)}
               disabled={loadingPool || checkingOut}
             />
@@ -229,16 +236,23 @@ export function PaddleChipPicker({
             <p className="text-xs text-muted-foreground">No paddles selected yet.</p>
           )}
           <Button
-            className="w-full"
+            className="w-full min-h-12 text-base"
             disabled={checkingOut || cart.size === 0 || !canAfford}
             onClick={() => void checkout()}
           >
             {checkingOut ? (
               <Loader2 className="h-4 w-4 animate-spin" />
+            ) : !canCheckout ? (
+              'Participate to purchase paddles'
             ) : (
               `Checkout with wallet (${formatCredits(cartTotalCredits)})`
             )}
           </Button>
+          {!canCheckout ? (
+            <p className="text-xs text-center text-muted-foreground">
+              Join the auction below, then tap chips to buy paddle numbers.
+            </p>
+          ) : null}
           {cart.size > 0 && !canAfford ? (
             <p className="text-xs text-destructive text-center">Not enough quarters in your wallet.</p>
           ) : null}

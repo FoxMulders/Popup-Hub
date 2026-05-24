@@ -10,8 +10,9 @@ import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
+import { WalletQrScanner } from '@/components/coordinator/wallet-qr-scanner'
 import type { WalletDepositRequest, WalletWithdrawalRequest, Profile } from '@/types/database'
-import { Banknote, CheckCircle, Loader2, QrCode, ScanLine, Undo2 } from 'lucide-react'
+import { Banknote, CheckCircle, Camera, Loader2, QrCode, ScanLine, Undo2 } from 'lucide-react'
 
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000]
 
@@ -49,6 +50,7 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
     amountCents: number
     newBalance: number
   } | null>(null)
+  const [scannerOpen, setScannerOpen] = useState(false)
 
   const resolvedUserId = parseWalletTopUpQrPayload(scanInput)
 
@@ -202,6 +204,14 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
 
   return (
     <div className="space-y-6">
+    <WalletQrScanner
+      open={scannerOpen}
+      onClose={() => setScannerOpen(false)}
+      onScan={(payload) => {
+        setScanInput(payload)
+        toast.success('Patron wallet QR scanned')
+      }}
+    />
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
@@ -218,15 +228,26 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
 
           <div className="space-y-1">
             <Label htmlFor="patron-qr">Patron QR / wallet code</Label>
-            <div className="relative">
-              <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="patron-qr"
-                className="min-h-11 pl-9 font-mono text-sm"
-                placeholder="Scan QR or paste wallet ID"
-                value={scanInput}
-                onChange={(e) => setScanInput(e.target.value)}
-              />
+            <div className="flex gap-2">
+              <div className="relative min-w-0 flex-1">
+                <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="patron-qr"
+                  className="min-h-11 pl-9 font-mono text-sm"
+                  placeholder="Scan QR or paste wallet ID"
+                  value={scanInput}
+                  onChange={(e) => setScanInput(e.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 shrink-0 gap-1.5 px-3"
+                onClick={() => setScannerOpen(true)}
+              >
+                <Camera className="h-4 w-4" />
+                <span className="hidden sm:inline">Scan</span>
+              </Button>
             </div>
             {resolvedUserId ? (
               <p className="text-xs text-sage-700">Patron ID recognized</p>
@@ -269,12 +290,22 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
 
           <Button
             type="button"
-            className="w-full min-h-11 gap-2 bg-forest hover:bg-forest-deep"
+            className="w-full min-h-12 gap-2 bg-forest hover:bg-forest-deep text-base"
             disabled={crediting || !resolvedUserId}
             onClick={creditCash}
           >
             {crediting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
             Credit {formatCents(customDollars ? Math.round(parseFloat(customDollars) * 100) : amountCents)}
+          </Button>
+
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full min-h-12 gap-2 sm:hidden"
+            onClick={() => setScannerOpen(true)}
+          >
+            <Camera className="h-5 w-5" />
+            Scan patron QR with camera
           </Button>
 
           {lastCredit ? (
@@ -360,15 +391,26 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
 
           <div className="space-y-1">
             <Label htmlFor="patron-qr-payout">Patron QR / wallet code</Label>
-            <div className="relative">
-              <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="patron-qr-payout"
-                className="min-h-11 pl-9 font-mono text-sm"
-                placeholder="Scan QR or paste wallet ID"
-                value={scanInput}
-                onChange={(e) => setScanInput(e.target.value)}
-              />
+            <div className="flex gap-2">
+              <div className="relative min-w-0 flex-1">
+                <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="patron-qr-payout"
+                  className="min-h-11 pl-9 font-mono text-sm"
+                  placeholder="Scan QR or paste wallet ID"
+                  value={scanInput}
+                  onChange={(e) => setScanInput(e.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 shrink-0 gap-1.5 px-3"
+                onClick={() => setScannerOpen(true)}
+              >
+                <Camera className="h-4 w-4" />
+                <span className="hidden sm:inline">Scan</span>
+              </Button>
             </div>
           </div>
 
