@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -45,8 +45,33 @@ export default function LoginForm() {
     if (authError === 'invalid_mock_role') {
       return 'Invalid mock_role. Use coordinator, vendor, or shopper.'
     }
+    if (authError === 'auth_callback_failed') {
+      return authErrorDetail
+        ? `Google sign-in could not be completed: ${authErrorDetail}`
+        : 'Google sign-in could not be completed. Please try again.'
+    }
+    if (authError === 'auth_callback_missing_code') {
+      return 'Sign-in link was incomplete. Please try again.'
+    }
+    if (authError === 'oauth_cancelled') {
+      return 'Sign-in was cancelled.'
+    }
+    if (authError === 'oauth_failed') {
+      return authErrorDetail
+        ? `Google sign-in failed: ${authErrorDetail}`
+        : 'Google sign-in failed. Please try again or use email sign-in.'
+    }
     return authError
   })
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (!code) return
+
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('redirectTo')
+    window.location.replace(`/api/auth/callback?${params.toString()}`)
+  }, [searchParams])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -86,13 +111,20 @@ export default function LoginForm() {
   }
 
   async function handleGoogleSignIn() {
-    const next = encodeURIComponent(redirectTo)
-    await supabase.auth.signInWithOAuth({
+    setError(null)
+    const params = new URLSearchParams({ next: redirectTo })
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?next=${next}`,
+        redirectTo: `${window.location.origin}/api/auth/callback?${params.toString()}`,
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     })
+    if (oauthError) {
+      setError(oauthError.message)
+    }
   }
 
   return (

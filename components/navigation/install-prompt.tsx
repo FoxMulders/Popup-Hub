@@ -3,6 +3,7 @@
 import { Share, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { PopupHubIcon } from '@/components/brand/popup-hub-logo'
 import { useInstallPrompt } from '@/hooks/use-install-prompt'
 
 export function InstallPrompt() {
@@ -32,8 +33,8 @@ export function InstallPrompt() {
     >
       {showAndroidPrompt ? (
         <div className="pointer-events-auto flex w-full max-w-lg items-center gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-lg">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-stone-100 text-xl">
-            📲
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-transparent">
+            <PopupHubIcon className="h-10 w-10" title="Popup Hub" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">Install Popup Hub App</p>

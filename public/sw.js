@@ -1,5 +1,16 @@
-const CACHE_NAME = 'popup-hub-shell-v1'
-const PRECACHE = ['/', '/discover', '/manifest.json', '/icons/icon-192x192.png', '/icons/icon-512x512.png']
+const CACHE_NAME = 'popup-hub-shell-v3'
+const PRECACHE = [
+  '/',
+  '/discover',
+  '/manifest.json',
+  '/popup-hub-logo.png',
+  '/popup-hub-icon.png',
+  '/favicon.ico',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/icons/icon-maskable-512x512.png',
+  '/icons/apple-touch-icon.png',
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

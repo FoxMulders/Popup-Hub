@@ -1,71 +1,130 @@
-import { NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { createClient } from '@/lib/supabase/server'
-import { getDefaultDashboard } from '@/lib/portals/active-portal'
-import { countCoordinatorApprovals } from '@/lib/vendor/access'
+import { NextResponse } from 'next/server'
+import { getDefaultDashboard, parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
 import type { Role } from '@/types/database'
 
 const VALID_SIGNUP_ROLES: Role[] = ['shopper', 'vendor', 'coordinator']
 
-/** Supabase SSR auth cookie prefix — clear stale session before magic-link exchange. */
-function isSupabaseAuthCookie(name: string): boolean {
-  return name.startsWith('sb-') || name.includes('supabase-auth')
+function safeRedirectPath(value: string | null, fallback = '/'): string {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) {
+    return fallback
+  }
+  return value
+}
+
+function loginErrorRedirect(
+  origin: string,
+  error: string,
+  detail?: string
+): NextResponse {
+  const url = new URL('/login', origin)
+  url.searchParams.set('error', error)
+  if (detail) {
+    url.searchParams.set('detail', detail)
+  }
+  return NextResponse.redirect(url)
+}
+
+function resolveRedirectOrigin(request: Request, fallbackOrigin: string): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+
+  if (process.env.NODE_ENV === 'development') {
+    return fallbackOrigin
+  }
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`
+  }
+
+  return fallbackOrigin
 }
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
-  const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/'
-  const roleParam = searchParams.get('role')
+  const redirectOrigin = resolveRedirectOrigin(request, origin)
 
-  if (code) {
-    const cookieStore = await cookies()
-
-    for (const { name } of cookieStore.getAll()) {
-      if (isSupabaseAuthCookie(name)) {
-        cookieStore.delete(name)
-      }
+  const oauthError = searchParams.get('error')
+  if (oauthError) {
+    if (oauthError === 'access_denied') {
+      return loginErrorRedirect(redirectOrigin, 'oauth_cancelled')
     }
-
-    const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-    if (!error) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        if (roleParam && VALID_SIGNUP_ROLES.includes(roleParam as Role)) {
-          await supabase
-            .from('profiles')
-            .update({ role: roleParam as Role })
-            .eq('id', user.id)
-        }
-
-        const shareCookie = cookieStore.get('signup_share_contact')?.value
-        if (shareCookie === '1' || shareCookie === '0') {
-          await supabase
-            .from('profiles')
-            .update({ share_contact_with_vendors: shareCookie === '1' })
-            .eq('id', user.id)
-          cookieStore.delete('signup_share_contact')
-        }
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-
-        if (profile) {
-          const approvalCount = await countCoordinatorApprovals(supabase, user.id)
-          const dashboard = getDefaultDashboard(profile.role, approvalCount)
-          return NextResponse.redirect(`${origin}${dashboard}`)
-        }
-      }
-      return NextResponse.redirect(`${origin}${next}`)
-    }
+    const description = searchParams.get('error_description') ?? oauthError
+    return loginErrorRedirect(redirectOrigin, 'oauth_failed', description)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  const code = searchParams.get('code')
+  const next = safeRedirectPath(searchParams.get('next'))
+  const roleParam = searchParams.get('role')
+
+  if (!code) {
+    return loginErrorRedirect(redirectOrigin, 'auth_callback_missing_code')
+  }
+
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+  if (error) {
+    return loginErrorRedirect(redirectOrigin, 'auth_callback_failed', error.message)
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return loginErrorRedirect(
+      redirectOrigin,
+      'auth_callback_failed',
+      'No user returned after sign-in.'
+    )
+  }
+
+  if (roleParam && VALID_SIGNUP_ROLES.includes(roleParam as Role)) {
+    await supabase
+      .from('profiles')
+      .update({ role: roleParam as Role })
+      .eq('id', user.id)
+  }
+
+  const shareCookie = cookieStore.get('signup_share_contact')?.value
+  if (shareCookie === '1' || shareCookie === '0') {
+    await supabase
+      .from('profiles')
+      .update({ share_contact_with_vendors: shareCookie === '1' })
+      .eq('id', user.id)
+    cookieStore.delete('signup_share_contact')
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile) {
+    const activePortal = parseActivePortal(cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value)
+    const dashboard = getDefaultDashboard(profile.role, 0, activePortal)
+    return NextResponse.redirect(`${redirectOrigin}${dashboard}`)
+  }
+
+  return NextResponse.redirect(`${redirectOrigin}${next}`)
 }

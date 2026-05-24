@@ -1,41 +1,98 @@
-import type { Profile } from '@/types/database'
-import { canAccessVendorPortal } from '@/lib/auth/rbac'
+import type { Profile, Role } from '@/types/database'
 
-export type ActivePortal = 'markets' | 'vendor'
+export type ActivePortal = 'patron' | 'vendor' | 'coordinator'
 
 export const ACTIVE_PORTAL_COOKIE = 'active_portal'
 
+export const PORTAL_LABELS: Record<ActivePortal, string> = {
+  patron: 'Patron',
+  vendor: 'Vendor',
+  coordinator: 'Coordinator',
+}
+
+export function getPortalHome(portal: ActivePortal): string {
+  switch (portal) {
+    case 'coordinator':
+      return '/coordinator/dashboard'
+    case 'vendor':
+      return '/vendor/dashboard'
+    case 'patron':
+      return '/discover'
+  }
+}
+
+/** Portals a user may switch between. Shoppers get none (no switcher). */
+export function getAvailablePortals(role: Role | string | null | undefined): ActivePortal[] {
+  const normalized = (role ?? 'shopper') as Role
+  if (normalized === 'coordinator') {
+    return ['patron', 'vendor', 'coordinator']
+  }
+  if (normalized === 'vendor') {
+    return ['patron', 'vendor']
+  }
+  return []
+}
+
+export function canAccessPortal(
+  role: Role | string | null | undefined,
+  portal: ActivePortal
+): boolean {
+  return getAvailablePortals(role).includes(portal)
+}
+
 export function parseActivePortal(value: string | undefined): ActivePortal | null {
-  if (value === 'markets' || value === 'vendor') return value
+  if (value === 'patron' || value === 'vendor' || value === 'coordinator') {
+    return value
+  }
+  // Legacy cookie value
+  if (value === 'markets') return 'patron'
   return null
+}
+
+export function detectPortalFromPath(pathname: string): ActivePortal {
+  if (pathname.startsWith('/coordinator')) return 'coordinator'
+  if (pathname.startsWith('/vendor')) return 'vendor'
+  return 'patron'
 }
 
 export function resolveActivePortal(
   cookieValue: string | undefined,
   profile: Profile | null,
-  approvalCount: number
+  pathname?: string
 ): ActivePortal {
+  const role = profile?.role ?? 'shopper'
+  const available = getAvailablePortals(role)
   const parsed = parseActivePortal(cookieValue)
-  if (parsed === 'vendor' && canAccessVendorPortal(profile?.role ?? 'shopper', approvalCount)) {
-    return 'vendor'
-  }
-  if (parsed === 'markets') return 'markets'
 
-  if (canAccessVendorPortal(profile?.role ?? 'shopper', approvalCount)) return 'vendor'
-  return 'markets'
+  if (parsed && available.includes(parsed)) {
+    return parsed
+  }
+
+  if (pathname) {
+    const fromPath = detectPortalFromPath(pathname)
+    if (fromPath === 'patron' || available.includes(fromPath)) {
+      return fromPath
+    }
+  }
+
+  if (role === 'coordinator') return 'coordinator'
+  if (role === 'vendor') return 'vendor'
+  return 'patron'
 }
 
 export function getDefaultDashboard(
   role: string,
-  approvalCount: number,
+  _approvalCount: number,
   activePortal?: ActivePortal | null
 ): string {
-  if (role === 'coordinator') return '/coordinator/dashboard'
-  if (canAccessVendorPortal(role as Profile['role'], approvalCount) && activePortal === 'vendor') {
-    return '/vendor/dashboard'
+  const normalized = (role ?? 'shopper') as Role
+  const portal = activePortal ?? (normalized === 'coordinator' ? 'coordinator' : normalized === 'vendor' ? 'vendor' : 'patron')
+
+  if (canAccessPortal(normalized, portal)) {
+    return getPortalHome(portal)
   }
-  if (canAccessVendorPortal(role as Profile['role'], approvalCount) && role === 'vendor') {
-    return '/vendor/dashboard'
-  }
-  return '/discover'
+
+  if (normalized === 'coordinator') return getPortalHome('coordinator')
+  if (normalized === 'vendor') return getPortalHome('vendor')
+  return getPortalHome('patron')
 }

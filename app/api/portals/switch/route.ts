@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { ACTIVE_PORTAL_COOKIE, type ActivePortal } from '@/lib/portals/active-portal'
-import { countCoordinatorApprovals } from '@/lib/vendor/access'
-import { canAccessVendorPortal } from '@/lib/auth/rbac'
+import {
+  ACTIVE_PORTAL_COOKIE,
+  canAccessPortal,
+  getPortalHome,
+  type ActivePortal,
+} from '@/lib/portals/active-portal'
 import type { Role } from '@/types/database'
+
+const VALID_PORTALS: ActivePortal[] = ['patron', 'vendor', 'coordinator']
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -17,22 +22,19 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as { portal?: ActivePortal }
   const portal = body.portal
-  if (portal !== 'markets' && portal !== 'vendor') {
+  if (!portal || !VALID_PORTALS.includes(portal)) {
     return NextResponse.json({ error: 'Invalid portal' }, { status: 400 })
   }
 
-  if (portal === 'vendor') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-    const role = (profile?.role as Role | undefined) ?? 'shopper'
-    const approvalCount = await countCoordinatorApprovals(supabase, user.id)
-    if (!canAccessVendorPortal(role, approvalCount)) {
-      return NextResponse.json({ error: 'Vendor portal not unlocked' }, { status: 403 })
-    }
+  const role = (profile?.role as Role | undefined) ?? 'shopper'
+  if (!canAccessPortal(role, portal)) {
+    return NextResponse.json({ error: 'Portal not available for this account' }, { status: 403 })
   }
 
   const cookieStore = await cookies()
@@ -42,5 +44,6 @@ export async function POST(request: Request) {
     sameSite: 'lax',
   })
 
-  return NextResponse.json({ ok: true, portal })
+  const redirectTo = getPortalHome(portal)
+  return NextResponse.json({ ok: true, portal, redirectTo })
 }

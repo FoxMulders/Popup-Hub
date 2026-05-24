@@ -207,7 +207,7 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
       ) : view === 'map' ? (
         <div
           className={cn(
-            'mt-4 overflow-hidden rounded-2xl border shadow-sm',
+            'relative isolate z-0 mt-4 overflow-hidden rounded-2xl border shadow-sm',
             'h-[min(70vh,520px)] md:h-[480px]'
           )}
         >
@@ -219,12 +219,6 @@ export function DiscoverScreen({ events, vendorCounts, favoriteIds }: DiscoverSc
           selectedDate={filterDate}
           favoriteIds={favoriteIds}
         />
-      )}
-
-      {view === 'list' && filtered.length > 0 && (
-        <div className="mt-4 hidden overflow-hidden rounded-2xl border shadow-sm md:block md:h-[360px]">
-          <EventMap events={filtered} center={origin} />
-        </div>
       )}
     </div>
   )

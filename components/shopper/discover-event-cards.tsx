@@ -34,6 +34,7 @@ export function DiscoverEventCards({
           <EventCard
             event={event}
             href={`/events/${event.id}`}
+            selectedDate={selectedDate}
             hoursLabel={getEventHoursForDate(event, selectedDate)}
             distanceLabel={
               event.distance_km != null ? formatDistance(event.distance_km) : undefined

@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { BrandLogoMark, PopupHubLogo } from '@/components/brand/popup-hub-logo'
+import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
 import { Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { SIGNUP_ROLES, type SignupRole } from '@/lib/auth/rbac'
@@ -60,6 +60,15 @@ function SignupForm() {
 
   const canSubmit = termsAccepted && !loading
 
+  useEffect(() => {
+    const code = params.get('code')
+    if (!code) return
+
+    const search = new URLSearchParams(params.toString())
+    search.delete('redirectTo')
+    window.location.replace(`/api/auth/callback?${search.toString()}`)
+  }, [params])
+
   async function handleGoogleSignUp() {
     if (!termsAccepted) {
       toast.error('Please accept the terms and conditions first.')
@@ -70,12 +79,18 @@ function SignupForm() {
       document.cookie = `signup_share_contact=${shareContactWithVendors ? '1' : '0'}; path=/; max-age=600; SameSite=Lax`
     }
     const supabase = createClient()
-    await supabase.auth.signInWithOAuth({
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback?role=${role}`,
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     })
+    if (oauthError) {
+      toast.error(oauthError.message)
+    }
   }
 
   async function handleSignup(e: React.FormEvent) {
@@ -115,8 +130,8 @@ function SignupForm() {
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50 px-4">
         <Card className="w-full max-w-md shadow-lg text-center">
           <CardContent className="pt-10 pb-8 px-8">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-              <PopupHubLogo className="h-9 w-9" title="Popup Hub" />
+            <div className="mx-auto mb-4 flex justify-center">
+              <BrandLogoMark size="auth" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
             <p className="text-gray-500 mb-1">

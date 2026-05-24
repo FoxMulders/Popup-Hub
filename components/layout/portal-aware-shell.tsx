@@ -2,9 +2,10 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { ShopperShell } from '@/components/shopper/shopper-shell'
 import { VendorShell } from '@/components/vendor/vendor-shell'
-import { resolveActivePortal } from '@/lib/portals/active-portal'
-import { canAccessVendorPortal } from '@/lib/auth/rbac'
-import { countCoordinatorApprovals } from '@/lib/vendor/access'
+import {
+  ACTIVE_PORTAL_COOKIE,
+  resolveActivePortal,
+} from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 
 interface PortalAwareShellProps {
@@ -18,28 +19,19 @@ export async function PortalAwareShell({ children }: PortalAwareShellProps) {
   } = await supabase.auth.getUser()
 
   let profile: Profile | null = null
-  let approvalCount = 0
 
   if (user) {
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
     profile = data as Profile | null
-    approvalCount = await countCoordinatorApprovals(supabase, user.id)
   }
 
   const cookieStore = await cookies()
-  const portal = resolveActivePortal(
-    cookieStore.get('active_portal')?.value,
-    profile,
-    approvalCount
-  )
+  const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
+  const portal = resolveActivePortal(portalCookie, profile)
 
-  if (portal === 'vendor' && profile && canAccessVendorPortal(profile.role, approvalCount)) {
-    return (
-      <VendorShell profile={profile} approvalCount={approvalCount}>
-        {children}
-      </VendorShell>
-    )
+  if (portal === 'vendor' && profile && (profile.role === 'vendor' || profile.role === 'coordinator')) {
+    return <VendorShell profile={profile}>{children}</VendorShell>
   }
 
-  return <ShopperShell>{children}</ShopperShell>
+  return <ShopperShell profile={profile}>{children}</ShopperShell>
 }

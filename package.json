@@ -16,6 +16,7 @@
         "env:vercel:dry": "powershell -ExecutionPolicy Bypass -File ./scripts/sync-vercel-env.ps1 -DryRun",
         "verify:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/verify-production.ps1",
         "ship": "powershell -ExecutionPolicy Bypass -File ./scripts/ship.ps1 -Message",
+        "assets:logo": "node scripts/process-logo.mjs",
         "qa:layout": "npx tsx lib/booth-planner/qa-scenarios.ts",
         "qa:regression": "npx tsx lib/booth-planner/qa-regression-100.ts",
         "test:shopper-routing": "npx tsx lib/shopper/qa-pathfinding.ts",

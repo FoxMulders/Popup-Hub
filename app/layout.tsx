@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { Lora, Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
+import { BuildVersionFooter } from '@/components/brand/build-version-footer'
 import { InstallPrompt } from '@/components/navigation/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import { Toaster } from '@/components/ui/sonner'
@@ -34,10 +35,13 @@ const baseMetadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: [{ url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   appleWebApp: {
     capable: true,
@@ -62,7 +66,7 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover' as const,
-  themeColor: '#2d5016',
+  themeColor: '#7b9b52',
 }
 
 export default async function RootLayout({
@@ -80,9 +84,12 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
         <DocumentTitleSync initialRole={sessionRole} />
         <ServiceWorkerRegister />
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
+        <div className="flex min-h-full flex-1 flex-col">
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
+          <BuildVersionFooter />
+        </div>
         <InstallPrompt />
         <Toaster richColors position="top-right" />
       </body>

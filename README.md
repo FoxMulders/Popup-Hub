@@ -30,6 +30,12 @@ npm install
 npm run dev
 ```
 
+Or if PowerShell blocks `npm`, double-click **`dev.cmd`** in the project folder, or run:
+
+```cmd
+dev.cmd
+```
+
 Open **[http://localhost:3000](http://localhost:3000)**. Guests see a public landing; coordinators and vendors route to their dashboards after sign-in.
 
 **Square / card payments in dev** require HTTPS:

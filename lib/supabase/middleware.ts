@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { getDefaultDashboard } from '@/lib/portals/active-portal'
+import { getDefaultDashboard, parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
 import {
   DEV_MOCK_ROLE_PARAM,
   devMockLoginPath,
@@ -103,13 +103,9 @@ export async function updateSession(request: NextRequest) {
 
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const role = profileRole ?? 'shopper'
-    const { count } = await supabase
-      .from('coordinator_vendor_approvals')
-      .select('id', { count: 'exact', head: true })
-      .eq('vendor_user_id', user.id)
-
+    const activePortal = parseActivePortal(request.cookies.get(ACTIVE_PORTAL_COOKIE)?.value)
     const url = request.nextUrl.clone()
-    url.pathname = getDefaultDashboard(role, count ?? 0)
+    url.pathname = getDefaultDashboard(role, 0, activePortal)
     return NextResponse.redirect(url)
   }
 

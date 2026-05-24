@@ -1,8 +1,13 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AppNav } from '@/components/nav/app-nav'
 import { hasAccess } from '@/lib/auth/rbac'
-import { getDefaultDashboard } from '@/lib/portals/active-portal'
+import {
+  ACTIVE_PORTAL_COOKIE,
+  getAvailablePortals,
+  getDefaultDashboard,
+} from '@/lib/portals/active-portal'
 
 export default async function CoordinatorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -18,16 +23,20 @@ export default async function CoordinatorLayout({ children }: { children: React.
 
   if (!profile) redirect('/login')
   if (!hasAccess(profile.role, 'coordinator')) {
-    const { count } = await supabase
-      .from('coordinator_vendor_approvals')
-      .select('id', { count: 'exact', head: true })
-      .eq('vendor_user_id', user.id)
-    redirect(getDefaultDashboard(profile.role, count ?? 0))
+    redirect(getDefaultDashboard(profile.role, 0))
   }
+
+  const cookieStore = await cookies()
+  const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
+  const availablePortals = getAvailablePortals(profile.role)
 
   return (
     <div className="market-page min-h-screen max-w-full overflow-x-hidden">
-      <AppNav profile={profile} />
+      <AppNav
+        profile={profile}
+        availablePortals={availablePortals}
+        portalCookie={portalCookie}
+      />
       <main>{children}</main>
     </div>
   )
