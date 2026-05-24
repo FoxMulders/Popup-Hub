@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PopupHubLogo } from '@/components/brand/popup-hub-logo'
+import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { getBuildInfo } from '@/lib/build-info'
 import { LEGAL_LINKS } from '@/lib/legal/links'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
           </ul>
         </nav>
 
-        <PopupHubLogo className="h-7 w-auto shrink-0 sm:h-8" title="Popup Hub" />
+        <BrandLogoLockup className="shrink-0" />
 
         <div className="flex flex-col items-center gap-1 text-center">
           <p className="text-xs text-muted-foreground sm:text-sm">
