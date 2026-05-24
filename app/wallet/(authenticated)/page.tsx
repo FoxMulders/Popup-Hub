@@ -35,6 +35,7 @@ export default async function WalletPage() {
         wallet={walletRow as Wallet | null}
         transactions={(transactions as WalletTransaction[]) ?? []}
         userId={user.id}
+        userEmail={user.email ?? ''}
       />
       <div className="mt-6">
         <BoothCheckout balance={walletRow?.balance ?? 0} userId={user.id} />

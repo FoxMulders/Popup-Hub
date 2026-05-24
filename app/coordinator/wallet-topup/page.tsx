@@ -31,7 +31,8 @@ export default async function CoordinatorWalletTopUpPage({ searchParams }: Props
       <div>
         <h1 className="font-heading text-2xl font-semibold">Wallet top-up desk</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Credit patron wallets from cash at the door or confirm pending Interac e-transfers.
+          Credit patron wallets from cash at the door, confirm Interac top-ups, and process end-of-event
+          balance reclaims.
         </p>
       </div>
       <DoorWalletTopUp initialUserId={initialUserId} />

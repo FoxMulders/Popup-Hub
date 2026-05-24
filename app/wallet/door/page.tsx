@@ -52,17 +52,26 @@ export default async function WalletDoorPage({ searchParams }: Props) {
             <WalletDoorCopyButton value={userId} className="mt-3" />
           </div>
           {isCoordinator ? (
-            <Link
-              href={`/coordinator/wallet-topup?u=${userId}`}
-              className={cn(
-                buttonVariants({
-                  className: 'mt-5 w-full min-h-11 gap-2 bg-forest hover:bg-forest-deep',
-                })
-              )}
-            >
-              <Banknote className="h-4 w-4" />
-              Open top-up desk
-            </Link>
+            <div className="mt-5 space-y-2">
+              <Link
+                href={`/coordinator/wallet-topup?u=${userId}`}
+                className={cn(
+                  buttonVariants({
+                    className: 'w-full min-h-11 gap-2 bg-forest hover:bg-forest-deep',
+                  })
+                )}
+              >
+                <Banknote className="h-4 w-4" />
+                Credit wallet (top-up)
+              </Link>
+              <Link
+                href={`/coordinator/wallet-topup?u=${userId}`}
+                className={cn(buttonVariants({ variant: 'outline', className: 'w-full min-h-11 gap-2' }))}
+              >
+                <Banknote className="h-4 w-4" />
+                Cash payout (reclaim)
+              </Link>
+            </div>
           ) : (
             <p className="mt-5 text-center text-xs text-muted-foreground">
               Coordinators: sign in to credit this wallet from the top-up desk.

@@ -10,12 +10,16 @@ import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
-import type { WalletDepositRequest, Profile } from '@/types/database'
-import { Banknote, CheckCircle, Loader2, QrCode, ScanLine } from 'lucide-react'
+import type { WalletDepositRequest, WalletWithdrawalRequest, Profile } from '@/types/database'
+import { Banknote, CheckCircle, Loader2, QrCode, ScanLine, Undo2 } from 'lucide-react'
 
 const QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000]
 
 interface PendingRow extends WalletDepositRequest {
+  profiles?: Pick<Profile, 'id' | 'full_name' | 'email'> | null
+}
+
+interface PendingWithdrawalRow extends WalletWithdrawalRequest {
   profiles?: Pick<Profile, 'id' | 'full_name' | 'email'> | null
 }
 
@@ -35,16 +39,32 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
     newBalance: number
   } | null>(null)
   const [pendingEtransfers, setPendingEtransfers] = useState<PendingRow[]>([])
+  const [pendingReclaims, setPendingReclaims] = useState<PendingWithdrawalRow[]>([])
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [cashoutAmountCents, setCashoutAmountCents] = useState(1000)
+  const [cashoutCustomDollars, setCashoutCustomDollars] = useState('')
+  const [payingOut, setPayingOut] = useState(false)
+  const [lastPayout, setLastPayout] = useState<{
+    name: string
+    amountCents: number
+    newBalance: number
+  } | null>(null)
 
   const resolvedUserId = parseWalletTopUpQrPayload(scanInput)
 
   const loadPending = useCallback(async () => {
     const params = eventId ? `?eventId=${eventId}` : ''
-    const res = await fetch(`/api/coordinator/wallet-deposits${params}`)
-    const json = await res.json()
-    if (res.ok) {
-      setPendingEtransfers((json.pending ?? []) as PendingRow[])
+    const [depositsRes, reclaimsRes] = await Promise.all([
+      fetch(`/api/coordinator/wallet-deposits${params}`),
+      fetch(`/api/coordinator/wallet-withdrawals${params}`),
+    ])
+    const depositsJson = await depositsRes.json()
+    const reclaimsJson = await reclaimsRes.json()
+    if (depositsRes.ok) {
+      setPendingEtransfers((depositsJson.pending ?? []) as PendingRow[])
+    }
+    if (reclaimsRes.ok) {
+      setPendingReclaims((reclaimsJson.pending ?? []) as PendingWithdrawalRow[])
     }
   }, [eventId])
 
@@ -118,7 +138,70 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
     }
   }
 
+  async function confirmReclaim(requestId: string) {
+    setConfirmingId(requestId)
+    try {
+      const res = await fetch(`/api/coordinator/wallet-withdrawals/${requestId}/confirm`, {
+        method: 'POST',
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Confirmation failed')
+        return
+      }
+      toast.success('E-transfer reclaim marked as sent')
+      await loadPending()
+    } finally {
+      setConfirmingId(null)
+    }
+  }
+
+  async function payoutCash() {
+    const dollars = cashoutCustomDollars
+      ? parseFloat(cashoutCustomDollars)
+      : cashoutAmountCents / 100
+    const cents = cashoutCustomDollars ? Math.round(dollars * 100) : cashoutAmountCents
+
+    if (!resolvedUserId) {
+      toast.error('Paste or scan a valid patron wallet QR first')
+      return
+    }
+    if (!Number.isFinite(cents) || cents < 100) {
+      toast.error('Minimum payout is $1.00')
+      return
+    }
+
+    setPayingOut(true)
+    try {
+      const res = await fetch('/api/coordinator/wallet-cashout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          qrPayload: scanInput.trim(),
+          amountCents: cents,
+          eventId,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? 'Cash payout failed')
+        return
+      }
+      setLastPayout({
+        name: json.shopper?.full_name ?? 'Patron',
+        amountCents: cents,
+        newBalance: json.newBalance,
+      })
+      toast.success(`Paid ${formatCents(cents)} in cash`)
+      setScanInput('')
+      setCashoutCustomDollars('')
+    } finally {
+      setPayingOut(false)
+    }
+  }
+
   return (
+    <div className="space-y-6">
     <div className="grid gap-6 lg:grid-cols-2">
       <Card>
         <CardHeader>
@@ -259,6 +342,148 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
           )}
         </CardContent>
       </Card>
+    </div>
+
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Undo2 className="h-5 w-5 text-harvest-600" />
+            Cash payout (reclaim)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Scan the patron&apos;s wallet QR at exit, pay them cash, and debit their remaining
+            balance.
+          </p>
+
+          <div className="space-y-1">
+            <Label htmlFor="patron-qr-payout">Patron QR / wallet code</Label>
+            <div className="relative">
+              <ScanLine className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="patron-qr-payout"
+                className="min-h-11 pl-9 font-mono text-sm"
+                placeholder="Scan QR or paste wallet ID"
+                value={scanInput}
+                onChange={(e) => setScanInput(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cash to pay out</Label>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_AMOUNTS.map((cents) => (
+                <button
+                  key={`out-${cents}`}
+                  type="button"
+                  onClick={() => {
+                    setCashoutAmountCents(cents)
+                    setCashoutCustomDollars('')
+                  }}
+                  className={`rounded-lg border-2 px-3 py-2 text-sm font-semibold ${
+                    !cashoutCustomDollars && cashoutAmountCents === cents
+                      ? 'border-harvest-500 bg-harvest-50 text-harvest-800'
+                      : 'border-stone-200'
+                  }`}
+                >
+                  {formatCents(cents)}
+                </button>
+              ))}
+            </div>
+            <Input
+              type="number"
+              min="1"
+              step="0.01"
+              placeholder="Custom amount ($)"
+              value={cashoutCustomDollars}
+              onChange={(e) => setCashoutCustomDollars(e.target.value)}
+              className="min-h-11"
+            />
+          </div>
+
+          <Button
+            type="button"
+            className="w-full min-h-11 gap-2 bg-harvest-600 hover:bg-harvest-700"
+            disabled={payingOut || !resolvedUserId}
+            onClick={payoutCash}
+          >
+            {payingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
+            Pay out{' '}
+            {formatCents(
+              cashoutCustomDollars
+                ? Math.round(parseFloat(cashoutCustomDollars) * 100)
+                : cashoutAmountCents
+            )}
+          </Button>
+
+          {lastPayout ? (
+            <div className="rounded-lg border border-harvest-200 bg-harvest-50 px-4 py-3 text-sm">
+              <p className="font-medium text-harvest-900">
+                <CheckCircle className="mr-1 inline h-4 w-4" />
+                {lastPayout.name} — {formatCents(lastPayout.amountCents)} paid in cash
+              </p>
+              <p className="text-harvest-800">New balance: {formatCents(lastPayout.newBalance)}</p>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Pending e-transfer reclaims</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Send Interac e-Transfer to the patron&apos;s email, then confirm here.
+          </p>
+          {pendingReclaims.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">No pending reclaims.</p>
+          ) : (
+            pendingReclaims.map((row) => {
+              const patron = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+              return (
+                <div key={row.id} className="rounded-lg border p-4 space-y-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{patron?.full_name ?? 'Patron'}</p>
+                      <p className="text-xs text-muted-foreground">{row.payout_email ?? patron?.email}</p>
+                    </div>
+                    <Badge variant="outline">{formatCents(row.amount_cents)}</Badge>
+                  </div>
+                  {row.reference_code ? (
+                    <p className="text-sm">
+                      Reference:{' '}
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono font-bold">
+                        {row.reference_code}
+                      </code>
+                    </p>
+                  ) : null}
+                  {row.expires_at ? (
+                    <p className="text-xs text-muted-foreground">
+                      {formatEtransferExpiryCountdown(row.expires_at)}
+                    </p>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={confirmingId === row.id}
+                    onClick={() => confirmReclaim(row.id)}
+                  >
+                    {confirmingId === row.id ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Confirm e-transfer sent
+                  </Button>
+                </div>
+              )
+            })
+          )}
+        </CardContent>
+      </Card>
+    </div>
     </div>
   )
 }

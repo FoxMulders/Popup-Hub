@@ -10,6 +10,7 @@ import { formatCents } from '@/lib/square/client'
 import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
 import type { Wallet, WalletTransaction } from '@/types/database'
 import { AlternativeDepositPanel } from '@/components/wallet/alternative-deposit-panel'
+import { WalletReclaimPanel } from '@/components/wallet/wallet-reclaim-panel'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Wallet as WalletIcon,
@@ -34,6 +35,7 @@ interface WalletViewProps {
   wallet: Wallet | null
   transactions: WalletTransaction[]
   userId: string
+  userEmail?: string
 }
 
 const TX_LABELS: Record<string, string> = {
@@ -60,6 +62,10 @@ function txLabel(tx: WalletTransaction): string {
   const method = (tx.metadata as Record<string, unknown> | undefined)?.method
   if (tx.type === 'deposit' && method === 'cash_at_door') return 'Cash at door'
   if (tx.type === 'deposit' && method === 'etransfer') return 'E-transfer top-up'
+  if (tx.type === 'withdrawal' && method === 'cash_at_door_reclaim') return 'Cash reclaim'
+  if (tx.type === 'withdrawal' && method === 'etransfer_reclaim') return 'E-transfer reclaim'
+  if (tx.type === 'withdrawal' && method === 'card_refund') return 'Card refund'
+  if (tx.type === 'refund' && method === 'reclaim_reversal') return 'Reclaim cancelled'
   return TX_LABELS[tx.type] ?? tx.type.replace(/_/g, ' ')
 }
 
@@ -79,7 +85,7 @@ interface SquareCardInstance {
   }>
 }
 
-export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
+export function WalletView({ wallet, transactions, userId, userEmail = '' }: WalletViewProps) {
   const [squareLoaded, setSquareLoaded] = useState(false)
   const [depositAmount, setDepositAmount] = useState(1000)
   const [depositing, setDepositing] = useState(false)
@@ -191,6 +197,10 @@ export function WalletView({ wallet, transactions, userId }: WalletViewProps) {
       </Card>
 
       <AlternativeDepositPanel userId={userId} />
+
+      {balance > 0 ? (
+        <WalletReclaimPanel userId={userId} userEmail={userEmail} balanceCents={balance} />
+      ) : null}
 
       {/* Add funds — card */}
       <Card>

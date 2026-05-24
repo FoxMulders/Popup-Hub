@@ -284,6 +284,27 @@ export interface WalletDepositRequest {
   created_at: string
 }
 
+export type WalletWithdrawalMethod = 'cash_at_door' | 'etransfer' | 'card_refund'
+export type WalletWithdrawalStatus = 'pending' | 'completed' | 'cancelled' | 'expired'
+
+export interface WalletWithdrawalRequest {
+  id: string
+  user_id: string
+  amount_cents: number
+  method: WalletWithdrawalMethod
+  status: WalletWithdrawalStatus
+  payout_email: string | null
+  reference_code: string | null
+  event_id: string | null
+  confirmed_by: string | null
+  wallet_transaction_id: string | null
+  square_refund_id: string | null
+  expires_at: string | null
+  completed_at: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
 export interface Auction {
   id: string
   event_id: string | null
