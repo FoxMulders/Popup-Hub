@@ -4,7 +4,7 @@ export const CREDIT_CENTS = 25
 /** Virtual paddle purchase price: 8 credits = $2.00 */
 export const DEFAULT_PADDLE_PURCHASE_CREDITS = 8
 
-/** Default per-paddle entry cost for catalog items: 1 credit = $0.25 */
+/** Default bid entry for new catalog items (each item may use 1, 2, or more credits). */
 export const DEFAULT_ENTRY_CREDITS = 1
 
 export const QUARTERS_IN_HEADLINE = 'Quarters In, Paddles Up!'

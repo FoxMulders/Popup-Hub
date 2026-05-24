@@ -37,6 +37,7 @@ export function CoordinatorQuarterAuction({
   const [settingsForm, setSettingsForm] = useState({
     paddle_purchase_credits: String(initialSettings.paddle_purchase_credits),
     default_entry_credits: String(initialSettings.default_entry_credits),
+    paddle_pool_size: String(initialSettings.paddle_pool_size ?? 100),
   })
   const [vendors, setVendors] = useState<VendorRow[]>([])
   const [approvals, setApprovals] = useState<Set<string>>(new Set())
@@ -109,6 +110,7 @@ export function CoordinatorQuarterAuction({
         body: JSON.stringify({
           paddle_purchase_credits: parseInt(settingsForm.paddle_purchase_credits, 10),
           default_entry_credits: parseInt(settingsForm.default_entry_credits, 10),
+          paddle_pool_size: parseInt(settingsForm.paddle_pool_size, 10),
         }),
       })
       const json = await res.json()
@@ -288,7 +290,7 @@ export function CoordinatorQuarterAuction({
               </p>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="default-entry">Default entry cost (credits)</Label>
+              <Label htmlFor="default-entry">Default item entry (credits)</Label>
               <Input
                 id="default-entry"
                 type="number"
@@ -298,6 +300,26 @@ export function CoordinatorQuarterAuction({
                   setSettingsForm((s) => ({ ...s, default_entry_credits: e.target.value }))
                 }
               />
+              <p className="text-xs text-muted-foreground">
+                Starting value when activating items — each item can be 1, 2, or more credits.
+              </p>
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <Label htmlFor="paddle-pool">Paddle number pool (1–200)</Label>
+              <Input
+                id="paddle-pool"
+                type="number"
+                min={1}
+                max={200}
+                value={settingsForm.paddle_pool_size}
+                onChange={(e) =>
+                  setSettingsForm((s) => ({ ...s, paddle_pool_size: e.target.value }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                White chips 1–100, green chips 101–200. Patrons pick numbers at registration; taken only after
+                payment.
+              </p>
             </div>
             <Button type="submit" disabled={busy === 'settings'} className="sm:col-span-2">
               {busy === 'settings' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save settings'}
@@ -392,7 +414,7 @@ export function CoordinatorQuarterAuction({
                 </p>
                 {activeItem.entry_cost_credits != null && (
                   <p className="text-sm">
-                    Entry: {formatCredits(activeItem.entry_cost_credits)} per paddle
+                    Item entry: {formatCredits(activeItem.entry_cost_credits)} per paddle
                   </p>
                 )}
               </div>
@@ -401,7 +423,7 @@ export function CoordinatorQuarterAuction({
             {activeItem.status === 'active_price_setting' && (
               <div className="flex flex-wrap items-end gap-3">
                 <div className="space-y-1">
-                  <Label htmlFor="entry-cost">Entry cost (credits per paddle)</Label>
+                  <Label htmlFor="entry-cost">Item entry (credits per paddle)</Label>
                   <Input
                     id="entry-cost"
                     type="number"
@@ -548,8 +570,9 @@ export function CoordinatorQuarterAuction({
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Paddles: {formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)} each
-        · Default entry: {formatCredits(settings.default_entry_credits)} per paddle per item
+        Paddles: {formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)} each · Pool:{' '}
+        {settings.paddle_pool_size ?? 100} numbers · Default item entry:{' '}
+        {formatCredits(settings.default_entry_credits)} (per item, per paddle at bid time)
       </p>
     </div>
   )

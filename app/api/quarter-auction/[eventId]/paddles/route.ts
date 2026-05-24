@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getOrCreateSettings } from '@/lib/quarter-auction/catalog'
-import { deductWalletCredits, nextPaddleNumber } from '@/lib/quarter-auction/wallet'
+import { clampPoolSize } from '@/lib/quarter-auction/paddle-pool'
+import {
+  fetchTakenPaddleNumbers,
+  purchaseEventPaddles,
+} from '@/lib/quarter-auction/purchase-paddles'
 
 interface RouteParams {
   params: Promise<{ eventId: string }>
 }
 
-export async function POST(_request: Request, { params }: RouteParams) {
+export async function POST(request: Request, { params }: RouteParams) {
   const { eventId } = await params
   const supabase = await createClient()
   const {
@@ -18,6 +22,13 @@ export async function POST(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const body = (await request.json()) as { paddle_numbers?: (string | number)[] }
+  const rawNumbers = body.paddle_numbers
+
+  if (!Array.isArray(rawNumbers) || rawNumbers.length === 0) {
+    return NextResponse.json({ error: 'Select at least one paddle number' }, { status: 400 })
+  }
+
   const service = await createServiceClient()
   const settings = await getOrCreateSettings(service, eventId)
 
@@ -25,36 +36,26 @@ export async function POST(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Quarter auction is not enabled for this event' }, { status: 422 })
   }
 
-  const deduct = await deductWalletCredits(
-    service,
-    user.id,
-    settings.paddle_purchase_credits,
-    'paddle_purchase',
-    { event_id: eventId, kind: 'virtual_paddle' }
-  )
+  const result = await purchaseEventPaddles(service, {
+    eventId,
+    userId: user.id,
+    rawNumbers,
+    creditsPerPaddle: settings.paddle_purchase_credits,
+    poolSize: settings.paddle_pool_size ?? 100,
+  })
 
-  if (!deduct.ok) {
-    return NextResponse.json({ error: deduct.error }, { status: 402 })
+  if (!result.ok) {
+    const status = result.error.includes('Insufficient') ? 402 : 409
+    return NextResponse.json(
+      { error: result.error, conflictNumbers: result.conflictNumbers },
+      { status }
+    )
   }
 
-  const paddleNumber = await nextPaddleNumber(service, eventId)
-
-  const { data: paddle, error } = await service
-    .from('event_paddles')
-    .insert({
-      event_id: eventId,
-      user_id: user.id,
-      paddle_number: paddleNumber,
-      purchase_credits: settings.paddle_purchase_credits,
-    })
-    .select('*')
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 422 })
-  }
-
-  return NextResponse.json({ paddle, newBalance: deduct.newBalance })
+  return NextResponse.json({
+    paddles: result.paddles,
+    newBalance: result.newBalance,
+  })
 }
 
 export async function GET(_request: Request, { params }: RouteParams) {
@@ -68,12 +69,24 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: paddles } = await supabase
-    .from('event_paddles')
-    .select('*')
-    .eq('event_id', eventId)
-    .eq('user_id', user.id)
-    .order('purchased_at', { ascending: true })
+  const service = await createServiceClient()
+  const settings = await getOrCreateSettings(service, eventId)
+  const poolSize = clampPoolSize(settings.paddle_pool_size ?? 100)
 
-  return NextResponse.json({ paddles: paddles ?? [] })
+  const [{ data: paddles }, taken] = await Promise.all([
+    supabase
+      .from('event_paddles')
+      .select('*')
+      .eq('event_id', eventId)
+      .eq('user_id', user.id)
+      .order('purchased_at', { ascending: true }),
+    fetchTakenPaddleNumbers(service, eventId),
+  ])
+
+  return NextResponse.json({
+    paddles: paddles ?? [],
+    taken: [...taken],
+    poolSize,
+    paddlePurchaseCredits: settings.paddle_purchase_credits,
+  })
 }

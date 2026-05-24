@@ -4,7 +4,7 @@ export type BookingMode = 'instant' | 'juried'
 export type BoothClearancePolicy = 'not_required' | 'leave_furniture' | 'pack_furniture'
 export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'
 export type EventStatus = 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
-export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'cancelled'
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'cancelled' | 'pending_insurance'
 export type PaymentStatus = 'unpaid' | 'pending' | 'payment_required' | 'processing' | 'paid' | 'refunded'
 export type PaymentMethod = 'SQUARE' | 'ETRANSFER'
 export type ApplicationPaymentStatus = 'PENDING_REVIEW' | 'COMPLETED' | 'EXPIRED'
@@ -112,6 +112,7 @@ export interface Category {
   name: string
   icon_url: string | null
   is_mlm: boolean
+  requires_documentation?: boolean
 }
 
 export interface VendorPassport {
@@ -162,6 +163,7 @@ export interface Event {
   max_mlm_slots: number | null
   is_multi_day?: boolean
   require_full_attendance: boolean
+  market_insurance_required?: boolean
   skip_venue_layout?: boolean
   booth_clearance_policy: BoothClearancePolicy
   platform_fee_mode: PlatformFeeMode
@@ -234,6 +236,8 @@ export interface BoothApplication {
   updated_at: string
   event_cancellation_reason: EventCancellationReason | null
   event_cancellation_reason_label: string | null
+  applicable_documentation_url: string | null
+  market_insurance_url: string | null
   event?: Event
   vendor?: Profile
   passport?: VendorPassport
@@ -313,6 +317,7 @@ export interface QuarterAuctionSettings {
   enabled: boolean
   paddle_purchase_credits: number
   default_entry_credits: number
+  paddle_pool_size: number
   created_at: string
   updated_at: string
 }
@@ -590,7 +595,6 @@ export interface CoordinatorSavedVenue {
   longitude: number
   venue_preset_id: string | null
   skip_venue_layout: boolean
-  city_quadrant: string | null
   last_used_at: string
   created_at: string
   updated_at: string

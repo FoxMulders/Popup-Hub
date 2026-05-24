@@ -68,6 +68,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.default_entry_credits !== undefined) {
     patch.default_entry_credits = body.default_entry_credits
   }
+  if (body.paddle_pool_size !== undefined) {
+    patch.paddle_pool_size = Math.min(200, Math.max(1, body.paddle_pool_size))
+  }
 
   const { data, error } = await service
     .from('quarter_auction_settings')
@@ -76,6 +79,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         enabled: existing.enabled,
         paddle_purchase_credits: existing.paddle_purchase_credits,
         default_entry_credits: existing.default_entry_credits,
+        paddle_pool_size: existing.paddle_pool_size ?? 100,
         ...patch,
       },
       { onConflict: 'event_id' }

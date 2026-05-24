@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Loader2, Plus, Wallet } from 'lucide-react'
+import { Loader2, Wallet } from 'lucide-react'
 import type {
   AuctionCatalogItem,
   AuctionItemEntry,
@@ -17,7 +17,8 @@ import type {
   Wallet as WalletType,
 } from '@/types/database'
 import { statusLabel, patronStatusHeadline } from '@/lib/quarter-auction/state-machine'
-import { centsToCredits, formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-auction/credits'
+import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
+import { PaddleChipPicker } from '@/components/quarter-auction/paddle-chip-picker'
 import { PaddleHoldScreen } from '@/components/quarter-auction/paddle-hold-screen'
 import { WinCelebration } from '@/components/quarter-auction/win-celebration'
 
@@ -45,7 +46,6 @@ export function PatronQuarterAuctionLive({
   const [entries, setEntries] = useState<AuctionItemEntry[]>([])
   const [selectedPaddleIds, setSelectedPaddleIds] = useState<Set<string>>(new Set())
   const [bidding, setBidding] = useState(false)
-  const [buyingPaddle, setBuyingPaddle] = useState(false)
   const [showWin, setShowWin] = useState(false)
   const [vendorInfo, setVendorInfo] = useState<{
     name: string
@@ -107,7 +107,7 @@ export function PatronQuarterAuctionLive({
         (payload) => {
           const row = payload.new as EventPaddle
           if (row.user_id === userId) {
-            setPaddles((prev) => [...prev, row])
+            setPaddles((prev) => (prev.some((p) => p.id === row.id) ? prev : [...prev, row]))
           }
         }
       )
@@ -157,22 +157,10 @@ export function PatronQuarterAuctionLive({
     loadVendor()
   }, [liveItem, userId, supabase])
 
-  async function buyPaddle() {
-    setBuyingPaddle(true)
-    try {
-      const res = await fetch(`/api/quarter-auction/${eventId}/paddles`, { method: 'POST' })
-      const json = await res.json()
-      if (!res.ok) {
-        toast.error(json.error ?? 'Could not purchase paddle')
-        return
-      }
-      setPaddles((prev) => [...prev, json.paddle])
-      if (wallet) {
-        setWallet({ ...wallet, balance: json.newBalance })
-      }
-      toast.success(`Paddle #${json.paddle.paddle_number} purchased!`)
-    } finally {
-      setBuyingPaddle(false)
+  async function handlePaddlesPurchased(newPaddles: EventPaddle[], newBalanceCents: number) {
+    setPaddles((prev) => [...prev, ...newPaddles])
+    if (wallet) {
+      setWallet({ ...wallet, balance: newBalanceCents })
     }
   }
 
@@ -232,38 +220,13 @@ export function PatronQuarterAuctionLive({
         </Link>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Your paddles</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {paddles.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Buy a virtual paddle to play.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {paddles.map((p) => (
-                <Badge key={p.id} variant="secondary" className="font-mono text-sm px-3 py-1">
-                  #{p.paddle_number}
-                </Badge>
-              ))}
-            </div>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 w-full"
-            disabled={buyingPaddle}
-            onClick={buyPaddle}
-          >
-            {buyingPaddle ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
-            )}
-            Buy paddle ({formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)})
-          </Button>
-        </CardContent>
-      </Card>
+      <PaddleChipPicker
+        eventId={eventId}
+        settings={settings}
+        ownedPaddles={paddles}
+        walletBalanceCents={wallet?.balance ?? 0}
+        onPurchased={handlePaddlesPurchased}
+      />
 
       {!liveItem ? (
         <Card>
@@ -310,7 +273,7 @@ export function PatronQuarterAuctionLive({
             )}
             {liveItem.entry_cost_credits != null && liveItem.status === 'bidding_open' && (
               <p className="text-sm font-medium">
-                Entry: {formatCredits(liveItem.entry_cost_credits)} per paddle
+                Entry for this item: {formatCredits(liveItem.entry_cost_credits)} per paddle
               </p>
             )}
           </CardHeader>
