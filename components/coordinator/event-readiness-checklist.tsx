@@ -63,7 +63,9 @@ export function EventReadinessChecklist({
     },
     { key: 'applied', label: 'Vendors applied', done: applicationCount > 0 },
     { key: 'approved', label: 'Vendors approved', done: approvedCount > 0 },
-    { key: 'layout', label: 'Booth layout saved', done: hasLayout },
+    ...(event.skip_venue_layout
+      ? []
+      : [{ key: 'layout', label: 'Booth layout saved', done: hasLayout } satisfies ChecklistItem]),
     {
       key: 'auction',
       label: 'Quarter auction configured',

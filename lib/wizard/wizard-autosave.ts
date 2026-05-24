@@ -23,6 +23,7 @@ export interface EventDraftPayload {
   status?: 'draft' | 'published'
   listingType?: EventListingType
   requireFullAttendance?: boolean
+  skipVenueLayout?: boolean
 }
 
 export interface DayRowPayload {
@@ -104,6 +105,7 @@ export async function persistEventDraft(
     allow_mlm: draft.allowMlm,
     is_multi_day: scheduleType === 'multi',
     require_full_attendance: draft.requireFullAttendance ?? true,
+    skip_venue_layout: draft.skipVenueLayout ?? false,
     booth_clearance_policy: draft.boothClearancePolicy,
   }
 

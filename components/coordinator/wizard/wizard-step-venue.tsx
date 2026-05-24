@@ -12,6 +12,7 @@ import { MapPin } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { EdmontonVenueTemplateBar } from '@/components/coordinator/edmonton-venue-template-bar'
 import type { EdmontonQuadrantFilter } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
@@ -20,6 +21,7 @@ import { marketStatusBadge } from '@/lib/theme/market'
 import {
   WIZARD_CALLOUT,
   WIZARD_FIELD_LABEL,
+  WIZARD_INFO_BOX,
   WIZARD_INPUT,
   WIZARD_PANEL_INNER,
   WIZARD_STEP_TITLE,
@@ -169,7 +171,7 @@ function VenueMapPin({
           <p className="font-bold uppercase tracking-wide block w-full whitespace-normal break-words">
             🏢 {displayName}
           </p>
-          <p className="text-gray-300 block w-full whitespace-normal break-words leading-relaxed">
+          <p className="text-muted-foreground block w-full whitespace-normal break-words leading-relaxed">
             📍 {displayAddress}
           </p>
         </div>
@@ -200,6 +202,8 @@ export interface WizardStepVenueProps {
   onPinDroppedChange: (v: boolean) => void
   venueWidth: number
   venueLength: number
+  skipVenueLayout: boolean
+  onSkipVenueLayoutChange: (v: boolean) => void
 }
 
 export function WizardStepVenue({
@@ -218,6 +222,8 @@ export function WizardStepVenue({
   onPinDroppedChange,
   venueWidth,
   venueLength,
+  skipVenueLayout,
+  onSkipVenueLayoutChange,
 }: WizardStepVenueProps) {
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
@@ -235,12 +241,36 @@ export function WizardStepVenue({
     <div className={WIZARD_PANEL_INNER}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className={WIZARD_STEP_TITLE}>
-          Step 2 — Edmonton Venue Registry &amp; Map
+          {skipVenueLayout ? 'Step 2 — Venue Location' : 'Step 2 — Edmonton Venue Registry & Map'}
         </h2>
         {pinDropped ? (
           <Badge className={`${marketStatusBadge.success} text-xs`}>Pin dropped</Badge>
         ) : null}
       </div>
+
+      <div className="flex items-start justify-between gap-4 rounded-lg border-2 border-stone-200 bg-canvas px-4 py-3">
+        <div className="space-y-1">
+          <Label htmlFor="wizard-skip-layout" className={WIZARD_FIELD_LABEL}>
+            No venue space planning required
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Skip the floor plan editor. Pick a venue from the registry to auto-fill name and address, or enter them
+            manually.
+          </p>
+        </div>
+        <Switch
+          id="wizard-skip-layout"
+          checked={skipVenueLayout}
+          onCheckedChange={onSkipVenueLayoutChange}
+          aria-label="Skip venue space planning"
+        />
+      </div>
+
+      {skipVenueLayout ? (
+        <p className={WIZARD_INFO_BOX}>
+          Choose an Edmonton venue below to auto-fill the name and address, or type them in and drop a map pin.
+        </p>
+      ) : null}
 
       <EdmontonVenueTemplateBar
         value={venuePresetId}
@@ -249,7 +279,7 @@ export function WizardStepVenue({
         onQuadrantChange={onCityQuadrantChange}
       />
 
-      {anchor.isAnchored && anchor.preset ? (
+      {anchor.isAnchored && anchor.preset && !skipVenueLayout ? (
         <p className={WIZARD_CALLOUT}>
           Template locked: {anchor.preset.label} — {anchor.width}′ × {anchor.length}′ (
           {(anchor.width * anchor.length).toLocaleString()} sq ft)
@@ -283,7 +313,9 @@ export function WizardStepVenue({
 
       <p className="text-xs text-muted-foreground flex items-center gap-1">
         <MapPin className="h-3.5 w-3.5" />
-        Click the map or pick a venue template to drop a pin immediately.
+        {skipVenueLayout
+          ? 'Select a venue template to auto-fill details, or search the address and click the map to drop a pin.'
+          : 'Click the map or pick a venue template to drop a pin immediately.'}
       </p>
 
       <div className="h-72 rounded-lg overflow-hidden border-2 border-stone-200">

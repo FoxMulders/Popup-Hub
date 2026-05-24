@@ -13,8 +13,10 @@ import {
 
 export interface SummaryVenueSelection {
   name: string
-  width: number
-  length: number
+  width?: number
+  length?: number
+  address?: string
+  locationOnly?: boolean
 }
 
 export interface WizardSummaryRailProps {
@@ -73,9 +75,15 @@ export function WizardSummaryRail({
             <span className={WIZARD_SUMMARY_META_LABEL}>Venue</span>
             <div className={WIZARD_SUMMARY_VALUE_SAGE}>
               <p className="font-medium whitespace-normal break-words">{selectedVenue.name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {selectedVenue.width} × {selectedVenue.length} ft
-              </p>
+              {selectedVenue.locationOnly ? (
+                <p className="text-xs text-muted-foreground mt-0.5 whitespace-normal break-words">
+                  {selectedVenue.address}
+                </p>
+              ) : selectedVenue.width != null && selectedVenue.length != null ? (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {selectedVenue.width} × {selectedVenue.length} ft
+                </p>
+              ) : null}
             </div>
           </li>
         ) : null}

@@ -162,6 +162,7 @@ export interface Event {
   max_mlm_slots: number | null
   is_multi_day?: boolean
   require_full_attendance: boolean
+  skip_venue_layout?: boolean
   booth_clearance_policy: BoothClearancePolicy
   platform_fee_mode: PlatformFeeMode
   platform_fee_flat_cents: number
@@ -203,6 +204,7 @@ export interface BoothApplication {
   booth_number: number | null
   square_payment_id: string | null
   payment_status: PaymentStatus
+  payment_processing_at: string | null
   payment_method: PaymentMethod | null
   application_payment_status: ApplicationPaymentStatus | null
   etransfer_reference_code: string | null

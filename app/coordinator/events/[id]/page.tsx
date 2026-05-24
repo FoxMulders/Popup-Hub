@@ -146,13 +146,15 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
                   eventName={event.name}
                   approvedVendorIds={approvedVendorIds}
                 />
-                <Link
-                  href={`/coordinator/events/${id}/layout`}
-                  className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  Layout
-                </Link>
+                {!event.skip_venue_layout ? (
+                  <Link
+                    href={`/coordinator/events/${id}/layout`}
+                    className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Layout
+                  </Link>
+                ) : null}
                 <Link
                   href={`/coordinator/events/${id}/operations`}
                   className={buttonVariants({ size: 'sm' }) + ' gap-1.5 bg-sage-600 hover:bg-sage-700 text-white'}

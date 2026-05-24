@@ -30,6 +30,7 @@ export interface WizardStepCapacityProps {
   layoutCapacity: number
   venueElements?: VenueElement[]
   entrance?: 'north' | 'south' | 'east' | 'west'
+  skipVenueLayout?: boolean
 }
 
 export function WizardStepCapacity({
@@ -47,6 +48,7 @@ export function WizardStepCapacity({
   layoutCapacity,
   venueElements,
   entrance = 'south',
+  skipVenueLayout = false,
 }: WizardStepCapacityProps) {
   const totalCaps = categoryLimits.reduce((sum, cl) => sum + (cl.maxSlots ?? 0), 0)
   const activeMlmSlots = countActiveMlmSlots(categoryLimits, categories)
@@ -60,23 +62,29 @@ export function WizardStepCapacity({
 
       <div className="flex flex-col lg:flex-row gap-4 items-start">
         <div className="flex-1 min-w-0 space-y-4">
-          <SmartPopulateBoothCaps
-            categories={categories}
-            allowMlm={allowMlm}
-            venueWidthFt={venueWidth}
-            venueLengthFt={venueLength}
-            onVenueWidthChange={() => {}}
-            onVenueLengthChange={() => {}}
-            existingLimits={categoryLimits}
-            onPopulate={onCategoryLimitsChange}
-            globalMlmCap={globalMlmCap}
-            venueReadOnly={venueReadOnly}
-            venueElements={venueElements}
-            entrance={entrance}
-            tableLengthFt={baselineTableLengthFt}
-            onTableLengthChange={onBaselineTableLengthChange}
-            hideTableSizeSelector
-          />
+          {!skipVenueLayout ? (
+            <SmartPopulateBoothCaps
+              categories={categories}
+              allowMlm={allowMlm}
+              venueWidthFt={venueWidth}
+              venueLengthFt={venueLength}
+              onVenueWidthChange={() => {}}
+              onVenueLengthChange={() => {}}
+              existingLimits={categoryLimits}
+              onPopulate={onCategoryLimitsChange}
+              globalMlmCap={globalMlmCap}
+              venueReadOnly={venueReadOnly}
+              venueElements={venueElements}
+              entrance={entrance}
+              tableLengthFt={baselineTableLengthFt}
+              onTableLengthChange={onBaselineTableLengthChange}
+              hideTableSizeSelector
+            />
+          ) : (
+            <p className={WIZARD_INFO_BOX}>
+              Floor plan planning is off for this event — set vendor category caps manually below.
+            </p>
+          )}
           {allowMlm ? (
             <MlmTierGuard
               globalMlmCap={globalMlmCap}
@@ -92,19 +100,27 @@ export function WizardStepCapacity({
             globalMlmCap={globalMlmCap}
           />
         </div>
-        <TableSizeSelector
-          value={baselineTableLengthFt}
-          onChange={onBaselineTableLengthChange}
-          disabled={venueReadOnly}
-        />
+        {!skipVenueLayout ? (
+          <TableSizeSelector
+            value={baselineTableLengthFt}
+            onChange={onBaselineTableLengthChange}
+            disabled={venueReadOnly}
+          />
+        ) : null}
       </div>
 
-      <p className={WIZARD_INFO_BOX}>
-        Optimized capacity (C<sub>max</sub>): up to{' '}
-        <span className="font-semibold text-foreground">{layoutCapacity}</span> vendor units on a{' '}
-        {venueWidth} × {venueLength} ft floor. Category caps total:{' '}
-        <span className="font-semibold">{totalCaps || '—'}</span>.
-      </p>
+      {!skipVenueLayout ? (
+        <p className={WIZARD_INFO_BOX}>
+          Optimized capacity (C<sub>max</sub>): up to{' '}
+          <span className="font-semibold text-foreground">{layoutCapacity}</span> vendor units on a{' '}
+          {venueWidth} × {venueLength} ft floor. Category caps total:{' '}
+          <span className="font-semibold">{totalCaps || '—'}</span>.
+        </p>
+      ) : (
+        <p className={WIZARD_INFO_BOX}>
+          Category caps total: <span className="font-semibold">{totalCaps || '—'}</span>.
+        </p>
+      )}
     </div>
   )
 }

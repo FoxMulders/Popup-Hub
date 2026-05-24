@@ -11,9 +11,12 @@ interface Props {
   searchParams: Promise<{ step?: string }>
 }
 
-function parseInitialStep(step: string | undefined): 1 | 2 | 3 | 4 {
+function parseInitialStep(step: string | undefined, skipVenueLayout: boolean): 1 | 2 | 3 | 4 {
   const n = Number(step)
-  if (n >= 1 && n <= 4) return n as 1 | 2 | 3 | 4
+  if (n >= 1 && n <= 4) {
+    if (skipVenueLayout && n === 4) return 3
+    return n as 1 | 2 | 3 | 4
+  }
   return 1
 }
 
@@ -81,7 +84,7 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
         existing={event as Event}
         existingLayout={layoutData as BoothLayout | null}
         applications={(applications ?? []) as unknown as Parameters<typeof MarketSetupWizard>[0]['applications']}
-        initialStep={parseInitialStep(step)}
+        initialStep={parseInitialStep(step, Boolean((event as Event).skip_venue_layout))}
       />
     </div>
   )

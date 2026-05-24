@@ -150,6 +150,9 @@ export function MarketSetupWizard({
   const [lat, setLat] = useState(existing?.latitude ?? 53.5461)
   const [lng, setLng] = useState(existing?.longitude ?? -113.4938)
   const [pinDropped, setPinDropped] = useState(!!existing?.latitude)
+  const [skipVenueLayout, setSkipVenueLayout] = useState(existing?.skip_venue_layout ?? false)
+
+  const totalSteps = skipVenueLayout ? 3 : 4
 
   const [rooms, setRooms] = useState(initialRoomsState.rooms)
   const [activeRoomId, setActiveRoomId] = useState(initialRoomsState.activeRoomId)
@@ -265,6 +268,13 @@ export function MarketSetupWizard({
   }, [scheduleType, dayRows, startDate, startTime, endTime])
 
   const selectedVenue = useMemo(() => {
+    if (skipVenueLayout && locationName.trim() && address.trim()) {
+      return {
+        name: locationName.trim(),
+        address: address.trim(),
+        locationOnly: true as const,
+      }
+    }
     if (templateAnchor.isAnchored && templateAnchor.preset) {
       return {
         name: locationName.trim() || templateAnchor.preset.label,
@@ -280,7 +290,7 @@ export function MarketSetupWizard({
       }
     }
     return null
-  }, [templateAnchor, locationName, pinDropped, currentStep])
+  }, [templateAnchor, locationName, address, pinDropped, currentStep, skipVenueLayout])
 
   const summaryCapacityLabel = useMemo(() => {
     const total = categoryLimits.reduce((s, cl) => s + cl.maxSlots, 0)
@@ -378,6 +388,7 @@ export function MarketSetupWizard({
             allowMlm,
             maxMlmSlots: globalMlmCap,
             requireFullAttendance,
+            skipVenueLayout,
             boothClearancePolicy,
             raffleDonationRequirement,
             scheduleType,
@@ -398,7 +409,7 @@ export function MarketSetupWizard({
         }
 
         const resolvedId = draftResult.eventId || eventId
-        if (resolvedId && currentStep >= 2) {
+        if (resolvedId && currentStep >= 2 && !skipVenueLayout) {
           const layoutPayload = layoutPayloadFromRooms(resolvedId, rooms, activeRoomId)
           const layoutResult = await persistLayoutDraft(supabase, resolvedId, layoutPayload)
           if (layoutResult.error) throw layoutResult.error
@@ -443,6 +454,7 @@ export function MarketSetupWizard({
       requireFullAttendance,
       rooms,
       scheduleType,
+      skipVenueLayout,
       startDate,
       startTime,
       supabase,
@@ -497,6 +509,21 @@ export function MarketSetupWizard({
   }
 
   function validateStep2(): boolean {
+    if (skipVenueLayout) {
+      if (!locationName.trim()) {
+        toast.error('Venue name is required')
+        return false
+      }
+      if (!address.trim()) {
+        toast.error('Venue address is required')
+        return false
+      }
+      if (!pinDropped) {
+        toast.error('Drop a map pin for the venue location')
+        return false
+      }
+      return true
+    }
     if (templateAnchor.width < 10 || templateAnchor.length < 10) {
       toast.error('Select a venue template or set dimensions (min 10 ft)')
       return false
@@ -533,6 +560,17 @@ export function MarketSetupWizard({
         return
       }
       if (currentStep === 3) {
+        if (skipVenueLayout) {
+          const result = await autosave({ publish: true })
+          if (!result.ok || !result.eventId) {
+            toast.error('Failed to deploy market')
+            return
+          }
+          toast.success('Market saved and deployed!')
+          await revalidateMarketsCacheClient()
+          router.push(`/coordinator/events/${result.eventId}`)
+          return
+        }
         const result = await autosave()
         if (!result.ok) {
           toast.error('Could not save capacity settings')
@@ -570,6 +608,12 @@ export function MarketSetupWizard({
   }
 
   useEffect(() => {
+    if (skipVenueLayout && currentStep === 4) {
+      setCurrentStep(3)
+    }
+  }, [skipVenueLayout, currentStep])
+
+  useEffect(() => {
     if (currentStep === 4 && !eventId) {
       setCurrentStep(3)
       toast.error('Save event details before opening the canvas')
@@ -580,7 +624,7 @@ export function MarketSetupWizard({
     <div className="space-y-6">
       <header className="space-y-1">
         <p className={WIZARD_PAGE_KICKER}>
-          Market Setup Wizard · Step {currentStep} of 4
+          Market Setup Wizard · Step {currentStep} of {totalSteps}
         </p>
         <h1 className={WIZARD_PAGE_TITLE}>
           {existing ? 'Edit Market' : 'Create New Market'}
@@ -589,7 +633,7 @@ export function MarketSetupWizard({
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         <div className={WIZARD_PANEL + ' flex-1 min-w-0 p-4 sm:p-5 space-y-4'}>
-          {currentStep >= 2 ? (
+          {currentStep >= 2 && !skipVenueLayout ? (
             <LayoutRoomBar
               rooms={rooms}
               activeRoomId={activeRoomId}
@@ -662,6 +706,8 @@ export function MarketSetupWizard({
                 onPinDroppedChange={setPinDropped}
                 venueWidth={templateAnchor.width}
                 venueLength={templateAnchor.length}
+                skipVenueLayout={skipVenueLayout}
+                onSkipVenueLayoutChange={setSkipVenueLayout}
               />
               <WizardNav step={2} onBack={goBack} onNext={goNext} nextDisabled={transitioning} />
             </>
@@ -684,12 +730,19 @@ export function MarketSetupWizard({
                 layoutCapacity={layoutCapacity}
                 venueElements={activeRoom.venue_elements}
                 entrance={activeRoom.entrance}
+                skipVenueLayout={skipVenueLayout}
               />
-              <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning} />
+              <WizardNav
+                step={3}
+                onBack={goBack}
+                onNext={goNext}
+                nextDisabled={transitioning}
+                nextLabel={skipVenueLayout ? 'Save & deploy market' : undefined}
+              />
             </>
           ) : null}
 
-          {currentStep === 4 && eventId ? (
+          {currentStep === 4 && eventId && !skipVenueLayout ? (
             <>
               <BoothPlanner
                 eventId={eventId}
@@ -723,7 +776,7 @@ export function MarketSetupWizard({
           scheduleSummary={scheduleSummary}
           selectedVenue={selectedVenue}
           capacityLabel={summaryCapacityLabel}
-          tableSizeLabel={currentStep >= 3 ? `Table size: ${baselineTableLengthFt} ft` : null}
+          tableSizeLabel={currentStep >= 3 && !skipVenueLayout ? `Table size: ${baselineTableLengthFt} ft` : null}
           autosaveStatus={autosaveStatus}
         />
       </div>
