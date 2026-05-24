@@ -36,7 +36,7 @@ foreach ($item in $paths) {
         if ($code -ge 200 -and $code -lt 400) {
             Write-Host "  OK   $($item.Name) ($code) $url" -ForegroundColor Green
         } else {
-            Write-Host "  FAIL $($item.Name) $url — $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "  FAIL $($item.Name) $url - $($_.Exception.Message)" -ForegroundColor Red
             $failures++
         }
     }

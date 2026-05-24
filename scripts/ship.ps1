@@ -48,8 +48,17 @@ try {
 
     if (-not $SkipPush) {
         Write-Step "Pushing to origin"
-        git push origin HEAD
-        if ($LASTEXITCODE -ne 0) { throw "Push failed" }
+        git push origin HEAD 2>&1 | ForEach-Object { Write-Host $_ }
+        if ($LASTEXITCODE -ne 0) {
+            git fetch origin 2>$null
+            $local = git rev-parse HEAD
+            $remote = git rev-parse origin/master 2>$null
+            if ($local -eq $remote) {
+                Write-Host "Push reported error but remote is up to date ($local)." -ForegroundColor Yellow
+            } else {
+                throw "Push failed"
+            }
+        }
     }
 
     if (-not $SkipDeploy) {
