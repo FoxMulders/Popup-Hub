@@ -30,12 +30,13 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 function markerStyle(event: Event) {
-  const isGarage = (event.listing_type ?? 'community_market') === 'garage_yard_sale'
-  if (isGarage) {
+  const isQuarterAuction =
+    (event.listing_type ?? 'community_market') === 'garage_yard_sale'
+  if (isQuarterAuction) {
     return {
       background: '#6366f1',
-      glyph: '🏡',
-      label: 'Garage / Yard Sale',
+      glyph: '🪙',
+      label: 'Quarter Auction',
     }
   }
 

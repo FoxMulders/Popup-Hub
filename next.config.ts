@@ -25,9 +25,19 @@ function readGitCommit(): string {
   }
 }
 
+/** Unique per deploy — Vercel deployment id or local build timestamp. */
+function readBuildNumber(): string {
+  const deploymentId = process.env.VERCEL_DEPLOYMENT_ID?.trim()
+  if (deploymentId) return deploymentId.slice(-8)
+  return new Date().toISOString().replace(/\D/g, '').slice(0, 14)
+}
+
 const buildTime = new Date().toISOString()
 const buildCommit = readGitCommit()
-const appVersion = readPackageVersion()
+const buildNumber = readBuildNumber()
+const baseVersion = readPackageVersion()
+/** Semver + commit metadata; changes when source changes. */
+const appVersion = `${baseVersion}+${buildCommit}`
 
 const nextConfig: NextConfig = {
   // All pages are dynamic — no static prerendering for an auth-protected marketplace
@@ -37,7 +47,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.1.113', '127.0.0.1', 'localhost'],
   env: {
     NEXT_PUBLIC_APP_VERSION: appVersion,
+    NEXT_PUBLIC_APP_VERSION_BASE: baseVersion,
     NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
+    NEXT_PUBLIC_BUILD_NUMBER: buildNumber,
     NEXT_PUBLIC_BUILD_TIME: buildTime,
   },
   images: {

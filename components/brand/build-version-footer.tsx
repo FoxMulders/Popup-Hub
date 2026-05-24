@@ -45,7 +45,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
           </p>
           <p
             className="font-mono text-[10px] leading-snug text-muted-foreground sm:text-[11px]"
-            title={`Version ${build.version}, commit ${build.commit}, built ${build.builtAt}`}
+            title={`Version ${build.version}, deploy ${build.buildNumber}, commit ${build.commit}, built ${build.builtAt}`}
           >
             {build.label}
           </p>

@@ -166,7 +166,7 @@ export async function POST(request: Request) {
 
   if ((event.listing_type ?? 'community_market') === 'garage_yard_sale') {
     return NextResponse.json(
-      { error: 'Garage and yard sales do not accept vendor booth applications.' },
+      { error: 'Quarter auctions do not accept vendor booth applications.' },
       { status: 400 }
     )
   }

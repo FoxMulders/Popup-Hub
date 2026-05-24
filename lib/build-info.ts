@@ -5,7 +5,9 @@ export type BuildEnvironment = 'development' | 'preview' | 'production' | 'local
 
 export interface BuildInfo {
   version: string
+  baseVersion: string
   commit: string
+  buildNumber: string
   builtAt: string
   environment: BuildEnvironment
   label: string
@@ -40,14 +42,20 @@ function formatBuiltAt(iso: string): string {
 
 /** Build metadata injected at compile time (see next.config.ts). */
 export function getBuildInfo(): BuildInfo {
-  const version =
-    process.env.NEXT_PUBLIC_APP_VERSION?.trim() || readPackageVersion()
+  const baseVersion =
+    process.env.NEXT_PUBLIC_APP_VERSION_BASE?.trim() || readPackageVersion()
   const commit =
     process.env.NEXT_PUBLIC_BUILD_COMMIT?.trim() ||
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
     'local'
+  const version =
+    process.env.NEXT_PUBLIC_APP_VERSION?.trim() || `${baseVersion}+${commit}`
+  const buildNumber =
+    process.env.NEXT_PUBLIC_BUILD_NUMBER?.trim() ||
+    process.env.VERCEL_DEPLOYMENT_ID?.slice(-8) ||
+    'local'
   const builtAt =
-    process.env.NEXT_PUBLIC_BUILD_TIME?.trim() || new Date(0).toISOString()
+    process.env.NEXT_PUBLIC_BUILD_TIME?.trim() || new Date().toISOString()
   const environment = resolveEnvironment()
 
   const envTag =
@@ -59,7 +67,7 @@ export function getBuildInfo(): BuildInfo {
           ? 'dev'
           : 'local'
 
-  const label = `v${version} · build ${commit} · ${formatBuiltAt(builtAt)} (${envTag})`
+  const label = `v${version} · deploy ${buildNumber} · ${formatBuiltAt(builtAt)} (${envTag})`
 
-  return { version, commit, builtAt, environment, label }
+  return { version, baseVersion, commit, buildNumber, builtAt, environment, label }
 }

@@ -128,12 +128,12 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
                 : WIZARD_TOGGLE_OPTION_INACTIVE
             )}
           >
-            🏡 Garage / Yard Sale
+            🪙 Quarter Auction
           </button>
         </div>
         {props.listingType === 'garage_yard_sale' ? (
           <p className={WIZARD_INFO_BOX}>
-            Garage and yard sales go live on the patron map when published — no vendor booth applications or juried review required.
+            Quarter auctions go live on the patron map when published — no vendor booth applications or juried review required.
           </p>
         ) : null}
       </div>

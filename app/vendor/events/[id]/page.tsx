@@ -56,7 +56,8 @@ export default async function VendorEventDetailPage({ params }: Props) {
 
   if (!event) notFound()
 
-  const isGarageSale = (event.listing_type ?? 'community_market') === 'garage_yard_sale'
+  const isQuarterAuctionListing =
+    (event.listing_type ?? 'community_market') === 'garage_yard_sale'
   const capacity = await fetchEventCapacitySummary(supabase, event as Event)
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const displayStatus = getEventDisplayStatus(event, undefined, {
@@ -174,9 +175,9 @@ export default async function VendorEventDetailPage({ params }: Props) {
       ) : null}
 
       <div className="rounded-2xl border bg-white p-6">
-        {isGarageSale ? (
+        {isQuarterAuctionListing ? (
           <p className="text-sm text-muted-foreground">
-            This is a garage or yard sale listing — vendor booth applications are not used for this event type.
+            This is a quarter auction listing — vendor booth applications are not used for this event type.
           </p>
         ) : (
           <>
