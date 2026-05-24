@@ -27,6 +27,55 @@ function backgroundAlpha(r, g, b) {
   return 255
 }
 
+async function getVisualCentroid(buffer) {
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  let sumX = 0
+  let sumY = 0
+  let weight = 0
+
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      const i = (y * info.width + x) * 4
+      const a = data[i + 3] / 255
+      if (a > 0.05) {
+        sumX += x * a
+        sumY += y * a
+        weight += a
+      }
+    }
+  }
+
+  return {
+    x: weight > 0 ? sumX / weight : info.width / 2,
+    y: weight > 0 ? sumY / weight : info.height / 2,
+    width: info.width,
+    height: info.height,
+  }
+}
+
+async function opticallyCenterBuffer(buffer) {
+  const meta = await sharp(buffer).metadata()
+  const { x: cx, y: cy } = await getVisualCentroid(buffer)
+  const left = Math.round(meta.width / 2 - cx)
+  const top = Math.round(meta.height / 2 - cy)
+
+  return sharp({
+    create: {
+      width: meta.width,
+      height: meta.height,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([{ input: buffer, left, top }])
+    .png()
+    .toBuffer()
+}
+
 async function makeTransparentLogo() {
   const { data, info } = await sharp(input)
     .ensureAlpha()
@@ -59,33 +108,69 @@ async function makeTransparentLogo() {
   console.log('Wrote transparent logo:', outputLogo, `${meta.width}x${meta.height}`, `alpha=${meta.hasAlpha}`)
 }
 
-async function extractIconMark() {
-  const meta = await sharp(outputLogo).metadata()
-  const iconCropWidth = Math.round(meta.width * 0.42)
-  const iconCropHeight = Math.round(meta.height * 0.72)
-  const left = Math.round((meta.width - iconCropWidth) * 0.08)
-  const top = Math.round((meta.height - iconCropHeight) * 0.05)
+async function trimToSquare(buffer) {
+  const trimmed = await sharp(buffer).trim().png().toBuffer()
+  const meta = await sharp(trimmed).metadata()
+  const maxDim = Math.max(meta.width, meta.height)
+  const padTop = Math.floor((maxDim - meta.height) / 2)
+  const padBottom = maxDim - meta.height - padTop
+  const padLeft = Math.floor((maxDim - meta.width) / 2)
+  const padRight = maxDim - meta.width - padLeft
 
-  const iconOnly = await sharp(outputLogo)
-    .extract({ left, top, width: iconCropWidth, height: iconCropHeight })
+  const squared = await sharp(trimmed)
+    .extend({
+      top: padTop,
+      bottom: padBottom,
+      left: padLeft,
+      right: padRight,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
     .png()
     .toBuffer()
 
-  await sharp(iconOnly).toFile(path.join(root, 'public', 'popup-hub-icon.png'))
-  console.log('Wrote icon mark:', path.join(root, 'public', 'popup-hub-icon.png'))
+  return opticallyCenterBuffer(squared)
+}
 
-  return iconOnly
+/** Full vertical lockup (icon + wordmark) for app icons. */
+async function extractFullLockup() {
+  const trimmed = await sharp(outputLogo).trim().png().toBuffer()
+  return trimToSquare(trimmed)
+}
+
+/** Stall + pin mark for compact favicons. */
+async function extractIconMark() {
+  const trimmed = await sharp(outputLogo).trim().png().toBuffer()
+  const meta = await sharp(trimmed).metadata()
+  const iconHeight = Math.round(meta.height * 0.56)
+
+  const iconOnly = await sharp(trimmed)
+    .extract({ left: 0, top: 0, width: meta.width, height: iconHeight })
+    .trim()
+    .png()
+    .toBuffer()
+
+  const square = await trimToSquare(iconOnly)
+  const out = path.join(root, 'public', 'popup-hub-icon.png')
+  await sharp(square).toFile(out)
+  console.log('Wrote icon mark:', out)
+
+  return square
 }
 
 async function iconOnBackground(iconBuffer, size, background, scale = 0.72) {
+  const square = await trimToSquare(iconBuffer)
   const iconSize = Math.round(size * scale)
-  const resized = await sharp(iconBuffer)
+  const resized = await sharp(square)
     .resize(iconSize, iconSize, {
       fit: 'contain',
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
     .png()
     .toBuffer()
+
+  const { x: cx, y: cy } = await getVisualCentroid(resized)
+  const left = Math.round(size / 2 - cx)
+  const top = Math.round(size / 2 - cy)
 
   return sharp({
     create: {
@@ -95,17 +180,18 @@ async function iconOnBackground(iconBuffer, size, background, scale = 0.72) {
       background,
     },
   })
-    .composite([{ input: resized, gravity: 'center' }])
+    .composite([{ input: resized, left, top }])
     .png()
     .toBuffer()
 }
 
-async function writeIcons(iconOnly) {
+async function writeIcons(fullLockup, iconMark) {
   await mkdir(iconsDir, { recursive: true })
   await mkdir(appDir, { recursive: true })
 
   for (const size of [192, 512]) {
-    const transparent = await sharp(iconOnly)
+    const square = await trimToSquare(fullLockup)
+    const transparent = await sharp(square)
       .resize(size, size, {
         fit: 'contain',
         background: { r: 0, g: 0, b: 0, alpha: 0 },
@@ -118,25 +204,25 @@ async function writeIcons(iconOnly) {
     console.log('Wrote icon:', out)
   }
 
-  const maskable512 = await iconOnBackground(iconOnly, 512, CREAM, 0.68)
+  const maskable512 = await iconOnBackground(fullLockup, 512, CREAM, 0.78)
   await sharp(maskable512).toFile(path.join(iconsDir, 'icon-maskable-512x512.png'))
   console.log('Wrote maskable icon:', path.join(iconsDir, 'icon-maskable-512x512.png'))
 
-  const appleTouch = await iconOnBackground(iconOnly, 180, CREAM, 0.7)
+  const appleTouch = await iconOnBackground(fullLockup, 180, CREAM, 0.8)
   await sharp(appleTouch).toFile(path.join(iconsDir, 'apple-touch-icon.png'))
   console.log('Wrote apple-touch-icon:', path.join(iconsDir, 'apple-touch-icon.png'))
 
   for (const size of [16, 32]) {
-    const favicon = await iconOnBackground(iconOnly, size, CREAM, 0.78)
+    const favicon = await iconOnBackground(iconMark, size, CREAM, 0.78)
     await sharp(favicon).toFile(path.join(root, 'public', `favicon-${size}x${size}.png`))
     console.log('Wrote favicon:', path.join(root, 'public', `favicon-${size}x${size}.png`))
   }
 
-  const favicon32 = await iconOnBackground(iconOnly, 32, CREAM, 0.78)
+  const favicon32 = await iconOnBackground(iconMark, 32, CREAM, 0.78)
   await sharp(favicon32).toFile(path.join(root, 'public', 'favicon.ico'))
   console.log('Wrote favicon.ico')
 
-  const nextIcon = await iconOnBackground(iconOnly, 512, CREAM, 0.68)
+  const nextIcon = await iconOnBackground(fullLockup, 512, CREAM, 0.78)
   await sharp(nextIcon).toFile(path.join(appDir, 'icon.png'))
   console.log('Wrote Next.js app icon:', path.join(appDir, 'icon.png'))
 
@@ -145,5 +231,6 @@ async function writeIcons(iconOnly) {
 }
 
 await makeTransparentLogo()
-const iconOnly = await extractIconMark()
-await writeIcons(iconOnly)
+const fullLockup = await extractFullLockup()
+const iconMark = await extractIconMark()
+await writeIcons(fullLockup, iconMark)
