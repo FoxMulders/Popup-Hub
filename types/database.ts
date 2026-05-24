@@ -257,6 +257,25 @@ export interface WalletTransaction {
   created_at: string
 }
 
+export type WalletDepositMethod = 'etransfer' | 'cash_at_door'
+export type WalletDepositStatus = 'pending' | 'completed' | 'cancelled' | 'expired'
+
+export interface WalletDepositRequest {
+  id: string
+  user_id: string
+  amount_cents: number
+  method: WalletDepositMethod
+  status: WalletDepositStatus
+  reference_code: string | null
+  event_id: string | null
+  confirmed_by: string | null
+  wallet_transaction_id: string | null
+  expires_at: string | null
+  completed_at: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
 export interface Auction {
   id: string
   event_id: string | null

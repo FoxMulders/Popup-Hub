@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
+import { buildWalletTopUpQrPayload, walletTopUpQrImageUrl } from '@/lib/wallet/wallet-qr'
 import { Loader2, QrCode, Store } from 'lucide-react'
 
 interface BoothCheckoutProps {
@@ -23,6 +24,8 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
   const [description, setDescription] = useState('')
   const [paying, setPaying] = useState(false)
   const [showQr, setShowQr] = useState(false)
+
+  const qrPayload = buildWalletTopUpQrPayload(userId)
 
   async function payAtBooth() {
     const dollars = parseFloat(amount)
@@ -68,8 +71,6 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
     }
   }
 
-  const qrPayload = `popuphub://pay?shopper=${userId}`
-
   return (
     <Card>
       <CardHeader>
@@ -96,16 +97,16 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
         {showQr && (
           <div className="rounded-lg border bg-canvas p-4 text-center">
             <p className="mb-2 text-xs font-medium text-muted-foreground">
-              Vendors can scan this to identify your wallet
+              Vendors and door staff can scan this to identify your wallet
             </p>
             <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(qrPayload)}`}
+              src={walletTopUpQrImageUrl(userId, 160)}
               alt="Wallet QR code"
               width={160}
               height={160}
               className="mx-auto rounded-lg border bg-white p-2"
             />
-            <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">{userId}</p>
+            <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">{qrPayload}</p>
           </div>
         )}
 

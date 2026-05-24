@@ -1,0 +1,33 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { DoorWalletTopUp } from '@/components/coordinator/door-wallet-topup'
+
+export default async function CoordinatorWalletTopUpPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'coordinator') {
+    redirect('/discover')
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+      <div>
+        <h1 className="font-heading text-2xl font-semibold">Wallet top-up desk</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Credit patron wallets from cash at the door or confirm pending Interac e-transfers.
+        </p>
+      </div>
+      <DoorWalletTopUp />
+    </div>
+  )
+}

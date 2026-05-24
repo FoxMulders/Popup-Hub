@@ -8,6 +8,7 @@ export type AdjustBalanceResult =
 
 /**
  * Atomically adjust wallet balance using optimistic locking on the current balance.
+ * Requires a service-role Supabase client — wallet UPDATE is blocked for end users via RLS.
  */
 export async function adjustWalletBalance(
   supabase: SupabaseClient,
