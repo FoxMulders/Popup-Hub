@@ -11,7 +11,6 @@ import { VendorAnnouncement } from '@/components/coordinator/vendor-announcement
 import { CategoryCapacityMatrix } from '@/components/coordinator/category-capacity-matrix'
 import { AuctionCard } from '@/components/auction/auction-card'
 import { buildCategoryCapacityRows } from '@/lib/coordinator/category-capacity-rows'
-import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { LayoutDashboard, ClipboardCheck, Printer, Gauge, Gavel } from 'lucide-react'
@@ -284,12 +283,6 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
           bookingMode={event.booking_mode}
           eventCancelled={isCancelled}
           categoryNameById={Object.fromEntries(categoryNameById)}
-          categoryLimits={sortedCategoryLimits as Array<{
-            category_id: string
-            max_slots: number
-            price_per_booth: number
-            category?: { name: string }
-          }>}
         />
       </div>
     </div>

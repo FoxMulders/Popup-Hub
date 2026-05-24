@@ -29,12 +29,6 @@ interface ApplicationBoardProps {
   bookingMode: 'instant' | 'juried'
   eventCancelled?: boolean
   categoryNameById?: Record<string, string>
-  categoryLimits?: Array<{
-    category_id: string
-    max_slots: number
-    price_per_booth?: number
-    category?: { name: string } | null
-  }>
 }
 
 function ApplicationCategoryBadges({
@@ -84,7 +78,6 @@ export function ApplicationBoard({
   bookingMode,
   eventCancelled,
   categoryNameById,
-  categoryLimits = [],
 }: ApplicationBoardProps) {
   const [apps, setApps] = useState<BoothApplication[]>(applications)
   const categoryLookup = categoryNameById ?? {}
@@ -304,8 +297,6 @@ export function ApplicationBoard({
                       onReject={() => updateStatus(app.id, 'rejected')}
                       onWaitlist={() => updateStatus(app.id, 'waitlisted')}
                       onConfirmEtransfer={() => confirmEtransferPayment(app.id)}
-                      onVerify={() => verifyVendor(app.vendor_id, app.event_id)}
-                      verifying={verifyingVendorId === app.vendor_id}
                       loading={isPending}
                     />
                   ))
@@ -386,8 +377,6 @@ function ApplicationCard({
   onReject,
   onWaitlist,
   onConfirmEtransfer,
-  onVerify,
-  verifying,
   loading,
 }: {
   app: BoothApplication
@@ -398,8 +387,6 @@ function ApplicationCard({
   onReject: () => void
   onWaitlist: () => void
   onConfirmEtransfer: () => void
-  onVerify: () => void
-  verifying: boolean
   loading: boolean
 }) {
   const passport = app.passport

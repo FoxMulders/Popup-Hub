@@ -7,7 +7,7 @@ import { MapPin, Calendar, CheckCircle2 } from 'lucide-react'
 import { resolveGridConfig } from '@/lib/booth-planner/grid-config'
 import { buildVenueElementMap, isElementOrigin } from '@/lib/booth-planner/venue-elements'
 import { ELEMENT_STYLES } from '@/lib/booth-planner/venue-elements'
-import type { BoothLayout, BoothCell, VenueElement } from '@/types/database'
+import type { BoothLayout, BoothCell } from '@/types/database'
 
 interface VendorCheckinScanProps {
   application: {

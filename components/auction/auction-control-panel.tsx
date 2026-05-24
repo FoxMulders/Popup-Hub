@@ -18,7 +18,7 @@ interface AuctionControlPanelProps {
   eventId: string
 }
 
-export function AuctionControlPanel({ auction: initialAuction, eventId }: AuctionControlPanelProps) {
+export function AuctionControlPanel({ auction: initialAuction }: AuctionControlPanelProps) {
   const supabase = createClient()
   const [auction, setAuction] = useState(initialAuction)
   const [drops, setDrops] = useState<AuctionDrop[]>(initialAuction.drops ?? [])

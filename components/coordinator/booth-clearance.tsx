@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Camera, RotateCcw, CheckCircle2, ImageIcon, X } from 'lucide-react'
+import { Camera, RotateCcw, CheckCircle2, ImageIcon } from 'lucide-react'
 import { getClearanceInstructions } from '@/lib/booth-clearance-policy'
 import type { BoothApplication, BoothClearancePolicy, Profile, VendorPassport } from '@/types/database'
 

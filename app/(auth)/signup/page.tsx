@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,8 @@ import { Separator } from '@/components/ui/separator'
 import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
 import { Loader2, ShoppingBag, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
-import { SIGNUP_ROLES, type SignupRole } from '@/lib/auth/rbac'
+import { type SignupRole } from '@/lib/auth/rbac'
+import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 
 const ROLE_OPTIONS = [
   {
@@ -33,7 +34,6 @@ const ROLE_OPTIONS = [
 ] as const
 
 function SignupForm() {
-  const router = useRouter()
   const params = useSearchParams()
   const supabase = createClient()
 
@@ -73,7 +73,7 @@ function SignupForm() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback?role=${role}`,
+        redirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), { role }),
         queryParams: {
           prompt: 'select_account',
         },
