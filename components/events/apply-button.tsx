@@ -226,7 +226,7 @@ export function ApplyButton({
 
       if (!isPassportReadyForApplication(passport)) {
         toast.error('Please complete your Vendor Passport before applying to markets.')
-        router.push('/vendor/passport')
+        router.push('/profile/passport')
         return
       }
 

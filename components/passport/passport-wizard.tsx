@@ -26,11 +26,17 @@ interface PassportWizardProps {
   categories: Category[]
   existing?: VendorPassport | null
   userId: string
+  redirectAfterSave?: string
 }
 
 const STEPS = ['Business Info', 'Category', 'Tax & Compliance', 'Photos']
 
-export function PassportWizard({ categories, existing, userId }: PassportWizardProps) {
+export function PassportWizard({
+  categories,
+  existing,
+  userId,
+  redirectAfterSave = '/vendor/events',
+}: PassportWizardProps) {
   const sortedCategories = sortCategoriesByName(categories)
   const router = useRouter()
   const supabase = createClient()
@@ -118,7 +124,7 @@ export function PassportWizard({ categories, existing, userId }: PassportWizardP
 
       toast.success('Passport saved! Ready to apply to events.')
       dispatchAvatarChanged(userId)
-      router.push('/vendor/events')
+      router.push(redirectAfterSave)
       router.refresh()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'

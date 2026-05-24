@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -7,14 +8,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AvatarPicker } from '@/components/profile/avatar-picker'
 import { toast } from 'sonner'
-import { Loader2, User } from 'lucide-react'
+import { ArrowRight, IdCard, Loader2, User } from 'lucide-react'
 import type { Profile } from '@/types/database'
+import { PASSPORT_PATH } from '@/lib/passport/requirements'
 
 interface ProfileFormProps {
   profile: Profile
+  passportComplete?: boolean
 }
 
-export function ProfileForm({ profile }: ProfileFormProps) {
+export function ProfileForm({ profile, passportComplete = true }: ProfileFormProps) {
   const supabase = createClient()
   const [fullName, setFullName] = useState(profile.full_name ?? '')
   const [phone, setPhone] = useState(profile.phone ?? '')
@@ -114,6 +117,24 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           </span>
         </label>
       </div>
+
+      {!passportComplete ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-amber-900">Complete your passport</p>
+            <p className="text-xs text-amber-800 mt-0.5">
+              Add the details required for your {profile.role} account.
+            </p>
+          </div>
+          <Link href={PASSPORT_PATH}>
+            <Button variant="outline" size="sm" className="gap-1.5 border-amber-300 bg-white">
+              <IdCard className="h-4 w-4" />
+              Open passport
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-4 pt-2">
         <Button type="submit" disabled={loading} className="h-11 px-8 bg-amber-500 hover:bg-amber-600 text-white">

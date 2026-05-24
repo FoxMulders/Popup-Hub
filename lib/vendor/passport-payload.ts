@@ -70,6 +70,23 @@ export function buildPassportSavePayload(input: PassportSaveInput): PassportSave
   }
 }
 
+export function buildMinimalPassportSavePayload(input: {
+  userId: string
+  displayName: string
+  bio?: string
+}): Pick<PassportSavePayload, 'user_id' | 'business_name' | 'bio'> {
+  const displayName = input.displayName.trim()
+  if (!displayName) {
+    throw new Error('Display name is required')
+  }
+
+  return {
+    user_id: input.userId,
+    business_name: displayName,
+    bio: input.bio?.trim() ?? '',
+  }
+}
+
 export function formatSupabaseError(error: {
   message?: string
   details?: string

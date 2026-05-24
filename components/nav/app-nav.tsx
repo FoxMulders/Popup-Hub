@@ -145,6 +145,12 @@ export function AppNav({
                     Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    onClick={() => router.push('/profile/passport')}
+                    className="cursor-pointer gap-2"
+                  >
+                    My Passport
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     onClick={() => router.push('/wallet')}
                     className="cursor-pointer gap-2"
                   >

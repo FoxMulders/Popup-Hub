@@ -1,37 +1,88 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import type { Profile } from '@/types/database'
 import { FoundingVendorBadge } from '@/components/vendor/founding-vendor-badge'
 import { ProfileForm } from './profile-form'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { PurchaseHistory } from '@/components/shopper/purchase-history'
 import { VendorAccessStatus } from '@/components/shopper/vendor-access-status'
+import { PASSPORT_PATH, passportCompletionSummary } from '@/lib/passport/requirements'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ArrowRight, IdCard } from 'lucide-react'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, { data: passport }] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
+    supabase
+      .from('vendor_passports')
+      .select('business_name, primary_category_id, category_ids')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ])
 
   if (!profile) redirect('/login')
 
+  const completion = passportCompletionSummary(profile.role, passport, profile as Profile)
+
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold text-gray-900">Profile Settings</h1>
-          <p className="mt-1.5 text-lg text-gray-500">Manage your account and notification preferences</p>
+        <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900">Profile Settings</h1>
+            <p className="mt-1.5 text-lg text-gray-500">Manage your account and notification preferences</p>
+          </div>
+          <Link href={PASSPORT_PATH}>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-white gap-2">
+              <IdCard className="h-4 w-4" />
+              My Passport
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-10">
-          <ProfileForm profile={profile as Profile} />
+          <ProfileForm profile={profile as Profile} passportComplete={completion.complete} />
 
           {/* Sidebar info */}
           <aside className="space-y-6">
+            <Link
+              href={PASSPORT_PATH}
+              className="block rounded-2xl border bg-white p-6 transition hover:border-amber-200 hover:shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-1">Popup Hub Passport</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    {profile.role === 'vendor'
+                      ? 'Your business identity for market applications and rosters.'
+                      : profile.role === 'coordinator'
+                        ? 'Your public identity when organizing markets.'
+                        : 'Your identity for markets, auctions, and vendor contact.'}
+                  </p>
+                </div>
+                <Badge
+                  className={
+                    completion.complete
+                      ? 'bg-green-100 text-green-800 shrink-0'
+                      : 'bg-amber-100 text-amber-800 shrink-0'
+                  }
+                >
+                  {completion.complete ? 'Complete' : 'Incomplete'}
+                </Badge>
+              </div>
+              {!completion.complete && completion.missing.length > 0 ? (
+                <p className="mt-3 text-xs text-amber-700">
+                  Still needed: {completion.missing.join(', ')}
+                </p>
+              ) : null}
+              <p className="mt-3 text-sm font-medium text-amber-700">View passport →</p>
+            </Link>
             <div className="rounded-2xl border bg-white p-6">
               <h3 className="font-semibold text-gray-900 mb-3">SMS Notifications</h3>
               <p className="text-sm text-gray-500 leading-relaxed">

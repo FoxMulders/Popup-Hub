@@ -20,7 +20,6 @@ export const VENDOR_ONLY_PREFIXES = [
   '/vendor/events',
   '/vendor/applications',
   '/vendor/passport',
-  '/profile/passport',
 ] as const
 
 /** Application funnel paths blocked for shoppers (legacy + canonical). */
