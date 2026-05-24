@@ -14,6 +14,7 @@ Manual smoke test for the coordinator-first MVP. Layout canvas polish is out of 
 - [ ] Guest `/` shows landing with links to discover, vendors, organizers
 - [ ] `/discover` lists published markets without login
 - [ ] `/events/[id]` shows market detail + vendor roster (anon)
+- [ ] `/events/[id]/map` — floor plan with patron flow toggle and routing modes (Patron flow · Direct to vendor · Browse all)
 - [ ] `/coordinators/[id]` shows organizer profile and their markets
 - [ ] Legacy `/shopper/events/[id]` redirects to `/events/[id]`
 
@@ -57,5 +58,11 @@ Manual smoke test for the coordinator-first MVP. Layout canvas polish is out of 
 
 ```bash
 npx tsc --noEmit
+npm run qa:launch          # full pre-ship: tsc + layout + shopper routing + build
+npm run qa:launch:fast     # same without production build
 npm run qa:layout
+npm run test:shopper-routing
+npm run test:shopper-routing:live
+npm run verify:prod        # HTTP smoke against popup-hub.vercel.app
+npm run test:e2e:shopper-floorplan   # Playwright (requires HTTPS dev server)
 ```

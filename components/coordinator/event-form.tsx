@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Loader2, MapPin, Calendar, Settings2, Upload, Gavel, Trash2, HelpCircle } from 'lucide-react'
@@ -349,6 +350,10 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
       toast.success(
         publishStatus === 'published' ? 'Event published! Vendors can now apply.' : 'Event saved.'
       )
+      const savedStatus = publishStatus ?? status
+      if (['published', 'active'].includes(savedStatus)) {
+        await revalidateMarketsCacheClient()
+      }
       router.push(`/coordinator/events/${eventId}`)
       router.refresh()
     } catch (err) {

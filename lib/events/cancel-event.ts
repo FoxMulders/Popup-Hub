@@ -10,6 +10,7 @@ import {
   applyCoordinatorReliabilityPenalty,
   computeNoticeDays,
 } from '@/lib/coordinator/reliability-penalty'
+import { revalidatePublicMarketsCache } from '@/lib/cache/public-markets'
 
 export interface CancelEventResult {
   ok: boolean
@@ -373,6 +374,8 @@ export async function cancelEventWithRefunds(
 
     vendorsNotified++
   }
+
+  revalidatePublicMarketsCache()
 
   return {
     ok: true,

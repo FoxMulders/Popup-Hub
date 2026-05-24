@@ -8,6 +8,7 @@ Use this checklist after pushing code to GitHub. Live site: [popup-hub.vercel.ap
 |------|---------|
 | Sync env → Vercel | `npm run env:vercel` |
 | Apply DB migrations | `npm run db:push` |
+| Pre-ship automated QA | `npm run qa:launch` |
 | Build + commit + deploy | `npm run ship -- "your message"` |
 | Smoke-check production | `npm run verify:prod` |
 

@@ -70,7 +70,8 @@ export function PatronFlowOverlay({
 
   return (
     <svg
-      aria-hidden
+      role="img"
+      aria-label="Patron route overlay"
       className={className}
       width={width}
       height={height}

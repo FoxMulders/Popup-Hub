@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { createClient } from '@/lib/supabase/client'
 import { BoothPlanner } from '@/components/coordinator/booth-planner'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
@@ -556,6 +557,7 @@ export function MarketSetupWizard({
           return
         }
         toast.success('Market saved and deployed!')
+        await revalidateMarketsCacheClient()
         router.push(`/coordinator/events/${result.eventId}`)
       }
     } finally {

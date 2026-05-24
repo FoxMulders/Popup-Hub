@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { CancelEventDialog } from '@/components/coordinator/cancel-event-dialog'
+import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { toast } from 'sonner'
 import { ChevronDown, Eye, Globe, Zap, CheckCircle, XCircle } from 'lucide-react'
 import type { Event, EventStatus } from '@/types/database'
@@ -65,6 +66,7 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
     if (error) {
       toast.error('Failed to update event status.')
     } else {
+      await revalidateMarketsCacheClient()
       toast.success(`Event is now ${newStatus}.`)
       startTransition(() => router.refresh())
     }
