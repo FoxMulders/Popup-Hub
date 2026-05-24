@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { transitionCatalogItem, rollDraw } from '@/lib/quarter-auction/catalog'
+import {
+  assertEventCoordinator,
+  resolveEventCoordinatorId,
+} from '@/lib/auction/coordinator-access'
 import type { AuctionItemStatus } from '@/types/database'
 
 interface RouteParams {
@@ -37,8 +41,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Item not found' }, { status: 404 })
   }
 
-  const event = item.event as { coordinator_id: string }
-  const isCoordinator = event.coordinator_id === user.id
+  const eventCoordinatorId = resolveEventCoordinatorId(
+    item.event as { coordinator_id: string } | { coordinator_id: string }[] | null
+  )
+  const isCoordinator = eventCoordinatorId === user.id
   const isVendor = item.vendor_id === user.id
 
   if (isVendor && item.status === 'draft') {
@@ -109,7 +115,14 @@ export async function POST(request: Request, { params }: RouteParams) {
         .eq('id', itemId)
         .single()
 
-      if (!item || (item.event as { coordinator_id: string }).coordinator_id !== user.id) {
+      if (!item) {
+        return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+      }
+
+      const eventCoordinatorId = resolveEventCoordinatorId(
+        item.event as { coordinator_id: string } | { coordinator_id: string }[] | null
+      )
+      if (eventCoordinatorId !== user.id) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       }
 
@@ -167,9 +180,11 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: item } = await supabase
+  const service = await createServiceClient()
+
+  const { data: item } = await service
     .from('auction_catalog_items')
-    .select('vendor_id, status, event:events(coordinator_id)')
+    .select('vendor_id, status, event_id, event:events(coordinator_id)')
     .eq('id', itemId)
     .single()
 
@@ -177,9 +192,10 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const eventRow = item.event as { coordinator_id: string } | { coordinator_id: string }[] | null
-  const coordinatorId = Array.isArray(eventRow) ? eventRow[0]?.coordinator_id : eventRow?.coordinator_id
-  const isCoordinator = coordinatorId === user.id
+  const eventCoordinatorId = resolveEventCoordinatorId(
+    item.event as { coordinator_id: string } | { coordinator_id: string }[] | null
+  )
+  const isCoordinator = eventCoordinatorId === user.id
   const isVendor = item.vendor_id === user.id
 
   const canVendorRemove =
@@ -194,7 +210,6 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     )
   }
 
-  const service = await createServiceClient()
   await service.from('auction_catalog_items').delete().eq('id', itemId)
 
   return NextResponse.json({ success: true })

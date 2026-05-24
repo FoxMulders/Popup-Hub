@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { assertEventCoordinator } from '@/lib/auction/coordinator-access'
 
 interface RouteParams {
   params: Promise<{ eventId: string }>
@@ -80,21 +81,15 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('coordinator_id')
-    .eq('id', eventId)
-    .single()
-
-  if (!event || event.coordinator_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const service = await createServiceClient()
+  const access = await assertEventCoordinator(service, eventId, user.id)
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status })
   }
 
   const body = await request.json().catch(() => ({}))
   const itemIds = Array.isArray(body.item_ids) ? (body.item_ids as string[]) : null
   const clearAll = body.clear_all === true
-
-  const service = await createServiceClient()
 
   let query = service
     .from('auction_catalog_items')
@@ -104,7 +99,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   if (itemIds?.length) {
     query = query.in('id', itemIds)
   } else if (clearAll) {
-    query = query.in('status', ['draft', 'queued', 'cancelled'])
+    query = query.in('status', ['draft', 'queued', 'cancelled', 'completed'])
   } else {
     return NextResponse.json({ error: 'Provide item_ids or clear_all' }, { status: 400 })
   }

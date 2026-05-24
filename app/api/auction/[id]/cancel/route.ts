@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { assertLegacyAuctionManager } from '@/lib/auction/coordinator-access'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -7,26 +8,28 @@ interface Props {
 
 export async function POST(_request: Request, { params }: Props) {
   const { id } = await params
-  const supabase = await createServiceClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: auction } = await supabase
-    .from('auctions')
-    .select('id, coordinator_id, status')
-    .eq('id', id)
-    .single()
+  const service = await createServiceClient()
+  const access = await assertLegacyAuctionManager(service, id, user.id)
 
-  if (!auction) return NextResponse.json({ error: 'Auction not found' }, { status: 404 })
-  if (auction.coordinator_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-  if (auction.status !== 'upcoming') {
-    return NextResponse.json({ error: `Cannot cancel an auction that is ${auction.status}` }, { status: 409 })
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status })
   }
 
-  const { error } = await supabase
+  if (access.auction.status !== 'upcoming') {
+    return NextResponse.json(
+      { error: `Cannot cancel an auction that is ${access.auction.status}` },
+      { status: 409 }
+    )
+  }
+
+  const { error } = await service
     .from('auctions')
     .update({ status: 'cancelled' })
     .eq('id', id)

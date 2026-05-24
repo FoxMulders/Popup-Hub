@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { notifyAuctionStarting } from '@/lib/auction/notify-auction-starting'
+import { assertLegacyAuctionManager } from '@/lib/auction/coordinator-access'
 import {
   canStartQuarterAuctionNow,
   quarterAuctionStartBlockedMessage,
@@ -12,24 +13,34 @@ interface Props {
 
 export async function POST(_request: Request, { params }: Props) {
   const { id } = await params
-  const supabase = await createServiceClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: auction } = await supabase
+  const service = await createServiceClient()
+  const access = await assertLegacyAuctionManager(service, id, user.id)
+
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status })
+  }
+
+  if (access.auction.status !== 'upcoming') {
+    return NextResponse.json(
+      { error: `Auction is already ${access.auction.status}` },
+      { status: 409 }
+    )
+  }
+
+  const { data: auction } = await service
     .from('auctions')
-    .select('id, coordinator_id, status, timer_duration_seconds, title, event_id, scheduled_start_at, event:events(start_at)')
+    .select('id, status, timer_duration_seconds, title, event_id, scheduled_start_at, event:events(start_at)')
     .eq('id', id)
     .single()
 
   if (!auction) return NextResponse.json({ error: 'Auction not found' }, { status: 404 })
-  if (auction.coordinator_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-  if (auction.status !== 'upcoming') {
-    return NextResponse.json({ error: `Auction is already ${auction.status}` }, { status: 409 })
-  }
 
   const eventRow = auction.event as { start_at: string } | { start_at: string }[] | null
   const eventStartAt = Array.isArray(eventRow) ? eventRow[0]?.start_at : eventRow?.start_at
@@ -68,14 +79,14 @@ export async function POST(_request: Request, { params }: Props) {
     Date.now() + auction.timer_duration_seconds * 1000
   ).toISOString()
 
-  const { error } = await supabase
+  const { error } = await service
     .from('auctions')
     .update({ status: 'active', timer_ends_at: timerEndsAt })
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await notifyAuctionStarting(supabase, {
+  await notifyAuctionStarting(service, {
     auctionId: id,
     auctionTitle: auction.title,
     eventId: auction.event_id,

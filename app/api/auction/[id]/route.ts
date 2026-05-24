@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { assertLegacyAuctionManager } from '@/lib/auction/coordinator-access'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -7,31 +8,28 @@ interface Props {
 
 export async function DELETE(_request: Request, { params }: Props) {
   const { id } = await params
-  const supabase = await createServiceClient()
+  const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: auction } = await supabase
-    .from('auctions')
-    .select('id, coordinator_id, status')
-    .eq('id', id)
-    .single()
+  const service = await createServiceClient()
+  const access = await assertLegacyAuctionManager(service, id, user.id)
 
-  if (!auction) return NextResponse.json({ error: 'Auction not found' }, { status: 404 })
-  if (auction.coordinator_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status })
   }
-  if (auction.status === 'active') {
+
+  if (access.auction.status === 'active') {
     return NextResponse.json(
       { error: 'End the live auction before removing it' },
       { status: 409 }
     )
   }
 
-  const { error } = await supabase.from('auctions').delete().eq('id', id)
+  const { error } = await service.from('auctions').delete().eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
