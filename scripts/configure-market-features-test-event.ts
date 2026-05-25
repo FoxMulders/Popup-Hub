@@ -44,7 +44,7 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  let query = supabase
+  const query = supabase
     .from('events')
     .select('id, name, status')
     .in('status', ['published', 'active'])
