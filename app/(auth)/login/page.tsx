@@ -2,7 +2,6 @@ export const dynamic = 'force-dynamic'
 
 import { Suspense } from 'react'
 import LoginForm from './login-form'
-import { DevRoleSwitcher } from '@/components/auth/dev-role-switcher'
 
 export default function LoginPage() {
   return (
@@ -10,7 +9,6 @@ export default function LoginPage() {
       <Suspense fallback={<div className="w-full max-w-md h-96 animate-pulse market-panel rounded-2xl" />}>
         <LoginForm />
       </Suspense>
-      <DevRoleSwitcher />
     </div>
   )
 }
