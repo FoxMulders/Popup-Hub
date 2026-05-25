@@ -21,6 +21,8 @@ interface PopupHubLogoProps {
   className?: string
   title?: string
   priority?: boolean
+  /** Smaller wordmark with a full-size tap target (footer). */
+  compact?: boolean
   /** When set, the logo navigates instead of playing the market animation. */
   href?: string
 }
@@ -38,10 +40,12 @@ function playAnimation(event: MouseEvent, playRandomLoader?: () => void) {
 function LogoAnimationButton({
   className,
   title,
+  compact = false,
   children,
 }: {
   className?: string
   title: string
+  compact?: boolean
   children: ReactNode
 }) {
   const loader = useContext(PopupLoaderContext)
@@ -51,7 +55,8 @@ function LogoAnimationButton({
       type="button"
       onClick={(event) => playAnimation(event, loader?.playRandomLoader)}
       className={cn(
-        'relative z-10 inline-flex min-h-11 min-w-[7rem] cursor-pointer touch-manipulation items-center justify-center rounded-md border-0 bg-transparent p-1 transition-opacity hover:opacity-90 active:scale-[0.98]',
+        'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
+        compact ? 'min-h-11 min-w-11 p-2' : 'min-h-11 min-w-[7rem] p-1',
         className,
       )}
       aria-label={`${title} — play market animation`}
@@ -65,11 +70,13 @@ function LogoShell({
   className,
   title,
   href,
+  compact = false,
   children,
 }: {
   className?: string
   title: string
   href?: string
+  compact?: boolean
   children: ReactNode
 }) {
   if (href) {
@@ -81,16 +88,20 @@ function LogoShell({
   }
 
   return (
-    <LogoAnimationButton className={className} title={title}>
+    <LogoAnimationButton className={className} title={title} compact={compact}>
       {children}
     </LogoAnimationButton>
   )
 }
 
+/** 25% of footer wordmark height (h-9 / sm:h-10). */
+const FOOTER_LOGO_HEIGHT = 'h-[0.5625rem] w-auto sm:h-[0.625rem]'
+
 export function PopupHubLogo({
   className,
   title = 'Popup Hub',
   priority = false,
+  compact = false,
   href,
 }: PopupHubLogoProps) {
   const image = (
@@ -101,13 +112,16 @@ export function PopupHubLogo({
       height={LOGO_HEIGHT}
       unoptimized
       draggable={false}
-      className="pointer-events-none h-auto w-auto select-none bg-transparent object-contain"
+      className={cn(
+        'pointer-events-none select-none bg-transparent object-contain',
+        compact ? FOOTER_LOGO_HEIGHT : 'h-auto w-auto',
+      )}
       priority={priority}
     />
   )
 
   return (
-    <LogoShell className={className} title={title} href={href}>
+    <LogoShell className={className} title={title} href={href} compact={compact}>
       {image}
     </LogoShell>
   )

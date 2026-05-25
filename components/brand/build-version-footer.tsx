@@ -37,7 +37,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
           </ul>
         </nav>
 
-        <PopupHubLogo className="relative z-20 h-9 w-auto shrink-0 sm:h-10" title="Popup Hub" />
+        <PopupHubLogo compact className="relative z-20 shrink-0" title="Popup Hub" />
 
         <div className="flex flex-col items-center gap-0.5 text-center">
           <p className="text-xs text-muted-foreground sm:text-sm">
