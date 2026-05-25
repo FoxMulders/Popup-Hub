@@ -59,9 +59,11 @@ import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
+import { WizardContextStrip } from '@/components/coordinator/wizard/wizard-context-strip'
+import { buildWizardScheduleLines } from '@/lib/wizard/wizard-schedule-summary'
 import { useFlyerScan } from '@/hooks/use-flyer-scan'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
-import { formatTimeLabel, formatShortDate } from '@/components/coordinator/wizard/wizard-time-options'
+import { cn } from '@/lib/utils'
 import type {
   BoothLayout,
   BoothClearancePolicy,
@@ -330,22 +332,19 @@ export function MarketSetupWizard({
   const [plannerOverlap, setPlannerOverlap] = useState(false)
   const [plannerQaRunning, setPlannerQaRunning] = useState(false)
 
-  const scheduleSummary = useMemo(() => {
-    if (scheduleType === 'multi') {
-      const filled = sortedDayRows().filter((r) => r.date && r.start_time && r.end_time)
-      if (filled.length === 0) return null
-      return filled
-        .map(
-          (r) =>
-            `${formatShortDate(r.date)} · ${formatTimeLabel(r.start_time)} – ${formatTimeLabel(r.end_time)}`
-        )
-        .join('\n')
-    }
-    if (startDate && startTime && endTime) {
-      return `${formatShortDate(startDate)} · ${formatTimeLabel(startTime)} – ${formatTimeLabel(endTime)}`
-    }
-    return null
-  }, [scheduleType, dayRows, startDate, startTime, endTime])
+  const scheduleLines = useMemo(
+    () =>
+      buildWizardScheduleLines({
+        scheduleType,
+        dayRows,
+        startDate,
+        startTime,
+        endTime,
+      }),
+    [scheduleType, dayRows, startDate, startTime, endTime]
+  )
+
+  const isWorkspaceStep = currentStep >= 3
 
   const selectedVenue = useMemo(() => {
     if (currentStep < 2) return null
@@ -855,9 +854,33 @@ export function MarketSetupWizard({
         />
       ) : null}
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        <div className={WIZARD_PANEL + ' flex-1 min-w-0 p-4 sm:p-5 space-y-4'}>
-          {currentStep >= 2 && !skipVenueLayout ? (
+      <div
+        className={cn(
+          'flex items-start gap-4',
+          isWorkspaceStep ? 'flex-col' : 'flex-col lg:flex-row lg:gap-6'
+        )}
+      >
+        {isWorkspaceStep ? (
+          <WizardContextStrip
+            stepLabel={currentStep === 3 ? 'Step 3 — Capacity' : 'Step 4 — Floor plan'}
+            eventName={name.trim() || null}
+            scheduleLines={scheduleLines}
+            selectedVenue={selectedVenue}
+            capacityLabel={summaryCapacityLabel}
+            tableSizeLabel={
+              currentStep >= 3 && !skipVenueLayout ? `${baselineTableLengthFt}′ tables` : null
+            }
+          />
+        ) : null}
+
+        <div
+          className={cn(
+            WIZARD_PANEL,
+            'min-w-0 flex-1 space-y-3',
+            currentStep === 4 ? 'p-2 sm:p-3' : isWorkspaceStep ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
+          )}
+        >
+          {currentStep === 4 && !skipVenueLayout ? (
             <LayoutRoomBar
               rooms={rooms}
               activeRoomId={activeRoomId}
@@ -999,14 +1022,16 @@ export function MarketSetupWizard({
           ) : null}
         </div>
 
-        <WizardSummaryRail
-          eventName={name.trim() || null}
-          scheduleSummary={scheduleSummary}
-          selectedVenue={selectedVenue}
-          capacityLabel={summaryCapacityLabel}
-          tableSizeLabel={currentStep >= 3 && !skipVenueLayout ? `Table size: ${baselineTableLengthFt} ft` : null}
-          autosaveStatus={autosaveStatus}
-        />
+        {!isWorkspaceStep ? (
+          <WizardSummaryRail
+            eventName={name.trim() || null}
+            scheduleLines={scheduleLines}
+            selectedVenue={selectedVenue}
+            capacityLabel={summaryCapacityLabel}
+            tableSizeLabel={currentStep >= 3 && !skipVenueLayout ? `Table size: ${baselineTableLengthFt} ft` : null}
+            autosaveStatus={autosaveStatus}
+          />
+        ) : null}
       </div>
 
       <WizardCritiqueDrawer findings={findings} onDismiss={dismiss} />

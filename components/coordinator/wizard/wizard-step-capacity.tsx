@@ -8,11 +8,6 @@ import { TableSizeSelector } from '@/components/coordinator/table-size-selector'
 import { countActiveMlmSlots } from '@/lib/categories/mlm-constraints'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import { cn } from '@/lib/utils'
-import {
-  WIZARD_INFO_BOX,
-  WIZARD_PANEL_INNER,
-  WIZARD_STEP_TITLE,
-} from '@/lib/wizard/wizard-panel-styles'
 import type { Category, VenueElement } from '@/types/database'
 
 export interface WizardStepCapacityProps {
@@ -54,74 +49,83 @@ export function WizardStepCapacity({
   const activeMlmSlots = countActiveMlmSlots(categoryLimits, categories)
 
   return (
-    <div className={WIZARD_PANEL_INNER}>
-      <h2 className={cn(WIZARD_STEP_TITLE, 'flex items-center gap-2')}>
-        <Settings2 className="h-4 w-4" />
-        Step 3 — Space Caps &amp; Math Specs
-      </h2>
-
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
-        <div className="flex-1 min-w-0 space-y-4">
-          {!skipVenueLayout ? (
-            <SmartPopulateBoothCaps
-              categories={categories}
-              allowMlm={allowMlm}
-              venueWidthFt={venueWidth}
-              venueLengthFt={venueLength}
-              onVenueWidthChange={() => {}}
-              onVenueLengthChange={() => {}}
-              existingLimits={categoryLimits}
-              onPopulate={onCategoryLimitsChange}
-              globalMlmCap={globalMlmCap}
-              venueReadOnly={venueReadOnly}
-              venueElements={venueElements}
-              entrance={entrance}
-              tableLengthFt={baselineTableLengthFt}
-              onTableLengthChange={onBaselineTableLengthChange}
-              hideTableSizeSelector
-            />
-          ) : (
-            <p className={WIZARD_INFO_BOX}>
-              Floor plan planning is off for this event — set vendor category caps manually below. Approved vendors
-              are not placed on a floor plan; applications still control who may participate.
-            </p>
-          )}
-          {allowMlm ? (
-            <MlmTierGuard
-              globalMlmCap={globalMlmCap}
-              onGlobalMlmCapChange={onGlobalMlmCapChange}
-              activeMlmSlots={activeMlmSlots}
-            />
-          ) : null}
-          <CategoryLimitEditor
-            categories={categories}
-            value={categoryLimits}
-            onChange={onCategoryLimitsChange}
-            allowMlm={allowMlm}
-            globalMlmCap={globalMlmCap}
-          />
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-stone-200/80 pb-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-heading font-semibold uppercase tracking-wide text-forest flex items-center gap-2">
+            <Settings2 className="h-4 w-4 shrink-0" aria-hidden />
+            Category caps &amp; booth fees
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
+            Set how many vendors each category can hold and what they pay. Use smart populate to draft
+            caps from your floor dimensions.
+          </p>
         </div>
-        {!skipVenueLayout ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {!skipVenueLayout ? (
+            <>
+              <span className="rounded-md border border-stone-200 bg-canvas px-2.5 py-1 tabular-nums">
+                Floor <strong className="text-foreground">{venueWidth}×{venueLength} ft</strong>
+              </span>
+              <span className="rounded-md border border-sage-200 bg-sage-50 px-2.5 py-1 tabular-nums">
+                C<sub>max</sub> <strong className="text-foreground">{layoutCapacity}</strong>
+              </span>
+            </>
+          ) : null}
+          <span className="rounded-md border border-harvest-200 bg-harvest-50 px-2.5 py-1 tabular-nums">
+            Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
+          </span>
+        </div>
+      </div>
+
+      {!skipVenueLayout ? (
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <SmartPopulateBoothCaps
+            compact
+            categories={categories}
+            allowMlm={allowMlm}
+            venueWidthFt={venueWidth}
+            venueLengthFt={venueLength}
+            onVenueWidthChange={() => {}}
+            onVenueLengthChange={() => {}}
+            existingLimits={categoryLimits}
+            onPopulate={onCategoryLimitsChange}
+            globalMlmCap={globalMlmCap}
+            venueReadOnly={venueReadOnly}
+            venueElements={venueElements}
+            entrance={entrance}
+            tableLengthFt={baselineTableLengthFt}
+            onTableLengthChange={onBaselineTableLengthChange}
+            hideTableSizeSelector
+          />
           <TableSizeSelector
             value={baselineTableLengthFt}
             onChange={onBaselineTableLengthChange}
             disabled={venueReadOnly}
+            className="lg:w-[240px]"
           />
-        ) : null}
-      </div>
-
-      {!skipVenueLayout ? (
-        <p className={WIZARD_INFO_BOX}>
-          Optimized capacity (C<sub>max</sub>): up to{' '}
-          <span className="font-semibold text-foreground">{layoutCapacity}</span> vendor units on a{' '}
-          {venueWidth} × {venueLength} ft floor. Category caps total:{' '}
-          <span className="font-semibold">{totalCaps || '—'}</span>.
-        </p>
+        </div>
       ) : (
-        <p className={WIZARD_INFO_BOX}>
-          Category caps total: <span className="font-semibold">{totalCaps || '—'}</span>.
+        <p className="rounded-lg border border-stone-200 bg-canvas px-3 py-2 text-xs text-muted-foreground">
+          Floor plan planning is off — set vendor category caps manually below.
         </p>
       )}
+
+      {allowMlm ? (
+        <MlmTierGuard
+          globalMlmCap={globalMlmCap}
+          onGlobalMlmCapChange={onGlobalMlmCapChange}
+          activeMlmSlots={activeMlmSlots}
+        />
+      ) : null}
+
+      <CategoryLimitEditor
+        categories={categories}
+        value={categoryLimits}
+        onChange={onCategoryLimitsChange}
+        allowMlm={allowMlm}
+        globalMlmCap={globalMlmCap}
+      />
     </div>
   )
 }

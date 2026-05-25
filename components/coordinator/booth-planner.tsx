@@ -3219,35 +3219,34 @@ export function BoothPlanner({
       {(canvasOnly || currentStep === 3) && (
         <div className="space-y-4">
           {canvasOnly ? (
-            <div className="market-panel space-y-3 p-4">
-              <div>
-                <h2 className={WIZARD_STEP_TITLE}>
-                  Step 4 — Save floor plan
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Save the venue shell or auto-place vendors on the canvas. Manual edits are optional — use
-                  &ldquo;Save &amp; Deploy Market&rdquo; when ready to publish.
+            <div className="flex flex-col gap-2 border-b border-stone-200/80 pb-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <h2 className={WIZARD_STEP_TITLE}>Save floor plan</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Save a blank shell or auto-place vendors — manual edits optional.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <Button
                   type="button"
                   variant="outline"
+                  size="sm"
                   disabled={saving || layoutOverlaps.hasOverlap}
                   onClick={() => void handleSaveBlankLayout()}
                   className="gap-1.5"
                 >
                   <Save className="h-4 w-4" />
-                  Save blank floor plan
+                  Save blank
                 </Button>
                 <Button
                   type="button"
+                  size="sm"
                   disabled={saving || autoPlanRunning || layoutOverlaps.hasOverlap}
                   onClick={() => void handleAutoPlanAndSave()}
                   className="gap-1.5"
                 >
                   <Wand2 className="h-4 w-4" />
-                  {autoPlanRunning ? 'Placing vendors…' : 'Auto-place vendors & save'}
+                  {autoPlanRunning ? 'Placing…' : 'Auto-place & save'}
                 </Button>
               </div>
             </div>

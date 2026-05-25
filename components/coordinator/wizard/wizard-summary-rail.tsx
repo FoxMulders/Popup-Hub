@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { WizardScheduleLines } from '@/components/coordinator/wizard/wizard-context-strip'
 import {
   WIZARD_PANEL,
   WIZARD_SECTION_LABEL,
@@ -21,7 +22,7 @@ export interface SummaryVenueSelection {
 
 export interface WizardSummaryRailProps {
   eventName?: string | null
-  scheduleSummary?: string | null
+  scheduleLines?: string[]
   selectedVenue?: SummaryVenueSelection | null
   capacityLabel?: string | null
   tableSizeLabel?: string | null
@@ -31,7 +32,7 @@ export interface WizardSummaryRailProps {
 
 export function WizardSummaryRail({
   eventName,
-  scheduleSummary,
+  scheduleLines = [],
   selectedVenue,
   capacityLabel,
   tableSizeLabel,
@@ -39,7 +40,7 @@ export function WizardSummaryRail({
   className,
 }: WizardSummaryRailProps) {
   const showEvent = Boolean(eventName?.trim())
-  const showSchedule = Boolean(scheduleSummary?.trim())
+  const showSchedule = scheduleLines.length > 0
   const showVenue = Boolean(selectedVenue)
   const showCapacity = Boolean(capacityLabel?.trim())
 
@@ -66,7 +67,9 @@ export function WizardSummaryRail({
         {showSchedule ? (
           <li className="space-y-1">
             <span className={WIZARD_SUMMARY_META_LABEL}>Hours</span>
-            <p className={cn(WIZARD_SUMMARY_VALUE, 'text-xs leading-relaxed')}>{scheduleSummary}</p>
+            <div className={cn(WIZARD_SUMMARY_VALUE, 'px-2 py-2')}>
+              <WizardScheduleLines lines={scheduleLines} />
+            </div>
           </li>
         ) : null}
 

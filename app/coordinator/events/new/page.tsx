@@ -14,13 +14,7 @@ export default async function NewEventPage() {
     .order('name')
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-8">
-        <h1 className="font-heading text-3xl font-semibold text-foreground">Create New Event</h1>
-        <p className="mt-1 text-muted-foreground">
-          Four-step wizard — core details, venue, capacity, then floor plan canvas.
-        </p>
-      </div>
+    <div className="mx-auto max-w-[min(100%,1600px)] px-4 py-6 sm:py-8">
       <MarketSetupWizard
         categories={(categories as Category[]) ?? []}
         coordinatorId={user.id}
