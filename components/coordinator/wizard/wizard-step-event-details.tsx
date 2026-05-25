@@ -1,6 +1,6 @@
 'use client'
 
-import { Trash2, HelpCircle } from 'lucide-react'
+import { buildNextEventDayRow } from '@/lib/events/event-day-rows'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -94,10 +94,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
   }
 
   function addDayRow() {
-    props.onDayRowsChange([
-      ...props.dayRows,
-      { date: '', start_time: '08:00', end_time: '15:00' },
-    ])
+    props.onDayRowsChange([...props.dayRows, buildNextEventDayRow(props.dayRows)])
   }
 
   function removeDayRow(index: number) {

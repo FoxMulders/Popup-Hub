@@ -25,6 +25,7 @@ import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-cli
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Loader2, MapPin, Calendar, Settings2, Upload, Gavel, Trash2, HelpCircle } from 'lucide-react'
+import { buildNextEventDayRow } from '@/lib/events/event-day-rows'
 import { ScheduleWeekendShortcuts } from '@/components/shared/schedule-weekend-shortcuts'
 import { FlyerCoverUpload } from '@/components/coordinator/flyer-cover-upload'
 import { FlyerFieldHighlight } from '@/components/coordinator/flyer-field-highlight'
@@ -219,7 +220,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   }
 
   function addDayRow() {
-    setDayRows((prev) => [...prev, { date: '', start_time: '08:00', end_time: '15:00' }])
+    setDayRows((prev) => [...prev, buildNextEventDayRow(prev)])
   }
 
   function removeDayRow(index: number) {
