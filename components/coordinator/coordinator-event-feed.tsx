@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { EventCard } from '@/components/events/event-card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -9,6 +10,13 @@ import { Button } from '@/components/ui/button'
 import { getEventDisplayStatus } from '@/lib/queries/events'
 import type { Event } from '@/types/database'
 import { Calendar, Search } from 'lucide-react'
+
+type EventFeedTab = 'active' | 'archived'
+
+function parseEventFeedTab(value: string | null): EventFeedTab | null {
+  if (value === 'active' || value === 'archived') return value
+  return null
+}
 
 interface CoordinatorEventFeedProps {
   activeEvents: Event[]
@@ -83,7 +91,7 @@ export function CoordinatorEventFeed({
         />
       </div>
 
-      <Tabs defaultValue="active">
+      <Tabs value={tab} onValueChange={(value) => setTab(value as EventFeedTab)}>
         <TabsList>
           <TabsTrigger value="active">Active markets ({activeEvents.length})</TabsTrigger>
           <TabsTrigger value="archived">Past events ({archivedEvents.length})</TabsTrigger>

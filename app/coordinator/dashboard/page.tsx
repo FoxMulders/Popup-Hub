@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CoordinatorEventFeed } from '@/components/coordinator/coordinator-event-feed'
 import {
@@ -11,12 +10,13 @@ import {
 } from '@/lib/queries/events'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, Calendar, Clock, DollarSign } from 'lucide-react'
+import { Plus, Calendar, Clock, DollarSign, Archive } from 'lucide-react'
 import type { Event } from '@/types/database'
 import { PendingBoothApplicationsPanel } from '@/components/coordinator/pending-booth-applications-panel'
 import type { PendingBoothApplicationRow } from '@/components/coordinator/pending-booth-applications-panel'
 import { PendingEtransferPanel } from '@/components/coordinator/pending-etransfer-panel'
 import type { PendingEtransferApplication } from '@/components/coordinator/pending-etransfer-panel'
+import { DashboardStatCard } from '@/components/coordinator/dashboard-stat-card'
 
 async function CoordinatorStats({ userId }: { userId: string }) {
   const supabase = await createClient()
@@ -24,14 +24,17 @@ async function CoordinatorStats({ userId }: { userId: string }) {
   const eventIds = myEventIds?.map((e) => e.id) ?? []
 
   const [
-    { count: totalEvents },
+    { data: eventRows },
     { count: pendingApplications },
     { count: pendingInsuranceApplications },
     { data: firstPendingApplication },
     { data: revenueRows },
     { data: profile },
   ] = await Promise.all([
-    supabase.from('events').select('id', { count: 'exact', head: true }).eq('coordinator_id', userId),
+    supabase
+      .from('events')
+      .select('id, start_at, end_at, status')
+      .eq('coordinator_id', userId),
     eventIds.length > 0
       ? supabase
           .from('booth_applications')
@@ -68,6 +71,10 @@ async function CoordinatorStats({ userId }: { userId: string }) {
       .single(),
   ])
 
+  const { active, archived } = partitionEventsByPhase((eventRows ?? []) as Event[])
+  const totalActiveEvents = active.length
+  const totalArchivedEvents = archived.length
+
   const totalRevenueCents =
     revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
   const revenueFormatted = new Intl.NumberFormat('en-CA', {
@@ -87,54 +94,44 @@ async function CoordinatorStats({ userId }: { userId: string }) {
         : '/coordinator/dashboard#pending-applications'
       : null
 
-  const pendingCard = (
-    <>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          Booth Applications
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-harvest-500" />
-          <span className="text-2xl font-bold">{pendingCount}</span>
-        </div>
-        {pendingCount > 0 && pendingHref ? (
-          <p className="text-xs font-medium text-harvest-700">Review pending applications →</p>
-        ) : null}
-      </CardContent>
-    </>
-  )
-
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Events</CardTitle></CardHeader>
-        <CardContent className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-forest" />
-          <span className="text-2xl font-bold">{totalEvents ?? 0}</span>
-        </CardContent>
-      </Card>
-      {pendingHref ? (
-        <Link href={pendingHref} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-harvest-400">
-          <Card className="h-full transition-colors group-hover:border-harvest-300 group-hover:bg-harvest-50/40">
-            {pendingCard}
-          </Card>
-        </Link>
-      ) : (
-        <Card>{pendingCard}</Card>
-      )}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Booth Revenue</CardTitle></CardHeader>
-        <CardContent className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-sage-600" />
-          <span className="text-2xl font-bold">{revenueFormatted}</span>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Square Payouts</CardTitle></CardHeader>
-        <CardContent className="flex items-center gap-2">
-          {squareConnected ? (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <DashboardStatCard
+        title="Total Events"
+        value={totalActiveEvents}
+        icon={Calendar}
+        iconClassName="text-forest"
+        href="/coordinator/dashboard?tab=active#my-events"
+        subtitle="View active markets →"
+      />
+      <DashboardStatCard
+        title="Archived Events"
+        value={totalArchivedEvents}
+        icon={Archive}
+        iconClassName="text-stone-500"
+        href="/coordinator/dashboard?tab=archived#my-events"
+        subtitle="View past events →"
+        hoverClassName="group-hover:border-stone-300 group-hover:bg-stone-50/60"
+      />
+      <DashboardStatCard
+        title="Booth Applications"
+        value={pendingCount}
+        icon={Clock}
+        iconClassName="text-harvest-500"
+        href={pendingHref}
+        subtitle={pendingCount > 0 ? 'Review pending applications →' : null}
+        hoverClassName="group-hover:border-harvest-300 group-hover:bg-harvest-50/40"
+      />
+      <DashboardStatCard
+        title="Booth Revenue"
+        value={revenueFormatted}
+        icon={DollarSign}
+        iconClassName="text-sage-600"
+      />
+      <DashboardStatCard
+        title="Square Payouts"
+        value={
+          squareConnected ? (
             <span className="text-sm font-medium text-sage-700">Connected</span>
           ) : (
             <Link href="/coordinator/square-connect">
@@ -142,9 +139,11 @@ async function CoordinatorStats({ userId }: { userId: string }) {
                 Connect Square →
               </Button>
             </Link>
-          )}
-        </CardContent>
-      </Card>
+          )
+        }
+        icon={DollarSign}
+        iconClassName="text-sage-600"
+      />
     </div>
   )
 }
@@ -276,7 +275,7 @@ export default async function CoordinatorDashboard() {
 
       <PendingEtransferPanel applications={pendingEtransfers} />
 
-      <div>
+      <div id="my-events">
         <h2 className="market-section-title mb-4">My Events</h2>
         <Suspense fallback={<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-56 rounded-2xl" />)}</div>}>
           <MyEvents userId={user.id} />
