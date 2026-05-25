@@ -6,7 +6,7 @@ export function ServiceWorkerRegister() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
-    navigator.serviceWorker.register('/sw.js').catch((error) => {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch((error) => {
       console.error('[pwa] service worker registration failed', error)
     })
   }, [])

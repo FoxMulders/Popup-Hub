@@ -80,9 +80,7 @@ export function AppNav({
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 lg:gap-6">
-            <Link href={homeHref} className="shrink-0">
-              <BrandLogoLockup />
-            </Link>
+            <BrandLogoLockup className="shrink-0" href={homeHref} />
 
             {availablePortals.length > 1 ? (
               <PortalTabs

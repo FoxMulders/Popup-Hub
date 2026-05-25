@@ -1,9 +1,10 @@
-const CACHE_NAME = 'popup-hub-shell-v6'
+const CACHE_NAME = 'popup-hub-shell-v9'
 const STATIC_ASSETS = [
   '/manifest.json',
   '/site.webmanifest',
   '/popup-hub-brand.png',
   '/popup-hub-icon.png',
+  '/popup-hub-logo.png',
   '/favicon.ico',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
@@ -33,9 +34,13 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+function isNextAssetRequest(url) {
+  return url.pathname.startsWith('/_next/')
+}
+
 function isAppShellRequest(url) {
   return (
-    url.pathname.startsWith('/_next/') ||
+    isNextAssetRequest(url) ||
     url.pathname === '/' ||
     url.pathname.startsWith('/discover') ||
     url.pathname.startsWith('/vendor') ||
@@ -69,9 +74,17 @@ self.addEventListener('fetch', (event) => {
 
   if (isAppShellRequest(url)) {
     event.respondWith(
-      fetch(request).catch(() =>
-        caches.match(request).then((cached) => cached ?? Response.error())
-      )
+      fetch(request)
+        .then((response) => {
+          if (response.ok && isNextAssetRequest(url)) {
+            const copy = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          }
+          return response
+        })
+        .catch(() =>
+          caches.match(request).then((cached) => cached ?? Response.error()),
+        ),
     )
     return
   }

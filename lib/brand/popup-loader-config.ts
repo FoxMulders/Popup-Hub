@@ -8,7 +8,7 @@ export const POPUP_LOADER = {
   /** Marker name in AE export — frame to hold on while the page is still loading. */
   holdMarkerNames: ['pre_door', 'pre-door', 'hold', 'door_closed'],
   /** Fallback hold frame when markers are absent (adjust to match your export). */
-  holdFrameFallback: 120,
+  holdFrameFallback: 530,
   fadeOutMs: 600,
   /** Safety timeout so the site never stays blocked. */
   maxWaitMs: 20_000,

@@ -5,7 +5,7 @@ import { Lora, Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
 import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
-import { PopupPageLoader } from '@/components/brand/popup-page-loader'
+import { PopupLoaderProvider } from '@/components/brand/popup-loader-provider'
 import { BuildVersionFooter } from '@/components/brand/build-version-footer'
 import { InstallPrompt } from '@/components/navigation/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
@@ -87,18 +87,19 @@ export default async function RootLayout({
       className={`${display.variable} ${body.variable} ${geistMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden safe-bottom">
-        <PopupPageLoader />
-        <DocumentTitleSync initialRole={sessionRole} />
-        <AuthSessionGuard />
-        <ServiceWorkerRegister />
-        <div className="flex min-h-full flex-1 flex-col">
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
-          <BuildVersionFooter />
-        </div>
-        <InstallPrompt />
-        <Toaster richColors position="top-right" />
+        <PopupLoaderProvider>
+          <DocumentTitleSync initialRole={sessionRole} />
+          <AuthSessionGuard />
+          <ServiceWorkerRegister />
+          <div className="flex min-h-full flex-1 flex-col">
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+            <BuildVersionFooter />
+          </div>
+          <InstallPrompt />
+          <Toaster richColors position="top-right" />
+        </PopupLoaderProvider>
       </body>
     </html>
   )

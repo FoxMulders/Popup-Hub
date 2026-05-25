@@ -18,9 +18,7 @@ export function GuestNav() {
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
       <div className="mx-auto flex max-w-full items-center justify-between overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
-        <Link href="/discover" className="shrink-0">
-          <BrandLogoLockup />
-        </Link>
+        <BrandLogoLockup className="shrink-0" href="/discover" />
 
         <div className="hidden items-center gap-1 md:flex">
           {NAV_LINKS.map(({ href, label }) => (

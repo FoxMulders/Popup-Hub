@@ -56,9 +56,7 @@ export function ShopperTopBar({
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 sm:max-w-7xl sm:px-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-4 lg:gap-6">
-            <Link href="/discover" className="shrink-0">
-              <BrandLogoLockup />
-            </Link>
+            <BrandLogoLockup className="shrink-0" href="/discover" />
 
             {profile && availablePortals.length > 1 ? (
               <PortalTabs
