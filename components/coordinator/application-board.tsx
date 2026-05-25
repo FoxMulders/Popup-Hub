@@ -24,6 +24,8 @@ interface ApplicationBoardProps {
   applications: BoothApplication[]
   bookingMode: 'instant' | 'juried'
   eventCancelled?: boolean
+  /** Market day has passed or status is completed — still allow resolving pending apps. */
+  marketEnded?: boolean
   categoryNameById?: Record<string, string>
   categoryLimits?: EventCategoryLimit[]
   marketInsuranceRequired?: boolean
@@ -76,6 +78,7 @@ export function ApplicationBoard({
   applications,
   bookingMode,
   eventCancelled,
+  marketEnded = false,
   categoryNameById,
   categoryLimits = [],
   marketInsuranceRequired = false,
@@ -262,6 +265,19 @@ export function ApplicationBoard({
           </p>
           <p className="mt-1 text-xs text-terracotta-700">
             This market is closed. Vendor applications are read-only.
+          </p>
+        </div>
+      )}
+
+      {!eventCancelled && marketEnded && pendingCount > 0 && (
+        <div className="rounded-xl border border-harvest-200 bg-harvest-50 px-4 py-3 text-center">
+          <p className="text-sm font-heading font-semibold text-harvest-900">
+            This market has ended — resolve {pendingCount} pending application
+            {pendingCount === 1 ? '' : 's'}
+          </p>
+          <p className="mt-1 text-xs text-harvest-800/90">
+            New vendor applications are closed, but you can still approve, waitlist, or decline
+            submissions received before the event.
           </p>
         </div>
       )}

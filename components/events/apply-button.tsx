@@ -71,6 +71,7 @@ import {
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
 import { ApplicationStatusActions, ApplicationStatusBadgeLink } from '@/components/vendor/application-status-actions'
+import { hasExistingVendorApplication } from '@/lib/vendor/application-status-ui'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
 
 interface ExistingApplication {
@@ -475,8 +476,10 @@ export function ApplyButton({
   }
 
   const resolvedApplicationId = applicationId ?? existingApplication?.id ?? null
+  const trackedApplicationStatus =
+    localApplicationStatus ?? existingApplication?.status ?? applicationStatus
 
-  if (!applicationsOpen) {
+  if (!applicationsOpen && !hasExistingVendorApplication(trackedApplicationStatus)) {
     return (
       <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
         Applications closed
@@ -484,7 +487,7 @@ export function ApplyButton({
     )
   }
 
-  if (localApplicationStatus === 'pending' && resolvedApplicationId) {
+  if (trackedApplicationStatus === 'pending' && resolvedApplicationId) {
     return (
       <ApplicationStatusActions
         event={event}
@@ -494,7 +497,7 @@ export function ApplyButton({
     )
   }
 
-  if (localApplicationStatus === 'pending') {
+  if (trackedApplicationStatus === 'pending') {
     return (
       <div className="space-y-2">
         <ApplicationStatusBadgeLink event={event} status="pending" />
@@ -505,7 +508,7 @@ export function ApplyButton({
     )
   }
 
-  if (localApplicationStatus === 'waitlisted' && resolvedApplicationId) {
+  if (trackedApplicationStatus === 'waitlisted' && resolvedApplicationId) {
     return (
       <ApplicationStatusActions
         event={event}
@@ -515,11 +518,11 @@ export function ApplyButton({
     )
   }
 
-  if (localApplicationStatus === 'waitlisted') {
+  if (trackedApplicationStatus === 'waitlisted') {
     return <ApplicationStatusBadgeLink event={event} status="waitlisted" />
   }
 
-  if (localApplicationStatus === 'pending_insurance' && resolvedApplicationId) {
+  if (trackedApplicationStatus === 'pending_insurance' && resolvedApplicationId) {
     return (
       <ApplicationStatusActions
         event={event}
@@ -529,11 +532,11 @@ export function ApplyButton({
     )
   }
 
-  if (localApplicationStatus === 'pending_insurance') {
+  if (trackedApplicationStatus === 'pending_insurance') {
     return <ApplicationStatusBadgeLink event={event} status="pending_insurance" />
   }
 
-  if (localApplicationStatus === 'approved') {
+  if (trackedApplicationStatus === 'approved') {
     const paymentApp = existingApplication ?? null
     const requiresPaymentNow = paymentApp ? needsSquareCheckout(paymentApp) : false
     const eTransferPending = paymentApp ? needsEtransferCoordinatorReview(paymentApp) : false
@@ -615,7 +618,7 @@ export function ApplyButton({
     )
   }
 
-  if (localApplicationStatus === 'cancelled') {
+  if (trackedApplicationStatus === 'cancelled') {
     return (
       <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
         Application cancelled
@@ -623,7 +626,7 @@ export function ApplyButton({
     )
   }
 
-  if (localApplicationStatus === 'rejected') {
+  if (trackedApplicationStatus === 'rejected') {
     return (
       <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
         Not selected

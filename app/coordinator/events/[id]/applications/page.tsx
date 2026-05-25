@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, MapPin } from 'lucide-react'
 import { format } from 'date-fns'
 import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
+import { isEventArchived } from '@/lib/queries/events'
 import type { BoothApplication, Event } from '@/types/database'
 
 interface Props {
@@ -39,6 +40,8 @@ export default async function ApplicationsPage({ params }: Props) {
   } = await fetchCoordinatorEventApplications(supabase, id)
 
   const categoryNameById = buildCategoryNameMap(allCategories ?? [])
+  const eventCancelled = event.status === 'cancelled'
+  const marketEnded = isEventArchived(event as Event)
 
   return (
     <div className="mx-auto max-w-[1500px] px-6 py-10 xl:px-10">
@@ -93,6 +96,8 @@ export default async function ApplicationsPage({ params }: Props) {
           categoryNameById={Object.fromEntries(categoryNameById)}
           categoryLimits={(event.category_limits ?? []) as Event['category_limits']}
           marketInsuranceRequired={Boolean((event as Event).market_insurance_required)}
+          eventCancelled={eventCancelled}
+          marketEnded={marketEnded}
         />
       ) : (
         <div className="rounded-xl border border-stone-200 bg-canvas px-4 py-8 text-center text-sm text-muted-foreground">
