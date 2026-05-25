@@ -10,6 +10,7 @@ import {
   type MapMouseEvent,
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
+import { MapRecenter } from '@/components/map/map-recenter'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -811,7 +812,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
               />
             </div>
             <p className="text-xs text-muted-foreground">Or click anywhere on the map to drop your event pin.</p>
-            <div className="h-64 rounded-xl overflow-hidden border">
+            <div className="h-64 overflow-hidden rounded-xl border [touch-action:auto]">
                 <Map
                   mapId="event-form-map"
                   defaultCenter={{ lat, lng }}
@@ -819,8 +820,9 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                   gestureHandling="greedy"
                   disableDefaultUI
                   onClick={handleMapClick}
-                  className="w-full h-full cursor-crosshair"
+                  className="h-full w-full cursor-crosshair"
                 >
+                  <MapRecenter lat={lat} lng={lng} pinDropped={pinDropped} zoomOnPinDrop zoom={13} />
                   {pinDropped && (
                     <AdvancedMarker position={{ lat, lng }}>
                       <div className="bg-forest text-primary-foreground rounded-full p-1.5 shadow-[var(--shadow-market-lift)]">

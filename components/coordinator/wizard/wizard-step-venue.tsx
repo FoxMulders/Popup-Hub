@@ -8,6 +8,7 @@ import {
   type MapMouseEvent,
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
+import { MapRecenter } from '@/components/map/map-recenter'
 import { Loader2, MapPin } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -457,17 +458,17 @@ export function WizardStepVenue({
           : 'Click the map or pick a venue template to drop a pin immediately.'}
       </p>
 
-      <div className="h-72 rounded-lg overflow-hidden border-2 border-stone-200">
+      <div className="h-72 overflow-hidden rounded-lg border-2 border-stone-200 [touch-action:auto]">
         <Map
           mapId="wizard-venue-map"
           defaultCenter={{ lat, lng }}
-          center={{ lat, lng }}
           defaultZoom={pinDropped ? 14 : 11}
           gestureHandling="greedy"
           disableDefaultUI
           onClick={handleMapClick}
-          className="w-full h-full cursor-crosshair"
+          className="h-full w-full cursor-crosshair"
         >
+          <MapRecenter lat={lat} lng={lng} pinDropped={pinDropped} zoomOnPinDrop />
           {pinDropped ? (
             <AdvancedMarker position={{ lat, lng }} title={markerTitle} zIndex={9999}>
               <VenueMapPin venueName={locationName} address={address} cityLabel={cityLabel} />

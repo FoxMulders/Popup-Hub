@@ -231,7 +231,7 @@ export function EventMap({ events, center: centerProp }: EventMapProps) {
       : DEFAULT_REGION)
 
   return (
-    <div className="relative isolate z-0 h-full w-full overflow-hidden">
+    <div className="relative isolate z-0 h-full w-full overflow-hidden [touch-action:auto]">
       {!apiKey ? (
         <EventMapFallback events={events} />
       ) : (

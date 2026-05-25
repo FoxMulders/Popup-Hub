@@ -68,7 +68,18 @@ export function CoordinatorEventFeed({
   activeEvents,
   archivedEvents,
 }: CoordinatorEventFeedProps) {
+  const searchParams = useSearchParams()
+  const tabFromUrl = parseEventFeedTab(searchParams.get('tab'))
+  const [tab, setTab] = useState<EventFeedTab>(tabFromUrl ?? 'active')
   const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    if (!tabFromUrl) return
+    setTab(tabFromUrl)
+    requestAnimationFrame(() => {
+      document.getElementById('my-events')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [tabFromUrl])
 
   const filteredActive = useMemo(
     () => filterEvents(activeEvents, search),
