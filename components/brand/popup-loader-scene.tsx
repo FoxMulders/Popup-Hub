@@ -246,8 +246,16 @@ function MarketLights({
 function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
   const { hubX, logoWidth, logoHeight, sidewalkY, logoBottomY, pinScale } = LOADER_LAYOUT
   const { logoTop, logoLeft, pinCenterX, pinCenterY } = LOADER_LAYOUT_COMPUTED
-  const pinOpenAngle = frame.doorOpen * -38
-  const pinDoorScale = (1 - frame.doorOpen * 0.15) * pinScale
+  const pinOpenAngle = frame.doorOpen * -28
+  const pinDoorScale = (1 - frame.doorOpen * 0.12) * pinScale
+  const leadMember = frame.members[0]
+  const footAnchorX = leadMember?.x ?? frame.groupX
+  const footAnchorY = sidewalkY
+  const depthScale = frame.groupScale ?? 1
+  const depthTransform =
+    depthScale === 1
+      ? `translate(0, ${frame.groupYOffset})`
+      : `translate(${footAnchorX}, ${footAnchorY}) scale(${depthScale}) translate(${-footAnchorX}, ${-footAnchorY}) translate(0, ${frame.groupYOffset})`
 
   return (
     <svg viewBox="0 0 800 600" className="h-full w-full" role="img" aria-hidden>
@@ -354,6 +362,17 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
             fill="#000000"
             opacity={0.28}
           />
+          {frame.doorOpen > 0.04 ? (
+            <rect
+              x={pinCenterX - 24}
+              y={pinCenterY - 6}
+              width={48}
+              height={42}
+              rx={5}
+              fill="#fef9c3"
+              opacity={frame.doorOpen * 0.5}
+            />
+          ) : null}
           <image
             href={LOGO_SRC}
             x={logoLeft}
@@ -363,14 +382,16 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
             preserveAspectRatio="xMidYMax meet"
             mask={frame.doorOpen > 0.02 ? 'url(#premium-loader-pin-cutout)' : undefined}
           />
-          <ellipse
-            cx={pinCenterX}
-            cy={pinCenterY + 6}
-            rx={34 + frame.doorOpen * 28}
-            ry={26 + frame.doorOpen * 18}
-            fill="url(#premium-loader-pin-glow)"
-            opacity={frame.doorOpen * 0.95}
-          />
+          {frame.doorOpen > 0.02 ? (
+            <ellipse
+              cx={pinCenterX}
+              cy={logoBottomY + 1}
+              rx={24}
+              ry={5}
+              fill="#fbbf24"
+              opacity={0.18 + frame.doorOpen * 0.22}
+            />
+          ) : null}
           {frame.doorOpen > 0.02 ? (
             <g transform={`translate(${pinCenterX}, ${pinCenterY + 42 * pinScale})`}>
               <g transform={`rotate(${pinOpenAngle}) scale(${pinDoorScale})`}>
@@ -380,7 +401,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
                   fill="#2d5a27"
                   stroke="#1e3f20"
                   strokeWidth="2.5"
-                  opacity={1 - frame.doorOpen * 0.9}
+                  opacity={1 - frame.doorOpen * 0.85}
                 />
               </g>
             </g>
@@ -389,7 +410,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
       </g>
 
       <ellipse
-        cx={frame.groupX - 28}
+        cx={(leadMember?.x ?? frame.groupX) - 28}
         cy={sidewalkY + 2}
         rx={
           frame.isPhoneCheck
@@ -398,7 +419,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         }
         ry={6}
         fill="#000000"
-        opacity={0.24 * frame.groupOpacity}
+        opacity={0.24 * frame.groupOpacity * (depthScale < 1 ? depthScale : 1)}
       />
 
       {frame.props.filter(isVehicleProp).map((prop, index) => (
@@ -410,7 +431,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         stroke="#f8fafc"
         fill="#f8fafc"
         color="#f8fafc"
-        transform={`translate(0, ${frame.groupYOffset})`}
+        transform={depthTransform}
       >
         {frame.members.map((member) => (
           <StickFigure key={member.id} member={member} frame={frame} />

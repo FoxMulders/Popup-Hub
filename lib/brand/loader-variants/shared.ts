@@ -22,6 +22,8 @@ export const LOADER_LAYOUT = {
   walkPhaseStep: 0.035,
   phoneCheckFrames: 110,
   enterFrames: 100,
+  /** Sidewalk spot where characters step through the pin doorway. */
+  doorThresholdX: 452,
 } as const
 
 export const LOADER_LAYOUT_COMPUTED = {
@@ -84,6 +86,8 @@ export type LoaderSceneFrame = {
   groupYOffset: number
   members: CharacterPose[]
   groupOpacity: number
+  /** Depth scale while walking into the storefront (1 = full size). */
+  groupScale: number
   hubOpacity: number
   marketGlow: number
   doorOpen: number
@@ -502,14 +506,20 @@ export function enterMotion(
   approachEnd: number,
   enterFrames: number,
   stopX: number,
-  startX: number,
 ) {
   const enterFrame = Math.max(0, globalFrame - approachEnd)
   const t = clamp(enterFrame / enterFrames, 0, 1)
+  const walkT = easeInOutCubic(t)
+  const doorX = LOADER_LAYOUT.doorThresholdX
+  const groupX = stopX + (doorX - stopX) * walkT
+  const doorOpen = easeOutCubic(clamp(t * 1.6, 0, 1))
+  const groupScale = 1 - walkT * 0.14
+  const groupOpacity = t < 0.78 ? 1 : 1 - easeOutCubic((t - 0.78) / 0.22)
   return {
-    groupX: stopX + (stopX - startX) * 0.08 * easeOutCubic(t),
-    doorOpen: easeOutCubic(clamp(t * 1.25, 0, 1)),
-    groupOpacity: 1 - easeOutCubic(clamp((t - 0.35) / 0.65, 0, 1)),
+    groupX,
+    doorOpen,
+    groupOpacity,
+    groupScale,
   }
 }
 
@@ -526,6 +536,7 @@ export function emptyFrame(partial: Partial<LoaderSceneFrame> & Pick<LoaderScene
     groupYOffset: 0,
     members: [],
     groupOpacity: 1,
+    groupScale: 1,
     hubOpacity: 0,
     marketGlow: 0,
     doorOpen: 0,

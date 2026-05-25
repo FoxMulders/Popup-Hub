@@ -68,19 +68,29 @@ function finishFrame(
     })
   }
 
-  const enter = enterMotion(globalFrame, approachFrames, enterFrames, characterStopX, characterStartX)
+  const enter = enterMotion(globalFrame, approachFrames, enterFrames, characterStopX)
+  const walkPhase = walkPhaseAt(globalFrame)
+  const enterMembers = buildFamilyPoses(
+    enter.groupX,
+    baseY,
+    walkPhase,
+    (x, y, scale, phase, id) =>
+      walkingPose(x, y, scale * enter.groupScale, phase, id),
+  )
   const market = baseMarketState(1, false)
   return emptyFrame({
     variantId,
     globalFrame,
     groupX: enter.groupX,
-    members,
+    members: enterMembers,
     groupOpacity: enter.groupOpacity,
+    groupScale: enter.groupScale,
     doorOpen: enter.doorOpen,
-    walkPhase: walkPhaseAt(globalFrame),
+    walkPhase,
     hubOpacity: market.hubOpacity,
     marketGlow: Math.max(market.marketGlow, extras.marketGlow ?? 0),
-    ...extras,
+    groupYOffset: 0,
+    props: enter.doorOpen > 0.25 ? [] : (extras.props ?? []),
   })
 }
 
@@ -129,15 +139,22 @@ const walkToMarket: LoaderVariant = {
       phoneCheckFrames + approachFrames,
       enterFrames,
       characterStopX,
-      characterStartX,
+    )
+    const enterMembers = buildFamilyPoses(
+      enter.groupX,
+      baseY,
+      walkPhase,
+      (x, y, scale, phase, id) =>
+        walkingPose(x, y, scale * enter.groupScale, phase, id),
     )
     const market = baseMarketState(1, false)
     return emptyFrame({
       variantId: 'walk-to-market',
       globalFrame,
       groupX: enter.groupX,
-      members,
+      members: enterMembers,
       groupOpacity: enter.groupOpacity,
+      groupScale: enter.groupScale,
       doorOpen: enter.doorOpen,
       walkPhase,
       hubOpacity: market.hubOpacity,
@@ -175,7 +192,7 @@ const balloonDrop: LoaderVariant = {
     const groupX =
       approachMotion(globalFrame, approachFrames, characterStartX, characterStopX) +
       Math.sin(globalFrame * walkPhaseStep) * 6
-    const dropY = -130 * (1 - easeOutCubic(approachProgress))
+    const dropY = -28 * (1 - easeOutCubic(approachProgress))
     const walkPhase = walkPhaseAt(globalFrame)
     const members = buildFamilyPoses(groupX, baseY + dropY, walkPhase, (x, y, scale, phase, id) =>
       walkingPose(x, y, scale, phase, id, 0.7),
