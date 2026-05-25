@@ -22,8 +22,8 @@ export const LOADER_LAYOUT = {
   walkPhaseStep: 0.035,
   phoneCheckFrames: 110,
   enterFrames: 100,
-  /** Sidewalk spot where characters step through the pin doorway. */
-  doorThresholdX: 452,
+  /** Sidewalk X where the lead character steps into the pin doorway. */
+  doorThresholdX: 496,
 } as const
 
 export const LOADER_LAYOUT_COMPUTED = {
@@ -501,6 +501,9 @@ export function approachMotion(
   return startX + (stopX - startX) * easeInOutCubic(t)
 }
 
+/** Share of enter timeline spent walking to the door before any fade. */
+const ENTER_WALK_PORTION = 0.9
+
 export function enterMotion(
   globalFrame: number,
   approachEnd: number,
@@ -509,12 +512,17 @@ export function enterMotion(
 ) {
   const enterFrame = Math.max(0, globalFrame - approachEnd)
   const t = clamp(enterFrame / enterFrames, 0, 1)
-  const walkT = easeInOutCubic(t)
+  const walkPhaseT = clamp(t / ENTER_WALK_PORTION, 0, 1)
+  const walkT = easeInOutCubic(walkPhaseT)
   const doorX = LOADER_LAYOUT.doorThresholdX
   const groupX = stopX + (doorX - stopX) * walkT
-  const doorOpen = easeOutCubic(clamp(t * 1.6, 0, 1))
-  const groupScale = 1 - walkT * 0.14
-  const groupOpacity = t < 0.78 ? 1 : 1 - easeOutCubic((t - 0.78) / 0.22)
+  const doorOpen = easeOutCubic(clamp(walkPhaseT * 1.3, 0, 1))
+  const groupScale = 1 - walkT * 0.12
+  const fadeT =
+    t <= ENTER_WALK_PORTION
+      ? 0
+      : clamp((t - ENTER_WALK_PORTION) / (1 - ENTER_WALK_PORTION), 0, 1)
+  const groupOpacity = 1 - easeOutCubic(fadeT)
   return {
     groupX,
     doorOpen,
