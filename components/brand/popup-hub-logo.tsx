@@ -21,7 +21,7 @@ interface PopupHubLogoProps {
   className?: string
   title?: string
   priority?: boolean
-  /** Smaller wordmark with a full-size tap target (footer). */
+  /** Footer wordmark at ~1″ tall with a comfortable tap target. */
   compact?: boolean
   /** When set, the logo navigates instead of playing the market animation. */
   href?: string
@@ -56,7 +56,7 @@ function LogoAnimationButton({
       onClick={(event) => playAnimation(event, loader?.playRandomLoader)}
       className={cn(
         'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
-        compact ? 'min-h-11 min-w-11 p-2' : 'min-h-11 min-w-[7rem] p-1',
+        compact ? 'min-h-11 min-w-11 p-1.5' : 'min-h-11 min-w-[7rem] p-1',
         className,
       )}
       aria-label={`${title} — play market animation`}
@@ -94,8 +94,12 @@ function LogoShell({
   )
 }
 
-/** 25% of footer wordmark height (h-9 / sm:h-10). */
-const FOOTER_LOGO_HEIGHT = 'h-[0.5625rem] w-auto sm:h-[0.625rem]'
+/** Footer wordmark — physical 1″ height for consistent cross-browser sizing. */
+const FOOTER_LOGO_HEIGHT_IN = 1
+const FOOTER_LOGO_DISPLAY_HEIGHT_PX = 96
+const FOOTER_LOGO_DISPLAY_WIDTH_PX = Math.round(
+  FOOTER_LOGO_DISPLAY_HEIGHT_PX * (LOGO_WIDTH / LOGO_HEIGHT),
+)
 
 export function PopupHubLogo({
   className,
@@ -104,7 +108,24 @@ export function PopupHubLogo({
   compact = false,
   href,
 }: PopupHubLogoProps) {
-  const image = (
+  const image = compact ? (
+    // Plain img avoids Next/Image intrinsic-size fights in Firefox/Edge.
+    <img
+      src={LOGO_SRC}
+      alt={title}
+      width={FOOTER_LOGO_DISPLAY_WIDTH_PX}
+      height={FOOTER_LOGO_DISPLAY_HEIGHT_PX}
+      draggable={false}
+      decoding="async"
+      style={{
+        display: 'block',
+        height: `${FOOTER_LOGO_HEIGHT_IN}in`,
+        width: 'auto',
+        maxHeight: `${FOOTER_LOGO_HEIGHT_IN}in`,
+      }}
+      className="pointer-events-none max-w-none select-none object-contain object-center"
+    />
+  ) : (
     <Image
       src={LOGO_SRC}
       alt={title}
@@ -112,10 +133,7 @@ export function PopupHubLogo({
       height={LOGO_HEIGHT}
       unoptimized
       draggable={false}
-      className={cn(
-        'pointer-events-none select-none bg-transparent object-contain',
-        compact ? FOOTER_LOGO_HEIGHT : 'h-auto w-auto',
-      )}
+      className="pointer-events-none h-auto w-auto select-none bg-transparent object-contain"
       priority={priority}
     />
   )
