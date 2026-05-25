@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EventDetailClient } from '@/components/shopper/event-detail-client'
@@ -149,27 +150,29 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
   const auctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
 
   return (
-    <EventDetailClient
-      event={event as Event}
-      applications={(applications ?? []) as BoothApplication[]}
-      layout={layout}
-      strollerBadge={strollerBadge}
-      favorited={!!favResult.data}
-      userId={user?.id ?? null}
-      reminderOffsets={(remindersResult.data ?? []).map(
-        (r: { reminder_offset: string }) => r.reminder_offset
-      )}
-      followVendorIds={(followsResult.data ?? []).map((f: { vendor_id: string }) => f.vendor_id)}
-      products={products}
-      scheduleItems={(scheduleItems ?? []) as EventScheduleItem[]}
-      activeAuction={auctionSummary.active}
-      upcomingAuction={auctionSummary.upcoming}
-      lastEndedAuction={auctionSummary.lastEnded}
-      existingReviewRating={reviewResult.data?.rating ?? null}
-      coordinatorId={coordinator?.id ?? null}
-      coordinatorName={coordinator?.full_name ?? 'Organizer'}
-      userRole={userRole}
-      quarterAuctionBanner={<QuarterAuctionEventBanner eventId={eventId} />}
-    />
+    <Suspense fallback={<div className="mx-auto max-w-5xl px-4 py-8 text-muted-foreground">Loading market…</div>}>
+      <EventDetailClient
+        event={event as Event}
+        applications={(applications ?? []) as BoothApplication[]}
+        layout={layout}
+        strollerBadge={strollerBadge}
+        favorited={!!favResult.data}
+        userId={user?.id ?? null}
+        reminderOffsets={(remindersResult.data ?? []).map(
+          (r: { reminder_offset: string }) => r.reminder_offset
+        )}
+        followVendorIds={(followsResult.data ?? []).map((f: { vendor_id: string }) => f.vendor_id)}
+        products={products}
+        scheduleItems={(scheduleItems ?? []) as EventScheduleItem[]}
+        activeAuction={auctionSummary.active}
+        upcomingAuction={auctionSummary.upcoming}
+        lastEndedAuction={auctionSummary.lastEnded}
+        existingReviewRating={reviewResult.data?.rating ?? null}
+        coordinatorId={coordinator?.id ?? null}
+        coordinatorName={coordinator?.full_name ?? 'Organizer'}
+        userRole={userRole}
+        quarterAuctionBanner={<QuarterAuctionEventBanner eventId={eventId} />}
+      />
+    </Suspense>
   )
 }

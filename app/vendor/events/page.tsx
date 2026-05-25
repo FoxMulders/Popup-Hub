@@ -63,7 +63,7 @@ export default async function VendorEventsPage() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground">Apply for open markets</h1>
         <p className="mt-1 text-muted-foreground">
-          Browse every published market and apply directly — no organizer pre-approval required.
+          Discover every published market and apply directly — no organizer pre-approval required.
         </p>
       </div>
       <Suspense

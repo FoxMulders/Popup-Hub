@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
   CanvasPerimeterFacingControls,
@@ -8,6 +8,11 @@ import {
   facingControlGutter,
   type CanvasPerimeterFacingControlsProps,
 } from '@/components/coordinator/canvas-perimeter-facing-controls'
+import {
+  LAYOUT_ZOOM_DEFAULT,
+  LayoutZoomSlider,
+  LayoutZoomViewport,
+} from '@/components/coordinator/layout-zoom-slider'
 
 /** 1 grid unit = 1 foot = 20px on the SVG workspace. */
 export const SVG_FOOT_PX = 20
@@ -55,6 +60,7 @@ export function SvgLayoutCanvas({
   roomLabel,
 }: SvgLayoutCanvasProps) {
   const uid = useId().replace(/:/g, '')
+  const [zoom, setZoom] = useState(LAYOUT_ZOOM_DEFAULT)
   const minorGridId = `minor-1ft-grid-${uid}`
   const majorLaneId = `major-8ft-lane-${uid}`
 
@@ -79,14 +85,17 @@ export function SvgLayoutCanvas({
   const hallTopForControls = hallOriginY + controlGutter
 
   return (
-    <div className={cn('flex w-full flex-col', className)}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-2 py-1.5">
-        <p className="text-[10px] font-black uppercase tracking-wider text-black shrink-0 truncate">
-          {roomLabel ?? `${cols}′ × ${rows}′ · 1′ grid`}
-        </p>
+    <div className={cn('flex w-full min-h-0 flex-col', className)}>
+      <div className="sticky top-0 z-20 shrink-0 border-b border-stone-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2 py-1.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-black shrink-0 truncate min-w-0">
+            {roomLabel ?? `${cols}′ × ${rows}′ · 1′ grid`}
+          </p>
+          <LayoutZoomSlider zoom={zoom} onZoomChange={setZoom} className="shrink-0" />
+        </div>
         {headerActions ? (
           <div
-            className="flex w-full flex-wrap items-center gap-2"
+            className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-2 py-1.5"
             role="toolbar"
             aria-label="Floor plan actions"
           >
@@ -94,14 +103,17 @@ export function SvgLayoutCanvas({
           </div>
         ) : null}
       </div>
-      <div className="relative w-full overflow-x-auto bg-zinc-100">
+      <div
+        className="relative min-h-[240px] max-h-[min(72vh,960px)] w-full min-w-0 overflow-auto bg-zinc-100"
+      >
         {viewportOverlay ? (
           <div className="pointer-events-none absolute inset-0 z-20 overflow-visible">{viewportOverlay}</div>
         ) : null}
-        <div
-          className="relative inline-block min-w-0 max-w-full"
-          style={{ width: wrapperWidth, height: wrapperHeight }}
-        >
+        <LayoutZoomViewport zoom={zoom} width={wrapperWidth} height={wrapperHeight}>
+          <div
+            className="relative shrink-0"
+            style={{ width: wrapperWidth, height: wrapperHeight }}
+          >
           {perimeterFacing ? (
             <CanvasPerimeterFacingControls
               hallLeft={hallLeftForControls}
@@ -117,8 +129,8 @@ export function SvgLayoutCanvas({
             height={heightPx}
             viewBox={`0 0 ${widthPx} ${heightPx}`}
             xmlns="http://www.w3.org/2000/svg"
-            className="absolute block max-w-full select-none"
-            style={{ left: controlGutter, top: controlGutter, height: 'auto' }}
+            className="absolute block select-none"
+            style={{ left: controlGutter, top: controlGutter, width: widthPx, height: heightPx }}
             role="img"
             aria-label={`Floor plan ${cols} by ${rows} feet`}
           >
@@ -171,7 +183,8 @@ export function SvgLayoutCanvas({
             ) : null}
             <g transform={`translate(${hallOriginX}, ${hallOriginY})`}>{children}</g>
           </svg>
-        </div>
+          </div>
+        </LayoutZoomViewport>
       </div>
     </div>
   )

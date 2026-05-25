@@ -66,6 +66,13 @@ import {
   isGenericRowPlacement,
   type GenericRowLayoutMode,
 } from '@/lib/booth-planner/generic-row-layouts'
+import {
+  isModifiedLoopPlacement,
+  scoreRightHandBias,
+  scoreSightlineHierarchy,
+  sortModifiedLoopVendorQueue,
+  type VendorTier,
+} from '@/lib/booth-planner/modified-loop-layout'
 
 interface VendorInput {
   id: string
@@ -79,6 +86,7 @@ interface VendorInput {
   tableLengthFt?: number | null
   tableOrientation?: TableOrientation | null
   requestedBoothType?: 'inside' | 'wall' | 'power' | 'any' | null
+  tier?: VendorTier
 }
 
 export interface AutoLayoutParams {
@@ -141,6 +149,7 @@ export class AutoLayoutSession {
   readonly useIndoorCorridor: boolean
   readonly genericRowMode: GenericRowLayoutMode | null
   readonly coGenerateAisles: boolean
+  readonly useModifiedLoop: boolean
   readonly entrance: AutoLayoutParams['entrance']
   readonly boothWidth: number
   readonly boothLength: number
@@ -184,14 +193,16 @@ export class AutoLayoutSession {
     this.boothWidth = boothWidth
     this.boothLength = boothLength
     this.coGenerateAisles = coGenerateAisles
+    this.useModifiedLoop = preset === 'modified_loop'
     this.genericRowMode = genericRowLayoutModeFromPreset(preset)
-    this.useIndoorCorridor = useIndoorCorridor || this.genericRowMode === 'snake'
+    this.useIndoorCorridor = useIndoorCorridor || this.genericRowMode === 'snake' || this.useModifiedLoop
     this.layoutPreset = preset
     this.usePerimeterOnly = preset === 'perimeter'
     this.useOutdoorClusters =
       preset === 'outdoor' ||
       preset === 'aligned_grid' ||
       preset === 'l_shape_corners' ||
+      preset === 'modified_loop' ||
       useIndoorCorridor ||
       this.genericRowMode != null
     this.stopOnOverlap = options.stopOnOverlap ?? false
@@ -223,7 +234,7 @@ export class AutoLayoutSession {
     this.wallKeys = buildBlockedWallKeys(this.fixtures, this.cols, this.rows)
     this.venueAnchors = findVenueAnchors(this.fixtures)
     this.patronPathTrace =
-      this.useIndoorCorridor || this.genericRowMode === 'snake'
+      this.useIndoorCorridor || this.genericRowMode === 'snake' || this.useModifiedLoop
         ? computePatronPathTrace(this.fixtures, this.cols, this.rows, entrance)
         : null
 
@@ -238,7 +249,7 @@ export class AutoLayoutSession {
     const placementOrder = buildPlacementOrder(this.rows, this.cols, entrance)
     this.placementOrderFlat = flattenPlacementOrder(placementOrder)
     this.categoryGuard = new VendorPlacementGuard(this.cols, this.rows)
-    this.vendorQueue = flattenVendorQueue(vendors, fcfsOrder)
+    this.vendorQueue = flattenVendorQueue(vendors, fcfsOrder, preset)
   }
 
   private rejectsCategoryIsolation(
@@ -339,8 +350,25 @@ export class AutoLayoutSession {
           continue
         }
         if (
+          this.useModifiedLoop &&
+          !isModifiedLoopPlacement(
+            spot.row,
+            spot.col,
+            spot.rowSpan,
+            spot.colSpan,
+            this.cols,
+            this.rows,
+            this.entrance,
+            this.fixtures
+          )
+        ) {
+          this.cells.push(this.unplacedCell(vendor))
+          continue
+        }
+        if (
           this.useIndoorCorridor &&
           !this.genericRowMode &&
+          !this.useModifiedLoop &&
           !isIndoorCorridorPlacement(spot.row, spot.col, spot.rowSpan, spot.colSpan, this.rows, this.cols)
         ) {
           this.cells.push(this.unplacedCell(vendor))
@@ -594,17 +622,19 @@ export class AutoLayoutSession {
 
   private constrainedOriginsFlat(rowSpan: number, colSpan: number, preset: LayoutPreset): Int32Array {
     const modeOffset =
-      this.genericRowMode === 'vertical_rows'
-        ? 4_000_000
-        : this.genericRowMode === 'horizontal_rows'
-          ? 5_000_000
-          : this.genericRowMode === 'snake'
-            ? 6_000_000
-            : this.useIndoorCorridor
-              ? 3_000_000
-              : preset === 'outdoor'
-                ? 2_000_000
-                : 1_000_000
+      this.useModifiedLoop
+        ? 7_000_000
+        : this.genericRowMode === 'vertical_rows'
+          ? 4_000_000
+          : this.genericRowMode === 'horizontal_rows'
+            ? 5_000_000
+            : this.genericRowMode === 'snake'
+              ? 6_000_000
+              : this.useIndoorCorridor
+                ? 3_000_000
+                : preset === 'outdoor'
+                  ? 2_000_000
+                  : 1_000_000
     const key = modeOffset + rowSpan * 1000 + colSpan
     const cached = this.perimeterOriginsCache.get(key)
     if (cached) return cached
@@ -617,7 +647,8 @@ export class AutoLayoutSession {
       rowSpan,
       colSpan,
       'street-fair',
-      this.useIndoorCorridor
+      this.useIndoorCorridor,
+      this.fixtures
     )
     const flat = flattenPlacementOrder(origins)
     this.perimeterOriginsCache.set(key, flat)
@@ -997,7 +1028,19 @@ export class AutoLayoutSession {
                 )
               }
               if (corridorBounds) {
-                if (this.genericRowMode) {
+                if (this.useModifiedLoop) {
+                  score += scoreRightHandBias(
+                    r,
+                    c,
+                    rs,
+                    cs,
+                    vendor.tier ?? 'standard',
+                    this.entrance,
+                    this.cols,
+                    this.rows
+                  )
+                  score += scoreSightlineHierarchy(r, c, rs, cs, corridorBounds)
+                } else if (this.genericRowMode) {
                   score += genericRowStorefrontBonus(
                     this.genericRowMode,
                     r,
@@ -1192,7 +1235,26 @@ function flattenPlacementOrder(order: [number, number][]): Int32Array {
   return flat
 }
 
-function flattenVendorQueue(vendors: VendorInput[], fcfsOrder: boolean): VendorInput[] {
+function flattenVendorQueue(
+  vendors: VendorInput[],
+  fcfsOrder: boolean,
+  preset: LayoutPreset = 'default'
+): VendorInput[] {
+  if (preset === 'modified_loop') {
+    const sorted = sortModifiedLoopVendorQueue(
+      vendors.map((v) => ({
+        id: v.id,
+        name: v.vendorName,
+        category: v.categoryName,
+        categoryId: v.categoryId,
+        tier: v.tier ?? 'standard',
+        boothDimensions: { colSpan: v.colSpan, rowSpan: v.rowSpan },
+        categoryColor: v.categoryColor,
+      }))
+    )
+    const byId = new Map(vendors.map((v) => [v.id, v]))
+    return sorted.map((s) => byId.get(s.id)!)
+  }
   if (fcfsOrder) return [...vendors]
   const groups = groupVendorsByCategory(vendors)
   const queue: VendorInput[] = []

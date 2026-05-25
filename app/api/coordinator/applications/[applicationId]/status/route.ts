@@ -36,8 +36,12 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const body = (await request.json()) as { status?: ApplicationStatus }
+  const body = (await request.json()) as {
+    status?: ApplicationStatus
+    declineMessage?: string
+  }
   const newStatus = body.status
+  const declineMessage = body.declineMessage?.trim() || null
 
   if (!newStatus || !ALLOWED_STATUSES.includes(newStatus)) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
@@ -119,6 +123,10 @@ export async function POST(
   }
 
   const updates: Partial<BoothApplication> = { status: resolvedStatus }
+
+  if (resolvedStatus === 'rejected' && declineMessage) {
+    updates.coordinator_decline_message = declineMessage
+  }
 
   if (resolvedStatus === 'approved' || resolvedStatus === 'pending_insurance') {
     updates.approved_at = new Date().toISOString()

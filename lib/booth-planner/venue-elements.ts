@@ -429,9 +429,74 @@ function elementIsProtected(
   grid?: VenueGridBounds
 ): boolean {
   if (!el) return false
-  if (el.locked) return true
-  if (grid) return isImmutableVenueElement(el, grid.cols, grid.rows)
+  return !canRemoveVenueElement(el, grid)
+}
+
+/** Labels stamped by auto-plan layout preset shell painters (eraser-removable). */
+const LAYOUT_PRESET_PAINT_LABELS = new Set([
+  'Entrance orientation',
+  'Angled corner',
+  'Entrance threshold',
+  'Exit buffer',
+  'Shared aisle',
+  'Row aisle',
+  'Serpentine flow',
+  'Anchor approach',
+  'Pedestrian walkway',
+  'Cross flow',
+  'Vertical aisle',
+  'Horizontal aisle',
+])
+
+/**
+ * True for corridor / preset shell paint that should stay editable — not perimeter walls or annex stage.
+ * These render on the interactive layer so coordinators can erase individual cells or blocks.
+ */
+export function isLayoutPresetPaintedElement(
+  el: VenueElement,
+  cols: number,
+  rows: number
+): boolean {
+  const label = (el.label ?? '').trim()
+  if (LAYOUT_PRESET_PAINT_LABELS.has(label)) return true
+  if (/ anchor zone$/i.test(label)) return true
+
+  if (el.type === 'aisle' && el.locked && !isStructuralShellElement(el, cols, rows)) {
+    return true
+  }
+
+  if (
+    (el.type === 'food_court' || el.type === 'restroom' || el.type === 'stage') &&
+    /anchor zone/i.test(label) &&
+    !isImmutableVenueElement(el, cols, rows)
+  ) {
+    return true
+  }
+
   return false
+}
+
+/** Whether the eraser / Remove tool may delete this fixture (preset paint, user paint, co-aisles). */
+export function canRemoveVenueElement(
+  el: VenueElement | undefined,
+  grid?: VenueGridBounds
+): boolean {
+  if (!el) return false
+  if (isCoGeneratedBoothAisle(el)) return true
+  if (!grid) return !el.locked
+  if (isLayoutPresetPaintedElement(el, grid.cols, grid.rows)) return true
+  if (isImmutableVenueElement(el, grid.cols, grid.rows)) return false
+  return true
+}
+
+export function removeVenueElementById(
+  elements: VenueElement[],
+  elementId: string,
+  grid?: VenueGridBounds
+): VenueElement[] {
+  const target = elements.find((e) => e.id === elementId)
+  if (!target || !canRemoveVenueElement(target, grid)) return elements
+  return elements.filter((e) => e.id !== elementId)
 }
 
 export function isFixtureLocked(el: VenueElement | undefined): boolean {

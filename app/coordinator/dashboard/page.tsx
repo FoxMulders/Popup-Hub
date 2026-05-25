@@ -49,7 +49,7 @@ async function CoordinatorStats({ userId }: { userId: string }) {
     eventIds.length > 0
       ? supabase
           .from('booth_applications')
-          .select('event_id, event:events(name)')
+          .select('event_id')
           .in('status', ['pending', 'pending_insurance'])
           .in('event_id', eventIds)
           .order('applied_at', { ascending: true })
@@ -80,13 +80,12 @@ async function CoordinatorStats({ userId }: { userId: string }) {
 
   const pendingCount = (pendingApplications ?? 0) + (pendingInsuranceApplications ?? 0)
   const pendingEventId = firstPendingApplication?.event_id as string | undefined
-  const pendingEvent = Array.isArray(firstPendingApplication?.event)
-    ? firstPendingApplication?.event[0]
-    : firstPendingApplication?.event
-  const pendingEventName = pendingEvent?.name as string | undefined
-  const pendingHref = pendingEventId
-    ? `/coordinator/events/${pendingEventId}/applications`
-    : null
+  const pendingHref =
+    pendingCount > 0
+      ? pendingEventId
+        ? `/coordinator/events/${pendingEventId}/applications`
+        : '/coordinator/dashboard#pending-applications'
+      : null
 
   const pendingCard = (
     <>
@@ -101,9 +100,7 @@ async function CoordinatorStats({ userId }: { userId: string }) {
           <span className="text-2xl font-bold">{pendingCount}</span>
         </div>
         {pendingCount > 0 && pendingHref ? (
-          <p className="text-xs font-medium text-harvest-700">
-            Review{pendingEventName ? ` · ${pendingEventName}` : ''} →
-          </p>
+          <p className="text-xs font-medium text-harvest-700">Review pending applications →</p>
         ) : null}
       </CardContent>
     </>
@@ -118,7 +115,7 @@ async function CoordinatorStats({ userId }: { userId: string }) {
           <span className="text-2xl font-bold">{totalEvents ?? 0}</span>
         </CardContent>
       </Card>
-      {pendingCount > 0 && pendingHref ? (
+      {pendingHref ? (
         <Link href={pendingHref} className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-harvest-400">
           <Card className="h-full transition-colors group-hover:border-harvest-300 group-hover:bg-harvest-50/40">
             {pendingCard}
@@ -182,8 +179,6 @@ export default async function CoordinatorDashboard() {
     .order('start_at', { ascending: false })
 
   const eventIds = myEvents?.map((e) => e.id) ?? []
-  const firstEventApplicationsHref =
-    myEvents?.[0]?.id != null ? `/coordinator/events/${myEvents[0].id}/applications` : null
 
   let pendingBoothApplications: PendingBoothApplicationRow[] = []
   if (eventIds.length > 0) {
@@ -201,6 +196,13 @@ export default async function CoordinatorDashboard() {
 
     pendingBoothApplications = (boothApps ?? []) as PendingBoothApplicationRow[]
   }
+
+  const firstEventApplicationsHref =
+    pendingBoothApplications[0]?.event_id != null
+      ? `/coordinator/events/${pendingBoothApplications[0].event_id}/applications`
+      : myEvents?.[0]?.id != null
+        ? `/coordinator/events/${myEvents[0].id}/applications`
+        : null
 
   let pendingEtransfers: PendingEtransferApplication[] = []
   if (eventIds.length > 0) {
@@ -264,11 +266,13 @@ export default async function CoordinatorDashboard() {
         <CoordinatorStats userId={user.id} />
       </Suspense>
 
-      <PendingBoothApplicationsPanel
-        applications={pendingBoothApplications}
-        hasEvents={eventIds.length > 0}
-        firstEventApplicationsHref={firstEventApplicationsHref}
-      />
+      <div id="pending-applications">
+        <PendingBoothApplicationsPanel
+          applications={pendingBoothApplications}
+          hasEvents={eventIds.length > 0}
+          firstEventApplicationsHref={firstEventApplicationsHref}
+        />
+      </div>
 
       <PendingEtransferPanel applications={pendingEtransfers} />
 

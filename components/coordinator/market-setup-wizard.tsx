@@ -59,6 +59,8 @@ import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
+import { useFlyerScan } from '@/hooks/use-flyer-scan'
+import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
 import { formatTimeLabel, formatShortDate } from '@/components/coordinator/wizard/wizard-time-options'
 import type {
   BoothLayout,
@@ -207,6 +209,7 @@ export function MarketSetupWizard({
   )
   const [coverImageUrl, setCoverImageUrl] = useState(existing?.cover_image_url ?? '')
   const [coverFile, setCoverFile] = useState<File | null>(null)
+  const { parsing: parsingFlyer, autoFilledFields, scanFlyer } = useFlyerScan()
 
   const [locationName, setLocationName] = useState(existing?.location_name ?? '')
   const [address, setAddress] = useState(existing?.address ?? '')
@@ -628,9 +631,55 @@ export function MarketSetupWizard({
     setRooms((prev) => updateRoomInList(prev, activeRoomId, { baseline_table_length_ft: ft }))
   }
 
+  async function handleCoverFileSelected(file: File) {
+    setCoverFile(file)
+    setCoverImageUrl(URL.createObjectURL(file))
+    await scanFlyer(file, {
+      setEventName: setName,
+      setDescription: setDescription,
+      setStartDate,
+      setEndDate,
+      setStartTime,
+      setEndTime,
+      setLocationName,
+      setAddress,
+      setRaffleDonationRequirement,
+      setListingType: (value) => {
+        if (value === 'garage_yard_sale') {
+          handleListingTypeChange('garage_yard_sale')
+        }
+      },
+    })
+  }
+
+  function handleApplyWeekendRange(range: { startDate: string; endDate: string }) {
+    const effective = effectiveScheduleTypeForListing(listingType, scheduleType)
+    if (effective === 'multi') {
+      setDayRows([
+        {
+          date: range.startDate,
+          start_time: DEFAULT_MARKET_START,
+          end_time: DEFAULT_MARKET_END,
+        },
+        {
+          date: range.endDate,
+          start_time: DEFAULT_MARKET_START,
+          end_time: DEFAULT_MARKET_END,
+        },
+      ])
+      return
+    }
+    setStartDate(range.startDate)
+    setEndDate(range.startDate)
+  }
+
   function validateStep1(): boolean {
     if (!name.trim()) {
       toast.error('Event name is required')
+      return false
+    }
+    if (isQuarterAuctionListing(listingType) && scheduleType === 'multi') {
+      toast.error('Quarter auctions must be single-day events.')
       return false
     }
     const bounds = resolveScheduleBounds()
@@ -782,13 +831,18 @@ export function MarketSetupWizard({
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <p className={WIZARD_PAGE_KICKER}>
-          Market Setup Wizard · Step {currentStep} of {totalSteps}
-        </p>
-        <h1 className={WIZARD_PAGE_TITLE}>
-          {existing ? 'Edit Market' : 'Create New Market'}
-        </h1>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          <p className={WIZARD_PAGE_KICKER}>
+            Market Setup Wizard · Step {currentStep} of {totalSteps}
+          </p>
+          <h1 className={WIZARD_PAGE_TITLE}>
+            {existing ? 'Edit Market' : 'Create New Market'}
+          </h1>
+        </div>
+        {isDraftMode && eventId ? (
+          <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
+        ) : null}
       </header>
 
       {isDraftMode ? (
@@ -841,6 +895,7 @@ export function MarketSetupWizard({
                 onRequireFullAttendanceChange={setRequireFullAttendance}
                 marketInsuranceRequired={marketInsuranceRequired}
                 onMarketInsuranceRequiredChange={setMarketInsuranceRequired}
+                onApplyWeekendRange={handleApplyWeekendRange}
                 allowMlm={allowMlm}
                 onAllowMlmChange={setAllowMlm}
                 boothClearancePolicy={boothClearancePolicy}
@@ -848,10 +903,9 @@ export function MarketSetupWizard({
                 raffleDonationRequirement={raffleDonationRequirement}
                 onRaffleDonationRequirementChange={setRaffleDonationRequirement}
                 coverImageUrl={coverImageUrl}
-                onCoverChange={(file) => {
-                  setCoverFile(file)
-                  setCoverImageUrl(URL.createObjectURL(file))
-                }}
+                onCoverFileSelected={handleCoverFileSelected}
+                parsingFlyer={parsingFlyer}
+                autoFilledFields={autoFilledFields}
               />
               <WizardNav step={1} onNext={goNext} nextDisabled={transitioning} />
             </>

@@ -56,9 +56,10 @@ const { data: existingApp, error: appError } = await anon
   .from('booth_applications')
   .select('id, status, payment_status, payment_method, application_payment_status, category_id')
   .eq('event_id', id)
+  .eq('vendor_id', auth.user.id)
   .maybeSingle()
 
-console.log('application (no vendor filter)', { error: appError?.message, app: existingApp })
+console.log('application', { error: appError?.message, code: appError?.code, app: existingApp })
 
 const { count, error: countError } = await anon
   .from('auction_catalog_items')
@@ -67,6 +68,14 @@ const { count, error: countError } = await anon
   .not('status', 'eq', 'cancelled')
 
 console.log('catalog count', { count, error: countError?.message })
+
+const { data: existingSettings } = await service
+  .from('quarter_auction_settings')
+  .select('*')
+  .eq('event_id', id)
+  .maybeSingle()
+
+console.log('qa settings existing', { hasSettings: !!existingSettings })
 
 const { data: created, error: insertError } = await service
   .from('quarter_auction_settings')

@@ -89,7 +89,8 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Not comfortable with e-transfer or card? Give cash to staff at the entrance. They&apos;ll
-            scan your wallet QR and add the exact amount you paid.
+            scan your wallet QR and add the exact amount you paid — or look you up by name at the desk
+            if you don&apos;t have your phone.
           </p>
           <div className="rounded-xl border bg-canvas p-4 text-center">
             <p className="mb-3 text-sm font-medium text-foreground">Show this QR at the door</p>

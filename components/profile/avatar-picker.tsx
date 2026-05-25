@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/profile/user-avatar'
 import { cropImageToSquare } from '@/lib/profile/crop-image'
+import { fitImageInSquare } from '@/lib/profile/fit-image-square'
 import { dispatchAvatarChanged } from '@/lib/profile/avatar-sync'
 import type { Profile } from '@/types/database'
 import { toast } from 'sonner'
@@ -38,7 +39,8 @@ export function AvatarPicker({ profile, onAvatarChange }: AvatarPickerProps) {
 
     setUploading(true)
     try {
-      const cropped = await cropImageToSquare(file)
+      const cropped =
+        profile.role === 'vendor' ? await fitImageInSquare(file) : await cropImageToSquare(file)
       const ext = file.type === 'image/png' ? 'png' : 'jpg'
       const path = `${profile.id}/avatar-${Date.now()}.${ext}`
 
@@ -104,7 +106,7 @@ export function AvatarPicker({ profile, onAvatarChange }: AvatarPickerProps) {
           full_name: profile.full_name,
           avatar_url: profile.avatar_url,
         }}
-        className="h-20 w-20"
+        className="h-24 w-24 sm:h-28 sm:w-28"
         fallbackClassName="text-2xl text-harvest-700 bg-harvest-100"
       />
 
@@ -149,7 +151,12 @@ export function AvatarPicker({ profile, onAvatarChange }: AvatarPickerProps) {
             </Button>
           ) : null}
         </div>
-        <p className="text-xs text-muted-foreground">JPG, PNG, or WebP · max 2MB · auto-cropped to square</p>
+        <p className="text-xs text-muted-foreground">
+          JPG, PNG, or WebP · max 2MB ·{' '}
+          {profile.role === 'vendor'
+            ? 'your full logo is preserved (letterboxed in a square)'
+            : 'auto-cropped to square'}
+        </p>
         <input
           ref={inputRef}
           type="file"

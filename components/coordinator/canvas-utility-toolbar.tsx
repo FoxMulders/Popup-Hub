@@ -52,7 +52,7 @@ export function CanvasUtilityToolbar({
           Redo
         </button>
       </TooltipWrapper>
-      <TooltipWrapper text="Erase fixtures or unplace vendors · Delete / Backspace / R">
+      <TooltipWrapper text="Erase vendors, preset aisles, and painted fixtures · Delete / Backspace / R">
         <button type="button" onClick={onRemove} className={UTILITY_BTN}>
           <Eraser className="h-3.5 w-3.5" />
           Remove

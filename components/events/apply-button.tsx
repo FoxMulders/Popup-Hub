@@ -474,6 +474,8 @@ export function ApplyButton({
     }
   }
 
+  const resolvedApplicationId = applicationId ?? existingApplication?.id ?? null
+
   if (!applicationsOpen) {
     return (
       <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
@@ -481,8 +483,6 @@ export function ApplyButton({
       </Badge>
     )
   }
-
-  const resolvedApplicationId = applicationId ?? existingApplication?.id ?? null
 
   if (localApplicationStatus === 'pending' && resolvedApplicationId) {
     return (

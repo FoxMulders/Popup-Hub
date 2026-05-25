@@ -80,3 +80,7 @@ export function getVendorLinks(passport: {
   }
   return links
 }
+
+export function buildVendorProfileHref(eventId: string, vendorId: string): string {
+  return `/events/${eventId}?vendor=${vendorId}`
+}

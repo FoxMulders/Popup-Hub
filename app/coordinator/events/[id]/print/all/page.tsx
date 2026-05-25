@@ -4,6 +4,7 @@ import { PrintTrigger } from '../print-trigger'
 import { PrintFloorplan } from '@/components/coordinator/print-floorplan'
 import { getActiveRoom, roomsFromBoothLayout } from '@/lib/booth-planner/layout-rooms'
 import type { BoothLayout } from '@/types/database'
+import { extractNestedPassport } from '@/lib/applications/extract-nested-passport'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -31,8 +32,11 @@ export default async function PrintAllPage({ params }: Props) {
         id,
         booth_number,
         checked_in,
-        vendor:profiles(full_name, phone),
-        passport:vendor_passports(business_name),
+        vendor:profiles!booth_applications_vendor_id_fkey(
+          full_name,
+          phone,
+          passport:vendor_passports(business_name)
+        ),
         category:categories(name)
       `)
       .eq('event_id', id)
@@ -46,7 +50,7 @@ export default async function PrintAllPage({ params }: Props) {
     booth_number: a.booth_number,
     checked_in: a.checked_in ?? false,
     vendor: Array.isArray(a.vendor) ? a.vendor[0] : a.vendor,
-    passport: Array.isArray(a.passport) ? (a.passport[0] ?? null) : a.passport,
+    passport: extractNestedPassport(a),
     category: Array.isArray(a.category) ? (a.category[0] ?? null) : a.category,
   }))
 

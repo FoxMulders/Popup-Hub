@@ -1,6 +1,6 @@
 'use client'
 
-import { Trash2, Upload, HelpCircle } from 'lucide-react'
+import { Trash2, HelpCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -32,10 +32,15 @@ import {
   WIZARD_TOGGLE_OPTION_ACTIVE,
   WIZARD_TOGGLE_OPTION_INACTIVE,
 } from '@/lib/wizard/wizard-panel-styles'
+import { ScheduleWeekendShortcuts } from '@/components/shared/schedule-weekend-shortcuts'
 import { cn } from '@/lib/utils'
+import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import type { BoothClearancePolicy, EventListingType } from '@/types/database'
 import { WIZARD_TIME_OPTIONS } from './wizard-time-options'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
+import { FlyerCoverUpload } from '@/components/coordinator/flyer-cover-upload'
+import { FlyerFieldHighlight } from '@/components/coordinator/flyer-field-highlight'
+import type { FlyerFieldKey } from '@/lib/flyer/types'
 
 export interface DayRow {
   date: string
@@ -69,13 +74,16 @@ export interface WizardStepEventDetailsProps {
   raffleDonationRequirement: string
   onRaffleDonationRequirementChange: (v: string) => void
   coverImageUrl: string
-  onCoverChange: (file: File) => void
+  onCoverFileSelected: (file: File) => void
+  parsingFlyer?: boolean
+  autoFilledFields?: Set<FlyerFieldKey>
   listingType: EventListingType
   onListingTypeChange: (v: EventListingType) => void
   requireFullAttendance: boolean
   onRequireFullAttendanceChange: (v: boolean) => void
   marketInsuranceRequired: boolean
   onMarketInsuranceRequiredChange: (v: boolean) => void
+  onApplyWeekendRange: (range: { startDate: string; endDate: string }) => void
 }
 
 export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
@@ -96,14 +104,36 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
     props.onDayRowsChange(props.dayRows.filter((_, i) => i !== index))
   }
 
+  const autoFilled = props.autoFilledFields ?? new Set<FlyerFieldKey>()
+
   return (
-    <div className={WIZARD_PANEL_INNER}>
+    <div className={cn(WIZARD_PANEL_INNER, 'relative')}>
+      {props.parsingFlyer ? (
+        <div
+          className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-cream/75 backdrop-blur-[2px]"
+          aria-hidden
+        >
+          <div className="mx-4 max-w-sm rounded-xl border border-harvest-200 bg-white px-5 py-4 text-center shadow-lg">
+            <p className="text-sm font-semibold text-harvest-800">✨ AI is reading your poster details…</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              We&apos;ll fill in matching fields when ready. You can edit everything afterward.
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className={WIZARD_STEP_TITLE}>
-          Step 1 — Core Market Setup
+          Step 1 — Core Event Setup
         </h2>
         <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">Draft</span>
       </div>
+
+      <FlyerCoverUpload
+        coverImageUrl={props.coverImageUrl}
+        onFileSelected={props.onCoverFileSelected}
+        parsing={props.parsingFlyer}
+        label="Cover Image / Flyer"
+      />
 
       <div className="space-y-2">
         <Label className={WIZARD_FIELD_LABEL}>Listing Type</Label>
@@ -142,16 +172,18 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         ) : null}
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="wizard-event-name" className={WIZARD_FIELD_LABEL}>Event Name *</Label>
-        <Input
-          id="wizard-event-name"
-          value={props.name}
-          onChange={(e) => props.onNameChange(e.target.value)}
-          placeholder="e.g. Spring Makers Market"
-          className={WIZARD_INPUT}
-        />
-      </div>
+      <FlyerFieldHighlight fieldKey="name" autoFilledFields={autoFilled}>
+        <div className="space-y-1">
+          <Label htmlFor="wizard-event-name" className={WIZARD_FIELD_LABEL}>Event Name *</Label>
+          <Input
+            id="wizard-event-name"
+            value={props.name}
+            onChange={(e) => props.onNameChange(e.target.value)}
+            placeholder="e.g. Spring Makers Market"
+            className={WIZARD_INPUT}
+          />
+        </div>
+      </FlyerFieldHighlight>
 
       <div className="space-y-2">
         <Label className={WIZARD_FIELD_LABEL}>Schedule Type</Label>
@@ -179,19 +211,26 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             ))}
           </div>
         )}
+        <ScheduleWeekendShortcuts
+          scheduleType={
+            isQuarterAuctionListing(props.listingType) ? 'single' : props.scheduleType
+          }
+          onApply={props.onApplyWeekendRange}
+        />
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="wizard-description" className={WIZARD_FIELD_LABEL}>Description</Label>
-        <Textarea
-          id="wizard-description"
-          value={props.description}
-          onChange={(e) => props.onDescriptionChange(e.target.value)}
-          rows={3}
-          maxLength={800}
-          placeholder="Example: Kilkenny indoor makers market — local artisans, baked goods, and vintage finds near 71 St. Family-friendly Saturday shopping."
-          className={WIZARD_TEXTAREA}
-        />
+      <FlyerFieldHighlight fieldKey="description" autoFilledFields={autoFilled}>
+        <div className="space-y-1">
+          <Label htmlFor="wizard-description" className={WIZARD_FIELD_LABEL}>Description</Label>
+          <Textarea
+            id="wizard-description"
+            value={props.description}
+            onChange={(e) => props.onDescriptionChange(e.target.value)}
+            rows={3}
+            maxLength={800}
+            placeholder="Example: Kilkenny indoor makers market — local artisans, baked goods, and vintage finds near 71 St. Family-friendly Saturday shopping."
+            className={WIZARD_TEXTAREA}
+          />
         <p
           className={cn(
             'text-xs text-right tabular-nums',
@@ -207,67 +246,76 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             </span>
           ) : null}
         </p>
-      </div>
+        </div>
+      </FlyerFieldHighlight>
 
       {props.scheduleType === 'single' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="wizard-start-date" className={WIZARD_FIELD_LABEL}>Start Date & Time *</Label>
-            <Input
-              id="wizard-start-date"
-              type="date"
-              value={props.startDate}
-              onChange={(e) => props.onStartDateChange(e.target.value)}
-              className={WIZARD_INPUT}
-            />
-            <Select
-              value={props.startTime}
-              onValueChange={(v) => {
-                const next = selectValueOrNull(v)
-                if (next) props.onStartTimeChange(next)
-              }}
-            >
-              <SelectTrigger className={WIZARD_SELECT_TRIGGER}>
-                <SelectValue placeholder="Start time" />
-              </SelectTrigger>
-              <SelectContent className={WIZARD_SELECT_CONTENT}>
-                {WIZARD_TIME_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="wizard-end-date" className={WIZARD_FIELD_LABEL}>End Date & Time *</Label>
-            <Input
-              id="wizard-end-date"
-              type="date"
-              value={props.endDate}
-              min={props.startDate}
-              onChange={(e) => props.onEndDateChange(e.target.value)}
-              className={WIZARD_INPUT}
-            />
-            <Select
-              value={props.endTime}
-              onValueChange={(v) => {
-                const next = selectValueOrNull(v)
-                if (next) props.onEndTimeChange(next)
-              }}
-            >
-              <SelectTrigger className={WIZARD_SELECT_TRIGGER}>
-                <SelectValue placeholder="End time" />
-              </SelectTrigger>
-              <SelectContent className={WIZARD_SELECT_CONTENT}>
-                {WIZARD_TIME_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <FlyerFieldHighlight fieldKey="startDate" autoFilledFields={autoFilled}>
+            <div className="space-y-1">
+              <Label htmlFor="wizard-start-date" className={WIZARD_FIELD_LABEL}>Start Date & Time *</Label>
+              <Input
+                id="wizard-start-date"
+                type="date"
+                value={props.startDate}
+                onChange={(e) => props.onStartDateChange(e.target.value)}
+                className={WIZARD_INPUT}
+              />
+              <FlyerFieldHighlight fieldKey="startTime" autoFilledFields={autoFilled} className="!p-0 !m-0 !ring-0 !bg-transparent">
+                <Select
+                  value={props.startTime}
+                  onValueChange={(v) => {
+                    const next = selectValueOrNull(v)
+                    if (next) props.onStartTimeChange(next)
+                  }}
+                >
+                  <SelectTrigger className={WIZARD_SELECT_TRIGGER}>
+                    <SelectValue placeholder="Start time" />
+                  </SelectTrigger>
+                  <SelectContent className={WIZARD_SELECT_CONTENT}>
+                    {WIZARD_TIME_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FlyerFieldHighlight>
+            </div>
+          </FlyerFieldHighlight>
+          <FlyerFieldHighlight fieldKey="endDate" autoFilledFields={autoFilled}>
+            <div className="space-y-1">
+              <Label htmlFor="wizard-end-date" className={WIZARD_FIELD_LABEL}>End Date & Time *</Label>
+              <Input
+                id="wizard-end-date"
+                type="date"
+                value={props.endDate}
+                min={props.startDate}
+                onChange={(e) => props.onEndDateChange(e.target.value)}
+                className={WIZARD_INPUT}
+              />
+              <FlyerFieldHighlight fieldKey="endTime" autoFilledFields={autoFilled} className="!p-0 !m-0 !ring-0 !bg-transparent">
+                <Select
+                  value={props.endTime}
+                  onValueChange={(v) => {
+                    const next = selectValueOrNull(v)
+                    if (next) props.onEndTimeChange(next)
+                  }}
+                >
+                  <SelectTrigger className={WIZARD_SELECT_TRIGGER}>
+                    <SelectValue placeholder="End time" />
+                  </SelectTrigger>
+                  <SelectContent className={WIZARD_SELECT_CONTENT}>
+                    {WIZARD_TIME_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FlyerFieldHighlight>
+            </div>
+          </FlyerFieldHighlight>
         </div>
       ) : (
         <div className="space-y-3">
@@ -448,45 +496,22 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         <Switch checked={props.allowMlm} onCheckedChange={props.onAllowMlmChange} className="ml-4 shrink-0" />
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="wizard-raffle" className={WIZARD_FIELD_LABEL}>Raffle Donation Requirement</Label>
-        <Textarea
-          id="wizard-raffle"
-          value={props.raffleDonationRequirement}
-          onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
-          placeholder="Optional — describe raffle or donation expectations for vendors"
-          rows={2}
-          className={WIZARD_TEXTAREA}
-        />
-      </div>
+      <FlyerFieldHighlight fieldKey="raffleDonationRequirement" autoFilledFields={autoFilled}>
+        <div className="space-y-1">
+          <Label htmlFor="wizard-raffle" className={WIZARD_FIELD_LABEL}>Raffle Donation Requirement</Label>
+          <Textarea
+            id="wizard-raffle"
+            value={props.raffleDonationRequirement}
+            onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
+            placeholder="Optional — describe raffle or donation expectations for vendors"
+            rows={2}
+            className={WIZARD_TEXTAREA}
+          />
+        </div>
+      </FlyerFieldHighlight>
         </>
       ) : null}
 
-      <div className="space-y-1">
-        <Label className={WIZARD_FIELD_LABEL}>Cover Image</Label>
-        <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-stone-200 p-4 hover:bg-canvas transition-all duration-200">
-          {props.coverImageUrl ? (
-            <img src={props.coverImageUrl} alt="Cover" className="h-16 w-24 rounded-lg object-cover" />
-          ) : (
-            <div className="h-16 w-24 rounded-lg bg-canvas flex items-center justify-center">
-              <Upload className="h-5 w-5 text-muted-foreground" />
-            </div>
-          )}
-          <div>
-            <p className="text-sm font-medium">{props.coverImageUrl ? 'Change cover' : 'Upload cover'}</p>
-            <p className="text-xs text-muted-foreground">JPG, PNG, WebP · 1200×400 recommended</p>
-          </div>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) props.onCoverChange(file)
-            }}
-          />
-        </label>
-      </div>
     </div>
   )
 }

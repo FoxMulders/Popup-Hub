@@ -23,6 +23,8 @@
         "qa:regression": "npx tsx lib/booth-planner/qa-regression-100.ts",
         "qa:launch": "powershell -ExecutionPolicy Bypass -File ./scripts/launch-qa.ps1",
         "qa:launch:fast": "powershell -ExecutionPolicy Bypass -File ./scripts/launch-qa.ps1 -SkipBuild",
+        "qa:market-features": "npx tsx scripts/smoke-market-features.ts",
+        "qa:market-features:configure": "npx tsx scripts/configure-market-features-test-event.ts",
         "test:shopper-routing": "npx tsx lib/shopper/qa-pathfinding.ts",
         "test:shopper-routing:live": "npx tsx lib/shopper/qa-live-layout.ts",
         "test:rbac-signup": "npx tsx lib/auth/qa-rbac-signup.ts",

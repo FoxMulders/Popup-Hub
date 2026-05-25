@@ -39,14 +39,14 @@ export default async function VendorEventDetailPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event }, { data: existingApp }, { data: eventAuctions }, { data: wallet }, { data: passport }] =
+  const [{ data: event, error: eventError }, { data: existingApp, error: appError }, { data: eventAuctions }, { data: wallet }, { data: passport }] =
     await Promise.all([
     supabase
       .from('events')
       .select(VENDOR_EVENT_SELECT)
       .eq('id', id)
       .in('status', VENDOR_MARKET_STATUSES)
-      .single(),
+      .maybeSingle(),
     supabase
       .from('booth_applications')
       .select('id, status, payment_status, payment_method, application_payment_status, category_id')
@@ -67,17 +67,63 @@ export default async function VendorEventDetailPage({ params }: Props) {
       .maybeSingle(),
   ])
 
-  if (!event) notFound()
+  if (eventError) {
+    console.error('[vendor/events/[id]] event query failed', {
+      eventId: id,
+      message: eventError.message,
+      code: eventError.code,
+    })
+  }
 
-  const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
-  const capacity = await fetchEventCapacitySummary(supabase, event as Event)
-  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
-  const displayStatus = getEventDisplayStatus(event, undefined, {
+  if (appError) {
+    console.error('[vendor/events/[id]] application query failed', {
+      eventId: id,
+      message: appError.message,
+      code: appError.code,
+    })
+  }
+
+  let resolvedEvent = event
+  if (!resolvedEvent) {
+    const { data: vendorApp } = await supabase
+      .from('booth_applications')
+      .select('id')
+      .eq('event_id', id)
+      .eq('vendor_id', user.id)
+      .maybeSingle()
+
+    if (vendorApp) {
+      const { data: fallbackEvent, error: fallbackError } = await supabase
+        .from('events')
+        .select(VENDOR_EVENT_SELECT)
+        .eq('id', id)
+        .maybeSingle()
+
+      if (fallbackError) {
+        console.error('[vendor/events/[id]] fallback event query failed', {
+          eventId: id,
+          message: fallbackError.message,
+          code: fallbackError.code,
+        })
+      }
+
+      resolvedEvent = fallbackEvent
+    }
+  }
+
+  if (!resolvedEvent) notFound()
+
+  const eventRecord = resolvedEvent
+
+  const isQuarterAuction = isQuarterAuctionListing(eventRecord.listing_type)
+  const capacity = await fetchEventCapacitySummary(supabase, eventRecord as Event)
+  const coordinator = Array.isArray(eventRecord.coordinator) ? eventRecord.coordinator[0] : eventRecord.coordinator
+  const displayStatus = getEventDisplayStatus(eventRecord, undefined, {
     isFullyBooked: capacity.isFullyBooked,
   })
-  const applicationsOpen = isEventOpenForApplications(event)
+  const applicationsOpen = isEventOpenForApplications(eventRecord)
 
-  const sortedLimits = getVendorEligibleCategoryLimits(event as Event).sort(
+  const sortedLimits = getVendorEligibleCategoryLimits(eventRecord as Event).sort(
     (a: EventCategoryLimit, b: EventCategoryLimit) =>
       (a.category?.name ?? '').localeCompare(b.category?.name ?? '')
   )
@@ -95,7 +141,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
     ? Math.max(...paidCategoryLimits.map((cl) => cl.price_per_booth))
     : 0
   const sampleFeePreview =
-    minBoothFee > 0 ? computePlatformFeeCents(minBoothFee, resolveEventFeeConfig(event as Event)) : 0
+    minBoothFee > 0 ? computePlatformFeeCents(minBoothFee, resolveEventFeeConfig(eventRecord as Event)) : 0
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -114,10 +160,10 @@ export default async function VendorEventDetailPage({ params }: Props) {
       </div>
 
       <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-        {event.cover_image_url ? (
+        {eventRecord.cover_image_url ? (
           <ExpandableImage
-            src={event.cover_image_url}
-            alt={event.name}
+            src={eventRecord.cover_image_url}
+            alt={eventRecord.name}
             className="h-48 w-full object-contain bg-canvas"
           />
         ) : (
@@ -127,7 +173,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
         )}
         <div className="space-y-4 p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <h1 className="text-2xl font-bold text-foreground">{event.name}</h1>
+            <h1 className="text-2xl font-bold text-foreground">{eventRecord.name}</h1>
             <div className="flex flex-wrap gap-2">
               <Badge className="capitalize">
                 {displayStatus === 'archived'
@@ -137,26 +183,26 @@ export default async function VendorEventDetailPage({ params }: Props) {
                     : displayStatus}
               </Badge>
               <Badge className="capitalize">
-                {event.booking_mode === 'juried' ? 'Juried review' : 'Instant book'}
+                {eventRecord.booking_mode === 'juried' ? 'Juried review' : 'Instant book'}
               </Badge>
             </div>
           </div>
           {capacity.totalMaxSlots > 0 ? (
             <p className="text-sm font-medium text-foreground">{eventCapacityLabel}</p>
           ) : null}
-          {event.description ? <p className="text-sm text-muted-foreground">{event.description}</p> : null}
+          {eventRecord.description ? <p className="text-sm text-muted-foreground">{eventRecord.description}</p> : null}
           <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 shrink-0 text-harvest-500" />
-              <span>{event.location_name}</span>
+              <span>{eventRecord.location_name}</span>
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 shrink-0 text-harvest-500" />
-              {format(new Date(event.start_at), 'EEE, MMM d, yyyy')}
+              {format(new Date(eventRecord.start_at), 'EEE, MMM d, yyyy')}
             </div>
             <div className="flex items-center gap-2 sm:col-span-2">
               <Clock className="h-4 w-4 shrink-0 text-harvest-500" />
-              {format(new Date(event.start_at), 'h:mm a')} – {format(new Date(event.end_at), 'h:mm a')}
+              {format(new Date(eventRecord.start_at), 'h:mm a')} – {format(new Date(eventRecord.end_at), 'h:mm a')}
             </div>
           </div>
           {coordinator ? (
@@ -184,7 +230,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
             walletBalanceCents={wallet?.balance ?? 0}
             dismissScope="timer-vendor"
             eventId={id}
-            eventStartAt={event.start_at}
+            eventStartAt={eventRecord.start_at}
           />
           <QuarterAuctionEventBanner eventId={id} variant="vendor" />
         </div>
@@ -276,7 +322,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
           </div>
         ) : null}
         <ApplyButton
-          event={event as Event}
+          event={eventRecord as Event}
           userId={user.id}
           applicationStatus={existingApp?.status ?? null}
           existingApplication={existingApp ?? null}

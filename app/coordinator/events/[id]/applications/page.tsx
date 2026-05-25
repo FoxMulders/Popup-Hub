@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, MapPin } from 'lucide-react'
 import { format } from 'date-fns'
-import { COORDINATOR_APPLICATION_SELECT } from '@/lib/applications/coordinator-application-select'
-import { normalizeCoordinatorApplication } from '@/lib/applications/normalize-coordinator-application'
+import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import type { BoothApplication, Event } from '@/types/database'
 
@@ -21,26 +20,23 @@ export default async function ApplicationsPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event }, { data: rawApplications }, { data: allCategories }] = await Promise.all([
+  const [{ data: event }, { data: allCategories }] = await Promise.all([
     supabase
       .from('events')
       .select('*, category_limits:event_category_limits(*, category:categories(name))')
       .eq('id', id)
       .eq('coordinator_id', user.id)
       .single(),
-    supabase
-      .from('booth_applications')
-      .select(COORDINATOR_APPLICATION_SELECT)
-      .eq('event_id', id)
-      .order('applied_at', { ascending: true }),
     supabase.from('categories').select('id, name'),
   ])
 
   if (!event) notFound()
 
-  const applications = (rawApplications ?? []).map((row) =>
-    normalizeCoordinatorApplication(row as Record<string, unknown>)
-  ) as BoothApplication[]
+  const {
+    applications,
+    error: applicationsError,
+    usedFallback,
+  } = await fetchCoordinatorEventApplications(supabase, id)
 
   const categoryNameById = buildCategoryNameMap(allCategories ?? [])
 
@@ -73,11 +69,36 @@ export default async function ApplicationsPage({ params }: Props) {
         </div>
       </div>
 
-      <ApplicationBoard
-        applications={applications}
-        bookingMode={(event as Event).booking_mode}
-        categoryNameById={Object.fromEntries(categoryNameById)}
-      />
+      {applicationsError ? (
+        <div
+          className="rounded-xl border border-terracotta-200 bg-terracotta-50 px-4 py-3 text-sm text-terracotta-900"
+          role="alert"
+        >
+          Could not load full vendor details: {applicationsError}. Applications are shown with limited
+          profile data.
+        </div>
+      ) : null}
+      {usedFallback && !applicationsError ? (
+        <div
+          className="mb-4 rounded-xl border border-harvest-200 bg-harvest-50 px-4 py-3 text-sm text-harvest-900"
+          role="status"
+        >
+          Loaded applications without passport details. You can still review and approve vendors.
+        </div>
+      ) : null}
+      {!applicationsError || applications.length > 0 ? (
+        <ApplicationBoard
+          applications={applications}
+          bookingMode={(event as Event).booking_mode}
+          categoryNameById={Object.fromEntries(categoryNameById)}
+          categoryLimits={(event.category_limits ?? []) as Event['category_limits']}
+          marketInsuranceRequired={Boolean((event as Event).market_insurance_required)}
+        />
+      ) : (
+        <div className="rounded-xl border border-stone-200 bg-canvas px-4 py-8 text-center text-sm text-muted-foreground">
+          No applications for this market yet.
+        </div>
+      )}
     </div>
   )
 }

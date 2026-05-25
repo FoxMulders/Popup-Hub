@@ -75,9 +75,7 @@ export function PendingBoothApplicationsPanel({
           const vendor = Array.isArray(app.vendor) ? app.vendor[0] : app.vendor
           const event = Array.isArray(app.event) ? app.event[0] : app.event
           const category = Array.isArray(app.category) ? app.category[0] : app.category
-          const reviewHref = event?.id
-            ? `/coordinator/events/${event.id}/applications`
-            : null
+          const reviewHref = `/coordinator/events/${app.event_id}/applications`
 
           return (
             <li key={app.id} className="rounded-xl border bg-white p-4">
@@ -100,15 +98,13 @@ export function PendingBoothApplicationsPanel({
                   {STATUS_LABEL[app.status] ?? app.status.replace('_', ' ')}
                 </Badge>
               </div>
-              {reviewHref ? (
-                <Link
-                  href={reviewHref}
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-harvest-700 hover:underline"
-                >
-                  Review application
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Link>
-              ) : null}
+              <Link
+                href={reviewHref}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-harvest-700 hover:underline"
+              >
+                Review application
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
             </li>
           )
         })}

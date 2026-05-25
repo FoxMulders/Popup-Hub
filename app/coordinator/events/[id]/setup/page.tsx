@@ -62,8 +62,10 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
       table_length_ft,
       applied_at,
       neighbor_preference,
-      vendor:profiles(full_name),
-      passport:vendor_passports(business_name),
+      vendor:profiles!booth_applications_vendor_id_fkey(
+        full_name,
+        passport:vendor_passports(business_name)
+      ),
       category:categories(name)
     `)
     .eq('event_id', id)

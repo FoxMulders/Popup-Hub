@@ -3,22 +3,12 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
 import { UserAvatar } from '@/components/profile/user-avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
-import { MobileNavSheet } from '@/components/nav/mobile-nav-sheet'
+import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { PortalTabs } from '@/components/nav/portal-tabs'
 import { getPortalHome, resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
-import { Bell, LogOut } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
 
@@ -83,8 +73,10 @@ export function AppNav({
     avatar_url: profile.avatar_url,
   }
 
+  const menuExtraLinks = [{ href: '/profile', label: 'Profile settings' }]
+
   return (
-    <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
+    <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 lg:gap-6">
@@ -96,86 +88,33 @@ export function AppNav({
               <PortalTabs
                 availablePortals={availablePortals}
                 activePortal={activePortal}
-                className="hidden lg:inline-flex"
+                className="hidden sm:inline-flex"
               />
             ) : null}
-
-            <div className="hidden lg:flex items-center gap-0.5">
-              {links.map(({ href, label }) => (
-                <Link key={href} href={href}>
-                  <Button
-                    variant={pathname === href || pathname.startsWith(href + '/') ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="text-sm font-medium h-8"
-                  >
-                    {label}
-                  </Button>
-                </Link>
-              ))}
-            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/notifications">
-              <Button variant="ghost" size="icon" className="relative min-h-11 min-w-11">
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <Badge className="absolute -right-0.5 -top-0.5 h-4 min-w-4 rounded-full bg-red-500 px-1 text-[9px] font-bold text-white leading-none flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            </Link>
+            <AppMenuSheet
+              links={links}
+              pathname={pathname}
+              profileName={profile.full_name}
+              unreadCount={unreadCount}
+              onSignOut={handleSignOut}
+              extraLinks={menuExtraLinks}
+            />
 
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <button className="min-h-11 min-w-11 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <UserAvatar
-                      userId={profile.id}
-                      profile={avatarProfile}
-                      className="h-9 w-9"
-                      fallbackClassName="text-xs"
-                    />
-                  </button>
-                }
+            <Link
+              href="/profile"
+              className="app-tap-target rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Profile settings"
+            >
+              <UserAvatar
+                userId={profile.id}
+                profile={avatarProfile}
+                className="h-9 w-9"
+                fallbackClassName="text-xs"
               />
-              <DropdownMenuContent align="end" className="w-52">
-                <div className="px-3 py-2 border-b">
-                  <p className="text-sm font-semibold truncate">{profile.full_name}</p>
-                  <p className="text-xs text-muted-foreground capitalize mt-0.5">{profile.role}</p>
-                </div>
-                <div className="py-1">
-                  <DropdownMenuItem
-                    onClick={() => router.push('/profile')}
-                    className="cursor-pointer gap-2"
-                  >
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => router.push('/profile/passport')}
-                    className="cursor-pointer gap-2"
-                  >
-                    My Passport
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => router.push('/wallet')}
-                    className="cursor-pointer gap-2"
-                  >
-                    Wallet
-                  </DropdownMenuItem>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleSignOut}
-                  className="text-red-600 focus:text-red-600 cursor-pointer"
-                >
-                  <LogOut className="mr-2 h-4 w-4" /> Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <MobileNavSheet links={links} pathname={pathname} side="left" className="lg:hidden" />
+            </Link>
           </div>
         </div>
 
@@ -184,7 +123,7 @@ export function AppNav({
             availablePortals={availablePortals}
             activePortal={activePortal}
             compact
-            className="w-full lg:hidden"
+            className="w-full sm:hidden"
           />
         ) : null}
       </div>

@@ -7,6 +7,7 @@ import { ProfileForm } from './profile-form'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { PurchaseHistory } from '@/components/shopper/purchase-history'
 import { AccountAccessPanel } from '@/components/profile/account-access-panel'
+import { PushNotificationSettings } from '@/components/profile/push-notification-settings'
 import { PASSPORT_PATH, passportCompletionSummary } from '@/lib/passport/requirements'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -113,6 +114,8 @@ export default async function ProfilePage() {
               </ul>
             </div>
 
+            <PushNotificationSettings />
+
             <AccountAccessPanel
               email={profile.email}
               role={profile.role}
@@ -152,6 +155,27 @@ export default async function ProfilePage() {
                   Cancellations: {(profile as { coordinator_cancellation_count?: number }).coordinator_cancellation_count ?? 0}
                   {' · '}
                   Late: {(profile as { coordinator_late_cancellation_count?: number }).coordinator_late_cancellation_count ?? 0}
+                </p>
+              </div>
+            )}
+
+            {profile.role === 'shopper' && (
+              <div className="rounded-2xl border bg-white p-6 space-y-3">
+                <h3 className="font-semibold text-foreground">Market Passport</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Vendors you scan at markets appear in your personal directory.
+                </p>
+                <Link
+                  href="/profile/makers"
+                  className="inline-flex text-sm font-medium text-harvest-700 hover:underline"
+                >
+                  Makers I Met →
+                </Link>
+                <p className="text-xs text-muted-foreground">
+                  Public profile:{' '}
+                  <a href={`/patrons/${profile.id}`} className="text-harvest-700 underline">
+                    /patrons/{profile.id.slice(0, 8)}…
+                  </a>
                 </p>
               </div>
             )}

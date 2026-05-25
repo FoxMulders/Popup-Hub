@@ -16,6 +16,7 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/events/') ||
     pathname.startsWith('/auctions/') ||
     pathname.startsWith('/coordinators/') ||
+    pathname.startsWith('/patrons/') ||
     pathname.startsWith('/checkin/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/square/webhook') ||
@@ -25,6 +26,7 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/favicon') ||
     pathname === '/sw.js' ||
     pathname === '/manifest.json' ||
+    pathname === '/site.webmanifest' ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/legal/') ||
     pathname.startsWith('/wallet/door')

@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ApplicationBoard } from '@/components/coordinator/application-board'
 import { EventInlineEditor } from '@/components/coordinator/event-inline-editor'
+import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
 import { EventReadinessChecklist } from '@/components/coordinator/event-readiness-checklist'
+import { MarketFeedbackAdminPanel } from '@/components/coordinator/market-feedback-admin-panel'
 import { EventLogisticsEditor } from '@/components/coordinator/event-logistics-editor'
 import { EventScheduleEditor } from '@/components/coordinator/event-schedule-editor'
 import { RefundExceptionsPanel } from '@/components/coordinator/refund-exceptions-panel'
@@ -15,8 +17,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { LayoutDashboard, ClipboardCheck, Printer, Gauge, Gavel } from 'lucide-react'
 import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
-import { COORDINATOR_APPLICATION_SELECT } from '@/lib/applications/coordinator-application-select'
-import { normalizeCoordinatorApplication } from '@/lib/applications/normalize-coordinator-application'
+import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import type { BoothApplication, Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
 
@@ -44,18 +45,11 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
       (a.category?.name ?? '').localeCompare(b.category?.name ?? '')
   )
 
-  const [{ data: rawApplications }, { data: allCategories }] = await Promise.all([
-    supabase
-      .from('booth_applications')
-      .select(COORDINATOR_APPLICATION_SELECT)
-      .eq('event_id', id)
-      .order('applied_at', { ascending: true }),
-    supabase.from('categories').select('id, name'),
-  ])
-
-  const applications = (rawApplications ?? []).map((row) =>
-    normalizeCoordinatorApplication(row as Record<string, unknown>)
-  ) as BoothApplication[]
+  const [{ applications, error: applicationsLoadError }, { data: allCategories }] =
+    await Promise.all([
+      fetchCoordinatorEventApplications(supabase, id),
+      supabase.from('categories').select('id, name'),
+    ])
 
   const categoryNameById = buildCategoryNameMap(allCategories ?? [])
 
@@ -87,7 +81,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   const hasSquare = !!event.square_merchant_id || !!squareLinked
 
-  const pendingCount = applications?.filter((a) => a.status === 'pending').length ?? 0
+  const pendingCount =
+    applications?.filter((a) => a.status === 'pending' || a.status === 'pending_insurance')
+      .length ?? 0
   const approvedCount = applications?.filter((a) => a.status === 'approved').length ?? 0
   const waitlistedCount = applications?.filter((a) => a.status === 'waitlisted').length ?? 0
   const applicationCount = applications?.length ?? 0
@@ -98,6 +94,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
     .map((a) => a.vendor_id)
 
   const isCancelled = event.status === 'cancelled'
+  const isDraft = event.status === 'draft'
 
   const eventRevenueCents =
     revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
@@ -123,6 +120,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <EventInlineEditor event={event as Event} />
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {isDraft ? (
+              <DeleteDraftMarketDialog eventId={id} eventName={event.name} />
+            ) : null}
             {!isCancelled && (
               <>
                 <Link
@@ -212,12 +212,30 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
           { label: 'Approved', count: approvedCount, color: 'text-sage-700' },
           { label: 'Waitlisted', count: waitlistedCount, color: 'text-muted-foreground' },
           { label: 'Booth Revenue', count: eventRevenueFormatted, color: 'text-forest' },
-        ].map(({ label, count, color }) => (
-          <div key={label} className="market-panel rounded-xl p-4 text-center">
-            <p className={`font-heading text-2xl font-bold ${color}`}>{count}</p>
-            <p className="text-xs text-muted-foreground">{label}</p>
-          </div>
-        ))}
+        ].map(({ label, count, color }) => {
+          const panel = (
+            <>
+              <p className={`font-heading text-2xl font-bold ${color}`}>{count}</p>
+              <p className="text-xs text-muted-foreground">{label}</p>
+            </>
+          )
+          if (label === 'Pending Review' && pendingCount > 0) {
+            return (
+              <Link
+                key={label}
+                href={`/coordinator/events/${id}/applications`}
+                className="market-panel rounded-xl p-4 text-center transition-colors hover:border-harvest-300 hover:bg-harvest-50/50"
+              >
+                {panel}
+              </Link>
+            )
+          }
+          return (
+            <div key={label} className="market-panel rounded-xl p-4 text-center">
+              {panel}
+            </div>
+          )
+        })}
       </div>
 
       <EventReadinessChecklist
@@ -230,6 +248,8 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         pendingCount={pendingCount}
         hasAuction={(eventAuctions ?? []).length > 0}
       />
+
+      {!isCancelled && <MarketFeedbackAdminPanel marketId={id} variant="page" />}
 
       {!isCancelled && <EventLogisticsEditor event={event as Event} />}
 
@@ -280,11 +300,22 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         <h2 className="market-section-title mb-4">
           Applications ({applications?.length ?? 0})
         </h2>
+        {applicationsLoadError ? (
+          <div
+            className="mb-4 rounded-xl border border-terracotta-200 bg-terracotta-50 px-4 py-3 text-sm text-terracotta-900"
+            role="alert"
+          >
+            Some vendor profile data could not be loaded ({applicationsLoadError}). Applications
+            below may show limited details — refresh after updating database policies.
+          </div>
+        ) : null}
         <ApplicationBoard
           applications={applications}
           bookingMode={event.booking_mode}
           eventCancelled={isCancelled}
           categoryNameById={Object.fromEntries(categoryNameById)}
+          categoryLimits={sortedCategoryLimits}
+          marketInsuranceRequired={Boolean(event.market_insurance_required)}
         />
       </div>
     </div>

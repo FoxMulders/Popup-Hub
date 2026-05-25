@@ -1,7 +1,7 @@
 'use client'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { VendorLogo, type VendorLogoSize } from '@/components/vendor/vendor-logo'
+import { BrandMark, type BrandMarkSize } from '@/components/profile/brand-mark'
 import { useUserAvatar, type UserAvatarSource } from '@/hooks/use-user-avatar'
 import { cn } from '@/lib/utils'
 
@@ -12,10 +12,14 @@ interface UserAvatarProps {
   fallbackClassName?: string
 }
 
-function vendorLogoSize(className?: string): VendorLogoSize {
-  if (className?.includes('h-20')) return 'profile'
-  if (className?.includes('h-12') || className?.includes('h-11')) return 'md'
-  return 'xs'
+function brandMarkSize(className?: string): BrandMarkSize {
+  if (className?.includes('h-20') || className?.includes('h-24') || className?.includes('h-28')) {
+    return 'profile'
+  }
+  if (className?.includes('h-14') || className?.includes('h-12') || className?.includes('h-11')) {
+    return 'md'
+  }
+  return 'nav'
 }
 
 export function UserAvatar({
@@ -24,19 +28,16 @@ export function UserAvatar({
   className,
   fallbackClassName,
 }: UserAvatarProps) {
-  const { displayUrl, initials, avatarUrl, passportLogoUrl } = useUserAvatar(userId, profile)
+  const { displayUrl, initials, avatarUrl } = useUserAvatar(userId, profile)
 
-  const usingPassportLogo =
-    profile.role === 'vendor' && !avatarUrl && Boolean(passportLogoUrl)
-
-  if (usingPassportLogo) {
+  if (profile.role === 'vendor') {
     return (
-      <VendorLogo
-        src={passportLogoUrl}
+      <BrandMark
+        src={displayUrl ?? avatarUrl}
         alt={`${profile.full_name || 'Business'} logo`}
         fallback={initials}
-        size={vendorLogoSize(className)}
-        className={cn('border-stone-200', className?.includes('h-20') ? undefined : 'max-h-9')}
+        size={brandMarkSize(className)}
+        className={className}
       />
     )
   }

@@ -5,6 +5,7 @@ import { Lora, Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
 import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
+import { PopupPageLoader } from '@/components/brand/popup-page-loader'
 import { BuildVersionFooter } from '@/components/brand/build-version-footer'
 import { InstallPrompt } from '@/components/navigation/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
@@ -33,7 +34,7 @@ const geistMono = Geist_Mono({
 const baseMetadata = {
   description:
     'Discover local markets, manage vendor booths, and run digital quarter auctions with Popup Hub.',
-  manifest: '/manifest.json',
+  manifest: '/site.webmanifest',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -47,10 +48,13 @@ const baseMetadata = {
   appleWebApp: {
     capable: true,
     title: 'Popup Hub',
-    statusBarStyle: 'default' as const,
+    statusBarStyle: 'black-translucent' as const,
   },
   other: {
     'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-status-bar-style': 'black-translucent',
+    'apple-mobile-web-app-title': 'Popup Hub',
   },
 } satisfies Omit<Metadata, 'title'>
 
@@ -82,7 +86,8 @@ export default async function RootLayout({
       lang="en"
       className={`${display.variable} ${body.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden safe-bottom">
+        <PopupPageLoader />
         <DocumentTitleSync initialRole={sessionRole} />
         <AuthSessionGuard />
         <ServiceWorkerRegister />

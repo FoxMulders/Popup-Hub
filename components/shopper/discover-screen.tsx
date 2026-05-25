@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { EventMap } from '@/components/map/event-map'
 import { DiscoverEventCards } from '@/components/shopper/discover-event-cards'
 import { DiscoverFlyerUpload } from '@/components/shopper/discover-flyer-upload'
+import { DiscoverDateFilter } from '@/components/markets/discover-date-filter'
 import { MarketAreaFilter } from '@/components/markets/market-area-filter'
 import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
 import {
@@ -141,7 +142,7 @@ export function DiscoverScreen({
         <p className="mt-1 text-sm text-muted-foreground">
           {liveAuctionsOnly
             ? 'Find live quarter auction markets near you — drop quarters and win vendor prizes'
-            : 'Find popup markets near you — browse vendors before you go'}
+            : 'Find popup markets near you — discover vendors before you go'}
         </p>
       </div>
 

@@ -22,10 +22,12 @@ export interface LayoutKeyboardShortcutHandlers {
   onClearLayout: () => void
   onToggleLockAll: () => void
   onToolChange: (tool: LayoutTool) => void
+  /** Delete / Backspace — remove selection or activate eraser. */
+  onErase?: () => void
 }
 
 export function useLayoutKeyboardShortcuts(handlers: LayoutKeyboardShortcutHandlers) {
-  const { onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange } = handlers
+  const { onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange, onErase } = handlers
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -61,6 +63,10 @@ export function useLayoutKeyboardShortcuts(handlers: LayoutKeyboardShortcutHandl
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault()
+        if (onErase) {
+          onErase()
+          return
+        }
         onToolChange('eraser')
         return
       }
@@ -76,5 +82,5 @@ export function useLayoutKeyboardShortcuts(handlers: LayoutKeyboardShortcutHandl
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange])
+  }, [onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange, onErase])
 }

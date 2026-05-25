@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -26,6 +26,7 @@ import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reaso
 import { MarketInsuranceUpload } from '@/components/vendor/market-insurance-upload'
 import { ApplicationFollowUpDialog } from '@/components/vendor/application-follow-up-dialog'
 import { MarketOwnerLink, vendorApplicationStatusHref } from '@/components/vendor/market-owner-link'
+import { PassportQrButton } from '@/components/vendor/passport-qr-button'
 import {
   filterVendorApplications,
   VENDOR_APPLICATION_STATUS_UI,
@@ -77,6 +78,10 @@ export function VendorApplicationsList({
 }: VendorApplicationsListProps) {
   const router = useRouter()
   const [filter, setFilter] = useState<VendorApplicationFilter>(initialFilter)
+
+  useEffect(() => {
+    setFilter(initialFilter)
+  }, [initialFilter])
   const [payTarget, setPayTarget] = useState<{
     applicationId: string
     eventId: string
@@ -336,6 +341,17 @@ export function VendorApplicationsList({
                         <CreditCard className="mr-1.5 h-3.5 w-3.5" />
                         Pay Now
                       </Button>
+                    ) : null}
+
+                    {app.status === 'approved' &&
+                    ev?.id &&
+                    ev.status &&
+                    ['published', 'active'].includes(ev.status) ? (
+                      <PassportQrButton
+                        eventId={ev.id}
+                        vendorId={userId}
+                        eventName={ev.name ?? 'Market'}
+                      />
                     ) : null}
 
                     {showFollowUp ? (

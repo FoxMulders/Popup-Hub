@@ -10,6 +10,10 @@ import { applyAlignedGridLayout } from '@/lib/booth-planner/aligned-grid-layout'
 import { applyLShapeCornersLayout } from '@/lib/booth-planner/l-shape-corners-layout'
 import { applyIndoorCorridorLayout } from '@/lib/booth-planner/indoor-corridor-layout'
 import { applyOutdoorMarketLayout } from '@/lib/booth-planner/outdoor-market-shell'
+import {
+  applyModifiedLoopLayout,
+  suggestAnchorPlacements,
+} from '@/lib/booth-planner/modified-loop-layout'
 import { applyGenericRowLayout } from '@/lib/booth-planner/generic-row-layouts'
 
 export interface AutoPlanLayoutPatch {
@@ -47,15 +51,37 @@ export function resolveAutoPlanStrategy(input: AutoPlanStrategyInput): AutoPlanS
 
   const genericMode = genericRowLayoutModeFromPreset(layoutPreset)
   const snakePreset = layoutPreset === 'snake'
+  const modifiedLoopPreset = layoutPreset === 'modified_loop'
   const indoorShell = hallHasIndoorShell(venueElementsWithDoors, gridCols, gridRows)
   const useCorridor =
-    snakePreset || (indoorShell && (layoutPreset === 'outdoor' || layoutPreset === 'default'))
+    snakePreset ||
+    modifiedLoopPreset ||
+    (indoorShell && (layoutPreset === 'outdoor' || layoutPreset === 'default'))
 
   const effectivePreset: LayoutPreset =
     useCorridor && layoutPreset === 'default' ? 'outdoor' : layoutPreset
 
   const presetShell: AutoPlanLayoutPatch | null =
-    effectivePreset === 'perimeter'
+    modifiedLoopPreset
+      ? (() => {
+          const patch = applyModifiedLoopLayout(
+            gridCols,
+            gridRows,
+            entrance,
+            venueElementsWithDoors
+          )
+          const anchorSuggestions = suggestAnchorPlacements(
+            patch.venue_elements,
+            gridCols,
+            gridRows,
+            entrance
+          )
+          return {
+            venue_elements: [...patch.venue_elements, ...anchorSuggestions],
+            cells: patch.cells,
+          }
+        })()
+      : effectivePreset === 'perimeter'
       ? applyOutsideOnlyLayout(gridCols, gridRows, entrance)
       : effectivePreset === 'aligned_grid'
         ? applyAlignedGridLayout(gridCols, gridRows, entrance, venueElementsWithDoors)

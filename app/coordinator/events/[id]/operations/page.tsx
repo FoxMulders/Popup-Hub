@@ -13,12 +13,19 @@ interface Props {
 
 function normalizeApp(record: Record<string, unknown>): OperationsApplication {
   const base = record as unknown as BoothApplication
+  const vendorRaw = Array.isArray(record.vendor) ? record.vendor[0] : record.vendor
+  const vendor = vendorRaw as Profile & { passport?: VendorPassport | VendorPassport[] | null }
+  const passportNested = vendor?.passport
+  const passportTop = record.passport
+  const passport = (Array.isArray(passportNested)
+    ? passportNested[0] ?? null
+    : passportNested ??
+      (Array.isArray(passportTop) ? passportTop[0] ?? null : passportTop ?? null)) as VendorPassport | null
+
   return {
     ...base,
-    vendor: (Array.isArray(record.vendor) ? record.vendor[0] : record.vendor) as Profile,
-    passport: (Array.isArray(record.passport)
-      ? record.passport[0] ?? null
-      : record.passport ?? null) as VendorPassport | null,
+    vendor: vendorRaw as Profile,
+    passport,
     category: (Array.isArray(record.category)
       ? record.category[0] ?? null
       : record.category ?? null) as { name: string } | null,
@@ -49,12 +56,12 @@ export default async function OperationsPage({ params }: Props) {
     .from('booth_applications')
     .select(`
       *,
-      vendor:profiles(
+      vendor:profiles!booth_applications_vendor_id_fkey(
         id, full_name, email, phone, avatar_url, role, created_at, is_beta_tester,
         reliability_score, total_markets, no_show_count, left_early_count,
-        late_arrival_count, poor_cleanup_strike_count
+        late_arrival_count, poor_cleanup_strike_count,
+        passport:vendor_passports(id, user_id, business_name, bio, logo_url, item_image_urls, is_verified, created_at, primary_category_id, tax_id_encrypted)
       ),
-      passport:vendor_passports(id, user_id, business_name, bio, logo_url, item_image_urls, is_verified, created_at, primary_category_id, tax_id_encrypted),
       category:categories(name)
     `)
     .eq('event_id', id)

@@ -55,7 +55,7 @@ export function LandingHeroActions() {
         ) : (
           <MapPin className="h-4 w-4" />
         )}
-        Browse markets
+        Discover markets
       </button>
       <Link
         href="/signup"

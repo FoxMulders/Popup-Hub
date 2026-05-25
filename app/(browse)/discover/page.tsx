@@ -11,7 +11,7 @@ import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
   title: 'Discover Markets — Popup Hub',
-  description: 'Browse upcoming popup markets near you — see confirmed vendors before you go.',
+  description: 'Discover upcoming popup markets near you — see confirmed vendors before you go.',
   path: '/discover',
 })
 

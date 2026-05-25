@@ -49,7 +49,8 @@ export function LayoutPresetPicker({
           Layout preset
         </h3>
         <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-          AI auto-plan shell — paints aisles and clears booths when changed.
+          AI auto-plan shell — paints aisles and clears booths when changed. Use Remove (R) to
+          erase individual preset cells.
         </p>
       </div>
 

@@ -14,7 +14,7 @@ export const ACCOUNT_CAPABILITIES: AccountCapability[] = [
   {
     id: 'discover',
     label: 'Discover markets',
-    description: 'Browse public market listings and maps',
+    description: 'Discover public market listings and maps',
     requiredRole: 'shopper',
     href: '/discover',
   },

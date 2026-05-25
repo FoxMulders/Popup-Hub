@@ -113,3 +113,51 @@ export async function registerAuctionParticipation(
     alreadyRegistered: false,
   }
 }
+
+/** Staff desk check-in — skips GPS; coordinator confirms patron is on-site. */
+export async function registerStaffAssistedParticipation(
+  supabase: SupabaseClient,
+  input: {
+    eventId: string
+    userId: string
+    eventLat: number
+    eventLng: number
+  }
+): Promise<
+  | { ok: true; participant: EventAuctionParticipant; alreadyRegistered: boolean }
+  | { ok: false; error: string; status: number }
+> {
+  const existing = await getAuctionParticipation(supabase, input.eventId, input.userId)
+  if (existing) {
+    return { ok: true, participant: existing, alreadyRegistered: true }
+  }
+
+  const eventLat = input.eventLat
+  const eventLng = input.eventLng
+
+  if (!Number.isFinite(eventLat) || !Number.isFinite(eventLng)) {
+    return { ok: false, error: 'Event location is not configured for check-in.', status: 422 }
+  }
+
+  const { data, error } = await supabase
+    .from('event_auction_participants')
+    .insert({
+      event_id: input.eventId,
+      user_id: input.userId,
+      check_in_lat: eventLat,
+      check_in_lng: eventLng,
+      distance_meters: 0,
+    })
+    .select('*')
+    .single()
+
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? 'Could not register participation', status: 422 }
+  }
+
+  return {
+    ok: true,
+    participant: data as EventAuctionParticipant,
+    alreadyRegistered: false,
+  }
+}

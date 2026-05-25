@@ -1,0 +1,49 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { deleteDraftEvent } from '@/lib/events/delete-draft-event'
+import { revalidatePath } from 'next/cache'
+
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+/**
+ * DELETE /api/events/[id]
+ * Coordinator-only: permanently removes a draft market (no vendor applications).
+ */
+export async function DELETE(_request: Request, context: RouteContext) {
+  const { id: eventId } = await context.params
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'coordinator') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const result = await deleteDraftEvent(supabase, {
+    eventId,
+    coordinatorId: user.id,
+  })
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  }
+
+  revalidatePath('/coordinator/dashboard')
+  revalidatePath('/coordinator/events/new')
+
+  return NextResponse.json({ ok: true })
+}

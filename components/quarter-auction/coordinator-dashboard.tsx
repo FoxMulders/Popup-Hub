@@ -18,6 +18,7 @@ import {
   useAuctionCanStart,
 } from '@/components/quarter-auction/auction-start-countdown'
 import { cn } from '@/lib/utils'
+import { AuctionClerkDesk } from '@/components/coordinator/auction-clerk-desk'
 
 interface CoordinatorQuarterAuctionProps {
   eventId: string
@@ -420,6 +421,8 @@ export function CoordinatorQuarterAuction({
           </form>
         </CardContent>
       </Card>
+
+      <AuctionClerkDesk eventId={eventId} settings={settings} liveItem={activeItem} />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2">

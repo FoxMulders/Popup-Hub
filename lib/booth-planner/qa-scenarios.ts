@@ -10,6 +10,9 @@ import {
   blockedCellKeys,
   buildDefaultVenueElements,
   clearRemovableFixtures,
+  canRemoveVenueElement,
+  isLayoutPresetPaintedElement,
+  removeElementsAt,
 } from '@/lib/booth-planner/venue-elements'
 import { compareFcfsApplicationOrder } from '@/lib/applications/fcfs-sort'
 import {
@@ -54,6 +57,11 @@ import {
 } from '@/lib/booth-planner/indoor-corridor-layout'
 import { analyzeStrollerClearance } from '@/lib/booth-planner/stroller-clearance'
 import { resolveAutoPlanStrategy } from '@/lib/booth-planner/auto-plan-strategy'
+import {
+  applyModifiedLoopLayout,
+  inEntranceBufferZone,
+  ENTRANCE_ORIENTATION_BUFFER_CELLS,
+} from '@/lib/booth-planner/modified-loop-layout'
 import {
   boothHasAisleFrontage,
   buildWalkwayCells,
@@ -115,6 +123,38 @@ function runCorridorAutoPlan(
     })),
     fcfsOrder: true,
     preset: 'outdoor',
+    useIndoorCorridor: true,
+    coGenerateAisles: false,
+  })
+}
+
+function runModifiedLoopAutoPlan(
+  cols: number,
+  rows: number,
+  vendorCount: number,
+  baseElements: VenueElement[]
+) {
+  const shell = applyModifiedLoopLayout(cols, rows, 'south', baseElements)
+  const categories = ['Jewelry', 'Candles & Soaps', 'Food & Beverage', 'Woodworking', 'Fiber Arts & Yarn']
+  return autoLayout({
+    venueWidth: cols,
+    venueLength: rows,
+    boothWidth: 1,
+    boothLength: 1,
+    entrance: 'south',
+    venueElements: shell.venue_elements,
+    vendors: Array.from({ length: vendorCount }, (_, i) => ({
+      id: `modified-loop-${cols}x${rows}-${i}`,
+      vendorName: `Vendor ${i}`,
+      categoryName: categories[i % categories.length]!,
+      categoryColor: '#2D5A27',
+      colSpan: 6,
+      rowSpan: 2,
+      tableLengthFt: 6,
+      tier: i < 3 ? 'premium' : i % 5 === 0 ? 'basic' : 'standard',
+    })),
+    fcfsOrder: false,
+    preset: 'modified_loop',
     useIndoorCorridor: true,
     coGenerateAisles: false,
   })
@@ -636,6 +676,87 @@ export function runLayoutQaScenarios(): void {
   assert(
     !kilkennyCorridorClearance.hasBottleneck,
     `Kilkenny corridor should have zero stroller bottlenecks, got ${kilkennyCorridorClearance.bottleneckKeys.size}`
+  )
+
+  const modifiedLoopShell = applyModifiedLoopLayout(40, 72, 'south', kilkennyCorridorBase)
+  assert(
+    modifiedLoopShell.venue_elements.some((e) => e.label === 'Entrance orientation'),
+    'Modified loop shell paints 15′ entrance orientation buffer'
+  )
+  assert(
+    modifiedLoopShell.venue_elements.some((e) => e.label === 'Angled corner'),
+    'Modified loop shell paints angled corner transitions'
+  )
+
+  const modifiedLoop35 = runModifiedLoopAutoPlan(40, 72, 35, kilkennyCorridorBase)
+  assert(modifiedLoop35.placedCount > 0, 'Modified loop auto-plan should place vendors on Kilkenny')
+  const modifiedLoopOverlap = detectLayoutOverlaps({
+    rows: 72,
+    cols: 40,
+    venueElements: modifiedLoop35.venueElements,
+    cells: modifiedLoop35.cells,
+  })
+  assert(!modifiedLoopOverlap.hasOverlap, 'Modified loop layout must have zero overlaps')
+
+  const placedModified = modifiedLoop35.cells.filter((c) => c.col >= 0)
+  for (const cell of placedModified) {
+    assert(
+      !inEntranceBufferZone(
+        cell.row,
+        cell.col,
+        cell.rowSpan,
+        cell.colSpan,
+        40,
+        72,
+        'south',
+        modifiedLoop35.venueElements
+      ),
+      `Modified loop vendor ${cell.vendorName} must not sit in ${ENTRANCE_ORIENTATION_BUFFER_CELLS}′ entrance buffer`
+    )
+  }
+
+  const modifiedLoopPatronPath = computePatronPathTrace(
+    modifiedLoop35.venueElements,
+    40,
+    72,
+    'south'
+  )
+  assert(
+    modifiedLoopPatronPath != null && modifiedLoopPatronPath.points.length > 0,
+    'Modified loop patron path should exist'
+  )
+  assert(
+    patronPathIsWalkable(modifiedLoopPatronPath!, modifiedLoop35.venueElements, 72, 40),
+    'Modified loop patron path must stay on walkable cells'
+  )
+
+  const modifiedLoopStrategy = resolveAutoPlanStrategy({
+    layoutPreset: 'modified_loop',
+    gridCols: 40,
+    gridRows: 72,
+    entrance: 'south',
+    venueElementsWithDoors: kilkennyCorridorBase,
+    isOneFootGrid: true,
+  })
+  assert(modifiedLoopStrategy.useCorridor, 'Modified loop strategy enables corridor grammar')
+  assert(
+    modifiedLoopStrategy.effectivePreset === 'modified_loop',
+    'Modified loop strategy keeps modified_loop preset'
+  )
+
+  const presetAisleElements = modifiedLoopShell.venue_elements.filter((e) =>
+    isLayoutPresetPaintedElement(e, 40, 72)
+  )
+  assert(presetAisleElements.length > 0, 'Modified loop shell should include preset-painted aisles')
+  const sampleAisle = presetAisleElements[0]!
+  assert(canRemoveVenueElement(sampleAisle, { cols: 40, rows: 72 }), 'Preset aisles must be eraser-removable')
+  const afterErase = removeElementsAt(modifiedLoopShell.venue_elements, sampleAisle.row, sampleAisle.col, {
+    cols: 40,
+    rows: 72,
+  })
+  assert(
+    afterErase.length === modifiedLoopShell.venue_elements.length - 1,
+    'removeElementsAt should delete a preset-painted aisle cell'
   )
 
   // Smart Populate (default preset) on indoor halls must route through corridor grammar.

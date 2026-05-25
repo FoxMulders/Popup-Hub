@@ -16,6 +16,9 @@ type FeedbackRow = MarketFeedback & {
 interface MarketFeedbackAdminPanelProps {
   marketId: string
   refreshToken?: number
+  /** Page layout for event admin; default compact sidebar styling. */
+  variant?: 'sidebar' | 'page'
+  className?: string
 }
 
 function contextSummary(row: FeedbackRow): string {
@@ -26,7 +29,12 @@ function contextSummary(row: FeedbackRow): string {
   return 'General'
 }
 
-export function MarketFeedbackAdminPanel({ marketId, refreshToken = 0 }: MarketFeedbackAdminPanelProps) {
+export function MarketFeedbackAdminPanel({
+  marketId,
+  refreshToken = 0,
+  variant = 'sidebar',
+  className,
+}: MarketFeedbackAdminPanelProps) {
   const [items, setItems] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
   const [addressingId, setAddressingId] = useState<string | null>(null)
@@ -70,9 +78,26 @@ export function MarketFeedbackAdminPanel({ marketId, refreshToken = 0 }: MarketF
   }
 
   return (
-    <section className="market-panel p-3" aria-label="Feedback review">
-      <div className="mb-2 flex items-center justify-between gap-2 border-b border-stone-200/80 pb-1.5">
-        <h3 className={WIZARD_SECTION_LABEL}>Feedback queue</h3>
+    <section
+      className={cn('market-panel', variant === 'page' ? 'p-6' : 'p-3', className)}
+      aria-label="Feedback review"
+    >
+      <div
+        className={cn(
+          'mb-2 flex items-center justify-between gap-2 border-b border-stone-200/80 pb-1.5',
+          variant === 'page' && 'mb-4 pb-3'
+        )}
+      >
+        <div>
+          <h3 className={variant === 'page' ? 'market-section-title' : WIZARD_SECTION_LABEL}>
+            Feedback queue
+          </h3>
+          {variant === 'page' ? (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review and resolve feedback from vendors and staff for this market.
+            </p>
+          ) : null}
+        </div>
         <TooltipWrapper text="Refresh unresolved feedback">
           <button
             type="button"

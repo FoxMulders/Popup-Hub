@@ -11,6 +11,7 @@ import { formatCents } from '@/lib/square/client'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { WalletQrScanner } from '@/components/coordinator/wallet-qr-scanner'
+import { PatronLookupField } from '@/components/coordinator/patron-lookup-field'
 import type { WalletDepositRequest, WalletWithdrawalRequest, Profile } from '@/types/database'
 import { Banknote, CheckCircle, Camera, Loader2, QrCode, ScanLine, Undo2 } from 'lucide-react'
 
@@ -81,11 +82,13 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
   }, [initialUserId])
 
   async function creditCash() {
+    if (crediting) return
+
     const dollars = customDollars ? parseFloat(customDollars) : amountCents / 100
     const cents = customDollars ? Math.round(dollars * 100) : amountCents
 
     if (!resolvedUserId) {
-      toast.error('Paste or scan a valid patron wallet QR first')
+      toast.error('Paste, scan, or look up a patron first')
       return
     }
     if (!Number.isFinite(cents) || cents < 100) {
@@ -99,6 +102,7 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          shopperUserId: resolvedUserId,
           qrPayload: scanInput.trim(),
           amountCents: cents,
           eventId,
@@ -159,13 +163,15 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
   }
 
   async function payoutCash() {
+    if (payingOut) return
+
     const dollars = cashoutCustomDollars
       ? parseFloat(cashoutCustomDollars)
       : cashoutAmountCents / 100
     const cents = cashoutCustomDollars ? Math.round(dollars * 100) : cashoutAmountCents
 
     if (!resolvedUserId) {
-      toast.error('Paste or scan a valid patron wallet QR first')
+      toast.error('Paste, scan, or look up a patron first')
       return
     }
     if (!Number.isFinite(cents) || cents < 100) {
@@ -179,6 +185,7 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          shopperUserId: resolvedUserId,
           qrPayload: scanInput.trim(),
           amountCents: cents,
           eventId,
@@ -204,6 +211,23 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
 
   return (
     <div className="space-y-6">
+    <Card className="border-forest/20">
+      <CardHeader>
+        <CardTitle className="text-lg">No QR? Look up by name</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <PatronLookupField
+          eventId={eventId}
+          selectedPatronId={resolvedUserId}
+          allowWalkUpCreate
+          onSelect={(patron) => {
+            setScanInput(patron.id)
+            toast.success(`Selected ${patron.full_name ?? 'patron'}`)
+          }}
+          onClear={() => setScanInput('')}
+        />
+      </CardContent>
+    </Card>
     <WalletQrScanner
       open={scannerOpen}
       onClose={() => setScannerOpen(false)}

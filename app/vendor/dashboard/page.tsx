@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Store, CheckCircle, Clock, AlertTriangle, ArrowRight, CreditCard } from 'lucide-react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
+import { VendorMeetTheMakerPanel } from '@/components/market-feed/vendor-meet-the-maker-panel'
+import { PassportStoriesManager } from '@/components/passport/passport-stories-manager'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
 import type { Auction, BoothApplication } from '@/types/database'
@@ -216,6 +218,23 @@ export default async function VendorDashboard() {
             ) : null}
           </CardContent>
         </Card>
+      </div>
+
+      <div>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold text-foreground">Passport stories</h2>
+          <Link href="/vendor/passport">
+            <Button variant="link" size="sm" className="h-auto p-0 text-sm">
+              Full passport →
+            </Button>
+          </Link>
+        </div>
+        <PassportStoriesManager ownerId={user.id} role="vendor" />
+      </div>
+
+      <div>
+        <h2 className="mb-4 text-xl font-semibold text-foreground">Meet the Maker — Live Feed</h2>
+        <VendorMeetTheMakerPanel vendorId={user.id} />
       </div>
 
       {/* Applications list */}

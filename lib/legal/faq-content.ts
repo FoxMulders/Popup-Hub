@@ -10,14 +10,14 @@ export const PLATFORM_FAQ: FaqItem[] = [
       'Popup Hub helps patrons discover local community markets, vendors apply for booth space, and coordinators run events — from applications and floor plans to check-in and checkout on market day.',
   },
   {
-    question: 'Do I need an account to browse markets?',
+    question: 'Do I need an account to discover markets?',
     answer:
       'No. You can explore upcoming markets on Discover without signing in. Create a free account to save favorites, use your wallet, and get the most from quarter auctions and vendor features.',
   },
   {
     question: 'How do I apply as a vendor?',
     answer:
-      'Sign up as a Vendor, complete your vendor passport (business details and product info), then browse open markets under Apply for open markets. Each event may have its own categories, fees, and approval process.',
+      'Sign up as a Vendor, complete your vendor passport (business details and product info), then discover open markets under Apply for open markets. Each event may have its own categories, fees, and approval process.',
   },
   {
     question: 'How do I host a market as a coordinator?',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +18,7 @@ import { formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-au
 import { AuctionStartCountdown } from '@/components/quarter-auction/auction-start-countdown'
 import { formatCents } from '@/lib/square/client'
 import { cn } from '@/lib/utils'
+import { CharitableImpactTracker } from '@/components/charitable-impact/charitable-impact-tracker'
 
 interface VendorQuarterAuctionProps {
   eventId: string
@@ -148,6 +149,11 @@ export function VendorQuarterAuction({
     }
   }
 
+  const livePoolCredits = useMemo(
+    () => items.map((item) => item.pool_credits ?? 0),
+    [items]
+  )
+
   if (!isApproved) {
     return (
       <Card>
@@ -160,6 +166,8 @@ export function VendorQuarterAuction({
 
   return (
     <div className="space-y-6">
+      <CharitableImpactTracker eventId={eventId} livePoolCredits={livePoolCredits} />
+
       <AuctionStartCountdown
         scheduledStartAt={settings.scheduled_start_at}
         eventStartAt={eventStartAt}

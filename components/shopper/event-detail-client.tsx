@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { MapPin, Calendar, Clock, Users, Map } from 'lucide-react'
 import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +21,8 @@ import { buildScheduleLines } from '@/lib/shopper/events'
 import { buildVendorLineup, type VendorLineupEntry } from '@/lib/shopper/vendors'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { Button } from '@/components/ui/button'
+import { MarketPassportPanel } from '@/components/market-passport/market-passport-panel'
+import { MeetTheMakerSection } from '@/components/market-feed/meet-the-maker-section'
 import type {
   Auction,
   BoothApplication,
@@ -74,15 +77,23 @@ export function EventDetailClient({
 }: EventDetailClientProps) {
   const [selectedVendor, setSelectedVendor] = useState<VendorLineupEntry | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const searchParams = useSearchParams()
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const scheduleLines = buildScheduleLines(event)
   const vendorCount = applications.length
-  const vendorLineup = buildVendorLineup(applications)
+  const vendorLineup = useMemo(() => buildVendorLineup(applications), [applications])
 
   function openVendor(v: VendorLineupEntry) {
     setSelectedVendor(v)
     setSheetOpen(true)
   }
+
+  useEffect(() => {
+    const vendorId = searchParams.get('vendor')
+    if (!vendorId) return
+    const match = vendorLineup.find((v) => v.vendor_id === vendorId)
+    if (match) openVendor(match)
+  }, [searchParams, vendorLineup])
 
   return (
     <>
@@ -180,6 +191,12 @@ export function EventDetailClient({
 
         <GoodToKnowPanel event={event} strollerBadge={strollerBadge} />
 
+        {['published', 'active'].includes(event.status) ? (
+          <MarketPassportPanel eventId={event.id} eventStatus={event.status} />
+        ) : null}
+
+        <MeetTheMakerSection eventId={event.id} eventStatus={event.status} />
+
         <EventSchedulePanel items={scheduleItems} eventLocation={event.location_name} />
 
         <section>
@@ -209,6 +226,18 @@ export function EventDetailClient({
 
         {event.status === 'completed' && (
           <>
+            {userId ? (
+              <section className="rounded-2xl border border-harvest-200 bg-gradient-to-br from-harvest-50 to-white p-5">
+                <h2 className="font-heading text-lg font-semibold">My Night at the Auction</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Revisit every maker you discovered and every item you backed — your personal local
+                  business directory from this market.
+                </p>
+                <Link href={`/events/${event.id}/my-night`} className="mt-3 inline-block">
+                  <Button size="sm">View your recap</Button>
+                </Link>
+              </section>
+            ) : null}
             <ReviewSection
               eventId={event.id}
               userId={userId}

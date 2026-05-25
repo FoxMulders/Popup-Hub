@@ -10,7 +10,7 @@ export function PublicLanding() {
             Discover local makers markets near you
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Browse upcoming pop-up markets, meet vendors, and plan your weekend — no account required.
+            Discover upcoming pop-up markets, meet vendors, and plan your weekend — no account required.
           </p>
           <LandingHeroActions />
         </div>

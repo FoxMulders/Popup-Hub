@@ -6,7 +6,12 @@ import type { BoothCell, VenueElement } from '@/types/database'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { SVG_FOOT_PX } from '@/components/coordinator/svg-layout-canvas'
 import type { CompositePreviewResult } from '@/lib/booth-planner/layout-engine/composite-preview'
-import { fixtureCanvasLabel, isElementOrigin } from '@/lib/booth-planner/venue-elements'
+import {
+  canRemoveVenueElement,
+  fixtureCanvasLabel,
+  isElementOrigin,
+  isLayoutPresetPaintedElement,
+} from '@/lib/booth-planner/venue-elements'
 import { isPerimeterWallElement } from '@/lib/booth-planner/perimeter-wall-segments'
 import { gridCellTooltip } from '@/lib/booth-planner/layout-tool-shortcuts'
 import { formatBoothFootprint } from '@/lib/booth-planner/grid-scale'
@@ -338,9 +343,11 @@ export function SvgInteractiveGrid({
         )
       } else if (fixture && isElementOrigin(fixture, r, c)) {
         const isPerimeterWall = isPerimeterWallElement(fixture, cols, hallRows)
+        const isPresetPaint = isLayoutPresetPaintedElement(fixture, cols, hallRows)
         const isTemplateOnly =
           isPerimeterWall ||
           (fixture.locked &&
+            !isPresetPaint &&
             fixture.type !== 'entrance' &&
             fixture.type !== 'exit' &&
             fixture.type !== 'door' &&
@@ -367,6 +374,7 @@ export function SvgInteractiveGrid({
         const isWalkway = fixture.type === 'aisle'
         const label = fixtureCanvasLabel(fixture, cols, hallRows)
         const fixtureTip = gridCellTooltip({ fixture: { label: label || fixture.type, type: fixture.type } })
+        const removable = canRemoveVenueElement(fixture, { cols, rows: hallRows })
 
         elements.push(
           <g key={`fixture-${fixture.id}`}>
@@ -376,9 +384,9 @@ export function SvgInteractiveGrid({
               width={w}
               height={h}
               fill={FIXTURE_FILL[fixture.type] ?? '#E8E4DC'}
-              stroke="#000000"
-              strokeWidth={1.5}
-              strokeDasharray={isWalkway ? '4 3' : undefined}
+              stroke={activeTool === 'eraser' && removable ? '#DC2626' : '#000000'}
+              strokeWidth={activeTool === 'eraser' && removable ? 2 : 1.5}
+              strokeDasharray={isWalkway || isPresetPaint ? '4 3' : undefined}
               pointerEvents="auto"
             />
             <foreignObject x={x} y={y} width={w} height={h}>
@@ -405,7 +413,13 @@ export function SvgInteractiveGrid({
                     onDragHoverEnd?.()
                     handleDrop(e, c, r)
                   }}
-                  className={`h-full w-full ${isMovableDoor ? 'cursor-grab' : 'cursor-crosshair'}`}
+                  className={`h-full w-full ${
+                    isMovableDoor
+                      ? 'cursor-grab'
+                      : activeTool === 'eraser' && removable
+                        ? 'cursor-pointer'
+                        : 'cursor-crosshair'
+                  }`}
                 />
               </TooltipWrapper>
             </foreignObject>

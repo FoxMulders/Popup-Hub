@@ -5,31 +5,28 @@ import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle, FileText } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { marketChip, marketStatusBadge } from '@/lib/theme/market'
+import { marketStatusBadge } from '@/lib/theme/market'
 import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
 import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
 import { resolveApplicationDisplayCategories } from '@/lib/applications/display-categories'
 import {
-  formatApplicationPaymentLabel,
   isApplicationPaid,
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
-  PAYMENT_METHOD_LABELS,
 } from '@/lib/applications/payment-fields'
-import { ApplicationDocumentLink } from '@/components/applications/application-document-link'
-import type { BoothApplication, ApplicationStatus } from '@/types/database'
+import { VendorReviewDrawer } from '@/components/coordinator/vendor-review-drawer'
+import type { BoothApplication, ApplicationStatus, EventCategoryLimit } from '@/types/database'
 
 interface ApplicationBoardProps {
   applications: BoothApplication[]
   bookingMode: 'instant' | 'juried'
   eventCancelled?: boolean
   categoryNameById?: Record<string, string>
+  categoryLimits?: EventCategoryLimit[]
+  marketInsuranceRequired?: boolean
 }
 
 function ApplicationCategoryBadges({
@@ -80,6 +77,8 @@ export function ApplicationBoard({
   bookingMode,
   eventCancelled,
   categoryNameById,
+  categoryLimits = [],
+  marketInsuranceRequired = false,
 }: ApplicationBoardProps) {
   const [apps, setApps] = useState<BoothApplication[]>(applications)
   const categoryLookup = categoryNameById ?? {}
@@ -156,7 +155,11 @@ export function ApplicationBoard({
     })
   }
 
-  async function updateStatus(appId: string, newStatus: ApplicationStatus) {
+  async function updateStatus(
+    appId: string,
+    newStatus: ApplicationStatus,
+    declineMessage?: string,
+  ) {
     startTransition(async () => {
       const app = apps.find((a) => a.id === appId)
       if (!app) return
@@ -164,7 +167,10 @@ export function ApplicationBoard({
       const res = await fetch(`/api/coordinator/applications/${appId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          status: newStatus,
+          ...(declineMessage ? { declineMessage } : {}),
+        }),
       })
 
       const data = (await res.json().catch(() => ({}))) as {
@@ -199,7 +205,9 @@ export function ApplicationBoard({
                 : '✅ Your booth application has been approved! See you at the event.',
           pending_insurance:
             '✅ Your booth application has been approved! Upload your market insurance proof to finalize your spot.',
-          rejected: `Your booth application was not selected this time. Keep an eye out for future events!`,
+          rejected: declineMessage
+            ? declineMessage
+            : `Your booth application was not selected this time. Keep an eye out for future events!`,
           waitlisted: `Your application has been waitlisted. We'll notify you if a spot opens up.`,
         }
         const message = notifMessages[resolvedStatus]
@@ -237,6 +245,7 @@ export function ApplicationBoard({
         cancelled: 'Application cancelled',
       }
       toast.success(labels[resolvedLabel])
+      setViewingApp((prev) => (prev?.id === appId ? null : prev))
     })
   }
 
@@ -304,7 +313,7 @@ export function ApplicationBoard({
                       app={app}
                       categoryNameById={categoryLookup}
                       eventCancelled={eventCancelled}
-                      onView={() => setViewingApp(app)}
+                      onOpenReview={() => setViewingApp(app)}
                       onApprove={() => updateStatus(app.id, 'approved')}
                       onReject={() => updateStatus(app.id, 'rejected')}
                       onWaitlist={() => updateStatus(app.id, 'waitlisted')}
@@ -319,63 +328,23 @@ export function ApplicationBoard({
         })}
       </div>
 
-      {/* Vendor detail modal */}
-      <Dialog open={!!viewingApp} onOpenChange={(o) => !o && setViewingApp(null)}>
-        <DialogContent className="max-w-2xl">
-          {viewingApp && (
-            <VendorDetailModal
-              app={viewingApp}
-              categoryNameById={categoryLookup}
-              onVerify={() => verifyVendor(viewingApp.vendor_id, viewingApp.event_id)}
-              onConfirmEtransfer={() => confirmEtransferPayment(viewingApp.id)}
-              verifying={verifyingVendorId === viewingApp.vendor_id}
-              confirming={isPending}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-function PassportVerificationBadge({
-  isVerified,
-  onVerify,
-  verifying,
-  compact,
-}: {
-  isVerified: boolean
-  onVerify: () => void
-  verifying: boolean
-  compact?: boolean
-}) {
-  if (isVerified) {
-    return (
-      <Badge className={`${marketStatusBadge.neutral} ${compact ? 'text-[10px]' : 'text-xs'}`}>
-        <CheckCircle className={`${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'} mr-1`} />
-        Verified
-      </Badge>
-    )
-  }
-
-  return (
-    <div className={`flex ${compact ? 'flex-col gap-1.5' : 'flex-wrap items-center gap-2'}`}>
-      <Badge className={`bg-stone-100 text-stone-600 ${compact ? 'text-[10px]' : 'text-xs'}`}>
-        Unverified
-      </Badge>
-      <Button
-        size="sm"
-        variant="outline"
-        className={`${compact ? 'min-h-9 text-[10px] px-2' : 'min-h-10 text-xs'} gap-1.5`}
-        onClick={onVerify}
-        disabled={verifying}
-      >
-        {verifying ? (
-          <span className="animate-pulse">Verifying…</span>
-        ) : (
-          'Verify Vendor Passport'
-        )}
-      </Button>
+      <VendorReviewDrawer
+        app={viewingApp}
+        open={!!viewingApp}
+        onOpenChange={(open) => !open && setViewingApp(null)}
+        applications={apps}
+        categoryNameById={categoryLookup}
+        categoryLimits={categoryLimits}
+        marketInsuranceRequired={marketInsuranceRequired}
+        eventCancelled={eventCancelled}
+        loading={isPending}
+        verifying={viewingApp ? verifyingVendorId === viewingApp.vendor_id : false}
+        onVerify={() => viewingApp && verifyVendor(viewingApp.vendor_id, viewingApp.event_id)}
+        onConfirmEtransfer={() => viewingApp && confirmEtransferPayment(viewingApp.id)}
+        onApprove={() => viewingApp && updateStatus(viewingApp.id, 'approved')}
+        onWaitlist={() => viewingApp && updateStatus(viewingApp.id, 'waitlisted')}
+        onDecline={(message) => viewingApp && updateStatus(viewingApp.id, 'rejected', message)}
+      />
     </div>
   )
 }
@@ -384,7 +353,7 @@ function ApplicationCard({
   app,
   categoryNameById,
   eventCancelled,
-  onView,
+  onOpenReview,
   onApprove,
   onReject,
   onWaitlist,
@@ -394,7 +363,7 @@ function ApplicationCard({
   app: BoothApplication
   categoryNameById: Record<string, string>
   eventCancelled?: boolean
-  onView: () => void
+  onOpenReview: () => void
   onApprove: () => void
   onReject: () => void
   onWaitlist: () => void
@@ -407,7 +376,18 @@ function ApplicationCard({
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <Card className="overflow-hidden hover:shadow-sm transition-shadow">
+    <Card
+      className="overflow-hidden transition-shadow hover:shadow-sm cursor-pointer"
+      onClick={onOpenReview}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onOpenReview()
+        }
+      }}
+    >
       {passport?.item_image_urls?.[0] && (
         <div className="h-20 overflow-hidden">
           <img
@@ -479,15 +459,15 @@ function ApplicationCard({
           </Badge>
         ) : null}
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap" onClick={(event) => event.stopPropagation()}>
           <Button
             size="sm"
             variant="outline"
             className="min-h-11 text-xs px-3 gap-1.5"
-            onClick={onView}
+            onClick={onOpenReview}
           >
             <Eye className="h-4 w-4" />
-            View
+            Review
           </Button>
           {!eventCancelled && needsEtransferCoordinatorReview(app) && (
             <Button
@@ -536,155 +516,5 @@ function ApplicationCard({
         </div>
       </CardContent>
     </Card>
-  )
-}
-
-function VendorDetailModal({
-  app,
-  categoryNameById,
-  onVerify,
-  onConfirmEtransfer,
-  verifying,
-  confirming,
-}: {
-  app: BoothApplication
-  categoryNameById: Record<string, string>
-  onVerify: () => void
-  onConfirmEtransfer: () => void
-  verifying: boolean
-  confirming: boolean
-}) {
-  const passport = app.passport
-  const vendor = app.vendor
-  const displayName = passport?.business_name ?? vendor?.full_name ?? 'Vendor'
-  const displayCategories = resolveApplicationDisplayCategories(app, categoryNameById)
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{displayName}</DialogTitle>
-        <DialogDescription>
-          Applied to: {displayCategories.join(', ')}
-        </DialogDescription>
-      </DialogHeader>
-      {app.has_category_overflow ? (
-        <Badge className="mb-2 w-fit gap-1 border border-violet-400 bg-violet-100 text-violet-950 text-xs font-semibold">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          {formatCategoryOverflowLabel(app.overflow_category_names ?? []) ||
-            'Multi-Category Exception'}
-        </Badge>
-      ) : null}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-2">
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <VendorLogo
-              src={passport?.logo_url ?? vendor?.avatar_url}
-              alt={`${displayName} logo`}
-              fallback={displayName[0]}
-              size="md"
-            />
-            <div>
-              <p className="font-semibold text-lg">{displayName}</p>
-              <div className="mt-1">
-                <PassportVerificationBadge
-                  isVerified={!!passport?.is_verified}
-                  onVerify={onVerify}
-                  verifying={verifying}
-                />
-              </div>
-              {app.vendor?.reliability_score != null && (
-                <Badge className={`${marketStatusBadge.success} text-xs mt-1`}>
-                  Reliability {app.vendor.reliability_score}%
-                </Badge>
-              )}
-            </div>
-          </div>
-          {passport?.bio && (
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">About</p>
-              <p className="text-sm text-foreground leading-relaxed">{passport.bio}</p>
-            </div>
-          )}
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between gap-3">
-              <span className="text-muted-foreground shrink-0">Categories</span>
-              <div className="flex flex-wrap justify-end gap-1">
-                {displayCategories.map((name) => (
-                  <Badge key={`${app.id}-detail-${name}`} variant="outline">
-                    {name}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-muted-foreground shrink-0">Payment</span>
-              <Badge
-                className={
-                  isApplicationPaid(app) ? marketChip.paid : marketChip.unpaid
-                }
-              >
-                {formatApplicationPaymentLabel(app)}
-              </Badge>
-            </div>
-            {app.payment_method ? (
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground shrink-0">Method</span>
-                <span className="font-medium text-right">
-                  {PAYMENT_METHOD_LABELS[app.payment_method]}
-                </span>
-              </div>
-            ) : null}
-            {needsEtransferCoordinatorReview(app) ? (
-              <Button
-                size="sm"
-                className="w-full bg-sky-700 hover:bg-sky-800"
-                onClick={onConfirmEtransfer}
-                disabled={confirming}
-              >
-                Confirm e-transfer received
-              </Button>
-            ) : null}
-            {app.waitlist_position && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Waitlist position</span>
-                <span className="font-medium">#{app.waitlist_position}</span>
-              </div>
-            )}
-            {app.attending_dates?.length ? (
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground shrink-0">Attendance</span>
-                <span className="font-medium text-right">
-                  {formatAttendanceDayLabels(app.attending_dates).join(', ')}
-                </span>
-              </div>
-            ) : null}
-            <ApplicationDocumentLink
-              label="Permits / documentation"
-              url={app.applicable_documentation_url}
-            />
-            <ApplicationDocumentLink
-              label="Market insurance proof"
-              url={app.market_insurance_url}
-            />
-          </div>
-        </div>
-
-        {passport?.item_image_urls && passport.item_image_urls.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Product Photos</p>
-            <div className="grid grid-cols-2 gap-2">
-              {passport.item_image_urls.slice(0, 4).map((url, i) => (
-                <img
-                  key={i}
-                  src={url}
-                  alt={`Product ${i + 1}`}
-                  className="aspect-square rounded-lg object-cover"
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </>
   )
 }

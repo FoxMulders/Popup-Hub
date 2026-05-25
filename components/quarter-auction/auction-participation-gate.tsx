@@ -23,6 +23,7 @@ export function AuctionParticipationGate({
   children,
 }: AuctionParticipationGateProps) {
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [participated, setParticipated] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -30,6 +31,7 @@ export function AuctionParticipationGate({
 
   const refresh = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       const res = await fetch(`/api/quarter-auction/${eventId}/participate`)
       if (res.status === 401) {
@@ -37,9 +39,15 @@ export function AuctionParticipationGate({
         window.location.href = `/login?redirectTo=${encodeURIComponent(loginReturnPath)}`
         return
       }
-      const json = await res.json()
+      const json = (await res.json()) as { participated?: boolean; error?: string }
+      if (!res.ok) {
+        setLoadError(json.error ?? 'Could not verify participation')
+        return
+      }
       setParticipated(!!json.participated)
       if (json.participated) onParticipated?.()
+    } catch {
+      setLoadError('Network error — check your connection and retry')
     } finally {
       setLoading(false)
     }
@@ -50,11 +58,14 @@ export function AuctionParticipationGate({
   }, [refresh])
 
   async function handleParticipate() {
+    if (submitting) return
     setSubmitting(true)
     try {
       const location = await requestUserLocation()
       if (!location) {
-        toast.error('Allow location access so we can confirm you are at the event.')
+        toast.error(
+          'Location access is required, or visit the registration desk if you do not have a smartphone.'
+        )
         return
       }
 
@@ -63,7 +74,7 @@ export function AuctionParticipationGate({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lat: location.lat, lng: location.lng }),
       })
-      const json = await res.json()
+      const json = (await res.json()) as { error?: string; alreadyRegistered?: boolean }
       if (!res.ok) {
         toast.error(json.error ?? 'Could not confirm participation')
         return
@@ -74,6 +85,8 @@ export function AuctionParticipationGate({
       toast.success(
         json.alreadyRegistered ? 'You are already participating' : 'You are in — good luck!'
       )
+    } catch {
+      toast.error('Network error — try again or visit the registration desk')
     } finally {
       setSubmitting(false)
     }
@@ -85,6 +98,19 @@ export function AuctionParticipationGate({
         <CardContent className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
           Checking participation…
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <Card>
+        <CardContent className="space-y-3 py-8 text-center">
+          <p className="text-sm text-destructive">{loadError}</p>
+          <Button type="button" variant="outline" onClick={() => void refresh()}>
+            Retry
+          </Button>
         </CardContent>
       </Card>
     )
@@ -102,6 +128,8 @@ export function AuctionParticipationGate({
         <CardTitle className="text-lg">Join this auction</CardTitle>
         <p className="text-sm text-muted-foreground">
           Auctions are in-person only. Sign in, verify you are at the venue, then tap participate.
+          No smartphone? Visit the registration desk — staff can set up your wallet and paddles for
+          you.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -126,7 +154,7 @@ export function AuctionParticipationGate({
         <Button
           className="w-full min-h-12 text-base gap-2"
           disabled={submitting}
-          onClick={handleParticipate}
+          onClick={() => void handleParticipate()}
         >
           {submitting ? (
             <Loader2 className="h-5 w-5 animate-spin" />

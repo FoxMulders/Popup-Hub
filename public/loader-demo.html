@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Popup Hub Loader Demo</title>
+    <style>
+      #loader-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #0f172a;
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.6s ease-out, visibility 0.6s ease-out;
+      }
+
+      #loader-screen.loader-screen--exit {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      #lottie-loader {
+        width: min(92vw, 520px);
+        height: min(72vh, 520px);
+      }
+
+      #lottie-loader svg {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      body.loader-active {
+        overflow: hidden;
+      }
+
+      main {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body class="loader-active">
+    <div id="loader-screen" aria-busy="true" aria-label="Loading Popup Hub">
+      <div id="lottie-loader"></div>
+    </div>
+
+    <main>
+      <h1>Popup Hub</h1>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <script>
+      ;(async function initPopupLoader() {
+        const LOADER = {
+          animationPath: '/popup-loader.json',
+          logoPath: '/popup-hub-logo.png',
+          logoAssetNames: ['logo.png', 'logo', 'Logo.png'],
+          holdMarkerNames: ['pre_door', 'pre-door', 'hold'],
+          holdFrameFallback: 120,
+          fadeOutMs: 600,
+          maxWaitMs: 20000,
+        }
+
+        const loaderScreen = document.getElementById('loader-screen')
+        const lottieHost = document.getElementById('lottie-loader')
+        if (!loaderScreen || !lottieHost || !window.lottie) return
+
+        document.body.classList.add('loader-active')
+        document.body.style.overflow = 'hidden'
+
+        function patchLogoAssets(data) {
+          const fileName = LOADER.logoPath.split('/').pop()
+          const basePath = LOADER.logoPath.slice(0, LOADER.logoPath.lastIndexOf('/') + 1) || '/'
+          for (const asset of data.assets || []) {
+            if (!asset.p) continue
+            const isLogo = LOADER.logoAssetNames.some(
+              (name) => asset.p.toLowerCase() === name.toLowerCase(),
+            )
+            if (isLogo || /logo/i.test(asset.p)) {
+              asset.p = fileName
+              asset.u = basePath
+              asset.e = 0
+            }
+          }
+          return data
+        }
+
+        function resolveHoldFrame(data) {
+          const marker = (data.markers || []).find((entry) =>
+            LOADER.holdMarkerNames.some(
+              (name) => entry.cm && entry.cm.toLowerCase() === name.toLowerCase(),
+            ),
+          )
+          const total = Math.max(1, (data.op || 0) - (data.ip || 0))
+          const candidate = marker ? marker.tm : LOADER.holdFrameFallback
+          return Math.min(Math.max(0, candidate), Math.max(0, total - 2))
+        }
+
+        let pageLoaded = document.readyState === 'complete'
+        let animationComplete = false
+        let pausedForLoad = false
+        let dismissed = false
+
+        const response = await fetch(LOADER.animationPath)
+        const animationData = patchLogoAssets(await response.json())
+        let holdFrame = resolveHoldFrame(animationData)
+
+        const anim = window.lottie.loadAnimation({
+          container: lottieHost,
+          renderer: 'svg',
+          loop: false,
+          autoplay: true,
+          animationData,
+        })
+
+        holdFrame = resolveHoldFrame(animationData)
+
+        function dismissLoader() {
+          if (dismissed) return
+          dismissed = true
+          loaderScreen.classList.add('loader-screen--exit')
+          loaderScreen.addEventListener(
+            'transitionend',
+            (event) => {
+              if (event.propertyName !== 'opacity') return
+              loaderScreen.remove()
+              document.body.style.overflow = 'auto'
+              document.body.classList.remove('loader-active')
+            },
+            { once: true },
+          )
+          setTimeout(() => {
+            if (document.body.contains(loaderScreen)) {
+              loaderScreen.remove()
+              document.body.style.overflow = 'auto'
+              document.body.classList.remove('loader-active')
+            }
+          }, LOADER.fadeOutMs + 120)
+        }
+
+        function maybeDismiss() {
+          if (pageLoaded && animationComplete) dismissLoader()
+        }
+
+        anim.addEventListener('enterFrame', () => {
+          if (pageLoaded || pausedForLoad) return
+          if (anim.currentFrame >= holdFrame - 0.5) {
+            anim.goToAndStop(holdFrame, true)
+            pausedForLoad = true
+          }
+        })
+
+        anim.addEventListener('complete', () => {
+          animationComplete = true
+          maybeDismiss()
+        })
+
+        window.addEventListener(
+          'load',
+          () => {
+            pageLoaded = true
+            if (pausedForLoad) {
+              pausedForLoad = false
+              anim.goToAndPlay(holdFrame, true)
+            }
+            maybeDismiss()
+          },
+          { once: true },
+        )
+
+        setTimeout(() => {
+          pageLoaded = true
+          animationComplete = true
+          maybeDismiss()
+        }, LOADER.maxWaitMs)
+      })()
+    </script>
+  </body>
+</html>

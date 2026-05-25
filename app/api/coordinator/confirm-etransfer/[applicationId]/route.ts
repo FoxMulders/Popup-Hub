@@ -5,6 +5,7 @@ import {
   sendEtransferConfirmedEmail,
 } from '@/lib/email/etransfer-confirmed'
 import { resolveVendorDisplayName } from '@/lib/email/application-received'
+import { extractNestedPassport } from '@/lib/applications/extract-nested-passport'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
 import type { Event } from '@/types/database'
 
@@ -44,8 +45,11 @@ export async function POST(
         is_multi_day,
         event_days(id, event_id, date, start_time, end_time, sort_order)
       ),
-      vendor:profiles!booth_applications_vendor_id_fkey(full_name, email),
-      passport:vendor_passports(business_name)
+      vendor:profiles!booth_applications_vendor_id_fkey(
+        full_name,
+        email,
+        passport:vendor_passports(business_name)
+      )
     `)
     .eq('id', applicationId)
     .single()
@@ -108,9 +112,7 @@ export async function POST(
   }
 
   const vendor = Array.isArray(application.vendor) ? application.vendor[0] : application.vendor
-  const passport = Array.isArray(application.passport)
-    ? application.passport[0]
-    : application.passport
+  const passport = extractNestedPassport(application)
 
   if (vendor?.email) {
     await sendEtransferConfirmedEmail(

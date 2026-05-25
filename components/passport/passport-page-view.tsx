@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { PassportWizard } from '@/components/passport/passport-wizard'
 import { PassportProfileForm } from '@/components/passport/passport-profile-form'
+import { PassportStoriesManager } from '@/components/passport/passport-stories-manager'
 import { VendorProductManager } from '@/components/vendor/vendor-product-manager'
 import type { PassportPageData } from '@/lib/passport/load-passport-page'
 import {
@@ -55,6 +56,9 @@ export function PassportPageView({ profile, passport, categories, products }: Pa
             isBetaTester={profile.is_beta_tester ?? false}
           />
         ) : null}
+        <div className="mt-8">
+          <PassportStoriesManager ownerId={profile.id} role="vendor" />
+        </div>
       </div>
     )
   }
@@ -62,6 +66,9 @@ export function PassportPageView({ profile, passport, categories, products }: Pa
   return (
     <div className="mx-auto max-w-[1100px] px-6 py-10 xl:px-10">
       <PassportProfileForm profile={profile} existing={passport} />
+      <div className="mt-8">
+        <PassportStoriesManager ownerId={profile.id} role={profile.role} />
+      </div>
     </div>
   )
 }

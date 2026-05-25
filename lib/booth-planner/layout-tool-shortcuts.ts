@@ -55,7 +55,7 @@ export const PRIMARY_LAYOUT_TOOLS: {
   {
     tool: 'eraser',
     label: 'Reset / Erase',
-    description: 'Unplace vendors or remove unlocked fixtures',
+    description: 'Unplace vendors or erase preset aisles and painted fixtures',
     sizeProfile: 'Click target cell',
     shortcut: 'R',
   },

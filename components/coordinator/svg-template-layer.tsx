@@ -3,7 +3,7 @@
 import type { ReactElement } from 'react'
 import type { VenueElement } from '@/types/database'
 import { SVG_FOOT_PX } from '@/components/coordinator/svg-layout-canvas'
-import { fixtureCanvasLabel, isElementOrigin } from '@/lib/booth-planner/venue-elements'
+import { fixtureCanvasLabel, isElementOrigin, isLayoutPresetPaintedElement } from '@/lib/booth-planner/venue-elements'
 import { isPerimeterWallElement } from '@/lib/booth-planner/perimeter-wall-segments'
 
 const FIXTURE_FILL: Record<string, string> = {
@@ -50,6 +50,7 @@ export function SvgTemplateLayer({
       if (!fixture || !isElementOrigin(fixture, r, c)) continue
       if (fixture.type === 'entrance' || fixture.type === 'exit' || fixture.type === 'door') continue
       if (fixture.type === 'stage') continue
+      if (isLayoutPresetPaintedElement(fixture, cols, hallRows)) continue
       if (!fixture.locked && !isPerimeterWallElement(fixture, cols, hallRows)) continue
 
       const spanC = fixture.colSpan ?? 1

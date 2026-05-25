@@ -30,6 +30,8 @@ interface VendorLogoProps {
   alt: string
   fallback?: string
   size?: VendorLogoSize
+  /** Circle crop for avatars and story rings */
+  shape?: 'rounded' | 'circle'
   className?: string
 }
 
@@ -38,12 +40,14 @@ export function VendorLogo({
   alt,
   fallback = '?',
   size = 'sm',
+  shape = 'rounded',
   className,
 }: VendorLogoProps) {
   const [imageFailed, setImageFailed] = useState(false)
   const resolvedSrc = resolvePublicAssetUrl(src)
   const frameClass = cn(
-    'inline-flex min-h-0 min-w-0 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-white p-1.5',
+    'inline-flex min-h-0 min-w-0 shrink-0 items-center justify-center overflow-hidden border border-stone-200 bg-white',
+    shape === 'circle' ? 'rounded-full p-0.5' : 'rounded-lg p-1.5',
     SIZE_CLASSES[size],
     FALLBACK_MIN[size],
     className
@@ -55,7 +59,10 @@ export function VendorLogo({
         <img
           src={resolvedSrc}
           alt={alt}
-          className="block max-h-full w-auto max-w-full object-contain object-center"
+          className={cn(
+            'block max-h-full w-auto max-w-full object-center',
+            shape === 'circle' ? 'h-full w-full rounded-full object-cover' : 'object-contain'
+          )}
           onError={() => setImageFailed(true)}
         />
       </div>

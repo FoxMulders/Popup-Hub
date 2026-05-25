@@ -36,7 +36,7 @@ export const VENDOR_APPLICATION_STATUS_UI: Record<ApplicationStatus, VendorAppli
   rejected: {
     label: 'Declined',
     badgeClass: marketStatusBadge.error,
-    nextStep: 'This market did not select your application. Browse other open markets to apply again.',
+    nextStep: 'This market did not select your application. Discover other open markets to apply again.',
     canFollowUp: false,
   },
   cancelled: {

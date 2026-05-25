@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { resolveProfileAvatarForServer } from '@/lib/profile/server-avatar'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
+import { CoordinatorStoriesStrip } from '@/components/coordinator/coordinator-stories-strip'
 import { format } from 'date-fns'
 import { Calendar, MapPin, ArrowLeft } from 'lucide-react'
 import type { Event } from '@/types/database'
@@ -31,6 +33,8 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
 
   if (!profile) notFound()
 
+  const displayAvatarUrl = await resolveProfileAvatarForServer(supabase, profile)
+
   const { data: events } = await supabase
     .from('events')
     .select('id, name, location_name, start_at, status')
@@ -54,9 +58,15 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
       </Link>
 
       <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
+        <CoordinatorStoriesStrip
+          coordinatorId={profile.id}
+          displayName={profile.full_name}
+          avatarUrl={displayAvatarUrl}
+        />
+
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
-            <AvatarImage src={profile.avatar_url ?? undefined} />
+            <AvatarImage src={displayAvatarUrl ?? undefined} />
             <AvatarFallback className="bg-harvest-100 text-harvest-700 text-lg font-bold">
               {initials}
             </AvatarFallback>

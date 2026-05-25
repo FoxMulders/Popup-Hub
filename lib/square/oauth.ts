@@ -1,10 +1,19 @@
 import { SquareClient, SquareEnvironment } from 'square'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import {
+  resolveSquareApplicationId,
+  resolveSquareApplicationSecret,
+} from '@/lib/square/app-credentials'
 
 const environment =
   process.env.SQUARE_ENVIRONMENT === 'production'
     ? SquareEnvironment.Production
     : SquareEnvironment.Sandbox
+
+/** OAuth token exchange must not use a seller access token on the client. */
+export function createSquareOAuthClient(): SquareClient {
+  return new SquareClient({ environment })
+}
 
 export interface CoordinatorSquareCredentials {
   accessToken: string
@@ -22,11 +31,10 @@ export function createSellerSquareClient(accessToken: string) {
 }
 
 export function getSquareApplicationSecret(): string {
-  return (
-    process.env.SQUARE_APPLICATION_SECRET ??
-    process.env.SQUARE_ACCESS_TOKEN ??
-    ''
-  )
+  const secret = resolveSquareApplicationSecret()
+  if (secret) return secret
+  // Legacy fallback — never use seller access token as OAuth client secret in production.
+  return process.env.SQUARE_ACCESS_TOKEN?.trim() ?? ''
 }
 
 export async function fetchPrimaryLocationId(accessToken: string): Promise<string | null> {
@@ -45,9 +53,12 @@ export async function refreshCoordinatorAccessToken(
   refreshToken: string
 ): Promise<{ accessToken: string; expiresAt: string | null } | null> {
   try {
-    const client = new SquareClient({ environment })
+    const clientId = resolveSquareApplicationId()
+    if (!clientId) return null
+
+    const client = createSquareOAuthClient()
     const response = await client.oAuth.obtainToken({
-      clientId: process.env.NEXT_PUBLIC_SQUARE_APP_ID!,
+      clientId,
       clientSecret: getSquareApplicationSecret(),
       refreshToken,
       grantType: 'refresh_token',

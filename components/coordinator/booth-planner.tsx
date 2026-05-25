@@ -34,6 +34,8 @@ import {
   clearUserPlacedLayout,
   paintCells,
   removeElementsAt,
+  removeVenueElementById,
+  canRemoveVenueElement,
   setAllFixturesLocked,
   toggleElementLock,
   toggleElementLockById,
@@ -41,6 +43,7 @@ import {
 import { FakeVendorsPanel } from '@/components/coordinator/fake-vendors-panel'
 import { LayoutPresetPicker } from '@/components/coordinator/layout-preset-picker'
 import { UnplacedVendorsPanel } from '@/components/coordinator/unplaced-vendors-panel'
+import { PlacedVendorsPanel } from '@/components/coordinator/placed-vendors-panel'
 import { GridScaleBanner } from '@/components/coordinator/grid-scale-banner'
 import { VendorCategorySummary } from '@/components/coordinator/vendor-category-summary'
 import { SmartPopulateBoothCaps } from '@/components/coordinator/smart-populate-booth-caps'
@@ -110,7 +113,6 @@ import {
 } from '@/lib/booth-planner/grid-glyphs'
 import { detectLayoutOverlaps, OVERLAP_RULE_FAILURE_MESSAGE } from '@/lib/booth-planner/layout-overlap'
 import { DismissibleAlertCard } from '@/components/coordinator/dismissible-alert-card'
-import { MarketFeedbackAdminPanel } from '@/components/coordinator/market-feedback-admin-panel'
 import { MarketFeedbackWidget } from '@/components/coordinator/market-feedback-widget'
 import type { Category } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
@@ -118,7 +120,13 @@ import { formatBoothFootprint } from '@/lib/booth-planner/grid-scale'
 import { summarizeVendorsByCategory } from '@/lib/booth-planner/vendor-category-summary'
 import { nextBoothNumber, syncCellsWithVendors } from '@/lib/booth-planner/vendor-cells'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
-import { LAYOUT_PRESET_OPTIONS, type LayoutPreset, genericRowLayoutModeFromPreset } from '@/lib/booth-planner/layout-presets'
+import { LAYOUT_PRESET_OPTIONS, SMART_POPULATE_LAYOUT_PRESET, type LayoutPreset, genericRowLayoutModeFromPreset } from '@/lib/booth-planner/layout-presets'
+import {
+  applyModifiedLoopLayout,
+  suggestAnchorPlacements,
+  tierFromApplicationMeta,
+  type VendorTier,
+} from '@/lib/booth-planner/modified-loop-layout'
 import {
   applyOutsideOnlyLayout,
   buildOutsideOnlyVenueElements,
@@ -151,6 +159,7 @@ import {
 } from '@/lib/booth-planner/indoor-shell'
 import { computePatronPathTrace } from '@/lib/booth-planner/patron-path-trace'
 import { SvgPatronFlowLayer } from '@/components/coordinator/svg-patron-flow-layer'
+import { ModifiedLoopFlowOverlay } from '@/components/coordinator/modified-loop-flow-overlay'
 import { isPerimeterWallElement } from '@/lib/booth-planner/perimeter-wall-segments'
 import {
   resolveVendorGridSpans,
@@ -553,7 +562,6 @@ export function BoothPlanner({
   const [saving, setSaving] = useState(false)
   const [customLabelDraft, setCustomLabelDraft] = useState('')
   const [clearCanvasOpen, setClearCanvasOpen] = useState(false)
-  const [feedbackRefreshToken, setFeedbackRefreshToken] = useState(0)
   const [autoPlanRunning, setAutoPlanRunning] = useState(false)
   const [randomFillRunning, setRandomFillRunning] = useState(false)
   const [seedFillRunning, setSeedFillRunning] = useState(false)
@@ -1038,13 +1046,6 @@ export function BoothPlanner({
     toast.success(lock ? 'All fixtures locked' : 'All fixtures unlocked')
   }, [allFixturesLocked, patchActiveRoom, venueElements])
 
-  useLayoutKeyboardShortcuts({
-    onUndo: handleUndo,
-    onRedo: handleRedo,
-    onClearLayout: () => setClearCanvasOpen(true),
-    onToggleLockAll: handleToggleLockAll,
-    onToolChange: setActiveTool,
-  })
   const approvedApps = applications.filter((a) => a.status === 'approved')
 
   function resolveTableLengthFt(_app: ApplicationInput): number {
@@ -1070,6 +1071,16 @@ export function BoothPlanner({
     tableOrientation: TableOrientation | null
     requestedBoothType: ApplicationInput['requested_booth_type'] | null
     categoryId: string | null
+    tier: VendorTier
+  }
+
+  function resolveVendorTier(meta: {
+    requestedBoothType?: ApplicationInput['requested_booth_type'] | null
+    tableLengthFt?: number | null
+  }): VendorTier {
+    return tierFromApplicationMeta({
+      isFeatured: meta.requestedBoothType === 'power' || meta.requestedBoothType === 'wall',
+    })
   }
 
   function buildVendorInput(
@@ -1080,7 +1091,8 @@ export function BoothPlanner({
     categoryId?: string | null,
     vendorUnitType?: VendorUnitType,
     tableOrientation?: TableOrientation | null,
-    requestedBoothType?: ApplicationInput['requested_booth_type']
+    requestedBoothType?: ApplicationInput['requested_booth_type'],
+    tier?: VendorTier
   ): VendorPlanInput {
     const color = categoryColorClass(categoryName)
     const baseMeta = { categoryId: categoryId ?? null }
@@ -1106,6 +1118,7 @@ export function BoothPlanner({
       tableLengthFt: spans.tableLengthFt,
       tableOrientation: orientation,
       requestedBoothType: requestedBoothType ?? null,
+      tier: tier ?? resolveVendorTier({ requestedBoothType, tableLengthFt }),
       ...baseMeta,
     }
   }
@@ -1127,16 +1140,20 @@ export function BoothPlanner({
       })
     )
     realVendorInputs = grouped.map((group) => {
-      const base = buildVendorInput(
-        group.id,
-        group.vendorName,
-        group.categoryName,
-        group.tableLengthFt,
-        group.categoryId,
-        group.vendorUnitType,
-        undefined,
-        group.requestedBoothType
-      )
+        const base = buildVendorInput(
+          group.id,
+          group.vendorName,
+          group.categoryName,
+          group.tableLengthFt,
+          group.categoryId,
+          group.vendorUnitType,
+          undefined,
+          group.requestedBoothType,
+          resolveVendorTier({
+            requestedBoothType: group.requestedBoothType,
+            tableLengthFt: group.tableLengthFt,
+          })
+        )
       return { ...base, colSpan: group.colSpan, rowSpan: group.rowSpan }
     })
   } else {
@@ -1153,7 +1170,20 @@ export function BoothPlanner({
         const catName = app.category?.name ?? 'Uncategorized'
         const groupKey = app.vendor_id ?? app.vendor.full_name
         const count = vendorAppCount.get(groupKey) ?? 1
-        const base = buildVendorInput(app.id, name, catName, undefined, app.category_id)
+        const base = buildVendorInput(
+          app.id,
+          name,
+          catName,
+          undefined,
+          app.category_id,
+          undefined,
+          undefined,
+          app.requested_booth_type,
+          resolveVendorTier({
+            requestedBoothType: app.requested_booth_type,
+            tableLengthFt: app.table_length_ft,
+          })
+        )
         return { ...base, colSpan: count, rowSpan: 1 }
       })
   }
@@ -1606,6 +1636,21 @@ export function BoothPlanner({
     [selectedVendorId, cells]
   )
 
+  useLayoutKeyboardShortcuts({
+    onUndo: handleUndo,
+    onRedo: handleRedo,
+    onClearLayout: () => setClearCanvasOpen(true),
+    onToggleLockAll: handleToggleLockAll,
+    onToolChange: setActiveTool,
+    onErase: () => {
+      if (selectedPlacedBooth) {
+        handleUnplaceVendor(selectedPlacedBooth)
+        return
+      }
+      setActiveTool('eraser')
+    },
+  })
+
   function handleAddFakeVendors(
     count: number,
     options: { namePrefix: string; category: string; vendorUnitType: VendorUnitType }
@@ -1679,6 +1724,24 @@ export function BoothPlanner({
         corridor
           ? 'Indoor corridor rows applied — walls preserved, serpentine aisles painted'
           : 'Open-lot corridor rows applied — use table vendors or 10×10 tent vendors'
+      )
+    } else if (preset === 'modified_loop') {
+      const patch = applyModifiedLoopLayout(gridCols, gridRows, entrance, venueElementsWithDoors)
+      const anchorSuggestions = suggestAnchorPlacements(
+        patch.venue_elements,
+        gridCols,
+        gridRows,
+        entrance
+      )
+      patchActiveRoom({
+        venue_elements: [...patch.venue_elements, ...anchorSuggestions],
+        cells: [],
+        spacing_mode: 'one_foot',
+        booth_width: 1,
+        booth_length: 1,
+      })
+      toast.success(
+        'Modified Loop shell applied — erase preset aisles with Remove (R) if you need to adjust flow'
       )
     } else if (genericMode) {
       const shell = applyGenericRowLayout(
@@ -1838,7 +1901,7 @@ export function BoothPlanner({
         const planInputs = buildAutoPlanVendorQueueFromFake(allCreated)
 
         const planStrategy = resolveAutoPlanStrategy({
-          layoutPreset,
+          layoutPreset: SMART_POPULATE_LAYOUT_PRESET,
           gridCols,
           gridRows,
           entrance,
@@ -1859,7 +1922,7 @@ export function BoothPlanner({
           vendors: sortVendorsFcfs(planInputs, appliedAtById),
           preset: planStrategy.effectivePreset,
           useIndoorCorridor: planStrategy.useCorridor,
-          fcfsOrder: true,
+          fcfsOrder: false,
           coGenerateAisles: planStrategy.coGenerateAisles,
         })
 
@@ -2084,8 +2147,13 @@ export function BoothPlanner({
   async function handleAutoPlan(vendorOverride?: VendorPlanInput[]) {
     if (autoPlanRunning) return
 
+    const autoPlanPreset = SMART_POPULATE_LAYOUT_PRESET
+    if (layoutPreset !== autoPlanPreset) {
+      setLayoutPreset(autoPlanPreset)
+    }
+
     const presetLabel =
-      LAYOUT_PRESET_OPTIONS.find((p) => p.id === layoutPreset)?.label ?? 'Standard'
+      LAYOUT_PRESET_OPTIONS.find((p) => p.id === autoPlanPreset)?.label ?? 'Modified Loop'
     const planVendors = vendorOverride ?? buildAutoPlanVendorQueue()
     const fcfsSorted = sortVendorsFcfs(planVendors, appliedAtById)
 
@@ -2096,7 +2164,7 @@ export function BoothPlanner({
 
     try {
       const planStrategy = resolveAutoPlanStrategy({
-        layoutPreset,
+        layoutPreset: autoPlanPreset,
         gridCols,
         gridRows,
         entrance,
@@ -2119,7 +2187,7 @@ export function BoothPlanner({
           vendors: fcfsSorted,
           preset: planStrategy.effectivePreset,
           useIndoorCorridor: planStrategy.useCorridor,
-          fcfsOrder: true,
+          fcfsOrder: autoPlanPreset !== 'modified_loop',
           coGenerateAisles: planStrategy.coGenerateAisles,
         },
         {
@@ -2281,6 +2349,14 @@ export function BoothPlanner({
     setShowPatronFlow(false)
     patchActiveRoom({ cells: [], venue_elements: keptElements })
     toast.message('Booths cleared — co-generated aisles removed, template shell kept')
+  }
+
+  function handleRemoveFixture(elementId: string) {
+    const grid = { cols: gridCols, rows: gridRows }
+    const next = removeVenueElementById(venueElements, elementId, grid)
+    if (next.length === venueElements.length) return
+    patchActiveRoom({ venue_elements: next })
+    toast.message('Preset fixture removed', { duration: 1500 })
   }
 
   function handleToggleFixtureLock(elementId: string) {
@@ -2809,6 +2885,7 @@ export function BoothPlanner({
       onCellPointerDown,
       onCellPointerEnter,
       onToggleFixtureLock: handleToggleFixtureLock,
+      onRemoveFixture: handleRemoveFixture,
       handleDragStart,
       handleDrop,
       onDoorDragStart: handleDoorDragStart,
@@ -2847,6 +2924,7 @@ export function BoothPlanner({
       onCellPointerDown,
       onCellPointerEnter,
       handleToggleFixtureLock,
+      handleRemoveFixture,
       handleDragStart,
       handleDrop,
       handleDoorDragStart,
@@ -3300,9 +3378,10 @@ export function BoothPlanner({
                 </div>
               )}
 
-              <section className="relative min-h-0 min-w-0 flex-1">
+              <section className="relative flex min-h-0 min-w-0 flex-1 flex-col">
               {isOneFootGrid && renderGridParams ? (
                 <SvgLayoutCanvas
+                  className="min-h-0 flex-1"
                   cols={gridCols}
                   rows={canvasRows}
                   hallRows={gridRows}
@@ -3326,7 +3405,7 @@ export function BoothPlanner({
                         onRedo={handleRedo}
                         onRemove={() => setActiveTool('eraser')}
                       />
-                      <TooltipWrapper text="Auto-place roster vendors with mandatory aisles and entrance/exit reserved">
+                      <TooltipWrapper text="Auto-place roster vendors using Modified Loop (IKEA) — 15′ entrance buffer, serpentine path, category scattering, premium right-hand bias">
                         <Button
                           type="button"
                           onClick={() => void handleAutoPlan()}
@@ -3350,8 +3429,8 @@ export function BoothPlanner({
                           Clear Booths
                         </Button>
                       </TooltipWrapper>
-                      {isOneFootGrid && hasPatronPath ? (
-                        <TooltipWrapper text="Toggle dotted patron route from entrance to exit">
+                      {isOneFootGrid && (hasPatronPath || layoutPreset === 'modified_loop') ? (
+                        <TooltipWrapper text="Toggle patron route from entrance through every booth to exit">
                           <Button
                             type="button"
                             variant={showPatronFlow ? 'default' : 'outline'}
@@ -3375,7 +3454,19 @@ export function BoothPlanner({
                     venueMap={venueMap}
                   />
                   <SvgInteractiveGrid {...renderGridParams} cellPx={SVG_FOOT_PX} />
-                  {showPatronFlow && hasPatronPath && patronPathTrace ? (
+                  {showPatronFlow && layoutPreset === 'modified_loop' ? (
+                    <ModifiedLoopFlowOverlay
+                      cols={gridCols}
+                      rows={gridRows}
+                      cellPx={SVG_FOOT_PX}
+                      entrance={entrance}
+                      venueElements={venueElementsWithDoors}
+                      placedCells={placed}
+                      showBuffer
+                      showPath
+                    />
+                  ) : null}
+                  {showPatronFlow && layoutPreset !== 'modified_loop' && hasPatronPath && patronPathTrace ? (
                     <SvgPatronFlowLayer trace={patronPathTrace} cellPx={SVG_FOOT_PX} />
                   ) : null}
                 </SvgLayoutCanvas>
@@ -3463,6 +3554,17 @@ export function BoothPlanner({
                 </p>
               </div>
             ) : (
+              <>
+              <PlacedVendorsPanel
+                vendors={placed}
+                selectedId={selectedVendorId}
+                cellWidthFt={gridConfig.cellWidthFt}
+                cellLengthFt={gridConfig.cellLengthFt}
+                isOneFootGrid={isOneFootGrid}
+                onSelect={setSelectedVendorId}
+                onUnplace={handleUnplaceVendor}
+                onRemove={handleRemoveVendorFromPlan}
+              />
               <UnplacedVendorsPanel
                 vendors={overflow}
                 activeTool={activeTool}
@@ -3474,6 +3576,7 @@ export function BoothPlanner({
                 onDragStart={handleUnplacedDragStart}
                 onRemove={handleRemoveVendorFromPlan}
               />
+              </>
             )}
             </div>
 
@@ -3529,23 +3632,6 @@ export function BoothPlanner({
                 />
               </div>
 
-              <MarketFeedbackAdminPanel marketId={eventId} refreshToken={feedbackRefreshToken} />
-
-              <MarketFeedbackWidget
-                marketId={eventId}
-                compact
-                onSubmitted={() => setFeedbackRefreshToken((n) => n + 1)}
-                layoutConflict={
-                  layoutOverlaps.hasOverlap
-                    ? {
-                        roomName: activeRoom.name,
-                        overlapCount: layoutOverlaps.overlapKeys.size,
-                        contextId: activeRoomId,
-                      }
-                    : null
-                }
-              />
-
             </aside>
           </div>
 
@@ -3556,6 +3642,20 @@ export function BoothPlanner({
               liveRegressionRunning={liveLayoutQa.regressionRunning}
             />
           ) : null}
+
+          <MarketFeedbackWidget
+            marketId={eventId}
+            layoutConflict={
+              layoutOverlaps.hasOverlap
+                ? {
+                    roomName: activeRoom.name,
+                    overlapCount: layoutOverlaps.overlapKeys.size,
+                    contextId: activeRoomId,
+                  }
+                : null
+            }
+          />
+
           {!hideInternalNav ? (
             <LayoutPlannerWizardNav
               currentStep={3}
@@ -3759,6 +3859,7 @@ function renderGrid({
   onCellPointerDown,
   onCellPointerEnter,
   onToggleFixtureLock,
+  onRemoveFixture,
   handleDragStart,
   handleDrop,
   onDoorDragStart,
@@ -3787,6 +3888,7 @@ function renderGrid({
   onCellPointerDown: (row: number, col: number) => void
   onCellPointerEnter: (row: number, col: number) => void
   onToggleFixtureLock: (elementId: string) => void
+  onRemoveFixture: (elementId: string) => void
   handleDragStart: (e: React.DragEvent, col: number, row: number) => void
   handleDrop: (e: React.DragEvent, col: number, row: number) => void
   onDoorDragStart: (e: React.DragEvent, doorType: 'entrance' | 'exit') => void
@@ -4048,6 +4150,7 @@ function renderGrid({
         const fixtureLabel = fixtureCanvasLabel(fixture, cols, rows)
         const isMovableDoor =
           (fixture.type === 'entrance' || fixture.type === 'exit') && !fixture.locked
+        const removableFixture = canRemoveVenueElement(fixture, { cols, rows: hallRows })
         elements.push(
           <div
             key={`fixture-${fixture.id}`}
@@ -4094,7 +4197,9 @@ function renderGrid({
                 : `group/fixture relative flex flex-col items-center justify-center gap-0.5 rounded-lg p-1 pt-4 text-center ${style.className} ${
                     isMovableDoor
                       ? 'cursor-grab active:cursor-grabbing ring-1 ring-black/10'
-                      : 'cursor-crosshair'
+                      : activeTool === 'eraser' && removableFixture
+                        ? 'cursor-pointer ring-2 ring-red-300'
+                        : 'cursor-crosshair'
                   } ${fixture.locked ? 'ring-2 ring-slate-600 shadow-sm' : ''}`
             }
           >
@@ -4146,6 +4251,21 @@ function renderGrid({
                 <LockOpen className="h-3 w-3" />
               )}
             </button>
+            {activeTool === 'eraser' && removableFixture ? (
+              <button
+                type="button"
+                title="Remove preset fixture"
+                aria-label={`Remove ${fixtureLabel || fixture.type}`}
+                className="absolute top-0.5 left-0.5 z-10 rounded p-0.5 bg-card/90 text-muted-foreground hover:text-red-600 hover:bg-card shadow-sm"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemoveFixture(fixture.id)
+                }}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            ) : null}
             {Icon && !isWalkway && <Icon className="h-4 w-4 shrink-0 opacity-80" />}
             {!isWalkway ? (
               <span className="text-[8px] font-bold uppercase leading-tight px-0.5">

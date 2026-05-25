@@ -29,6 +29,7 @@ import {
 } from '@/components/quarter-auction/auction-start-countdown'
 import { DismissibleAuctionBanner } from '@/components/auction/dismissible-auction-banner'
 import { AuctionParticipationGate } from '@/components/quarter-auction/auction-participation-gate'
+import { CharitableImpactTracker } from '@/components/charitable-impact/charitable-impact-tracker'
 
 interface PatronQuarterAuctionLiveProps {
   eventId: string
@@ -224,8 +225,23 @@ export function PatronQuarterAuctionLive({
 
   const biddingHeadline = liveItem ? patronStatusHeadline(liveItem.status) : null
 
+  const livePoolCredits = useMemo(
+    () => items.map((item) => item.pool_credits ?? 0),
+    [items]
+  )
+  const livePaddleCredits = useMemo(
+    () => paddles.map((paddle) => paddle.purchase_credits ?? 0),
+    [paddles]
+  )
+
   return (
     <div className="mx-auto max-w-lg space-y-4 px-4 py-6 pb-24">
+      <CharitableImpactTracker
+        eventId={eventId}
+        livePoolCredits={livePoolCredits}
+        livePaddleCredits={livePaddleCredits}
+      />
+
       <DismissibleAuctionBanner scope="quarter-patron-room" id={eventId}>
         <div className="flex items-center justify-between gap-2 rounded-xl border bg-white px-4 py-3">
           <div>

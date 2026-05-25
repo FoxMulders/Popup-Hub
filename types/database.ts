@@ -135,6 +135,22 @@ export interface VendorPassport {
   profile?: Profile
 }
 
+export type PassportStoryKind = 'behind_the_brand' | 'market_promo' | 'story'
+export type PassportStoryMediaType = 'video' | 'image'
+
+export interface PassportStory {
+  id: string
+  owner_id: string
+  media_url: string
+  media_type: PassportStoryMediaType
+  duration_seconds: number | null
+  story_kind: PassportStoryKind
+  caption: string | null
+  sort_order: number
+  created_by: string
+  created_at: string
+}
+
 export interface EventDay {
   id: string
   event_id: string
@@ -179,6 +195,7 @@ export interface Event {
   cancellation_notice_days: number | null
   cancellation_penalty_applied: number
   raffle_donation_requirement: string | null
+  passport_vendors_required: number | null
   parking_notes: string | null
   wheelchair_access_notes: string | null
   pet_policy?: PetPolicy
@@ -240,6 +257,8 @@ export interface BoothApplication {
   event_cancellation_reason_label: string | null
   applicable_documentation_url: string | null
   market_insurance_url: string | null
+  coordinator_review_notes?: string | null
+  coordinator_decline_message?: string | null
   event?: Event
   vendor?: Profile
   passport?: VendorPassport
@@ -343,6 +362,7 @@ export interface QuarterAuctionSettings {
   default_entry_credits: number
   paddle_pool_size: number
   scheduled_start_at: string | null
+  charity_milestones?: { amount_cents: number; label: string }[] | null
   created_at: string
   updated_at: string
 }
@@ -387,6 +407,25 @@ export interface EventAuctionParticipant {
   check_in_lat: number
   check_in_lng: number
   distance_meters: number | null
+}
+
+export interface MarketPatronCheckIn {
+  id: string
+  event_id: string
+  user_id: string
+  paddle_number: number
+  checked_in_at: string
+  check_in_lat: number | null
+  check_in_lng: number | null
+  distance_meters: number | null
+}
+
+export interface PassportScan {
+  id: string
+  event_id: string
+  user_id: string
+  vendor_id: string
+  scanned_at: string
 }
 
 export interface AuctionItemEntry {
@@ -683,4 +722,34 @@ export interface MarketFeedback {
   context_id: string | null
   created_at: string
   reporter?: Pick<Profile, 'full_name' | 'email' | 'role'>
+}
+
+export type MarketFeedMediaType = 'image' | 'video'
+
+export interface MarketFeedPost {
+  id: string
+  event_id: string
+  vendor_id: string
+  media_url: string
+  media_type: MarketFeedMediaType
+  caption: string
+  likes_count: number
+  comments_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface MarketFeedPostLike {
+  post_id: string
+  user_id: string
+  created_at: string
+}
+
+export interface MarketFeedPostComment {
+  id: string
+  post_id: string
+  user_id: string
+  body: string
+  created_at: string
+  author?: Pick<Profile, 'full_name' | 'avatar_url'>
 }

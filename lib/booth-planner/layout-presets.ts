@@ -29,6 +29,10 @@ import {
   isLShapeCornersPlacement,
   lShapeCornersOriginsForBooth,
 } from '@/lib/booth-planner/l-shape-corners-layout'
+import {
+  isModifiedLoopPlacement,
+  modifiedLoopOriginsForBooth,
+} from '@/lib/booth-planner/modified-loop-layout'
 
 export type LayoutPreset =
   | 'default'
@@ -39,6 +43,10 @@ export type LayoutPreset =
   | 'aligned_grid'
   | 'l_shape_corners'
   | 'snake'
+  | 'modified_loop'
+
+/** Preset used by Smart Populate — IKEA-style modified loop with retail flow rules. */
+export const SMART_POPULATE_LAYOUT_PRESET: LayoutPreset = 'modified_loop'
 
 /** Five AI-facing auto-plan presets shown in Step 3 layout picker. */
 export const LAYOUT_AI_PRESET_OPTIONS: {
@@ -75,6 +83,12 @@ export const LAYOUT_AI_PRESET_OPTIONS: {
     label: 'Snake',
     description:
       'Serpentine S-curve shopper path with tables parallel to local flow.',
+  },
+  {
+    id: 'modified_loop',
+    label: 'Modified Loop (IKEA)',
+    description:
+      'Guided serpentine loop — 15′ entrance buffer, category scattering, right-hand premium bias, anchor dead zones.',
   },
 ]
 
@@ -162,7 +176,7 @@ export {
   isGenericRowPlacement,
 } from '@/lib/booth-planner/generic-row-layouts'
 export type { GenericRowLayoutMode } from '@/lib/booth-planner/generic-row-layouts'
-export type { OutdoorMarketVariant }
+export { isModifiedLoopPlacement } from '@/lib/booth-planner/modified-loop-layout'
 
 /** True when preset uses pre-painted shared-aisle row/column grammar. */
 export function isStructuredRowPreset(preset: LayoutPreset): boolean {
@@ -170,6 +184,7 @@ export function isStructuredRowPreset(preset: LayoutPreset): boolean {
     preset === 'outdoor' ||
     preset === 'aligned_grid' ||
     preset === 'l_shape_corners' ||
+    preset === 'modified_loop' ||
     isGenericRowLayoutPreset(preset)
   )
 }
@@ -183,11 +198,15 @@ export function constrainedOriginsForBooth(
   rowSpan: number,
   colSpan: number,
   outdoorVariant: OutdoorMarketVariant = 'street-fair',
-  useIndoorCorridor = false
+  useIndoorCorridor = false,
+  venueElements: import('@/types/database').VenueElement[] = []
 ): [number, number][] {
   const genericMode = genericRowLayoutModeFromPreset(preset)
   if (genericMode) {
     return genericRowOriginsForBooth(genericMode, rows, cols, entrance, rowSpan, colSpan)
+  }
+  if (preset === 'modified_loop') {
+    return modifiedLoopOriginsForBooth(rows, cols, entrance, rowSpan, colSpan, venueElements)
   }
   if (useIndoorCorridor) {
     return indoorCorridorOriginsForBooth(rows, cols, entrance, rowSpan, colSpan)

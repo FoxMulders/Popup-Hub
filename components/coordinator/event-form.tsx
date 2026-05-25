@@ -25,6 +25,11 @@ import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-cli
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Loader2, MapPin, Calendar, Settings2, Upload, Gavel, Trash2, HelpCircle } from 'lucide-react'
+import { ScheduleWeekendShortcuts } from '@/components/shared/schedule-weekend-shortcuts'
+import { FlyerCoverUpload } from '@/components/coordinator/flyer-cover-upload'
+import { FlyerFieldHighlight } from '@/components/coordinator/flyer-field-highlight'
+import { useFlyerScan } from '@/hooks/use-flyer-scan'
+import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
 import { CategoryLimitEditor, type CategoryLimit } from './category-limit-editor'
 import { SmartPopulateBoothCaps } from './smart-populate-booth-caps'
 import { EdmontonHallSelector } from './edmonton-hall-selector'
@@ -103,6 +108,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   )
   const [coverImageUrl, setCoverImageUrl] = useState(existing?.cover_image_url ?? '')
   const [coverFile, setCoverFile] = useState<File | null>(null)
+  const { parsing: parsingFlyer, autoFilledFields, scanFlyer } = useFlyerScan()
   const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
   const [boothClearancePolicy, setBoothClearancePolicy] = useState<BoothClearancePolicy>(
     existing?.booth_clearance_policy ?? 'leave_furniture'
@@ -188,11 +194,20 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     setPlannerVenueLength(full.lengthFt)
   }
 
-  async function handleCoverChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function handleCoverFileSelected(file: File) {
     setCoverFile(file)
     setCoverImageUrl(URL.createObjectURL(file))
+    await scanFlyer(file, {
+      setEventName: setName,
+      setDescription,
+      setStartDate,
+      setEndDate,
+      setStartTime,
+      setEndTime,
+      setLocationName,
+      setAddress,
+      setRaffleDonationRequirement,
+    })
   }
 
   function updateDayRow(index: number, field: keyof DayRow, value: string) {
@@ -390,22 +405,51 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
       <div className="space-y-6">
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Calendar className="h-4 w-4 text-forest" />
-              Event Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label htmlFor="name">Event Name *</Label>
-              <Input
-                id="name"
-                placeholder="e.g. Riverside Weekend Market"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="text-base"
-              />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calendar className="h-4 w-4 text-forest" />
+                Event Details
+              </CardTitle>
+              {existing?.status === 'draft' && existing.id ? (
+                <DeleteDraftMarketDialog eventId={existing.id} eventName={name} />
+              ) : null}
             </div>
+          </CardHeader>
+          <CardContent className="relative space-y-4">
+            {parsingFlyer ? (
+              <div
+                className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-cream/75 backdrop-blur-[2px]"
+                aria-hidden
+              >
+                <div className="mx-4 max-w-sm rounded-xl border border-harvest-200 bg-white px-5 py-4 text-center shadow-lg">
+                  <p className="text-sm font-semibold text-harvest-800">✨ AI is reading your poster details…</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    We&apos;ll fill matching fields when ready. Review everything before saving.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <FlyerCoverUpload
+              coverImageUrl={coverImageUrl}
+              onFileSelected={handleCoverFileSelected}
+              parsing={parsingFlyer}
+              label="Cover Image / Flyer"
+              hint="JPG, PNG, WebP · 1200×400 recommended · AI reads flyer details"
+            />
+
+            <FlyerFieldHighlight fieldKey="name" autoFilledFields={autoFilledFields}>
+              <div className="space-y-1">
+                <Label htmlFor="name">Event Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g. Riverside Weekend Market"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="text-base"
+                />
+              </div>
+            </FlyerFieldHighlight>
 
             {/* Schedule Type segmented control */}
             <div className="space-y-1">
@@ -432,20 +476,36 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                   Multi-Day
                 </button>
               </div>
+              <ScheduleWeekendShortcuts
+                scheduleType={scheduleType}
+                onApply={(range) => {
+                  if (scheduleType === 'multi') {
+                    setDayRows([
+                      { date: range.startDate, start_time: '09:00', end_time: '17:00' },
+                      { date: range.endDate, start_time: '09:00', end_time: '17:00' },
+                    ])
+                  } else {
+                    setStartDate(range.startDate)
+                    setEndDate(range.startDate)
+                  }
+                }}
+              />
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Tell vendors and shoppers what makes this market special…"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                maxLength={800}
-              />
-              <p className="text-right text-xs text-muted-foreground">{description.length}/800</p>
-            </div>
+            <FlyerFieldHighlight fieldKey="description" autoFilledFields={autoFilledFields}>
+              <div className="space-y-1">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Tell vendors and shoppers what makes this market special…"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  maxLength={800}
+                />
+                <p className="text-right text-xs text-muted-foreground">{description.length}/800</p>
+              </div>
+            </FlyerFieldHighlight>
 
             {scheduleType === 'single' ? (
               <div className="grid grid-cols-2 gap-4">
@@ -662,32 +722,6 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                 checked={marketInsuranceRequired}
                 onCheckedChange={setMarketInsuranceRequired}
               />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <Label>Cover Image</Label>
-                <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                  <TooltipContent>Shown on the event listing and shopper discovery map. Recommended size: 1200 × 400px.</TooltipContent>
-                </Tooltip>
-              </div>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-stone-200 p-4 hover:border-forest/40 transition">
-                {coverImageUrl ? (
-                  <img src={coverImageUrl} alt="Cover" className="h-16 w-24 rounded-lg object-cover" />
-                ) : (
-                  <div className="h-16 w-24 rounded-lg bg-canvas flex items-center justify-center">
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {coverImageUrl ? 'Change cover image' : 'Upload cover image'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">JPG, PNG, WebP · Recommended 1200×400</p>
-                </div>
-                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverChange} />
-              </label>
             </div>
           </CardContent>
         </Card>

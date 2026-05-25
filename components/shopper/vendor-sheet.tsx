@@ -14,6 +14,7 @@ import { CheckCircle, Globe, ShoppingBag, Camera, MapPin } from 'lucide-react'
 import type { VendorLineupEntry } from '@/lib/shopper/vendors'
 import { getVendorLinks } from '@/lib/shopper/vendors'
 import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
+import { PassportStoriesPublicStrip } from '@/components/passport/passport-stories-public-strip'
 
 interface VendorSheetProps {
   vendor: VendorLineupEntry | null
@@ -59,6 +60,12 @@ export function VendorSheet({
           <SheetTitle className="text-left">{displayName}</SheetTitle>
         </SheetHeader>
         <div className="mt-4 space-y-4">
+          <PassportStoriesPublicStrip
+            ownerId={vendor.vendor_id}
+            displayName={displayName}
+            avatarUrl={passport?.logo_url ?? vendor.vendor?.avatar_url ?? null}
+          />
+
           <div className="flex items-start gap-3">
             <VendorLogo
               src={passport?.logo_url ?? vendor.vendor?.avatar_url}

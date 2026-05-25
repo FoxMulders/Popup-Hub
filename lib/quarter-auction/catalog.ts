@@ -28,6 +28,15 @@ export async function getOrCreateSettings(
     .select('*')
     .single()
 
+  if (error?.code === '23505') {
+    const { data: raced } = await supabase
+      .from('quarter_auction_settings')
+      .select('*')
+      .eq('event_id', eventId)
+      .maybeSingle()
+    if (raced) return raced as QuarterAuctionSettings
+  }
+
   if (error || !created) {
     throw new Error('Could not initialize quarter auction settings')
   }
