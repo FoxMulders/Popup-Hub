@@ -12,6 +12,10 @@ export function SandboxSquareOAuthNotice() {
       </p>
       <ol className="list-decimal space-y-1 pl-4 text-xs text-harvest-800/90 leading-relaxed">
         <li>
+          Use the <strong>same browser profile</strong> for Popup Hub and Square (not Cursor preview vs
+          Chrome, and not separate incognito windows).
+        </li>
+        <li>
           Open the{' '}
           <a
             href={SQUARE_DEVELOPER_CONSOLE_URL}
@@ -21,14 +25,19 @@ export function SandboxSquareOAuthNotice() {
           >
             Square Developer Console
           </a>{' '}
-          and select your app.
+          → your app → <strong>Sandbox test accounts</strong>.
         </li>
         <li>
-          Go to <strong>Sandbox test accounts</strong> → choose a seller →{' '}
-          <strong>Open in Square Dashboard</strong>.
+          For your seller (e.g. The Tipsy Fox), click <strong>Open in Square Dashboard</strong> — do not
+          bookmark the dashboard URL.
         </li>
-        <li>Leave that Sandbox dashboard tab open.</li>
-        <li>Return here and click Connect with Square again — you should see an Allow / Authorize screen.</li>
+        <li>Leave that dashboard tab open, open a <strong>new tab</strong>, then click Connect with Square.</li>
+        <li>
+          If still blank, disable third-party cookie blocking for{' '}
+          <code className="rounded bg-white/60 px-1">squareupsandbox.com</code>, or recreate the test
+          account with <strong>Automatically create authorizations for all my current apps</strong>{' '}
+          checked.
+        </li>
       </ol>
       <p className="text-xs text-harvest-800/80">
         In the Developer Console (Sandbox → OAuth), register the redirect URL exactly as shown below — same

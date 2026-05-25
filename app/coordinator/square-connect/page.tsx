@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import { ConnectSquareButton } from './connect-button'
+import { DevSandboxConnectPanel } from './dev-sandbox-connect-panel'
 import { SandboxSquareOAuthNotice } from './sandbox-oauth-notice'
 import {
   buildSquareOAuthAuthorizeUrl,
@@ -28,7 +29,20 @@ export default async function SquareConnectPage() {
     .limit(1)
     .maybeSingle()
 
-  const isConnected = !!connectedEvent?.square_merchant_id
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('payout_account_id, square_access_token, payout_onboarding_status')
+    .eq('id', user.id)
+    .single()
+
+  const isConnected =
+    !!connectedEvent?.square_merchant_id ||
+    (!!profile?.square_access_token &&
+      profile.payout_onboarding_status === 'complete' &&
+      !!profile.payout_account_id)
+
+  const showDevSandboxBypass =
+    process.env.NODE_ENV === 'development' && !isSquareProductionEnvironment()
 
   const appId = getSquareAppId()
   const redirectUri = getSquareOAuthRedirectUri()
@@ -105,6 +119,7 @@ export default async function SquareConnectPage() {
               ) : (
                 <ConnectSquareButton oauthUrl={oauthUrl!} />
               )}
+              {showDevSandboxBypass ? <DevSandboxConnectPanel /> : null}
             </>
           )}
 

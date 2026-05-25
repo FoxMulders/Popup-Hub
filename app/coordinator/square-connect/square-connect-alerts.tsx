@@ -15,6 +15,12 @@ const ERROR_COPY: Record<string, string> = {
   oauth_failed: 'Square authorization failed. Try connecting again or check your Square app credentials.',
   session_mismatch: 'Your session changed during Square login. Sign in again and retry Connect Square.',
   forbidden: 'Only coordinator accounts can connect Square for payouts.',
+  missing_access_token:
+    'No SQUARE_ACCESS_TOKEN in .env.local. Copy a Sandbox seller access token from the Square Developer Console.',
+  invalid_access_token:
+    'Square rejected SQUARE_ACCESS_TOKEN. Copy a fresh Sandbox access token for your seller test account, update .env.local, restart npm run dev, and try the dev connect button again.',
+  no_merchant: 'Could not resolve a Square merchant ID from the sandbox access token.',
+  dev_token_failed: 'Dev sandbox connect failed. Check SQUARE_ACCESS_TOKEN and restart the dev server.',
 }
 
 export function SquareConnectAlerts() {
