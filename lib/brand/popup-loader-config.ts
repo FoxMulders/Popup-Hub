@@ -1,6 +1,6 @@
-/** Popup Hub full-screen Lottie loader configuration. */
+/** Popup Hub full-screen loader configuration. */
 export const POPUP_LOADER = {
-  /** Lottie JSON served from /public */
+  /** Legacy Lottie JSON path (kept for loader-demo.html). Premium loader uses SVG runtime. */
   animationPath: '/popup-loader.json',
   /** Maps placeholder asset filenames inside the Lottie JSON to this logo. */
   logoPath: '/popup-hub-logo.png',

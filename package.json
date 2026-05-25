@@ -25,6 +25,7 @@
         "qa:launch:fast": "powershell -ExecutionPolicy Bypass -File ./scripts/launch-qa.ps1 -SkipBuild",
         "qa:market-features": "npx tsx scripts/smoke-market-features.ts",
         "qa:market-features:configure": "npx tsx scripts/configure-market-features-test-event.ts",
+        "qa:a2-walkthrough": "npx tsx scripts/a2-coordinator-loop-walkthrough.ts",
         "test:shopper-routing": "npx tsx lib/shopper/qa-pathfinding.ts",
         "test:shopper-routing:live": "npx tsx lib/shopper/qa-live-layout.ts",
         "test:rbac-signup": "npx tsx lib/auth/qa-rbac-signup.ts",

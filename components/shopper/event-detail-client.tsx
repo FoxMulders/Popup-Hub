@@ -23,6 +23,7 @@ import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { Button } from '@/components/ui/button'
 import { MarketPassportPanel } from '@/components/market-passport/market-passport-panel'
 import { MeetTheMakerSection } from '@/components/market-feed/meet-the-maker-section'
+import { PassportStoriesPublicStrip } from '@/components/passport/passport-stories-public-strip'
 import type {
   Auction,
   BoothApplication,
@@ -172,6 +173,13 @@ export function EventDetailClient({
                     score={coordinator.reliability_score ?? 100}
                     recentLateCancellationAt={coordinator.recent_late_cancellation_at}
                     size="sm"
+                  />
+                </div>
+                <div className="mt-3">
+                  <PassportStoriesPublicStrip
+                    ownerId={coordinator.id}
+                    displayName={coordinator.full_name}
+                    avatarUrl={coordinator.avatar_url}
                   />
                 </div>
               </div>

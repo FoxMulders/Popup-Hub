@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { PublicEventDetail } from '@/components/public/public-event-detail'
+import { EventJsonLd } from '@/components/seo/event-json-ld'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { format } from 'date-fns'
 
@@ -43,5 +44,26 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function PublicEventPage({ params }: Props) {
   const { id } = await params
-  return <PublicEventDetail eventId={id} />
+  const supabase = await createClient()
+
+  const [{ data: event }, { count: vendorCount }] = await Promise.all([
+    supabase
+      .from('events')
+      .select('id, name, description, start_at, end_at, location_name, address, cover_image_url')
+      .eq('id', id)
+      .in('status', ['published', 'active', 'completed'])
+      .maybeSingle(),
+    supabase
+      .from('booth_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', id)
+      .eq('status', 'approved'),
+  ])
+
+  return (
+    <>
+      {event ? <EventJsonLd event={event} vendorCount={vendorCount ?? 0} /> : null}
+      <PublicEventDetail eventId={id} />
+    </>
+  )
 }

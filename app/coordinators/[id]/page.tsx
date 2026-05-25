@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { resolveProfileAvatarForServer } from '@/lib/profile/server-avatar'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
@@ -12,6 +13,32 @@ import type { Event } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: Props) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, avatar_url')
+    .eq('id', id)
+    .eq('role', 'coordinator')
+    .maybeSingle()
+
+  if (!profile) {
+    return buildPublicMetadata({
+      title: 'Organizer not found — Popup Hub',
+      description: 'This market organizer profile is unavailable.',
+      path: `/coordinators/${id}`,
+    })
+  }
+
+  return buildPublicMetadata({
+    title: `${profile.full_name} — Market Organizer`,
+    description: `Browse upcoming and past popup markets organized by ${profile.full_name} on Popup Hub.`,
+    path: `/coordinators/${id}`,
+    imageUrl: profile.avatar_url,
+  })
 }
 
 export default async function CoordinatorPublicProfilePage({ params }: Props) {
