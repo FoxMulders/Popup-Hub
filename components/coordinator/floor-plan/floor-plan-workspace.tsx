@@ -38,7 +38,7 @@ export function FloorPlanWorkspace({
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
           {alerts}
-          <section className="relative flex min-h-[min(72vh,960px)] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[var(--shadow-market)]">
+          <section className="relative flex min-h-[min(78vh,1100px)] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[var(--shadow-market)]">
             {canvas}
           </section>
           {footer}

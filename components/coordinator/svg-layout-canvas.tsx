@@ -112,7 +112,7 @@ export function SvgLayoutCanvas({
         ref={scrollRef}
         {...panHandlers}
         className={cn(
-          'relative min-h-[240px] max-h-[min(72vh,960px)] w-full min-w-0 overflow-auto bg-zinc-100 outline-none',
+          'relative min-h-[240px] w-full min-w-0 flex-1 overflow-auto bg-zinc-100 outline-none',
           isPanning ? 'cursor-grabbing' : 'cursor-default'
         )}
       >

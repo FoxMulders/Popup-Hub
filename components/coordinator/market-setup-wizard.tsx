@@ -859,23 +859,42 @@ export function MarketSetupWizard({
   return (
     <div
       className={cn(
-        'space-y-6',
-        isFloorPlanStep ? 'mx-[calc(50%-50vw)] w-screen px-3 sm:px-4 lg:px-6' : null
+        isFloorPlanStep
+          ? 'mx-[calc(50%-50vw)] flex w-screen flex-col gap-2 px-2 pb-3 sm:px-3 sm:pb-4 lg:px-4'
+          : 'space-y-6'
       )}
     >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
-          <p className={WIZARD_PAGE_KICKER}>
-            Market Setup Wizard · Step {currentStep} of {totalSteps}
-          </p>
-          <h1 className={WIZARD_PAGE_TITLE}>
-            {existing ? 'Edit Market' : 'Create New Market'}
-          </h1>
-        </div>
-        {isDraftMode && eventId ? (
-          <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
-        ) : null}
-      </header>
+      {isFloorPlanStep ? (
+        <header className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
+            <p className={cn(WIZARD_PAGE_KICKER, 'mb-0')}>
+              Step {currentStep} of {totalSteps}
+            </p>
+            {name.trim() ? (
+              <span className="text-sm font-semibold text-foreground truncate max-w-[28ch]">
+                {name.trim()}
+              </span>
+            ) : null}
+          </div>
+          {isDraftMode && eventId ? (
+            <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
+          ) : null}
+        </header>
+      ) : (
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <p className={WIZARD_PAGE_KICKER}>
+              Market Setup Wizard · Step {currentStep} of {totalSteps}
+            </p>
+            <h1 className={WIZARD_PAGE_TITLE}>
+              {existing ? 'Edit Market' : 'Create New Market'}
+            </h1>
+          </div>
+          {isDraftMode && eventId ? (
+            <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
+          ) : null}
+        </header>
+      )}
 
       {isDraftMode ? (
         <WizardStepStepper
@@ -890,10 +909,11 @@ export function MarketSetupWizard({
       <div
         className={cn(
           'flex items-start gap-4',
-          isWorkspaceStep ? 'flex-col' : 'flex-col lg:flex-row lg:gap-6'
+          isWorkspaceStep ? 'flex-col' : 'flex-col lg:flex-row lg:gap-6',
+          isFloorPlanStep ? 'flex-1 min-h-0 gap-2' : null
         )}
       >
-        {isWorkspaceStep ? (
+        {isWorkspaceStep && !isFloorPlanStep ? (
           <WizardContextStrip
             stepLabel={currentStep === 3 ? 'Step 3 — Capacity' : 'Step 4 — Floor plan'}
             eventName={name.trim() || null}
@@ -908,9 +928,14 @@ export function MarketSetupWizard({
 
         <div
           className={cn(
-            WIZARD_PANEL,
-            'min-w-0 flex-1 space-y-3',
-            currentStep === 4 ? 'p-2 sm:p-3' : isWorkspaceStep ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
+            'min-w-0 flex-1',
+            isFloorPlanStep
+              ? 'flex flex-col gap-2'
+              : cn(
+                  WIZARD_PANEL,
+                  'space-y-3',
+                  currentStep === 4 ? 'p-2 sm:p-3' : isWorkspaceStep ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
+                )
           )}
         >
           {currentStep === 4 && !skipVenueLayout ? (
