@@ -24,10 +24,18 @@ export interface LayoutKeyboardShortcutHandlers {
   onToolChange: (tool: LayoutTool) => void
   /** Delete / Backspace — remove selection or activate eraser. */
   onErase?: () => void
+  /**
+   * R key — when a vendor cell is currently selected on the canvas, rotate
+   * it 90° instead of switching to the eraser tool. Returning `true` from
+   * the handler tells the shortcut layer the rotation was consumed and the
+   * R-as-eraser fallback should be skipped.
+   */
+  onRotateSelected?: () => boolean
 }
 
 export function useLayoutKeyboardShortcuts(handlers: LayoutKeyboardShortcutHandlers) {
-  const { onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange, onErase } = handlers
+  const { onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange, onErase, onRotateSelected } =
+    handlers
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -73,6 +81,15 @@ export function useLayoutKeyboardShortcuts(handlers: LayoutKeyboardShortcutHandl
 
       if (mod || e.altKey) return
 
+      // R rotates the focused canvas cell when one is selected. Only when no
+      // selection exists do we fall through to R = eraser tool shortcut.
+      if (e.key.toLowerCase() === 'r' && onRotateSelected) {
+        if (onRotateSelected()) {
+          e.preventDefault()
+          return
+        }
+      }
+
       const tool = SHORTCUT_TO_TOOL[e.key.toUpperCase()]
       if (tool) {
         e.preventDefault()
@@ -82,5 +99,5 @@ export function useLayoutKeyboardShortcuts(handlers: LayoutKeyboardShortcutHandl
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange, onErase])
+  }, [onUndo, onRedo, onClearLayout, onToggleLockAll, onToolChange, onErase, onRotateSelected])
 }

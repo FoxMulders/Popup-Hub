@@ -17,6 +17,7 @@ import {
   createRandomFakeVendors,
   fakeVendorsFromCells,
   isFakeVendorId,
+  FAKE_VENDOR_ID_PREFIX,
   TEST_CATEGORY_PRESETS,
   type FakeVendorInput,
 } from '@/lib/booth-planner/fake-vendors'
@@ -40,6 +41,8 @@ import {
   setAllFixturesLocked,
   toggleElementLock,
   toggleElementLockById,
+  getElementAt,
+  isImmutableVenueElement,
 } from '@/lib/booth-planner/venue-elements'
 import { FakeVendorsPanel } from '@/components/coordinator/fake-vendors-panel'
 import { LayoutPresetPicker } from '@/components/coordinator/layout-preset-picker'
@@ -369,6 +372,29 @@ export interface BoothPlannerProps {
   }) => void
   /** Optional panel below layout presets (e.g. wizard QA desk). */
   rightSidebarExtra?: React.ReactNode
+  /**
+   * Total category slots configured upstream (Step 3). When provided, the
+   * Floor Plan stats panel shows this number clamped by the physical layout
+   * limit, never exceeding what fits with aisle widths and stroller QA rules.
+   */
+  configuredSlotTotal?: number
+  /**
+   * Category slot breakdown from Step 3. Used by the generic placeholder
+   * generator to seed the canvas with one "Generic Vendor Booth" placeholder
+   * per slot, distributed by the configured category caps. Real vendors then
+   * claim one of these placeholders when their application is approved.
+   */
+  configuredCategorySlots?: Array<{
+    categoryId: string
+    categoryName: string
+    maxSlots: number
+  }>
+  /**
+   * Imperative populate hook — wizard calls this on first entry to Step 4 to
+   * fill the canvas with N generic-booth placeholders sized to match the
+   * Step 3 caps (clamped to the physical ceiling).
+   */
+  populatePlaceholdersRef?: React.MutableRefObject<(() => Promise<boolean>) | null>
 }
 
 const DEFAULT_TABLE_LENGTH_FT = DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
@@ -401,6 +427,9 @@ export function BoothPlanner({
   onOverlapChange,
   onLiveQaChange,
   rightSidebarExtra,
+  configuredSlotTotal,
+  configuredCategorySlots,
+  populatePlaceholdersRef,
 }: BoothPlannerProps) {
   const supabase = createClient()
 
@@ -619,10 +648,31 @@ export function BoothPlanner({
     })
   }, [])
 
+  const captureSnapshotRef = useCallback((): PlannerSnapshot => {
+    const state = plannerStateRef.current
+    return {
+      rooms: state.rooms,
+      activeRoomId: state.activeRoomId,
+      fakeVendors: state.fakeVendors,
+      vendorTableLengths: state.vendorTableLengths,
+      vendorTableOrientations: state.vendorTableOrientations,
+    }
+  }, [])
+
   const recordHistory = useCallback(() => {
     if (suppressHistoryRef.current || isInitializingRef.current) return
-    setLayoutHistory((h) => pushHistory(h, makeSnapshot()))
-  }, [makeSnapshot])
+    const snapshotRef = captureSnapshotRef()
+    const enqueue =
+      typeof window !== 'undefined' && 'requestIdleCallback' in window
+        ? (cb: () => void) =>
+            (window as Window & {
+              requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number
+            }).requestIdleCallback(cb, { timeout: 200 })
+        : (cb: () => void) => setTimeout(cb, 0)
+    enqueue(() => {
+      setLayoutHistory((h) => pushHistory(h, snapshotRef))
+    })
+  }, [captureSnapshotRef])
 
   const applySnapshot = useCallback((snapshot: PlannerSnapshot) => {
     suppressHistoryRef.current = true
@@ -1013,6 +1063,15 @@ export function BoothPlanner({
     [layoutCells, eventCategoryNames]
   )
 
+  /** Lower-cased names of categories flagged as MLM in the catalog. */
+  const mlmCategoryNamesSet = useMemo(() => {
+    const set = new Set<string>()
+    for (const cat of allCategories) {
+      if (cat.is_mlm && cat.name) set.add(cat.name.toLowerCase())
+    }
+    return set
+  }, [allCategories])
+
   const layoutCapacity = useMemo(
     () =>
       estimateMaxVendorsFit({
@@ -1048,6 +1107,41 @@ export function BoothPlanner({
     return calculateMaxBoothCapacity(floor.netUsableSqFt, unit.sqFt)
   }, [venueWidth, venueLength, venueElementsWithDoors, entrance, baselineTableLengthFt])
 
+  /**
+   * Physical hard ceiling — never exceed what fits on the current grid once
+   * aisles + stroller QA clearances are reserved. Floor area can hint at a
+   * higher number, but the layout engine cannot place more booths than this.
+   */
+  const physicalCapacityCeiling = useMemo(() => {
+    if (layoutCapacity > 0 && maxBoothCapacity > 0) {
+      return Math.min(layoutCapacity, maxBoothCapacity)
+    }
+    return Math.max(layoutCapacity, maxBoothCapacity)
+  }, [layoutCapacity, maxBoothCapacity])
+
+  /**
+   * Displayed "Max booths" — strictly the configured Step 3 slot total when
+   * available, clamped down to the physical ceiling so the number never
+   * promises more than the room can actually hold.
+   */
+  const displayedMaxBooths = useMemo(() => {
+    if (configuredSlotTotal == null || configuredSlotTotal <= 0) {
+      return physicalCapacityCeiling
+    }
+    return physicalCapacityCeiling > 0
+      ? Math.min(configuredSlotTotal, physicalCapacityCeiling)
+      : configuredSlotTotal
+  }, [configuredSlotTotal, physicalCapacityCeiling])
+
+  const capacityClampedByLayout = useMemo(() => {
+    return (
+      configuredSlotTotal != null &&
+      configuredSlotTotal > 0 &&
+      physicalCapacityCeiling > 0 &&
+      configuredSlotTotal > physicalCapacityCeiling
+    )
+  }, [configuredSlotTotal, physicalCapacityCeiling])
+
   const isOneFootGrid = spacingMode === 'one_foot'
   const isTableSpacing = spacingMode === 'table_provided'
   const usesTableUnits = isTableSpacing || isOneFootGrid
@@ -1080,7 +1174,82 @@ export function BoothPlanner({
     toast.success(lock ? 'All fixtures locked' : 'All fixtures unlocked')
   }, [allFixturesLocked, patchActiveRoom, venueElements])
 
+  const handleStripPresetPaint = useCallback(() => {
+    if (venueElements.length === 0 && cellMap.size === 0) {
+      toast.message('Already a bare grid.', { duration: 2200 })
+      return
+    }
+    setShowPatronFlow(false)
+    setSelectedVendorId(null)
+    setLayoutHiddenIds(new Set())
+    patchActiveRoom({ cells: [], venue_elements: [] })
+    setActiveTool('column')
+    toast.success(
+      'Bare grid ready — pick "Wall / Column" to draw your room shape, then add entrance, exit, and fixtures.',
+      { duration: 4000 }
+    )
+  }, [cellMap.size, patchActiveRoom, venueElements.length])
+
+  /**
+   * Reset the LAYOUT_PRESET selection back to the default shell and wipe the
+   * canvas. Restores a fresh perimeter so the coordinator can pick a new
+   * preset or hand-draw their layout from scratch.
+   */
+  const handleClearLayoutPreset = useCallback(() => {
+    setShowPatronFlow(false)
+    setSelectedVendorId(null)
+    setLayoutHiddenIds(new Set())
+    setLayoutPreset('default')
+    patchActiveRoom({
+      cells: [],
+      venue_elements: buildDefaultVenueElements(entrance, gridCols, gridRows),
+    })
+    setActiveTool('vendor')
+    toast.success('Layout preset cleared — canvas reset to a default empty grid', {
+      duration: 3500,
+    })
+  }, [entrance, gridCols, gridRows, patchActiveRoom])
+
   const approvedApps = applications.filter((a) => a.status === 'approved')
+
+  /**
+   * Generic-placeholder claim — when a real vendor is approved their booth
+   * cell takes one of the unassigned "Generic Vendor Booth" placeholders.
+   * For every approved app of category C we retire one matching-category
+   * placeholder so total = realApproved + remainingPlaceholders never
+   * exceeds the configured slot total. Placeholders are FakeVendorInput
+   * entries whose `vendorName === 'Generic Vendor Booth'`.
+   */
+  useEffect(() => {
+    if (fakeVendors.length === 0) return
+    const placeholderCount = fakeVendors.filter(
+      (v) => v.vendorName === 'Generic Vendor Booth'
+    ).length
+    if (placeholderCount === 0) return
+
+    const claimsByCategory = new Map<string, number>()
+    for (const app of approvedApps) {
+      const cat = app.category?.name
+      if (!cat) continue
+      claimsByCategory.set(cat, (claimsByCategory.get(cat) ?? 0) + 1)
+    }
+    if (claimsByCategory.size === 0) return
+
+    setFakeVendors((prev) => {
+      const remaining = new Map(claimsByCategory)
+      let mutated = false
+      const next = prev.filter((v) => {
+        if (v.vendorName !== 'Generic Vendor Booth') return true
+        const left = remaining.get(v.categoryName) ?? 0
+        if (left <= 0) return true
+        remaining.set(v.categoryName, left - 1)
+        mutated = true
+        return false
+      })
+      return mutated ? next : prev
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- claim only on approval changes
+  }, [approvedApps.length, approvedApps.map((a) => a.id).join('|')])
 
   function resolveTableLengthFt(_app: ApplicationInput): number {
     return baselineTableLengthFt
@@ -1680,6 +1849,17 @@ export function BoothPlanner({
         return
       }
       setActiveTool('eraser')
+    },
+    /**
+     * R key — rotate the currently-selected booth 90°. Returns true when
+     * the rotation was consumed so the shortcut layer skips the R-as-eraser
+     * fallback. Tents have a square footprint and are skipped.
+     */
+    onRotateSelected: () => {
+      if (!selectedPlacedBooth) return false
+      if (isTentVendor(selectedPlacedBooth.vendorUnitType)) return false
+      handleRotateTable(selectedPlacedBooth)
+      return true
     },
   })
 
@@ -2486,6 +2666,24 @@ export function BoothPlanner({
         return
       }
 
+      const existing = getElementAt(venueElements, row, col)
+      if (existing && isImmutableVenueElement(existing, gridCols, gridRows)) {
+        const isWall = wallAtCell(row, col, gridCols, gridRows) !== null
+        toast.message(
+          isWall
+            ? 'That cell is a perimeter wall.'
+            : 'That cell is part of the locked venue shell.',
+          {
+            id: 'paint-blocked',
+            description: isWall
+              ? 'Walls define the room boundary. Switch to a smaller venue preset on Step 1, or paint inside the walls.'
+              : 'Use the Eraser tool (R) to clear preset paint, or pick the Blank preset on Step 1 to draw your own area.',
+            duration: 3500,
+          }
+        )
+        return
+      }
+
       patchActiveRoomFn((room) => ({
         venue_elements: paintCells(room.venue_elements, [{ row, col }], activeTool, undefined, {
           cols: gridCols,
@@ -2493,7 +2691,7 @@ export function BoothPlanner({
         }),
       }))
     },
-    [activeTool, customLabelDraft, gridCols, gridRows, canvasRows, patchActiveRoomFn, cellMap, handleUnplaceVendor, entrance]
+    [activeTool, customLabelDraft, gridCols, gridRows, canvasRows, patchActiveRoomFn, cellMap, handleUnplaceVendor, entrance, venueElements]
   )
 
   const onCellPointerDown = useCallback(
@@ -2628,9 +2826,10 @@ export function BoothPlanner({
       if (activeTool !== 'vendor') return
       const existing = cellMap.get(`${targetRow}-${targetCol}`)
       if (existing) {
-        handleUnplaceVendor(existing)
-        setSelectedVendorId(null)
-        toast.message(`${existing.vendorName} removed from canvas`, { duration: 1500 })
+        // Click an already-placed booth → select it (drag to move, R to
+        // rotate, sidebar ↩ to unplace). Clicking the same cell again
+        // toggles the selection off.
+        setSelectedVendorId((prev) => (prev === existing.id ? null : existing.id))
         return
       }
       const toPlace = selectedVendorId
@@ -2645,7 +2844,7 @@ export function BoothPlanner({
       setSelectedVendorId(null)
       toast.success(`${toPlace.vendorName} placed`, { duration: 1500 })
     },
-    [activeTool, cellMap, selectedVendorId, cells, overflow, canPlaceCellAt, placeCellAt, handleUnplaceVendor]
+    [activeTool, cellMap, selectedVendorId, cells, overflow, canPlaceCellAt, placeCellAt]
   )
 
   const [dragHoverCell, setDragHoverCell] = useState<{ row: number; col: number } | null>(null)
@@ -2871,6 +3070,84 @@ export function BoothPlanner({
     return handleSave()
   }
 
+  /**
+   * Slot-to-booth placeholder generator. Reads the Step 3 category caps and
+   * seeds the canvas with one "Generic Vendor Booth" placeholder per slot,
+   * preserving categoryName so real vendors can later claim a placeholder
+   * matching their primary category.
+   *
+   * Hard cap: total placeholders never exceed the absolute physical ceiling
+   * of the current room dimensions once aisle + stroller QA reservations
+   * have been deducted (`physicalCapacityCeiling`).
+   */
+  async function handlePopulateGenericPlaceholders(): Promise<boolean> {
+    const slots = configuredCategorySlots ?? []
+    if (slots.length === 0) {
+      toast.message('No category caps configured yet — fill Step 3 first', { duration: 3500 })
+      return false
+    }
+
+    const totalConfigured = slots.reduce((sum, s) => sum + Math.max(0, s.maxSlots), 0)
+    if (totalConfigured <= 0) {
+      toast.message('No slots to place — set at least one category max in Step 3', {
+        duration: 3500,
+      })
+      return false
+    }
+
+    const ceiling = physicalCapacityCeiling > 0 ? physicalCapacityCeiling : totalConfigured
+    const targetCount = Math.min(totalConfigured, ceiling)
+
+    // Round-robin draw across categories so the canvas isn't dominated by
+    // a single category when the physical ceiling forces us to drop slots.
+    const buckets = slots
+      .filter((s) => s.maxSlots > 0)
+      .map((s) => ({ categoryName: s.categoryName, remaining: s.maxSlots }))
+
+    const placeholders: FakeVendorInput[] = []
+    let categoryCursor = 0
+    let safety = 0
+    while (placeholders.length < targetCount && buckets.some((b) => b.remaining > 0)) {
+      if (safety++ > targetCount * 4) break
+      const bucket = buckets[categoryCursor % buckets.length]
+      categoryCursor += 1
+      if (bucket.remaining <= 0) continue
+      bucket.remaining -= 1
+      placeholders.push({
+        id: `${FAKE_VENDOR_ID_PREFIX}placeholder-${crypto.randomUUID()}`,
+        vendorName: 'Generic Vendor Booth',
+        categoryName: bucket.categoryName,
+        vendorUnitType: 'table',
+        tableLengthFt: baselineTableLengthFt,
+      })
+    }
+
+    if (placeholders.length === 0) {
+      toast.message('No room to place generic placeholders right now', { duration: 3000 })
+      return false
+    }
+
+    handleClearBooths()
+    setFakeVendors(placeholders)
+
+    const dropped = totalConfigured - placeholders.length
+    const summary =
+      dropped > 0
+        ? `${placeholders.length} Generic Vendor Booth placeholders placed — ${dropped} skipped to honour aisle / stroller QA limits`
+        : `${placeholders.length} Generic Vendor Booth placeholders placed across ${buckets.length} categories`
+
+    setLastFillSummary(summary)
+    await handleAutoPlan(buildAutoPlanVendorQueueFromFake(placeholders))
+
+    // Honour the Blank Slate Preset Rule — handleAutoPlan flipped the picker
+    // to `modified_loop` to drive layout. Reset the visual selection back to
+    // `'default'` so no preset card is highlighted on first canvas entry.
+    setLayoutPreset('default')
+
+    toast.success(summary, { duration: 5000 })
+    return handleSave()
+  }
+
   useEffect(() => {
     if (saveLayoutRef) {
       saveLayoutRef.current = handleSave
@@ -2880,6 +3157,9 @@ export function BoothPlanner({
     }
     if (saveBlankLayoutRef) {
       saveBlankLayoutRef.current = handleSaveBlankLayout
+    }
+    if (populatePlaceholdersRef) {
+      populatePlaceholdersRef.current = handlePopulateGenericPlaceholders
     }
   })
 
@@ -3221,6 +3501,7 @@ export function BoothPlanner({
                 onChange={handleLayoutPresetChange}
                 disabled={layoutPresetApplying}
                 applying={layoutPresetApplying}
+                onClear={handleClearLayoutPreset}
               />
             </div>
             {usesTableUnits && (
@@ -3378,6 +3659,7 @@ export function BoothPlanner({
                   onUnplace={handleUnplaceVendor}
                   onRemove={handleRemoveVendorFromPlan}
                   onDragStart={handleUnplacedDragStart}
+                  mlmCategoryNames={mlmCategoryNamesSet}
                 />
               </>
             }
@@ -3389,8 +3671,9 @@ export function BoothPlanner({
                   gridRows={gridRows}
                   placedCount={placed.length}
                   unplacedCount={overflow.length}
-                  maxBoothCapacity={maxBoothCapacity}
+                  maxBoothCapacity={displayedMaxBooths}
                   layoutCapacity={layoutCapacity}
+                  capacityClampedByLayout={capacityClampedByLayout}
                   baselineTableLengthFt={baselineTableLengthFt}
                   entrance={entrance}
                   lockedFixtureCount={lockedFixtureCount}
@@ -3404,6 +3687,7 @@ export function BoothPlanner({
                     compact
                     disabled={layoutPresetApplying}
                     applying={layoutPresetApplying}
+                    onClear={handleClearLayoutPreset}
                   />
                 </div>
                 {rightSidebarExtra}
@@ -3488,6 +3772,7 @@ export function BoothPlanner({
                         onUndo={handleUndo}
                         onRedo={handleRedo}
                         onRemove={() => setActiveTool('eraser')}
+                        onStripPresetPaint={handleStripPresetPaint}
                       />
                       <TooltipWrapper text="Auto-place roster vendors using Modified Loop (IKEA) — 15′ entrance buffer, serpentine path, category scattering, premium right-hand bias">
                         <Button
@@ -3865,6 +4150,7 @@ function renderGrid({
   onVendorPlaceClick,
   onUnplaceVendor,
   onRotateTable,
+  selectedVendorId,
   cellWidthFt,
   cellLengthFt,
   clearanceOverlay,
@@ -3894,6 +4180,12 @@ function renderGrid({
   onVendorPlaceClick: (col: number, row: number) => void
   onUnplaceVendor: (cell: BoothCell) => void
   onRotateTable: (cell: BoothCell) => void
+  /**
+   * Currently focused booth on the canvas. When a placed cell matches this
+   * id we render a forest selection ring so the coordinator sees the
+   * boundary state for drag / rotate / sidebar actions.
+   */
+  selectedVendorId?: string | null
   cellWidthFt: number
   cellLengthFt: number
   clearanceOverlay?: DualRingOverlayResult | null
@@ -4011,15 +4303,22 @@ function renderGrid({
                 ),
               },
             })}
-            className={`relative rounded-lg p-1 pt-4 flex flex-col justify-between overflow-hidden select-none transition-shadow hover:shadow-md ${booth.categoryColor} ${boothTypeBorder} ${
-              isFakeVendorId(booth.id) ? 'ring-2 ring-violet-400 ring-offset-1' : ''
-            } ${
+            className={cn(
+              'relative rounded-lg p-1 pt-4 flex flex-col justify-between overflow-hidden select-none transition-shadow hover:shadow-md',
+              booth.categoryColor,
+              boothTypeBorder,
+              isFakeVendorId(booth.id) && 'ring-2 ring-violet-400 ring-offset-1',
+              /* Active selection state — coordinator clicked this cell on
+                 the canvas. Forest ring wins over the violet placeholder
+                 ring so the focus boundary is unambiguous. */
+              selectedVendorId === booth.id &&
+                'ring-2 ring-forest ring-offset-2 shadow-lg z-[5]',
               activeTool === 'vendor'
                 ? 'cursor-grab active:cursor-grabbing'
                 : activeTool === 'eraser'
                   ? 'pointer-events-auto cursor-pointer hover:ring-2 hover:ring-red-300'
                   : 'pointer-events-none opacity-90'
-            }`}
+            )}
           >
             {(activeTool === 'vendor' || activeTool === 'eraser') && (
               <>

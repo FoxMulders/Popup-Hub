@@ -166,6 +166,22 @@ export async function POST(request: Request) {
     )
   }
 
+  const { data: primaryCategory } = await supabase
+    .from('categories')
+    .select('id, name, is_broad')
+    .eq('id', passport.primary_category_id)
+    .maybeSingle()
+
+  if (!primaryCategory || primaryCategory.is_broad !== true) {
+    return NextResponse.json(
+      {
+        error:
+          'Your Vendor Passport primary category is too specific. Edit your passport and pick a broader bucket (e.g. Artisan Crafts, Food & Beverage) before applying.',
+      },
+      { status: 400 }
+    )
+  }
+
   if (!event) {
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }

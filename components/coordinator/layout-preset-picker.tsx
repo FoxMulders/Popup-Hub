@@ -2,7 +2,7 @@
 
 import { LAYOUT_AI_PRESET_OPTIONS, type LayoutPreset } from '@/lib/booth-planner/layout-presets'
 import { cn } from '@/lib/utils'
-import { Check } from 'lucide-react'
+import { Check, Eraser } from 'lucide-react'
 
 interface LayoutPresetPickerProps {
   value: LayoutPreset
@@ -13,7 +13,15 @@ interface LayoutPresetPickerProps {
   inline?: boolean
   disabled?: boolean
   applying?: boolean
+  /**
+   * Optional handler for the "Clear Layout Preset" action. When provided,
+   * renders a button below the preset list that fully resets the canvas
+   * shell back to a default empty grid and unselects any active preset.
+   */
+  onClear?: () => void
 }
+
+const CLEARED_PRESET: LayoutPreset = 'default'
 
 export function LayoutPresetPicker({
   value,
@@ -22,6 +30,7 @@ export function LayoutPresetPicker({
   inline = false,
   disabled = false,
   applying = false,
+  onClear,
 }: LayoutPresetPickerProps) {
   const options = LAYOUT_AI_PRESET_OPTIONS
 
@@ -54,8 +63,9 @@ export function LayoutPresetPicker({
           Layout preset
         </h3>
         <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
-          AI auto-plan shell — paints aisles and clears booths when changed. Use Remove (R) to
-          erase individual preset cells.
+          No preset is active by default — pick one to auto-paint aisles, or hand-draw your own
+          layout. Click <span className="font-semibold">Clear layout preset</span> to wipe the
+          canvas back to a blank shell.
         </p>
       </div>
 
@@ -92,6 +102,26 @@ export function LayoutPresetPicker({
           )
         })}
       </div>
+
+      {onClear ? (
+        <button
+          type="button"
+          disabled={disabled || applying}
+          onClick={onClear}
+          className={cn(
+            /* Editorial secondary action — soft cream surface, dark text, terracotta hover. */
+            'mt-1 inline-flex items-center justify-center gap-1.5 rounded-lg border-2 border-stone-300 bg-cream px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground transition-colors',
+            'hover:border-terracotta-500 hover:bg-terracotta-50 hover:text-terracotta-800',
+            'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-stone-300 disabled:hover:bg-cream disabled:hover:text-foreground'
+          )}
+          title="Reset preset selection and wipe the canvas to a default empty grid"
+          aria-label="Clear layout preset"
+          aria-pressed={value === CLEARED_PRESET}
+        >
+          <Eraser className="h-3.5 w-3.5" aria-hidden />
+          Clear layout preset
+        </button>
+      ) : null}
     </div>
   )
 }

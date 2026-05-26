@@ -19,6 +19,12 @@ export interface FloorPlanStatsPanelProps {
   unplacedCount: number
   maxBoothCapacity: number
   layoutCapacity: number
+  /**
+   * True when the configured Step 3 slot total had to be clamped down to the
+   * physical layout ceiling. Surfaces a small inline note so coordinators
+   * understand the displayed cap is not the raw slot total.
+   */
+  capacityClampedByLayout?: boolean
   baselineTableLengthFt: number
   entrance: string
   lockedFixtureCount: number
@@ -34,6 +40,7 @@ export function FloorPlanStatsPanel({
   unplacedCount,
   maxBoothCapacity,
   layoutCapacity,
+  capacityClampedByLayout = false,
   baselineTableLengthFt,
   entrance,
   lockedFixtureCount,
@@ -72,6 +79,12 @@ export function FloorPlanStatsPanel({
             <span className="block text-xs mt-0.5 text-muted-foreground">
               ~{layoutCapacity} fit with 8′ aisles · {baselineTableLengthFt}′ baseline table
             </span>
+            {capacityClampedByLayout ? (
+              <span className="mt-1 block rounded border border-harvest-300 bg-harvest-50 px-1.5 py-1 text-[10px] font-semibold text-harvest-900">
+                Clamped to physical layout ceiling — Step 3 slots exceed what fits with required
+                aisles.
+              </span>
+            ) : null}
           </p>
         </li>
         <li>

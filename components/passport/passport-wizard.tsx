@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -44,10 +44,28 @@ export function PassportWizard({
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
 
+  const broadCategories = useMemo(
+    () => sortedCategories.filter((c) => c.is_broad === true),
+    [sortedCategories]
+  )
+  const nicheCategories = useMemo(
+    () => sortedCategories.filter((c) => c.is_broad !== true),
+    [sortedCategories]
+  )
+
   const [businessName, setBusinessName] = useState(existing?.business_name ?? '')
   const [bio, setBio] = useState(existing?.bio ?? '')
+  const [primaryCategoryId, setPrimaryCategoryId] = useState<string>(() => {
+    const existingPrimary = existing?.primary_category_id ?? ''
+    if (existingPrimary && broadCategories.some((c) => c.id === existingPrimary)) {
+      return existingPrimary
+    }
+    return ''
+  })
   const [categoryIds, setCategoryIds] = useState<string[]>(() =>
-    resolvePassportCategoryIds(existing ?? {})
+    resolvePassportCategoryIds(existing ?? {}).filter(
+      (id) => id !== (existing?.primary_category_id ?? '')
+    )
   )
   const [taxId, setTaxId] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
@@ -76,8 +94,8 @@ export function PassportWizard({
       toast.error('Business name is required')
       return
     }
-    if (categoryIds.length === 0) {
-      toast.error('Select at least one business category')
+    if (!primaryCategoryId) {
+      toast.error('Pick a primary category — this fills your booth slot at markets.')
       return
     }
     setLoading(true)
@@ -98,7 +116,8 @@ export function PassportWizard({
         userId,
         businessName,
         bio,
-        categoryIds,
+        primaryCategoryId,
+        categoryIds: [primaryCategoryId, ...categoryIds.filter((id) => id !== primaryCategoryId)],
         logoUrl,
         itemImageUrls: uploadedItemUrls,
         taxIdEncrypted: taxId ? btoa(taxId) : existing?.tax_id_encrypted ?? null,
@@ -243,47 +262,92 @@ export function PassportWizard({
 
           {/* Step 1: Category */}
           {step === 1 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5">
-                <Label>Business Categories *</Label>
-                <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    Select every category that describes what you sell. Coordinators use this to match you to the right booth slots.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Select all categories that apply to your business.
-              </p>
-              <div className="grid max-h-72 grid-cols-1 gap-2 overflow-y-auto rounded-xl border p-3 sm:grid-cols-2">
-                {sortedCategories.map((cat) => {
-                  const selected = categoryIds.includes(cat.id)
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setCategoryIds((prev) => toggleCategoryId(prev, cat.id))}
-                      className={cn(
-                        'rounded-lg border px-3 py-2 text-left text-sm transition',
-                        selected
-                          ? 'border-harvest-400 bg-harvest-50 font-medium text-harvest-800'
-                          : 'border-stone-200 bg-white text-foreground hover:border-harvest-200'
-                      )}
-                      aria-pressed={selected}
-                    >
-                      {cat.name}
-                    </button>
-                  )
-                })}
-              </div>
-              {categoryIds.length > 0 ? (
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Label>Primary category *</Label>
+                  <Tooltip>
+                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      Pick the broader bucket that best describes your business. This is what fills your booth slot when a coordinator approves your application.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  {categoryIds.length} categor{categoryIds.length === 1 ? 'y' : 'ies'} selected
+                  Choose one broad bucket. This is what consumes a category slot at markets.
                 </p>
-              ) : (
-                <p className="text-xs text-harvest-700">Choose at least one category to continue.</p>
-              )}
+                <div className="grid grid-cols-1 gap-2 rounded-xl border p-3 sm:grid-cols-2">
+                  {broadCategories.map((cat) => {
+                    const selected = primaryCategoryId === cat.id
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setPrimaryCategoryId(cat.id)}
+                        className={cn(
+                          'rounded-lg border px-3 py-2 text-left text-sm transition',
+                          selected
+                            ? 'border-forest bg-forest/10 font-semibold text-forest ring-2 ring-forest/30'
+                            : 'border-stone-200 bg-white text-foreground hover:border-forest/40'
+                        )}
+                        aria-pressed={selected}
+                        role="radio"
+                        aria-checked={selected}
+                      >
+                        {cat.name}
+                      </button>
+                    )
+                  })}
+                </div>
+                {primaryCategoryId ? null : (
+                  <p className="text-xs text-harvest-700">Pick a primary to continue.</p>
+                )}
+              </div>
+
+              {nicheCategories.length > 0 ? (
+                <div className="space-y-2 border-t pt-4">
+                  <div className="flex items-center gap-1.5">
+                    <Label>Specific tags (optional)</Label>
+                    <Tooltip>
+                      <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        Add narrower tags so shoppers can find you in search filters. These do not consume booth slots.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Help shoppers discover you. These are search tags and do not consume a category slot.
+                  </p>
+                  <div className="grid max-h-60 grid-cols-1 gap-2 overflow-y-auto rounded-xl border p-3 sm:grid-cols-2">
+                    {nicheCategories.map((cat) => {
+                      const selected = categoryIds.includes(cat.id)
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() =>
+                            setCategoryIds((prev) => toggleCategoryId(prev, cat.id))
+                          }
+                          className={cn(
+                            'rounded-lg border px-3 py-2 text-left text-sm transition',
+                            selected
+                              ? 'border-harvest-400 bg-harvest-50 font-medium text-harvest-800'
+                              : 'border-stone-200 bg-white text-foreground hover:border-harvest-200'
+                          )}
+                          aria-pressed={selected}
+                        >
+                          {cat.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {categoryIds.length > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {categoryIds.length} tag{categoryIds.length === 1 ? '' : 's'} selected
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -407,7 +471,7 @@ export function PassportWizard({
                 className=""
                 disabled={
                   (step === 0 && !businessName.trim()) ||
-                  (step === 1 && categoryIds.length === 0)
+                  (step === 1 && !primaryCategoryId)
                 }
               >
                 Next

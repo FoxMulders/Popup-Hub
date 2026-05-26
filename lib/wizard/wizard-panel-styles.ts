@@ -61,7 +61,22 @@ export const WIZARD_TOGGLE_OPTION_INACTIVE = 'text-foreground hover:bg-canvas'
 export const WIZARD_DRAFT_BADGE =
   'inline-flex items-center rounded-md border border-stone-200 bg-harvest-50 px-3 py-1 text-xs font-heading font-semibold uppercase tracking-wide text-muted-foreground'
 
-export const WIZARD_BTN_PRIMARY = 'min-h-11 gap-1.5 transition-all duration-200'
+/**
+ * High-contrast wizard primary button — luminous cream surface with bold
+ * espresso text. Designed to override Button's default `bg-primary` variant
+ * with `!` Tailwind important so it commands visual priority across the
+ * wizard (Open Floor Plan Canvas, Save & Deploy, Add, etc.). Contrast ratio
+ * espresso (#1f1f1e) on cream (#fffdf9) is ~17:1 which clears WCAG AAA.
+ */
+export const WIZARD_BTN_PRIMARY = cn(
+  'min-h-11 px-4 gap-1.5 text-sm font-bold tracking-tight transition-all duration-200',
+  '!bg-cream !text-foreground',
+  'border-2 !border-espresso',
+  '!shadow-[var(--shadow-market)]',
+  'hover:!bg-canvas hover:!text-foreground',
+  'active:translate-y-0.5 active:!shadow-none',
+  'disabled:!opacity-60 disabled:cursor-not-allowed'
+)
 
 export const WIZARD_BTN_SECONDARY = 'min-h-11 gap-1.5 transition-all duration-200'
 

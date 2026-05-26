@@ -114,6 +114,13 @@ export interface Category {
   icon_url: string | null
   is_mlm: boolean
   requires_documentation?: boolean
+  /**
+   * Curated "broad" buckets vendors must pick as their passport primary
+   * (e.g. Artisan Crafts, Food & Beverage, Home Decor). Niche tags
+   * (Macrame & Weaving, Honey & Preserves, etc.) have is_broad=false and
+   * may only be used as secondaries / discovery filters / advanced caps.
+   */
+  is_broad?: boolean
 }
 
 export interface VendorPassport {

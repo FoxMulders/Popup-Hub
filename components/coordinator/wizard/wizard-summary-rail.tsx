@@ -48,7 +48,9 @@ export function WizardSummaryRail({
     <aside
       className={cn(
         WIZARD_PANEL,
-        'sticky top-6 h-fit p-4 space-y-4 w-full lg:w-72 shrink-0',
+        // Wizard layout now stacks vertically so the rail spans the full
+        // timeline width — drop the lg:w-72 sidebar constraint to align.
+        'h-fit p-4 space-y-4 w-full',
         className
       )}
       aria-label="Wizard selection summary"

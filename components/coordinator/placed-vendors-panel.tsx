@@ -3,6 +3,7 @@
 import { X } from 'lucide-react'
 import { formatBoothFootprint } from '@/lib/booth-planner/grid-scale'
 import { isTentVendor, vendorUnitLabel } from '@/lib/booth-planner/vendor-unit-types'
+import { cn } from '@/lib/utils'
 import type { BoothCell } from '@/types/database'
 
 interface PlacedVendorsPanelProps {
@@ -14,6 +15,8 @@ interface PlacedVendorsPanelProps {
   onSelect: (id: string) => void
   onUnplace: (cell: BoothCell) => void
   onRemove: (cell: BoothCell) => void
+  /** Lower-case names of categories flagged is_mlm on the catalog. */
+  mlmCategoryNames?: Set<string>
   /** Full-width embed inside floor-plan inventory tabs. */
   embedded?: boolean
 }
@@ -21,6 +24,9 @@ interface PlacedVendorsPanelProps {
 function boothLabel(boothNumber: number): string {
   return boothNumber > 0 ? `#${boothNumber}` : 'Unassigned'
 }
+
+const ROW_STRIPE_EVEN = 'bg-card'
+const ROW_STRIPE_ODD = 'bg-stone-50'
 
 export function PlacedVendorsPanel({
   vendors,
@@ -31,6 +37,7 @@ export function PlacedVendorsPanel({
   onSelect,
   onUnplace,
   onRemove,
+  mlmCategoryNames,
   embedded = false,
 }: PlacedVendorsPanelProps) {
   if (vendors.length === 0) return null
@@ -47,18 +54,24 @@ export function PlacedVendorsPanel({
         </p>
       </div>
       <div className="space-y-2 max-h-64 overflow-y-auto">
-        {vendors.map((cell) => {
+        {vendors.map((cell, index) => {
           const tableDirection =
             !isTentVendor(cell.vendorUnitType) && isOneFootGrid && cell.tableOrientation
               ? cell.tableOrientation
               : null
+          const isMlm = Boolean(
+            mlmCategoryNames && cell.categoryName && mlmCategoryNames.has(cell.categoryName.toLowerCase())
+          )
+          const stripe = index % 2 === 0 ? ROW_STRIPE_EVEN : ROW_STRIPE_ODD
           return (
             <div
               key={cell.id}
               onClick={() => onSelect(cell.id)}
-              className={`relative rounded-lg border px-2 py-2 pr-14 text-xs cursor-pointer transition-shadow ${
-                cell.categoryColor
-              } ${selectedId === cell.id ? 'ring-2 ring-forest shadow-md' : 'hover:shadow-sm'}`}
+              className={cn(
+                'relative rounded-lg border px-2 py-2 pr-14 text-xs cursor-pointer transition-shadow',
+                cell.categoryColor || stripe,
+                selectedId === cell.id ? 'ring-2 ring-forest shadow-md' : 'hover:shadow-sm'
+              )}
             >
               <div className="absolute top-1 right-1 flex gap-0.5">
                 <button
@@ -88,7 +101,18 @@ export function PlacedVendorsPanel({
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <p className="font-semibold truncate">{cell.vendorName}</p>
+              <p className="flex items-center gap-1.5 font-semibold">
+                <span className="truncate">{cell.vendorName}</span>
+                {isMlm ? (
+                  <span
+                    className="shrink-0 rounded bg-terracotta-100 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-terracotta-800 ring-1 ring-terracotta-200/80"
+                    title="Multi-Level Marketing brand"
+                    aria-label="MLM category"
+                  >
+                    MLM
+                  </span>
+                ) : null}
+              </p>
               <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[10px] opacity-80 leading-snug">
                 <dt className="text-muted-foreground">Booth</dt>
                 <dd className="truncate tabular-nums">{boothLabel(cell.boothNumber)}</dd>

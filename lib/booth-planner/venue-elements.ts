@@ -58,7 +58,13 @@ export const VENUE_ELEMENT_TOOLS: {
     shortLabel: 'Welcome',
     description: 'Guest welcome / information booth (not a vendor space)',
   },
-  { type: 'column', label: 'Column / Obstacle', shortLabel: 'Column', description: 'Structural column or pillar' },
+  {
+    type: 'column',
+    label: 'Wall / Column',
+    shortLabel: 'Wall',
+    description:
+      'Paint walls or structural columns anywhere — combine cells to outline your custom usable area before placing fixtures',
+  },
   { type: 'custom_label', label: 'Custom Label', shortLabel: 'Label', description: 'Named area (you choose the text)' },
 ]
 

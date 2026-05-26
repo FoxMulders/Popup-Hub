@@ -18,6 +18,8 @@ interface FloorPlanInventoryPanelProps {
   onUnplace: (cell: BoothCell) => void
   onRemove: (cell: BoothCell) => void
   onDragStart: (e: React.DragEvent, cell: BoothCell) => void
+  /** Lower-case names of categories flagged is_mlm in the catalog. */
+  mlmCategoryNames?: Set<string>
 }
 
 export function FloorPlanInventoryPanel({
@@ -32,6 +34,7 @@ export function FloorPlanInventoryPanel({
   onUnplace,
   onRemove,
   onDragStart,
+  mlmCategoryNames,
 }: FloorPlanInventoryPanelProps) {
   const [tab, setTab] = useState<'unplaced' | 'placed'>(unplaced.length > 0 ? 'unplaced' : 'placed')
 
@@ -83,6 +86,7 @@ export function FloorPlanInventoryPanel({
             onSelect={onSelect}
             onDragStart={onDragStart}
             onRemove={onRemove}
+            mlmCategoryNames={mlmCategoryNames}
           />
         ) : null}
         {tab === 'placed' && placed.length > 0 ? (
@@ -96,6 +100,7 @@ export function FloorPlanInventoryPanel({
             onSelect={onSelect}
             onUnplace={onUnplace}
             onRemove={onRemove}
+            mlmCategoryNames={mlmCategoryNames}
           />
         ) : null}
       </div>

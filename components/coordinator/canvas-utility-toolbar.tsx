@@ -1,6 +1,6 @@
 'use client'
 
-import { Eraser, Lock, Redo2, Trash2, Undo2 } from 'lucide-react'
+import { Eraser, Lock, PaintBucket, Redo2, Trash2, Undo2 } from 'lucide-react'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +12,7 @@ interface CanvasUtilityToolbarProps {
   onUndo: () => void
   onRedo: () => void
   onRemove: () => void
+  onStripPresetPaint?: () => void
 }
 
 const UTILITY_BTN =
@@ -25,6 +26,7 @@ export function CanvasUtilityToolbar({
   onUndo,
   onRedo,
   onRemove,
+  onStripPresetPaint,
 }: CanvasUtilityToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Canvas utilities">
@@ -58,6 +60,14 @@ export function CanvasUtilityToolbar({
           Remove
         </button>
       </TooltipWrapper>
+      {onStripPresetPaint ? (
+        <TooltipWrapper text="Wipe everything to a bare grid so you can draw your own walls (Wall / Column tool) and outline a custom usable area before placing fixtures">
+          <button type="button" onClick={onStripPresetPaint} className={UTILITY_BTN}>
+            <PaintBucket className="h-3.5 w-3.5" />
+            Bare grid
+          </button>
+        </TooltipWrapper>
+      ) : null}
     </div>
   )
 }

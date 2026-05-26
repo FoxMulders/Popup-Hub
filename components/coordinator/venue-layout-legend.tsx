@@ -23,7 +23,7 @@ const CATALOG_DISPLAY_LABEL: Partial<Record<LayoutTool, string>> = {
   food_court: 'Food/Concession',
   seating: 'Seating/Tables',
   exit: 'Emerg. Exit X',
-  column: 'Column W',
+  column: 'Wall / Column W',
 }
 
 /** Tools whose shortcut is merged into the display label (no separate kbd badge). */

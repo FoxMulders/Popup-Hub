@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Trash2, Plus, HelpCircle, Sparkles } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import type { Category } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import { TABLE_LENGTH_OPTIONS_FT } from '@/lib/booth-planner/table-space'
 import { selectValueOrNull } from '@/lib/wizard/wizard-autosave'
+import { WIZARD_BTN_PRIMARY } from '@/lib/wizard/wizard-panel-styles'
 import {
   applyMlmLimitRules,
   clampMlmMaxSlots,
@@ -58,14 +61,46 @@ export function CategoryLimitEditor({
   const [slots, setSlots] = useState(DEFAULT_NEW_SLOTS)
   const [priceDollars, setPriceDollars] = useState(0)
   const [tableLengthFt, setTableLengthFt] = useState<number | ''>('')
+  const [showNicheCaps, setShowNicheCaps] = useState(() =>
+    value.some((v) => {
+      const cat = categories.find((c) => c.id === v.categoryId)
+      return cat ? cat.is_broad !== true : false
+    })
+  )
 
   const usedCategoryIds = new Set(value.map((v) => v.categoryId))
   const availableCategories = useMemo(
     () =>
       categories
-        .filter((c) => !usedCategoryIds.has(c.id) && (allowMlm || !c.is_mlm))
+        .filter(
+          (c) =>
+            !usedCategoryIds.has(c.id) &&
+            (allowMlm || !c.is_mlm) &&
+            (showNicheCaps || c.is_broad === true)
+        )
+        .sort((a, b) => compareCategoryNames(a.name, b.name)),
+    [categories, value, allowMlm, showNicheCaps]
+  )
+
+  const broadCategories = useMemo(
+    () =>
+      categories
+        .filter(
+          (c) => !usedCategoryIds.has(c.id) && (allowMlm || !c.is_mlm) && c.is_broad === true
+        )
         .sort((a, b) => compareCategoryNames(a.name, b.name)),
     [categories, value, allowMlm]
+  )
+
+  const broadById = useMemo(
+    () => new Map(categories.filter((c) => c.is_broad === true).map((c) => [c.id, c])),
+    [categories]
+  )
+
+  /** Lookup: which category ids are flagged is_mlm for badging in the row. */
+  const mlmCategoryIds = useMemo(
+    () => new Set(categories.filter((c) => c.is_mlm).map((c) => c.id)),
+    [categories]
   )
 
   const limitsWithNames = useMemo(
@@ -109,7 +144,7 @@ export function CategoryLimitEditor({
   }
 
   function addOneOfEveryCategory() {
-    const additions: CategoryLimit[] = availableCategories.map((cat) => ({
+    const additions: CategoryLimit[] = broadCategories.map((cat) => ({
       categoryId: cat.id,
       categoryName: cat.name,
       maxSlots: 1,
@@ -157,11 +192,11 @@ export function CategoryLimitEditor({
 
   return (
     <div className="space-y-4">
-      {availableCategories.length > 0 && (
+      {broadCategories.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-canvas/60 px-3 py-2">
           <p className="text-xs text-muted-foreground">
             <strong className="font-semibold text-foreground">Quick start:</strong> add one of every
-            category at 1 slot each. Edit and increase any of them after.
+            broad category at 1 slot each. Edit and increase any of them after.
           </p>
           <Button
             type="button"
@@ -171,10 +206,34 @@ export function CategoryLimitEditor({
             onClick={addOneOfEveryCategory}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Add one of every category ({availableCategories.length})
+            Add one of every broad category ({broadCategories.length})
           </Button>
         </div>
       )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-stone-200 bg-card px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <Label htmlFor="show-niche-caps" className="text-xs font-medium text-foreground">
+            Advanced: cap niche tags
+          </Label>
+          <Tooltip>
+            <TooltipTrigger type="button">
+              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              By default, slots match vendor primary categories (broad buckets). Turn this on to
+              additionally cap a specific niche tag (e.g. only allow 1 Macrame inside Artisan
+              Crafts). Niche caps act as sub-limits on top of broad slots.
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <Switch
+          id="show-niche-caps"
+          checked={showNicheCaps}
+          onCheckedChange={setShowNicheCaps}
+          aria-label="Show niche category caps"
+        />
+      </div>
 
       {/* Existing limits table */}
       {value.length > 0 && (
@@ -215,15 +274,54 @@ export function CategoryLimitEditor({
                 <th className="w-12" />
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-stone-200/60">
               {sortedLimits.map((limit, index) => {
                 const singleSlotLocked = allowMlm && isSingleSlotMlmLimit(limit, categories)
+                const isMlmRow = mlmCategoryIds.has(limit.categoryId)
                 return (
-                <tr key={`${limit.categoryId}-${index}`} className="bg-card">
+                <tr
+                  key={`${limit.categoryId}-${index}`}
+                  className={cn(
+                    'transition-colors',
+                    /* Editorial zebra striping — soft 4% canvas tint, no aggressive coloring */
+                    index % 2 === 0 ? 'bg-card' : 'bg-canvas/40'
+                  )}
+                >
                   <td className="px-4 py-2.5">
-                    <Badge variant="outline" className="font-medium">
-                      {limit.categoryName}
-                    </Badge>
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="font-medium">
+                        {limit.categoryName}
+                      </Badge>
+                      {isMlmRow ? (
+                        <Tooltip>
+                          <TooltipTrigger type="button">
+                            <span
+                              className="rounded bg-terracotta-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-terracotta-800 ring-1 ring-terracotta-200/80"
+                              aria-label="Multi-Level Marketing category"
+                            >
+                              MLM
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            Multi-Level Marketing brand — booth approval is capped globally to
+                            keep the market diverse.
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                      {broadById.has(limit.categoryId) ? null : (
+                        <Tooltip>
+                          <TooltipTrigger type="button">
+                            <span className="rounded bg-stone-200 px-1 text-[10px] font-semibold uppercase tracking-wide text-stone-700">
+                              Niche
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            Niche cap — sub-limit on top of broad slots. Vendor primaries don&apos;t
+                            consume this directly.
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-2.5">
                     <Input
@@ -408,7 +506,7 @@ export function CategoryLimitEditor({
               type="button"
               onClick={addLimit}
               disabled={!selectedCategoryId || slots <= 0}
-              className="h-11 gap-1.5"
+              className={WIZARD_BTN_PRIMARY}
             >
               <Plus className="h-4 w-4" />
               Add

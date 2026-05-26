@@ -26,6 +26,8 @@ export type PassportSaveInput = {
   userId: string
   businessName: string
   bio?: string
+  /** Vendor primary (must be a broad category id). Falls back to categoryIds[0] for legacy callers. */
+  primaryCategoryId?: string | null
   categoryIds: unknown
   logoUrl: string | null
   itemImageUrls: string[]
@@ -51,16 +53,26 @@ export type PassportSavePayload = {
 
 export function buildPassportSavePayload(input: PassportSaveInput): PassportSavePayload {
   const categoryIds = normalizeCategoryIds(input.categoryIds)
-  if (categoryIds.length === 0) {
-    throw new Error('At least one valid category is required')
+  const primaryCandidate =
+    typeof input.primaryCategoryId === 'string' && isValidUuid(input.primaryCategoryId)
+      ? input.primaryCategoryId
+      : null
+  const primaryCategoryId = primaryCandidate ?? categoryIds[0]
+
+  if (!primaryCategoryId) {
+    throw new Error('A primary category is required')
   }
+
+  const mergedCategoryIds = categoryIds.includes(primaryCategoryId)
+    ? categoryIds
+    : [primaryCategoryId, ...categoryIds]
 
   return {
     user_id: input.userId,
     business_name: input.businessName.trim(),
     bio: input.bio?.trim() ?? '',
-    primary_category_id: categoryIds[0],
-    category_ids: categoryIds,
+    primary_category_id: primaryCategoryId,
+    category_ids: mergedCategoryIds,
     logo_url: input.logoUrl,
     item_image_urls: input.itemImageUrls.slice(0, 6),
     tax_id_encrypted: input.taxIdEncrypted,
