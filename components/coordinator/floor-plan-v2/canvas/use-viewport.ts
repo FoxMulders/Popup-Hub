@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -20,16 +21,41 @@ export interface ViewportState {
   panActive: boolean
 }
 
+export interface ZoomMath {
+  /** Pixels per foot at zoom = 1.0. */
+  basePxPerFt: number
+  /** Padding around the venue rectangle, in feet, on each side. */
+  padFt: number
+  /**
+   * Where to anchor "discrete" zoom changes (buttons, reset, programmatic
+   * setZoom calls). In feet, doc-space. The scroll container is adjusted
+   * so this point sits at the center of the visible viewport after a
+   * zoom change.
+   *
+   * Wheel and pinch zoom override this with a screen-space anchor so the
+   * cursor / finger midpoint remain locked in place — that's the more
+   * natural behavior for those input modalities.
+   */
+  anchorFt: { x: number; y: number }
+}
+
+export interface UseViewportOptions {
+  scrollRef: RefObject<HTMLDivElement | null>
+  initialZoom?: number
+  /**
+   * Read on every zoom event. Returning a fresh value from the closure
+   * (rather than passing as a prop) avoids re-binding the handlers on
+   * every render and lets us pull the *latest* anchor from the host's
+   * selection state without React stale-closure pitfalls.
+   */
+  getZoomMath: () => ZoomMath
+}
+
 export interface ViewportApi extends ViewportState {
   setZoom: (next: number) => void
   zoomIn: () => void
   zoomOut: () => void
   resetZoom: () => void
-  /**
-   * Handlers to attach to the scroll container. Manages middle-mouse +
-   * spacebar pan, wheel zoom (with Ctrl/Cmd), and two-finger pinch zoom
-   * for touch devices.
-   */
   scrollHandlers: {
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void
     onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void
@@ -72,10 +98,31 @@ function distance(a: ActivePointer, b: ActivePointer): number {
   return Math.hypot(dx, dy)
 }
 
-export function useViewport(
-  scrollRef: RefObject<HTMLDivElement | null>,
-  initialZoom = 1
-): ViewportApi {
+/**
+ * Compute the scrollLeft/scrollTop that puts a doc-ft anchor at a
+ * specific local pixel inside the scroll container.
+ *
+ *   visibleScreenPx = (padFt + anchorFt) * pxPerFt - scrollOffset
+ *   ⇒ scrollOffset = (padFt + anchorFt) * pxPerFt - visibleScreenPx
+ *
+ * Negative scroll positions are clamped to 0 — browsers refuse them.
+ */
+function computeScroll(
+  anchorFtX: number,
+  anchorFtY: number,
+  pxPerFt: number,
+  padFt: number,
+  localScreenX: number,
+  localScreenY: number
+): { left: number; top: number } {
+  const left = (padFt + anchorFtX) * pxPerFt - localScreenX
+  const top = (padFt + anchorFtY) * pxPerFt - localScreenY
+  return { left: Math.max(0, left), top: Math.max(0, top) }
+}
+
+export function useViewport(options: UseViewportOptions): ViewportApi {
+  const { scrollRef, initialZoom = 1, getZoomMath } = options
+
   const [zoom, setZoomState] = useState(initialZoom)
   const [isPanning, setIsPanning] = useState(false)
   const [panActive, setPanActive] = useState(false)
@@ -88,32 +135,157 @@ export function useViewport(
     zoomRef.current = zoom
   }, [zoom])
 
+  // Stash the latest math accessor in a ref so the keyboard / wheel /
+  // pointer callbacks always see the current selection-aware anchor
+  // without having `getZoomMath` in their dependency arrays.
+  const getZoomMathRef = useRef(getZoomMath)
+  useEffect(() => {
+    getZoomMathRef.current = getZoomMath
+  }, [getZoomMath])
+
   const activePointers = useRef<Map<number, ActivePointer>>(new Map())
   const panRef = useRef<PanInternal | null>(null)
   const pinchRef = useRef<PinchInternal | null>(null)
   const spaceHeldRef = useRef(false)
 
-  const setZoom = useCallback((next: number) => {
-    setZoomState(clampZoom(next))
-  }, [])
+  /**
+   * Pending scroll, applied in a layout effect after `zoom` updates.
+   *
+   * We can't write scroll synchronously alongside `setZoomState` because
+   * the document's pixel size depends on zoom (the SVG scales with it),
+   * and the new size only exists after React commits. A layout effect
+   * runs after the DOM mutation but before the browser paints, so the
+   * user only sees one repaint at the new zoom with the anchor still
+   * locked in place.
+   */
+  const pendingScrollRef = useRef<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    const target = pendingScrollRef.current
+    if (!target) return
+    const scroll = scrollRef.current
+    if (!scroll) {
+      pendingScrollRef.current = null
+      return
+    }
+    scroll.scrollLeft = target.left
+    scroll.scrollTop = target.top
+    pendingScrollRef.current = null
+  }, [scrollRef, zoom])
 
-  const zoomIn = useCallback(() => setZoom(zoomRef.current + ZOOM_STEP * 4), [
-    setZoom,
-  ])
-  const zoomOut = useCallback(
-    () => setZoom(zoomRef.current - ZOOM_STEP * 4),
-    [setZoom]
+  /**
+   * Apply a zoom change anchored to a screen-local pixel position
+   * inside the scroll container. The doc-ft point currently under that
+   * pixel stays under that pixel after the zoom commits.
+   */
+  const applyZoomAtScreen = useCallback(
+    (nextZoom: number, localScreenX: number, localScreenY: number) => {
+      const scroll = scrollRef.current
+      const oldZoom = zoomRef.current
+      const clamped = clampZoom(nextZoom)
+      if (clamped === oldZoom) return
+      if (!scroll) {
+        setZoomState(clamped)
+        return
+      }
+      const math = getZoomMathRef.current()
+      const oldPxPerFt = math.basePxPerFt * oldZoom
+      const newPxPerFt = math.basePxPerFt * clamped
+
+      // Doc-ft point currently under (localScreenX, localScreenY).
+      const innerPxX = scroll.scrollLeft + localScreenX
+      const innerPxY = scroll.scrollTop + localScreenY
+      const anchorFtX = innerPxX / oldPxPerFt - math.padFt
+      const anchorFtY = innerPxY / oldPxPerFt - math.padFt
+
+      pendingScrollRef.current = computeScroll(
+        anchorFtX,
+        anchorFtY,
+        newPxPerFt,
+        math.padFt,
+        localScreenX,
+        localScreenY
+      )
+      setZoomState(clamped)
+    },
+    [scrollRef]
   )
-  const resetZoom = useCallback(() => setZoom(1), [setZoom])
+
+  /**
+   * Apply a zoom change anchored to a doc-ft point. Used by zoom
+   * buttons, the reset button, and any external `setZoom` calls. The
+   * doc anchor is taken from `getZoomMath().anchorFt`, which the host
+   * computes as the selection-bbox centroid (when something is
+   * selected) or the room center (when nothing is selected).
+   */
+  const applyZoomAtDocAnchor = useCallback(
+    (nextZoom: number) => {
+      const scroll = scrollRef.current
+      const oldZoom = zoomRef.current
+      const clamped = clampZoom(nextZoom)
+      if (clamped === oldZoom) return
+      if (!scroll) {
+        setZoomState(clamped)
+        return
+      }
+      const math = getZoomMathRef.current()
+      const newPxPerFt = math.basePxPerFt * clamped
+      const localScreenX = scroll.clientWidth / 2
+      const localScreenY = scroll.clientHeight / 2
+
+      pendingScrollRef.current = computeScroll(
+        math.anchorFt.x,
+        math.anchorFt.y,
+        newPxPerFt,
+        math.padFt,
+        localScreenX,
+        localScreenY
+      )
+      setZoomState(clamped)
+    },
+    [scrollRef]
+  )
+
+  const setZoom = useCallback(
+    (next: number) => {
+      applyZoomAtDocAnchor(next)
+    },
+    [applyZoomAtDocAnchor]
+  )
+
+  const zoomIn = useCallback(
+    () => applyZoomAtDocAnchor(zoomRef.current + ZOOM_STEP * 4),
+    [applyZoomAtDocAnchor]
+  )
+  const zoomOut = useCallback(
+    () => applyZoomAtDocAnchor(zoomRef.current - ZOOM_STEP * 4),
+    [applyZoomAtDocAnchor]
+  )
+  const resetZoom = useCallback(
+    () => applyZoomAtDocAnchor(1),
+    [applyZoomAtDocAnchor]
+  )
 
   const onWheel = useCallback(
     (e: WheelEvent<HTMLDivElement>) => {
       if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
+      const scroll = scrollRef.current
+      if (!scroll) {
+        const direction = e.deltaY > 0 ? -1 : 1
+        applyZoomAtDocAnchor(zoomRef.current + direction * ZOOM_STEP * 4)
+        return
+      }
+      const rect = scroll.getBoundingClientRect()
+      const localX = e.clientX - rect.left
+      const localY = e.clientY - rect.top
       const direction = e.deltaY > 0 ? -1 : 1
-      setZoom(zoomRef.current + direction * ZOOM_STEP * 4)
+      applyZoomAtScreen(
+        zoomRef.current + direction * ZOOM_STEP * 4,
+        localX,
+        localY
+      )
     },
-    [setZoom]
+    [applyZoomAtDocAnchor, applyZoomAtScreen, scrollRef]
   )
 
   const onPointerDown = useCallback(
@@ -195,10 +367,18 @@ export function useViewport(
         const b = activePointers.current.get(pinch.pointerIds[1])
         if (!a || !b) return
         const ratio = distance(a, b) / pinch.startDistance
-        setZoom(pinch.startZoom * ratio)
+        const targetZoom = pinch.startZoom * ratio
+        const rect = scroll.getBoundingClientRect()
+        const midClientX = (a.clientX + b.clientX) / 2
+        const midClientY = (a.clientY + b.clientY) / 2
+        applyZoomAtScreen(
+          targetZoom,
+          midClientX - rect.left,
+          midClientY - rect.top
+        )
       }
     },
-    [scrollRef, setZoom]
+    [applyZoomAtScreen, scrollRef]
   )
 
   const releasePointer = useCallback(
