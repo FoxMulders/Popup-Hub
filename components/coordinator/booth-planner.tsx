@@ -1,6 +1,13 @@
 'use client'
 
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
+import {
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+  useEffect,
+  useDeferredValue,
+} from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { autoLayoutAsync } from '@/lib/booth-planner/auto-layout-async'
@@ -533,7 +540,19 @@ export function BoothPlanner({
     cells,
     venue_elements: venueElements,
     venue_preset_id: roomVenuePresetId,
+    unmanaged_mode: roomUnmanagedMode,
   } = activeRoom
+
+  /**
+   * Bare-Grid (unmanaged) mode: when active, the canvas suspends strict
+   * placement validation — perimeter wall enforcement, stroller-aisle
+   * clearance, category adjacency, and pathfinding gates are *bypassed*
+   * so the coordinator can paint anywhere. Stroller / overlap warnings
+   * are still surfaced as informational findings, they just no longer
+   * block placement. Persisted on the room itself so the mode survives
+   * room switches and reload.
+   */
+  const unmanagedMode = roomUnmanagedMode === true
 
   const activeTemplateId: VenuePresetId = isVenuePresetId(roomVenuePresetId)
     ? roomVenuePresetId
@@ -906,6 +925,20 @@ export function BoothPlanner({
     [venueElements.length, lockedFixtureCount]
   )
 
+  // INP optimization (§4): the heavy O(rows×cols) flood-fills below
+  // (`analyzeStrollerClearance`, `computePatronPathTrace`,
+  // `detectLayoutOverlaps`) used to run synchronously inside the same
+  // render that committed a paint, blowing past the 50 ms Interaction
+  // to Next Paint budget on large venues. Now they key off
+  // `useDeferredValue`, so React commits the paint *first* with the
+  // last-known QA results and re-runs the flood-fills as a low-priority
+  // follow-up render. Live placement gates (`layoutBitmap`,
+  // `categoryPlacementGuard`, `canPlaceCellAt`) intentionally stay on
+  // the live `cells` value so drag-drop validation never sees stale
+  // occupancy.
+  const deferredCells = useDeferredValue(cells)
+  const deferredVenueElementsWithDoors = useDeferredValue(venueElementsWithDoors)
+
   const strollerClearance = useMemo(
     () =>
       analyzeStrollerClearance({
@@ -913,22 +946,37 @@ export function BoothPlanner({
         cols: gridCols,
         boothWidthFt: gridConfig.cellWidthFt,
         boothLengthFt: gridConfig.cellLengthFt,
-        cells,
-        venueElements: venueElementsWithDoors,
+        cells: deferredCells,
+        venueElements: deferredVenueElementsWithDoors,
       }),
-    [gridRows, gridCols, gridConfig.cellWidthFt, gridConfig.cellLengthFt, cells, venueElementsWithDoors]
+    [
+      gridRows,
+      gridCols,
+      gridConfig.cellWidthFt,
+      gridConfig.cellLengthFt,
+      deferredCells,
+      deferredVenueElementsWithDoors,
+    ]
   )
 
   const patronPathTrace = useMemo(
     () =>
-      computePatronPathTrace(venueElementsWithDoors, gridCols, gridRows, entrance, {
+      computePatronPathTrace(deferredVenueElementsWithDoors, gridCols, gridRows, entrance, {
         placedCells: normalizePlacedCellsForPathfinding(
-          cells.filter((c) => c.col >= 0),
+          deferredCells.filter((c) => c.col >= 0),
           spacingMode,
           baselineTableLengthFt
         ),
       }),
-    [venueElementsWithDoors, gridCols, gridRows, entrance, cells, spacingMode, baselineTableLengthFt]
+    [
+      deferredVenueElementsWithDoors,
+      gridCols,
+      gridRows,
+      entrance,
+      deferredCells,
+      spacingMode,
+      baselineTableLengthFt,
+    ]
   )
 
   const hasPatronPath = patronPathTrace != null && patronPathTrace.points.length >= 2
@@ -957,12 +1005,12 @@ export function BoothPlanner({
   const layoutOverlaps = useMemo(
     () =>
       detectLayoutOverlaps({
-        cells,
+        cells: deferredCells,
         rows: gridRows,
         cols: gridCols,
-        venueElements: venueElementsWithDoors,
+        venueElements: deferredVenueElementsWithDoors,
       }),
-    [cells, gridRows, gridCols, venueElementsWithDoors]
+    [deferredCells, gridRows, gridCols, deferredVenueElementsWithDoors]
   )
 
   const overlapFingerprint = useMemo(
@@ -1174,21 +1222,50 @@ export function BoothPlanner({
     toast.success(lock ? 'All fixtures locked' : 'All fixtures unlocked')
   }, [allFixturesLocked, patchActiveRoom, venueElements])
 
+  /**
+   * Canonical tool-change entry point. Resets transient cursor state
+   * (in-progress paint stroke, custom-label draft) so picking a
+   * structural tool — Aisle A, Wall W, Entrance E, Exit X — never
+   * leaks state into the Vendor Booth V tool. We deliberately do NOT
+   * touch `selectedVendorId` here; coordinators can keep a booth
+   * selected while rotating between the structural tools and the
+   * vendor tool without losing their selection.
+   */
+  const handleToolChange = useCallback((next: LayoutTool) => {
+    isPainting.current = false
+    if (next !== 'custom_label') {
+      paintLabelRef.current = undefined
+    }
+    setActiveTool(next)
+  }, [])
+
+  /**
+   * Toggle Bare-Grid (unmanaged) mode. Turning the mode ON wipes the
+   * canvas to a blank shell, suspends strict validation, and switches
+   * the active tool to Wall/Column so the coordinator can draw the
+   * usable area by hand. Turning the mode OFF re-enables the strict
+   * stroller-aisle / clearance / pathfinding gates without touching
+   * any placed objects — a safety net the coordinator can re-engage
+   * at any time.
+   */
   const handleStripPresetPaint = useCallback(() => {
-    if (venueElements.length === 0 && cellMap.size === 0) {
-      toast.message('Already a bare grid.', { duration: 2200 })
+    if (unmanagedMode) {
+      patchActiveRoom({ unmanaged_mode: false })
+      toast.success('Strict validation re-enabled — clearance and aisle rules will block invalid placements.', {
+        duration: 3500,
+      })
       return
     }
     setShowPatronFlow(false)
     setSelectedVendorId(null)
     setLayoutHiddenIds(new Set())
-    patchActiveRoom({ cells: [], venue_elements: [] })
-    setActiveTool('column')
+    patchActiveRoom({ cells: [], venue_elements: [], unmanaged_mode: true })
+    handleToolChange('column')
     toast.success(
-      'Bare grid ready — pick "Wall / Column" to draw your room shape, then add entrance, exit, and fixtures.',
+      'Bare-Grid mode on — validation suspended. Draw walls with W, then place vendors freely.',
       { duration: 4000 }
     )
-  }, [cellMap.size, patchActiveRoom, venueElements.length])
+  }, [unmanagedMode, patchActiveRoom, handleToolChange])
 
   /**
    * Reset the LAYOUT_PRESET selection back to the default shell and wipe the
@@ -1204,11 +1281,11 @@ export function BoothPlanner({
       cells: [],
       venue_elements: buildDefaultVenueElements(entrance, gridCols, gridRows),
     })
-    setActiveTool('vendor')
+    handleToolChange('vendor')
     toast.success('Layout preset cleared — canvas reset to a default empty grid', {
       duration: 3500,
     })
-  }, [entrance, gridCols, gridRows, patchActiveRoom])
+  }, [entrance, gridCols, gridRows, patchActiveRoom, handleToolChange])
 
   const approvedApps = applications.filter((a) => a.status === 'approved')
 
@@ -1615,20 +1692,33 @@ export function BoothPlanner({
     const snapped = snapPlacementOrigin(targetCol, targetRow, colSpan, rowSpan)
     targetCol = snapped.col
     targetRow = snapped.row
-    const bitmap =
+
+    // Reuse the memoized layoutBitmap and let the per-call exclude rect
+    // mask out the booth's own footprint when we're relocating it. This
+    // replaces an O(rows×cols) `SpatialBitGrid.fromLayout(...)` rebuild
+    // that previously fired on every drag-hover frame and was the
+    // single largest INP offender on the canvas.
+    const excludeRect =
       srcCell.col >= 0
-        ? SpatialBitGrid.fromLayout(
-            gridCols,
-            canvasRows,
-            venueElementsWithDoors,
-            cells,
-            srcCell.id
-          )
-        : layoutBitmap
-    if (!bitmap.canPlaceBoothRect(targetCol, targetRow, colSpan, rowSpan)) {
+        ? {
+            row: srcCell.row,
+            col: srcCell.col,
+            rowSpan: srcCell.rowSpan,
+            colSpan: srcCell.colSpan,
+          }
+        : undefined
+    if (!layoutBitmap.canPlaceBoothRectExcluding(targetCol, targetRow, colSpan, rowSpan, excludeRect)) {
       placementBlockReason.current = 'Cannot place here — blocked or occupied.'
       return false
     }
+
+    // Bare-Grid mode skips every soft-validation gate below — by design
+    // the coordinator can place anywhere as long as cells aren't
+    // physically claimed. Hard collision (above) is the only check.
+    if (unmanagedMode) {
+      return true
+    }
+
     const manual = isOneFootGrid && !isTentVendor(srcCell.vendorUnitType)
       ? resolveManualPlacement(srcCell, targetCol, targetRow)
       : null
@@ -1654,15 +1744,6 @@ export function BoothPlanner({
 
     const categoryKey = normalizeCategoryKey(srcCell.categoryName)
     const guard = categoryPlacementGuard
-    const excludeRect =
-      srcCell.col >= 0
-        ? {
-            row: srcCell.row,
-            col: srcCell.col,
-            rowSpan: srcCell.rowSpan,
-            colSpan: srcCell.colSpan,
-          }
-        : undefined
     if (
       guard.rejectsManualPlacement({
         categoryKey,
@@ -1842,13 +1923,13 @@ export function BoothPlanner({
     onRedo: handleRedo,
     onClearLayout: () => setClearCanvasOpen(true),
     onToggleLockAll: handleToggleLockAll,
-    onToolChange: setActiveTool,
+    onToolChange: handleToolChange,
     onErase: () => {
       if (selectedPlacedBooth) {
         handleUnplaceVendor(selectedPlacedBooth)
         return
       }
-      setActiveTool('eraser')
+      handleToolChange('eraser')
     },
     /**
      * R key — rotate the currently-selected booth 90°. Returns true when
@@ -2667,7 +2748,11 @@ export function BoothPlanner({
       }
 
       const existing = getElementAt(venueElements, row, col)
-      if (existing && isImmutableVenueElement(existing, gridCols, gridRows)) {
+      // Bare-Grid mode lets the coordinator paint over perimeter walls
+      // and locked shell cells — that's the whole point of suspending
+      // validation. In strict mode we keep the immutable-cell guard so
+      // a stray click on a wall doesn't silently nuke the room shape.
+      if (!unmanagedMode && existing && isImmutableVenueElement(existing, gridCols, gridRows)) {
         const isWall = wallAtCell(row, col, gridCols, gridRows) !== null
         toast.message(
           isWall
@@ -2676,7 +2761,7 @@ export function BoothPlanner({
           {
             id: 'paint-blocked',
             description: isWall
-              ? 'Walls define the room boundary. Switch to a smaller venue preset on Step 1, or paint inside the walls.'
+              ? 'Walls define the room boundary. Switch to a smaller venue preset on Step 1, or paint inside the walls. Bare-Grid mode also lets you edit walls directly.'
               : 'Use the Eraser tool (R) to clear preset paint, or pick the Blank preset on Step 1 to draw your own area.',
             duration: 3500,
           }
@@ -3621,7 +3706,7 @@ export function BoothPlanner({
           <FloorPlanWorkspace
             leftSidebar={
               <>
-                <VenueFixturesCatalog activeTool={activeTool} onToolChange={setActiveTool} />
+                <VenueFixturesCatalog activeTool={activeTool} onToolChange={handleToolChange} />
                 {!hideRoomBar ? (
                   <LayoutRoomBar
                     rooms={rooms}
@@ -3772,8 +3857,9 @@ export function BoothPlanner({
                         onClear={() => setClearCanvasOpen(true)}
                         onUndo={handleUndo}
                         onRedo={handleRedo}
-                        onRemove={() => setActiveTool('eraser')}
+                        onRemove={() => handleToolChange('eraser')}
                         onStripPresetPaint={handleStripPresetPaint}
+                        bareGridActive={unmanagedMode}
                       />
                       <TooltipWrapper text="Auto-place roster vendors using Modified Loop (IKEA) — 15′ entrance buffer, serpentine path, category scattering, premium right-hand bias">
                         <Button

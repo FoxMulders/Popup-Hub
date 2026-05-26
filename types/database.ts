@@ -565,6 +565,16 @@ export interface LayoutRoom {
     | 'crestwood'
     | 'west-jasper-sherwood'
     | null
+  /**
+   * Bare-Grid / unmanaged mode: when true, the canvas suspends strict
+   * validation rules (perimeter wall enforcement, stroller-aisle
+   * clearance, category adjacency, vendor pathfinding) so the
+   * coordinator can place, move, and edit objects anywhere on the
+   * coordinate field. Walls must be drawn manually in this mode.
+   * Stroller / overlap warnings are still surfaced as informational
+   * findings — they just no longer *block* placement.
+   */
+  unmanaged_mode?: boolean
 }
 
 export interface BoothLayout {

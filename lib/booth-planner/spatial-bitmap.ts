@@ -92,6 +92,43 @@ export class SpatialBitGrid {
     return true
   }
 
+  /**
+   * Same hard booth-placement check as `canPlaceBoothRect`, but treats
+   * any cell inside `excludeRect` as empty. Used when relocating an
+   * already-placed booth so the booth's *current* footprint doesn't
+   * count as collision against itself. This avoids the heavy
+   * `SpatialBitGrid.fromLayout(..., excludeBoothId)` re-allocation that
+   * was running on every drag-hover (~O(rows×cols) every pointer move).
+   */
+  canPlaceBoothRectExcluding(
+    col: number,
+    row: number,
+    colSpan: number,
+    rowSpan: number,
+    excludeRect?: { row: number; col: number; rowSpan: number; colSpan: number }
+  ): boolean {
+    if (col < 0 || row < 0 || col + colSpan > this.cols || row + rowSpan > this.rows) {
+      return false
+    }
+    const er = excludeRect
+    for (let r = row; r < row + rowSpan; r++) {
+      for (let c = col; c < col + colSpan; c++) {
+        if (
+          er &&
+          r >= er.row &&
+          r < er.row + er.rowSpan &&
+          c >= er.col &&
+          c < er.col + er.colSpan
+        ) {
+          continue
+        }
+        const code = this.get(r, c)
+        if (code === CELL_WALL || code === CELL_BOOTH || code === CELL_LOCK) return false
+      }
+    }
+    return true
+  }
+
   markVenueElements(elements: VenueElement[]): void {
     for (const el of elements) {
       const spanC = el.colSpan ?? 1

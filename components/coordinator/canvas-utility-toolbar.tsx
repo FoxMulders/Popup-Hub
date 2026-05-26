@@ -13,6 +13,8 @@ interface CanvasUtilityToolbarProps {
   onRedo: () => void
   onRemove: () => void
   onStripPresetPaint?: () => void
+  /** True when the canvas is currently in Bare-Grid (unmanaged) mode. */
+  bareGridActive?: boolean
 }
 
 const UTILITY_BTN =
@@ -27,6 +29,7 @@ export function CanvasUtilityToolbar({
   onRedo,
   onRemove,
   onStripPresetPaint,
+  bareGridActive = false,
 }: CanvasUtilityToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Canvas utilities">
@@ -61,10 +64,24 @@ export function CanvasUtilityToolbar({
         </button>
       </TooltipWrapper>
       {onStripPresetPaint ? (
-        <TooltipWrapper text="Wipe everything to a bare grid so you can draw your own walls (Wall / Column tool) and outline a custom usable area before placing fixtures">
-          <button type="button" onClick={onStripPresetPaint} className={UTILITY_BTN}>
+        <TooltipWrapper
+          text={
+            bareGridActive
+              ? 'Bare-Grid is ON — strict validation suspended. Click to re-enable clearance, aisle, and pathfinding rules.'
+              : 'Bare-Grid mode: wipes the canvas and suspends clearance / aisle / pathfinding validation so you can draw walls and place objects anywhere.'
+          }
+        >
+          <button
+            type="button"
+            onClick={onStripPresetPaint}
+            aria-pressed={bareGridActive}
+            className={cn(
+              UTILITY_BTN,
+              bareGridActive && 'bg-harvest-200 ring-2 ring-harvest-700 ring-offset-1'
+            )}
+          >
             <PaintBucket className="h-3.5 w-3.5" />
-            Bare grid
+            {bareGridActive ? 'Bare grid · ON' : 'Bare grid'}
           </button>
         </TooltipWrapper>
       ) : null}
