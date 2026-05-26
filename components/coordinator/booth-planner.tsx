@@ -1156,15 +1156,28 @@ export function BoothPlanner({
   }, [venueWidth, venueLength, venueElementsWithDoors, entrance, baselineTableLengthFt])
 
   /**
-   * Physical hard ceiling — never exceed what fits on the current grid once
-   * aisles + stroller QA clearances are reserved. Floor area can hint at a
-   * higher number, but the layout engine cannot place more booths than this.
+   * Physical hard ceiling for booth count.
+   *
+   * Source of truth is the *area-based* `maxBoothCapacity` —
+   *
+   *     net usable sq ft (after aisles + door + locked-fixture deductions)
+   *     ÷ booth unit footprint (table length × operational depth)
+   *
+   * That number is what fits if booths are packed efficiently on the
+   * current grid. The auto-layout simulator (`layoutCapacity`) is a
+   * *planning hint*, not authority — it intentionally enforces strict
+   * stroller-aisle frontage and clearance rules, and any algorithmic
+   * regression in that simulator can collapse the number to a tiny
+   * value (e.g. 3 booths on a 40×72 hall) which then clamps the
+   * configured slot total down to nothing and starves the placeholder
+   * generator of inventory.
+   *
+   * We therefore take the higher of the two as the ceiling: the
+   * coordinator can always *manually* place up to the area maximum,
+   * even if the auto-plan strategy chooses a sparser layout.
    */
   const physicalCapacityCeiling = useMemo(() => {
-    if (layoutCapacity > 0 && maxBoothCapacity > 0) {
-      return Math.min(layoutCapacity, maxBoothCapacity)
-    }
-    return Math.max(layoutCapacity, maxBoothCapacity)
+    return Math.max(maxBoothCapacity, layoutCapacity)
   }, [layoutCapacity, maxBoothCapacity])
 
   /**

@@ -9,6 +9,7 @@ import { tableFootprintToGridSpans } from '@/lib/booth-planner/table-space'
 import { buildOutsideOnlyVenueElements } from '@/lib/booth-planner/outside-only-layout'
 import { buildOutdoorMarketShell } from '@/lib/booth-planner/outdoor-market-shell'
 import { buildDefaultVenueElements, blockedCellKeys } from '@/lib/booth-planner/venue-elements'
+import { resolveAutoPlanStrategy } from '@/lib/booth-planner/auto-plan-strategy'
 import type { BoothCell, VenueElement } from '@/types/database'
 import type { LayoutSpacingMode } from '@/lib/booth-planner/table-space'
 
@@ -86,7 +87,20 @@ function venueElementsForPreset(
   return buildDefaultVenueElements(entrance, cols, rows)
 }
 
-/** Max vendors that auto-layout can place with current aisles and stroller spacing. */
+/**
+ * Max vendors that auto-layout can place with current aisles and
+ * stroller spacing.
+ *
+ * Critically, this binary search invokes `autoLayout` through the same
+ * `resolveAutoPlanStrategy` that the real Coordinator UI uses. Without
+ * that, an indoor hall (perimeter walls present) with `preset='default'`
+ * fell into the open-floor branch that requires every booth's
+ * storefront to be entirely adjacent to walkway cells — which only
+ * 3 spots in a 40×72 venue satisfy, regardless of how empty the room
+ * is. Aligning the simulator with the production resolver makes the
+ * estimate reflect reality: the same corridor strategy the user sees
+ * when they click "Auto-plan".
+ */
 export function estimateMaxVendorsFit(params: TestLayoutFillParams): number {
   const cols = Math.max(1, Math.floor(params.venueWidth / params.boothWidth))
   const rows = Math.max(1, Math.floor(params.venueLength / params.boothLength))
@@ -95,8 +109,22 @@ export function estimateMaxVendorsFit(params: TestLayoutFillParams): number {
   const openCells = cols * rows - blocked.size
   if (openCells <= 0) return 0
 
+  // Mirror the production Coordinator's auto-plan flow so the estimate
+  // can't drift from what the user actually sees when they hit
+  // "Auto-plan". `isOneFootGrid` matches our shipping default for the
+  // 1' grid spacing modes.
+  const planStrategy = resolveAutoPlanStrategy({
+    layoutPreset: params.preset ?? 'default',
+    gridCols: cols,
+    gridRows: rows,
+    entrance: params.entrance,
+    venueElementsWithDoors: venueElements,
+    isOneFootGrid: params.spacingMode === 'one_foot',
+  })
+  const planVenueElements = planStrategy.presetShell?.venue_elements ?? venueElements
+
   let lo = 0
-  let hi = Math.min(openCells, 120)
+  let hi = Math.min(openCells, 240)
 
   const category = params.categoryNames[0] ?? 'Uncategorized'
 
@@ -111,9 +139,11 @@ export function estimateMaxVendorsFit(params: TestLayoutFillParams): number {
       boothWidth: params.boothWidth,
       boothLength: params.boothLength,
       entrance: params.entrance,
-      venueElements,
+      venueElements: planVenueElements,
       vendors,
-      preset: params.preset ?? 'default',
+      preset: planStrategy.effectivePreset,
+      useIndoorCorridor: planStrategy.useCorridor,
+      coGenerateAisles: planStrategy.coGenerateAisles,
     })
     const placed = cells.filter((c) => c.col >= 0).length
     if (placed >= mid) lo = mid
