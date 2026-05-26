@@ -64,13 +64,15 @@ export function runUiAudit(input: {
     })
   }
 
-  if (input.currentStep === 2 && !input.pinDropped) {
+  // Step 1 = combined Event & Venue. Surface the missing-map-pin warning
+  // here so coordinators are reminded before they leave the page.
+  if (input.currentStep === 1 && !input.pinDropped) {
     findings.push({
       id: 'ui-no-map-pin',
       persona: 'ui',
       severity: 'warning',
       title: 'MAP PIN MISSING',
-      message: 'Drop a map pin on Step 2 so shoppers can find the venue.',
+      message: 'Drop a map pin on Step 1 so shoppers can find the venue.',
     })
   }
 

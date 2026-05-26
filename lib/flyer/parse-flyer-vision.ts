@@ -1,29 +1,61 @@
 import { parsedFlyerSchema, type ParsedFlyerResponse } from '@/lib/flyer/types'
 import { normalizeFlyerDate, normalizeFlyerTime } from '@/lib/flyer/normalize'
 
-const FLYER_PARSE_PROMPT = `You extract structured event details from a market or quarter-auction flyer/poster image.
-Return ONLY valid JSON with these keys (use null when not visible or uncertain):
+/**
+ * Vision prompt for OpenAI's vision-capable chat completions endpoint.
+ *
+ * The prompt is intentionally strict about reading the *visual text* on the
+ * flyer (largest title block, headline market name, printed street address)
+ * so the wizard can populate event name + address directly from the poster
+ * — not from the uploaded filename or the host organization tagline. The
+ * test flyer "3rd Annual Christmas Market" hosted by the Slovenian Canadian
+ * Association at 16703 - 66 Street NW must yield:
+ *   { eventName: "Christmas Market", venueName: "Slovenian Hall" (or similar),
+ *     address: "16703 - 66 Street NW, Edmonton, AB" }
+ */
+const FLYER_PARSE_PROMPT = `You are an OCR + extraction model that reads market and quarter-auction event posters.
+Carefully READ the visible printed text on the flyer image. Do NOT guess from filenames or context outside the image.
+
+Return ONLY valid JSON with these keys (use null when the value is not visible or you are uncertain):
 {
   "eventName": string | null,
+  "venueName": string | null,
+  "address": string | null,
   "date": string | null,
   "startTime": string | null,
   "endTime": string | null,
-  "location": string | null,
   "description": string | null,
   "ticketPrice": string | null
 }
+
 Rules:
-- date: prefer ISO YYYY-MM-DD
-- startTime/endTime: 24-hour HH:mm when possible, else clear 12-hour text
-- location: venue name and address combined in one string if needed
-- description: 1-3 sentence summary for vendors/shoppers, not raw OCR dump
-- ticketPrice: admission, booth fee, or ticket price as printed (include currency symbol if shown)`
+- eventName: the actual MARKET / EVENT TITLE printed on the poster — usually the largest stylised text block (e.g. "Christmas Market", "Spring Bazaar", "Summer Craft Fair"). Strip prefixes like "3rd Annual", "The", "Annual", and the host organization name. Never use the host association's name as the event name. Never use the uploaded file's name. If only an organization name is visible and no distinct event title, return null.
+- venueName: the building / hall / venue name printed on the flyer (e.g. "Slovenian Hall", "Servus Place", "St Albert Community Centre"). The hosting association's name counts ONLY when the venue itself isn't separately printed. Do not include the street address here.
+- address: the printed street address as written on the flyer, including unit / suite if present. Combine multi-line addresses into a single comma-separated string. Append the city + province if visible (e.g. "16703 - 66 Street NW, Edmonton, AB"). Do NOT include the venue name in this field.
+- date: prefer ISO YYYY-MM-DD when the year is unambiguous, else use the printed wording (e.g. "Saturday, November 30").
+- startTime / endTime: prefer 24-hour HH:mm; otherwise return the printed text (e.g. "9:30 AM").
+- description: a one or two sentence neutral summary suitable for a market listing — not raw OCR dump and not marketing fluff.
+- ticketPrice: admission, booth fee, or ticket price exactly as printed including currency symbol. Use "FREE" when the flyer says free entry / free admission.
+
+If the image is too blurry or has no readable text, return all null values.`
 
 function fileToDataUrl(buffer: Buffer, mimeType: string): string {
   const base64 = buffer.toString('base64')
   return `data:${mimeType};base64,${base64}`
 }
 
+/**
+ * Filename-based fallback used when no OpenAI API key is configured.
+ *
+ * Intentionally does NOT populate the event name from the filename — the
+ * coordinator complained that uploads like "Craft_Fair_Poster_2024.png"
+ * were filling the market name with the file slug. Returning null lets the
+ * UI render an empty "name" field that the coordinator can type manually
+ * instead of being seeded with garbage.
+ *
+ * The filename date heuristic is preserved because date prefixes
+ * ("2024-11-30-poster.png") are common and unambiguous.
+ */
 function heuristicFromFilename(fileName: string): ParsedFlyerResponse {
   const base = fileName.replace(/\.[^.]+$/, '')
   const dateMatch =
@@ -39,14 +71,10 @@ function heuristicFromFilename(fileName: string): ParsedFlyerResponse {
     }
   }
 
-  const eventName = base
-    .replace(/(\d{4})[-_.](\d{1,2})[-_.](\d{1,2})/, '')
-    .replace(/(\d{1,2})[-_.](\d{1,2})[-_.](\d{4})/, '')
-    .replace(/[-_]+/g, ' ')
-    .trim()
-
   return parsedFlyerSchema.parse({
-    eventName: eventName.length > 3 ? eventName : null,
+    eventName: null,
+    venueName: null,
+    address: null,
     date,
     startTime: null,
     endTime: null,
@@ -81,6 +109,11 @@ export async function parseFlyerWithVision(input: {
       response_format: { type: 'json_object' },
       messages: [
         {
+          role: 'system',
+          content:
+            'You extract event-listing data from market posters. Output strict JSON only — never prose, never markdown, never wrap in code fences.',
+        },
+        {
           role: 'user',
           content: [
             { type: 'text', text: FLYER_PARSE_PROMPT },
@@ -111,6 +144,8 @@ export async function parseFlyerWithVision(input: {
   return {
     data: parsedFlyerSchema.parse({
       eventName: data.eventName ?? null,
+      venueName: data.venueName ?? null,
+      address: data.address ?? null,
       date: normalizeFlyerDate(data.date ?? null) ?? data.date ?? null,
       startTime: normalizeFlyerTime(data.startTime ?? null) ?? data.startTime ?? null,
       endTime: normalizeFlyerTime(data.endTime ?? null) ?? data.endTime ?? null,

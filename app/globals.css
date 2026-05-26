@@ -418,7 +418,12 @@
   }
 }
 
-/* ─── Premium Lottie page loader ─── */
+/* ─── Premium Lottie page loader ───
+ *
+ * Background matches the site's linen canvas (--linen / #faf8f7) so the
+ * inline replay (logo click) and full-screen first-paint loader feel like
+ * a continuation of the page rather than an opaque dark overlay.
+ */
 #loader-screen.loader-screen {
   position: fixed;
   inset: 0;
@@ -426,7 +431,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0f172a;
+  background-color: var(--linen, #faf8f7);
   opacity: 1;
   visibility: visible;
   transition: opacity 0.6s ease-out, visibility 0.6s ease-out;

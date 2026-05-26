@@ -14,7 +14,7 @@ export default async function NewEventPage() {
     .order('name')
 
   return (
-    <div className="mx-auto max-w-[min(100%,1600px)] px-4 py-4 sm:py-6">
+    <div className="w-full px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
       <MarketSetupWizard
         categories={(categories as Category[]) ?? []}
         coordinatorId={user.id}

@@ -125,6 +125,11 @@ function buildDayRows(existing: Event | null | undefined): DayRow[] {
   return [{ date: '', start_time: DEFAULT_MARKET_START, end_time: DEFAULT_MARKET_END }]
 }
 
+/**
+ * Infer the highest reachable step for a draft. Step 1 is the combined
+ * Event & Venue page — we only let the user past it once both sets of
+ * fields are populated. Step 2 = Capacity, Step 3 = Floor Plan.
+ */
 function inferInitialMaxReachedStep(
   existing: Event | null | undefined,
   existingLayout: BoothLayout | null | undefined,
@@ -133,27 +138,27 @@ function inferInitialMaxReachedStep(
 ): WizardStep {
   let max = initialStep
 
-  if (existing?.name?.trim() && existing.start_at && existing.end_at) {
+  const hasEventDetails =
+    Boolean(existing?.name?.trim()) && Boolean(existing?.start_at) && Boolean(existing?.end_at)
+  const hasVenueDetails =
+    Boolean(existing?.location_name?.trim()) &&
+    Boolean(existing?.address?.trim()) &&
+    existing?.latitude != null
+
+  if (hasEventDetails && hasVenueDetails) {
     max = Math.max(max, 2) as WizardStep
-  }
-  if (
-    existing?.location_name?.trim() &&
-    existing.address?.trim() &&
-    existing.latitude != null
-  ) {
-    max = Math.max(max, 3) as WizardStep
   }
 
   if (skipVenueLayout) {
-    return Math.min(max, 3) as WizardStep
+    return Math.min(max, 2) as WizardStep
   }
 
   const limits = (existing as Event & { category_limits?: unknown[] })?.category_limits
   if (limits && limits.length > 0) {
-    max = Math.max(max, 4) as WizardStep
+    max = Math.max(max, 3) as WizardStep
   }
   if (existingLayout) {
-    max = Math.max(max, 4) as WizardStep
+    max = Math.max(max, 3) as WizardStep
   }
 
   return max
@@ -222,7 +227,7 @@ export function MarketSetupWizard({
   const [pinDropped, setPinDropped] = useState(!!existing?.latitude)
   const [skipVenueLayout, setSkipVenueLayout] = useState(existing?.skip_venue_layout ?? false)
 
-  const totalSteps = skipVenueLayout ? 3 : 4
+  const totalSteps = skipVenueLayout ? 2 : 3
   const wizardSteps = skipVenueLayout ? MARKET_WIZARD_STEPS_SHORT : MARKET_WIZARD_STEPS_FULL
 
   function syncStepInUrl(step: WizardStep, resolvedEventId?: string | null) {
@@ -331,6 +336,7 @@ export function MarketSetupWizard({
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
   const saveBlankLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
   const autoPlanRef = useRef<(() => Promise<boolean>) | null>(null)
+  const populatePlaceholdersRef = useRef<(() => Promise<boolean>) | null>(null)
   const [plannerOverlap, setPlannerOverlap] = useState(false)
   const [plannerQaRunning, setPlannerQaRunning] = useState(false)
 
@@ -346,11 +352,14 @@ export function MarketSetupWizard({
     [scheduleType, dayRows, startDate, startTime, endTime]
   )
 
-  const isWorkspaceStep = currentStep >= 3
+  // Workspace steps (Capacity, Floor Plan) get a wider, panel-less layout.
+  // Step 1 = combined Event & Venue (form-style), Step 2 = Capacity,
+  // Step 3 = Floor Plan canvas.
+  const isWorkspaceStep = currentStep >= 2
 
   const selectedVenue = useMemo(() => {
-    if (currentStep < 2) return null
-
+    // Step 1 already captures venue info (combined Event & Venue), so we
+    // surface the live selection from the very first step onward.
     const trimmedName = locationName.trim()
     const trimmedAddress = address.trim() || undefined
 
@@ -387,7 +396,7 @@ export function MarketSetupWizard({
   const summaryCapacityLabel = useMemo(() => {
     const total = categoryLimits.reduce((s, cl) => s + cl.maxSlots, 0)
     if (total > 0) return String(total)
-    if (currentStep >= 3) return String(layoutCapacity)
+    if (currentStep >= 2) return String(layoutCapacity)
     return null
   }, [categoryLimits, layoutCapacity, currentStep])
 
@@ -504,7 +513,10 @@ export function MarketSetupWizard({
         }
 
         const resolvedId = draftResult.eventId || eventId
-        if (resolvedId && currentStep >= 2 && !skipVenueLayout) {
+        // Step 1 already captures venue dimensions (combined Event & Venue
+        // step), so the layout payload is meaningful from the very first
+        // autosave onward as long as the coordinator hasn't opted out.
+        if (resolvedId && !skipVenueLayout) {
           const layoutPayload = layoutPayloadFromRooms(resolvedId, rooms, activeRoomId)
           const layoutResult = await persistLayoutDraft(supabase, resolvedId, layoutPayload)
           if (layoutResult.error) throw layoutResult.error
@@ -674,6 +686,11 @@ export function MarketSetupWizard({
     setEndDate(range.startDate)
   }
 
+  /**
+   * Combined Step 1 (Event & Venue) validation — checks event name, schedule
+   * bounds, listing-type rules, AND venue location / map pin / template
+   * dimensions in a single pass.
+   */
   function validateStep1(): boolean {
     if (!name.trim()) {
       toast.error('Event name is required')
@@ -688,10 +705,7 @@ export function MarketSetupWizard({
       toast.error('Complete schedule dates and times before continuing')
       return false
     }
-    return true
-  }
 
-  function validateStep2(): boolean {
     if (skipVenueLayout) {
       if (!locationName.trim()) {
         toast.error('Venue name is required')
@@ -722,27 +736,21 @@ export function MarketSetupWizard({
     if (transitioning) return
     setTransitioning(true)
     try {
+      // Step 1 — combined Event & Venue. Validate both halves, autosave,
+      // and advance to Capacity.
       if (currentStep === 1) {
         if (!validateStep1()) return
         const result = await autosave()
         if (!result.ok) {
-          toast.error('Could not save draft — check schedule fields')
+          toast.error('Could not save draft — check schedule and venue fields')
           return
         }
         advanceToStep(2, result.eventId)
         return
       }
+      // Step 2 — Capacity. If the user opted out of the layout canvas the
+      // wizard publishes here; otherwise advance to the Floor Plan.
       if (currentStep === 2) {
-        if (!validateStep2()) return
-        const result = await autosave()
-        if (!result.ok) {
-          toast.error('Could not save venue — try again')
-          return
-        }
-        advanceToStep(3, result.eventId)
-        return
-      }
-      if (currentStep === 3) {
         if (skipVenueLayout) {
           const result = await autosave({ publish: true })
           if (!result.ok || !result.eventId) {
@@ -759,10 +767,11 @@ export function MarketSetupWizard({
           toast.error('Could not save capacity settings')
           return
         }
-        advanceToStep(4, result.eventId)
+        advanceToStep(3, result.eventId)
         return
       }
-      if (currentStep === 4) {
+      // Step 3 — Floor Plan. Final deploy after layout overlap check.
+      if (currentStep === 3) {
         if (plannerOverlap) {
           toast.error('Resolve layout overlaps before deploying')
           return
@@ -796,7 +805,7 @@ export function MarketSetupWizard({
 
   async function goToStep(step: WizardStep) {
     if (!isDraftMode || step > maxReachedStep || step === currentStep || transitioning) return
-    if (skipVenueLayout && step === 4) return
+    if (skipVenueLayout && step === 3) return
 
     setTransitioning(true)
     try {
@@ -813,26 +822,26 @@ export function MarketSetupWizard({
   }
 
   useEffect(() => {
-    const cap = skipVenueLayout ? 3 : 4
+    const cap = skipVenueLayout ? 2 : 3
     setMaxReachedStep((prev) => Math.min(prev, cap) as WizardStep)
   }, [skipVenueLayout])
 
   useEffect(() => {
-    if (skipVenueLayout && currentStep === 4) {
-      setCurrentStep(3)
+    if (skipVenueLayout && currentStep === 3) {
+      setCurrentStep(2)
     }
   }, [skipVenueLayout, currentStep])
 
   useEffect(() => {
-    if (currentStep === 4 && !eventId) {
-      setCurrentStep(3)
+    if (currentStep === 3 && !eventId) {
+      setCurrentStep(2)
       toast.error('Save event details before opening the canvas')
     }
   }, [currentStep, eventId])
 
   const hasAutoPopulatedRef = useRef(false)
   useEffect(() => {
-    if (currentStep !== 4 || skipVenueLayout || !eventId) return
+    if (currentStep !== 3 || skipVenueLayout || !eventId) return
     if (hasAutoPopulatedRef.current) return
 
     const totalConfiguredSlots = categoryLimits.reduce((sum, cl) => sum + (cl.maxSlots ?? 0), 0)
@@ -849,12 +858,16 @@ export function MarketSetupWizard({
 
     const handle = window.setTimeout(() => {
       hasAutoPopulatedRef.current = true
-      void autoPlanRef.current?.()
+      // Prefer the slot-to-booth placeholder generator when available so the
+      // canvas mirrors the configured Step 3 caps exactly. Fall back to the
+      // legacy Smart Populate path if the placeholder ref hasn't mounted yet.
+      const populate = populatePlaceholdersRef.current ?? autoPlanRef.current
+      void populate?.()
     }, 250)
     return () => window.clearTimeout(handle)
   }, [currentStep, skipVenueLayout, eventId, categoryLimits, rooms])
 
-  const isFloorPlanStep = currentStep === 4 && !skipVenueLayout
+  const isFloorPlanStep = currentStep === 3 && !skipVenueLayout
 
   return (
     <div
@@ -908,37 +921,41 @@ export function MarketSetupWizard({
 
       <div
         className={cn(
-          'flex items-start gap-4',
-          isWorkspaceStep ? 'flex-col' : 'flex-col lg:flex-row lg:gap-6',
+          'flex w-full items-stretch gap-4',
+          // Always stack vertically so every panel below the wizard timeline
+          // spans the same horizontal width as the timeline component itself.
+          'flex-col',
           isFloorPlanStep ? 'flex-1 min-h-0 gap-2' : null
         )}
       >
         {isWorkspaceStep && !isFloorPlanStep ? (
           <WizardContextStrip
-            stepLabel={currentStep === 3 ? 'Step 3 — Capacity' : 'Step 4 — Floor plan'}
+            stepLabel={currentStep === 2 ? 'Step 2 — Capacity' : 'Step 3 — Floor plan'}
             eventName={name.trim() || null}
             scheduleLines={scheduleLines}
             selectedVenue={selectedVenue}
             capacityLabel={summaryCapacityLabel}
             tableSizeLabel={
-              currentStep >= 3 && !skipVenueLayout ? `${baselineTableLengthFt}′ tables` : null
+              currentStep >= 2 && !skipVenueLayout ? `${baselineTableLengthFt}′ tables` : null
             }
           />
         ) : null}
 
         <div
           className={cn(
-            'min-w-0 flex-1',
-            isFloorPlanStep
-              ? 'flex flex-col gap-2'
-              : cn(
-                  WIZARD_PANEL,
-                  'space-y-3',
-                  currentStep === 4 ? 'p-2 sm:p-3' : isWorkspaceStep ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
-                )
+            // Workspace column matches the wizard timeline's full horizontal
+            // width — always w-full now that the rail is stacked beneath.
+            'w-full min-w-0',
+              isFloorPlanStep
+                ? 'flex flex-1 min-h-0 flex-col gap-2'
+                : cn(
+                    WIZARD_PANEL,
+                    'space-y-3',
+                    currentStep === 3 ? 'p-2 sm:p-3' : isWorkspaceStep ? 'p-3 sm:p-4' : 'p-4 sm:p-5'
+                  )
           )}
         >
-          {currentStep === 4 && !skipVenueLayout ? (
+          {currentStep === 3 && !skipVenueLayout ? (
             <LayoutRoomBar
               rooms={rooms}
               activeRoomId={activeRoomId}
@@ -949,8 +966,11 @@ export function MarketSetupWizard({
             />
           ) : null}
 
+          {/* Step 1 — combined Event & Venue. Both halves of the legacy
+             Step 1 / Step 2 render together so coordinators can fill the
+             entire setup in a single page transition. */}
           {currentStep === 1 ? (
-            <>
+            <div className="space-y-6">
               <WizardStepEventDetails
                 name={name}
                 onNameChange={setName}
@@ -988,12 +1008,7 @@ export function MarketSetupWizard({
                 parsingFlyer={parsingFlyer}
                 autoFilledFields={autoFilledFields}
               />
-              <WizardNav step={1} onNext={goNext} nextDisabled={transitioning} />
-            </>
-          ) : null}
-
-          {currentStep === 2 ? (
-            <>
+              <div className="border-t-2 border-stone-200/60" aria-hidden />
               <WizardStepVenueWithMapsProvider
                 venuePresetId={venuePresetId}
                 onVenuePresetChange={handleVenuePresetChange}
@@ -1018,11 +1033,12 @@ export function MarketSetupWizard({
                 coordinatorId={coordinatorId}
                 onApplySavedVenue={handleApplySavedVenue}
               />
-              <WizardNav step={2} onBack={goBack} onNext={goNext} nextDisabled={transitioning} />
-            </>
+              <WizardNav step={1} onNext={goNext} nextDisabled={transitioning} />
+            </div>
           ) : null}
 
-          {currentStep === 3 ? (
+          {/* Step 2 — Capacity (was Step 3 in the legacy 4-step flow). */}
+          {currentStep === 2 ? (
             <>
               <WizardStepCapacity
                 categories={sortedCategories}
@@ -1042,7 +1058,7 @@ export function MarketSetupWizard({
                 skipVenueLayout={skipVenueLayout}
               />
               <WizardNav
-                step={3}
+                step={2}
                 onBack={goBack}
                 onNext={goNext}
                 nextDisabled={transitioning}
@@ -1051,7 +1067,8 @@ export function MarketSetupWizard({
             </>
           ) : null}
 
-          {currentStep === 4 && eventId && !skipVenueLayout ? (
+          {/* Step 3 — Floor Plan (was Step 4). */}
+          {currentStep === 3 && eventId && !skipVenueLayout ? (
             <>
               <BoothPlanner
                 eventId={eventId}
@@ -1072,8 +1089,18 @@ export function MarketSetupWizard({
                 saveLayoutRef={saveLayoutRef}
                 saveBlankLayoutRef={saveBlankLayoutRef}
                 autoPlanRef={autoPlanRef}
+                populatePlaceholdersRef={populatePlaceholdersRef}
                 onOverlapChange={setPlannerOverlap}
                 onLiveQaChange={({ qaRunning }) => setPlannerQaRunning(qaRunning)}
+                configuredSlotTotal={categoryLimits.reduce(
+                  (sum, cl) => sum + (cl.maxSlots ?? 0),
+                  0
+                )}
+                configuredCategorySlots={categoryLimits.map((cl) => ({
+                  categoryId: cl.categoryId,
+                  categoryName: cl.categoryName,
+                  maxSlots: cl.maxSlots,
+                }))}
                 rightSidebarExtra={
                   <WizardQaSidebarPanel
                     findings={findings}
@@ -1082,7 +1109,7 @@ export function MarketSetupWizard({
                   />
                 }
               />
-              <WizardNav step={4} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
+              <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
             </>
           ) : null}
         </div>
@@ -1093,13 +1120,13 @@ export function MarketSetupWizard({
             scheduleLines={scheduleLines}
             selectedVenue={selectedVenue}
             capacityLabel={summaryCapacityLabel}
-            tableSizeLabel={currentStep >= 3 && !skipVenueLayout ? `Table size: ${baselineTableLengthFt} ft` : null}
+            tableSizeLabel={currentStep >= 2 && !skipVenueLayout ? `Table size: ${baselineTableLengthFt} ft` : null}
             autosaveStatus={autosaveStatus}
           />
         ) : null}
       </div>
 
-      {currentStep !== 4 ? (
+      {currentStep !== 3 ? (
         <WizardCritiqueDrawer
           findings={findings}
           onDismiss={dismiss}

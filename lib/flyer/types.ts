@@ -5,7 +5,16 @@ export const parsedFlyerSchema = z.object({
   date: z.string().nullable().optional(),
   startTime: z.string().nullable().optional(),
   endTime: z.string().nullable().optional(),
+  /**
+   * Combined "venue name + address" string used by older callers.
+   * Newer responses split this into {@link venueName} + {@link address} so
+   * the wizard can populate the dedicated fields directly without parsing.
+   */
   location: z.string().nullable().optional(),
+  /** Venue/host name printed on the flyer (e.g. "Slovenian Hall"). */
+  venueName: z.string().nullable().optional(),
+  /** Street address printed on the flyer (e.g. "16703 - 66 Street NW"). */
+  address: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   ticketPrice: z.string().nullable().optional(),
 })

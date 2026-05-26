@@ -85,8 +85,8 @@ function StickFigure({
         cx={member.head.cx}
         cy={member.head.cy}
         r={member.head.r}
-        fill="#f8fafc"
-        stroke="#cbd5e1"
+        fill="#000000"
+        stroke="#000000"
         strokeWidth={1.5 * member.scale}
       />
       {member.phone ? (
@@ -260,17 +260,29 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
   return (
     <svg viewBox="0 0 800 600" className="h-full w-full" role="img" aria-hidden>
       <defs>
+        {/*
+         * Sky gradient swapped from the original near-black slate to the
+         * site's linen / cream palette so the inline logo replay and the
+         * full-screen first-paint loader blend with the page background.
+         * Linen (`--linen` / #faf8f7) is used at the top, transitioning to
+         * cream (`--cream` / #fffdf9) at the bottom for a subtle depth cue.
+         */}
         <linearGradient id="premium-loader-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#111827" />
-          <stop offset="100%" stopColor="#0f172a" />
+          <stop offset="0%" stopColor="#faf8f7" />
+          <stop offset="100%" stopColor="#fffdf9" />
         </linearGradient>
+        {/*
+         * Ground + sidewalk gradients re-tuned to warm canvas / espresso
+         * tones so the inline animation reads as a cohesive linen scene
+         * instead of a dark-slate cityscape.
+         */}
         <linearGradient id="premium-loader-ground" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#1e293b" />
-          <stop offset="100%" stopColor="#334155" />
+          <stop offset="0%" stopColor="#d4cdbf" />
+          <stop offset="100%" stopColor="#bfb6a6" />
         </linearGradient>
         <linearGradient id="premium-loader-sidewalk" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#334155" />
-          <stop offset="100%" stopColor="#1e293b" />
+          <stop offset="0%" stopColor="#e6e0d2" />
+          <stop offset="100%" stopColor="#cfc7b6" />
         </linearGradient>
         <filter id="premium-loader-shadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#000000" floodOpacity="0.35" />
@@ -305,7 +317,8 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
 
       <rect width="800" height="600" fill="url(#premium-loader-sky)" />
 
-      <g opacity="0.3" fill="#1f2937">
+      {/* Distant buildings — warm canvas tan to harmonize with the linen sky. */}
+      <g opacity="0.28" fill="#a89e8b">
         <rect x="40" y="300" width="70" height="120" />
         <rect x="120" y="278" width="55" height="142" />
         <rect x="190" y="290" width="80" height="130" />
@@ -321,7 +334,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         fill="url(#premium-loader-sidewalk)"
         opacity="0.85"
       />
-      <ellipse cx="400" cy={sidewalkY + 14} rx="340" ry="16" fill="#0b1220" opacity="0.45" />
+      <ellipse cx="400" cy={sidewalkY + 14} rx="340" ry="16" fill="#3a2f24" opacity="0.18" />
 
       <path
         d={`M 50 ${sidewalkY + 2} Q 280 ${sidewalkY - 4} ${hubX - 40} ${sidewalkY + 1}`}
@@ -426,11 +439,17 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         <LoaderPropGraphic key={`vehicle-${prop.type}-${index}`} prop={prop} />
       ))}
 
+      {/*
+       * People silhouettes — solid black to match the website theme.
+       * The previous near-white (`#f8fafc`) palette was chosen for a dark
+       * sky; with the linen background, solid black keeps the figures
+       * readable as crisp foreground silhouettes.
+       */}
       <g
         opacity={frame.groupOpacity}
-        stroke="#f8fafc"
-        fill="#f8fafc"
-        color="#f8fafc"
+        stroke="#000000"
+        fill="#000000"
+        color="#000000"
         transform={depthTransform}
       >
         {frame.members.map((member) => (

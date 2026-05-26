@@ -7,7 +7,12 @@ import {
   WIZARD_NAV_DIVIDER,
 } from '@/lib/wizard/wizard-panel-styles'
 
-export type WizardStep = 1 | 2 | 3 | 4
+/**
+ * 3-step wizard: Event & Venue → Capacity → Floor Plan.
+ * (Step 1 was previously "Event Details" + Step 2 "Venue"; they are now
+ * a single combined step.)
+ */
+export type WizardStep = 1 | 2 | 3
 
 interface WizardNavProps {
   step: WizardStep
@@ -20,12 +25,10 @@ interface WizardNavProps {
 export function WizardNav({ step, onBack, onNext, nextDisabled, nextLabel }: WizardNavProps) {
   const defaultNext =
     step === 1
-      ? 'Proceed to Venue Location →'
+      ? 'Proceed to Capacity Settings →'
       : step === 2
-        ? 'Proceed to Capacity Settings →'
-        : step === 3
-          ? 'Open Floor Plan Canvas →'
-          : 'Save floor plan & deploy'
+        ? 'Open Floor Plan Canvas →'
+        : 'Save floor plan & deploy'
 
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 pt-4 ${WIZARD_NAV_DIVIDER}`}>

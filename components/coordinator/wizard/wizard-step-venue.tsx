@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { EdmontonVenueTemplateBar } from '@/components/coordinator/edmonton-venue-template-bar'
-import { SavedVenuePicker } from '@/components/coordinator/wizard/saved-venue-picker'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { resolveTemplateAnchoredDimensions } from '@/lib/booth-planner/venue-presets'
 import { marketStatusBadge } from '@/lib/theme/market'
@@ -362,10 +361,10 @@ export function WizardStepVenue({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className={WIZARD_STEP_TITLE}>
           {skipVenueLayout
-            ? 'Step 2 — Venue Location'
+            ? 'Venue Location'
             : isEdmontonMarketCity(city)
-              ? 'Step 2 — Edmonton Venue Registry & Map'
-              : `Step 2 — Venue Registry & Map (${cityLabel})`}
+              ? 'Edmonton Venue Registry & Map'
+              : `Venue Registry & Map (${cityLabel})`}
         </h2>
         {pinDropped ? (
           <Badge className={`${marketStatusBadge.success} text-xs`}>Pin dropped</Badge>
@@ -398,24 +397,19 @@ export function WizardStepVenue({
         </p>
       ) : null}
 
-      <SavedVenuePicker
-        coordinatorId={coordinatorId}
-        locationName={locationName}
-        address={address}
-        lat={lat}
-        lng={lng}
-        pinDropped={pinDropped}
-        venuePresetId={venuePresetId}
-        skipVenueLayout={skipVenueLayout}
-        marketCity={city}
-        onApply={onApplySavedVenue}
-      />
-
       <EdmontonVenueTemplateBar
         value={venuePresetId}
         onChange={onVenuePresetChange}
         city={city}
         onCityChange={onCityChange}
+        coordinatorId={coordinatorId}
+        onApplySavedVenue={onApplySavedVenue}
+        locationName={locationName}
+        address={address}
+        lat={lat}
+        lng={lng}
+        pinDropped={pinDropped}
+        skipVenueLayout={skipVenueLayout}
       />
 
       {anchor.isAnchored && anchor.preset && !skipVenueLayout ? (

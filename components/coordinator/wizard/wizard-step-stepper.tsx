@@ -10,17 +10,22 @@ export interface WizardStepDefinition {
   hint: string
 }
 
+/**
+ * 3-step wizard for full markets — the previous "Event Details" and "Venue"
+ * steps were merged into a single combined first step so coordinators can
+ * fill the entire context (name + schedule + venue + map pin) without a
+ * forced page transition.
+ */
 export const MARKET_WIZARD_STEPS_FULL: WizardStepDefinition[] = [
-  { id: 1, label: 'Event Details', hint: 'Name, schedule, settings' },
-  { id: 2, label: 'Venue', hint: 'Location & map' },
-  { id: 3, label: 'Capacity', hint: 'Categories & booths' },
-  { id: 4, label: 'Floor Plan', hint: 'Layout canvas' },
+  { id: 1, label: 'Event & Venue', hint: 'Name, schedule, location & map' },
+  { id: 2, label: 'Capacity', hint: 'Categories & booths' },
+  { id: 3, label: 'Floor Plan', hint: 'Layout canvas' },
 ]
 
+/** 2-step wizard for "skip venue layout" markets (capacity-only, no canvas). */
 export const MARKET_WIZARD_STEPS_SHORT: WizardStepDefinition[] = [
-  { id: 1, label: 'Event Details', hint: 'Name, schedule, settings' },
-  { id: 2, label: 'Venue', hint: 'Location & map' },
-  { id: 3, label: 'Capacity', hint: 'Categories & deploy' },
+  { id: 1, label: 'Event & Venue', hint: 'Name, schedule, location & map' },
+  { id: 2, label: 'Capacity', hint: 'Categories & deploy' },
 ]
 
 interface WizardStepStepperProps {

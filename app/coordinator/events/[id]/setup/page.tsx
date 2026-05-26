@@ -11,11 +11,23 @@ interface Props {
   searchParams: Promise<{ step?: string }>
 }
 
-function parseInitialStep(step: string | undefined, skipVenueLayout: boolean): 1 | 2 | 3 | 4 {
+/**
+ * Resolves the initial wizard step from a URL `?step=` query param.
+ * The wizard is now a 3-step flow (Event & Venue → Capacity → Floor Plan),
+ * but legacy URLs may still pass the old 1–4 numbering. Map them onto the
+ * new range and clamp to 2 when the coordinator opted out of the layout
+ * canvas.
+ */
+function parseInitialStep(step: string | undefined, skipVenueLayout: boolean): 1 | 2 | 3 {
   const n = Number(step)
-  if (n >= 1 && n <= 4) {
-    if (skipVenueLayout && n === 4) return 3
-    return n as 1 | 2 | 3 | 4
+  if (Number.isFinite(n) && n >= 1) {
+    // Legacy URL mapping: old 1+2 collapsed to 1, old 3 → 2, old 4 → 3.
+    let mapped: 1 | 2 | 3
+    if (n <= 2) mapped = 1
+    else if (n === 3) mapped = 2
+    else mapped = 3
+    if (skipVenueLayout && mapped === 3) return 2
+    return mapped
   }
   return 1
 }
@@ -72,7 +84,7 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
     .order('applied_at', { ascending: true })
 
   return (
-    <div className="mx-auto max-w-[min(100%,1600px)] px-4 py-8">
+    <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
       <Link
         href={`/coordinator/events/${id}`}
         className={buttonVariants({ variant: 'ghost', size: 'sm' }) + ' gap-1.5 mb-6 -ml-2'}

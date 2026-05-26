@@ -121,7 +121,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className={WIZARD_STEP_TITLE}>
-          Step 1 — Core Event Setup
+          Core Event Setup
         </h2>
         <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">Draft</span>
       </div>

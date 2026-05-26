@@ -45,13 +45,27 @@ export function applyParsedFlyer(
     filled.add('endTime')
   }
 
-  const { locationName, address } = splitFlyerLocation(parsed.location ?? null)
-  if (locationName && handlers.setLocationName) {
-    handlers.setLocationName(locationName)
+  // Prefer the dedicated `venueName` + `address` keys returned by the
+  // strengthened vision prompt. Fall back to the legacy combined `location`
+  // string (parsed by `splitFlyerLocation`) so older API responses still
+  // populate the form correctly.
+  const directVenue = parsed.venueName?.trim() || null
+  const directAddress = parsed.address?.trim() || null
+
+  let resolvedVenue = directVenue
+  let resolvedAddress = directAddress
+  if (!resolvedVenue || !resolvedAddress) {
+    const split = splitFlyerLocation(parsed.location ?? null)
+    resolvedVenue = resolvedVenue || split.locationName
+    resolvedAddress = resolvedAddress || split.address
+  }
+
+  if (resolvedVenue && handlers.setLocationName) {
+    handlers.setLocationName(resolvedVenue)
     filled.add('locationName')
   }
-  if (address && handlers.setAddress) {
-    handlers.setAddress(address)
+  if (resolvedAddress && handlers.setAddress) {
+    handlers.setAddress(resolvedAddress)
     filled.add('address')
   }
 
@@ -62,7 +76,13 @@ export function applyParsedFlyer(
     filled.add('raffleDonationRequirement')
   }
 
-  const combinedText = [parsed.eventName, parsed.description, parsed.location]
+  const combinedText = [
+    parsed.eventName,
+    parsed.description,
+    parsed.location,
+    parsed.venueName,
+    parsed.address,
+  ]
     .filter(Boolean)
     .join(' ')
   if (handlers.setListingType && QUARTER_AUCTION_RE.test(combinedText)) {
