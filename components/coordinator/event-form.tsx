@@ -167,9 +167,10 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         table_length_ft: number | null
       }>
     }).category_limits
+    const nameById = Object.fromEntries(categories.map((c) => [c.id, c.name])) as Record<string, string>
     return (limits ?? []).map((cl) => ({
       categoryId: cl.category_id,
-      categoryName: cl.category?.name ?? '',
+      categoryName: cl.category?.name?.trim() || nameById[cl.category_id] || '',
       maxSlots: cl.max_slots,
       pricePerBooth: cl.price_per_booth,
       tableLengthFt: cl.table_length_ft ?? null,

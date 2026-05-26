@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import {
   CanvasPerimeterFacingControls,
@@ -13,6 +13,7 @@ import {
   LayoutZoomSlider,
   LayoutZoomViewport,
 } from '@/components/coordinator/layout-zoom-slider'
+import { useCanvasPanZoom } from '@/hooks/use-canvas-pan-zoom'
 
 /** 1 grid unit = 1 foot = 20px on the SVG workspace. */
 export const SVG_FOOT_PX = 20
@@ -60,7 +61,8 @@ export function SvgLayoutCanvas({
   roomLabel,
 }: SvgLayoutCanvasProps) {
   const uid = useId().replace(/:/g, '')
-  const [zoom, setZoom] = useState(LAYOUT_ZOOM_DEFAULT)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const { zoom, onZoomChange, panHandlers, isPanning } = useCanvasPanZoom({ scrollRef })
   const minorGridId = `minor-1ft-grid-${uid}`
   const majorLaneId = `major-8ft-lane-${uid}`
 
@@ -88,10 +90,13 @@ export function SvgLayoutCanvas({
     <div className={cn('flex w-full min-h-0 flex-col', className)}>
       <div className="sticky top-0 z-20 shrink-0 border-b border-stone-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2 py-1.5">
-          <p className="text-[10px] font-black uppercase tracking-wider text-black shrink-0 truncate min-w-0">
-            {roomLabel ?? `${cols}′ × ${rows}′ · 1′ grid`}
-          </p>
-          <LayoutZoomSlider zoom={zoom} onZoomChange={setZoom} className="shrink-0" />
+          <div className="min-w-0 shrink">
+            <p className="truncate text-[10px] font-black uppercase tracking-wider text-black">
+              {roomLabel ?? `${cols}′ × ${rows}′ · 1′ grid`}
+            </p>
+            <p className="text-[10px] text-muted-foreground">Space + drag to pan · Ctrl + scroll to zoom</p>
+          </div>
+          <LayoutZoomSlider zoom={zoom} onZoomChange={onZoomChange} className="shrink-0" />
         </div>
         {headerActions ? (
           <div
@@ -104,7 +109,12 @@ export function SvgLayoutCanvas({
         ) : null}
       </div>
       <div
-        className="relative min-h-[240px] max-h-[min(72vh,960px)] w-full min-w-0 overflow-auto bg-zinc-100"
+        ref={scrollRef}
+        {...panHandlers}
+        className={cn(
+          'relative min-h-[240px] max-h-[min(72vh,960px)] w-full min-w-0 overflow-auto bg-zinc-100 outline-none',
+          isPanning ? 'cursor-grabbing' : 'cursor-default'
+        )}
       >
         {viewportOverlay ? (
           <div className="pointer-events-none absolute inset-0 z-20 overflow-visible">{viewportOverlay}</div>

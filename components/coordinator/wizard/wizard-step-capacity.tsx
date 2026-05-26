@@ -5,7 +5,6 @@ import { CategoryLimitEditor, type CategoryLimit } from '@/components/coordinato
 import { MlmTierGuard } from '@/components/coordinator/mlm-tier-guard'
 import { SmartPopulateBoothCaps } from '@/components/coordinator/smart-populate-booth-caps'
 import { TableSizeSelector } from '@/components/coordinator/table-size-selector'
-import { countActiveMlmSlots } from '@/lib/categories/mlm-constraints'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import { cn } from '@/lib/utils'
 import type { Category, VenueElement } from '@/types/database'
@@ -46,7 +45,6 @@ export function WizardStepCapacity({
   skipVenueLayout = false,
 }: WizardStepCapacityProps) {
   const totalCaps = categoryLimits.reduce((sum, cl) => sum + (cl.maxSlots ?? 0), 0)
-  const activeMlmSlots = countActiveMlmSlots(categoryLimits, categories)
 
   return (
     <div className="space-y-3">
@@ -115,7 +113,6 @@ export function WizardStepCapacity({
         <MlmTierGuard
           globalMlmCap={globalMlmCap}
           onGlobalMlmCapChange={onGlobalMlmCapChange}
-          activeMlmSlots={activeMlmSlots}
         />
       ) : null}
 

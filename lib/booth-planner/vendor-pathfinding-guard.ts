@@ -154,11 +154,11 @@ export function vendorPathfindingUnobstructed(
 export function vendorPathfindingBlockMessage(reason?: VendorPathfindingGuardResult['reason']): string {
   switch (reason) {
     case 'no_patron_path':
-      return 'Cannot place here — would block the main patron path.'
+      return 'Cannot place here — would block the main patron path. Move the booth away from entrance-to-exit walkways.'
     case 'storefront_blocked':
       return 'Cannot place here — storefront aisle must stay walkable.'
     case 'flow_vector_blocked':
-      return 'Cannot place here — would obstruct patron flow vectors.'
+      return 'Cannot place here — would obstruct patron flow. Shift the booth off the highlighted flow lane.'
     default:
       return 'Cannot place here — blocked or occupied.'
   }

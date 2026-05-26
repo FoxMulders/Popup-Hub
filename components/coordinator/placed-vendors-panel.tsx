@@ -14,6 +14,8 @@ interface PlacedVendorsPanelProps {
   onSelect: (id: string) => void
   onUnplace: (cell: BoothCell) => void
   onRemove: (cell: BoothCell) => void
+  /** Full-width embed inside floor-plan inventory tabs. */
+  embedded?: boolean
 }
 
 function boothLabel(boothNumber: number): string {
@@ -29,11 +31,12 @@ export function PlacedVendorsPanel({
   onSelect,
   onUnplace,
   onRemove,
+  embedded = false,
 }: PlacedVendorsPanelProps) {
   if (vendors.length === 0) return null
 
   return (
-    <div className="w-56 market-panel p-4 space-y-3">
+    <div className={embedded ? 'space-y-2 p-2' : 'w-56 market-panel p-4 space-y-3'}>
       <div>
         <p className="text-xs font-semibold text-forest uppercase">
           Placed ({vendors.length})

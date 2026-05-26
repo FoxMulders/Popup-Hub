@@ -17,9 +17,10 @@ const PERSONA_LABELS: Record<WizardCritiqueFinding['persona'], string> = {
 interface WizardCritiqueDrawerProps {
   findings: WizardCritiqueFinding[]
   onDismiss: (id: string) => void
+  onGoToStep?: (step: number) => void
 }
 
-export function WizardCritiqueDrawer({ findings, onDismiss }: WizardCritiqueDrawerProps) {
+export function WizardCritiqueDrawer({ findings, onDismiss, onGoToStep }: WizardCritiqueDrawerProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -77,6 +78,17 @@ export function WizardCritiqueDrawer({ findings, onDismiss }: WizardCritiqueDraw
                 onDismiss={onDismiss}
               >
                 <p className="text-xs leading-relaxed whitespace-normal break-words">{f.message}</p>
+                {f.actionStep && onGoToStep ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 h-8 text-xs"
+                    onClick={() => onGoToStep(f.actionStep!)}
+                  >
+                    Go to Step {f.actionStep}
+                  </Button>
+                ) : null}
               </DismissibleAlertCard>
             ))
           )}

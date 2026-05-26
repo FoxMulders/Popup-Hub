@@ -10,6 +10,7 @@ import {
   storefrontLabelCssTransform,
 } from '@/lib/booth-planner/booth-label-layout'
 import { AUTO_PLAN_CAPACITY_LIMIT_MESSAGE } from '@/lib/booth-planner/placement-guard'
+import { formatCapacityAlertDetail } from '@/lib/booth-planner/accessible-placement'
 import { sortVendorsFcfs } from '@/lib/applications/fcfs-sort'
 import {
   createFakeVendors,
@@ -42,8 +43,6 @@ import {
 } from '@/lib/booth-planner/venue-elements'
 import { FakeVendorsPanel } from '@/components/coordinator/fake-vendors-panel'
 import { LayoutPresetPicker } from '@/components/coordinator/layout-preset-picker'
-import { UnplacedVendorsPanel } from '@/components/coordinator/unplaced-vendors-panel'
-import { PlacedVendorsPanel } from '@/components/coordinator/placed-vendors-panel'
 import { GridScaleBanner } from '@/components/coordinator/grid-scale-banner'
 import { VendorCategorySummary } from '@/components/coordinator/vendor-category-summary'
 import { SmartPopulateBoothCaps } from '@/components/coordinator/smart-populate-booth-caps'
@@ -280,6 +279,11 @@ import {
   RotateCw,
   Route,
 } from 'lucide-react'
+import { placementLayoutFingerprint } from '@/lib/booth-planner/placement-layout-fingerprint'
+import { FloorPlanWorkspace } from '@/components/coordinator/floor-plan/floor-plan-workspace'
+import { FloorPlanStatsPanel } from '@/components/coordinator/floor-plan/floor-plan-stats-panel'
+import { FloorPlanInventoryPanel } from '@/components/coordinator/floor-plan/floor-plan-inventory-panel'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import type { BoothCell, BoothLayout, VenueElement, VenueElementType } from '@/types/database'
 
 const CATEGORY_COLORS = [
@@ -363,6 +367,8 @@ export interface BoothPlannerProps {
     live: LiveLayoutQaResult | null
     qaRunning: boolean
   }) => void
+  /** Optional panel below layout presets (e.g. wizard QA desk). */
+  rightSidebarExtra?: React.ReactNode
 }
 
 const DEFAULT_TABLE_LENGTH_FT = DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
@@ -394,6 +400,7 @@ export function BoothPlanner({
   saveBlankLayoutRef,
   onOverlapChange,
   onLiveQaChange,
+  rightSidebarExtra,
 }: BoothPlannerProps) {
   const supabase = createClient()
 
@@ -951,6 +958,8 @@ export function BoothPlanner({
 
   const [capacityAlertVisible, setCapacityAlertVisible] = useState(false)
   const [capacityAlertMessage, setCapacityAlertMessage] = useState<string | null>(null)
+  const [layoutPresetApplying, setLayoutPresetApplying] = useState(false)
+  const layoutPresetApplyRef = useRef<number | null>(null)
 
   const cellMap = useMemo(() => {
     const map = new Map<string, BoothCell>()
@@ -968,6 +977,31 @@ export function BoothPlanner({
 
   const overflow = useMemo(() => cells.filter((c) => c.col < 0), [cells])
   const placed = useMemo(() => cells.filter((c) => c.col >= 0), [cells])
+
+  const capacityAlertDetail = useMemo(() => {
+    if (!capacityAlertMessage) return null
+    return formatCapacityAlertDetail(placed.length, overflow.length, capacityAlertMessage)
+  }, [capacityAlertMessage, placed.length, overflow.length])
+
+  const layoutBitmapFingerprint = useMemo(
+    () => placementLayoutFingerprint(gridCols, canvasRows, venueElementsWithDoors, cells),
+    [gridCols, canvasRows, venueElementsWithDoors, cells]
+  )
+
+  const layoutBitmap = useMemo(
+    () => SpatialBitGrid.fromLayout(gridCols, canvasRows, venueElementsWithDoors, cells),
+    [layoutBitmapFingerprint, gridCols, canvasRows, venueElementsWithDoors, cells]
+  )
+
+  const categoryPlacementGuard = useMemo(
+    () =>
+      buildVendorPlacementGuard({
+        cols: gridCols,
+        rows: canvasRows,
+        placedCells: cells,
+      }),
+    [layoutBitmapFingerprint, gridCols, canvasRows, cells]
+  )
 
   const layoutCells = useMemo(
     () => cells.filter((c) => !layoutHiddenIds.has(c.id)),
@@ -1412,13 +1446,16 @@ export function BoothPlanner({
     const snapped = snapPlacementOrigin(targetCol, targetRow, colSpan, rowSpan)
     targetCol = snapped.col
     targetRow = snapped.row
-    const bitmap = SpatialBitGrid.fromLayout(
-      gridCols,
-      canvasRows,
-      venueElementsWithDoors,
-      cells,
-      srcCell.id
-    )
+    const bitmap =
+      srcCell.col >= 0
+        ? SpatialBitGrid.fromLayout(
+            gridCols,
+            canvasRows,
+            venueElementsWithDoors,
+            cells,
+            srcCell.id
+          )
+        : layoutBitmap
     if (!bitmap.canPlaceBoothRect(targetCol, targetRow, colSpan, rowSpan)) {
       placementBlockReason.current = 'Cannot place here — blocked or occupied.'
       return false
@@ -1447,12 +1484,7 @@ export function BoothPlanner({
     }
 
     const categoryKey = normalizeCategoryKey(srcCell.categoryName)
-    const guard = buildVendorPlacementGuard({
-      cols: gridCols,
-      rows: canvasRows,
-      placedCells: cells,
-      excludeBoothId: srcCell.col >= 0 ? srcCell.id : undefined,
-    })
+    const guard = categoryPlacementGuard
     const excludeRect =
       srcCell.col >= 0
         ? {
@@ -1679,10 +1711,7 @@ export function BoothPlanner({
     toast.message('Test vendors removed')
   }
 
-  function handleLayoutPresetChange(preset: LayoutPreset) {
-    setLayoutPreset(preset)
-    setShowPatronFlow(false)
-
+  function applyLayoutPresetShell(preset: LayoutPreset) {
     const genericMode = genericRowLayoutModeFromPreset(preset)
 
     if (preset === 'perimeter') {
@@ -1761,6 +1790,27 @@ export function BoothPlanner({
       const label = LAYOUT_PRESET_OPTIONS.find((p) => p.id === preset)?.label ?? preset
       toast.success(`${label} shell applied — structural fixtures preserved, booths cleared`)
     }
+  }
+
+  function handleLayoutPresetChange(preset: LayoutPreset) {
+    if (preset === layoutPreset && !layoutPresetApplying) return
+
+    setLayoutPreset(preset)
+    setShowPatronFlow(false)
+    setLayoutPresetApplying(true)
+
+    if (layoutPresetApplyRef.current != null) {
+      cancelAnimationFrame(layoutPresetApplyRef.current)
+    }
+
+    layoutPresetApplyRef.current = requestAnimationFrame(() => {
+      layoutPresetApplyRef.current = null
+      try {
+        applyLayoutPresetShell(preset)
+      } finally {
+        setLayoutPresetApplying(false)
+      }
+    })
   }
 
   function applyDefaultFixtures() {
@@ -2560,14 +2610,17 @@ export function BoothPlanner({
       }
       if (!srcCell) return
 
-      if (!canPlaceCellAt(srcCell, targetCol, targetRow)) return
+      if (!canPlaceCellAt(srcCell, targetCol, targetRow)) {
+        toast.message(categoryPlacementBlockMessage(srcCell), { duration: 3000 })
+        return
+      }
 
       placeCellAt(srcCell, targetCol, targetRow)
       dragSource.current = null
       setDragHoverCell(null)
       setSelectedVendorId(null)
     },
-    [activeTool, cellMap, cells, canPlaceCellAt, placeCellAt, handleDoorDrop]
+    [activeTool, cellMap, cells, canPlaceCellAt, placeCellAt, handleDoorDrop, categoryPlacementBlockMessage]
   )
 
   const handlePlaceOnCellClick = useCallback(
@@ -2596,9 +2649,10 @@ export function BoothPlanner({
   )
 
   const [dragHoverCell, setDragHoverCell] = useState<{ row: number; col: number } | null>(null)
+  const debouncedDragHoverCell = useDebouncedValue(dragHoverCell, 32)
 
   const clearanceOverlay = useMemo((): DualRingOverlayResult | null => {
-    if (activeTool !== 'vendor' || !isOneFootGrid || !dragHoverCell) return null
+    if (activeTool !== 'vendor' || !isOneFootGrid || !debouncedDragHoverCell) return null
 
     const src = dragSource.current
     let srcCell: BoothCell | undefined
@@ -2616,8 +2670,8 @@ export function BoothPlanner({
 
     const { rowSpan, colSpan } = resolvePlacementSpans(
       srcCell,
-      dragHoverCell.col,
-      dragHoverCell.row
+      debouncedDragHoverCell.col,
+      debouncedDragHoverCell.row
     )
     const placed = cells
       .filter((c) => c.col >= 0 && c.id !== srcCell.id)
@@ -2632,8 +2686,8 @@ export function BoothPlanner({
     return computeDualRingOverlay({
       active: {
         id: srcCell.id,
-        row: dragHoverCell.row,
-        col: dragHoverCell.col,
+        row: debouncedDragHoverCell.row,
+        col: debouncedDragHoverCell.col,
         rowSpan,
         colSpan,
       },
@@ -2645,7 +2699,7 @@ export function BoothPlanner({
   }, [
     activeTool,
     isOneFootGrid,
-    dragHoverCell,
+    debouncedDragHoverCell,
     cells,
     cellMap,
     selectedVendorId,
@@ -3162,7 +3216,12 @@ export function BoothPlanner({
                   </Button>
                 </div>
               </div>
-              <LayoutPresetPicker value={layoutPreset} onChange={handleLayoutPresetChange} />
+              <LayoutPresetPicker
+                value={layoutPreset}
+                onChange={handleLayoutPresetChange}
+                disabled={layoutPresetApplying}
+                applying={layoutPresetApplying}
+              />
             </div>
             {usesTableUnits && (
               <TableVendorSpacingPanel
@@ -3277,57 +3336,83 @@ export function BoothPlanner({
             </DialogContent>
           </Dialog>
 
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,1fr)] xl:items-start">
-            <aside className="sticky top-3 z-10 flex min-w-0 flex-col gap-2 self-start">
-              <FakeVendorsPanel
-                compact
-                fakeVendorCount={fakeVendors.length}
-                layoutCapacity={layoutCapacity}
-                maxBoothCapacity={maxBoothCapacity}
-                lastFillSummary={lastFillSummary}
-                allowsTentVendors={allowsTentVendors}
-                tentRestrictionTooltip={TENT_OUTDOOR_ONLY_TOOLTIP}
-                randomFillRunning={randomFillRunning || autoPlanRunning}
-                seedFillRunning={seedFillRunning}
-                onAdd={handleAddFakeVendors}
-                onClear={handleClearFakeVendors}
-                onAutoFill={handleAutoFillTestVendors}
-                onRandomFillToMax={() => void handleRandomFillTestVendorsToMax()}
-                onSeedDiverseToMax={() => void handleSeedDiverseApplicationsToMax()}
-              />
-              <VenueFixturesCatalog activeTool={activeTool} onToolChange={setActiveTool} />
-              {!hideRoomBar ? (
-                <LayoutRoomBar
-                  rooms={rooms}
-                  activeRoomId={activeRoomId}
-                  onSelectRoom={handleSelectRoom}
-                  onAddRoom={handleAddRoom}
-                  onRenameRoom={handleRenameRoom}
-                  onDeleteRoom={handleDeleteRoom}
-                  compact
+          <FloorPlanWorkspace
+            leftSidebar={
+              <>
+                <VenueFixturesCatalog activeTool={activeTool} onToolChange={setActiveTool} />
+                {!hideRoomBar ? (
+                  <LayoutRoomBar
+                    rooms={rooms}
+                    activeRoomId={activeRoomId}
+                    onSelectRoom={handleSelectRoom}
+                    onAddRoom={handleAddRoom}
+                    onRenameRoom={handleRenameRoom}
+                    onDeleteRoom={handleDeleteRoom}
+                    compact
+                  />
+                ) : null}
+                {activeTool === 'custom_label' ? (
+                  <div className="market-panel flex flex-col gap-1.5 px-3 py-2">
+                    <label className="text-[10px] font-medium uppercase text-muted-foreground">Label text</label>
+                    <input
+                      type="text"
+                      value={customLabelDraft}
+                      onChange={(e) => {
+                        setCustomLabelDraft(e.target.value)
+                        paintLabelRef.current = e.target.value.trim() || undefined
+                      }}
+                      placeholder="Sponsor lounge…"
+                      className="rounded-lg border-2 border-stone-200 bg-card px-2 py-1 text-sm"
+                    />
+                  </div>
+                ) : null}
+                <FloorPlanInventoryPanel
+                  placed={placed}
+                  unplaced={overflow}
+                  activeTool={activeTool}
+                  selectedId={selectedVendorId}
+                  cellWidthFt={gridConfig.cellWidthFt}
+                  cellLengthFt={gridConfig.cellLengthFt}
+                  isOneFootGrid={isOneFootGrid}
+                  onSelect={setSelectedVendorId}
+                  onUnplace={handleUnplaceVendor}
+                  onRemove={handleRemoveVendorFromPlan}
+                  onDragStart={handleUnplacedDragStart}
                 />
-              ) : null}
-              {activeTool === 'custom_label' ? (
-                <div className="market-panel flex flex-col gap-1.5 px-3 py-2">
-                  <label className="text-[10px] font-medium uppercase text-muted-foreground">Label text</label>
-                  <input
-                    type="text"
-                    value={customLabelDraft}
-                    onChange={(e) => {
-                      setCustomLabelDraft(e.target.value)
-                      paintLabelRef.current = e.target.value.trim() || undefined
-                    }}
-                    placeholder="Sponsor lounge…"
-                    className="rounded-lg border-2 border-stone-200 bg-card px-2 py-1 text-sm"
+              </>
+            }
+            rightSidebar={
+              <>
+                <FloorPlanStatsPanel
+                  roomName={activeRoom.name}
+                  gridCols={gridCols}
+                  gridRows={gridRows}
+                  placedCount={placed.length}
+                  unplacedCount={overflow.length}
+                  maxBoothCapacity={maxBoothCapacity}
+                  layoutCapacity={layoutCapacity}
+                  baselineTableLengthFt={baselineTableLengthFt}
+                  entrance={entrance}
+                  lockedFixtureCount={lockedFixtureCount}
+                  hasOverlap={layoutOverlaps.hasOverlap}
+                  hasStrollerBottleneck={showStrollerOverlays && strollerClearance.hasBottleneck}
+                />
+                <div className="market-panel p-3">
+                  <LayoutPresetPicker
+                    value={layoutPreset}
+                    onChange={handleLayoutPresetChange}
+                    compact
+                    disabled={layoutPresetApplying}
+                    applying={layoutPresetApplying}
                   />
                 </div>
-              ) : null}
-            </aside>
-
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-              {(showOverlapCard ||
-                capacityAlertVisible ||
-                (layoutAlert && !dismissedAlerts.has('layout-exception'))) && (
+                {rightSidebarExtra}
+              </>
+            }
+            alerts={
+              showOverlapCard ||
+              capacityAlertVisible ||
+              (layoutAlert && !dismissedAlerts.has('layout-exception')) ? (
                 <div className="flex flex-wrap gap-2">
                   {showOverlapCard ? (
                     <DismissibleAlertCard
@@ -3350,7 +3435,7 @@ export function BoothPlanner({
                   {capacityAlertVisible && capacityAlertMessage ? (
                     <DismissibleAlertCard
                       alertId="capacity-reached"
-                      title="Capacity reached"
+                      title="CAPACITY REACHED"
                       variant="warning"
                       dismissed={false}
                       onDismiss={() => {
@@ -3359,7 +3444,7 @@ export function BoothPlanner({
                       }}
                       className="min-w-0 flex-1 shrink-0"
                     >
-                      <p className="text-xs font-semibold leading-relaxed pr-2">{capacityAlertMessage}</p>
+                      <p className="text-xs font-semibold leading-relaxed pr-2">{capacityAlertDetail}</p>
                     </DismissibleAlertCard>
                   ) : null}
                   {layoutAlert && !dismissedAlerts.has('layout-exception') ? (
@@ -3375,12 +3460,12 @@ export function BoothPlanner({
                     </DismissibleAlertCard>
                   ) : null}
                 </div>
-              )}
-
-              <section className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-              {isOneFootGrid && renderGridParams ? (
+              ) : null
+            }
+            canvas={
+              isOneFootGrid && renderGridParams ? (
                 <SvgLayoutCanvas
-                  className="min-h-0 flex-1"
+                  className="min-h-0 flex-1 border-0 shadow-none"
                   cols={gridCols}
                   rows={canvasRows}
                   hallRows={gridRows}
@@ -3472,7 +3557,7 @@ export function BoothPlanner({
               ) : (
                 <>
                   <div
-                    className="flex flex-wrap items-center gap-2 border-2 border-black bg-white px-3 py-2 mb-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+                    className="flex flex-wrap items-center gap-2 border-b border-stone-200 bg-white px-3 py-2"
                     role="toolbar"
                     aria-label="Floor plan actions"
                   >
@@ -3526,113 +3611,28 @@ export function BoothPlanner({
                     onGridCellDragLeave={() => setDragHoverCell(null)}
                   />
                 </>
-              )}
-            </section>
-
-            {layoutHiddenIds.size > 0 && (
-              <div className="rounded-xl border-2 border-dashed border-stone-200 bg-canvas px-3 py-2">
-                <p className="text-[10px] text-muted-foreground mb-1.5">
-                  {layoutHiddenIds.size} vendor{layoutHiddenIds.size === 1 ? '' : 's'} hidden from this layout
-                </p>
-                <button
-                  type="button"
-                  className="text-xs font-medium text-forest hover:underline active:translate-y-0.5"
-                  onClick={() => {
-                    setLayoutHiddenIds(new Set())
-                    toast.message('Hidden vendors restored to the plan')
-                  }}
-                >
-                  Restore hidden vendors
-                </button>
-              </div>
-            )}
-            {vendorInputs.length === 0 ? (
-              <div className="rounded-2xl border-2 border-stone-200 bg-card shadow-[var(--shadow-market)] p-3">
-                <p className="text-xs text-muted-foreground">
-                  Add test vendors in the left panel or run Smart Populate Layout to fill the canvas.
-                </p>
-              </div>
-            ) : (
-              <>
-              <PlacedVendorsPanel
-                vendors={placed}
-                selectedId={selectedVendorId}
-                cellWidthFt={gridConfig.cellWidthFt}
-                cellLengthFt={gridConfig.cellLengthFt}
-                isOneFootGrid={isOneFootGrid}
-                onSelect={setSelectedVendorId}
-                onUnplace={handleUnplaceVendor}
-                onRemove={handleRemoveVendorFromPlan}
-              />
-              <UnplacedVendorsPanel
-                vendors={overflow}
-                activeTool={activeTool}
-                selectedId={selectedVendorId}
-                cellWidthFt={gridConfig.cellWidthFt}
-                cellLengthFt={gridConfig.cellLengthFt}
-                isOneFootGrid={isOneFootGrid}
-                onSelect={setSelectedVendorId}
-                onDragStart={handleUnplacedDragStart}
-                onRemove={handleRemoveVendorFromPlan}
-              />
-              </>
-            )}
-            </div>
-
-            <aside className="sticky top-3 flex min-w-0 flex-col gap-2 self-start">
-              <article className="market-panel space-y-2 p-3" aria-label="Your selections">
-                <h3 className={cn(WIZARD_SECTION_LABEL, 'border-b border-stone-200/80 pb-1.5')}>
-                  Your Selections
-                </h3>
-                <ul className="space-y-2 text-xs">
-                  <li>
-                    <span className={WIZARD_SUMMARY_META_LABEL}>Room</span>
-                    <p className={WIZARD_SUMMARY_VALUE_EMPHASIS}>{activeRoom.name}</p>
-                  </li>
-                  <li>
-                    <span className={WIZARD_SUMMARY_META_LABEL}>Grid</span>
-                    <p className={cn(WIZARD_SUMMARY_VALUE, 'tabular-nums')}>
-                      {gridCols} × {gridRows} · {placed.length} placed
-                      {layoutCells.length > placed.length
-                        ? ` · ${layoutCells.length - placed.length} unplaced`
-                        : ''}
-                    </p>
-                  </li>
-                  <li>
-                    <span className={WIZARD_SUMMARY_META_LABEL}>Capacity</span>
-                    <p className={WIZARD_SUMMARY_VALUE_WARN}>
-                      Max booths: {maxBoothCapacity}
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        ~{layoutCapacity} fit with aisles · {baselineTableLengthFt}&apos; baseline table
-                      </span>
-                    </p>
-                  </li>
-                  <li>
-                    <span className={WIZARD_SUMMARY_META_LABEL}>Entrance</span>
-                    <p className={cn(WIZARD_SUMMARY_VALUE_SAGE, 'capitalize')}>{entrance}</p>
-                  </li>
-                </ul>
-                <TooltipWrapper text="Drag doors on outer walls, or use Entrance (E) / Exit (X). Paint fixtures or run Smart Populate when the canvas is empty.">
-                  <p className="cursor-default text-[10px] font-medium tabular-nums text-muted-foreground">
-                    {lockedFixtureCount > 0 ? `${lockedFixtureCount} locked · ` : ''}
-                    {layoutOverlaps.hasOverlap ? 'overlap · ' : ''}
-                    {showStrollerOverlays && strollerClearance.hasBottleneck
-                      ? 'stroller warnings'
-                      : 'layout clear'}
+              )
+            }
+            footer={
+              layoutHiddenIds.size > 0 ? (
+                <div className="rounded-xl border border-dashed border-stone-200 bg-canvas px-3 py-2">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">
+                    {layoutHiddenIds.size} vendor{layoutHiddenIds.size === 1 ? '' : 's'} hidden from this layout
                   </p>
-                </TooltipWrapper>
-              </article>
-
-              <div className="market-panel p-3">
-                <LayoutPresetPicker
-                  value={layoutPreset}
-                  onChange={handleLayoutPresetChange}
-                  compact
-                />
-              </div>
-
-            </aside>
-          </div>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-forest hover:underline active:translate-y-0.5"
+                    onClick={() => {
+                      setLayoutHiddenIds(new Set())
+                      toast.message('Hidden vendors restored to the plan')
+                    }}
+                  >
+                    Restore hidden vendors
+                  </button>
+                </div>
+              ) : null
+            }
+          />
 
           {canvasMounted ? (
             <LayoutQaLogPanel

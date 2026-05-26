@@ -3,26 +3,24 @@
 interface MlmTierGuardProps {
   globalMlmCap: number
   onGlobalMlmCapChange: (cap: number) => void
-  activeMlmSlots: number
+  /** @deprecated MLM cap is enforced at approval time, not on the listed slot count. */
+  activeMlmSlots?: number
 }
 
-export function MlmTierGuard({
-  globalMlmCap,
-  onGlobalMlmCapChange,
-  activeMlmSlots,
-}: MlmTierGuardProps) {
+export function MlmTierGuard({ globalMlmCap, onGlobalMlmCapChange }: MlmTierGuardProps) {
   return (
-    <div className="border-2 border-black p-4 bg-yellow-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] my-4">
-      <h4 className="font-bold uppercase tracking-wide text-sm flex items-center gap-2">
-        🛡️ MLM Tier Curation Guard
+    <div className="rounded-xl border border-stone-200 bg-harvest-50/40 px-4 py-3">
+      <h4 className="font-semibold text-sm flex items-center gap-2 text-foreground">
+        <span aria-hidden>🛡️</span> MLM approval cap
       </h4>
-      <p className="text-xs text-foreground mt-1 whitespace-normal break-words">
-        Brands are capped at 1 slot each to prevent internal competition. Set the maximum total MLM
-        profiles allowed in this showcase:
+      <p className="mt-1 text-xs text-muted-foreground whitespace-normal break-words">
+        List as many MLM brands as you want — each is locked to one booth slot. The cap below only
+        limits how many MLM applicants you can approve at this market; remaining brands queue as a
+        first-come waitlist.
       </p>
-      <div className="flex flex-wrap items-center gap-3 mt-3">
-        <label htmlFor="global-mlm-cap" className="text-xs font-bold uppercase">
-          Max Overall MLMs:
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <label htmlFor="global-mlm-cap" className="text-xs font-semibold uppercase tracking-wide">
+          Max MLMs to approve
         </label>
         <input
           id="global-mlm-cap"
@@ -31,10 +29,10 @@ export function MlmTierGuard({
           max={50}
           value={globalMlmCap}
           onChange={(e) => onGlobalMlmCapChange(Math.max(0, Number(e.target.value) || 0))}
-          className="border-2 border-black p-1 w-16 text-center font-bold bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+          className="h-9 w-20 rounded-lg border-2 border-stone-200 bg-card px-2 text-center text-sm font-semibold tabular-nums focus:border-harvest-500 focus:outline-none"
         />
-        <span className="text-xs text-muted-foreground italic whitespace-normal break-words">
-          (Remaining brands queue as FCFS waitlist once met — {activeMlmSlots}/{globalMlmCap} active)
+        <span className="text-xs text-muted-foreground">
+          enforced at approval — applicants beyond this stay pending until a slot opens.
         </span>
       </div>
     </div>

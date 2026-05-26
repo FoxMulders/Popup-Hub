@@ -15,6 +15,8 @@ interface UnplacedVendorsPanelProps {
   onSelect: (id: string) => void
   onDragStart: (e: React.DragEvent, cell: BoothCell) => void
   onRemove: (cell: BoothCell) => void
+  /** Full-width embed inside floor-plan inventory tabs. */
+  embedded?: boolean
 }
 
 function boothLabel(boothNumber: number): string {
@@ -51,13 +53,14 @@ export function UnplacedVendorsPanel({
   onSelect,
   onDragStart,
   onRemove,
+  embedded = false,
 }: UnplacedVendorsPanelProps) {
   if (vendors.length === 0) return null
 
   const canDrag = activeTool === 'vendor'
 
   return (
-    <div className="w-56 market-panel p-4 space-y-3">
+    <div className={embedded ? 'space-y-2 p-2' : 'w-56 market-panel p-4 space-y-3'}>
       <div>
         <p className="text-xs font-semibold text-terracotta-700 uppercase">
           Unplaced ({vendors.length})

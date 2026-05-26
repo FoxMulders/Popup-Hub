@@ -49,6 +49,7 @@ import {
   WIZARD_PANEL,
 } from '@/lib/wizard/wizard-panel-styles'
 import { WizardCritiqueDrawer } from '@/components/coordinator/wizard/wizard-critique-drawer'
+import { WizardQaSidebarPanel } from '@/components/coordinator/wizard/wizard-qa-sidebar-panel'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import {
   MARKET_WIZARD_STEPS_FULL,
@@ -99,9 +100,10 @@ function buildCategoryLimitsFromEvent(
       table_length_ft: number | null
     }>
   }).category_limits
+  const byId = new Map(categories.map((c) => [c.id, c]))
   const mapped = (limits ?? []).map((cl) => ({
     categoryId: cl.category_id,
-    categoryName: cl.category?.name ?? '',
+    categoryName: cl.category?.name?.trim() || byId.get(cl.category_id)?.name || '',
     maxSlots: cl.max_slots,
     pricePerBooth: cl.price_per_booth,
     tableLengthFt: cl.table_length_ft ?? null,
@@ -828,8 +830,39 @@ export function MarketSetupWizard({
     }
   }, [currentStep, eventId])
 
+  const hasAutoPopulatedRef = useRef(false)
+  useEffect(() => {
+    if (currentStep !== 4 || skipVenueLayout || !eventId) return
+    if (hasAutoPopulatedRef.current) return
+
+    const totalConfiguredSlots = categoryLimits.reduce((sum, cl) => sum + (cl.maxSlots ?? 0), 0)
+    if (totalConfiguredSlots <= 0) return
+
+    const placedCount = rooms.reduce(
+      (sum, room) => sum + room.cells.filter((c) => c.col >= 0 && c.row >= 0).length,
+      0
+    )
+    if (placedCount > 0) {
+      hasAutoPopulatedRef.current = true
+      return
+    }
+
+    const handle = window.setTimeout(() => {
+      hasAutoPopulatedRef.current = true
+      void autoPlanRef.current?.()
+    }, 250)
+    return () => window.clearTimeout(handle)
+  }, [currentStep, skipVenueLayout, eventId, categoryLimits, rooms])
+
+  const isFloorPlanStep = currentStep === 4 && !skipVenueLayout
+
   return (
-    <div className="space-y-6">
+    <div
+      className={cn(
+        'space-y-6',
+        isFloorPlanStep ? 'mx-[calc(50%-50vw)] w-screen px-3 sm:px-4 lg:px-6' : null
+      )}
+    >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <p className={WIZARD_PAGE_KICKER}>
@@ -1016,6 +1049,13 @@ export function MarketSetupWizard({
                 autoPlanRef={autoPlanRef}
                 onOverlapChange={setPlannerOverlap}
                 onLiveQaChange={({ qaRunning }) => setPlannerQaRunning(qaRunning)}
+                rightSidebarExtra={
+                  <WizardQaSidebarPanel
+                    findings={findings}
+                    onDismiss={dismiss}
+                    onGoToStep={(step) => void goToStep(step as WizardStep)}
+                  />
+                }
               />
               <WizardNav step={4} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
             </>
@@ -1034,7 +1074,13 @@ export function MarketSetupWizard({
         ) : null}
       </div>
 
-      <WizardCritiqueDrawer findings={findings} onDismiss={dismiss} />
+      {currentStep !== 4 ? (
+        <WizardCritiqueDrawer
+          findings={findings}
+          onDismiss={dismiss}
+          onGoToStep={(step) => void goToStep(step as WizardStep)}
+        />
+      ) : null}
     </div>
   )
 }

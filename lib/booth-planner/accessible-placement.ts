@@ -23,6 +23,17 @@ export const MAX_CLUSTER_HEIGHT_CELLS = 2
 export const AUTO_PLAN_CAPACITY_TOAST =
   '⚠️ Room capacity reached. Some booths could not be placed while maintaining mandatory 8ft stroller-safe aisles.'
 
+export function formatCapacityAlertDetail(
+  placedCount: number,
+  unplacedCount: number,
+  baseMessage?: string | null
+): string {
+  const base = baseMessage?.trim() || AUTO_PLAN_CAPACITY_TOAST
+  const counts = `${placedCount} on floor · ${unplacedCount} unplaced`
+  if (unplacedCount <= 0) return `${base} ${counts}.`
+  return `${base} ${counts}. Try L-Shape Corners or Modified Loop in Layout preset, or rearrange placed booths to open aisle space.`
+}
+
 export function buildWalkwayCells(elements: VenueElement[]): Set<string> {
   const walkway = new Set<string>()
   for (const el of elements) {

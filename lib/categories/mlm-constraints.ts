@@ -57,31 +57,26 @@ export function countActiveMlmSlots(limits: CategoryLimit[], categories: Categor
   }, 0)
 }
 
-/** Apply per-brand (max 1) and collective MLM tier cap rules to category limits. */
+/**
+ * Apply per-brand (max 1 booth slot each) MLM rules.
+ *
+ * The collective `globalMlmCap` is enforced at approval time (see
+ * `lib/applications/mlm-approval-cap.ts`), NOT at config time — coordinators can
+ * list every MLM brand they want to consider; the cap controls how many actually
+ * get approved.
+ */
 export function applyMlmLimitRules(
   limits: CategoryLimit[],
   categories: Category[],
-  globalMlmCap: number
+  _globalMlmCap: number
 ): CategoryLimit[] {
-  const cap = Math.max(0, globalMlmCap)
   const byId = new Map(categories.map((c) => [c.id, c]))
-  let mlmSlotsAssigned = 0
 
   return limits.map((limit) => {
     const cat = byId.get(limit.categoryId)
     const isMlm = cat ? isMlmCategory(cat) : isSingleSlotMlmBrand(limit.categoryName)
     if (!isMlm) return limit
-
-    let maxSlots = clampMlmMaxSlots(limit.categoryName, cat, limit.maxSlots)
-    if (maxSlots > 0) {
-      if (mlmSlotsAssigned >= cap) {
-        maxSlots = 0
-      } else {
-        mlmSlotsAssigned += maxSlots
-      }
-    }
-
-    return { ...limit, maxSlots }
+    return { ...limit, maxSlots: clampMlmMaxSlots(limit.categoryName, cat, limit.maxSlots) }
   })
 }
 

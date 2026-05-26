@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Trash2, Plus, HelpCircle } from 'lucide-react'
+import { Trash2, Plus, HelpCircle, Sparkles } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Category } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
@@ -38,6 +38,15 @@ interface CategoryLimitEditorProps {
   globalMlmCap?: number
 }
 
+const DEFAULT_NEW_SLOTS = 1
+
+function resolveCategoryName(limit: CategoryLimit, categories: Category[]): string {
+  const trimmed = limit.categoryName?.trim()
+  if (trimmed) return trimmed
+  const cat = categories.find((c) => c.id === limit.categoryId)
+  return cat?.name ?? 'Unnamed category'
+}
+
 export function CategoryLimitEditor({
   categories,
   value,
@@ -46,7 +55,7 @@ export function CategoryLimitEditor({
   globalMlmCap = DEFAULT_GLOBAL_MLM_CAP,
 }: CategoryLimitEditorProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
-  const [slots, setSlots] = useState(3)
+  const [slots, setSlots] = useState(DEFAULT_NEW_SLOTS)
   const [priceDollars, setPriceDollars] = useState(0)
   const [tableLengthFt, setTableLengthFt] = useState<number | ''>('')
 
@@ -59,9 +68,18 @@ export function CategoryLimitEditor({
     [categories, value, allowMlm]
   )
 
+  const limitsWithNames = useMemo(
+    () =>
+      value.map((limit) => ({
+        ...limit,
+        categoryName: resolveCategoryName(limit, categories),
+      })),
+    [value, categories]
+  )
+
   const sortedLimits = useMemo(
-    () => [...value].sort((a, b) => compareCategoryNames(a.categoryName, b.categoryName)),
-    [value]
+    () => [...limitsWithNames].sort((a, b) => compareCategoryNames(a.categoryName, b.categoryName)),
+    [limitsWithNames]
   )
 
   function commitLimits(next: CategoryLimit[]) {
@@ -85,9 +103,21 @@ export function CategoryLimitEditor({
       },
     ])
     setSelectedCategoryId('')
-    setSlots(3)
+    setSlots(DEFAULT_NEW_SLOTS)
     setPriceDollars(0)
     setTableLengthFt('')
+  }
+
+  function addOneOfEveryCategory() {
+    const additions: CategoryLimit[] = availableCategories.map((cat) => ({
+      categoryId: cat.id,
+      categoryName: cat.name,
+      maxSlots: 1,
+      pricePerBooth: 0,
+      tableLengthFt: null,
+    }))
+    if (additions.length === 0) return
+    commitLimits([...value, ...additions])
   }
 
   function removeLimit(categoryId: string) {
@@ -127,6 +157,25 @@ export function CategoryLimitEditor({
 
   return (
     <div className="space-y-4">
+      {availableCategories.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-canvas/60 px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            <strong className="font-semibold text-foreground">Quick start:</strong> add one of every
+            category at 1 slot each. Edit and increase any of them after.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="gap-1.5"
+            onClick={addOneOfEveryCategory}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Add one of every category ({availableCategories.length})
+          </Button>
+        </div>
+      )}
+
       {/* Existing limits table */}
       {value.length > 0 && (
         <div className="rounded-xl border overflow-hidden">
@@ -302,7 +351,7 @@ export function CategoryLimitEditor({
               <Label className="text-xs">Max Slots</Label>
               <Input
                 type="number"
-                min={addingMlmLocked ? 1 : 1}
+                min={1}
                 max={addingMlmLocked ? 1 : 100}
                 value={addingMlmLocked ? 1 : slots}
                 disabled={addingMlmLocked}

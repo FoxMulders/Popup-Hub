@@ -13,6 +13,7 @@ export interface WizardCritiqueFinding {
   severity: 'warning' | 'error' | 'info'
   title: string
   message: string
+  actionStep?: number
 }
 
 export interface CritiqueSnapshot {
@@ -64,7 +65,11 @@ export function useWizardCritiqueAgents(snapshot: CritiqueSnapshot, debounceMs =
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const merged: WizardCritiqueFinding[] = [
-        ...runCopyAudit({ eventName: snapshot.eventName, description: snapshot.description }),
+        ...runCopyAudit({
+          eventName: snapshot.eventName,
+          description: snapshot.description,
+          currentStep: snapshot.currentStep,
+        }),
         ...runUiAudit({
           currentStep: snapshot.currentStep,
           hasOverlap: snapshot.hasOverlap,

@@ -11,6 +11,8 @@ interface LayoutPresetPickerProps {
   compact?: boolean
   /** Single-row dock — label beside control. */
   inline?: boolean
+  disabled?: boolean
+  applying?: boolean
 }
 
 export function LayoutPresetPicker({
@@ -18,6 +20,8 @@ export function LayoutPresetPicker({
   onChange,
   compact = false,
   inline = false,
+  disabled = false,
+  applying = false,
 }: LayoutPresetPickerProps) {
   const options = LAYOUT_AI_PRESET_OPTIONS
 
@@ -29,8 +33,9 @@ export function LayoutPresetPicker({
         </label>
         <select
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value as LayoutPreset)}
-          className="min-w-[8.5rem] max-w-[11rem] rounded-lg border-2 border-black px-1.5 py-0.5 text-[11px] font-semibold text-black focus:outline-none focus:ring-2 focus:ring-harvest-400"
+          className="min-w-[8.5rem] max-w-[11rem] rounded-lg border-2 border-black px-1.5 py-0.5 text-[11px] font-semibold text-black focus:outline-none focus:ring-2 focus:ring-harvest-400 disabled:opacity-60"
         >
           {options.map((opt) => (
             <option key={opt.id} value={opt.id}>
@@ -63,9 +68,10 @@ export function LayoutPresetPicker({
               type="button"
               role="radio"
               aria-checked={isSelected}
+              disabled={disabled}
               onClick={() => onChange(opt.id)}
               className={cn(
-                'rounded-xl border-2 px-2.5 py-2 text-left transition-colors',
+                'rounded-xl border-2 px-2.5 py-2 text-left transition-colors disabled:cursor-wait disabled:opacity-60',
                 isSelected
                   ? 'border-forest bg-forest/10 shadow-[var(--shadow-market)]'
                   : 'border-stone-200 bg-white hover:border-stone-400'
@@ -73,7 +79,13 @@ export function LayoutPresetPicker({
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="text-xs font-semibold text-black">{opt.label}</span>
-                {isSelected ? <Check className="h-3.5 w-3.5 shrink-0 text-forest" aria-hidden /> : null}
+                {isSelected ? (
+                  applying ? (
+                    <span className="text-[10px] font-medium text-forest">Applying…</span>
+                  ) : (
+                    <Check className="h-3.5 w-3.5 shrink-0 text-forest" aria-hidden />
+                  )
+                ) : null}
               </div>
               <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{opt.description}</p>
             </button>
