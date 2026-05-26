@@ -1,0 +1,177 @@
+'use client'
+
+import {
+  ArrowUpRight,
+  DoorOpen,
+  Hand,
+  MousePointer2,
+  Pencil,
+  Redo2,
+  Square,
+  Tag,
+  Trash2,
+  Undo2,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { DrawShape, ToolId, ToolState } from './types'
+
+interface ToolPaletteProps {
+  toolState: ToolState
+  onToolChange: (tool: ToolId) => void
+  onDrawShapeChange: (shape: DrawShape) => void
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
+  onClearAll: () => void
+  selectedCount: number
+  onDeleteSelected: () => void
+  className?: string
+}
+
+interface ToolButton {
+  id: ToolId
+  label: string
+  shortcut: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+const TOOLS: ToolButton[] = [
+  { id: 'hand', label: 'Hand · pan', shortcut: 'H', icon: Hand },
+  { id: 'select', label: 'Select', shortcut: 'V', icon: MousePointer2 },
+  { id: 'draw', label: 'Draw', shortcut: 'D', icon: Pencil },
+]
+
+interface ShapeButton {
+  id: DrawShape
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+const SHAPES: ShapeButton[] = [
+  { id: 'booth', label: 'Booth', icon: Square },
+  { id: 'wall', label: 'Wall', icon: Square },
+  { id: 'aisle', label: 'Aisle', icon: ArrowUpRight },
+  { id: 'door', label: 'Door', icon: DoorOpen },
+  { id: 'stage', label: 'Stage', icon: Square },
+  { id: 'label', label: 'Label', icon: Tag },
+]
+
+export function ToolPalette({
+  toolState,
+  onToolChange,
+  onDrawShapeChange,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onClearAll,
+  selectedCount,
+  onDeleteSelected,
+  className,
+}: ToolPaletteProps) {
+  return (
+    <div
+      className={cn(
+        'flex flex-wrap items-center gap-2 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm',
+        className
+      )}
+      role="toolbar"
+      aria-label="Floor plan tools"
+    >
+      <div className="flex items-center gap-1">
+        {TOOLS.map((t) => {
+          const Icon = t.icon
+          const active = toolState.tool === t.id
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onToolChange(t.id)}
+              aria-pressed={active}
+              title={`${t.label} (${t.shortcut})`}
+              className={cn(
+                'inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold',
+                active
+                  ? 'bg-stone-900 text-white shadow-sm'
+                  : 'text-stone-700 hover:bg-stone-100'
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t.label}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {toolState.tool === 'draw' ? (
+        <div className="flex items-center gap-1 border-l border-stone-200 pl-2">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-stone-500">
+            Shape
+          </span>
+          {SHAPES.map((s) => {
+            const active = toolState.drawShape === s.id
+            const Icon = s.icon
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => onDrawShapeChange(s.id)}
+                aria-pressed={active}
+                title={s.label}
+                className={cn(
+                  'inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold',
+                  active
+                    ? 'bg-amber-200 text-amber-900'
+                    : 'text-stone-600 hover:bg-stone-100'
+                )}
+              >
+                <Icon className="h-3 w-3" />
+                {s.label}
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+
+      <div className="ml-auto flex items-center gap-1 border-l border-stone-200 pl-2">
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Undo (Ctrl+Z)"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 disabled:opacity-40"
+        >
+          <Undo2 className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="Redo (Ctrl+Shift+Z)"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 disabled:opacity-40"
+        >
+          <Redo2 className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onDeleteSelected}
+          disabled={selectedCount === 0}
+          title={`Delete ${selectedCount} selected`}
+          className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+        >
+          <Trash2 className="h-3 w-3" />
+          Delete
+        </button>
+        <button
+          type="button"
+          onClick={onClearAll}
+          title="Clear canvas (no preset will be applied)"
+          className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-stone-600 hover:bg-stone-100"
+        >
+          Clear all
+        </button>
+      </div>
+    </div>
+  )
+}

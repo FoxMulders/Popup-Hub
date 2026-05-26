@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { createClient } from '@/lib/supabase/client'
 import { BoothPlanner } from '@/components/coordinator/booth-planner'
+import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import {
@@ -341,11 +342,12 @@ export function MarketSetupWizard({
   }, [templateAnchor, activeRoom.venue_elements, activeRoom.entrance, baselineTableLengthFt])
 
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
-  const saveBlankLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
-  const autoPlanRef = useRef<(() => Promise<boolean>) | null>(null)
-  const populatePlaceholdersRef = useRef<(() => Promise<boolean>) | null>(null)
-  const [plannerOverlap, setPlannerOverlap] = useState(false)
-  const [plannerQaRunning, setPlannerQaRunning] = useState(false)
+  // Floor plan v2 owns its own state. The legacy planner exposed
+  // separate refs for blank-save / auto-plan / generic placeholder
+  // population — none of those concepts exist in v2 (no auto-presets,
+  // no capacity-driven population), so we no longer wire those refs.
+  const [plannerOverlap] = useState(false)
+  const [plannerQaRunning] = useState(false)
 
   const scheduleLines = useMemo(
     () =>
@@ -866,17 +868,10 @@ export function MarketSetupWizard({
     }
   }, [currentStep, eventId])
 
-  // The canvas intentionally starts as a bare grid. Earlier builds
-  // auto-populated generic placeholder booths the moment the user
-  // entered Step 3 (Floor Plan), but coordinators asked for a fully
-  // blank shell so they can choose when to apply a preset, paint
-  // walls, or generate placeholders. The "Populate generic placeholders"
-  // and "Auto-plan" buttons inside the planner remain available for
-  // explicit user-initiated population.
-  //
-  // The `populatePlaceholdersRef` is still wired up by the planner so
-  // those buttons keep working — we just no longer fire it from a mount
-  // effect.
+  // Floor plan v2 owns Step 3. The canvas surface mounts empty and is
+  // mutated only by direct user gestures (pointer-down draw, marquee
+  // select, drag move). No effect in this file paints presets, seeds
+  // placeholders, or runs auto-plan on mount or on canvas interaction.
 
   const isFloorPlanStep = currentStep === 3 && !skipVenueLayout
 
@@ -1078,40 +1073,19 @@ export function MarketSetupWizard({
             </>
           ) : null}
 
-          {/* Step 3 — Floor Plan (was Step 4). */}
+          {/* Step 3 — Floor Plan v2. The legacy BoothPlanner was retired
+              from this surface in favor of a free-form, object-oriented
+              canvas (see components/coordinator/floor-plan-v2). The
+              v2 module owns its own state, tools, and inspector — no
+              automatic presets, no capacity clamps, no forced templates. */}
           {currentStep === 3 && eventId && !skipVenueLayout ? (
             <>
-              <BoothPlanner
+              <FloorPlanV2
                 eventId={eventId}
-                existingLayout={
-                  layoutPayloadFromRooms(eventId, rooms, activeRoomId) as unknown as BoothLayout
-                }
-                applications={applications}
-                categoryTableLengths={categoryTableLengths}
-                eventCategoryNames={eventCategoryNames}
-                allCategories={sortedCategories}
-                allowMlm={allowMlm}
-                canvasOnly
-                hideInternalNav
-                hideRoomBar
                 layoutRooms={rooms}
                 layoutActiveRoomId={activeRoomId}
                 onLayoutRoomsChange={handleLayoutRoomsChange}
                 saveLayoutRef={saveLayoutRef}
-                saveBlankLayoutRef={saveBlankLayoutRef}
-                autoPlanRef={autoPlanRef}
-                populatePlaceholdersRef={populatePlaceholdersRef}
-                onOverlapChange={setPlannerOverlap}
-                onLiveQaChange={({ qaRunning }) => setPlannerQaRunning(qaRunning)}
-                configuredSlotTotal={categoryLimits.reduce(
-                  (sum, cl) => sum + (cl.maxSlots ?? 0),
-                  0
-                )}
-                configuredCategorySlots={categoryLimits.map((cl) => ({
-                  categoryId: cl.categoryId,
-                  categoryName: cl.categoryName,
-                  maxSlots: cl.maxSlots,
-                }))}
                 rightSidebarExtra={
                   <WizardQaSidebarPanel
                     findings={findings}

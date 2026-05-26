@@ -1,0 +1,394 @@
+'use client'
+
+import { useMemo } from 'react'
+import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
+import type {
+  BoothObject,
+  DoorObject,
+  LabelObject,
+  PlacedObject,
+} from '../state/types'
+
+interface PropertyInspectorProps {
+  store: FloorPlanDocStore
+  className?: string
+}
+
+/**
+ * On-demand property inspector. Renders the editable fields for the
+ * currently selected object(s). When nothing is selected we show the
+ * canvas-level properties (advisory venue size, grid, snap).
+ *
+ * This panel is purely cosmetic / data-entry — it never blocks placement,
+ * never enforces constraints, and never auto-applies presets. Edits flow
+ * through the doc store immutably.
+ */
+export function PropertyInspector({
+  store,
+  className,
+}: PropertyInspectorProps) {
+  const selected = useMemo(() => {
+    return store.doc.objects.filter((o) => store.selectedIds.has(o.id))
+  }, [store.doc.objects, store.selectedIds])
+
+  if (selected.length === 0) {
+    return (
+      <aside
+        className={
+          'flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs ' +
+          (className ?? '')
+        }
+        aria-label="Canvas properties"
+      >
+        <header>
+          <h3 className="text-[11px] font-bold uppercase tracking-wide text-stone-700">
+            Canvas
+          </h3>
+          <p className="mt-0.5 text-[10px] text-stone-500">
+            No object selected. Pick an object to edit its properties, or
+            tweak the advisory canvas settings below.
+          </p>
+        </header>
+        <NumberField
+          label="Width (ft)"
+          value={store.doc.canvasWidthFt}
+          min={5}
+          step={1}
+          onChange={(v) => store.patchDoc({ canvasWidthFt: v })}
+        />
+        <NumberField
+          label="Length (ft)"
+          value={store.doc.canvasLengthFt}
+          min={5}
+          step={1}
+          onChange={(v) => store.patchDoc({ canvasLengthFt: v })}
+        />
+        <NumberField
+          label="Snap (ft)"
+          value={store.doc.snapFt}
+          min={0}
+          step={0.5}
+          onChange={(v) => store.patchDoc({ snapFt: v })}
+        />
+        <p className="text-[10px] leading-snug text-stone-500">
+          Snap = 0 disables grid snapping for free-form placement.
+        </p>
+      </aside>
+    )
+  }
+
+  if (selected.length > 1) {
+    return (
+      <aside
+        className={
+          'flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs ' +
+          (className ?? '')
+        }
+        aria-label="Multi selection properties"
+      >
+        <header>
+          <h3 className="text-[11px] font-bold uppercase tracking-wide text-stone-700">
+            {selected.length} selected
+          </h3>
+          <p className="mt-0.5 text-[10px] text-stone-500">
+            Multi-select editing for shared fields only.
+          </p>
+        </header>
+        <BulkLockToggle store={store} ids={selected.map((s) => s.id)} />
+      </aside>
+    )
+  }
+
+  const obj = selected[0]
+  return (
+    <aside
+      className={
+        'flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs ' +
+        (className ?? '')
+      }
+      aria-label={`${obj.kind} properties`}
+    >
+      <header>
+        <h3 className="text-[11px] font-bold uppercase tracking-wide text-stone-700">
+          {obj.kind}
+        </h3>
+        <p className="mt-0.5 text-[10px] text-stone-500">
+          {prettyKindHint(obj.kind)}
+        </p>
+      </header>
+      <PositionFields store={store} obj={obj} />
+      <SizeFields store={store} obj={obj} />
+      <NumberField
+        label="Rotation (°)"
+        value={obj.rotation}
+        min={-180}
+        max={180}
+        step={5}
+        onChange={(v) => store.updateObject(obj.id, { rotation: v })}
+      />
+      <KindSpecificFields store={store} obj={obj} />
+      <LockToggle store={store} obj={obj} />
+    </aside>
+  )
+}
+
+function prettyKindHint(kind: PlacedObject['kind']): string {
+  switch (kind) {
+    case 'booth':
+      return 'Vendor footprint. Bind a vendor or set a category color.'
+    case 'wall':
+      return 'Solid barrier — purely visual; no placement enforcement.'
+    case 'aisle':
+      return 'Walkway zone. Advisory only; vendors can still cross it.'
+    case 'door':
+      return 'Entrance or exit marker. Position freely along walls.'
+    case 'stage':
+      return 'Performance area. Re-size to match the platform footprint.'
+    case 'label':
+      return 'Free-form text annotation.'
+  }
+}
+
+function PositionFields({
+  store,
+  obj,
+}: {
+  store: FloorPlanDocStore
+  obj: PlacedObject
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <NumberField
+        label="X (ft)"
+        value={obj.x}
+        step={store.doc.snapFt || 0.5}
+        onChange={(v) => store.updateObject(obj.id, { x: v })}
+      />
+      <NumberField
+        label="Y (ft)"
+        value={obj.y}
+        step={store.doc.snapFt || 0.5}
+        onChange={(v) => store.updateObject(obj.id, { y: v })}
+      />
+    </div>
+  )
+}
+
+function SizeFields({
+  store,
+  obj,
+}: {
+  store: FloorPlanDocStore
+  obj: PlacedObject
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <NumberField
+        label="W (ft)"
+        value={obj.width}
+        min={0.5}
+        step={store.doc.snapFt || 0.5}
+        onChange={(v) => store.updateObject(obj.id, { width: v })}
+      />
+      <NumberField
+        label="H (ft)"
+        value={obj.height}
+        min={0.5}
+        step={store.doc.snapFt || 0.5}
+        onChange={(v) => store.updateObject(obj.id, { height: v })}
+      />
+    </div>
+  )
+}
+
+function KindSpecificFields({
+  store,
+  obj,
+}: {
+  store: FloorPlanDocStore
+  obj: PlacedObject
+}) {
+  if (obj.kind === 'booth') {
+    const booth = obj as BoothObject
+    return (
+      <>
+        <TextField
+          label="Vendor name"
+          value={booth.label ?? ''}
+          onChange={(v) => store.updateObject(obj.id, { label: v })}
+        />
+        <TextField
+          label="Category"
+          value={booth.categoryName ?? ''}
+          onChange={(v) =>
+            store.updateObject(obj.id, { categoryName: v || null })
+          }
+        />
+        <TextField
+          label="Accent color (hex)"
+          value={booth.accentColor ?? ''}
+          placeholder="#fde68a"
+          onChange={(v) =>
+            store.updateObject(obj.id, { accentColor: v || null })
+          }
+        />
+      </>
+    )
+  }
+  if (obj.kind === 'door') {
+    const door = obj as DoorObject
+    return (
+      <SelectField
+        label="Door type"
+        value={door.doorType}
+        options={[
+          { value: 'entrance', label: 'Entrance' },
+          { value: 'exit', label: 'Exit' },
+        ]}
+        onChange={(v) =>
+          store.updateObject(obj.id, {
+            doorType: v as DoorObject['doorType'],
+          })
+        }
+      />
+    )
+  }
+  if (obj.kind === 'label') {
+    const label = obj as LabelObject
+    return (
+      <TextField
+        label="Text"
+        value={label.text}
+        onChange={(v) => store.updateObject(obj.id, { text: v })}
+      />
+    )
+  }
+  return null
+}
+
+function LockToggle({
+  store,
+  obj,
+}: {
+  store: FloorPlanDocStore
+  obj: PlacedObject
+}) {
+  return (
+    <label className="flex items-center justify-between gap-2 rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-[11px] text-stone-700">
+      <span>Locked</span>
+      <input
+        type="checkbox"
+        checked={!!obj.locked}
+        onChange={(e) =>
+          store.updateObject(obj.id, { locked: e.target.checked })
+        }
+      />
+    </label>
+  )
+}
+
+function BulkLockToggle({
+  store,
+  ids,
+}: {
+  store: FloorPlanDocStore
+  ids: string[]
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        store.updateObjects(
+          ids.map((id) => ({ id, patch: { locked: true } }))
+        )
+      }
+      className="rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-[11px] font-semibold text-stone-700 hover:bg-stone-100"
+    >
+      Lock all selected
+    </button>
+  )
+}
+
+interface NumberFieldProps {
+  label: string
+  value: number
+  min?: number
+  max?: number
+  step?: number
+  onChange: (v: number) => void
+}
+
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: NumberFieldProps) {
+  return (
+    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
+      <span>{label}</span>
+      <input
+        type="number"
+        value={Number.isFinite(value) ? value : 0}
+        min={min}
+        max={max}
+        step={step ?? 1}
+        onChange={(e) => {
+          const next = parseFloat(e.target.value)
+          if (Number.isFinite(next)) onChange(next)
+        }}
+        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+      />
+    </label>
+  )
+}
+
+interface TextFieldProps {
+  label: string
+  value: string
+  placeholder?: string
+  onChange: (v: string) => void
+}
+
+function TextField({ label, value, placeholder, onChange }: TextFieldProps) {
+  return (
+    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
+      <span>{label}</span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+      />
+    </label>
+  )
+}
+
+interface SelectFieldProps {
+  label: string
+  value: string
+  options: Array<{ value: string; label: string }>
+  onChange: (v: string) => void
+}
+
+function SelectField({ label, value, options, onChange }: SelectFieldProps) {
+  return (
+    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
+      <span>{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
