@@ -56,6 +56,41 @@ export function hasExistingVendorApplication(
   return status != null
 }
 
+/**
+ * UI shape used when an application's market closes before the organizer
+ * could decide on it. Only triggered for `pending` rows — `waitlisted`
+ * intentionally survives closure (the user may still get pulled in), and
+ * `pending_insurance` represents an already-approved seat that needs
+ * follow-through, so neither receive this terminal treatment.
+ */
+export const VENDOR_APPLICATION_CLOSED_UNSELECTED_UI: VendorApplicationStatusUi = {
+  label: 'Applications closed — not selected',
+  badgeClass: marketStatusBadge.neutral,
+  nextStep:
+    'This market closed before the organizer reviewed your application. Discover other open markets to apply again.',
+  canFollowUp: false,
+}
+
+/**
+ * Resolve the *effective* status UI for a vendor row given whether the
+ * market is still open to new/pending applications. When applications
+ * have closed and the row is still in `pending`, surface a terminal
+ * "Applications closed — not selected" state instead of the perpetual
+ * "Pending Review" badge.
+ *
+ * Pass `applicationsOpen={true}` (or omit) for the legacy unconditional
+ * mapping — useful when callers don't know the event timing.
+ */
+export function resolveVendorApplicationStatusUi(
+  status: ApplicationStatus,
+  applicationsOpen = true,
+): VendorApplicationStatusUi {
+  if (!applicationsOpen && status === 'pending') {
+    return VENDOR_APPLICATION_CLOSED_UNSELECTED_UI
+  }
+  return VENDOR_APPLICATION_STATUS_UI[status]
+}
+
 export function filterVendorApplications<T extends { status: ApplicationStatus; event?: { status?: string } | null }>(
   applications: T[],
   filter: VendorApplicationFilter,

@@ -8,6 +8,7 @@ import {
   Pin,
   InfoWindow,
   useApiIsLoaded,
+  useMap,
 } from '@vis.gl/react-google-maps'
 import type { Event } from '@/types/database'
 import { ExpandableImage } from '@/components/ui/expandable-image'
@@ -18,10 +19,37 @@ import Link from 'next/link'
 import { MapPin, Clock, Calendar, Navigation, Map as MapIcon } from 'lucide-react'
 import { openDirections, type LatLng } from '@/lib/shopper/geo'
 import { DEFAULT_REGION } from '@/lib/shopper/geo'
+import {
+  type DistanceRadiusKm,
+  zoomForRadiusKm,
+} from '@/lib/markets/distance-radius'
 
 interface EventMapProps {
   events: Event[]
   center?: LatLng
+  /**
+   * Search radius (km) currently selected by the user. When provided the
+   * map auto-rezooms so the visible viewport mirrors the radius the user
+   * is filtering by — `null` zooms out to a country-wide view ("everywhere").
+   */
+  radiusKm?: DistanceRadiusKm
+}
+
+/**
+ * Side-effect-only component that listens for `center` and `radiusKm`
+ * prop changes and re-frames the Google map accordingly. Lives inside
+ * `<Map>` so it can call `useMap()`.
+ */
+function MapRadiusFraming({ center, radiusKm }: { center: LatLng; radiusKm: DistanceRadiusKm | undefined }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!map) return
+    map.panTo({ lat: center.lat, lng: center.lng })
+    if (radiusKm !== undefined) {
+      map.setZoom(zoomForRadiusKm(radiusKm))
+    }
+  }, [map, center.lat, center.lng, radiusKm])
+  return null
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -116,7 +144,15 @@ function EventMapFallback({ events }: { events: Event[] }) {
   )
 }
 
-function GoogleEventMap({ events, center }: { events: Event[]; center: LatLng }) {
+function GoogleEventMap({
+  events,
+  center,
+  radiusKm,
+}: {
+  events: Event[]
+  center: LatLng
+  radiusKm?: DistanceRadiusKm
+}) {
   const [selected, setSelected] = useState<Event | null>(null)
   const apiLoaded = useApiIsLoaded()
   const [loadFailed, setLoadFailed] = useState(false)
@@ -134,14 +170,20 @@ function GoogleEventMap({ events, center }: { events: Event[]; center: LatLng })
     return <EventMapFallback events={events} />
   }
 
+  // Initial zoom seeds the radius framing — `MapRadiusFraming` keeps it
+  // in sync as the user drags the slider afterwards.
+  const initialZoom =
+    radiusKm !== undefined ? zoomForRadiusKm(radiusKm) : events.length > 0 ? 11 : 10
+
   return (
     <Map
       style={{ width: '100%', height: '100%' }}
       defaultCenter={center}
-      defaultZoom={events.length > 0 ? 11 : 10}
+      defaultZoom={initialZoom}
       mapId="popup-hub-map"
       gestureHandling="greedy"
     >
+      <MapRadiusFraming center={center} radiusKm={radiusKm} />
       {events.map((event) => {
         const style = markerStyle(event)
         return (
@@ -221,9 +263,13 @@ function GoogleEventMap({ events, center }: { events: Event[]; center: LatLng })
   )
 }
 
-export function EventMap({ events, center: centerProp }: EventMapProps) {
+export function EventMap({ events, center: centerProp, radiusKm }: EventMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
 
+  // Always anchor the map on the user's selected origin (`centerProp`) when
+  // available — falling back to the first event only when the user hasn't
+  // pinned a location yet. This keeps the map visible and useful even when
+  // the result set is empty for the current radius / date filter.
   const center =
     centerProp ??
     (events.length > 0
@@ -236,7 +282,7 @@ export function EventMap({ events, center: centerProp }: EventMapProps) {
         <EventMapFallback events={events} />
       ) : (
         <APIProvider apiKey={apiKey}>
-          <GoogleEventMap events={events} center={center} />
+          <GoogleEventMap events={events} center={center} radiusKm={radiusKm} />
         </APIProvider>
       )}
     </div>

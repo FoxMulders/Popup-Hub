@@ -487,6 +487,27 @@ export function ApplyButton({
     )
   }
 
+  // Bug fix: once a market closes its applications, a vendor whose status
+  // is still `pending` (or `pending_insurance` without an approved seat)
+  // should NOT continue to see "Pending Review" — the organizer can no
+  // longer act on a closed market. Show a terminal "Applications closed —
+  // not selected" state instead. `waitlisted` survives closure (the user
+  // may still get pulled in), and `approved` / `rejected` / `cancelled`
+  // are already terminal so the existing branches handle them correctly.
+  if (!applicationsOpen && trackedApplicationStatus === 'pending') {
+    return (
+      <div className="space-y-2">
+        <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
+          Applications closed — not selected
+        </Badge>
+        <p className="text-center text-xs text-muted-foreground">
+          This market closed before the organizer reviewed your application.
+          Discover other open markets to apply again.
+        </p>
+      </div>
+    )
+  }
+
   if (trackedApplicationStatus === 'pending' && resolvedApplicationId) {
     return (
       <ApplicationStatusActions

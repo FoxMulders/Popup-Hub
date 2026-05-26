@@ -172,14 +172,6 @@ export function CategoryLimitEditor({
     commitLimits(value.map((v) => (v.categoryId === categoryId ? { ...v, maxSlots: slots } : v)))
   }
 
-  function updatePrice(categoryId: string, dollars: number) {
-    commitLimits(
-      value.map((v) =>
-        v.categoryId === categoryId ? { ...v, pricePerBooth: Math.round(dollars * 100) } : v
-      )
-    )
-  }
-
   function updateTableLength(categoryId: string, ft: number | null) {
     commitLimits(
       value.map((v) => (v.categoryId === categoryId ? { ...v, tableLengthFt: ft } : v))
@@ -262,15 +254,13 @@ export function CategoryLimitEditor({
                     </Tooltip>
                   </span>
                 </th>
-                <th className="text-center px-4 py-2.5 font-semibold text-muted-foreground w-32">
-                  <span className="inline-flex items-center gap-1">
-                    Booth Fee
-                    <Tooltip>
-                      <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                      <TooltipContent className="max-w-xs">The amount vendors pay to book a booth in this category. Set to $0 for free events.</TooltipContent>
-                    </Tooltip>
-                  </span>
-                </th>
+                {/*
+                 * Booth-fee column intentionally omitted — booth pricing is
+                 * uniform across categories so a per-row fee column adds
+                 * visual noise without additional information. The
+                 * `pricePerBooth` field still persists in state so prior
+                 * configurations remain editable elsewhere if needed.
+                 */}
                 <th className="w-12" />
               </tr>
             </thead>
@@ -361,19 +351,6 @@ export function CategoryLimitEditor({
                       </SelectContent>
                     </Select>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <div className="relative w-24 mx-auto">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={(limit.pricePerBooth / 100).toFixed(2)}
-                        onChange={(e) => updatePrice(limit.categoryId, parseFloat(e.target.value) || 0)}
-                        className="h-8 pl-6 text-right w-full"
-                      />
-                    </div>
-                  </td>
                   <td className="px-2 py-2.5">
                     <Button
                       type="button"
@@ -396,7 +373,7 @@ export function CategoryLimitEditor({
                 <td className="px-4 py-2.5 text-center text-xs font-bold text-foreground">
                   {totalSlots} total
                 </td>
-                <td colSpan={3} />
+                <td colSpan={2} />
               </tr>
             </tfoot>
           </table>

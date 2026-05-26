@@ -31,16 +31,32 @@ export function WizardNav({ step, onBack, onNext, nextDisabled, nextLabel }: Wiz
         : 'Save floor plan & deploy'
 
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-3 pt-4 ${WIZARD_NAV_DIVIDER}`}>
+    // On mobile we stack the buttons full-width so the Proceed CTA is
+    // never clipped by other floating UI (eg. mobile bottom-bar) and is
+    // always tappable. Above sm we restore the desktop side-by-side
+    // arrangement with wrap behaviour for very narrow content.
+    <div
+      className={`flex flex-col gap-3 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between ${WIZARD_NAV_DIVIDER}`}
+    >
       {step > 1 && onBack ? (
-        <Button type="button" variant="outline" className={WIZARD_BTN_SECONDARY} onClick={onBack}>
+        <Button
+          type="button"
+          variant="outline"
+          className={`${WIZARD_BTN_SECONDARY} w-full sm:w-auto`}
+          onClick={onBack}
+        >
           ← Back
         </Button>
       ) : (
-        <span />
+        <span className="hidden sm:block" />
       )}
       {onNext ? (
-        <Button type="button" className={WIZARD_BTN_PRIMARY} disabled={nextDisabled} onClick={onNext}>
+        <Button
+          type="button"
+          className={`${WIZARD_BTN_PRIMARY} w-full sm:w-auto`}
+          disabled={nextDisabled}
+          onClick={onNext}
+        >
           {nextLabel ?? defaultNext}
         </Button>
       ) : null}

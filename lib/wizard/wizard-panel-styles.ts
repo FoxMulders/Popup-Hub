@@ -101,3 +101,27 @@ export const WIZARD_SUMMARY_VALUE_WARN =
 
 export const DEFAULT_MARKET_START = '08:00'
 export const DEFAULT_MARKET_END = '15:00'
+
+/**
+ * Quarter-auction events default to a 5:00 PM – 8:00 PM evening slot
+ * since the format is almost always run after dinner. The wizard
+ * substitutes these values into the schedule fields when the
+ * coordinator picks Quarter Auction as the listing type.
+ */
+export const DEFAULT_QUARTER_AUCTION_START = '17:00'
+export const DEFAULT_QUARTER_AUCTION_END = '20:00'
+
+/**
+ * Resolves the right (start, end) defaults for an event listing type.
+ * Centralised so the wizard, the schedule day-row builder, and any
+ * weekend-range shortcut all agree on the right pair.
+ */
+export function defaultMarketTimesForListingType(listingType: string | null | undefined): {
+  start: string
+  end: string
+} {
+  if ((listingType ?? 'community_market') === 'garage_yard_sale') {
+    return { start: DEFAULT_QUARTER_AUCTION_START, end: DEFAULT_QUARTER_AUCTION_END }
+  }
+  return { start: DEFAULT_MARKET_START, end: DEFAULT_MARKET_END }
+}

@@ -29,9 +29,12 @@ import { MarketOwnerLink, vendorApplicationStatusHref } from '@/components/vendo
 import { PassportQrButton } from '@/components/vendor/passport-qr-button'
 import {
   filterVendorApplications,
+  resolveVendorApplicationStatusUi,
   VENDOR_APPLICATION_STATUS_UI,
   type VendorApplicationFilter,
 } from '@/lib/vendor/application-status-ui'
+import { isEventOpenForApplications } from '@/lib/queries/events'
+import type { Event } from '@/types/database'
 
 interface VendorApplicationsListProps {
   applications: BoothApplication[]
@@ -162,7 +165,13 @@ export function VendorApplicationsList({
       ) : (
         <div className="space-y-3">
           {filteredApplications.map((app) => {
-            const statusUi = VENDOR_APPLICATION_STATUS_UI[app.status]
+            // Recompute "applications open" from the event row so vendors
+            // whose market closed before review see a terminal "closed —
+            // not selected" badge instead of an indefinite "Pending Review".
+            const applicationsOpen = app.event
+              ? isEventOpenForApplications(app.event as unknown as Pick<Event, 'status' | 'start_at' | 'end_at'>)
+              : true
+            const statusUi = resolveVendorApplicationStatusUi(app.status, applicationsOpen)
             const eventCancelled = app.event?.status === 'cancelled'
             const ev = app.event as {
               id?: string

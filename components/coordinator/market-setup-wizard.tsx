@@ -42,8 +42,7 @@ import { useWizardCritiqueAgents } from '@/lib/wizard/critique/use-wizard-critiq
 import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity, resolveMarketCityId } from '@/lib/wizard/market-cities'
 import { effectiveScheduleTypeForListing, isQuarterAuctionListing } from '@/lib/events/listing-type'
 import {
-  DEFAULT_MARKET_END,
-  DEFAULT_MARKET_START,
+  defaultMarketTimesForListingType,
   WIZARD_PAGE_KICKER,
   WIZARD_PAGE_TITLE,
   WIZARD_PANEL,
@@ -122,7 +121,10 @@ function buildDayRows(existing: Event | null | undefined): DayRow[] {
         end_time: d.end_time,
       }))
   }
-  return [{ date: '', start_time: DEFAULT_MARKET_START, end_time: DEFAULT_MARKET_END }]
+  // Quarter-auction listings default to an evening 5:00 PM – 8:00 PM slot;
+  // every other listing type uses the standard daytime market window.
+  const { start, end } = defaultMarketTimesForListingType(existing?.listing_type)
+  return [{ date: '', start_time: start, end_time: end }]
 }
 
 /**
@@ -194,9 +196,14 @@ export function MarketSetupWizard({
     return existing?.is_multi_day ? 'multi' : 'single'
   })
   const [startDate, setStartDate] = useState(existing?.start_at ? existing.start_at.slice(0, 10) : '')
-  const [startTime, setStartTime] = useState(existing?.start_at ? existing.start_at.slice(11, 16) : DEFAULT_MARKET_START)
+  const initialDefaultTimes = defaultMarketTimesForListingType(existing?.listing_type)
+  const [startTime, setStartTime] = useState(
+    existing?.start_at ? existing.start_at.slice(11, 16) : initialDefaultTimes.start
+  )
   const [endDate, setEndDate] = useState(existing?.end_at ? existing.end_at.slice(0, 10) : '')
-  const [endTime, setEndTime] = useState(existing?.end_at ? existing.end_at.slice(11, 16) : DEFAULT_MARKET_END)
+  const [endTime, setEndTime] = useState(
+    existing?.end_at ? existing.end_at.slice(11, 16) : initialDefaultTimes.end
+  )
   const [dayRows, setDayRows] = useState<DayRow[]>(() => buildDayRows(existing))
   const [bookingMode, setBookingMode] = useState<'instant' | 'juried'>(existing?.booking_mode ?? 'juried')
   const [listingType, setListingType] = useState<EventListingType>(
@@ -571,11 +578,29 @@ export function MarketSetupWizard({
   )
 
   function handleListingTypeChange(next: EventListingType) {
+    const prev = listingType
     setListingType(next)
     if (isQuarterAuctionListing(next)) {
       setSkipVenueLayout(true)
       setScheduleType('single')
     }
+    // When the listing type *flips* between QA and standard market, retune
+    // the schedule defaults so the form mirrors the typical event window
+    // (5:00 PM – 8:00 PM for quarter auctions, 8:00 AM – 3:00 PM otherwise).
+    // Only overwrite values that still match the previous default — never
+    // clobber a coordinator-edited time.
+    if (isQuarterAuctionListing(prev) === isQuarterAuctionListing(next)) return
+    const prevDefaults = defaultMarketTimesForListingType(prev)
+    const nextDefaults = defaultMarketTimesForListingType(next)
+    setStartTime((current) => (current === prevDefaults.start ? nextDefaults.start : current))
+    setEndTime((current) => (current === prevDefaults.end ? nextDefaults.end : current))
+    setDayRows((rows) =>
+      rows.map((row) => ({
+        ...row,
+        start_time: row.start_time === prevDefaults.start ? nextDefaults.start : row.start_time,
+        end_time: row.end_time === prevDefaults.end ? nextDefaults.end : row.end_time,
+      }))
+    )
   }
 
   function handleScheduleTypeChange(next: 'single' | 'multi') {
@@ -667,17 +692,19 @@ export function MarketSetupWizard({
 
   function handleApplyWeekendRange(range: { startDate: string; endDate: string }) {
     const effective = effectiveScheduleTypeForListing(listingType, scheduleType)
+    const { start: defaultStart, end: defaultEnd } =
+      defaultMarketTimesForListingType(listingType)
     if (effective === 'multi') {
       setDayRows([
         {
           date: range.startDate,
-          start_time: DEFAULT_MARKET_START,
-          end_time: DEFAULT_MARKET_END,
+          start_time: defaultStart,
+          end_time: defaultEnd,
         },
         {
           date: range.endDate,
-          start_time: DEFAULT_MARKET_START,
-          end_time: DEFAULT_MARKET_END,
+          start_time: defaultStart,
+          end_time: defaultEnd,
         },
       ])
       return

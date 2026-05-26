@@ -286,22 +286,36 @@ export function DiscoverScreen({
         </Button>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="mt-4 rounded-2xl border bg-white py-16 text-center">
-          <p className="text-muted-foreground">
-            {liveAuctionsOnly
-              ? 'No quarter auctions on this day within your area. Try another date or turn off the Quarter auctions filter.'
-              : 'No community markets on this day within your area. Try another date or widen the radius.'}
-          </p>
-        </div>
-      ) : view === 'map' ? (
+      {view === 'map' ? (
+        // The map stays mounted even when zero markets match the current
+        // filters so the user keeps spatial context (their pinned origin,
+        // surrounding geography) while they widen the radius or change
+        // the date. The empty-state copy is overlaid on top of the map
+        // instead of replacing it.
         <div
           className={cn(
             'relative isolate z-0 mt-4 overflow-hidden rounded-2xl border shadow-sm [touch-action:auto]',
             'h-[min(70vh,520px)] md:h-[480px]'
           )}
         >
-          <EventMap events={filtered} center={origin} />
+          <EventMap events={filtered} center={origin} radiusKm={radiusKm} />
+          {filtered.length === 0 ? (
+            <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center">
+              <div className="pointer-events-auto rounded-xl border border-stone-200 bg-white/95 px-4 py-2 text-center text-xs font-medium shadow-sm backdrop-blur-sm sm:max-w-md">
+                {liveAuctionsOnly
+                  ? 'No quarter auctions on this day within your area — pan the map, try another date, or turn off the Quarter auctions filter.'
+                  : 'No community markets on this day within your area — pan the map, widen the radius, or try another date.'}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="mt-4 rounded-2xl border bg-white py-16 text-center">
+          <p className="text-muted-foreground">
+            {liveAuctionsOnly
+              ? 'No quarter auctions on this day within your area. Try another date or turn off the Quarter auctions filter.'
+              : 'No community markets on this day within your area. Try another date or widen the radius.'}
+          </p>
         </div>
       ) : (
         <DiscoverEventCards

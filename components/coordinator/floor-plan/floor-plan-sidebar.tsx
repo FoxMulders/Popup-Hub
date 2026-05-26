@@ -27,8 +27,12 @@ export function FloorPlanSidebar({
   return (
     <aside
       className={cn(
-        'sticky top-0 z-10 flex min-h-0 shrink-0 flex-col self-start transition-[width] duration-200',
-        collapsed ? 'w-10' : 'w-[min(100%,15rem)] xl:w-60',
+        // On mobile (<md) the sidebar lives above/below the canvas in a
+        // stacked layout, so it should never sticky-pin. Above md it pins
+        // to the top of the workspace and uses the legacy three-column
+        // proportions.
+        'flex min-h-0 shrink-0 flex-col transition-[width] duration-200 md:sticky md:top-0 md:z-10 md:self-start',
+        collapsed ? 'w-full md:w-10' : 'w-full md:w-[min(100%,15rem)] xl:w-60',
         className
       )}
       aria-label={title}

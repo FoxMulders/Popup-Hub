@@ -89,10 +89,12 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
           <Input
             id="phone"
             type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="+1 (555) 000-0000"
-            className="h-11"
+            className="h-11 max-w-[16rem]"
           />
         </div>
       </div>

@@ -61,11 +61,16 @@ export function LayoutZoomSlider({ zoom, onZoomChange, className }: LayoutZoomSl
         step={Math.round(LAYOUT_ZOOM_STEP * 100)}
         value={pct}
         onChange={(event) => setFromPercent(Number(event.target.value))}
+        // Native range inputs already support touch on iOS / Android.
+        // `touch-manipulation` removes the 300 ms tap-delay legacy quirk
+        // and a generous height + accent + thumb shadow makes the thumb
+        // hit-target finger-friendly. The wider min-w guarantees the
+        // track is long enough to be drag-able with a thumb on a phone.
         aria-label="Zoom level"
         aria-valuemin={Math.round(LAYOUT_ZOOM_MIN * 100)}
         aria-valuemax={Math.round(LAYOUT_ZOOM_MAX * 100)}
         aria-valuenow={pct}
-        className="h-2 w-28 min-w-[7rem] cursor-pointer accent-forest sm:w-36"
+        className="h-3 w-32 min-w-[8rem] cursor-pointer accent-forest touch-manipulation sm:w-36"
       />
       <TooltipWrapper text="Zoom in">
         <Button

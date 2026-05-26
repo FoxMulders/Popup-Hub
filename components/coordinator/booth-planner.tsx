@@ -3286,8 +3286,9 @@ export function BoothPlanner({
   return (
     <div
       className="space-y-6"
-      onMouseUp={canvasMounted ? () => { isPainting.current = false } : undefined}
-      onMouseLeave={canvasMounted ? () => { isPainting.current = false } : undefined}
+      onPointerUp={canvasMounted ? () => { isPainting.current = false } : undefined}
+      onPointerLeave={canvasMounted ? () => { isPainting.current = false } : undefined}
+      onPointerCancel={canvasMounted ? () => { isPainting.current = false } : undefined}
     >
       {!canvasOnly ? (
         <LayoutPlannerStepper
@@ -4280,7 +4281,7 @@ function renderGrid({
               onDragHoverEnd?.()
               handleDrop(e, c, r)
             }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               if (activeTool === 'eraser') {
                 e.preventDefault()
                 e.stopPropagation()
@@ -4328,7 +4329,7 @@ function renderGrid({
                     title="Rotate table direction"
                     aria-label={`Rotate table for ${booth.vendorName}`}
                     className="absolute top-0.5 left-0.5 z-10 rounded p-0.5 bg-card/90 text-muted-foreground hover:text-harvest-700 hover:bg-card shadow-sm"
-                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation()
                       onRotateTable(booth)
@@ -4342,7 +4343,7 @@ function renderGrid({
                   title="Unplace vendor (move to sidebar)"
                   aria-label={`Unplace ${booth.vendorName}`}
                   className="absolute top-0.5 right-0.5 z-10 rounded p-0.5 bg-card/90 text-muted-foreground hover:text-terracotta-700 hover:bg-card shadow-sm"
-                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation()
                     onUnplaceVendor(booth)
@@ -4458,7 +4459,7 @@ function renderGrid({
             onDragStart={(e) =>
               isMovableDoor && onDoorDragStart(e, fixture.type as 'entrance' | 'exit')
             }
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               if (isMovableDoor) {
                 e.preventDefault()
                 return
@@ -4467,8 +4468,13 @@ function renderGrid({
               e.preventDefault()
               onCellPointerDown(r, c)
             }}
-            onMouseEnter={() => {
-              if (!isPerimeterWall) onCellPointerEnter(r, c)
+            onPointerEnter={(e) => {
+              if (isPerimeterWall) return
+              // Only paint-trail with an active mouse drag; touch pointers
+              // never report buttons===1 mid-drag and a passive hover from
+              // a stylus shouldn't paint either.
+              if (e.pointerType === 'mouse' && e.buttons !== 1) return
+              onCellPointerEnter(r, c)
             }}
             onDragOver={(e) => {
               e.preventDefault()
@@ -4537,7 +4543,7 @@ function renderGrid({
                   ? 'bg-slate-700 text-white hover:bg-slate-800'
                   : 'bg-card/90 text-muted-foreground hover:text-foreground hover:bg-card shadow-sm opacity-80 group-hover/fixture:opacity-100'
               }`}
-              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
                 onToggleFixtureLock(fixture.id)
@@ -4555,7 +4561,7 @@ function renderGrid({
                 title="Remove preset fixture"
                 aria-label={`Remove ${fixtureLabel || fixture.type}`}
                 className="absolute top-0.5 left-0.5 z-10 rounded p-0.5 bg-card/90 text-muted-foreground hover:text-red-600 hover:bg-card shadow-sm"
-                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation()
                   onRemoveFixture(fixture.id)

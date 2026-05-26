@@ -1,6 +1,14 @@
 'use client'
 
-import { useRef, useState, useEffect, useCallback, type ReactNode, type MouseEvent, type DragEvent } from 'react'
+import {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  type DragEvent,
+} from 'react'
 import {
   shouldPartitionGrid,
   quadrantBoundsForGrid,
@@ -26,7 +34,7 @@ interface VirtualizedLayoutCanvasProps {
   /** Snap wrapper to exact grid bounds — no trailing scroll/padding overflow. */
   fitToBounds?: boolean
   /** Pointer fallback when vacant placeholder cells are not rendered. */
-  onGridCellPointerDown?: (row: number, col: number, event: MouseEvent) => void
+  onGridCellPointerDown?: (row: number, col: number, event: ReactPointerEvent<HTMLElement>) => void
   onGridCellPointerEnter?: (row: number, col: number) => void
   /** Drag-hover fallback when vacant cells are not rendered. */
   onGridCellDragOver?: (row: number, col: number) => void
@@ -34,7 +42,7 @@ interface VirtualizedLayoutCanvasProps {
 }
 
 function cellFromPointer(
-  event: MouseEvent,
+  event: ReactPointerEvent<HTMLElement> | DragEvent<HTMLElement>,
   cols: number,
   rows: number,
   cellPx: number,
@@ -150,13 +158,23 @@ export function VirtualizedLayoutCanvas({
   const gridPointerProps =
     onGridCellPointerDown || onGridCellPointerEnter
       ? {
-          onMouseDown: (event: MouseEvent) => {
+          // Pointer Events unify mouse / touch / pen so a tap on a phone
+          // and a click on a desktop both fire the same handler. Using
+          // PointerDown (instead of Mouse / Touch) is the recommended way
+          // to keep desktop ergonomics while supporting iOS Safari.
+          onPointerDown: (event: ReactPointerEvent<HTMLElement>) => {
             if (event.target !== event.currentTarget) return
             const cell = cellFromPointer(event, cols, rows, cellPx, zoom)
             if (cell) onGridCellPointerDown?.(cell.row, cell.col, event)
           },
-          onMouseMove: (event: MouseEvent) => {
-            if (event.buttons !== 1 || event.target !== event.currentTarget) return
+          onPointerMove: (event: ReactPointerEvent<HTMLElement>) => {
+            // For touch we receive pointerType==='touch' and `buttons` is
+            // 0; for an active mouse drag we get buttons===1. We accept
+            // both so dragging-to-paint works on either input.
+            const draggingMouse = event.pointerType === 'mouse' && event.buttons === 1
+            const draggingTouch = event.pointerType === 'touch'
+            if (!draggingMouse && !draggingTouch) return
+            if (event.target !== event.currentTarget) return
             const cell = cellFromPointer(event, cols, rows, cellPx, zoom)
             if (cell) onGridCellPointerEnter?.(cell.row, cell.col)
           },
@@ -166,12 +184,12 @@ export function VirtualizedLayoutCanvas({
   const gridDragProps =
     onGridCellDragOver || onGridCellDragLeave
       ? {
-          onDragOver: (event: DragEvent) => {
+          onDragOver: (event: DragEvent<HTMLElement>) => {
             event.preventDefault()
             const cell = cellFromPointer(event, cols, rows, cellPx, zoom)
             if (cell) onGridCellDragOver?.(cell.row, cell.col)
           },
-          onDragLeave: (event: DragEvent) => {
+          onDragLeave: (event: DragEvent<HTMLElement>) => {
             if (event.target !== event.currentTarget) return
             onGridCellDragLeave?.()
           },

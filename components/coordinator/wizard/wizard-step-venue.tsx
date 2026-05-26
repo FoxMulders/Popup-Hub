@@ -147,14 +147,18 @@ function AddressAutocomplete({
   )
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    // PointerDown unifies mouse, touch and pen so a tap outside the
+    // autocomplete dropdown closes it on mobile too. Falling back to
+    // `mousedown` for browsers that pre-date Pointer Events would only
+    // matter for legacy IE — every supported browser ships PointerEvents.
+    function handleClickOutside(e: PointerEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
         setHighlightIndex(-1)
       }
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('pointerdown', handleClickOutside)
+    return () => document.removeEventListener('pointerdown', handleClickOutside)
   }, [])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
