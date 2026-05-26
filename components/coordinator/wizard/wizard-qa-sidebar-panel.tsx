@@ -45,7 +45,10 @@ export function WizardQaSidebarPanel({
       {findings.length === 0 ? (
         <p className="text-xs font-medium text-forest">No active findings.</p>
       ) : (
-        <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+        // Plain stack with no inner scrollbar — the right-hand workspace
+        // column owns vertical flow now, so the QA findings list extends
+        // as tall as it needs to within the column itself.
+        <div className="flex flex-col gap-2">
           {findings.map((f) => (
             <DismissibleAlertCard
               key={f.id}

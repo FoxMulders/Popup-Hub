@@ -866,33 +866,17 @@ export function MarketSetupWizard({
     }
   }, [currentStep, eventId])
 
-  const hasAutoPopulatedRef = useRef(false)
-  useEffect(() => {
-    if (currentStep !== 3 || skipVenueLayout || !eventId) return
-    if (hasAutoPopulatedRef.current) return
-
-    const totalConfiguredSlots = categoryLimits.reduce((sum, cl) => sum + (cl.maxSlots ?? 0), 0)
-    if (totalConfiguredSlots <= 0) return
-
-    const placedCount = rooms.reduce(
-      (sum, room) => sum + room.cells.filter((c) => c.col >= 0 && c.row >= 0).length,
-      0
-    )
-    if (placedCount > 0) {
-      hasAutoPopulatedRef.current = true
-      return
-    }
-
-    const handle = window.setTimeout(() => {
-      hasAutoPopulatedRef.current = true
-      // Prefer the slot-to-booth placeholder generator when available so the
-      // canvas mirrors the configured Step 3 caps exactly. Fall back to the
-      // legacy Smart Populate path if the placeholder ref hasn't mounted yet.
-      const populate = populatePlaceholdersRef.current ?? autoPlanRef.current
-      void populate?.()
-    }, 250)
-    return () => window.clearTimeout(handle)
-  }, [currentStep, skipVenueLayout, eventId, categoryLimits, rooms])
+  // The canvas intentionally starts as a bare grid. Earlier builds
+  // auto-populated generic placeholder booths the moment the user
+  // entered Step 3 (Floor Plan), but coordinators asked for a fully
+  // blank shell so they can choose when to apply a preset, paint
+  // walls, or generate placeholders. The "Populate generic placeholders"
+  // and "Auto-plan" buttons inside the planner remain available for
+  // explicit user-initiated population.
+  //
+  // The `populatePlaceholdersRef` is still wired up by the planner so
+  // those buttons keep working — we just no longer fire it from a mount
+  // effect.
 
   const isFloorPlanStep = currentStep === 3 && !skipVenueLayout
 
