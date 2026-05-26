@@ -331,11 +331,17 @@ export function CategoryLimitEditor({
                 }}
               >
                 <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select…" />
+                  <SelectValue placeholder="Select…">
+                    {(value) => {
+                      if (!value) return 'Select…'
+                      const cat = categories.find((c) => c.id === value)
+                      return cat?.name ?? 'Select…'
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {availableCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
+                    <SelectItem key={cat.id} value={cat.id} label={cat.name}>
                       <span className="flex items-center gap-2">
                         {cat.name}
                         {cat.is_mlm && (
