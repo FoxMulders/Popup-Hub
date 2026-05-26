@@ -1,11 +1,11 @@
 'use client'
 
-import { useContext, type MouseEvent, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { requestPopupLoaderAnimation } from '@/lib/brand/popup-loader-play'
-import { PopupLoaderContext } from '@/components/brand/popup-loader-context'
+import { PopupLoaderScene } from '@/components/brand/popup-loader-scene'
+import { pickRandomLoaderVariant, type LoaderVariantId } from '@/lib/brand/loader-variants'
 
 const LOGO_VERSION =
   process.env.NEXT_PUBLIC_BUILD_NUMBER ??
@@ -27,16 +27,6 @@ interface PopupHubLogoProps {
   href?: string
 }
 
-function playAnimation(event: MouseEvent, playRandomLoader?: () => void) {
-  event.preventDefault()
-  event.stopPropagation()
-  if (playRandomLoader) {
-    playRandomLoader()
-    return
-  }
-  requestPopupLoaderAnimation()
-}
-
 function LogoAnimationButton({
   className,
   title,
@@ -48,20 +38,60 @@ function LogoAnimationButton({
   compact?: boolean
   children: ReactNode
 }) {
-  const loader = useContext(PopupLoaderContext)
+  const [activeVariant, setActiveVariant] = useState<LoaderVariantId | null>(null)
+
+  const handleClick = useCallback((event: React.MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (typeof window !== 'undefined') {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (reducedMotion) return
+    }
+    setActiveVariant((current) =>
+      current ? current : pickRandomLoaderVariant({ forReplay: true })
+    )
+  }, [])
+
+  const handleSceneEnd = useCallback(() => {
+    setActiveVariant(null)
+  }, [])
+
+  const playing = activeVariant != null
 
   return (
     <button
       type="button"
-      onClick={(event) => playAnimation(event, loader?.playRandomLoader)}
+      onClick={handleClick}
       className={cn(
-        'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
+        'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center overflow-hidden rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
         compact ? 'min-h-11 min-w-11 p-1.5' : 'min-h-11 min-w-[7rem] p-1',
         className,
       )}
       aria-label={`${title} — play market animation`}
+      aria-pressed={playing}
     >
-      {children}
+      <span
+        aria-hidden={playing}
+        className={cn(
+          'inline-flex items-center justify-center transition-opacity duration-200',
+          playing ? 'opacity-0' : 'opacity-100'
+        )}
+      >
+        {children}
+      </span>
+      {playing ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        >
+          <PopupLoaderScene
+            key={activeVariant}
+            variantId={activeVariant!}
+            mode="replay"
+            onReadyToDismiss={handleSceneEnd}
+          />
+        </span>
+      ) : null}
     </button>
   )
 }

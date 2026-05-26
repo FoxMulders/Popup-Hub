@@ -469,7 +469,7 @@ export function PopupLoaderScene({
   }, [variantId, mode, onReadyToDismiss])
 
   return (
-    <div className="loader-screen__lottie">
+    <div className="loader-screen__lottie h-full w-full">
       <LoaderSceneSvg frame={frame} />
     </div>
   )
