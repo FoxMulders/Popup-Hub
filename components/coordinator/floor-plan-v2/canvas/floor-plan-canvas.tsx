@@ -17,6 +17,11 @@ import { cn } from '@/lib/utils'
 interface FloorPlanCanvasProps {
   store: FloorPlanDocStore
   toolState: ToolState
+  /**
+   * Fired immediately after a draw gesture commits a new object. The
+   * default behaviour is to leave the tool sticky — the host owns
+   * tool-switching policy entirely.
+   */
   onAfterDrawCommit?: () => void
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
@@ -99,6 +104,10 @@ export function FloorPlanCanvas({
     scrollRef,
     initialZoom: 1,
     getZoomMath,
+    // Tool ref so the viewport hook can route a single-touch drag into
+    // a pan when the Hand tool is active. (Mouse panning already uses
+    // middle-click / Shift+drag.)
+    getToolMode: () => toolState.tool,
   })
 
   const transform = useMemo(
@@ -189,6 +198,15 @@ export function FloorPlanCanvas({
             background: '#fafaf9',
             boxShadow: '0 0 0 1px #e7e5e4, 0 12px 28px rgba(28,25,23,0.08)',
             cursor,
+            // touch-action:none is critical on iOS Safari — without it
+            // the OS captures the first touchmove for native scrolling
+            // and our pointermove arrives ~300ms late (or not at all).
+            // userSelect:none stops long-press from triggering iOS
+            // text selection callouts when dragging objects.
+            touchAction: 'none',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none',
           }}
           onPointerDown={pointer.onPointerDown}
           onPointerMove={pointer.onPointerMove}

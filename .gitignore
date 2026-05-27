@@ -35,6 +35,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+# local dev / prod server logs (next start -p XXXX > XXXX.log)
+dev-*.log
+prod-*.log
+.commit-message.tmp
 
 # env files (can opt-in for committing if needed)
 .env*

@@ -49,6 +49,13 @@ export interface UseViewportOptions {
    * selection state without React stale-closure pitfalls.
    */
   getZoomMath: () => ZoomMath
+  /**
+   * Optional accessor that returns the host's currently-active tool.
+   * When provided, single-touch drags on the scroll container are
+   * routed into a pan if the tool is `'hand'`. Mouse panning still
+   * uses middle-click / Shift+drag and doesn't depend on this.
+   */
+  getToolMode?: () => 'hand' | 'select' | 'draw'
 }
 
 export interface ViewportApi extends ViewportState {
@@ -121,11 +128,18 @@ function computeScroll(
 }
 
 export function useViewport(options: UseViewportOptions): ViewportApi {
-  const { scrollRef, initialZoom = 1, getZoomMath } = options
+  const { scrollRef, initialZoom = 1, getZoomMath, getToolMode } = options
 
   const [zoom, setZoomState] = useState(initialZoom)
   const [isPanning, setIsPanning] = useState(false)
   const [panActive, setPanActive] = useState(false)
+
+  // Mirror the tool-mode accessor in a ref so pointer callbacks see
+  // the latest tool without re-binding on every host render.
+  const getToolModeRef = useRef(getToolMode)
+  useEffect(() => {
+    getToolModeRef.current = getToolMode
+  }, [getToolMode])
 
   // Mirror `zoom` into a ref so RAF / pointer-callback closures can
   // read the latest value without re-binding. Updated in an effect to
@@ -303,8 +317,18 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       const isMouseLikePan =
         e.pointerType === 'mouse' &&
         (e.button === 1 || (e.button === 0 && spaceHeldRef.current))
-      if (isMouseLikePan) {
-        e.currentTarget.setPointerCapture(e.pointerId)
+      const tool = getToolModeRef.current?.()
+      const isSingleTouchHandPan =
+        tool === 'hand' &&
+        (e.pointerType === 'touch' || e.pointerType === 'pen') &&
+        activePointers.current.size === 1
+      if (isMouseLikePan || isSingleTouchHandPan) {
+        try {
+          e.currentTarget.setPointerCapture(e.pointerId)
+        } catch {
+          // setPointerCapture can throw on synthesized pointers in
+          // tests; ignore — we still get pointermove via bubbling.
+        }
         panRef.current = {
           pointerId: e.pointerId,
           startClientX: e.clientX,

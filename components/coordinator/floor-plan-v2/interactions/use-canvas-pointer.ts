@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -138,6 +139,33 @@ export function useCanvasPointer(
   const rotateRef = useRef<RotateState>(null)
   const [rotating, setRotating] = useState(false)
 
+  /**
+   * Pointermove can fire at the device's native rate (often 120 Hz on
+   * recent iPhones, even higher on Pro models). Each move triggers a
+   * `store.updateObjects` and a React render; running that 120+ times
+   * per second on a phone is the easiest way to drop frames.
+   *
+   * We coalesce by stashing the latest move in a ref and applying it
+   * inside a rAF tick. Drags and rotates feel buttery instead of
+   * step-per-event-ish — the user sees one render per paint.
+   */
+  type CoalescedMove = {
+    ft: Point
+    pointerId: number
+    shiftKey: boolean
+    metaKey: boolean
+    ctrlKey: boolean
+  }
+  const pendingMoveRef = useRef<CoalescedMove | null>(null)
+  const moveRafRef = useRef<number | null>(null)
+
+  // Mirror panActive so the rAF callback can bail if a pinch / mouse-
+  // pan begins while we're mid-drag — pan should always win.
+  const panActiveRef = useRef(panActive)
+  useEffect(() => {
+    panActiveRef.current = panActive
+  }, [panActive])
+
   const ftAt = useCallback(
     (clientX: number, clientY: number): Point => {
       const surface = surfaceRef.current
@@ -176,6 +204,22 @@ export function useCanvasPointer(
     [store.doc.objects]
   )
 
+  const capturePointer = useCallback(
+    (target: SVGSVGElement, pointerId: number) => {
+      // setPointerCapture throws "InvalidPointerId" on synthesized
+      // pointers (Playwright, our browser tests). Real pointer
+      // capture isn't strictly required for correct behaviour because
+      // pointer events still bubble to the captured root, so swallow
+      // the throw rather than crashing the gesture.
+      try {
+        target.setPointerCapture(pointerId)
+      } catch {
+        // ignore
+      }
+    },
+    []
+  )
+
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
       if (panActive) return
@@ -190,7 +234,7 @@ export function useCanvasPointer(
       }
 
       if (toolState.tool === 'draw') {
-        e.currentTarget.setPointerCapture(e.pointerId)
+        capturePointer(e.currentTarget, e.pointerId)
         const snapped = snapPoint(ft, store.doc.snapFt)
         setDraft({
           anchor: snapped,
@@ -214,7 +258,7 @@ export function useCanvasPointer(
           handleObjectId &&
           store.doc.objects.find((o) => o.id === handleObjectId)
         if (obj) {
-          e.currentTarget.setPointerCapture(e.pointerId)
+          capturePointer(e.currentTarget, e.pointerId)
           const center = objectCenter(obj)
           rotateRef.current = {
             pointerId: e.pointerId,
@@ -242,13 +286,13 @@ export function useCanvasPointer(
         const targetIds = wasSelected || additive
           ? Array.from(new Set([...store.selectedIds, objectId]))
           : [objectId]
-        e.currentTarget.setPointerCapture(e.pointerId)
+        capturePointer(e.currentTarget, e.pointerId)
         beginDrag(e.pointerId, ft, targetIds)
         return
       }
 
       // Empty canvas in select mode → marquee.
-      e.currentTarget.setPointerCapture(e.pointerId)
+      capturePointer(e.currentTarget, e.pointerId)
       if (!(e.shiftKey || e.metaKey || e.ctrlKey)) {
         store.clearSelection()
       }
@@ -256,6 +300,7 @@ export function useCanvasPointer(
     },
     [
       beginDrag,
+      capturePointer,
       ftAt,
       panActive,
       store,
@@ -264,19 +309,23 @@ export function useCanvasPointer(
     ]
   )
 
-  const onPointerMove = useCallback(
-    (e: ReactPointerEvent<SVGSVGElement>) => {
-      if (panActive) return
-
+  /**
+   * Apply a coalesced move to whichever gesture is currently active
+   * (rotate / draft / drag / marquee). Called from a rAF tick so we
+   * never run more than once per paint, even on 120 Hz touch devices.
+   */
+  const flushMove = useCallback(
+    (move: CoalescedMove) => {
+      if (panActiveRef.current) return
       const drag = dragRef.current
       const rotate = rotateRef.current
-      const ft = ftAt(e.clientX, e.clientY)
+      const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
 
-      if (rotate && rotate.pointerId === e.pointerId) {
+      if (rotate && rotate.pointerId === pointerId) {
         const angleNow = angleDegFromCenter(rotate.centerFt, ft)
         const delta = angleNow - rotate.initialAngleDeg
         let nextRotation = rotate.initialRotation + delta
-        if (!e.shiftKey) {
+        if (!shiftKey) {
           // Default: snap to ROTATE_SNAP_DEG (15°). Shift = freeform.
           nextRotation =
             Math.round(nextRotation / ROTATE_SNAP_DEG) * ROTATE_SNAP_DEG
@@ -317,7 +366,7 @@ export function useCanvasPointer(
         return
       }
 
-      if (drag && drag.pointerId === e.pointerId) {
+      if (drag && drag.pointerId === pointerId) {
         const dx = ft.x - drag.origin.x
         const dy = ft.y - drag.origin.y
         const moved =
@@ -339,8 +388,9 @@ export function useCanvasPointer(
           if (!obj) continue
           const proposedX = snapToGrid(orig.x + dx, snap)
           const proposedY = snapToGrid(orig.y + dy, snap)
-          // Clamp the proposed position against the rotated AABB so
-          // the object can't be dragged past the canvas edge.
+          // Hard boundary clamp: the rotated AABB is forced inside
+          // [0, canvasWidth] × [0, canvasLength]. Drags hitting the
+          // edge slide along it instead of pushing through.
           const probe: PlacedObject = { ...obj, x: proposedX, y: proposedY }
           const clampDelta = canvasClampDelta(probe, cw, cl)
           patches.push({
@@ -357,17 +407,61 @@ export function useCanvasPointer(
         return
       }
 
-      if (marquee && marquee.pointerId === e.pointerId) {
-        setMarquee({ ...marquee, current: ft })
+      const marqueeNow = marquee
+      if (marqueeNow && marqueeNow.pointerId === pointerId) {
+        // Mark unused-modifier vars so eslint doesn't trip — they're
+        // captured in the coalesced move but only matter on rotate.
+        void metaKey
+        void ctrlKey
+        setMarquee({ ...marqueeNow, current: ft })
       }
     },
-    [draft, ftAt, marquee, panActive, store]
+    [draft, marquee, store]
+  )
+
+  const onPointerMove = useCallback(
+    (e: ReactPointerEvent<SVGSVGElement>) => {
+      if (panActive) return
+      // Stash the latest pointer position. Modifier keys are captured
+      // here because React event objects are technically still safe
+      // post-handler in React 19, but keeping a plain snapshot is
+      // cheaper and bullet-proof against any future pooling regressions.
+      pendingMoveRef.current = {
+        ft: ftAt(e.clientX, e.clientY),
+        pointerId: e.pointerId,
+        shiftKey: e.shiftKey,
+        metaKey: e.metaKey,
+        ctrlKey: e.ctrlKey,
+      }
+      if (moveRafRef.current !== null) return
+      moveRafRef.current = requestAnimationFrame(() => {
+        moveRafRef.current = null
+        const pending = pendingMoveRef.current
+        if (!pending) return
+        pendingMoveRef.current = null
+        flushMove(pending)
+      })
+    },
+    [flushMove, ftAt, panActive]
   )
 
   const onPointerUp = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
       if (e.currentTarget.hasPointerCapture(e.pointerId)) {
         e.currentTarget.releasePointerCapture(e.pointerId)
+      }
+
+      // Flush any pending coalesced move before we tear down state, so
+      // the final pointer position is committed before history is
+      // snapshotted on the gesture-specific branches below.
+      if (moveRafRef.current !== null) {
+        cancelAnimationFrame(moveRafRef.current)
+        moveRafRef.current = null
+      }
+      const pending = pendingMoveRef.current
+      pendingMoveRef.current = null
+      if (pending && pending.pointerId === e.pointerId) {
+        flushMove(pending)
       }
 
       const rotate = rotateRef.current
@@ -448,7 +542,20 @@ export function useCanvasPointer(
         setMarquee(null)
       }
     },
-    [draft, marquee, onAfterDrawCommit, store]
+    [draft, flushMove, marquee, onAfterDrawCommit, store]
+  )
+
+  // Cancel any in-flight rAF on unmount so we don't fire flushMove
+  // against a torn-down store.
+  useEffect(
+    () => () => {
+      if (moveRafRef.current !== null) {
+        cancelAnimationFrame(moveRafRef.current)
+        moveRafRef.current = null
+      }
+      pendingMoveRef.current = null
+    },
+    []
   )
 
   const onContextMenu = useCallback(

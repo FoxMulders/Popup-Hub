@@ -105,10 +105,14 @@ interface SelectionOverlayProps {
  * Rotate handle in pixels. Sits above the rotated AABB top-center.
  * Tapping/dragging it kicks off a rotation gesture in the canvas
  * pointer hook (which looks up the handle by `data-rotate-handle`).
+ *
+ * The hit target follows Apple's HIG: 44pt minimum touch area, so the
+ * invisible hit circle is 22px radius (44px diameter) while the
+ * visible chrome stays compact at 7px radius.
  */
-const ROTATE_HANDLE_OFFSET_PX = 26
+const ROTATE_HANDLE_OFFSET_PX = 30
 const ROTATE_HANDLE_RADIUS_PX = 7
-const ROTATE_HANDLE_HIT_RADIUS_PX = 14
+const ROTATE_HANDLE_HIT_RADIUS_PX = 22
 
 /**
  * Renders selection chrome for every selected object: a faint dotted
@@ -167,16 +171,18 @@ export function SelectionOverlay({
                   strokeDasharray="3 2"
                   pointerEvents="none"
                 />
-                {/* Invisible enlarged hit target so finger taps land
-                    reliably on touch devices. */}
+                {/* Invisible 44px-diameter hit target — Apple HIG
+                    touch-target minimum. Pointer-events explicit so
+                    the transparent fill still receives taps. */}
                 <circle
                   cx={handleX}
                   cy={handleY}
                   r={ROTATE_HANDLE_HIT_RADIUS_PX}
                   fill="transparent"
+                  pointerEvents="all"
                   data-rotate-handle="true"
                   data-object-id={obj.id}
-                  style={{ cursor: 'grab' }}
+                  style={{ cursor: 'grab', touchAction: 'none' }}
                 />
                 <circle
                   cx={handleX}

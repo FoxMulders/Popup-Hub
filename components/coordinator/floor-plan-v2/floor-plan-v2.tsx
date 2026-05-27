@@ -131,11 +131,11 @@ export function FloorPlanV2({
     setDrawShape(next)
   }, [])
 
-  const handleAfterDrawCommit = useCallback(() => {
-    // After a single draw, snap back to Select so the user is in editing
-    // mode immediately. Held Shift = stay in Draw for rapid placements.
-    setTool('select')
-  }, [])
+  // Sticky draw: after each placement, the active tool stays on Draw so
+  // the user can place the next object without re-selecting the tool.
+  // Switching to Select / Hand requires an explicit tool button click or
+  // the V / H keyboard shortcut. Pressing Escape also drops back to
+  // Select for convenience.
 
   const handleClearAll = useCallback(() => {
     store.replaceObjects([])
@@ -422,8 +422,8 @@ export function FloorPlanV2({
             Floor plan canvas
           </h2>
           <p className="text-[11px] text-stone-500">
-            Free-form. No presets, no capacity clamps. Draw, drag, and edit
-            objects directly. Press{' '}
+            Free-form. The active tool stays selected until you switch — draw
+            multiple objects without round-tripping. Press{' '}
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               H
             </kbd>{' '}
@@ -491,11 +491,7 @@ export function FloorPlanV2({
           - desktop:                    full 720px
         */}
         <div className="relative h-[clamp(320px,52vh,720px)] overflow-hidden rounded-lg border border-stone-200 bg-stone-100 lg:h-[720px]">
-          <FloorPlanCanvas
-            store={store}
-            toolState={{ tool, drawShape }}
-            onAfterDrawCommit={handleAfterDrawCommit}
-          />
+          <FloorPlanCanvas store={store} toolState={{ tool, drawShape }} />
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <PropertyInspector store={store} />
