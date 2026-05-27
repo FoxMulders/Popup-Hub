@@ -3,7 +3,11 @@
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import { CanvasGrid } from './canvas-grid'
 import { CanvasObjects } from './canvas-objects'
-import { DraftPreview, MarqueePreview } from './canvas-overlays'
+import {
+  DraftPreview,
+  MarqueePreview,
+  SelectionOverlay,
+} from './canvas-overlays'
 import { useViewport, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
@@ -149,7 +153,9 @@ export function FloorPlanCanvas({
     store.doc.canvasWidthFt,
   ])
 
-  const cursor = cursorForTool(viewport.isPanning ? 'pan' : toolState.tool)
+  const cursor = pointer.rotating
+    ? 'grabbing'
+    : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool)
 
   return (
     <div
@@ -201,6 +207,14 @@ export function FloorPlanCanvas({
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
           />
+          {toolState.tool === 'select' ? (
+            <SelectionOverlay
+              objects={store.doc.objects}
+              selectedIds={store.selectedIds}
+              pxPerFt={pxPerFt}
+              suppressHandle={pointer.draftRect !== null}
+            />
+          ) : null}
           <DraftPreview
             rect={pointer.draftRect}
             kind={pointer.draftKind}

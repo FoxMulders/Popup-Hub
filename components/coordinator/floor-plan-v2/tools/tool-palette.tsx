@@ -2,11 +2,15 @@
 
 import {
   ArrowUpRight,
+  ClipboardPaste,
+  Copy,
   DoorOpen,
   Hand,
   MousePointer2,
   Pencil,
   Redo2,
+  RotateCcw,
+  RotateCw,
   Square,
   Tag,
   Trash2,
@@ -26,6 +30,16 @@ interface ToolPaletteProps {
   onClearAll: () => void
   selectedCount: number
   onDeleteSelected: () => void
+  /** Copy selected objects into the floor-plan clipboard. */
+  onCopy: () => void
+  /** Paste the floor-plan clipboard contents back onto the canvas. */
+  onPaste: () => void
+  /** Whether the clipboard currently has contents to paste. */
+  clipboardHasContents: boolean
+  /** Rotate the current selection -15°. */
+  onRotateLeft: () => void
+  /** Rotate the current selection +15°. */
+  onRotateRight: () => void
   className?: string
 }
 
@@ -68,8 +82,14 @@ export function ToolPalette({
   onClearAll,
   selectedCount,
   onDeleteSelected,
+  onCopy,
+  onPaste,
+  clipboardHasContents,
+  onRotateLeft,
+  onRotateRight,
   className,
 }: ToolPaletteProps) {
+  const hasSelection = selectedCount > 0
   return (
     <div
       className={cn(
@@ -133,6 +153,60 @@ export function ToolPalette({
           })}
         </div>
       ) : null}
+
+      {/*
+        Copy / Paste / Rotate cluster. Mirrors the keyboard shortcuts
+        (Ctrl+C, Ctrl+V, R / Shift+R) so touch and mobile users can
+        access the same operations without a keyboard.
+      */}
+      <div className="flex items-center gap-1 border-l border-stone-200 pl-2">
+        <button
+          type="button"
+          onClick={onCopy}
+          disabled={!hasSelection}
+          title={`Copy ${selectedCount || ''} selected (Ctrl+C)`.trim()}
+          aria-label="Copy selection"
+          className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-40"
+        >
+          <Copy className="h-3 w-3" />
+          <span className="hidden sm:inline">Copy</span>
+        </button>
+        <button
+          type="button"
+          onClick={onPaste}
+          disabled={!clipboardHasContents}
+          title={
+            clipboardHasContents
+              ? 'Paste from clipboard (Ctrl+V)'
+              : 'Clipboard is empty'
+          }
+          aria-label="Paste from clipboard"
+          className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-40"
+        >
+          <ClipboardPaste className="h-3 w-3" />
+          <span className="hidden sm:inline">Paste</span>
+        </button>
+        <button
+          type="button"
+          onClick={onRotateLeft}
+          disabled={!hasSelection}
+          title="Rotate -15° (Shift+R)"
+          aria-label="Rotate selection left 15 degrees"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 disabled:opacity-40"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onRotateRight}
+          disabled={!hasSelection}
+          title="Rotate +15° (R)"
+          aria-label="Rotate selection right 15 degrees"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 disabled:opacity-40"
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
       <div className="ml-auto flex items-center gap-1 border-l border-stone-200 pl-2">
         <button

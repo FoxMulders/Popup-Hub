@@ -1,7 +1,7 @@
 'use client'
 
-import type { ObjectKind } from '../state/types'
-import type { Rect } from '../interactions/geometry'
+import type { ObjectKind, PlacedObject } from '../state/types'
+import { rotatedAabb, type Rect } from '../interactions/geometry'
 
 interface DraftPreviewProps {
   rect: Rect | null
@@ -91,4 +91,109 @@ function previewStroke(kind: ObjectKind): string {
     case 'label':
       return '#57534e'
   }
+}
+
+interface SelectionOverlayProps {
+  objects: ReadonlyArray<PlacedObject>
+  selectedIds: ReadonlySet<string>
+  pxPerFt: number
+  /** Hide the rotate handle while a different gesture is in flight. */
+  suppressHandle?: boolean
+}
+
+/**
+ * Rotate handle in pixels. Sits above the rotated AABB top-center.
+ * Tapping/dragging it kicks off a rotation gesture in the canvas
+ * pointer hook (which looks up the handle by `data-rotate-handle`).
+ */
+const ROTATE_HANDLE_OFFSET_PX = 26
+const ROTATE_HANDLE_RADIUS_PX = 7
+const ROTATE_HANDLE_HIT_RADIUS_PX = 14
+
+/**
+ * Renders selection chrome for every selected object: a faint dotted
+ * outline around the rotated AABB plus a single rotate handle on top
+ * of each selection. The handle is what the pointer hook hooks into
+ * via `data-rotate-handle="true"` + `data-object-id`.
+ */
+export function SelectionOverlay({
+  objects,
+  selectedIds,
+  pxPerFt,
+  suppressHandle = false,
+}: SelectionOverlayProps) {
+  if (selectedIds.size === 0) return null
+  const items = objects.filter((o) => selectedIds.has(o.id))
+  if (items.length === 0) return null
+
+  return (
+    <g aria-hidden="true">
+      {items.map((obj) => {
+        const aabb = rotatedAabb(obj)
+        const left = aabb.x * pxPerFt
+        const top = aabb.y * pxPerFt
+        const width = aabb.width * pxPerFt
+        const height = aabb.height * pxPerFt
+        const handleX = left + width / 2
+        const handleY = top - ROTATE_HANDLE_OFFSET_PX
+        const locked = !!obj.locked
+        return (
+          <g key={`sel-${obj.id}`}>
+            {/* Bounding-box ghost — keeps users oriented when the
+                object is rotated and its native rect would no longer
+                hug the visible chrome. */}
+            <rect
+              x={left}
+              y={top}
+              width={width}
+              height={height}
+              fill="none"
+              stroke="#0f766e"
+              strokeWidth={1}
+              strokeOpacity={0.55}
+              strokeDasharray="4 3"
+              pointerEvents="none"
+              shapeRendering="crispEdges"
+            />
+            {locked || suppressHandle ? null : (
+              <g>
+                <line
+                  x1={handleX}
+                  y1={top}
+                  x2={handleX}
+                  y2={handleY}
+                  stroke="#0f766e"
+                  strokeWidth={1.25}
+                  strokeDasharray="3 2"
+                  pointerEvents="none"
+                />
+                {/* Invisible enlarged hit target so finger taps land
+                    reliably on touch devices. */}
+                <circle
+                  cx={handleX}
+                  cy={handleY}
+                  r={ROTATE_HANDLE_HIT_RADIUS_PX}
+                  fill="transparent"
+                  data-rotate-handle="true"
+                  data-object-id={obj.id}
+                  style={{ cursor: 'grab' }}
+                />
+                <circle
+                  cx={handleX}
+                  cy={handleY}
+                  r={ROTATE_HANDLE_RADIUS_PX}
+                  fill="#ffffff"
+                  stroke="#0f766e"
+                  strokeWidth={2}
+                  data-rotate-handle="true"
+                  data-object-id={obj.id}
+                  style={{ cursor: 'grab' }}
+                />
+              </g>
+            )}
+          </g>
+        )
+      })}
+    </g>
+  )
 }

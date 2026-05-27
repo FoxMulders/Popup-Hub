@@ -879,7 +879,10 @@ export function MarketSetupWizard({
     <div
       className={cn(
         isFloorPlanStep
-          ? 'mx-[calc(50%-50vw)] flex w-screen flex-col gap-2 px-2 pb-3 sm:px-3 sm:pb-4 lg:px-4'
+          ? // Bottom padding (`pb-[calc(...)]`) pulls the WizardNav row
+            // clear of the iOS home indicator on phones so the
+            // "Save floor plan & deploy" button is fully tappable.
+            'mx-[calc(50%-50vw)] flex w-screen flex-col gap-2 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4'
           : 'space-y-6'
       )}
     >

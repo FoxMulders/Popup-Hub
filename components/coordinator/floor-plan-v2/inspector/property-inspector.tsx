@@ -123,7 +123,7 @@ export function PropertyInspector({
         value={obj.rotation}
         min={-180}
         max={180}
-        step={5}
+        step={15}
         onChange={(v) => store.updateObject(obj.id, { rotation: v })}
       />
       <KindSpecificFields store={store} obj={obj} />

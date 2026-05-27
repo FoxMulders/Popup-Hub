@@ -248,16 +248,22 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
       </FlyerFieldHighlight>
 
       {props.scheduleType === 'single' ? (
+        // On mobile: single column so each Date+Time stack uses the
+        // full row width — narrow phones can't fit two `min-w-[200px]`
+        // selects side by side. From sm: two columns side by side.
+        // Within each cell the date input + time select stack at full
+        // width via `w-full` on the time trigger (overriding the
+        // shared `min-w-[200px]` so it can shrink in tight cells).
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FlyerFieldHighlight fieldKey="startDate" autoFilledFields={autoFilled}>
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <Label htmlFor="wizard-start-date" className={WIZARD_FIELD_LABEL}>Start Date & Time *</Label>
               <Input
                 id="wizard-start-date"
                 type="date"
                 value={props.startDate}
                 onChange={(e) => props.onStartDateChange(e.target.value)}
-                className={WIZARD_INPUT}
+                className={cn(WIZARD_INPUT, 'w-full')}
               />
               <FlyerFieldHighlight fieldKey="startTime" autoFilledFields={autoFilled} className="!p-0 !m-0 !ring-0 !bg-transparent">
                 <Select
@@ -267,7 +273,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
                     if (next) props.onStartTimeChange(next)
                   }}
                 >
-                  <SelectTrigger className={WIZARD_SELECT_TRIGGER}>
+                  <SelectTrigger className={cn(WIZARD_SELECT_TRIGGER, 'w-full !min-w-0')}>
                     <SelectValue placeholder="Start time" />
                   </SelectTrigger>
                   <SelectContent className={WIZARD_SELECT_CONTENT}>
@@ -282,7 +288,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             </div>
           </FlyerFieldHighlight>
           <FlyerFieldHighlight fieldKey="endDate" autoFilledFields={autoFilled}>
-            <div className="space-y-1">
+            <div className="space-y-1 min-w-0">
               <Label htmlFor="wizard-end-date" className={WIZARD_FIELD_LABEL}>End Date & Time *</Label>
               <Input
                 id="wizard-end-date"
@@ -290,7 +296,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
                 value={props.endDate}
                 min={props.startDate}
                 onChange={(e) => props.onEndDateChange(e.target.value)}
-                className={WIZARD_INPUT}
+                className={cn(WIZARD_INPUT, 'w-full')}
               />
               <FlyerFieldHighlight fieldKey="endTime" autoFilledFields={autoFilled} className="!p-0 !m-0 !ring-0 !bg-transparent">
                 <Select
@@ -300,7 +306,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
                     if (next) props.onEndTimeChange(next)
                   }}
                 >
-                  <SelectTrigger className={WIZARD_SELECT_TRIGGER}>
+                  <SelectTrigger className={cn(WIZARD_SELECT_TRIGGER, 'w-full !min-w-0')}>
                     <SelectValue placeholder="End time" />
                   </SelectTrigger>
                   <SelectContent className={WIZARD_SELECT_CONTENT}>
@@ -319,60 +325,76 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         <div className="space-y-3">
           <Label className={WIZARD_FIELD_LABEL}>Market Days *</Label>
           {props.dayRows.map((row, i) => (
-            <div key={`day-${i}`} className="flex flex-wrap items-center gap-2">
+            // Mobile-first multi-day row: a 2-row grid on phones
+            // (date + delete on top, start–to–end on the next line)
+            // and a single horizontal row on `sm`+. The previous fixed
+            // widths (`w-40`/`w-36`) and the inherited `min-w-[200px]`
+            // from `WIZARD_SELECT_TRIGGER` summed to ~560px, well over
+            // a 375px iPhone viewport, which forced ugly mid-control
+            // wrapping (and the trash icon orphaned on its own line).
+            <div
+              key={`day-${i}`}
+              className={cn(
+                'grid items-center gap-2',
+                'grid-cols-[1fr_auto]',
+                'sm:flex sm:flex-wrap'
+              )}
+            >
               <Input
                 type="date"
                 value={row.date}
                 onChange={(e) => updateDayRow(i, 'date', e.target.value)}
-                className={cn(WIZARD_INPUT, 'w-40 shrink-0')}
+                className={cn(WIZARD_INPUT, 'w-full sm:w-40 sm:shrink-0')}
               />
-              <Select
-                value={row.start_time}
-                onValueChange={(v) => {
-                  const next = selectValueOrNull(v)
-                  if (next) updateDayRow(i, 'start_time', next)
-                }}
-              >
-                <SelectTrigger className={cn(WIZARD_SELECT_TRIGGER, 'w-36')}>
-                  <SelectValue placeholder="Start" />
-                </SelectTrigger>
-                <SelectContent className={WIZARD_SELECT_CONTENT}>
-                  {WIZARD_TIME_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-muted-foreground text-sm">to</span>
-              <Select
-                value={row.end_time}
-                onValueChange={(v) => {
-                  const next = selectValueOrNull(v)
-                  if (next) updateDayRow(i, 'end_time', next)
-                }}
-              >
-                <SelectTrigger className={cn(WIZARD_SELECT_TRIGGER, 'w-36')}>
-                  <SelectValue placeholder="End" />
-                </SelectTrigger>
-                <SelectContent className={WIZARD_SELECT_CONTENT}>
-                  {WIZARD_TIME_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               {props.dayRows.length > 1 ? (
                 <button
                   type="button"
                   onClick={() => removeDayRow(i)}
-                  className="p-1.5 rounded-md text-muted-foreground hover:text-red-500"
+                  className="p-1.5 rounded-md text-muted-foreground hover:text-red-500 sm:order-last"
                   aria-label="Remove day"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
               ) : null}
+              <div className="col-span-2 flex items-center gap-2 sm:contents">
+                <Select
+                  value={row.start_time}
+                  onValueChange={(v) => {
+                    const next = selectValueOrNull(v)
+                    if (next) updateDayRow(i, 'start_time', next)
+                  }}
+                >
+                  <SelectTrigger className={cn(WIZARD_SELECT_TRIGGER, 'flex-1 !min-w-0 sm:flex-none sm:w-36')}>
+                    <SelectValue placeholder="Start" />
+                  </SelectTrigger>
+                  <SelectContent className={WIZARD_SELECT_CONTENT}>
+                    {WIZARD_TIME_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-muted-foreground text-sm shrink-0">to</span>
+                <Select
+                  value={row.end_time}
+                  onValueChange={(v) => {
+                    const next = selectValueOrNull(v)
+                    if (next) updateDayRow(i, 'end_time', next)
+                  }}
+                >
+                  <SelectTrigger className={cn(WIZARD_SELECT_TRIGGER, 'flex-1 !min-w-0 sm:flex-none sm:w-36')}>
+                    <SelectValue placeholder="End" />
+                  </SelectTrigger>
+                  <SelectContent className={WIZARD_SELECT_CONTENT}>
+                    {WIZARD_TIME_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className={WIZARD_SELECT_ITEM}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           ))}
           <button

@@ -98,8 +98,16 @@ export function EventDetailClient({
 
   return (
     <>
-      <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 pb-32">
-        <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+      {/*
+        Outer column already constrains width via `max-w-5xl` + `px-4`,
+        but we add `min-w-0` + `w-full` defensively so any flex/grid
+        parent (the shopper shell, vendor shell, etc.) can't allow a
+        long market name (e.g. "Tipsy Fox …") to push the hero card
+        past the viewport on mobile. `overflow-x-hidden` on the hero
+        wrap is a hard backstop.
+      */}
+      <div className="mx-auto w-full min-w-0 max-w-5xl space-y-8 px-4 py-8 pb-32">
+        <div className="w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
           {event.cover_image_url ? (
             <ExpandableImage
               src={event.cover_image_url}
@@ -111,16 +119,27 @@ export function EventDetailClient({
               <MapPin className="h-16 w-16 text-harvest-400" />
             </div>
           )}
-          <div className="p-6">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="font-heading text-2xl font-bold text-foreground sm:text-3xl">{event.name}</h1>
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+              {/*
+                `min-w-0` on the title column is the critical fix —
+                without it, a flex item refuses to shrink below its
+                intrinsic content width, so a very long market name
+                forces the parent flex container to overflow horizontally.
+                `break-words` lets long unbreakable strings wrap.
+              */}
+              <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+                <h1 className="font-heading text-2xl font-bold text-foreground break-words sm:text-3xl">
+                  {event.name}
+                </h1>
                 {event.description && (
-                  <p className="mt-2 max-w-2xl text-muted-foreground">{event.description}</p>
+                  <p className="mt-2 max-w-2xl text-muted-foreground break-words">
+                    {event.description}
+                  </p>
                 )}
               </div>
               <Badge
-                className={`capitalize ${
+                className={`capitalize self-start shrink-0 ${
                   event.status === 'active' ? marketStatusBadge.success : marketStatusBadge.warning
                 }`}
               >
@@ -129,10 +148,12 @@ export function EventDetailClient({
             </div>
 
             <div className="mt-4 space-y-2">
-              <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4 shrink-0 text-harvest-500" />
-                {event.location_name}
-                {event.address ? ` · ${event.address}` : ''}
+              <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 shrink-0 text-harvest-500 mt-0.5" />
+                <span className="min-w-0 break-words">
+                  {event.location_name}
+                  {event.address ? ` · ${event.address}` : ''}
+                </span>
               </p>
               <div className="rounded-lg border bg-canvas p-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Schedule</p>

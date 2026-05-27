@@ -11,9 +11,11 @@ import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
 import {
+  canvasClampDelta,
   normalizeRect,
-  objectRect,
+  objectCenter,
   rectsIntersect,
+  rotatedAabb,
   snapPoint,
   snapToGrid,
   type Point,
@@ -69,10 +71,54 @@ type MarqueeState =
       current: Point
     }
 
+/**
+ * Active rotate gesture state. Started when the user pointer-downs on
+ * an element with `data-rotate-handle="true"` and ended on pointer-up.
+ *
+ * `initialAngle` is the angle (degrees) from the object center to the
+ * initial pointer position. We accumulate `currentRotation - initialRotation`
+ * relative to that, so the handle stays under the pointer regardless of
+ * which screen direction the user drags.
+ */
+type RotateState =
+  | null
+  | {
+      pointerId: number
+      objectId: string
+      centerFt: Point
+      initialRotation: number
+      initialAngleDeg: number
+    }
+
+/**
+ * 15° increments match the toolbar buttons; holding Shift switches to
+ * smooth 1° rotation for fine adjustments.
+ */
+const ROTATE_SNAP_DEG = 15
+
+/**
+ * Returns the angle (in degrees, clockwise, 0 = +X axis) from `center`
+ * to `p`. Used by the rotate handle to translate pointer motion into
+ * a delta rotation.
+ */
+function angleDegFromCenter(center: Point, p: Point): number {
+  return (Math.atan2(p.y - center.y, p.x - center.x) * 180) / Math.PI
+}
+
+/** Wrap a degree value into the canonical (-180, 180] range. */
+function normalizeDegrees(deg: number): number {
+  let d = deg % 360
+  if (d > 180) d -= 360
+  if (d <= -180) d += 360
+  return d
+}
+
 export interface CanvasPointerApi {
   draftRect: Rect | null
   draftKind: PlacedObject['kind'] | null
   marqueeRect: Rect | null
+  /** True while the user is actively dragging an on-canvas rotate handle. */
+  rotating: boolean
   onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerMove: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerUp: (e: ReactPointerEvent<SVGSVGElement>) => void
@@ -89,6 +135,8 @@ export function useCanvasPointer(
   const [draft, setDraft] = useState<DrawDraft>(null)
   const dragRef = useRef<DragState>(null)
   const [marquee, setMarquee] = useState<MarqueeState>(null)
+  const rotateRef = useRef<RotateState>(null)
+  const [rotating, setRotating] = useState(false)
 
   const ftAt = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -154,6 +202,32 @@ export function useCanvasPointer(
 
       // SELECT
       const target = e.target as Element | null
+
+      // Rotate handle takes priority over the underlying object hit-
+      // test. The handle carries `data-rotate-handle="true"` and
+      // `data-object-id` so we can pick up the right object without
+      // walking the doc.
+      const rotateHandle = target?.closest('[data-rotate-handle="true"]')
+      if (rotateHandle && toolState.tool === 'select') {
+        const handleObjectId = rotateHandle.getAttribute('data-object-id')
+        const obj =
+          handleObjectId &&
+          store.doc.objects.find((o) => o.id === handleObjectId)
+        if (obj) {
+          e.currentTarget.setPointerCapture(e.pointerId)
+          const center = objectCenter(obj)
+          rotateRef.current = {
+            pointerId: e.pointerId,
+            objectId: obj.id,
+            centerFt: center,
+            initialRotation: obj.rotation || 0,
+            initialAngleDeg: angleDegFromCenter(center, ft),
+          }
+          setRotating(true)
+          return
+        }
+      }
+
       const objectId = target?.closest('[data-object-id]')?.getAttribute(
         'data-object-id'
       )
@@ -195,7 +269,43 @@ export function useCanvasPointer(
       if (panActive) return
 
       const drag = dragRef.current
+      const rotate = rotateRef.current
       const ft = ftAt(e.clientX, e.clientY)
+
+      if (rotate && rotate.pointerId === e.pointerId) {
+        const angleNow = angleDegFromCenter(rotate.centerFt, ft)
+        const delta = angleNow - rotate.initialAngleDeg
+        let nextRotation = rotate.initialRotation + delta
+        if (!e.shiftKey) {
+          // Default: snap to ROTATE_SNAP_DEG (15°). Shift = freeform.
+          nextRotation =
+            Math.round(nextRotation / ROTATE_SNAP_DEG) * ROTATE_SNAP_DEG
+        }
+        nextRotation = normalizeDegrees(nextRotation)
+        // Push the rotation, then clamp the object back inside the
+        // canvas if the new rotated AABB pokes out of bounds. We
+        // translate rather than refuse the rotation so the gesture
+        // always feels responsive.
+        const obj = store.doc.objects.find((o) => o.id === rotate.objectId)
+        if (obj) {
+          const probe = { ...obj, rotation: nextRotation }
+          const { dx, dy } = canvasClampDelta(
+            probe,
+            store.doc.canvasWidthFt,
+            store.doc.canvasLengthFt
+          )
+          store.updateObject(
+            rotate.objectId,
+            {
+              rotation: nextRotation,
+              x: obj.x + dx,
+              y: obj.y + dy,
+            },
+            { pushHistory: false }
+          )
+        }
+        return
+      }
 
       if (draft) {
         const snapped = snapPoint(ft, store.doc.snapFt)
@@ -219,12 +329,27 @@ export function useCanvasPointer(
           patch: Partial<PlacedObject>
         }> = []
         const snap = store.doc.snapFt
+        const cw = store.doc.canvasWidthFt
+        const cl = store.doc.canvasLengthFt
+        const objById = new Map(store.doc.objects.map((o) => [o.id, o]))
         for (const id of drag.ids) {
           const orig = drag.originals.get(id)
           if (!orig) continue
-          const nextX = snapToGrid(orig.x + dx, snap)
-          const nextY = snapToGrid(orig.y + dy, snap)
-          patches.push({ id, patch: { x: nextX, y: nextY } })
+          const obj = objById.get(id)
+          if (!obj) continue
+          const proposedX = snapToGrid(orig.x + dx, snap)
+          const proposedY = snapToGrid(orig.y + dy, snap)
+          // Clamp the proposed position against the rotated AABB so
+          // the object can't be dragged past the canvas edge.
+          const probe: PlacedObject = { ...obj, x: proposedX, y: proposedY }
+          const clampDelta = canvasClampDelta(probe, cw, cl)
+          patches.push({
+            id,
+            patch: {
+              x: proposedX + clampDelta.dx,
+              y: proposedY + clampDelta.dy,
+            },
+          })
         }
         // Don't push a history entry on every frame. We'll push one at
         // pointerup if `moved` is true.
@@ -243,6 +368,27 @@ export function useCanvasPointer(
     (e: ReactPointerEvent<SVGSVGElement>) => {
       if (e.currentTarget.hasPointerCapture(e.pointerId)) {
         e.currentTarget.releasePointerCapture(e.pointerId)
+      }
+
+      const rotate = rotateRef.current
+      if (rotate && rotate.pointerId === e.pointerId) {
+        const obj = store.doc.objects.find((o) => o.id === rotate.objectId)
+        if (
+          obj &&
+          (obj.rotation || 0) !== rotate.initialRotation
+        ) {
+          // Single history entry that captures the final rotation +
+          // translation. We've been mutating without history during
+          // the gesture; snapshot once on release.
+          store.updateObject(
+            rotate.objectId,
+            { rotation: obj.rotation, x: obj.x, y: obj.y },
+            { pushHistory: true }
+          )
+        }
+        rotateRef.current = null
+        setRotating(false)
+        return
       }
 
       if (draft) {
@@ -288,8 +434,10 @@ export function useCanvasPointer(
       if (marquee && marquee.pointerId === e.pointerId) {
         const rect = normalizeRect(marquee.anchor, marquee.current)
         if (rect.width > 0.5 || rect.height > 0.5) {
+          // Marquee selects against each object's rotated AABB so a
+          // tilted booth can still be lassoed without false misses.
           const hits = store.doc.objects
-            .filter((o) => rectsIntersect(rect, objectRect(o)))
+            .filter((o) => rectsIntersect(rect, rotatedAabb(o)))
             .map((o) => o.id)
           if (e.shiftKey || e.metaKey || e.ctrlKey) {
             store.setSelection(new Set([...store.selectedIds, ...hits]))
@@ -316,6 +464,7 @@ export function useCanvasPointer(
     marqueeRect: marquee
       ? normalizeRect(marquee.anchor, marquee.current)
       : null,
+    rotating,
     onPointerDown,
     onPointerMove,
     onPointerUp,

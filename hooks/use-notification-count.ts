@@ -11,16 +11,23 @@ export function useNotificationCount(userId: string): number {
     const supabase = createClient()
 
     async function fetchCount() {
-      const { count: c } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('is_read', false)
-
-      setCount(c ?? 0)
+      try {
+        const { count: c, error } = await supabase
+          .from('notifications')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('is_read', false)
+        if (error) {
+          console.error('[notification-count] fetch failed', error)
+          return
+        }
+        setCount(c ?? 0)
+      } catch (err) {
+        console.error('[notification-count] fetch threw', err)
+      }
     }
 
-    fetchCount()
+    void fetchCount()
 
     const channel = supabase
       .channel(`notifications:${userId}`)

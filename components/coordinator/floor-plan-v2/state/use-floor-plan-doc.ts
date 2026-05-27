@@ -47,6 +47,16 @@ export interface FloorPlanDocStore {
     options?: { pushHistory?: boolean; select?: boolean }
   ) => string
 
+  /**
+   * Append multiple objects in a single immutable pass with one history
+   * entry. Used by paste (and any future bulk-create flow) so undo
+   * rolls back the entire group atomically.
+   */
+  addObjects: (
+    objs: ReadonlyArray<PlacedObject>,
+    options?: { pushHistory?: boolean; select?: boolean }
+  ) => string[]
+
   /** Patch a single object by id. */
   updateObject: (
     id: string,
@@ -134,6 +144,23 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       commit(next, pushHistory)
       if (select) setSelectedIds(new Set([obj.id]))
       return obj.id
+    },
+    [commit]
+  )
+
+  const addObjects = useCallback<FloorPlanDocStore['addObjects']>(
+    (objs, options) => {
+      if (objs.length === 0) return []
+      const pushHistory = options?.pushHistory ?? true
+      const select = options?.select ?? false
+      const ids = objs.map((o) => o.id)
+      const next: FloorPlanDoc = {
+        ...docRef.current,
+        objects: [...docRef.current.objects, ...objs],
+      }
+      commit(next, pushHistory)
+      if (select) setSelectedIds(new Set(ids))
+      return ids
     },
     [commit]
   )
@@ -257,6 +284,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       canRedo: history.future.length > 0,
       resetDoc,
       addObject,
+      addObjects,
       updateObject,
       updateObjects,
       removeObjects,
@@ -275,6 +303,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       history.future.length,
       resetDoc,
       addObject,
+      addObjects,
       updateObject,
       updateObjects,
       removeObjects,

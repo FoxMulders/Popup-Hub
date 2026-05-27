@@ -15,6 +15,43 @@ interface NotificationListProps {
   userId: string
 }
 
+/**
+ * Realtime payloads from supabase aren't typed against our `Notification`
+ * shape — the wire format can drift if the table schema changes or an
+ * upstream service writes a partial row. We narrow defensively here so a
+ * malformed insert/update can't wedge the list with `Invalid time value`
+ * crashes from date-fns.
+ */
+function isRenderableNotification(row: unknown): row is Notification {
+  if (!row || typeof row !== 'object') return false
+  const r = row as Record<string, unknown>
+  return (
+    typeof r.id === 'string' &&
+    typeof r.user_id === 'string' &&
+    typeof r.type === 'string' &&
+    typeof r.message === 'string' &&
+    typeof r.is_read === 'boolean' &&
+    typeof r.created_at === 'string' &&
+    !Number.isNaN(new Date(r.created_at).getTime())
+  )
+}
+
+/**
+ * Format `created_at` for display, returning a stable fallback if the
+ * timestamp is missing or not parseable. We never let a single bad row
+ * throw out of render and tear down the whole feed.
+ */
+function formatNotificationDate(createdAt: string | null | undefined): string {
+  if (typeof createdAt !== 'string') return '—'
+  const ts = new Date(createdAt)
+  if (Number.isNaN(ts.getTime())) return '—'
+  try {
+    return format(ts, 'MMM d, yyyy h:mm a')
+  } catch {
+    return '—'
+  }
+}
+
 const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   waitlist_triggered: { icon: <Calendar className="h-4 w-4" />, color: 'text-blue-500 bg-blue-50' },
   waitlist_promoted: { icon: <Calendar className="h-4 w-4" />, color: 'text-blue-500 bg-blue-50' },
@@ -52,6 +89,7 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          if (!isRenderableNotification(payload.new)) return
           setNotifications((prev) => [payload.new as Notification, ...prev])
         }
       )
@@ -64,8 +102,10 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
+          if (!isRenderableNotification(payload.new)) return
+          const next = payload.new as Notification
           setNotifications((prev) =>
-            prev.map((n) => (n.id === payload.new.id ? (payload.new as Notification) : n))
+            prev.map((n) => (n.id === next.id ? next : n))
           )
         }
       )
@@ -100,13 +140,27 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
   }
 
   async function handleNotificationClick(notification: Notification) {
-    if (!notification.is_read) {
-      await markAsRead(notification.id)
-    }
+    try {
+      if (!notification.is_read) {
+        await markAsRead(notification.id)
+      }
 
-    const metadata = notification.metadata as { event_id?: string } | null
-    if (notification.type === 'application_follow_up' && metadata?.event_id) {
-      router.push(`/coordinator/events/${metadata.event_id}/applications`)
+      const metadata =
+        notification.metadata && typeof notification.metadata === 'object'
+          ? (notification.metadata as { event_id?: unknown })
+          : null
+      const eventId =
+        metadata && typeof metadata.event_id === 'string'
+          ? metadata.event_id
+          : null
+      if (notification.type === 'application_follow_up' && eventId) {
+        router.push(`/coordinator/events/${eventId}/applications`)
+      }
+    } catch (err) {
+      // Click-handler errors don't bubble to error boundaries, so we
+      // catch and log instead of letting a bad metadata shape (or a
+      // failed update) leave the user staring at a dead button.
+      console.error('[notifications] click handler failed', err)
     }
   }
 
@@ -157,7 +211,7 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
                       {notification.message}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {format(new Date(notification.created_at), 'MMM d, yyyy h:mm a')}
+                      {formatNotificationDate(notification.created_at)}
                     </p>
                   </div>
                   {!notification.is_read && (

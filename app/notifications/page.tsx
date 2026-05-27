@@ -4,17 +4,68 @@ import type { Notification } from '@/types/database'
 import { NotificationList } from '@/components/notifications/notification-list'
 import { NotificationPageHeader } from '@/components/notifications/notification-page-header'
 
+/**
+ * Coerce an unknown row from supabase into a `Notification` we can safely
+ * render, or `null` if it's missing fields the UI assumes are present.
+ *
+ * The page handler runs against a shared schema so a single malformed row
+ * (e.g. a backfill that didn't populate `created_at`) used to topple the
+ * whole client tree via `new Date(undefined)` → "Invalid time value" inside
+ * date-fns `format()`. Filtering at the boundary keeps the failure mode
+ * graceful: bad rows are dropped, good rows still render.
+ */
+function sanitizeNotification(row: unknown): Notification | null {
+  if (!row || typeof row !== 'object') return null
+  const r = row as Record<string, unknown>
+  if (typeof r.id !== 'string') return null
+  if (typeof r.user_id !== 'string') return null
+  if (typeof r.type !== 'string') return null
+  if (typeof r.message !== 'string') return null
+  if (typeof r.is_read !== 'boolean') return null
+  if (typeof r.created_at !== 'string') return null
+  // Validate the timestamp parses — anything date-fns will choke on we drop.
+  if (Number.isNaN(new Date(r.created_at).getTime())) return null
+  const metadata =
+    r.metadata && typeof r.metadata === 'object' && !Array.isArray(r.metadata)
+      ? (r.metadata as Record<string, unknown>)
+      : {}
+  return {
+    id: r.id,
+    user_id: r.user_id,
+    type: r.type as Notification['type'],
+    message: r.message,
+    is_read: r.is_read,
+    metadata,
+    created_at: r.created_at,
+  }
+}
+
 export default async function NotificationsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: notifications } = await supabase
-    .from('notifications')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(100)
+  let initialNotifications: Notification[] = []
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100)
+    if (error) {
+      // Don't throw — we'd rather show an empty feed than the error
+      // page. The realtime subscription in the client will repopulate
+      // whenever new notifications land.
+      console.error('[notifications] fetch failed', error)
+    } else if (Array.isArray(data)) {
+      initialNotifications = data
+        .map(sanitizeNotification)
+        .filter((n): n is Notification => n !== null)
+    }
+  } catch (err) {
+    console.error('[notifications] fetch threw', err)
+  }
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
@@ -23,7 +74,7 @@ export default async function NotificationsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8">
         {/* Main notification feed */}
         <NotificationList
-          initialNotifications={(notifications as Notification[]) ?? []}
+          initialNotifications={initialNotifications}
           userId={user.id}
         />
 
