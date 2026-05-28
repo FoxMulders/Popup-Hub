@@ -886,6 +886,22 @@ export function MarketSetupWizard({
 
   const isFloorPlanStep = currentStep === 3 && !skipVenueLayout
 
+  // Toggle the global "fullscreen workspace" body class while the
+  // coordinator is on the floor plan step. CSS in `globals.css`
+  // hides the global footer + setup-page back link, collapses the
+  // setup wrapper's vertical padding, and disables body-level
+  // overflow so the canvas's `overflow:auto` element becomes the
+  // single unified scroll surface (no more dual page+canvas
+  // scrollbars).
+  useEffect(() => {
+    if (!isFloorPlanStep) return
+    const cls = 'workspace-fullscreen'
+    document.body.classList.add(cls)
+    return () => {
+      document.body.classList.remove(cls)
+    }
+  }, [isFloorPlanStep])
+
   return (
     <div
       className={cn(
@@ -896,17 +912,16 @@ export function MarketSetupWizard({
             //
             // Height constraint: the floor plan step is the one
             // place in the wizard where a fixed viewport height is
-            // critical. Without it the page itself overflows AND
-            // the canvas inner `overflow-auto` overflows, producing
-            // the "double scrollbar" UX (one for the browser, one
-            // inside the canvas). Pinning the wizard step root to
-            // `100dvh` minus the chrome above (AppNav ~56 px + setup
-            // page padding 64 px + back-link block ~28 px ≈ 148 px)
-            // means the existing `flex-1 min-h-0` cascade below
-            // delivers the canvas exactly the leftover space, and
-            // the canvas's own scroll surface becomes the single
-            // unified viewport scroll.
-            'mx-[calc(50%-50vw)] flex h-[calc(100dvh-148px)] min-h-[480px] w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4'
+            // critical. With the body class toggle above hiding the
+            // global footer, the back-link, and collapsing the
+            // setup-page padding, the only chrome left above is the
+            // AppNav (~106 px) plus a thin top pad (~8 px) ≈ 114 px.
+            // Pinning the wizard root to `100dvh-114px` therefore
+            // exactly fills the remaining viewport, and the existing
+            // `flex-1 min-h-0` cascade below delivers the canvas
+            // exactly the leftover space — making the canvas's own
+            // `overflow:auto` the single unified scroll surface.
+            'mx-[calc(50%-50vw)] flex h-[calc(100dvh-114px)] min-h-[420px] w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4'
           : 'space-y-6'
       )}
     >
