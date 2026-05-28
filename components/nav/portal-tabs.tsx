@@ -33,18 +33,33 @@ export function PortalTabs({
     if (portal === activePortal || pending) return
 
     startTransition(async () => {
-      const res = await fetch('/api/portals/switch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portal }),
-      })
+      try {
+        const res = await fetch('/api/portals/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ portal }),
+        })
 
-      if (!res.ok) return
+        if (!res.ok) return
 
-      const data = (await res.json()) as { redirectTo?: string }
-      const target = data.redirectTo ?? getPortalHome(portal)
-      router.push(target)
-      router.refresh()
+        const data = (await res.json().catch(() => ({}))) as {
+          redirectTo?: string
+        }
+        const target = data.redirectTo ?? getPortalHome(portal)
+
+        // We intentionally do NOT call router.refresh() after router.push():
+        // refresh forces a re-fetch of the *current* segment with the new
+        // cookie before the push has finished navigating, which on segments
+        // whose shell wrapper depends on the portal cookie (e.g.
+        // /notifications, which switches between PortalAwareShell variants)
+        // races with the in-flight push and surfaces the segment-level
+        // error boundary. Pushing alone is enough — the destination route
+        // is fetched fresh with the new cookie state.
+        router.push(target)
+      } catch {
+        // Network/abort errors during the transition shouldn't surface to
+        // the user; the next portal click can retry.
+      }
     })
   }
 

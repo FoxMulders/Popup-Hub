@@ -41,41 +41,70 @@ function sanitizeNotification(row: unknown): Notification | null {
 }
 
 export default async function NotificationsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
+  // Wrap supabase client creation defensively. If env vars are missing in a
+  // particular environment, the client throws synchronously; we'd rather
+  // bounce the user to /login than blow up the whole segment with an
+  // unhandled exception.
+  let userId: string | null = null
   let initialNotifications: Notification[] = []
   try {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(100)
-    if (error) {
-      // Don't throw — we'd rather show an empty feed than the error
-      // page. The realtime subscription in the client will repopulate
-      // whenever new notifications land.
-      console.error('[notifications] fetch failed', error)
-    } else if (Array.isArray(data)) {
-      initialNotifications = data
-        .map(sanitizeNotification)
-        .filter((n): n is Notification => n !== null)
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) redirect('/login')
+    userId = user.id
+
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      if (error) {
+        // Don't throw — we'd rather show an empty feed than the error
+        // page. The realtime subscription in the client will repopulate
+        // whenever new notifications land.
+        console.error('[notifications] fetch failed', error)
+      } else if (Array.isArray(data)) {
+        initialNotifications = data
+          .map(sanitizeNotification)
+          .filter((n): n is Notification => n !== null)
+      }
+    } catch (err) {
+      console.error('[notifications] fetch threw', err)
     }
   } catch (err) {
-    console.error('[notifications] fetch threw', err)
+    // `redirect()` throws a NEXT_REDIRECT error that *must* propagate for
+    // the redirect to work. Re-throw it; everything else (auth init
+    // failures, transient cookie weirdness during portal switch, etc.)
+    // falls through to a graceful empty-state render.
+    if (err && typeof err === 'object' && 'digest' in err) {
+      const digest = (err as { digest?: unknown }).digest
+      if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+        throw err
+      }
+    }
+    console.error('[notifications] page setup failed', err)
+  }
+
+  if (!userId) {
+    // Auth couldn't be established (and we didn't redirect for some
+    // reason — e.g. a transient supabase client failure). Render a calm
+    // empty shell instead of tripping the segment error boundary.
+    redirect('/login')
   }
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
-      <NotificationPageHeader userId={user.id} />
+      <NotificationPageHeader userId={userId} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8">
         {/* Main notification feed */}
         <NotificationList
           initialNotifications={initialNotifications}
-          userId={user.id}
+          userId={userId}
         />
 
         {/* Sidebar: key */}

@@ -73,45 +73,72 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
 
 export function NotificationList({ initialNotifications, userId }: NotificationListProps) {
   const router = useRouter()
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
+  // Guard against an upstream caller passing `null`/`undefined`. Even though
+  // the typed prop says it's an array, when this component is rendered mid
+  // navigation transition (portal switch, etc.) React can briefly hold a
+  // stale prop reference; refusing to ever map over a non-array prevents
+  // `.filter is not a function` style throws from tripping the segment
+  // error boundary.
+  const [notifications, setNotifications] = useState<Notification[]>(() =>
+    Array.isArray(initialNotifications) ? initialNotifications : []
+  )
   const [markingAll, setMarkingAll] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    const channel = supabase
-      .channel(`notifications-list:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          if (!isRenderableNotification(payload.new)) return
-          setNotifications((prev) => [payload.new as Notification, ...prev])
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          if (!isRenderableNotification(payload.new)) return
-          const next = payload.new as Notification
-          setNotifications((prev) =>
-            prev.map((n) => (n.id === next.id ? next : n))
-          )
-        }
-      )
-      .subscribe()
+    if (!userId) return
+    let channel: ReturnType<ReturnType<typeof createClient>['channel']> | null = null
+    try {
+      const supabase = createClient()
+      channel = supabase
+        .channel(`notifications-list:${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (!isRenderableNotification(payload.new)) return
+            setNotifications((prev) => [payload.new as Notification, ...prev])
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (!isRenderableNotification(payload.new)) return
+            const next = payload.new as Notification
+            setNotifications((prev) =>
+              prev.map((n) => (n.id === next.id ? next : n))
+            )
+          }
+        )
+        .subscribe()
+    } catch (err) {
+      // Realtime channel setup is best-effort. If supabase env is missing
+      // or the websocket negotiation throws, we still render the static
+      // initialNotifications instead of letting an effect-time throw bubble
+      // up and unmount the feed.
+      console.error('[notifications] realtime subscribe failed', err)
+    }
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      try {
+        if (channel) {
+          const supabase = createClient()
+          supabase.removeChannel(channel)
+        }
+      } catch {
+        // Cleanup is best-effort.
+      }
+    }
   }, [userId])
 
   async function markAsRead(id: string) {
@@ -192,7 +219,12 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
         </div>
       ) : (
         <div className="space-y-2">
-          {notifications.map((notification) => {
+          {(notifications ?? []).map((notification) => {
+            // Defensive: even though `notifications` is typed as
+            // `Notification[]`, a malformed realtime payload could in
+            // theory slip past the renderable check above. Skip anything
+            // that doesn't have an `id` we can use as a key.
+            if (!notification || typeof notification.id !== 'string') return null
             const config = TYPE_CONFIG[notification.type] ?? TYPE_CONFIG.default
             return (
               <button

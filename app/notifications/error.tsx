@@ -34,7 +34,65 @@ export default function NotificationsError({
       digest: error.digest,
       stack: error.stack,
     })
+    // Also stash the most recent crash to localStorage so a tester can
+    // open DevTools after the fact and pull it back out, without
+    // depending on a third-party logger being wired up.
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          'popup-hub:notifications-last-crash',
+          JSON.stringify({
+            ts: Date.now(),
+            message: error.message,
+            digest: error.digest ?? null,
+            stack: (error.stack ?? '').slice(0, 4000),
+          })
+        )
+      }
+    } catch {
+      // localStorage can be disabled (private mode, quota); ignore.
+    }
   }, [error])
+
+  // Auto-retry once on mount. The most common crash mode for this segment
+  // is a transient render error during a portal-switch transition — the
+  // shell wrapper changes shape mid-render and React surfaces the boundary
+  // for a beat before the destination route finishes loading. A single
+  // silent retry hides that flicker without masking real persistent
+  // failures, which fall straight back into this UI on the second crash.
+  useEffect(() => {
+    const stamp = Date.now()
+    let lastRetry = 0
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = window.sessionStorage.getItem(
+          'popup-hub:notifications-last-retry'
+        )
+        lastRetry = raw ? parseInt(raw, 10) || 0 : 0
+      }
+    } catch {
+      // sessionStorage unavailable — skip auto-retry.
+      return
+    }
+    // Only auto-retry once per ~5 seconds to avoid loops on a real crash.
+    if (stamp - lastRetry < 5000) return
+    try {
+      window.sessionStorage.setItem(
+        'popup-hub:notifications-last-retry',
+        String(stamp)
+      )
+    } catch {
+      return
+    }
+    const id = window.setTimeout(() => {
+      try {
+        unstable_retry()
+      } catch {
+        // unstable_retry should never throw, but defensively swallow.
+      }
+    }, 100)
+    return () => window.clearTimeout(id)
+  }, [unstable_retry])
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">

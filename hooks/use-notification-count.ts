@@ -8,7 +8,18 @@ export function useNotificationCount(userId: string): number {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
-    const supabase = createClient()
+    if (!userId) return
+    // We isolate every supabase call in its own try/catch — if the env vars
+    // are missing or the websocket negotiation fails, we still want the
+    // header to render the (zero) badge instead of letting the segment
+    // error boundary swallow the whole notifications page.
+    let supabase: ReturnType<typeof createClient>
+    try {
+      supabase = createClient()
+    } catch (err) {
+      console.error('[notification-count] supabase client init failed', err)
+      return
+    }
 
     async function fetchCount() {
       try {
@@ -29,25 +40,34 @@ export function useNotificationCount(userId: string): number {
 
     void fetchCount()
 
-    const channel = supabase
-      .channel(`notifications:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        () => fetchCount()
-      )
-      .subscribe()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      channel = supabase
+        .channel(`notifications:${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => fetchCount()
+        )
+        .subscribe()
+    } catch (err) {
+      console.error('[notification-count] subscribe failed', err)
+    }
 
     window.addEventListener(NOTIFICATIONS_CHANGED, fetchCount)
 
     return () => {
       window.removeEventListener(NOTIFICATIONS_CHANGED, fetchCount)
-      supabase.removeChannel(channel)
+      try {
+        if (channel) supabase.removeChannel(channel)
+      } catch {
+        // Cleanup is best-effort.
+      }
     }
   }, [userId])
 
