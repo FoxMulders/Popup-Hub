@@ -19,7 +19,9 @@ import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { resolveTemplateAnchoredDimensions } from '@/lib/booth-planner/venue-presets'
 import { marketStatusBadge } from '@/lib/theme/market'
 import {
+  MARKET_CITIES,
   getMarketCityById,
+  inferMarketCityId,
   isEdmontonMarketCity,
 } from '@/lib/wizard/market-cities'
 import {
@@ -38,6 +40,55 @@ interface PlaceResult {
   lat: number
   lng: number
   name: string
+  /** Market-city ID inferred from the place's address components. */
+  cityId: string | null
+  /** Whether the picked place is a named establishment (not a bare street address). */
+  isEstablishment: boolean
+  postalCode: string | null
+  country: string | null
+}
+
+function pickAddressComponent(
+  components: google.maps.GeocoderAddressComponent[] | undefined,
+  type: string
+): string | null {
+  if (!components) return null
+  const match = components.find((c) => c.types.includes(type))
+  return match?.long_name ?? null
+}
+
+/**
+ * Resolve the inferred market city ID from the picked place. We prefer
+ * structured `address_components` (locality / administrative_area) and only
+ * fall back to fuzzy string match on the formatted address — that way a
+ * "Chinook Centre, Calgary" pick reliably switches the wizard from Edmonton
+ * even if the formatted_address opens with the venue name.
+ */
+function resolveCityIdFromPlace(
+  place: google.maps.places.PlaceResult,
+  fallbackAddress: string
+): string | null {
+  const components = place.address_components ?? undefined
+  const candidates = [
+    pickAddressComponent(components, 'locality'),
+    pickAddressComponent(components, 'postal_town'),
+    pickAddressComponent(components, 'sublocality'),
+    pickAddressComponent(components, 'administrative_area_level_2'),
+  ].filter((value): value is string => Boolean(value && value.trim()))
+
+  for (const candidate of candidates) {
+    const lower = candidate.trim().toLowerCase()
+    const match = MARKET_CITIES.find((city) => {
+      const cityName = city.label.split(',')[0]!.trim().toLowerCase()
+      return lower === cityName
+    })
+    if (match) return match.id
+  }
+
+  // Fall back to the existing formatted-address heuristic.
+  const text = place.formatted_address ?? fallbackAddress
+  if (!text.trim()) return null
+  return inferMarketCityId(text)
 }
 
 function AddressAutocomplete({
@@ -128,17 +179,37 @@ function AddressAutocomplete({
       placesServiceRef.current.getDetails(
         {
           placeId: prediction.place_id,
-          fields: ['formatted_address', 'geometry', 'name'],
+          fields: [
+            'formatted_address',
+            'geometry',
+            'name',
+            'types',
+            'address_components',
+          ],
         },
         (place, status) => {
           if (status !== window.google.maps.places.PlacesServiceStatus.OK || !place?.geometry?.location) {
             return
           }
+          const address = place.formatted_address ?? prediction.description
+          const types = place.types ?? []
+          // `establishment` covers any named POI; `point_of_interest` covers
+          // venues without a strict establishment classification. A pure
+          // street_address / route should NOT clobber a coordinator's typed
+          // venue name.
+          const isEstablishment =
+            types.includes('establishment') ||
+            types.includes('point_of_interest') ||
+            types.includes('premise')
           onPlaceSelect({
-            address: place.formatted_address ?? prediction.description,
+            address,
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng(),
             name: place.name ?? '',
+            cityId: resolveCityIdFromPlace(place, address),
+            isEstablishment,
+            postalCode: pickAddressComponent(place.address_components, 'postal_code'),
+            country: pickAddressComponent(place.address_components, 'country'),
           })
         }
       )
@@ -443,7 +514,24 @@ export function WizardStepVenue({
               onAddressChange(place.address)
               onCoordinatesChange(place.lat, place.lng)
               onPinDroppedChange(true)
-              if (!locationName.trim()) onLocationNameChange(place.name)
+
+              // Sync the market-city dropdown if the picked address falls
+              // inside a different known market city. We do NOT override an
+              // unrecognized region (cityId === null) so a coordinator
+              // picking a venue outside our supported markets still keeps
+              // their previously chosen anchor.
+              if (place.cityId && place.cityId !== city) {
+                onCityChange(place.cityId)
+              }
+
+              // Auto-fill the Venue Name only when:
+              //  • the field is empty, OR
+              //  • the picked place is a named establishment (Costco, Hall,
+              //    Park…), in which case overwriting the prior value is a
+              //    safe upgrade because the user clearly chose a new POI.
+              if (place.name && (place.isEstablishment || !locationName.trim())) {
+                onLocationNameChange(place.name)
+              }
             }}
           />
         </div>
@@ -478,13 +566,101 @@ export function WizardStepVenue({
   )
 }
 
+/**
+ * Plain-form fallback shown when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is missing
+ * from the environment. We still render the venue name + address inputs and
+ * let the coordinator advance — the map / typeahead simply degrade so a
+ * misconfigured Vercel env doesn't hard-block the wizard.
+ */
+function WizardStepVenueFallback({
+  locationName,
+  onLocationNameChange,
+  address,
+  onAddressChange,
+  city,
+  cityLabel,
+  skipVenueLayout,
+  onSkipVenueLayoutChange,
+}: {
+  locationName: string
+  onLocationNameChange: (v: string) => void
+  address: string
+  onAddressChange: (v: string) => void
+  city: string
+  cityLabel: string
+  skipVenueLayout: boolean
+  onSkipVenueLayoutChange: (v: boolean) => void
+}) {
+  return (
+    <div className={WIZARD_PANEL_INNER}>
+      <h2 className={WIZARD_STEP_TITLE}>Venue Location</h2>
+      <p className={cn(WIZARD_INFO_BOX, 'text-sm text-amber-900')}>
+        Map autocomplete is offline (Google Maps API key not configured). Enter the venue name and
+        address by hand — coordinates will fall back to the {cityLabel} city centre.
+      </p>
+      <div className="flex items-start justify-between gap-4 rounded-lg border-2 border-stone-200 bg-canvas px-4 py-3">
+        <div className="space-y-1">
+          <Label htmlFor="wizard-skip-layout" className={WIZARD_FIELD_LABEL}>
+            No venue space planning required
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Skip the floor plan editor. Enter the venue name and address manually.
+          </p>
+        </div>
+        <Switch
+          id="wizard-skip-layout"
+          checked={skipVenueLayout}
+          onCheckedChange={onSkipVenueLayoutChange}
+          aria-label="Skip venue space planning"
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label htmlFor="wizard-loc-name" className={WIZARD_FIELD_LABEL}>
+            Venue Name
+          </Label>
+          <Input
+            id="wizard-loc-name"
+            value={locationName}
+            onChange={(e) => onLocationNameChange(e.target.value)}
+            className={WIZARD_INPUT}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="wizard-address" className={WIZARD_FIELD_LABEL}>
+            Address
+          </Label>
+          <Input
+            id="wizard-address"
+            value={address}
+            onChange={(e) => onAddressChange(e.target.value)}
+            placeholder={`Street address near ${cityLabel}`}
+            className={WIZARD_INPUT}
+          />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground" aria-hidden="true">
+        Selected market city: {cityLabel} ({city})
+      </p>
+    </div>
+  )
+}
+
 export function WizardStepVenueWithMapsProvider(props: WizardStepVenueProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''
   if (!apiKey) {
+    const cityLabel = getMarketCityById(props.city).label
     return (
-      <div className={WIZARD_PANEL_INNER}>
-        <p className="text-sm text-destructive">Google Maps API key is not configured.</p>
-      </div>
+      <WizardStepVenueFallback
+        locationName={props.locationName}
+        onLocationNameChange={props.onLocationNameChange}
+        address={props.address}
+        onAddressChange={props.onAddressChange}
+        city={props.city}
+        cityLabel={cityLabel}
+        skipVenueLayout={props.skipVenueLayout}
+        onSkipVenueLayoutChange={props.onSkipVenueLayoutChange}
+      />
     )
   }
   return (

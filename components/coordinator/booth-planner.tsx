@@ -238,6 +238,7 @@ import {
   WIZARD_SUMMARY_VALUE_SAGE,
   WIZARD_SUMMARY_VALUE_WARN,
 } from '@/lib/wizard/wizard-panel-styles'
+import { resetWizardScrollAnchor } from '@/lib/wizard/wizard-scroll-anchor'
 import { PureLayoutPreview } from '@/components/coordinator/pure-layout-preview'
 import {
   LayoutPlannerStepper,
@@ -3233,6 +3234,10 @@ export function BoothPlanner({
   function goToWizardStep(step: LayoutPlannerStep) {
     setCurrentStep(step)
     setMaxReachableStep((prev) => (step > prev ? step : prev))
+    // Pin the viewport to the top of the step so coordinators always see the
+    // header / first action of the new step instead of mid-scroll wherever
+    // the previous step happened to leave them.
+    resetWizardScrollAnchor(step)
   }
 
   function validateStep1(): boolean {
@@ -3260,7 +3265,9 @@ export function BoothPlanner({
 
   function handleWizardBack() {
     if (currentStep > 1) {
-      setCurrentStep((currentStep - 1) as LayoutPlannerStep)
+      const prev = (currentStep - 1) as LayoutPlannerStep
+      setCurrentStep(prev)
+      resetWizardScrollAnchor(prev)
     }
   }
 

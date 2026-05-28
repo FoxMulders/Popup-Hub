@@ -51,6 +51,7 @@ import {
   WIZARD_PAGE_TITLE,
   WIZARD_PANEL,
 } from '@/lib/wizard/wizard-panel-styles'
+import { resetWizardScrollAnchor } from '@/lib/wizard/wizard-scroll-anchor'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import {
   MARKET_WIZARD_STEPS_FULL,
@@ -251,6 +252,7 @@ export function MarketSetupWizard({
     setCurrentStep(nextStep)
     setMaxReachedStep((prev) => Math.max(prev, nextStep) as WizardStep)
     syncStepInUrl(nextStep, resolvedEventId)
+    resetWizardScrollAnchor(nextStep)
   }
 
   const [rooms, setRooms] = useState(initialRoomsState.rooms)
@@ -836,6 +838,7 @@ export function MarketSetupWizard({
       const prev = (currentStep - 1) as WizardStep
       setCurrentStep(prev)
       syncStepInUrl(prev)
+      resetWizardScrollAnchor(prev)
     }
   }
 
@@ -852,6 +855,7 @@ export function MarketSetupWizard({
       }
       setCurrentStep(step)
       syncStepInUrl(step)
+      resetWizardScrollAnchor(step)
     } finally {
       setTransitioning(false)
     }

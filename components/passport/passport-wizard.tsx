@@ -20,6 +20,7 @@ import { buildPassportSavePayload, formatSupabaseError } from '@/lib/vendor/pass
 import { uploadVendorAsset } from '@/lib/vendor/upload-vendor-asset'
 import { dispatchAvatarChanged } from '@/lib/profile/avatar-sync'
 import { cn } from '@/lib/utils'
+import { resetWizardScrollAnchor } from '@/lib/wizard/wizard-scroll-anchor'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
 
 interface PassportWizardProps {
@@ -458,7 +459,12 @@ export function PassportWizard({
           <div className="flex justify-between pt-4">
             <Button
               variant="outline"
-              onClick={() => setStep((s) => s - 1)}
+              onClick={() => {
+                const next = step - 1
+                if (next < 0) return
+                setStep(next)
+                resetWizardScrollAnchor()
+              }}
               disabled={step === 0}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -467,7 +473,11 @@ export function PassportWizard({
 
             {step < STEPS.length - 1 ? (
               <Button
-                onClick={() => setStep((s) => s + 1)}
+                onClick={() => {
+                  const next = step + 1
+                  setStep(next)
+                  resetWizardScrollAnchor()
+                }}
                 className=""
                 disabled={
                   (step === 0 && !businessName.trim()) ||
