@@ -63,6 +63,15 @@ export interface ViewportApi extends ViewportState {
   zoomIn: () => void
   zoomOut: () => void
   resetZoom: () => void
+  /**
+   * Reset zoom to 1.0 *and* scroll the canvas so the doc anchor
+   * (current selection or room center) sits in the centre of the
+   * viewport. Distinct from `resetZoom`: when zoom is already 1.0
+   * `resetZoom` no-ops, but `centerView` always re-centres the scroll
+   * — so users who have panned away can recover the original framing
+   * with a single click.
+   */
+  centerView: () => void
   scrollHandlers: {
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void
     onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void
@@ -279,6 +288,43 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     [applyZoomAtDocAnchor]
   )
 
+  /**
+   * Center the doc anchor in the viewport without short-circuiting on
+   * "zoom is already 1.0". `applyZoomAtDocAnchor` bails when the zoom
+   * delta is zero, which makes it useless when the user has panned but
+   * not zoomed; this re-runs the same scroll math directly so the
+   * viewport always re-centres.
+   */
+  const centerView = useCallback(() => {
+    const scroll = scrollRef.current
+    if (!scroll) {
+      setZoomState(1)
+      return
+    }
+    const math = getZoomMathRef.current()
+    const targetZoom = clampZoom(1)
+    const newPxPerFt = math.basePxPerFt * targetZoom
+    const localScreenX = scroll.clientWidth / 2
+    const localScreenY = scroll.clientHeight / 2
+    const target = computeScroll(
+      math.anchorFt.x,
+      math.anchorFt.y,
+      newPxPerFt,
+      math.padFt,
+      localScreenX,
+      localScreenY
+    )
+    if (zoomRef.current !== targetZoom) {
+      pendingScrollRef.current = target
+      setZoomState(targetZoom)
+    } else {
+      // Same zoom — apply scroll synchronously; no React commit
+      // needed because the document's pixel size is unchanged.
+      scroll.scrollLeft = target.left
+      scroll.scrollTop = target.top
+    }
+  }, [scrollRef])
+
   const onWheel = useCallback(
     (e: WheelEvent<HTMLDivElement>) => {
       if (!(e.ctrlKey || e.metaKey)) return
@@ -462,6 +508,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     zoomIn,
     zoomOut,
     resetZoom,
+    centerView,
     scrollHandlers: {
       onPointerDown,
       onPointerMove,
