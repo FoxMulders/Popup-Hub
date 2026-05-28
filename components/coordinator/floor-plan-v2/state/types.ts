@@ -41,6 +41,16 @@ export interface BasePlacedObject {
   label?: string
   /** Locked objects can't be moved, resized, or deleted via direct manipulation. */
   locked?: boolean
+  /**
+   * Optional join-group id. When present, this object's bounding box
+   * contributes to the dissolved outer perimeter of the joined zone
+   * (`state/room-joins.ts`). Only specific object kinds are eligible
+   * for joining — `JOINABLE_OBJECT_KINDS` in `room-joins.ts` is the
+   * authoritative gate. Standard vendor booths, tables, walls, and
+   * other generic floor assets are NOT joinable; the field stays
+   * unset on those kinds.
+   */
+  joinGroupId?: string
 }
 
 export interface BoothObject extends BasePlacedObject {

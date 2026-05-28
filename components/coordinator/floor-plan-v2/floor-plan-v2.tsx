@@ -39,7 +39,10 @@ import {
 } from './state/local-draft'
 import { useFloorPlanDoc } from './state/use-floor-plan-doc'
 import {
+  isAuxiliaryRoom,
+  isJoinableObject,
   joinableGroups,
+  mixedNeighborsOf,
   neighborsOf,
 } from './state/room-joins'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from './state/types'
@@ -852,45 +855,157 @@ export function FloorPlanV2({
   )
 
   /**
-   * Eligibility for the canvas-bar "Join" action. The user can fuse
-   * the focused room (selected, otherwise active) with every
-   * neighbour that overlaps or touches its bounding box, dissolving
-   * the shared walls into one outer perimeter (`state/room-joins`).
+   * Eligibility for the canvas-bar "Join" action.
    *
-   * `joinTargetRoomId` follows selection > active because the
-   * selection signal is the more deliberate one: a coordinator
-   * dragging a new room into an existing perimeter clicks/drags the
-   * new room, so we treat *that* frame as the join initiator.
+   * Asset-type gate (deliberate restriction):
+   * The Join action is *only* available when the deliberate initiator
+   * is one of the following architectural fixtures:
+   *   1. A joinable `PlacedObject` (currently `stage`) that overlaps
+   *      or touches a room's perimeter wall, OR
+   *   2. An auxiliary `RoomFrame` (Kitchen, Storage, Washroom,
+   *      Corridor, Hallway, Annex, Outdoor Stage — anything matching
+   *      `isAuxiliaryRoom`) that has at least one overlapping or
+   *      touching neighbour.
+   *
+   * Standard vendor booths, tables, walls, doors, labels, exits, and
+   * generic floor assets are explicitly blocked from triggering a
+   * join — the button stays disabled when one is selected. The
+   * primary "Main Hall" can be a join *target* (an annex extends it)
+   * but it can't be the initiator on its own.
+   *
+   * Selection precedence:
+   *   1. A single joinable `PlacedObject` (e.g. a stage) → object
+   *      initiator, finds room/object neighbours.
+   *   2. Otherwise: the active/selected `RoomFrame` is the initiator,
+   *      gated on `isAuxiliaryRoom`.
+   *
+   * The structural intent: "Join" represents an architectural
+   * extension of the perimeter wall, not a generic grouping op.
    */
-  const joinTargetRoomId = selectedRoomId ?? activeRoomId
   const joinPlan = useMemo(() => {
     const frames = store.doc.rooms ?? []
-    if (frames.length < 2 || !joinTargetRoomId) {
-      return { canJoin: false, joinIds: [] as string[], unjoinGroupId: null as string | null }
+    const objects = store.doc.objects ?? []
+    const empty = {
+      canJoin: false,
+      joinRoomIds: [] as string[],
+      joinObjectIds: [] as string[],
+      candidateCount: 0,
+      unjoinGroupId: null as string | null,
+      blockedReason: null as string | null,
+    }
+
+    // -------------------------------------------------------------
+    // Initiator detection. A single selection is required so the
+    // join action has unambiguous semantics.
+    // -------------------------------------------------------------
+    const selectedIdsArray = Array.from(store.selectedIds)
+    const singleSelectedObj =
+      selectedIdsArray.length === 1
+        ? objects.find((o) => o.id === selectedIdsArray[0]!)
+        : null
+
+    // Case A: a `PlacedObject` is selected.
+    if (singleSelectedObj) {
+      // Standard floor assets block the action entirely.
+      if (!isJoinableObject(singleSelectedObj)) {
+        return {
+          ...empty,
+          blockedReason: `${singleSelectedObj.kind} can't extend the perimeter`,
+        }
+      }
+      const initiatorGroupId = singleSelectedObj.joinGroupId ?? null
+      const neighbors = mixedNeighborsOf(
+        { kind: 'object', id: singleSelectedObj.id },
+        frames,
+        objects
+      )
+      const joinRoomIds: string[] = []
+      const joinObjectIds: string[] = [singleSelectedObj.id]
+      for (const n of neighbors) {
+        if (n.kind === 'room') {
+          const f = frames.find((x) => x.id === n.id)
+          if (!f) continue
+          if (initiatorGroupId && f.joinGroupId === initiatorGroupId) continue
+          joinRoomIds.push(n.id)
+        } else {
+          const o = objects.find((x) => x.id === n.id)
+          if (!o) continue
+          if (initiatorGroupId && o.joinGroupId === initiatorGroupId) continue
+          joinObjectIds.push(n.id)
+        }
+      }
+      const candidateCount = joinRoomIds.length + joinObjectIds.length - 1
+      return {
+        canJoin: candidateCount > 0,
+        joinRoomIds,
+        joinObjectIds,
+        candidateCount,
+        unjoinGroupId: initiatorGroupId,
+        blockedReason: null as string | null,
+      }
+    }
+
+    // Case B: no single object — fall back to the active/selected
+    // room frame, gated on the auxiliary-room rule.
+    const joinTargetRoomId = selectedRoomId ?? activeRoomId
+    if (!joinTargetRoomId || frames.length < 2) {
+      return empty
     }
     const target = frames.find((f) => f.id === joinTargetRoomId)
-    if (!target) {
-      return { canJoin: false, joinIds: [], unjoinGroupId: null }
+    if (!target) return empty
+
+    if (!isAuxiliaryRoom(target)) {
+      // Main Hall can't initiate — coordinators must select the
+      // auxiliary annex (or the stage) to express the intent.
+      return {
+        ...empty,
+        unjoinGroupId: target.joinGroupId ?? null,
+        blockedReason:
+          'Select an auxiliary room (Kitchen / Storage / Washroom / Annex / Stage) to extend the perimeter',
+      }
     }
+
     const targetGroupId = target.joinGroupId ?? null
-
-    // Candidates: every frame that overlaps/touches the target AND
-    // isn't already in the same join group as the target. This way
-    // hitting "Join" is idempotent — you can keep clicking it as you
-    // drag new rooms into the zone, but it never offers a no-op.
-    const candidates = neighborsOf(frames, target.id).filter((id) => {
-      const f = frames.find((x) => x.id === id)
-      if (!f) return false
-      if (!targetGroupId) return true
-      return f.joinGroupId !== targetGroupId
-    })
-
-    return {
-      canJoin: candidates.length > 0,
-      joinIds: [target.id, ...candidates],
-      unjoinGroupId: targetGroupId,
+    // Use the mixed-neighbour search so an auxiliary room can also
+    // pull in a touching joinable object (e.g. a stage parked on
+    // the kitchen edge).
+    const neighbors = mixedNeighborsOf(
+      { kind: 'room', id: target.id },
+      frames,
+      objects
+    )
+    const joinRoomIds: string[] = [target.id]
+    const joinObjectIds: string[] = []
+    for (const n of neighbors) {
+      if (n.kind === 'room') {
+        const f = frames.find((x) => x.id === n.id)
+        if (!f) continue
+        if (targetGroupId && f.joinGroupId === targetGroupId) continue
+        joinRoomIds.push(n.id)
+      } else {
+        const o = objects.find((x) => x.id === n.id)
+        if (!o) continue
+        if (targetGroupId && o.joinGroupId === targetGroupId) continue
+        joinObjectIds.push(n.id)
+      }
     }
-  }, [store.doc.rooms, joinTargetRoomId])
+    const candidateCount =
+      joinRoomIds.length - 1 + joinObjectIds.length
+    return {
+      canJoin: candidateCount > 0,
+      joinRoomIds,
+      joinObjectIds,
+      candidateCount,
+      unjoinGroupId: targetGroupId,
+      blockedReason: null as string | null,
+    }
+  }, [
+    store.doc.rooms,
+    store.doc.objects,
+    store.selectedIds,
+    selectedRoomId,
+    activeRoomId,
+  ])
 
   /**
    * Total number of distinct joined zones currently on the canvas.
@@ -904,21 +1019,29 @@ export function FloorPlanV2({
   )
 
   const handleJoinRooms = useCallback(() => {
-    if (!joinPlan.canJoin || joinPlan.joinIds.length < 2) return
-    const groupId = store.joinRooms(joinPlan.joinIds)
+    if (!joinPlan.canJoin) return
+    const totalParticipants =
+      joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
+    if (totalParticipants < 2) return
+    const groupId = store.joinSelection({
+      roomIds: joinPlan.joinRoomIds,
+      objectIds: joinPlan.joinObjectIds,
+    })
     if (!groupId) return
-    const folded = joinPlan.joinIds.length
-    toast.success(
-      `Joined ${folded} rooms into one zone — interior walls dissolved.`,
-      { duration: 1800 }
-    )
+    const roomCount = joinPlan.joinRoomIds.length
+    const objectCount = joinPlan.joinObjectIds.length
+    const summary =
+      objectCount > 0
+        ? `Joined ${roomCount} room${roomCount === 1 ? '' : 's'} + ${objectCount} fixture${objectCount === 1 ? '' : 's'} — perimeter walls extended.`
+        : `Joined ${roomCount} rooms into one zone — interior walls dissolved.`
+    toast.success(summary, { duration: 1800 })
   }, [joinPlan, store])
 
   const handleUnjoinRoom = useCallback(() => {
     const groupId = joinPlan.unjoinGroupId
     if (!groupId) return
     store.unjoinRooms(groupId)
-    toast.message('Joined zone split — each room is now standalone again.', {
+    toast.message('Joined zone split — each member is standalone again.', {
       duration: 1500,
     })
   }, [joinPlan.unjoinGroupId, store])
@@ -1012,8 +1135,11 @@ export function FloorPlanV2({
         onJoinRooms={handleJoinRooms}
         canJoinRooms={joinPlan.canJoin}
         joinCandidateCount={
-          joinPlan.canJoin ? joinPlan.joinIds.length : undefined
+          joinPlan.canJoin
+            ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
+            : undefined
         }
+        joinBlockedReason={joinPlan.blockedReason}
         onUnjoinRoom={handleUnjoinRoom}
         canUnjoinRoom={joinPlan.unjoinGroupId !== null}
       />

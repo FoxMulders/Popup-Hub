@@ -356,6 +356,7 @@ export function FloorPlanCanvas({
           {store.doc.rooms && store.doc.rooms.length > 0 ? (
             <RoomFrames
               frames={store.doc.rooms}
+              objects={store.doc.objects}
               activeRoomId={activeRoomId ?? null}
               selectedRoomId={selectedRoomId ?? null}
               pxPerFt={pxPerFt}

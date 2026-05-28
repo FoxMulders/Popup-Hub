@@ -53,7 +53,11 @@ import type {
 
 import polygonClippingDefault from 'polygon-clipping'
 
-import type { RoomFrame } from './types'
+import type {
+  ObjectKind,
+  PlacedObject,
+  RoomFrame,
+} from './types'
 
 // `Geom` is the polygon-clipping internal union type — re-derive it
 // because the package only exports it privately.
@@ -90,6 +94,9 @@ export interface JoinedZone {
   groupId: string
   /** Member room ids (in insertion order). */
   frameIds: string[]
+  /** Member object ids (auxiliary `PlacedObject`s annexed into the
+   *  zone, e.g. an outdoor stage that overlaps the perimeter). */
+  objectIds: string[]
   /** Outer rings of the dissolved perimeter. */
   rings: Ring[]
   /** Bounding box of the union polygon. */
@@ -99,6 +106,67 @@ export interface JoinedZone {
 }
 
 const DEFAULT_TOUCH_EPSILON_FT = 0.25
+
+// ---------------------------------------------------------------------------
+// Asset-type gating
+// ---------------------------------------------------------------------------
+//
+// Polygon joining is intentionally restricted: only auxiliary spaces and
+// performance fixtures can extend the perimeter wall. Standard vendor
+// booths, tables, aisles, doors, labels, and walls cannot trigger a
+// join. This keeps the "Join" action semantically meaningful — it
+// represents an architectural extension of the floor plan, not a
+// general-purpose grouping operation.
+
+/**
+ * `PlacedObject` kinds that are eligible to extend the perimeter wall
+ * via the Join action. A stage is the canonical case: an outdoor or
+ * raised performance fixture that physically extends the room's
+ * footprint.
+ *
+ * Booths, walls, aisles, labels, doors, exits, and open-walls are
+ * *not* in this set — see the goal ("Explicitly disable or hide the
+ * join feature for standard vendor booths, tables, or generic layout
+ * assets").
+ */
+export const JOINABLE_OBJECT_KINDS: ReadonlySet<ObjectKind> = new Set<ObjectKind>([
+  'stage',
+])
+
+/**
+ * Returns true when `obj` is an architectural/performance fixture
+ * eligible to extend the perimeter wall. Standard floor assets
+ * (booths, tables, aisles) return false.
+ */
+export function isJoinableObject(obj: PlacedObject): boolean {
+  return JOINABLE_OBJECT_KINDS.has(obj.kind)
+}
+
+/**
+ * Auxiliary-room name pattern. Any `RoomFrame` whose name matches
+ * this regex (case-insensitive) is treated as an auxiliary space —
+ * the kind that *initiates* a Join action against the primary Main
+ * Hall. The Main Hall itself can be a join *target* (you can extend
+ * it with an annex) but it can't be the initiator: the action only
+ * makes sense when the auxiliary annex is the deliberate selection.
+ *
+ * The pattern matches the names used by `LAYOUT_ROOM_PRESETS`
+ * (kitchen, outdoor stage, annex) plus a few common manually-typed
+ * variants (storage, washroom/restroom, corridor, hallway) so
+ * coordinators can type a recognisable name and have the gating
+ * just work.
+ */
+const AUXILIARY_ROOM_NAME_RE =
+  /\b(kitchen|storage|washroom|restroom|corridor|hallway|annex|outdoor\s*stage|stage|prep|patio)\b/i
+
+/**
+ * Returns true when `frame` looks like an auxiliary space (kitchen,
+ * storage, washroom, corridor, hallway, annex, outdoor stage). The
+ * primary "Main Hall" returns false.
+ */
+export function isAuxiliaryRoom(frame: RoomFrame): boolean {
+  return AUXILIARY_ROOM_NAME_RE.test(frame.name)
+}
 
 /**
  * Trace the four corners of `frame` as a closed polygon ring. The
@@ -124,6 +192,89 @@ export function frameToRing(frame: RoomFrame): Ring {
 /** Convenience: a single-ring polygon for one frame. */
 export function frameToPolygon(frame: RoomFrame): Polygon {
   return [frameToRing(frame)]
+}
+
+/**
+ * Trace the four corners of a `PlacedObject`'s axis-aligned bounding
+ * box as a closed polygon ring, ignoring rotation. We intentionally
+ * use the AABB rather than the rotated rect because:
+ *
+ *   1. The dissolved zone perimeter is rectilinear by convention
+ *      (rooms are always axis-aligned), and feeding rotated polygons
+ *      into the union would emit angled outer edges that visually
+ *      conflict with the rectilinear room frames.
+ *   2. The user's mental model when annexing a stage to a room is
+ *      "this rectangle of floor space joins the room", not "rotate
+ *      the perimeter to follow the stage's tilt."
+ *
+ * If a future requirement calls for rotation-aware joining we can
+ * swap this for the rotated 4-corner ring — `polygon-clipping`
+ * handles non-axis-aligned polygons natively.
+ */
+export function objectToRing(obj: PlacedObject): Ring {
+  const x0 = obj.x
+  const y0 = obj.y
+  const x1 = obj.x + obj.width
+  const y1 = obj.y + obj.height
+  return [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+    [x0, y0],
+  ]
+}
+
+/** Convenience: a single-ring polygon for one placed object. */
+export function objectToPolygon(obj: PlacedObject): Polygon {
+  return [objectToRing(obj)]
+}
+
+/**
+ * Treat a `PlacedObject` as if it were a `RoomFrame` for join-geometry
+ * purposes. This lets the same overlap/touch predicates drive
+ * mixed-type joins without duplicating the math.
+ */
+function objectAsFrameSurrogate(obj: PlacedObject): RoomFrame {
+  return {
+    id: obj.id,
+    name: obj.label ?? obj.kind,
+    originX: obj.x,
+    originY: obj.y,
+    widthFt: obj.width,
+    lengthFt: obj.height,
+  }
+}
+
+/**
+ * Predicate: does the given joinable object overlap or touch the
+ * frame within the standard tolerance? Used to surface the Join
+ * action when an auxiliary fixture (e.g. an outdoor stage) is
+ * positioned flush against the perimeter wall.
+ */
+export function objectFrameOverlapsOrTouches(
+  obj: PlacedObject,
+  frame: RoomFrame,
+  epsilon = DEFAULT_TOUCH_EPSILON_FT
+): boolean {
+  return framesOverlapOrTouch(objectAsFrameSurrogate(obj), frame, epsilon)
+}
+
+/**
+ * Predicate: do the two joinable objects overlap or touch? Used so
+ * a coordinator can join two abutting stages into a single dissolved
+ * "performance zone" without dragging them through a room first.
+ */
+export function joinableObjectsOverlapOrTouch(
+  a: PlacedObject,
+  b: PlacedObject,
+  epsilon = DEFAULT_TOUCH_EPSILON_FT
+): boolean {
+  return framesOverlapOrTouch(
+    objectAsFrameSurrogate(a),
+    objectAsFrameSurrogate(b),
+    epsilon
+  )
 }
 
 /**
@@ -290,20 +441,105 @@ export function neighborsOf(
 }
 
 /**
- * Given a list of frames, project the polygon-clipping union into a
- * `JoinedZone` summary (rings, AABB, area). This is the runtime data
- * the canvas needs to paint a single dissolved perimeter.
+ * Discriminated union returned by `mixedNeighborsOf`. The caller
+ * uses the `kind` tag to feed each neighbour to the right slot of
+ * the `joinSelection` API (rooms vs joinable objects).
+ */
+export type JoinNeighbor =
+  | { kind: 'room'; id: string }
+  | { kind: 'object'; id: string }
+
+/**
+ * Mixed-type neighbour search: given a target frame OR object id,
+ * returns every nearby room frame plus every nearby joinable object.
+ * Skips objects whose kind is not in `JOINABLE_OBJECT_KINDS` and
+ * always skips the target itself.
  *
- * `groupId` and `frameIds` are passed through verbatim (callers
- * decide how the group is identified persistently).
+ * This is the seed list the Join button uses when the active
+ * selection is a Stage (or any other joinable object kind) — the
+ * UI draws a single chip per neighbour and the action commits all
+ * of them into one group.
+ */
+export function mixedNeighborsOf(
+  target: { kind: 'room' | 'object'; id: string },
+  frames: ReadonlyArray<RoomFrame>,
+  objects: ReadonlyArray<PlacedObject>,
+  epsilon = DEFAULT_TOUCH_EPSILON_FT
+): JoinNeighbor[] {
+  const out: JoinNeighbor[] = []
+
+  // Resolve the target's bounding rectangle (RoomFrame surrogate
+  // either way) so we can run the same predicates uniformly.
+  let targetSurrogate: RoomFrame | null = null
+  if (target.kind === 'room') {
+    targetSurrogate = frames.find((f) => f.id === target.id) ?? null
+  } else {
+    const obj = objects.find((o) => o.id === target.id)
+    if (obj && isJoinableObject(obj)) {
+      targetSurrogate = objectAsFrameSurrogate(obj)
+    }
+  }
+  if (!targetSurrogate) return out
+
+  for (const f of frames) {
+    if (target.kind === 'room' && f.id === target.id) continue
+    if (framesOverlapOrTouch(targetSurrogate, f, epsilon)) {
+      out.push({ kind: 'room', id: f.id })
+    }
+  }
+  for (const obj of objects) {
+    if (target.kind === 'object' && obj.id === target.id) continue
+    if (!isJoinableObject(obj)) continue
+    if (framesOverlapOrTouch(targetSurrogate, objectAsFrameSurrogate(obj), epsilon)) {
+      out.push({ kind: 'object', id: obj.id })
+    }
+  }
+  return out
+}
+
+/**
+ * Given a list of frames (and optionally a list of joinable objects),
+ * project the polygon-clipping union into a `JoinedZone` summary
+ * (rings, AABB, area). This is the runtime data the canvas needs to
+ * paint a single dissolved perimeter.
+ *
+ * `groupId`, `frameIds`, and `objectIds` are passed through verbatim
+ * (callers decide how the group is identified persistently).
+ *
+ * Joinable objects (e.g. an outdoor stage annexed to the Main Hall)
+ * contribute their AABB rectangle to the union — the same way a
+ * room frame does — so the dissolved perimeter naturally wraps
+ * around the stage's footprint. Non-joinable kinds passed in are
+ * silently skipped to keep callers honest without needing a guard
+ * at every site.
  */
 export function buildJoinedZone(
   groupId: string,
-  frames: ReadonlyArray<RoomFrame>
+  frames: ReadonlyArray<RoomFrame>,
+  objects: ReadonlyArray<PlacedObject> = []
 ): JoinedZone | null {
-  if (frames.length === 0) return null
+  const eligibleObjects = objects.filter(isJoinableObject)
+  if (frames.length === 0 && eligibleObjects.length === 0) return null
   const frameIds = frames.map((f) => f.id)
-  const mp = unionFrames(frames)
+  const objectIds = eligibleObjects.map((o) => o.id)
+
+  // Build a list of polygons for both rooms and joinable objects.
+  // A single union call (with all polygons unpacked as varargs)
+  // dissolves shared edges across the mixed input — the clipper
+  // doesn't care which polygons originated as frames vs objects.
+  const polygons: Polygon[] = [
+    ...frames.map(frameToPolygon),
+    ...eligibleObjects.map(objectToPolygon),
+  ]
+  if (polygons.length === 0) return null
+
+  let mp: MultiPolygon
+  if (polygons.length === 1) {
+    mp = [polygons[0]!]
+  } else {
+    const [first, ...rest] = polygons
+    mp = polygonClipping.union(first as Geom, ...(rest as Geom[]))
+  }
   if (mp.length === 0) return null
 
   const rings: Ring[] = []
@@ -315,8 +551,9 @@ export function buildJoinedZone(
 
   for (const polygon of mp) {
     // outer ring is polygon[0]; holes are polygon[1..]. We render
-    // outer rings only (rooms can't form holes via union-of-rects in
-    // any sane configuration, but we filter defensively).
+    // outer rings only (rooms + axis-aligned stages can't form
+    // holes via union-of-rects in any sane configuration, but we
+    // filter defensively).
     const outer = polygon[0]
     if (!outer) continue
     rings.push(outer)
@@ -334,6 +571,7 @@ export function buildJoinedZone(
   return {
     groupId,
     frameIds,
+    objectIds,
     rings,
     aabb: { minX, minY, maxX, maxY },
     areaSqFt: Math.abs(area),

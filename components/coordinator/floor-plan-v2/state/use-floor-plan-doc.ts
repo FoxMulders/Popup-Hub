@@ -129,9 +129,32 @@ export interface FloorPlanDocStore {
   ) => string | null
 
   /**
+   * Mixed-target join: fuse rooms AND joinable `PlacedObject`s
+   * (e.g. an outdoor stage that overlaps a perimeter wall) into a
+   * single dissolved zone. The store does not enforce the
+   * "joinable kind" rule — callers must pre-filter with
+   * `isJoinableObject` from `state/room-joins.ts` so booths, walls,
+   * and other generic floor assets are never included.
+   *
+   * One history entry covers the entire commit so a single Ctrl+Z
+   * undoes both the room and object group assignments atomically.
+   *
+   * Returns the resulting `joinGroupId`, or `null` when fewer than
+   * two participants were resolved (no-op).
+   */
+  joinSelection: (
+    selection: {
+      roomIds?: ReadonlyArray<string>
+      objectIds?: ReadonlyArray<string>
+    },
+    options?: { pushHistory?: boolean }
+  ) => string | null
+
+  /**
    * Reverse of `joinRooms`: clears the `joinGroupId` from every
    * member of the named group so each room reverts to a standalone
-   * frame.
+   * frame. Also clears the field from any `PlacedObject` that was
+   * annexed into the same group (mixed-type unjoin).
    */
   unjoinRooms: (
     groupId: string,
@@ -353,51 +376,82 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     [commit]
   )
 
-  const joinRooms = useCallback<FloorPlanDocStore['joinRooms']>(
-    (roomIds, options) => {
+  const joinSelection = useCallback<FloorPlanDocStore['joinSelection']>(
+    (selection, options) => {
       const pushHistory = options?.pushHistory ?? true
       const current = docRef.current
       const frames = current.rooms ?? []
-      if (frames.length === 0 || roomIds.length < 2) return null
-      const wantedIds = new Set(roomIds)
-      const targets = frames.filter((f) => wantedIds.has(f.id))
-      if (targets.length < 2) return null
+      const objects = current.objects ?? []
 
-      // If any of the target frames is already part of a join group,
-      // fold the new members into the existing group rather than
-      // minting a fresh id. When multiple groups intersect the
-      // target set we collapse them all into one — the user just
-      // declared they should all be a single zone.
+      const wantedRoomIds = new Set(selection.roomIds ?? [])
+      const wantedObjectIds = new Set(selection.objectIds ?? [])
+
+      const targetFrames = frames.filter((f) => wantedRoomIds.has(f.id))
+      const targetObjects = objects.filter((o) => wantedObjectIds.has(o.id))
+      const totalTargets = targetFrames.length + targetObjects.length
+      if (totalTargets < 2) return null
+
+      // Existing-group fold: if any participant (room or object) is
+      // already in a join group, prefer that group id so the action
+      // is idempotent. Multiple intersecting groups are collapsed
+      // into one — the user just declared all of these should be a
+      // single zone.
       const existingGroupIds = new Set<string>()
-      for (const f of targets) {
+      for (const f of targetFrames) {
         if (f.joinGroupId) existingGroupIds.add(f.joinGroupId)
+      }
+      for (const o of targetObjects) {
+        if (o.joinGroupId) existingGroupIds.add(o.joinGroupId)
       }
       const groupId =
         existingGroupIds.size > 0
           ? existingGroupIds.values().next().value!
           : `join-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
 
-      // Promote all members of the original groups + the freshly
-      // selected frames into the resolved group id.
-      const memberIds = new Set<string>(roomIds)
+      // Promote all members of any folded-in groups so the merge is
+      // transitive — joining A+B when B was already part of {B,C}
+      // produces {A,B,C}, not {A,B}+{B,C}.
+      const memberRoomIds = new Set<string>(wantedRoomIds)
+      const memberObjectIds = new Set<string>(wantedObjectIds)
       for (const f of frames) {
         if (f.joinGroupId && existingGroupIds.has(f.joinGroupId)) {
-          memberIds.add(f.id)
+          memberRoomIds.add(f.id)
+        }
+      }
+      for (const o of objects) {
+        if (o.joinGroupId && existingGroupIds.has(o.joinGroupId)) {
+          memberObjectIds.add(o.id)
         }
       }
 
       let mutated = false
       const nextFrames = frames.map((f) => {
-        if (!memberIds.has(f.id)) return f
+        if (!memberRoomIds.has(f.id)) return f
         if (f.joinGroupId === groupId) return f
         mutated = true
         return { ...f, joinGroupId: groupId }
       })
+      const nextObjects = objects.map((o) => {
+        if (!memberObjectIds.has(o.id)) return o
+        if (o.joinGroupId === groupId) return o
+        mutated = true
+        return { ...o, joinGroupId: groupId } as typeof o
+      })
       if (!mutated) return groupId
-      commit({ ...current, rooms: nextFrames }, pushHistory)
+      commit({ ...current, rooms: nextFrames, objects: nextObjects }, pushHistory)
       return groupId
     },
     [commit]
+  )
+
+  const joinRooms = useCallback<FloorPlanDocStore['joinRooms']>(
+    (roomIds, options) => {
+      // Thin wrapper preserved for backward compatibility — the
+      // mixed-target `joinSelection` path is the source of truth.
+      if (roomIds.length < 2) return null
+      return joinSelection({ roomIds }, options)
+    },
+    [joinSelection]
   )
 
   const unjoinRooms = useCallback<FloorPlanDocStore['unjoinRooms']>(
@@ -405,8 +459,9 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const pushHistory = options?.pushHistory ?? true
       const current = docRef.current
       const frames = current.rooms ?? []
-      if (frames.length === 0) return
+      const objects = current.objects ?? []
       let mutated = false
+
       const nextFrames = frames.map((f) => {
         if (f.joinGroupId !== groupId) return f
         mutated = true
@@ -414,8 +469,20 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         void _drop
         return rest
       })
+
+      // Mixed-type unjoin: also strip `joinGroupId` from any
+      // `PlacedObject` that was annexed into this group (e.g. an
+      // outdoor stage joined to the Main Hall).
+      const nextObjects = objects.map((o) => {
+        if (o.joinGroupId !== groupId) return o
+        mutated = true
+        const { joinGroupId: _drop, ...rest } = o
+        void _drop
+        return rest as typeof o
+      })
+
       if (!mutated) return
-      commit({ ...current, rooms: nextFrames }, pushHistory)
+      commit({ ...current, rooms: nextFrames, objects: nextObjects }, pushHistory)
     },
     [commit]
   )
@@ -497,6 +564,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       patchDoc,
       moveRoomFrame,
       joinRooms,
+      joinSelection,
       unjoinRooms,
       setSelection,
       toggleSelection,
@@ -519,6 +587,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       patchDoc,
       moveRoomFrame,
       joinRooms,
+      joinSelection,
       unjoinRooms,
       setSelection,
       toggleSelection,

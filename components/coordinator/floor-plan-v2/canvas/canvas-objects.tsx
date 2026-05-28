@@ -102,8 +102,16 @@ function CanvasObjectsBase({
         const h = obj.height * pxPerFt
         const isSelected = selectedIds.has(obj.id)
         const fill = fillForObject(obj)
-        const stroke = strokeForObject(obj, isSelected)
-        const strokeWidth = isSelected ? 2.5 : 1.5
+        // When the object is part of an explicit join group its
+        // perimeter is no longer "owned" by the object — the
+        // dissolved zone polygon (rendered in <RoomFrames>) draws
+        // the unified outer wall. Suppress the per-object stroke
+        // so the two boundaries don't double up.
+        const isJoined = !!obj.joinGroupId
+        const stroke = isJoined && !isSelected
+          ? 'transparent'
+          : strokeForObject(obj, isSelected)
+        const strokeWidth = isSelected ? 2.5 : isJoined ? 0 : 1.5
         const transform =
           obj.rotation && obj.rotation !== 0
             ? `rotate(${obj.rotation} ${x + w / 2} ${y + h / 2})`

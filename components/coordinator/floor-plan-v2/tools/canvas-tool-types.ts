@@ -26,18 +26,31 @@ export interface CanvasToolHostProps {
   onAutoArrange?: () => void
   canAutoArrange?: boolean
   /**
-   * Fuse the active room with every overlapping/touching neighbour
-   * into a single dissolved zone (see `state/room-joins.ts`). Falsy
-   * when fewer than two rooms touch — the button becomes disabled.
+   * Fuse the active room (or a selected joinable fixture like a
+   * Stage) with every overlapping/touching neighbour into a single
+   * dissolved zone (see `state/room-joins.ts`).
+   *
+   * Asset-type gated: only enabled when the deliberate selection is
+   * an auxiliary room (Kitchen / Storage / Washroom / Annex / etc.)
+   * or a joinable `PlacedObject` (currently `stage`). Standard
+   * vendor booths, walls, doors, and labels keep this falsy.
    */
   onJoinRooms?: () => void
   canJoinRooms?: boolean
-  /** Number of frames eligible for the next join action — used as a
-   *  badge on the button (e.g. "Join (3)"). */
+  /** Number of participants (rooms + joinable fixtures) eligible
+   *  for the next join action — used as a badge on the button. */
   joinCandidateCount?: number
   /**
-   * Split the active room out of its existing join group. Falsy
-   * when the active room is not part of a group.
+   * Optional explanation surfaced as the join button's `title` when
+   * the action is gated off (e.g. "booth can't extend the perimeter").
+   * Lets coordinators understand why the button is dim instead of
+   * staring at a silent disabled state.
+   */
+  joinBlockedReason?: string | null
+  /**
+   * Split the active room (or joined fixture) out of its existing
+   * join group. Falsy when the active selection is not part of a
+   * group.
    */
   onUnjoinRoom?: () => void
   canUnjoinRoom?: boolean

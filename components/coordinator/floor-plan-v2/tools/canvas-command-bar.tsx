@@ -79,6 +79,7 @@ export function CanvasCommandBar({
   onJoinRooms,
   canJoinRooms,
   joinCandidateCount,
+  joinBlockedReason,
   onUnjoinRoom,
   canUnjoinRoom,
   zoom,
@@ -91,9 +92,14 @@ export function CanvasCommandBar({
   const canAlign = selectedCount >= 2
   const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
   const joinLabel =
-    canJoinRooms && joinCandidateCount && joinCandidateCount > 0
+    canJoinRooms && joinCandidateCount && joinCandidateCount > 1
       ? `Join (${joinCandidateCount})`
       : 'Join'
+  const joinTitle = canJoinRooms
+    ? 'Extend the perimeter wall: dissolve shared edges with every overlapping/touching auxiliary room or joinable fixture (Stage)'
+    : joinBlockedReason
+      ? `Can't join: ${joinBlockedReason}`
+      : 'Select an auxiliary room (Kitchen / Storage / Washroom / Annex) or a Stage to extend the perimeter'
 
   return (
     <div
@@ -179,7 +185,7 @@ export function CanvasCommandBar({
               <CommandButton
                 onClick={onJoinRooms}
                 disabled={!canJoinRooms}
-                title="Join the active room with overlapping or touching neighbours into one dissolved zone"
+                title={joinTitle}
                 label={joinLabel}
                 className="bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
               >

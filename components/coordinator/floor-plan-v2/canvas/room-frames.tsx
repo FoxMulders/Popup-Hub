@@ -5,11 +5,19 @@ import {
   computeRoomWallSegments,
   detectMergedRoomPairs,
 } from '../interactions/geometry'
-import { buildJoinedZone } from '../state/room-joins'
-import type { RoomFrame } from '../state/types'
+import { buildJoinedZone, isJoinableObject } from '../state/room-joins'
+import type { PlacedObject, RoomFrame } from '../state/types'
 
 interface RoomFramesProps {
   frames: ReadonlyArray<RoomFrame>
+  /**
+   * All placed objects on the canvas. We only consume the ones whose
+   * `joinGroupId` matches a frame's join group — those rectangles
+   * get folded into the dissolved zone polygon so the perimeter wall
+   * extends over them. Standard floor objects pass through
+   * untouched.
+   */
+  objects?: ReadonlyArray<PlacedObject>
   /** Active room (highlighted; child edits are routed here by default). */
   activeRoomId: string | null
   /** Currently selected room (clicked-to-select for drag). */
@@ -48,6 +56,7 @@ const PERIMETER_WIDTH_JOINED = 4
  */
 function RoomFramesBase({
   frames,
+  objects,
   activeRoomId,
   selectedRoomId,
   pxPerFt,
@@ -66,25 +75,51 @@ function RoomFramesBase({
     return out
   }, [frames])
 
+  // Same shape as `groupMembers`, but for joinable `PlacedObject`s
+  // (currently `stage` only). These rectangles get folded into the
+  // dissolved zone polygon so the perimeter wall flows around them.
+  const groupObjects = useMemo(() => {
+    const out = new Map<string, PlacedObject[]>()
+    if (!objects) return out
+    for (const o of objects) {
+      if (!o.joinGroupId) continue
+      if (!isJoinableObject(o)) continue
+      if (!out.has(o.joinGroupId)) out.set(o.joinGroupId, [])
+      out.get(o.joinGroupId)!.push(o)
+    }
+    return out
+  }, [objects])
+
   /**
    * Compute the dissolved zone (outer ring + AABB + member ids) for
    * every join group, in canvas-pixel space ready to feed straight
-   * into an SVG `<path>`. Memoized on `frames` so the polygon
-   * clipper only runs when room geometry actually changes.
+   * into an SVG `<path>`. Memoized so the polygon clipper only runs
+   * when room or joinable-object geometry actually changes.
    */
   const joinedZones = useMemo(() => {
     const result: Array<{
       groupId: string
       members: RoomFrame[]
+      objects: PlacedObject[]
       pathData: string
       labelX: number
       labelY: number
       width: number
       height: number
     }> = []
-    for (const [groupId, members] of groupMembers.entries()) {
-      if (members.length < 2) continue
-      const zone = buildJoinedZone(groupId, members)
+    // Walk every group that has at least one room frame OR at least
+    // two joinable objects (a stage joined to a stage with no rooms
+    // in between is still a valid extension).
+    const groupIds = new Set<string>([
+      ...groupMembers.keys(),
+      ...groupObjects.keys(),
+    ])
+    for (const groupId of groupIds) {
+      const members = groupMembers.get(groupId) ?? []
+      const groupObjs = groupObjects.get(groupId) ?? []
+      const totalParticipants = members.length + groupObjs.length
+      if (totalParticipants < 2) continue
+      const zone = buildJoinedZone(groupId, members, groupObjs)
       if (!zone) continue
       // Build the SVG `path` by walking each outer ring; "M" + "L"…
       // + "Z" per ring so multiple disjoint outers (rare but
@@ -100,26 +135,64 @@ function RoomFramesBase({
         segments.push('Z')
       }
       const pathData = segments.join(' ')
-      const minMember = members.reduce(
+      // Anchor the label to the top-left-most participant (room or
+      // joinable object), so a stage annexed to the upper edge of
+      // a hall can host the label too.
+      const labelAnchorRoom = members.reduce<RoomFrame | null>(
         (best, f) => {
           const score = f.originY * 1e6 + f.originX
-          return score < best.score ? { score, f } : best
+          if (!best) return f
+          const bestScore = best.originY * 1e6 + best.originX
+          return score < bestScore ? f : best
         },
-        { score: Infinity, f: members[0]! }
-      ).f
+        null
+      )
+      const labelAnchorObj = groupObjs.reduce<PlacedObject | null>(
+        (best, o) => {
+          const score = o.y * 1e6 + o.x
+          if (!best) return o
+          const bestScore = best.y * 1e6 + best.x
+          return score < bestScore ? o : best
+        },
+        null
+      )
+      let anchorX: number
+      let anchorY: number
+      if (labelAnchorRoom && labelAnchorObj) {
+        const roomScore =
+          labelAnchorRoom.originY * 1e6 + labelAnchorRoom.originX
+        const objScore = labelAnchorObj.y * 1e6 + labelAnchorObj.x
+        if (roomScore <= objScore) {
+          anchorX = labelAnchorRoom.originX
+          anchorY = labelAnchorRoom.originY
+        } else {
+          anchorX = labelAnchorObj.x
+          anchorY = labelAnchorObj.y
+        }
+      } else if (labelAnchorRoom) {
+        anchorX = labelAnchorRoom.originX
+        anchorY = labelAnchorRoom.originY
+      } else if (labelAnchorObj) {
+        anchorX = labelAnchorObj.x
+        anchorY = labelAnchorObj.y
+      } else {
+        anchorX = zone.aabb.minX
+        anchorY = zone.aabb.minY
+      }
       result.push({
         groupId,
         members,
+        objects: groupObjs,
         pathData,
-        labelX: minMember.originX * pxPerFt,
-        labelY: minMember.originY * pxPerFt,
+        labelX: anchorX * pxPerFt,
+        labelY: anchorY * pxPerFt,
         width: (zone.aabb.maxX - zone.aabb.minX) * pxPerFt,
         height: (zone.aabb.maxY - zone.aabb.minY) * pxPerFt,
       })
     }
     return result
     // pxPerFt is captured in the path; recompute when anything changes.
-  }, [groupMembers, pxPerFt])
+  }, [groupMembers, groupObjects, pxPerFt])
 
   if (frames.length === 0) return null
 
@@ -164,24 +237,36 @@ function RoomFramesBase({
             pointerEvents="none"
           />
           <g pointerEvents="none">
-            <rect
-              x={zone.labelX + 6}
-              y={zone.labelY + 6}
-              width={Math.min(260, Math.max(120, zone.members.length * 60 + 80))}
-              height={22}
-              rx={4}
-              fill="#0e7490"
-              fillOpacity={0.92}
-            />
-            <text
-              x={zone.labelX + 14}
-              y={zone.labelY + 22}
-              fontSize={12}
-              fontWeight={700}
-              fill="#ecfeff"
-            >
-              {`Joined zone · ${zone.members.length} rooms`}
-            </text>
+            {(() => {
+              const roomCount = zone.members.length
+              const objectCount = zone.objects.length
+              const summary =
+                objectCount > 0
+                  ? `Joined zone · ${roomCount} room${roomCount === 1 ? '' : 's'} + ${objectCount} fixture${objectCount === 1 ? '' : 's'}`
+                  : `Joined zone · ${roomCount} room${roomCount === 1 ? '' : 's'}`
+              return (
+                <>
+                  <rect
+                    x={zone.labelX + 6}
+                    y={zone.labelY + 6}
+                    width={Math.min(320, Math.max(140, summary.length * 7 + 24))}
+                    height={22}
+                    rx={4}
+                    fill="#0e7490"
+                    fillOpacity={0.92}
+                  />
+                  <text
+                    x={zone.labelX + 14}
+                    y={zone.labelY + 22}
+                    fontSize={12}
+                    fontWeight={700}
+                    fill="#ecfeff"
+                  >
+                    {summary}
+                  </text>
+                </>
+              )
+            })()}
           </g>
         </g>
       ))}
