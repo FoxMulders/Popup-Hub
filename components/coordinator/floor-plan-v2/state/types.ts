@@ -94,6 +94,32 @@ export type PlacedObject =
   | EmergencyExitObject
   | StageObject
 
+/**
+ * Room frame on the unified canvas. Each frame represents one
+ * `LayoutRoom` projected onto a shared coordinate space; frames can be
+ * placed side-by-side, butted up against each other (wall-merge), and
+ * dragged as macro-level entities — child objects translate with the
+ * frame because they're stored in *global* canvas coords with a
+ * sidecar room association (`FloorPlanDoc.objectRoom`).
+ *
+ * Frames are part of the doc so room moves participate in the same
+ * undo/redo stack as object edits — a single Ctrl+Z restores the
+ * previous origin and the children that travelled with it.
+ */
+export interface RoomFrame {
+  /** Mirrors `LayoutRoom.id` so the bridge can write back to the
+   *  source list at save time. */
+  id: string
+  /** Display name shown above the frame (mirrors `LayoutRoom.name`). */
+  name: string
+  /** Top-left of the room rectangle on the unified canvas, in feet. */
+  originX: number
+  originY: number
+  /** Room interior extent in feet (matches `LayoutRoom.venue_width/length`). */
+  widthFt: number
+  lengthFt: number
+}
+
 export interface FloorPlanDoc {
   /** Visual canvas extents in feet. Advisory; objects may sit outside. */
   canvasWidthFt: number
@@ -104,6 +130,19 @@ export interface FloorPlanDoc {
   snapFt: number
   /** Free-form, user-managed object list. Order = z-order (later = on top). */
   objects: PlacedObject[]
+  /**
+   * Room frames on the unified canvas. Optional so single-room callers
+   * (e.g., legacy tests) can keep using a frameless doc; the v2 wizard
+   * always populates this with one entry per `LayoutRoom`.
+   */
+  rooms?: RoomFrame[]
+  /**
+   * Sidecar mapping `objectId → roomId` so we can round-trip objects
+   * back to their source `LayoutRoom` on save. Objects without an
+   * entry default to the first room (or no room when `rooms` is
+   * absent).
+   */
+  objectRoom?: Record<string, string>
 }
 
 export const DEFAULT_GRID_SPACING_FT = 1

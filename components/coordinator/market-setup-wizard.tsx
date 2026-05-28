@@ -7,7 +7,6 @@ import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-cli
 import { createClient } from '@/lib/supabase/client'
 import { BoothPlanner } from '@/components/coordinator/booth-planner'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
-import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import {
   createLayoutRoom,
@@ -258,10 +257,6 @@ export function MarketSetupWizard({
   const [activeRoomId, setActiveRoomId] = useState(initialRoomsState.activeRoomId)
   const activeRoom = useMemo(() => getActiveRoom(rooms, activeRoomId), [rooms, activeRoomId])
 
-  function handleSelectRoom(roomId: string) {
-    setActiveRoomId(roomId)
-  }
-
   function handleAddRoom(presetId?: LayoutRoomPresetId) {
     // Look up the structural preset (kitchen / outdoor stage / annex
     // / blank). Any unknown id falls back to the blank preset so the
@@ -270,10 +265,6 @@ export function MarketSetupWizard({
       LAYOUT_ROOM_PRESETS.find((p) => p.id === presetId) ??
       LAYOUT_ROOM_PRESETS[0]!
     const isFirstRoom = rooms.length === 0
-    // Auto-name presets so the user gets a recognisable label rather
-    // than a generic "Room N", but stay out of the way for blank rooms
-    // where the existing "Main Hall / Room N" sequencing is what
-    // coordinators are used to.
     let name: string
     if (preset.id !== 'blank') {
       name = preset.name
@@ -283,7 +274,26 @@ export function MarketSetupWizard({
       name = `Room ${rooms.length + 1}`
     }
     const partial = presetToRoomPartial(preset)
-    const room = createLayoutRoom(name, partial)
+    // Tile new rooms to the right of the existing union so the first
+    // added preset / room never collides with the Main Hall on the
+    // unified canvas. The 4 ft gap leaves enough air between rooms
+    // for coordinators to grab and drag the new frame; once they
+    // butt the rooms together the wall-merge logic kicks in.
+    let nextOriginX = 0
+    const nextOriginY = 0
+    if (!isFirstRoom) {
+      let maxRight = 0
+      for (const r of rooms) {
+        const right = (r.canvas_origin_x ?? 0) + (r.venue_width || 50)
+        if (right > maxRight) maxRight = right
+      }
+      nextOriginX = maxRight + 4
+    }
+    const room = createLayoutRoom(name, {
+      ...partial,
+      canvas_origin_x: nextOriginX,
+      canvas_origin_y: nextOriginY,
+    })
     setRooms((prev) => [...prev, room])
     setActiveRoomId(room.id)
     toast.success(`Added ${room.name}`)
@@ -961,16 +971,14 @@ export function MarketSetupWizard({
                   )
           )}
         >
-          {currentStep === 3 && !skipVenueLayout ? (
-            <LayoutRoomBar
-              rooms={rooms}
-              activeRoomId={activeRoomId}
-              onSelectRoom={handleSelectRoom}
-              onAddRoom={handleAddRoom}
-              onRenameRoom={handleRenameRoom}
-              onDeleteRoom={handleDeleteRoom}
-            />
-          ) : null}
+          {/*
+            The legacy "ROOMS / ZONES" bar that used to sit above the
+            canvas was retired in the multi-room canvas overhaul. The
+            FloorPlanV2 component now mounts a compact rooms strip
+            inside its right-hand sidebar so the canvas itself can
+            absorb the empty real estate and coordinators can see
+            every room's frame on a single coordinate space.
+          */}
 
           {/* Step 1 — combined Event & Venue. Both halves of the legacy
              Step 1 / Step 2 render together so coordinators can fill the
@@ -1087,6 +1095,9 @@ export function MarketSetupWizard({
                 onLayoutRoomsChange={handleLayoutRoomsChange}
                 saveLayoutRef={saveLayoutRef}
                 eventCategoryNames={eventCategoryNames}
+                onAddRoom={handleAddRoom}
+                onRenameRoom={handleRenameRoom}
+                onDeleteRoom={handleDeleteRoom}
               />
               <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
             </>

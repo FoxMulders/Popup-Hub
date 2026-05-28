@@ -101,3 +101,74 @@ export function clearLocalDraft(eventId: string, roomId: string): void {
     // ignore
   }
 }
+
+/* -----------------------------------------------------------------
+ * Multi-room (unified) draft variant
+ * -----------------------------------------------------------------
+ * The v2 wizard step now edits *all* rooms on a single unified
+ * canvas, so the per-(event, room) keying above isn't enough — a
+ * crash mid-edit could leave one room's objects saved to one key
+ * and another room's objects stale in a different key, with no
+ * record of where the room frames sit on the unified canvas.
+ *
+ * The functions below cache the *whole* unified `FloorPlanDoc`
+ * keyed on `eventId` only. The per-room API above is kept intact
+ * so other surfaces (legacy single-room flows, tests) keep working
+ * without changes.
+ */
+
+const MULTI_KEY_PREFIX = 'floorplan:v2:multi-draft'
+
+interface MultiDraftEnvelope {
+  version: number
+  savedAt: number
+  doc: FloorPlanDoc
+}
+
+function multiStorageKey(eventId: string): string {
+  return `${MULTI_KEY_PREFIX}:${eventId}`
+}
+
+/** Persist the unified multi-room doc for `eventId`. */
+export function saveMultiRoomDraft(eventId: string, doc: FloorPlanDoc): void {
+  const ls = safeStorage()
+  if (!ls) return
+  try {
+    const env: MultiDraftEnvelope = {
+      version: STORAGE_VERSION,
+      savedAt: Date.now(),
+      doc,
+    }
+    ls.setItem(multiStorageKey(eventId), JSON.stringify(env))
+  } catch {
+    // Storage full / private mode — non-fatal.
+  }
+}
+
+/** Load a previously cached multi-room draft for `eventId`. */
+export function loadMultiRoomDraft(
+  eventId: string
+): { doc: FloorPlanDoc; savedAt: number } | null {
+  const ls = safeStorage()
+  if (!ls) return null
+  try {
+    const raw = ls.getItem(multiStorageKey(eventId))
+    if (!raw) return null
+    const env = JSON.parse(raw) as Partial<MultiDraftEnvelope>
+    if (!env || env.version !== STORAGE_VERSION || !env.doc) return null
+    return { doc: env.doc as FloorPlanDoc, savedAt: env.savedAt ?? 0 }
+  } catch {
+    return null
+  }
+}
+
+/** Drop the cached multi-room draft after a successful server save. */
+export function clearMultiRoomDraft(eventId: string): void {
+  const ls = safeStorage()
+  if (!ls) return
+  try {
+    ls.removeItem(multiStorageKey(eventId))
+  } catch {
+    // ignore
+  }
+}

@@ -17,6 +17,15 @@
  * read path we re-hydrate as best we can. The v2 canvas itself never
  * round-trips through this projection at runtime — it only happens at
  * save time.
+ *
+ * Multi-room model:
+ * Each `LayoutRoom` carries an optional `(canvas_origin_x,
+ * canvas_origin_y)` offset. The unified `FloorPlanDoc` stores objects
+ * in *global* canvas coordinates so the canvas pointer / drag /
+ * marquee / rotate code can treat them as a flat list. The sidecar
+ * `objectRoom` map remembers which room each object belongs to so
+ * that on save we can subtract the parent room's origin and write
+ * the object back as a room-local cell / venue element.
  */
 
 import type {
@@ -30,6 +39,7 @@ import type {
   DoorObject,
   FloorPlanDoc,
   PlacedObject,
+  RoomFrame,
 } from './types'
 import { makeEmptyDoc } from './types'
 
@@ -230,4 +240,163 @@ export function docFromLegacyRoom(room: LayoutRoom | null): FloorPlanDoc {
     snapFt: 1,
     objects,
   }
+}
+
+/** Padding (ft) added around the room union when sizing the unified canvas. */
+const UNIFIED_CANVAS_PAD_FT = 0
+
+/**
+ * Compute the unified canvas extents from a list of room frames.
+ * The canvas always starts at `(0, 0)` and stretches to the far
+ * corner of the rightmost/bottommost room. Room origins should be
+ * non-negative; if any are negative they're effectively clamped via
+ * `Math.max` so the canvas still anchors at zero.
+ */
+export function unifiedCanvasExtents(frames: ReadonlyArray<RoomFrame>): {
+  width: number
+  length: number
+} {
+  if (frames.length === 0) return { width: 50, length: 50 }
+  let maxX = 0
+  let maxY = 0
+  for (const f of frames) {
+    const right = Math.max(0, f.originX) + f.widthFt
+    const bottom = Math.max(0, f.originY) + f.lengthFt
+    if (right > maxX) maxX = right
+    if (bottom > maxY) maxY = bottom
+  }
+  return {
+    width: maxX + UNIFIED_CANVAS_PAD_FT,
+    length: maxY + UNIFIED_CANVAS_PAD_FT,
+  }
+}
+
+/**
+ * Build a `RoomFrame[]` from the wizard's `LayoutRoom[]`. Each frame
+ * carries its origin in global coords plus its local extent so the
+ * canvas can render perimeters and run wall-merge geometry without
+ * having to peek back at the source list.
+ */
+export function frameListFromRooms(
+  rooms: ReadonlyArray<LayoutRoom>
+): RoomFrame[] {
+  return rooms.map((r) => ({
+    id: r.id,
+    name: r.name,
+    originX: Math.max(0, r.canvas_origin_x ?? 0),
+    originY: Math.max(0, r.canvas_origin_y ?? 0),
+    widthFt: r.venue_width || 50,
+    lengthFt: r.venue_length || 50,
+  }))
+}
+
+/**
+ * Project every `LayoutRoom`'s booths and venue elements onto a single
+ * unified `FloorPlanDoc` whose objects sit in *global* canvas coords.
+ * The sidecar `objectRoom` map remembers which room each object came
+ * from so `legacyRoomsFromDoc` can route edits back to the right
+ * source row.
+ */
+export function docFromLegacyRooms(
+  rooms: ReadonlyArray<LayoutRoom>
+): FloorPlanDoc {
+  if (rooms.length === 0) return { ...makeEmptyDoc(50, 50), rooms: [], objectRoom: {} }
+
+  const frames = frameListFromRooms(rooms)
+  const objects: PlacedObject[] = []
+  const objectRoom: Record<string, string> = {}
+
+  for (const room of rooms) {
+    const ox = Math.max(0, room.canvas_origin_x ?? 0)
+    const oy = Math.max(0, room.canvas_origin_y ?? 0)
+    for (const cell of room.cells ?? []) {
+      if (cell.col < 0 || cell.row < 0) continue
+      const obj = objectFromBoothCell(cell)
+      // Translate from room-local → unified global coords.
+      obj.x += ox
+      obj.y += oy
+      objects.push(obj)
+      objectRoom[obj.id] = room.id
+    }
+    for (const el of room.venue_elements ?? []) {
+      const obj = objectFromVenueElement(el)
+      if (!obj) continue
+      obj.x += ox
+      obj.y += oy
+      objects.push(obj)
+      objectRoom[obj.id] = room.id
+    }
+  }
+
+  const extents = unifiedCanvasExtents(frames)
+  return {
+    canvasWidthFt: extents.width,
+    canvasLengthFt: extents.length,
+    gridSpacingFt: 1,
+    snapFt: 1,
+    objects,
+    rooms: frames,
+    objectRoom,
+  }
+}
+
+/**
+ * Inverse of `docFromLegacyRooms`. Splits the unified doc back into
+ * one `LayoutRoom` per source row by:
+ *   1. Bucketing objects via `doc.objectRoom` (defaulting to the
+ *      first room when an entry is missing — e.g., an object created
+ *      by a draw gesture before its room association was wired up).
+ *   2. Subtracting the parent room's `canvas_origin_*` so coords
+ *      land back in room-local space before passing through
+ *      `legacyRoomFromDoc`.
+ *   3. Writing the room's new origin from `doc.rooms` so undo of a
+ *      room-drag round-trips correctly through save.
+ */
+export function legacyRoomsFromDoc(
+  baseRooms: ReadonlyArray<LayoutRoom>,
+  doc: FloorPlanDoc
+): LayoutRoom[] {
+  if (baseRooms.length === 0) return []
+
+  const frames = doc.rooms ?? []
+  const frameById = new Map(frames.map((f) => [f.id, f]))
+  const objectRoom = doc.objectRoom ?? {}
+  const fallbackRoomId = baseRooms[0]!.id
+
+  // Bucket objects by destination room id.
+  const bucketed = new Map<string, PlacedObject[]>()
+  for (const room of baseRooms) bucketed.set(room.id, [])
+  for (const obj of doc.objects) {
+    const roomId = objectRoom[obj.id] ?? fallbackRoomId
+    if (!bucketed.has(roomId)) bucketed.set(fallbackRoomId, bucketed.get(fallbackRoomId) ?? [])
+    bucketed.get(bucketed.has(roomId) ? roomId : fallbackRoomId)!.push(obj)
+  }
+
+  return baseRooms.map((room) => {
+    const frame = frameById.get(room.id)
+    const ox = frame ? frame.originX : Math.max(0, room.canvas_origin_x ?? 0)
+    const oy = frame ? frame.originY : Math.max(0, room.canvas_origin_y ?? 0)
+    const widthFt = frame ? frame.widthFt : room.venue_width || 50
+    const lengthFt = frame ? frame.lengthFt : room.venue_length || 50
+
+    // Translate this room's objects back into local coords, then
+    // re-use the single-room legacy projection to land cells +
+    // venue_elements correctly.
+    const localObjects: PlacedObject[] = (bucketed.get(room.id) ?? []).map(
+      (obj) => ({ ...obj, x: obj.x - ox, y: obj.y - oy }) as PlacedObject
+    )
+    const localDoc: FloorPlanDoc = {
+      canvasWidthFt: widthFt,
+      canvasLengthFt: lengthFt,
+      gridSpacingFt: doc.gridSpacingFt,
+      snapFt: doc.snapFt,
+      objects: localObjects,
+    }
+    const projected = legacyRoomFromDoc(room, localDoc)
+    return {
+      ...projected,
+      canvas_origin_x: ox,
+      canvas_origin_y: oy,
+    }
+  })
 }

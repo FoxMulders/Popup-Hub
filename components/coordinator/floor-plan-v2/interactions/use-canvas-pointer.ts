@@ -52,6 +52,21 @@ interface UseCanvasPointerOptions {
    * undefined disables the auto-assignment (booth is born untagged).
    */
   eventCategoryNames?: ReadonlyArray<string>
+  /**
+   * Active room id on the unified multi-room canvas. New draws and
+   * paste-spawned objects inherit this association so saves project
+   * back into the right `LayoutRoom`. Empty / null falls back to
+   * "no association" (legacy single-room behaviour).
+   */
+  activeRoomId?: string | null
+  /**
+   * Currently selected room frame on the canvas. Used by the
+   * pointer-down router to decide whether a Select-tool click on a
+   * frame stroke promotes to a macro-level frame drag.
+   */
+  selectedRoomId?: string | null
+  /** Notifies the host when a click selects a room frame. */
+  onRoomFrameClick?: (roomId: string) => void
 }
 
 type DrawDraft =
@@ -107,6 +122,24 @@ type RotateState =
         initialX: number
         initialY: number
       }>
+    }
+
+/**
+ * Active macro-level room-drag gesture. Started when the user
+ * pointer-downs on an element with `data-room-stroke="true"` and ends
+ * on pointer-up. While active we apply a *cumulative* delta to the
+ * room's origin — accumulated outside the gesture's history so the
+ * undo stack only grows by one entry on commit.
+ */
+type RoomDragState =
+  | null
+  | {
+      pointerId: number
+      roomId: string
+      origin: Point
+      lastDx: number
+      lastDy: number
+      moved: boolean
     }
 
 /**
@@ -167,6 +200,15 @@ export function useCanvasPointer(
   const [marquee, setMarquee] = useState<MarqueeState>(null)
   const rotateRef = useRef<RotateState>(null)
   const [rotating, setRotating] = useState(false)
+  const roomDragRef = useRef<RoomDragState>(null)
+  const activeRoomIdRef = useRef(options.activeRoomId ?? null)
+  useEffect(() => {
+    activeRoomIdRef.current = options.activeRoomId ?? null
+  }, [options.activeRoomId])
+  const onRoomFrameClickRef = useRef(options.onRoomFrameClick)
+  useEffect(() => {
+    onRoomFrameClickRef.current = options.onRoomFrameClick
+  }, [options.onRoomFrameClick])
 
   /**
    * Pointermove can fire at the device's native rate (often 120 Hz on
@@ -276,6 +318,32 @@ export function useCanvasPointer(
       // SELECT
       const target = e.target as Element | null
 
+      // Macro-level room frame drag — clicking on a frame's perimeter
+      // stroke selects the room and starts a translate gesture for
+      // the whole room (including all of its child objects). The
+      // hit target is identified by `data-room-stroke="true"` +
+      // `data-room-id` set on each visible perimeter line segment.
+      const roomStroke = target?.closest('[data-room-stroke="true"]')
+      if (roomStroke && toolState.tool === 'select') {
+        const roomId = roomStroke.getAttribute('data-room-id')
+        if (roomId) {
+          capturePointer(e.currentTarget, e.pointerId)
+          // Selecting the frame clears any object selection so the
+          // selection chrome doesn't fight with the frame chrome.
+          store.clearSelection()
+          onRoomFrameClickRef.current?.(roomId)
+          roomDragRef.current = {
+            pointerId: e.pointerId,
+            roomId,
+            origin: ft,
+            lastDx: 0,
+            lastDy: 0,
+            moved: false,
+          }
+          return
+        }
+      }
+
       // Rotate handle takes priority over the underlying object hit-
       // test. The handle carries `data-rotate-handle="true"` and
       // `data-object-id` so we can pick up the right object without
@@ -362,15 +430,47 @@ export function useCanvasPointer(
 
   /**
    * Apply a coalesced move to whichever gesture is currently active
-   * (rotate / draft / drag / marquee). Called from a rAF tick so we
-   * never run more than once per paint, even on 120 Hz touch devices.
+   * (rotate / draft / drag / marquee / room-drag). Called from a
+   * rAF tick so we never run more than once per paint, even on
+   * 120 Hz touch devices.
    */
   const flushMove = useCallback(
     (move: CoalescedMove) => {
       if (panActiveRef.current) return
       const drag = dragRef.current
       const rotate = rotateRef.current
+      const roomDrag = roomDragRef.current
       const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
+
+      if (roomDrag && roomDrag.pointerId === pointerId) {
+        const snap = store.doc.snapFt
+        const rawDx = ft.x - roomDrag.origin.x
+        const rawDy = ft.y - roomDrag.origin.y
+        const dxTotal = snap > 0 ? Math.round(rawDx / snap) * snap : rawDx
+        const dyTotal = snap > 0 ? Math.round(rawDy / snap) * snap : rawDy
+        const stepDx = dxTotal - roomDrag.lastDx
+        const stepDy = dyTotal - roomDrag.lastDy
+        const wasMoved = roomDrag.moved
+        const isMovedNow =
+          wasMoved || Math.abs(rawDx) > 0.05 || Math.abs(rawDy) > 0.05
+        roomDragRef.current = {
+          ...roomDrag,
+          lastDx: dxTotal,
+          lastDy: dyTotal,
+          moved: isMovedNow,
+        }
+        if (stepDx !== 0 || stepDy !== 0) {
+          // Apply the *step* delta — moveRoomFrame is additive, so
+          // accumulating would compound over every paint. The first
+          // committing step of the gesture pushes the pre-drag doc
+          // onto the undo stack so a single Ctrl+Z restores the
+          // room origin (and child translations) atomically.
+          store.moveRoomFrame(roomDrag.roomId, stepDx, stepDy, {
+            pushHistory: !wasMoved,
+          })
+        }
+        return
+      }
 
       if (rotate && rotate.pointerId === pointerId) {
         const angleNow = angleDegFromCenter(rotate.anchorCenterFt, ft)
@@ -579,6 +679,31 @@ export function useCanvasPointer(
         flushMove(pending)
       }
 
+      const roomDrag = roomDragRef.current
+      if (roomDrag && roomDrag.pointerId === e.pointerId) {
+        // Clamp the room frame back to non-negative origin so the
+        // unified canvas always anchors at (0, 0). If the user
+        // dragged it past the left/top edge we silently bring it
+        // back without spawning another history entry — the first
+        // mid-drag commit already pushed the pre-gesture state.
+        const frame = (store.doc.rooms ?? []).find(
+          (r) => r.id === roomDrag.roomId
+        )
+        let cleanupDx = 0
+        let cleanupDy = 0
+        if (frame) {
+          if (frame.originX < 0) cleanupDx = -frame.originX
+          if (frame.originY < 0) cleanupDy = -frame.originY
+        }
+        if (cleanupDx !== 0 || cleanupDy !== 0) {
+          store.moveRoomFrame(roomDrag.roomId, cleanupDx, cleanupDy, {
+            pushHistory: false,
+          })
+        }
+        roomDragRef.current = null
+        return
+      }
+
       const rotate = rotateRef.current
       if (rotate && rotate.pointerId === e.pointerId) {
         // Snapshot every affected object once at gesture end so the
@@ -624,11 +749,34 @@ export function useCanvasPointer(
           // user gets immediate visual feedback. Only commit when there's
           // at least one snap-unit of extent — guards against accidental
           // 0-area objects when the user just taps and lifts.
+          //
+          // Multi-room association: the new object inherits the room
+          // whose perimeter contains its centroid (or, failing that,
+          // the active room set by the host). This lets a coordinator
+          // draw inside any room frame on the unified canvas without
+          // first having to flip the active selection.
+          const center = {
+            x: rect.x + rect.width / 2,
+            y: rect.y + rect.height / 2,
+          }
+          let drawRoomId = activeRoomIdRef.current ?? null
+          for (const f of store.doc.rooms ?? []) {
+            if (
+              center.x >= f.originX &&
+              center.x <= f.originX + f.widthFt &&
+              center.y >= f.originY &&
+              center.y <= f.originY + f.lengthFt
+            ) {
+              drawRoomId = f.id
+              break
+            }
+          }
           commitDraft(
             store,
             draft.kind,
             rect,
-            eventCategoryNamesRef.current
+            eventCategoryNamesRef.current,
+            drawRoomId
           )
           onAfterDrawCommit?.()
         }
@@ -749,7 +897,8 @@ function commitDraft(
   store: FloorPlanDocStore,
   kind: PlacedObject['kind'],
   rect: Rect,
-  eventCategoryNames?: ReadonlyArray<string>
+  eventCategoryNames?: ReadonlyArray<string>,
+  roomId?: string | null
 ): void {
   const id = `obj-${crypto.randomUUID()}`
   const base = {
@@ -796,5 +945,8 @@ function commitDraft(
       obj = { ...base, kind: 'label', text: 'Label' }
       break
   }
-  store.addObject(obj, { select: true })
+  store.addObject(obj, {
+    select: true,
+    ...(roomId ? { roomId } : {}),
+  })
 }

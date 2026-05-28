@@ -300,6 +300,229 @@ export function hitTest(
   return null
 }
 
+/* -------------------------------------------------------------------
+ * Multi-room geometry — perimeter walls, edge merging, and frame
+ * hit-testing for the unified canvas.
+ * ------------------------------------------------------------------- */
+
+/**
+ * One side of a room frame's perimeter, measured in canvas-global
+ * feet. `axis` = `'horizontal'` means the segment runs left→right
+ * along the perpendicular `coord` (top or bottom edge); `axis` =
+ * `'vertical'` means top→bottom along the perpendicular `coord`
+ * (left or right edge).
+ */
+export interface RoomEdge {
+  side: 'top' | 'bottom' | 'left' | 'right'
+  axis: 'horizontal' | 'vertical'
+  /** Constant-perpendicular coord of the edge in ft (y for h, x for v). */
+  coord: number
+  /** Inclusive [from, to] interval along the edge's parallel axis. */
+  from: number
+  to: number
+}
+
+export interface RoomFrameGeom {
+  id: string
+  originX: number
+  originY: number
+  widthFt: number
+  lengthFt: number
+}
+
+/** Returns the four perimeter edges of a frame in canvas-global coords. */
+export function frameEdges(frame: RoomFrameGeom): RoomEdge[] {
+  const { originX: x, originY: y, widthFt: w, lengthFt: l } = frame
+  return [
+    { side: 'top', axis: 'horizontal', coord: y, from: x, to: x + w },
+    { side: 'bottom', axis: 'horizontal', coord: y + l, from: x, to: x + w },
+    { side: 'left', axis: 'vertical', coord: x, from: y, to: y + l },
+    { side: 'right', axis: 'vertical', coord: x + w, from: y, to: y + l },
+  ]
+}
+
+/**
+ * Merge a list of [from, to] intervals (along the same axis) into
+ * a sorted, non-overlapping list. Used by the wall-merge renderer:
+ * we collect every neighbor-overlap interval per edge, fold them
+ * into one set, and subtract from the edge's full extent.
+ */
+export function mergeIntervals(
+  intervals: ReadonlyArray<readonly [number, number]>
+): Array<[number, number]> {
+  if (intervals.length === 0) return []
+  const sorted = [...intervals]
+    .map(([a, b]) => [Math.min(a, b), Math.max(a, b)] as [number, number])
+    .sort((a, b) => a[0] - b[0])
+  const out: Array<[number, number]> = [sorted[0]!]
+  for (let i = 1; i < sorted.length; i++) {
+    const cur = sorted[i]!
+    const last = out[out.length - 1]!
+    if (cur[0] <= last[1] + 1e-6) {
+      last[1] = Math.max(last[1], cur[1])
+    } else {
+      out.push(cur)
+    }
+  }
+  return out
+}
+
+/**
+ * Subtract a sorted, non-overlapping `holes` list from `whole` and
+ * return the surviving sub-intervals (the "visible" wall segments
+ * after merging neighbours' shared walls). `holes` is assumed to
+ * be already merged via `mergeIntervals`.
+ */
+export function subtractIntervals(
+  whole: readonly [number, number],
+  holes: ReadonlyArray<readonly [number, number]>
+): Array<[number, number]> {
+  const eps = 1e-6
+  let cursor = whole[0]
+  const end = whole[1]
+  const out: Array<[number, number]> = []
+  for (const [hStart, hEnd] of holes) {
+    const cs = Math.max(hStart, whole[0])
+    const ce = Math.min(hEnd, end)
+    if (ce <= cs) continue
+    if (cs - cursor > eps) out.push([cursor, cs])
+    cursor = Math.max(cursor, ce)
+    if (cursor >= end - eps) break
+  }
+  if (end - cursor > eps) out.push([cursor, end])
+  return out
+}
+
+/**
+ * For each room frame, compute the visible perimeter wall segments
+ * after merging out any portion that overlaps a neighbouring room's
+ * coincident edge (within `epsilon` feet on the perpendicular axis
+ * AND with non-zero overlap on the parallel axis).
+ *
+ * Returns a map `frameId → RoomEdge[]` where each entry is an edge
+ * sub-interval that should still be painted as a wall. Edges that
+ * overlap a neighbour fully are simply omitted from the list — their
+ * absence is what makes two adjacent rooms read as a single combined
+ * interior with no wall between them.
+ */
+export function computeRoomWallSegments(
+  frames: ReadonlyArray<RoomFrameGeom>,
+  epsilon = 0.5
+): Map<string, RoomEdge[]> {
+  const out = new Map<string, RoomEdge[]>()
+  if (frames.length === 0) return out
+
+  const allEdges = frames.map((f) => ({ frame: f, edges: frameEdges(f) }))
+
+  for (const { frame, edges } of allEdges) {
+    const merged: RoomEdge[] = []
+    for (const edge of edges) {
+      const holes: Array<[number, number]> = []
+      for (const other of allEdges) {
+        if (other.frame.id === frame.id) continue
+        for (const candidate of other.edges) {
+          if (candidate.axis !== edge.axis) continue
+          // Two edges merge when they share the same perpendicular
+          // coord (within tolerance) AND have non-zero overlap on
+          // the parallel axis. Sides must be facing each other —
+          // a top edge can only merge with a bottom edge, left with
+          // right, etc. — so a perimeter wall and an interior offset
+          // wall don't accidentally collapse.
+          const facing =
+            (edge.side === 'top' && candidate.side === 'bottom') ||
+            (edge.side === 'bottom' && candidate.side === 'top') ||
+            (edge.side === 'left' && candidate.side === 'right') ||
+            (edge.side === 'right' && candidate.side === 'left')
+          if (!facing) continue
+          if (Math.abs(candidate.coord - edge.coord) > epsilon) continue
+          const overlapStart = Math.max(edge.from, candidate.from)
+          const overlapEnd = Math.min(edge.to, candidate.to)
+          if (overlapEnd - overlapStart > 1e-6) {
+            holes.push([overlapStart, overlapEnd])
+          }
+        }
+      }
+      const visible = subtractIntervals(
+        [edge.from, edge.to],
+        mergeIntervals(holes)
+      )
+      for (const [from, to] of visible) {
+        merged.push({ ...edge, from, to })
+      }
+    }
+    out.set(frame.id, merged)
+  }
+  return out
+}
+
+/**
+ * Detect every pair of frames that share a merged wall segment.
+ * Each entry is a directed pair `(a, b)` reported once with `a.id <
+ * b.id`. Used by the canvas to paint a "Joined" badge near each
+ * pair so coordinators can see at a glance that the two rooms
+ * read as one combined interior.
+ */
+export function detectMergedRoomPairs(
+  frames: ReadonlyArray<RoomFrameGeom>,
+  epsilon = 0.5
+): Array<{ a: string; b: string; sharedLengthFt: number }> {
+  const out: Array<{ a: string; b: string; sharedLengthFt: number }> = []
+  for (let i = 0; i < frames.length; i++) {
+    for (let j = i + 1; j < frames.length; j++) {
+      const a = frames[i]!
+      const b = frames[j]!
+      const aEdges = frameEdges(a)
+      const bEdges = frameEdges(b)
+      let shared = 0
+      for (const ea of aEdges) {
+        for (const eb of bEdges) {
+          if (ea.axis !== eb.axis) continue
+          const facing =
+            (ea.side === 'top' && eb.side === 'bottom') ||
+            (ea.side === 'bottom' && eb.side === 'top') ||
+            (ea.side === 'left' && eb.side === 'right') ||
+            (ea.side === 'right' && eb.side === 'left')
+          if (!facing) continue
+          if (Math.abs(ea.coord - eb.coord) > epsilon) continue
+          const overlap = Math.min(ea.to, eb.to) - Math.max(ea.from, eb.from)
+          if (overlap > 1e-6) shared += overlap
+        }
+      }
+      if (shared > 1e-6) {
+        out.push({ a: a.id, b: b.id, sharedLengthFt: shared })
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * Hit-test a point against a frame's perimeter walls. Returns true
+ * when the point sits within `tolerance` feet of any of the four
+ * perimeter edges *and* outside the room's strict interior — so a
+ * click on the wall stroke selects the room frame instead of falling
+ * through to whatever child object happens to sit on the wall.
+ */
+export function pointHitsFrameStroke(
+  frame: RoomFrameGeom,
+  p: Point,
+  tolerance: number
+): boolean {
+  const inX = p.x >= frame.originX - tolerance && p.x <= frame.originX + frame.widthFt + tolerance
+  const inY = p.y >= frame.originY - tolerance && p.y <= frame.originY + frame.lengthFt + tolerance
+  if (!inX || !inY) return false
+  const distLeft = Math.abs(p.x - frame.originX)
+  const distRight = Math.abs(p.x - (frame.originX + frame.widthFt))
+  const distTop = Math.abs(p.y - frame.originY)
+  const distBottom = Math.abs(p.y - (frame.originY + frame.lengthFt))
+  return (
+    distLeft <= tolerance ||
+    distRight <= tolerance ||
+    distTop <= tolerance ||
+    distBottom <= tolerance
+  )
+}
+
 /** Translate browser-client coords into ft-space using a known viewport rect. */
 export function clientToFt(
   clientX: number,

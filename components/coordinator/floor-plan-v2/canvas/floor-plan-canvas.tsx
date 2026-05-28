@@ -16,6 +16,7 @@ import {
   SelectionOverlay,
 } from './canvas-overlays'
 import { InlineLabelEditor } from './inline-label-editor'
+import { RoomFrames } from './room-frames'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
@@ -26,6 +27,20 @@ import { cn } from '@/lib/utils'
 interface FloorPlanCanvasProps {
   store: FloorPlanDocStore
   toolState: ToolState
+  /**
+   * Active room id (for the multi-room canvas). New draws are tagged
+   * with this id; the room frame is highlighted on the canvas. When
+   * undefined the canvas runs in legacy single-room mode and skips
+   * the room-frame layer entirely.
+   */
+  activeRoomId?: string | null
+  /**
+   * Currently selected room (clicked-to-select via the Select tool on
+   * a frame stroke). Drives the "selected" perimeter chrome.
+   */
+  selectedRoomId?: string | null
+  /** Called when the user clicks on a room frame stroke. */
+  onRoomFrameClick?: (roomId: string) => void
   /**
    * Fired immediately after a draw gesture commits a new object. The
    * default behaviour is to leave the tool sticky — the host owns
@@ -57,6 +72,9 @@ const DEFAULT_BASE_PX_PER_FT = 12
 export function FloorPlanCanvas({
   store,
   toolState,
+  activeRoomId,
+  selectedRoomId,
+  onRoomFrameClick,
   onAfterDrawCommit,
   onViewportReady,
   onZoomChange,
@@ -165,6 +183,9 @@ export function FloorPlanCanvas({
     panActive: viewport.panActive,
     onAfterDrawCommit,
     eventCategoryNames,
+    activeRoomId: activeRoomId ?? null,
+    selectedRoomId: selectedRoomId ?? null,
+    onRoomFrameClick,
   })
 
   /**
@@ -332,6 +353,14 @@ export function FloorPlanCanvas({
             spacingFt={store.doc.gridSpacingFt}
             pxPerFt={pxPerFt}
           />
+          {store.doc.rooms && store.doc.rooms.length > 0 ? (
+            <RoomFrames
+              frames={store.doc.rooms}
+              activeRoomId={activeRoomId ?? null}
+              selectedRoomId={selectedRoomId ?? null}
+              pxPerFt={pxPerFt}
+            />
+          ) : null}
           <CanvasObjects
             objects={store.doc.objects}
             selectedIds={store.selectedIds}

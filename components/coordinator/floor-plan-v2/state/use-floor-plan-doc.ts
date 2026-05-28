@@ -41,20 +41,28 @@ export interface FloorPlanDocStore {
   /** Replace the entire document (resets selection + history). */
   resetDoc: (next: FloorPlanDoc) => void
 
-  /** Append one object. Returns the appended object's id. */
+  /**
+   * Append one object. Returns the appended object's id.
+   *
+   * `roomId` (multi-room canvas) tags the new object with its parent
+   * `LayoutRoom`. The mapping is folded into the same commit as the
+   * object insert so a single undo step clears both the new object
+   * and its room association.
+   */
   addObject: (
     obj: PlacedObject,
-    options?: { pushHistory?: boolean; select?: boolean }
+    options?: { pushHistory?: boolean; select?: boolean; roomId?: string }
   ) => string
 
   /**
    * Append multiple objects in a single immutable pass with one history
    * entry. Used by paste (and any future bulk-create flow) so undo
-   * rolls back the entire group atomically.
+   * rolls back the entire group atomically. `roomId` applies the same
+   * parent-room association to every appended object.
    */
   addObjects: (
     objs: ReadonlyArray<PlacedObject>,
-    options?: { pushHistory?: boolean; select?: boolean }
+    options?: { pushHistory?: boolean; select?: boolean; roomId?: string }
   ) => string[]
 
   /** Patch a single object by id. */
@@ -85,6 +93,22 @@ export interface FloorPlanDocStore {
   /** Patch top-level document fields (canvas extents, grid, snap). */
   patchDoc: (
     patch: Partial<Omit<FloorPlanDoc, 'objects'>>,
+    options?: { pushHistory?: boolean }
+  ) => void
+
+  /**
+   * Translate a room frame and every object tagged with that room id
+   * by `(dx, dy)` in a single immutable pass with one history entry.
+   * Used by the macro-level room drag in the multi-room canvas — undo
+   * restores both the room origin and the child positions atomically.
+   * The unified canvas extents are recomputed from the new room union
+   * so the visible frame keeps hugging the rightmost / bottommost
+   * corner.
+   */
+  moveRoomFrame: (
+    roomId: string,
+    dx: number,
+    dy: number,
     options?: { pushHistory?: boolean }
   ) => void
 
@@ -137,9 +161,14 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     (obj, options) => {
       const pushHistory = options?.pushHistory ?? true
       const select = options?.select ?? false
+      const roomId = options?.roomId
+      const current = docRef.current
       const next: FloorPlanDoc = {
-        ...docRef.current,
-        objects: [...docRef.current.objects, obj],
+        ...current,
+        objects: [...current.objects, obj],
+        objectRoom: roomId
+          ? { ...(current.objectRoom ?? {}), [obj.id]: roomId }
+          : current.objectRoom,
       }
       commit(next, pushHistory)
       if (select) setSelectedIds(new Set([obj.id]))
@@ -153,10 +182,18 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       if (objs.length === 0) return []
       const pushHistory = options?.pushHistory ?? true
       const select = options?.select ?? false
+      const roomId = options?.roomId
       const ids = objs.map((o) => o.id)
+      const current = docRef.current
+      let nextObjectRoom = current.objectRoom
+      if (roomId) {
+        nextObjectRoom = { ...(current.objectRoom ?? {}) }
+        for (const id of ids) nextObjectRoom[id] = roomId
+      }
       const next: FloorPlanDoc = {
-        ...docRef.current,
-        objects: [...docRef.current.objects, ...objs],
+        ...current,
+        objects: [...current.objects, ...objs],
+        objectRoom: nextObjectRoom,
       }
       commit(next, pushHistory)
       if (select) setSelectedIds(new Set(ids))
@@ -208,7 +245,14 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const current = docRef.current
       const objects = current.objects.filter((o) => !idSet.has(o.id))
       if (objects.length === current.objects.length) return
-      commit({ ...current, objects }, pushHistory)
+      // Drop the doomed ids from the room sidecar so the map doesn't
+      // grow unbounded with stale entries every delete cycle.
+      let nextObjectRoom = current.objectRoom
+      if (current.objectRoom) {
+        nextObjectRoom = { ...current.objectRoom }
+        for (const id of ids) delete nextObjectRoom[id]
+      }
+      commit({ ...current, objects, objectRoom: nextObjectRoom }, pushHistory)
       setSelectedIds((prev) => {
         let changed = false
         const next = new Set(prev)
@@ -234,6 +278,51 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     (patch, options) => {
       const pushHistory = options?.pushHistory ?? true
       commit({ ...docRef.current, ...patch }, pushHistory)
+    },
+    [commit]
+  )
+
+  const moveRoomFrame = useCallback<FloorPlanDocStore['moveRoomFrame']>(
+    (roomId, dx, dy, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const current = docRef.current
+      const frames = current.rooms ?? []
+      if (frames.length === 0) return
+      if (dx === 0 && dy === 0) return
+      const objectRoom = current.objectRoom ?? {}
+
+      const nextFrames = frames.map((f) =>
+        f.id === roomId
+          ? { ...f, originX: f.originX + dx, originY: f.originY + dy }
+          : f
+      )
+      const nextObjects = current.objects.map((o) => {
+        if (objectRoom[o.id] !== roomId) return o
+        return { ...o, x: o.x + dx, y: o.y + dy } as PlacedObject
+      })
+
+      // Recompute the unified canvas extents from the new frame union
+      // so the visible canvas always ends at the far-right / bottom of
+      // the rightmost room.
+      let maxX = 0
+      let maxY = 0
+      for (const f of nextFrames) {
+        const right = Math.max(0, f.originX) + f.widthFt
+        const bottom = Math.max(0, f.originY) + f.lengthFt
+        if (right > maxX) maxX = right
+        if (bottom > maxY) maxY = bottom
+      }
+
+      commit(
+        {
+          ...current,
+          objects: nextObjects,
+          rooms: nextFrames,
+          canvasWidthFt: Math.max(maxX, current.canvasWidthFt),
+          canvasLengthFt: Math.max(maxY, current.canvasLengthFt),
+        },
+        pushHistory
+      )
     },
     [commit]
   )
@@ -313,6 +402,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       removeObjects,
       replaceObjects,
       patchDoc,
+      moveRoomFrame,
       setSelection,
       toggleSelection,
       clearSelection,
@@ -332,6 +422,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       removeObjects,
       replaceObjects,
       patchDoc,
+      moveRoomFrame,
       setSelection,
       toggleSelection,
       clearSelection,

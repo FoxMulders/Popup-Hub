@@ -575,6 +575,17 @@ export interface LayoutRoom {
    * findings — they just no longer *block* placement.
    */
   unmanaged_mode?: boolean
+  /**
+   * Floor-plan v2 — per-room origin on the unified multi-room canvas
+   * (in feet). Each room's local coordinate system runs from
+   * `(canvas_origin_x, canvas_origin_y)` to
+   * `(canvas_origin_x + venue_width, canvas_origin_y + venue_length)`
+   * in the unified canvas frame. Optional / defaults to 0 so any
+   * legacy `LayoutRoom` row that predates multi-room layouts keeps
+   * rendering at the canvas origin.
+   */
+  canvas_origin_x?: number
+  canvas_origin_y?: number
 }
 
 export interface BoothLayout {
