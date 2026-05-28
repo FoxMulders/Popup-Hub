@@ -4,6 +4,7 @@ import {
   AlignCenterHorizontal,
   AlignCenterVertical,
   ClipboardPaste,
+  Combine,
   Copy,
   LayoutGrid,
   Locate,
@@ -12,6 +13,7 @@ import {
   Redo2,
   RotateCcw,
   RotateCw,
+  Split,
   Undo2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -74,6 +76,11 @@ export function CanvasCommandBar({
   onRotateRight,
   onAutoArrange,
   canAutoArrange,
+  onJoinRooms,
+  canJoinRooms,
+  joinCandidateCount,
+  onUnjoinRoom,
+  canUnjoinRoom,
   zoom,
   onZoomOut,
   onZoomIn,
@@ -82,6 +89,11 @@ export function CanvasCommandBar({
 }: CanvasCommandBarProps) {
   const hasSelection = selectedCount > 0
   const canAlign = selectedCount >= 2
+  const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
+  const joinLabel =
+    canJoinRooms && joinCandidateCount && joinCandidateCount > 0
+      ? `Join (${joinCandidateCount})`
+      : 'Join'
 
   return (
     <div
@@ -158,6 +170,35 @@ export function CanvasCommandBar({
           </CommandButton>
         ) : null}
       </div>
+
+      {showJoinGroup ? (
+        <>
+          <div className="mx-1 h-6 w-px bg-stone-200" aria-hidden />
+          <div className="flex items-center gap-0.5" role="group" aria-label="Room joining">
+            {onJoinRooms ? (
+              <CommandButton
+                onClick={onJoinRooms}
+                disabled={!canJoinRooms}
+                title="Join the active room with overlapping or touching neighbours into one dissolved zone"
+                label={joinLabel}
+                className="bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+              >
+                <Combine className="h-3.5 w-3.5" />
+              </CommandButton>
+            ) : null}
+            {onUnjoinRoom ? (
+              <CommandButton
+                onClick={onUnjoinRoom}
+                disabled={!canUnjoinRoom}
+                title="Split the active room out of its joined zone"
+                label="Unjoin"
+              >
+                <Split className="h-3.5 w-3.5" />
+              </CommandButton>
+            ) : null}
+          </div>
+        </>
+      ) : null}
 
       <div className="ml-auto inline-flex h-8 items-center overflow-hidden rounded-md border border-stone-200">
         <button

@@ -1,10 +1,11 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import {
   computeRoomWallSegments,
   detectMergedRoomPairs,
 } from '../interactions/geometry'
+import { buildJoinedZone } from '../state/room-joins'
 import type { RoomFrame } from '../state/types'
 
 interface RoomFramesProps {
@@ -20,8 +21,10 @@ const PERIMETER_STROKE = '#1c1917'
 const PERIMETER_STROKE_ACTIVE = '#0f766e'
 const PERIMETER_STROKE_SELECTED = '#0f766e'
 const PERIMETER_STROKE_MERGED = '#15803d'
+const PERIMETER_STROKE_JOINED = '#0e7490'
 const PERIMETER_WIDTH = 2.5
 const PERIMETER_WIDTH_SELECTED = 3.5
+const PERIMETER_WIDTH_JOINED = 4
 
 /**
  * Renders one perimeter group per room frame on the unified canvas.
@@ -49,12 +52,82 @@ function RoomFramesBase({
   selectedRoomId,
   pxPerFt,
 }: RoomFramesProps) {
+  // Pre-compute the joined groups so members can skip their
+  // individual perimeter strokes and we render the union polygon
+  // once per group instead. `joinGroupId` is set by the canvas
+  // toolbar's "Join" action (`state/room-joins`).
+  const groupMembers = useMemo(() => {
+    const out = new Map<string, RoomFrame[]>()
+    for (const f of frames) {
+      if (!f.joinGroupId) continue
+      if (!out.has(f.joinGroupId)) out.set(f.joinGroupId, [])
+      out.get(f.joinGroupId)!.push(f)
+    }
+    return out
+  }, [frames])
+
+  /**
+   * Compute the dissolved zone (outer ring + AABB + member ids) for
+   * every join group, in canvas-pixel space ready to feed straight
+   * into an SVG `<path>`. Memoized on `frames` so the polygon
+   * clipper only runs when room geometry actually changes.
+   */
+  const joinedZones = useMemo(() => {
+    const result: Array<{
+      groupId: string
+      members: RoomFrame[]
+      pathData: string
+      labelX: number
+      labelY: number
+      width: number
+      height: number
+    }> = []
+    for (const [groupId, members] of groupMembers.entries()) {
+      if (members.length < 2) continue
+      const zone = buildJoinedZone(groupId, members)
+      if (!zone) continue
+      // Build the SVG `path` by walking each outer ring; "M" + "L"…
+      // + "Z" per ring so multiple disjoint outers (rare but
+      // possible after a partial join) all paint correctly.
+      const segments: string[] = []
+      for (const ring of zone.rings) {
+        if (ring.length === 0) continue
+        const [first, ...rest] = ring
+        segments.push(`M ${first![0] * pxPerFt} ${first![1] * pxPerFt}`)
+        for (const [px, py] of rest) {
+          segments.push(`L ${px * pxPerFt} ${py * pxPerFt}`)
+        }
+        segments.push('Z')
+      }
+      const pathData = segments.join(' ')
+      const minMember = members.reduce(
+        (best, f) => {
+          const score = f.originY * 1e6 + f.originX
+          return score < best.score ? { score, f } : best
+        },
+        { score: Infinity, f: members[0]! }
+      ).f
+      result.push({
+        groupId,
+        members,
+        pathData,
+        labelX: minMember.originX * pxPerFt,
+        labelY: minMember.originY * pxPerFt,
+        width: (zone.aabb.maxX - zone.aabb.minX) * pxPerFt,
+        height: (zone.aabb.maxY - zone.aabb.minY) * pxPerFt,
+      })
+    }
+    return result
+    // pxPerFt is captured in the path; recompute when anything changes.
+  }, [groupMembers, pxPerFt])
+
   if (frames.length === 0) return null
 
   // Visible wall segments per room (with merged sections subtracted).
   const wallSegments = computeRoomWallSegments(frames)
   // Pairs of rooms that share at least one wall — drives the
-  // "Joined" badge under the name.
+  // "Joined" badge under the name (legacy auto-merge for touching
+  // rooms; explicit join groups override this rendering).
   const mergedPairs = detectMergedRoomPairs(frames)
   const joinedNeighbors = new Map<string, Set<string>>()
   for (const { a, b } of mergedPairs) {
@@ -64,9 +137,55 @@ function RoomFramesBase({
     joinedNeighbors.get(b)!.add(a)
   }
   const nameById = new Map(frames.map((f) => [f.id, f.name]))
+  // Frames that belong to an explicit join group skip their
+  // individual perimeter outline — the dissolved zone polygon
+  // renders the outer wall instead.
+  const joinedFrameIds = new Set<string>()
+  for (const members of groupMembers.values()) {
+    if (members.length < 2) continue
+    for (const m of members) joinedFrameIds.add(m.id)
+  }
 
   return (
     <g aria-hidden>
+      {/* Dissolved (joined) zones: one outer ring per group, painted
+          underneath the per-frame chrome so individual room labels
+          still float on top. */}
+      {joinedZones.map((zone) => (
+        <g key={`joined-${zone.groupId}`} data-joined-group={zone.groupId}>
+          <path
+            d={zone.pathData}
+            fill={PERIMETER_STROKE_JOINED}
+            fillOpacity={0.05}
+            stroke={PERIMETER_STROKE_JOINED}
+            strokeWidth={PERIMETER_WIDTH_JOINED}
+            strokeLinejoin="round"
+            shapeRendering="geometricPrecision"
+            pointerEvents="none"
+          />
+          <g pointerEvents="none">
+            <rect
+              x={zone.labelX + 6}
+              y={zone.labelY + 6}
+              width={Math.min(260, Math.max(120, zone.members.length * 60 + 80))}
+              height={22}
+              rx={4}
+              fill="#0e7490"
+              fillOpacity={0.92}
+            />
+            <text
+              x={zone.labelX + 14}
+              y={zone.labelY + 22}
+              fontSize={12}
+              fontWeight={700}
+              fill="#ecfeff"
+            >
+              {`Joined zone · ${zone.members.length} rooms`}
+            </text>
+          </g>
+        </g>
+      ))}
+
       {frames.map((frame) => {
         const x = frame.originX * pxPerFt
         const y = frame.originY * pxPerFt
@@ -74,6 +193,7 @@ function RoomFramesBase({
         const h = frame.lengthFt * pxPerFt
         const isActive = activeRoomId === frame.id
         const isSelected = selectedRoomId === frame.id
+        const isJoined = joinedFrameIds.has(frame.id)
         const isMerged = (joinedNeighbors.get(frame.id)?.size ?? 0) > 0
         const stroke = isSelected
           ? PERIMETER_STROKE_SELECTED
@@ -100,45 +220,75 @@ function RoomFramesBase({
                 read clearly on top. Pointer-events are disabled so a
                 click on the interior falls through to whatever booth
                 / aisle / wall sits on top; only the perimeter stroke
-                hit target promotes a click into a frame-level drag. */}
-            <rect
-              x={x}
-              y={y}
-              width={w}
-              height={h}
-              fill={isActive ? '#0f766e' : '#1c1917'}
-              fillOpacity={fillOpacity}
-              pointerEvents="none"
-              shapeRendering="crispEdges"
-            />
+                hit target promotes a click into a frame-level drag.
+                Members of an explicit join group skip the fill so
+                the dissolved-zone polygon's tinted fill takes over. */}
+            {!isJoined ? (
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                fill={isActive ? '#0f766e' : '#1c1917'}
+                fillOpacity={fillOpacity}
+                pointerEvents="none"
+                shapeRendering="crispEdges"
+              />
+            ) : null}
 
             {/* Visible perimeter walls — segmented, with shared edges
                 subtracted out so two adjacent rooms render as a
-                single combined interior pathway. */}
-            {segments.map((seg, idx) => {
-              const isHorizontal = seg.axis === 'horizontal'
-              const x1 = (isHorizontal ? seg.from : seg.coord) * pxPerFt
-              const y1 = (isHorizontal ? seg.coord : seg.from) * pxPerFt
-              const x2 = (isHorizontal ? seg.to : seg.coord) * pxPerFt
-              const y2 = (isHorizontal ? seg.coord : seg.to) * pxPerFt
-              return (
-                <line
-                  key={`${frame.id}-edge-${idx}`}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke={stroke}
-                  strokeWidth={strokeWidth}
-                  strokeLinecap="square"
-                  data-room-id={frame.id}
-                  data-room-stroke="true"
-                  data-room-side={seg.side}
-                  pointerEvents="stroke"
-                  style={{ cursor: 'grab' }}
-                />
-              )
-            })}
+                single combined interior pathway. Suppressed entirely
+                for members of an explicit join group: their wall is
+                the dissolved zone's outer polygon, painted above. */}
+            {!isJoined
+              ? segments.map((seg, idx) => {
+                  const isHorizontal = seg.axis === 'horizontal'
+                  const x1 = (isHorizontal ? seg.from : seg.coord) * pxPerFt
+                  const y1 = (isHorizontal ? seg.coord : seg.from) * pxPerFt
+                  const x2 = (isHorizontal ? seg.to : seg.coord) * pxPerFt
+                  const y2 = (isHorizontal ? seg.coord : seg.to) * pxPerFt
+                  return (
+                    <line
+                      key={`${frame.id}-edge-${idx}`}
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={stroke}
+                      strokeWidth={strokeWidth}
+                      strokeLinecap="square"
+                      data-room-id={frame.id}
+                      data-room-stroke="true"
+                      data-room-side={seg.side}
+                      pointerEvents="stroke"
+                      style={{ cursor: 'grab' }}
+                    />
+                  )
+                })
+              : null}
+
+            {/* For joined frames we still need a transparent hit
+                target along the perimeter so the macro-level room
+                drag stays grabbable — coordinators must be able to
+                slide a room within the joined zone, even though the
+                visible wall is suppressed. */}
+            {isJoined ? (
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                fill="transparent"
+                stroke="transparent"
+                strokeWidth={Math.max(8, PERIMETER_WIDTH_JOINED * 2)}
+                data-room-id={frame.id}
+                data-room-stroke="true"
+                data-room-side="hit"
+                pointerEvents="stroke"
+                style={{ cursor: 'grab' }}
+              />
+            ) : null}
 
             {/* Room name at the top-left of the frame. Pointer events
                 bubble through to the underlying perimeter stroke

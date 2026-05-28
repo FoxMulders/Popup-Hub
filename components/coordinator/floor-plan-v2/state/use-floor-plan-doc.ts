@@ -112,6 +112,32 @@ export interface FloorPlanDocStore {
     options?: { pushHistory?: boolean }
   ) => void
 
+  /**
+   * Fuse a list of room frames into a single dissolved zone. Every
+   * listed frame is tagged with a freshly minted `joinGroupId` (or
+   * an existing group id when one of the frames is already part of
+   * a group — the new members fold into the existing group). One
+   * history entry covers the entire merge so a single Ctrl+Z undoes
+   * the join.
+   *
+   * Returns the resulting `joinGroupId`, or `null` when no frames
+   * matched (defensive — a no-op shouldn't push history).
+   */
+  joinRooms: (
+    roomIds: ReadonlyArray<string>,
+    options?: { pushHistory?: boolean }
+  ) => string | null
+
+  /**
+   * Reverse of `joinRooms`: clears the `joinGroupId` from every
+   * member of the named group so each room reverts to a standalone
+   * frame.
+   */
+  unjoinRooms: (
+    groupId: string,
+    options?: { pushHistory?: boolean }
+  ) => void
+
   setSelection: (ids: Iterable<string>) => void
   toggleSelection: (id: string) => void
   clearSelection: () => void
@@ -327,6 +353,73 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     [commit]
   )
 
+  const joinRooms = useCallback<FloorPlanDocStore['joinRooms']>(
+    (roomIds, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const current = docRef.current
+      const frames = current.rooms ?? []
+      if (frames.length === 0 || roomIds.length < 2) return null
+      const wantedIds = new Set(roomIds)
+      const targets = frames.filter((f) => wantedIds.has(f.id))
+      if (targets.length < 2) return null
+
+      // If any of the target frames is already part of a join group,
+      // fold the new members into the existing group rather than
+      // minting a fresh id. When multiple groups intersect the
+      // target set we collapse them all into one — the user just
+      // declared they should all be a single zone.
+      const existingGroupIds = new Set<string>()
+      for (const f of targets) {
+        if (f.joinGroupId) existingGroupIds.add(f.joinGroupId)
+      }
+      const groupId =
+        existingGroupIds.size > 0
+          ? existingGroupIds.values().next().value!
+          : `join-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+
+      // Promote all members of the original groups + the freshly
+      // selected frames into the resolved group id.
+      const memberIds = new Set<string>(roomIds)
+      for (const f of frames) {
+        if (f.joinGroupId && existingGroupIds.has(f.joinGroupId)) {
+          memberIds.add(f.id)
+        }
+      }
+
+      let mutated = false
+      const nextFrames = frames.map((f) => {
+        if (!memberIds.has(f.id)) return f
+        if (f.joinGroupId === groupId) return f
+        mutated = true
+        return { ...f, joinGroupId: groupId }
+      })
+      if (!mutated) return groupId
+      commit({ ...current, rooms: nextFrames }, pushHistory)
+      return groupId
+    },
+    [commit]
+  )
+
+  const unjoinRooms = useCallback<FloorPlanDocStore['unjoinRooms']>(
+    (groupId, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const current = docRef.current
+      const frames = current.rooms ?? []
+      if (frames.length === 0) return
+      let mutated = false
+      const nextFrames = frames.map((f) => {
+        if (f.joinGroupId !== groupId) return f
+        mutated = true
+        const { joinGroupId: _drop, ...rest } = f
+        void _drop
+        return rest
+      })
+      if (!mutated) return
+      commit({ ...current, rooms: nextFrames }, pushHistory)
+    },
+    [commit]
+  )
+
   const setSelection = useCallback((ids: Iterable<string>) => {
     setSelectedIds(new Set(ids))
   }, [])
@@ -403,6 +496,8 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       replaceObjects,
       patchDoc,
       moveRoomFrame,
+      joinRooms,
+      unjoinRooms,
       setSelection,
       toggleSelection,
       clearSelection,
@@ -423,6 +518,8 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       replaceObjects,
       patchDoc,
       moveRoomFrame,
+      joinRooms,
+      unjoinRooms,
       setSelection,
       toggleSelection,
       clearSelection,

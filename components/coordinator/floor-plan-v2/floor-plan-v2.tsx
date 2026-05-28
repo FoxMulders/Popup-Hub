@@ -38,6 +38,10 @@ import {
   saveMultiRoomDraft,
 } from './state/local-draft'
 import { useFloorPlanDoc } from './state/use-floor-plan-doc'
+import {
+  joinableGroups,
+  neighborsOf,
+} from './state/room-joins'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from './state/types'
 import {
   aabbFitsCanvas,
@@ -847,6 +851,78 @@ export function FloorPlanV2({
     [activeRoomId, layoutRooms, onLayoutRoomsChange]
   )
 
+  /**
+   * Eligibility for the canvas-bar "Join" action. The user can fuse
+   * the focused room (selected, otherwise active) with every
+   * neighbour that overlaps or touches its bounding box, dissolving
+   * the shared walls into one outer perimeter (`state/room-joins`).
+   *
+   * `joinTargetRoomId` follows selection > active because the
+   * selection signal is the more deliberate one: a coordinator
+   * dragging a new room into an existing perimeter clicks/drags the
+   * new room, so we treat *that* frame as the join initiator.
+   */
+  const joinTargetRoomId = selectedRoomId ?? activeRoomId
+  const joinPlan = useMemo(() => {
+    const frames = store.doc.rooms ?? []
+    if (frames.length < 2 || !joinTargetRoomId) {
+      return { canJoin: false, joinIds: [] as string[], unjoinGroupId: null as string | null }
+    }
+    const target = frames.find((f) => f.id === joinTargetRoomId)
+    if (!target) {
+      return { canJoin: false, joinIds: [], unjoinGroupId: null }
+    }
+    const targetGroupId = target.joinGroupId ?? null
+
+    // Candidates: every frame that overlaps/touches the target AND
+    // isn't already in the same join group as the target. This way
+    // hitting "Join" is idempotent — you can keep clicking it as you
+    // drag new rooms into the zone, but it never offers a no-op.
+    const candidates = neighborsOf(frames, target.id).filter((id) => {
+      const f = frames.find((x) => x.id === id)
+      if (!f) return false
+      if (!targetGroupId) return true
+      return f.joinGroupId !== targetGroupId
+    })
+
+    return {
+      canJoin: candidates.length > 0,
+      joinIds: [target.id, ...candidates],
+      unjoinGroupId: targetGroupId,
+    }
+  }, [store.doc.rooms, joinTargetRoomId])
+
+  /**
+   * Total number of distinct joined zones currently on the canvas.
+   * Surfaced in the workspace header so coordinators can see at a
+   * glance that the doc contains fused rooms even when the active
+   * frame isn't part of one.
+   */
+  const joinedZoneCount = useMemo(
+    () => joinableGroups(store.doc.rooms ?? []).length,
+    [store.doc.rooms]
+  )
+
+  const handleJoinRooms = useCallback(() => {
+    if (!joinPlan.canJoin || joinPlan.joinIds.length < 2) return
+    const groupId = store.joinRooms(joinPlan.joinIds)
+    if (!groupId) return
+    const folded = joinPlan.joinIds.length
+    toast.success(
+      `Joined ${folded} rooms into one zone — interior walls dissolved.`,
+      { duration: 1800 }
+    )
+  }, [joinPlan, store])
+
+  const handleUnjoinRoom = useCallback(() => {
+    const groupId = joinPlan.unjoinGroupId
+    if (!groupId) return
+    store.unjoinRooms(groupId)
+    toast.message('Joined zone split — each room is now standalone again.', {
+      duration: 1500,
+    })
+  }, [joinPlan.unjoinGroupId, store])
+
   return (
     <div id="floor-plan-workspace" className={cn('flex flex-col gap-2', className)}>
       <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2">
@@ -881,9 +957,19 @@ export function FloorPlanV2({
             undo
           </p>
         </div>
-        <div className="ml-auto rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-semibold text-stone-700">
-          {placedCount} object{placedCount === 1 ? '' : 's'} placed
-          {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
+        <div className="ml-auto flex items-center gap-1.5">
+          {joinedZoneCount > 0 ? (
+            <span
+              className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-900"
+              title="Number of dissolved (joined) zones on this canvas"
+            >
+              {joinedZoneCount} joined zone{joinedZoneCount === 1 ? '' : 's'}
+            </span>
+          ) : null}
+          <div className="rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-semibold text-stone-700">
+            {placedCount} object{placedCount === 1 ? '' : 's'} placed
+            {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
+          </div>
         </div>
       </header>
 
@@ -923,6 +1009,13 @@ export function FloorPlanV2({
         onCenterView={handleCenterView}
         onAutoArrange={handleAutoArrange}
         canAutoArrange={boothCount > 0}
+        onJoinRooms={handleJoinRooms}
+        canJoinRooms={joinPlan.canJoin}
+        joinCandidateCount={
+          joinPlan.canJoin ? joinPlan.joinIds.length : undefined
+        }
+        onUnjoinRoom={handleUnjoinRoom}
+        canUnjoinRoom={joinPlan.unjoinGroupId !== null}
       />
 
       <div className="flex min-h-0 gap-2">

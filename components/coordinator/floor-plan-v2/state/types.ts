@@ -118,6 +118,14 @@ export interface RoomFrame {
   /** Room interior extent in feet (matches `LayoutRoom.venue_width/length`). */
   widthFt: number
   lengthFt: number
+  /**
+   * Optional join-group id. Frames sharing the same `joinGroupId`
+   * are rendered as a single dissolved zone with a unified outer
+   * perimeter (see `state/room-joins.ts`). The id is stable for the
+   * lifetime of the group and is cleared when the user splits the
+   * zone via "Unjoin".
+   */
+  joinGroupId?: string
 }
 
 export interface FloorPlanDoc {
