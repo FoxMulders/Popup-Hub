@@ -60,6 +60,11 @@ import {
   groupRotatedAabb,
   rotatedAabb,
 } from './interactions/geometry'
+import {
+  buildPerimeterWalls,
+  resolvePerimeterTarget,
+  targetHasPerimeterWalls,
+} from './interactions/perimeter-walls'
 import type { LayoutRoom } from '@/types/database'
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
@@ -918,6 +923,49 @@ export function FloorPlanV2({
     }
   }, [activeRoomId, boothCount, eventCategoryNames, store])
 
+  /**
+   * Macro: emit four locked perimeter wall rects matching the active
+   * room's bounding box (or the canvas rect if there's no active
+   * room). Walls are tagged with `PERIMETER_WALL_LABEL` and
+   * `locked: true` so the wall-immutability gate in
+   * `handleDeleteSelected` and `handleClearAll` keeps them intact
+   * across the rest of the editing session. If the active target
+   * already has a complete macro perimeter the call is a no-op
+   * (toast feedback informs the user) so re-clicks don't double-
+   * stack walls.
+   */
+  const handleAddPerimeterWalls = useCallback(() => {
+    const target = resolvePerimeterTarget(
+      store.doc.rooms,
+      activeRoomId,
+      store.doc.canvasWidthFt,
+      store.doc.canvasLengthFt
+    )
+    if (target.widthFt <= 0 || target.lengthFt <= 0) {
+      toast.error('Cannot add perimeter walls — invalid room dimensions.')
+      return
+    }
+    if (targetHasPerimeterWalls(target, store.doc.objects)) {
+      toast.message('Perimeter walls are already in place.')
+      return
+    }
+    const walls = buildPerimeterWalls(target)
+    const ids = store.addObjects(walls, {
+      select: false,
+      pushHistory: true,
+      roomId: activeRoomId ?? undefined,
+    })
+    if (ids.length === 4) {
+      toast.success('Sealed the room with four perimeter walls.', {
+        duration: 1800,
+      })
+    } else {
+      toast.warning(
+        `Added ${ids.length} of 4 perimeter walls — some failed to fit.`
+      )
+    }
+  }, [activeRoomId, store])
+
   const handleSelectRoom = useCallback(
     (roomId: string) => {
       // Selecting a room from the sidebar updates both the wizard's
@@ -1281,6 +1329,7 @@ export function FloorPlanV2({
                 onCenterView={handleCenterView}
                 onAutoArrange={handleAutoArrange}
                 canAutoArrange={boothCount > 0}
+                onAddPerimeterWalls={handleAddPerimeterWalls}
               />
             </div>
           )}

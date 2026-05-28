@@ -10,6 +10,7 @@ import {
   RectangleHorizontal,
   Siren,
   Square,
+  SquareDashed,
   Tag,
   Trash2,
 } from 'lucide-react'
@@ -119,6 +120,7 @@ export function CanvasLeftDock({
   onClearAll,
   onZoomIn,
   onZoomOut,
+  onAddPerimeterWalls,
   collapsed = false,
   className,
 }: CanvasLeftDockProps) {
@@ -197,6 +199,15 @@ export function CanvasLeftDock({
               variant="arch"
             />
           ))}
+          {onAddPerimeterWalls && (
+            <DockButton
+              onClick={onAddPerimeterWalls}
+              title="Seal the active room with four locked perimeter walls"
+              label="Add perimeter"
+              icon={SquareDashed}
+              variant="arch"
+            />
+          )}
         </DockSection>
       </div>
 

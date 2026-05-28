@@ -18,6 +18,7 @@ import {
 import { InlineLabelEditor } from './inline-label-editor'
 import { RoomFrames } from './room-frames'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
+import { useEdgeAutoScroll } from './use-edge-auto-scroll'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { LabelObject, PlacedObject } from '../state/types'
@@ -95,6 +96,13 @@ export function FloorPlanCanvas({
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
+
+  // Edge auto-scroll: when the user holds LMB and drags the cursor
+  // past the canvas viewport, the container scrolls in the
+  // direction of the overshoot at a velocity proportional to the
+  // distance past the edge. Lets coordinators move objects across
+  // sprawling event maps without losing the gesture.
+  useEdgeAutoScroll(scrollRef)
 
   // Add a generous infinite-feeling pad around the venue so users can
   // pan into negative coordinates and place objects "off the field".
