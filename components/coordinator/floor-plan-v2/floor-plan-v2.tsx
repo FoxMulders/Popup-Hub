@@ -45,7 +45,13 @@ import {
   mixedNeighborsOf,
   neighborsOf,
 } from './state/room-joins'
-import type { FloorPlanDoc, PlacedObject, RoomFrame } from './state/types'
+import type {
+  BoothObject,
+  FloorPlanDoc,
+  PlacedObject,
+  RoomFrame,
+} from './state/types'
+import { nextCategoryName } from './canvas/category-palette'
 import {
   aabbFitsCanvas,
   alignSelectionPatches,
@@ -288,19 +294,69 @@ export function FloorPlanV2({
   const handleClearAll = useCallback(() => {
     // Clearing is scoped to the active room so coordinators don't
     // accidentally wipe other rooms' work in a multi-room layout.
+    // Structural walls are explicitly preserved across the clear —
+    // they're treated as architecture, not décor.
     const activeId = activeRoomId
     const objectRoom = store.doc.objectRoom ?? {}
-    const remaining = store.doc.objects.filter(
-      (o) => objectRoom[o.id] && objectRoom[o.id] !== activeId
-    )
+    const remaining = store.doc.objects.filter((o) => {
+      if (o.kind === 'wall') return true
+      return objectRoom[o.id] && objectRoom[o.id] !== activeId
+    })
     store.replaceObjects(remaining)
     toast.success('Active room cleared')
   }, [activeRoomId, store])
 
+  /**
+   * Delete-selected hard-blocks structural perimeter walls. Walls
+   * (`kind: 'wall'`) cannot be removed via direct manipulation —
+   * keyboard Delete/Backspace, the toolbar Delete button, and any
+   * future delete entry-point all funnel through this callback, so
+   * the type-guard here is the single chokepoint that keeps walls
+   * immutable on the canvas grid.
+   *
+   * Locked objects (any kind with `locked === true`) are also held
+   * back so coordinators don't accidentally lose pinned fixtures
+   * during a multi-select delete.
+   *
+   * The action is silent on a wall-only selection (no toast, no
+   * change) so it stays out of the way during normal editing; we
+   * surface a single toast only when the user appears to be trying
+   * to delete walls explicitly.
+   */
   const handleDeleteSelected = useCallback(() => {
     const ids = Array.from(store.selectedIds)
     if (ids.length === 0) return
-    store.removeObjects(ids)
+    const idSet = new Set(ids)
+    const selectedObjects = store.doc.objects.filter((o) => idSet.has(o.id))
+    if (selectedObjects.length === 0) return
+    const wallSelected = selectedObjects.filter((o) => o.kind === 'wall')
+    const lockedSelected = selectedObjects.filter(
+      (o) => o.kind !== 'wall' && o.locked === true
+    )
+    const removable = selectedObjects.filter(
+      (o) => o.kind !== 'wall' && o.locked !== true
+    )
+    if (removable.length === 0) {
+      if (wallSelected.length > 0) {
+        toast.message(
+          'Walls are structural fixtures and cannot be deleted.',
+          { duration: 1800 }
+        )
+      } else if (lockedSelected.length > 0) {
+        toast.message(
+          'Selection is locked. Unlock to delete.',
+          { duration: 1500 }
+        )
+      }
+      return
+    }
+    store.removeObjects(removable.map((o) => o.id))
+    if (wallSelected.length > 0) {
+      toast.message(
+        `Walls retained — ${wallSelected.length} structural fixture${wallSelected.length === 1 ? ' is' : 's are'} immutable.`,
+        { duration: 1800 }
+      )
+    }
   }, [store])
 
   /**
@@ -370,11 +426,43 @@ export function FloorPlanV2({
     // Group entries by destination room so each batch lands with the
     // right room association in a single commit. Entries without a
     // recorded room id default to the active room.
+    //
+    // Booth category cycling: every paste advances the booth's
+    // category to the next entry in `eventCategoryNames`, wrapping
+    // back to index 0. The cycle index is the per-entry paste count
+    // so successive pastes from the same clipboard land on a
+    // different category each time. Non-booth kinds and clipboards
+    // that pre-date the cycling rule are passed through untouched.
+    const cycleSteps = clip.pasteCount
     const buckets = new Map<string, PlacedObject[]>()
     for (const entry of clip.entries) {
       const roomId = entry.roomId ?? activeRoomId
+      let template = entry.template as Omit<PlacedObject, 'id'>
+      if (
+        template.kind === 'booth' &&
+        eventCategoryNames &&
+        eventCategoryNames.length > 0
+      ) {
+        const sourceBooth = template as Omit<BoothObject, 'id'>
+        let nextCat: string | null = sourceBooth.categoryName ?? null
+        // Advance one step per accumulated paste so paste #1 → next,
+        // paste #2 → next-next, etc., wrapping around.
+        for (let i = 0; i <= cycleSteps; i++) {
+          nextCat = nextCategoryName(nextCat, eventCategoryNames)
+        }
+        if (nextCat) {
+          template = {
+            ...template,
+            kind: 'booth',
+            categoryName: nextCat,
+            // Drop any explicit accent override so the pasted booth
+            // reads in the new category's palette color.
+            accentColor: null,
+          } as Omit<BoothObject, 'id'>
+        }
+      }
       const candidate = {
-        ...(entry.template as Omit<PlacedObject, 'id'>),
+        ...template,
         id: `obj-${crypto.randomUUID()}`,
         x: baseX + entry.relX,
         y: baseY + entry.relY,
@@ -411,7 +499,7 @@ export function FloorPlanV2({
       { duration: 1500 }
     )
     return true
-  }, [activeRoomId, store])
+  }, [activeRoomId, store, eventCategoryNames])
 
   /** See use-canvas-pointer.ts for the rotate semantics. */
   const handleRotateBy = useCallback(
@@ -1096,17 +1184,6 @@ export function FloorPlanV2({
         </div>
       </header>
 
-      {onAddRoom && onRenameRoom && onDeleteRoom ? (
-        <LayoutRoomBar
-          rooms={layoutRooms}
-          activeRoomId={selectedRoomId ?? activeRoomId}
-          onSelectRoom={handleSelectRoom}
-          onAddRoom={onAddRoom}
-          onRenameRoom={onRenameRoom}
-          onDeleteRoom={onDeleteRoom}
-        />
-      ) : null}
-
       <CanvasCommandBar
         toolState={{ tool, drawShape }}
         onToolChange={handleToolChange}
@@ -1143,6 +1220,18 @@ export function FloorPlanV2({
         onUnjoinRoom={handleUnjoinRoom}
         canUnjoinRoom={joinPlan.unjoinGroupId !== null}
       />
+
+      {onAddRoom && onRenameRoom && onDeleteRoom ? (
+        <LayoutRoomBar
+          rooms={layoutRooms}
+          activeRoomId={selectedRoomId ?? activeRoomId}
+          onSelectRoom={handleSelectRoom}
+          onAddRoom={onAddRoom}
+          onRenameRoom={onRenameRoom}
+          onDeleteRoom={onDeleteRoom}
+          slim
+        />
+      ) : null}
 
       <div className="flex min-h-0 gap-2">
         <div className="relative flex shrink-0">
@@ -1207,6 +1296,12 @@ export function FloorPlanV2({
             onViewportReady={handleViewportReady}
             onZoomChange={setCurrentZoom}
             eventCategoryNames={eventCategoryNames}
+            onProximityViolation={(info) => {
+              toast.error(
+                `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
+                { duration: 2400 }
+              )
+            }}
           />
           <CanvasLegend />
         </div>

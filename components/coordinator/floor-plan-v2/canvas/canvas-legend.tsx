@@ -73,7 +73,7 @@ export function CanvasLegend({ className }: { className?: string }) {
         aria-label="Show allocation legend"
         aria-expanded={false}
         className={cn(
-          'absolute bottom-3 left-3 z-20 inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-sm backdrop-blur hover:bg-white',
+          'absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-md backdrop-blur-sm hover:bg-white',
           className
         )}
       >
@@ -90,7 +90,7 @@ export function CanvasLegend({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'absolute bottom-3 left-3 z-20 max-w-[260px] rounded-md border border-stone-200 bg-white/95 p-2 shadow-sm backdrop-blur',
+        'absolute top-3 right-3 z-20 max-w-[220px] rounded-lg border border-stone-200/90 bg-white/90 p-2 shadow-md backdrop-blur-sm',
         className
       )}
       role="region"
@@ -98,7 +98,7 @@ export function CanvasLegend({ className }: { className?: string }) {
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-stone-500">
-          Allocation legend
+          Placement HUD
         </span>
         <button
           type="button"
@@ -126,7 +126,7 @@ export function CanvasLegend({ className }: { className?: string }) {
             />
             <span className="min-w-0">
               <span className="font-semibold text-stone-800">{item.label}</span>
-              <span className="ml-1 text-stone-500">{item.detail}</span>
+            <span className="block text-stone-500">{item.detail}</span>
             </span>
           </li>
         ))}

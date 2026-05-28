@@ -244,20 +244,24 @@ function RoomFramesBase({
                 objectCount > 0
                   ? `Joined zone · ${roomCount} room${roomCount === 1 ? '' : 's'} + ${objectCount} fixture${objectCount === 1 ? '' : 's'}`
                   : `Joined zone · ${roomCount} room${roomCount === 1 ? '' : 's'}`
+              const tagH = 22
+              const tagGap = 6
+              const tagW = Math.min(320, Math.max(140, summary.length * 7 + 24))
+              const tagY = zone.labelY - tagH - tagGap
               return (
                 <>
                   <rect
-                    x={zone.labelX + 6}
-                    y={zone.labelY + 6}
-                    width={Math.min(320, Math.max(140, summary.length * 7 + 24))}
-                    height={22}
+                    x={zone.labelX}
+                    y={tagY}
+                    width={tagW}
+                    height={tagH}
                     rx={4}
                     fill="#0e7490"
                     fillOpacity={0.92}
                   />
                   <text
-                    x={zone.labelX + 14}
-                    y={zone.labelY + 22}
+                    x={zone.labelX + 8}
+                    y={tagY + 16}
                     fontSize={12}
                     fontWeight={700}
                     fill="#ecfeff"
@@ -375,52 +379,75 @@ function RoomFramesBase({
               />
             ) : null}
 
-            {/* Room name at the top-left of the frame. Pointer events
-                bubble through to the underlying perimeter stroke
-                hit-target so coordinators can grab the label too. */}
+            {/* Room name floated ABOVE the frame so the badge never
+                sits on top of the interior usable square footage and
+                never obscures the perimeter wall vector. The badge
+                anchors at (x, y - badgeHeight - gap) — i.e., the
+                tag's bottom edge clears the perimeter stroke by a
+                consistent margin at every zoom level. */}
             <g pointerEvents="none">
-              <rect
-                x={x + 6}
-                y={y + 6}
-                width={Math.min(180, Math.max(60, frame.name.length * 7 + 30))}
-                height={22}
-                rx={4}
-                fill={isSelected ? '#0f766e' : isMerged ? '#15803d' : '#1c1917'}
-                fillOpacity={isSelected || isMerged ? 0.92 : 0.75}
-              />
-              <text
-                x={x + 14}
-                y={y + 22}
-                fontSize={12}
-                fontWeight={700}
-                fill="#fafaf9"
-              >
-                {frame.name}
-              </text>
-              {isMerged ? (
-                <g>
-                  <rect
-                    x={x + 6}
-                    y={y + 30}
-                    width={Math.min(220, Math.max(90, neighborNames.length * 6.5 + 50))}
-                    height={18}
-                    rx={3}
-                    fill="#dcfce7"
-                    fillOpacity={0.96}
-                    stroke="#15803d"
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={x + 12}
-                    y={y + 43}
-                    fontSize={10}
-                    fontWeight={600}
-                    fill="#166534"
-                  >
-                    {`Joined to ${neighborNames}`}
-                  </text>
-                </g>
-              ) : null}
+              {(() => {
+                const tagH = 22
+                const tagGap = 6
+                const tagW = Math.min(180, Math.max(60, frame.name.length * 7 + 30))
+                const tagX = x
+                const tagY = y - tagH - tagGap
+                const mergedH = 18
+                const mergedW = Math.min(
+                  220,
+                  Math.max(90, neighborNames.length * 6.5 + 50)
+                )
+                // Stack the merged-neighbour pill above the room
+                // name so both labels live on the exterior margin.
+                const mergedX = x
+                const mergedY = tagY - mergedH - 4
+                return (
+                  <>
+                    <rect
+                      x={tagX}
+                      y={tagY}
+                      width={tagW}
+                      height={tagH}
+                      rx={4}
+                      fill={isSelected ? '#0f766e' : isMerged ? '#15803d' : '#1c1917'}
+                      fillOpacity={isSelected || isMerged ? 0.92 : 0.85}
+                    />
+                    <text
+                      x={tagX + 8}
+                      y={tagY + 16}
+                      fontSize={12}
+                      fontWeight={700}
+                      fill="#fafaf9"
+                    >
+                      {frame.name}
+                    </text>
+                    {isMerged ? (
+                      <g>
+                        <rect
+                          x={mergedX}
+                          y={mergedY}
+                          width={mergedW}
+                          height={mergedH}
+                          rx={3}
+                          fill="#dcfce7"
+                          fillOpacity={0.96}
+                          stroke="#15803d"
+                          strokeWidth={1}
+                        />
+                        <text
+                          x={mergedX + 6}
+                          y={mergedY + 13}
+                          fontSize={10}
+                          fontWeight={600}
+                          fill="#166534"
+                        >
+                          {`Joined to ${neighborNames}`}
+                        </text>
+                      </g>
+                    ) : null}
+                  </>
+                )
+              })()}
             </g>
           </g>
         )

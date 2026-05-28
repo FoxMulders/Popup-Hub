@@ -62,6 +62,16 @@ interface FloorPlanCanvasProps {
    * currently least-used category, preventing visual clusters.
    */
   eventCategoryNames?: ReadonlyArray<string>
+  /**
+   * Notifies the host (the floor-plan workspace) that a placement
+   * was rejected by the same-category proximity rule. The host
+   * surfaces a toast — the rule's pure logic stays headless.
+   */
+  onProximityViolation?: (info: {
+    category: string
+    dxColumns: number
+    dyRows: number
+  }) => void
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
@@ -79,6 +89,7 @@ export function FloorPlanCanvas({
   onViewportReady,
   onZoomChange,
   eventCategoryNames,
+  onProximityViolation,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
 }: FloorPlanCanvasProps) {
@@ -186,6 +197,7 @@ export function FloorPlanCanvas({
     activeRoomId: activeRoomId ?? null,
     selectedRoomId: selectedRoomId ?? null,
     onRoomFrameClick,
+    onProximityViolation,
   })
 
   /**
@@ -367,6 +379,7 @@ export function FloorPlanCanvas({
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
             editingObjectId={editingObjectId}
+            eventCategoryNames={eventCategoryNames}
           />
           {toolState.tool === 'select' ? (
             <SelectionOverlay

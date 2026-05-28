@@ -9,7 +9,7 @@ import {
   type RefObject,
 } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
-import type { PlacedObject } from '../state/types'
+import type { BoothObject, PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
 import {
   aabbFitsCanvas,
@@ -25,6 +25,10 @@ import {
   type Rect,
   type ViewportTransform,
 } from './geometry'
+import {
+  findFirstViolationInMove,
+  findBoothProximityViolation,
+} from './category-rules'
 
 interface UseCanvasPointerOptions {
   store: FloorPlanDocStore
@@ -67,6 +71,17 @@ interface UseCanvasPointerOptions {
   selectedRoomId?: string | null
   /** Notifies the host when a click selects a room frame. */
   onRoomFrameClick?: (roomId: string) => void
+  /**
+   * Notifies the host that a placement (draw or drag) was rejected by
+   * the same-category proximity rule (`category-rules.ts`). The host
+   * surfaces a toast — the rule logic itself stays headless so it can
+   * be unit-tested without React or sonner.
+   */
+  onProximityViolation?: (info: {
+    category: string
+    dxColumns: number
+    dyRows: number
+  }) => void
 }
 
 type DrawDraft =
@@ -184,6 +199,11 @@ export function useCanvasPointer(
     options
   const onAfterDrawCommit = options.onAfterDrawCommit
   const eventCategoryNames = options.eventCategoryNames
+  const onProximityViolation = options.onProximityViolation
+  const onProximityViolationRef = useRef(onProximityViolation)
+  useEffect(() => {
+    onProximityViolationRef.current = onProximityViolation
+  }, [onProximityViolation])
 
   // The host re-renders this hook every time the doc changes (because
   // `store.doc` is a different object), but `commitDraft` only fires
@@ -776,7 +796,8 @@ export function useCanvasPointer(
             draft.kind,
             rect,
             eventCategoryNamesRef.current,
-            drawRoomId
+            drawRoomId,
+            onProximityViolationRef.current
           )
           onAfterDrawCommit?.()
         }
@@ -787,21 +808,71 @@ export function useCanvasPointer(
       const drag = dragRef.current
       if (drag && drag.pointerId === e.pointerId) {
         if (drag.moved) {
-          // Commit the move with a single history entry. We've been
-          // mutating without history during the gesture; now snapshot.
-          const finalPatches: Array<{
-            id: string
-            patch: Partial<PlacedObject>
-          }> = []
+          // Same-category proximity gate: when the drag would land
+          // any moved booth within `<5 cols AND <2 rows` of another
+          // same-category booth, snap the entire move back to its
+          // pre-gesture origin. Non-booths and untagged booths skip
+          // the gate. Other booths in the move are excluded from the
+          // "others" set so a coordinator dragging a same-category
+          // pair as a unit isn't blocked by their own neighbour.
+          const movedIdSet = new Set(drag.ids)
+          const movedBooths: BoothObject[] = []
           for (const obj of store.doc.objects) {
-            if (drag.ids.includes(obj.id)) {
-              finalPatches.push({
-                id: obj.id,
-                patch: { x: obj.x, y: obj.y },
-              })
-            }
+            if (!movedIdSet.has(obj.id)) continue
+            if (obj.kind === 'booth') movedBooths.push(obj as BoothObject)
           }
-          store.updateObjects(finalPatches, { pushHistory: true })
+          const others = store.doc.objects.filter(
+            (o) => !movedIdSet.has(o.id)
+          )
+          const gridSpacingFt = store.doc.gridSpacingFt || 1
+          const violation = findFirstViolationInMove(
+            movedBooths,
+            others,
+            gridSpacingFt
+          )
+          if (violation) {
+            // Snap back: rewrite each moved object's x/y to its
+            // pre-gesture position. Skip pushHistory because the
+            // gesture is being aborted — there's no net change to
+            // record on the undo stack.
+            const revertPatches: Array<{
+              id: string
+              patch: Partial<PlacedObject>
+            }> = []
+            for (const id of drag.ids) {
+              const orig = drag.originals.get(id)
+              if (orig) {
+                revertPatches.push({
+                  id,
+                  patch: { x: orig.x, y: orig.y },
+                })
+              }
+            }
+            if (revertPatches.length > 0) {
+              store.updateObjects(revertPatches, { pushHistory: false })
+            }
+            onProximityViolationRef.current?.({
+              category: violation.category,
+              dxColumns: violation.dxColumns,
+              dyRows: violation.dyRows,
+            })
+          } else {
+            // Commit the move with a single history entry. We've been
+            // mutating without history during the gesture; now snapshot.
+            const finalPatches: Array<{
+              id: string
+              patch: Partial<PlacedObject>
+            }> = []
+            for (const obj of store.doc.objects) {
+              if (drag.ids.includes(obj.id)) {
+                finalPatches.push({
+                  id: obj.id,
+                  patch: { x: obj.x, y: obj.y },
+                })
+              }
+            }
+            store.updateObjects(finalPatches, { pushHistory: true })
+          }
         }
         dragRef.current = null
         return
@@ -898,7 +969,12 @@ function commitDraft(
   kind: PlacedObject['kind'],
   rect: Rect,
   eventCategoryNames?: ReadonlyArray<string>,
-  roomId?: string | null
+  roomId?: string | null,
+  onProximityViolation?: (info: {
+    category: string
+    dxColumns: number
+    dyRows: number
+  }) => void
 ): void {
   const id = `obj-${crypto.randomUUID()}`
   const base = {
@@ -951,6 +1027,24 @@ function commitDraft(
     case 'label':
       obj = { ...base, kind: 'label', text: 'Label' }
       break
+  }
+  // Same-category proximity gate for newly-drawn booths. Walls,
+  // doors, aisles, etc. skip the check (it only applies to booths).
+  if (obj.kind === 'booth') {
+    const gridSpacingFt = store.doc.gridSpacingFt || 1
+    const violation = findBoothProximityViolation(
+      obj as BoothObject,
+      store.doc.objects,
+      gridSpacingFt
+    )
+    if (violation) {
+      onProximityViolation?.({
+        category: violation.category,
+        dxColumns: violation.dxColumns,
+        dyRows: violation.dyRows,
+      })
+      return
+    }
   }
   store.addObject(obj, {
     select: true,

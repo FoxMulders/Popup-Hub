@@ -25,6 +25,15 @@ interface LayoutRoomBarProps {
   onDeleteRoom: (roomId: string) => void
   /** Vertical room list for the floor-plan sidebar. */
   compact?: boolean
+  /**
+   * Slim toolbar mode: render as a thin horizontal ribbon designed
+   * to stack directly under the canvas command bar instead of as a
+   * full `market-panel` card. Drops the panel chrome, shrinks the
+   * "Rooms / zones" caption, and reduces vertical padding so the
+   * bar sits cleanly between the primary toolbar and the canvas
+   * grid without eating workspace height.
+   */
+  slim?: boolean
 }
 
 export function LayoutRoomBar({
@@ -35,6 +44,7 @@ export function LayoutRoomBar({
   onRenameRoom,
   onDeleteRoom,
   compact = false,
+  slim = false,
 }: LayoutRoomBarProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -80,18 +90,46 @@ export function LayoutRoomBar({
   }
 
   return (
-    <div className="market-panel p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-heading font-semibold text-muted-foreground uppercase tracking-wide">
+    <div
+      className={cn(
+        slim
+          ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
+          : 'market-panel p-3 space-y-2'
+      )}
+      role="toolbar"
+      aria-label="Rooms and zones"
+    >
+      <div
+        className={cn(
+          slim
+            ? 'flex shrink-0 items-center gap-2'
+            : 'flex items-center justify-between gap-2'
+        )}
+      >
+        <p
+          className={cn(
+            slim
+              ? 'text-[10px] font-heading font-semibold text-muted-foreground uppercase tracking-wide'
+              : 'text-xs font-heading font-semibold text-muted-foreground uppercase tracking-wide'
+          )}
+        >
           Rooms / zones
         </p>
         <div className="relative" ref={presetMenuRef}>
-          <div className="flex items-stretch overflow-hidden rounded-md border-2 border-stone-200">
+          <div
+            className={cn(
+              'flex items-stretch overflow-hidden rounded-md border-2 border-stone-200',
+              slim ? 'border' : 'border-2'
+            )}
+          >
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="gap-1 min-h-11 rounded-none border-0"
+              className={cn(
+                'gap-1 rounded-none border-0',
+                slim ? 'h-8 min-h-0 px-2 text-xs' : 'min-h-11'
+              )}
               onClick={() => onAddRoom()}
             >
               <Plus className="h-3.5 w-3.5" />
@@ -103,7 +141,10 @@ export function LayoutRoomBar({
               aria-expanded={presetMenuOpen}
               aria-haspopup="menu"
               onClick={() => setPresetMenuOpen((v) => !v)}
-              className="flex min-h-11 items-center justify-center border-l-2 border-stone-200 px-2 text-stone-600 hover:bg-canvas"
+              className={cn(
+                'flex items-center justify-center border-l-2 border-stone-200 px-2 text-stone-600 hover:bg-canvas',
+                slim ? 'h-8 min-h-0' : 'min-h-11'
+              )}
             >
               <ChevronDown
                 className={cn(
@@ -144,8 +185,13 @@ export function LayoutRoomBar({
       </div>
       <div
         className={cn(
-          'flex gap-2 pb-1 -mx-1 px-1',
-          compact ? 'flex-col items-stretch' : 'scroll-touch-x items-center'
+          'flex gap-2 -mx-1 px-1',
+          slim ? 'min-w-0 flex-1 items-center pb-0' : 'pb-1',
+          compact
+            ? 'flex-col items-stretch'
+            : slim
+              ? 'overflow-x-auto'
+              : 'scroll-touch-x items-center'
         )}
       >
         {rooms.map((room) => {
@@ -193,16 +239,24 @@ export function LayoutRoomBar({
             <div
               key={room.id}
               className={cn(
-                'flex items-center rounded-xl border-2 overflow-hidden transition-all duration-200',
+                'flex items-center overflow-hidden transition-all duration-200',
+                slim ? 'rounded-md border' : 'rounded-xl border-2',
                 compact ? 'w-full shrink-0' : 'shrink-0',
-                isActive ? 'border-harvest-500 shadow-[var(--shadow-market)]' : 'border-stone-200'
+                isActive
+                  ? slim
+                    ? 'border-harvest-500'
+                    : 'border-harvest-500 shadow-[var(--shadow-market)]'
+                  : 'border-stone-200'
               )}
             >
               <button
                 type="button"
                 onClick={() => onSelectRoom(room.id)}
                 className={cn(
-                  'min-h-11 px-4 text-sm font-medium transition-all duration-200 active:translate-y-0.5',
+                  'font-medium transition-all duration-200 active:translate-y-0.5',
+                  slim
+                    ? 'h-8 px-3 text-xs'
+                    : 'min-h-11 px-4 text-sm',
                   isActive
                     ? 'bg-forest text-primary-foreground'
                     : 'bg-card text-foreground hover:bg-canvas'
@@ -215,19 +269,29 @@ export function LayoutRoomBar({
                   <button
                     type="button"
                     title="Rename room"
-                    className="touch-target border-l-2 border-stone-200 text-muted-foreground hover:bg-canvas"
+                    className={cn(
+                      'border-l-2 border-stone-200 text-muted-foreground hover:bg-canvas',
+                      slim
+                        ? 'flex h-8 w-7 items-center justify-center border-l'
+                        : 'touch-target'
+                    )}
                     onClick={() => startRename(room)}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className={slim ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                   </button>
                   {rooms.length > 1 && (
                     <button
                       type="button"
                       title="Delete room"
-                      className="touch-target border-l-2 border-stone-200 text-terracotta-600 hover:bg-terracotta-50"
+                      className={cn(
+                        'border-l-2 border-stone-200 text-terracotta-600 hover:bg-terracotta-50',
+                        slim
+                          ? 'flex h-8 w-7 items-center justify-center border-l'
+                          : 'touch-target'
+                      )}
                       onClick={() => onDeleteRoom(room.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className={slim ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                     </button>
                   )}
                 </>
