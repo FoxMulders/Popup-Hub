@@ -24,7 +24,39 @@ function frameForMode(frame: LoaderSceneFrame, mode: LoaderControllerMode): Load
   }
 }
 
-const LOGO_SRC = '/popup-hub-logo.png'
+/**
+ * Storefront-only artwork. The wordmark used to be baked into the same
+ * PNG (`/popup-hub-logo.png`) which forced the "Popup Hub" text into
+ * the bottom 30 % of the rendered logo box, lifting the market icon
+ * off the sidewalk and crashing the typography into the walking
+ * characters. Switching to the square icon decouples the two so the
+ * market sits flush on the ground and the wordmark renders separately
+ * as SVG `<text>` above the canvas.
+ */
+const LOGO_SRC = '/popup-hub-icon.png'
+
+/**
+ * Brand wordmark frame — drawn directly in the SVG above the walking
+ * canvas. Tweak the y-coordinate / fontSize here if the typography
+ * ever needs to move; the rest of the scene already gives it a clean
+ * ~140 px top band that nothing else touches.
+ */
+const WORDMARK_TEXT = 'Popup Hub'
+const WORDMARK_Y = 86
+const WORDMARK_FONT_SIZE = 64
+const WORDMARK_LETTER_SPACING = 2
+const WORDMARK_FILL = '#7b9b52'
+
+/**
+ * Continuous phone-flash oscillation. The lead character's phone glows
+ * with a steady sine pulse for the entire animation lifetime — no
+ * iteration cap, no end-of-phase termination — so the screen "blinks"
+ * forever the way a real notification light would. Driven off
+ * `globalFrame` so the loop period is independent of FPS hiccups.
+ */
+function continuousPhoneGlow(globalFrame: number): number {
+  return 0.55 + Math.sin(globalFrame * 0.18) * 0.4
+}
 
 const SCENE_PROP_TYPES = new Set(['balloon', 'splash', 'confetti', 'note', 'zzz'])
 const VEHICLE_PROP_TYPES = new Set(['bike', 'scooter', 'cart'])
@@ -90,7 +122,17 @@ function StickFigure({
         strokeWidth={1.5 * member.scale}
       />
       {member.phone ? (
-        <g filter="url(#premium-loader-phone-glow)" opacity={frame.phoneGlow}>
+        // Phone glow runs as a perpetual sine loop. Previously the
+        // outer-group opacity tracked `frame.phoneGlow`, which was 0
+        // for every replay variant (only the initial `walk-to-market`
+        // populated it during its phone-check phase). Driving opacity
+        // off `continuousPhoneGlow(globalFrame)` instead makes the
+        // notification flash run for the entire lifetime of every
+        // variant, with zero iteration cap.
+        <g
+          filter="url(#premium-loader-phone-glow)"
+          opacity={continuousPhoneGlow(frame.globalFrame)}
+        >
           <rect
             x={member.phone.x}
             y={member.phone.y}
@@ -110,17 +152,18 @@ function StickFigure({
             fill="#0ea5e9"
             opacity={0.85}
           />
-          {frame.isPhoneCheck ? (
-            <rect
-              x={member.phone.x + 3 * member.scale}
-              y={member.phone.y + 5 * member.scale}
-              width={member.phone.w - 6 * member.scale}
-              height={member.phone.h - 10 * member.scale}
-              rx={member.scale}
-              fill="#bae6fd"
-              opacity={0.35 + Math.sin(frame.globalFrame * 0.2) * 0.2}
-            />
-          ) : null}
+          {/* Inner notification flash — also driven off globalFrame
+              so the "screen woke up" highlight pulses forever, not
+              just during the phone-check intro. */}
+          <rect
+            x={member.phone.x + 3 * member.scale}
+            y={member.phone.y + 5 * member.scale}
+            width={member.phone.w - 6 * member.scale}
+            height={member.phone.h - 10 * member.scale}
+            rx={member.scale}
+            fill="#bae6fd"
+            opacity={0.35 + Math.sin(frame.globalFrame * 0.2) * 0.25}
+          />
         </g>
       ) : null}
     </g>
@@ -261,14 +304,17 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
     <svg viewBox="0 0 800 600" className="h-full w-full" role="img" aria-hidden>
       <defs>
         {/*
-         * Sky gradient swapped from the original near-black slate to the
-         * site's linen / cream palette so the inline logo replay and the
-         * full-screen first-paint loader blend with the page background.
-         * Linen (`--linen` / #faf8f7) is used at the top, transitioning to
-         * cream (`--cream` / #fffdf9) at the bottom for a subtle depth cue.
+         * Sky gradient now mirrors the public landing hero band so the
+         * animation drops in seamlessly behind the marketing copy.
+         *   page hero: bg-gradient-to-b from-sage-50 to-cream
+         *   sage-50  = #f4f8f4
+         *   cream    = #fffdf9
+         * Coordinator/wizard surfaces still use this same scene as a
+         * loader and read fine because both endpoints are off-white;
+         * the sage tint is barely perceptible against pure cream.
          */}
         <linearGradient id="premium-loader-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#faf8f7" />
+          <stop offset="0%" stopColor="#f4f8f4" />
           <stop offset="100%" stopColor="#fffdf9" />
         </linearGradient>
         {/*
@@ -316,6 +362,32 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
       </defs>
 
       <rect width="800" height="600" fill="url(#premium-loader-sky)" />
+
+      {/*
+       * Brand wordmark — drawn as SVG text above the walking canvas
+       * so it never collides with the storefront, characters, or
+       * sidewalk. The market icon now uses `popup-hub-icon.png`
+       * (icon-only) instead of the full `popup-hub-logo.png`, which
+       * had the wordmark baked into the bottom 30 % of the image and
+       * was the source of the "typography drifts into the graphics"
+       * complaint.
+       */}
+      <text
+        x={400}
+        y={WORDMARK_Y}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize={WORDMARK_FONT_SIZE}
+        fontWeight={700}
+        fill={WORDMARK_FILL}
+        style={{
+          letterSpacing: `${WORDMARK_LETTER_SPACING}px`,
+          fontFamily:
+            'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        }}
+      >
+        {WORDMARK_TEXT}
+      </text>
 
       {/* Distant buildings — warm canvas tan to harmonize with the linen sky. */}
       <g opacity="0.28" fill="#a89e8b">

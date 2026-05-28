@@ -71,6 +71,8 @@ function previewFill(kind: ObjectKind): string {
       return '#fbcfe8'
     case 'door':
       return '#22c55e'
+    case 'emergency_exit':
+      return '#fca5a5'
     case 'label':
       return 'transparent'
   }
@@ -88,6 +90,8 @@ function previewStroke(kind: ObjectKind): string {
       return '#9d174d'
     case 'door':
       return '#15803d'
+    case 'emergency_exit':
+      return '#991b1b'
     case 'label':
       return '#57534e'
   }

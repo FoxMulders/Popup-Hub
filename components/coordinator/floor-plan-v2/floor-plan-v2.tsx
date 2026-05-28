@@ -14,13 +14,25 @@ import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
 import { FloorPlanCanvas } from './canvas/floor-plan-canvas'
+import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { ToolPalette } from './tools/tool-palette'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
+import { autoArrange } from './engine/auto-arrange'
 import { docFromLegacyRoom, legacyRoomFromDoc } from './state/legacy-bridge'
+import {
+  clearLocalDraft,
+  loadLocalDraft,
+  saveLocalDraft,
+} from './state/local-draft'
 import { useFloorPlanDoc } from './state/use-floor-plan-doc'
 import type { FloorPlanDoc, PlacedObject } from './state/types'
-import { canvasClampDelta } from './interactions/geometry'
+import {
+  aabbFitsCanvas,
+  canvasClampDelta,
+  groupCanvasClampDelta,
+  rotatedAabb,
+} from './interactions/geometry'
 import type { LayoutRoom } from '@/types/database'
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
@@ -68,6 +80,13 @@ export interface FloorPlanV2Props {
   saveLayoutRef?: MutableRefObject<(() => Promise<boolean>) | null>
   /** Optional sidebar slot — wizard injects QA findings here. */
   rightSidebarExtra?: React.ReactNode
+  /**
+   * Sorted list of category names defined on this event (Step 2 of
+   * the wizard). Forwarded to the booth property inspector so the
+   * Category field renders as a dropdown of these names instead of
+   * free-form text.
+   */
+  eventCategoryNames?: string[]
   className?: string
 }
 
@@ -93,6 +112,7 @@ export function FloorPlanV2({
   onLayoutRoomsChange,
   saveLayoutRef,
   rightSidebarExtra,
+  eventCategoryNames,
   className,
 }: FloorPlanV2Props) {
   const activeRoom = useMemo(
@@ -101,13 +121,17 @@ export function FloorPlanV2({
     [layoutRooms, layoutActiveRoomId]
   )
 
-  const initialDoc = useMemo<FloorPlanDoc>(
-    () => docFromLegacyRoom(activeRoom ?? null),
-    // We deliberately depend only on the room id — re-hydrating on every
-    // object change would clobber in-flight edits.
+  // Seed the doc from the server-loaded room first; if a fresher
+  // crash-recovery draft exists in localStorage for this (event, room)
+  // pair, prefer that — coordinators expect the canvas to look exactly
+  // the way they left it after an accidental refresh.
+  const initialDoc = useMemo<FloorPlanDoc>(() => {
+    const seeded = docFromLegacyRoom(activeRoom ?? null)
+    if (!eventId || !activeRoom?.id) return seeded
+    const cached = loadLocalDraft(eventId, activeRoom.id)
+    return cached?.doc ?? seeded
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeRoom?.id]
-  )
+  }, [activeRoom?.id])
 
   const store = useFloorPlanDoc(initialDoc)
   const [tool, setTool] = useState<ToolId>(DEFAULT_TOOL_STATE.tool)
@@ -115,13 +139,33 @@ export function FloorPlanV2({
     DEFAULT_TOOL_STATE.drawShape
   )
 
-  // When the active room changes, re-hydrate.
+  // When the active room changes, re-hydrate. Prefer the per-(event,
+  // room) localStorage draft if one exists so room switches don't
+  // wipe in-progress work the way a server-only round-trip would.
   const lastRoomIdRef = useRef<string | undefined>(activeRoom?.id)
   useEffect(() => {
     if (lastRoomIdRef.current === activeRoom?.id) return
     lastRoomIdRef.current = activeRoom?.id
-    store.resetDoc(docFromLegacyRoom(activeRoom ?? null))
-  }, [activeRoom, store])
+    const seeded = docFromLegacyRoom(activeRoom ?? null)
+    const cached =
+      eventId && activeRoom?.id
+        ? loadLocalDraft(eventId, activeRoom.id)
+        : null
+    store.resetDoc(cached?.doc ?? seeded)
+  }, [activeRoom, eventId, store])
+
+  // Crash-recovery autosave: every doc commit (object add, move,
+  // rotate, delete, undo, redo, etc.) lands a serialized snapshot in
+  // localStorage. Debounced to 250ms so a continuous gesture doesn't
+  // hammer the storage layer; cleared whenever the wizard's server
+  // save succeeds (see saveLayoutRef wiring below).
+  useEffect(() => {
+    if (!eventId || !activeRoom?.id) return
+    const id = window.setTimeout(() => {
+      saveLocalDraft(eventId, activeRoom.id, store.doc)
+    }, 250)
+    return () => window.clearTimeout(id)
+  }, [eventId, activeRoom?.id, store.doc])
 
   const handleToolChange = useCallback((next: ToolId) => {
     setTool(next)
@@ -251,10 +295,28 @@ export function FloorPlanV2({
 
   /**
    * Rotate every selected object by `delta` degrees around its own
-   * center, then translate it back inside the canvas if the new
-   * rotated AABB poked out of bounds. We rotate each object
-   * independently (rather than around a group origin) so behaviour
-   * matches the on-canvas rotate handle.
+   * center.
+   *
+   * Boundary containment is three-tiered:
+   *   1. First we predict the rotated layout (each object spun in
+   *      place) and ask `groupCanvasClampDelta` for a single uniform
+   *      translation that pulls the cluster's *union* AABB back inside
+   *      the canvas. This preserves relative spacing, so a tilted row
+   *      of booths sits flush along the wall instead of getting
+   *      scrambled when one corner alone overflows.
+   *   2. If the union itself can't fit (cluster wider/taller than the
+   *      canvas — e.g. the user selected the whole hall and rotated it
+   *      90°), we fall back to per-object clamping. Every booth is
+   *      pulled in independently so nothing leaks off-canvas, even if
+   *      relative geometry shifts a bit.
+   *   3. Pre-flight HALT: after computing the clamped patches we
+   *      verify *every* resulting rotated AABB actually fits inside
+   *      `[0, cw] × [0, cl]`. If any object is too big to fit at the
+   *      proposed angle (e.g. a long thin booth rotated to a diagonal
+   *      that exceeds the canvas), we abort the rotation entirely and
+   *      surface a toast rather than letting it silently overflow.
+   *      This is Strategy A from the spec — when nudging cannot
+   *      contain the transform, the transform doesn't happen.
    */
   const handleRotateBy = useCallback(
     (delta: number) => {
@@ -263,7 +325,7 @@ export function FloorPlanV2({
       const cw = store.doc.canvasWidthFt
       const cl = store.doc.canvasLengthFt
       const idSet = new Set(ids)
-      const patches: Array<{ id: string; patch: Partial<PlacedObject> }> = []
+      const proposed: Array<{ obj: PlacedObject; nextRotation: number }> = []
       for (const obj of store.doc.objects) {
         if (!idSet.has(obj.id)) continue
         if (obj.locked) continue
@@ -272,15 +334,72 @@ export function FloorPlanV2({
         let next = ((obj.rotation || 0) + delta) % 360
         if (next > 180) next -= 360
         if (next <= -180) next += 360
-        const probe: PlacedObject = { ...obj, rotation: next }
-        const { dx, dy } = canvasClampDelta(probe, cw, cl)
-        patches.push({
-          id: obj.id,
-          patch: { rotation: next, x: obj.x + dx, y: obj.y + dy },
-        })
+        proposed.push({ obj, nextRotation: next })
       }
-      if (patches.length === 0) return false
-      store.updateObjects(patches)
+      if (proposed.length === 0) return false
+
+      const probes: PlacedObject[] = proposed.map((p) => ({
+        ...p.obj,
+        rotation: p.nextRotation,
+      }))
+      const unionDelta = groupCanvasClampDelta(probes, cw, cl)
+
+      type PatchEntry = {
+        id: string
+        patch: { rotation: number; x: number; y: number }
+        finalProbe: PlacedObject
+      }
+      const entries: PatchEntry[] = []
+      if (unionDelta) {
+        for (const p of proposed) {
+          const nx = p.obj.x + unionDelta.dx
+          const ny = p.obj.y + unionDelta.dy
+          entries.push({
+            id: p.obj.id,
+            patch: { rotation: p.nextRotation, x: nx, y: ny },
+            finalProbe: {
+              ...p.obj,
+              rotation: p.nextRotation,
+              x: nx,
+              y: ny,
+            },
+          })
+        }
+      } else {
+        // Cluster too big to translate as a unit — clamp every object
+        // independently so each one at least stays on-canvas.
+        for (const p of proposed) {
+          const probe: PlacedObject = { ...p.obj, rotation: p.nextRotation }
+          const { dx, dy } = canvasClampDelta(probe, cw, cl)
+          const nx = p.obj.x + dx
+          const ny = p.obj.y + dy
+          entries.push({
+            id: p.obj.id,
+            patch: { rotation: p.nextRotation, x: nx, y: ny },
+            finalProbe: {
+              ...p.obj,
+              rotation: p.nextRotation,
+              x: nx,
+              y: ny,
+            },
+          })
+        }
+      }
+
+      // Tier 3 — preflight HALT. If any clamped probe still pokes off
+      // the canvas (object's rotated AABB is wider/taller than the
+      // canvas itself), abort the rotation step entirely.
+      for (const entry of entries) {
+        const aabb = rotatedAabb(entry.finalProbe)
+        if (!aabbFitsCanvas(aabb, cw, cl)) {
+          toast.message(
+            'Rotation blocked — selection would not fit inside the room.'
+          )
+          return false
+        }
+      }
+
+      store.updateObjects(entries.map((e) => ({ id: e.id, patch: e.patch })))
       return true
     },
     [store]
@@ -328,6 +447,17 @@ export function FloorPlanV2({
       // one keystroke). Common in design tools.
       if (cmd && key === 'd') {
         if (handleCopy() && handlePaste()) e.preventDefault()
+        return
+      }
+      // Select-all. The early-return above already exempts text
+      // fields, so we can safely intercept the browser's default
+      // text-selection behaviour and route it to the canvas.
+      if (cmd && key === 'a') {
+        const all = store.doc.objects.map((o) => o.id)
+        if (all.length > 0) {
+          e.preventDefault()
+          store.setSelection(all)
+        }
         return
       }
 
@@ -389,6 +519,10 @@ export function FloorPlanV2({
         toast.error(`Save failed — ${error.message}`)
         return false
       }
+      // Server is now the source of truth for this room — drop the
+      // crash-recovery draft so a future refresh loads from Supabase
+      // instead of stale localStorage.
+      clearLocalDraft(eventId, activeRoom.id)
       toast.success('Floor plan saved')
       return true
     }
@@ -413,6 +547,55 @@ export function FloorPlanV2({
   const handleRotateRight = useCallback(() => {
     handleRotateBy(ROTATE_STEP_DEG)
   }, [handleRotateBy])
+
+  // Hoisted viewport API: the canvas owns the actual zoom math, but
+  // the toolbar lives outside the canvas's DOM tree, so we mirror
+  // the API here. `viewportApiRef` carries the imperative methods,
+  // `currentZoom` re-renders the % readout in the toolbar.
+  const viewportApiRef = useRef<ViewportApi | null>(null)
+  const [currentZoom, setCurrentZoom] = useState(1)
+  const handleViewportReady = useCallback((api: ViewportApi | null) => {
+    viewportApiRef.current = api
+  }, [])
+  const handleZoomIn = useCallback(() => {
+    viewportApiRef.current?.zoomIn()
+  }, [])
+  const handleZoomOut = useCallback(() => {
+    viewportApiRef.current?.zoomOut()
+  }, [])
+  const handleZoomReset = useCallback(() => {
+    viewportApiRef.current?.resetZoom()
+  }, [])
+
+  // Auto-Arrange — re-position the booth list with clearance-aware
+  // row pack. Other objects (walls / doors / exits / stages) are
+  // honored as obstacles. The result lands as a single history step
+  // so coordinators can always Ctrl+Z back to their previous layout.
+  const boothCount = useMemo(
+    () => store.doc.objects.filter((o) => o.kind === 'booth').length,
+    [store.doc.objects]
+  )
+  const handleAutoArrange = useCallback(() => {
+    if (boothCount === 0) {
+      toast.message('Nothing to arrange — draw at least one booth first.')
+      return
+    }
+    const result = autoArrange(store.doc, { eventCategoryNames })
+    if (result.placedCount === 0) {
+      toast.error('Auto-Arrange could not fit any booths inside the canvas.')
+      return
+    }
+    store.replaceObjects(result.doc.objects)
+    if (result.droppedCount > 0) {
+      toast.warning(
+        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} — ${result.droppedCount} did not fit and were dropped.`
+      )
+    } else {
+      toast.success(
+        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} with clearance.`
+      )
+    }
+  }, [boothCount, eventCategoryNames, store])
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -445,13 +628,17 @@ export function FloorPlanV2({
             </kbd>{' '}
             copy / paste,{' '}
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
+              Ctrl+A
+            </kbd>{' '}
+            select all,{' '}
+            <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               R
             </kbd>{' '}
             /{' '}
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               Shift+R
             </kbd>{' '}
-            rotate ±15°.
+            rotate ±15°. Double-click any object to rename in place.
           </p>
         </div>
         <div className="ml-auto rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-semibold text-stone-700">
@@ -476,6 +663,12 @@ export function FloorPlanV2({
         clipboardHasContents={clipboardHasContents}
         onRotateLeft={handleRotateLeft}
         onRotateRight={handleRotateRight}
+        zoom={currentZoom}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onZoomReset={handleZoomReset}
+        onAutoArrange={handleAutoArrange}
+        canAutoArrange={boothCount > 0}
       />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,260px)]">
@@ -491,10 +684,19 @@ export function FloorPlanV2({
           - desktop:                    full 720px
         */}
         <div className="relative h-[clamp(320px,52vh,720px)] overflow-hidden rounded-lg border border-stone-200 bg-stone-100 lg:h-[720px]">
-          <FloorPlanCanvas store={store} toolState={{ tool, drawShape }} />
+          <FloorPlanCanvas
+            store={store}
+            toolState={{ tool, drawShape }}
+            onViewportReady={handleViewportReady}
+            onZoomChange={setCurrentZoom}
+            eventCategoryNames={eventCategoryNames}
+          />
         </div>
         <div className="flex min-w-0 flex-col gap-2">
-          <PropertyInspector store={store} />
+          <PropertyInspector
+            store={store}
+            eventCategoryNames={eventCategoryNames}
+          />
           {rightSidebarExtra}
         </div>
       </div>

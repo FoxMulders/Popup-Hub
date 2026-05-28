@@ -17,6 +17,11 @@ import {
   updateRoomInList,
 } from '@/lib/booth-planner/layout-rooms'
 import {
+  LAYOUT_ROOM_PRESETS,
+  presetToRoomPartial,
+  type LayoutRoomPresetId,
+} from '@/lib/booth-planner/layout-room-presets'
+import {
   DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
   isLayoutBaselineTableLengthFt,
   type LayoutBaselineTableLengthFt,
@@ -39,7 +44,6 @@ import {
   DEFAULT_GLOBAL_MLM_CAP,
   hydrateMlmCategoryLimits,
 } from '@/lib/categories/mlm-constraints'
-import { useWizardCritiqueAgents } from '@/lib/wizard/critique/use-wizard-critique-agents'
 import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity, resolveMarketCityId } from '@/lib/wizard/market-cities'
 import { effectiveScheduleTypeForListing, isQuarterAuctionListing } from '@/lib/events/listing-type'
 import {
@@ -48,8 +52,6 @@ import {
   WIZARD_PAGE_TITLE,
   WIZARD_PANEL,
 } from '@/lib/wizard/wizard-panel-styles'
-import { WizardCritiqueDrawer } from '@/components/coordinator/wizard/wizard-critique-drawer'
-import { WizardQaSidebarPanel } from '@/components/coordinator/wizard/wizard-qa-sidebar-panel'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import {
   MARKET_WIZARD_STEPS_FULL,
@@ -260,10 +262,28 @@ export function MarketSetupWizard({
     setActiveRoomId(roomId)
   }
 
-  function handleAddRoom() {
-    const room = createLayoutRoom(
-      rooms.length === 0 ? 'Main Hall' : `Room ${rooms.length + 1}`
-    )
+  function handleAddRoom(presetId?: LayoutRoomPresetId) {
+    // Look up the structural preset (kitchen / outdoor stage / annex
+    // / blank). Any unknown id falls back to the blank preset so the
+    // legacy single-button code path keeps working unchanged.
+    const preset =
+      LAYOUT_ROOM_PRESETS.find((p) => p.id === presetId) ??
+      LAYOUT_ROOM_PRESETS[0]!
+    const isFirstRoom = rooms.length === 0
+    // Auto-name presets so the user gets a recognisable label rather
+    // than a generic "Room N", but stay out of the way for blank rooms
+    // where the existing "Main Hall / Room N" sequencing is what
+    // coordinators are used to.
+    let name: string
+    if (preset.id !== 'blank') {
+      name = preset.name
+    } else if (isFirstRoom) {
+      name = 'Main Hall'
+    } else {
+      name = `Room ${rooms.length + 1}`
+    }
+    const partial = presetToRoomPartial(preset)
+    const room = createLayoutRoom(name, partial)
     setRooms((prev) => [...prev, room])
     setActiveRoomId(room.id)
     toast.success(`Added ${room.name}`)
@@ -347,7 +367,6 @@ export function MarketSetupWizard({
   // population — none of those concepts exist in v2 (no auto-presets,
   // no capacity-driven population), so we no longer wire those refs.
   const [plannerOverlap] = useState(false)
-  const [plannerQaRunning] = useState(false)
 
   const scheduleLines = useMemo(
     () =>
@@ -408,28 +427,6 @@ export function MarketSetupWizard({
     if (currentStep >= 2) return String(layoutCapacity)
     return null
   }, [categoryLimits, layoutCapacity, currentStep])
-
-  const { findings, dismiss } = useWizardCritiqueAgents(
-    {
-      currentStep,
-      eventName: name,
-      description,
-      hasOverlap: plannerOverlap,
-      undismissedAlertCount: 0,
-      venueWidth: templateAnchor.width,
-      venueLength: templateAnchor.length,
-      templateWidth: templateAnchor.preset?.canvasWidth,
-      templateLength: templateAnchor.preset?.canvasHeight,
-      gridCols: templateAnchor.width,
-      gridRows: templateAnchor.length,
-      pinDropped,
-      iterationLimitHit: false,
-      qaRunning: plannerQaRunning,
-      qaCancelled: false,
-      saveBlocked: plannerOverlap,
-    },
-    100
-  )
 
   function sortedDayRows(): DayRow[] {
     return [...dayRows].sort((a, b) => {
@@ -1071,7 +1068,7 @@ export function MarketSetupWizard({
                 onBack={goBack}
                 onNext={goNext}
                 nextDisabled={transitioning}
-                nextLabel={skipVenueLayout ? 'Save & deploy market' : undefined}
+                nextLabel={skipVenueLayout ? 'Save market' : undefined}
               />
             </>
           ) : null}
@@ -1089,13 +1086,7 @@ export function MarketSetupWizard({
                 layoutActiveRoomId={activeRoomId}
                 onLayoutRoomsChange={handleLayoutRoomsChange}
                 saveLayoutRef={saveLayoutRef}
-                rightSidebarExtra={
-                  <WizardQaSidebarPanel
-                    findings={findings}
-                    onDismiss={dismiss}
-                    onGoToStep={(step) => void goToStep(step as WizardStep)}
-                  />
-                }
+                eventCategoryNames={eventCategoryNames}
               />
               <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
             </>
@@ -1114,13 +1105,6 @@ export function MarketSetupWizard({
         ) : null}
       </div>
 
-      {currentStep !== 3 ? (
-        <WizardCritiqueDrawer
-          findings={findings}
-          onDismiss={dismiss}
-          onGoToStep={(step) => void goToStep(step as WizardStep)}
-        />
-      ) : null}
     </div>
   )
 }

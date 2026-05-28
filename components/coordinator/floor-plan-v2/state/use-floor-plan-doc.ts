@@ -255,6 +255,27 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     setSelectedIds((prev) => (prev.size === 0 ? prev : new Set()))
   }, [])
 
+  /**
+   * Drop any ids from `selectedIds` that no longer correspond to an
+   * object in the restored doc. Without this, an undo that removes a
+   * just-pasted object would leave its id in `selectedIds`, and the
+   * "N selected" toolbar counter / property inspector would point at
+   * a ghost. Pure helper so it can be reused by both undo and redo.
+   */
+  const pruneStaleSelection = useCallback((restored: FloorPlanDoc) => {
+    const validIds = new Set(restored.objects.map((o) => o.id))
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev
+      let changed = false
+      const next = new Set<string>()
+      for (const id of prev) {
+        if (validIds.has(id)) next.add(id)
+        else changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [])
+
   const undo = useCallback(() => {
     setHistory((h) => {
       if (h.past.length === 0) return h
@@ -262,9 +283,10 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const previous = past.pop() as FloorPlanDoc
       const future = [docRef.current, ...h.future]
       setDoc(previous)
+      pruneStaleSelection(previous)
       return { past, future }
     })
-  }, [])
+  }, [pruneStaleSelection])
 
   const redo = useCallback(() => {
     setHistory((h) => {
@@ -272,9 +294,10 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const [next, ...rest] = h.future
       const past = [...h.past, docRef.current]
       setDoc(next)
+      pruneStaleSelection(next)
       return { past, future: rest }
     })
-  }, [])
+  }, [pruneStaleSelection])
 
   return useMemo<FloorPlanDocStore>(
     () => ({

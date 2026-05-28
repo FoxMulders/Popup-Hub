@@ -20,6 +20,7 @@ export type ObjectKind =
   | 'aisle'
   | 'label'
   | 'door'
+  | 'emergency_exit'
   | 'stage'
 
 export interface BasePlacedObject {
@@ -69,6 +70,17 @@ export interface DoorObject extends BasePlacedObject {
   doorType: 'entrance' | 'exit'
 }
 
+/**
+ * Emergency exit fixture. Modeled as its own kind (rather than another
+ * `doorType` variant) so the canvas can paint it with the universally
+ * recognised red/yellow striped chrome and so the legacy bridge can
+ * always project it as a fire-egress `exit` venue element regardless
+ * of how it was drawn.
+ */
+export interface EmergencyExitObject extends BasePlacedObject {
+  kind: 'emergency_exit'
+}
+
 export interface StageObject extends BasePlacedObject {
   kind: 'stage'
 }
@@ -79,6 +91,7 @@ export type PlacedObject =
   | AisleObject
   | LabelObject
   | DoorObject
+  | EmergencyExitObject
   | StageObject
 
 export interface FloorPlanDoc {

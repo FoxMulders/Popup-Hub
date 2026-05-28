@@ -1,22 +1,43 @@
-/** Shared layout + pose math for Popup Hub loader variants. */
-export const LOGO_NATURAL_WIDTH = 1024
-export const LOGO_NATURAL_HEIGHT = 559
-export const LOGO_ASPECT = LOGO_NATURAL_HEIGHT / LOGO_NATURAL_WIDTH
+/**
+ * Shared layout + pose math for Popup Hub loader variants.
+ *
+ * Asset notes
+ * ===========
+ * The market storefront uses the icon-only PNG (`/popup-hub-icon.png`,
+ * 299 × 299) so the brand wordmark "Popup Hub" can be rendered as
+ * separate SVG `<text>` ABOVE the walking canvas instead of riding
+ * underneath the storefront and crashing into the sidewalk. Keeping
+ * the icon square also means we can sit its bottom edge flush with
+ * the sidewalk surface — the previous wordmark PNG had ~30% empty
+ * space below the storefront art that visually lifted it off the
+ * ground.
+ */
+export const ICON_NATURAL_SIZE = 299
 
 export const LOADER_LAYOUT = {
   fps: 60,
   sidewalkY: 408,
-  /** Walkway surface — logo ground line sits here. */
-  logoBottomY: 410,
+  /**
+   * The icon's bottom edge lands here — chosen so the storefront base
+   * line tucks 3 px under the sidewalk's top surface (`sidewalkY − 6`),
+   * giving a clean "feet planted on the ground" silhouette with no
+   * floating-above-pavement gap.
+   */
+  logoBottomY: 405,
   characterStartX: 72,
   characterStopX: 288,
   hubX: 532,
-  /** Wide wordmark — height derived from true aspect ratio (no letterboxing). */
-  logoWidth: 440,
-  logoHeight: Math.round(440 * LOGO_ASPECT),
-  /** Pin center as fraction of rendered logo height (matches PNG artwork). */
-  pinOffsetY: 0.3,
-  pinScale: 440 / 250,
+  /** Square storefront icon — same width and height. */
+  logoWidth: 200,
+  logoHeight: 200,
+  /**
+   * Pin center as a fraction of rendered icon height. The new
+   * `popup-hub-icon.png` artwork places the storefront pin/circle at
+   * roughly 60 % from the top of the icon, so the green door overlay
+   * and the masked cutout line up with it.
+   */
+  pinOffsetY: 0.6,
+  pinScale: 200 / 250,
   /** All variants use the slowest timing (sleepy-stroll). */
   approachFrames: 420,
   walkPhaseStep: 0.035,
@@ -474,7 +495,22 @@ export function buildFamilyPoses(
     const y = baseY + member.yOffset + (extra?.y ?? 0)
     const phase = (walkPhase + member.walkPhaseOffset) % 1
     const body = poseFn(x, y, member.scale, phase, member.id, member)
-    return { id: member.id, x, y, scale: member.scale, ...body }
+    // Lead always carries a phone in their right hand so the loader
+    // can keep its notification flash looping for the entire animation
+    // lifetime, no matter which variant is playing. Only `phoneCheckPose`
+    // already synthesizes its own phone (with a different pose); leave
+    // that one alone.
+    let withPhone = body
+    if (member.hasPhone && !body.phone) {
+      const phone: CharacterPose['phone'] = {
+        x: body.rightForearm.x2 - 5 * member.scale,
+        y: body.rightForearm.y2 - 10 * member.scale,
+        w: 10 * member.scale,
+        h: 16 * member.scale,
+      }
+      withPhone = { ...body, phone }
+    }
+    return { id: member.id, x, y, scale: member.scale, ...withPhone }
   })
 }
 

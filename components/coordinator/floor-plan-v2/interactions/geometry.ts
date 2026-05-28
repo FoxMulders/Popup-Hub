@@ -192,6 +192,99 @@ export function clampObjectToCanvas(
 }
 
 /**
+ * Axis-aligned bounding box that fully encloses every object in
+ * `objects` (each measured by its own rotated AABB). Returns `null`
+ * for an empty input so callers can early-out cleanly.
+ *
+ * Used by group-rotation clamping: instead of nudging each booth
+ * independently — which warps the cluster's relative geometry when
+ * one corner pokes past the wall — we measure the cluster as one and
+ * apply a single uniform translation. This keeps a tilted row of
+ * booths flush against the wall after rotation rather than scrambled.
+ */
+export function groupRotatedAabb(
+  objects: ReadonlyArray<PlacedObject>
+): Rect | null {
+  if (objects.length === 0) return null
+  let minX = Number.POSITIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+  for (const obj of objects) {
+    const aabb = rotatedAabb(obj)
+    if (aabb.x < minX) minX = aabb.x
+    if (aabb.y < minY) minY = aabb.y
+    if (aabb.x + aabb.width > maxX) maxX = aabb.x + aabb.width
+    if (aabb.y + aabb.height > maxY) maxY = aabb.y + aabb.height
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+/**
+ * Returns true when `rect` sits fully inside the canvas
+ * `[0, canvasWidthFt] × [0, canvasLengthFt]`. A small epsilon
+ * tolerance absorbs floating-point round-off from the rotation math
+ * so a perfectly-flush object never reads as a fraction-of-an-inch
+ * overflow.
+ *
+ * Used as the rotation-preflight gate: callers that have already
+ * applied a per-object or group clamp use this to confirm the
+ * resulting rotated AABB really is contained, and *halt* the
+ * rotation gesture entirely (Strategy A from the spec) if not.
+ */
+export function aabbFitsCanvas(
+  rect: Rect,
+  canvasWidthFt: number,
+  canvasLengthFt: number
+): boolean {
+  const eps = 1e-6
+  return (
+    rect.x >= -eps &&
+    rect.y >= -eps &&
+    rect.x + rect.width <= canvasWidthFt + eps &&
+    rect.y + rect.height <= canvasLengthFt + eps
+  )
+}
+
+/**
+ * Compute the translation `(dx, dy)` to apply uniformly to every
+ * object in `objects` so the union of their rotated AABBs sits fully
+ * inside `[0, canvasWidthFt] × [0, canvasLengthFt]`.
+ *
+ * - When the union already fits, returns `{ dx: 0, dy: 0 }`.
+ * - When the union pokes past one or more edges but is still narrower
+ *   than the canvas on every axis, returns the smallest delta that
+ *   pulls it back inside (Strategy B from the spec — "slide the
+ *   group's positioning center back inward by that exact offset").
+ * - When the union is *wider* or *taller* than the canvas itself,
+ *   returns `null`. The cluster cannot be fitted via translation
+ *   alone; callers should fall back to per-object clamping or block
+ *   the operation entirely (Strategy A).
+ */
+export function groupCanvasClampDelta(
+  objects: ReadonlyArray<PlacedObject>,
+  canvasWidthFt: number,
+  canvasLengthFt: number
+): { dx: number; dy: number } | null {
+  const union = groupRotatedAabb(objects)
+  if (!union) return { dx: 0, dy: 0 }
+  if (union.width > canvasWidthFt || union.height > canvasLengthFt) {
+    return null
+  }
+  let dx = 0
+  let dy = 0
+  if (union.x < 0) dx = -union.x
+  else if (union.x + union.width > canvasWidthFt) {
+    dx = canvasWidthFt - (union.x + union.width)
+  }
+  if (union.y < 0) dy = -union.y
+  else if (union.y + union.height > canvasLengthFt) {
+    dy = canvasLengthFt - (union.y + union.height)
+  }
+  return { dx, dy }
+}
+
+/**
  * Hit-test a point against the object list. Walks z-order from top to
  * bottom (last in list = topmost) so the nearest visible object wins.
  * Honours per-object rotation via `rectContainsPointRotated`.

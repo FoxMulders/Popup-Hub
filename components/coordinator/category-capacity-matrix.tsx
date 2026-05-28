@@ -51,7 +51,18 @@ function CategoryCapacityCard({ row }: { row: CategoryCapacityRow }) {
       )}
     >
       <div className="mb-2 min-h-[2.5rem]">
-        <h3 className={cn('text-sm font-semibold leading-snug', styles.name)}>{row.categoryName}</h3>
+        <h3
+          className={cn(
+            // Tighter type on narrow phones (2-col grid → ~150px cards)
+            // so multi-word category names like "3D Printing" or
+            // "Outdoor Gear" don't fragment into 3-4 broken lines.
+            'text-[13px] font-semibold leading-snug break-words hyphens-auto sm:text-sm',
+            styles.name
+          )}
+          title={row.categoryName}
+        >
+          {row.categoryName}
+        </h3>
         <p className="mt-0.5 text-[11px] text-muted-foreground">{formatBoothPrice(row.pricePerBooth)}</p>
       </div>
 
@@ -67,14 +78,14 @@ function CategoryCapacityCard({ row }: { row: CategoryCapacityRow }) {
         />
       </div>
 
-      <div className="mt-auto flex items-end justify-between gap-2">
+      <div className="mt-auto flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-2">
         <p className="text-xs text-muted-foreground">
           <span className="font-semibold text-foreground">{row.approvedCount}</span>
           <span className="text-muted-foreground"> / {row.maxSlots} filled</span>
         </p>
         <span
           className={cn(
-            'shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+            'shrink-0 self-start rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide sm:self-auto',
             styles.pill
           )}
         >

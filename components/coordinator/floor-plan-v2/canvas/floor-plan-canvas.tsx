@@ -1,6 +1,13 @@
 'use client'
 
-import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { CanvasGrid } from './canvas-grid'
 import { CanvasObjects } from './canvas-objects'
 import {
@@ -8,9 +15,11 @@ import {
   MarqueePreview,
   SelectionOverlay,
 } from './canvas-overlays'
-import { useViewport, type ZoomMath } from './use-viewport'
+import { InlineLabelEditor } from './inline-label-editor'
+import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
+import type { LabelObject, PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +32,21 @@ interface FloorPlanCanvasProps {
    * tool-switching policy entirely.
    */
   onAfterDrawCommit?: () => void
+  /**
+   * Receives the canvas's imperative viewport API on mount. The host
+   * uses this to drive zoom from a toolbar that lives outside the
+   * canvas's DOM subtree. Calling code should keep a ref + a
+   * `currentZoom` mirror in state so it can re-render the readout.
+   */
+  onViewportReady?: (api: ViewportApi | null) => void
+  /** Mirrors viewport.zoom upward so the toolbar can render the % readout. */
+  onZoomChange?: (zoom: number) => void
+  /**
+   * Sorted list of category names for this event (Step 2). Forwarded
+   * to the pointer hook so newly drawn booths auto-allocate to the
+   * currently least-used category, preventing visual clusters.
+   */
+  eventCategoryNames?: ReadonlyArray<string>
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
@@ -34,6 +58,9 @@ export function FloorPlanCanvas({
   store,
   toolState,
   onAfterDrawCommit,
+  onViewportReady,
+  onZoomChange,
+  eventCategoryNames,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
 }: FloorPlanCanvasProps) {
@@ -110,6 +137,20 @@ export function FloorPlanCanvas({
     getToolMode: () => toolState.tool,
   })
 
+  // Lift zoom controls to the host so the toolbar (rendered outside
+  // this canvas's DOM subtree) can drive zoom in / zoom out / reset.
+  // The API object is recreated each render so we only forward it
+  // on identity change, not on each zoom tick — host re-renders for
+  // the % readout via `onZoomChange` instead.
+  useEffect(() => {
+    onViewportReady?.(viewport)
+    return () => onViewportReady?.(null)
+  }, [onViewportReady, viewport])
+
+  useEffect(() => {
+    onZoomChange?.(viewport.zoom)
+  }, [onZoomChange, viewport.zoom])
+
   const transform = useMemo(
     () => ({ basePxPerFt, zoom: viewport.zoom }),
     [basePxPerFt, viewport.zoom]
@@ -123,7 +164,77 @@ export function FloorPlanCanvas({
     transform,
     panActive: viewport.panActive,
     onAfterDrawCommit,
+    eventCategoryNames,
   })
+
+  /**
+   * Inline label editor state. A double-click on any placed object
+   * swaps the static SVG label for an HTML `<input>` rendered through
+   * `<foreignObject>` so the user can rename in place. Tracked here
+   * (rather than in the floor-plan-v2 host) because the editor is
+   * positioned in canvas-pixel space, which is local to this surface.
+   */
+  const [editingObjectId, setEditingObjectId] = useState<string | null>(null)
+  const editingObj = useMemo<PlacedObject | null>(() => {
+    if (!editingObjectId) return null
+    return store.doc.objects.find((o) => o.id === editingObjectId) ?? null
+  }, [editingObjectId, store.doc.objects])
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      // Only react to dblclick in select mode — in draw mode the user
+      // is mid-stroke and a stray dblclick shouldn't pop a renamer.
+      if (toolState.tool !== 'select') return
+      const target = e.target as Element | null
+      const id = target
+        ?.closest('[data-object-id]')
+        ?.getAttribute('data-object-id')
+      if (!id) return
+      const obj = store.doc.objects.find((o) => o.id === id)
+      if (!obj || obj.locked) return
+      e.preventDefault()
+      e.stopPropagation()
+      // Make sure the object is selected so cancel/blur leaves the
+      // user with the same selection state they expected.
+      if (!store.selectedIds.has(id)) {
+        store.setSelection([id])
+      }
+      setEditingObjectId(id)
+    },
+    [store, toolState.tool]
+  )
+
+  const commitEditing = useCallback(
+    (next: string) => {
+      if (!editingObj) {
+        setEditingObjectId(null)
+        return
+      }
+      const trimmed = next.trim()
+      if (editingObj.kind === 'label') {
+        const label = editingObj as LabelObject
+        if ((label.text ?? '') !== trimmed) {
+          store.updateObject(editingObj.id, { text: trimmed })
+        }
+      } else {
+        if ((editingObj.label ?? '') !== trimmed) {
+          store.updateObject(editingObj.id, { label: trimmed || undefined })
+        }
+      }
+      setEditingObjectId(null)
+    },
+    [editingObj, store]
+  )
+
+  const cancelEditing = useCallback(() => {
+    setEditingObjectId(null)
+  }, [])
+
+  // Close any active edit if the underlying object disappears (e.g.
+  // it was deleted via the toolbar while the input was focused).
+  useEffect(() => {
+    if (editingObjectId && !editingObj) setEditingObjectId(null)
+  }, [editingObj, editingObjectId])
 
   const pxPerFt = transform.basePxPerFt * transform.zoom
   const docWidthPx = store.doc.canvasWidthFt * pxPerFt
@@ -213,6 +324,7 @@ export function FloorPlanCanvas({
           onPointerUp={pointer.onPointerUp}
           onPointerCancel={pointer.onPointerUp}
           onContextMenu={pointer.onContextMenu}
+          onDoubleClick={handleDoubleClick}
         >
           <CanvasGrid
             widthFt={store.doc.canvasWidthFt}
@@ -224,6 +336,7 @@ export function FloorPlanCanvas({
             objects={store.doc.objects}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
+            editingObjectId={editingObjectId}
           />
           {toolState.tool === 'select' ? (
             <SelectionOverlay
@@ -239,14 +352,16 @@ export function FloorPlanCanvas({
             pxPerFt={pxPerFt}
           />
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
+          {editingObj ? (
+            <InlineLabelEditor
+              obj={editingObj}
+              pxPerFt={pxPerFt}
+              onCommit={commitEditing}
+              onCancel={cancelEditing}
+            />
+          ) : null}
         </svg>
       </div>
-      <ZoomBadge
-        zoom={viewport.zoom}
-        onZoomIn={viewport.zoomIn}
-        onZoomOut={viewport.zoomOut}
-        onReset={viewport.resetZoom}
-      />
     </div>
   )
 }
@@ -265,43 +380,3 @@ function cursorForTool(tool: 'hand' | 'select' | 'draw' | 'pan'): string {
   }
 }
 
-function ZoomBadge({
-  zoom,
-  onZoomIn,
-  onZoomOut,
-  onReset,
-}: {
-  zoom: number
-  onZoomIn: () => void
-  onZoomOut: () => void
-  onReset: () => void
-}) {
-  return (
-    <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-lg border border-stone-300 bg-white/95 px-1.5 py-1 text-xs font-semibold text-stone-700 shadow-sm">
-      <button
-        type="button"
-        onClick={onZoomOut}
-        className="pointer-events-auto rounded px-1.5 py-0.5 hover:bg-stone-100"
-        aria-label="Zoom out"
-      >
-        −
-      </button>
-      <button
-        type="button"
-        onClick={onReset}
-        className="pointer-events-auto min-w-[3.25rem] rounded px-1.5 py-0.5 text-center tabular-nums hover:bg-stone-100"
-        aria-label="Reset zoom"
-      >
-        {Math.round(zoom * 100)}%
-      </button>
-      <button
-        type="button"
-        onClick={onZoomIn}
-        className="pointer-events-auto rounded px-1.5 py-0.5 hover:bg-stone-100"
-        aria-label="Zoom in"
-      >
-        +
-      </button>
-    </div>
-  )
-}

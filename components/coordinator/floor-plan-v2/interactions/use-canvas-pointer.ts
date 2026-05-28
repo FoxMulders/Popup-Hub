@@ -12,7 +12,9 @@ import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
 import {
+  aabbFitsCanvas,
   canvasClampDelta,
+  groupCanvasClampDelta,
   normalizeRect,
   objectCenter,
   rectsIntersect,
@@ -42,6 +44,14 @@ interface UseCanvasPointerOptions {
    * snap the active tool back to Select after a single placement.
    */
   onAfterDrawCommit?: () => void
+  /**
+   * Sorted list of category names defined on this event. Used by the
+   * draw-commit flow to assign each new booth to the *least*-used
+   * category in the current document — so two newly-placed booths
+   * never default into the same bucket and end up clustered. Empty /
+   * undefined disables the auto-assignment (booth is born untagged).
+   */
+  eventCategoryNames?: ReadonlyArray<string>
 }
 
 type DrawDraft =
@@ -76,19 +86,27 @@ type MarqueeState =
  * Active rotate gesture state. Started when the user pointer-downs on
  * an element with `data-rotate-handle="true"` and ended on pointer-up.
  *
- * `initialAngle` is the angle (degrees) from the object center to the
- * initial pointer position. We accumulate `currentRotation - initialRotation`
- * relative to that, so the handle stays under the pointer regardless of
- * which screen direction the user drags.
+ * `initialAngle` is the angle (degrees) from the anchor object's center
+ * to the initial pointer position; the same delta angle is then applied
+ * to every selected object in `affected` (each rotated independently
+ * around its own center) so multi-select gestures rotate the whole
+ * group rather than only the dragged anchor.
  */
 type RotateState =
   | null
   | {
       pointerId: number
-      objectId: string
-      centerFt: Point
-      initialRotation: number
-      initialAngleDeg: number
+      /** The object whose handle was grabbed — drives the cursor angle. */
+      anchorId: string
+      anchorCenterFt: Point
+      anchorInitialAngleDeg: number
+      /** Snapshot of every object affected by this gesture. */
+      affected: Array<{
+        id: string
+        initialRotation: number
+        initialX: number
+        initialY: number
+      }>
     }
 
 /**
@@ -132,6 +150,17 @@ export function useCanvasPointer(
   const { store, toolState, scrollRef, surfaceRef, transform, panActive } =
     options
   const onAfterDrawCommit = options.onAfterDrawCommit
+  const eventCategoryNames = options.eventCategoryNames
+
+  // The host re-renders this hook every time the doc changes (because
+  // `store.doc` is a different object), but `commitDraft` only fires
+  // on a draw release. We refresh refs of the inputs it needs each
+  // render so the closure inside `onPointerUp` always sees the latest
+  // category list and the current booth distribution.
+  const eventCategoryNamesRef = useRef(eventCategoryNames)
+  useEffect(() => {
+    eventCategoryNamesRef.current = eventCategoryNames
+  }, [eventCategoryNames])
 
   const [draft, setDraft] = useState<DrawDraft>(null)
   const dragRef = useRef<DragState>(null)
@@ -254,18 +283,40 @@ export function useCanvasPointer(
       const rotateHandle = target?.closest('[data-rotate-handle="true"]')
       if (rotateHandle && toolState.tool === 'select') {
         const handleObjectId = rotateHandle.getAttribute('data-object-id')
-        const obj =
+        const anchorObj =
           handleObjectId &&
           store.doc.objects.find((o) => o.id === handleObjectId)
-        if (obj) {
+        if (anchorObj) {
           capturePointer(e.currentTarget, e.pointerId)
-          const center = objectCenter(obj)
+          const anchorCenter = objectCenter(anchorObj)
+          // If the handle's owner is part of a multi-selection, rotate
+          // every selected (unlocked) object as a group; each pivots
+          // around its own center so the cluster stays in place. If
+          // the handle's owner isn't in the current selection (rare —
+          // only selected items render handles), fall back to a single-
+          // object rotate against just the anchor.
+          const ownerSelected = store.selectedIds.has(anchorObj.id)
+          const targetIds = ownerSelected
+            ? Array.from(store.selectedIds)
+            : [anchorObj.id]
+          const idSet = new Set(targetIds)
+          const affected = store.doc.objects
+            .filter((o) => idSet.has(o.id) && !o.locked)
+            .map((o) => ({
+              id: o.id,
+              initialRotation: o.rotation || 0,
+              initialX: o.x,
+              initialY: o.y,
+            }))
+          // If the only candidate (the anchor itself) is locked we
+          // bail entirely — nothing to rotate.
+          if (affected.length === 0) return
           rotateRef.current = {
             pointerId: e.pointerId,
-            objectId: obj.id,
-            centerFt: center,
-            initialRotation: obj.rotation || 0,
-            initialAngleDeg: angleDegFromCenter(center, ft),
+            anchorId: anchorObj.id,
+            anchorCenterFt: anchorCenter,
+            anchorInitialAngleDeg: angleDegFromCenter(anchorCenter, ft),
+            affected,
           }
           setRotating(true)
           return
@@ -322,34 +373,98 @@ export function useCanvasPointer(
       const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
 
       if (rotate && rotate.pointerId === pointerId) {
-        const angleNow = angleDegFromCenter(rotate.centerFt, ft)
-        const delta = angleNow - rotate.initialAngleDeg
-        let nextRotation = rotate.initialRotation + delta
+        const angleNow = angleDegFromCenter(rotate.anchorCenterFt, ft)
+        let deltaDeg = angleNow - rotate.anchorInitialAngleDeg
         if (!shiftKey) {
           // Default: snap to ROTATE_SNAP_DEG (15°). Shift = freeform.
-          nextRotation =
-            Math.round(nextRotation / ROTATE_SNAP_DEG) * ROTATE_SNAP_DEG
+          deltaDeg = Math.round(deltaDeg / ROTATE_SNAP_DEG) * ROTATE_SNAP_DEG
         }
-        nextRotation = normalizeDegrees(nextRotation)
-        // Push the rotation, then clamp the object back inside the
-        // canvas if the new rotated AABB pokes out of bounds. We
-        // translate rather than refuse the rotation so the gesture
-        // always feels responsive.
-        const obj = store.doc.objects.find((o) => o.id === rotate.objectId)
-        if (obj) {
-          const probe = { ...obj, rotation: nextRotation }
-          const { dx, dy } = canvasClampDelta(
+        const cw = store.doc.canvasWidthFt
+        const cl = store.doc.canvasLengthFt
+        const objById = new Map(store.doc.objects.map((o) => [o.id, o]))
+
+        // Build the proposed rotated layout from each object's *initial*
+        // (pre-gesture) position so the clamp measures the new orientation
+        // freshly each frame instead of accumulating round-off drift.
+        type Plan = {
+          id: string
+          nextRotation: number
+          baseX: number
+          baseY: number
+          probe: PlacedObject
+        }
+        const plans: Plan[] = []
+        for (const a of rotate.affected) {
+          const obj = objById.get(a.id)
+          if (!obj) continue
+          const nextRotation = normalizeDegrees(a.initialRotation + deltaDeg)
+          const probe: PlacedObject = {
+            ...obj,
+            rotation: nextRotation,
+            x: a.initialX,
+            y: a.initialY,
+          }
+          plans.push({
+            id: a.id,
+            nextRotation,
+            baseX: a.initialX,
+            baseY: a.initialY,
             probe,
-            store.doc.canvasWidthFt,
-            store.doc.canvasLengthFt
-          )
-          store.updateObject(
-            rotate.objectId,
-            {
-              rotation: nextRotation,
-              x: obj.x + dx,
-              y: obj.y + dy,
-            },
+          })
+        }
+        if (plans.length === 0) return
+
+        // Containment: prefer a single uniform translation that pulls the
+        // group's union AABB back inside the canvas (so a tilted row stays
+        // flush against the wall). When the cluster is itself larger than
+        // the canvas after rotating, fall back to clamping each object
+        // independently so nothing leaks out, even at the cost of warping
+        // relative geometry slightly.
+        const probes = plans.map((p) => p.probe)
+        const unionDelta = groupCanvasClampDelta(probes, cw, cl)
+        type PatchEntry = {
+          id: string
+          patch: Partial<PlacedObject>
+          finalProbe: PlacedObject
+        }
+        const entries: PatchEntry[] = []
+        if (unionDelta) {
+          for (const p of plans) {
+            const nx = p.baseX + unionDelta.dx
+            const ny = p.baseY + unionDelta.dy
+            entries.push({
+              id: p.id,
+              patch: { rotation: p.nextRotation, x: nx, y: ny },
+              finalProbe: { ...p.probe, x: nx, y: ny },
+            })
+          }
+        } else {
+          for (const p of plans) {
+            const { dx, dy } = canvasClampDelta(p.probe, cw, cl)
+            const nx = p.baseX + dx
+            const ny = p.baseY + dy
+            entries.push({
+              id: p.id,
+              patch: { rotation: p.nextRotation, x: nx, y: ny },
+              finalProbe: { ...p.probe, x: nx, y: ny },
+            })
+          }
+        }
+        // Final boundary halt: if even the clamped probes still poke
+        // off the canvas (an object whose rotated AABB is wider/taller
+        // than the room), freeze the rotation gesture this frame.
+        // The last accepted angle stays committed; the user backs off
+        // and rotation resumes when the angle returns to a fitting
+        // range.
+        for (const entry of entries) {
+          const aabb = rotatedAabb(entry.finalProbe)
+          if (!aabbFitsCanvas(aabb, cw, cl)) {
+            return
+          }
+        }
+        if (entries.length > 0) {
+          store.updateObjects(
+            entries.map((e) => ({ id: e.id, patch: e.patch })),
             { pushHistory: false }
           )
         }
@@ -466,19 +581,33 @@ export function useCanvasPointer(
 
       const rotate = rotateRef.current
       if (rotate && rotate.pointerId === e.pointerId) {
-        const obj = store.doc.objects.find((o) => o.id === rotate.objectId)
-        if (
-          obj &&
-          (obj.rotation || 0) !== rotate.initialRotation
-        ) {
-          // Single history entry that captures the final rotation +
-          // translation. We've been mutating without history during
-          // the gesture; snapshot once on release.
-          store.updateObject(
-            rotate.objectId,
-            { rotation: obj.rotation, x: obj.x, y: obj.y },
-            { pushHistory: true }
-          )
+        // Snapshot every affected object once at gesture end so the
+        // entire group rotation is one undo step. We've been mutating
+        // without history during the move; commit one frame's worth
+        // of patches with pushHistory:true here.
+        const objById = new Map(store.doc.objects.map((o) => [o.id, o]))
+        const finalPatches: Array<{
+          id: string
+          patch: Partial<PlacedObject>
+        }> = []
+        let anyChanged = false
+        for (const a of rotate.affected) {
+          const obj = objById.get(a.id)
+          if (!obj) continue
+          if (
+            (obj.rotation || 0) !== a.initialRotation ||
+            obj.x !== a.initialX ||
+            obj.y !== a.initialY
+          ) {
+            anyChanged = true
+          }
+          finalPatches.push({
+            id: a.id,
+            patch: { rotation: obj.rotation, x: obj.x, y: obj.y },
+          })
+        }
+        if (anyChanged && finalPatches.length > 0) {
+          store.updateObjects(finalPatches, { pushHistory: true })
         }
         rotateRef.current = null
         setRotating(false)
@@ -495,7 +624,12 @@ export function useCanvasPointer(
           // user gets immediate visual feedback. Only commit when there's
           // at least one snap-unit of extent — guards against accidental
           // 0-area objects when the user just taps and lifts.
-          commitDraft(store, draft.kind, rect)
+          commitDraft(
+            store,
+            draft.kind,
+            rect,
+            eventCategoryNamesRef.current
+          )
           onAfterDrawCommit?.()
         }
         setDraft(null)
@@ -579,10 +713,43 @@ export function useCanvasPointer(
   }
 }
 
+/**
+ * Pick the least-used category from `eventCategoryNames` based on
+ * existing booth assignments in the doc. Ties break toward the
+ * earlier entry in `eventCategoryNames` so coordinators get a
+ * predictable rotation. Returns `null` when no categories are
+ * defined yet — the caller leaves the booth untagged in that case.
+ */
+function pickLeastUsedCategory(
+  store: FloorPlanDocStore,
+  eventCategoryNames: ReadonlyArray<string> | undefined
+): string | null {
+  if (!eventCategoryNames || eventCategoryNames.length === 0) return null
+  const counts = new Map<string, number>()
+  for (const name of eventCategoryNames) counts.set(name, 0)
+  for (const obj of store.doc.objects) {
+    if (obj.kind !== 'booth') continue
+    const cat = obj.categoryName
+    if (!cat) continue
+    if (counts.has(cat)) counts.set(cat, (counts.get(cat) ?? 0) + 1)
+  }
+  let bestName = eventCategoryNames[0]!
+  let bestCount = counts.get(bestName) ?? 0
+  for (const name of eventCategoryNames) {
+    const c = counts.get(name) ?? 0
+    if (c < bestCount) {
+      bestName = name
+      bestCount = c
+    }
+  }
+  return bestName
+}
+
 function commitDraft(
   store: FloorPlanDocStore,
   kind: PlacedObject['kind'],
-  rect: Rect
+  rect: Rect,
+  eventCategoryNames?: ReadonlyArray<string>
 ): void {
   const id = `obj-${crypto.randomUUID()}`
   const base = {
@@ -595,9 +762,21 @@ function commitDraft(
   }
   let obj: PlacedObject
   switch (kind) {
-    case 'booth':
-      obj = { ...base, kind: 'booth', accentColor: '#fde68a' }
+    case 'booth': {
+      // Booth fills now derive from category + a deterministic palette.
+      // accentColor stays null so colors flow from the category mapping.
+      // Auto-assign the least-occupied category at draw time so two
+      // newly-placed booths never default into the same bucket — this
+      // is the engine-level half of the "diverse vendor mix" rule.
+      const seedCategory = pickLeastUsedCategory(store, eventCategoryNames)
+      obj = {
+        ...base,
+        kind: 'booth',
+        accentColor: null,
+        ...(seedCategory ? { categoryName: seedCategory } : {}),
+      }
       break
+    }
     case 'wall':
       obj = { ...base, kind: 'wall' }
       break
@@ -609,6 +788,9 @@ function commitDraft(
       break
     case 'door':
       obj = { ...base, kind: 'door', doorType: 'entrance' }
+      break
+    case 'emergency_exit':
+      obj = { ...base, kind: 'emergency_exit', label: 'EXIT' }
       break
     case 'label':
       obj = { ...base, kind: 'label', text: 'Label' }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type {
   BoothObject,
@@ -11,6 +11,14 @@ import type {
 
 interface PropertyInspectorProps {
   store: FloorPlanDocStore
+  /**
+   * Sorted list of category names defined for this event (Step 2 of
+   * the wizard). When provided the booth Category field renders as a
+   * dropdown of these names plus a "Custom…" escape hatch; when empty
+   * we fall back to free-text entry so the inspector still works on
+   * events that don't yet have a category list.
+   */
+  eventCategoryNames?: string[]
   className?: string
 }
 
@@ -25,6 +33,7 @@ interface PropertyInspectorProps {
  */
 export function PropertyInspector({
   store,
+  eventCategoryNames,
   className,
 }: PropertyInspectorProps) {
   const selected = useMemo(() => {
@@ -126,7 +135,11 @@ export function PropertyInspector({
         step={15}
         onChange={(v) => store.updateObject(obj.id, { rotation: v })}
       />
-      <KindSpecificFields store={store} obj={obj} />
+      <KindSpecificFields
+        store={store}
+        obj={obj}
+        eventCategoryNames={eventCategoryNames}
+      />
       <LockToggle store={store} obj={obj} />
     </aside>
   )
@@ -142,6 +155,8 @@ function prettyKindHint(kind: PlacedObject['kind']): string {
       return 'Walkway zone. Advisory only; vendors can still cross it.'
     case 'door':
       return 'Entrance or exit marker. Position freely along walls.'
+    case 'emergency_exit':
+      return 'Emergency egress. Keep paths clear and visible.'
     case 'stage':
       return 'Performance area. Re-size to match the platform footprint.'
     case 'label':
@@ -204,9 +219,11 @@ function SizeFields({
 function KindSpecificFields({
   store,
   obj,
+  eventCategoryNames,
 }: {
   store: FloorPlanDocStore
   obj: PlacedObject
+  eventCategoryNames?: string[]
 }) {
   if (obj.kind === 'booth') {
     const booth = obj as BoothObject
@@ -217,9 +234,9 @@ function KindSpecificFields({
           value={booth.label ?? ''}
           onChange={(v) => store.updateObject(obj.id, { label: v })}
         />
-        <TextField
-          label="Category"
+        <CategoryField
           value={booth.categoryName ?? ''}
+          options={eventCategoryNames ?? []}
           onChange={(v) =>
             store.updateObject(obj.id, { categoryName: v || null })
           }
@@ -389,6 +406,107 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
           </option>
         ))}
       </select>
+    </label>
+  )
+}
+
+interface CategoryFieldProps {
+  value: string
+  options: string[]
+  onChange: (next: string) => void
+}
+
+/** Sentinel `<option>` value for entering a free-form category name. */
+const CATEGORY_CUSTOM_VALUE = '__custom__'
+
+/**
+ * Booth Category field.
+ *
+ * The wizard owns the canonical list of categories for the event
+ * (Step 2 capacity matrix). On the layout canvas, picking a category
+ * for a booth should be a one-tap dropdown that pulls from that list,
+ * not a free-form text box where coordinators have to remember exact
+ * spelling.
+ *
+ * Behaviour:
+ *  - When `options` is non-empty, render a `<select>`. The current
+ *    value is preselected; "— No category —" clears the field.
+ *  - If the booth's existing `value` isn't in `options` (e.g. an
+ *    older booth carries a custom name, or the coordinator hasn't
+ *    defined any categories yet), the dropdown automatically falls
+ *    into "Custom…" mode with a text input pre-filled with that name
+ *    so existing data is preserved and editable.
+ *  - When `options` is empty (event with no category list yet) we
+ *    skip the dropdown entirely and render the plain text field —
+ *    nothing useful would go in the menu otherwise.
+ */
+function CategoryField({ value, options, onChange }: CategoryFieldProps) {
+  const trimmed = value.trim()
+  const matchesOption = trimmed.length > 0 && options.includes(trimmed)
+  const startsCustom = trimmed.length > 0 && !matchesOption
+
+  // `customMode` is sticky once the user opens the custom input, so
+  // typing characters that briefly match an option (e.g. "Cra") doesn't
+  // yank the input out from under them. Called before the no-options
+  // fallback so hook order stays stable.
+  const [customMode, setCustomMode] = useState(startsCustom)
+
+  // No event-level categories defined: degrade to a plain text field
+  // so the inspector still works on legacy / category-less events.
+  // The hook above is still called every render so order is stable.
+  if (options.length === 0) {
+    return (
+      <TextField
+        label="Category"
+        value={value}
+        placeholder="e.g. Crafts"
+        onChange={onChange}
+      />
+    )
+  }
+
+  const selectValue = customMode
+    ? CATEGORY_CUSTOM_VALUE
+    : matchesOption
+      ? trimmed
+      : ''
+
+  return (
+    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
+      <span>Category</span>
+      <select
+        value={selectValue}
+        onChange={(e) => {
+          const next = e.target.value
+          if (next === CATEGORY_CUSTOM_VALUE) {
+            setCustomMode(true)
+            return
+          }
+          setCustomMode(false)
+          onChange(next)
+        }}
+        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+        aria-label="Booth category"
+      >
+        <option value="">— No category —</option>
+        {options.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+        <option value={CATEGORY_CUSTOM_VALUE}>Custom…</option>
+      </select>
+      {customMode ? (
+        <input
+          type="text"
+          value={value}
+          autoFocus
+          placeholder="Custom category name"
+          onChange={(e) => onChange(e.target.value)}
+          className="mt-1 rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+          aria-label="Custom category name"
+        />
+      ) : null}
     </label>
   )
 }

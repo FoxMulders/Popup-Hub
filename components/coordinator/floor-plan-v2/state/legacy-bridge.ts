@@ -61,12 +61,25 @@ function venueElementTypeForObject(
       return 'custom_label'
     case 'door':
       return (obj as DoorObject).doorType
+    case 'emergency_exit':
+      // The legacy schema only knows `entrance` / `exit`, so emergency
+      // egress markers project to `exit`. The fact that the source was
+      // explicitly an emergency exit is preserved in the label string
+      // (see `legacyRoomFromDoc` below).
+      return 'exit'
     case 'booth':
       return null
     default:
       return null
   }
 }
+
+/**
+ * Sentinel label used to round-trip `emergency_exit` through the legacy
+ * `exit` venue element. When we re-hydrate, any `exit` whose label
+ * starts with this prefix becomes an `emergency_exit` again.
+ */
+const EMERGENCY_EXIT_LABEL_PREFIX = 'EMERGENCY:'
 
 export function legacyRoomFromDoc(
   base: LayoutRoom,
@@ -101,6 +114,17 @@ export function legacyRoomFromDoc(
     const elementType = venueElementTypeForObject(obj)
     if (!elementType) continue
 
+    let projectedLabel: string | undefined
+    if (obj.kind === 'label') {
+      projectedLabel = obj.text
+    } else if (obj.kind === 'emergency_exit') {
+      // Tag the emergency-exit so the read path can recover the
+      // distinct kind. Preserve any user label after the sentinel.
+      projectedLabel = `${EMERGENCY_EXIT_LABEL_PREFIX}${obj.label ?? ''}`
+    } else {
+      projectedLabel = obj.label
+    }
+
     venueElements.push({
       id: obj.id,
       type: elementType,
@@ -108,7 +132,7 @@ export function legacyRoomFromDoc(
       row: ftToCell(obj.y),
       colSpan: spanCells(obj.width),
       rowSpan: spanCells(obj.height),
-      label: obj.label ?? (obj.kind === 'label' ? obj.text : undefined),
+      label: projectedLabel,
       locked: obj.locked,
     })
   }
@@ -142,6 +166,14 @@ function objectFromBoothCell(cell: BoothCell): BoothObject {
 }
 
 function objectFromVenueElement(el: VenueElement): PlacedObject | null {
+  const rawLabel = el.label
+  const isEmergencyTagged =
+    typeof rawLabel === 'string' &&
+    rawLabel.startsWith(EMERGENCY_EXIT_LABEL_PREFIX)
+  const cleanedLabel = isEmergencyTagged
+    ? rawLabel.slice(EMERGENCY_EXIT_LABEL_PREFIX.length) || undefined
+    : rawLabel
+
   const base = {
     id: el.id,
     x: el.col,
@@ -149,7 +181,7 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
     width: Math.max(1, el.colSpan ?? 1),
     height: Math.max(1, el.rowSpan ?? 1),
     rotation: 0,
-    label: el.label,
+    label: cleanedLabel,
     locked: el.locked,
   }
   switch (el.type) {
@@ -162,8 +194,15 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
     case 'custom_label':
       return { ...base, kind: 'label', text: el.label ?? '' }
     case 'entrance':
+      return { ...base, kind: 'door', doorType: 'entrance' }
     case 'exit':
-      return { ...base, kind: 'door', doorType: el.type }
+      // Emergency-exit fidelity: if the saved label still carries the
+      // sentinel prefix, re-hydrate as the dedicated kind. Otherwise
+      // fall back to the standard door+exit fixture.
+      if (isEmergencyTagged) {
+        return { ...base, kind: 'emergency_exit' }
+      }
+      return { ...base, kind: 'door', doorType: 'exit' }
     case 'door':
       return { ...base, kind: 'door', doorType: 'entrance' }
     default:

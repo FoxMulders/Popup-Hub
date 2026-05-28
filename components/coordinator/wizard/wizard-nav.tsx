@@ -28,7 +28,7 @@ export function WizardNav({ step, onBack, onNext, nextDisabled, nextLabel }: Wiz
       ? 'Proceed to Capacity Settings →'
       : step === 2
         ? 'Open Floor Plan Canvas →'
-        : 'Save floor plan & deploy'
+        : 'Save market'
 
   return (
     // On mobile we stack the buttons full-width so the Proceed CTA is
