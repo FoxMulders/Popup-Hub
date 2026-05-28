@@ -231,8 +231,9 @@
     display: none !important;
   }
   body.workspace-fullscreen .workspace-fullscreen-tight-pad {
-    padding-top: 0.5rem;
-    padding-bottom: 0.25rem;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.25rem !important;
+    padding-block: 0.5rem 0.25rem !important;
   }
 
 
