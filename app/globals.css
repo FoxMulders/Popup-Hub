@@ -216,7 +216,15 @@
    * `components/coordinator/market-setup-wizard.tsx` (useEffect
    * guarded by `isFloorPlanStep`).
    */
-  body.workspace-fullscreen {
+  body.workspace-fullscreen,
+  html.workspace-fullscreen {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+  html:has(body.workspace-fullscreen) {
+    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
   }
   body.workspace-fullscreen .workspace-fullscreen-hide {

@@ -892,13 +892,19 @@ export function MarketSetupWizard({
   // setup wrapper's vertical padding, and disables body-level
   // overflow so the canvas's `overflow:auto` element becomes the
   // single unified scroll surface (no more dual page+canvas
-  // scrollbars).
+  // scrollbars). The `<html>` element is also toggled to
+  // `overflow: hidden; height: 100dvh` because body's overflow
+  // alone doesn't suppress the browser-level scrollbar — the root
+  // scroller is the html element and Chrome still grows the page
+  // unless html itself is height-pinned.
   useEffect(() => {
     if (!isFloorPlanStep) return
     const cls = 'workspace-fullscreen'
     document.body.classList.add(cls)
+    document.documentElement.classList.add(cls)
     return () => {
       document.body.classList.remove(cls)
+      document.documentElement.classList.remove(cls)
     }
   }, [isFloorPlanStep])
 
