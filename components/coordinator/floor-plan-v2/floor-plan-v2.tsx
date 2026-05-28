@@ -9,6 +9,10 @@ import {
   type MutableRefObject,
 } from 'react'
 import { toast } from 'sonner'
+import {
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
@@ -19,7 +23,8 @@ import { CanvasLegend } from './canvas/canvas-legend'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { LayoutRoomBar } from '../layout-room-bar'
-import { ToolPalette } from './tools/tool-palette'
+import { CanvasCommandBar } from './tools/canvas-command-bar'
+import { CanvasLeftDock } from './tools/canvas-left-dock'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import { autoArrange } from './engine/auto-arrange'
 import {
@@ -36,8 +41,10 @@ import { useFloorPlanDoc } from './state/use-floor-plan-doc'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from './state/types'
 import {
   aabbFitsCanvas,
+  alignSelectionPatches,
   canvasClampDelta,
   groupCanvasClampDelta,
+  groupRotatedAabb,
   rotatedAabb,
 } from './interactions/geometry'
 import type { LayoutRoom } from '@/types/database'
@@ -153,6 +160,8 @@ export function FloorPlanV2({
   const [drawShape, setDrawShape] = useState<DrawShape>(
     DEFAULT_TOOL_STATE.drawShape
   )
+  const [leftDockOpen, setLeftDockOpen] = useState(true)
+  const [rightInspectorOpen, setRightInspectorOpen] = useState(true)
 
   // The wizard's room list is the canonical source of (rooms, names,
   // dims). The unified doc's `rooms` field is updated whenever the
@@ -478,6 +487,69 @@ export function FloorPlanV2({
     [store]
   )
 
+  /**
+   * Align Vertical / Align Horizontal — snap the geometric centers of
+   * the current selection to the *median* center on a single axis.
+   *
+   *   - "vertical"   = snap each center's x to the median x. Objects
+   *                    stack into a single vertical column. Y-coords
+   *                    are untouched, preserving relative top/bottom
+   *                    spacing.
+   *   - "horizontal" = snap each center's y to the median y. Objects
+   *                    line up across a single horizontal row.
+   *
+   * We use median (not mean) so a single far-away outlier can't drag
+   * the whole group across the canvas — the line lands on a value
+   * already present in the selection, so visible motion stays bounded.
+   * Locked objects contribute to the median but never move.
+   * Patches are applied via `updateObjects` so undo rolls back the
+   * entire group atomically.
+   *
+   * Defined here (above the keyboard-shortcut effect) so the effect
+   * can list these callbacks in its deps without hitting a TDZ
+   * "used before declaration" error from the const bindings below.
+   */
+  const handleAlignSelection = useCallback(
+    (orientation: 'vertical' | 'horizontal') => {
+      const ids = store.selectedIds
+      if (ids.size < 2) {
+        toast.message('Select two or more objects to align.')
+        return false
+      }
+      const selected = store.doc.objects.filter((o) => ids.has(o.id))
+      if (selected.length < 2) return false
+      const axis: 'x' | 'y' = orientation === 'vertical' ? 'x' : 'y'
+      const patches = alignSelectionPatches(
+        selected,
+        axis,
+        store.doc.canvasWidthFt,
+        store.doc.canvasLengthFt
+      )
+      if (patches.length === 0) {
+        toast.message('Already aligned.')
+        return false
+      }
+      store.updateObjects(patches)
+      toast.success(
+        orientation === 'vertical'
+          ? `Aligned ${patches.length} object${patches.length === 1 ? '' : 's'} to vertical axis.`
+          : `Aligned ${patches.length} object${patches.length === 1 ? '' : 's'} to horizontal axis.`,
+        { duration: 1500 }
+      )
+      return true
+    },
+    [store]
+  )
+
+  const handleAlignVertical = useCallback(
+    () => handleAlignSelection('vertical'),
+    [handleAlignSelection]
+  )
+  const handleAlignHorizontal = useCallback(
+    () => handleAlignSelection('horizontal'),
+    [handleAlignSelection]
+  )
+
   // Keyboard shortcuts.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -537,6 +609,38 @@ export function FloorPlanV2({
         return
       }
 
+      // Alignment shortcuts — Shift+H aligns selected objects'
+      // horizontal centers (snaps every center's y to the median y)
+      // and Shift+V aligns vertical centers (snaps x to the median).
+      // Plain `h` / `v` are reserved for Hand / Select tool toggles
+      // below; the case-sensitive checks here ensure the modifier
+      // form takes priority and never collides with the tool keys.
+      if (!cmd && e.shiftKey && key === 'h') {
+        if (store.selectedIds.size >= 2) {
+          e.preventDefault()
+          handleAlignHorizontal()
+        }
+        return
+      }
+      if (!cmd && e.shiftKey && key === 'v') {
+        if (store.selectedIds.size >= 2) {
+          e.preventDefault()
+          handleAlignVertical()
+        }
+        return
+      }
+
+      if (!cmd && e.key === '[') {
+        e.preventDefault()
+        setLeftDockOpen((open) => !open)
+        return
+      }
+      if (!cmd && e.key === ']') {
+        e.preventDefault()
+        setRightInspectorOpen((open) => !open)
+        return
+      }
+
       if (e.key === 'h') setTool('hand')
       else if (e.key === 'v') setTool('select')
       else if (e.key === 'd') setTool('draw')
@@ -548,7 +652,15 @@ export function FloorPlanV2({
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleCopy, handleDeleteSelected, handlePaste, handleRotateBy, store])
+  }, [
+    handleAlignHorizontal,
+    handleAlignVertical,
+    handleCopy,
+    handleDeleteSelected,
+    handlePaste,
+    handleRotateBy,
+    store,
+  ])
 
   // Wire the wizard save ref to a v2-aware persistence function that
   // splits the unified doc back into per-room rows.
@@ -617,9 +729,41 @@ export function FloorPlanV2({
   const handleZoomReset = useCallback(() => {
     viewportApiRef.current?.resetZoom()
   }, [])
+  /**
+   * "Center View" — the toolbar button that recovers framing.
+   *
+   * Behaviour:
+   *   1. If the doc has at least one object, compute the union of
+   *      every placed object's *rotated* AABB and frame that rectangle
+   *      with ~10% padding on each side. This both pans (the bbox
+   *      centroid lands at the viewport centre) and zooms (the
+   *      largest factor in [0.25, 3] that still fits the bbox) — so
+   *      one click always makes "everything you've drawn" visible
+   *      regardless of where the user has panned or how far they've
+   *      zoomed in.
+   *   2. With nothing placed, fall back to `centerView()` — re-centres
+   *      on the active room midpoint at zoom 1.0 so an empty canvas
+   *      reads cleanly.
+   */
   const handleCenterView = useCallback(() => {
-    viewportApiRef.current?.centerView()
-  }, [])
+    const api = viewportApiRef.current
+    if (!api) return
+    const bbox = groupRotatedAabb(store.doc.objects)
+    if (!bbox) {
+      api.centerView()
+      return
+    }
+    api.fitToBounds(
+      {
+        minX: bbox.x,
+        minY: bbox.y,
+        maxX: bbox.x + bbox.width,
+        maxY: bbox.y + bbox.height,
+      },
+      { padding: 0.1 }
+    )
+  }, [store.doc.objects])
+
 
   /**
    * Auto-Arrange — scoped to the *active* room only on the unified
@@ -704,15 +848,21 @@ export function FloorPlanV2({
   )
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div id="floor-plan-workspace" className={cn('flex flex-col gap-2', className)}>
       <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2">
         <div className="min-w-0">
           <h2 className="text-lg font-bold tracking-tight text-stone-900">
             Floor plan canvas
           </h2>
           <p className="text-[11px] text-stone-500">
-            Multi-room. Click a room wall to drag the whole room. Touching
-            walls automatically merge. Press{' '}
+            <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
+              [
+            </kbd>{' '}
+            /{' '}
+            <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
+              ]
+            </kbd>{' '}
+            toggle panels ·{' '}
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               H
             </kbd>{' '}
@@ -724,19 +874,11 @@ export function FloorPlanV2({
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               D
             </kbd>{' '}
-            for tools,{' '}
+            tools ·{' '}
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               Ctrl+Z
             </kbd>{' '}
-            undo,{' '}
-            <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
-              R
-            </kbd>{' '}
-            /{' '}
-            <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
-              Shift+R
-            </kbd>{' '}
-            rotate ±15°.
+            undo
           </p>
         </div>
         <div className="ml-auto rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-semibold text-stone-700">
@@ -745,7 +887,18 @@ export function FloorPlanV2({
         </div>
       </header>
 
-      <ToolPalette
+      {onAddRoom && onRenameRoom && onDeleteRoom ? (
+        <LayoutRoomBar
+          rooms={layoutRooms}
+          activeRoomId={selectedRoomId ?? activeRoomId}
+          onSelectRoom={handleSelectRoom}
+          onAddRoom={onAddRoom}
+          onRenameRoom={onRenameRoom}
+          onDeleteRoom={onDeleteRoom}
+        />
+      ) : null}
+
+      <CanvasCommandBar
         toolState={{ tool, drawShape }}
         onToolChange={handleToolChange}
         onDrawShapeChange={handleDrawShapeChange}
@@ -761,6 +914,8 @@ export function FloorPlanV2({
         clipboardHasContents={clipboardHasContents}
         onRotateLeft={handleRotateLeft}
         onRotateRight={handleRotateRight}
+        onAlignVertical={handleAlignVertical}
+        onAlignHorizontal={handleAlignHorizontal}
         zoom={currentZoom}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
@@ -770,13 +925,60 @@ export function FloorPlanV2({
         canAutoArrange={boothCount > 0}
       />
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,260px)]">
-        {/*
-          Canvas height is fluid on mobile so the wizard's "Save floor
-          plan & deploy" CTA is always reachable below the fold without
-          forcing a long scroll past a 640px box.
-        */}
-        <div className="relative h-[clamp(320px,52vh,720px)] overflow-hidden rounded-lg border border-stone-200 bg-stone-100 lg:h-[720px]">
+      <div className="flex min-h-0 gap-2">
+        <div className="relative flex shrink-0">
+          {!leftDockOpen ? (
+            <button
+              type="button"
+              onClick={() => setLeftDockOpen(true)}
+              title="Show tool palette ([)"
+              aria-label="Show tool palette"
+              className="flex h-full w-7 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setLeftDockOpen(false)}
+                title="Hide tool palette ([)"
+                aria-label="Hide tool palette"
+                className="absolute -right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </button>
+              <CanvasLeftDock
+                toolState={{ tool, drawShape }}
+                onToolChange={handleToolChange}
+                onDrawShapeChange={handleDrawShapeChange}
+                canUndo={store.canUndo}
+                canRedo={store.canRedo}
+                onUndo={store.undo}
+                onRedo={store.redo}
+                onClearAll={handleClearAll}
+                selectedCount={selectedCount}
+                onDeleteSelected={handleDeleteSelected}
+                onCopy={handleCopy}
+                onPaste={handlePaste}
+                clipboardHasContents={clipboardHasContents}
+                onRotateLeft={handleRotateLeft}
+                onRotateRight={handleRotateRight}
+                onAlignVertical={handleAlignVertical}
+                onAlignHorizontal={handleAlignHorizontal}
+                zoom={currentZoom}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onZoomReset={handleZoomReset}
+                onCenterView={handleCenterView}
+                onAutoArrange={handleAutoArrange}
+                canAutoArrange={boothCount > 0}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="relative min-w-0 flex-1 h-[clamp(360px,58vh,780px)] overflow-hidden rounded-lg border border-stone-200 bg-stone-100 lg:h-[780px]">
           <FloorPlanCanvas
             store={store}
             toolState={{ tool, drawShape }}
@@ -787,40 +989,38 @@ export function FloorPlanV2({
             onZoomChange={setCurrentZoom}
             eventCategoryNames={eventCategoryNames}
           />
-          {/*
-            Persistent allocation legend — overlaid on the canvas
-            wrapper (NOT inside the scroll container) so it stays
-            pinned to the bottom-left corner regardless of pan/zoom.
-            Decodes the green/red status grammar that booths and
-            zone overlays use to communicate placement validity.
-          */}
           <CanvasLegend />
         </div>
-        <div className="flex min-w-0 flex-col gap-2">
-          {/*
-            In-canvas Rooms panel. Replaces the old "ROOMS / ZONES"
-            top-of-canvas bar — the wizard now mounts this strip on
-            the right rail so the canvas itself can grow into the
-            real estate previously consumed by the standalone bar.
-            Clicking a row selects + activates the room (and focuses
-            the inspector); the canvas frame chrome lights up to
-            match.
-          */}
-          {onAddRoom && onRenameRoom && onDeleteRoom ? (
-            <LayoutRoomBar
-              rooms={layoutRooms}
-              activeRoomId={selectedRoomId ?? activeRoomId}
-              onSelectRoom={handleSelectRoom}
-              onAddRoom={onAddRoom}
-              onRenameRoom={onRenameRoom}
-              onDeleteRoom={onDeleteRoom}
-              compact
-            />
-          ) : null}
-          <PropertyInspector
-            store={store}
-            eventCategoryNames={eventCategoryNames}
-          />
+
+        <div className="relative flex shrink-0">
+          {!rightInspectorOpen ? (
+            <button
+              type="button"
+              onClick={() => setRightInspectorOpen(true)}
+              title="Show inspector (])"
+              aria-label="Show inspector"
+              className="flex h-full w-7 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          ) : (
+            <div className="relative w-[min(100%,260px)]">
+              <button
+                type="button"
+                onClick={() => setRightInspectorOpen(false)}
+                title="Hide inspector (])"
+                aria-label="Hide inspector"
+                className="absolute -left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
+              >
+                <ChevronRight className="h-3 w-3" />
+              </button>
+              <PropertyInspector
+                store={store}
+                eventCategoryNames={eventCategoryNames}
+                className="h-full max-h-[clamp(360px,58vh,780px)] overflow-y-auto lg:max-h-[780px]"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

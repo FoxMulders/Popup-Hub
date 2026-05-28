@@ -96,7 +96,7 @@ See [docs/COORDINATOR_QA.md](docs/COORDINATOR_QA.md) for a manual E2E checklist.
 
 ## Layout work (on hold)
 
-Interactive SVG canvas polish, venue photo tuning, and live QA desk wiring are deferred. Step 4 only requires a saved non-overlapping layout (blank shell or auto-populate is fine).
+Interactive SVG canvas polish and venue photo tuning are deferred. Step 4 only requires a saved non-overlapping layout (blank shell or auto-populate is fine).
 
 ## Deploy
 

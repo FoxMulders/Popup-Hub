@@ -1,6 +1,8 @@
 'use client'
 
 import {
+  AlignCenterHorizontal,
+  AlignCenterVertical,
   ArrowUpRight,
   ClipboardPaste,
   Copy,
@@ -45,6 +47,17 @@ interface ToolPaletteProps {
   onRotateLeft: () => void
   /** Rotate the current selection +15°. */
   onRotateRight: () => void
+  /**
+   * Snap selected objects' geometric centers onto a single vertical
+   * axis (the median X of the selection). Requires ≥ 2 selected
+   * objects; the host enforces this and toasts a hint otherwise.
+   */
+  onAlignVertical: () => void
+  /**
+   * Snap selected objects' geometric centers onto a single horizontal
+   * axis (the median Y of the selection). Requires ≥ 2 selected.
+   */
+  onAlignHorizontal: () => void
   /** Current canvas zoom (1.0 = 100%). Driven by the canvas viewport. */
   zoom: number
   /** Zoom out one step. */
@@ -129,6 +142,8 @@ export function ToolPalette({
   clipboardHasContents,
   onRotateLeft,
   onRotateRight,
+  onAlignVertical,
+  onAlignHorizontal,
   zoom,
   onZoomOut,
   onZoomIn,
@@ -139,6 +154,7 @@ export function ToolPalette({
   className,
 }: ToolPaletteProps) {
   const hasSelection = selectedCount > 0
+  const canAlign = selectedCount >= 2
   const drawActive = toolState.tool === 'draw'
 
   return (
@@ -186,8 +202,8 @@ export function ToolPalette({
           <button
             type="button"
             onClick={onCenterView}
-            title="Center view (recenter the canvas)"
-            aria-label="Center view"
+            title="Center view — frame every placed object in the viewport"
+            aria-label="Center view on all placed objects"
             className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-stone-700 hover:bg-stone-100"
           >
             <Locate className="h-3.5 w-3.5" />
@@ -344,6 +360,34 @@ export function ToolPalette({
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 disabled:opacity-40"
           >
             <RotateCw className="h-3.5 w-3.5" />
+          </button>
+          {/*
+            Alignment pair — snaps selected centers to the median axis
+            line of the selection. Requires at least two selected
+            objects (one item is trivially "aligned with itself").
+            The icons mirror the axis they snap to: vertical icon =
+            stack-on-a-vertical-column, horizontal icon = line-up-on-
+            a-horizontal-row.
+          */}
+          <button
+            type="button"
+            onClick={onAlignVertical}
+            disabled={!canAlign}
+            title="Align vertical centers (Shift+V) — stack selected objects on a single column"
+            aria-label="Align selection vertical centers"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 disabled:opacity-40"
+          >
+            <AlignCenterVertical className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onAlignHorizontal}
+            disabled={!canAlign}
+            title="Align horizontal centers (Shift+H) — line selected objects up on a single row"
+            aria-label="Align selection horizontal centers"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-stone-600 hover:bg-stone-100 disabled:opacity-40"
+          >
+            <AlignCenterHorizontal className="h-3.5 w-3.5" />
           </button>
           {onAutoArrange ? (
             <button

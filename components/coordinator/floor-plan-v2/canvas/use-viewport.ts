@@ -72,6 +72,26 @@ export interface ViewportApi extends ViewportState {
    * with a single click.
    */
   centerView: () => void
+  /**
+   * Frame an arbitrary doc-ft rectangle: pick the largest zoom (clamped
+   * to the [ZOOM_MIN, ZOOM_MAX] range) that lets `bounds` fit inside
+   * the visible viewport with `padding` percent of breathing room on
+   * each side, then scroll so the bbox centroid sits at the viewport
+   * centre.
+   *
+   * Used by the toolbar "Center" button to recompose the camera around
+   * the union of every placed object — so a single click always recovers
+   * "show me everything I've drawn" regardless of how the user has
+   * panned or zoomed.
+   *
+   * `padding` defaults to 0.1 (10% margin per side). Pass 0 for an
+   * edge-to-edge fit (e.g., when the caller has already padded the
+   * input bbox). Empty / zero-size bboxes are treated as no-ops.
+   */
+  fitToBounds: (
+    bounds: { minX: number; minY: number; maxX: number; maxY: number },
+    options?: { padding?: number }
+  ) => void
   scrollHandlers: {
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void
     onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void
@@ -325,6 +345,60 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     }
   }, [scrollRef])
 
+  /**
+   * Pick the zoom that makes a doc-ft `bounds` fit inside the visible
+   * viewport (with `padding` percent of breathing room per side), then
+   * centre the bbox in the viewport. This is the math behind the
+   * toolbar "Center" button — so one click always frames everything
+   * the user has drawn, regardless of where they panned to.
+   */
+  const fitToBounds = useCallback<ViewportApi['fitToBounds']>(
+    (bounds, options) => {
+      const padding = options?.padding ?? 0.1
+      const scroll = scrollRef.current
+      const widthFt = bounds.maxX - bounds.minX
+      const heightFt = bounds.maxY - bounds.minY
+      if (widthFt <= 0 || heightFt <= 0) return
+      if (!scroll) return
+
+      const math = getZoomMathRef.current()
+      const viewportPxW = scroll.clientWidth
+      const viewportPxH = scroll.clientHeight
+      if (viewportPxW <= 0 || viewportPxH <= 0) return
+
+      // Reserve `padding` of viewport on each side, but never less
+      // than a few px on tiny / dimensionless viewports — otherwise
+      // the resulting zoom would explode toward infinity.
+      const usableW = Math.max(40, viewportPxW * (1 - padding * 2))
+      const usableH = Math.max(40, viewportPxH * (1 - padding * 2))
+
+      const zoomForWidth = usableW / (widthFt * math.basePxPerFt)
+      const zoomForHeight = usableH / (heightFt * math.basePxPerFt)
+      const targetZoom = clampZoom(Math.min(zoomForWidth, zoomForHeight))
+
+      const newPxPerFt = math.basePxPerFt * targetZoom
+      const centerXFt = (bounds.minX + bounds.maxX) / 2
+      const centerYFt = (bounds.minY + bounds.maxY) / 2
+      const target = computeScroll(
+        centerXFt,
+        centerYFt,
+        newPxPerFt,
+        math.padFt,
+        viewportPxW / 2,
+        viewportPxH / 2
+      )
+
+      if (zoomRef.current !== targetZoom) {
+        pendingScrollRef.current = target
+        setZoomState(targetZoom)
+      } else {
+        scroll.scrollLeft = target.left
+        scroll.scrollTop = target.top
+      }
+    },
+    [scrollRef]
+  )
+
   const onWheel = useCallback(
     (e: WheelEvent<HTMLDivElement>) => {
       if (!(e.ctrlKey || e.metaKey)) return
@@ -509,6 +583,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     zoomOut,
     resetZoom,
     centerView,
+    fitToBounds,
     scrollHandlers: {
       onPointerDown,
       onPointerMove,

@@ -238,10 +238,7 @@ import {
   WIZARD_SUMMARY_VALUE_SAGE,
   WIZARD_SUMMARY_VALUE_WARN,
 } from '@/lib/wizard/wizard-panel-styles'
-import { useLiveLayoutQa } from '@/lib/booth-planner/use-live-layout-qa'
-import type { LiveLayoutQaResult } from '@/lib/booth-planner/live-layout-qa'
 import { PureLayoutPreview } from '@/components/coordinator/pure-layout-preview'
-import { LayoutQaLogPanel } from '@/components/coordinator/layout-qa-log-panel'
 import {
   LayoutPlannerStepper,
   LayoutPlannerWizardNav,
@@ -266,7 +263,6 @@ import {
   ArrowLeftRight,
   ArrowUpDown,
   Wand2,
-  FlaskConical,
   Save,
   Trash2,
   Zap,
@@ -373,12 +369,6 @@ export interface BoothPlannerProps {
   autoPlanRef?: React.MutableRefObject<(() => Promise<boolean>) | null>
   saveBlankLayoutRef?: React.MutableRefObject<(() => Promise<boolean>) | null>
   onOverlapChange?: (hasOverlap: boolean) => void
-  onLiveQaChange?: (state: {
-    live: LiveLayoutQaResult | null
-    qaRunning: boolean
-  }) => void
-  /** Optional panel below layout presets (e.g. wizard QA desk). */
-  rightSidebarExtra?: React.ReactNode
   /**
    * Total category slots configured upstream (Step 3). When provided, the
    * Floor Plan stats panel shows this number clamped by the physical layout
@@ -432,8 +422,6 @@ export function BoothPlanner({
   autoPlanRef,
   saveBlankLayoutRef,
   onOverlapChange,
-  onLiveQaChange,
-  rightSidebarExtra,
   configuredSlotTotal,
   configuredCategorySlots,
   populatePlaceholdersRef,
@@ -1030,29 +1018,6 @@ export function BoothPlanner({
 
   const showOverlapCard =
     layoutOverlaps.hasOverlap && !dismissedAlerts.has('overlap-booth')
-
-  const liveLayoutQa = useLiveLayoutQa(
-    {
-      cells,
-      venueElements: venueElementsWithDoors,
-      rows: gridRows,
-      cols: gridCols,
-      cellWidthFt: gridConfig.cellWidthFt,
-      cellLengthFt: gridConfig.cellLengthFt,
-    },
-    {
-      enabled: canvasMounted,
-      // Live overlap/stroller desk only — full 100-scenario regression is manual via Layout QA panel.
-      runRegression: false,
-    }
-  )
-
-  useEffect(() => {
-    onLiveQaChange?.({
-      live: liveLayoutQa.live,
-      qaRunning: liveLayoutQa.qaRunning,
-    })
-  }, [liveLayoutQa.live, liveLayoutQa.qaRunning, onLiveQaChange])
 
   const [capacityAlertVisible, setCapacityAlertVisible] = useState(false)
   const [capacityAlertMessage, setCapacityAlertMessage] = useState<string | null>(null)
@@ -3789,7 +3754,6 @@ export function BoothPlanner({
                     onClear={handleClearLayoutPreset}
                   />
                 </div>
-                {rightSidebarExtra}
               </>
             }
             alerts={
@@ -4019,14 +3983,6 @@ export function BoothPlanner({
             }
           />
 
-          {canvasMounted ? (
-            <LayoutQaLogPanel
-              live={liveLayoutQa.live}
-              liveRegression={liveLayoutQa.regression}
-              liveRegressionRunning={liveLayoutQa.regressionRunning}
-            />
-          ) : null}
-
           <MarketFeedbackWidget
             marketId={eventId}
             layoutConflict={
@@ -4112,11 +4068,6 @@ export function BoothPlanner({
                 ) : null}
               </div>
             </div>
-            <LayoutQaLogPanel
-              live={liveLayoutQa.live}
-              liveRegression={liveLayoutQa.regression}
-              liveRegressionRunning={liveLayoutQa.regressionRunning}
-            />
           </div>
           <LayoutPlannerWizardNav
             currentStep={4}

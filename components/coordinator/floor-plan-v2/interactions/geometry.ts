@@ -301,6 +301,101 @@ export function hitTest(
 }
 
 /* -------------------------------------------------------------------
+ * Alignment helpers — used by the toolbar Align Vertical / Align
+ * Horizontal commands. Both commands snap selected objects' true
+ * geometric centers to the *median* center of the selection on a
+ * single axis, leaving the perpendicular axis untouched.
+ * ------------------------------------------------------------------- */
+
+/**
+ * Pure median of a numeric list.
+ *
+ * Even-length lists return the average of the two middle values
+ * (standard median). Empty input returns `null` so callers don't have
+ * to special-case it. Original input is not mutated — we sort a copy.
+ *
+ * Why median (not mean): a single far-away outlier shouldn't drag
+ * every other object across the canvas. Median picks an axis line
+ * that's already approximately where most of the selection lives, so
+ * the visible motion stays bounded by the existing spread.
+ */
+export function median(values: ReadonlyArray<number>): number | null {
+  if (values.length === 0) return null
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = sorted.length >> 1
+  if (sorted.length % 2 === 1) return sorted[mid]!
+  return (sorted[mid - 1]! + sorted[mid]!) / 2
+}
+
+/**
+ * One alignment patch, ready for `FloorPlanDocStore.updateObjects`.
+ * `x` / `y` are absolute new positions in ft (top-left of the
+ * unrotated bounding box), not deltas.
+ */
+export interface AlignPatch {
+  id: string
+  patch: { x?: number; y?: number }
+}
+
+/**
+ * Compute alignment patches that snap every selected object's
+ * geometric center to the median selection center on `axis`:
+ *
+ *   - axis === 'x'  → snaps **vertical** centers to a common x
+ *                     (objects stack into a single column).
+ *   - axis === 'y'  → snaps **horizontal** centers to a common y
+ *                     (objects line up along a single row).
+ *
+ * Locked objects are skipped — their center contributes to the
+ * median (so they still influence where the line lands) but they
+ * never move. Returned patches:
+ *   - omit objects already on the median line (within ε) so we
+ *     don't churn history with a no-op commit;
+ *   - clamp the proposed new position so the object's rotated AABB
+ *     stays inside `[0, canvasWidthFt] × [0, canvasLengthFt]` —
+ *     alignment never pushes anything off-canvas.
+ *
+ * Returns `[]` when there's nothing to align (less than two unlocked
+ * selected objects). The host treats `[]` as a silent no-op.
+ */
+export function alignSelectionPatches(
+  objects: ReadonlyArray<PlacedObject>,
+  axis: 'x' | 'y',
+  canvasWidthFt: number,
+  canvasLengthFt: number
+): AlignPatch[] {
+  if (objects.length < 2) return []
+
+  const centers = objects.map((o) => objectCenter(o))
+  const targetMedian = median(centers.map((c) => (axis === 'x' ? c.x : c.y)))
+  if (targetMedian === null) return []
+
+  const patches: AlignPatch[] = []
+  const eps = 1e-4
+
+  for (let i = 0; i < objects.length; i++) {
+    const obj = objects[i]!
+    if (obj.locked) continue
+    const c = centers[i]!
+    if (axis === 'x') {
+      const delta = targetMedian - c.x
+      if (Math.abs(delta) < eps) continue
+      const proposed: PlacedObject = { ...obj, x: obj.x + delta }
+      const clamp = canvasClampDelta(proposed, canvasWidthFt, canvasLengthFt)
+      patches.push({ id: obj.id, patch: { x: proposed.x + clamp.dx } })
+    } else {
+      const delta = targetMedian - c.y
+      if (Math.abs(delta) < eps) continue
+      const proposed: PlacedObject = { ...obj, y: obj.y + delta }
+      const clamp = canvasClampDelta(proposed, canvasWidthFt, canvasLengthFt)
+      patches.push({ id: obj.id, patch: { y: proposed.y + clamp.dy } })
+    }
+  }
+
+  return patches
+}
+
+/* -------------------------------------------------------------------
  * Multi-room geometry — perimeter walls, edge merging, and frame
  * hit-testing for the unified canvas.
  * ------------------------------------------------------------------- */
