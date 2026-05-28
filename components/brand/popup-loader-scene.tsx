@@ -37,12 +37,19 @@ const LOGO_SRC = '/popup-hub-icon.png'
 
 /**
  * Brand wordmark frame — drawn directly in the SVG above the walking
- * canvas. Tweak the y-coordinate / fontSize here if the typography
- * ever needs to move; the rest of the scene already gives it a clean
- * ~140 px top band that nothing else touches.
+ * canvas. Pinned to the absolute top of the viewport so the typography
+ * cannot drift into the storefront / characters / sidewalk band below.
+ *
+ * `dominantBaseline="hanging"` means `WORDMARK_Y` is the *top* of the
+ * letters (ascender line), not the visual middle, so we land cleanly
+ * a few units inside the viewBox top edge instead of clipping the
+ * cap-height. The viewBox itself is extended upward (see the outer
+ * `<svg viewBox>` below) to guarantee there is always breathing room
+ * above the wordmark and above the market tent peak, even when the
+ * container wrapper is short relative to the SVG's 4:3 aspect.
  */
 const WORDMARK_TEXT = 'Popup Hub'
-const WORDMARK_Y = 86
+const WORDMARK_Y = 12
 const WORDMARK_FONT_SIZE = 64
 const WORDMARK_LETTER_SPACING = 2
 const WORDMARK_FILL = '#7b9b52'
@@ -301,7 +308,19 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
       : `translate(${footAnchorX}, ${footAnchorY}) scale(${depthScale}) translate(${-footAnchorX}, ${-footAnchorY}) translate(0, ${frame.groupYOffset})`
 
   return (
-    <svg viewBox="0 0 800 600" className="h-full w-full" role="img" aria-hidden>
+    // viewBox is extended *upward* by 80 units (min-y = -80, height = 680)
+    // so the wordmark and the tent peak both have guaranteed headroom
+    // above the original 0..600 design grid. Combined with the parent
+    // `.loader-screen__lottie { overflow: visible }` rule this keeps the
+    // peak of the market tent from being clipped on shorter containers
+    // (mobile portrait, inline replay button, etc.).
+    <svg
+      viewBox="0 -80 800 680"
+      className="h-full w-full overflow-visible"
+      preserveAspectRatio="xMidYMax meet"
+      role="img"
+      aria-hidden
+    >
       <defs>
         {/*
          * Sky gradient now mirrors the public landing hero band so the
@@ -330,9 +349,10 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
           <stop offset="0%" stopColor="#e6e0d2" />
           <stop offset="100%" stopColor="#cfc7b6" />
         </linearGradient>
-        <filter id="premium-loader-shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="6" stdDeviation="8" floodColor="#000000" floodOpacity="0.35" />
-        </filter>
+        {/* `premium-loader-shadow` (feDropShadow) was removed in the
+            flat-aesthetic pass — the storefront no longer references
+            it. `premium-loader-phone-glow` is still in use by the
+            lead character's phone notification flash and stays. */}
         <filter id="premium-loader-phone-glow" x="-80%" y="-80%" width="260%" height="260%">
           <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
@@ -361,22 +381,23 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         </mask>
       </defs>
 
-      <rect width="800" height="600" fill="url(#premium-loader-sky)" />
+      {/* Sky covers the full extended viewBox (-80..600) so the
+          headroom above the wordmark stays consistent with the rest
+          of the scene background. */}
+      <rect x="0" y="-80" width="800" height="680" fill="url(#premium-loader-sky)" />
 
       {/*
-       * Brand wordmark — drawn as SVG text above the walking canvas
-       * so it never collides with the storefront, characters, or
-       * sidewalk. The market icon now uses `popup-hub-icon.png`
-       * (icon-only) instead of the full `popup-hub-logo.png`, which
-       * had the wordmark baked into the bottom 30 % of the image and
-       * was the source of the "typography drifts into the graphics"
-       * complaint.
+       * Brand wordmark — pinned to the absolute top of the viewport
+       * via `dominantBaseline="hanging"` + `WORDMARK_Y = 12`. The
+       * extended viewBox (min-y = -80) keeps a 92-unit cushion of
+       * sky above the cap-height, so the typography never collides
+       * with the storefront, characters, or sidewalk band below.
        */}
       <text
         x={400}
         y={WORDMARK_Y}
         textAnchor="middle"
-        dominantBaseline="middle"
+        dominantBaseline="hanging"
         fontSize={WORDMARK_FONT_SIZE}
         fontWeight={700}
         fill={WORDMARK_FILL}
@@ -438,14 +459,22 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
           fill="url(#premium-loader-market-warmth)"
           opacity={frame.marketGlow * 0.9}
         />
-        <g filter="url(#premium-loader-shadow)">
+        {/* Storefront group used to be wrapped in
+            `<g filter="url(#premium-loader-shadow)">` (a feDropShadow
+            blur). The drop-shadow filter has been removed for a clean,
+            flat aesthetic — the market tent now reads as a crisp 2D
+            silhouette against the linen sky, matching the rest of the
+            scene's flat-vector vocabulary. The thin contact ellipse
+            below the storefront is a flat fill, not a filter, so it
+            stays as a subtle "feet planted" anchor. */}
+        <g>
           <ellipse
             cx={hubX}
             cy={logoBottomY + 1}
             rx={logoWidth * 0.42}
             ry={8}
             fill="#000000"
-            opacity={0.28}
+            opacity={0.18}
           />
           {frame.doorOpen > 0.04 ? (
             <rect

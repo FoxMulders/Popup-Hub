@@ -18,12 +18,15 @@ export const LOADER_LAYOUT = {
   fps: 60,
   sidewalkY: 408,
   /**
-   * The icon's bottom edge lands here — chosen so the storefront base
-   * line tucks 3 px under the sidewalk's top surface (`sidewalkY − 6`),
-   * giving a clean "feet planted on the ground" silhouette with no
-   * floating-above-pavement gap.
+   * The icon's bottom edge sits *exactly* on the top surface of the
+   * sidewalk rectangle (the rect is drawn from `sidewalkY − 6`, so the
+   * sidewalk top is `y = 402`). Setting `logoBottomY = 402` makes the
+   * stall completely flush with the sidewalk vector — no transform
+   * offset, no padding, no overlap. The original "tuck 3 px under"
+   * value caused the storefront to bleed visibly into the pavement
+   * texture and read as a misalignment.
    */
-  logoBottomY: 405,
+  logoBottomY: 402,
   characterStartX: 72,
   characterStopX: 288,
   hubX: 532,

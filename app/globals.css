@@ -448,11 +448,19 @@
   height: min(72vh, 520px);
   max-width: 100%;
   max-height: 100%;
+  /* The SVG inside extends slightly above its 0-baseline (viewBox
+   * min-y = -80) to keep the tent peak / wordmark from being clipped
+   * on shorter containers. Allowing visible overflow on the wrapper
+   * makes that headroom render even when the parent flex layout
+   * tries to crop the SVG to the container's box.
+   */
+  overflow: visible;
 }
 
 #loader-screen .loader-screen__lottie svg {
   width: 100% !important;
   height: 100% !important;
+  overflow: visible;
 }
 
 body.loader-active {

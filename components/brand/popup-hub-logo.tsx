@@ -63,7 +63,14 @@ function LogoAnimationButton({
       type="button"
       onClick={handleClick}
       className={cn(
-        'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center overflow-hidden rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
+        // We deliberately *do not* set `overflow-hidden` here.
+        // The inline replay scene mounts an SVG whose content
+        // (market tent peak, wordmark) needs to be allowed to
+        // breathe past the static button rectangle so the peak
+        // is never cut off by the rounded button shell. The SVG
+        // itself uses `preserveAspectRatio` to stay centred and
+        // proportional, so visually it still reads as contained.
+        'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
         compact ? 'min-h-11 min-w-11 p-1.5' : 'min-h-11 min-w-[7rem] p-1',
         className,
       )}
@@ -82,7 +89,7 @@ function LogoAnimationButton({
       {playing ? (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-visible"
         >
           <PopupLoaderScene
             key={activeVariant}
