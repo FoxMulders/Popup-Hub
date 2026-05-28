@@ -929,6 +929,13 @@ function commitDraft(
     case 'wall':
       obj = { ...base, kind: 'wall' }
       break
+    case 'open_wall':
+      // Default counter depth = 1.5 ft (a typical pass-through
+      // ledge). The inspector lets coordinators tune this per
+      // window, and the renderer falls back to this default when
+      // the field is absent — see canvas-objects.tsx.
+      obj = { ...base, kind: 'open_wall', counterDepthFt: 1.5 }
+      break
     case 'aisle':
       obj = { ...base, kind: 'aisle' }
       break

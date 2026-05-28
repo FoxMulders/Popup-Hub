@@ -7,6 +7,7 @@ export type {
   ObjectKind,
   BoothObject,
   WallObject,
+  OpenWallObject,
   AisleObject,
   LabelObject,
   DoorObject,

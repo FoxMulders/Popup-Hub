@@ -7,6 +7,7 @@ import {
   Minus,
   MousePointer2,
   Plus,
+  RectangleHorizontal,
   Siren,
   Square,
   Tag,
@@ -99,6 +100,7 @@ const FLOOR_SHAPES: Array<{ id: DrawShape; label: string; icon: DockButtonProps[
 
 const ARCH_SHAPES: Array<{ id: DrawShape; label: string; icon: DockButtonProps['icon'] }> = [
   { id: 'wall', label: 'Wall', icon: Square },
+  { id: 'open_wall', label: 'Open wall', icon: RectangleHorizontal },
   { id: 'door', label: 'Door', icon: DoorOpen },
   { id: 'emergency_exit', label: 'Exit', icon: Siren },
   { id: 'stage', label: 'Stage', icon: Square },

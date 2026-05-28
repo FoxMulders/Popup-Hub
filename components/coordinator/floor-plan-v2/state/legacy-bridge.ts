@@ -63,6 +63,13 @@ function venueElementTypeForObject(
       // closest analog is `column`, which the legacy booth-planner
       // already used to paint walls via the column tool.
       return 'column'
+    case 'open_wall':
+      // Open-walls share the legacy `column` slot — they're
+      // structurally walls, just with a service cutout. The fact
+      // that the source was an open-wall (and its counter depth)
+      // is preserved in the label string via the `OPEN_WALL_LABEL_PREFIX`
+      // sentinel (see `legacyRoomFromDoc` below).
+      return 'column'
     case 'aisle':
       return 'aisle'
     case 'stage':
@@ -90,6 +97,49 @@ function venueElementTypeForObject(
  * starts with this prefix becomes an `emergency_exit` again.
  */
 const EMERGENCY_EXIT_LABEL_PREFIX = 'EMERGENCY:'
+
+/**
+ * Sentinel label used to round-trip `open_wall` through the legacy
+ * `column` venue element. The format is
+ *   `OPENWALL@<counterDepthFt>:<userLabel>`
+ * so we can re-hydrate the kind, recover the configured counter
+ * depth, and preserve the coordinator's free-form label across
+ * save/load cycles.
+ */
+const OPEN_WALL_LABEL_PREFIX = 'OPENWALL@'
+
+function buildOpenWallLabel(depthFt: number | undefined, label: string | undefined): string {
+  const depth = depthFt && depthFt > 0 ? depthFt : 1.5
+  // Round to 2 decimal places so the legacy string stays compact
+  // and stable across edits that don't actually change the value.
+  const depthStr = (Math.round(depth * 100) / 100).toString()
+  return `${OPEN_WALL_LABEL_PREFIX}${depthStr}:${label ?? ''}`
+}
+
+interface ParsedOpenWallLabel {
+  counterDepthFt: number
+  label: string | undefined
+}
+
+function parseOpenWallLabel(raw: string): ParsedOpenWallLabel | null {
+  if (!raw.startsWith(OPEN_WALL_LABEL_PREFIX)) return null
+  const remainder = raw.slice(OPEN_WALL_LABEL_PREFIX.length)
+  const colonIdx = remainder.indexOf(':')
+  if (colonIdx < 0) {
+    const depth = parseFloat(remainder)
+    return {
+      counterDepthFt: Number.isFinite(depth) && depth > 0 ? depth : 1.5,
+      label: undefined,
+    }
+  }
+  const depthPart = remainder.slice(0, colonIdx)
+  const labelPart = remainder.slice(colonIdx + 1)
+  const depth = parseFloat(depthPart)
+  return {
+    counterDepthFt: Number.isFinite(depth) && depth > 0 ? depth : 1.5,
+    label: labelPart.length > 0 ? labelPart : undefined,
+  }
+}
 
 export function legacyRoomFromDoc(
   base: LayoutRoom,
@@ -131,6 +181,11 @@ export function legacyRoomFromDoc(
       // Tag the emergency-exit so the read path can recover the
       // distinct kind. Preserve any user label after the sentinel.
       projectedLabel = `${EMERGENCY_EXIT_LABEL_PREFIX}${obj.label ?? ''}`
+    } else if (obj.kind === 'open_wall') {
+      // Tag the open-wall + its counter depth so the read path can
+      // round-trip the kind and the configured depth without a
+      // schema change.
+      projectedLabel = buildOpenWallLabel(obj.counterDepthFt, obj.label)
     } else {
       projectedLabel = obj.label
     }
@@ -180,9 +235,13 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
   const isEmergencyTagged =
     typeof rawLabel === 'string' &&
     rawLabel.startsWith(EMERGENCY_EXIT_LABEL_PREFIX)
+  const openWallParsed =
+    typeof rawLabel === 'string' ? parseOpenWallLabel(rawLabel) : null
   const cleanedLabel = isEmergencyTagged
     ? rawLabel.slice(EMERGENCY_EXIT_LABEL_PREFIX.length) || undefined
-    : rawLabel
+    : openWallParsed
+      ? openWallParsed.label
+      : rawLabel
 
   const base = {
     id: el.id,
@@ -196,6 +255,16 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
   }
   switch (el.type) {
     case 'column':
+      // Open-walls and regular walls both legacy-project to `column`;
+      // the open-wall sentinel in the label tells us which one to
+      // re-hydrate as.
+      if (openWallParsed) {
+        return {
+          ...base,
+          kind: 'open_wall',
+          counterDepthFt: openWallParsed.counterDepthFt,
+        }
+      }
       return { ...base, kind: 'wall' }
     case 'aisle':
       return { ...base, kind: 'aisle' }

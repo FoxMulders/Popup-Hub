@@ -7,6 +7,7 @@ import type {
   DoorObject,
   EmergencyExitObject,
   LabelObject,
+  OpenWallObject,
   PlacedObject,
   StageObject,
   WallObject,
@@ -36,6 +37,12 @@ function fillForObject(obj: PlacedObject): string {
     }
     case 'wall':
       return '#1c1917'
+    case 'open_wall':
+      // Pale travertine fill — visually softer than the solid wall
+      // so the cutout reads as an opening rather than a closed
+      // surface. The dashed counter line drawn on top provides the
+      // "service window" cue.
+      return '#fef3c7'
     case 'aisle':
       return '#fafaf9'
     case 'stage':
@@ -62,6 +69,8 @@ function strokeForObject(obj: PlacedObject, isSelected: boolean): string {
     }
     case 'wall':
       return '#1c1917'
+    case 'open_wall':
+      return '#92400e'
     case 'aisle':
       return '#a8a29e'
     case 'stage':
@@ -74,6 +83,9 @@ function strokeForObject(obj: PlacedObject, isSelected: boolean): string {
       return '#57534e'
   }
 }
+
+/** Default counter-depth (ft) when an open-wall doesn't specify one. */
+const OPEN_WALL_DEFAULT_COUNTER_DEPTH_FT = 1.5
 
 function CanvasObjectsBase({
   objects,
@@ -144,6 +156,74 @@ function CanvasObjectsBase({
                 pointerEvents="none"
               />
             ) : null}
+            {/*
+              Open-wall service window — the wall rectangle is
+              already painted by the base <rect> above. Here we add:
+                * a dashed inner cutout running along the LONG axis
+                  of the wall (the "service line" patrons step up
+                  to), insetting by the configured counter depth, and
+                * two short tick marks at the ends of the cutout to
+                  signal where the wall resumes.
+              The cutout always tracks the wall's longer dimension
+              so a 12'×1' counter shows the dashed line horizontally
+              and a 1'×8' window shows it vertically without the
+              coordinator having to flip orientation by hand.
+            */}
+            {obj.kind === 'open_wall' ? (
+              (() => {
+                const ow = obj as OpenWallObject
+                const counterDepthFt =
+                  ow.counterDepthFt && ow.counterDepthFt > 0
+                    ? ow.counterDepthFt
+                    : OPEN_WALL_DEFAULT_COUNTER_DEPTH_FT
+                const counterDepthPx = counterDepthFt * pxPerFt
+                const isLandscape = w >= h
+                // Inset the cutout by counterDepth along the SHORT
+                // axis, and pad ~10% along the LONG axis so the
+                // service line doesn't run wall-to-wall.
+                const longPad = (isLandscape ? w : h) * 0.1
+                const shortInset = Math.min(
+                  isLandscape ? h - 1 : w - 1,
+                  Math.max(0.3 * pxPerFt, counterDepthPx)
+                )
+                const cutX1 = isLandscape ? x + longPad : x + shortInset
+                const cutX2 = isLandscape ? x + w - longPad : x + shortInset
+                const cutY1 = isLandscape ? y + shortInset : y + longPad
+                const cutY2 = isLandscape ? y + shortInset : y + h - longPad
+                return (
+                  <g pointerEvents="none">
+                    {/* Service-counter line (the open portion). */}
+                    <line
+                      x1={cutX1}
+                      y1={cutY1}
+                      x2={cutX2}
+                      y2={cutY2}
+                      stroke="#92400e"
+                      strokeWidth={2}
+                      strokeDasharray="5 3"
+                      strokeLinecap="round"
+                    />
+                    {/* End-cap ticks marking where the wall resumes. */}
+                    <line
+                      x1={isLandscape ? cutX1 : cutX1 - 4}
+                      y1={isLandscape ? cutY1 - 4 : cutY1}
+                      x2={isLandscape ? cutX1 : cutX1 + 4}
+                      y2={isLandscape ? cutY1 + 4 : cutY1}
+                      stroke="#92400e"
+                      strokeWidth={1.5}
+                    />
+                    <line
+                      x1={isLandscape ? cutX2 : cutX2 - 4}
+                      y1={isLandscape ? cutY2 - 4 : cutY2}
+                      x2={isLandscape ? cutX2 : cutX2 + 4}
+                      y2={isLandscape ? cutY2 + 4 : cutY2}
+                      stroke="#92400e"
+                      strokeWidth={1.5}
+                    />
+                  </g>
+                )
+              })()
+            ) : null}
             {labelText && !isEditing ? (
               <text
                 x={x + w / 2}
@@ -168,6 +248,8 @@ function textFillForObject(obj: PlacedObject): string {
   switch (obj.kind) {
     case 'wall':
       return '#fafaf9'
+    case 'open_wall':
+      return '#92400e'
     case 'aisle':
       return '#57534e'
     case 'door':
@@ -185,6 +267,8 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return (obj as BoothObject).vendorId ? '' : 'Booth'
     case 'wall':
       return (obj as WallObject).label || ''
+    case 'open_wall':
+      return (obj as OpenWallObject).label || 'Open wall'
     case 'aisle':
       return (obj as AisleObject).label || 'Aisle'
     case 'stage':

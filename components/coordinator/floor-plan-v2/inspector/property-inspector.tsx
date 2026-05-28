@@ -6,6 +6,7 @@ import type {
   BoothObject,
   DoorObject,
   LabelObject,
+  OpenWallObject,
   PlacedObject,
 } from '../state/types'
 
@@ -151,6 +152,8 @@ function prettyKindHint(kind: PlacedObject['kind']): string {
       return 'Vendor footprint. Bind a vendor or set a category color.'
     case 'wall':
       return 'Solid barrier — purely visual; no placement enforcement.'
+    case 'open_wall':
+      return 'Service window (food trucks / concessions). Snap flush to walls and tune counter depth.'
     case 'aisle':
       return 'Walkway zone. Advisory only; vendors can still cross it.'
     case 'door':
@@ -268,6 +271,28 @@ function KindSpecificFields({
           })
         }
       />
+    )
+  }
+  if (obj.kind === 'open_wall') {
+    const ow = obj as OpenWallObject
+    return (
+      <>
+        <TextField
+          label="Window label"
+          value={ow.label ?? ''}
+          placeholder="e.g. Taco truck pickup"
+          onChange={(v) => store.updateObject(obj.id, { label: v })}
+        />
+        <NumberField
+          label="Counter depth (ft)"
+          value={ow.counterDepthFt ?? 1.5}
+          min={0.5}
+          step={0.5}
+          onChange={(v) =>
+            store.updateObject(obj.id, { counterDepthFt: v })
+          }
+        />
+      </>
     )
   }
   if (obj.kind === 'label') {

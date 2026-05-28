@@ -17,6 +17,7 @@
 export type ObjectKind =
   | 'booth'
   | 'wall'
+  | 'open_wall'
   | 'aisle'
   | 'label'
   | 'door'
@@ -56,6 +57,26 @@ export interface WallObject extends BasePlacedObject {
   kind: 'wall'
 }
 
+/**
+ * Open Wall — a service-window architectural fixture (think food
+ * trucks, concession booths, ordering counters). Reads as a normal
+ * wall segment, but the canvas paints a dashed cutout along the
+ * "front" face of the wall to signal that patrons can transact
+ * through the opening.
+ *
+ * The opening sits along the segment's longer dimension; the
+ * `counterDepthFt` field captures how deep the counter projects
+ * into the room from the wall plane (defaults to 1.5 ft = a typical
+ * pass-through counter). It is rendered as a dashed silhouette
+ * inside the wall rectangle.
+ */
+export interface OpenWallObject extends BasePlacedObject {
+  kind: 'open_wall'
+  /** Counter depth in feet (projection of the service ledge into
+   *  the interior). Defaults to 1.5 ft when unset. */
+  counterDepthFt?: number
+}
+
 export interface AisleObject extends BasePlacedObject {
   kind: 'aisle'
 }
@@ -88,6 +109,7 @@ export interface StageObject extends BasePlacedObject {
 export type PlacedObject =
   | BoothObject
   | WallObject
+  | OpenWallObject
   | AisleObject
   | LabelObject
   | DoorObject
