@@ -893,7 +893,20 @@ export function MarketSetupWizard({
           ? // Bottom padding (`pb-[calc(...)]`) pulls the WizardNav row
             // clear of the iOS home indicator on phones so the
             // "Save floor plan & deploy" button is fully tappable.
-            'mx-[calc(50%-50vw)] flex w-screen flex-col gap-2 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4'
+            //
+            // Height constraint: the floor plan step is the one
+            // place in the wizard where a fixed viewport height is
+            // critical. Without it the page itself overflows AND
+            // the canvas inner `overflow-auto` overflows, producing
+            // the "double scrollbar" UX (one for the browser, one
+            // inside the canvas). Pinning the wizard step root to
+            // `100dvh` minus the chrome above (AppNav ~56 px + setup
+            // page padding 64 px + back-link block ~28 px ≈ 148 px)
+            // means the existing `flex-1 min-h-0` cascade below
+            // delivers the canvas exactly the leftover space, and
+            // the canvas's own scroll surface becomes the single
+            // unified viewport scroll.
+            'mx-[calc(50%-50vw)] flex h-[calc(100dvh-148px)] min-h-[480px] w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4'
           : 'space-y-6'
       )}
     >
@@ -1102,8 +1115,11 @@ export function MarketSetupWizard({
                 onAddRoom={handleAddRoom}
                 onRenameRoom={handleRenameRoom}
                 onDeleteRoom={handleDeleteRoom}
+                className="flex-1 min-h-0"
               />
-              <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
+              <div className="shrink-0">
+                <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
+              </div>
             </>
           ) : null}
         </div>

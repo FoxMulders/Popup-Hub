@@ -1183,8 +1183,8 @@ export function FloorPlanV2({
   }, [joinPlan.unjoinGroupId, store])
 
   return (
-    <div id="floor-plan-workspace" className={cn('flex flex-col gap-2', className)}>
-      <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2">
+    <div id="floor-plan-workspace" className={cn('flex flex-col gap-2 min-h-0', className)}>
+      <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2 shrink-0">
         <div className="min-w-0">
           <h2 className="text-lg font-bold tracking-tight text-stone-900">
             Floor plan canvas
@@ -1232,56 +1232,71 @@ export function FloorPlanV2({
         </div>
       </header>
 
-      <CanvasCommandBar
-        toolState={{ tool, drawShape }}
-        onToolChange={handleToolChange}
-        onDrawShapeChange={handleDrawShapeChange}
-        canUndo={store.canUndo}
-        canRedo={store.canRedo}
-        onUndo={store.undo}
-        onRedo={store.redo}
-        onClearAll={handleClearAll}
-        selectedCount={selectedCount}
-        onDeleteSelected={handleDeleteSelected}
-        onCopy={handleCopy}
-        onPaste={handlePaste}
-        clipboardHasContents={clipboardHasContents}
-        onRotateLeft={handleRotateLeft}
-        onRotateRight={handleRotateRight}
-        onAlignVertical={handleAlignVertical}
-        onAlignHorizontal={handleAlignHorizontal}
-        zoom={currentZoom}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-        onZoomReset={handleZoomReset}
-        onCenterView={handleCenterView}
-        onAutoArrange={handleAutoArrange}
-        canAutoArrange={boothCount > 0}
-        onJoinRooms={handleJoinRooms}
-        canJoinRooms={joinPlan.canJoin}
-        joinCandidateCount={
-          joinPlan.canJoin
-            ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
-            : undefined
-        }
-        joinBlockedReason={joinPlan.blockedReason}
-        onUnjoinRoom={handleUnjoinRoom}
-        canUnjoinRoom={joinPlan.unjoinGroupId !== null}
-      />
-
-      {onAddRoom && onRenameRoom && onDeleteRoom ? (
-        <LayoutRoomBar
-          rooms={layoutRooms}
-          activeRoomId={selectedRoomId ?? activeRoomId}
-          onSelectRoom={handleSelectRoom}
-          onAddRoom={onAddRoom}
-          onRenameRoom={onRenameRoom}
-          onDeleteRoom={onDeleteRoom}
-          slim
+      {/* Sticky-pinned action bars: even though the workspace is
+          height-constrained so the page itself shouldn't scroll on
+          most viewports, very small devices (height < ~640 px) can
+          still nudge the page into overflow. `sticky top-0` keeps
+          the command ribbon and rooms row anchored to the viewport
+          top in that fallback case so coordinators never lose their
+          tools while scrolling. Both bars share one sticky container
+          so they slide together rather than jittering past each
+          other. The `bg-stone-50` opaque backdrop matches the
+          page background and prevents canvas content from showing
+          through on the sticky ribbon. */}
+      <div className="sticky top-0 z-40 -mx-2 px-2 -mt-2 pt-2 bg-stone-50 shrink-0">
+        <CanvasCommandBar
+          toolState={{ tool, drawShape }}
+          onToolChange={handleToolChange}
+          onDrawShapeChange={handleDrawShapeChange}
+          canUndo={store.canUndo}
+          canRedo={store.canRedo}
+          onUndo={store.undo}
+          onRedo={store.redo}
+          onClearAll={handleClearAll}
+          selectedCount={selectedCount}
+          onDeleteSelected={handleDeleteSelected}
+          onCopy={handleCopy}
+          onPaste={handlePaste}
+          clipboardHasContents={clipboardHasContents}
+          onRotateLeft={handleRotateLeft}
+          onRotateRight={handleRotateRight}
+          onAlignVertical={handleAlignVertical}
+          onAlignHorizontal={handleAlignHorizontal}
+          zoom={currentZoom}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          onCenterView={handleCenterView}
+          onAutoArrange={handleAutoArrange}
+          canAutoArrange={boothCount > 0}
+          onJoinRooms={handleJoinRooms}
+          canJoinRooms={joinPlan.canJoin}
+          joinCandidateCount={
+            joinPlan.canJoin
+              ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
+              : undefined
+          }
+          joinBlockedReason={joinPlan.blockedReason}
+          onUnjoinRoom={handleUnjoinRoom}
+          canUnjoinRoom={joinPlan.unjoinGroupId !== null}
         />
-      ) : null}
 
-      <div className="flex min-h-0 gap-2">
+        {onAddRoom && onRenameRoom && onDeleteRoom ? (
+          <div className="mt-2">
+            <LayoutRoomBar
+              rooms={layoutRooms}
+              activeRoomId={selectedRoomId ?? activeRoomId}
+              onSelectRoom={handleSelectRoom}
+              onAddRoom={onAddRoom}
+              onRenameRoom={onRenameRoom}
+              onDeleteRoom={onDeleteRoom}
+              slim
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex flex-1 min-h-0 gap-2">
         <div className="relative flex shrink-0">
           {!leftDockOpen ? (
             <button
@@ -1335,7 +1350,7 @@ export function FloorPlanV2({
           )}
         </div>
 
-        <div className="relative min-w-0 flex-1 h-[clamp(360px,58vh,780px)] overflow-hidden rounded-lg border border-stone-200 bg-stone-100 lg:h-[780px]">
+        <div className="relative h-full min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
           <FloorPlanCanvas
             store={store}
             toolState={{ tool, drawShape }}
@@ -1380,7 +1395,7 @@ export function FloorPlanV2({
               <PropertyInspector
                 store={store}
                 eventCategoryNames={eventCategoryNames}
-                className="h-full max-h-[clamp(360px,58vh,780px)] overflow-y-auto lg:max-h-[780px]"
+                className="h-full max-h-full overflow-y-auto"
               />
             </div>
           )}
