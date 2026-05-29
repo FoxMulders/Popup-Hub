@@ -483,6 +483,31 @@ export function MarketSetupWizard({
       const bounds = resolveScheduleBounds()
       if (!bounds) return { ok: false as const, reason: 'schedule' as const }
 
+      /*
+       * Booth-fee disclosure gate — applies only on the publish path.
+       * Coordinators must explicitly state a per-booth fee for every
+       * category before vendors can land on a registration card. Free
+       * booths ($0) are valid as long as the coordinator typed it; we
+       * just refuse missing/invalid values and empty category lists.
+       */
+      if (opts?.publish) {
+        if (categoryLimits.length === 0) {
+          toast.error(
+            'Add at least one booth category and state its fee before publishing.'
+          )
+          return { ok: false as const, reason: 'fees' as const }
+        }
+        const missingFee = categoryLimits.find(
+          (cl) => !Number.isFinite(cl.pricePerBooth) || cl.pricePerBooth < 0
+        )
+        if (missingFee) {
+          toast.error(
+            `Set a booth fee for "${missingFee.categoryName}" before publishing. Use $0 for free booths.`
+          )
+          return { ok: false as const, reason: 'fees' as const }
+        }
+      }
+
       setAutosaveStatus('saving')
       try {
         let coverUrl = coverImageUrl || null

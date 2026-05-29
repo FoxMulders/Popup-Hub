@@ -241,6 +241,32 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     if (!name.trim()) { toast.error('Event name is required'); return }
     if (!pinDropped) { toast.error('Please drop a map pin for the venue location'); return }
 
+    /*
+     * Mandatory booth-fee disclosure gate. Before flipping an event
+     * into a Published state, the coordinator must have explicitly
+     * stated a booth fee for every category — leaving a row at $0
+     * is fine (that's an explicit "free" choice), but having zero
+     * categories at all means vendors would land on a registration
+     * card with no fee context. Refuse the publish in that case.
+     */
+    if (publishStatus === 'published') {
+      if (categoryLimits.length === 0) {
+        toast.error(
+          'Add at least one booth category and state its fee before publishing — vendors need to see a price.'
+        )
+        return
+      }
+      const missingFee = categoryLimits.find(
+        (cl) => !Number.isFinite(cl.pricePerBooth) || cl.pricePerBooth < 0
+      )
+      if (missingFee) {
+        toast.error(
+          `Set a booth fee for "${missingFee.categoryName}" before publishing. Use $0 for free booths.`
+        )
+        return
+      }
+    }
+
     const hasPaidBooths = categoryLimits.some((cl) => cl.pricePerBooth > 0)
     if (publishStatus === 'published' && hasPaidBooths) {
       const { data: profile } = await supabase

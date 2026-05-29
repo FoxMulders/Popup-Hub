@@ -21,8 +21,6 @@ import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-banner'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
-import { computePlatformFeeCents } from '@/lib/monetization/fees'
-import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
 import type { Auction, Event, EventCategoryLimit } from '@/types/database'
@@ -140,8 +138,6 @@ export default async function VendorEventDetailPage({ params }: Props) {
   const maxBoothFee = paidCategoryLimits.length
     ? Math.max(...paidCategoryLimits.map((cl) => cl.price_per_booth))
     : 0
-  const sampleFeePreview =
-    minBoothFee > 0 ? computePlatformFeeCents(minBoothFee, resolveEventFeeConfig(eventRecord as Event)) : 0
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -306,19 +302,16 @@ export default async function VendorEventDetailPage({ params }: Props) {
         {!existingApp && paidCategoryLimits.length > 0 ? (
           <div className="mb-4 rounded-lg bg-canvas p-3 text-sm space-y-1">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Booth fee range</span>
+              <span className="text-muted-foreground">Booth fee</span>
               <span className="font-semibold">
                 {minBoothFee === maxBoothFee
                   ? formatCents(minBoothFee)
                   : `${formatCents(minBoothFee)} – ${formatCents(maxBoothFee)}`}
               </span>
             </div>
-            {sampleFeePreview > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Platform fee (3% + $1) applies on paid booths — e.g. {formatCents(sampleFeePreview)} on{' '}
-                {formatCents(minBoothFee)}.
-              </p>
-            ) : null}
+            <p className="text-xs text-muted-foreground">
+              The total above is what gets charged to your card on application.
+            </p>
           </div>
         ) : null}
         <ApplyButton

@@ -89,16 +89,18 @@ export function VendorPaymentMethodSelector({
                   {id === 'SQUARE' ? (
                     <>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        3% convenience fee · instant approval after payment
+                        Instant approval after payment
                       </p>
                       <p className="text-sm font-semibold text-foreground">
                         Total {formatCents(squareTotalCents)}
                       </p>
-                      {platformFeeCents > 0 && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Includes {formatCents(platformFeeCents)} processing fee
-                        </p>
-                      )}
+                      {/*
+                       * Public-facing copy: the unified "Total"
+                       * already absorbs every line item the buyer
+                       * is charged. The internal platform-margin
+                       * breakdown stays on coordinator-only views
+                       * (e.g. the Square Connect dashboard).
+                       */}
                       <p className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
                         <Sparkles className="h-3 w-3" aria-hidden />
                         Instant booth confirmation

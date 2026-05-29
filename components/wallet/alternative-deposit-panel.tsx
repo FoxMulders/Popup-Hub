@@ -10,7 +10,8 @@ import {
   BANKING_PORTAL_LINKS,
 } from '@/lib/wallet/etransfer-config'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
-import { buildWalletTopUpQrPayload, walletTopUpQrImageUrl } from '@/lib/wallet/wallet-qr'
+import { buildWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
+import { WalletQrDisplay } from '@/components/wallet/wallet-qr-display'
 import { WalletDoorCopyButton } from '@/components/wallet/wallet-door-copy-button'
 import type { WalletDepositRequest } from '@/types/database'
 import { Banknote, Copy, ExternalLink, Loader2, QrCode, Send } from 'lucide-react'
@@ -29,7 +30,6 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
   const [loadingPending, setLoadingPending] = useState(true)
 
   const qrPayload = buildWalletTopUpQrPayload(userId)
-  const qrUrl = walletTopUpQrImageUrl(userId, 220)
 
   const loadPending = useCallback(async () => {
     setLoadingPending(true)
@@ -94,13 +94,11 @@ export function AlternativeDepositPanel({ userId }: AlternativeDepositPanelProps
           </p>
           <div className="rounded-xl border bg-canvas p-4 text-center">
             <p className="mb-3 text-sm font-medium text-foreground">Show this QR at the door</p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={qrUrl}
-              alt="Wallet top-up QR code for door staff"
-              width={220}
-              height={220}
-              className="mx-auto rounded-lg border bg-white p-2"
+            <WalletQrDisplay
+              value={qrPayload}
+              size={220}
+              ariaLabel="Wallet top-up QR code for door staff"
+              className="h-44 w-44"
             />
             <p className="mt-3 break-all font-mono text-[10px] text-muted-foreground">{qrPayload}</p>
             <WalletDoorCopyButton value={userId} className="mt-3" />

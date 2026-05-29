@@ -29,7 +29,3 @@ export function parseWalletTopUpQrPayload(raw: string): string | null {
   if (new RegExp(`^${UUID_PATTERN}$`, 'i').test(trimmed)) return trimmed
   return null
 }
-
-export function walletTopUpQrImageUrl(userId: string, size = 200): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(buildWalletTopUpQrPayload(userId))}`
-}

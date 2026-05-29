@@ -562,10 +562,6 @@ export function ApplyButton({
     const requiresPaymentNow = paymentApp ? needsSquareCheckout(paymentApp) : false
     const eTransferPending = paymentApp ? needsEtransferCoordinatorReview(paymentApp) : false
     const paid = paymentApp ? isApplicationPaid(paymentApp) : false
-    const feePreview =
-      requiresPaymentNow && boothPriceCents > 0
-        ? computePlatformFeeCents(boothPriceCents, resolveEventFeeConfig(event))
-        : 0
 
     if (requiresPaymentNow) {
       return (
@@ -575,15 +571,15 @@ export function ApplyButton({
               <span className="text-muted-foreground">Booth fee</span>
               <span className="font-semibold">{formatCents(boothPriceCents)}</span>
             </div>
-            {feePreview > 0 ? (
-              <div className="flex justify-between text-muted-foreground">
-                <span>Platform fee (3% + $1)</span>
-                <span>{formatCents(feePreview)}</span>
-              </div>
-            ) : null}
+            {/*
+             * Platform-fee processing margin intentionally hidden
+             * from the public vendor view — coordinators see the
+             * detailed breakdown on their own dashboards. Vendors
+             * see exactly one line: the booth fee they pay.
+             */}
             <div className="flex justify-between border-t border-harvest-100 pt-1 font-medium">
               <span>Total due</span>
-              <span>{formatCents(boothPriceCents + feePreview)}</span>
+              <span>{formatCents(boothPriceCents)}</span>
             </div>
           </div>
           <Button
@@ -803,12 +799,11 @@ export function ApplyButton({
                       : formatCents(applySlot.pricePerBooth)}
                   </span>
                 </div>
-                {requiresPayment && (
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Platform fee (3% + $1)</span>
-                    <span>{formatCents(feePreview)}</span>
-                  </div>
-                )}
+                {/*
+                 * Public vendor view — platform-fee math is
+                 * intentionally hidden. Coordinators see the
+                 * processing breakdown on their dashboards.
+                 */}
                 <div className="flex justify-between mt-1">
                   <span className="text-muted-foreground">Mode</span>
                   <Badge variant="outline" className="text-xs capitalize">

@@ -19,6 +19,7 @@ import { ReviewSection } from '@/components/shopper/review-section'
 import { VendorReviewsPanel } from '@/components/shopper/vendor-reviews-panel'
 import { buildScheduleLines } from '@/lib/shopper/events'
 import { buildVendorLineup, type VendorLineupEntry } from '@/lib/shopper/vendors'
+import { formatCents } from '@/lib/square/client'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { Button } from '@/components/ui/button'
 import { MarketPassportPanel } from '@/components/market-passport/market-passport-panel'
@@ -287,6 +288,34 @@ export function EventDetailClient({
               Sign up as a vendor or enable vendor access on your profile, then apply from the vendor
               portal. Juried markets review each booth application individually.
             </p>
+            {/*
+             * Public registration card — booth fee is the headline
+             * vendors care about. We surface it prominently so shoppers
+             * thinking about flipping into a vendor know exactly what
+             * the booth costs before they tap through.
+             */}
+            {(() => {
+              const limits = event.category_limits ?? []
+              if (limits.length === 0) return null
+              const fees = limits
+                .map((cl) => cl.price_per_booth ?? 0)
+                .filter((cents) => Number.isFinite(cents) && cents >= 0)
+              if (fees.length === 0) return null
+              const minFee = Math.min(...fees)
+              const maxFee = Math.max(...fees)
+              const allFree = maxFee === 0
+              const display = allFree
+                ? 'Free'
+                : minFee === maxFee
+                  ? formatCents(minFee)
+                  : `${formatCents(minFee)} – ${formatCents(maxFee)}`
+              return (
+                <div className="mt-3 flex items-center justify-between rounded-lg border border-harvest-200 bg-harvest-50/40 px-3 py-2 text-sm">
+                  <span className="font-medium text-foreground">Booth fee</span>
+                  <span className="font-semibold text-harvest-900">{display}</span>
+                </div>
+              )
+            })()}
             <div className="mt-3 flex flex-wrap gap-2">
               <Link href="/profile">
                 <Button size="sm" variant="outline">

@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
-import { buildWalletTopUpQrPayload, walletTopUpQrImageUrl } from '@/lib/wallet/wallet-qr'
+import { buildWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
+import { WalletQrDisplay } from '@/components/wallet/wallet-qr-display'
 import { Loader2, QrCode, Store } from 'lucide-react'
 
 interface BoothCheckoutProps {
@@ -99,12 +100,10 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
             <p className="mb-2 text-xs font-medium text-muted-foreground">
               Vendors and door staff can scan this to identify your wallet
             </p>
-            <img
-              src={walletTopUpQrImageUrl(userId, 160)}
-              alt="Wallet QR code"
-              width={160}
-              height={160}
-              className="mx-auto rounded-lg border bg-white p-2"
+            <WalletQrDisplay
+              value={qrPayload}
+              size={160}
+              ariaLabel="Your wallet QR code"
             />
             <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">{qrPayload}</p>
           </div>

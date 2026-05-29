@@ -58,6 +58,57 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
   const transitions = TRANSITIONS[currentStatus]
 
   async function changeStatus(newStatus: EventStatus) {
+    /*
+     * Mandatory booth-fee disclosure gate. Before flipping into a
+     * Published state from any path (this status dropdown OR the
+     * form's "Publish" button), we make sure every booth category has
+     * an explicit fee value. The form already enforces this on
+     * publish — we re-check here because vendors who arrive at the
+     * registration card need to see a price line, and a Draft event
+     * can have empty/half-set categories from the wizard.
+     */
+    if (newStatus === 'published') {
+      const { data: limits, error: feeError } = await supabase
+        .from('event_category_limits')
+        .select('price_per_booth, category:categories(name)')
+        .eq('event_id', event.id)
+
+      if (feeError) {
+        toast.error('Could not verify booth fees before publishing.')
+        return
+      }
+
+      type FeeRow = {
+        price_per_booth: number | null
+        category: { name?: string | null } | { name?: string | null }[] | null
+      }
+
+      const rows = (limits ?? []) as FeeRow[]
+      if (rows.length === 0) {
+        toast.error(
+          'Add at least one booth category and state its fee before publishing.'
+        )
+        return
+      }
+      const missing = rows.find(
+        (row) =>
+          row.price_per_booth === null ||
+          row.price_per_booth === undefined ||
+          !Number.isFinite(row.price_per_booth) ||
+          row.price_per_booth < 0
+      )
+      if (missing) {
+        const cat = Array.isArray(missing.category)
+          ? missing.category[0]
+          : missing.category
+        const catName = cat?.name ?? 'one of your categories'
+        toast.error(
+          `Set a booth fee for ${catName} before publishing. Use $0 for free booths.`
+        )
+        return
+      }
+    }
+
     const { error } = await supabase
       .from('events')
       .update({ status: newStatus })
