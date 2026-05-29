@@ -1,3 +1,5 @@
+import type { VendorVerificationStatus } from '@/types/database'
+
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -35,6 +37,10 @@ export type PassportSaveInput = {
   websiteUrl: string | null
   shopUrl: string | null
   instagramUrl: string | null
+  businessNumber?: string | null
+  socialHandle?: string | null
+  verificationStatus?: VendorVerificationStatus | null
+  riskScore?: number | null
 }
 
 export type PassportSavePayload = {
@@ -49,6 +55,10 @@ export type PassportSavePayload = {
   website_url: string | null
   shop_url: string | null
   instagram_url: string | null
+  business_number: string | null
+  social_handle: string | null
+  verification_status: VendorVerificationStatus
+  risk_score: number
 }
 
 export function buildPassportSavePayload(input: PassportSaveInput): PassportSavePayload {
@@ -79,6 +89,10 @@ export function buildPassportSavePayload(input: PassportSaveInput): PassportSave
     website_url: input.websiteUrl,
     shop_url: input.shopUrl,
     instagram_url: input.instagramUrl,
+    business_number: input.businessNumber ?? null,
+    social_handle: input.socialHandle ?? null,
+    verification_status: input.verificationStatus ?? 'unverified',
+    risk_score: input.riskScore ?? 0,
   }
 }
 

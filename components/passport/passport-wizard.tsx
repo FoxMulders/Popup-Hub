@@ -17,6 +17,7 @@ import { sortCategoriesByName } from '@/lib/categories'
 import { normalizeUrl } from '@/lib/vendor/normalize-url'
 import { resolvePassportCategoryIds, toggleCategoryId } from '@/lib/vendor/passport-categories'
 import { buildPassportSavePayload, formatSupabaseError } from '@/lib/vendor/passport-payload'
+import { evaluateAndScoreVendorPassport } from '@/lib/vendor/verification'
 import { uploadVendorAsset } from '@/lib/vendor/upload-vendor-asset'
 import { dispatchAvatarChanged } from '@/lib/profile/avatar-sync'
 import { cn } from '@/lib/utils'
@@ -76,6 +77,8 @@ export function PassportWizard({
   const [websiteUrl, setWebsiteUrl] = useState(existing?.website_url ?? '')
   const [shopUrl, setShopUrl] = useState(existing?.shop_url ?? '')
   const [instagramUrl, setInstagramUrl] = useState(existing?.instagram_url ?? '')
+  const [businessNumber, setBusinessNumber] = useState(existing?.business_number ?? '')
+  const [socialHandle, setSocialHandle] = useState(existing?.social_handle ?? '')
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -113,6 +116,15 @@ export function PassportWizard({
         uploadedItemUrls.push(url)
       }
 
+      const verification = await evaluateAndScoreVendorPassport({
+        business_name: businessName,
+        business_number: businessNumber,
+        social_handle: socialHandle,
+        instagram_url: instagramUrl,
+        is_verified: existing?.is_verified,
+        verification_status: existing?.verification_status,
+      })
+
       const passportData = buildPassportSavePayload({
         userId,
         businessName,
@@ -125,6 +137,10 @@ export function PassportWizard({
         websiteUrl: normalizeUrl(websiteUrl),
         shopUrl: normalizeUrl(shopUrl),
         instagramUrl: normalizeUrl(instagramUrl),
+        businessNumber: verification.business_number,
+        socialHandle: verification.social_handle,
+        verificationStatus: verification.verification_status,
+        riskScore: verification.risk_score,
       })
 
       const { error } = existing
@@ -225,6 +241,31 @@ export function PassportWizard({
                   maxLength={500}
                 />
                 <p className="text-right text-xs text-muted-foreground">{bio.length}/500</p>
+              </div>
+              <div className="space-y-3 border-t pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Identity verification
+                </p>
+                <div className="space-y-1">
+                  <Label htmlFor="business-number">Business / tax number *</Label>
+                  <Input
+                    id="business-number"
+                    placeholder="123456789 or 12-3456789"
+                    value={businessNumber}
+                    onChange={(e) => setBusinessNumber(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="social-handle">Primary social handle *</Label>
+                  <Input
+                    id="social-handle"
+                    placeholder="@yourbrand"
+                    value={socialHandle}
+                    onChange={(e) => setSocialHandle(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-3 border-t pt-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

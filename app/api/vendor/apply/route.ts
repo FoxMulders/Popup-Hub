@@ -32,6 +32,7 @@ import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-inst
 import { isCategoryCapacityError } from '@/lib/applications/booth-payment-processing'
 import { resolvePostApprovalStatus, isReservedBoothStatus } from '@/lib/applications/resolve-approval-status'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
+import { vendorApplyBlockReason } from '@/lib/vendor/verification'
 import type { Role } from '@/types/database'
 
 async function nextWaitlistPosition(
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
     supabase
       .from('vendor_passports')
       .select(
-        'id, business_name, primary_category_id, category_ids, is_verified'
+        'id, business_name, primary_category_id, category_ids, is_verified, verification_status, business_number, social_handle, risk_score, account_status'
       )
       .eq('user_id', vendorId)
       .maybeSingle(),
@@ -164,6 +165,11 @@ export async function POST(request: Request) {
       { error: 'Complete your Vendor Passport before applying to markets.' },
       { status: 400 }
     )
+  }
+
+  const fraudBlock = vendorApplyBlockReason(passport)
+  if (fraudBlock) {
+    return NextResponse.json({ error: fraudBlock }, { status: 403 })
   }
 
   const { data: primaryCategory } = await supabase

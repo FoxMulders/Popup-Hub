@@ -4,9 +4,13 @@ import {
   resolvePassportVendorsRequired,
 } from '@/lib/market-passport/check-in'
 import {
+  computePassportPaymentHash,
   parsePassportScanPayload,
-  verifyPassportScanToken,
-} from '@/lib/market-passport/scan-token'
+  verifyLegacyPassportScanToken,
+  verifySignedPassportToken,
+} from '@/lib/passport/passport-token'
+import { isApplicationPaid } from '@/lib/applications/payment-fields'
+import { isReservedBoothStatus } from '@/lib/applications/resolve-approval-status'
 import type { PassportScan } from '@/types/database'
 
 export interface PassportProgress {
@@ -60,18 +64,29 @@ export async function recordPassportScan(
 > {
   let eventId = input.eventId
   let vendorId = input.vendorId
+  let signedApplicationId: string | undefined
+  let signedPaymentHash: string | undefined
 
   if (input.token) {
     const rawToken = parsePassportScanPayload(input.token)
     if (!rawToken) {
       return { ok: false, error: 'Invalid passport QR code.', status: 400 }
     }
-    const parsed = verifyPassportScanToken(rawToken)
-    if (!parsed) {
-      return { ok: false, error: 'Passport QR code could not be verified.', status: 400 }
+
+    const signed = verifySignedPassportToken(rawToken)
+    if (signed) {
+      eventId = signed.eventId
+      vendorId = signed.vendorId
+      signedApplicationId = signed.applicationId
+      signedPaymentHash = signed.paymentHash
+    } else {
+      const legacy = verifyLegacyPassportScanToken(rawToken)
+      if (!legacy) {
+        return { ok: false, error: 'Passport QR code could not be verified.', status: 400 }
+      }
+      eventId = legacy.eventId
+      vendorId = legacy.vendorId
     }
-    eventId = parsed.eventId
-    vendorId = parsed.vendorId
   }
 
   if (!eventId || !vendorId) {
@@ -101,19 +116,42 @@ export async function recordPassportScan(
     return { ok: false, error: 'This market is not open for passport scans.', status: 422 }
   }
 
-  const { data: application } = await supabase
+  const applicationQuery = supabase
     .from('booth_applications')
-    .select('id, vendor_id')
+    .select(
+      'id, vendor_id, status, payment_status, payment_method, application_payment_status, approved_at'
+    )
     .eq('event_id', eventId)
     .eq('vendor_id', vendorId)
-    .eq('status', 'approved')
-    .maybeSingle()
 
-  if (!application) {
+  const { data: application } = signedApplicationId
+    ? await applicationQuery.eq('id', signedApplicationId).maybeSingle()
+    : await applicationQuery.maybeSingle()
+
+  if (!application || !isReservedBoothStatus(application.status)) {
     return {
       ok: false,
       error: 'This vendor is not participating at this market.',
       status: 422,
+    }
+  }
+
+  if (!isApplicationPaid(application)) {
+    return {
+      ok: false,
+      error: 'Vendor passport is not active until booth payment is completed.',
+      status: 422,
+    }
+  }
+
+  if (signedPaymentHash) {
+    const currentHash = computePassportPaymentHash(application)
+    if (currentHash !== signedPaymentHash) {
+      return {
+        ok: false,
+        error: 'Passport QR code is no longer valid. Ask the vendor to refresh their QR.',
+        status: 422,
+      }
     }
   }
 

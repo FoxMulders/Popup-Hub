@@ -1,10 +1,9 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import QRCode from 'react-qr-code'
-import { buildPassportScanQrValue } from '@/lib/market-passport/scan-token'
 import { Button } from '@/components/ui/button'
-import { Download, Stamp } from 'lucide-react'
+import { Download, Loader2, Stamp } from 'lucide-react'
 
 interface PassportVendorQrProps {
   eventId: string
@@ -20,7 +19,40 @@ export function PassportVendorQr({
   businessName,
 }: PassportVendorQrProps) {
   const svgRef = useRef<HTMLDivElement>(null)
-  const qrValue = buildPassportScanQrValue(eventId, vendorId)
+  const [qrValue, setQrValue] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadToken() {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(`/api/passport/vendor-token?eventId=${encodeURIComponent(eventId)}`)
+        const body = (await res.json()) as { qrValue?: string; error?: string }
+        if (!res.ok) {
+          throw new Error(body.error ?? 'Passport QR is not available yet.')
+        }
+        if (!cancelled) {
+          setQrValue(body.qrValue ?? null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Could not load passport QR')
+          setQrValue(null)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadToken()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId, vendorId])
 
   function handleDownload() {
     const svgEl = svgRef.current?.querySelector('svg')
@@ -68,12 +100,22 @@ export function PassportVendorQr({
         Patron passport QR
       </div>
 
-      <div
-        ref={svgRef}
-        className="rounded-xl border-2 border-stone-200 bg-white p-3 shadow-sm"
-      >
-        <QRCode value={qrValue} size={180} />
-      </div>
+      {loading ? (
+        <div className="flex h-[220px] w-[220px] items-center justify-center rounded-xl border-2 border-dashed border-stone-200">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : error ? (
+        <div className="max-w-[240px] rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-xs text-amber-900">
+          {error}
+        </div>
+      ) : qrValue ? (
+        <div
+          ref={svgRef}
+          className="rounded-xl border-2 border-stone-200 bg-white p-3 shadow-sm"
+        >
+          <QRCode value={qrValue} size={180} />
+        </div>
+      ) : null}
 
       <div className="space-y-0.5 text-center">
         {businessName ? (
@@ -83,13 +125,15 @@ export function PassportVendorQr({
       </div>
 
       <p className="max-w-[220px] text-center text-xs text-muted-foreground">
-        Display this at your booth so patrons can scan and stamp their passport.
+        Available only after approval and completed payment. Display at your booth for patron passport scans.
       </p>
 
-      <Button size="sm" variant="outline" onClick={handleDownload} className="gap-1.5 text-xs">
-        <Download className="h-3.5 w-3.5" />
-        Download PNG
-      </Button>
+      {qrValue ? (
+        <Button size="sm" variant="outline" onClick={handleDownload} className="gap-1.5 text-xs">
+          <Download className="h-3.5 w-3.5" />
+          Download PNG
+        </Button>
+      ) : null}
     </div>
   )
 }

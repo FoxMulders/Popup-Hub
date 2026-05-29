@@ -289,6 +289,9 @@ export type SecurityAuditActionType =
   | 'MANUAL_PAYMENT_CLEARANCE'
   | 'STATE_OVERRIDE_APPROVAL'
   | 'APPLICATION_STATUS_CHANGE'
+  | 'VENDOR_DISPUTE_SUSPENSION'
+  | 'VENDOR_BOOTH_EVICTION'
+  | 'PASSPORT_QR_BLOCKED'
 
 export interface AuditSecurityLog {
   id: string
@@ -800,17 +803,6 @@ export interface MarketFeedPost {
 export interface MarketFeedPostLike {
   post_id: string
   user_id: string
-  created_at: string
-}
-
-export interface AuditSecurityLog {
-  id: string
-  event_type: string
-  actor_id: string | null
-  vendor_id: string | null
-  event_id: string | null
-  application_id: string | null
-  metadata: Record<string, unknown>
   created_at: string
 }
 

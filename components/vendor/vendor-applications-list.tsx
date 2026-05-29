@@ -20,6 +20,7 @@ import {
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
 } from '@/lib/applications/payment-fields'
+import { isPassportQrEligible } from '@/lib/passport/passport-token'
 import type { BoothApplication, EventCancellationReason, PaymentStatus } from '@/types/database'
 import { CancellationDetails } from '@/components/vendor/cancellation-details'
 import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
@@ -352,7 +353,7 @@ export function VendorApplicationsList({
                       </Button>
                     ) : null}
 
-                    {app.status === 'approved' &&
+                    {isPassportQrEligible(app) &&
                     ev?.id &&
                     ev.status &&
                     ['published', 'active'].includes(ev.status) ? (

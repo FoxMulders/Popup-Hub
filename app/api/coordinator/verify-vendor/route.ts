@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { logSecurityEvent } from '@/lib/security/audit-log'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -58,9 +59,13 @@ export async function POST(request: Request) {
 
   const { data: passport, error } = await supabase
     .from('vendor_passports')
-    .update({ is_verified: true })
+    .update({
+      is_verified: true,
+      verification_status: 'verified',
+      risk_score: 0,
+    })
     .eq('user_id', vendorId)
-    .select('id, is_verified')
+    .select('id, is_verified, verification_status, risk_score')
     .maybeSingle()
 
   if (error) {
@@ -70,6 +75,15 @@ export async function POST(request: Request) {
   if (!passport) {
     return NextResponse.json({ error: 'Vendor passport not found' }, { status: 404 })
   }
+
+  await logSecurityEvent({
+    eventType: 'vendor_verification_override',
+    actorId: user.id,
+    vendorId,
+    eventId,
+    applicationId: application.id,
+    metadata: { verification_status: 'verified' },
+  })
 
   return NextResponse.json({ ok: true, passport })
 }

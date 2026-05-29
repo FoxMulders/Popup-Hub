@@ -5,6 +5,40 @@ import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
 import { applyWalletDepositCredit, isDepositBalanceApplied } from '@/lib/wallet/adjust-balance'
+import { suspendVendorForPaymentDispute } from '@/lib/vendor/fraud-actions'
+
+async function handlePaymentDispute(
+  supabase: Awaited<ReturnType<typeof createServiceClient>>,
+  paymentId: string,
+  signal: 'payment.disputed' | 'dispute.created' | 'payment.failed' | 'refund.completed'
+) {
+  const { data: application } = await supabase
+    .from('booth_applications')
+    .select(`
+      id,
+      event_id,
+      vendor_id,
+      status,
+      event:events(coordinator_id)
+    `)
+    .eq('square_payment_id', paymentId)
+    .maybeSingle()
+
+  if (!application?.vendor_id || !application.event_id) return
+
+  const eventRow = Array.isArray(application.event)
+    ? application.event[0]
+    : application.event
+
+  await suspendVendorForPaymentDispute(supabase, {
+    vendorId: application.vendor_id,
+    eventId: application.event_id,
+    applicationId: application.id,
+    signal,
+    processorReference: paymentId,
+    actorId: eventRow?.coordinator_id ?? null,
+  })
+}
 
 export async function POST(request: Request) {
   const rawBody = await request.text()
@@ -120,6 +154,25 @@ export async function POST(request: Request) {
         .update({ status: 'failed' })
         .eq('processor_charge_id', payment.id)
 
+      await handlePaymentDispute(supabase, payment.id, 'payment.failed')
+      break
+    }
+
+    case 'payment.disputed':
+    case 'dispute.created':
+    case 'dispute.state.updated': {
+      const paymentId =
+        event.data?.object?.payment?.id ??
+        event.data?.object?.dispute?.payment_id ??
+        event.data?.object?.dispute?.disputed_payment?.payment_id
+
+      if (paymentId) {
+        await handlePaymentDispute(
+          supabase,
+          paymentId,
+          eventType === 'payment.disputed' ? 'payment.disputed' : 'dispute.created'
+        )
+      }
       break
     }
 
@@ -141,6 +194,10 @@ export async function POST(request: Request) {
         .from('refund_exceptions')
         .update({ status: 'resolved', resolved_at: new Date().toISOString() })
         .eq('square_payment_id', refund.payment_id)
+
+      if (refund.payment_id) {
+        await handlePaymentDispute(supabase, refund.payment_id, 'refund.completed')
+      }
 
       break
     }
