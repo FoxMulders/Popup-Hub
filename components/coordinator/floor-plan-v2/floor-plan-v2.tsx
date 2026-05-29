@@ -144,6 +144,14 @@ export interface FloorPlanV2Props {
    */
   baselineTableLengthFt?: LayoutBaselineTableLengthFt
   onBaselineTableLengthChange?: (ft: LayoutBaselineTableLengthFt) => void
+  /**
+   * Hard structural booth ceiling from Step 2 — already accounts
+   * for walking aisles and emergency fire paths via the
+   * `WALKING_AISLE_RESERVE_RATIO` deduction in
+   * `calculateNetUsableFloorSpace`. Forwarded to Auto-Arrange so it
+   * never lays out more booths than the venue can safely host.
+   */
+  layoutCapacity?: number
   className?: string
 }
 
@@ -177,6 +185,7 @@ export function FloorPlanV2({
   onDeleteRoom,
   baselineTableLengthFt,
   onBaselineTableLengthChange,
+  layoutCapacity,
   className,
 }: FloorPlanV2Props) {
   // Initial unified doc — seed from server-loaded rooms first; if a
@@ -976,7 +985,12 @@ export function FloorPlanV2({
       snapFt: store.doc.snapFt,
       objects: localObjects,
     }
-    const result = autoArrange(localDoc, { eventCategoryNames })
+    const result = autoArrange(localDoc, {
+      eventCategoryNames,
+      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
+        ? { maxBooths: layoutCapacity }
+        : {}),
+    })
     if (result.placedCount === 0) {
       toast.error('Auto-Arrange could not fit any booths inside the room.')
       return
@@ -985,7 +999,16 @@ export function FloorPlanV2({
       (o) => ({ ...o, x: o.x + frame.originX, y: o.y + frame.originY }) as PlacedObject
     )
     store.replaceObjects([...others, ...reglobal])
-    if (result.droppedCount > 0) {
+    if (result.overflowCount > 0) {
+      // Capacity gate from Step 2 prevented overflow booths from
+      // ever entering the placement loop. Tell the coordinator
+      // so they know the layout reflects the safe ceiling, not
+      // their original booth count.
+      toast.warning(
+        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} — ${result.overflowCount} exceeded the venue's safe Max Booths ceiling and were trimmed to preserve walking clearance.`,
+        { duration: 5000 }
+      )
+    } else if (result.droppedCount > 0) {
       toast.warning(
         `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} — ${result.droppedCount} did not fit and were dropped.`
       )
@@ -1003,7 +1026,7 @@ export function FloorPlanV2({
         `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} with clearance.`
       )
     }
-  }, [activeRoomId, boothCount, eventCategoryNames, store])
+  }, [activeRoomId, boothCount, eventCategoryNames, layoutCapacity, store])
 
   /**
    * Macro: emit four locked perimeter wall rects matching the active

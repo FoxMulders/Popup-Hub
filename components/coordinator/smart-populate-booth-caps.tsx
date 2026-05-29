@@ -122,9 +122,9 @@ export function SmartPopulateBoothCaps({
             Smart Populate Layout
           </p>
           <p className={`text-sage-800/90 leading-relaxed ${compact ? 'text-[11px] mt-0.5' : 'text-xs mt-1'}`}>
-            Perimeter wall rows are vendor seating (4′ pocket in booth depth). Net usable deducts only
-            structural locks, [E]/[X] doors, and one 8′ customer spine aisle — then divides by{' '}
-            {tableLengthFt}′×10′ units (2′ equipment + 8′ aisle) for C_max.
+            Net usable deducts structural locks, [E]/[X] doors, the 8′ customer spine aisle, and a 40%
+            reserve for cross aisles + emergency fire paths — then divides by {tableLengthFt}′×10′ units
+            (2′ equipment + 8′ aisle) for C<sub>max</sub>.
           </p>
         </div>
       </div>
@@ -205,6 +205,15 @@ export function SmartPopulateBoothCaps({
               −{preview.breakdown.floor.centralAisleDeductionSqFt.toLocaleString()} sq ft
             </span>
           </div>
+          <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-sage-700">
+            <span title="Reserves cross aisles for two-way patron flow plus code-compliant emergency egress on top of the 2′ co-generated front-of-booth aisle.">
+              − Walking aisles &amp; fire paths (
+              {Math.round(preview.breakdown.floor.walkwayReserveRatio * 100)}%)
+            </span>
+            <span className="tabular-nums">
+              −{preview.breakdown.floor.walkwayReserveSqFt.toLocaleString()} sq ft
+            </span>
+          </div>
           <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-[10px] text-sage-600">
             <span className="whitespace-normal break-words">
               Perimeter [W] ({preview.breakdown.floor.perimeterWallSqFt.toLocaleString()} sq ft) — vendor
@@ -225,6 +234,9 @@ export function SmartPopulateBoothCaps({
             <span className="font-bold text-sage-900">C_max (max booths)</span>
             <span className="font-bold text-harvest-700 tabular-nums">{preview.breakdown.cMax}</span>
           </div>
+          <p className="text-[10px] leading-snug text-sage-700/80 pt-1">
+            Calculated value accounts for standard 10ft walking aisles and emergency fire paths.
+          </p>
           <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-0.5 pt-1 text-[10px] text-sage-800">
             {preview.breakdown.buckets.map((b) => (
               <li key={b.key}>

@@ -99,11 +99,17 @@ export function WizardSummaryRail({
         {showCapacity ? (
           <li className="space-y-1">
             <span className={WIZARD_SUMMARY_META_LABEL}>Capacity</span>
-            <p className={WIZARD_SUMMARY_VALUE_WARN}>
+            <p
+              className={WIZARD_SUMMARY_VALUE_WARN}
+              title="Calculated value accounts for standard 10ft walking aisles and emergency fire paths."
+            >
               Max Booths: {capacityLabel}
               {tableSizeLabel ? (
                 <span className="block text-xs mt-0.5 text-muted-foreground">{tableSizeLabel}</span>
               ) : null}
+              <span className="block text-[10px] mt-0.5 text-muted-foreground">
+                Reserves 10ft walking aisles &amp; fire paths.
+              </span>
             </p>
           </li>
         ) : null}

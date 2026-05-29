@@ -42,8 +42,22 @@ export const CENTRAL_AISLE_WIDTH_FT = MIN_STROLLER_AISLE_WIDTH_FT
 
 export const DEFAULT_UNIT_SQ_FT = DEFAULT_TABLE_LENGTH_FT * BOOTH_UNIT_DEPTH_FT // 60 at 6′ table
 
-/** @deprecated Walkway reserve ratio no longer caps net usable — aisles are explicit deductions. */
-export const DEFAULT_WALKWAY_RESERVE_RATIO = 0
+/**
+ * Mandatory walking-aisle / fire-path reserve as a fraction of the
+ * post-deduction open grid. Even after we strip perimeter walls,
+ * structural locks, [E]/[X] doors, and the planned customer spine,
+ * a hall still needs cross aisles for two-way patron flow plus
+ * unimpeded emergency egress that aren't part of any single
+ * booth's co-generated 2′ shopper aisle. We reserve **40% of the
+ * remaining open grid** for that overhead before dividing into
+ * booth units. This brings raw 4 000 sq ft halls down from a
+ * congested 128-booth ceiling to a code-compliant ~76, in line
+ * with NFPA 101 § 12.2.5.6 walking-clearance guidance.
+ */
+export const WALKING_AISLE_RESERVE_RATIO = 0.4
+
+/** @deprecated superseded by WALKING_AISLE_RESERVE_RATIO. */
+export const DEFAULT_WALKWAY_RESERVE_RATIO = WALKING_AISLE_RESERVE_RATIO
 
 export interface NetUsableFloorSpaceOptions {
   venueElements?: VenueElement[]
@@ -162,7 +176,20 @@ export function calculateNetUsableFloorSpace(
   const deductions = classifyFloorDeductions(elements)
   const centralAisleDeductionSqFt = reserveCentralAisleCells(cols, rows, blocked)
   const openGridSqFt = Math.max(0, grossSqFt - blocked.size)
-  const netUsableSqFt = Math.max(0, openGridSqFt - centralAisleDeductionSqFt)
+  const postDeductionSqFt = Math.max(0, openGridSqFt - centralAisleDeductionSqFt)
+  /*
+   * Reserve a 40% slice of whatever open grid remains for cross
+   * aisles, fire-egress lanes, and emergency exit paths. The
+   * per-booth 2′ co-generated shopper aisle (already baked into
+   * BOOTH_OPERATIONAL_DEPTH_FT) only handles row-local foot
+   * traffic; coordinators still need bigger thoroughfares for
+   * stroller-pair flow and code-compliant egress, and those don't
+   * exist as explicit cells in the doc.
+   */
+  const walkwayReserveSqFt = Math.round(
+    postDeductionSqFt * WALKING_AISLE_RESERVE_RATIO
+  )
+  const netUsableSqFt = Math.max(0, postDeductionSqFt - walkwayReserveSqFt)
 
   const netWidthFt = Math.max(0, venueWidthFt - CENTRAL_AISLE_WIDTH_FT)
   const netLengthFt = venueLengthFt
@@ -180,8 +207,8 @@ export function calculateNetUsableFloorSpace(
     netUsableSqFt,
     perimeterDeductionSqFt: 0,
     centralAisleDeductionSqFt,
-    walkwayReserveRatio: 0,
-    walkwayReserveSqFt: 0,
+    walkwayReserveRatio: WALKING_AISLE_RESERVE_RATIO,
+    walkwayReserveSqFt,
     structuralNetSqFt: netUsableSqFt,
     structuralDeductionSqFt: deductions.structuralSqFt,
     doorDeductionSqFt: deductions.doorSqFt,

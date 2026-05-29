@@ -65,6 +65,15 @@ export interface AutoArrangeOptions {
    * pass; if empty, booths are left untagged.
    */
   eventCategoryNames?: ReadonlyArray<string>
+  /**
+   * Hard structural cap from the Step 2 capacity calculation
+   * (`calculateMaxBoothCapacity` after the walking-aisle reserve).
+   * The engine will never lay out more than this many booths even
+   * if the caller passes a doc with a larger booth count — the
+   * overflow is reported via `overflowCount` so the UI can warn
+   * the coordinator that they're over the safe ceiling.
+   */
+  maxBooths?: number
 }
 
 export interface AutoArrangeResult {
@@ -82,6 +91,14 @@ export interface AutoArrangeResult {
    * coordinator knows their canvas is too tight to host every category.
    */
   unsatisfiedCategoryCount: number
+  /**
+   * How many booths the caller asked for that were NOT laid out
+   * because they exceeded `options.maxBooths`. These are dropped
+   * before the physical clearance pass — they never even get a
+   * shot at a slot. Distinct from `droppedCount`, which means
+   * "wanted to place but the canvas had no room".
+   */
+  overflowCount: number
 }
 
 interface Rect {
@@ -151,13 +168,43 @@ export function autoArrange(
   doc: FloorPlanDoc,
   options: AutoArrangeOptions = {}
 ): AutoArrangeResult {
-  const { eventCategoryNames } = options
+  const { eventCategoryNames, maxBooths } = options
 
-  const sourceBooths = doc.objects.filter(
+  const allSourceBooths = doc.objects.filter(
     (o): o is BoothObject => o.kind === 'booth'
   )
+  if (allSourceBooths.length === 0) {
+    return {
+      doc,
+      placedCount: 0,
+      droppedCount: 0,
+      unsatisfiedCategoryCount: 0,
+      overflowCount: 0,
+    }
+  }
+
+  /*
+   * Apply the structural booth ceiling from Step 2 (which already
+   * subtracts walking aisles and fire paths). Booths past the cap
+   * are dropped before any physical placement attempt — they don't
+   * deserve a slot because the venue can't safely host them.
+   */
+  const sourceBooths =
+    typeof maxBooths === 'number' && maxBooths >= 0
+      ? allSourceBooths.slice(0, Math.floor(maxBooths))
+      : allSourceBooths
+  const overflowCount = allSourceBooths.length - sourceBooths.length
   if (sourceBooths.length === 0) {
-    return { doc, placedCount: 0, droppedCount: 0, unsatisfiedCategoryCount: 0 }
+    return {
+      doc: {
+        ...doc,
+        objects: doc.objects.filter((o) => o.kind !== 'booth'),
+      },
+      placedCount: 0,
+      droppedCount: 0,
+      unsatisfiedCategoryCount: 0,
+      overflowCount,
+    }
   }
 
   // Use the median footprint so a single oversized outlier booth
@@ -236,6 +283,7 @@ export function autoArrange(
       placedCount: 0,
       droppedCount: sourceBooths.length,
       unsatisfiedCategoryCount: 0,
+      overflowCount,
     }
   }
 
@@ -404,6 +452,7 @@ export function autoArrange(
     placedCount,
     droppedCount,
     unsatisfiedCategoryCount,
+    overflowCount,
   }
 }
 

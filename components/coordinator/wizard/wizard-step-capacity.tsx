@@ -63,7 +63,10 @@ export function WizardStepCapacity({
               <span className="rounded-md border border-stone-200 bg-canvas px-2.5 py-1 tabular-nums">
                 Floor <strong className="text-foreground">{venueWidth}×{venueLength} ft</strong>
               </span>
-              <span className="rounded-md border border-sage-200 bg-sage-50 px-2.5 py-1 tabular-nums">
+              <span
+                className="rounded-md border border-sage-200 bg-sage-50 px-2.5 py-1 tabular-nums"
+                title="Calculated value accounts for standard 10ft walking aisles and emergency fire paths."
+              >
                 C<sub>max</sub> <strong className="text-foreground">{layoutCapacity}</strong>
               </span>
             </>

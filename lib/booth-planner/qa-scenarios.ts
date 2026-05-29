@@ -552,7 +552,9 @@ export function runLayoutQaScenarios(): void {
     'Kilkenny preset auto-plan should have zero spatial overlaps'
   )
 
-  // Perimeter seating math: no blank 8′ gross buffer; deduct structure, doors, customer spine only.
+  // Perimeter seating math: deduct structure, doors, customer spine, then
+  // reserve 40% of the remaining open grid for code-compliant cross
+  // aisles + emergency egress before dividing into booth units.
   const kilkennyFloor = calculateNetUsableFloorSpace(40, 72, {
     venueElements: kilkennyElements,
     entrance: 'south',
@@ -570,8 +572,16 @@ export function runLayoutQaScenarios(): void {
     `Kilkenny entrance + perimeter openings should deduct 38 sq ft, got ${kilkennyFloor.doorDeductionSqFt}`
   )
   assert(
-    kilkennyFloor.netUsableSqFt === 2100,
-    `Kilkenny net usable should be 2100 sq ft (open hall minus customer spine), got ${kilkennyFloor.netUsableSqFt}`
+    kilkennyFloor.walkwayReserveRatio === 0.4,
+    `Kilkenny walkway reserve ratio should be 0.4, got ${kilkennyFloor.walkwayReserveRatio}`
+  )
+  assert(
+    kilkennyFloor.walkwayReserveSqFt === 840,
+    `Kilkenny walkway reserve should be 840 sq ft (40% of 2100 post-deduction grid), got ${kilkennyFloor.walkwayReserveSqFt}`
+  )
+  assert(
+    kilkennyFloor.netUsableSqFt === 1260,
+    `Kilkenny net usable should be 1260 sq ft (post-deduction 2100 − 40% walking reserve), got ${kilkennyFloor.netUsableSqFt}`
   )
   const kilkennyCaps = buildSmartPopulateLimits({
     venueWidthFt: 40,
@@ -581,7 +591,10 @@ export function runLayoutQaScenarios(): void {
     categories: [{ id: '1', name: 'Makers', is_mlm: false } as import('@/types/database').Category],
     allowMlm: false,
   })
-  assert(kilkennyCaps.breakdown.cMax === 87, `Kilkenny C_max should be 87 at 6′×4′ units, got ${kilkennyCaps.breakdown.cMax}`)
+  assert(
+    kilkennyCaps.breakdown.cMax === 52,
+    `Kilkenny C_max should be 52 at 6′×4′ units after 40% walking reserve, got ${kilkennyCaps.breakdown.cMax}`
+  )
 
   const legacyRoom = migrateRoomToCurrentPreset({
     id: 'legacy',
