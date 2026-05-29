@@ -1,4 +1,5 @@
-import type { RoomFrame } from './types'
+import { rotatedAabb } from '../interactions/geometry'
+import type { PlacedObject, RoomFrame } from './types'
 
 /**
  * Multi-room canvas sizing and limits.
@@ -46,9 +47,12 @@ export function canvasDimensionLimits(
 ): CanvasDimensionLimits | null {
   const primary = getPrimaryRoomFrame(frames)
   if (!primary) return null
+  // Symmetric ceiling so a 90° room swap does not shrink the allowed canvas.
+  const span =
+    Math.max(primary.widthFt, primary.lengthFt) * CANVAS_DIMENSION_SCALE
   return {
-    maxWidthFt: primary.widthFt * CANVAS_DIMENSION_SCALE,
-    maxLengthFt: primary.lengthFt * CANVAS_DIMENSION_SCALE,
+    maxWidthFt: span,
+    maxLengthFt: span,
   }
 }
 
@@ -76,23 +80,55 @@ export function roomUnionBounds(frames: ReadonlyArray<RoomFrame>): FtBounds {
   return { minX, minY, maxX, maxY }
 }
 
+/** Union of room frames and every placed object's rotated footprint. */
+export function unionCanvasContentBounds(
+  frames: ReadonlyArray<RoomFrame>,
+  objects?: ReadonlyArray<PlacedObject>
+): FtBounds {
+  const room = roomUnionBounds(frames)
+  if (!objects?.length) return room
+
+  let { minX, minY, maxX, maxY } = room
+  for (const obj of objects) {
+    const aabb = rotatedAabb(obj)
+    const right = aabb.x + aabb.width
+    const bottom = aabb.y + aabb.height
+    if (aabb.x < minX) minX = aabb.x
+    if (aabb.y < minY) minY = aabb.y
+    if (right > maxX) maxX = right
+    if (bottom > maxY) maxY = bottom
+  }
+  if (!Number.isFinite(minX)) minX = 0
+  if (!Number.isFinite(minY)) minY = 0
+  return { minX, minY, maxX, maxY }
+}
+
 /**
- * Desired canvas extents from the current room layout plus margin,
- * clamped to the 5× primary-room per-dimension ceiling.
+ * Desired canvas extents from rooms + placed objects plus margin.
+ * Grows past the nominal 5× ceiling when rotated content requires it.
  */
 export function reconcileCanvasExtents(
   frames: ReadonlyArray<RoomFrame>,
-  marginFt = UNIFIED_CANVAS_MARGIN_FT
+  marginFt = UNIFIED_CANVAS_MARGIN_FT,
+  objects?: ReadonlyArray<PlacedObject>
 ): { canvasWidthFt: number; canvasLengthFt: number } {
-  const bounds = roomUnionBounds(frames)
-  let width = Math.max(50, bounds.maxX + marginFt)
-  let length = Math.max(50, bounds.maxY + marginFt)
+  const bounds = unionCanvasContentBounds(frames, objects)
+  const neededW = Math.max(50, bounds.maxX + marginFt)
+  const neededL = Math.max(50, bounds.maxY + marginFt)
   const limits = canvasDimensionLimits(frames)
-  if (limits) {
-    width = Math.min(width, limits.maxWidthFt)
-    length = Math.min(length, limits.maxLengthFt)
+  if (!limits) {
+    return { canvasWidthFt: neededW, canvasLengthFt: neededL }
   }
-  return { canvasWidthFt: width, canvasLengthFt: length }
+  return {
+    canvasWidthFt:
+      neededW > limits.maxWidthFt
+        ? neededW
+        : Math.min(neededW, limits.maxWidthFt),
+    canvasLengthFt:
+      neededL > limits.maxLengthFt
+        ? neededL
+        : Math.min(neededL, limits.maxLengthFt),
+  }
 }
 
 function framesWithMovedRoom(

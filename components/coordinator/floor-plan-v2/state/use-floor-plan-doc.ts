@@ -484,14 +484,6 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const nextFrames = frames.map((f) =>
         f.id === roomId ? rotatedFrame : f
       )
-      const limits = canvasDimensionLimits(frames)
-      const bounds = roomUnionBounds(nextFrames)
-      if (
-        limits &&
-        (bounds.maxX > limits.maxWidthFt || bounds.maxY > limits.maxLengthFt)
-      ) {
-        return null
-      }
 
       const objectRoom = current.objectRoom ?? {}
       const nextObjects = current.objects.map((o) => {
@@ -505,7 +497,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
           y: patch.y + fixDy,
         } as PlacedObject
       })
-      const extents = reconcileCanvasExtents(nextFrames)
+      const extents = reconcileCanvasExtents(nextFrames, undefined, nextObjects)
 
       const nextDoc: FloorPlanDoc = {
         ...current,

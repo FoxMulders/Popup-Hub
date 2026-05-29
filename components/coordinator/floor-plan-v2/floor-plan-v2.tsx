@@ -33,7 +33,11 @@ import {
   docFromLegacyRooms,
   legacyRoomsFromDoc,
 } from './state/legacy-bridge'
-import { reconcileCanvasExtents, roomUnionBounds } from './state/room-canvas'
+import {
+  reconcileCanvasExtents,
+  roomUnionBounds,
+  unionCanvasContentBounds,
+} from './state/room-canvas'
 import {
   clearMultiRoomDraft,
   loadMultiRoomDraft,
@@ -984,6 +988,7 @@ export function FloorPlanV2({
     handleRotateBy(ROTATE_STEP_DEG)
   }, [handleRotateBy])
 
+  const viewportApiRef = useRef<ViewportApi | null>(null)
   const rotateTargetRoomId = selectedRoomId ?? activeRoomId
 
   const syncLayoutRoomsFromDoc = useCallback(
@@ -1001,13 +1006,12 @@ export function FloorPlanV2({
       return
     }
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'ccw')
-    if (!nextDoc) {
-      toast.message(
-        'Room rotation blocked — canvas limit would be exceeded.'
-      )
-      return
-    }
+    if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
+    viewportApiRef.current?.fitToBoundsStepped(
+      unionCanvasContentBounds(nextDoc.rooms ?? [], nextDoc.objects),
+      { padding: 0.12, zoomMax: 1 }
+    )
   }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const handleRotateRoomRight = useCallback(() => {
@@ -1016,16 +1020,14 @@ export function FloorPlanV2({
       return
     }
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'cw')
-    if (!nextDoc) {
-      toast.message(
-        'Room rotation blocked — canvas limit would be exceeded.'
-      )
-      return
-    }
+    if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
+    viewportApiRef.current?.fitToBoundsStepped(
+      unionCanvasContentBounds(nextDoc.rooms ?? [], nextDoc.objects),
+      { padding: 0.12, zoomMax: 1 }
+    )
   }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
-  const viewportApiRef = useRef<ViewportApi | null>(null)
   const [currentZoom, setCurrentZoom] = useState(1)
 
   const canvasExtentsKey = `${store.doc.canvasWidthFt}:${store.doc.canvasLengthFt}`
