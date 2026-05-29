@@ -290,7 +290,7 @@ export function CanvasCommandBar({
           <CommandButton
             onClick={onToggleCanvasFullscreen}
             title={canvasFullscreen ? 'Exit full screen (Esc)' : 'Full screen editor'}
-            label={canvasFullscreen ? 'Exit' : 'Full Screen'}
+            label={canvasFullscreen ? 'Exit Full Screen' : 'Full Screen'}
             className={
               canvasFullscreen
                 ? 'bg-stone-800 text-white hover:bg-stone-700'

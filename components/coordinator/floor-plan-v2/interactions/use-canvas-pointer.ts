@@ -79,7 +79,7 @@ interface UseCanvasPointerOptions {
    */
   selectedRoomId?: string | null
   /** Notifies the host when a click selects a room frame. */
-  onRoomFrameClick?: (roomId: string) => void
+  onRoomFrameClick?: (roomId: string, options?: { additive?: boolean }) => void
   /** Fired when a room drag/resize is blocked (e.g. origin at 0,0). */
   onRoomCanvasLimitBlocked?: () => void
   /**
@@ -488,9 +488,13 @@ export function useCanvasPointer(
           }
         }
         if (roomId) {
-          capturePointer(e.currentTarget, e.pointerId)
+          const additive = e.shiftKey || e.metaKey || e.ctrlKey
           store.clearSelection()
-          onRoomFrameClickRef.current?.(roomId)
+          onRoomFrameClickRef.current?.(roomId, { additive })
+          if (additive) {
+            return
+          }
+          capturePointer(e.currentTarget, e.pointerId)
           setRoomGestureActive(true)
           roomDragRef.current = {
             pointerId: e.pointerId,

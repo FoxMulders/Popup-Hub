@@ -105,7 +105,8 @@ export interface JoinedZone {
   areaSqFt: number
 }
 
-const DEFAULT_TOUCH_EPSILON_FT = 0.25
+/** ~5 canvas pixels at 12 px/ft — adjacent rooms need not be pixel-perfect. */
+export const DEFAULT_TOUCH_EPSILON_FT = 5 / 12
 
 // ---------------------------------------------------------------------------
 // Asset-type gating
@@ -638,4 +639,21 @@ export function aabbOfRings(rings: ReadonlyArray<Ring>): RoomJoinBbox | null {
   }
   if (!Number.isFinite(minX)) return null
   return { minX, minY, maxX, maxY }
+}
+
+/**
+ * True when every room in `roomIds` belongs to one overlap/touch
+ * connected component (for validating multi-select Join).
+ */
+export function roomIdsFormConnectedComponent(
+  roomIds: ReadonlyArray<string>,
+  frames: ReadonlyArray<RoomFrame>,
+  epsilon = DEFAULT_TOUCH_EPSILON_FT
+): boolean {
+  if (roomIds.length < 2) return false
+  const idSet = new Set(roomIds)
+  const members = frames.filter((f) => idSet.has(f.id))
+  if (members.length < 2) return false
+  const groups = joinableGroups(members, epsilon)
+  return groups.some((g) => g.length === members.length)
 }

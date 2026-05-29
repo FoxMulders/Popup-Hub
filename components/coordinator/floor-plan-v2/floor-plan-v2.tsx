@@ -43,11 +43,11 @@ import {
 } from './state/local-draft'
 import { useFloorPlanDoc } from './state/use-floor-plan-doc'
 import {
-  isAuxiliaryRoom,
+  DEFAULT_TOUCH_EPSILON_FT,
   isJoinableObject,
-  joinableGroups,
   mixedNeighborsOf,
   neighborsOf,
+  roomIdsFormConnectedComponent,
 } from './state/room-joins'
 import type {
   BoothObject,
@@ -335,6 +335,9 @@ export function FloorPlanV2({
   // with it.
   const activeRoomId = layoutActiveRoomId
   const [rawSelectedRoomId, setSelectedRoomId] = useState<string | null>(null)
+  const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(
+    () => new Set()
+  )
   // Drop the canvas-side room selection if the underlying room was
   // deleted by the sidebar — otherwise the chrome would point at a
   // ghost. Derived inline (rather than synced via useEffect) so we
@@ -439,57 +442,29 @@ export function FloorPlanV2({
   }, [])
 
   const handleClearAll = useCallback(() => {
-    // Clearing is scoped to the active room so coordinators don't
-    // accidentally wipe other rooms' work in a multi-room layout.
-    // Structural walls are explicitly preserved across the clear —
-    // they're treated as architecture, not décor.
+    // Clearing is scoped to the active room. Locked perimeter walls stay.
     const activeId = activeRoomId
     const objectRoom = store.doc.objectRoom ?? {}
     const remaining = store.doc.objects.filter((o) => {
-      if (o.kind === 'wall') return true
-      return objectRoom[o.id] && objectRoom[o.id] !== activeId
+      if (objectRoom[o.id] && objectRoom[o.id] !== activeId) return true
+      if (o.locked === true) return true
+      return false
     })
     store.replaceObjects(remaining)
     toast.success('Active room cleared')
   }, [activeRoomId, store])
 
-  /**
-   * Delete-selected hard-blocks structural perimeter walls. Walls
-   * (`kind: 'wall'`) cannot be removed via direct manipulation —
-   * keyboard Delete/Backspace, the toolbar Delete button, and any
-   * future delete entry-point all funnel through this callback, so
-   * the type-guard here is the single chokepoint that keeps walls
-   * immutable on the canvas grid.
-   *
-   * Locked objects (any kind with `locked === true`) are also held
-   * back so coordinators don't accidentally lose pinned fixtures
-   * during a multi-select delete.
-   *
-   * The action is silent on a wall-only selection (no toast, no
-   * change) so it stays out of the way during normal editing; we
-   * surface a single toast only when the user appears to be trying
-   * to delete walls explicitly.
-   */
+  /** Delete selected objects; locked macro perimeter walls are kept. */
   const handleDeleteSelected = useCallback(() => {
     const ids = Array.from(store.selectedIds)
     if (ids.length === 0) return
     const idSet = new Set(ids)
     const selectedObjects = store.doc.objects.filter((o) => idSet.has(o.id))
     if (selectedObjects.length === 0) return
-    const wallSelected = selectedObjects.filter((o) => o.kind === 'wall')
-    const lockedSelected = selectedObjects.filter(
-      (o) => o.kind !== 'wall' && o.locked === true
-    )
-    const removable = selectedObjects.filter(
-      (o) => o.kind !== 'wall' && o.locked !== true
-    )
+    const lockedSelected = selectedObjects.filter((o) => o.locked === true)
+    const removable = selectedObjects.filter((o) => o.locked !== true)
     if (removable.length === 0) {
-      if (wallSelected.length > 0) {
-        toast.message(
-          'Walls are structural fixtures and cannot be deleted.',
-          { duration: 1800 }
-        )
-      } else if (lockedSelected.length > 0) {
+      if (lockedSelected.length > 0) {
         toast.message(
           'Selection is locked. Unlock to delete.',
           { duration: 1500 }
@@ -498,10 +473,10 @@ export function FloorPlanV2({
       return
     }
     store.removeObjects(removable.map((o) => o.id))
-    if (wallSelected.length > 0) {
+    if (lockedSelected.length > 0) {
       toast.message(
-        `Walls retained — ${wallSelected.length} structural fixture${wallSelected.length === 1 ? ' is' : 's are'} immutable.`,
-        { duration: 1800 }
+        `Locked fixtures retained (${lockedSelected.length}).`,
+        { duration: 1500 }
       )
     }
   }, [store])
@@ -792,6 +767,8 @@ export function FloorPlanV2({
     [handleAlignSelection]
   )
 
+  const [canvasFullscreen, setCanvasFullscreen] = useState(false)
+
   // Keyboard shortcuts.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -887,9 +864,15 @@ export function FloorPlanV2({
       else if (e.key === 'v') setTool('select')
       else if (e.key === 'd') setTool('draw')
       else if (e.key === 'Escape') {
+        if (canvasFullscreen) {
+          e.preventDefault()
+          setCanvasFullscreen(false)
+          return
+        }
         setTool('select')
         store.clearSelection()
         setSelectedRoomId(null)
+        setSelectedRoomIds(new Set())
       }
     }
     window.addEventListener('keydown', handler)
@@ -901,6 +884,7 @@ export function FloorPlanV2({
     handleDeleteSelected,
     handlePaste,
     handleRotateBy,
+    canvasFullscreen,
     store,
   ])
 
@@ -959,16 +943,6 @@ export function FloorPlanV2({
 
   const viewportApiRef = useRef<ViewportApi | null>(null)
   const [currentZoom, setCurrentZoom] = useState(1)
-  const [canvasFullscreen, setCanvasFullscreen] = useState(false)
-
-  useEffect(() => {
-    if (!canvasFullscreen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setCanvasFullscreen(false)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [canvasFullscreen])
 
   const canvasExtentsKey = `${store.doc.canvasWidthFt}:${store.doc.canvasLengthFt}`
   useEffect(() => {
@@ -1134,16 +1108,25 @@ export function FloorPlanV2({
     (roomId: string) => {
       onLayoutRoomsChange(layoutRooms, roomId)
       setSelectedRoomId(roomId)
+      setSelectedRoomIds(new Set([roomId]))
       store.clearSelection()
     },
     [layoutRooms, onLayoutRoomsChange, store]
   )
 
   const handleRoomFrameClick = useCallback(
-    (roomId: string) => {
+    (roomId: string, options?: { additive?: boolean }) => {
+      if (options?.additive) {
+        setSelectedRoomIds((prev) => {
+          const next = new Set(prev)
+          if (next.has(roomId)) next.delete(roomId)
+          else next.add(roomId)
+          return next
+        })
+      } else {
+        setSelectedRoomIds(new Set([roomId]))
+      }
       setSelectedRoomId(roomId)
-      // Promote the clicked frame to the active room so subsequent
-      // draws / auto-arrange / property-inspector edits target it.
       if (roomId !== activeRoomId) {
         onLayoutRoomsChange(layoutRooms, roomId)
       }
@@ -1151,34 +1134,7 @@ export function FloorPlanV2({
     [activeRoomId, layoutRooms, onLayoutRoomsChange]
   )
 
-  /**
-   * Eligibility for the canvas-bar "Join" action.
-   *
-   * Asset-type gate (deliberate restriction):
-   * The Join action is *only* available when the deliberate initiator
-   * is one of the following architectural fixtures:
-   *   1. A joinable `PlacedObject` (currently `stage`) that overlaps
-   *      or touches a room's perimeter wall, OR
-   *   2. An auxiliary `RoomFrame` (Kitchen, Storage, Washroom,
-   *      Corridor, Hallway, Annex, Outdoor Stage — anything matching
-   *      `isAuxiliaryRoom`) that has at least one overlapping or
-   *      touching neighbour.
-   *
-   * Standard vendor booths, tables, walls, doors, labels, exits, and
-   * generic floor assets are explicitly blocked from triggering a
-   * join — the button stays disabled when one is selected. The
-   * primary "Main Hall" can be a join *target* (an annex extends it)
-   * but it can't be the initiator on its own.
-   *
-   * Selection precedence:
-   *   1. A single joinable `PlacedObject` (e.g. a stage) → object
-   *      initiator, finds room/object neighbours.
-   *   2. Otherwise: the active/selected `RoomFrame` is the initiator,
-   *      gated on `isAuxiliaryRoom`.
-   *
-   * The structural intent: "Join" represents an architectural
-   * extension of the perimeter wall, not a generic grouping op.
-   */
+  /** Join eligibility: touching/overlapping rooms (5px tolerance) or stages. */
   const joinPlan = useMemo(() => {
     const frames = store.doc.rooms ?? []
     const objects = store.doc.objects ?? []
@@ -1214,7 +1170,8 @@ export function FloorPlanV2({
       const neighbors = mixedNeighborsOf(
         { kind: 'object', id: singleSelectedObj.id },
         frames,
-        objects
+        objects,
+        DEFAULT_TOUCH_EPSILON_FT
       )
       const joinRoomIds: string[] = []
       const joinObjectIds: string[] = [singleSelectedObj.id]
@@ -1242,8 +1199,31 @@ export function FloorPlanV2({
       }
     }
 
-    // Case B: no single object — fall back to the active/selected
-    // room frame, gated on the auxiliary-room rule.
+    // Case B: two+ rooms selected on canvas (Shift+click) for explicit join.
+    const prunedRoomIds = Array.from(selectedRoomIds).filter((id) =>
+      frames.some((f) => f.id === id)
+    )
+    if (prunedRoomIds.length >= 2) {
+      const connected = roomIdsFormConnectedComponent(
+        prunedRoomIds,
+        frames,
+        DEFAULT_TOUCH_EPSILON_FT
+      )
+      const groupId =
+        frames.find((f) => prunedRoomIds.includes(f.id))?.joinGroupId ?? null
+      return {
+        canJoin: connected,
+        joinRoomIds: prunedRoomIds,
+        joinObjectIds: [] as string[],
+        candidateCount: prunedRoomIds.length,
+        unjoinGroupId: groupId,
+        blockedReason: connected
+          ? null
+          : 'Selected rooms must touch or overlap to join',
+      }
+    }
+
+    // Case C: single selected/active room + geometric neighbours.
     const joinTargetRoomId = selectedRoomId ?? activeRoomId
     if (!joinTargetRoomId || frames.length < 2) {
       return empty
@@ -1251,25 +1231,12 @@ export function FloorPlanV2({
     const target = frames.find((f) => f.id === joinTargetRoomId)
     if (!target) return empty
 
-    if (!isAuxiliaryRoom(target)) {
-      // Main Hall can't initiate — coordinators must select the
-      // auxiliary annex (or the stage) to express the intent.
-      return {
-        ...empty,
-        unjoinGroupId: target.joinGroupId ?? null,
-        blockedReason:
-          'Select an auxiliary room (Kitchen / Storage / Washroom / Annex / Stage) to extend the perimeter',
-      }
-    }
-
     const targetGroupId = target.joinGroupId ?? null
-    // Use the mixed-neighbour search so an auxiliary room can also
-    // pull in a touching joinable object (e.g. a stage parked on
-    // the kitchen edge).
     const neighbors = mixedNeighborsOf(
       { kind: 'room', id: target.id },
       frames,
-      objects
+      objects,
+      DEFAULT_TOUCH_EPSILON_FT
     )
     const joinRoomIds: string[] = [target.id]
     const joinObjectIds: string[] = []
@@ -1294,29 +1261,40 @@ export function FloorPlanV2({
       joinObjectIds,
       candidateCount,
       unjoinGroupId: targetGroupId,
-      blockedReason: null as string | null,
+      blockedReason:
+        candidateCount > 0
+          ? null
+          : 'Move rooms flush together (within ~5px), then Join',
     }
   }, [
     store.doc.rooms,
     store.doc.objects,
     store.selectedIds,
     selectedRoomId,
+    selectedRoomIds,
     activeRoomId,
   ])
 
-  /**
-   * Total number of distinct joined zones currently on the canvas.
-   * Surfaced in the workspace header so coordinators can see at a
-   * glance that the doc contains fused rooms even when the active
-   * frame isn't part of one.
-   */
-  const joinedZoneCount = useMemo(
-    () => joinableGroups(store.doc.rooms ?? []).length,
-    [store.doc.rooms]
-  )
+  const joinedZoneCount = useMemo(() => {
+    const frames = store.doc.rooms ?? []
+    const groupIds = new Set<string>()
+    for (const f of frames) {
+      if (f.joinGroupId) groupIds.add(f.joinGroupId)
+    }
+    let count = 0
+    for (const gid of groupIds) {
+      if (frames.filter((f) => f.joinGroupId === gid).length >= 2) count++
+    }
+    return count
+  }, [store.doc.rooms])
 
   const handleJoinRooms = useCallback(() => {
-    if (!joinPlan.canJoin) return
+    if (!joinPlan.canJoin) {
+      if (joinPlan.blockedReason) {
+        toast.message(joinPlan.blockedReason, { duration: 2200 })
+      }
+      return
+    }
     const totalParticipants =
       joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
     if (totalParticipants < 2) return
@@ -1347,12 +1325,24 @@ export function FloorPlanV2({
     <div
       id="floor-plan-workspace"
       className={cn(
-        'flex flex-col gap-2 min-h-0',
+        'flex flex-col gap-2',
         canvasFullscreen &&
           'fixed inset-0 z-50 h-screen w-screen bg-stone-50 p-2 sm:p-3',
         className
       )}
     >
+      {canvasFullscreen ? (
+        <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex justify-center pt-2">
+          <button
+            type="button"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-stone-900 px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-stone-800"
+            onClick={() => setCanvasFullscreen(false)}
+          >
+            Exit Full Screen
+            <span className="text-[10px] font-normal text-stone-300">(Esc)</span>
+          </button>
+        </div>
+      ) : null}
       <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2 shrink-0">
         <div className="min-w-0">
           <h2 className="text-lg font-bold tracking-tight text-stone-900">
@@ -1401,17 +1391,7 @@ export function FloorPlanV2({
         </div>
       </header>
 
-      {/* Sticky-pinned command ribbon: even though the workspace is
-          height-constrained so the page itself shouldn't scroll on
-          most viewports, very small devices (height < ~640 px) can
-          still nudge the page into overflow. `sticky top-0` keeps
-          the unified toolbar (including inline room tabs) anchored
-          to the viewport top in that fallback case so coordinators
-          never lose their tools while scrolling. The `bg-stone-50`
-          opaque backdrop matches the page background and prevents
-          canvas content from showing through on the sticky ribbon. */}
-      <div className="sticky top-0 z-40 -mx-2 px-2 -mt-2 pt-2 bg-stone-50 shrink-0">
-        <CanvasCommandBar
+      <CanvasCommandBar
           toolState={{ tool, drawShape }}
           onToolChange={handleToolChange}
           onDrawShapeChange={handleDrawShapeChange}
@@ -1462,9 +1442,8 @@ export function FloorPlanV2({
           canvasFullscreen={canvasFullscreen}
           onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
         />
-      </div>
 
-      <div className="flex flex-1 min-h-0 gap-2">
+      <div className="flex min-h-0 gap-2">
         <div className="relative flex shrink-0">
           {!leftDockOpen ? (
             <button
@@ -1520,7 +1499,7 @@ export function FloorPlanV2({
           )}
         </div>
 
-        <div className="relative h-full min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
+        <div className="relative min-w-0 flex-1 h-[clamp(360px,58vh,780px)] overflow-hidden rounded-lg border border-stone-200 bg-stone-100 lg:h-[780px]">
           <FloorPlanCanvas
             store={store}
             toolState={{ tool, drawShape }}
@@ -1578,7 +1557,7 @@ export function FloorPlanV2({
               <PropertyInspector
                 store={store}
                 eventCategoryNames={eventCategoryNames}
-                className="h-full max-h-full overflow-y-auto"
+                className="h-full max-h-[clamp(360px,58vh,780px)] overflow-y-auto lg:max-h-[780px]"
               />
             </div>
           )}
