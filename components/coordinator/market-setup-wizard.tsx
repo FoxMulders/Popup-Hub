@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { createClient } from '@/lib/supabase/client'
 import { BoothPlanner } from '@/components/coordinator/booth-planner'
-import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import {
   createLayoutRoom,
@@ -77,6 +76,7 @@ import {
   WizardStepStepper,
 } from '@/components/coordinator/wizard/wizard-step-stepper'
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
+import { WizardStepFloorPlan } from '@/components/coordinator/wizard/wizard-step-floor-plan'
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
@@ -926,6 +926,9 @@ export function MarketSetupWizard({
       if (currentStep === 3) {
         if (plannerOverlap) {
           toast.error('Resolve layout overlaps before deploying')
+          const zone = document.getElementById('wizard-zone-floor-canvas')
+          zone?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          zone?.classList.add('wizard-zone--error')
           return
         }
         const saveFn = saveLayoutRef.current
@@ -1049,23 +1052,7 @@ export function MarketSetupWizard({
           : 'space-y-6'
       )}
     >
-      {isFloorPlanStep ? (
-        <header className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
-            <p className={cn(WIZARD_PAGE_KICKER, 'mb-0')}>
-              Step {currentStep} of {totalSteps}
-            </p>
-            {name.trim() ? (
-              <span className="text-sm font-semibold text-foreground truncate max-w-[28ch]">
-                {name.trim()}
-              </span>
-            ) : null}
-          </div>
-          {isDraftMode && eventId ? (
-            <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
-          ) : null}
-        </header>
-      ) : (
+      {!isFloorPlanStep ? (
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <p className={WIZARD_PAGE_KICKER}>
@@ -1079,7 +1066,11 @@ export function MarketSetupWizard({
             <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
           ) : null}
         </header>
-      )}
+      ) : isDraftMode && eventId ? (
+        <div className="flex justify-end shrink-0 px-0.5">
+          <DeleteDraftMarketDialog eventId={eventId} eventName={name} />
+        </div>
+      ) : null}
 
       {isDraftMode ? (
         <WizardStepStepper
@@ -1250,31 +1241,34 @@ export function MarketSetupWizard({
               v2 module owns its own state, tools, and inspector — no
               automatic presets, no capacity clamps, no forced templates. */}
           {currentStep === 3 && eventId && !skipVenueLayout ? (
-            <>
-              <FloorPlanV2
-                eventId={eventId}
-                layoutRooms={rooms}
-                layoutActiveRoomId={activeRoomId}
-                onLayoutRoomsChange={handleLayoutRoomsChange}
-                saveLayoutRef={saveLayoutRef}
-                eventCategoryNames={eventCategoryNames}
-                onAddRoom={handleAddRoom}
-                onRenameRoom={handleRenameRoom}
-                onDeleteRoom={handleDeleteRoom}
-                baselineTableLengthFt={baselineTableLengthFt}
-                onBaselineTableLengthChange={handleBaselineTableLengthChange}
-                layoutCapacity={layoutCapacity}
-                applications={applications}
-                className="flex-1 min-h-0"
-                onOverlapChange={setPlannerOverlap}
-                onSaveMarket={goNext}
-                saveMarketDisabled={transitioning || plannerOverlap}
-                saveMarketLoading={transitioning}
-              />
-              <div className="shrink-0">
-                <WizardNav step={3} onBack={goBack} />
-              </div>
-            </>
+            <WizardStepFloorPlan
+              eventId={eventId}
+              layoutRooms={rooms}
+              layoutActiveRoomId={activeRoomId}
+              onLayoutRoomsChange={handleLayoutRoomsChange}
+              saveLayoutRef={saveLayoutRef}
+              eventCategoryNames={eventCategoryNames}
+              onAddRoom={handleAddRoom}
+              onRenameRoom={handleRenameRoom}
+              onDeleteRoom={handleDeleteRoom}
+              baselineTableLengthFt={baselineTableLengthFt}
+              onBaselineTableLengthChange={handleBaselineTableLengthChange}
+              applications={applications}
+              onOverlapChange={setPlannerOverlap}
+              onSaveMarket={goNext}
+              saveMarketDisabled={transitioning || plannerOverlap}
+              saveMarketLoading={transitioning}
+              scheduleLines={scheduleLines}
+              selectedVenue={selectedVenue}
+              capacityLabel={summaryCapacityLabel}
+              tableSizeLabel={`${baselineTableLengthFt}′ tables`}
+              layoutCapacity={layoutCapacity}
+              totalCategoryCaps={categoryLimits.reduce((s, cl) => s + (cl.maxSlots ?? 0), 0)}
+              eventDisplayName={name.trim()}
+              onBack={goBack}
+              navDisabled={transitioning}
+              plannerOverlap={plannerOverlap}
+            />
           ) : null}
         </div>
 

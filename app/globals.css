@@ -543,6 +543,10 @@
     opacity: 1;
   }
 
+  .wizard-zone--canvas .wizard-floor-canvas-host {
+    min-height: min(68vh, 640px);
+  }
+
   .wizard-zone--error {
     animation: wizard-zone-shake 0.45s ease-in-out;
     box-shadow:

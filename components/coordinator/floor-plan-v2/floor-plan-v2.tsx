@@ -1395,12 +1395,12 @@ export function FloorPlanV2({
         </div>
       ) : null}
       {!isDashboard ? (
-      <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2 shrink-0">
+      <header className="flex flex-wrap items-center gap-3 border-b border-stone-200/80 bg-card/60 px-2 py-2 rounded-lg shrink-0">
         <div className="min-w-0">
-          <h2 className="text-lg font-bold tracking-tight text-stone-900">
-            Floor plan canvas
+          <h2 className="font-heading text-base font-bold tracking-tight text-forest sm:text-lg">
+            Layout tools
           </h2>
-          <p className="text-[11px] text-stone-500">
+          <p className="text-[11px] text-muted-foreground">
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               ]
             </kbd>{' '}
@@ -1500,7 +1500,7 @@ export function FloorPlanV2({
         <div
           className={cn(
             'relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100',
-            isDashboard ? 'h-full' : 'h-[calc(100vh-theme(spacing.header))]'
+            'h-full min-h-[280px]'
           )}
         >
           <FloorPlanCanvas

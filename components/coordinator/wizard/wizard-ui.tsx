@@ -69,7 +69,7 @@ export function WizardZone({
   subtitle?: string
   children: ReactNode
   className?: string
-  variant?: 'stack' | 'wide'
+  variant?: 'stack' | 'wide' | 'canvas'
 }) {
   return (
     <section
@@ -77,12 +77,15 @@ export function WizardZone({
       role="region"
       aria-labelledby={`${id}-title`}
       className={cn(
-        'wizard-zone wizard-glass-panel scroll-mt-24 p-4 sm:p-5',
+        'wizard-zone wizard-glass-panel scroll-mt-24',
+        variant === 'canvas'
+          ? 'flex min-h-0 flex-1 flex-col p-3 sm:p-4 wizard-zone--canvas'
+          : 'p-4 sm:p-5',
         variant === 'wide' && 'wizard-zone--wide',
         className
       )}
     >
-      <header className="mb-4 space-y-1">
+      <header className={cn('space-y-1', variant === 'canvas' ? 'mb-2 shrink-0' : 'mb-4')}>
         <h3
           id={`${id}-title`}
           className="wizard-zone-title font-sans text-[clamp(0.9375rem,0.4vw+0.85rem,1.125rem)] font-bold tracking-tight text-forest"
@@ -93,7 +96,13 @@ export function WizardZone({
           <p className="text-[0.8125rem] leading-snug text-muted-foreground">{subtitle}</p>
         ) : null}
       </header>
-      <div className={cn('space-y-4', variant === 'wide' && 'lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0')}>
+      <div
+        className={cn(
+          variant === 'canvas' && 'flex min-h-0 flex-1 flex-col gap-2',
+          variant === 'wide' && 'lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 space-y-4',
+          variant === 'stack' && 'space-y-4'
+        )}
+      >
         {children}
       </div>
     </section>
