@@ -9,7 +9,9 @@ import {
 import { marketUnitGridSpans, tableFootprintToGridSpans } from '@/lib/booth-planner/table-space'
 
 /** Venue-wide table lengths — one size per hall, applied to every table vendor. */
-export const LAYOUT_BASELINE_TABLE_LENGTHS_FT = [5, 6, 7, 8, 9, 10] as const
+export const LAYOUT_BASELINE_TABLE_LENGTHS_FT = [
+  5, 6, 7, 8, 9, 10, 12, 15, 18,
+] as const
 export type LayoutBaselineTableLengthFt = (typeof LAYOUT_BASELINE_TABLE_LENGTHS_FT)[number]
 
 export const DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT: LayoutBaselineTableLengthFt = 6

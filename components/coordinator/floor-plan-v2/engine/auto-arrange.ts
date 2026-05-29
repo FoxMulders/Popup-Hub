@@ -50,6 +50,14 @@ import {
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
 } from '../interactions/category-rules'
+import {
+  DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
+  type LayoutBaselineTableLengthFt,
+} from '@/lib/booth-planner/layout-table-size'
+import {
+  consolidateBoothsForAutoArrange,
+  type VendorTableMeta,
+} from '@/lib/booth-planner/table-booth-consolidation'
 
 /** Standard chair = 1.75 ft on a side. */
 export const CHAIR_LENGTH_FT = 1.75
@@ -69,6 +77,10 @@ export const FRONT_CLEARANCE_FT = PATRON_PAIR_WIDTH_FT
 export const BOOTH_EDGE_CLEARANCE_FT = 2
 
 export interface AutoArrangeOptions {
+  /** Venue baseline table length for multi-table consolidation. */
+  baselineTableLengthFt?: LayoutBaselineTableLengthFt
+  /** Per-vendor table counts from approved applications. */
+  vendorTableMetaByKey?: Map<string, VendorTableMeta>
   /**
    * Sorted list of category names (Step 2). Drives the diversification
    * pass; if empty, booths are left untagged.
@@ -188,8 +200,7 @@ interface RowPlan {
  *      (front clearance). Wall buffer offsets the first row from
  *      the top edge.
  *   4. Inside each row, walk left-to-right placing booth-width
- *      slots separated by 0 ft (booths can sit shoulder-to-shoulder
- *      side-to-side; the back-to-back rule handles the spine).
+ *      slots separated by `BOOTH_EDGE_CLEARANCE_FT` (2′ side gap).
  *   5. Skip any slot whose AABB overlaps an obstacle.
  *   6. Assign categories round-robin from `eventCategoryNames` so
  *      no two adjacent slots share a category.
@@ -200,10 +211,18 @@ export function autoArrange(
   doc: FloorPlanDoc,
   options: AutoArrangeOptions = {}
 ): AutoArrangeResult {
-  const { eventCategoryNames, maxBooths } = options
+  const { eventCategoryNames, maxBooths, baselineTableLengthFt, vendorTableMetaByKey } =
+    options
 
-  const allSourceBooths = doc.objects.filter(
+  const rawSourceBooths = doc.objects.filter(
     (o): o is BoothObject => o.kind === 'booth'
+  )
+  const baselineFt =
+    baselineTableLengthFt ?? DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
+  const allSourceBooths = consolidateBoothsForAutoArrange(
+    rawSourceBooths,
+    baselineFt,
+    vendorTableMetaByKey
   )
   if (allSourceBooths.length === 0) {
     return {

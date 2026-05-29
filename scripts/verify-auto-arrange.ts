@@ -26,6 +26,7 @@ import {
   BACK_TO_BACK_GAP_FT,
   FRONT_CLEARANCE_FT,
 } from '../components/coordinator/floor-plan-v2/engine/auto-arrange'
+import { consolidateBoothsForAutoArrange } from '../lib/booth-planner/table-booth-consolidation'
 import { docFromLegacyRooms } from '../components/coordinator/floor-plan-v2/state/legacy-bridge'
 import {
   PROXIMITY_MIN_COLUMNS,
@@ -451,6 +452,55 @@ console.log(`  WALL_BUFFER_FT      = ${WALL_BUFFER_FT}  (2 chairs)`)
 console.log(`  FRONT_CLEARANCE_FT  = ${FRONT_CLEARANCE_FT}  (2 patrons)`)
 console.log(`  BACK_TO_BACK_GAP_FT = ${BACK_TO_BACK_GAP_FT}  (3 chairs)`)
 console.log(`  BOOTH_EDGE_CLEARANCE_FT = ${BOOTH_EDGE_CLEARANCE_FT}`)
+
+// ----- Multi-table consolidation (3×5′ → single 15′ booth) -----
+{
+  const vendorId = 'vendor-multi'
+  const triple = Array.from({ length: 3 }, (_, i) =>
+    makeBooth(i, {
+      vendorId,
+      width: 5,
+      height: 2,
+      tableCount: 1,
+    })
+  )
+  const merged = consolidateBoothsForAutoArrange(triple, 5, undefined)
+  const mergeOk =
+    merged.length === 1 &&
+    merged[0]!.width === 15 &&
+    merged[0]!.height === 2 &&
+    merged[0]!.tableCount === 3
+
+  const arrangeDoc = makeDoc(40, 72, triple)
+  const arranged = autoArrange(arrangeDoc, {
+    baselineTableLengthFt: 5,
+    vendorTableMetaByKey: new Map([
+      [
+        vendorId,
+        { vendorKey: vendorId, tableCount: 3, tableLengthFt: 5 },
+      ],
+    ]),
+    eventCategoryNames: ['Art', 'Food'],
+  })
+  const placed = arranged.doc.objects.filter((o) => o.kind === 'booth')
+  const arrangeOk =
+    placed.length === 1 &&
+    placed[0]!.width === 15 &&
+    validateClearances(arranged.doc).length === 0
+
+  console.log('')
+  console.log('=== Multi-table mega-table consolidation ===')
+  console.log(
+    `${mergeOk ? 'PASS' : 'FAIL'}  consolidateBoothsForAutoArrange: 3×5′ → one 15′×2′ booth`
+  )
+  console.log(
+    `${arrangeOk ? 'PASS' : 'FAIL'}  autoArrange places single 15′ booth for 3-table vendor`
+  )
+  if (mergeOk) pass++
+  else fail++
+  if (arrangeOk) pass++
+  else fail++
+}
 
 // ----- 2ft edge clearance between booth footprints -----
 {

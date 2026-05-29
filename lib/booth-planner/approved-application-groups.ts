@@ -1,5 +1,9 @@
 import type { FakeVendorInput } from '@/lib/booth-planner/fake-vendors'
 import { DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT } from '@/lib/booth-planner/layout-table-size'
+import {
+  boothDimensionsForTableLength,
+  consolidatedTableLengthFt,
+} from '@/lib/booth-planner/table-booth-consolidation'
 
 export interface MultiSlotVendorMember {
   id: string
@@ -103,15 +107,21 @@ export function groupMultiSlotTableVendorsForPlan(
     const lead = groupMembers[0]!
     const slotCount = lead.slotCount ?? groupMembers.length
     const tableLengthFt = lead.tableLengthFt ?? DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
-    const unit = resolveUnitSpans(tableLengthFt)
+    const megaFt = consolidatedTableLengthFt(tableLengthFt, slotCount)
+    const effectiveFt = megaFt ?? tableLengthFt
+    const unit = resolveUnitSpans(effectiveFt)
+    const dims =
+      megaFt != null
+        ? boothDimensionsForTableLength(megaFt)
+        : { width: unit.colSpan, height: unit.rowSpan }
     return {
       id: lead.id,
       vendorName: lead.vendorName,
       categoryName: lead.categoryName,
       categoryId: lead.categoryId,
-      colSpan: unit.colSpan * slotCount,
-      rowSpan: unit.rowSpan,
-      tableLengthFt,
+      colSpan: megaFt != null ? dims.width : unit.colSpan * slotCount,
+      rowSpan: megaFt != null ? dims.height : unit.rowSpan,
+      tableLengthFt: effectiveFt,
       requestedBoothType: lead.requestedBoothType,
       vendorUnitType: 'table' as const,
       slotCount,

@@ -61,6 +61,10 @@ export interface BoothObject extends BasePlacedObject {
   categoryName?: string | null
   /** Optional accent color (hex). When unset, derived from category or default. */
   accentColor?: string | null
+  /** Consolidated table length in feet (width on the 1′ grid). */
+  tableLengthFt?: number
+  /** Tables requested for this vendor (used to merge into mega-table footprints). */
+  tableCount?: number
 }
 
 export interface WallObject extends BasePlacedObject {

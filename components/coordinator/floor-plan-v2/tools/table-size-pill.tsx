@@ -43,7 +43,7 @@ export function TableSizePill({
       >
         Table size
       </span>
-      <div className="flex h-full sm:border-l sm:border-stone-200">
+      <div className="flex h-full max-w-[min(100%,28rem)] overflow-x-auto sm:border-l sm:border-stone-200">
         {LAYOUT_BASELINE_TABLE_LENGTHS_FT.map((ft) => {
           const active = value === ft
           return (
@@ -55,7 +55,7 @@ export function TableSizePill({
               aria-pressed={active}
               title={`Set baseline table length to ${ft} ft`}
               className={cn(
-                'inline-flex h-full min-w-[2.1rem] items-center justify-center px-2 text-[11px] font-semibold tabular-nums border-r border-stone-200 last:border-r-0 transition-colors',
+                'inline-flex h-full min-w-[1.85rem] shrink-0 items-center justify-center px-1.5 text-[10px] font-semibold tabular-nums border-r border-stone-200 last:border-r-0 transition-colors sm:min-w-[2rem] sm:px-2 sm:text-[11px]',
                 active
                   ? 'bg-[#2D5A27] text-[#F5F2EB]'
                   : 'text-stone-700 hover:bg-stone-100',

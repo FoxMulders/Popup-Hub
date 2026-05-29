@@ -1164,6 +1164,7 @@ export function MarketSetupWizard({
                 baselineTableLengthFt={baselineTableLengthFt}
                 onBaselineTableLengthChange={handleBaselineTableLengthChange}
                 layoutCapacity={layoutCapacity}
+                applications={applications}
                 className="flex-1 min-h-0"
                 onOverlapChange={setPlannerOverlap}
               />

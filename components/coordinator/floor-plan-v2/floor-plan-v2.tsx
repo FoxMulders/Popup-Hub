@@ -49,6 +49,7 @@ import {
   neighborsOf,
   roomIdsFormConnectedComponent,
 } from './state/room-joins'
+import { vendorTableMetaFromApplications } from '@/lib/booth-planner/table-booth-consolidation'
 import type {
   BoothObject,
   FloorPlanDoc,
@@ -152,6 +153,16 @@ export interface FloorPlanV2Props {
    * never lays out more booths than the venue can safely host.
    */
   layoutCapacity?: number
+  /**
+   * Approved vendor applications — used to read `table_count` when
+   * consolidating multi-table booths during Auto-Arrange.
+   */
+  applications?: ReadonlyArray<{
+    id: string
+    vendor_id?: string
+    table_count?: number
+    status?: string
+  }>
   className?: string
   /** Notifies the host when the layout has unresolved object overlaps. */
   onOverlapChange?: (hasOverlap: boolean) => void
@@ -188,6 +199,7 @@ export function FloorPlanV2({
   baselineTableLengthFt,
   onBaselineTableLengthChange,
   layoutCapacity,
+  applications,
   className,
   onOverlapChange,
 }: FloorPlanV2Props) {
@@ -1015,6 +1027,11 @@ export function FloorPlanV2({
     ).length
   }, [activeRoomId, store.doc.objects, store.doc.objectRoom])
 
+  const vendorTableMetaByKey = useMemo(() => {
+    if (!applications?.length) return undefined
+    return vendorTableMetaFromApplications(applications, safeTableSizeFt)
+  }, [applications, safeTableSizeFt])
+
   const handleAutoArrange = useCallback(() => {
     if (boothCount === 0) {
       toast.message('Nothing to arrange — draw at least one booth first.')
@@ -1022,6 +1039,8 @@ export function FloorPlanV2({
     }
     const result = autoArrangeInRoom(store.doc, activeRoomId, {
       eventCategoryNames,
+      baselineTableLengthFt: safeTableSizeFt,
+      vendorTableMetaByKey,
       ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
         ? { maxBooths: layoutCapacity }
         : {}),
@@ -1059,7 +1078,15 @@ export function FloorPlanV2({
         `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} with clearance.`
       )
     }
-  }, [activeRoomId, boothCount, eventCategoryNames, layoutCapacity, store])
+  }, [
+    activeRoomId,
+    boothCount,
+    eventCategoryNames,
+    layoutCapacity,
+    safeTableSizeFt,
+    store,
+    vendorTableMetaByKey,
+  ])
 
   /**
    * Macro: emit four locked perimeter wall rects matching the active
