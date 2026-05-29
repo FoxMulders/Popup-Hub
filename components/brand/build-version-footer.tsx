@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { PopupHubLogo } from '@/components/brand/popup-hub-logo'
-import { getBuildFooterLabel, getBuildInfo } from '@/lib/build-info'
+import { getBuildInfo } from '@/lib/build-info'
 import { LEGAL_LINKS } from '@/lib/legal/links'
 import { cn } from '@/lib/utils'
 
@@ -10,9 +10,8 @@ interface BuildVersionFooterProps {
 
 export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
   const build = getBuildInfo()
-  const buildLabel = getBuildFooterLabel()
   const year = new Date().getFullYear()
-  const tooltip = `${buildLabel}, built ${build.builtAt} (${build.environment})`
+  const tooltip = build.label
 
   return (
     <footer
@@ -50,10 +49,11 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
             title={tooltip}
             data-testid="build-version-footer"
             data-build-version={build.version}
+            data-build-number={build.buildNumber}
             data-build-commit={build.commit}
             data-build-environment={build.environment}
           >
-            {buildLabel}
+            v{build.version} · build {build.buildNumber} · {build.commit}
           </p>
         </div>
       </div>

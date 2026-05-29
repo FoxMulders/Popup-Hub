@@ -1,7 +1,9 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { BuildVersionStrip } from '@/components/brand/build-version-strip'
 import { AppNav } from '@/components/nav/app-nav'
+import { cn } from '@/lib/utils'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 
@@ -27,7 +29,12 @@ export function SiteAppShell({
   vendorPortal = false,
 }: SiteAppShellProps) {
   return (
-    <div className="market-page site-app-shell flex min-h-screen max-w-full flex-col overflow-x-hidden">
+    <div
+      className={cn(
+        'market-page site-app-shell flex max-w-full flex-col overflow-x-hidden',
+        viewportFill ? 'h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden' : 'min-h-screen'
+      )}
+    >
       <AppNav
         profile={profile}
         availablePortals={availablePortals}
@@ -44,6 +51,7 @@ export function SiteAppShell({
       >
         {children}
       </main>
+      <BuildVersionStrip />
     </div>
   )
 }

@@ -71,16 +71,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.1.113', '127.0.0.1', 'localhost'],
   env: {
     NEXT_PUBLIC_APP_URL: resolvePublicAppUrlEnv(),
-    ...(isProductionBuild
-      ? {
-          NEXT_PUBLIC_APP_VERSION: appVersion,
-          NEXT_PUBLIC_GIT_HASH: buildCommit,
-          NEXT_PUBLIC_APP_VERSION_BASE: baseVersion,
-          NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
-          NEXT_PUBLIC_BUILD_NUMBER: String(buildNumber),
-          NEXT_PUBLIC_BUILD_TIME: buildTime,
-        }
-      : {}),
+    NEXT_PUBLIC_APP_VERSION: appVersion,
+    NEXT_PUBLIC_GIT_HASH: buildCommit,
+    NEXT_PUBLIC_APP_VERSION_BASE: baseVersion,
+    NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
+    NEXT_PUBLIC_BUILD_NUMBER: String(buildNumber),
+    NEXT_PUBLIC_BUILD_TIME: buildTime,
   },
   images: {
     remotePatterns: [

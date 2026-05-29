@@ -36,7 +36,7 @@ export function DashboardAppShell({
     <div
       id={id}
       className={cn(
-        'dashboard-app-shell flex h-[calc(100dvh-var(--app-nav-height,4.5rem))] min-h-0 flex-col overflow-hidden bg-canvas',
+        'dashboard-app-shell flex h-full min-h-0 flex-col overflow-hidden bg-canvas',
         className
       )}
       aria-busy={ariaBusy === true ? true : ariaBusy === false ? false : undefined}

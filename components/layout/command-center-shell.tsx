@@ -35,7 +35,7 @@ export function CommandCenterShell({
   return (
     <div
       className={cn(
-        'flex h-[calc(100dvh-var(--app-nav-height,4.5rem))] min-h-0 flex-col overflow-hidden bg-canvas',
+        'flex h-full min-h-0 flex-col overflow-hidden bg-canvas',
         className
       )}
     >
