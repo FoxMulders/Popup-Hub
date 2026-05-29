@@ -9,6 +9,7 @@ import { pickRandomLoaderVariant, type LoaderVariantId } from '@/lib/brand/loade
 
 const LOGO_VERSION =
   process.env.NEXT_PUBLIC_BUILD_NUMBER ??
+  process.env.NEXT_PUBLIC_GIT_HASH ??
   process.env.NEXT_PUBLIC_BUILD_COMMIT ??
   '1'
 const LOGO_SRC = `/popup-hub-brand.png?v=${LOGO_VERSION}`

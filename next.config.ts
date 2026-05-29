@@ -2,6 +2,7 @@ import type { NextConfig } from 'next'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { formatAppVersion } from './lib/build-info'
 
 function readPackageVersion(): string {
   try {
@@ -40,8 +41,7 @@ const buildTime = new Date().toISOString()
 const buildCommit = readGitCommit()
 const buildNumber = readBuildNumber()
 const baseVersion = readPackageVersion()
-/** Semver + monotonic build counter; build increments on each production deploy. */
-const appVersion = `${baseVersion}+${buildNumber}`
+const appVersion = formatAppVersion(baseVersion, buildNumber)
 
 function resolvePublicAppUrlEnv(): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.trim()
@@ -61,6 +61,8 @@ function resolvePublicAppUrlEnv(): string {
     : 'http://localhost:3000'
 }
 
+const isProductionBuild = process.env.NODE_ENV === 'production'
+
 const nextConfig: NextConfig = {
   // All pages are dynamic — no static prerendering for an auth-protected marketplace
   output: 'standalone',
@@ -69,11 +71,16 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.1.113', '127.0.0.1', 'localhost'],
   env: {
     NEXT_PUBLIC_APP_URL: resolvePublicAppUrlEnv(),
-    NEXT_PUBLIC_APP_VERSION: appVersion,
-    NEXT_PUBLIC_APP_VERSION_BASE: baseVersion,
-    NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
-    NEXT_PUBLIC_BUILD_NUMBER: String(buildNumber),
-    NEXT_PUBLIC_BUILD_TIME: buildTime,
+    ...(isProductionBuild
+      ? {
+          NEXT_PUBLIC_APP_VERSION: appVersion,
+          NEXT_PUBLIC_GIT_HASH: buildCommit,
+          NEXT_PUBLIC_APP_VERSION_BASE: baseVersion,
+          NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
+          NEXT_PUBLIC_BUILD_NUMBER: String(buildNumber),
+          NEXT_PUBLIC_BUILD_TIME: buildTime,
+        }
+      : {}),
   },
   images: {
     remotePatterns: [

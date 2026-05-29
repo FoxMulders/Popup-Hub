@@ -45,30 +45,14 @@ const packageVersion = readPackageVersion()
 const commit = readGitCommit()
 const state = readBuildState()
 
-const shouldBump =
-  process.env.BUMP_BUILD_NUMBER === '1' ||
-  (process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'production')
-
+// prebuild runs before every `npm run build`; always bump the monotonic counter.
 let nextBuild = state.build
-let nextCommit = state.commit
+let nextCommit = commit
 
 if (state.version !== packageVersion) {
-  nextBuild = shouldBump ? 1 : 0
-  nextCommit = shouldBump ? commit : state.commit
-} else if (shouldBump) {
-  const sameCommitRebuild =
-    process.env.VERCEL === '1' &&
-    state.commit === commit &&
-    state.build > 0 &&
-    process.env.BUMP_BUILD_NUMBER !== '1'
-
-  if (sameCommitRebuild) {
-    nextBuild = state.build
-    nextCommit = state.commit
-  } else {
-    nextBuild = state.build + 1
-    nextCommit = commit
-  }
+  nextBuild = 1
+} else {
+  nextBuild = state.build + 1
 }
 
 const nextState = {
@@ -79,10 +63,4 @@ const nextState = {
 
 writeFileSync(buildFile, `${JSON.stringify(nextState, null, 2)}\n`)
 
-if (shouldBump && nextBuild !== state.build) {
-  console.log(`Build number: ${state.build} → ${nextBuild} (v${packageVersion}, ${commit})`)
-} else if (shouldBump && nextBuild === state.build) {
-  console.log(`Build number unchanged for commit ${commit}: ${nextBuild} (v${packageVersion})`)
-} else {
-  console.log(`Build number unchanged: ${nextBuild} (v${packageVersion})`)
-}
+console.log(`Build number: ${state.build} → ${nextBuild} (v${packageVersion}, ${commit})`)

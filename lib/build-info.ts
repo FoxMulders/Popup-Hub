@@ -13,13 +13,22 @@ export interface BuildInfo {
   label: string
 }
 
+/** Display version: major.minor.buildNumber (e.g. 1.0.154). */
+export function formatAppVersion(baseVersion: string, buildNumber: number): string {
+  const match = baseVersion.match(/^(\d+)\.(\d+)/)
+  if (match) {
+    return `${match[1]}.${match[2]}.${buildNumber}`
+  }
+  return buildNumber > 0 ? `${baseVersion}.${buildNumber}` : baseVersion
+}
+
 function readPackageVersion(): string {
   try {
     const raw = readFileSync(join(process.cwd(), 'package.json'), 'utf8')
     const pkg = JSON.parse(raw) as { version?: string }
     return pkg.version ?? '0.0.0'
   } catch {
-    return process.env.NEXT_PUBLIC_APP_VERSION ?? '0.0.0'
+    return '0.0.0'
   }
 }
 
@@ -55,17 +64,33 @@ function readBuildNumber(): number {
   return 0
 }
 
+/** Footer label: `Build: {version} · {gitHash}` or `Build: local-dev`. */
+export function getBuildFooterLabel(): string {
+  const version = process.env.NEXT_PUBLIC_APP_VERSION?.trim()
+  const gitHash =
+    process.env.NEXT_PUBLIC_GIT_HASH?.trim() ||
+    process.env.NEXT_PUBLIC_BUILD_COMMIT?.trim()
+
+  if (!version || !gitHash) {
+    return 'Build: local-dev'
+  }
+
+  return `Build: ${version} · ${gitHash}`
+}
+
 /** Build metadata injected at compile time (see next.config.ts). */
 export function getBuildInfo(): BuildInfo {
   const baseVersion =
     process.env.NEXT_PUBLIC_APP_VERSION_BASE?.trim() || readPackageVersion()
   const commit =
+    process.env.NEXT_PUBLIC_GIT_HASH?.trim() ||
     process.env.NEXT_PUBLIC_BUILD_COMMIT?.trim() ||
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
     'local'
   const buildNumber = readBuildNumber()
   const version =
-    process.env.NEXT_PUBLIC_APP_VERSION?.trim() || `${baseVersion}+${buildNumber}`
+    process.env.NEXT_PUBLIC_APP_VERSION?.trim() ||
+    formatAppVersion(baseVersion, buildNumber)
   const builtAt =
     process.env.NEXT_PUBLIC_BUILD_TIME?.trim() || new Date().toISOString()
   const environment = resolveEnvironment()
@@ -79,7 +104,16 @@ export function getBuildInfo(): BuildInfo {
           ? 'dev'
           : 'local'
 
-  const label = `v${baseVersion} · build ${buildNumber} · ${commit} · ${formatBuiltAt(builtAt)} (${envTag})`
+  const label = getBuildFooterLabel()
+  const detailLabel = `${label} · ${formatBuiltAt(builtAt)} (${envTag})`
 
-  return { version, baseVersion, commit, buildNumber, builtAt, environment, label }
+  return {
+    version,
+    baseVersion,
+    commit,
+    buildNumber,
+    builtAt,
+    environment,
+    label: detailLabel,
+  }
 }

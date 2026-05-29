@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { PopupHubLogo } from '@/components/brand/popup-hub-logo'
-import { getBuildInfo } from '@/lib/build-info'
+import { getBuildFooterLabel, getBuildInfo } from '@/lib/build-info'
 import { LEGAL_LINKS } from '@/lib/legal/links'
 import { cn } from '@/lib/utils'
 
@@ -8,20 +8,11 @@ interface BuildVersionFooterProps {
   className?: string
 }
 
-const ENV_BADGE: Record<ReturnType<typeof getBuildInfo>['environment'], string> = {
-  production: 'prod',
-  preview: 'preview',
-  development: 'dev',
-  local: 'local',
-}
-
 export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
   const build = getBuildInfo()
+  const buildLabel = getBuildFooterLabel()
   const year = new Date().getFullYear()
-  const envTag = ENV_BADGE[build.environment]
-  const primaryLabel = `v${build.baseVersion} · build ${build.buildNumber}`
-  const secondaryLabel = `${build.commit} · ${envTag}`
-  const tooltip = `Version ${build.version}, build ${build.buildNumber}, commit ${build.commit}, built ${build.builtAt} (${build.environment})`
+  const tooltip = `${buildLabel}, built ${build.builtAt} (${build.environment})`
 
   return (
     <footer
@@ -55,16 +46,14 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
             © {year} Popup Hub. All rights reserved.
           </p>
           <p
-            className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0 font-mono text-[10px] leading-snug text-muted-foreground sm:text-[11px]"
+            className="font-mono text-[10px] leading-snug text-muted-foreground sm:text-[11px]"
             title={tooltip}
             data-testid="build-version-footer"
             data-build-version={build.version}
             data-build-commit={build.commit}
             data-build-environment={build.environment}
           >
-            <span className="font-semibold text-foreground/80">{primaryLabel}</span>
-            <span aria-hidden="true">·</span>
-            <span>{secondaryLabel}</span>
+            {buildLabel}
           </p>
         </div>
       </div>

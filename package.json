@@ -8,6 +8,7 @@
         "dev:certs": "mkcert -install && mkcert -key-file .cert/localhost-key.pem -cert-file .cert/localhost.pem localhost 127.0.0.1 ::1",
         "prebuild": "node scripts/bump-build-number.mjs",
         "build": "next build",
+        "release": "npm version patch && git push && git push --tags",
         "start": "next start",
         "lint": "eslint",
         "db:push": "npx supabase db push",
