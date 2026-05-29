@@ -1,9 +1,14 @@
 /**
- * Smoke test: edge auto-scroll velocity math + perimeter wall macro.
+ * Smoke test: perimeter wall macro geometry + duplicate detection +
+ * room/canvas fallback resolution.
  *
- * Run with `tsx scripts/verify-edge-scroll-and-perimeter.ts`.
+ * Run with `tsx scripts/verify-perimeter-walls.ts`.
+ *
+ * History: this file used to also exercise the canvas edge
+ * auto-scroll velocity math, but the auto-scroll dampening loop was
+ * reverted to restore the original snappier drag behavior. Only the
+ * perimeter-wall checks remain.
  */
-import { computeEdgeOvershoot } from '../components/coordinator/floor-plan-v2/canvas/use-edge-auto-scroll'
 import {
   buildPerimeterWalls,
   PERIMETER_WALL_LABEL,
@@ -20,41 +25,6 @@ function expect(cond: boolean, label: string) {
   } else {
     failed += 1
     console.log(`✗ ${label}`)
-  }
-}
-
-// -----------------------------------------------------------------------------
-// computeEdgeOvershoot
-// -----------------------------------------------------------------------------
-{
-  const rect = { left: 100, right: 800, top: 50, bottom: 600 }
-  // Inside the rectangle: zero overshoot.
-  {
-    const { dx, dy } = computeEdgeOvershoot(400, 300, rect)
-    expect(dx === 0 && dy === 0, 'inside-rect overshoot is zero')
-  }
-  // Just past the right edge by 1 px → tiny positive dx, scaled by perPx=0.5.
-  {
-    const { dx, dy } = computeEdgeOvershoot(801, 300, rect)
-    expect(dx === 0.5 && dy === 0, 'right-edge 1px → dx=0.5')
-  }
-  // Far past the right edge → clamped to MAX_VELOCITY (25).
-  {
-    const { dx } = computeEdgeOvershoot(2000, 300, rect)
-    expect(dx === 25, 'right-edge far overshoot capped at 25 px/frame')
-  }
-  // Far above top → negative dy, also capped.
-  {
-    const { dx, dy } = computeEdgeOvershoot(400, -1000, rect)
-    expect(dx === 0 && dy === -25, 'above-top far overshoot dy=-25')
-  }
-  // Diagonal overshoot (top-right corner).
-  {
-    const { dx, dy } = computeEdgeOvershoot(900, 0, rect)
-    expect(
-      dx === 50 * 0.5 && dy === -50 * 0.5,
-      'diagonal overshoot scales each axis independently'
-    )
   }
 }
 
@@ -174,4 +144,4 @@ if (failed > 0) {
   console.error(`\n${failed} assertion(s) failed`)
   process.exit(1)
 }
-console.log('\nAll edge-scroll + perimeter-wall checks passed.')
+console.log('\nAll perimeter-wall checks passed.')
