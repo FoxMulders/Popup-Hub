@@ -168,14 +168,25 @@ export async function POST(
 
     const boothPrice = limit?.price_per_booth ?? 0
     if (boothPrice > 0) {
-      const paymentFields = resolvePaymentFieldsForPaidApplication({
-        paymentMethod: application.payment_method ?? 'SQUARE',
-        requiresPayment: true,
-        approved: resolvedStatus === 'approved',
-      })
-      updates.payment_method = paymentFields.payment_method
-      updates.payment_status = paymentFields.payment_status
-      updates.application_payment_status = paymentFields.application_payment_status
+      /*
+       * Don't regress payment fields when the payment is already
+       * cleared (relevant for re-running approve on legacy ETRANSFER
+       * apps that already cleared via Mark as Paid & Approve).
+       */
+      const paymentAlreadyCleared =
+        application.payment_status === 'paid' ||
+        application.application_payment_status === 'COMPLETED'
+
+      if (!paymentAlreadyCleared) {
+        const paymentFields = resolvePaymentFieldsForPaidApplication({
+          paymentMethod: application.payment_method ?? 'SQUARE',
+          requiresPayment: true,
+          approved: resolvedStatus === 'approved',
+        })
+        updates.payment_method = paymentFields.payment_method
+        updates.payment_status = paymentFields.payment_status
+        updates.application_payment_status = paymentFields.application_payment_status
+      }
     }
   }
 

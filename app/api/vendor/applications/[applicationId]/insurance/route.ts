@@ -34,6 +34,8 @@ export async function POST(
       category_id,
       status,
       payment_method,
+      payment_status,
+      application_payment_status,
       event:events(id, name, coordinator_id, market_insurance_required)
     `)
     .eq('id', applicationId)
@@ -67,8 +69,19 @@ export async function POST(
     .maybeSingle()
 
   const boothPrice = limit?.price_per_booth ?? 0
+  /*
+   * Don't regress payment fields if the payment is already cleared.
+   * E-Transfer apps reach `pending_insurance` only after the
+   * coordinator clicked "Mark as Paid & Approve" (confirm-etransfer
+   * route) — at that point application_payment_status is COMPLETED.
+   * Re-running resolvePaymentFieldsForPaidApplication here would
+   * stomp those fields back to PENDING_REVIEW.
+   */
+  const paymentAlreadyCleared =
+    application.payment_status === 'paid' ||
+    application.application_payment_status === 'COMPLETED'
   const paymentFields =
-    boothPrice > 0
+    boothPrice > 0 && !paymentAlreadyCleared
       ? resolvePaymentFieldsForPaidApplication({
           paymentMethod: application.payment_method ?? 'SQUARE',
           requiresPayment: true,
