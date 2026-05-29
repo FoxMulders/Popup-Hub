@@ -31,16 +31,17 @@ interface PaymentSettingsState {
   walletBalanceCents: number
   walletBlocked: boolean
   walletGraceUntil: string | null
+  balanceOwed?: number
   etransferPaymentEmail: string | null
+  paymentInstructions?: string | null
   offlinePaymentInstructions: string | null
   squareConnected: boolean
   stripeConnected: boolean
   stripeOnboardingComplete: boolean
   defaultEventPaymentFlags: {
-    accepts_square: boolean
-    accepts_stripe: boolean
-    accepts_offline_etransfer: boolean
-    accepts_offline_cash: boolean
+    accepts_credit_card: boolean
+    accepts_etransfer: boolean
+    accepts_cash: boolean
   }
 }
 
@@ -72,10 +73,9 @@ export function PaymentMethodsForm({
   const [etransferEmail, setEtransferEmail] = useState('')
   const [offlineInstructions, setOfflineInstructions] = useState('')
   const [flags, setFlags] = useState({
-    accepts_square: true,
-    accepts_stripe: false,
-    accepts_offline_etransfer: true,
-    accepts_offline_cash: false,
+    accepts_credit_card: true,
+    accepts_etransfer: false,
+    accepts_cash: false,
   })
 
   useEffect(() => {
@@ -85,6 +85,9 @@ export function PaymentMethodsForm({
     if (stripeParam === 'refresh') toast.message('Resume Stripe onboarding when ready')
     if (walletParam === 'success') toast.success('Wallet top-up submitted — balance updates after payment clears')
     if (walletParam === 'cancelled') toast.message('Wallet top-up cancelled')
+    const invoiceParam = searchParams.get('platform_invoice')
+    if (invoiceParam === 'success') toast.success('Platform fee invoice paid — balance reset')
+    if (invoiceParam === 'cancelled') toast.message('Platform fee invoice cancelled')
   }, [searchParams])
 
   useEffect(() => {
@@ -93,7 +96,9 @@ export function PaymentMethodsForm({
       .then((data: PaymentSettingsState) => {
         setSettings(data)
         setEtransferEmail(data.etransferPaymentEmail ?? '')
-        setOfflineInstructions(data.offlinePaymentInstructions ?? '')
+        setOfflineInstructions(
+          data.paymentInstructions ?? data.offlinePaymentInstructions ?? ''
+        )
         setFlags(data.defaultEventPaymentFlags)
       })
       .catch(() => toast.error('Could not load payment settings'))
@@ -107,6 +112,7 @@ export function PaymentMethodsForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           etransferPaymentEmail: etransferEmail,
+          paymentInstructions: offlineInstructions,
           offlinePaymentInstructions: offlineInstructions,
           defaultEventPaymentFlags: flags,
         }),
@@ -165,24 +171,28 @@ export function PaymentMethodsForm({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Wallet className="h-5 w-5 text-emerald-700" />
-            Platform wallet
+            Platform fees owed
           </CardTitle>
           <CardDescription>
-            Offline booth payments (e-Transfer and cash) debit the 3% + $1.00 platform fee from this
-            balance when you mark vendors as paid.
+            When you mark offline vendors as paid, Popup Hub adds 3% + $1.00 per booth to this balance.
+            Invoices run when the balance exceeds $20 or at month-end.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg bg-emerald-50 px-4 py-3">
-            <p className="text-sm text-muted-foreground">Current balance</p>
+            <p className="text-sm text-muted-foreground">Outstanding platform fees</p>
             <p className="font-heading text-2xl font-semibold text-forest">
-              {formatCents(settings.walletBalanceCents)}
+              ${(settings.balanceOwed ?? 0).toFixed(2)} CAD
             </p>
             {settings.walletBlocked ? (
               <p className="mt-1 text-xs font-medium text-terracotta-800">
-                Wallet in grace — top up to avoid blocking new vendor approvals.
+                Legacy wallet grace active — top up if prompted for older markets.
               </p>
             ) : null}
+          </div>
+          <div className="rounded-lg border border-dashed px-4 py-3">
+            <p className="text-sm text-muted-foreground">Legacy wallet (optional top-up)</p>
+            <p className="font-medium">{formatCents(settings.walletBalanceCents)}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {[2500, 5000, 10000].map((cents) => (
@@ -236,13 +246,18 @@ export function PaymentMethodsForm({
             </p>
           )}
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-            <Label htmlFor="accepts-square">Accept Square at markets</Label>
+            <Label htmlFor="accepts-credit-card">Accept credit card at markets</Label>
             <Switch
-              id="accepts-square"
-              checked={flags.accepts_square}
-              onCheckedChange={(checked) => setFlags((f) => ({ ...f, accepts_square: checked }))}
+              id="accepts-credit-card"
+              checked={flags.accepts_credit_card}
+              onCheckedChange={(checked) =>
+                setFlags((f) => ({ ...f, accepts_credit_card: checked }))
+              }
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            Uses Square and/or Stripe Connect when connected below.
+          </p>
         </CardContent>
       </Card>
 
@@ -269,15 +284,11 @@ export function PaymentMethodsForm({
               Connect Stripe
             </Button>
           )}
-          <div className="flex items-center justify-between rounded-lg border px-3 py-2">
-            <Label htmlFor="accepts-stripe">Accept Stripe at markets</Label>
-            <Switch
-              id="accepts-stripe"
-              checked={flags.accepts_stripe}
-              disabled={!settings.stripeOnboardingComplete}
-              onCheckedChange={(checked) => setFlags((f) => ({ ...f, accepts_stripe: checked }))}
-            />
-          </div>
+          {settings.stripeOnboardingComplete ? (
+            <p className="text-xs text-muted-foreground">
+              Stripe Connect is available for credit card checkout alongside Square.
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -288,8 +299,7 @@ export function PaymentMethodsForm({
             Offline payments
           </CardTitle>
           <CardDescription>
-            Vendors pay you directly; Popup Hub collects platform fees from your wallet when you
-            mark them paid.
+            Vendors pay you directly; platform fees accrue to your balance when you mark them paid.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -320,9 +330,9 @@ export function PaymentMethodsForm({
             </div>
             <Switch
               id="accepts-etransfer"
-              checked={flags.accepts_offline_etransfer}
+              checked={flags.accepts_etransfer}
               onCheckedChange={(checked) =>
-                setFlags((f) => ({ ...f, accepts_offline_etransfer: checked }))
+                setFlags((f) => ({ ...f, accepts_etransfer: checked }))
               }
             />
           </div>
@@ -333,10 +343,8 @@ export function PaymentMethodsForm({
             </div>
             <Switch
               id="accepts-cash"
-              checked={flags.accepts_offline_cash}
-              onCheckedChange={(checked) =>
-                setFlags((f) => ({ ...f, accepts_offline_cash: checked }))
-              }
+              checked={flags.accepts_cash}
+              onCheckedChange={(checked) => setFlags((f) => ({ ...f, accepts_cash: checked }))}
             />
           </div>
         </CardContent>

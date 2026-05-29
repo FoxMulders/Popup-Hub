@@ -111,6 +111,7 @@ export interface Profile {
   stripe_connected_id?: string | null
   stripe_onboarding_complete?: boolean
   offline_payment_instructions?: string | null
+  payment_instructions?: string | null
   platform_wallet_grace_until?: string | null
   platform_wallet_blocked?: boolean
   updated_at: string
@@ -208,6 +209,9 @@ export interface Event {
   accepts_stripe?: boolean
   accepts_offline_etransfer?: boolean
   accepts_offline_cash?: boolean
+  accepts_credit_card?: boolean
+  accepts_etransfer?: boolean
+  accepts_cash?: boolean
   allow_mlm: boolean
   max_mlm_slots: number | null
   is_multi_day?: boolean
@@ -829,4 +833,11 @@ export interface MarketFeedPostComment {
   body: string
   created_at: string
   author?: Pick<Profile, 'full_name' | 'avatar_url'>
+}
+
+export interface AccountBalance {
+  coordinator_id: string
+  balance_owed: number
+  last_invoiced_at: string | null
+  updated_at: string
 }

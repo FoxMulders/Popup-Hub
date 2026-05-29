@@ -17,7 +17,7 @@ import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pric
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
-import { deductCoordinatorPlatformFee } from '@/lib/wallet/deduct-coordinator-platform-fee'
+import { addCoordinatorPlatformFeeToBalance } from '@/lib/payments/account-balance'
 import type {
   ApplicationPaymentStatus,
   ApplicationStatus,
@@ -146,24 +146,15 @@ export async function confirmOfflinePayment(
   const feeConfig = resolveEventFeeConfig(eventRow)
   const platformFeeCents = computePlatformFeeCents(boothPriceCents, feeConfig)
 
-  const feeDeduction = await deductCoordinatorPlatformFee(supabase, {
+  const feeBalance = await addCoordinatorPlatformFeeToBalance(supabase, {
     coordinatorId: eventRow.coordinator_id,
     platformFeeCents,
     applicationId: application.id,
     paymentMethod: method,
   })
 
-  if (!feeDeduction.ok) {
-    if (feeDeduction.error === 'blocked') {
-      return {
-        ok: false,
-        error:
-          'Platform wallet balance is too low. Top up your payment wallet before marking offline payments as paid.',
-        code: 'wallet_blocked',
-        status: 402,
-      }
-    }
-    return { ok: false, error: 'Coordinator wallet not found', status: 500 }
+  if (!feeBalance.ok) {
+    return { ok: false, error: 'Could not record platform fee balance', status: 500 }
   }
 
   const nextStatus: ApplicationStatus = shouldAdvanceStatus

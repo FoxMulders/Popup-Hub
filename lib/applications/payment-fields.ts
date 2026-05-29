@@ -4,6 +4,11 @@ import type {
   PaymentMethod,
   PaymentStatus,
 } from '@/types/database'
+import {
+  readUnifiedEventPaymentFlags,
+  type EventPaymentFlagRow,
+} from '@/lib/payments/event-payment-flags'
+import type { VendorCheckoutMethod } from '@/lib/payments/booth-payment-display'
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   SQUARE: 'Square (card)',
@@ -31,8 +36,9 @@ export function isDigitalPaymentMethod(method: PaymentMethod | null | undefined)
 
 export function normalizePaymentMethod(value: unknown): PaymentMethod {
   if (value === 'STRIPE') return 'STRIPE'
-  if (value === 'ETRANSFER') return 'ETRANSFER'
-  if (value === 'CASH') return 'CASH'
+  if (value === 'ETRANSFER' || value === 'etransfer') return 'ETRANSFER'
+  if (value === 'CASH' || value === 'cash') return 'CASH'
+  if (value === 'credit_card') return 'SQUARE'
   return 'SQUARE'
 }
 
@@ -153,12 +159,7 @@ export function formatApplicationPaymentLabel(
   return app.payment_status
 }
 
-export type EventPaymentAcceptance = {
-  accepts_square?: boolean | null
-  accepts_stripe?: boolean | null
-  accepts_offline_etransfer?: boolean | null
-  accepts_offline_cash?: boolean | null
-}
+export type EventPaymentAcceptance = EventPaymentFlagRow
 
 export function resolveEnabledPaymentMethods(
   event: EventPaymentAcceptance,
@@ -167,20 +168,71 @@ export function resolveEnabledPaymentMethods(
     stripeConnected?: boolean
   } = {}
 ): PaymentMethod[] {
+  const flags = readUnifiedEventPaymentFlags(event)
   const methods: PaymentMethod[] = []
-  if (event.accepts_square !== false && options.squareConnected !== false) {
-    methods.push('SQUARE')
+
+  if (flags.accepts_credit_card) {
+    const stripeOk = options.stripeConnected === true
+    const squareOk = options.squareConnected !== false
+    if (stripeOk && (event.accepts_stripe === true || flags.accepts_credit_card)) {
+      methods.push('STRIPE')
+    }
+    if (squareOk && event.accepts_square !== false) {
+      methods.push('SQUARE')
+    }
+    if (methods.length === 0 && flags.accepts_credit_card) {
+      if (stripeOk) methods.push('STRIPE')
+      else if (squareOk) methods.push('SQUARE')
+    }
   }
-  if (event.accepts_stripe === true && options.stripeConnected === true) {
-    methods.push('STRIPE')
-  }
-  if (event.accepts_offline_etransfer !== false) {
+
+  if (flags.accepts_etransfer) {
     methods.push('ETRANSFER')
   }
-  if (event.accepts_offline_cash === true) {
+  if (flags.accepts_cash) {
     methods.push('CASH')
   }
   return methods
+}
+
+/** Single card option when any digital processor is enabled (vendor-facing spec). */
+export function resolveVendorCheckoutMethods(
+  event: EventPaymentAcceptance,
+  options: {
+    squareConnected?: boolean
+    stripeConnected?: boolean
+  } = {}
+): VendorCheckoutMethod[] {
+  const internal = resolveEnabledPaymentMethods(event, options)
+  const out: VendorCheckoutMethod[] = []
+  if (internal.some((m) => m === 'SQUARE' || m === 'STRIPE')) {
+    out.push('credit_card')
+  }
+  if (internal.includes('ETRANSFER')) out.push('etransfer')
+  if (internal.includes('CASH')) out.push('cash')
+  return out
+}
+
+export function resolvePreferredDigitalPaymentMethod(
+  enabled: PaymentMethod[]
+): PaymentMethod {
+  if (enabled.includes('STRIPE')) return 'STRIPE'
+  if (enabled.includes('SQUARE')) return 'SQUARE'
+  return 'SQUARE'
+}
+
+export function normalizeVendorCheckoutToPaymentMethod(
+  checkout: VendorCheckoutMethod | PaymentMethod | undefined,
+  enabled: PaymentMethod[]
+): PaymentMethod {
+  if (checkout === 'etransfer' || checkout === 'ETRANSFER') return 'ETRANSFER'
+  if (checkout === 'cash' || checkout === 'CASH') return 'CASH'
+  if (checkout === 'STRIPE' || checkout === 'SQUARE') {
+    return enabled.includes(checkout as PaymentMethod)
+      ? (checkout as PaymentMethod)
+      : resolvePreferredDigitalPaymentMethod(enabled)
+  }
+  return resolvePreferredDigitalPaymentMethod(enabled)
 }
 
 export function isPaymentMethodAllowed(

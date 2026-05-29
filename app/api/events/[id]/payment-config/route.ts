@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { resolveEnabledPaymentMethods } from '@/lib/applications/payment-fields'
+import {
+  resolveEnabledPaymentMethods,
+  resolveVendorCheckoutMethods,
+} from '@/lib/applications/payment-fields'
+import { readCoordinatorPaymentInstructions } from '@/lib/payments/event-payment-flags'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import { resolveCoordinatorEtransferEmail } from '@/lib/coordinator/etransfer-email'
@@ -20,6 +24,9 @@ export async function GET(
       coordinator_id,
       square_merchant_id,
       status,
+      accepts_credit_card,
+      accepts_etransfer,
+      accepts_cash,
       accepts_square,
       accepts_stripe,
       accepts_offline_etransfer,
@@ -31,6 +38,7 @@ export async function GET(
         email,
         etransfer_payment_email,
         offline_payment_instructions,
+        payment_instructions,
         stripe_connected_id,
         stripe_onboarding_complete
       )
@@ -61,10 +69,10 @@ export async function GET(
 
   const feeConfig = resolveEventFeeConfig(event)
   const coordinatorEtransferEmail = resolveCoordinatorEtransferEmail(coordinator)
-  const enabledPaymentMethods = resolveEnabledPaymentMethods(event, {
-    squareConnected,
-    stripeConnected,
-  })
+  const connection = { squareConnected, stripeConnected }
+  const enabledPaymentMethods = resolveEnabledPaymentMethods(event, connection)
+  const vendorCheckoutMethods = resolveVendorCheckoutMethods(event, connection)
+  const paymentInstructions = readCoordinatorPaymentInstructions(coordinator ?? {})
 
   return NextResponse.json({
     eventId: event.id,
@@ -74,8 +82,10 @@ export async function GET(
     stripeConnected,
     stripePublishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null,
     enabledPaymentMethods,
+    vendorCheckoutMethods,
     feeConfig,
     coordinatorEtransferEmail,
-    offlinePaymentInstructions: coordinator?.offline_payment_instructions ?? null,
+    paymentInstructions,
+    offlinePaymentInstructions: paymentInstructions,
   })
 }

@@ -69,7 +69,10 @@ import {
   needsDigitalCheckout,
   needsOfflineCoordinatorReview,
   resolveEnabledPaymentMethods,
+  resolvePreferredDigitalPaymentMethod,
+  resolveVendorCheckoutMethods,
 } from '@/lib/applications/payment-fields'
+import type { VendorCheckoutMethod } from '@/lib/payments/booth-payment-display'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
 import { ApplicationStatusActions, ApplicationStatusBadgeLink } from '@/components/vendor/application-status-actions'
@@ -123,6 +126,9 @@ export function ApplyButton({
   const [enabledPaymentMethods, setEnabledPaymentMethods] = useState<PaymentMethod[]>(['SQUARE', 'ETRANSFER'])
   const [coordinatorEtransferEmail, setCoordinatorEtransferEmail] = useState<string | null>(null)
   const [offlinePaymentInstructions, setOfflinePaymentInstructions] = useState<string | null>(null)
+  const [vendorCheckoutMethods, setVendorCheckoutMethods] = useState<VendorCheckoutMethod[]>([
+    'credit_card',
+  ])
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [pendingApplicationId, setPendingApplicationId] = useState<string | null>(null)
   const [pendingBoothPrice, setPendingBoothPrice] = useState(0)
@@ -287,8 +293,10 @@ export function ApplyButton({
           squareConnected?: boolean
           stripeConnected?: boolean
           enabledPaymentMethods?: PaymentMethod[]
+          vendorCheckoutMethods?: VendorCheckoutMethod[]
           coordinatorEtransferEmail?: string | null
           offlinePaymentInstructions?: string | null
+          paymentInstructions?: string | null
         }) => {
           setSquareConnected(!!data.squareConnected)
           setStripeConnected(!!data.stripeConnected)
@@ -299,10 +307,19 @@ export function ApplyButton({
               stripeConnected: !!data.stripeConnected,
             })
           setEnabledPaymentMethods(methods)
+          setVendorCheckoutMethods(
+            data.vendorCheckoutMethods ??
+              resolveVendorCheckoutMethods(event, {
+                squareConnected: !!data.squareConnected,
+                stripeConnected: !!data.stripeConnected,
+              })
+          )
           setCoordinatorEtransferEmail(data.coordinatorEtransferEmail ?? null)
-          setOfflinePaymentInstructions(data.offlinePaymentInstructions ?? null)
+          const instructions =
+            data.paymentInstructions ?? data.offlinePaymentInstructions ?? null
+          setOfflinePaymentInstructions(instructions)
           if (methods.length > 0 && !methods.includes(paymentMethod)) {
-            setPaymentMethod(methods[0])
+            setPaymentMethod(resolvePreferredDigitalPaymentMethod(methods))
           }
         }
       )
@@ -899,8 +916,10 @@ export function ApplyButton({
                 boothPriceCents={checkoutBoothPriceCents}
                 platformFeeCents={feePreview}
                 coordinatorEtransferEmail={coordinatorEtransferEmail}
+                paymentInstructions={offlinePaymentInstructions}
                 offlinePaymentInstructions={offlinePaymentInstructions}
                 enabledMethods={enabledPaymentMethods}
+                vendorCheckoutMethods={vendorCheckoutMethods}
                 disabled={submitting}
               />
             )}

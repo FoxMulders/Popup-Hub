@@ -6,6 +6,7 @@ import { recordPlatformTransaction } from '@/lib/monetization/record-transaction
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { getStripeClient, getStripeWebhookSecret, isStripeConfigured } from '@/lib/stripe/client'
 import { refreshStripeConnectStatus } from '@/lib/stripe/connect'
+import { finalizeCoordinatorPlatformInvoicePayment } from '@/lib/cron/coordinator-platform-invoice'
 import type Stripe from 'stripe'
 
 async function finalizeStripeBoothPayment(
@@ -157,6 +158,14 @@ export async function POST(request: Request) {
       const paymentIntent = event.data.object as Stripe.PaymentIntent
       if (paymentIntent.metadata?.kind === 'coordinator_wallet_topup') {
         await creditCoordinatorWalletTopUp(supabase, paymentIntent)
+      } else if (paymentIntent.metadata?.kind === 'coordinator_platform_invoice') {
+        const coordinatorId = paymentIntent.metadata?.coordinator_id
+        if (coordinatorId) {
+          await finalizeCoordinatorPlatformInvoicePayment(supabase, {
+            coordinatorId,
+            paymentIntentId: paymentIntent.id,
+          })
+        }
       } else if (paymentIntent.metadata?.application_id) {
         await finalizeStripeBoothPayment(supabase, paymentIntent)
       }

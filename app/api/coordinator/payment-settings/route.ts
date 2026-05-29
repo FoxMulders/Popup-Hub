@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import {
+  readCoordinatorPaymentInstructions,
+  readUnifiedEventPaymentFlags,
+  writeCoordinatorPaymentInstructions,
+  writeEventPaymentFlags,
+} from '@/lib/payments/event-payment-flags'
+import { getCoordinatorBalanceOwed } from '@/lib/payments/account-balance'
 
 export async function GET() {
   const supabase = await createClient()
@@ -11,15 +18,16 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const [{ data: profile }, { data: wallet }] = await Promise.all([
+  const [{ data: profile }, { data: wallet }, balance] = await Promise.all([
     supabase
       .from('profiles')
       .select(
-        'role, etransfer_payment_email, offline_payment_instructions, stripe_connected_id, stripe_onboarding_complete, platform_wallet_blocked, platform_wallet_grace_until, payout_account_id, square_access_token, payout_onboarding_status'
+        'role, etransfer_payment_email, offline_payment_instructions, payment_instructions, stripe_connected_id, stripe_onboarding_complete, platform_wallet_blocked, platform_wallet_grace_until, payout_account_id, square_access_token, payout_onboarding_status'
       )
       .eq('id', user.id)
       .single(),
     supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
+    getCoordinatorBalanceOwed(supabase, user.id),
   ])
 
   if (profile?.role !== 'coordinator') {
@@ -28,7 +36,9 @@ export async function GET() {
 
   const { data: connectedEvent } = await supabase
     .from('events')
-    .select('square_merchant_id, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash')
+    .select(
+      'square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash'
+    )
     .eq('coordinator_id', user.id)
     .order('updated_at', { ascending: false })
     .limit(1)
@@ -38,16 +48,21 @@ export async function GET() {
     !!connectedEvent?.square_merchant_id ||
     (!!profile.square_access_token && profile.payout_onboarding_status === 'complete')
 
+  const unifiedFlags = readUnifiedEventPaymentFlags(connectedEvent ?? {})
+
   return NextResponse.json({
     walletBalanceCents: wallet?.balance ?? 0,
     walletBlocked: profile.platform_wallet_blocked === true,
     walletGraceUntil: profile.platform_wallet_grace_until,
+    balanceOwed: balance,
     etransferPaymentEmail: profile.etransfer_payment_email,
-    offlinePaymentInstructions: profile.offline_payment_instructions,
+    paymentInstructions: readCoordinatorPaymentInstructions(profile),
+    offlinePaymentInstructions: readCoordinatorPaymentInstructions(profile),
     squareConnected,
     stripeConnected: !!profile.stripe_connected_id,
     stripeOnboardingComplete: profile.stripe_onboarding_complete === true,
-    defaultEventPaymentFlags: {
+    defaultEventPaymentFlags: unifiedFlags,
+    defaultEventPaymentFlagsLegacy: {
       accepts_square: connectedEvent?.accepts_square ?? true,
       accepts_stripe: connectedEvent?.accepts_stripe ?? false,
       accepts_offline_etransfer: connectedEvent?.accepts_offline_etransfer ?? true,
@@ -79,7 +94,11 @@ export async function PATCH(request: Request) {
   const body = (await request.json()) as {
     etransferPaymentEmail?: string | null
     offlinePaymentInstructions?: string | null
+    paymentInstructions?: string | null
     defaultEventPaymentFlags?: {
+      accepts_credit_card?: boolean
+      accepts_etransfer?: boolean
+      accepts_cash?: boolean
       accepts_square?: boolean
       accepts_stripe?: boolean
       accepts_offline_etransfer?: boolean
@@ -91,8 +110,13 @@ export async function PATCH(request: Request) {
   if (body.etransferPaymentEmail !== undefined) {
     profileUpdates.etransfer_payment_email = body.etransferPaymentEmail?.trim() || null
   }
-  if (body.offlinePaymentInstructions !== undefined) {
-    profileUpdates.offline_payment_instructions = body.offlinePaymentInstructions?.trim() || null
+
+  const instructions =
+    body.paymentInstructions !== undefined
+      ? body.paymentInstructions
+      : body.offlinePaymentInstructions
+  if (instructions !== undefined) {
+    Object.assign(profileUpdates, writeCoordinatorPaymentInstructions(instructions))
   }
 
   if (Object.keys(profileUpdates).length > 0) {
@@ -104,15 +128,21 @@ export async function PATCH(request: Request) {
 
   if (body.defaultEventPaymentFlags) {
     const flags = body.defaultEventPaymentFlags
-    const eventUpdates: Record<string, boolean> = {}
-    if (typeof flags.accepts_square === 'boolean') eventUpdates.accepts_square = flags.accepts_square
-    if (typeof flags.accepts_stripe === 'boolean') eventUpdates.accepts_stripe = flags.accepts_stripe
-    if (typeof flags.accepts_offline_etransfer === 'boolean') {
-      eventUpdates.accepts_offline_etransfer = flags.accepts_offline_etransfer
+    const unified = {
+      accepts_credit_card:
+        typeof flags.accepts_credit_card === 'boolean'
+          ? flags.accepts_credit_card
+          : typeof flags.accepts_square === 'boolean' || typeof flags.accepts_stripe === 'boolean'
+            ? (flags.accepts_square ?? true) || (flags.accepts_stripe ?? false)
+            : undefined,
+      accepts_etransfer:
+        typeof flags.accepts_etransfer === 'boolean'
+          ? flags.accepts_etransfer
+          : flags.accepts_offline_etransfer,
+      accepts_cash:
+        typeof flags.accepts_cash === 'boolean' ? flags.accepts_cash : flags.accepts_offline_cash,
     }
-    if (typeof flags.accepts_offline_cash === 'boolean') {
-      eventUpdates.accepts_offline_cash = flags.accepts_offline_cash
-    }
+    const eventUpdates = writeEventPaymentFlags(unified)
 
     if (Object.keys(eventUpdates).length > 0) {
       const { error } = await supabase

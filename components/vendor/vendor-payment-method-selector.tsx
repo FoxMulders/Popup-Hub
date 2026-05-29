@@ -4,7 +4,8 @@ import { Banknote, CreditCard, Landmark, Sparkles, Timer } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { formatCents } from '@/lib/square/client'
 import type { PaymentMethod } from '@/types/database'
-import { PAYMENT_METHOD_LABELS } from '@/lib/applications/payment-fields'
+import type { VendorCheckoutMethod } from '@/lib/payments/booth-payment-display'
+import { resolvePreferredDigitalPaymentMethod } from '@/lib/applications/payment-fields'
 import { cn } from '@/lib/utils'
 
 export interface VendorPaymentMethodSelectorProps {
@@ -14,35 +15,42 @@ export interface VendorPaymentMethodSelectorProps {
   platformFeeCents: number
   coordinatorEtransferEmail: string | null
   offlinePaymentInstructions?: string | null
+  paymentInstructions?: string | null
   enabledMethods: PaymentMethod[]
+  vendorCheckoutMethods?: VendorCheckoutMethod[]
   disabled?: boolean
   className?: string
 }
 
-const METHOD_META: Record<
-  PaymentMethod,
+const CHECKOUT_META: Record<
+  VendorCheckoutMethod,
   { title: string; icon: typeof CreditCard; description: string }
 > = {
-  SQUARE: {
-    title: PAYMENT_METHOD_LABELS.SQUARE,
+  credit_card: {
+    title: 'Credit card',
     icon: CreditCard,
-    description: 'Instant approval after payment',
+    description: 'Pay by card — instant confirmation after payment clears',
   },
-  STRIPE: {
-    title: PAYMENT_METHOD_LABELS.STRIPE,
-    icon: CreditCard,
-    description: 'Pay by card via Stripe',
-  },
-  ETRANSFER: {
-    title: PAYMENT_METHOD_LABELS.ETRANSFER,
+  etransfer: {
+    title: 'Interac e-Transfer',
     icon: Landmark,
-    description: 'Pay the organizer directly by Interac e-Transfer',
+    description: 'Pay the organizer directly by e-Transfer',
   },
-  CASH: {
-    title: PAYMENT_METHOD_LABELS.CASH,
+  cash: {
+    title: 'Cash',
     icon: Banknote,
     description: 'Pay the organizer in cash at load-in',
   },
+}
+
+function paymentMethodMatchesCheckout(
+  paymentMethod: PaymentMethod,
+  checkout: VendorCheckoutMethod,
+  enabledMethods: PaymentMethod[]
+): boolean {
+  if (checkout === 'etransfer') return paymentMethod === 'ETRANSFER'
+  if (checkout === 'cash') return paymentMethod === 'CASH'
+  return paymentMethod === 'SQUARE' || paymentMethod === 'STRIPE'
 }
 
 export function VendorPaymentMethodSelector({
@@ -52,11 +60,17 @@ export function VendorPaymentMethodSelector({
   platformFeeCents,
   coordinatorEtransferEmail,
   offlinePaymentInstructions,
+  paymentInstructions,
   enabledMethods,
+  vendorCheckoutMethods,
   disabled = false,
   className,
 }: VendorPaymentMethodSelectorProps) {
-  const methods = enabledMethods.length > 0 ? enabledMethods : (['SQUARE'] as PaymentMethod[])
+  const instructions = paymentInstructions ?? offlinePaymentInstructions
+  const checkoutMethods: VendorCheckoutMethod[] =
+    vendorCheckoutMethods && vendorCheckoutMethods.length > 0
+      ? vendorCheckoutMethods
+      : buildCheckoutMethodsFromEnabled(enabledMethods)
 
   return (
     <fieldset className={cn('space-y-3', className)} disabled={disabled}>
@@ -64,10 +78,10 @@ export function VendorPaymentMethodSelector({
       <Label className="text-sm font-medium text-foreground">Payment method</Label>
 
       <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Payment method">
-        {methods.map((id) => {
-          const { title, icon: Icon, description } = METHOD_META[id]
-          const selected = value === id
-          const isDigital = id === 'SQUARE' || id === 'STRIPE'
+        {checkoutMethods.map((id) => {
+          const { title, icon: Icon, description } = CHECKOUT_META[id]
+          const selected = paymentMethodMatchesCheckout(value, id, enabledMethods)
+          const isDigital = id === 'credit_card'
           const displayTotal = isDigital ? boothPriceCents + platformFeeCents : boothPriceCents
 
           return (
@@ -88,7 +102,15 @@ export function VendorPaymentMethodSelector({
                 value={id}
                 checked={selected}
                 disabled={disabled}
-                onChange={() => onChange(id)}
+                onChange={() => {
+                  if (id === 'credit_card') {
+                    onChange(resolvePreferredDigitalPaymentMethod(enabledMethods))
+                  } else if (id === 'etransfer') {
+                    onChange('ETRANSFER')
+                  } else {
+                    onChange('CASH')
+                  }
+                }}
                 className="sr-only"
               />
 
@@ -112,7 +134,7 @@ export function VendorPaymentMethodSelector({
                       <Sparkles className="h-3 w-3" aria-hidden />
                       Instant booth confirmation
                     </p>
-                  ) : id === 'ETRANSFER' ? (
+                  ) : id === 'etransfer' ? (
                     <>
                       {coordinatorEtransferEmail ? (
                         <p className="text-xs text-sky-900 break-all">
@@ -120,17 +142,18 @@ export function VendorPaymentMethodSelector({
                           <span className="font-medium">{coordinatorEtransferEmail}</span>
                         </p>
                       ) : null}
+                      {instructions ? (
+                        <p className="text-xs text-stone-700 whitespace-pre-wrap">{instructions}</p>
+                      ) : null}
                       <p className="inline-flex items-start gap-1 rounded-md bg-terracotta-50 px-2 py-1.5 text-[11px] font-medium text-terracotta-800 leading-snug">
                         <Timer className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-                        Spot held 24 hours pending manual verification
+                        Pending until coordinator marks you paid
                       </p>
                     </>
                   ) : (
                     <>
-                      {offlinePaymentInstructions ? (
-                        <p className="text-xs text-stone-700 whitespace-pre-wrap">
-                          {offlinePaymentInstructions}
-                        </p>
+                      {instructions ? (
+                        <p className="text-xs text-stone-700 whitespace-pre-wrap">{instructions}</p>
                       ) : (
                         <p className="text-xs text-harvest-700">
                           Coordinator payment instructions will be included after you apply.
@@ -158,3 +181,12 @@ export function VendorPaymentMethodSelector({
     </fieldset>
   )
 }
+
+function buildCheckoutMethodsFromEnabled(enabled: PaymentMethod[]): VendorCheckoutMethod[] {
+  const out: VendorCheckoutMethod[] = []
+  if (enabled.some((m) => m === 'SQUARE' || m === 'STRIPE')) out.push('credit_card')
+  if (enabled.includes('ETRANSFER')) out.push('etransfer')
+  if (enabled.includes('CASH')) out.push('cash')
+  return out.length > 0 ? out : ['credit_card']
+}
+

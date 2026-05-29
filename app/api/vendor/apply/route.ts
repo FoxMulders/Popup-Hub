@@ -23,7 +23,9 @@ import {
 import {
   isOfflinePaymentMethod,
   isPaymentMethodAllowed,
-  normalizePaymentMethod,
+  normalizeVendorCheckoutToPaymentMethod,
+  resolveEnabledPaymentMethods,
+  resolvePreferredDigitalPaymentMethod,
   resolvePaymentFieldsForPaidApplication,
 } from '@/lib/applications/payment-fields'
 import {
@@ -125,7 +127,7 @@ export async function POST(request: Request) {
     attendanceTermsAcknowledged?: boolean
     attendingEventDayIds?: string[]
     attendingDates?: string[]
-    paymentMethod?: 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH'
+    paymentMethod?: 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH' | 'credit_card' | 'etransfer' | 'cash'
     applicableDocumentationUrl?: string | null
     tableCount?: number
   }
@@ -157,7 +159,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -333,8 +335,9 @@ export async function POST(request: Request) {
     tableCount
   )
   const requiresPayment = boothPrice > 0
-  const paymentMethod = normalizePaymentMethod(rawPaymentMethod)
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
+
+  let paymentMethod = resolvePreferredDigitalPaymentMethod(['SQUARE'])
 
   if (requiresPayment) {
     const serviceSupabase = await createServiceClient()
@@ -347,6 +350,12 @@ export async function POST(request: Request) {
       (!!credentials?.accessToken && !!credentials.merchantId)
     const stripeReady =
       !!coordinator?.stripe_connected_id && coordinator?.stripe_onboarding_complete === true
+
+    const enabled = resolveEnabledPaymentMethods(event, {
+      squareConnected: squareReady,
+      stripeConnected: stripeReady,
+    })
+    paymentMethod = normalizeVendorCheckoutToPaymentMethod(rawPaymentMethod, enabled)
 
     if (
       !isPaymentMethodAllowed(paymentMethod, event, {
