@@ -11,6 +11,7 @@ import { getPortalHome, resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
+import { cn } from '@/lib/utils'
 
 interface AppNavProps {
   profile: Profile
@@ -92,6 +93,33 @@ export function AppNav({
                 activePortal={activePortal}
                 className="hidden sm:inline-flex"
               />
+            ) : null}
+
+            {links.length > 0 ? (
+              <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex">
+                {links.map(({ href, label }) => {
+                  const active =
+                    href === '/coordinator/dashboard'
+                      ? pathname === href
+                      : pathname === href || pathname.startsWith(`${href}/`)
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={cn(
+                        'shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                        active
+                          ? 'bg-forest/10 text-forest'
+                          : 'text-muted-foreground hover:bg-canvas hover:text-foreground'
+                      )}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      {label}
+                    </Link>
+                  )
+                })}
+              </div>
             ) : null}
           </div>
 

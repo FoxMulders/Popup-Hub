@@ -11,6 +11,7 @@ import {
 } from './market-management-context'
 import type { VendorApplicationSnapshot } from './booth-placement-status'
 import { DashboardBootstrap } from './dashboard-bootstrap'
+import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
 
 export interface MarketDashboardClientProps {
   events: DashboardEventSummary[]
@@ -64,33 +65,7 @@ export function MarketDashboardClient({
       stripeConnected={stripeConnected}
       totalRevenueCents={totalRevenueCents}
     >
-      <DashboardBootstrap
-        header={
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="font-heading text-xl font-semibold sm:text-2xl">
-                Market command center
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                CAD booth designer · curation queue · payment telemetry
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href="/coordinator/payment-methods">
-                <Button variant="outline" size="sm">
-                  Payments
-                </Button>
-              </Link>
-              <Link href="/coordinator/events/new">
-                <Button size="sm" className="gap-1.5">
-                  <Plus className="h-4 w-4" aria-hidden />
-                  New market
-                </Button>
-              </Link>
-            </div>
-          </div>
-        }
-      />
+      <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
     </MarketManagementProvider>
   )
 }

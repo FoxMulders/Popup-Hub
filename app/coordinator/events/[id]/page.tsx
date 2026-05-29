@@ -126,6 +126,13 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
             {!isCancelled && (
               <>
                 <Link
+                  href={`/coordinator/dashboard?event=${id}`}
+                  className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Command center
+                </Link>
+                <Link
                   href={`/coordinator/events/${id}/checkin`}
                   className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
                 >

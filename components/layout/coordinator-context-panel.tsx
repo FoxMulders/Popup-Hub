@@ -4,16 +4,23 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Activity, ArrowRight, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { coordinatorEventIdFromPath } from '@/lib/coordinator/coordinator-event-route'
 
 export function CoordinatorContextPanel() {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
   const onCommandCenter = pathname === '/coordinator/dashboard'
+  const eventIdFromRoute = coordinatorEventIdFromPath(pathname)
 
   return (
     <aside
       className="flex h-full min-h-0 flex-col gap-3 p-3"
       aria-label="Coordinator context and telemetry"
     >
+      {eventIdFromRoute && !onCommandCenter ? (
+        <CommandCenterExitLink eventId={eventIdFromRoute} compact className="w-full" />
+      ) : null}
+
       <div className="ecosystem-panel-inner rounded-xl border border-stone-200/80 bg-card/90 p-3">
         <p className="flex items-center gap-1.5 text-[0.625rem] font-bold uppercase tracking-wider text-muted-foreground">
           <Radio className="h-3.5 w-3.5 text-sky-500" aria-hidden />

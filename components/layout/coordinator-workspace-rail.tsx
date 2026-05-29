@@ -12,6 +12,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { coordinatorEventIdFromPath } from '@/lib/coordinator/coordinator-event-route'
 
 const RAIL_LINKS = [
   { href: '/coordinator/dashboard', label: 'Command center', icon: LayoutDashboard },
@@ -21,13 +23,19 @@ const RAIL_LINKS = [
 ] as const
 
 export function CoordinatorWorkspaceRail() {
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
+  const eventIdFromRoute = coordinatorEventIdFromPath(pathname)
+  const onCommandCenter = pathname === '/coordinator/dashboard'
 
   return (
     <nav
       className="flex h-full min-h-0 flex-col gap-3 p-3"
       aria-label="Coordinator workspace"
     >
+      {eventIdFromRoute && !onCommandCenter ? (
+        <CommandCenterExitLink eventId={eventIdFromRoute} compact className="w-full" />
+      ) : null}
+
       <div className="ecosystem-panel-inner rounded-xl border border-stone-200/80 bg-card/80 p-3">
         <p className="text-[0.625rem] font-bold uppercase tracking-wider text-muted-foreground">
           Market ops

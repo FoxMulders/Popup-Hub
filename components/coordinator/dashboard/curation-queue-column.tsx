@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useMarketManagement } from './market-management-context'
 import { VendorPoolShelf } from './vendor-pool-shelf'
+import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 
 export function CurationQueueColumn() {
   const { pendingApplications, approvedPool, events, selectedEventId, setSelectedEventId } =
@@ -18,13 +19,22 @@ export function CurationQueueColumn() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="market-panel-header shrink-0 rounded-none border-0 border-b border-stone-200/80 bg-gradient-to-r from-card via-card to-emerald-50/30 px-4 py-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/90">
-            Curation queue
-          </p>
-          <h2 className="market-panel-title text-base">Market intake</h2>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          {selectedEventId ? (
+            <CommandCenterExitLink
+              eventId={selectedEventId}
+              eventName={selectedEvent?.name}
+              compact
+            />
+          ) : null}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/90">
+              Curation queue
+            </p>
+            <h2 className="market-panel-title text-base">Market intake</h2>
+          </div>
         </div>
-        <Badge variant="outline" className="border-harvest-300 bg-harvest-50 text-harvest-800">
+        <Badge variant="outline" className="border-harvest-300 bg-harvest-50 text-harvest-800 shrink-0">
           {pendingApplications.length} pending
         </Badge>
       </div>

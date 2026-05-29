@@ -22,7 +22,12 @@ function categoryNameFromRow(app: {
   return category?.name ?? null
 }
 
-export default async function CoordinatorDashboard() {
+interface DashboardPageProps {
+  searchParams: Promise<{ event?: string }>
+}
+
+export default async function CoordinatorDashboard({ searchParams }: DashboardPageProps) {
+  const { event: eventQuery } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -176,10 +181,15 @@ export default async function CoordinatorDashboard() {
   const stripeConnected =
     !!profile?.stripe_connected_id && profile?.stripe_onboarding_complete === true
 
+  const initialEventId =
+    eventQuery && events.some((e) => e.id === eventQuery)
+      ? eventQuery
+      : events[0]?.id ?? null
+
   return (
     <MarketDashboardClient
       events={events}
-      initialEventId={events[0]?.id ?? null}
+      initialEventId={initialEventId}
       layoutsByEventId={layoutsByEventId}
       approvedByEventId={approvedByEventId}
       pendingByEventId={pendingByEventId}
