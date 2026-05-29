@@ -105,6 +105,8 @@ export function LayoutRoomBar({
     setEditingId(null)
   }
 
+  const inlineToolbar = slim || embedded
+
   return (
     <div
       className={cn(
@@ -114,7 +116,7 @@ export function LayoutRoomBar({
             ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
             : 'market-panel p-3 space-y-2'
       )}
-      role="toolbar"
+      role={embedded ? 'group' : 'toolbar'}
       aria-label="Rooms and zones"
     >
       {!embedded ? (
@@ -342,10 +344,10 @@ export function LayoutRoomBar({
               key={room.id}
               className={cn(
                 'flex items-center overflow-hidden transition-all duration-200',
-                slim ? 'rounded-md border' : 'rounded-xl border-2',
+                inlineToolbar ? 'rounded-md border' : 'rounded-xl border-2',
                 compact ? 'w-full shrink-0' : 'shrink-0',
                 isActive
-                  ? slim
+                  ? inlineToolbar
                     ? 'border-harvest-500'
                     : 'border-harvest-500 shadow-[var(--shadow-market)]'
                   : 'border-stone-200'
@@ -356,7 +358,7 @@ export function LayoutRoomBar({
                 onClick={() => onSelectRoom(room.id)}
                 className={cn(
                   'font-medium transition-all duration-200 active:translate-y-0.5',
-                  slim
+                  inlineToolbar
                     ? 'h-8 px-3 text-xs'
                     : 'min-h-11 px-4 text-sm',
                   isActive
@@ -373,13 +375,13 @@ export function LayoutRoomBar({
                     title="Rename room"
                     className={cn(
                       'border-l-2 border-stone-200 text-muted-foreground hover:bg-canvas',
-                      slim
+                      inlineToolbar
                         ? 'flex h-8 w-7 items-center justify-center border-l'
                         : 'touch-target'
                     )}
                     onClick={() => startRename(room)}
                   >
-                    <Pencil className={slim ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                    <Pencil className={inlineToolbar ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                   </button>
                   {rooms.length > 1 && (
                     <button
@@ -387,13 +389,13 @@ export function LayoutRoomBar({
                       title="Delete room"
                       className={cn(
                         'border-l-2 border-stone-200 text-terracotta-600 hover:bg-terracotta-50',
-                        slim
+                        inlineToolbar
                           ? 'flex h-8 w-7 items-center justify-center border-l'
                           : 'touch-target'
                       )}
                       onClick={() => onDeleteRoom(room.id)}
                     >
-                      <Trash2 className={slim ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                      <Trash2 className={inlineToolbar ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                     </button>
                   )}
                 </>

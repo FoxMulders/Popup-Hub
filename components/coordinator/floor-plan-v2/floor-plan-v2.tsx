@@ -27,7 +27,6 @@ import { FloorPlanCanvas } from './canvas/floor-plan-canvas'
 import { CanvasLegend } from './canvas/canvas-legend'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
-import { LayoutRoomBar } from '../layout-room-bar'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
 import { CanvasLeftDock } from './tools/canvas-left-dock'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
@@ -1402,17 +1401,15 @@ export function FloorPlanV2({
         </div>
       </header>
 
-      {/* Sticky-pinned action bars: even though the workspace is
+      {/* Sticky-pinned command ribbon: even though the workspace is
           height-constrained so the page itself shouldn't scroll on
           most viewports, very small devices (height < ~640 px) can
           still nudge the page into overflow. `sticky top-0` keeps
-          the command ribbon and rooms row anchored to the viewport
-          top in that fallback case so coordinators never lose their
-          tools while scrolling. Both bars share one sticky container
-          so they slide together rather than jittering past each
-          other. The `bg-stone-50` opaque backdrop matches the
-          page background and prevents canvas content from showing
-          through on the sticky ribbon. */}
+          the unified toolbar (including inline room tabs) anchored
+          to the viewport top in that fallback case so coordinators
+          never lose their tools while scrolling. The `bg-stone-50`
+          opaque backdrop matches the page background and prevents
+          canvas content from showing through on the sticky ribbon. */}
       <div className="sticky top-0 z-40 -mx-2 px-2 -mt-2 pt-2 bg-stone-50 shrink-0">
         <CanvasCommandBar
           toolState={{ tool, drawShape }}
