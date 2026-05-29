@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { AppNav } from '@/components/nav/app-nav'
 import { ShopperShell } from '@/components/shopper/shopper-shell'
+import { PortalSiteChrome } from '@/components/layout/portal-site-chrome'
 import { VendorShell } from '@/components/vendor/vendor-shell'
 import {
   ACTIVE_PORTAL_COOKIE,
@@ -34,14 +34,14 @@ export async function PortalAwareShell({ children }: PortalAwareShellProps) {
   if (profile && portal === 'coordinator' && profile.role === 'coordinator') {
     const availablePortals = getAvailablePortals(profile.role)
     return (
-      <div className="market-page min-h-screen max-w-full overflow-x-hidden">
-        <AppNav
-          profile={profile}
-          availablePortals={availablePortals}
-          portalCookie={portalCookie}
-        />
-        <main>{children}</main>
-      </div>
+      <PortalSiteChrome
+        portal="coordinator"
+        profile={profile}
+        availablePortals={availablePortals}
+        portalCookie={portalCookie}
+      >
+        {children}
+      </PortalSiteChrome>
     )
   }
 

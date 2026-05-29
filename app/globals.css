@@ -53,6 +53,10 @@
 
   --spacing-header: 9rem;
 
+  /* Site-wide command center grid (coordinator + vendor workspaces) */
+  --command-center-left: 320px;
+  --command-center-right: 360px;
+
   /* Brand & surface */
   --color-canvas: #f5f2eb;
   --color-linen: #faf8f7;
@@ -135,6 +139,12 @@
   --sidebar-accent-foreground: var(--espresso);
   --sidebar-border: #e3ddd2;
   --sidebar-ring: #8fb892;
+
+  --app-nav-height: 4.5rem;
+  --command-center-left: 320px;
+  --command-center-right: 360px;
+  --ecosystem-neon: 56 189 248;
+  --ecosystem-neon-violet: 139 92 246;
 }
 
 .dark {
@@ -200,6 +210,20 @@
       rgb(250 248 247 / 0.9),
       transparent 70%
     );
+  }
+
+  .site-app-shell #site-main {
+    @apply min-h-0;
+  }
+
+  .ecosystem-panel {
+    @apply bg-card/40 backdrop-blur-[2px];
+  }
+
+  .ecosystem-panel-inner {
+    box-shadow:
+      0 0 0 1px rgb(var(--ecosystem-neon) / 0.06),
+      var(--shadow-market);
   }
 
   /* Signage-style panels (clipboards on a table) */
@@ -467,6 +491,41 @@
 
 body.loader-active {
   overflow: hidden !important;
+}
+
+/* Coordinator dashboard — LCP-friendly blueprint draw (inline SVG in blueprint-loader) */
+.dashboard-app-shell__grid {
+  contain: layout style;
+}
+
+.dashboard-blueprint__stroke {
+  stroke-dasharray: 520;
+  stroke-dashoffset: 520;
+  animation: dashboard-blueprint-draw 1.1s ease-out forwards;
+}
+
+.dashboard-blueprint__stroke--accent {
+  animation-delay: 0.15s;
+}
+
+.dashboard-blueprint--instant .dashboard-blueprint__stroke,
+.dashboard-blueprint--instant .dashboard-blueprint__stroke--accent {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+
+@keyframes dashboard-blueprint-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-blueprint__stroke,
+  .dashboard-blueprint__stroke--accent {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
 }
 
 @media (max-width: 640px) {

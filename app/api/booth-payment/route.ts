@@ -9,6 +9,7 @@ import {
   getBoothPayment,
 } from '@/lib/square/payments'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 
 const COMPLETED_PAYMENT_STATUSES = new Set(['COMPLETED', 'APPROVED'])
 
@@ -87,9 +88,13 @@ export async function POST(request: Request) {
       application_payment_status,
       square_payment_id,
       payment_processing_at,
+      table_count,
       event:events(
         coordinator_id,
         square_merchant_id,
+        listing_type,
+        booth_price_cents,
+        multi_table_discount_percent,
         platform_fee_mode,
         platform_fee_flat_cents,
         platform_fee_bps
@@ -124,6 +129,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This booth is already paid' }, { status: 400 })
   }
 
+  const eventRow = Array.isArray(application.event)
+    ? application.event[0]
+    : application.event
+
   const { data: limit } = await supabase
     .from('event_category_limits')
     .select('price_per_booth')
@@ -131,7 +140,17 @@ export async function POST(request: Request) {
     .eq('category_id', application.category_id)
     .single()
 
-  const amountCents = (limit?.price_per_booth as number) ?? 0
+  const amountCents = computeApplicationBoothPriceCents(
+    limit?.price_per_booth as number | undefined,
+    {
+      listing_type: eventRow?.listing_type,
+      booth_price_cents: eventRow?.booth_price_cents as number | undefined,
+      multi_table_discount_percent: eventRow?.multi_table_discount_percent as
+        | number
+        | undefined,
+    },
+    (application.table_count as number) ?? 1
+  )
   if (amountCents <= 0) {
     await supabase
       .from('booth_applications')
@@ -140,10 +159,6 @@ export async function POST(request: Request) {
       .eq('payment_status', 'payment_required')
     return NextResponse.json({ paymentId: null, free: true })
   }
-
-  const eventRow = Array.isArray(application.event)
-    ? application.event[0]
-    : application.event
 
   const feeConfig = resolveEventFeeConfig(eventRow)
   const platformFeeCents = computePlatformFeeCents(amountCents, feeConfig)

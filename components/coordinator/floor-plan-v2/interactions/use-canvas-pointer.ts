@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
+import { boothDimensionsForTableLength } from '@/lib/booth-planner/table-booth-consolidation'
 import type { BoothObject, PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
 import {
@@ -29,6 +30,7 @@ import {
   type Rect,
   type ViewportTransform,
 } from './geometry'
+import { objectFootprintAabb } from '../state/table-cluster-layout'
 import {
   findFirstViolationInMove,
   findBoothProximityViolation,
@@ -95,6 +97,8 @@ interface UseCanvasPointerOptions {
   }) => void
   /** Notifies the host when a placement is rejected due to overlap. */
   onOverlapViolation?: () => void
+  /** Table length (ft) for width/height of newly drawn booths. */
+  defaultBoothTableLengthFt?: number
 }
 
 type DrawDraft =
@@ -247,6 +251,12 @@ export function useCanvasPointer(
   useEffect(() => {
     eventCategoryNamesRef.current = eventCategoryNames
   }, [eventCategoryNames])
+  const defaultBoothTableLengthFtRef = useRef(
+    options.defaultBoothTableLengthFt
+  )
+  useEffect(() => {
+    defaultBoothTableLengthFtRef.current = options.defaultBoothTableLengthFt
+  }, [options.defaultBoothTableLengthFt])
 
   const [draft, setDraft] = useState<DrawDraft>(null)
   const dragRef = useRef<DragState>(null)
@@ -688,7 +698,7 @@ export function useCanvasPointer(
         // and rotation resumes when the angle returns to a fitting
         // range.
         for (const entry of entries) {
-          const aabb = rotatedAabb(entry.finalProbe)
+          const aabb = objectFootprintAabb(entry.finalProbe)
           if (!aabbFitsCanvas(aabb, cw, cl)) {
             return
           }
@@ -917,7 +927,8 @@ export function useCanvasPointer(
             eventCategoryNamesRef.current,
             drawRoomId,
             onProximityViolationRef.current,
-            onOverlapViolationRef.current
+            onOverlapViolationRef.current,
+            defaultBoothTableLengthFtRef.current
           )
           onAfterDrawCommit?.()
         }
@@ -1119,15 +1130,23 @@ function commitDraft(
     dxColumns: number
     dyRows: number
   }) => void,
-  onOverlapViolation?: () => void
+  onOverlapViolation?: () => void,
+  defaultBoothTableLengthFt?: number
 ): void {
+  let width = Math.max(store.doc.snapFt || 1, rect.width)
+  let height = Math.max(store.doc.snapFt || 1, rect.height)
+  if (kind === 'booth' && defaultBoothTableLengthFt != null) {
+    const dims = boothDimensionsForTableLength(defaultBoothTableLengthFt)
+    width = dims.width
+    height = dims.height
+  }
   const id = `obj-${crypto.randomUUID()}`
   const base = {
     id,
     x: rect.x,
     y: rect.y,
-    width: Math.max(store.doc.snapFt || 1, rect.width),
-    height: Math.max(store.doc.snapFt || 1, rect.height),
+    width,
+    height,
     rotation: 0,
   }
   let obj: PlacedObject
@@ -1143,6 +1162,9 @@ function commitDraft(
         ...base,
         kind: 'booth',
         accentColor: null,
+        ...(defaultBoothTableLengthFt != null
+          ? { tableLengthFt: defaultBoothTableLengthFt }
+          : {}),
         ...(seedCategory ? { categoryName: seedCategory } : {}),
       }
       break

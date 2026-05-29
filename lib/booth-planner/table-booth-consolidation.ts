@@ -1,5 +1,10 @@
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
+  createTableCluster,
+  inferClusterPreset,
+  syncBoothCompoundBounds,
+} from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
+import {
   isLayoutBaselineTableLengthFt,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
@@ -32,6 +37,19 @@ export function boothDimensionsForTableLength(tableLengthFt: number): {
     width: tableLengthFt,
     height: BOOTH_EQUIPMENT_DEPTH_FT,
   }
+}
+
+/** Patch a booth so its long edge matches `tableLengthFt` (preserves orientation). */
+export function boothPatchForTableLength(
+  booth: Pick<BoothObject, 'width' | 'height'>,
+  tableLengthFt: LayoutBaselineTableLengthFt
+): Pick<BoothObject, 'width' | 'height' | 'tableLengthFt'> {
+  const { width: tableW, height: tableH } =
+    boothDimensionsForTableLength(tableLengthFt)
+  if (booth.width >= booth.height) {
+    return { width: tableW, height: tableH, tableLengthFt }
+  }
+  return { width: tableH, height: tableW, tableLengthFt }
 }
 
 function vendorKeyForBooth(booth: BoothObject): string {
@@ -79,6 +97,21 @@ export function consolidateBoothsForAutoArrange(
 
     if (megaFt != null && tableCount > 1) {
       const lead = members[0]!
+      const preset = inferClusterPreset(tableCount, baseFt)
+      if (preset) {
+        consolidated.push(
+          syncBoothCompoundBounds({
+            ...lead,
+            tableCluster: createTableCluster(preset),
+            tableLengthFt: baseFt,
+            tableCount,
+            label:
+              lead.label ??
+              `${tableCount}×${baseFt}′ cluster`,
+          })
+        )
+        continue
+      }
       const dims = boothDimensionsForTableLength(megaFt)
       consolidated.push({
         ...lead,

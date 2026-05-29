@@ -2,6 +2,7 @@
 
 import type { ObjectKind, PlacedObject } from '../state/types'
 import { rotatedAabb, type Rect } from '../interactions/geometry'
+import { PLACEMENT_AVAILABLE, PLACEMENT_VIOLATION } from './placement-theme'
 
 interface DraftPreviewProps {
   rect: Rect | null
@@ -22,8 +23,17 @@ export function DraftPreview({
   const y = rect.y * pxPerFt
   const w = Math.max(1, rect.width * pxPerFt)
   const h = Math.max(1, rect.height * pxPerFt)
-  const stroke = hasOverlap ? '#ef4444' : previewStroke(kind)
-  const fill = hasOverlap ? '#fecaca' : previewFill(kind)
+  const isBoothPlacement = kind === 'booth'
+  const stroke = hasOverlap
+    ? PLACEMENT_VIOLATION.stroke
+    : isBoothPlacement
+      ? PLACEMENT_AVAILABLE.stroke
+      : previewStroke(kind)
+  const fill = hasOverlap
+    ? PLACEMENT_VIOLATION.fill
+    : isBoothPlacement
+      ? PLACEMENT_AVAILABLE.fill
+      : previewFill(kind)
   return (
     <rect
       x={x}
@@ -31,7 +41,13 @@ export function DraftPreview({
       width={w}
       height={h}
       fill={fill}
-      fillOpacity={hasOverlap ? 0.55 : 0.35}
+      fillOpacity={
+        hasOverlap
+          ? PLACEMENT_VIOLATION.fillOpacity
+          : isBoothPlacement
+            ? PLACEMENT_AVAILABLE.fillOpacity
+            : 0.35
+      }
       stroke={stroke}
       strokeWidth={2}
       strokeDasharray="6 3"

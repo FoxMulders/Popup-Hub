@@ -27,9 +27,12 @@ import {
   placedObjectOverlapsAny,
 } from '../interactions/geometry'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
+import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
 import { cn } from '@/lib/utils'
+import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
+import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
 
 interface FloorPlanCanvasProps {
   store: FloorPlanDocStore
@@ -85,9 +88,16 @@ interface FloorPlanCanvasProps {
   onRoomCanvasLimitBlocked?: () => void
   /** When false, hide architectural overlay labels on the canvas. */
   showLabels?: boolean
+  /**
+   * Table length (ft) used for width/height when the coordinator
+   * places a new booth. Ignored for non-booth draw shapes.
+   */
+  defaultBoothTableLengthFt?: LayoutBaselineTableLengthFt
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+  onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
@@ -106,8 +116,11 @@ export function FloorPlanCanvas({
   onOverlapViolation,
   onRoomCanvasLimitBlocked,
   showLabels = true,
+  defaultBoothTableLengthFt,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
+  boothPlacementStatusByObjectId,
+  onVendorDrop,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -278,6 +291,7 @@ export function FloorPlanCanvas({
     onProximityViolation,
     onOverlapViolation,
     onRoomCanvasLimitBlocked,
+    defaultBoothTableLengthFt,
   })
 
   const overlappingIds = useMemo(
@@ -428,6 +442,49 @@ export function FloorPlanCanvas({
     ? 'grabbing'
     : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool)
 
+  const ftAtClient = useCallback(
+    (clientX: number, clientY: number) => {
+      const surface = surfaceRef.current
+      if (!surface) return { x: 0, y: 0 }
+      const rect = surface.getBoundingClientRect()
+      const px = clientX - rect.left
+      const py = clientY - rect.top
+      const ratio = basePxPerFt * viewport.zoom
+      if (ratio === 0) return { x: 0, y: 0 }
+      return { x: px / ratio, y: py / ratio }
+    },
+    [basePxPerFt, viewport.zoom]
+  )
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!onVendorDrop) return
+      if (e.dataTransfer.types.includes(VENDOR_DRAG_MIME)) {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+      }
+    },
+    [onVendorDrop]
+  )
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      if (!onVendorDrop) return
+      const raw = e.dataTransfer.getData(VENDOR_DRAG_MIME)
+      if (!raw) return
+      e.preventDefault()
+      try {
+        const payload = JSON.parse(raw) as { applicationId?: string }
+        if (!payload.applicationId) return
+        const ft = ftAtClient(e.clientX, e.clientY)
+        onVendorDrop(payload.applicationId, ft.x, ft.y)
+      } catch {
+        // ignore malformed drag payload
+      }
+    },
+    [ftAtClient, onVendorDrop]
+  )
+
   return (
     <div
       ref={scrollRef}
@@ -440,6 +497,8 @@ export function FloorPlanCanvas({
       aria-label="Floor plan canvas viewport"
       style={{ touchAction: 'none', cursor }}
       {...viewport.scrollHandlers}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
       onMouseMove={categoryTooltip.onMouseMove}
       onMouseLeave={categoryTooltip.onMouseLeave}
     >
@@ -516,6 +575,7 @@ export function FloorPlanCanvas({
             overlappingIds={overlappingIds}
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
+            boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
           />
           {toolState.tool === 'select' ? (
             <SelectionOverlay

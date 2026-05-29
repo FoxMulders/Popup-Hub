@@ -16,6 +16,7 @@ import { extractNestedPassport } from '@/lib/applications/extract-nested-passpor
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
 import { resolvePostApprovalStatus } from '@/lib/applications/resolve-approval-status'
 import type { ApplicationStatus, BoothApplication, Event } from '@/types/database'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 
 export async function POST(
   request: Request,
@@ -44,10 +45,14 @@ export async function POST(
       application_payment_status,
       payment_status,
       etransfer_reference_code,
+      table_count,
       event:events(
         id,
         name,
         coordinator_id,
+        listing_type,
+        booth_price_cents,
+        multi_table_discount_percent,
         status,
         market_insurance_required,
         start_at,
@@ -159,7 +164,15 @@ export async function POST(
     .eq('category_id', application.category_id)
     .maybeSingle()
 
-  const boothPriceCents = limit?.price_per_booth ?? 0
+  const boothPriceCents = computeApplicationBoothPriceCents(
+    limit?.price_per_booth,
+    {
+      listing_type: eventRow?.listing_type,
+      booth_price_cents: eventRow?.booth_price_cents,
+      multi_table_discount_percent: eventRow?.multi_table_discount_percent,
+    },
+    application.table_count ?? 1
+  )
   const referenceCode = application.etransfer_reference_code ?? 'N/A'
 
   const previousState = snapshotApplicationAuditState(application)

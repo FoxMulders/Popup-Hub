@@ -1,15 +1,15 @@
 /**
- * Auto-Arrange engine — center-out spiral and perimeter-only modes.
+ * Auto-Arrange engine — patron-centric winding aisles and perimeter mode.
  *
  * Modes:
- *   - `center-out`     — sort slots by distance from room centroid,
- *                        place spiraling outward (not top-left row pack).
+ *   - `center-out` (default) — `calculatePatronCentricLayout`: serpentine
+ *     patron corridor, chevron/herringbone angles, 60° sightline equity,
+ *     rotated AABB collision (replaces rigid parallel rows).
  *   - `perimeter-only` — trace exterior walls, snap booths flush to
- *                        interior faces with 2′ edge clearance between booths.
+ *     interior faces with 2′ edge clearance between booths.
  *
  * Both modes honor structural obstacles, multi-table consolidation,
- * same-category proximity rules, and a post-pass patron-flow exposure
- * enhancement (`engine/patron-flow.ts`).
+ * and same-category proximity rules.
  *
  * The function is pure: it returns a fresh `FloorPlanDoc` and does
  * not mutate the input. Boundaries are enforced — no booth ever sits
@@ -22,7 +22,11 @@ import type {
   PlacedObject,
   RoomFrame,
 } from '../state/types'
-import { rotatedAabb } from '../interactions/geometry'
+import {
+  placedObjectsOverlap,
+  rotatedAabb,
+} from '../interactions/geometry'
+import { objectFootprintAabb } from '../state/table-cluster-layout'
 import {
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
@@ -35,10 +39,16 @@ import {
   consolidateBoothsForAutoArrange,
   type VendorTableMeta,
 } from '@/lib/booth-planner/table-booth-consolidation'
-import {
-  computePatronFlowPaths,
-  enhanceBoothsForPatronFlow,
-} from './patron-flow'
+import { calculatePatronCentricLayout } from './patron-centric-layout'
+
+export {
+  calculatePatronCentricLayout,
+  type PatronCentricLayoutResult,
+  type PatronLayoutObjectInput,
+  type PatronCentricLayoutOptions,
+  PATRON_CORRIDOR_WIDTH_FT,
+  PATRON_VISION_CONE_DEG,
+} from './patron-centric-layout'
 import { PERIMETER_WALL_THICKNESS_FT } from '../interactions/perimeter-walls'
 
 /** Standard chair = 1.75 ft on a side. */
@@ -419,50 +429,111 @@ export function autoArrange(
   const otherObjects = doc.objects.filter((o) => o.kind !== 'booth')
   const obstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
 
-  const slots =
-    mode === 'perimeter-only'
-      ? perimeterSlots(cw, cl, boothW, boothH)
-      : centerOutSlots(cw, cl, boothW, boothH)
+  const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
 
-  if (slots.length === 0) {
+  if (mode === 'perimeter-only') {
+    const slots = perimeterSlots(cw, cl, boothW, boothH)
+    if (slots.length === 0) {
+      return {
+        doc: { ...doc, objects: otherObjects },
+        placedCount: 0,
+        droppedCount: sourceBooths.length,
+        unsatisfiedCategoryCount: 0,
+        overflowCount,
+      }
+    }
+    const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(slots, {
+      cw,
+      cl,
+      boothW,
+      boothH,
+      obstacles,
+      sourceBooths,
+      eventCategoryNames,
+      gridSpacingFt,
+    })
+    const placedCount = newBooths.length
     return {
-      doc: { ...doc, objects: otherObjects },
-      placedCount: 0,
-      droppedCount: sourceBooths.length,
-      unsatisfiedCategoryCount: 0,
+      doc: { ...doc, objects: [...otherObjects, ...newBooths] },
+      placedCount,
+      droppedCount: sourceBooths.length - placedCount,
+      unsatisfiedCategoryCount,
       overflowCount,
     }
   }
 
-  const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
-  const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(slots, {
-    cw,
-    cl,
-    boothW,
-    boothH,
+  const doors = otherObjects.filter((o) => o.kind === 'door')
+  const entranceDoor =
+    doors.find((d) => d.kind === 'door' && d.doorType === 'entrance') ??
+    doors[0]
+  const exitObj =
+    otherObjects.find((o) => o.kind === 'emergency_exit') ??
+    doors.find((d) => d.kind === 'door' && d.doorType === 'exit')
+
+  const entrance = entranceDoor
+    ? {
+        x: entranceDoor.x + entranceDoor.width / 2,
+        y: entranceDoor.y + entranceDoor.height / 2,
+      }
+    : undefined
+  const exit = exitObj
+    ? {
+        x: exitObj.x + exitObj.width / 2,
+        y: exitObj.y + exitObj.height / 2,
+      }
+    : undefined
+
+  const patronLayout = calculatePatronCentricLayout(cw, cl, sourceBooths, {
     obstacles,
-    sourceBooths,
-    eventCategoryNames,
+    entrance,
+    exit,
     gridSpacingFt,
+    eventCategoryNames,
+    layoutStyle: 'chevron-45',
   })
 
-  const patronPaths = computePatronFlowPaths({ ...doc, objects: otherObjects })
-  const enhancedBooths =
-    mode === 'center-out' && patronPaths
-      ? enhanceBoothsForPatronFlow(newBooths, patronPaths, eventCategoryNames)
-      : newBooths
+  let newBooths: BoothObject[] = patronLayout.placed.map((p) => ({
+    ...p,
+    kind: 'booth' as const,
+    accentColor: p.accentColor ?? null,
+  }))
 
-  const placedCount = enhancedBooths.length
+  const placedIds = new Set(newBooths.map((b) => b.id))
+  const remaining = sourceBooths.filter((s) => !placedIds.has(s.id))
+
+  if (remaining.length > 0) {
+    const fillSlots = centerOutSlots(cw, cl, boothW, boothH)
+    const { newBooths: filled, unsatisfiedCategoryCount: fillUnsat } =
+      placeBoothsAtSlots(fillSlots, {
+        cw,
+        cl,
+        boothW,
+        boothH,
+        obstacles: [
+          ...obstacles,
+          ...newBooths.map((b) =>
+            expandRectForClearance(rotatedAabb(b), BOOTH_EDGE_CLEARANCE_FT)
+          ),
+        ],
+        sourceBooths: remaining,
+        eventCategoryNames,
+        gridSpacingFt,
+      })
+    newBooths = [...newBooths, ...filled]
+    patronLayout.unsatisfiedCategoryCount += fillUnsat
+  }
+
+  const placedCount = newBooths.length
   const droppedCount = sourceBooths.length - placedCount
 
   return {
     doc: {
       ...doc,
-      objects: [...otherObjects, ...enhancedBooths],
+      objects: [...otherObjects, ...newBooths],
     },
     placedCount,
     droppedCount,
-    unsatisfiedCategoryCount,
+    unsatisfiedCategoryCount: patronLayout.unsatisfiedCategoryCount,
     overflowCount,
   }
 }
@@ -585,6 +656,15 @@ function roundHalf(n: number): number {
   return Math.round(n * 2) / 2
 }
 
+function expandRectForClearance(rect: Rect, margin: number): Rect {
+  return {
+    x: rect.x - margin,
+    y: rect.y - margin,
+    width: rect.width + margin * 2,
+    height: rect.height + margin * 2,
+  }
+}
+
 /**
  * Validate that an arranged doc obeys the v1 spec — used by tests.
  * Returns an array of human-readable violation strings; empty array
@@ -603,24 +683,25 @@ export function validateClearances(
   )
 
   for (const booth of booths) {
-    if (booth.x < wallBuffer - 1e-6) {
+    const aabb = objectFootprintAabb(booth)
+    if (aabb.x < wallBuffer - 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to left wall (x=${booth.x}, need ≥${wallBuffer})`
+        `booth ${booth.id} too close to left wall (x=${aabb.x}, need ≥${wallBuffer})`
       )
     }
-    if (booth.x + booth.width > cw - wallBuffer + 1e-6) {
+    if (aabb.x + aabb.width > cw - wallBuffer + 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to right wall (right=${booth.x + booth.width}, max=${cw - wallBuffer})`
+        `booth ${booth.id} too close to right wall (right=${aabb.x + aabb.width}, max=${cw - wallBuffer})`
       )
     }
-    if (booth.y < wallBuffer - 1e-6) {
+    if (aabb.y < wallBuffer - 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to top wall (y=${booth.y}, need ≥${wallBuffer})`
+        `booth ${booth.id} too close to top wall (y=${aabb.y}, need ≥${wallBuffer})`
       )
     }
-    if (booth.y + booth.height > cl - wallBuffer + 1e-6) {
+    if (aabb.y + aabb.height > cl - wallBuffer + 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to bottom wall (bottom=${booth.y + booth.height}, max=${cl - wallBuffer})`
+        `booth ${booth.id} too close to bottom wall (bottom=${aabb.y + aabb.height}, max=${cl - wallBuffer})`
       )
     }
   }
@@ -629,11 +710,15 @@ export function validateClearances(
     for (let j = i + 1; j < booths.length; j++) {
       const a = booths[i]!
       const b = booths[j]!
-      const ra = { x: a.x, y: a.y, width: a.width, height: a.height }
-      const rb = { x: b.x, y: b.y, width: b.width, height: b.height }
-      if (aabbOverlap(ra, rb)) {
+      if (placedObjectsOverlap(a, b)) {
         errors.push(`booths ${a.id} and ${b.id} overlap`)
-      } else if (boothsCloserThan(ra, rb, BOOTH_EDGE_CLEARANCE_FT)) {
+      } else if (
+        boothsCloserThan(
+          objectFootprintAabb(a),
+          objectFootprintAabb(b),
+          BOOTH_EDGE_CLEARANCE_FT
+        )
+      ) {
         errors.push(
           `booths ${a.id} and ${b.id} closer than ${BOOTH_EDGE_CLEARANCE_FT}ft edge clearance`
         )

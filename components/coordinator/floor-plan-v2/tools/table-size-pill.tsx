@@ -57,7 +57,7 @@ export function TableSizePill({
               className={cn(
                 'inline-flex h-full min-w-[1.85rem] shrink-0 items-center justify-center px-1.5 text-[10px] font-semibold tabular-nums border-r border-stone-200 last:border-r-0 transition-colors sm:min-w-[2rem] sm:px-2 sm:text-[11px]',
                 active
-                  ? 'bg-[#2D5A27] text-[#F5F2EB]'
+                  ? 'bg-sky-600 text-white'
                   : 'text-stone-700 hover:bg-stone-100',
                 disabled && 'pointer-events-none'
               )}

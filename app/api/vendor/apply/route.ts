@@ -33,6 +33,11 @@ import { isCategoryCapacityError } from '@/lib/applications/booth-payment-proces
 import { resolvePostApprovalStatus, isReservedBoothStatus } from '@/lib/applications/resolve-approval-status'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import { vendorApplyBlockReason } from '@/lib/vendor/verification'
+import {
+  computeApplicationBoothPriceCents,
+  isCommunityMarketListing,
+  normalizeTableCount,
+} from '@/lib/monetization/booth-pricing'
 import type { Role } from '@/types/database'
 
 async function nextWaitlistPosition(
@@ -120,6 +125,7 @@ export async function POST(request: Request) {
     attendingDates?: string[]
     paymentMethod?: 'SQUARE' | 'ETRANSFER'
     applicableDocumentationUrl?: string | null
+    tableCount?: number
   }
 
   const {
@@ -132,6 +138,7 @@ export async function POST(request: Request) {
     attendingDates,
     paymentMethod: rawPaymentMethod,
     applicableDocumentationUrl,
+    tableCount: rawTableCount,
   } = body
   if (!eventId) {
     return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
@@ -148,7 +155,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -311,7 +318,18 @@ export async function POST(request: Request) {
   }
 
   const isInstant = event.booking_mode === 'instant'
-  const boothPrice = categoryLimit.price_per_booth ?? 0
+  const tableCount = isCommunityMarketListing(event.listing_type)
+    ? normalizeTableCount(rawTableCount)
+    : 1
+  const boothPrice = computeApplicationBoothPriceCents(
+    categoryLimit.price_per_booth,
+    {
+      listing_type: event.listing_type,
+      booth_price_cents: event.booth_price_cents,
+      multi_table_discount_percent: event.multi_table_discount_percent,
+    },
+    tableCount
+  )
   const requiresPayment = boothPrice > 0
   const paymentMethod = normalizePaymentMethod(rawPaymentMethod)
 
@@ -412,6 +430,7 @@ export async function POST(request: Request) {
         attending_dates: selectedAttendanceDates,
         attendance_terms_acknowledged_at: now,
         applicable_documentation_url: applicableDocumentationUrl?.trim() || null,
+        table_count: tableCount,
         ...(isReservedBoothStatus(status) ? { approved_at: now } : {}),
       })
       .select(
@@ -452,6 +471,7 @@ export async function POST(request: Request) {
           attending_event_day_ids: selectedAttendanceEventDayIds,
           attending_dates: selectedAttendanceDates,
           attendance_terms_acknowledged_at: now,
+          table_count: tableCount,
         })
         .select(
           'id, status, payment_status, payment_method, application_payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'

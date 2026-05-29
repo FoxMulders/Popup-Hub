@@ -33,6 +33,8 @@ import { FlyerFieldHighlight } from '@/components/coordinator/flyer-field-highli
 import { useFlyerScan } from '@/hooks/use-flyer-scan'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
 import { CategoryLimitEditor, type CategoryLimit } from './category-limit-editor'
+import { MarketBoothPricingFields } from '@/components/coordinator/wizard/market-booth-pricing-fields'
+import { applyUnifiedBoothFeeToCategoryLimits } from '@/lib/monetization/booth-pricing'
 import { SmartPopulateBoothCaps } from './smart-populate-booth-caps'
 import { EdmontonHallSelector } from './edmonton-hall-selector'
 import { getEdmontonHallById } from '@/lib/data/edmonton-halls'
@@ -156,6 +158,17 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   const [plannerVenueWidth, setPlannerVenueWidth] = useState(100)
   const [plannerVenueLength, setPlannerVenueLength] = useState(100)
 
+  const [boothPriceCents, setBoothPriceCents] = useState(() => {
+    const fromEvent = existing?.booth_price_cents
+    if (fromEvent != null && fromEvent > 0) return fromEvent
+    const limits = (
+      existing as Event & {
+        category_limits?: Array<{ price_per_booth: number }>
+      }
+    )?.category_limits
+    return limits?.find((cl) => cl.price_per_booth > 0)?.price_per_booth ?? 0
+  })
+
   const [categoryLimits, setCategoryLimits] = useState<CategoryLimit[]>(() => {
     if (!existing) return []
     const limits = (existing as Event & {
@@ -168,14 +181,27 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
       }>
     }).category_limits
     const nameById = Object.fromEntries(categories.map((c) => [c.id, c.name])) as Record<string, string>
-    return (limits ?? []).map((cl) => ({
+    const mapped = (limits ?? []).map((cl) => ({
       categoryId: cl.category_id,
       categoryName: cl.category?.name?.trim() || nameById[cl.category_id] || '',
       maxSlots: cl.max_slots,
       pricePerBooth: cl.price_per_booth,
       tableLengthFt: cl.table_length_ft ?? null,
     }))
+    return applyUnifiedBoothFeeToCategoryLimits(mapped, boothPriceCents)
   })
+  const [multiTableDiscountPercent, setMultiTableDiscountPercent] = useState(
+    existing?.multi_table_discount_percent ?? 0
+  )
+
+  function handleBoothPriceCentsChange(cents: number) {
+    setBoothPriceCents(cents)
+    setCategoryLimits((prev) => applyUnifiedBoothFeeToCategoryLimits(prev, cents))
+  }
+
+  function handleCategoryLimitsChange(limits: CategoryLimit[]) {
+    setCategoryLimits(applyUnifiedBoothFeeToCategoryLimits(limits, boothPriceCents))
+  }
 
   const handleMapClick = useCallback((e: MapMouseEvent) => {
     if (!e.detail?.latLng) return
@@ -241,33 +267,20 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     if (!name.trim()) { toast.error('Event name is required'); return }
     if (!pinDropped) { toast.error('Please drop a map pin for the venue location'); return }
 
-    /*
-     * Mandatory booth-fee disclosure gate. Before flipping an event
-     * into a Published state, the coordinator must have explicitly
-     * stated a booth fee for every category — leaving a row at $0
-     * is fine (that's an explicit "free" choice), but having zero
-     * categories at all means vendors would land on a registration
-     * card with no fee context. Refuse the publish in that case.
-     */
     if (publishStatus === 'published') {
       if (categoryLimits.length === 0) {
         toast.error(
-          'Add at least one booth category and state its fee before publishing — vendors need to see a price.'
+          'Add at least one booth category before publishing.'
         )
         return
       }
-      const missingFee = categoryLimits.find(
-        (cl) => !Number.isFinite(cl.pricePerBooth) || cl.pricePerBooth < 0
-      )
-      if (missingFee) {
-        toast.error(
-          `Set a booth fee for "${missingFee.categoryName}" before publishing. Use $0 for free booths.`
-        )
+      if (!Number.isFinite(boothPriceCents) || boothPriceCents < 0) {
+        toast.error('Set a valid booth fee before publishing. Use $0 for free booths.')
         return
       }
     }
 
-    const hasPaidBooths = categoryLimits.some((cl) => cl.pricePerBooth > 0)
+    const hasPaidBooths = boothPriceCents > 0
     if (publishStatus === 'published' && hasPaidBooths) {
       const { data: profile } = await supabase
         .from('profiles')
@@ -346,6 +359,11 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         booth_clearance_policy: boothClearancePolicy,
         raffle_donation_requirement: raffleDonationRequirement.trim() || null,
         market_insurance_required: marketInsuranceRequired,
+        booth_price_cents: Math.max(0, boothPriceCents),
+        multi_table_discount_percent: Math.min(
+          100,
+          Math.max(0, Math.round(multiTableDiscountPercent))
+        ),
       }
 
       let eventId = existing?.id
@@ -769,6 +787,12 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <MarketBoothPricingFields
+              boothPriceCents={boothPriceCents}
+              onBoothPriceCentsChange={handleBoothPriceCentsChange}
+              multiTableDiscountPercent={multiTableDiscountPercent}
+              onMultiTableDiscountPercentChange={setMultiTableDiscountPercent}
+            />
             <SmartPopulateBoothCaps
               categories={sortedCategories}
               allowMlm={allowMlm}
@@ -777,13 +801,14 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
               onVenueWidthChange={setPlannerVenueWidth}
               onVenueLengthChange={setPlannerVenueLength}
               existingLimits={categoryLimits}
-              onPopulate={setCategoryLimits}
+              onPopulate={handleCategoryLimitsChange}
             />
             <CategoryLimitEditor
               categories={sortedCategories}
               value={categoryLimits}
-              onChange={setCategoryLimits}
+              onChange={handleCategoryLimitsChange}
               allowMlm={allowMlm}
+              unifiedBoothFeeCents={boothPriceCents}
             />
           </CardContent>
         </Card>

@@ -1,4 +1,8 @@
 import type { PlacedObject } from '../state/types'
+import {
+  objectFootprintAabb,
+  placementProbesForObject,
+} from '../state/table-cluster-layout'
 
 /**
  * Geometry helpers — pure math, no React, no DOM.
@@ -179,7 +183,7 @@ export function canvasClampDelta(
   canvasWidthFt: number,
   canvasLengthFt: number
 ): { dx: number; dy: number } {
-  const aabb = rotatedAabb(obj)
+  const aabb = objectFootprintAabb(obj)
   let dx = 0
   let dy = 0
   if (aabb.width <= canvasWidthFt) {
@@ -231,7 +235,7 @@ export function groupRotatedAabb(
   let maxX = Number.NEGATIVE_INFINITY
   let maxY = Number.NEGATIVE_INFINITY
   for (const obj of objects) {
-    const aabb = rotatedAabb(obj)
+    const aabb = objectFootprintAabb(obj)
     if (aabb.x < minX) minX = aabb.x
     if (aabb.y < minY) minY = aabb.y
     if (aabb.x + aabb.width > maxX) maxX = aabb.x + aabb.width
@@ -315,7 +319,10 @@ export function hitTest(
 ): PlacedObject | null {
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i]
-    if (rectContainsPointRotated(obj, p)) return obj
+    const probes = placementProbesForObject(obj)
+    for (const probe of probes) {
+      if (rectContainsPointRotated(probe, p)) return obj
+    }
   }
   return null
 }
@@ -348,7 +355,16 @@ export function placedObjectsOverlap(
   b: PlacedObject
 ): boolean {
   if (shouldSkipOverlapPair(a, b)) return false
-  return rectsOverlapPositiveArea(rotatedAabb(a), rotatedAabb(b))
+  const probesA = placementProbesForObject(a)
+  const probesB = placementProbesForObject(b)
+  for (const pa of probesA) {
+    for (const pb of probesB) {
+      if (rectsOverlapPositiveArea(rotatedAabb(pa), rotatedAabb(pb))) {
+        return true
+      }
+    }
+  }
+  return false
 }
 
 /**

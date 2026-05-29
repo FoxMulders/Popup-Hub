@@ -84,10 +84,10 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
     .order('applied_at', { ascending: true })
 
   return (
-    <div className="w-full px-4 py-8 sm:px-6 lg:px-8 workspace-fullscreen-tight-pad">
+    <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
       <Link
         href={`/coordinator/events/${id}`}
-        className={buttonVariants({ variant: 'ghost', size: 'sm' }) + ' gap-1.5 mb-6 -ml-2 workspace-fullscreen-hide'}
+        className={buttonVariants({ variant: 'ghost', size: 'sm' }) + ' gap-1.5 mb-6 -ml-2'}
       >
         <ArrowLeft className="h-4 w-4" />
         Back to event

@@ -14,6 +14,8 @@
  *   not in placement code.
  */
 
+import type { BoothTableCluster } from './table-cluster-types'
+
 export type ObjectKind =
   | 'booth'
   | 'wall'
@@ -50,6 +52,12 @@ export interface BasePlacedObject {
    * unset on those kinds.
    */
   joinGroupId?: string
+  /**
+   * Transform group (Tinkercad-style Join). Members share selection
+   * and move together; geometry stays in world ft until explicitly
+   * edited. See `state/object-groups.ts`. Distinct from `joinGroupId`.
+   */
+  canvasGroupId?: string
 }
 
 export interface BoothObject extends BasePlacedObject {
@@ -62,8 +70,15 @@ export interface BoothObject extends BasePlacedObject {
   accentColor?: string | null
   /** Consolidated table length in feet (width on the 1′ grid). */
   tableLengthFt?: number
-  /** Tables requested for this vendor (used to merge into mega-table footprints). */
+  /** Tables requested for this vendor (used for multi-table cluster presets). */
   tableCount?: number
+  /**
+   * Multi-table cluster (2×5′, 2×6′, 3×5′, 3×6′). Sub-tables use
+   * cluster-local offsets; parent `x/y/width/height` is the compound
+   * rotated AABB. The unit still drags/selects as one booth — Join
+   * (`canvasGroupId`) and perimeter `joinGroupId` stay intact.
+   */
+  tableCluster?: BoothTableCluster
 }
 
 export interface WallObject extends BasePlacedObject {
@@ -137,6 +152,24 @@ export type PlacedObject =
  * undo/redo stack as object edits — a single Ctrl+Z restores the
  * previous origin and the children that travelled with it.
  */
+/** Union AABB + pivot for a canvas transform group (`object-groups.ts`). */
+export interface GroupBounds {
+  x: number
+  y: number
+  width: number
+  height: number
+  centerX: number
+  centerY: number
+}
+
+/** Sidecar assemble/join group; members stay in `objects[]`. */
+export interface CanvasObjectGroup {
+  id: string
+  memberIds: string[]
+  bounds: GroupBounds
+  createdAt?: string
+}
+
 export interface RoomFrame {
   /** Mirrors `LayoutRoom.id` so the bridge can write back to the
    *  source list at save time. */
@@ -182,6 +215,11 @@ export interface FloorPlanDoc {
    * absent).
    */
   objectRoom?: Record<string, string>
+  /**
+   * Transform groups keyed by `canvasGroupId`. Members remain in
+   * `objects[]`; unjoin deletes only this map entry and member tags.
+   */
+  objectGroups?: Record<string, CanvasObjectGroup>
 }
 
 export const DEFAULT_GRID_SPACING_FT = 1

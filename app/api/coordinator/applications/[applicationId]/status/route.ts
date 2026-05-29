@@ -14,6 +14,7 @@ import {
 } from '@/lib/audit/security-audit-log'
 
 import type { ApplicationStatus, BoothApplication } from '@/types/database'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 
 const ALLOWED_STATUSES: ApplicationStatus[] = [
   'approved',
@@ -68,7 +69,16 @@ export async function POST(
       payment_method,
       application_payment_status,
       payment_status,
-      event:events(id, coordinator_id, status, market_insurance_required)
+      table_count,
+      event:events(
+        id,
+        coordinator_id,
+        status,
+        market_insurance_required,
+        listing_type,
+        booth_price_cents,
+        multi_table_discount_percent
+      )
     `)
     .eq('id', applicationId)
     .single()
@@ -173,7 +183,15 @@ export async function POST(
       .eq('category_id', application.category_id)
       .maybeSingle()
 
-    const boothPrice = limit?.price_per_booth ?? 0
+    const boothPrice = computeApplicationBoothPriceCents(
+      limit?.price_per_booth,
+      {
+        listing_type: eventRow?.listing_type,
+        booth_price_cents: eventRow?.booth_price_cents,
+        multi_table_discount_percent: eventRow?.multi_table_discount_percent,
+      },
+      application.table_count ?? 1
+    )
     if (boothPrice > 0) {
       /*
        * Don't regress payment fields when the payment is already

@@ -27,6 +27,8 @@ export interface EventDraftPayload {
   marketInsuranceRequired?: boolean
   skipVenueLayout?: boolean
   marketCity?: string
+  boothPriceCents?: number
+  multiTableDiscountPercent?: number
 }
 
 export interface DayRowPayload {
@@ -117,6 +119,11 @@ export async function persistEventDraft(
     skip_venue_layout: draft.skipVenueLayout ?? false,
     market_city: draft.marketCity ?? 'edmonton',
     booth_clearance_policy: draft.boothClearancePolicy,
+    booth_price_cents: Math.max(0, draft.boothPriceCents ?? 0),
+    multi_table_discount_percent: Math.min(
+      100,
+      Math.max(0, Math.round(draft.multiTableDiscountPercent ?? 0))
+    ),
   }
 
   const eventDatabasePayload = {

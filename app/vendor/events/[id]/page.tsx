@@ -22,6 +22,7 @@ import { QuarterAuctionEventBanner } from '@/components/quarter-auction/event-ba
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
 import type { Auction, Event, EventCategoryLimit } from '@/types/database'
 
@@ -47,7 +48,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
       .maybeSingle(),
     supabase
       .from('booth_applications')
-      .select('id, status, payment_status, payment_method, application_payment_status, category_id')
+      .select('id, status, payment_status, payment_method, application_payment_status, category_id, table_count')
       .eq('event_id', id)
       .eq('vendor_id', user.id)
       .maybeSingle(),
@@ -129,7 +130,11 @@ export default async function VendorEventDetailPage({ params }: Props) {
   const auctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
   const passportReady = isPassportReadyForApplication(passport)
   const boothPriceCents = existingApp?.category_id
-    ? sortedLimits.find((cl) => cl.category_id === existingApp.category_id)?.price_per_booth ?? 0
+    ? computeApplicationBoothPriceCents(
+        sortedLimits.find((cl) => cl.category_id === existingApp.category_id)?.price_per_booth,
+        eventRecord,
+        existingApp.table_count ?? 1
+      )
     : 0
   const paidCategoryLimits = sortedLimits.filter((cl) => cl.price_per_booth > 0)
   const minBoothFee = paidCategoryLimits.length

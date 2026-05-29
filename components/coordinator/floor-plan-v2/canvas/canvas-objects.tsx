@@ -12,8 +12,15 @@ import type {
   WallObject,
 } from '../state/types'
 import { paletteForCategory, DEFAULT_BOOTH_PALETTE } from './category-palette'
-import { EXTERIOR_LABEL_OFFSET_PX } from '../interactions/geometry'
+import { EXTERIOR_LABEL_OFFSET_PX, objectCenter } from '../interactions/geometry'
+import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
+import { boothHasTableCluster } from '../state/table-cluster-layout'
 import { PERIMETER_WALL_LABEL } from '../interactions/perimeter-walls'
+import { PLACEMENT_VIOLATION } from './placement-theme'
+import {
+  BOOTH_STATUS_THEME,
+  type BoothPlacementStatus,
+} from '@/lib/coordinator/booth-placement-status'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
@@ -21,6 +28,8 @@ interface CanvasObjectsProps {
   pxPerFt: number
   /** When false, hide architectural overlay labels (walls, doors, exits). */
   showLabels?: boolean
+  /** Dashboard booth fill overrides (unassigned / paid / VIP). */
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
   /** Object ids currently overlapping another placed object. */
   overlappingIds?: ReadonlySet<string>
   /**
@@ -38,18 +47,17 @@ interface CanvasObjectsProps {
   eventCategoryNames?: ReadonlyArray<string>
 }
 
-/** Warning red for overlap validation failures. */
-const OVERLAP_FILL = '#fecaca'
-const OVERLAP_STROKE = '#ef4444'
-
 function fillForObject(
   obj: PlacedObject,
   eventCategoryNames?: ReadonlyArray<string>,
-  isOverlapping?: boolean
+  isOverlapping?: boolean,
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
 ): string {
-  if (isOverlapping) return OVERLAP_FILL
+  if (isOverlapping) return PLACEMENT_VIOLATION.fill
   switch (obj.kind) {
     case 'booth': {
+      const status = boothPlacementStatusByObjectId?.get(obj.id)
+      if (status) return BOOTH_STATUS_THEME[status].fill
       const booth = obj as BoothObject
       // Explicit override wins; otherwise fall through to the deterministic
       // category palette so booths read by category color.
@@ -79,12 +87,15 @@ function strokeForObject(
   obj: PlacedObject,
   isSelected: boolean,
   eventCategoryNames?: ReadonlyArray<string>,
-  isOverlapping?: boolean
+  isOverlapping?: boolean,
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
 ): string {
-  if (isOverlapping) return OVERLAP_STROKE
+  if (isOverlapping) return PLACEMENT_VIOLATION.stroke
   if (isSelected) return '#0f766e'
   switch (obj.kind) {
     case 'booth': {
+      const status = boothPlacementStatusByObjectId?.get(obj.id)
+      if (status) return BOOTH_STATUS_THEME[status].stroke
       const booth = obj as BoothObject
       // When the user has set a custom accentColor, keep the legacy
       // amber stroke so contrast stays readable. Otherwise pull the
@@ -354,11 +365,45 @@ function renderGlobalPerimeterLabel(
   )
 }
 
+function BoothStatusPatterns() {
+  return (
+    <defs>
+      <pattern id="booth-pattern-unassigned" width="8" height="8" patternUnits="userSpaceOnUse">
+        <rect width="8" height="8" fill="#e7e5e4" />
+        <path d="M0 8 L8 0" stroke="#a8a29e" strokeWidth="1" />
+      </pattern>
+      <pattern id="booth-pattern-assigned" width="6" height="6" patternUnits="userSpaceOnUse">
+        <rect width="6" height="6" fill="#d6d3d1" />
+        <circle cx="3" cy="3" r="0.75" fill="#78716c" />
+      </pattern>
+      <pattern id="booth-pattern-paid" width="10" height="10" patternUnits="userSpaceOnUse">
+        <rect width="10" height="10" fill="#bbf7d0" />
+        <path d="M0 10 L10 0 M-2 2 L2 -2 M8 12 L12 8" stroke="#15803d" strokeWidth="1.5" />
+      </pattern>
+      <pattern id="booth-pattern-vip" width="8" height="8" patternUnits="userSpaceOnUse">
+        <rect width="8" height="8" fill="#e9d5ff" />
+        <circle cx="2" cy="2" r="1" fill="#7e22ce" />
+        <circle cx="6" cy="6" r="1" fill="#7e22ce" />
+      </pattern>
+    </defs>
+  )
+}
+
+function boothStatusLabel(
+  obj: PlacedObject,
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+): string | null {
+  const status = boothPlacementStatusByObjectId?.get(obj.id)
+  if (!status) return null
+  return BOOTH_STATUS_THEME[status].label
+}
+
 function CanvasObjectsBase({
   objects,
   selectedIds,
   pxPerFt,
   showLabels = true,
+  boothPlacementStatusByObjectId,
   overlappingIds,
   editingObjectId,
   eventCategoryNames,
@@ -377,6 +422,7 @@ function CanvasObjectsBase({
 
   return (
     <g>
+      {boothPlacementStatusByObjectId ? <BoothStatusPatterns /> : null}
       {objects.map((obj) => {
         const x = obj.x * pxPerFt
         const y = obj.y * pxPerFt
@@ -384,7 +430,17 @@ function CanvasObjectsBase({
         const h = obj.height * pxPerFt
         const isSelected = selectedIds.has(obj.id)
         const isOverlapping = overlappingIds?.has(obj.id) ?? false
-        const fill = fillForObject(obj, eventCategoryNames, isOverlapping)
+        const placementStatus = boothPlacementStatusByObjectId?.get(obj.id)
+        const fill = fillForObject(
+          obj,
+          eventCategoryNames,
+          isOverlapping,
+          boothPlacementStatusByObjectId
+        )
+        const patternFill =
+          placementStatus && !isOverlapping
+            ? `url(#${BOOTH_STATUS_THEME[placementStatus].patternId})`
+            : null
         // When the object is part of an explicit join group its
         // perimeter is no longer "owned" by the object — the
         // dissolved zone polygon (rendered in <RoomFrames>) draws
@@ -393,10 +449,18 @@ function CanvasObjectsBase({
         const isJoined = !!obj.joinGroupId
         const stroke = isJoined && !isSelected && !isOverlapping
           ? 'transparent'
-          : strokeForObject(obj, isSelected, eventCategoryNames, isOverlapping)
+          : strokeForObject(
+              obj,
+              isSelected,
+              eventCategoryNames,
+              isOverlapping,
+              boothPlacementStatusByObjectId
+            )
         const strokeWidth = isOverlapping ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
+        const isTableClusterBooth =
+          obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)
         const transform =
-          obj.rotation && obj.rotation !== 0
+          !isTableClusterBooth && obj.rotation && obj.rotation !== 0
             ? `rotate(${obj.rotation} ${x + w / 2} ${y + h / 2})`
             : undefined
         const labelText =
@@ -448,25 +512,53 @@ function CanvasObjectsBase({
                   />
                 )
               })
+            ) : isTableClusterBooth ? (
+              <TableClusterShapes
+                booth={obj as BoothObject}
+                pxPerFt={pxPerFt}
+                fill={fill}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                isSelected={isSelected}
+                compoundX={x}
+                compoundY={y}
+                compoundW={w}
+                compoundH={h}
+              />
             ) : (
               <rect
                 x={x}
                 y={y}
                 width={w}
                 height={h}
-                fill={fill}
+                fill={patternFill ?? fill}
                 fillOpacity={0.85}
                 stroke={stroke}
                 strokeWidth={strokeWidth}
                 strokeDasharray={
                   obj.kind === 'emergency_exit'
                     ? '6 3'
-                    : undefined
+                    : placementStatus === 'assigned_unpaid'
+                      ? '4 2'
+                      : undefined
                 }
                 pointerEvents="all"
                 shapeRendering="crispEdges"
               />
             )}
+            {obj.kind === 'booth' && placementStatus && !isEditing ? (
+              <text
+                x={x + w / 2}
+                y={y + h - Math.min(10, h * 0.15)}
+                textAnchor="middle"
+                fontSize={Math.min(9, Math.max(6, w * 0.12))}
+                fontWeight={700}
+                fill={BOOTH_STATUS_THEME[placementStatus].stroke}
+                pointerEvents="none"
+              >
+                {truncate(boothStatusLabel(obj, boothPlacementStatusByObjectId) ?? '', 18)}
+              </text>
+            ) : null}
             {/* Walls fully consumed by door/exit overlaps still need
                 a transparent hit target so the wall stays selectable
                 and so it can keep the carved-state visual without
@@ -765,6 +857,81 @@ function objectFallbackLabel(obj: PlacedObject): string {
     case 'label':
       return ''
   }
+}
+
+function TableClusterShapes({
+  booth,
+  pxPerFt,
+  fill,
+  stroke,
+  strokeWidth,
+  isSelected,
+  compoundX,
+  compoundY,
+  compoundW,
+  compoundH,
+}: {
+  booth: BoothObject
+  pxPerFt: number
+  fill: string
+  stroke: string
+  strokeWidth: number
+  isSelected: boolean
+  compoundX: number
+  compoundY: number
+  compoundW: number
+  compoundH: number
+}) {
+  const cluster = booth.tableCluster!
+  const center = objectCenter(booth)
+  const cx = center.x * pxPerFt
+  const cy = center.y * pxPerFt
+  const clusterRot = booth.rotation ?? 0
+  const depthPx = BOOTH_EQUIPMENT_DEPTH_FT * pxPerFt
+
+  return (
+    <>
+      <g transform={`translate(${cx} ${cy}) rotate(${clusterRot})`}>
+        {cluster.subTables.map((sub) => {
+          const tw = sub.tableLengthFt * pxPerFt
+          const lx = sub.localCenterX * pxPerFt
+          const ly = sub.localCenterY * pxPerFt
+          return (
+            <g
+              key={`${booth.id}-${sub.id}`}
+              transform={`translate(${lx} ${ly}) rotate(${sub.rotationOffsetDeg})`}
+            >
+              <rect
+                x={-tw / 2}
+                y={-depthPx / 2}
+                width={tw}
+                height={depthPx}
+                fill={fill}
+                fillOpacity={0.85}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                pointerEvents="all"
+                shapeRendering="crispEdges"
+              />
+            </g>
+          )
+        })}
+      </g>
+      {isSelected ? (
+        <rect
+          x={compoundX}
+          y={compoundY}
+          width={compoundW}
+          height={compoundH}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={1}
+          strokeDasharray="4 3"
+          pointerEvents="none"
+        />
+      ) : null}
+    </>
+  )
 }
 
 function truncate(s: string, max: number): string {

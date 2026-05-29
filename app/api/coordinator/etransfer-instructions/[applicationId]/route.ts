@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-instructions-service'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
+import type { EventListingType } from '@/types/database'
 
 export async function POST(
   _request: Request,
@@ -37,7 +39,14 @@ export async function POST(
     return NextResponse.json({ error: 'Application not found' }, { status: 404 })
   }
 
-  const eventRow = Array.isArray(application.event) ? application.event[0] : application.event
+  const eventRow = (Array.isArray(application.event)
+    ? application.event[0]
+    : application.event) as {
+    coordinator_id: string
+    listing_type?: EventListingType
+    booth_price_cents?: number
+    multi_table_discount_percent?: number
+  } | null
   if (!eventRow || eventRow.coordinator_id !== user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -57,7 +66,15 @@ export async function POST(
     applicationId,
     eventId: application.event_id,
     vendorId: application.vendor_id,
-    boothPriceCents: limit?.price_per_booth ?? 0,
+    boothPriceCents: computeApplicationBoothPriceCents(
+      limit?.price_per_booth,
+      {
+        listing_type: eventRow?.listing_type,
+        booth_price_cents: eventRow?.booth_price_cents,
+        multi_table_discount_percent: eventRow?.multi_table_discount_percent,
+      },
+      (application as { table_count?: number }).table_count ?? 1
+    ),
     referenceCode: application.etransfer_reference_code,
     expiresAt: application.etransfer_expires_at,
   })

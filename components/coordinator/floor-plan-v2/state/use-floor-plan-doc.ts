@@ -7,7 +7,8 @@ import {
   reconcileCanvasExtents,
   type RoomResizePatch,
 } from './room-canvas'
-import type { FloorPlanDoc, PlacedObject } from './types'
+import type { BoothObject, FloorPlanDoc, PlacedObject } from './types'
+import { applyBoothObjectPatch } from './table-cluster-layout'
 
 /**
  * useFloorPlanDoc — pure state hook for a v2 floor plan document.
@@ -275,6 +276,9 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const objects = current.objects.map((o) => {
         if (o.id !== id) return o
         mutated = true
+        if (o.kind === 'booth') {
+          return applyBoothObjectPatch(o as BoothObject, patch as Partial<BoothObject>)
+        }
         return { ...o, ...patch } as PlacedObject
       })
       if (!mutated) return
@@ -294,6 +298,12 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         const patch = patchById.get(o.id)
         if (!patch) return o
         mutated = true
+        if (o.kind === 'booth') {
+          return applyBoothObjectPatch(
+            o as BoothObject,
+            patch as Partial<BoothObject>
+          )
+        }
         return { ...o, ...patch } as PlacedObject
       })
       if (!mutated) return

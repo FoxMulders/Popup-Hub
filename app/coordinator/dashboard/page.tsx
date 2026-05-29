@@ -1,286 +1,189 @@
-import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Skeleton } from '@/components/ui/skeleton'
-import { CoordinatorEventFeed } from '@/components/coordinator/coordinator-event-feed'
-import {
-  partitionEventsByPhase,
-  sortEventsByStartAsc,
-  sortEventsByStartDesc,
-} from '@/lib/queries/events'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
-import { Plus, Calendar, Clock, DollarSign, Archive } from 'lucide-react'
+import { partitionEventsByPhase, sortEventsByStartAsc } from '@/lib/queries/events'
 import type { Event } from '@/types/database'
-import { PendingBoothApplicationsPanel } from '@/components/coordinator/pending-booth-applications-panel'
-import type { PendingBoothApplicationRow } from '@/components/coordinator/pending-booth-applications-panel'
-import { PendingEtransferPanel } from '@/components/coordinator/pending-etransfer-panel'
-import type { PendingEtransferApplication } from '@/components/coordinator/pending-etransfer-panel'
-import { DashboardStatCard } from '@/components/coordinator/dashboard-stat-card'
+import { roomsFromBoothLayout } from '@/lib/booth-planner/layout-rooms'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
+import { MarketDashboardClient } from '@/components/coordinator/dashboard/market-dashboard-client'
+import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
+import type { DashboardEventSummary } from '@/components/coordinator/dashboard/market-management-context'
 
-async function CoordinatorStats({ userId }: { userId: string }) {
-  const supabase = await createClient()
-  const { data: myEventIds } = await supabase.from('events').select('id').eq('coordinator_id', userId)
-  const eventIds = myEventIds?.map((e) => e.id) ?? []
-
-  const [
-    { data: eventRows },
-    { count: pendingApplications },
-    { count: pendingInsuranceApplications },
-    { data: firstPendingApplication },
-    { data: revenueRows },
-    { data: profile },
-  ] = await Promise.all([
-    supabase
-      .from('events')
-      .select('id, start_at, end_at, status')
-      .eq('coordinator_id', userId),
-    eventIds.length > 0
-      ? supabase
-          .from('booth_applications')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending')
-          .in('event_id', eventIds)
-      : Promise.resolve({ count: 0 }),
-    eventIds.length > 0
-      ? supabase
-          .from('booth_applications')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending_insurance')
-          .in('event_id', eventIds)
-      : Promise.resolve({ count: 0 }),
-    eventIds.length > 0
-      ? supabase
-          .from('booth_applications')
-          .select('event_id')
-          .in('status', ['pending', 'pending_insurance'])
-          .in('event_id', eventIds)
-          .order('applied_at', { ascending: true })
-          .limit(1)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    supabase
-      .from('platform_transactions')
-      .select('organizer_payout_amount')
-      .eq('coordinator_id', userId)
-      .eq('status', 'completed'),
-    supabase
-      .from('profiles')
-      .select('payout_onboarding_status, payout_account_id')
-      .eq('id', userId)
-      .single(),
-  ])
-
-  const { active, archived } = partitionEventsByPhase((eventRows ?? []) as Event[])
-  const totalActiveEvents = active.length
-  const totalArchivedEvents = archived.length
-
-  const totalRevenueCents =
-    revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
-  const revenueFormatted = new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: 'CAD',
-  }).format(totalRevenueCents / 100)
-
-  const squareConnected =
-    profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
-
-  const pendingCount = (pendingApplications ?? 0) + (pendingInsuranceApplications ?? 0)
-  const pendingEventId = firstPendingApplication?.event_id as string | undefined
-  const pendingHref =
-    pendingCount > 0
-      ? pendingEventId
-        ? `/coordinator/events/${pendingEventId}/applications`
-        : '/coordinator/dashboard#pending-applications'
-      : null
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      <DashboardStatCard
-        title="Total Events"
-        value={totalActiveEvents}
-        icon={Calendar}
-        iconClassName="text-forest"
-        href="/coordinator/dashboard?tab=active#my-events"
-        subtitle="View active markets →"
-      />
-      <DashboardStatCard
-        title="Archived Events"
-        value={totalArchivedEvents}
-        icon={Archive}
-        iconClassName="text-stone-500"
-        href="/coordinator/dashboard?tab=archived#my-events"
-        subtitle="View past events →"
-        hoverClassName="group-hover:border-stone-300 group-hover:bg-stone-50/60"
-      />
-      <DashboardStatCard
-        title="Booth Applications"
-        value={pendingCount}
-        icon={Clock}
-        iconClassName="text-harvest-500"
-        href={pendingHref}
-        subtitle={pendingCount > 0 ? 'Review pending applications →' : null}
-        hoverClassName="group-hover:border-harvest-300 group-hover:bg-harvest-50/40"
-      />
-      <DashboardStatCard
-        title="Booth Revenue"
-        value={revenueFormatted}
-        icon={DollarSign}
-        iconClassName="text-sage-600"
-      />
-      <DashboardStatCard
-        title="Square Payouts"
-        value={
-          squareConnected ? (
-            <span className="text-sm font-medium text-sage-700">Connected</span>
-          ) : (
-            <Link href="/coordinator/square-connect">
-              <Button variant="link" size="sm" className="h-auto p-0 text-sm text-sage-700">
-                Connect Square →
-              </Button>
-            </Link>
-          )
-        }
-        icon={DollarSign}
-        iconClassName="text-sage-600"
-      />
-    </div>
-  )
+function vendorNameFromRow(app: {
+  vendor?: { full_name?: string | null } | { full_name?: string | null }[] | null
+}): string | null {
+  const vendor = Array.isArray(app.vendor) ? app.vendor[0] : app.vendor
+  return vendor?.full_name ?? null
 }
 
-async function MyEvents({ userId }: { userId: string }) {
-  const supabase = await createClient()
-  const { data: events } = await supabase
-    .from('events')
-    .select('*')
-    .eq('coordinator_id', userId)
-    .order('start_at', { ascending: false })
-
-  const { active, archived } = partitionEventsByPhase((events ?? []) as Event[])
-
-  return (
-    <CoordinatorEventFeed
-      activeEvents={sortEventsByStartAsc(active)}
-      archivedEvents={sortEventsByStartDesc(archived)}
-    />
-  )
+function categoryNameFromRow(app: {
+  category?: { name?: string | null } | { name?: string | null }[] | null
+}): string | null {
+  const category = Array.isArray(app.category) ? app.category[0] : app.category
+  return category?.name ?? null
 }
 
 export default async function CoordinatorDashboard() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: myEvents } = await supabase
+  const { data: eventRows } = await supabase
     .from('events')
-    .select('id, name')
+    .select('id, name, start_at, end_at, status, listing_type, booth_price_cents, multi_table_discount_percent')
     .eq('coordinator_id', user.id)
     .order('start_at', { ascending: false })
 
-  const eventIds = myEvents?.map((e) => e.id) ?? []
+  const coordinatorEventIds = (eventRows ?? []).map((e) => e.id)
 
-  let pendingBoothApplications: PendingBoothApplicationRow[] = []
-  if (eventIds.length > 0) {
-    const { data: boothApps } = await supabase
-      .from('booth_applications')
-      .select(`
-        *,
-        vendor:profiles!booth_applications_vendor_id_fkey(full_name, email),
-        event:events(id, name, booking_mode),
-        category:categories(name)
-      `)
-      .in('event_id', eventIds)
-      .in('status', ['pending', 'pending_insurance'])
-      .order('applied_at', { ascending: true })
+  const [
+    { data: profile },
+    { data: revenueRows },
+    { data: layouts },
+    { data: applications },
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('payout_onboarding_status, payout_account_id')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('platform_transactions')
+      .select('organizer_payout_amount')
+      .eq('coordinator_id', user.id)
+      .eq('status', 'completed'),
+    coordinatorEventIds.length > 0
+      ? supabase.from('booth_layouts').select('*').in('event_id', coordinatorEventIds)
+      : Promise.resolve({ data: [] as import('@/types/database').BoothLayout[] }),
+    coordinatorEventIds.length > 0
+      ? supabase
+          .from('booth_applications')
+          .select(`
+            *,
+            vendor:profiles!booth_applications_vendor_id_fkey(full_name, email),
+            event:events(id, name, listing_type, booth_price_cents, multi_table_discount_percent),
+            category:categories(name)
+          `)
+          .in('event_id', coordinatorEventIds)
+          .order('applied_at', { ascending: true })
+      : Promise.resolve({ data: [] }),
+  ])
 
-    pendingBoothApplications = (boothApps ?? []) as PendingBoothApplicationRow[]
-  }
+  const { active } = partitionEventsByPhase((eventRows ?? []) as Event[])
+  const events: DashboardEventSummary[] = sortEventsByStartAsc(active).map((e) => ({
+    id: e.id,
+    name: e.name,
+    start_at: e.start_at,
+    status: e.status,
+  }))
 
-  const firstEventApplicationsHref =
-    pendingBoothApplications[0]?.event_id != null
-      ? `/coordinator/events/${pendingBoothApplications[0].event_id}/applications`
-      : myEvents?.[0]?.id != null
-        ? `/coordinator/events/${myEvents[0].id}/applications`
-        : null
+  const eventIds = new Set(events.map((e) => e.id))
+  const coordinatorEventIdSet = new Set(coordinatorEventIds)
 
-  let pendingEtransfers: PendingEtransferApplication[] = []
-  if (eventIds.length > 0) {
-    const { data: etransferApps } = await supabase
-      .from('booth_applications')
-      .select(`
-        *,
-        vendor:profiles!booth_applications_vendor_id_fkey(full_name, email),
-        event:events(id, name),
-        category:categories(name)
-      `)
-      .in('event_id', eventIds)
-      .eq('payment_method', 'ETRANSFER')
-      .eq('application_payment_status', 'PENDING_REVIEW')
-      .in('status', ['pending', 'approved', 'pending_insurance'])
-      .order('applied_at', { ascending: false })
-
-    if (etransferApps?.length) {
-      const categoryPairs = etransferApps.map((app) => ({
-        event_id: app.event_id,
-        category_id: app.category_id,
-      }))
-      const uniqueEventIds = [...new Set(categoryPairs.map((p) => p.event_id))]
-      const { data: limits } = await supabase
-        .from('event_category_limits')
-        .select('event_id, category_id, price_per_booth')
-        .in('event_id', uniqueEventIds)
-
-      const priceByKey = new Map(
-        (limits ?? []).map((row) => [`${row.event_id}:${row.category_id}`, row.price_per_booth ?? 0])
-      )
-
-      pendingEtransfers = etransferApps.map((app) => ({
-        ...(app as PendingEtransferApplication),
-        booth_price_cents:
-          priceByKey.get(`${app.event_id}:${app.category_id}`) ?? 0,
-      }))
+  const layoutsByEventId: Record<
+    string,
+    { rooms: ReturnType<typeof roomsFromBoothLayout>['rooms']; activeRoomId: string }
+  > = {}
+  for (const layout of layouts ?? []) {
+    if (!coordinatorEventIdSet.has(layout.event_id)) continue
+    const bundle = roomsFromBoothLayout(layout)
+    layoutsByEventId[layout.event_id] = {
+      rooms: bundle.rooms,
+      activeRoomId: bundle.activeRoomId,
     }
   }
 
+  for (const event of events) {
+    if (!layoutsByEventId[event.id]) {
+      const empty = roomsFromBoothLayout(null)
+      layoutsByEventId[event.id] = {
+        rooms: empty.rooms,
+        activeRoomId: empty.activeRoomId,
+      }
+    }
+  }
+
+  const categoryPriceKeys = new Set<string>()
+  for (const app of applications ?? []) {
+    if (!eventIds.has(app.event_id)) continue
+    categoryPriceKeys.add(`${app.event_id}:${app.category_id}`)
+  }
+
+  const uniqueEventIdsForLimits = [...new Set([...categoryPriceKeys].map((k) => k.split(':')[0]!))]
+  const { data: limits } =
+    uniqueEventIdsForLimits.length > 0
+      ? await supabase
+          .from('event_category_limits')
+          .select('event_id, category_id, price_per_booth')
+          .in('event_id', uniqueEventIdsForLimits)
+      : { data: [] as { event_id: string; category_id: string; price_per_booth: number | null }[] }
+
+  const priceByKey = new Map(
+    (limits ?? []).map((row) => [`${row.event_id}:${row.category_id}`, row.price_per_booth ?? 0])
+  )
+
+  const toSnapshot = (app: NonNullable<typeof applications>[number]): VendorApplicationSnapshot => ({
+    id: app.id,
+    vendor_id: app.vendor_id,
+    status: app.status,
+    payment_status: app.payment_status,
+    payment_method: app.payment_method,
+    application_payment_status: app.application_payment_status,
+    booth_number: app.booth_number,
+    categoryName: categoryNameFromRow(app),
+    vendorName: vendorNameFromRow(app),
+  })
+
+  const approvedByEventId: Record<string, VendorApplicationSnapshot[]> = {}
+  const pendingByEventId: Record<string, VendorApplicationSnapshot[]> = {}
+  const boothPriceByEventAndApplicationId: Record<string, Record<string, number>> = {}
+
+  for (const app of applications ?? []) {
+    if (!eventIds.has(app.event_id)) continue
+    const snapshot = toSnapshot(app)
+    const eventRow = Array.isArray(app.event) ? app.event[0] : app.event
+    const categoryPrice = priceByKey.get(`${app.event_id}:${app.category_id}`) ?? 0
+    const boothPrice = computeApplicationBoothPriceCents(
+      categoryPrice,
+      {
+        listing_type: eventRow?.listing_type,
+        booth_price_cents: eventRow?.booth_price_cents,
+        multi_table_discount_percent: eventRow?.multi_table_discount_percent,
+      },
+      (app as { table_count?: number }).table_count ?? 1
+    )
+    if (!boothPriceByEventAndApplicationId[app.event_id]) {
+      boothPriceByEventAndApplicationId[app.event_id] = {}
+    }
+    boothPriceByEventAndApplicationId[app.event_id]![app.id] = boothPrice
+
+    if (app.status === 'approved' || app.status === 'pending_insurance' || app.status === 'waitlisted') {
+      if (!approvedByEventId[app.event_id]) approvedByEventId[app.event_id] = []
+      approvedByEventId[app.event_id]!.push(snapshot)
+    }
+    if (app.status === 'pending' || app.status === 'pending_insurance') {
+      if (!pendingByEventId[app.event_id]) pendingByEventId[app.event_id] = []
+      pendingByEventId[app.event_id]!.push(snapshot)
+    }
+  }
+
+  const totalRevenueCents =
+    revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
+
+  const squareConnected =
+    profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
+
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-8">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <h1 className="font-heading text-3xl font-semibold text-foreground">Coordinator Dashboard</h1>
-          <p className="mt-1 text-muted-foreground">Manage your markets and vendors</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/coordinator/square-connect">
-            <Button variant="outline" size="sm">Connect Square</Button>
-          </Link>
-          <Link href="/coordinator/events/new">
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />New Event
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <Suspense fallback={<div className="grid gap-4 sm:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}</div>}>
-        <CoordinatorStats userId={user.id} />
-      </Suspense>
-
-      <div id="pending-applications">
-        <PendingBoothApplicationsPanel
-          applications={pendingBoothApplications}
-          hasEvents={eventIds.length > 0}
-          firstEventApplicationsHref={firstEventApplicationsHref}
-        />
-      </div>
-
-      <PendingEtransferPanel applications={pendingEtransfers} />
-
-      <div id="my-events">
-        <h2 className="market-section-title mb-4">My Events</h2>
-        <Suspense fallback={<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-56 rounded-2xl" />)}</div>}>
-          <MyEvents userId={user.id} />
-        </Suspense>
-      </div>
-    </div>
+    <MarketDashboardClient
+      events={events}
+      initialEventId={events[0]?.id ?? null}
+      layoutsByEventId={layoutsByEventId}
+      approvedByEventId={approvedByEventId}
+      pendingByEventId={pendingByEventId}
+      boothPriceByEventAndApplicationId={boothPriceByEventAndApplicationId}
+      squareConnected={squareConnected}
+      totalRevenueCents={totalRevenueCents}
+    />
   )
 }

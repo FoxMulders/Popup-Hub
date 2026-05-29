@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type {
   BoothObject,
@@ -9,6 +9,18 @@ import type {
   OpenWallObject,
   PlacedObject,
 } from '../state/types'
+import { cn } from '@/lib/utils'
+import { boothHasTableCluster } from '../state/table-cluster-layout'
+import {
+  inspectorControlClassName,
+  inspectorFieldsetClass,
+  inspectorLabelClass,
+  inspectorLegendClass,
+} from './inspector-field-styles'
+import { TableClusterFields } from './table-cluster-fields'
+
+const INSPECTOR_ASIDE_CLASS =
+  '@container flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs'
 
 interface PropertyInspectorProps {
   store: FloorPlanDocStore
@@ -44,45 +56,47 @@ export function PropertyInspector({
   if (selected.length === 0) {
     return (
       <aside
-        className={
-          'flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs ' +
-          (className ?? '')
-        }
+        className={cn(INSPECTOR_ASIDE_CLASS, className)}
         aria-label="Canvas properties"
       >
         <header>
-          <h3 className="text-[11px] font-bold uppercase tracking-wide text-stone-700">
+          <h2 className="text-[0.6875rem] font-bold uppercase tracking-wide text-stone-700">
             Canvas
-          </h3>
-          <p className="mt-0.5 text-[10px] text-stone-500">
+          </h2>
+          <p className="mt-0.5 text-[0.625rem] leading-snug text-stone-500 sm:text-xs">
             No object selected. Pick an object to edit its properties, or
             tweak the advisory canvas settings below.
           </p>
         </header>
-        <NumberField
-          label="Width (ft)"
-          value={store.doc.canvasWidthFt}
-          min={5}
-          step={1}
-          onChange={(v) => store.patchDoc({ canvasWidthFt: v })}
-        />
-        <NumberField
-          label="Length (ft)"
-          value={store.doc.canvasLengthFt}
-          min={5}
-          step={1}
-          onChange={(v) => store.patchDoc({ canvasLengthFt: v })}
-        />
-        <NumberField
-          label="Snap (ft)"
-          value={store.doc.snapFt}
-          min={0}
-          step={0.5}
-          onChange={(v) => store.patchDoc({ snapFt: v })}
-        />
-        <p className="text-[10px] leading-snug text-stone-500">
-          Snap = 0 disables grid snapping for free-form placement.
-        </p>
+        <section aria-label="Canvas dimensions">
+          <fieldset className={cn(inspectorFieldsetClass, 'flex flex-col gap-3')}>
+            <legend className="sr-only">Canvas dimensions and snap</legend>
+            <NumberField
+              label="Width (ft)"
+              value={store.doc.canvasWidthFt}
+              min={5}
+              step={1}
+              onChange={(v) => store.patchDoc({ canvasWidthFt: v })}
+            />
+            <NumberField
+              label="Length (ft)"
+              value={store.doc.canvasLengthFt}
+              min={5}
+              step={1}
+              onChange={(v) => store.patchDoc({ canvasLengthFt: v })}
+            />
+            <NumberField
+              label="Snap (ft)"
+              value={store.doc.snapFt}
+              min={0}
+              step={0.5}
+              onChange={(v) => store.patchDoc({ snapFt: v })}
+            />
+          </fieldset>
+          <p className="mt-2 text-[0.625rem] leading-snug text-stone-500 sm:text-xs">
+            Snap = 0 disables grid snapping for free-form placement.
+          </p>
+        </section>
       </aside>
     )
   }
@@ -90,58 +104,73 @@ export function PropertyInspector({
   if (selected.length > 1) {
     return (
       <aside
-        className={
-          'flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs ' +
-          (className ?? '')
-        }
+        className={cn(INSPECTOR_ASIDE_CLASS, className)}
         aria-label="Multi selection properties"
       >
         <header>
-          <h3 className="text-[11px] font-bold uppercase tracking-wide text-stone-700">
+          <h2 className="text-[0.6875rem] font-bold uppercase tracking-wide text-stone-700">
             {selected.length} selected
-          </h3>
-          <p className="mt-0.5 text-[10px] text-stone-500">
+          </h2>
+          <p className="mt-0.5 text-[0.625rem] text-stone-500 sm:text-xs">
             Multi-select editing for shared fields only.
           </p>
         </header>
-        <BulkLockToggle store={store} ids={selected.map((s) => s.id)} />
+        <section aria-label="Bulk actions">
+          <BulkLockToggle store={store} ids={selected.map((s) => s.id)} />
+        </section>
       </aside>
     )
   }
 
   const obj = selected[0]
+  const boothWithCluster =
+    obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)
+
   return (
     <aside
-      className={
-        'flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs ' +
-        (className ?? '')
-      }
+      className={cn(INSPECTOR_ASIDE_CLASS, className)}
       aria-label={`${obj.kind} properties`}
     >
       <header>
-        <h3 className="text-[11px] font-bold uppercase tracking-wide text-stone-700">
+        <h2 className="text-[0.6875rem] font-bold uppercase tracking-wide text-stone-700">
           {obj.kind}
-        </h3>
-        <p className="mt-0.5 text-[10px] text-stone-500">
+        </h2>
+        <p className="mt-0.5 text-[0.625rem] text-stone-500 sm:text-xs">
           {prettyKindHint(obj.kind)}
         </p>
       </header>
-      <PositionFields store={store} obj={obj} />
-      <SizeFields store={store} obj={obj} />
-      <NumberField
-        label="Rotation (°)"
-        value={obj.rotation}
-        min={-180}
-        max={180}
-        step={15}
-        onChange={(v) => store.updateObject(obj.id, { rotation: v })}
-      />
+
+      <section aria-label="Position and dimensions">
+        <fieldset className={cn(inspectorFieldsetClass, 'flex flex-col gap-3')}>
+          <legend className={inspectorLegendClass}>Geometry</legend>
+          <PositionFields store={store} obj={obj} />
+          {boothWithCluster ? (
+            <p className="text-[0.625rem] text-stone-500 sm:text-xs">
+              Size is derived from the angled sub-table footprint.
+            </p>
+          ) : (
+            <SizeFields store={store} obj={obj} />
+          )}
+          <NumberField
+            label="Rotation (°)"
+            value={obj.rotation}
+            min={-180}
+            max={180}
+            step={15}
+            onChange={(v) => store.updateObject(obj.id, { rotation: v })}
+          />
+        </fieldset>
+      </section>
+
       <KindSpecificFields
         store={store}
         obj={obj}
         eventCategoryNames={eventCategoryNames}
       />
-      <LockToggle store={store} obj={obj} />
+
+      <section aria-label="Object lock">
+        <LockToggle store={store} obj={obj} />
+      </section>
     </aside>
   )
 }
@@ -230,32 +259,39 @@ function KindSpecificFields({
     const booth = obj as BoothObject
     return (
       <>
-        <TextField
-          label="Vendor name"
-          value={booth.label ?? ''}
-          onChange={(v) => store.updateObject(obj.id, { label: v })}
-        />
-        <CategoryField
-          value={booth.categoryName ?? ''}
-          options={eventCategoryNames ?? []}
-          onChange={(v) =>
-            store.updateObject(obj.id, { categoryName: v || null })
-          }
-        />
-        <TextField
-          label="Accent color (hex)"
-          value={booth.accentColor ?? ''}
-          placeholder="#fde68a"
-          onChange={(v) =>
-            store.updateObject(obj.id, { accentColor: v || null })
-          }
-        />
+        <section aria-label="Booth details">
+          <fieldset className={cn(inspectorFieldsetClass, 'flex flex-col gap-3')}>
+            <legend className={inspectorLegendClass}>Booth</legend>
+            <TextField
+              label="Vendor name"
+              value={booth.label ?? ''}
+              onChange={(v) => store.updateObject(obj.id, { label: v })}
+            />
+            <CategoryField
+              value={booth.categoryName ?? ''}
+              options={eventCategoryNames ?? []}
+              onChange={(v) =>
+                store.updateObject(obj.id, { categoryName: v || null })
+              }
+            />
+            <TextField
+              label="Accent color (hex)"
+              value={booth.accentColor ?? ''}
+              placeholder="#fde68a"
+              onChange={(v) =>
+                store.updateObject(obj.id, { accentColor: v || null })
+              }
+            />
+          </fieldset>
+        </section>
+        <TableClusterFields store={store} booth={booth} />
       </>
     )
   }
   if (obj.kind === 'door') {
     const door = obj as DoorObject
     return (
+      <section aria-label="Door details">
       <SelectField
         label="Door type"
         value={door.doorType}
@@ -269,38 +305,44 @@ function KindSpecificFields({
           })
         }
       />
+      </section>
     )
   }
   if (obj.kind === 'open_wall') {
     const ow = obj as OpenWallObject
     return (
-      <>
-        <TextField
-          label="Window label"
-          value={ow.label ?? ''}
-          placeholder="e.g. Taco truck pickup"
-          onChange={(v) => store.updateObject(obj.id, { label: v })}
-        />
-        <NumberField
-          label="Counter depth (ft)"
-          value={ow.counterDepthFt ?? 1.5}
-          min={0.5}
-          step={0.5}
-          onChange={(v) =>
-            store.updateObject(obj.id, { counterDepthFt: v })
-          }
-        />
-      </>
+      <section aria-label="Service window details">
+        <fieldset className={cn(inspectorFieldsetClass, 'flex flex-col gap-3')}>
+          <legend className={inspectorLegendClass}>Open wall</legend>
+          <TextField
+            label="Window label"
+            value={ow.label ?? ''}
+            placeholder="e.g. Taco truck pickup"
+            onChange={(v) => store.updateObject(obj.id, { label: v })}
+          />
+          <NumberField
+            label="Counter depth (ft)"
+            value={ow.counterDepthFt ?? 1.5}
+            min={0.5}
+            step={0.5}
+            onChange={(v) =>
+              store.updateObject(obj.id, { counterDepthFt: v })
+            }
+          />
+        </fieldset>
+      </section>
     )
   }
   if (obj.kind === 'label') {
     const label = obj as LabelObject
     return (
-      <TextField
-        label="Text"
-        value={label.text}
-        onChange={(v) => store.updateObject(obj.id, { text: v })}
-      />
+      <section aria-label="Label text">
+        <TextField
+          label="Text"
+          value={label.text}
+          onChange={(v) => store.updateObject(obj.id, { text: v })}
+        />
+      </section>
     )
   }
   return null
@@ -314,7 +356,7 @@ function LockToggle({
   obj: PlacedObject
 }) {
   return (
-    <label className="flex items-center justify-between gap-2 rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-[11px] text-stone-700">
+    <label className="flex min-h-10 cursor-pointer items-center justify-between gap-2 rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-xs text-stone-700 transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-sky-600 has-[:focus-visible]:ring-offset-1">
       <span>Locked</span>
       <input
         type="checkbox"
@@ -322,6 +364,7 @@ function LockToggle({
         onChange={(e) =>
           store.updateObject(obj.id, { locked: e.target.checked })
         }
+        className="size-4 rounded border-stone-300 text-sky-600 focus-visible:outline-none"
       />
     </label>
   )
@@ -342,7 +385,10 @@ function BulkLockToggle({
           ids.map((id) => ({ id, patch: { locked: true } }))
         )
       }
-      className="rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-[11px] font-semibold text-stone-700 hover:bg-stone-100"
+      className={cn(
+        'min-h-10 rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-xs font-semibold text-stone-700 transition-colors duration-150 hover:bg-stone-100',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-1'
+      )}
     >
       Lock all selected
     </button>
@@ -366,10 +412,14 @@ function NumberField({
   step,
   onChange,
 }: NumberFieldProps) {
+  const fieldId = useId()
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
-      <span>{label}</span>
+    <div className="flex flex-col gap-1">
+      <label htmlFor={fieldId} className={inspectorLabelClass}>
+        {label}
+      </label>
       <input
+        id={fieldId}
         type="number"
         value={Number.isFinite(value) ? value : 0}
         min={min}
@@ -379,9 +429,9 @@ function NumberField({
           const next = parseFloat(e.target.value)
           if (Number.isFinite(next)) onChange(next)
         }}
-        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+        className={inspectorControlClassName()}
       />
-    </label>
+    </div>
   )
 }
 
@@ -393,17 +443,21 @@ interface TextFieldProps {
 }
 
 function TextField({ label, value, placeholder, onChange }: TextFieldProps) {
+  const fieldId = useId()
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
-      <span>{label}</span>
+    <div className="flex flex-col gap-1">
+      <label htmlFor={fieldId} className={inspectorLabelClass}>
+        {label}
+      </label>
       <input
+        id={fieldId}
         type="text"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+        className={inspectorControlClassName()}
       />
-    </label>
+    </div>
   )
 }
 
@@ -415,13 +469,17 @@ interface SelectFieldProps {
 }
 
 function SelectField({ label, value, options, onChange }: SelectFieldProps) {
+  const fieldId = useId()
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
-      <span>{label}</span>
+    <div className="flex flex-col gap-1">
+      <label htmlFor={fieldId} className={inspectorLabelClass}>
+        {label}
+      </label>
       <select
+        id={fieldId}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+        className={inspectorControlClassName()}
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -429,7 +487,7 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
           </option>
         ))}
       </select>
-    </label>
+    </div>
   )
 }
 
@@ -473,6 +531,8 @@ function CategoryField({ value, options, onChange }: CategoryFieldProps) {
   // yank the input out from under them. Called before the no-options
   // fallback so hook order stays stable.
   const [customMode, setCustomMode] = useState(startsCustom)
+  const selectId = useId()
+  const customId = useId()
 
   // No event-level categories defined: degrade to a plain text field
   // so the inspector still works on legacy / category-less events.
@@ -495,9 +555,12 @@ function CategoryField({ value, options, onChange }: CategoryFieldProps) {
       : ''
 
   return (
-    <label className="flex flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
-      <span>Category</span>
+    <div className="flex flex-col gap-1">
+      <label htmlFor={selectId} className={inspectorLabelClass}>
+        Category
+      </label>
       <select
+        id={selectId}
         value={selectValue}
         onChange={(e) => {
           const next = e.target.value
@@ -508,8 +571,8 @@ function CategoryField({ value, options, onChange }: CategoryFieldProps) {
           setCustomMode(false)
           onChange(next)
         }}
-        className="rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
-        aria-label="Booth category"
+        className={inspectorControlClassName()}
+        aria-controls={customMode ? customId : undefined}
       >
         <option value="">— No category —</option>
         {options.map((name) => (
@@ -521,15 +584,16 @@ function CategoryField({ value, options, onChange }: CategoryFieldProps) {
       </select>
       {customMode ? (
         <input
+          id={customId}
           type="text"
           value={value}
           autoFocus
           placeholder="Custom category name"
           onChange={(e) => onChange(e.target.value)}
-          className="mt-1 rounded-md border border-stone-300 bg-white px-2 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400"
+          className={cn(inspectorControlClassName(), 'mt-1')}
           aria-label="Custom category name"
         />
       ) : null}
-    </label>
+    </div>
   )
 }

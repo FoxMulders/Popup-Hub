@@ -48,6 +48,7 @@ import {
   roomIdsFormConnectedComponent,
 } from './state/room-joins'
 import { vendorTableMetaFromApplications } from '@/lib/booth-planner/table-booth-consolidation'
+import { planTableSizeChange } from './state/table-size-selection'
 import type {
   BoothObject,
   FloorPlanDoc,
@@ -71,6 +72,8 @@ import {
 } from './interactions/perimeter-walls'
 import type { LayoutRoom } from '@/types/database'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
+import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
+import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
 const ROTATE_STEP_DEG = 15
@@ -169,6 +172,12 @@ export interface FloorPlanV2Props {
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  /** Dashboard embed — compact chrome, telemetry-driven booth fills. */
+  variant?: 'wizard' | 'dashboard'
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+  onStoreReady?: (store: FloorPlanDocStore | null) => void
+  onSelectionChange?: (store: FloorPlanDocStore) => void
+  onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
 }
 
 /**
@@ -208,6 +217,11 @@ export function FloorPlanV2({
   onSaveMarket,
   saveMarketDisabled,
   saveMarketLoading,
+  variant = 'wizard',
+  boothPlacementStatusByObjectId,
+  onStoreReady,
+  onSelectionChange,
+  onVendorDrop,
 }: FloorPlanV2Props) {
   // Initial unified doc — seed from server-loaded rooms first; if a
   // fresher crash-recovery draft exists in localStorage for this
@@ -231,6 +245,16 @@ export function FloorPlanV2({
   }, [])
 
   const store = useFloorPlanDoc(initialDoc)
+  const isDashboard = variant === 'dashboard'
+
+  useEffect(() => {
+    onStoreReady?.(store)
+    return () => onStoreReady?.(null)
+  }, [onStoreReady, store])
+
+  useEffect(() => {
+    onSelectionChange?.(store)
+  }, [onSelectionChange, store, store.selectedIds])
   const layoutOverlaps = useMemo(
     () => detectPlacedObjectOverlaps(store.doc.objects),
     [store.doc.objects]
@@ -244,7 +268,7 @@ export function FloorPlanV2({
   )
   const [autoArrangeMode, setAutoArrangeMode] =
     useState<AutoArrangeMode>('center-out')
-  const [rightInspectorOpen, setRightInspectorOpen] = useState(true)
+  const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
 
   // The wizard's room list is the canonical source of (rooms, names,
@@ -395,48 +419,48 @@ export function FloorPlanV2({
     return DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
   }, [baselineTableLengthFt])
 
-  // Live booth rescaling. Tracks the previously-applied baseline
-  // length per active room — when the wizard pushes a new size for
-  // the *same* room, every booth in that room whose long edge
-  // matches the previous baseline (within 0.1 ft) gets nudged to
-  // the new length in one history step. Booths drawn at custom
-  // dimensions are left alone, and the rescale is skipped on room
-  // switches so values don't leak across rooms.
-  const prevTableContextRef = useRef<{
-    roomId: string
-    size: LayoutBaselineTableLengthFt | undefined
-  }>({ roomId: activeRoomId, size: safeTableSizeFt })
+  // Footprint for the next booth draw when nothing is selected.
+  const [defaultPlacementSizeFt, setDefaultPlacementSizeFt] =
+    useState<LayoutBaselineTableLengthFt>(safeTableSizeFt)
 
   useEffect(() => {
-    const prev = prevTableContextRef.current
-    prevTableContextRef.current = { roomId: activeRoomId, size: safeTableSizeFt }
-    if (prev.roomId !== activeRoomId) return
-    if (prev.size == null || safeTableSizeFt == null) return
-    if (prev.size === safeTableSizeFt) return
+    setDefaultPlacementSizeFt(safeTableSizeFt)
+  }, [safeTableSizeFt])
 
-    const tol = 0.1
-    const objectRoom = store.doc.objectRoom ?? {}
-    const patches: Array<{ id: string; patch: Partial<PlacedObject> }> = []
-    for (const obj of store.doc.objects) {
-      if (obj.kind !== 'booth') continue
-      if (obj.locked) continue
-      if (objectRoom[obj.id] !== activeRoomId) continue
-      if (obj.width >= obj.height && Math.abs(obj.width - prev.size) < tol) {
-        patches.push({ id: obj.id, patch: { width: safeTableSizeFt } })
-      } else if (obj.height > obj.width && Math.abs(obj.height - prev.size) < tol) {
-        patches.push({ id: obj.id, patch: { height: safeTableSizeFt } })
-      }
+  const tableSizePillValue = useMemo<LayoutBaselineTableLengthFt>(() => {
+    const selected = Array.from(store.selectedIds)
+    if (selected.length !== 1) return defaultPlacementSizeFt
+    const obj = store.doc.objects.find((o) => o.id === selected[0])
+    if (obj?.kind !== 'booth') return defaultPlacementSizeFt
+    const booth = obj as BoothObject
+    if (
+      booth.tableLengthFt != null &&
+      isLayoutBaselineTableLengthFt(booth.tableLengthFt)
+    ) {
+      return booth.tableLengthFt
     }
-    if (patches.length > 0) {
-      store.updateObjects(patches)
-    }
-  }, [safeTableSizeFt, activeRoomId, store])
+    const longEdge = Math.max(booth.width, booth.height)
+    if (isLayoutBaselineTableLengthFt(longEdge)) return longEdge
+    return defaultPlacementSizeFt
+  }, [store.selectedIds, store.doc.objects, defaultPlacementSizeFt])
 
   const handleTableSizeChange = useCallback(
     (ft: LayoutBaselineTableLengthFt) => {
-      onBaselineTableLengthChange?.(ft)
+      const { objectPatches, nextDefaultPlacementSizeFt } = planTableSizeChange({
+        objects: store.doc.objects,
+        selectedIds: store.selectedIds,
+        ft,
+      })
+      if (objectPatches.length > 0) {
+        store.updateObjects(objectPatches)
+        return
+      }
+      if (nextDefaultPlacementSizeFt != null) {
+        setDefaultPlacementSizeFt(nextDefaultPlacementSizeFt)
+        onBaselineTableLengthChange?.(nextDefaultPlacementSizeFt)
+      }
     },
-    [onBaselineTableLengthChange]
+    [store.doc.objects, store.selectedIds, store, onBaselineTableLengthChange]
   )
 
   // Crash-recovery autosave: every doc commit lands a serialized
@@ -1370,6 +1394,7 @@ export function FloorPlanV2({
           </button>
         </div>
       ) : null}
+      {!isDashboard ? (
       <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2 shrink-0">
         <div className="min-w-0">
           <h2 className="text-lg font-bold tracking-tight text-stone-900">
@@ -1413,6 +1438,7 @@ export function FloorPlanV2({
           </div>
         </div>
       </header>
+      ) : null}
 
       <CanvasCommandBar
           toolState={{ tool, drawShape }}
@@ -1452,10 +1478,8 @@ export function FloorPlanV2({
           joinBlockedReason={joinPlan.blockedReason}
           onUnjoinRoom={handleUnjoinRoom}
           canUnjoinRoom={joinPlan.unjoinGroupId !== null}
-          tableSizeFt={safeTableSizeFt}
-          onTableSizeChange={
-            onBaselineTableLengthChange ? handleTableSizeChange : undefined
-          }
+          tableSizeFt={tableSizePillValue}
+          onTableSizeChange={handleTableSizeChange}
           rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
           activeRoomId={selectedRoomId ?? activeRoomId}
           onSelectRoom={handleSelectRoom}
@@ -1473,17 +1497,25 @@ export function FloorPlanV2({
         />
 
       <div className="flex min-h-0 flex-1 gap-2 overflow-hidden">
-        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100 h-[calc(100vh-theme(spacing.header))]">
+        <div
+          className={cn(
+            'relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100',
+            isDashboard ? 'h-full' : 'h-[calc(100vh-theme(spacing.header))]'
+          )}
+        >
           <FloorPlanCanvas
             className="absolute inset-0"
             store={store}
             toolState={{ tool, drawShape }}
+            defaultBoothTableLengthFt={defaultPlacementSizeFt}
             activeRoomId={activeRoomId}
             selectedRoomId={selectedRoomId}
             onRoomFrameClick={handleRoomFrameClick}
             onViewportReady={handleViewportReady}
             onZoomChange={setCurrentZoom}
             eventCategoryNames={eventCategoryNames}
+            boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+            onVendorDrop={onVendorDrop}
             onProximityViolation={(info) => {
               toast.error(
                 `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
@@ -1507,6 +1539,7 @@ export function FloorPlanV2({
           <CanvasLegend />
         </div>
 
+        {!isDashboard ? (
         <div className="relative flex shrink-0">
           {!rightInspectorOpen ? (
             <button
@@ -1537,6 +1570,7 @@ export function FloorPlanV2({
             </div>
           )}
         </div>
+        ) : null}
       </div>
     </div>
   )

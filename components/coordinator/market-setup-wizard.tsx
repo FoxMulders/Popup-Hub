@@ -45,6 +45,7 @@ import {
 } from '@/lib/categories/mlm-constraints'
 import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity, resolveMarketCityId } from '@/lib/wizard/market-cities'
 import { effectiveScheduleTypeForListing, isQuarterAuctionListing } from '@/lib/events/listing-type'
+import { applyUnifiedBoothFeeToCategoryLimits } from '@/lib/monetization/booth-pricing'
 import {
   defaultMarketTimesForListingType,
   WIZARD_PAGE_KICKER,
@@ -220,6 +221,20 @@ export function MarketSetupWizard({
   )
   const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
   const [globalMlmCap, setGlobalMlmCap] = useState(existing?.max_mlm_slots ?? DEFAULT_GLOBAL_MLM_CAP)
+  const [boothPriceCents, setBoothPriceCents] = useState(() => {
+    const fromEvent = existing?.booth_price_cents
+    if (fromEvent != null && fromEvent > 0) return fromEvent
+    const limits = (
+      existing as Event & {
+        category_limits?: Array<{ price_per_booth: number }>
+      }
+    )?.category_limits
+    const firstPaid = limits?.find((cl) => cl.price_per_booth > 0)?.price_per_booth
+    return firstPaid ?? 0
+  })
+  const [multiTableDiscountPercent, setMultiTableDiscountPercent] = useState(
+    existing?.multi_table_discount_percent ?? 0
+  )
   const [boothClearancePolicy, setBoothClearancePolicy] = useState<BoothClearancePolicy>(
     existing?.booth_clearance_policy ?? 'leave_furniture'
   )
@@ -341,9 +356,14 @@ export function MarketSetupWizard({
     [venuePresetId, activeRoom.venue_width, activeRoom.venue_length]
   )
 
-  const [categoryLimits, setCategoryLimits] = useState<CategoryLimit[]>(() =>
-    buildCategoryLimitsFromEvent(existing, categories)
-  )
+  const [categoryLimits, setCategoryLimits] = useState<CategoryLimit[]>(() => {
+    const initial = buildCategoryLimitsFromEvent(existing, categories)
+    const cents =
+      existing?.booth_price_cents ??
+      initial.find((cl) => cl.pricePerBooth > 0)?.pricePerBooth ??
+      0
+    return applyUnifiedBoothFeeToCategoryLimits(initial, cents)
+  })
 
   const baselineTableLengthFt: LayoutBaselineTableLengthFt = useMemo(() => {
     const ft = activeRoom.baseline_table_length_ft
@@ -537,6 +557,8 @@ export function MarketSetupWizard({
             skipVenueLayout,
             marketCity,
             boothClearancePolicy,
+            boothPriceCents,
+            multiTableDiscountPercent,
             raffleDonationRequirement,
             scheduleType,
             startAt: bounds.startAt,
@@ -544,7 +566,7 @@ export function MarketSetupWizard({
             coverImageUrl: coverUrl,
             status: opts?.publish ? 'published' : 'draft',
           },
-          categoryLimits,
+          applyUnifiedBoothFeeToCategoryLimits(categoryLimits, boothPriceCents),
           dayRows,
           scheduleType
         )
@@ -584,7 +606,9 @@ export function MarketSetupWizard({
       allowMlm,
       bookingMode,
       boothClearancePolicy,
+      boothPriceCents,
       categoryLimits,
+      multiTableDiscountPercent,
       coordinatorId,
       coverFile,
       coverImageUrl,
@@ -650,14 +674,25 @@ export function MarketSetupWizard({
   function handleGlobalMlmCapChange(cap: number) {
     setGlobalMlmCap(cap)
     if (allowMlm) {
-      setCategoryLimits((prev) => applyMlmLimitRules(prev, sortedCategories, cap))
+      setCategoryLimits((prev) =>
+        applyUnifiedBoothFeeToCategoryLimits(
+          applyMlmLimitRules(prev, sortedCategories, cap),
+          boothPriceCents
+        )
+      )
     }
   }
 
+  function handleBoothPriceCentsChange(cents: number) {
+    setBoothPriceCents(cents)
+    setCategoryLimits((prev) => applyUnifiedBoothFeeToCategoryLimits(prev, cents))
+  }
+
   function handleCategoryLimitsChange(limits: CategoryLimit[]) {
-    setCategoryLimits(
-      allowMlm ? applyMlmLimitRules(limits, sortedCategories, globalMlmCap) : limits
-    )
+    const next = allowMlm
+      ? applyMlmLimitRules(limits, sortedCategories, globalMlmCap)
+      : limits
+    setCategoryLimits(applyUnifiedBoothFeeToCategoryLimits(next, boothPriceCents))
   }
 
   function handleVenuePresetChange(presetId: VenuePresetId) {
@@ -1096,6 +1131,11 @@ export function MarketSetupWizard({
                 venueElements={activeRoom.venue_elements}
                 entrance={activeRoom.entrance}
                 skipVenueLayout={skipVenueLayout}
+                showMarketPricing={!isQuarterAuctionListing(listingType)}
+                boothPriceCents={boothPriceCents}
+                onBoothPriceCentsChange={handleBoothPriceCentsChange}
+                multiTableDiscountPercent={multiTableDiscountPercent}
+                onMultiTableDiscountPercentChange={setMultiTableDiscountPercent}
               />
               <WizardNav
                 step={2}

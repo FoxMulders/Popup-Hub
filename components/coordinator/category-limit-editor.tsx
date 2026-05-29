@@ -39,6 +39,8 @@ interface CategoryLimitEditorProps {
   onChange: (limits: CategoryLimit[]) => void
   allowMlm?: boolean
   globalMlmCap?: number
+  /** When set, per-category fee inputs are hidden; all rows use this cents value. */
+  unifiedBoothFeeCents?: number
 }
 
 const DEFAULT_NEW_SLOTS = 1
@@ -56,7 +58,10 @@ export function CategoryLimitEditor({
   onChange,
   allowMlm = false,
   globalMlmCap = DEFAULT_GLOBAL_MLM_CAP,
+  unifiedBoothFeeCents,
 }: CategoryLimitEditorProps) {
+  const useUnifiedFee = unifiedBoothFeeCents !== undefined
+  const unifiedCents = Math.max(0, Math.round(unifiedBoothFeeCents ?? 0))
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [slots, setSlots] = useState(DEFAULT_NEW_SLOTS)
   const [priceDollars, setPriceDollars] = useState(0)
@@ -133,7 +138,7 @@ export function CategoryLimitEditor({
         categoryId: cat.id,
         categoryName: cat.name,
         maxSlots: nextSlots,
-        pricePerBooth: Math.round(priceDollars * 100),
+        pricePerBooth: useUnifiedFee ? unifiedCents : Math.round(priceDollars * 100),
         tableLengthFt: tableLengthFt === '' ? null : tableLengthFt,
       },
     ])
@@ -148,7 +153,7 @@ export function CategoryLimitEditor({
       categoryId: cat.id,
       categoryName: cat.name,
       maxSlots: 1,
-      pricePerBooth: 0,
+      pricePerBooth: useUnifiedFee ? unifiedCents : 0,
       tableLengthFt: null,
     }))
     if (additions.length === 0) return
@@ -266,18 +271,20 @@ export function CategoryLimitEditor({
                     </Tooltip>
                   </span>
                 </th>
-                <th className="text-center px-4 py-2.5 font-semibold text-muted-foreground w-32">
-                  <span className="inline-flex items-center gap-1">
-                    Booth Fee
-                    <Tooltip>
-                      <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        Per-booth fee charged to the vendor. Required before publishing — leave at $0
-                        for free booths, but every category must have an explicit value.
-                      </TooltipContent>
-                    </Tooltip>
-                  </span>
-                </th>
+                {useUnifiedFee ? null : (
+                  <th className="text-center px-4 py-2.5 font-semibold text-muted-foreground w-32">
+                    <span className="inline-flex items-center gap-1">
+                      Booth Fee
+                      <Tooltip>
+                        <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          Per-booth fee charged to the vendor. Required before publishing — leave at $0
+                          for free booths, but every category must have an explicit value.
+                        </TooltipContent>
+                      </Tooltip>
+                    </span>
+                  </th>
+                )}
                 <th className="w-12" />
               </tr>
             </thead>
@@ -368,20 +375,22 @@ export function CategoryLimitEditor({
                       </SelectContent>
                     </Select>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <div className="relative mx-auto w-24">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={(limit.pricePerBooth / 100).toFixed(2)}
-                        onChange={(e) => updatePriceDollars(limit.categoryId, parseFloat(e.target.value))}
-                        className="h-8 pl-5 text-right tabular-nums"
-                        aria-label={`Booth fee for ${limit.categoryName}`}
-                      />
-                    </div>
-                  </td>
+                  {useUnifiedFee ? null : (
+                    <td className="px-4 py-2.5">
+                      <div className="relative mx-auto w-24">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={(limit.pricePerBooth / 100).toFixed(2)}
+                          onChange={(e) => updatePriceDollars(limit.categoryId, parseFloat(e.target.value))}
+                          className="h-8 pl-5 text-right tabular-nums"
+                          aria-label={`Booth fee for ${limit.categoryName}`}
+                        />
+                      </div>
+                    </td>
+                  )}
                   <td className="px-2 py-2.5">
                     <Button
                       type="button"
@@ -496,20 +505,22 @@ export function CategoryLimitEditor({
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-28 space-y-1">
-              <Label className="text-xs">Fee (USD)</Label>
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={priceDollars}
-                  onChange={(e) => setPriceDollars(parseFloat(e.target.value) || 0)}
-                  className="h-9 pl-6"
-                />
+            {useUnifiedFee ? null : (
+              <div className="w-28 space-y-1">
+                <Label className="text-xs">Fee (USD)</Label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={priceDollars}
+                    onChange={(e) => setPriceDollars(parseFloat(e.target.value) || 0)}
+                    className="h-9 pl-6"
+                  />
+                </div>
               </div>
-            </div>
+            )}
             <Button
               type="button"
               onClick={addLimit}
@@ -520,11 +531,16 @@ export function CategoryLimitEditor({
               Add
             </Button>
           </div>
-          {selectedCategoryId && priceDollars > 0 && (
+          {selectedCategoryId && !useUnifiedFee && priceDollars > 0 ? (
             <p className="text-xs text-muted-foreground mt-2">
               Vendors will pay {formatCents(Math.round(priceDollars * 100))} per booth.
             </p>
-          )}
+          ) : null}
+          {selectedCategoryId && useUnifiedFee && unifiedCents > 0 ? (
+            <p className="text-xs text-muted-foreground mt-2">
+              Vendors will pay {formatCents(unifiedCents)} per table (market-wide fee).
+            </p>
+          ) : null}
         </div>
       )}
 

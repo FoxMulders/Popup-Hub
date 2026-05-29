@@ -11,6 +11,7 @@ import {
   computeNoticeDays,
 } from '@/lib/coordinator/reliability-penalty'
 import { revalidatePublicMarketsCache } from '@/lib/cache/public-markets'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 
 export interface CancelEventResult {
   ok: boolean
@@ -63,7 +64,18 @@ async function resolveRefundAmountCents(
       .eq('event_id', app.event_id)
       .eq('category_id', app.category_id)
       .maybeSingle()
-    if (limit?.price_per_booth) return limit.price_per_booth as number
+    if (limit?.price_per_booth) {
+      const { data: eventRow } = await supabase
+        .from('events')
+        .select('listing_type, booth_price_cents, multi_table_discount_percent')
+        .eq('id', app.event_id)
+        .maybeSingle()
+      return computeApplicationBoothPriceCents(
+        limit.price_per_booth as number,
+        eventRow ?? {},
+        (app as { table_count?: number }).table_count ?? 1
+      )
+    }
   }
 
   return null

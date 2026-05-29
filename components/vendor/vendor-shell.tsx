@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers'
-import { AppNav } from '@/components/nav/app-nav'
+import { PortalSiteChrome } from '@/components/layout/portal-site-chrome'
 import {
   ACTIVE_PORTAL_COOKIE,
   getAvailablePortals,
@@ -17,14 +17,14 @@ export async function VendorShell({ profile, children }: VendorShellProps) {
   const availablePortals = getAvailablePortals(profile.role)
 
   return (
-    <div className="market-page min-h-screen">
-      <AppNav
-        profile={profile}
-        availablePortals={availablePortals}
-        portalCookie={portalCookie}
-        vendorPortal
-      />
-      <main>{children}</main>
-    </div>
+    <PortalSiteChrome
+      portal="vendor"
+      profile={profile}
+      availablePortals={availablePortals}
+      portalCookie={portalCookie}
+      vendorPortal
+    >
+      {children}
+    </PortalSiteChrome>
   )
 }

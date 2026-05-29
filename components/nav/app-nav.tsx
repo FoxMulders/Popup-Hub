@@ -76,7 +76,11 @@ export function AppNav({
   const menuExtraLinks = [{ href: '/profile', label: 'Profile settings' }]
 
   return (
-    <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
+    <nav
+      id="site-app-nav"
+      className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
+      style={{ minHeight: 'var(--app-nav-height, 4.5rem)' }}
+    >
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 lg:gap-6">

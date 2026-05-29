@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { AppNav } from '@/components/nav/app-nav'
+import { PortalSiteChrome } from '@/components/layout/portal-site-chrome'
 import { hasAccess } from '@/lib/auth/rbac'
 import {
   ACTIVE_PORTAL_COOKIE,
@@ -31,13 +31,13 @@ export default async function CoordinatorLayout({ children }: { children: React.
   const availablePortals = getAvailablePortals(profile.role)
 
   return (
-    <div className="market-page min-h-screen max-w-full overflow-x-hidden">
-      <AppNav
-        profile={profile}
-        availablePortals={availablePortals}
-        portalCookie={portalCookie}
-      />
-      <main>{children}</main>
-    </div>
+    <PortalSiteChrome
+      portal="coordinator"
+      profile={profile}
+      availablePortals={availablePortals}
+      portalCookie={portalCookie}
+    >
+      {children}
+    </PortalSiteChrome>
   )
 }

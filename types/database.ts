@@ -218,6 +218,8 @@ export interface Event {
   cancellation_notice_days: number | null
   cancellation_penalty_applied: number
   raffle_donation_requirement: string | null
+  booth_price_cents: number
+  multi_table_discount_percent: number
   passport_vendors_required: number | null
   parking_notes: string | null
   wheelchair_access_notes: string | null
@@ -275,6 +277,7 @@ export interface BoothApplication {
   requested_booth_type: 'inside' | 'wall' | 'power' | 'any' | null
   platform_transaction_id: string | null
   table_length_ft: number | null
+  table_count: number
   updated_at: string
   event_cancellation_reason: EventCancellationReason | null
   event_cancellation_reason_label: string | null

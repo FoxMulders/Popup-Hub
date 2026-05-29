@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { resolvePaymentFieldsForPaidApplication } from '@/lib/applications/payment-fields'
 import { isFullyApprovedStatus } from '@/lib/applications/resolve-approval-status'
+import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 
 export async function POST(
   request: Request,
@@ -36,7 +37,16 @@ export async function POST(
       payment_method,
       payment_status,
       application_payment_status,
-      event:events(id, name, coordinator_id, market_insurance_required)
+      table_count,
+      event:events(
+        id,
+        name,
+        coordinator_id,
+        market_insurance_required,
+        listing_type,
+        booth_price_cents,
+        multi_table_discount_percent
+      )
     `)
     .eq('id', applicationId)
     .single()
@@ -68,7 +78,15 @@ export async function POST(
     .eq('category_id', application.category_id)
     .maybeSingle()
 
-  const boothPrice = limit?.price_per_booth ?? 0
+  const boothPrice = computeApplicationBoothPriceCents(
+    limit?.price_per_booth,
+    {
+      listing_type: eventRow?.listing_type,
+      booth_price_cents: eventRow?.booth_price_cents,
+      multi_table_discount_percent: eventRow?.multi_table_discount_percent,
+    },
+    application.table_count ?? 1
+  )
   /*
    * Don't regress payment fields if the payment is already cleared.
    * E-Transfer apps reach `pending_insurance` only after the

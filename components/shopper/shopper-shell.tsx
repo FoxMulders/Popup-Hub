@@ -31,7 +31,7 @@ export async function ShopperShell({ children, hideBottomNav, profile: profilePr
   const availablePortals = profile ? getAvailablePortals(profile.role) : []
 
   return (
-    <div className="flex min-h-screen flex-col bg-cream max-w-full overflow-x-hidden">
+    <div className="site-app-shell market-page flex min-h-screen flex-col bg-cream max-w-full overflow-x-hidden">
       <ShopperTopBar
         profile={profile}
         availablePortals={availablePortals}

@@ -6,6 +6,7 @@ import { MlmTierGuard } from '@/components/coordinator/mlm-tier-guard'
 import { SmartPopulateBoothCaps } from '@/components/coordinator/smart-populate-booth-caps'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { Category, VenueElement } from '@/types/database'
+import { MarketBoothPricingFields } from '@/components/coordinator/wizard/market-booth-pricing-fields'
 
 export interface WizardStepCapacityProps {
   categories: Category[]
@@ -23,6 +24,11 @@ export interface WizardStepCapacityProps {
   venueElements?: VenueElement[]
   entrance?: 'north' | 'south' | 'east' | 'west'
   skipVenueLayout?: boolean
+  showMarketPricing?: boolean
+  boothPriceCents?: number
+  onBoothPriceCentsChange?: (cents: number) => void
+  multiTableDiscountPercent?: number
+  onMultiTableDiscountPercentChange?: (percent: number) => void
 }
 
 export function WizardStepCapacity({
@@ -41,6 +47,11 @@ export function WizardStepCapacity({
   venueElements,
   entrance = 'south',
   skipVenueLayout = false,
+  showMarketPricing = false,
+  boothPriceCents = 0,
+  onBoothPriceCentsChange,
+  multiTableDiscountPercent = 0,
+  onMultiTableDiscountPercentChange,
 }: WizardStepCapacityProps) {
   const totalCaps = categoryLimits.reduce((sum, cl) => sum + (cl.maxSlots ?? 0), 0)
 
@@ -50,11 +61,11 @@ export function WizardStepCapacity({
         <div className="min-w-0">
           <h2 className="text-sm font-heading font-semibold uppercase tracking-wide text-forest flex items-center gap-2">
             <Settings2 className="h-4 w-4 shrink-0" aria-hidden />
-            Category caps &amp; booth fees
+            Category caps &amp; booth fee
           </h2>
           <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
-            Set how many vendors each category can hold and what they pay. Use smart populate to draft
-            caps from your floor dimensions.
+            Set one booth fee for all vendors, then cap how many vendors each category can hold. Use
+            smart populate to draft caps from your floor dimensions.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -109,12 +120,26 @@ export function WizardStepCapacity({
         />
       ) : null}
 
+      {onBoothPriceCentsChange ? (
+        <MarketBoothPricingFields
+          boothPriceCents={boothPriceCents}
+          onBoothPriceCentsChange={onBoothPriceCentsChange}
+          {...(showMarketPricing && onMultiTableDiscountPercentChange
+            ? {
+                multiTableDiscountPercent,
+                onMultiTableDiscountPercentChange,
+              }
+            : {})}
+        />
+      ) : null}
+
       <CategoryLimitEditor
         categories={categories}
         value={categoryLimits}
         onChange={onCategoryLimitsChange}
         allowMlm={allowMlm}
         globalMlmCap={globalMlmCap}
+        unifiedBoothFeeCents={onBoothPriceCentsChange ? boothPriceCents : undefined}
       />
     </div>
   )

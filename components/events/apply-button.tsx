@@ -72,6 +72,11 @@ import { categoryRequiresDocumentation } from '@/lib/categories/regulated-catego
 import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
 import { ApplicationStatusActions, ApplicationStatusBadgeLink } from '@/components/vendor/application-status-actions'
 import { hasExistingVendorApplication } from '@/lib/vendor/application-status-ui'
+import {
+  computeApplicationBoothPriceCents,
+  isCommunityMarketListing,
+  resolveBoothUnitPriceCents,
+} from '@/lib/monetization/booth-pricing'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
 
 interface ExistingApplication {
@@ -124,6 +129,8 @@ export function ApplyButton({
   const [termsAcknowledged, setTermsAcknowledged] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('SQUARE')
   const [permitFile, setPermitFile] = useState<File | null>(null)
+  const [tableCount, setTableCount] = useState(1)
+  const showTableCount = isCommunityMarketListing(event.listing_type)
 
   const requireFullAttendance = event.require_full_attendance ?? true
   const scheduleDays = useMemo(() => resolveEventScheduleDays(event), [event])
@@ -144,6 +151,7 @@ export function ApplyButton({
       setSelectedDayKeys(new Set())
       setTermsAcknowledged(false)
       setPermitFile(null)
+      setTableCount(1)
       return
     }
 
@@ -176,7 +184,18 @@ export function ApplyButton({
       }))
 
   const allCategoriesFull = categoryMatch?.allCategoriesFull ?? false
-  const requiresPayment = (applySlot?.pricePerBooth ?? 0) > 0 && !allCategoriesFull
+  const applyUnitPriceCents = applySlot
+    ? resolveBoothUnitPriceCents(applySlot.pricePerBooth, event.booth_price_cents ?? 0)
+    : 0
+  const checkoutBoothPriceCents =
+    applySlot && !allCategoriesFull
+      ? computeApplicationBoothPriceCents(
+          applySlot.pricePerBooth,
+          event,
+          showTableCount ? tableCount : 1
+        )
+      : 0
+  const requiresPayment = checkoutBoothPriceCents > 0 && !allCategoriesFull
   const isInstant = event.booking_mode === 'instant'
   const partialDaySelectionReady =
     requireFullAttendance || selectedDayKeys.size > 0
@@ -338,6 +357,7 @@ export function ApplyButton({
         attendingDates: attendance.attendingDates,
         paymentMethod,
         applicableDocumentationUrl,
+        tableCount: showTableCount ? tableCount : 1,
       }),
     })
 
@@ -655,7 +675,7 @@ export function ApplyButton({
 
   const feePreview =
     applySlot && requiresPayment
-      ? computePlatformFeeCents(applySlot.pricePerBooth, resolveEventFeeConfig(event))
+      ? computePlatformFeeCents(checkoutBoothPriceCents, resolveEventFeeConfig(event))
       : 0
 
   return (
@@ -793,14 +813,38 @@ export function ApplyButton({
                   <span className="text-muted-foreground">Applying as</span>
                   <span className="font-semibold">{applySlot.categoryName}</span>
                 </div>
+                {showTableCount && applyUnitPriceCents > 0 ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="table-count">Tables / booths</Label>
+                    <Input
+                      id="table-count"
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={tableCount}
+                      onChange={(e) => {
+                        const n = Number.parseInt(e.target.value, 10)
+                        setTableCount(Number.isFinite(n) && n >= 1 ? Math.min(20, n) : 1)
+                      }}
+                    />
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Booth fee</span>
                   <span className="font-semibold">
-                    {applySlot.pricePerBooth === 0
+                    {checkoutBoothPriceCents === 0
                       ? 'Free'
-                      : formatCents(applySlot.pricePerBooth)}
+                      : formatCents(checkoutBoothPriceCents)}
                   </span>
                 </div>
+                {showTableCount && tableCount > 1 && checkoutBoothPriceCents > 0 ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    {tableCount} tables at {formatCents(applyUnitPriceCents)} each
+                    {(event.multi_table_discount_percent ?? 0) > 0
+                      ? ` — ${event.multi_table_discount_percent}% multi-table discount applied`
+                      : ''}
+                  </p>
+                ) : null}
                 {/*
                  * Public vendor view — platform-fee math is
                  * intentionally hidden. Coordinators see the
@@ -819,7 +863,7 @@ export function ApplyButton({
               <VendorPaymentMethodSelector
                 value={paymentMethod}
                 onChange={setPaymentMethod}
-                boothPriceCents={applySlot?.pricePerBooth ?? 0}
+                boothPriceCents={checkoutBoothPriceCents}
                 platformFeeCents={feePreview}
                 coordinatorEtransferEmail={coordinatorEtransferEmail}
                 squareConnected={squareConnected}

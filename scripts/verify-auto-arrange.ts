@@ -30,6 +30,7 @@ import {
   PATRON_VISION_WIDTH_FT,
 } from '../components/coordinator/floor-plan-v2/engine/patron-flow'
 import { PERIMETER_WALL_THICKNESS_FT } from '../components/coordinator/floor-plan-v2/interactions/perimeter-walls'
+import { rotatedAabb } from '../components/coordinator/floor-plan-v2/interactions/geometry'
 import {
   consolidateBoothsForAutoArrange,
   vendorTableMetaFromApplications,
@@ -521,33 +522,12 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
   const booths = result.doc.objects.filter(
     (o): o is BoothObject => o.kind === 'booth'
   )
-  let minGap = Infinity
-  for (let i = 0; i < booths.length; i++) {
-    for (let j = i + 1; j < booths.length; j++) {
-      const a = booths[i]!
-      const b = booths[j]!
-      const gapX = Math.max(
-        0,
-        Math.max(a.x, b.x) - Math.min(a.x + a.width, b.x + b.width)
-      )
-      const gapY = Math.max(
-        0,
-        Math.max(a.y, b.y) - Math.min(a.y + a.height, b.y + b.height)
-      )
-      if (gapX === 0 && gapY === 0) continue
-      const edgeGap = gapX > 0 && gapY > 0 ? Math.min(gapX, gapY) : Math.max(gapX, gapY)
-      if (edgeGap < minGap) minGap = edgeGap
-    }
-  }
   const clearanceErrors = validateClearances(result.doc)
-  const gapOk =
-    booths.length >= 2 &&
-    minGap >= BOOTH_EDGE_CLEARANCE_FT - 1e-6 &&
-    clearanceErrors.length === 0
+  const gapOk = booths.length >= 2 && clearanceErrors.length === 0
   console.log('')
   console.log('=== Booth 2ft edge clearance ===')
   console.log(
-    `${gapOk ? 'PASS' : 'FAIL'}  min edge gap=${minGap.toFixed(2)}ft need>=${BOOTH_EDGE_CLEARANCE_FT}ft placed=${booths.length}`
+    `${gapOk ? 'PASS' : 'FAIL'}  rotated-AABB clearance validation (placed=${booths.length}, violations=${clearanceErrors.length})`
   )
   if (gapOk) pass++
   else fail++
@@ -572,17 +552,11 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
   const perimeterBooths = perimeterResult.doc.objects.filter(
     (o) => o.kind === 'booth'
   )
-  const cx = 40 / 2
-  const cy = 72 / 2
-  const centerDistances = centerBooths.map((b) =>
-    Math.hypot(b.x + b.width / 2 - cx, b.y + b.height / 2 - cy)
-  )
-  centerDistances.sort((a, b) => a - b)
+  const angledCount = centerBooths.filter((b) => Math.abs(b.rotation) > 0.5).length
   const centerOutOk =
     centerResult.placedCount >= 8 &&
     validateClearances(centerResult.doc).length === 0 &&
-    centerDistances.length >= 2 &&
-    centerDistances[0]! <= centerDistances[centerDistances.length - 1]!
+    angledCount >= Math.min(4, centerBooths.length)
   const perimeterOk =
     perimeterResult.placedCount >= 4 &&
     validateClearances(perimeterResult.doc, {
@@ -624,7 +598,7 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
   console.log('')
   console.log('=== Auto-arrange modes ===')
   console.log(
-    `${centerOutOk ? 'PASS' : 'FAIL'}  center-out spiral places from centroid outward (placed=${centerResult.placedCount})`
+    `${centerOutOk ? 'PASS' : 'FAIL'}  patron-flow mode places angled booths with clearances (placed=${centerResult.placedCount}, angled=${angledCount})`
   )
   console.log(
     `${perimeterOk ? 'PASS' : 'FAIL'}  perimeter-only snaps booths to wall faces (placed=${perimeterResult.placedCount})`

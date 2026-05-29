@@ -3,13 +3,17 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  PLACEMENT_AVAILABLE,
+  PLACEMENT_VIOLATION,
+} from './placement-theme'
 
 /**
  * Persistent canvas allocation legend.
  *
  * Pinned to the bottom-left corner of the canvas viewport so it
  * stays visible while the user pans / zooms / draws / runs
- * Auto-Arrange. Explains the meaning of the green / red status
+ * Auto-Arrange. Explains the meaning of the sky / red status
  * colours that the canvas applies to booth and zone overlays so
  * coordinators can decode placement feedback without needing to
  * memorise the colour grammar.
@@ -35,7 +39,7 @@ const ITEMS: LegendItem[] = [
       'Valid space — meets clearance and category-proximity rules. Safe to drop a booth here.',
   },
   {
-    swatchClass: 'bg-rose-500 ring-1 ring-rose-700/30',
+    swatchClass: PLACEMENT_VIOLATION.tailwindSwatch,
     label: 'Violation',
     detail:
       'Constraint violation — fails the 5-column / 2-row same-category freeze, overlaps a barrier, or blocks an emergency corridor.',
@@ -78,8 +82,18 @@ export function CanvasLegend({ className }: { className?: string }) {
         )}
       >
         <span className="flex items-center gap-0.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500 ring-1 ring-emerald-700/30" />
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-rose-500 ring-1 ring-rose-700/30" />
+          <span
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm',
+              PLACEMENT_AVAILABLE.tailwindSwatchCollapsed
+            )}
+          />
+          <span
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm',
+              PLACEMENT_VIOLATION.tailwindSwatch
+            )}
+          />
         </span>
         Legend
         <ChevronUp className="h-3 w-3" />
