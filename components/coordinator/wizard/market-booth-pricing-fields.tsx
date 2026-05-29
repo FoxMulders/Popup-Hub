@@ -26,7 +26,7 @@ export function MarketBoothPricingFields({
     multiTableDiscountPercent !== undefined
 
   return (
-    <div className="rounded-lg border border-stone-200 bg-canvas p-4 space-y-4">
+    <div className="wizard-glass-inset space-y-4 rounded-xl p-4">
       <div>
         <h3 className="text-sm font-heading font-semibold text-forest">Booth fee</h3>
         <p className="mt-1 text-xs text-muted-foreground max-w-2xl">

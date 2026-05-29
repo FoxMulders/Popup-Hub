@@ -64,6 +64,10 @@ import {
   focusWizardField,
   getWizardStep1ValidationError,
 } from '@/lib/wizard/wizard-step1-validation'
+import {
+  focusWizardStep2Field,
+  getWizardStep2ValidationError,
+} from '@/lib/wizard/wizard-step2-validation'
 import type { PlaceResult } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import { WizardAmbientShell, WizardDivider } from '@/components/coordinator/wizard/wizard-ui'
@@ -842,6 +846,19 @@ export function MarketSetupWizard({
     []
   )
 
+  function validateStep2(): boolean {
+    const error = getWizardStep2ValidationError({
+      categoryLimits,
+      skipVenueLayout,
+      requireBoothPrice: !isQuarterAuctionListing(listingType),
+      boothPriceCents,
+    })
+    if (!error) return true
+    toast.error(error.message)
+    focusWizardStep2Field(error.fieldId)
+    return false
+  }
+
   function validateStep1(): boolean {
     const error = getWizardStep1ValidationError({
       name,
@@ -885,6 +902,7 @@ export function MarketSetupWizard({
       // Step 2 — Capacity. If the user opted out of the layout canvas the
       // wizard publishes here; otherwise advance to the Floor Plan.
       if (currentStep === 2) {
+        if (!validateStep2()) return
         if (skipVenueLayout) {
           const result = await autosave({ publish: true })
           if (!result.ok || !result.eventId) {
