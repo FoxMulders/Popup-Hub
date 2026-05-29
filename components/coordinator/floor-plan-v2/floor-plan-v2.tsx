@@ -36,7 +36,7 @@ import {
   docFromLegacyRooms,
   legacyRoomsFromDoc,
 } from './state/legacy-bridge'
-import { reconcileCanvasExtents } from './state/room-canvas'
+import { reconcileCanvasExtents, roomUnionBounds } from './state/room-canvas'
 import {
   clearMultiRoomDraft,
   loadMultiRoomDraft,
@@ -914,6 +914,26 @@ export function FloorPlanV2({
 
   const viewportApiRef = useRef<ViewportApi | null>(null)
   const [currentZoom, setCurrentZoom] = useState(1)
+  const [canvasFullscreen, setCanvasFullscreen] = useState(false)
+
+  useEffect(() => {
+    if (!canvasFullscreen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCanvasFullscreen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [canvasFullscreen])
+
+  const canvasExtentsKey = `${store.doc.canvasWidthFt}:${store.doc.canvasLengthFt}`
+  useEffect(() => {
+    const api = viewportApiRef.current
+    const frames = store.doc.rooms ?? []
+    if (!api || frames.length === 0) return
+    const bounds = roomUnionBounds(frames)
+    api.fitToBoundsStepped(bounds, { padding: 0.12, zoomMax: 1 })
+  }, [canvasExtentsKey, store.doc.rooms?.length])
+
   const handleViewportReady = useCallback((api: ViewportApi | null) => {
     viewportApiRef.current = api
   }, [])
@@ -1282,7 +1302,15 @@ export function FloorPlanV2({
   }, [joinPlan.unjoinGroupId, store])
 
   return (
-    <div id="floor-plan-workspace" className={cn('flex flex-col gap-2 min-h-0', className)}>
+    <div
+      id="floor-plan-workspace"
+      className={cn(
+        'flex flex-col gap-2 min-h-0',
+        canvasFullscreen &&
+          'fixed inset-0 z-50 h-screen w-screen bg-stone-50 p-2 sm:p-3',
+        className
+      )}
+    >
       <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 pb-2 shrink-0">
         <div className="min-w-0">
           <h2 className="text-lg font-bold tracking-tight text-stone-900">
@@ -1382,21 +1410,15 @@ export function FloorPlanV2({
           onTableSizeChange={
             onBaselineTableLengthChange ? handleTableSizeChange : undefined
           }
+          rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
+          activeRoomId={selectedRoomId ?? activeRoomId}
+          onSelectRoom={handleSelectRoom}
+          onAddRoom={onAddRoom}
+          onRenameRoom={onRenameRoom}
+          onDeleteRoom={onDeleteRoom}
+          canvasFullscreen={canvasFullscreen}
+          onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
         />
-
-        {onAddRoom && onRenameRoom && onDeleteRoom ? (
-          <div className="mt-2">
-            <LayoutRoomBar
-              rooms={layoutRooms}
-              activeRoomId={selectedRoomId ?? activeRoomId}
-              onSelectRoom={handleSelectRoom}
-              onAddRoom={onAddRoom}
-              onRenameRoom={onRenameRoom}
-              onDeleteRoom={onDeleteRoom}
-              slim
-            />
-          </div>
-        ) : null}
       </div>
 
       <div className="flex flex-1 min-h-0 gap-2">

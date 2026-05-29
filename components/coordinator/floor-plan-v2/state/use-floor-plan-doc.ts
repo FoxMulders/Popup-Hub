@@ -1,6 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  clampRoomMoveDelta,
+  clampRoomResizePatch,
+  reconcileCanvasExtents,
+  type RoomResizePatch,
+} from './room-canvas'
 import type { FloorPlanDoc, PlacedObject } from './types'
 
 /**
@@ -110,7 +116,17 @@ export interface FloorPlanDocStore {
     dx: number,
     dy: number,
     options?: { pushHistory?: boolean }
-  ) => void
+  ) => boolean
+
+  /**
+   * Resize a room frame (origin + width/length). Child objects keep
+   * their global coords. Returns false only when no frames exist.
+   */
+  resizeRoomFrame: (
+    roomId: string,
+    patch: RoomResizePatch,
+    options?: { pushHistory?: boolean }
+  ) => boolean
 
   /**
    * Fuse a list of room frames into a single dissolved zone. Every
@@ -336,42 +352,76 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const pushHistory = options?.pushHistory ?? true
       const current = docRef.current
       const frames = current.rooms ?? []
-      if (frames.length === 0) return
-      if (dx === 0 && dy === 0) return
-      const objectRoom = current.objectRoom ?? {}
+      if (frames.length === 0) return false
+      if (dx === 0 && dy === 0) return true
 
+      const { dx: clampedDx, dy: clampedDy } = clampRoomMoveDelta(
+        frames,
+        roomId,
+        dx,
+        dy
+      )
+      if (clampedDx === 0 && clampedDy === 0) return false
+
+      const objectRoom = current.objectRoom ?? {}
       const nextFrames = frames.map((f) =>
         f.id === roomId
-          ? { ...f, originX: f.originX + dx, originY: f.originY + dy }
+          ? {
+              ...f,
+              originX: f.originX + clampedDx,
+              originY: f.originY + clampedDy,
+            }
           : f
       )
       const nextObjects = current.objects.map((o) => {
         if (objectRoom[o.id] !== roomId) return o
-        return { ...o, x: o.x + dx, y: o.y + dy } as PlacedObject
+        return {
+          ...o,
+          x: o.x + clampedDx,
+          y: o.y + clampedDy,
+        } as PlacedObject
       })
-
-      // Recompute the unified canvas extents from the new frame union
-      // so the visible canvas always ends at the far-right / bottom of
-      // the rightmost room.
-      let maxX = 0
-      let maxY = 0
-      for (const f of nextFrames) {
-        const right = Math.max(0, f.originX) + f.widthFt
-        const bottom = Math.max(0, f.originY) + f.lengthFt
-        if (right > maxX) maxX = right
-        if (bottom > maxY) maxY = bottom
-      }
+      const extents = reconcileCanvasExtents(nextFrames)
 
       commit(
         {
           ...current,
           objects: nextObjects,
           rooms: nextFrames,
-          canvasWidthFt: Math.max(maxX, current.canvasWidthFt),
-          canvasLengthFt: Math.max(maxY, current.canvasLengthFt),
+          canvasWidthFt: extents.canvasWidthFt,
+          canvasLengthFt: extents.canvasLengthFt,
         },
         pushHistory
       )
+      return true
+    },
+    [commit]
+  )
+
+  const resizeRoomFrame = useCallback<FloorPlanDocStore['resizeRoomFrame']>(
+    (roomId, patch, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const current = docRef.current
+      const frames = current.rooms ?? []
+      if (frames.length === 0) return false
+
+      const clamped = clampRoomResizePatch(frames, roomId, patch)
+
+      const nextFrames = frames.map((f) =>
+        f.id === roomId ? { ...f, ...clamped } : f
+      )
+      const extents = reconcileCanvasExtents(nextFrames)
+
+      commit(
+        {
+          ...current,
+          rooms: nextFrames,
+          canvasWidthFt: extents.canvasWidthFt,
+          canvasLengthFt: extents.canvasLengthFt,
+        },
+        pushHistory
+      )
+      return true
     },
     [commit]
   )
@@ -563,6 +613,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       replaceObjects,
       patchDoc,
       moveRoomFrame,
+      resizeRoomFrame,
       joinRooms,
       joinSelection,
       unjoinRooms,
@@ -586,6 +637,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       replaceObjects,
       patchDoc,
       moveRoomFrame,
+      resizeRoomFrame,
       joinRooms,
       joinSelection,
       unjoinRooms,

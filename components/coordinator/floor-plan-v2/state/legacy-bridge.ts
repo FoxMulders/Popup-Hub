@@ -41,6 +41,7 @@ import type {
   PlacedObject,
   RoomFrame,
 } from './types'
+import { reconcileCanvasExtents } from './room-canvas'
 import { makeEmptyDoc } from './types'
 
 const FT = 1
@@ -311,33 +312,16 @@ export function docFromLegacyRoom(room: LayoutRoom | null): FloorPlanDoc {
   }
 }
 
-/** Padding (ft) added around the room union when sizing the unified canvas. */
-const UNIFIED_CANVAS_PAD_FT = 0
-
 /**
  * Compute the unified canvas extents from a list of room frames.
- * The canvas always starts at `(0, 0)` and stretches to the far
- * corner of the rightmost/bottommost room. Room origins should be
- * non-negative; if any are negative they're effectively clamped via
- * `Math.max` so the canvas still anchors at zero.
+ * Applies margin padding around the room union.
  */
 export function unifiedCanvasExtents(frames: ReadonlyArray<RoomFrame>): {
   width: number
   length: number
 } {
-  if (frames.length === 0) return { width: 50, length: 50 }
-  let maxX = 0
-  let maxY = 0
-  for (const f of frames) {
-    const right = Math.max(0, f.originX) + f.widthFt
-    const bottom = Math.max(0, f.originY) + f.lengthFt
-    if (right > maxX) maxX = right
-    if (bottom > maxY) maxY = bottom
-  }
-  return {
-    width: maxX + UNIFIED_CANVAS_PAD_FT,
-    length: maxY + UNIFIED_CANVAS_PAD_FT,
-  }
+  const { canvasWidthFt, canvasLengthFt } = reconcileCanvasExtents(frames)
+  return { width: canvasWidthFt, length: canvasLengthFt }
 }
 
 /**

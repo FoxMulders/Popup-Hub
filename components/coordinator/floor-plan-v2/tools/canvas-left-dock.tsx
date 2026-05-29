@@ -3,6 +3,8 @@
 import {
   ArrowUpRight,
   DoorOpen,
+  Eye,
+  EyeOff,
   Hand,
   Minus,
   MousePointer2,
@@ -21,6 +23,8 @@ import type { CanvasToolHostProps } from './canvas-tool-types'
 interface CanvasLeftDockProps extends CanvasToolHostProps {
   collapsed?: boolean
   className?: string
+  showLabels?: boolean
+  onShowLabelsChange?: (show: boolean) => void
 }
 
 interface DockButtonProps {

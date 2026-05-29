@@ -26,6 +26,12 @@ import {
   frameListFromRooms,
 } from '../components/coordinator/floor-plan-v2/state/legacy-bridge'
 import {
+  CANVAS_DIMENSION_SCALE,
+  clampRoomMoveDelta,
+  reconcileCanvasExtents,
+  roomUnionBounds,
+} from '../components/coordinator/floor-plan-v2/state/room-canvas'
+import {
   computeRoomWallSegments,
   detectMergedRoomPairs,
   pointHitsFrameStroke,
@@ -135,10 +141,12 @@ console.log('=== Multi-room canvas verification ===\n')
     doc.objects.find((o) => o.id === 'b-3')?.x === 50 + 2,
     `b-3.x=${doc.objects.find((o) => o.id === 'b-3')?.x}`
   )
+  const expectedExtents = reconcileCanvasExtents(doc.rooms ?? [])
   check(
-    'Unified extents = union of rooms',
-    doc.canvasWidthFt === 90 && doc.canvasLengthFt === 50,
-    `${doc.canvasWidthFt}x${doc.canvasLengthFt}`
+    'Unified extents = union of rooms + margin (capped at 5× primary)',
+    doc.canvasWidthFt === expectedExtents.canvasWidthFt &&
+      doc.canvasLengthFt === expectedExtents.canvasLengthFt,
+    `${doc.canvasWidthFt}x${doc.canvasLengthFt} expected ${expectedExtents.canvasWidthFt}x${expectedExtents.canvasLengthFt}`
   )
   check(
     'objectRoom map tags every object',
@@ -394,8 +402,47 @@ console.log('=== Multi-room canvas verification ===\n')
 {
   const empty = unifiedCanvasExtents([])
   check(
-    'Empty room list yields a 50x50 fallback canvas',
-    empty.width === 50 && empty.length === 50
+    'Empty room list yields fallback canvas with margin',
+    empty.width === 74 && empty.length === 74
+  )
+}
+
+// ----- Case 10: 5× primary-room per-dimension cap on canvas extents -----
+{
+  const primary = makeRoom('r-main', 'Main Hall', 50, 50, 0, 0)
+  const farAnnex = makeRoom('r-far', 'Far Wing', 40, 40, 220, 0)
+  const frames = frameListFromRooms([primary, farAnnex])
+  const extents = reconcileCanvasExtents(frames)
+  const capW = 50 * CANVAS_DIMENSION_SCALE
+  check(
+    'Canvas width clamps to 5× primary width when union exceeds cap',
+    extents.canvasWidthFt === capW,
+    `canvasWidthFt=${extents.canvasWidthFt} expected ${capW}`
+  )
+  check(
+    'Room union maxX is beyond the cap (geometry uncapped)',
+    roomUnionBounds(frames).maxX === 260
+  )
+}
+
+// ----- Case 11: room drag clamped at canvas ceiling -----
+{
+  const main = makeRoom('r-main', 'Main Hall', 50, 50, 0, 0)
+  const annex = makeRoom('r-annex', 'Annex', 40, 40, 200, 0)
+  const frames = frameListFromRooms([main, annex])
+  const { dx, dy } = clampRoomMoveDelta(frames, 'r-annex', 100, 0)
+  const moved = frames.map((f) =>
+    f.id === 'r-annex' ? { ...f, originX: f.originX + dx, originY: f.originY + dy } : f
+  )
+  const bounds = roomUnionBounds(moved)
+  check(
+    'Drag toward limit is partially applied',
+    dx > 0 && dx < 100,
+    `dx=${dx}`
+  )
+  check(
+    'Post-drag union respects 5× primary width cap',
+    bounds.maxX <= 50 * CANVAS_DIMENSION_SCALE
   )
 }
 

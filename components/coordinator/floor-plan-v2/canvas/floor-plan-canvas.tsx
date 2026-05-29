@@ -105,6 +105,7 @@ export function FloorPlanCanvas({
   onProximityViolation,
   onOverlapViolation,
   onRoomCanvasLimitBlocked,
+  showLabels = true,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
 }: FloorPlanCanvasProps) {
@@ -504,12 +505,14 @@ export function FloorPlanCanvas({
               activeRoomId={activeRoomId ?? null}
               selectedRoomId={selectedRoomId ?? null}
               pxPerFt={pxPerFt}
+              showLabels={showLabels}
             />
           ) : null}
           <CanvasObjects
             objects={store.doc.objects}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
+            showLabels={showLabels}
             overlappingIds={overlappingIds}
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}

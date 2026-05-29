@@ -92,6 +92,15 @@ export interface ViewportApi extends ViewportState {
     bounds: { minX: number; minY: number; maxX: number; maxY: number },
     options?: { padding?: number }
   ) => void
+  /**
+   * Like `fitToBounds`, but picks zoom by stepping down from `zoomMax`
+   * (default 1.0) in multiplicative `stepFactor` decrements (default
+   * 0.8) until the bounds fit — used for adaptive multi-room framing.
+   */
+  fitToBoundsStepped: (
+    bounds: { minX: number; minY: number; maxX: number; maxY: number },
+    options?: { padding?: number; stepFactor?: number; zoomMax?: number }
+  ) => void
   scrollHandlers: {
     onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void
     onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void
@@ -399,6 +408,61 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     [scrollRef]
   )
 
+  const fitToBoundsStepped = useCallback<ViewportApi['fitToBoundsStepped']>(
+    (bounds, options) => {
+      const padding = options?.padding ?? 0.12
+      const stepFactor = options?.stepFactor ?? 0.8
+      const zoomMax = options?.zoomMax ?? 1
+      const scroll = scrollRef.current
+      const widthFt = bounds.maxX - bounds.minX
+      const heightFt = bounds.maxY - bounds.minY
+      if (widthFt <= 0 || heightFt <= 0) return
+      if (!scroll) return
+
+      const math = getZoomMathRef.current()
+      const viewportPxW = scroll.clientWidth
+      const viewportPxH = scroll.clientHeight
+      if (viewportPxW <= 0 || viewportPxH <= 0) return
+
+      const usableW = Math.max(40, viewportPxW * (1 - padding * 2))
+      const usableH = Math.max(40, viewportPxH * (1 - padding * 2))
+
+      let targetZoom = zoomMax
+      while (targetZoom >= ZOOM_MIN) {
+        const pxPerFt = math.basePxPerFt * targetZoom
+        if (
+          widthFt * pxPerFt <= usableW &&
+          heightFt * pxPerFt <= usableH
+        ) {
+          break
+        }
+        targetZoom *= stepFactor
+      }
+      targetZoom = clampZoom(targetZoom)
+
+      const newPxPerFt = math.basePxPerFt * targetZoom
+      const centerXFt = (bounds.minX + bounds.maxX) / 2
+      const centerYFt = (bounds.minY + bounds.maxY) / 2
+      const target = computeScroll(
+        centerXFt,
+        centerYFt,
+        newPxPerFt,
+        math.padFt,
+        viewportPxW / 2,
+        viewportPxH / 2
+      )
+
+      if (zoomRef.current !== targetZoom) {
+        pendingScrollRef.current = target
+        setZoomState(targetZoom)
+      } else {
+        scroll.scrollLeft = target.left
+        scroll.scrollTop = target.top
+      }
+    },
+    [scrollRef]
+  )
+
   const onWheel = useCallback(
     (e: WheelEvent<HTMLDivElement>) => {
       if (!(e.ctrlKey || e.metaKey)) return
@@ -584,6 +648,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     resetZoom,
     centerView,
     fitToBounds,
+    fitToBoundsStepped,
     scrollHandlers: {
       onPointerDown,
       onPointerMove,

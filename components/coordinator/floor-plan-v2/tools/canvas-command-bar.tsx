@@ -6,8 +6,10 @@ import {
   ClipboardPaste,
   Combine,
   Copy,
+  Expand,
   LayoutGrid,
   Locate,
+  Minimize2,
   Minus,
   Plus,
   Redo2,
@@ -19,9 +21,21 @@ import {
 import { cn } from '@/lib/utils'
 import { TableSizePill } from './table-size-pill'
 import type { CanvasToolHostProps } from './canvas-tool-types'
+import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
+import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
+import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 
 interface CanvasCommandBarProps extends CanvasToolHostProps {
   className?: string
+  /** Inline room tabs + Add room (embedded in this ribbon). */
+  rooms?: LayoutRoom[]
+  activeRoomId?: string
+  onSelectRoom?: (roomId: string) => void
+  onAddRoom?: (presetId?: LayoutRoomPresetId) => void
+  onRenameRoom?: (roomId: string, name: string) => void
+  onDeleteRoom?: (roomId: string) => void
+  canvasFullscreen?: boolean
+  onToggleCanvasFullscreen?: () => void
 }
 
 function CommandButton({
@@ -89,12 +103,26 @@ export function CanvasCommandBar({
   onZoomOut,
   onZoomIn,
   onZoomReset,
+  rooms,
+  activeRoomId,
+  onSelectRoom,
+  onAddRoom,
+  onRenameRoom,
+  onDeleteRoom,
+  canvasFullscreen = false,
+  onToggleCanvasFullscreen,
   className,
 }: CanvasCommandBarProps) {
   const hasSelection = selectedCount > 0
   const canAlign = selectedCount >= 2
   const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
   const showTableSize = Boolean(onTableSizeChange) && tableSizeFt != null
+  const showRooms =
+    Boolean(rooms?.length) &&
+    Boolean(onSelectRoom) &&
+    Boolean(onAddRoom) &&
+    Boolean(onRenameRoom) &&
+    Boolean(onDeleteRoom)
   const joinLabel =
     canJoinRooms && joinCandidateCount && joinCandidateCount > 1
       ? `Join (${joinCandidateCount})`
@@ -210,7 +238,41 @@ export function CanvasCommandBar({
         </>
       ) : null}
 
+      {showRooms ? (
+        <>
+          <div className="mx-1 h-6 w-px bg-stone-200" aria-hidden />
+          <LayoutRoomBar
+            rooms={rooms!}
+            activeRoomId={activeRoomId ?? rooms![0]!.id}
+            onSelectRoom={onSelectRoom!}
+            onAddRoom={onAddRoom!}
+            onRenameRoom={onRenameRoom!}
+            onDeleteRoom={onDeleteRoom!}
+            embedded
+          />
+        </>
+      ) : null}
+
       <div className="ml-auto inline-flex items-center gap-2">
+        {onToggleCanvasFullscreen ? (
+          <CommandButton
+            onClick={onToggleCanvasFullscreen}
+            title={canvasFullscreen ? 'Exit full screen (Esc)' : 'Full screen editor'}
+            label={canvasFullscreen ? 'Exit' : 'Full Screen'}
+            className={
+              canvasFullscreen
+                ? 'bg-stone-800 text-white hover:bg-stone-700'
+                : undefined
+            }
+          >
+            {canvasFullscreen ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Expand className="h-3.5 w-3.5" />
+            )}
+          </CommandButton>
+        ) : null}
+
         {showTableSize ? (
           <TableSizePill
             value={tableSizeFt!}
