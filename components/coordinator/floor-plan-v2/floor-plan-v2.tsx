@@ -989,6 +989,15 @@ export function FloorPlanV2({
       toast.warning(
         `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} — ${result.droppedCount} did not fit and were dropped.`
       )
+    } else if (result.unsatisfiedCategoryCount > 0) {
+      // The clearance pass succeeded but the same-category proximity
+      // rule (< 5 cols AND < 2 rows) couldn't be honored for every
+      // booth — surface the overflow so the coordinator knows their
+      // canvas is too tight to disperse every category.
+      toast.warning(
+        `Auto-arrange complete. ${result.unsatisfiedCategoryCount} booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
+        { duration: 4500 }
+      )
     } else {
       toast.success(
         `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} with clearance.`

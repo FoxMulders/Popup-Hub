@@ -16,10 +16,15 @@
  * - Honors structural obstacles: walls, doors, and emergency_exit
  *   objects already placed in the doc are treated as immovable; the
  *   row pack routes around their AABBs.
- * - Diversifies categories: when picking which booth lands in which
- *   slot, we walk the slots in placement order and assign the
- *   highest-priority unused category — same rule the draw-time
- *   allocator uses, but applied to the whole layout in one pass.
+ * - Diversifies categories with a strict same-category proximity
+ *   guard: when the rotor would assign category X to a slot whose
+ *   center sits within `< 5 columns AND < 2 rows` of any already-placed
+ *   same-category booth, we skip past category X to the next category
+ *   that satisfies the guard. This is the same threshold the canvas
+ *   pointer hook uses on manual drags (`PROXIMITY_MIN_COLUMNS = 5`,
+ *   `PROXIMITY_MIN_ROWS = 2`), so an arranged layout never produces a
+ *   violation that a coordinator's mouse would have been blocked
+ *   from creating.
  *
  * What this DOES NOT do (deferred to v2):
  * - Patron pathfinding simulation / 100% visibility scoring.
@@ -38,6 +43,10 @@ import type {
   PlacedObject,
 } from '../state/types'
 import { rotatedAabb } from '../interactions/geometry'
+import {
+  PROXIMITY_MIN_COLUMNS,
+  PROXIMITY_MIN_ROWS,
+} from '../interactions/category-rules'
 
 /** Standard chair = 1.75 ft on a side. */
 export const CHAIR_LENGTH_FT = 1.75
@@ -65,6 +74,14 @@ export interface AutoArrangeResult {
   placedCount: number
   /** How many booths the engine had to drop (couldn't fit at any rotation). */
   droppedCount: number
+  /**
+   * How many booths landed without an assigned category because every
+   * candidate would have violated the same-category proximity rule
+   * (`< 5 columns AND < 2 rows`) against an already-placed booth.
+   * The caller should surface a warning when this is non-zero so the
+   * coordinator knows their canvas is too tight to host every category.
+   */
+  unsatisfiedCategoryCount: number
 }
 
 interface Rect {
@@ -140,7 +157,7 @@ export function autoArrange(
     (o): o is BoothObject => o.kind === 'booth'
   )
   if (sourceBooths.length === 0) {
-    return { doc, placedCount: 0, droppedCount: 0 }
+    return { doc, placedCount: 0, droppedCount: 0, unsatisfiedCategoryCount: 0 }
   }
 
   // Use the median footprint so a single oversized outlier booth
@@ -218,6 +235,7 @@ export function autoArrange(
       doc: { ...doc, objects: otherObjects },
       placedCount: 0,
       droppedCount: sourceBooths.length,
+      unsatisfiedCategoryCount: 0,
     }
   }
 
@@ -226,6 +244,99 @@ export function autoArrange(
   let nextSourceIdx = 0
   let categoryRotor = 0
   const categoryCount = eventCategoryNames?.length ?? 0
+  /*
+   * Per-category use count. The slot allocator prefers the
+   * least-used category at each step (with the rotor as the tie
+   * breaker), so a 50-booth row with 4 categories spreads as
+   * 12-13-12-13 rather than dumping all of category[0] on the
+   * left half before rotating.
+   */
+  const categoryUseCount = new Map<string, number>()
+  if (eventCategoryNames) {
+    for (const name of eventCategoryNames) categoryUseCount.set(name, 0)
+  }
+  let unsatisfiedCategoryCount = 0
+  const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
+
+  /*
+   * Returns true if a booth of `category` placed at `rect` would sit
+   * within `< 5 columns AND < 2 rows` (center-to-center, in grid
+   * spaces) of any already-placed booth that shares the same
+   * category. Mirrors `findBoothProximityViolation` from
+   * interactions/category-rules but works directly on the engine's
+   * rect/category pair so we don't have to round-trip through the
+   * BoothObject shape during the inner loop.
+   */
+  function violatesProximity(
+    rect: Rect,
+    category: string | null
+  ): boolean {
+    if (!category) return false
+    const cx = rect.x + rect.width / 2
+    const cy = rect.y + rect.height / 2
+    for (let i = 0; i < newBooths.length; i++) {
+      const placed = newBooths[i]!
+      if ((placed.categoryName ?? null) !== category) continue
+      const placedRect = placedRects[i]!
+      const ocx = placedRect.x + placedRect.width / 2
+      const ocy = placedRect.y + placedRect.height / 2
+      const dxColumns = Math.abs(cx - ocx) / gridSpacingFt
+      const dyRows = Math.abs(cy - ocy) / gridSpacingFt
+      if (
+        dxColumns < PROXIMITY_MIN_COLUMNS &&
+        dyRows < PROXIMITY_MIN_ROWS
+      ) {
+        return true
+      }
+    }
+    return false
+  }
+
+  /*
+   * Pick the best category for the candidate slot.
+   *
+   *   1. Build the rotor-ordered list (rotor, rotor+1, … wrap) so
+   *      sequential slots still tend to alternate categories.
+   *   2. Stable-sort that list by current use-count ascending — the
+   *      least-used category wins ties so the layout balances over
+   *      the full canvas.
+   *   3. Walk the sorted list and pick the first category whose
+   *      placement at `rect` does NOT violate the proximity rule.
+   *   4. If every candidate violates, return `null`. The caller
+   *      records the slot as "untagged" and increments the
+   *      unsatisfied counter so the UI can warn the coordinator.
+   *
+   * Returns the chosen category name plus the number of categories
+   * we walked past so the caller can advance the rotor accordingly
+   * (skipping past blocked categories prevents the same blocked
+   * pick from being tried again on the next slot).
+   */
+  function pickCategoryForSlot(rect: Rect): {
+    category: string | null
+    advanceBy: number
+  } {
+    if (categoryCount === 0) return { category: null, advanceBy: 0 }
+    const candidates: Array<{ name: string; rotorIdx: number }> = []
+    for (let i = 0; i < categoryCount; i++) {
+      const idx = (categoryRotor + i) % categoryCount
+      candidates.push({
+        name: eventCategoryNames![idx]!,
+        rotorIdx: i,
+      })
+    }
+    candidates.sort((a, b) => {
+      const ua = categoryUseCount.get(a.name) ?? 0
+      const ub = categoryUseCount.get(b.name) ?? 0
+      if (ua !== ub) return ua - ub
+      return a.rotorIdx - b.rotorIdx
+    })
+    for (const cand of candidates) {
+      if (!violatesProximity(rect, cand.name)) {
+        return { category: cand.name, advanceBy: cand.rotorIdx + 1 }
+      }
+    }
+    return { category: null, advanceBy: 1 }
+  }
 
   for (const row of rows) {
     if (nextSourceIdx >= sourceBooths.length) break
@@ -248,10 +359,24 @@ export function autoArrange(
 
       if (!hitsObstacle && !hitsBooth) {
         const src = sourceBooths[nextSourceIdx++]!
-        const category =
-          categoryCount > 0
-            ? eventCategoryNames![categoryRotor++ % categoryCount]
-            : src.categoryName ?? null
+        const { category, advanceBy } = pickCategoryForSlot(candidate)
+        if (categoryCount > 0) {
+          categoryRotor = (categoryRotor + advanceBy) % categoryCount
+        }
+        if (category) {
+          categoryUseCount.set(
+            category,
+            (categoryUseCount.get(category) ?? 0) + 1
+          )
+        } else if (categoryCount > 0) {
+          // Every category candidate was blocked by the proximity
+          // rule. Drop the booth into the layout untagged so it still
+          // satisfies the physical clearance pass, and surface the
+          // overflow count so the coordinator can widen the room.
+          unsatisfiedCategoryCount++
+        }
+        const finalCategory =
+          categoryCount > 0 ? category : src.categoryName ?? null
         const placed: BoothObject = {
           ...src,
           x: candidate.x,
@@ -259,7 +384,7 @@ export function autoArrange(
           width: boothW,
           height: boothH,
           rotation: 0,
-          ...(category ? { categoryName: category } : { categoryName: null }),
+          categoryName: finalCategory,
         }
         newBooths.push(placed)
         placedRects.push(candidate)
@@ -278,6 +403,7 @@ export function autoArrange(
     },
     placedCount,
     droppedCount,
+    unsatisfiedCategoryCount,
   }
 }
 
