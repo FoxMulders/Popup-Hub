@@ -55,6 +55,51 @@ export function WizardGlassPanel({
   return <Tag className={cn('wizard-glass-panel', className)}>{children}</Tag>
 }
 
+/** Step 1 zone — scroll anchor, glass panel, optional error halo from validation. */
+export function WizardZone({
+  id,
+  title,
+  subtitle,
+  children,
+  className,
+  variant = 'stack',
+}: {
+  id: string
+  title: string
+  subtitle?: string
+  children: ReactNode
+  className?: string
+  variant?: 'stack' | 'wide'
+}) {
+  return (
+    <section
+      id={id}
+      role="region"
+      aria-labelledby={`${id}-title`}
+      className={cn(
+        'wizard-zone wizard-glass-panel scroll-mt-24 p-4 sm:p-5',
+        variant === 'wide' && 'wizard-zone--wide',
+        className
+      )}
+    >
+      <header className="mb-4 space-y-1">
+        <h3
+          id={`${id}-title`}
+          className="wizard-zone-title font-sans text-[clamp(0.9375rem,0.4vw+0.85rem,1.125rem)] font-bold tracking-tight text-forest"
+        >
+          {title}
+        </h3>
+        {subtitle ? (
+          <p className="text-[0.8125rem] leading-snug text-muted-foreground">{subtitle}</p>
+        ) : null}
+      </header>
+      <div className={cn('space-y-4', variant === 'wide' && 'lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0')}>
+        {children}
+      </div>
+    </section>
+  )
+}
+
 export function WizardSectionTitle({
   children,
   className,

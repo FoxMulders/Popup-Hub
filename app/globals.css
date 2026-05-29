@@ -542,6 +542,38 @@
     opacity: 1;
   }
 
+  .wizard-zone--error {
+    animation: wizard-zone-shake 0.45s ease-in-out;
+    box-shadow:
+      0 0 0 1px rgb(184 92 69 / 0.35),
+      0 0 24px rgb(184 92 69 / 0.14),
+      var(--shadow-market-md);
+  }
+
+  .wizard-payment-chip input:focus-visible + svg,
+  .wizard-payment-chip:has(:focus-visible) {
+    outline: none;
+  }
+
+  @keyframes wizard-zone-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-3px);
+    }
+    40% {
+      transform: translateX(3px);
+    }
+    60% {
+      transform: translateX(-2px);
+    }
+    80% {
+      transform: translateX(2px);
+    }
+  }
+
   @keyframes wizard-orb-drift {
     0% {
       transform: translate(0, 0) scale(1);
@@ -594,6 +626,10 @@
     }
 
     .wizard-field-error {
+      animation: none;
+    }
+
+    .wizard-zone--error {
       animation: none;
     }
 

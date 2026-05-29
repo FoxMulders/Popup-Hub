@@ -5,8 +5,21 @@ import {
   type ScheduleBoundsFailureReason,
 } from '@/lib/events/schedule-bounds'
 import type { EventListingType } from '@/types/database'
+import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
 import { WIZARD_FIELD_ERROR_CLASS } from '@/components/coordinator/wizard/wizard-ui'
 import type { DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
+
+export const WIZARD_FIELD_ZONE: Record<WizardStep1FieldId, string> = {
+  'wizard-event-name': 'wizard-zone-identity',
+  'wizard-description': 'wizard-zone-identity',
+  'wizard-start-date': 'wizard-zone-schedule',
+  'wizard-end-date': 'wizard-zone-schedule',
+  'wizard-day-date': 'wizard-zone-schedule',
+  'wizard-loc-name': 'wizard-zone-venue',
+  'wizard-address': 'wizard-zone-venue',
+  'wizard-venue-map': 'wizard-zone-venue',
+  'edmonton-venue-template': 'wizard-zone-venue',
+}
 
 export type WizardStep1FieldId =
   | 'wizard-event-name'
@@ -73,6 +86,20 @@ export function getWizardStep1ValidationError(
 ): WizardStep1ValidationError | null {
   if (!input.name.trim()) {
     return { message: 'Event name is required', fieldId: 'wizard-event-name' }
+  }
+
+  const desc = input.description.trim()
+  if (!desc) {
+    return {
+      message: 'Description is required — vendors use this to decide whether to apply',
+      fieldId: 'wizard-description',
+    }
+  }
+  if (desc.length < DESCRIPTION_MIN_LENGTH) {
+    return {
+      message: `Description needs at least ${DESCRIPTION_MIN_LENGTH} characters (vendor mix, location, vibe)`,
+      fieldId: 'wizard-description',
+    }
   }
 
   if (isQuarterAuctionListing(input.listingType) && input.scheduleType === 'multi') {
@@ -157,11 +184,34 @@ export function focusWizardField(
 
   if (!el) return
 
+  const zoneId = WIZARD_FIELD_ZONE[fieldId]
+  const zoneEl = zoneId ? document.getElementById(zoneId) : null
+  if (zoneEl) {
+    zoneEl.classList.remove('wizard-zone--error')
+    void zoneEl.offsetWidth
+    zoneEl.classList.add('wizard-zone--error')
+    const clearZone = () => {
+      zoneEl.classList.remove('wizard-zone--error')
+      zoneEl.removeEventListener('animationend', clearZone)
+    }
+    zoneEl.addEventListener('animationend', clearZone)
+    zoneEl.scrollIntoView({
+      behavior:
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+      block: 'center',
+    })
+  }
+
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' })
+  if (!zoneEl) {
+    el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' })
+  }
 
   el.classList.remove(WIZARD_FIELD_ERROR_CLASS)
   // Force reflow so repeated validation re-triggers the shake animation.

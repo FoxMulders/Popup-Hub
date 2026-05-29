@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label'
 import {
   WizardFloatingInput,
   WizardFloatingTextarea,
-  WizardSectionTitle,
   WizardSelectionCard,
   WizardSelectionGroup,
   WizardSwitchRow,
+  WizardZone,
 } from '@/components/coordinator/wizard/wizard-ui'
+import { WizardPaymentPreviewStrip } from '@/components/coordinator/wizard/wizard-payment-preview-strip'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -29,7 +30,6 @@ import {
   WIZARD_FIELD_LABEL,
   WIZARD_INFO_BOX,
   WIZARD_INPUT,
-  WIZARD_PANEL_INNER,
   WIZARD_SELECT_CONTENT,
   WIZARD_SELECT_ITEM,
   WIZARD_SELECT_TRIGGER,
@@ -108,7 +108,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
   const autoFilled = props.autoFilledFields ?? new Set<FlyerFieldKey>()
 
   return (
-    <div className={cn(WIZARD_PANEL_INNER, 'relative')}>
+    <div className="wizard-step1-deck relative space-y-4">
       {props.parsingFlyer ? (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-cream/75 backdrop-blur-[2px]"
@@ -122,56 +122,109 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
           </div>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <WizardSectionTitle active>Core Event Setup</WizardSectionTitle>
-        <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">Draft</span>
-      </div>
-
-      <FlyerCoverUpload
-        coverImageUrl={props.coverImageUrl}
-        onFileSelected={props.onCoverFileSelected}
-        parsing={props.parsingFlyer}
-        label="Cover Image / Flyer"
-      />
-
-      <div className="space-y-2">
-        <Label className={WIZARD_FIELD_LABEL}>Listing Type</Label>
-        <WizardSelectionGroup label="Listing type">
-          <WizardSelectionCard
-            selected={props.listingType === 'community_market'}
-            onSelect={() => props.onListingTypeChange('community_market')}
-            aria-label="Community Market"
-          >
-            🎪 Community Market
-          </WizardSelectionCard>
-          <WizardSelectionCard
-            selected={props.listingType === 'garage_yard_sale'}
-            onSelect={() => props.onListingTypeChange('garage_yard_sale')}
-            aria-label="Quarter Auction"
-          >
-            🪙 Quarter Auction
-          </WizardSelectionCard>
-        </WizardSelectionGroup>
-        {props.listingType === 'garage_yard_sale' ? (
-          <p className={WIZARD_INFO_BOX}>
-            Quarter auctions appear on the patron map when published. Vendor booth applications are required —
-            instant book or juried review, depending on booking mode below. There is no assigned floor-plan booth
-            placement; set category caps on step 3 and run the live quarter auction from the coordinator dashboard.
+      <div className="flex flex-wrap items-center justify-between gap-3 px-0.5">
+        <div>
+          <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            Step 1
           </p>
-        ) : null}
+          <h2 className="font-heading text-[clamp(1.25rem,1.2vw+1rem,1.75rem)] font-bold tracking-tight text-forest">
+            Launch your market
+          </h2>
+        </div>
+        <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">
+          Draft
+        </span>
       </div>
 
-      <FlyerFieldHighlight fieldKey="name" autoFilledFields={autoFilled}>
-        <WizardFloatingInput
-          id="wizard-event-name"
-          label="Event Name *"
-          value={props.name}
-          onChange={(e) => props.onNameChange(e.target.value)}
-        />
-      </FlyerFieldHighlight>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <WizardZone
+          id="wizard-zone-identity"
+          title="Identity & story"
+          subtitle="What vendors and shoppers see first — name and description are required."
+        >
+          <FlyerCoverUpload
+            coverImageUrl={props.coverImageUrl}
+            onFileSelected={props.onCoverFileSelected}
+            parsing={props.parsingFlyer}
+            label="Cover image / flyer"
+          />
+          <FlyerFieldHighlight fieldKey="name" autoFilledFields={autoFilled}>
+            <WizardFloatingInput
+              id="wizard-event-name"
+              label="Event name *"
+              value={props.name}
+              onChange={(e) => props.onNameChange(e.target.value)}
+            />
+          </FlyerFieldHighlight>
+          <FlyerFieldHighlight fieldKey="description" autoFilledFields={autoFilled}>
+            <div className="space-y-1">
+              <WizardFloatingTextarea
+                id="wizard-description"
+                label="Description *"
+                value={props.description}
+                onChange={(e) => props.onDescriptionChange(e.target.value)}
+                rows={4}
+                maxLength={800}
+              />
+              <p
+                className={cn(
+                  'text-xs text-right tabular-nums',
+                  props.description.trim().length < DESCRIPTION_MIN_LENGTH
+                    ? 'text-harvest-700'
+                    : 'text-muted-foreground'
+                )}
+              >
+                {props.description.trim().length}/{DESCRIPTION_MIN_LENGTH} min · {props.description.length}
+                /800
+                {props.description.trim().length < DESCRIPTION_MIN_LENGTH ? (
+                  <span className="mt-0.5 block text-left whitespace-normal break-words">
+                    Mention vendor mix, neighborhood, and what makes the market worth visiting.
+                  </span>
+                ) : null}
+              </p>
+            </div>
+          </FlyerFieldHighlight>
+        </WizardZone>
 
-      <div className="space-y-2">
-        <Label className={WIZARD_FIELD_LABEL}>Schedule Type</Label>
+        <WizardZone
+          id="wizard-zone-schedule"
+          title="Schedule & booking"
+          subtitle="When the market runs and how vendors get approved."
+        >
+          <div className="space-y-2">
+            <Label className={WIZARD_FIELD_LABEL}>Listing type</Label>
+            <WizardSelectionGroup label="Listing type">
+              <WizardSelectionCard
+                selected={props.listingType === 'community_market'}
+                onSelect={() => props.onListingTypeChange('community_market')}
+                aria-label="Community Market"
+              >
+                <span className="block text-left font-semibold">Community market</span>
+                <span className="mt-1 block text-left text-xs font-normal text-muted-foreground">
+                  Booths, floor plan, Square or offline pay
+                </span>
+              </WizardSelectionCard>
+              <WizardSelectionCard
+                selected={props.listingType === 'garage_yard_sale'}
+                onSelect={() => props.onListingTypeChange('garage_yard_sale')}
+                aria-label="Quarter Auction"
+              >
+                <span className="block text-left font-semibold">Quarter auction</span>
+                <span className="mt-1 block text-left text-xs font-normal text-muted-foreground">
+                  Single day · live auction from dashboard
+                </span>
+              </WizardSelectionCard>
+            </WizardSelectionGroup>
+            {props.listingType === 'garage_yard_sale' ? (
+              <p className={WIZARD_INFO_BOX}>
+                Quarter auctions appear on the patron map when published. Vendor applications are required;
+                there is no floor-plan booth placement — set caps on step 3.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label className={WIZARD_FIELD_LABEL}>Schedule type</Label>
         {props.listingType === 'garage_yard_sale' ? (
           <p className={WIZARD_INFO_BOX}>
             Quarter auctions are limited to a single day. Multi-day scheduling is not available for this
@@ -199,34 +252,6 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
           onApply={props.onApplyWeekendRange}
         />
       </div>
-
-      <FlyerFieldHighlight fieldKey="description" autoFilledFields={autoFilled}>
-        <div className="space-y-1">
-          <WizardFloatingTextarea
-            id="wizard-description"
-            label="Description *"
-            value={props.description}
-            onChange={(e) => props.onDescriptionChange(e.target.value)}
-            rows={3}
-            maxLength={800}
-          />
-        <p
-          className={cn(
-            'text-xs text-right tabular-nums',
-            props.description.trim().length < DESCRIPTION_MIN_LENGTH
-              ? 'text-harvest-700'
-              : 'text-muted-foreground'
-          )}
-        >
-          {props.description.trim().length}/{DESCRIPTION_MIN_LENGTH} min · {props.description.length}/800
-          {props.description.trim().length < DESCRIPTION_MIN_LENGTH ? (
-            <span className="block text-left mt-0.5 whitespace-normal break-words">
-              Add vendor mix, location highlights, or shopper experience to clear the QA warning.
-            </span>
-          ) : null}
-        </p>
-        </div>
-      </FlyerFieldHighlight>
 
       {props.effectiveScheduleType === 'single' ? (
         // On mobile: single column so each Date+Time stack uses the
@@ -404,20 +429,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         />
       ) : null}
 
-      <WizardSwitchRow
-        id="wizard-market-insurance-required"
-        label="Require Market Insurance from Vendors?"
-        description="Approved vendors must upload proof of insurance before their booth is finalized."
-        control={
-          <Switch
-            id="wizard-market-insurance-required"
-            checked={props.marketInsuranceRequired}
-            onCheckedChange={props.onMarketInsuranceRequiredChange}
-          />
-        }
-      />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="wizard-booking-mode" className={WIZARD_FIELD_LABEL}>Booking Mode</Label>
           <Select
@@ -479,28 +491,58 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         </div>
         ) : null}
       </div>
+        </WizardZone>
+      </div>
 
-      {props.listingType === 'community_market' ? (
-        <>
-      <WizardSwitchRow
-        id="wizard-allow-mlm"
-        label="Allow Direct Sales / MLM Vendors"
-        description="Enables MLM brand categories in the category selector."
-        control={<Switch id="wizard-allow-mlm" checked={props.allowMlm} onCheckedChange={props.onAllowMlmChange} />}
-      />
-
-      <FlyerFieldHighlight fieldKey="raffleDonationRequirement" autoFilledFields={autoFilled}>
-        <WizardFloatingTextarea
-          id="wizard-raffle"
-          label="Raffle Donation Requirement"
-          value={props.raffleDonationRequirement}
-          onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
-          rows={2}
-        />
-      </FlyerFieldHighlight>
-        </>
-      ) : null}
-
+      <WizardZone
+        id="wizard-zone-rules"
+        title="Vendor rules & payments"
+        subtitle="Insurance, MLM policy, and checkout options vendors will see."
+        variant="wide"
+      >
+        <div className="space-y-4">
+          <WizardSwitchRow
+            id="wizard-market-insurance-required"
+            label="Require market insurance"
+            description="Approved vendors upload proof of insurance before their booth is finalized."
+            control={
+              <Switch
+                id="wizard-market-insurance-required"
+                checked={props.marketInsuranceRequired}
+                onCheckedChange={props.onMarketInsuranceRequiredChange}
+              />
+            }
+          />
+          {props.listingType === 'community_market' ? (
+            <>
+              <WizardSwitchRow
+                id="wizard-allow-mlm"
+                label="Allow direct sales / MLM vendors"
+                description="Recommended for most community markets — enables MLM categories in step 2."
+                control={
+                  <Switch
+                    id="wizard-allow-mlm"
+                    checked={props.allowMlm}
+                    onCheckedChange={props.onAllowMlmChange}
+                  />
+                }
+              />
+              <FlyerFieldHighlight fieldKey="raffleDonationRequirement" autoFilledFields={autoFilled}>
+                <WizardFloatingTextarea
+                  id="wizard-raffle"
+                  label="Raffle donation requirement"
+                  value={props.raffleDonationRequirement}
+                  onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
+                  rows={2}
+                />
+              </FlyerFieldHighlight>
+            </>
+          ) : null}
+        </div>
+        <div className="wizard-glass-inset p-4">
+          <WizardPaymentPreviewStrip />
+        </div>
+      </WizardZone>
     </div>
   )
 }

@@ -13,8 +13,8 @@ import { Loader2, MapPin } from 'lucide-react'
 import {
   WizardFloatingInput,
   WizardMapContainer,
-  WizardSectionTitle,
   WizardSwitchRow,
+  WizardZone,
 } from '@/components/coordinator/wizard/wizard-ui'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,7 +35,6 @@ import {
   WIZARD_FIELD_LABEL,
   WIZARD_INFO_BOX,
   WIZARD_INPUT,
-  WIZARD_PANEL_INNER,
 } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
 import {
@@ -470,17 +469,20 @@ export function WizardStepVenue({
   const markerTitle = `🏢 ${displayName}\n📍 ${displayAddress}`
 
   return (
-    <div className={WIZARD_PANEL_INNER}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <WizardSectionTitle active>
-          {skipVenueLayout
-            ? 'Venue Location'
-            : isEdmontonMarketCity(city)
-              ? 'Edmonton Venue Registry & Map'
-              : `Venue Registry & Map (${cityLabel})`}
-        </WizardSectionTitle>
+    <WizardZone
+      id="wizard-zone-venue"
+      title={
+        skipVenueLayout
+          ? 'Venue location'
+          : isEdmontonMarketCity(city)
+            ? 'Edmonton venue & map'
+            : `Venue & map (${cityLabel})`
+      }
+      subtitle="Search an address or drop a pin — venue name and coordinates update together."
+    >
+      <div className="flex flex-wrap items-center justify-end gap-2 -mt-2 mb-1">
         {pinDropped ? (
-          <Badge className={`${marketStatusBadge.success} text-xs`}>Pin dropped</Badge>
+          <Badge className={`${marketStatusBadge.success} text-xs`}>Location locked</Badge>
         ) : null}
       </div>
 
@@ -571,7 +573,7 @@ export function WizardStepVenue({
           ) : null}
         </Map>
       </WizardMapContainer>
-    </div>
+    </WizardZone>
   )
 }
 
@@ -601,11 +603,13 @@ function WizardStepVenueFallback({
   onSkipVenueLayoutChange: (v: boolean) => void
 }) {
   return (
-    <div className={WIZARD_PANEL_INNER}>
-      <WizardSectionTitle active>Venue Location</WizardSectionTitle>
+    <WizardZone
+      id="wizard-zone-venue"
+      title="Venue location"
+      subtitle="Maps autocomplete is offline — enter name and address manually."
+    >
       <p className={cn(WIZARD_INFO_BOX, 'text-sm text-amber-900')}>
-        Map autocomplete is offline (Google Maps API key not configured). Enter the venue name and
-        address by hand — coordinates will fall back to the {cityLabel} city centre.
+        Coordinates will fall back to the {cityLabel} city centre until a pin is set.
       </p>
       <WizardSwitchRow
         id="wizard-skip-layout"
@@ -638,7 +642,7 @@ function WizardStepVenueFallback({
       <p className="text-xs text-muted-foreground" aria-hidden="true">
         Selected market city: {cityLabel} ({city})
       </p>
-    </div>
+    </WizardZone>
   )
 }
 
