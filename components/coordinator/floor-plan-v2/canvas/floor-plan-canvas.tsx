@@ -19,6 +19,7 @@ import { InlineLabelEditor } from './inline-label-editor'
 import { RoomFrames } from './room-frames'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
+import { useBoothCategoryTooltip } from '../interactions/use-booth-category-tooltip'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
@@ -200,6 +201,18 @@ export function FloorPlanCanvas({
     onProximityViolation,
   })
 
+  const categoryTooltip = useBoothCategoryTooltip({
+    surfaceRef,
+    transform,
+    objects: store.doc.objects,
+    disabled:
+      viewport.isPanning ||
+      viewport.panActive ||
+      pointer.rotating ||
+      pointer.draftRect !== null ||
+      pointer.marqueeRect !== null,
+  })
+
   /**
    * Inline label editor state. A double-click on any placed object
    * swaps the static SVG label for an HTML `<input>` rendered through
@@ -322,7 +335,22 @@ export function FloorPlanCanvas({
       aria-label="Floor plan canvas viewport"
       style={{ touchAction: 'none', cursor }}
       {...viewport.scrollHandlers}
+      onMouseMove={categoryTooltip.onMouseMove}
+      onMouseLeave={categoryTooltip.onMouseLeave}
     >
+      {categoryTooltip.tooltip ? (
+        <div
+          className="pointer-events-none fixed z-50 rounded bg-neutral-900 px-2 py-1 text-xs text-white shadow-lg"
+          style={{
+            left: categoryTooltip.tooltip.x,
+            top: categoryTooltip.tooltip.y - 28,
+            transform: 'translateX(-50%)',
+          }}
+          role="tooltip"
+        >
+          {categoryTooltip.tooltip.label}
+        </div>
+      ) : null}
       <div
         style={{
           width: totalWidthPx,
