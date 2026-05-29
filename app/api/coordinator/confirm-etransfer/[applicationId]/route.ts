@@ -7,7 +7,8 @@ import {
 import { resolveVendorDisplayName } from '@/lib/email/application-received'
 import { extractNestedPassport } from '@/lib/applications/extract-nested-passport'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
-import type { Event } from '@/types/database'
+import { resolvePostApprovalStatus } from '@/lib/applications/resolve-approval-status'
+import type { ApplicationStatus, BoothApplication, Event } from '@/types/database'
 
 export async function POST(
   _request: Request,
@@ -40,6 +41,8 @@ export async function POST(
         id,
         name,
         coordinator_id,
+        status,
+        market_insurance_required,
         start_at,
         end_at,
         is_multi_day,
@@ -63,12 +66,83 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  if (eventRow.status === 'cancelled') {
+    return NextResponse.json({ error: 'Event is cancelled' }, { status: 409 })
+  }
+
   if (application.payment_method !== 'ETRANSFER') {
     return NextResponse.json({ error: 'Not an e-transfer application' }, { status: 400 })
   }
 
   if (application.application_payment_status !== 'PENDING_REVIEW') {
     return NextResponse.json({ error: 'Payment is not pending review' }, { status: 400 })
+  }
+
+  /*
+   * "Mark as Paid" is a single atomic clearing-and-approval action:
+   *
+   *   1. Flip application_payment_status → COMPLETED, payment_status → paid
+   *   2. If the app is still sitting in pending / waitlisted, advance
+   *      it to Approved (or Pending Insurance, if the market requires
+   *      proof of insurance).
+   *
+   * If the app is already Approved (legacy rows applied before the
+   * hard-gate change) we just clear payment without re-approving, so
+   * the operation stays idempotent.
+   */
+  const shouldAdvanceStatus =
+    application.status === 'pending' || application.status === 'waitlisted'
+
+  if (shouldAdvanceStatus && application.category_id) {
+    const { data: limit } = await serviceSupabase
+      .from('event_category_limits')
+      .select('max_slots, category:categories(name)')
+      .eq('event_id', application.event_id)
+      .eq('category_id', application.category_id)
+      .maybeSingle()
+
+    if (limit) {
+      const { count, error: countError } = await serviceSupabase
+        .from('booth_applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', application.event_id)
+        .eq('category_id', application.category_id)
+        .in('status', ['approved', 'pending_insurance'])
+        .neq('id', applicationId)
+
+      if (countError) {
+        return NextResponse.json({ error: countError.message }, { status: 500 })
+      }
+
+      const reservedInCategory = count ?? 0
+      if (reservedInCategory >= limit.max_slots) {
+        const category = Array.isArray(limit.category)
+          ? limit.category[0]
+          : limit.category
+        const categoryName = category?.name ?? 'This category'
+        return NextResponse.json(
+          {
+            error: `${categoryName} is full (${limit.max_slots} slots) — cannot auto-approve. Mark a competing slot as Declined first, then retry Mark as Paid.`,
+            code: 'category_full',
+          },
+          { status: 409 }
+        )
+      }
+    }
+  }
+
+  const nextStatus: ApplicationStatus = shouldAdvanceStatus
+    ? resolvePostApprovalStatus(eventRow.market_insurance_required)
+    : (application.status as ApplicationStatus)
+
+  const updates: Partial<BoothApplication> = {
+    application_payment_status: 'COMPLETED',
+    payment_status: 'paid',
+    status: nextStatus,
+  }
+
+  if (shouldAdvanceStatus) {
+    updates.approved_at = new Date().toISOString()
   }
 
   const { data: limit } = await serviceSupabase
@@ -83,10 +157,7 @@ export async function POST(
 
   const { error: updateError } = await serviceSupabase
     .from('booth_applications')
-    .update({
-      application_payment_status: 'COMPLETED',
-      payment_status: 'paid',
-    })
+    .update(updates)
     .eq('id', applicationId)
 
   if (updateError) {
@@ -111,6 +182,47 @@ export async function POST(
     console.error('[etransfer] transaction record failed:', txError)
   }
 
+  /*
+   * Vendor-facing notifications. The confirmed-payment email goes
+   * out below. When the clearing also flipped the application from
+   * Pending into Approved (or Pending Insurance), push the in-app
+   * + SMS notification too so the vendor's dashboard reflects the
+   * auto-approval immediately.
+   */
+  if (shouldAdvanceStatus) {
+    try {
+      const { sendSms } = await import('@/lib/twilio')
+      const finalApprovedMessage =
+        nextStatus === 'pending_insurance'
+          ? '✅ Payment received! Upload your market insurance proof to finalize your approved booth.'
+          : '✅ Payment received — your booth is approved! See you at the event.'
+
+      await serviceSupabase.from('notifications').insert({
+        user_id: application.vendor_id,
+        type: 'application_approved',
+        message: finalApprovedMessage,
+        metadata: {
+          application_id: applicationId,
+          event_id: application.event_id,
+          payment_method: 'ETRANSFER',
+          payment_cleared: true,
+        },
+      })
+
+      const { data: vendorProfile } = await serviceSupabase
+        .from('profiles')
+        .select('phone')
+        .eq('id', application.vendor_id)
+        .single()
+
+      if (vendorProfile?.phone) {
+        await sendSms(vendorProfile.phone, finalApprovedMessage)
+      }
+    } catch (notifyErr) {
+      console.error('[etransfer] auto-approval notification failed:', notifyErr)
+    }
+  }
+
   const vendor = Array.isArray(application.vendor) ? application.vendor[0] : application.vendor
   const passport = extractNestedPassport(application)
 
@@ -133,7 +245,10 @@ export async function POST(
     ok: true,
     applicationId,
     applicationPaymentStatus: 'COMPLETED',
+    status: nextStatus,
+    advancedToApproved: shouldAdvanceStatus,
     transactionId,
     revenueAddedCents: boothPriceCents,
+    updates,
   })
 }

@@ -354,6 +354,23 @@ export async function POST(request: Request) {
     }
   }
 
+  /*
+   * E-Transfer hard gate: even on instant-approval markets, vendors
+   * who pick Interac e-Transfer must NOT auto-approve. Their booth
+   * stays in the Pending Review / Awaiting Funds Verification queue
+   * until the coordinator clicks "Mark as Paid". This prevents an
+   * unpaid vendor from showing up in the Approved pool and on the
+   * floor-plan layout grid before the cash has actually arrived.
+   *
+   * SQUARE applications keep their existing post-approval payment
+   * flow (vendor pays with card after approval), since Square clears
+   * funds atomically inside the tokenization handshake.
+   */
+  if (paymentMethod === 'ETRANSFER' && (status === 'approved' || status === 'pending_insurance')) {
+    status = 'pending'
+    waitlistPosition = null
+  }
+
   const paymentApproved = status === 'approved'
   const paymentFields = resolvePaymentFieldsForPaidApplication({
     paymentMethod,

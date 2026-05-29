@@ -34,8 +34,10 @@ import type { VendorPlatformHistory } from '@/lib/applications/vendor-review-sta
 import { getVendorLinks } from '@/lib/shopper/vendors'
 import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
 import {
+  ETRANSFER_PAYMENT_GATE_MESSAGE,
   formatApplicationPaymentLabel,
   isApplicationPaid,
+  isEtransferAwaitingPayment,
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
 } from '@/lib/applications/payment-fields'
@@ -187,12 +189,20 @@ export function VendorReviewDrawer({
       app.status === 'rejected' ||
       app.status === 'approved')
 
+  const etransferGateActive =
+    isEtransferAwaitingPayment(app) &&
+    app.status !== 'approved' &&
+    app.status !== 'pending_insurance' &&
+    app.status !== 'rejected'
+
   const approveLabel =
     needsSquareCheckout(app) || app.payment_status === 'payment_required'
       ? 'Approve & Send Invoice'
-      : needsEtransferCoordinatorReview(app)
-        ? 'Approve — E-transfer Pending'
-        : 'Approve Application'
+      : etransferGateActive
+        ? 'Mark as Paid & Approve'
+        : needsEtransferCoordinatorReview(app)
+          ? 'Approve — E-transfer Pending'
+          : 'Approve Application'
 
   function saveNotes(nextNotes: string) {
     if (!app) return
@@ -474,17 +484,40 @@ export function VendorReviewDrawer({
             </div>
 
             <div className="border-t bg-white px-6 py-4">
+              {etransferGateActive ? (
+                <div
+                  className="mb-3 flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"
+                  role="note"
+                >
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <p>
+                    <span className="font-semibold">Approval blocked.</span>{' '}
+                    {ETRANSFER_PAYMENT_GATE_MESSAGE}{' '}
+                    Click <span className="font-semibold">Mark as Paid &amp; Approve</span> below
+                    once the funds clear — that action settles the balance and approves the
+                    vendor in a single step.
+                  </p>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                {!eventCancelled && needsEtransferCoordinatorReview(app) ? (
+                {!eventCancelled &&
+                app.payment_method === 'ETRANSFER' &&
+                app.application_payment_status === 'PENDING_REVIEW' &&
+                app.status !== 'rejected' ? (
                   <Button
                     className="w-full bg-sky-700 hover:bg-sky-800 sm:w-auto"
                     onClick={onConfirmEtransfer}
                     disabled={loading}
                   >
-                    Confirm e-transfer received
+                    {etransferGateActive
+                      ? 'Mark as Paid & Approve'
+                      : 'Confirm e-transfer received'}
                   </Button>
                 ) : null}
-                {!eventCancelled && app.status !== 'approved' && app.status !== 'pending_insurance' ? (
+                {!eventCancelled &&
+                app.status !== 'approved' &&
+                app.status !== 'pending_insurance' &&
+                !etransferGateActive ? (
                   <Button
                     className="w-full gap-1.5 sm:flex-1"
                     onClick={() => {

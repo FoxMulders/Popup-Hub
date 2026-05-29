@@ -13,7 +13,9 @@ import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
 import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
 import { resolveApplicationDisplayCategories } from '@/lib/applications/display-categories'
 import {
+  ETRANSFER_PAYMENT_GATE_MESSAGE,
   isApplicationPaid,
+  isEtransferAwaitingPayment,
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
 } from '@/lib/applications/payment-fields'
@@ -146,15 +148,35 @@ export function ApplicationBoard({
   async function confirmEtransferPayment(appId: string) {
     startTransition(async () => {
       const res = await fetch(`/api/coordinator/confirm-etransfer/${appId}`, { method: 'POST' })
-      const data = (await res.json()) as { error?: string }
+      const data = (await res.json()) as {
+        error?: string
+        advancedToApproved?: boolean
+        status?: ApplicationStatus
+        updates?: Partial<BoothApplication>
+      }
       if (!res.ok) {
         toast.error(data.error ?? 'Failed to confirm e-transfer payment')
         return
       }
 
-      setApps((prev) => prev.filter((a) => a.id !== appId))
-      setViewingApp((prev) => (prev?.id === appId ? null : prev))
-      toast.success('E-transfer marked as received')
+      const updates = data.updates ?? {
+        application_payment_status: 'COMPLETED' as const,
+        payment_status: 'paid' as const,
+        ...(data.status ? { status: data.status } : {}),
+      }
+
+      setApps((prev) => prev.map((a) => (a.id === appId ? { ...a, ...updates } : a)))
+      setViewingApp((prev) => (prev?.id === appId ? { ...prev, ...updates } : prev))
+
+      if (data.advancedToApproved) {
+        toast.success(
+          data.status === 'pending_insurance'
+            ? 'Payment cleared — vendor moved to Pending Insurance'
+            : '✅ Payment cleared & vendor approved — vendor notified'
+        )
+      } else {
+        toast.success('E-transfer marked as received')
+      }
     })
   }
 
@@ -442,6 +464,15 @@ function ApplicationCard({
           </Badge>
         )}
 
+        {app.payment_method === 'ETRANSFER' &&
+          app.application_payment_status === 'PENDING_REVIEW' &&
+          app.status !== 'approved' &&
+          app.status !== 'pending_insurance' && (
+            <Badge className="w-full justify-center bg-sky-100 text-sky-900 text-[10px] py-1">
+              Awaiting funds verification
+            </Badge>
+          )}
+
         {needsEtransferCoordinatorReview(app) && (
           <Badge className="w-full justify-center bg-sky-100 text-sky-900 text-[10px] py-1">
             E-transfer pending review
@@ -468,6 +499,20 @@ function ApplicationCard({
 
         <CategoryOverflowBadge app={app} />
 
+        {!eventCancelled &&
+          app.status !== 'approved' &&
+          app.status !== 'pending_insurance' &&
+          app.status !== 'rejected' &&
+          isEtransferAwaitingPayment(app) && (
+            <p
+              className="rounded-lg border border-sky-200 bg-sky-50 px-2 py-1.5 text-[10px] leading-snug text-sky-900"
+              role="note"
+            >
+              <span className="font-semibold">Approval blocked.</span>{' '}
+              {ETRANSFER_PAYMENT_GATE_MESSAGE}
+            </p>
+          )}
+
         {app.applicable_documentation_url ? (
           <Badge className="w-full justify-center gap-1 bg-canvas text-[10px] text-foreground border-stone-200 py-1">
             <FileText className="h-3 w-3 shrink-0" aria-hidden />
@@ -485,27 +530,43 @@ function ApplicationCard({
             <Eye className="h-4 w-4" />
             Review
           </Button>
-          {!eventCancelled && needsEtransferCoordinatorReview(app) && (
-            <Button
-              size="sm"
-              className="min-h-11 text-xs px-3 gap-1.5 bg-sky-700 hover:bg-sky-800"
-              onClick={onConfirmEtransfer}
-              disabled={loading}
-            >
-              Confirm e-transfer
-            </Button>
-          )}
-          {!eventCancelled && app.status !== 'approved' && app.status !== 'pending_insurance' && (
-            <Button
-              size="sm"
-              className="min-h-11 text-xs px-3 gap-1.5"
-              onClick={onApprove}
-              disabled={loading}
-            >
-              <CheckCircle className="h-4 w-4" />
-              Approve
-            </Button>
-          )}
+          {!eventCancelled &&
+            app.payment_method === 'ETRANSFER' &&
+            app.application_payment_status === 'PENDING_REVIEW' &&
+            app.status !== 'rejected' && (
+              <Button
+                size="sm"
+                className="min-h-11 text-xs px-3 gap-1.5 bg-sky-700 hover:bg-sky-800"
+                onClick={onConfirmEtransfer}
+                disabled={loading}
+              >
+                {app.status === 'approved' || app.status === 'pending_insurance'
+                  ? 'Confirm e-transfer'
+                  : 'Mark as Paid & Approve'}
+              </Button>
+            )}
+          {!eventCancelled &&
+            app.status !== 'approved' &&
+            app.status !== 'pending_insurance' &&
+            !(
+              app.payment_method === 'ETRANSFER' &&
+              app.application_payment_status === 'PENDING_REVIEW'
+            ) && (
+              <Button
+                size="sm"
+                className="min-h-11 text-xs px-3 gap-1.5"
+                onClick={onApprove}
+                disabled={loading || isEtransferAwaitingPayment(app)}
+                title={
+                  isEtransferAwaitingPayment(app)
+                    ? ETRANSFER_PAYMENT_GATE_MESSAGE
+                    : undefined
+                }
+              >
+                <CheckCircle className="h-4 w-4" />
+                Approve
+              </Button>
+            )}
           {!eventCancelled && app.status !== 'waitlisted' && app.status !== 'rejected' && (
             <Button
               size="sm"

@@ -65,9 +65,11 @@ export function PendingEtransferPanel({ applications: initial }: PendingEtransfe
   return (
     <div className="market-panel space-y-4 p-5">
       <div>
-        <h3 className="font-heading font-semibold">Pending e-transfer verifications</h3>
+        <h3 className="font-heading font-semibold">Awaiting funds verification</h3>
         <p className="text-sm text-muted-foreground">
-          Confirm vendor transfers to secure their booth and update booth revenue.
+          Vendors who chose Interac e-Transfer stay in <span className="font-semibold">Pending</span>{' '}
+          until you click <span className="font-semibold">Mark as Paid &amp; Approve</span> —
+          that single action settles the balance and moves them into the Approved pool.
         </p>
       </div>
 
@@ -138,7 +140,9 @@ export function PendingEtransferPanel({ applications: initial }: PendingEtransfe
                   ) : (
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                   )}
-                  Confirm E-Transfer
+                  {app.status === 'approved' || app.status === 'pending_insurance'
+                    ? 'Confirm E-Transfer'
+                    : 'Mark as Paid & Approve'}
                 </Button>
               </div>
             </li>

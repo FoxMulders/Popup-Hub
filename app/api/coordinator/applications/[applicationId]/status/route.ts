@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { resolvePostApprovalStatus } from '@/lib/applications/resolve-approval-status'
-import { resolvePaymentFieldsForPaidApplication } from '@/lib/applications/payment-fields'
+import {
+  ETRANSFER_PAYMENT_GATE_MESSAGE,
+  resolvePaymentFieldsForPaidApplication,
+} from '@/lib/applications/payment-fields'
 
 import type { ApplicationStatus, BoothApplication } from '@/types/database'
 
@@ -56,6 +59,8 @@ export async function POST(
       category_id,
       status,
       payment_method,
+      application_payment_status,
+      payment_status,
       event:events(id, coordinator_id, status, market_insurance_required)
     `)
     .eq('id', applicationId)
@@ -75,6 +80,29 @@ export async function POST(
 
   if (eventRow.status === 'cancelled') {
     return NextResponse.json({ error: 'Event is cancelled' }, { status: 409 })
+  }
+
+  /*
+   * Hard gate: an Interac e-Transfer application cannot transition
+   * to Approved (or Pending Insurance) until the coordinator has
+   * marked the funds as cleared. The clearing path is the dedicated
+   * /api/coordinator/confirm-etransfer route, which atomically
+   * clears the payment AND advances the status. Refusing the
+   * mutation here keeps the regular status updater from creating
+   * an unpaid-but-Approved row.
+   */
+  if (
+    newStatus === 'approved' &&
+    application.payment_method === 'ETRANSFER' &&
+    application.application_payment_status !== 'COMPLETED'
+  ) {
+    return NextResponse.json(
+      {
+        error: ETRANSFER_PAYMENT_GATE_MESSAGE,
+        code: 'etransfer_payment_required',
+      },
+      { status: 409 }
+    )
   }
 
   const resolvedStatus =

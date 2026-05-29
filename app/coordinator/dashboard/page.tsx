@@ -216,7 +216,7 @@ export default async function CoordinatorDashboard() {
       .in('event_id', eventIds)
       .eq('payment_method', 'ETRANSFER')
       .eq('application_payment_status', 'PENDING_REVIEW')
-      .eq('status', 'approved')
+      .in('status', ['pending', 'approved', 'pending_insurance'])
       .order('applied_at', { ascending: false })
 
     if (etransferApps?.length) {

@@ -58,6 +58,37 @@ export function needsEtransferCoordinatorReview(
   )
 }
 
+/**
+ * Hard gate: an Interac e-Transfer application must NOT be approvable
+ * until the coordinator has marked the funds as cleared. Used both
+ * server-side (status route refuses the mutation) and client-side
+ * (Approve button is greyed-out with the explanatory banner).
+ *
+ * Returns true when the application would slot into the
+ * "Awaiting Funds Verification" queue — i.e. the vendor picked
+ * E-Transfer but the cash hasn't been ticked off yet.
+ */
+export function isEtransferAwaitingPayment(
+  app: Pick<
+    BoothApplication,
+    'payment_method' | 'application_payment_status'
+  >
+): boolean {
+  return (
+    app.payment_method === 'ETRANSFER' &&
+    app.application_payment_status !== 'COMPLETED'
+  )
+}
+
+/**
+ * Coordinator-facing copy used for the disabled Approve button
+ * tooltip / banner. Centralized so the wording stays in lockstep
+ * across the application board, the review drawer, and any future
+ * approval surface.
+ */
+export const ETRANSFER_PAYMENT_GATE_MESSAGE =
+  'Vendor cannot be marked as Approved until their Interac e-Transfer is marked as Paid.'
+
 export function resolvePaymentFieldsForPaidApplication({
   paymentMethod,
   requiresPayment,
@@ -80,10 +111,18 @@ export function resolvePaymentFieldsForPaidApplication({
   }
 
   if (paymentMethod === 'ETRANSFER') {
+    /*
+     * E-Transfer apps live in PENDING_REVIEW from the moment they
+     * apply — the coordinator must verify funds before the app can
+     * transition to Approved. Keeping the flag set even on apps that
+     * haven't been approved yet means the "Mark as Paid" workflow
+     * can find them on the dashboard and clear payment + advance
+     * status in one atomic move.
+     */
     return {
       payment_method: 'ETRANSFER',
       payment_status: 'pending',
-      application_payment_status: approved ? 'PENDING_REVIEW' : null,
+      application_payment_status: 'PENDING_REVIEW',
     }
   }
 

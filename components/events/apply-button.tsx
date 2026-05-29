@@ -388,7 +388,9 @@ export function ApplyButton({
 
     if (data.eTransferPendingReview) {
       toast.success(
-        'Application approved — send your e-transfer. The coordinator will confirm payment.'
+        submittedStatus === 'pending'
+          ? 'Application received — send your Interac e-Transfer. Approval is finalized once the coordinator marks payment received.'
+          : 'Application approved — send your e-transfer. The coordinator will confirm payment.'
       )
       setOpen(false)
       setWaitlistConfirmOpen(false)
