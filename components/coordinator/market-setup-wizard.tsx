@@ -1136,6 +1136,8 @@ export function MarketSetupWizard({
                 onAddRoom={handleAddRoom}
                 onRenameRoom={handleRenameRoom}
                 onDeleteRoom={handleDeleteRoom}
+                baselineTableLengthFt={baselineTableLengthFt}
+                onBaselineTableLengthChange={handleBaselineTableLengthChange}
                 className="flex-1 min-h-0"
               />
               <div className="shrink-0">

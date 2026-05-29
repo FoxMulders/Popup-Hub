@@ -4,9 +4,7 @@ import { Settings2 } from 'lucide-react'
 import { CategoryLimitEditor, type CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import { MlmTierGuard } from '@/components/coordinator/mlm-tier-guard'
 import { SmartPopulateBoothCaps } from '@/components/coordinator/smart-populate-booth-caps'
-import { TableSizeSelector } from '@/components/coordinator/table-size-selector'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
-import { cn } from '@/lib/utils'
 import type { Category, VenueElement } from '@/types/database'
 
 export interface WizardStepCapacityProps {
@@ -77,32 +75,24 @@ export function WizardStepCapacity({
       </div>
 
       {!skipVenueLayout ? (
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-          <SmartPopulateBoothCaps
-            compact
-            categories={categories}
-            allowMlm={allowMlm}
-            venueWidthFt={venueWidth}
-            venueLengthFt={venueLength}
-            onVenueWidthChange={() => {}}
-            onVenueLengthChange={() => {}}
-            existingLimits={categoryLimits}
-            onPopulate={onCategoryLimitsChange}
-            globalMlmCap={globalMlmCap}
-            venueReadOnly={venueReadOnly}
-            venueElements={venueElements}
-            entrance={entrance}
-            tableLengthFt={baselineTableLengthFt}
-            onTableLengthChange={onBaselineTableLengthChange}
-            hideTableSizeSelector
-          />
-          <TableSizeSelector
-            value={baselineTableLengthFt}
-            onChange={onBaselineTableLengthChange}
-            disabled={venueReadOnly}
-            className="lg:w-[240px]"
-          />
-        </div>
+        <SmartPopulateBoothCaps
+          compact
+          categories={categories}
+          allowMlm={allowMlm}
+          venueWidthFt={venueWidth}
+          venueLengthFt={venueLength}
+          onVenueWidthChange={() => {}}
+          onVenueLengthChange={() => {}}
+          existingLimits={categoryLimits}
+          onPopulate={onCategoryLimitsChange}
+          globalMlmCap={globalMlmCap}
+          venueReadOnly={venueReadOnly}
+          venueElements={venueElements}
+          entrance={entrance}
+          tableLengthFt={baselineTableLengthFt}
+          onTableLengthChange={onBaselineTableLengthChange}
+          hideTableSizeSelector
+        />
       ) : (
         <p className="rounded-lg border border-stone-200 bg-canvas px-3 py-2 text-xs text-muted-foreground">
           Floor plan planning is off — set vendor category caps manually below.

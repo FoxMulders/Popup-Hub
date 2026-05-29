@@ -17,6 +17,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { TableSizePill } from './table-size-pill'
 import type { CanvasToolHostProps } from './canvas-tool-types'
 
 interface CanvasCommandBarProps extends CanvasToolHostProps {
@@ -82,6 +83,8 @@ export function CanvasCommandBar({
   joinBlockedReason,
   onUnjoinRoom,
   canUnjoinRoom,
+  tableSizeFt,
+  onTableSizeChange,
   zoom,
   onZoomOut,
   onZoomIn,
@@ -91,6 +94,7 @@ export function CanvasCommandBar({
   const hasSelection = selectedCount > 0
   const canAlign = selectedCount >= 2
   const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
+  const showTableSize = Boolean(onTableSizeChange) && tableSizeFt != null
   const joinLabel =
     canJoinRooms && joinCandidateCount && joinCandidateCount > 1
       ? `Join (${joinCandidateCount})`
@@ -206,34 +210,43 @@ export function CanvasCommandBar({
         </>
       ) : null}
 
-      <div className="ml-auto inline-flex h-8 items-center overflow-hidden rounded-md border border-stone-200">
-        <button
-          type="button"
-          onClick={onZoomOut}
-          title="Zoom out"
-          aria-label="Zoom out"
-          className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
-        >
-          <Minus className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={onZoomReset}
-          title="Reset zoom to 100%"
-          aria-label="Reset zoom"
-          className="inline-flex h-full min-w-[3rem] items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-        <button
-          type="button"
-          onClick={onZoomIn}
-          title="Zoom in"
-          aria-label="Zoom in"
-          className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+      <div className="ml-auto inline-flex items-center gap-2">
+        {showTableSize ? (
+          <TableSizePill
+            value={tableSizeFt!}
+            onChange={onTableSizeChange!}
+          />
+        ) : null}
+
+        <div className="inline-flex h-8 items-center overflow-hidden rounded-md border border-stone-200">
+          <button
+            type="button"
+            onClick={onZoomOut}
+            title="Zoom out"
+            aria-label="Zoom out"
+            className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onZoomReset}
+            title="Reset zoom to 100%"
+            aria-label="Reset zoom"
+            className="inline-flex h-full min-w-[3rem] items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={onZoomIn}
+            title="Zoom in"
+            aria-label="Zoom in"
+            className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   )

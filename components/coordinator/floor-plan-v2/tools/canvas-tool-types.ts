@@ -1,3 +1,4 @@
+import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { DrawShape, ToolId, ToolState } from './types'
 
 export interface CanvasToolHostProps {
@@ -64,4 +65,16 @@ export interface CanvasToolHostProps {
    * prop optional for any consumer that hasn't wired it up yet.
    */
   onAddPerimeterWalls?: () => void
+  /**
+   * Baseline table length (ft) for the active room — this is the
+   * single venue-wide table size that drives newly-drawn booth
+   * dimensions and gets persisted on the room. Hosts the toolbar
+   * pill that used to live on Step 2; when the coordinator changes
+   * the value here the canvas rescales any booth whose long edge
+   * matches the previous baseline so the new size lands instantly
+   * without a page reload. Optional — when both fields are omitted
+   * the pill hides cleanly so non-Step-3 hosts stay unaffected.
+   */
+  tableSizeFt?: LayoutBaselineTableLengthFt
+  onTableSizeChange?: (ft: LayoutBaselineTableLengthFt) => void
 }

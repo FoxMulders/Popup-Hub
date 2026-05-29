@@ -14,6 +14,11 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
+import {
+  DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
+  isLayoutBaselineTableLengthFt,
+  type LayoutBaselineTableLengthFt,
+} from '@/lib/booth-planner/layout-table-size'
 import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
@@ -129,6 +134,16 @@ export interface FloorPlanV2Props {
   onAddRoom?: (presetId?: LayoutRoomPresetId) => void
   onRenameRoom?: (roomId: string, name: string) => void
   onDeleteRoom?: (roomId: string) => void
+  /**
+   * Wizard-owned baseline table length for the active room (one
+   * size per hall). The toolbar pill above the canvas binds to this
+   * — when omitted, the pill hides and live booth rescaling is
+   * skipped. Forwarding both fields keeps Step 3 the single source
+   * of truth for table sizing now that the Step 2 selector has been
+   * retired.
+   */
+  baselineTableLengthFt?: LayoutBaselineTableLengthFt
+  onBaselineTableLengthChange?: (ft: LayoutBaselineTableLengthFt) => void
   className?: string
 }
 
@@ -160,6 +175,8 @@ export function FloorPlanV2({
   onAddRoom,
   onRenameRoom,
   onDeleteRoom,
+  baselineTableLengthFt,
+  onBaselineTableLengthChange,
   className,
 }: FloorPlanV2Props) {
   // Initial unified doc — seed from server-loaded rooms first; if a
@@ -274,6 +291,62 @@ export function FloorPlanV2({
       ? rawSelectedRoomId
       : null
   }, [layoutRooms, rawSelectedRoomId])
+
+  // Validated copy of the wizard-owned baseline table length. The
+  // command-bar pill binds to this; upstream the value comes from
+  // `activeRoom.baseline_table_length_ft` so the ribbon always
+  // reflects the active room's size. Unrecognised lengths fall back
+  // to the default rather than blowing up the selector.
+  const safeTableSizeFt = useMemo<LayoutBaselineTableLengthFt | undefined>(() => {
+    if (baselineTableLengthFt == null) return undefined
+    return isLayoutBaselineTableLengthFt(baselineTableLengthFt)
+      ? baselineTableLengthFt
+      : DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
+  }, [baselineTableLengthFt])
+
+  // Live booth rescaling. Tracks the previously-applied baseline
+  // length per active room — when the wizard pushes a new size for
+  // the *same* room, every booth in that room whose long edge
+  // matches the previous baseline (within 0.1 ft) gets nudged to
+  // the new length in one history step. Booths drawn at custom
+  // dimensions are left alone, and the rescale is skipped on room
+  // switches so values don't leak across rooms.
+  const prevTableContextRef = useRef<{
+    roomId: string
+    size: LayoutBaselineTableLengthFt | undefined
+  }>({ roomId: activeRoomId, size: safeTableSizeFt })
+
+  useEffect(() => {
+    const prev = prevTableContextRef.current
+    prevTableContextRef.current = { roomId: activeRoomId, size: safeTableSizeFt }
+    if (prev.roomId !== activeRoomId) return
+    if (prev.size == null || safeTableSizeFt == null) return
+    if (prev.size === safeTableSizeFt) return
+
+    const tol = 0.1
+    const objectRoom = store.doc.objectRoom ?? {}
+    const patches: Array<{ id: string; patch: Partial<PlacedObject> }> = []
+    for (const obj of store.doc.objects) {
+      if (obj.kind !== 'booth') continue
+      if (obj.locked) continue
+      if (objectRoom[obj.id] !== activeRoomId) continue
+      if (obj.width >= obj.height && Math.abs(obj.width - prev.size) < tol) {
+        patches.push({ id: obj.id, patch: { width: safeTableSizeFt } })
+      } else if (obj.height > obj.width && Math.abs(obj.height - prev.size) < tol) {
+        patches.push({ id: obj.id, patch: { height: safeTableSizeFt } })
+      }
+    }
+    if (patches.length > 0) {
+      store.updateObjects(patches)
+    }
+  }, [safeTableSizeFt, activeRoomId, store])
+
+  const handleTableSizeChange = useCallback(
+    (ft: LayoutBaselineTableLengthFt) => {
+      onBaselineTableLengthChange?.(ft)
+    },
+    [onBaselineTableLengthChange]
+  )
 
   // Crash-recovery autosave: every doc commit lands a serialized
   // snapshot of the unified multi-room doc in localStorage. Debounced
@@ -1279,6 +1352,10 @@ export function FloorPlanV2({
           joinBlockedReason={joinPlan.blockedReason}
           onUnjoinRoom={handleUnjoinRoom}
           canUnjoinRoom={joinPlan.unjoinGroupId !== null}
+          tableSizeFt={safeTableSizeFt}
+          onTableSizeChange={
+            onBaselineTableLengthChange ? handleTableSizeChange : undefined
+          }
         />
 
         {onAddRoom && onRenameRoom && onDeleteRoom ? (
