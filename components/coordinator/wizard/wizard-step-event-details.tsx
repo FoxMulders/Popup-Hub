@@ -55,6 +55,8 @@ export interface WizardStepEventDetailsProps {
   description: string
   onDescriptionChange: (v: string) => void
   scheduleType: 'single' | 'multi'
+  /** Listing-aware schedule (quarter auctions are always single-day). */
+  effectiveScheduleType: 'single' | 'multi'
   onScheduleTypeChange: (v: 'single' | 'multi') => void
   startDate: string
   onStartDateChange: (v: string) => void
@@ -219,7 +221,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
 
       <FlyerFieldHighlight fieldKey="description" autoFilledFields={autoFilled}>
         <div className="space-y-1">
-          <Label htmlFor="wizard-description" className={WIZARD_FIELD_LABEL}>Description</Label>
+          <Label htmlFor="wizard-description" className={WIZARD_FIELD_LABEL}>Description *</Label>
           <Textarea
             id="wizard-description"
             value={props.description}
@@ -247,7 +249,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         </div>
       </FlyerFieldHighlight>
 
-      {props.scheduleType === 'single' ? (
+      {props.effectiveScheduleType === 'single' ? (
         // On mobile: single column so each Date+Time stack uses the
         // full row width — narrow phones can't fit two `min-w-[200px]`
         // selects side by side. From sm: two columns side by side.
@@ -341,6 +343,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
               )}
             >
               <Input
+                id={i === 0 ? 'wizard-day-0-date' : `wizard-day-${i}-date`}
                 type="date"
                 value={row.date}
                 onChange={(e) => updateDayRow(i, 'date', e.target.value)}

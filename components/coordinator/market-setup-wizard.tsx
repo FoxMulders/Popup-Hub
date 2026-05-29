@@ -45,6 +45,11 @@ import {
 } from '@/lib/categories/mlm-constraints'
 import { DEFAULT_MARKET_CITY_ID, isEdmontonMarketCity, resolveMarketCityId } from '@/lib/wizard/market-cities'
 import { effectiveScheduleTypeForListing, isQuarterAuctionListing } from '@/lib/events/listing-type'
+import {
+  resolveEventScheduleBounds,
+  scheduleBoundsFailureMessage,
+  type ScheduleBoundsFailureReason,
+} from '@/lib/events/schedule-bounds'
 import { applyUnifiedBoothFeeToCategoryLimits } from '@/lib/monetization/booth-pricing'
 import {
   defaultMarketTimesForListingType,
@@ -53,6 +58,12 @@ import {
   WIZARD_PANEL,
 } from '@/lib/wizard/wizard-panel-styles'
 import { resetWizardScrollAnchor } from '@/lib/wizard/wizard-scroll-anchor'
+import { resolveVenueNameForPlace } from '@/lib/wizard/google-place-venue'
+import {
+  focusWizardField,
+  getWizardStep1ValidationError,
+} from '@/lib/wizard/wizard-step1-validation'
+import type { PlaceResult } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import {
   MARKET_WIZARD_STEPS_FULL,
@@ -79,6 +90,22 @@ import type {
 } from '@/types/database'
 
 type ApplicationInput = Parameters<typeof BoothPlanner>[0]['applications']
+
+type AutosaveResult =
+  | { ok: true; eventId: string | null }
+  | { ok: false; reason: 'schedule'; scheduleReason: ScheduleBoundsFailureReason }
+  | { ok: false; reason: 'fees' }
+  | { ok: false; reason: 'error'; message: string }
+
+function autosaveFailureMessage(result: Extract<AutosaveResult, { ok: false }>, fallback?: string): string {
+  if (result.reason === 'schedule') {
+    return scheduleBoundsFailureMessage(result.scheduleReason)
+  }
+  if (result.reason === 'error' && result.message) {
+    return `Could not save draft: ${result.message}`
+  }
+  return fallback ?? 'Could not save draft — try again'
+}
 
 export interface MarketSetupWizardProps {
   coordinatorId: string
@@ -219,7 +246,7 @@ export function MarketSetupWizard({
   const [marketInsuranceRequired, setMarketInsuranceRequired] = useState(
     existing?.market_insurance_required ?? false
   )
-  const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? false)
+  const [allowMlm, setAllowMlm] = useState(existing?.allow_mlm ?? true)
   const [globalMlmCap, setGlobalMlmCap] = useState(existing?.max_mlm_slots ?? DEFAULT_GLOBAL_MLM_CAP)
   const [boothPriceCents, setBoothPriceCents] = useState(() => {
     const fromEvent = existing?.booth_price_cents
@@ -400,16 +427,21 @@ export function MarketSetupWizard({
   // no capacity-driven population), so we no longer wire those refs.
   const [plannerOverlap, setPlannerOverlap] = useState(false)
 
+  const effectiveScheduleType = useMemo(
+    () => effectiveScheduleTypeForListing(listingType, scheduleType),
+    [listingType, scheduleType]
+  )
+
   const scheduleLines = useMemo(
     () =>
       buildWizardScheduleLines({
-        scheduleType,
+        scheduleType: effectiveScheduleType,
         dayRows,
         startDate,
         startTime,
         endTime,
       }),
-    [scheduleType, dayRows, startDate, startTime, endTime]
+    [effectiveScheduleType, dayRows, startDate, startTime, endTime]
   )
 
   // Workspace steps (Capacity, Floor Plan) get a wider, panel-less layout.
@@ -460,34 +492,6 @@ export function MarketSetupWizard({
     return null
   }, [categoryLimits, layoutCapacity, currentStep])
 
-  function sortedDayRows(): DayRow[] {
-    return [...dayRows].sort((a, b) => {
-      if (!a.date) return 1
-      if (!b.date) return -1
-      return a.date.localeCompare(b.date)
-    })
-  }
-
-  function resolveScheduleBounds(): { startAt: string; endAt: string } | null {
-    const effectiveSchedule = effectiveScheduleTypeForListing(listingType, scheduleType)
-    if (effectiveSchedule === 'multi') {
-      const filledRows = dayRows.filter((r) => r.date && r.start_time && r.end_time)
-      if (filledRows.length === 0) return null
-      if (dayRows.some((r) => !r.date || !r.start_time || !r.end_time)) return null
-      const sorted = sortedDayRows()
-      return {
-        startAt: new Date(`${sorted[0].date}T${sorted[0].start_time}`).toISOString(),
-        endAt: new Date(`${sorted[sorted.length - 1].date}T${sorted[sorted.length - 1].end_time}`).toISOString(),
-      }
-    }
-    if (!startDate || !startTime || !endDate || !endTime) return null
-    if (new Date(`${endDate}T${endTime}`) <= new Date(`${startDate}T${startTime}`)) return null
-    return {
-      startAt: new Date(`${startDate}T${startTime}`).toISOString(),
-      endAt: new Date(`${endDate}T${endTime}`).toISOString(),
-    }
-  }
-
   async function uploadCoverIfNeeded(resolvedEventId: string): Promise<string | null> {
     if (!coverFile) return coverImageUrl || null
     const ext = coverFile.name.split('.').pop() ?? 'jpg'
@@ -500,8 +504,22 @@ export function MarketSetupWizard({
 
   const autosave = useCallback(
     async (opts?: { publish?: boolean }) => {
-      const bounds = resolveScheduleBounds()
-      if (!bounds) return { ok: false as const, reason: 'schedule' as const }
+      const bounds = resolveEventScheduleBounds({
+        listingType,
+        scheduleType,
+        startDate,
+        startTime,
+        endDate,
+        endTime,
+        dayRows,
+      })
+      if (!bounds.ok) {
+        return {
+          ok: false as const,
+          reason: 'schedule' as const,
+          scheduleReason: bounds.reason,
+        }
+      }
 
       /*
        * Booth-fee disclosure gate — applies only on the publish path.
@@ -597,7 +615,8 @@ export function MarketSetupWizard({
       } catch (err) {
         console.error(err)
         setAutosaveStatus('error')
-        return { ok: false as const, reason: 'error' as const }
+        const message = err instanceof Error ? err.message : 'Save failed'
+        return { ok: false as const, reason: 'error' as const, message }
       }
     },
     [
@@ -643,6 +662,13 @@ export function MarketSetupWizard({
     if (isQuarterAuctionListing(next)) {
       setSkipVenueLayout(true)
       setScheduleType('single')
+      const firstDay = dayRows.find((r) => r.date && r.start_time && r.end_time)
+      if (firstDay) {
+        setStartDate(firstDay.date)
+        setEndDate(firstDay.date)
+        setStartTime(firstDay.start_time)
+        setEndTime(firstDay.end_time)
+      }
     }
     // When the listing type *flips* between QA and standard market, retune
     // the schedule defaults so the form mirrors the typical event window
@@ -789,45 +815,50 @@ export function MarketSetupWizard({
    * bounds, listing-type rules, AND venue location / map pin / template
    * dimensions in a single pass.
    */
-  function validateStep1(): boolean {
-    if (!name.trim()) {
-      toast.error('Event name is required')
-      return false
-    }
-    if (isQuarterAuctionListing(listingType) && scheduleType === 'multi') {
-      toast.error('Quarter auctions must be single-day events.')
-      return false
-    }
-    const bounds = resolveScheduleBounds()
-    if (!bounds) {
-      toast.error('Complete schedule dates and times before continuing')
-      return false
-    }
+  const handleGooglePlaceSelect = useCallback(
+    (place: PlaceResult) => {
+      setAddress(place.address)
+      setLat(place.lat)
+      setLng(place.lng)
+      setPinDropped(true)
+      if (place.cityId) {
+        setMarketCity((current) => (place.cityId !== current ? place.cityId! : current))
+      }
+      setLocationName((current) => {
+        const next = resolveVenueNameForPlace({
+          placeName: place.name,
+          formattedAddress: place.address,
+          isEstablishment: place.isEstablishment,
+          currentVenueName: current,
+        })
+        return next ?? current
+      })
+    },
+    []
+  )
 
-    if (skipVenueLayout) {
-      if (!locationName.trim()) {
-        toast.error('Venue name is required')
-        return false
-      }
-      if (!address.trim()) {
-        toast.error('Venue address is required')
-        return false
-      }
-      if (!pinDropped) {
-        toast.error('Drop a map pin for the venue location')
-        return false
-      }
-      return true
-    }
-    if (templateAnchor.width < 10 || templateAnchor.length < 10) {
-      toast.error('Select a venue template or set dimensions (min 10 ft)')
-      return false
-    }
-    if (!pinDropped) {
-      toast.error('Drop a map pin for the venue location')
-      return false
-    }
-    return true
+  function validateStep1(): boolean {
+    const error = getWizardStep1ValidationError({
+      name,
+      description,
+      listingType,
+      scheduleType,
+      startDate,
+      startTime,
+      endDate,
+      endTime,
+      dayRows,
+      locationName,
+      address,
+      pinDropped,
+      skipVenueLayout,
+      templateWidth: templateAnchor.width,
+      templateLength: templateAnchor.length,
+    })
+    if (!error) return true
+    toast.error(error.message)
+    focusWizardField(error.fieldId, { dayRowIndex: error.dayRowIndex })
+    return false
   }
 
   async function goNext() {
@@ -840,7 +871,7 @@ export function MarketSetupWizard({
         if (!validateStep1()) return
         const result = await autosave()
         if (!result.ok) {
-          toast.error('Could not save draft — check schedule and venue fields')
+          toast.error(autosaveFailureMessage(result))
           return
         }
         advanceToStep(2, result.eventId)
@@ -910,7 +941,7 @@ export function MarketSetupWizard({
     try {
       const result = await autosave()
       if (!result.ok) {
-        toast.error('Could not save draft before switching steps')
+        toast.error(autosaveFailureMessage(result, 'Could not save draft before switching steps'))
         return
       }
       setCurrentStep(step)
@@ -1052,6 +1083,7 @@ export function MarketSetupWizard({
                 description={description}
                 onDescriptionChange={setDescription}
                 scheduleType={scheduleType}
+                effectiveScheduleType={effectiveScheduleType}
                 onScheduleTypeChange={handleScheduleTypeChange}
                 startDate={startDate}
                 onStartDateChange={setStartDate}
@@ -1107,6 +1139,7 @@ export function MarketSetupWizard({
                 onSkipVenueLayoutChange={setSkipVenueLayout}
                 coordinatorId={coordinatorId}
                 onApplySavedVenue={handleApplySavedVenue}
+                onPlaceSelect={handleGooglePlaceSelect}
               />
               <WizardNav step={1} onNext={goNext} nextDisabled={transitioning} />
             </div>

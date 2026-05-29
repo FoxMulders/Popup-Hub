@@ -33,9 +33,13 @@ import {
   WIZARD_STEP_TITLE,
 } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
+import {
+  isNamedEstablishmentPlace,
+  resolveVenueNameFromGeocoderResult,
+} from '@/lib/wizard/google-place-venue'
 import type { CoordinatorSavedVenue } from '@/types/database'
 
-interface PlaceResult {
+export interface PlaceResult {
   address: string
   lat: number
   lng: number
@@ -192,15 +196,7 @@ function AddressAutocomplete({
             return
           }
           const address = place.formatted_address ?? prediction.description
-          const types = place.types ?? []
-          // `establishment` covers any named POI; `point_of_interest` covers
-          // venues without a strict establishment classification. A pure
-          // street_address / route should NOT clobber a coordinator's typed
-          // venue name.
-          const isEstablishment =
-            types.includes('establishment') ||
-            types.includes('point_of_interest') ||
-            types.includes('premise')
+          const isEstablishment = isNamedEstablishmentPlace(place.types ?? undefined)
           onPlaceSelect({
             address,
             lat: place.geometry.location.lat(),
@@ -382,6 +378,7 @@ export interface WizardStepVenueProps {
   onSkipVenueLayoutChange: (v: boolean) => void
   coordinatorId: string
   onApplySavedVenue: (venue: CoordinatorSavedVenue) => void
+  onPlaceSelect: (place: PlaceResult) => void
 }
 
 export function WizardStepVenue({
@@ -404,10 +401,21 @@ export function WizardStepVenue({
   onSkipVenueLayoutChange,
   coordinatorId,
   onApplySavedVenue,
+  onPlaceSelect,
 }: WizardStepVenueProps) {
+  const apiLoaded = useApiIsLoaded()
   const marketCity = getMarketCityById(city)
   const cityLabel = marketCity.label
   const prevCityRef = useRef(city)
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null)
+  const locationNameRef = useRef(locationName)
+  locationNameRef.current = locationName
+
+  useEffect(() => {
+    if (apiLoaded && window.google?.maps) {
+      geocoderRef.current = new window.google.maps.Geocoder()
+    }
+  }, [apiLoaded])
 
   useEffect(() => {
     if (prevCityRef.current === city) return
@@ -420,10 +428,35 @@ export function WizardStepVenue({
   const handleMapClick = useCallback(
     (e: MapMouseEvent) => {
       if (!e.detail?.latLng) return
-      onCoordinatesChange(e.detail.latLng.lat, e.detail.latLng.lng)
+      const nextLat = e.detail.latLng.lat
+      const nextLng = e.detail.latLng.lng
+      onCoordinatesChange(nextLat, nextLng)
       onPinDroppedChange(true)
+
+      const geocoder = geocoderRef.current
+      if (!geocoder) return
+
+      geocoder.geocode({ location: { lat: nextLat, lng: nextLng } }, (results, status) => {
+        if (status !== window.google.maps.GeocoderStatus.OK || !results?.[0]) return
+        const result = results[0]
+        const address = result.formatted_address ?? ''
+        const venueName = resolveVenueNameFromGeocoderResult(result, locationNameRef.current)
+        const cityId = address ? inferMarketCityId(address) : null
+        const isEstablishment = isNamedEstablishmentPlace(result.types)
+
+        onPlaceSelect({
+          address,
+          lat: nextLat,
+          lng: nextLng,
+          name: venueName ?? '',
+          cityId,
+          isEstablishment,
+          postalCode: pickAddressComponent(result.address_components, 'postal_code'),
+          country: pickAddressComponent(result.address_components, 'country'),
+        })
+      })
     },
-    [onCoordinatesChange, onPinDroppedChange]
+    [onCoordinatesChange, onPinDroppedChange, onPlaceSelect]
   )
 
   const anchor = resolveTemplateAnchoredDimensions(venuePresetId, venueWidth, venueLength)
@@ -510,29 +543,7 @@ export function WizardStepVenue({
             value={address}
             onChange={onAddressChange}
             cityId={city}
-            onPlaceSelect={(place) => {
-              onAddressChange(place.address)
-              onCoordinatesChange(place.lat, place.lng)
-              onPinDroppedChange(true)
-
-              // Sync the market-city dropdown if the picked address falls
-              // inside a different known market city. We do NOT override an
-              // unrecognized region (cityId === null) so a coordinator
-              // picking a venue outside our supported markets still keeps
-              // their previously chosen anchor.
-              if (place.cityId && place.cityId !== city) {
-                onCityChange(place.cityId)
-              }
-
-              // Auto-fill the Venue Name only when:
-              //  • the field is empty, OR
-              //  • the picked place is a named establishment (Costco, Hall,
-              //    Park…), in which case overwriting the prior value is a
-              //    safe upgrade because the user clearly chose a new POI.
-              if (place.name && (place.isEstablishment || !locationName.trim())) {
-                onLocationNameChange(place.name)
-              }
-            }}
+            onPlaceSelect={onPlaceSelect}
           />
         </div>
       </div>
@@ -544,9 +555,13 @@ export function WizardStepVenue({
           : 'Click the map or pick a venue template to drop a pin immediately.'}
       </p>
 
-      <div className="h-72 overflow-hidden rounded-lg border-2 border-stone-200 [touch-action:auto]">
+      <div
+        id="wizard-venue-map"
+        className="h-72 overflow-hidden rounded-lg border-2 border-stone-200 [touch-action:auto]"
+        tabIndex={-1}
+      >
         <Map
-          mapId="wizard-venue-map"
+          mapId="wizard-venue-map-canvas"
           defaultCenter={{ lat, lng }}
           defaultZoom={pinDropped ? 14 : 11}
           gestureHandling="greedy"
