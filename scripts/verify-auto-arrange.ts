@@ -290,25 +290,9 @@ for (const c of cases) {
   const dropped = result.droppedCount
   const ok = errors.length === 0 && placed >= c.expectMin
 
-  // Legacy row-major adjacency check — only meaningful when slots
-  // fill left-to-right; center-out spiral may fail this while still
-  // satisfying proximity rules, so we no longer gate on it.
-  let adjacentDuplicate = false
-  if (false && c.categories && c.categories.length > 1) {
-    const placedBooths = result.doc.objects.filter(
-      (o): o is BoothObject => o.kind === 'booth'
-    )
-    // Sort row-major then x to walk in placement order.
-    const sorted = [...placedBooths].sort((a, b) =>
-      a.y === b.y ? a.x - b.x : a.y - b.y
-    )
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i]!.categoryName === sorted[i - 1]!.categoryName) {
-        adjacentDuplicate = true
-        break
-      }
-    }
-  }
+  // Legacy row-major adjacency check disabled — center-out spiral may place
+  // same-category neighbors in scan order while still satisfying proximity.
+  const adjacentDuplicate = false
 
   // Hard proximity rule: every pair of same-category booths in the
   // arranged doc must satisfy `dxColumns >= 5 OR dyRows >= 2`. Any
