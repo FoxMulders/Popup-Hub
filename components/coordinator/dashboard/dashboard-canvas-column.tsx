@@ -73,7 +73,7 @@ export function DashboardCanvasColumn({
             <DashboardFloorPlanViewport onInteractive={handleInteractive} />
           </motion.div>
         </Suspense>
-      ) : (
+      ) : showBlueprint ? null : (
         <CanvasZoneSkeleton />
       )}
     </div>

@@ -45,6 +45,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
       clearTimers()
       setPhase('ready')
       setMountCanvas(true)
+      setAriaBusy(false)
       setLiveMessage('Market command center ready.')
       return
     }
