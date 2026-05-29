@@ -302,11 +302,11 @@ export function FloorPlanV2({
     const merged: RoomFrame[] = wizardFrames.map((wf) => {
       const existing = docFrameById.get(wf.id)
       if (!existing) return wf
+      // Keep canvas geometry (drag, resize, rotate). Wizard only
+      // updates the display name while the editor is open.
       return {
         ...existing,
         name: wf.name,
-        widthFt: wf.widthFt,
-        lengthFt: wf.lengthFt,
       }
     })
 
@@ -986,31 +986,44 @@ export function FloorPlanV2({
 
   const rotateTargetRoomId = selectedRoomId ?? activeRoomId
 
+  const syncLayoutRoomsFromDoc = useCallback(
+    (doc: FloorPlanDoc) => {
+      if (layoutRooms.length === 0) return
+      const projected = legacyRoomsFromDoc(layoutRooms, doc)
+      onLayoutRoomsChange(projected, activeRoomId)
+    },
+    [activeRoomId, layoutRooms, onLayoutRoomsChange]
+  )
+
   const handleRotateRoomLeft = useCallback(() => {
     if (!rotateTargetRoomId) {
       toast.message('Click the room perimeter on the canvas, then rotate.')
       return
     }
-    const ok = store.rotateRoomFrame(rotateTargetRoomId, 'ccw')
-    if (!ok) {
+    const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'ccw')
+    if (!nextDoc) {
       toast.message(
         'Room rotation blocked — canvas limit would be exceeded.'
       )
+      return
     }
-  }, [rotateTargetRoomId, store])
+    syncLayoutRoomsFromDoc(nextDoc)
+  }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const handleRotateRoomRight = useCallback(() => {
     if (!rotateTargetRoomId) {
       toast.message('Click the room perimeter on the canvas, then rotate.')
       return
     }
-    const ok = store.rotateRoomFrame(rotateTargetRoomId, 'cw')
-    if (!ok) {
+    const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'cw')
+    if (!nextDoc) {
       toast.message(
         'Room rotation blocked — canvas limit would be exceeded.'
       )
+      return
     }
-  }, [rotateTargetRoomId, store])
+    syncLayoutRoomsFromDoc(nextDoc)
+  }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const viewportApiRef = useRef<ViewportApi | null>(null)
   const [currentZoom, setCurrentZoom] = useState(1)

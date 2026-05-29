@@ -147,7 +147,7 @@ export interface FloorPlanDocStore {
     roomId: string,
     direction: 'cw' | 'ccw',
     options?: { pushHistory?: boolean }
-  ) => boolean
+  ) => FloorPlanDoc | null
 
   /**
    * Fuse a list of room frames into a single dissolved zone. Every
@@ -232,6 +232,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
   const commit = useCallback(
     (next: FloorPlanDoc, pushHistory: boolean) => {
       if (pushHistory) pushPast(docRef.current)
+      docRef.current = next
       setDoc(next)
     },
     [pushPast]
@@ -462,7 +463,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const current = docRef.current
       const frames = current.rooms ?? []
       const frame = frames.find((f) => f.id === roomId)
-      if (!frame) return false
+      if (!frame) return null
 
       const roomCenter = roomFrameCenter(frame)
       const deltaDeg = roomRotateDeltaDeg(direction)
@@ -489,7 +490,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         limits &&
         (bounds.maxX > limits.maxWidthFt || bounds.maxY > limits.maxLengthFt)
       ) {
-        return false
+        return null
       }
 
       const objectRoom = current.objectRoom ?? {}
@@ -506,17 +507,15 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       })
       const extents = reconcileCanvasExtents(nextFrames)
 
-      commit(
-        {
-          ...current,
-          objects: nextObjects,
-          rooms: nextFrames,
-          canvasWidthFt: extents.canvasWidthFt,
-          canvasLengthFt: extents.canvasLengthFt,
-        },
-        pushHistory
-      )
-      return true
+      const nextDoc: FloorPlanDoc = {
+        ...current,
+        objects: nextObjects,
+        rooms: nextFrames,
+        canvasWidthFt: extents.canvasWidthFt,
+        canvasLengthFt: extents.canvasLengthFt,
+      }
+      commit(nextDoc, pushHistory)
+      return nextDoc
     },
     [commit]
   )

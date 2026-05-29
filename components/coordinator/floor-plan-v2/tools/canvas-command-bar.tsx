@@ -245,7 +245,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
   return (
     <div
       className={cn(
-        'flex flex-col gap-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm',
+        'rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm',
         className
       )}
       role="toolbar"

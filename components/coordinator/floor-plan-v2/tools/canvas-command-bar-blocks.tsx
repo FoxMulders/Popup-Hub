@@ -290,25 +290,25 @@ export function renderCanvasCommandBarBlock(
     case 'room-transform':
       return ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
         <div
-          className="inline-flex items-center gap-0.5 rounded-md border border-teal-200/80 bg-teal-50/50 px-1"
+          className="inline-flex items-center gap-0.5"
           role="group"
           aria-label="Rotate room"
         >
           <CommandButton
             onClick={ctx.onRotateRoomLeft}
             disabled={!canRotateRoom}
-            title={canRotateRoom ? `${rotateRoomHint} (counter-clockwise)` : rotateRoomHint}
-            label="Rotate room ↺"
-            className="text-teal-900 hover:bg-teal-100/80"
+            title={canRotateRoom ? `${rotateRoomHint} (left)` : rotateRoomHint}
+            label="Room ↺"
+            className="text-teal-900 hover:bg-teal-100"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </CommandButton>
           <CommandButton
             onClick={ctx.onRotateRoomRight}
             disabled={!canRotateRoom}
-            title={canRotateRoom ? `${rotateRoomHint} (clockwise)` : rotateRoomHint}
-            label="Rotate room ↻"
-            className="text-teal-900 hover:bg-teal-100/80"
+            title={canRotateRoom ? `${rotateRoomHint} (right)` : rotateRoomHint}
+            label="Room ↻"
+            className="text-teal-900 hover:bg-teal-100"
           >
             <RotateCw className="h-3.5 w-3.5" />
           </CommandButton>
