@@ -103,6 +103,40 @@ export function unionCanvasContentBounds(
   return { minX, minY, maxX, maxY }
 }
 
+/** Bounds used to frame the viewport on the active room (not the full canvas). */
+export function activeRoomFramingBounds(
+  frames: ReadonlyArray<RoomFrame>,
+  activeRoomId: string | null | undefined,
+  objects?: ReadonlyArray<PlacedObject>,
+  objectRoom?: Readonly<Record<string, string>>
+): FtBounds {
+  const frame =
+    (activeRoomId ? frames.find((f) => f.id === activeRoomId) : null) ??
+    frames[0]
+  if (!frame) return roomUnionBounds(frames)
+
+  let minX = Math.max(0, frame.originX)
+  let minY = Math.max(0, frame.originY)
+  let maxX = minX + frame.widthFt
+  let maxY = minY + frame.lengthFt
+
+  if (objects?.length) {
+    for (const obj of objects) {
+      const roomId = objectRoom?.[obj.id]
+      if (roomId && roomId !== frame.id) continue
+      const aabb = rotatedAabb(obj)
+      const right = aabb.x + aabb.width
+      const bottom = aabb.y + aabb.height
+      if (aabb.x < minX) minX = aabb.x
+      if (aabb.y < minY) minY = aabb.y
+      if (right > maxX) maxX = right
+      if (bottom > maxY) maxY = bottom
+    }
+  }
+
+  return { minX, minY, maxX, maxY }
+}
+
 /**
  * Desired canvas extents from rooms + placed objects plus margin.
  * Grows past the nominal 5× ceiling when rotated content requires it.

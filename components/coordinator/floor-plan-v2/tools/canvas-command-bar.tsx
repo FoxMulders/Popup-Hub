@@ -245,7 +245,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
   return (
     <div
       className={cn(
-        'max-h-[min(42vh,320px)] overflow-y-auto rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm scrollbar-none',
+        'shrink-0 rounded-lg border border-stone-200 bg-white px-2 py-1 shadow-sm',
         className
       )}
       role="toolbar"

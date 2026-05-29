@@ -41,7 +41,7 @@ export function BoothMatrixA11yTable() {
   if (rows.length === 0) return null
 
   return (
-    <div className="border-t border-stone-200 bg-stone-50/90 px-3 py-2">
+    <div className="dashboard-booth-matrix-panel border-t border-stone-200 bg-stone-50/90 px-3 py-2 sr-only">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Booth matrix (screen reader)
       </h3>

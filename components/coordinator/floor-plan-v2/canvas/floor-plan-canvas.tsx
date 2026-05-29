@@ -18,7 +18,7 @@ import {
 import { InlineLabelEditor } from './inline-label-editor'
 import { RoomFrames } from './room-frames'
 import { RoomSelectionOverlay } from './room-selection-overlay'
-import { roomUnionBounds } from '../state/room-canvas'
+import { activeRoomFramingBounds } from '../state/room-canvas'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
 import { useBoothCategoryTooltip } from '../interactions/use-booth-category-tooltip'
@@ -209,67 +209,50 @@ export function FloorPlanCanvas({
     onZoomChange?.(viewport.zoom)
   }, [onZoomChange, viewport.zoom])
 
-  /**
-   * Adaptive auto-zoom: when room frames spread apart, step zoom down
-   * (80% per step from 1.0) so every room stays framed. Only zooms
-   * out — never forces zoom-in while the user is inspecting detail.
-   */
+  /** Re-frame the active room when its layout or the viewport size changes. */
   const roomsLayoutKey = useMemo(() => {
     const frames = store.doc.rooms ?? []
-    return frames
+    return `${activeRoomId ?? ''}:${frames
       .map(
         (f) =>
           `${f.id}:${f.originX},${f.originY},${f.widthFt},${f.lengthFt}`
       )
-      .join('|')
-  }, [store.doc.rooms])
+      .join('|')}`
+  }, [activeRoomId, store.doc.rooms])
 
-  const lastAutoZoomRef = useRef<number | null>(null)
-  useEffect(() => {
+  const frameActiveRoom = useCallback(() => {
     const frames = store.doc.rooms ?? []
     if (frames.length === 0) return
+    const bounds = activeRoomFramingBounds(
+      frames,
+      activeRoomId,
+      store.doc.objects,
+      store.doc.objectRoom
+    )
+    viewport.fitToBounds(bounds, { padding: 0.08 })
+  }, [
+    activeRoomId,
+    store.doc.objectRoom,
+    store.doc.objects,
+    store.doc.rooms,
+    viewport,
+  ])
+
+  useEffect(() => {
+    frameActiveRoom()
+  }, [frameActiveRoom, roomsLayoutKey])
+
+  useEffect(() => {
     const scroll = scrollRef.current
-    if (!scroll || scroll.clientWidth === 0 || scroll.clientHeight === 0) {
-      return
-    }
-    const bounds = roomUnionBounds(frames)
-    const widthFt = bounds.maxX - bounds.minX
-    const heightFt = bounds.maxY - bounds.minY
-    if (widthFt <= 0 || heightFt <= 0) return
-
-    const padding = 0.12
-    const stepFactor = 0.8
-    const usableW = Math.max(40, scroll.clientWidth * (1 - padding * 2))
-    const usableH = Math.max(40, scroll.clientHeight * (1 - padding * 2))
-    let targetZoom = 1
-    while (targetZoom >= 0.25) {
-      const pxPerFt = basePxPerFt * targetZoom
-      if (widthFt * pxPerFt <= usableW && heightFt * pxPerFt <= usableH) {
-        break
+    if (!scroll || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      if (scroll.clientWidth > 0 && scroll.clientHeight > 0) {
+        frameActiveRoom()
       }
-      targetZoom *= stepFactor
-    }
-    targetZoom = Math.max(0.25, Math.min(3, targetZoom))
-
-    if (
-      lastAutoZoomRef.current !== null &&
-      targetZoom >= viewport.zoom - 0.02
-    ) {
-      return
-    }
-    lastAutoZoomRef.current = targetZoom
-    if (targetZoom < viewport.zoom - 0.02) {
-      viewport.fitToBoundsStepped(
-        {
-          minX: bounds.minX,
-          minY: bounds.minY,
-          maxX: bounds.maxX,
-          maxY: bounds.maxY,
-        },
-        { padding, stepFactor, zoomMax: 1 }
-      )
-    }
-  }, [basePxPerFt, roomsLayoutKey, viewport, store.doc.rooms])
+    })
+    observer.observe(scroll)
+    return () => observer.disconnect()
+  }, [frameActiveRoom])
 
   const transform = useMemo(
     () => ({ basePxPerFt, zoom: viewport.zoom }),

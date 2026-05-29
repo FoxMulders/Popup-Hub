@@ -34,8 +34,8 @@ import {
   legacyRoomsFromDoc,
 } from './state/legacy-bridge'
 import {
+  activeRoomFramingBounds,
   reconcileCanvasExtents,
-  roomUnionBounds,
   unionCanvasContentBounds,
 } from './state/room-canvas'
 import {
@@ -816,7 +816,24 @@ export function FloorPlanV2({
     [handleAlignSelection]
   )
 
-  const [canvasFullscreen, setCanvasFullscreen] = useState(false)
+  const [wizardCanvasFullscreen, setWizardCanvasFullscreen] = useState(false)
+  const canvasFullscreen = isDashboard
+    ? commandCenterFullscreen.fullscreen
+    : wizardCanvasFullscreen
+  const setCanvasFullscreen = useCallback(
+    (value: boolean | ((prev: boolean) => boolean)) => {
+      if (isDashboard) {
+        const next =
+          typeof value === 'function'
+            ? value(commandCenterFullscreen.fullscreen)
+            : value
+        commandCenterFullscreen.setFullscreen(next)
+        return
+      }
+      setWizardCanvasFullscreen(value)
+    },
+    [commandCenterFullscreen, isDashboard]
+  )
 
   // Keyboard shortcuts.
   useEffect(() => {
@@ -1008,10 +1025,13 @@ export function FloorPlanV2({
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'ccw')
     if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
-    viewportApiRef.current?.fitToBoundsStepped(
-      unionCanvasContentBounds(nextDoc.rooms ?? [], nextDoc.objects),
-      { padding: 0.12, zoomMax: 1 }
+    const bounds = activeRoomFramingBounds(
+      nextDoc.rooms ?? [],
+      rotateTargetRoomId,
+      nextDoc.objects,
+      nextDoc.objectRoom
     )
+    viewportApiRef.current?.fitToBounds(bounds, { padding: 0.08 })
   }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const handleRotateRoomRight = useCallback(() => {
@@ -1022,22 +1042,16 @@ export function FloorPlanV2({
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'cw')
     if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
-    viewportApiRef.current?.fitToBoundsStepped(
-      unionCanvasContentBounds(nextDoc.rooms ?? [], nextDoc.objects),
-      { padding: 0.12, zoomMax: 1 }
+    const bounds = activeRoomFramingBounds(
+      nextDoc.rooms ?? [],
+      rotateTargetRoomId,
+      nextDoc.objects,
+      nextDoc.objectRoom
     )
+    viewportApiRef.current?.fitToBounds(bounds, { padding: 0.08 })
   }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const [currentZoom, setCurrentZoom] = useState(1)
-
-  const canvasExtentsKey = `${store.doc.canvasWidthFt}:${store.doc.canvasLengthFt}`
-  useEffect(() => {
-    const api = viewportApiRef.current
-    const frames = store.doc.rooms ?? []
-    if (!api || frames.length === 0) return
-    const bounds = roomUnionBounds(frames)
-    api.fitToBoundsStepped(bounds, { padding: 0.12, zoomMax: 1 })
-  }, [canvasExtentsKey, store.doc.rooms?.length])
 
   const handleViewportReady = useCallback((api: ViewportApi | null) => {
     viewportApiRef.current = api
@@ -1486,7 +1500,158 @@ export function FloorPlanV2({
       </header>
       ) : null}
 
-      <CanvasCommandBar
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col gap-1 overflow-hidden',
+          isDashboard && 'min-h-[min(58vh,640px)]'
+        )}
+      >
+        {!isDashboard ? (
+          <CanvasCommandBar
+            toolState={{ tool, drawShape }}
+            onToolChange={handleToolChange}
+            onDrawShapeChange={handleDrawShapeChange}
+            canUndo={store.canUndo}
+            canRedo={store.canRedo}
+            onUndo={store.undo}
+            onRedo={store.redo}
+            onClearAll={handleClearAll}
+            selectedCount={selectedCount}
+            onDeleteSelected={handleDeleteSelected}
+            onCopy={handleCopy}
+            onPaste={handlePaste}
+            clipboardHasContents={clipboardHasContents}
+            onRotateLeft={handleRotateLeft}
+            onRotateRight={handleRotateRight}
+            onRotateRoomLeft={handleRotateRoomLeft}
+            onRotateRoomRight={handleRotateRoomRight}
+            selectedRoomId={selectedRoomId}
+            onAlignVertical={handleAlignVertical}
+            onAlignHorizontal={handleAlignHorizontal}
+            zoom={currentZoom}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
+            onCenterView={handleCenterView}
+            onAutoArrange={handleAutoArrange}
+            canAutoArrange={boothCount > 0}
+            autoArrangeMode={autoArrangeMode}
+            onAutoArrangeModeChange={setAutoArrangeMode}
+            onAddPerimeterWalls={handleAddPerimeterWalls}
+            onJoinRooms={handleJoinRooms}
+            canJoinRooms={joinPlan.canJoin}
+            joinCandidateCount={
+              joinPlan.canJoin
+                ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
+                : undefined
+            }
+            joinBlockedReason={joinPlan.blockedReason}
+            onUnjoinRoom={handleUnjoinRoom}
+            canUnjoinRoom={joinPlan.unjoinGroupId !== null}
+            tableSizeFt={tableSizePillValue}
+            onTableSizeChange={handleTableSizeChange}
+            rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
+            activeRoomId={selectedRoomId ?? activeRoomId}
+            onSelectRoom={handleSelectRoom}
+            onAddRoom={onAddRoom}
+            onRenameRoom={onRenameRoom}
+            onDeleteRoom={onDeleteRoom}
+            highlightedRoomMetrics={highlightedRoomMetrics}
+            showLabels={showLabels}
+            onShowLabelsChange={setShowLabels}
+            canvasFullscreen={canvasFullscreen}
+            onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+            onSaveMarket={onSaveMarket}
+            saveMarketDisabled={saveMarketDisabled}
+            saveMarketLoading={saveMarketLoading}
+          />
+        ) : null}
+
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 flex-1 overflow-hidden',
+            !isDashboard && 'gap-2'
+          )}
+        >
+          <div
+            className={cn(
+              'relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100',
+              isDashboard ? 'min-h-[280px]' : 'min-h-[280px] h-full'
+            )}
+          >
+            <FloorPlanCanvas
+              className="absolute inset-0"
+              store={store}
+              toolState={{ tool, drawShape }}
+              defaultBoothTableLengthFt={defaultPlacementSizeFt}
+              activeRoomId={activeRoomId}
+              selectedRoomId={selectedRoomId}
+              onRoomFrameClick={handleRoomFrameClick}
+              onViewportReady={handleViewportReady}
+              onZoomChange={setCurrentZoom}
+              eventCategoryNames={eventCategoryNames}
+              boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+              onVendorDrop={onVendorDrop}
+              onProximityViolation={(info) => {
+                toast.error(
+                  `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
+                  { duration: 2400 }
+                )
+              }}
+              onOverlapViolation={() => {
+                toast.error(
+                  'Objects cannot overlap — move the selection so it clears other fixtures, then try again.',
+                  { duration: 2400 }
+                )
+              }}
+              onRoomCanvasLimitBlocked={() => {
+                toast.message(
+                  'Canvas limit reached — rooms cannot extend beyond 5× the primary room dimensions.',
+                  { duration: 2200 }
+                )
+              }}
+              showLabels={showLabels}
+            />
+            <CanvasLegend />
+          </div>
+
+          {!isDashboard ? (
+            <div className="relative flex shrink-0">
+              {!rightInspectorOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setRightInspectorOpen(true)}
+                  title="Show inspector (])"
+                  aria-label="Show inspector"
+                  className="flex h-full w-7 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              ) : (
+                <div className="relative w-[min(100%,260px)]">
+                  <button
+                    type="button"
+                    onClick={() => setRightInspectorOpen(false)}
+                    title="Hide inspector (])"
+                    aria-label="Hide inspector"
+                    className="absolute -left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </button>
+                  <PropertyInspector
+                    store={store}
+                    eventCategoryNames={eventCategoryNames}
+                    className="h-full max-h-full overflow-y-auto"
+                  />
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {isDashboard ? (
+        <CanvasCommandBar
+          className="max-h-28 shrink-0 overflow-y-auto scrollbar-none"
           toolState={{ tool, drawShape }}
           onToolChange={handleToolChange}
           onDrawShapeChange={handleDrawShapeChange}
@@ -1544,81 +1709,6 @@ export function FloorPlanV2({
           saveMarketDisabled={saveMarketDisabled}
           saveMarketLoading={saveMarketLoading}
         />
-
-      <div className="flex min-h-0 flex-1 gap-2 overflow-hidden">
-        <div
-          className={cn(
-            'relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100',
-            'h-full min-h-[280px]'
-          )}
-        >
-          <FloorPlanCanvas
-            className="absolute inset-0"
-            store={store}
-            toolState={{ tool, drawShape }}
-            defaultBoothTableLengthFt={defaultPlacementSizeFt}
-            activeRoomId={activeRoomId}
-            selectedRoomId={selectedRoomId}
-            onRoomFrameClick={handleRoomFrameClick}
-            onViewportReady={handleViewportReady}
-            onZoomChange={setCurrentZoom}
-            eventCategoryNames={eventCategoryNames}
-            boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
-            onVendorDrop={onVendorDrop}
-            onProximityViolation={(info) => {
-              toast.error(
-                `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
-                { duration: 2400 }
-              )
-            }}
-            onOverlapViolation={() => {
-              toast.error(
-                'Objects cannot overlap — move the selection so it clears other fixtures, then try again.',
-                { duration: 2400 }
-              )
-            }}
-            onRoomCanvasLimitBlocked={() => {
-              toast.message(
-                'Canvas limit reached — rooms cannot extend beyond 5× the primary room dimensions.',
-                { duration: 2200 }
-              )
-            }}
-            showLabels={showLabels}
-          />
-          <CanvasLegend />
-        </div>
-
-        {!isDashboard ? (
-        <div className="relative flex shrink-0">
-          {!rightInspectorOpen ? (
-            <button
-              type="button"
-              onClick={() => setRightInspectorOpen(true)}
-              title="Show inspector (])"
-              aria-label="Show inspector"
-              className="flex h-full w-7 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          ) : (
-            <div className="relative w-[min(100%,260px)]">
-              <button
-                type="button"
-                onClick={() => setRightInspectorOpen(false)}
-                title="Hide inspector (])"
-                aria-label="Hide inspector"
-                className="absolute -left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
-              <PropertyInspector
-                store={store}
-                eventCategoryNames={eventCategoryNames}
-                className="h-full max-h-full overflow-y-auto"
-              />
-            </div>
-          )}
-        </div>
         ) : null}
       </div>
     </div>
