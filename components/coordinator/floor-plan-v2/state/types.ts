@@ -18,7 +18,6 @@ export type ObjectKind =
   | 'booth'
   | 'wall'
   | 'open_wall'
-  | 'aisle'
   | 'label'
   | 'door'
   | 'emergency_exit'
@@ -91,10 +90,6 @@ export interface OpenWallObject extends BasePlacedObject {
   counterDepthFt?: number
 }
 
-export interface AisleObject extends BasePlacedObject {
-  kind: 'aisle'
-}
-
 export interface LabelObject extends BasePlacedObject {
   kind: 'label'
   text: string
@@ -124,7 +119,6 @@ export type PlacedObject =
   | BoothObject
   | WallObject
   | OpenWallObject
-  | AisleObject
   | LabelObject
   | DoorObject
   | EmergencyExitObject

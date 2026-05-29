@@ -8,7 +8,6 @@ export type {
   BoothObject,
   WallObject,
   OpenWallObject,
-  AisleObject,
   LabelObject,
   DoorObject,
   StageObject,

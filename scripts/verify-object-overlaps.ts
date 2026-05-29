@@ -42,7 +42,7 @@ function obj(
     case 'stage':
       return { ...base, kind: 'stage' }
     default:
-      return { ...base, kind: 'aisle' }
+      return { ...base, kind: 'label', text: 'Test' }
   }
 }
 

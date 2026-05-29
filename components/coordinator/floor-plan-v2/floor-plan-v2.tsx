@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import {
   DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
   isLayoutBaselineTableLengthFt,
@@ -28,9 +27,8 @@ import { CanvasLegend } from './canvas/canvas-legend'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
-import { CanvasLeftDock } from './tools/canvas-left-dock'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
-import { autoArrangeInRoom } from './engine/auto-arrange'
+import { autoArrangeInRoom, type AutoArrangeMode } from './engine/auto-arrange'
 import {
   docFromLegacyRooms,
   legacyRoomsFromDoc,
@@ -72,6 +70,7 @@ import {
   targetHasPerimeterWalls,
 } from './interactions/perimeter-walls'
 import type { LayoutRoom } from '@/types/database'
+import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
 const ROTATE_STEP_DEG = 15
@@ -166,6 +165,10 @@ export interface FloorPlanV2Props {
   className?: string
   /** Notifies the host when the layout has unresolved object overlaps. */
   onOverlapChange?: (hasOverlap: boolean) => void
+  /** Wizard Step 3 — triggers save + deploy from the top ribbon. */
+  onSaveMarket?: () => void
+  saveMarketDisabled?: boolean
+  saveMarketLoading?: boolean
 }
 
 /**
@@ -174,7 +177,7 @@ export interface FloorPlanV2Props {
  * Architecture:
  *   - Every `LayoutRoom` from the wizard is projected onto a single
  *     `FloorPlanDoc` whose `objects` array carries every booth /
- *     wall / door / stage / aisle / label across every room, all in
+ *     wall / door / stage / label across every room, all in
  *     *global* canvas coordinates. Each object is tagged via
  *     `doc.objectRoom[id] → roomId` so saves can split the unified
  *     edit back into per-room cells + venue elements.
@@ -202,6 +205,9 @@ export function FloorPlanV2({
   applications,
   className,
   onOverlapChange,
+  onSaveMarket,
+  saveMarketDisabled,
+  saveMarketLoading,
 }: FloorPlanV2Props) {
   // Initial unified doc — seed from server-loaded rooms first; if a
   // fresher crash-recovery draft exists in localStorage for this
@@ -236,7 +242,8 @@ export function FloorPlanV2({
   const [drawShape, setDrawShape] = useState<DrawShape>(
     DEFAULT_TOOL_STATE.drawShape
   )
-  const [leftDockOpen, setLeftDockOpen] = useState(true)
+  const [autoArrangeMode, setAutoArrangeMode] =
+    useState<AutoArrangeMode>('center-out')
   const [rightInspectorOpen, setRightInspectorOpen] = useState(true)
   const [showLabels, setShowLabels] = useState(true)
 
@@ -862,8 +869,6 @@ export function FloorPlanV2({
       }
 
       if (!cmd && e.key === '[') {
-        e.preventDefault()
-        setLeftDockOpen((open) => !open)
         return
       }
       if (!cmd && e.key === ']') {
@@ -1038,6 +1043,7 @@ export function FloorPlanV2({
       return
     }
     const result = autoArrangeInRoom(store.doc, activeRoomId, {
+      mode: autoArrangeMode,
       eventCategoryNames,
       baselineTableLengthFt: safeTableSizeFt,
       vendorTableMetaByKey,
@@ -1051,18 +1057,11 @@ export function FloorPlanV2({
       return
     }
     store.replaceObjects(result.doc.objects)
-    if (result.overflowCount > 0) {
-      // Capacity gate from Step 2 prevented overflow booths from
-      // ever entering the placement loop. Tell the coordinator
-      // so they know the layout reflects the safe ceiling, not
-      // their original booth count.
+    const spaceOverflow = result.overflowCount + result.droppedCount
+    if (spaceOverflow > 0) {
       toast.warning(
-        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} — ${result.overflowCount} exceeded the venue's safe Max Booths ceiling and were trimmed to preserve walking clearance.`,
+        `Could not place ${spaceOverflow} booth${spaceOverflow === 1 ? '' : 's'} due to space restrictions.`,
         { duration: 5000 }
-      )
-    } else if (result.droppedCount > 0) {
-      toast.warning(
-        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} — ${result.droppedCount} did not fit and were dropped.`
       )
     } else if (result.unsatisfiedCategoryCount > 0) {
       // The clearance pass succeeded but the same-category proximity
@@ -1080,6 +1079,7 @@ export function FloorPlanV2({
     }
   }, [
     activeRoomId,
+    autoArrangeMode,
     boothCount,
     eventCategoryNames,
     layoutCapacity,
@@ -1352,7 +1352,7 @@ export function FloorPlanV2({
     <div
       id="floor-plan-workspace"
       className={cn(
-        'flex flex-col gap-2',
+        'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden',
         canvasFullscreen &&
           'fixed inset-0 z-50 h-screen w-screen bg-stone-50 p-2 sm:p-3',
         className
@@ -1377,13 +1377,9 @@ export function FloorPlanV2({
           </h2>
           <p className="text-[11px] text-stone-500">
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
-              [
-            </kbd>{' '}
-            /{' '}
-            <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               ]
             </kbd>{' '}
-            toggle panels ·{' '}
+            toggle inspector ·{' '}
             <kbd className="rounded border border-stone-300 bg-white px-1 text-[10px] font-semibold">
               H
             </kbd>{' '}
@@ -1443,6 +1439,9 @@ export function FloorPlanV2({
           onCenterView={handleCenterView}
           onAutoArrange={handleAutoArrange}
           canAutoArrange={boothCount > 0}
+          autoArrangeMode={autoArrangeMode}
+          onAutoArrangeModeChange={setAutoArrangeMode}
+          onAddPerimeterWalls={handleAddPerimeterWalls}
           onJoinRooms={handleJoinRooms}
           canJoinRooms={joinPlan.canJoin}
           joinCandidateCount={
@@ -1468,66 +1467,15 @@ export function FloorPlanV2({
           onShowLabelsChange={setShowLabels}
           canvasFullscreen={canvasFullscreen}
           onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+          onSaveMarket={onSaveMarket}
+          saveMarketDisabled={saveMarketDisabled}
+          saveMarketLoading={saveMarketLoading}
         />
 
-      <div className="flex min-h-0 gap-2">
-        <div className="relative flex shrink-0">
-          {!leftDockOpen ? (
-            <button
-              type="button"
-              onClick={() => setLeftDockOpen(true)}
-              title="Show tool palette ([)"
-              aria-label="Show tool palette"
-              className="flex h-full w-7 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setLeftDockOpen(false)}
-                title="Hide tool palette ([)"
-                aria-label="Hide tool palette"
-                className="absolute -right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </button>
-              <CanvasLeftDock
-                toolState={{ tool, drawShape }}
-                onToolChange={handleToolChange}
-                onDrawShapeChange={handleDrawShapeChange}
-                canUndo={store.canUndo}
-                canRedo={store.canRedo}
-                onUndo={store.undo}
-                onRedo={store.redo}
-                onClearAll={handleClearAll}
-                selectedCount={selectedCount}
-                onDeleteSelected={handleDeleteSelected}
-                onCopy={handleCopy}
-                onPaste={handlePaste}
-                clipboardHasContents={clipboardHasContents}
-                onRotateLeft={handleRotateLeft}
-                onRotateRight={handleRotateRight}
-                onAlignVertical={handleAlignVertical}
-                onAlignHorizontal={handleAlignHorizontal}
-                zoom={currentZoom}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomReset={handleZoomReset}
-                onCenterView={handleCenterView}
-                onAutoArrange={handleAutoArrange}
-                canAutoArrange={boothCount > 0}
-                onAddPerimeterWalls={handleAddPerimeterWalls}
-                showLabels={showLabels}
-                onShowLabelsChange={setShowLabels}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="relative min-w-0 flex-1 h-[clamp(360px,58vh,780px)] overflow-hidden rounded-lg border border-stone-200 bg-stone-100 lg:h-[780px]">
+      <div className="flex min-h-0 flex-1 gap-2 overflow-hidden">
+        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100 h-[calc(100vh-theme(spacing.header))]">
           <FloorPlanCanvas
+            className="absolute inset-0"
             store={store}
             toolState={{ tool, drawShape }}
             activeRoomId={activeRoomId}
@@ -1584,7 +1532,7 @@ export function FloorPlanV2({
               <PropertyInspector
                 store={store}
                 eventCategoryNames={eventCategoryNames}
-                className="h-full max-h-[clamp(360px,58vh,780px)] overflow-y-auto lg:max-h-[780px]"
+                className="h-full max-h-full overflow-y-auto"
               />
             </div>
           )}

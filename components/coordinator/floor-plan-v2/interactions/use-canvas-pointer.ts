@@ -1157,9 +1157,6 @@ function commitDraft(
       // the field is absent — see canvas-objects.tsx.
       obj = { ...base, kind: 'open_wall', counterDepthFt: 1.5 }
       break
-    case 'aisle':
-      obj = { ...base, kind: 'aisle' }
-      break
     case 'stage':
       obj = { ...base, kind: 'stage' }
       break
@@ -1174,7 +1171,7 @@ function commitDraft(
       break
   }
   // Same-category proximity gate for newly-drawn booths. Walls,
-  // doors, aisles, etc. skip the check (it only applies to booths).
+  // doors, etc. skip the check (it only applies to booths).
   if (obj.kind === 'booth') {
     const gridSpacingFt = store.doc.gridSpacingFt || 1
     const violation = findBoothProximityViolation(

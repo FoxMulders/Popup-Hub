@@ -2,7 +2,6 @@
 
 import { memo, useMemo } from 'react'
 import type {
-  AisleObject,
   BoothObject,
   DoorObject,
   EmergencyExitObject,
@@ -65,8 +64,6 @@ function fillForObject(
       // surface. The dashed counter line drawn on top provides the
       // "service window" cue.
       return '#fef3c7'
-    case 'aisle':
-      return '#fafaf9'
     case 'stage':
       return '#fbcfe8'
     case 'door':
@@ -99,8 +96,6 @@ function strokeForObject(
       return '#1c1917'
     case 'open_wall':
       return '#92400e'
-    case 'aisle':
-      return '#a8a29e'
     case 'stage':
       return '#9d174d'
     case 'door':
@@ -125,7 +120,7 @@ const OPEN_WALL_DEFAULT_COUNTER_DEPTH_FT = 1.5
  *
  * Open-walls (`open_wall`) are NOT in this set: they are their own
  * architectural fixture with a built-in dashed cutout. Stages,
- * booths, aisles, labels never carve walls.
+ * booths, labels never carve walls.
  */
 const WALL_CARVING_KINDS: ReadonlySet<PlacedObject['kind']> = new Set<
   PlacedObject['kind']
@@ -460,15 +455,13 @@ function CanvasObjectsBase({
                 width={w}
                 height={h}
                 fill={fill}
-                fillOpacity={obj.kind === 'aisle' ? 0.4 : 0.85}
+                fillOpacity={0.85}
                 stroke={stroke}
                 strokeWidth={strokeWidth}
                 strokeDasharray={
-                  obj.kind === 'aisle'
-                    ? '4 3'
-                    : obj.kind === 'emergency_exit'
-                      ? '6 3'
-                      : undefined
+                  obj.kind === 'emergency_exit'
+                    ? '6 3'
+                    : undefined
                 }
                 pointerEvents="all"
                 shapeRendering="crispEdges"
@@ -601,8 +594,6 @@ function textFillForObject(obj: PlacedObject): string {
       return '#fafaf9'
     case 'open_wall':
       return '#92400e'
-    case 'aisle':
-      return '#57534e'
     case 'door':
       return '#fafaf9'
     case 'emergency_exit':
@@ -628,7 +619,7 @@ const EXTERIOR_LABEL_KINDS: ReadonlySet<PlacedObject['kind']> = new Set<
  * pushed onto the exterior margin (above for landscape, to the
  * left for portrait) with an opaque pill backing so the wall
  * vector underneath stays unobscured. Other kinds (booth, stage,
- * aisle, label) keep the centered inline placement that reads as
+ * label) keep the centered inline placement that reads as
  * "this is the contents of this region".
  *
  * The exterior margin is:
@@ -761,8 +752,6 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return (obj as WallObject).label || 'Perimeter wall'
     case 'open_wall':
       return (obj as OpenWallObject).label || 'Open wall'
-    case 'aisle':
-      return (obj as AisleObject).label || 'Aisle'
     case 'stage':
       return (obj as StageObject).label || 'Stage'
     case 'door':

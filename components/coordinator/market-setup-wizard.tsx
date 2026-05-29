@@ -911,48 +911,11 @@ export function MarketSetupWizard({
 
   const isFloorPlanStep = currentStep === 3 && !skipVenueLayout
 
-  // Toggle the global "fullscreen workspace" body class while the
-  // coordinator is on the floor plan step. CSS in `globals.css`
-  // hides the global footer + setup-page back link, collapses the
-  // setup wrapper's vertical padding, and disables body-level
-  // overflow so the canvas's `overflow:auto` element becomes the
-  // single unified scroll surface (no more dual page+canvas
-  // scrollbars). The `<html>` element is also toggled to
-  // `overflow: hidden; height: 100dvh` because body's overflow
-  // alone doesn't suppress the browser-level scrollbar — the root
-  // scroller is the html element and Chrome still grows the page
-  // unless html itself is height-pinned.
-  useEffect(() => {
-    if (!isFloorPlanStep) return
-    const cls = 'workspace-fullscreen'
-    document.body.classList.add(cls)
-    document.documentElement.classList.add(cls)
-    return () => {
-      document.body.classList.remove(cls)
-      document.documentElement.classList.remove(cls)
-    }
-  }, [isFloorPlanStep])
-
   return (
     <div
       className={cn(
         isFloorPlanStep
-          ? // Bottom padding (`pb-[calc(...)]`) pulls the WizardNav row
-            // clear of the iOS home indicator on phones so the
-            // "Save floor plan & deploy" button is fully tappable.
-            //
-            // Height constraint: the floor plan step is the one
-            // place in the wizard where a fixed viewport height is
-            // critical. With the body class toggle above hiding the
-            // global footer, the back-link, and collapsing the
-            // setup-page padding, the only chrome left above is the
-            // AppNav (~106 px) plus a thin top pad (~8 px) ≈ 114 px.
-            // Pinning the wizard root to `100dvh-114px` therefore
-            // exactly fills the remaining viewport, and the existing
-            // `flex-1 min-h-0` cascade below delivers the canvas
-            // exactly the leftover space — making the canvas's own
-            // `overflow:auto` the single unified scroll surface.
-            'mx-[calc(50%-50vw)] flex min-h-0 w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4 h-[calc(100svh-148px)] sm:h-[calc(100dvh-114px)] max-h-[calc(100svh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]'
+          ? 'mx-[calc(50%-50vw)] flex min-h-0 w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] sm:px-3 lg:px-4 h-[calc(100dvh-theme(spacing.header))] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]'
           : 'space-y-6'
       )}
     >
@@ -1167,9 +1130,12 @@ export function MarketSetupWizard({
                 applications={applications}
                 className="flex-1 min-h-0"
                 onOverlapChange={setPlannerOverlap}
+                onSaveMarket={goNext}
+                saveMarketDisabled={transitioning || plannerOverlap}
+                saveMarketLoading={transitioning}
               />
               <div className="shrink-0">
-                <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />
+                <WizardNav step={3} onBack={goBack} />
               </div>
             </>
           ) : null}

@@ -213,16 +213,16 @@ console.log('Carve — multiple overlapping doors merge into one carve interval'
   )
 }
 
-console.log('Carve — booth/aisle/wall do NOT carve walls')
+console.log('Carve — booth/label/wall do NOT carve walls')
 {
   const wall = obj('w', 'wall', 0, 0, 30, 1)
   const booth = obj('b', 'booth', 5, 0, 4, 1)
-  const aisle = obj('a', 'aisle', 12, 0, 4, 1)
+  const label = { ...obj('a', 'label', 12, 0, 4, 1), text: 'Zone' }
   const otherWall = obj('w2', 'wall', 18, 0, 4, 1)
   const openWall = obj('ow', 'open_wall', 22, 0, 4, 1)
   const segments = computeWallSegments(
     wall,
-    [wall, booth, aisle, otherWall, openWall],
+    [wall, booth, label, otherWall, openWall],
     PX_PER_FT
   )
   expect(

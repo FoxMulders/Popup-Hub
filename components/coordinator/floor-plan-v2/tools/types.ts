@@ -10,7 +10,7 @@ import type { ObjectKind } from '../state/types'
  * Critically, NONE of these modes ever invoke a layout preset, capacity
  * clamp, or auto-population routine. Drawing creates exactly one object
  * per gesture. Clicking empty canvas in `select` mode just clears the
- * selection — it never spawns booths or aisles.
+ * selection — it never spawns booths from empty canvas clicks.
  */
 export type ToolId = 'hand' | 'select' | 'draw'
 

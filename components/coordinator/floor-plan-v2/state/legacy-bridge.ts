@@ -10,7 +10,7 @@
  * Translation rules:
  * - Booths → `BoothCell` records with col/row computed from
  *   `floor(x / 1ft)`, span derived from `ceil(width / 1ft)`.
- * - Walls / aisles / stages / labels → `VenueElement` records.
+ * - Walls / stages / labels → `VenueElement` records.
  * - Doors → `VenueElement` of type `entrance` or `exit`.
  *
  * Note: this projection is lossy (floats truncate to ft cells). On the
@@ -71,8 +71,6 @@ function venueElementTypeForObject(
       // is preserved in the label string via the `OPEN_WALL_LABEL_PREFIX`
       // sentinel (see `legacyRoomFromDoc` below).
       return 'column'
-    case 'aisle':
-      return 'aisle'
     case 'stage':
       return 'stage'
     case 'label':
@@ -268,7 +266,7 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
       }
       return { ...base, kind: 'wall' }
     case 'aisle':
-      return { ...base, kind: 'aisle' }
+      return null
     case 'stage':
       return { ...base, kind: 'stage' }
     case 'custom_label':

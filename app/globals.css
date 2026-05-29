@@ -51,6 +51,8 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
+  --spacing-header: 9rem;
+
   /* Brand & surface */
   --color-canvas: #f5f2eb;
   --color-linen: #faf8f7;
@@ -199,57 +201,6 @@
       transparent 70%
     );
   }
-
-  /*
-   * Fullscreen workspace mode.
-   *
-   * Toggled by `MarketSetupWizard` while the coordinator is on the
-   * floor plan step. The body becomes a non-scrolling viewport and
-   * any element that opts in via `.workspace-fullscreen-hide` is
-   * removed from the layout (footer, "Back to event" link, etc).
-   * `.workspace-fullscreen-tight-pad` collapses generous page-level
-   * py-8 padding down to a tight margin so the wizard step root
-   * gets virtually all of the viewport below the AppNav. The result
-   * is a single seamless scroll surface inside the canvas itself.
-   *
-   * The `body.workspace-fullscreen` toggle is in
-   * `components/coordinator/market-setup-wizard.tsx` (useEffect
-   * guarded by `isFloorPlanStep`).
-   */
-  body.workspace-fullscreen,
-  html.workspace-fullscreen {
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-  }
-  html:has(body.workspace-fullscreen) {
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-  }
-  body.workspace-fullscreen .workspace-fullscreen-hide {
-    display: none !important;
-  }
-  body.workspace-fullscreen .workspace-fullscreen-tight-pad {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.25rem !important;
-    padding-block: 0.5rem 0.25rem !important;
-  }
-  /*
-   * `market-page` carries `overflow-x: hidden` which CSS implicitly
-   * promotes to `overflow-y: auto` per spec — that re-introduces a
-   * thin viewport-level scrollbar on the floor plan step even after
-   * we've height-pinned html and body. Force both axes hidden while
-   * fullscreen is active so the canvas is unambiguously the only
-   * scroll surface.
-   */
-  body.workspace-fullscreen .market-page {
-    overflow: hidden !important;
-    height: 100svh;
-    height: 100dvh;
-    min-height: 0;
-  }
-
 
   /* Signage-style panels (clipboards on a table) */
   .market-panel {

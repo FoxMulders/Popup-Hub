@@ -75,8 +75,6 @@ function previewFill(kind: ObjectKind): string {
       return '#1c1917'
     case 'open_wall':
       return '#fef3c7'
-    case 'aisle':
-      return '#f5f5f4'
     case 'stage':
       return '#fbcfe8'
     case 'door':
@@ -96,8 +94,6 @@ function previewStroke(kind: ObjectKind): string {
       return '#0c0a09'
     case 'open_wall':
       return '#92400e'
-    case 'aisle':
-      return '#a8a29e'
     case 'stage':
       return '#9d174d'
     case 'door':

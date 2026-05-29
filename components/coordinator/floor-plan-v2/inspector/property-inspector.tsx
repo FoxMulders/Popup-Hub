@@ -154,8 +154,6 @@ function prettyKindHint(kind: PlacedObject['kind']): string {
       return 'Solid barrier — purely visual; no placement enforcement.'
     case 'open_wall':
       return 'Service window (food trucks / concessions). Snap flush to walls and tune counter depth.'
-    case 'aisle':
-      return 'Walkway zone. Advisory only; vendors can still cross it.'
     case 'door':
       return 'Entrance or exit marker. Position freely along walls.'
     case 'emergency_exit':

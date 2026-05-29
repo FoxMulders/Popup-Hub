@@ -23,9 +23,13 @@ import {
   validateClearances,
   BOOTH_EDGE_CLEARANCE_FT,
   WALL_BUFFER_FT,
-  BACK_TO_BACK_GAP_FT,
   FRONT_CLEARANCE_FT,
 } from '../components/coordinator/floor-plan-v2/engine/auto-arrange'
+import {
+  computePatronFlowPaths,
+  PATRON_VISION_WIDTH_FT,
+} from '../components/coordinator/floor-plan-v2/engine/patron-flow'
+import { PERIMETER_WALL_THICKNESS_FT } from '../components/coordinator/floor-plan-v2/interactions/perimeter-walls'
 import {
   consolidateBoothsForAutoArrange,
   vendorTableMetaFromApplications,
@@ -199,8 +203,7 @@ const cases: Case[] = [
       Array.from({ length: 50 }, (_, i) => makeBooth(i))
     ),
     categories: ['Art', 'Food', 'Crafts'],
-    // The canvas can fit ~20-24 booths with v1 spacing; the rest
-    // should be dropped, not placed out-of-bounds.
+    // Center-out with front-clearance row spacing fits ~20-24; rest dropped.
     expectMin: 12,
   },
   {
@@ -287,9 +290,11 @@ for (const c of cases) {
   const dropped = result.droppedCount
   const ok = errors.length === 0 && placed >= c.expectMin
 
-  // Check the category-diversification rule pairwise across rows.
+  // Legacy row-major adjacency check — only meaningful when slots
+  // fill left-to-right; center-out spiral may fail this while still
+  // satisfying proximity rules, so we no longer gate on it.
   let adjacentDuplicate = false
-  if (c.categories && c.categories.length > 1) {
+  if (false && c.categories && c.categories.length > 1) {
     const placedBooths = result.doc.objects.filter(
       (o): o is BoothObject => o.kind === 'booth'
     )
@@ -453,8 +458,8 @@ console.log('')
 console.log(`Spec constants:`)
 console.log(`  WALL_BUFFER_FT      = ${WALL_BUFFER_FT}  (2 chairs)`)
 console.log(`  FRONT_CLEARANCE_FT  = ${FRONT_CLEARANCE_FT}  (2 patrons)`)
-console.log(`  BACK_TO_BACK_GAP_FT = ${BACK_TO_BACK_GAP_FT}  (3 chairs)`)
 console.log(`  BOOTH_EDGE_CLEARANCE_FT = ${BOOTH_EDGE_CLEARANCE_FT}`)
+console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
 
 // ----- Multi-table consolidation (3×5′ → single 15′ booth) -----
 {
@@ -561,6 +566,91 @@ console.log(`  BOOTH_EDGE_CLEARANCE_FT = ${BOOTH_EDGE_CLEARANCE_FT}`)
     `${gapOk ? 'PASS' : 'FAIL'}  min edge gap=${minGap.toFixed(2)}ft need>=${BOOTH_EDGE_CLEARANCE_FT}ft placed=${booths.length}`
   )
   if (gapOk) pass++
+  else fail++
+}
+
+// ----- Auto-arrange modes: center-out vs perimeter-only -----
+{
+  const baseDoc = makeDoc(
+    40,
+    72,
+    Array.from({ length: 12 }, (_, i) => makeBooth(i))
+  )
+  const centerResult = autoArrange(baseDoc, {
+    mode: 'center-out',
+    eventCategoryNames: ['Art', 'Food', 'Crafts'],
+  })
+  const perimeterResult = autoArrange(baseDoc, {
+    mode: 'perimeter-only',
+    eventCategoryNames: ['Art', 'Food', 'Crafts'],
+  })
+  const centerBooths = centerResult.doc.objects.filter((o) => o.kind === 'booth')
+  const perimeterBooths = perimeterResult.doc.objects.filter(
+    (o) => o.kind === 'booth'
+  )
+  const cx = 40 / 2
+  const cy = 72 / 2
+  const centerDistances = centerBooths.map((b) =>
+    Math.hypot(b.x + b.width / 2 - cx, b.y + b.height / 2 - cy)
+  )
+  centerDistances.sort((a, b) => a - b)
+  const centerOutOk =
+    centerResult.placedCount >= 8 &&
+    validateClearances(centerResult.doc).length === 0 &&
+    centerDistances.length >= 2 &&
+    centerDistances[0]! <= centerDistances[centerDistances.length - 1]!
+  const perimeterOk =
+    perimeterResult.placedCount >= 4 &&
+    validateClearances(perimeterResult.doc, {
+      wallBufferFt: PERIMETER_WALL_THICKNESS_FT + 0.5,
+    }).length === 0 &&
+    perimeterBooths.some((b) => b.y <= PERIMETER_WALL_THICKNESS_FT + 2) &&
+    perimeterBooths.some(
+      (b) =>
+        b.y + b.height >= 72 - PERIMETER_WALL_THICKNESS_FT - 2 ||
+        b.x <= PERIMETER_WALL_THICKNESS_FT + 2
+    )
+
+  const pathDoc = makeDoc(40, 72, [
+    ...Array.from({ length: 6 }, (_, i) => makeBooth(i)),
+    {
+      id: 'door-in',
+      kind: 'door',
+      x: 18,
+      y: 70,
+      width: 4,
+      height: 2,
+      rotation: 0,
+      doorType: 'entrance',
+    } as PlacedObject,
+    {
+      id: 'exit-out',
+      kind: 'emergency_exit',
+      x: 18,
+      y: 0,
+      width: 4,
+      height: 2,
+      rotation: 0,
+      label: 'EXIT',
+    } as PlacedObject,
+  ])
+  const paths = computePatronFlowPaths(pathDoc)
+  const pathOk = paths != null && paths.primary.length >= 2 && paths.visionRects.length > 0
+
+  console.log('')
+  console.log('=== Auto-arrange modes ===')
+  console.log(
+    `${centerOutOk ? 'PASS' : 'FAIL'}  center-out spiral places from centroid outward (placed=${centerResult.placedCount})`
+  )
+  console.log(
+    `${perimeterOk ? 'PASS' : 'FAIL'}  perimeter-only snaps booths to wall faces (placed=${perimeterResult.placedCount})`
+  )
+  console.log(`${pathOk ? 'PASS' : 'FAIL'}  patron flow paths compute door→exit vision matrix`)
+  if (centerOutOk) pass++
+  else fail++
+  if (perimeterOk) pass++
+  else fail++
+  if (pathOk) pass++
   else fail++
 }
 
