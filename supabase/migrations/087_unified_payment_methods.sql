@@ -34,6 +34,5 @@ CREATE INDEX IF NOT EXISTS idx_booth_applications_stripe_payment_id
   ON booth_applications (stripe_payment_id)
   WHERE stripe_payment_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_booth_applications_offline_pending
-  ON booth_applications (event_id, application_payment_status)
-  WHERE payment_method IN ('ETRANSFER', 'CASH') AND application_payment_status = 'PENDING_REVIEW';
+-- idx_booth_applications_offline_pending is in 089: new enum values cannot be
+-- referenced in the same transaction as ALTER TYPE ... ADD VALUE.

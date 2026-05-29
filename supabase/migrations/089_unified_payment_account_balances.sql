@@ -70,3 +70,7 @@ CREATE POLICY account_balances_service_all ON account_balances
 -- booth_applications.payment_method (SQUARE|STRIPE|ETRANSFER|CASH) maps to vendor-facing
 -- credit_card | etransfer | cash; payment_status pending + application_payment_status
 -- PENDING_REVIEW maps to pending_payment; paid + COMPLETED maps to paid.
+
+CREATE INDEX IF NOT EXISTS idx_booth_applications_offline_pending
+  ON booth_applications (event_id, application_payment_status)
+  WHERE payment_method IN ('ETRANSFER', 'CASH') AND application_payment_status = 'PENDING_REVIEW';
