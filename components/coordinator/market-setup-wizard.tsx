@@ -952,7 +952,7 @@ export function MarketSetupWizard({
             // `flex-1 min-h-0` cascade below delivers the canvas
             // exactly the leftover space — making the canvas's own
             // `overflow:auto` the single unified scroll surface.
-            'mx-[calc(50%-50vw)] flex h-[calc(100dvh-114px)] min-h-[420px] w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4'
+            'mx-[calc(50%-50vw)] flex min-h-0 w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:px-3 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] lg:px-4 h-[calc(100svh-148px)] sm:h-[calc(100dvh-114px)] max-h-[calc(100svh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]'
           : 'space-y-6'
       )}
     >

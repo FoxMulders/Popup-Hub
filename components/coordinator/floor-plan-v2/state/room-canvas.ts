@@ -262,7 +262,7 @@ export function clampRoomResizePatch(
   roomId: string,
   patch: RoomResizePatch
 ): RoomResizePatch | null {
-  let next = { ...patch }
+  const next = { ...patch }
   next.widthFt = Math.max(MIN_ROOM_DIMENSION_FT, next.widthFt)
   next.lengthFt = Math.max(MIN_ROOM_DIMENSION_FT, next.lengthFt)
   if (next.originX < 0) next.originX = 0

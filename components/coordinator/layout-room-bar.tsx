@@ -26,6 +26,15 @@ interface LayoutRoomBarProps {
   /** Vertical room list for the floor-plan sidebar. */
   compact?: boolean
   /**
+   * Live dimensions for the highlighted room — updates during canvas
+   * resize and reads from the unified doc room frame.
+   */
+  highlightedRoomMetrics?: {
+    name: string
+    widthFt: number
+    lengthFt: number
+  } | null
+  /**
    * Slim toolbar mode: render as a thin horizontal ribbon designed
    * to stack directly under the canvas command bar instead of as a
    * full `market-panel` card. Drops the panel chrome, shrinks the
@@ -34,6 +43,11 @@ interface LayoutRoomBarProps {
    * grid without eating workspace height.
    */
   slim?: boolean
+  /**
+   * Inline mode: no outer panel chrome — tabs and Add room live
+   * inside the primary CanvasCommandBar row (no secondary ribbon).
+   */
+  embedded?: boolean
 }
 
 export function LayoutRoomBar({
@@ -44,7 +58,9 @@ export function LayoutRoomBar({
   onRenameRoom,
   onDeleteRoom,
   compact = false,
+  highlightedRoomMetrics = null,
   slim = false,
+  embedded = false,
 }: LayoutRoomBarProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -92,13 +108,16 @@ export function LayoutRoomBar({
   return (
     <div
       className={cn(
-        slim
-          ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
-          : 'market-panel p-3 space-y-2'
+        embedded
+          ? 'flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-1'
+          : slim
+            ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
+            : 'market-panel p-3 space-y-2'
       )}
       role="toolbar"
       aria-label="Rooms and zones"
     >
+      {!embedded ? (
       <div
         className={cn(
           slim
@@ -115,6 +134,19 @@ export function LayoutRoomBar({
         >
           Rooms / zones
         </p>
+        {highlightedRoomMetrics ? (
+          <span
+            className={cn(
+              'rounded-md border border-stone-200 bg-stone-50 font-semibold tabular-nums text-stone-700',
+              slim ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1 text-xs'
+            )}
+            title="Physical dimensions of the highlighted room"
+          >
+            {highlightedRoomMetrics.name}: {Math.round(highlightedRoomMetrics.widthFt)}'
+            {' × '}
+            {Math.round(highlightedRoomMetrics.lengthFt)}'
+          </span>
+        ) : null}
         <div className="relative" ref={presetMenuRef}>
           <div
             className={cn(
@@ -183,13 +215,83 @@ export function LayoutRoomBar({
           ) : null}
         </div>
       </div>
+      ) : (
+        <>
+          {highlightedRoomMetrics ? (
+            <span
+              className="shrink-0 rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-[11px] font-semibold tabular-nums text-stone-700"
+              title="Physical dimensions of the highlighted room"
+            >
+              {highlightedRoomMetrics.name}: {Math.round(highlightedRoomMetrics.widthFt)}'
+              {' × '}
+              {Math.round(highlightedRoomMetrics.lengthFt)}'
+            </span>
+          ) : null}
+          <div className="relative shrink-0" ref={presetMenuRef}>
+          <div className="flex items-stretch overflow-hidden rounded-md border border-stone-200">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 min-h-0 gap-1 rounded-none border-0 px-2 text-xs"
+              onClick={() => onAddRoom()}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add room
+            </Button>
+            <button
+              type="button"
+              aria-label="Choose room preset"
+              aria-expanded={presetMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => setPresetMenuOpen((v) => !v)}
+              className="flex h-8 min-h-0 items-center justify-center border-l border-stone-200 px-2 text-stone-600 hover:bg-canvas"
+            >
+              <ChevronDown
+                className={cn(
+                  'h-3.5 w-3.5 transition-transform',
+                  presetMenuOpen ? 'rotate-180' : ''
+                )}
+              />
+            </button>
+          </div>
+          {presetMenuOpen ? (
+            <div
+              role="menu"
+              aria-label="Add room from preset"
+              className="absolute left-0 z-20 mt-1 w-64 rounded-lg border border-stone-200 bg-card p-1 shadow-[var(--shadow-market)]"
+            >
+              {LAYOUT_ROOM_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setPresetMenuOpen(false)
+                    onAddRoom(preset.id)
+                  }}
+                  className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
+                >
+                  <span className="text-sm font-semibold text-foreground">
+                    {preset.name}
+                  </span>
+                  <span className="text-[11px] leading-tight text-muted-foreground">
+                    {preset.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        </>
+      )}
       <div
         className={cn(
           'flex gap-2 -mx-1 px-1',
-          slim ? 'min-w-0 flex-1 items-center pb-0' : 'pb-1',
+          embedded ? 'min-w-0 flex-1 items-center overflow-x-auto pb-0' : slim ? 'min-w-0 flex-1 items-center pb-0' : 'pb-1',
           compact
             ? 'flex-col items-stretch'
-            : slim
+            : slim || embedded
               ? 'overflow-x-auto'
               : 'scroll-touch-x items-center'
         )}

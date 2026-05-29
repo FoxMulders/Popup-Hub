@@ -125,6 +125,8 @@ export function CanvasLeftDock({
   onZoomIn,
   onZoomOut,
   onAddPerimeterWalls,
+  showLabels = true,
+  onShowLabelsChange,
   collapsed = false,
   className,
 }: CanvasLeftDockProps) {
@@ -171,6 +173,19 @@ export function CanvasLeftDock({
             label="Zoom +"
             icon={Plus}
           />
+          {onShowLabelsChange ? (
+            <DockButton
+              active={showLabels}
+              onClick={() => onShowLabelsChange(!showLabels)}
+              title={
+                showLabels
+                  ? 'Hide architectural labels'
+                  : 'Show architectural labels'
+              }
+              label="Show Labels"
+              icon={showLabels ? Eye : EyeOff}
+            />
+          ) : null}
         </DockSection>
 
         <div className="border-t border-stone-100" />

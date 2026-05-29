@@ -197,9 +197,19 @@ export function FloorPlanV2({
   // event, prefer that.
   const initialDoc = useMemo<FloorPlanDoc>(() => {
     const seeded = docFromLegacyRooms(layoutRooms)
-    if (!eventId) return seeded
+    const reconcileDoc = (doc: FloorPlanDoc): FloorPlanDoc => {
+      const frames = doc.rooms ?? []
+      if (frames.length === 0) return doc
+      const extents = reconcileCanvasExtents(frames)
+      return {
+        ...doc,
+        canvasWidthFt: Math.max(extents.canvasWidthFt, doc.canvasWidthFt, 50),
+        canvasLengthFt: Math.max(extents.canvasLengthFt, doc.canvasLengthFt, 50),
+      }
+    }
+    if (!eventId) return reconcileDoc(seeded)
     const cached = loadMultiRoomDraft(eventId)
-    return cached?.doc ?? seeded
+    return reconcileDoc(cached?.doc ?? seeded)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -217,6 +227,7 @@ export function FloorPlanV2({
   )
   const [leftDockOpen, setLeftDockOpen] = useState(true)
   const [rightInspectorOpen, setRightInspectorOpen] = useState(true)
+  const [showLabels, setShowLabels] = useState(true)
 
   // The wizard's room list is the canonical source of (rooms, names,
   // dims). The unified doc's `rooms` field is updated whenever the
@@ -255,13 +266,6 @@ export function FloorPlanV2({
       }
     })
 
-    // First sync after mount: if the wizard already had server-loaded
-    // rooms with origins set, prefer the doc's seeded frames as-is.
-    if (isFirstSync && docFrames.length > 0) {
-      // No re-sync needed — initial doc already used wizardFrames.
-      return
-    }
-
     const sameFrames =
       merged.length === docFrames.length &&
       merged.every((m, i) => {
@@ -276,6 +280,37 @@ export function FloorPlanV2({
           d.originY === m.originY
         )
       })
+
+    // First sync after mount: when wizard and doc already agree on the
+    // same room ids, only reconcile canvas extents (crash-recovery
+    // drafts can undersize the workspace vs room union). When the
+    // wizard has rooms the doc doesn't know about yet, fall through
+    // and merge normally so secondary rooms aren't trapped inside the
+    // primary hall bounds.
+    if (isFirstSync && docFrames.length > 0) {
+      const wizardIdSet = new Set(wizardFrames.map((f) => f.id))
+      const sameRoomSet =
+        wizardIdSet.size === docFrames.length &&
+        docFrames.every((f) => wizardIdSet.has(f.id))
+      if (sameRoomSet) {
+        const extents = reconcileCanvasExtents(merged)
+        if (
+          store.doc.canvasWidthFt !== extents.canvasWidthFt ||
+          store.doc.canvasLengthFt !== extents.canvasLengthFt ||
+          !sameFrames
+        ) {
+          store.patchDoc(
+            {
+              rooms: merged,
+              canvasWidthFt: extents.canvasWidthFt,
+              canvasLengthFt: extents.canvasLengthFt,
+            },
+            { pushHistory: false }
+          )
+        }
+        return
+      }
+    }
 
     if (sameFrames) return
 
@@ -311,6 +346,17 @@ export function FloorPlanV2({
       ? rawSelectedRoomId
       : null
   }, [layoutRooms, rawSelectedRoomId])
+
+  const highlightedRoomId = selectedRoomId ?? activeRoomId
+  const highlightedRoomMetrics = useMemo(() => {
+    const frame = (store.doc.rooms ?? []).find((r) => r.id === highlightedRoomId)
+    if (!frame) return null
+    return {
+      name: frame.name,
+      widthFt: frame.widthFt,
+      lengthFt: frame.lengthFt,
+    }
+  }, [store.doc.rooms, highlightedRoomId])
 
   // Validated copy of the wizard-owned baseline table length. The
   // command-bar pill binds to this; upstream the value comes from
@@ -1087,11 +1133,8 @@ export function FloorPlanV2({
 
   const handleSelectRoom = useCallback(
     (roomId: string) => {
-      // Selecting a room from the sidebar updates both the wizard's
-      // active room id (so capacity and other surfaces follow) and
-      // clears any in-canvas selection so the user can start working
-      // in the freshly-focused room.
       onLayoutRoomsChange(layoutRooms, roomId)
+      setSelectedRoomId(roomId)
       store.clearSelection()
     },
     [layoutRooms, onLayoutRoomsChange, store]
@@ -1416,6 +1459,9 @@ export function FloorPlanV2({
           onAddRoom={onAddRoom}
           onRenameRoom={onRenameRoom}
           onDeleteRoom={onDeleteRoom}
+          highlightedRoomMetrics={highlightedRoomMetrics}
+          showLabels={showLabels}
+          onShowLabelsChange={setShowLabels}
           canvasFullscreen={canvasFullscreen}
           onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
         />
@@ -1470,6 +1516,8 @@ export function FloorPlanV2({
                 onAutoArrange={handleAutoArrange}
                 canAutoArrange={boothCount > 0}
                 onAddPerimeterWalls={handleAddPerimeterWalls}
+                showLabels={showLabels}
+                onShowLabelsChange={setShowLabels}
               />
             </div>
           )}
@@ -1503,6 +1551,7 @@ export function FloorPlanV2({
                 { duration: 2200 }
               )
             }}
+            showLabels={showLabels}
           />
           <CanvasLegend />
         </div>

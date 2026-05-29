@@ -6,6 +6,8 @@ import {
   ClipboardPaste,
   Combine,
   Copy,
+  Eye,
+  EyeOff,
   Expand,
   LayoutGrid,
   Locate,
@@ -34,6 +36,13 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onAddRoom?: (presetId?: LayoutRoomPresetId) => void
   onRenameRoom?: (roomId: string, name: string) => void
   onDeleteRoom?: (roomId: string) => void
+  highlightedRoomMetrics?: {
+    name: string
+    widthFt: number
+    lengthFt: number
+  } | null
+  showLabels?: boolean
+  onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
 }
@@ -109,6 +118,9 @@ export function CanvasCommandBar({
   onAddRoom,
   onRenameRoom,
   onDeleteRoom,
+  highlightedRoomMetrics,
+  showLabels = true,
+  onShowLabelsChange,
   canvasFullscreen = false,
   onToggleCanvasFullscreen,
   className,
@@ -248,12 +260,32 @@ export function CanvasCommandBar({
             onAddRoom={onAddRoom!}
             onRenameRoom={onRenameRoom!}
             onDeleteRoom={onDeleteRoom!}
+            highlightedRoomMetrics={highlightedRoomMetrics}
             embedded
           />
         </>
       ) : null}
 
       <div className="ml-auto inline-flex items-center gap-2">
+        {onShowLabelsChange ? (
+          <CommandButton
+            onClick={() => onShowLabelsChange(!showLabels)}
+            title={
+              showLabels
+                ? 'Hide architectural labels'
+                : 'Show architectural labels'
+            }
+            label="Show Labels"
+            className={showLabels ? 'bg-sky-50 text-sky-900 hover:bg-sky-100' : undefined}
+          >
+            {showLabels ? (
+              <Eye className="h-3.5 w-3.5" />
+            ) : (
+              <EyeOff className="h-3.5 w-3.5" />
+            )}
+          </CommandButton>
+        ) : null}
+
         {onToggleCanvasFullscreen ? (
           <CommandButton
             onClick={onToggleCanvasFullscreen}
