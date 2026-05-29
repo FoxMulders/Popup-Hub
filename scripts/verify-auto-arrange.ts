@@ -21,6 +21,7 @@ import {
   autoArrangeInRoom,
   boothWithinRoomFrame,
   validateClearances,
+  BOOTH_EDGE_CLEARANCE_FT,
   WALL_BUFFER_FT,
   BACK_TO_BACK_GAP_FT,
   FRONT_CLEARANCE_FT,
@@ -250,19 +251,15 @@ const cases: Case[] = [
     expectMin: 20,
   },
   {
-    name: 'narrow 4ft booths × single category → fallback fires',
+    name: 'narrow 4ft booths × single category with 2ft edge spacing',
     doc: makeDoc(
       40,
       72,
       Array.from({ length: 8 }, (_, i) => makeNarrowBooth(i))
     ),
-    // 4-ft booths sit 4 cols apart edge-to-edge → 4 < 5, dy=0 < 2.
-    // With one category every booth past the first should fail
-    // proximity → engine should drop those to categoryName=null and
-    // bump unsatisfiedCategoryCount.
+    // 4-ft booths + 2-ft gap → 6-ft center pitch clears the 5-col rule.
     categories: ['Solo'],
     expectMin: 8,
-    expectFallback: true,
   },
   {
     name: 'narrow 4ft booths × 4 categories → fallback NOT needed (rotor finds slots)',
@@ -453,5 +450,52 @@ console.log(`Spec constants:`)
 console.log(`  WALL_BUFFER_FT      = ${WALL_BUFFER_FT}  (2 chairs)`)
 console.log(`  FRONT_CLEARANCE_FT  = ${FRONT_CLEARANCE_FT}  (2 patrons)`)
 console.log(`  BACK_TO_BACK_GAP_FT = ${BACK_TO_BACK_GAP_FT}  (3 chairs)`)
+console.log(`  BOOTH_EDGE_CLEARANCE_FT = ${BOOTH_EDGE_CLEARANCE_FT}`)
+
+// ----- 2ft edge clearance between booth footprints -----
+{
+  const doc = makeDoc(
+    40,
+    72,
+    Array.from({ length: 16 }, (_, i) => makeBooth(i))
+  )
+  const result = autoArrange(doc, {
+    eventCategoryNames: ['Art', 'Food', 'Crafts', 'Music'],
+  })
+  const booths = result.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth'
+  )
+  let minGap = Infinity
+  for (let i = 0; i < booths.length; i++) {
+    for (let j = i + 1; j < booths.length; j++) {
+      const a = booths[i]!
+      const b = booths[j]!
+      const gapX = Math.max(
+        0,
+        Math.max(a.x, b.x) - Math.min(a.x + a.width, b.x + b.width)
+      )
+      const gapY = Math.max(
+        0,
+        Math.max(a.y, b.y) - Math.min(a.y + a.height, b.y + b.height)
+      )
+      if (gapX === 0 && gapY === 0) continue
+      const edgeGap = gapX > 0 && gapY > 0 ? Math.min(gapX, gapY) : Math.max(gapX, gapY)
+      if (edgeGap < minGap) minGap = edgeGap
+    }
+  }
+  const clearanceErrors = validateClearances(result.doc)
+  const gapOk =
+    booths.length >= 2 &&
+    minGap >= BOOTH_EDGE_CLEARANCE_FT - 1e-6 &&
+    clearanceErrors.length === 0
+  console.log('')
+  console.log('=== Booth 2ft edge clearance ===')
+  console.log(
+    `${gapOk ? 'PASS' : 'FAIL'}  min edge gap=${minGap.toFixed(2)}ft need>=${BOOTH_EDGE_CLEARANCE_FT}ft placed=${booths.length}`
+  )
+  if (gapOk) pass++
+  else fail++
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail === 0 ? 0 : 1)

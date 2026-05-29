@@ -13,6 +13,8 @@
  *       so vendors can sit + access from behind).
  *     * Back-to-back gap: 5.25 ft between back-to-back rows
  *       (= 2 chairs + 1 walking buffer).
+ *     * Booth edge buffer: 2 ft between every booth footprint
+ *       (horizontal slot step and row spacing floors).
  * - Honors structural obstacles: walls, doors, and emergency_exit
  *   objects already placed in the doc are treated as immovable; the
  *   row pack routes around their AABBs.
@@ -59,6 +61,12 @@ export const WALL_BUFFER_FT = CHAIR_LENGTH_FT * 2
 export const BACK_TO_BACK_GAP_FT = CHAIR_LENGTH_FT * 3
 /** Front-of-booth clearance — uses the patron-pair width. */
 export const FRONT_CLEARANCE_FT = PATRON_PAIR_WIDTH_FT
+/**
+ * Mandatory edge-to-edge gap between booth footprints (side and back).
+ * Row pack advances X by `boothW + BOOTH_EDGE_CLEARANCE_FT` so slots
+ * never sit flush.
+ */
+export const BOOTH_EDGE_CLEARANCE_FT = 2
 
 export interface AutoArrangeOptions {
   /**
@@ -120,6 +128,24 @@ function aabbOverlap(a: Rect, b: Rect): boolean {
     a.x + a.width > b.x &&
     a.y < b.y + b.height &&
     a.y + a.height > b.y
+  )
+}
+
+/** True when two booth rects are closer than `clearanceFt` edge-to-edge. */
+function boothsCloserThan(
+  a: Rect,
+  b: Rect,
+  clearanceFt: number
+): boolean {
+  const m = clearanceFt
+  return aabbOverlap(
+    {
+      x: a.x - m,
+      y: a.y - m,
+      width: a.width + m * 2,
+      height: a.height + m * 2,
+    },
+    b
   )
 }
 
@@ -408,8 +434,10 @@ export function autoArrange(
 
       // Check against fixed obstacles.
       const hitsObstacle = obstacles.some((r) => aabbOverlap(candidate, r))
-      // Check against already-placed booths.
-      const hitsBooth = placedRects.some((r) => aabbOverlap(candidate, r))
+      // Check against already-placed booths (mandatory 2ft edge gap).
+      const hitsBooth = placedRects.some((r) =>
+        boothsCloserThan(candidate, r, BOOTH_EDGE_CLEARANCE_FT)
+      )
 
       if (!hitsObstacle && !hitsBooth) {
         const src = sourceBooths[nextSourceIdx++]!
@@ -443,7 +471,7 @@ export function autoArrange(
         newBooths.push(placed)
         placedRects.push(candidate)
       }
-      x += boothW
+      x += boothW + BOOTH_EDGE_CLEARANCE_FT
     }
   }
 
@@ -616,19 +644,18 @@ export function validateClearances(doc: FloorPlanDoc): string[] {
     }
   }
 
-  // Pair-wise overlap + back-to-back / front-clearance check between
-  // booths at different y values (rows).
   for (let i = 0; i < booths.length; i++) {
     for (let j = i + 1; j < booths.length; j++) {
       const a = booths[i]!
       const b = booths[j]!
-      if (
-        aabbOverlap(
-          { x: a.x, y: a.y, width: a.width, height: a.height },
-          { x: b.x, y: b.y, width: b.width, height: b.height }
-        )
-      ) {
+      const ra = { x: a.x, y: a.y, width: a.width, height: a.height }
+      const rb = { x: b.x, y: b.y, width: b.width, height: b.height }
+      if (aabbOverlap(ra, rb)) {
         errors.push(`booths ${a.id} and ${b.id} overlap`)
+      } else if (boothsCloserThan(ra, rb, BOOTH_EDGE_CLEARANCE_FT)) {
+        errors.push(
+          `booths ${a.id} and ${b.id} closer than ${BOOTH_EDGE_CLEARANCE_FT}ft edge clearance`
+        )
       }
     }
   }
