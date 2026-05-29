@@ -38,7 +38,7 @@ const ITEMS: LegendItem[] = [
     swatchClass: 'bg-rose-500 ring-1 ring-rose-700/30',
     label: 'Violation',
     detail:
-      'Constraint violation — fails the 6-space / 2-row freeze, overlaps a barrier, or blocks an emergency corridor.',
+      'Constraint violation — fails the 5-column / 2-row same-category freeze, overlaps a barrier, or blocks an emergency corridor.',
   },
 ]
 
