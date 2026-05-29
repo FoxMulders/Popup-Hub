@@ -6,6 +6,7 @@ export type CanvasToolbarBlockId =
   | 'primitives'
   | 'history-clipboard'
   | 'view-align'
+  | 'room-transform'
   | 'arrangement'
   | 'table-size'
   | 'rooms'
@@ -15,6 +16,7 @@ export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
   'primitives',
   'history-clipboard',
   'view-align',
+  'room-transform',
   'arrangement',
   'table-size',
   'rooms',

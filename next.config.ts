@@ -61,8 +61,6 @@ function resolvePublicAppUrlEnv(): string {
     : 'http://localhost:3000'
 }
 
-const isProductionBuild = process.env.NODE_ENV === 'production'
-
 const nextConfig: NextConfig = {
   // All pages are dynamic — no static prerendering for an auth-protected marketplace
   output: 'standalone',

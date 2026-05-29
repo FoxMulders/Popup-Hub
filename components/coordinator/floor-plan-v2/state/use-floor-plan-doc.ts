@@ -4,9 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   clampRoomMoveDelta,
   clampRoomResizePatch,
+  canvasDimensionLimits,
   reconcileCanvasExtents,
+  roomUnionBounds,
   type RoomResizePatch,
 } from './room-canvas'
+import {
+  roomFrameCenter,
+  roomRotateDeltaDeg,
+  rotateObjectInRoom,
+  rotateRoomFrame90,
+} from './rotate-room-frame'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from './types'
 import { applyBoothObjectPatch } from './table-cluster-layout'
 
@@ -126,6 +134,18 @@ export interface FloorPlanDocStore {
   resizeRoomFrame: (
     roomId: string,
     patch: RoomResizePatch,
+    options?: { pushHistory?: boolean }
+  ) => boolean
+
+  /**
+   * Rotate a room frame 90° around its center and spin every object
+   * tagged with that room (skipping locked). One history entry covers
+   * the frame + child positions. Returns false when the room is
+   * missing or the rotated union would exceed canvas limits.
+   */
+  rotateRoomFrame: (
+    roomId: string,
+    direction: 'cw' | 'ccw',
     options?: { pushHistory?: boolean }
   ) => boolean
 
@@ -436,6 +456,71 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     [commit]
   )
 
+  const rotateRoomFrame = useCallback<FloorPlanDocStore['rotateRoomFrame']>(
+    (roomId, direction, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const current = docRef.current
+      const frames = current.rooms ?? []
+      const frame = frames.find((f) => f.id === roomId)
+      if (!frame) return false
+
+      const roomCenter = roomFrameCenter(frame)
+      const deltaDeg = roomRotateDeltaDeg(direction)
+      let rotatedFrame = rotateRoomFrame90(frame, direction)
+
+      let fixDx = 0
+      let fixDy = 0
+      if (rotatedFrame.originX < 0) fixDx = -rotatedFrame.originX
+      if (rotatedFrame.originY < 0) fixDy = -rotatedFrame.originY
+      if (fixDx !== 0 || fixDy !== 0) {
+        rotatedFrame = {
+          ...rotatedFrame,
+          originX: rotatedFrame.originX + fixDx,
+          originY: rotatedFrame.originY + fixDy,
+        }
+      }
+
+      const nextFrames = frames.map((f) =>
+        f.id === roomId ? rotatedFrame : f
+      )
+      const limits = canvasDimensionLimits(frames)
+      const bounds = roomUnionBounds(nextFrames)
+      if (
+        limits &&
+        (bounds.maxX > limits.maxWidthFt || bounds.maxY > limits.maxLengthFt)
+      ) {
+        return false
+      }
+
+      const objectRoom = current.objectRoom ?? {}
+      const nextObjects = current.objects.map((o) => {
+        if (objectRoom[o.id] !== roomId) return o
+        if (o.locked) return o
+        const patch = rotateObjectInRoom(o, roomCenter, deltaDeg)
+        return {
+          ...o,
+          ...patch,
+          x: patch.x + fixDx,
+          y: patch.y + fixDy,
+        } as PlacedObject
+      })
+      const extents = reconcileCanvasExtents(nextFrames)
+
+      commit(
+        {
+          ...current,
+          objects: nextObjects,
+          rooms: nextFrames,
+          canvasWidthFt: extents.canvasWidthFt,
+          canvasLengthFt: extents.canvasLengthFt,
+        },
+        pushHistory
+      )
+      return true
+    },
+    [commit]
+  )
+
   const joinSelection = useCallback<FloorPlanDocStore['joinSelection']>(
     (selection, options) => {
       const pushHistory = options?.pushHistory ?? true
@@ -624,6 +709,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       patchDoc,
       moveRoomFrame,
       resizeRoomFrame,
+      rotateRoomFrame,
       joinRooms,
       joinSelection,
       unjoinRooms,
@@ -648,6 +734,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       patchDoc,
       moveRoomFrame,
       resizeRoomFrame,
+      rotateRoomFrame,
       joinRooms,
       joinSelection,
       unjoinRooms,

@@ -217,6 +217,17 @@
     @apply min-h-0;
   }
 
+  /* Command center booth designer: hide site chrome, keep back link in dashboard header */
+  html.command-center-canvas-fullscreen #site-app-nav,
+  html.command-center-canvas-fullscreen .build-version-strip {
+    display: none;
+  }
+
+  html.command-center-canvas-fullscreen .site-app-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
   .ecosystem-panel {
     @apply bg-card/40 backdrop-blur-[2px];
   }

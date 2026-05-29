@@ -17,6 +17,11 @@ import {
   type BoothPlacementStatus,
   type VendorApplicationSnapshot,
 } from './booth-placement-status'
+import {
+  approvedVendorsNotOnCanvas,
+  boothVendorIdReconciliationPatches,
+  pickBoothForApplication,
+} from '@/lib/coordinator/dashboard-vendor-placement'
 import { formatCadCurrency } from '@/lib/coordinator/booth-placement-status'
 
 export interface DashboardEventSummary {
@@ -62,6 +67,7 @@ export interface MarketManagementState {
   toggleVipHold: (applicationId: string) => void
   assignVendorToBooth: (boothId: string, application: VendorApplicationSnapshot) => void
   unassignBooth: (boothId: string) => void
+  autoSeatApprovedVendors: () => number
   focusBooth: (boothId: string) => void
   totalRevenueCents: number
 }
@@ -149,9 +155,40 @@ export function MarketManagementProvider({
     return map
   }, [approvedPool])
 
-  const registerFloorPlanStore = useCallback((store: FloorPlanDocStore | null) => {
-    setFloorPlanStore(store)
-  }, [])
+  const appByApplicationId = useMemo(() => {
+    const map = new Map<string, VendorApplicationSnapshot>()
+    for (const app of approvedPool) {
+      map.set(app.id, app)
+    }
+    return map
+  }, [approvedPool])
+
+  const registerFloorPlanStore = useCallback(
+    (store: FloorPlanDocStore | null) => {
+      if (store && approvedPool.length > 0) {
+        const booths = store.doc.objects.filter(
+          (o): o is BoothObject => o.kind === 'booth'
+        )
+        const patches = boothVendorIdReconciliationPatches(booths, approvedPool)
+        for (const patch of patches) {
+          store.updateObject(
+            patch.boothId,
+            {
+              vendorId: patch.vendorId,
+              label: patch.label,
+              categoryName: patch.categoryName,
+            } as Partial<BoothObject>,
+            { pushHistory: false }
+          )
+        }
+        if (patches.length > 0) {
+          setDocRevision((n) => n + 1)
+        }
+      }
+      setFloorPlanStore(store)
+    },
+    [approvedPool]
+  )
 
   useEffect(() => {
     if (!floorPlanStore) return
@@ -166,7 +203,12 @@ export function MarketManagementProvider({
       if (obj.kind !== 'booth') continue
       map.set(
         obj.id,
-        deriveBoothPlacementStatus(obj as BoothObject, appByVendorId, vipHoldIds)
+        deriveBoothPlacementStatus(
+          obj as BoothObject,
+          appByVendorId,
+          vipHoldIds,
+          appByApplicationId
+        )
       )
     }
     return map
@@ -188,8 +230,15 @@ export function MarketManagementProvider({
         const booth = obj as BoothObject
         if (!booth.vendorId) continue
         assignedBooths += 1
-        const status = deriveBoothPlacementStatus(booth, appByVendorId, vipHoldIds)
-        const app = appByVendorId.get(booth.vendorId)
+        const status = deriveBoothPlacementStatus(
+          booth,
+          appByVendorId,
+          vipHoldIds,
+          appByApplicationId
+        )
+        const app =
+          appByVendorId.get(booth.vendorId!) ??
+          appByApplicationId.get(booth.vendorId!)
         const price = app ? boothPriceByApplicationId.get(app.id) ?? 0 : 0
         if (status === 'paid') {
           paidBooths += 1
@@ -269,6 +318,42 @@ export function MarketManagementProvider({
     [floorPlanStore]
   )
 
+  const autoSeatApprovedVendors = useCallback((): number => {
+    if (!floorPlanStore) return 0
+    const booths = floorPlanStore.doc.objects.filter(
+      (o): o is BoothObject => o.kind === 'booth'
+    )
+    const openBooths = booths
+      .filter((b) => !b.vendorId)
+      .sort((a, b) => a.y - b.y || a.x - b.x)
+    const unplaced = approvedVendorsNotOnCanvas(approvedPool, booths)
+    let seated = 0
+    const remainingOpen = [...openBooths]
+
+    for (const app of unplaced) {
+      const booth = pickBoothForApplication(remainingOpen, app)
+      if (!booth) break
+      const vendorName = app.vendorName ?? 'Vendor'
+      floorPlanStore.updateObject(
+        booth.id,
+        {
+          vendorId: app.vendor_id,
+          label: vendorName,
+          categoryName: app.categoryName ?? null,
+        } as Partial<BoothObject>,
+        { pushHistory: true }
+      )
+      const idx = remainingOpen.findIndex((b) => b.id === booth.id)
+      if (idx >= 0) remainingOpen.splice(idx, 1)
+      seated += 1
+    }
+
+    if (seated > 0) {
+      setDocRevision((n) => n + 1)
+    }
+    return seated
+  }, [approvedPool, floorPlanStore])
+
   const focusBooth = useCallback(
     (boothId: string) => {
       setSelectedBoothId(boothId)
@@ -297,6 +382,7 @@ export function MarketManagementProvider({
       toggleVipHold,
       assignVendorToBooth,
       unassignBooth,
+      autoSeatApprovedVendors,
       focusBooth,
       totalRevenueCents,
     }),
@@ -317,6 +403,7 @@ export function MarketManagementProvider({
       toggleVipHold,
       assignVendorToBooth,
       unassignBooth,
+      autoSeatApprovedVendors,
       focusBooth,
       totalRevenueCents,
     ]

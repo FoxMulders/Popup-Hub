@@ -4,11 +4,25 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useMarketManagement } from './market-management-context'
 
 export function DashboardCommandCenterHeader() {
   const { events, selectedEventId } = useMarketManagement()
+  const { fullscreen: immersive } = useCommandCenterFullscreen()
   const selectedEvent = events.find((e) => e.id === selectedEventId)
+
+  if (immersive) {
+    return selectedEventId ? (
+      <CommandCenterExitLink
+        eventId={selectedEventId}
+        eventName={selectedEvent?.name}
+        className="shrink-0"
+      />
+    ) : (
+      <span className="text-sm text-muted-foreground">Booth designer</span>
+    )
+  }
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">

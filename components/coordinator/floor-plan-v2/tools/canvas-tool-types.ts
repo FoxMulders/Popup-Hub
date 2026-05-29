@@ -17,6 +17,10 @@ export interface CanvasToolHostProps {
   clipboardHasContents: boolean
   onRotateLeft: () => void
   onRotateRight: () => void
+  /** Rotate the selected room frame 90° (not individual objects). */
+  onRotateRoomLeft?: () => void
+  onRotateRoomRight?: () => void
+  selectedRoomId?: string | null
   onAlignVertical: () => void
   onAlignHorizontal: () => void
   zoom: number

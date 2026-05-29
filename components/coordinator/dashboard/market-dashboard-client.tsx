@@ -10,6 +10,7 @@ import {
   type EventLayoutBundle,
 } from './market-management-context'
 import type { VendorApplicationSnapshot } from './booth-placement-status'
+import { CommandCenterFullscreenProvider } from './command-center-fullscreen-context'
 import { DashboardBootstrap } from './dashboard-bootstrap'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
 
@@ -65,7 +66,9 @@ export function MarketDashboardClient({
       stripeConnected={stripeConnected}
       totalRevenueCents={totalRevenueCents}
     >
-      <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
+      <CommandCenterFullscreenProvider>
+        <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
+      </CommandCenterFullscreenProvider>
     </MarketManagementProvider>
   )
 }

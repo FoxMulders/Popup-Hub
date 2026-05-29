@@ -75,6 +75,9 @@ export interface CanvasCommandBarBlockContext {
   clipboardHasContents: boolean
   onRotateLeft: () => void
   onRotateRight: () => void
+  onRotateRoomLeft?: () => void
+  onRotateRoomRight?: () => void
+  selectedRoomId?: string | null
   onAutoArrange?: () => void
   canAutoArrange?: boolean
   onJoinRooms?: () => void
@@ -120,6 +123,11 @@ export function renderCanvasCommandBarBlock(
 ): React.ReactNode {
   const hasSelection = ctx.selectedCount > 0
   const canAlign = ctx.selectedCount >= 2
+  const rotateRoomId = ctx.selectedRoomId ?? ctx.activeRoomId ?? null
+  const canRotateRoom = Boolean(rotateRoomId) && Boolean(ctx.onRotateRoomLeft)
+  const rotateRoomHint = rotateRoomId
+    ? 'Rotate the room and everything inside it 90°'
+    : 'Select a room on the canvas (click its perimeter) to rotate'
 
   function activateDrawShape(shape: DrawShape) {
     ctx.onToolChange('draw')
@@ -271,13 +279,41 @@ export function renderCanvasCommandBarBlock(
             <CommandButton
               onClick={ctx.onRotateRight}
               disabled={!hasSelection}
-              title="Rotate +15°"
+              title="Rotate selection +15°"
             >
               <RotateCw className="h-3.5 w-3.5" />
             </CommandButton>
           </div>
         </>
       )
+
+    case 'room-transform':
+      return ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
+        <div
+          className="inline-flex items-center gap-0.5 rounded-md border border-teal-200/80 bg-teal-50/50 px-1"
+          role="group"
+          aria-label="Rotate room"
+        >
+          <CommandButton
+            onClick={ctx.onRotateRoomLeft}
+            disabled={!canRotateRoom}
+            title={canRotateRoom ? `${rotateRoomHint} (counter-clockwise)` : rotateRoomHint}
+            label="Rotate room ↺"
+            className="text-teal-900 hover:bg-teal-100/80"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </CommandButton>
+          <CommandButton
+            onClick={ctx.onRotateRoomRight}
+            disabled={!canRotateRoom}
+            title={canRotateRoom ? `${rotateRoomHint} (clockwise)` : rotateRoomHint}
+            label="Rotate room ↻"
+            className="text-teal-900 hover:bg-teal-100/80"
+          >
+            <RotateCw className="h-3.5 w-3.5" />
+          </CommandButton>
+        </div>
+      ) : null
 
     case 'view-align':
       return (
@@ -512,12 +548,14 @@ export function getVisibleToolbarBlockIds(ctx: {
   showJoinGroup: boolean
   showRooms: boolean
   showArrangement: boolean
+  showRoomTransform: boolean
 }): CanvasToolbarBlockId[] {
   const ids: CanvasToolbarBlockId[] = [
     'primitives',
     'history-clipboard',
     'view-align',
   ]
+  if (ctx.showRoomTransform) ids.push('room-transform')
   if (ctx.showArrangement) ids.push('arrangement')
   if (ctx.showTableSize) ids.push('table-size')
   if (ctx.showRooms) ids.push('rooms')

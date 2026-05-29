@@ -74,6 +74,7 @@ import type { LayoutRoom } from '@/types/database'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
+import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
 const ROTATE_STEP_DEG = 15
@@ -246,6 +247,7 @@ export function FloorPlanV2({
 
   const store = useFloorPlanDoc(initialDoc)
   const isDashboard = variant === 'dashboard'
+  const commandCenterFullscreen = useCommandCenterFullscreen()
 
   useEffect(() => {
     onStoreReady?.(store)
@@ -982,6 +984,34 @@ export function FloorPlanV2({
     handleRotateBy(ROTATE_STEP_DEG)
   }, [handleRotateBy])
 
+  const rotateTargetRoomId = selectedRoomId ?? activeRoomId
+
+  const handleRotateRoomLeft = useCallback(() => {
+    if (!rotateTargetRoomId) {
+      toast.message('Click the room perimeter on the canvas, then rotate.')
+      return
+    }
+    const ok = store.rotateRoomFrame(rotateTargetRoomId, 'ccw')
+    if (!ok) {
+      toast.message(
+        'Room rotation blocked — canvas limit would be exceeded.'
+      )
+    }
+  }, [rotateTargetRoomId, store])
+
+  const handleRotateRoomRight = useCallback(() => {
+    if (!rotateTargetRoomId) {
+      toast.message('Click the room perimeter on the canvas, then rotate.')
+      return
+    }
+    const ok = store.rotateRoomFrame(rotateTargetRoomId, 'cw')
+    if (!ok) {
+      toast.message(
+        'Room rotation blocked — canvas limit would be exceeded.'
+      )
+    }
+  }, [rotateTargetRoomId, store])
+
   const viewportApiRef = useRef<ViewportApi | null>(null)
   const [currentZoom, setCurrentZoom] = useState(1)
 
@@ -1378,11 +1408,12 @@ export function FloorPlanV2({
       className={cn(
         'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden',
         canvasFullscreen &&
+          !isDashboard &&
           'fixed inset-0 z-50 h-screen w-screen bg-stone-50 p-2 sm:p-3',
         className
       )}
     >
-      {canvasFullscreen ? (
+      {canvasFullscreen && !isDashboard ? (
         <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex justify-center pt-2">
           <button
             type="button"
@@ -1456,6 +1487,9 @@ export function FloorPlanV2({
           clipboardHasContents={clipboardHasContents}
           onRotateLeft={handleRotateLeft}
           onRotateRight={handleRotateRight}
+          onRotateRoomLeft={handleRotateRoomLeft}
+          onRotateRoomRight={handleRotateRoomRight}
+          selectedRoomId={selectedRoomId}
           onAlignVertical={handleAlignVertical}
           onAlignHorizontal={handleAlignHorizontal}
           zoom={currentZoom}

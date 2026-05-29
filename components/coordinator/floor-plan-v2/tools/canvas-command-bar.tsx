@@ -60,6 +60,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     clipboardHasContents,
     onRotateLeft,
     onRotateRight,
+    onRotateRoomLeft,
+    onRotateRoomRight,
+    selectedRoomId,
     onAutoArrange,
     canAutoArrange,
     onJoinRooms,
@@ -104,6 +107,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     Boolean(onRenameRoom) &&
     Boolean(onDeleteRoom)
   const showArrangement = Boolean(onAutoArrange) || showJoinGroup
+  const showRoomTransform = Boolean(onRotateRoomLeft) && Boolean(onRotateRoomRight)
 
   const joinLabel =
     canJoinRooms && joinCandidateCount && joinCandidateCount > 1
@@ -133,6 +137,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       clipboardHasContents,
       onRotateLeft,
       onRotateRight,
+      onRotateRoomLeft,
+      onRotateRoomRight,
+      selectedRoomId,
       onAutoArrange,
       canAutoArrange,
       onJoinRooms,
@@ -184,6 +191,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       clipboardHasContents,
       onRotateLeft,
       onRotateRight,
+      onRotateRoomLeft,
+      onRotateRoomRight,
+      selectedRoomId,
       onAutoArrange,
       canAutoArrange,
       onJoinRooms,
@@ -227,8 +237,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
         showJoinGroup,
         showRooms,
         showArrangement,
+        showRoomTransform,
       }),
-    [showTableSize, showJoinGroup, showRooms, showArrangement]
+    [showTableSize, showJoinGroup, showRooms, showArrangement, showRoomTransform]
   )
 
   return (

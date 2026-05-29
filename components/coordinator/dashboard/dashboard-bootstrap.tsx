@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
+import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardAppShell } from './dashboard-app-shell'
 import { DashboardCurationColumn } from './dashboard-curation-column'
 import { DashboardCanvasColumn } from './dashboard-canvas-column'
@@ -26,6 +27,7 @@ export interface DashboardBootstrapProps {
 }
 
 export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
+  const { fullscreen: immersive } = useCommandCenterFullscreen()
   const reducedMotion = useReducedMotion()
   const [phase, setPhase] = useState<BootstrapPhase>(() =>
     reducedMotion ? 'ready' : 'shell'
@@ -96,6 +98,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
       </span>
       <DashboardAppShell
         header={header}
+        immersive={immersive}
         ariaBusy={ariaBusy}
         left={
           <DashboardCurationColumn ready={hydrateSidebars} animate={animateSidebars} />

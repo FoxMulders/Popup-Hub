@@ -1,6 +1,6 @@
 'use client'
 
-import { Reorder, useDragControls } from 'framer-motion'
+import { Reorder } from 'framer-motion'
 import { RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -29,16 +29,13 @@ function ToolbarReorderItem({
   label: string
   children: React.ReactNode
 }) {
-  const dragControls = useDragControls()
-
   return (
     <Reorder.Item
       value={id}
-      dragListener={false}
-      dragControls={dragControls}
+      dragListener
       className={cn(
-        'flex shrink-0 items-center gap-0.5 rounded-md border border-transparent',
-        'bg-white pr-1.5 pl-0.5',
+        'flex shrink-0 cursor-grab items-center gap-0.5 rounded-md border border-transparent',
+        'bg-white pr-1.5 pl-0.5 active:cursor-grabbing',
         'data-[dragging=true]:border-stone-300 data-[dragging=true]:shadow-md'
       )}
       whileDrag={{
@@ -46,31 +43,17 @@ function ToolbarReorderItem({
         zIndex: 40,
         boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
       }}
-      aria-label={`${label} tool group`}
+      aria-label={`${label} tool group — drag to reorder`}
+      title={`Drag to reorder ${label}`}
     >
-      <button
-        type="button"
-        className={cn(
-          'inline-flex h-8 w-5 shrink-0 cursor-grab items-center justify-center rounded-sm',
-          'text-stone-400 hover:bg-stone-100 hover:text-stone-600',
-          'touch-none active:cursor-grabbing'
-        )}
-        title={`Drag to reorder ${label}`}
-        aria-label={`Reorder ${label} group`}
-        onPointerDown={(e) => {
-          e.preventDefault()
-          dragControls.start(e)
-        }}
+      <span
+        className="inline-flex h-8 w-5 shrink-0 select-none items-center justify-center text-[10px] font-bold leading-none tracking-tighter text-stone-400"
+        aria-hidden
       >
-        <span
-          className="select-none text-[10px] font-bold leading-none tracking-tighter text-stone-400"
-          aria-hidden
-        >
-          ⋮⋮
-        </span>
-      </button>
+        ⋮⋮
+      </span>
       <div
-        className="flex flex-wrap items-center gap-0.5"
+        className="flex items-center gap-0.5"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
@@ -84,6 +67,7 @@ const BLOCK_LABELS: Record<CanvasToolbarBlockId, string> = {
   primitives: 'Primitive tools',
   'history-clipboard': 'History and clipboard',
   'view-align': 'View and alignment',
+  'room-transform': 'Room transform',
   arrangement: 'Arrangement engine',
   'table-size': 'Table size',
   rooms: 'Rooms',
@@ -142,7 +126,7 @@ export function CanvasToolbarReorder({
   return (
     <div
       className={cn(
-        'flex min-w-0 flex-1 flex-wrap items-center gap-1',
+        'flex min-w-0 flex-1 items-center gap-1',
         className
       )}
     >
@@ -164,7 +148,7 @@ export function CanvasToolbarReorder({
         axis="x"
         values={displayOrder}
         onReorder={handleReorder}
-        className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
+        className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 overflow-x-auto overflow-y-hidden pb-0.5 [-webkit-overflow-scrolling:touch]"
         layoutScroll
       >
         {displayOrder.map((id, index) => (

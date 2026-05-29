@@ -21,10 +21,13 @@ export interface VendorApplicationSnapshot {
 export function deriveBoothPlacementStatus(
   booth: BoothObject,
   appByVendorId: ReadonlyMap<string, VendorApplicationSnapshot>,
-  vipHoldApplicationIds: ReadonlySet<string>
+  vipHoldApplicationIds: ReadonlySet<string>,
+  appByApplicationId?: ReadonlyMap<string, VendorApplicationSnapshot>
 ): BoothPlacementStatus {
   if (!booth.vendorId) return 'unassigned'
-  const app = appByVendorId.get(booth.vendorId)
+  const app =
+    appByVendorId.get(booth.vendorId) ??
+    appByApplicationId?.get(booth.vendorId)
   if (!app) return 'assigned_unpaid'
   if (app.status === 'waitlisted' || vipHoldApplicationIds.has(app.id)) return 'vip_hold'
   if (
