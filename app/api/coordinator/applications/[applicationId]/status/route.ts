@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { resolvePostApprovalStatus } from '@/lib/applications/resolve-approval-status'
 import {
   ETRANSFER_PAYMENT_GATE_MESSAGE,
   resolvePaymentFieldsForPaidApplication,
 } from '@/lib/applications/payment-fields'
+import {
+  buildAuditStateFromUpdates,
+  extractClientIp,
+  mutateApplicationWithSecurityAudit,
+  resolveApprovalAuditAction,
+  snapshotApplicationAuditState,
+} from '@/lib/audit/security-audit-log'
 
 import type { ApplicationStatus, BoothApplication } from '@/types/database'
 
@@ -190,20 +197,31 @@ export async function POST(
     }
   }
 
-  const { data: updated, error: updateError } = await supabase
-    .from('booth_applications')
-    .update(updates)
-    .eq('id', applicationId)
-    .select('*')
-    .single()
+  const previousState = snapshotApplicationAuditState(application)
+  const newState = buildAuditStateFromUpdates(previousState, updates)
+  const actionType = resolveApprovalAuditAction(resolvedStatus)
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
+  const serviceSupabase = await createServiceClient()
+  const mutation = await mutateApplicationWithSecurityAudit(serviceSupabase, {
+    applicationId,
+    actorId: user.id,
+    targetVendorId: application.vendor_id,
+    actionType,
+    previousState,
+    newState,
+    updates,
+    ipAddress: extractClientIp(request),
+  })
+
+  if (!mutation.ok) {
+    const status =
+      mutation.code === '42501' || mutation.code === 'P0002' ? 403 : 500
+    return NextResponse.json({ error: mutation.error }, { status })
   }
 
   return NextResponse.json({
     ok: true,
-    application: updated,
+    application: mutation.application,
     updates,
     requestedStatus: newStatus,
     resolvedStatus,

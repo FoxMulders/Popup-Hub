@@ -123,6 +123,14 @@ export interface Category {
   is_broad?: boolean
 }
 
+export type VendorVerificationStatus =
+  | 'unverified'
+  | 'pending'
+  | 'verified'
+  | 'rejected'
+
+export type VendorAccountStatus = 'active' | 'suspended' | 'banned'
+
 export interface VendorPassport {
   id: string
   user_id: string
@@ -134,6 +142,11 @@ export interface VendorPassport {
   logo_url: string | null
   item_image_urls: string[]
   is_verified: boolean
+  verification_status?: VendorVerificationStatus
+  business_number?: string | null
+  social_handle?: string | null
+  risk_score?: number
+  account_status?: VendorAccountStatus
   website_url: string | null
   shop_url: string | null
   instagram_url: string | null
@@ -270,6 +283,23 @@ export interface BoothApplication {
   vendor?: Profile
   passport?: VendorPassport
   category?: Category
+}
+
+export type SecurityAuditActionType =
+  | 'MANUAL_PAYMENT_CLEARANCE'
+  | 'STATE_OVERRIDE_APPROVAL'
+  | 'APPLICATION_STATUS_CHANGE'
+
+export interface AuditSecurityLog {
+  id: string
+  created_at: string
+  actor_id: string
+  target_vendor_id: string | null
+  application_id: string | null
+  action_type: SecurityAuditActionType
+  previous_state: Record<string, unknown>
+  new_state: Record<string, unknown>
+  ip_address: string | null
 }
 
 export interface Wallet {
@@ -770,6 +800,17 @@ export interface MarketFeedPost {
 export interface MarketFeedPostLike {
   post_id: string
   user_id: string
+  created_at: string
+}
+
+export interface AuditSecurityLog {
+  id: string
+  event_type: string
+  actor_id: string | null
+  vendor_id: string | null
+  event_id: string | null
+  application_id: string | null
+  metadata: Record<string, unknown>
   created_at: string
 }
 

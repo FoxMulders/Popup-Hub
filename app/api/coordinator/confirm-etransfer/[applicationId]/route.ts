@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import {
+  buildAuditStateFromUpdates,
+  extractClientIp,
+  mutateApplicationWithSecurityAudit,
+  SECURITY_AUDIT_ACTION,
+  snapshotApplicationAuditState,
+} from '@/lib/audit/security-audit-log'
+import {
   buildEtransferConfirmedContext,
   sendEtransferConfirmedEmail,
 } from '@/lib/email/etransfer-confirmed'
@@ -11,7 +18,7 @@ import { resolvePostApprovalStatus } from '@/lib/applications/resolve-approval-s
 import type { ApplicationStatus, BoothApplication, Event } from '@/types/database'
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ applicationId: string }> }
 ) {
   const { applicationId } = await params
@@ -155,13 +162,22 @@ export async function POST(
   const boothPriceCents = limit?.price_per_booth ?? 0
   const referenceCode = application.etransfer_reference_code ?? 'N/A'
 
-  const { error: updateError } = await serviceSupabase
-    .from('booth_applications')
-    .update(updates)
-    .eq('id', applicationId)
+  const previousState = snapshotApplicationAuditState(application)
+  const newState = buildAuditStateFromUpdates(previousState, updates)
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 })
+  const mutation = await mutateApplicationWithSecurityAudit(serviceSupabase, {
+    applicationId,
+    actorId: user.id,
+    targetVendorId: application.vendor_id,
+    actionType: SECURITY_AUDIT_ACTION.MANUAL_PAYMENT_CLEARANCE,
+    previousState,
+    newState,
+    updates,
+    ipAddress: extractClientIp(request),
+  })
+
+  if (!mutation.ok) {
+    return NextResponse.json({ error: mutation.error }, { status: 500 })
   }
 
   const { transactionId, error: txError } = await recordPlatformTransaction(serviceSupabase, {
