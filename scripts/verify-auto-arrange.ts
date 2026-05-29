@@ -26,7 +26,10 @@ import {
   BACK_TO_BACK_GAP_FT,
   FRONT_CLEARANCE_FT,
 } from '../components/coordinator/floor-plan-v2/engine/auto-arrange'
-import { consolidateBoothsForAutoArrange } from '../lib/booth-planner/table-booth-consolidation'
+import {
+  consolidateBoothsForAutoArrange,
+  vendorTableMetaFromApplications,
+} from '../lib/booth-planner/table-booth-consolidation'
 import { docFromLegacyRooms } from '../components/coordinator/floor-plan-v2/state/legacy-bridge'
 import {
   PROXIMITY_MIN_COLUMNS,
@@ -496,9 +499,23 @@ console.log(`  BOOTH_EDGE_CLEARANCE_FT = ${BOOTH_EDGE_CLEARANCE_FT}`)
   console.log(
     `${arrangeOk ? 'PASS' : 'FAIL'}  autoArrange places single 15′ booth for 3-table vendor`
   )
+  const meta = vendorTableMetaFromApplications(
+    [
+      { id: 'a1', vendor_id: vendorId, status: 'approved' },
+      { id: 'a2', vendor_id: vendorId, status: 'approved' },
+      { id: 'a3', vendor_id: vendorId, status: 'approved' },
+    ],
+    5
+  )
+  const metaOk = meta.get(vendorId)?.tableCount === 3
+  console.log(
+    `${metaOk ? 'PASS' : 'FAIL'}  vendorTableMetaFromApplications: 3 apps → tableCount 3`
+  )
   if (mergeOk) pass++
   else fail++
   if (arrangeOk) pass++
+  else fail++
+  if (metaOk) pass++
   else fail++
 }
 

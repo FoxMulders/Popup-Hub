@@ -113,6 +113,21 @@ export function consolidateBoothsForAutoArrange(
   return consolidated
 }
 
+function isApprovedForLayout(status?: string): boolean {
+  return !status || status === 'approved' || status === 'pending_insurance'
+}
+
+/** Table slots for a vendor: explicit `table_count` wins; else # of approved apps. */
+export function tableCountForVendorApplications(
+  apps: ReadonlyArray<{ table_count?: number }>
+): number {
+  const explicit = apps.map((a) => a.table_count ?? 0).filter((n) => n > 1)
+  if (explicit.length > 0) {
+    return Math.max(...explicit)
+  }
+  return Math.max(1, apps.length)
+}
+
 /** Build vendor-key → table metadata from approved applications. */
 export function vendorTableMetaFromApplications(
   applications: ReadonlyArray<{
@@ -124,25 +139,27 @@ export function vendorTableMetaFromApplications(
   baselineTableLengthFt: LayoutBaselineTableLengthFt
 ): Map<string, VendorTableMeta> {
   const map = new Map<string, VendorTableMeta>()
+  const byVendor = new Map<string, Array<(typeof applications)[number]>>()
+
   for (const app of applications) {
-    if (app.status && app.status !== 'approved' && app.status !== 'pending_insurance') {
-      continue
-    }
-    const key = app.vendor_id ?? app.id
-    const count = Math.max(1, app.table_count ?? 1)
-    const prev = map.get(key)
-    if (!prev || count > prev.tableCount) {
-      map.set(key, {
-        vendorKey: key,
-        tableCount: count,
-        tableLengthFt: baselineTableLengthFt,
-      })
-    }
-    map.set(app.id, {
-      vendorKey: app.id,
-      tableCount: count,
-      tableLengthFt: baselineTableLengthFt,
-    })
+    if (!isApprovedForLayout(app.status)) continue
+    const vendorKey = app.vendor_id ?? app.id
+    if (!byVendor.has(vendorKey)) byVendor.set(vendorKey, [])
+    byVendor.get(vendorKey)!.push(app)
   }
+
+  for (const [vendorKey, apps] of byVendor) {
+    const tableCount = tableCountForVendorApplications(apps)
+    const meta: VendorTableMeta = {
+      vendorKey,
+      tableCount,
+      tableLengthFt: baselineTableLengthFt,
+    }
+    map.set(vendorKey, meta)
+    for (const app of apps) {
+      map.set(app.id, { ...meta, vendorKey: app.id })
+    }
+  }
+
   return map
 }
