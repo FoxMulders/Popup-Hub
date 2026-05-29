@@ -2,7 +2,7 @@
 
 import { Calendar, MapPin, Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { WIZARD_SECTION_LABEL } from '@/lib/wizard/wizard-panel-styles'
+import { WIZARD_PANEL, WIZARD_SECTION_LABEL } from '@/lib/wizard/wizard-panel-styles'
 import type { SummaryVenueSelection } from '@/components/coordinator/wizard/wizard-summary-rail'
 
 export function WizardScheduleLines({
@@ -50,7 +50,7 @@ export function WizardContextStrip({
 
   return (
     <div
-      className="market-panel w-full px-3 py-3 sm:px-4 sm:py-3.5"
+      className={cn(WIZARD_PANEL, 'w-full px-3 py-3 sm:px-4 sm:py-3.5')}
       aria-label="Market context"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 gap-y-2">
@@ -73,7 +73,7 @@ export function WizardContextStrip({
 
         <div className="flex flex-wrap items-stretch gap-2 shrink-0">
           {hasVenue && selectedVenue ? (
-            <div className="rounded-lg border border-sage-200 bg-sage-50/80 px-3 py-2 min-w-[140px] max-w-[220px]">
+            <div className="wizard-glass-inset px-3 py-2 min-w-[140px] max-w-[220px]">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3" aria-hidden />
                 Venue
@@ -92,7 +92,7 @@ export function WizardContextStrip({
           ) : null}
 
           {hasCapacity ? (
-            <div className="rounded-lg border border-harvest-200 bg-harvest-50/80 px-3 py-2 min-w-[100px]">
+            <div className="wizard-glass-inset px-3 py-2 min-w-[100px]">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
                 <Settings2 className="h-3 w-3" aria-hidden />
                 Caps

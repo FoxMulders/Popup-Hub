@@ -10,6 +10,12 @@ import {
 } from '@vis.gl/react-google-maps'
 import { MapRecenter } from '@/components/map/map-recenter'
 import { Loader2, MapPin } from 'lucide-react'
+import {
+  WizardFloatingInput,
+  WizardMapContainer,
+  WizardSectionTitle,
+  WizardSwitchRow,
+} from '@/components/coordinator/wizard/wizard-ui'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +36,6 @@ import {
   WIZARD_INFO_BOX,
   WIZARD_INPUT,
   WIZARD_PANEL_INNER,
-  WIZARD_STEP_TITLE,
 } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
 import {
@@ -280,7 +285,7 @@ function AddressAutocomplete({
         <ul
           id="wizard-address-predictions"
           role="listbox"
-          className="absolute z-20 mt-1 w-full rounded-lg border-2 border-stone-200 bg-card shadow-[var(--shadow-market)] max-h-48 overflow-y-auto"
+          className="wizard-select-content absolute z-20 mt-1 w-full rounded-lg border border-white/60 bg-card/95 backdrop-blur-md shadow-[var(--shadow-market)] max-h-48 overflow-y-auto"
         >
           {predictions.map((p, index) => (
             <li key={p.place_id} role="option" aria-selected={index === highlightIndex}>
@@ -467,35 +472,31 @@ export function WizardStepVenue({
   return (
     <div className={WIZARD_PANEL_INNER}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className={WIZARD_STEP_TITLE}>
+        <WizardSectionTitle active>
           {skipVenueLayout
             ? 'Venue Location'
             : isEdmontonMarketCity(city)
               ? 'Edmonton Venue Registry & Map'
               : `Venue Registry & Map (${cityLabel})`}
-        </h2>
+        </WizardSectionTitle>
         {pinDropped ? (
           <Badge className={`${marketStatusBadge.success} text-xs`}>Pin dropped</Badge>
         ) : null}
       </div>
 
-      <div className="flex items-start justify-between gap-4 rounded-lg border-2 border-stone-200 bg-canvas px-4 py-3">
-        <div className="space-y-1">
-          <Label htmlFor="wizard-skip-layout" className={WIZARD_FIELD_LABEL}>
-            No venue space planning required
-          </Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Skip the floor plan editor. Pick a venue from the registry to auto-fill name and address, or enter them
-            manually.
-          </p>
-        </div>
-        <Switch
-          id="wizard-skip-layout"
-          checked={skipVenueLayout}
-          onCheckedChange={onSkipVenueLayoutChange}
-          aria-label="Skip venue space planning"
-        />
-      </div>
+      <WizardSwitchRow
+        id="wizard-skip-layout"
+        label="No venue space planning required"
+        description="Skip the floor plan editor. Pick a venue from the registry to auto-fill name and address, or enter them manually."
+        control={
+          <Switch
+            id="wizard-skip-layout"
+            checked={skipVenueLayout}
+            onCheckedChange={onSkipVenueLayoutChange}
+            aria-label="Skip venue space planning"
+          />
+        }
+      />
 
       {skipVenueLayout ? (
         <p className={WIZARD_INFO_BOX}>
@@ -528,15 +529,12 @@ export function WizardStepVenue({
       ) : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <Label htmlFor="wizard-loc-name" className={WIZARD_FIELD_LABEL}>Venue Name</Label>
-          <Input
-            id="wizard-loc-name"
-            value={locationName}
-            onChange={(e) => onLocationNameChange(e.target.value)}
-            className={WIZARD_INPUT}
-          />
-        </div>
+        <WizardFloatingInput
+          id="wizard-loc-name"
+          label="Venue Name"
+          value={locationName}
+          onChange={(e) => onLocationNameChange(e.target.value)}
+        />
         <div className="space-y-1">
           <Label htmlFor="wizard-address" className={WIZARD_FIELD_LABEL}>Address</Label>
           <AddressAutocomplete
@@ -555,11 +553,7 @@ export function WizardStepVenue({
           : 'Click the map or pick a venue template to drop a pin immediately.'}
       </p>
 
-      <div
-        id="wizard-venue-map"
-        className="h-72 overflow-hidden rounded-lg border-2 border-stone-200 [touch-action:auto]"
-        tabIndex={-1}
-      >
+      <WizardMapContainer id="wizard-venue-map" pinDropped={pinDropped} tabIndex={-1}>
         <Map
           mapId="wizard-venue-map-canvas"
           defaultCenter={{ lat, lng }}
@@ -576,7 +570,7 @@ export function WizardStepVenue({
             </AdvancedMarker>
           ) : null}
         </Map>
-      </div>
+      </WizardMapContainer>
     </div>
   )
 }
@@ -608,51 +602,38 @@ function WizardStepVenueFallback({
 }) {
   return (
     <div className={WIZARD_PANEL_INNER}>
-      <h2 className={WIZARD_STEP_TITLE}>Venue Location</h2>
+      <WizardSectionTitle active>Venue Location</WizardSectionTitle>
       <p className={cn(WIZARD_INFO_BOX, 'text-sm text-amber-900')}>
         Map autocomplete is offline (Google Maps API key not configured). Enter the venue name and
         address by hand — coordinates will fall back to the {cityLabel} city centre.
       </p>
-      <div className="flex items-start justify-between gap-4 rounded-lg border-2 border-stone-200 bg-canvas px-4 py-3">
-        <div className="space-y-1">
-          <Label htmlFor="wizard-skip-layout" className={WIZARD_FIELD_LABEL}>
-            No venue space planning required
-          </Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Skip the floor plan editor. Enter the venue name and address manually.
-          </p>
-        </div>
-        <Switch
-          id="wizard-skip-layout"
-          checked={skipVenueLayout}
-          onCheckedChange={onSkipVenueLayoutChange}
-          aria-label="Skip venue space planning"
-        />
-      </div>
+      <WizardSwitchRow
+        id="wizard-skip-layout"
+        label="No venue space planning required"
+        description="Skip the floor plan editor. Enter the venue name and address manually."
+        control={
+          <Switch
+            id="wizard-skip-layout"
+            checked={skipVenueLayout}
+            onCheckedChange={onSkipVenueLayoutChange}
+            aria-label="Skip venue space planning"
+          />
+        }
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <Label htmlFor="wizard-loc-name" className={WIZARD_FIELD_LABEL}>
-            Venue Name
-          </Label>
-          <Input
-            id="wizard-loc-name"
-            value={locationName}
-            onChange={(e) => onLocationNameChange(e.target.value)}
-            className={WIZARD_INPUT}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="wizard-address" className={WIZARD_FIELD_LABEL}>
-            Address
-          </Label>
-          <Input
-            id="wizard-address"
-            value={address}
-            onChange={(e) => onAddressChange(e.target.value)}
-            placeholder={`Street address near ${cityLabel}`}
-            className={WIZARD_INPUT}
-          />
-        </div>
+        <WizardFloatingInput
+          id="wizard-loc-name"
+          label="Venue Name"
+          value={locationName}
+          onChange={(e) => onLocationNameChange(e.target.value)}
+        />
+        <WizardFloatingInput
+          id="wizard-address"
+          label="Address"
+          value={address}
+          onChange={(e) => onAddressChange(e.target.value)}
+          placeholder={`Street address near ${cityLabel}`}
+        />
       </div>
       <p className="text-xs text-muted-foreground" aria-hidden="true">
         Selected market city: {cityLabel} ({city})

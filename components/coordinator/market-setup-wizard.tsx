@@ -66,6 +66,7 @@ import {
 } from '@/lib/wizard/wizard-step1-validation'
 import type { PlaceResult } from '@/components/coordinator/wizard/wizard-step-venue'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
+import { WizardAmbientShell, WizardDivider } from '@/components/coordinator/wizard/wizard-ui'
 import {
   MARKET_WIZARD_STEPS_FULL,
   MARKET_WIZARD_STEPS_SHORT,
@@ -981,8 +982,49 @@ export function MarketSetupWizard({
 
   const isFloorPlanStep = currentStep === 3 && !skipVenueLayout
 
+  const step1Ready = useMemo(() => {
+    if (currentStep !== 1) return false
+    return (
+      getWizardStep1ValidationError({
+        name,
+        description,
+        listingType,
+        scheduleType,
+        startDate,
+        startTime,
+        endDate,
+        endTime,
+        dayRows,
+        locationName,
+        address,
+        pinDropped,
+        skipVenueLayout,
+        templateWidth: templateAnchor.width,
+        templateLength: templateAnchor.length,
+      }) === null
+    )
+  }, [
+    currentStep,
+    name,
+    description,
+    listingType,
+    scheduleType,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    dayRows,
+    locationName,
+    address,
+    pinDropped,
+    skipVenueLayout,
+    templateAnchor.width,
+    templateAnchor.length,
+  ])
+
   return (
-    <div
+    <WizardAmbientShell
+      step={currentStep}
       className={cn(
         isFloorPlanStep
           ? 'mx-[calc(50%-50vw)] flex min-h-0 w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] sm:px-3 lg:px-4 h-[calc(100dvh-theme(spacing.header))] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]'
@@ -1119,7 +1161,7 @@ export function MarketSetupWizard({
                 parsingFlyer={parsingFlyer}
                 autoFilledFields={autoFilledFields}
               />
-              <div className="border-t-2 border-stone-200/60" aria-hidden />
+              <WizardDivider />
               <WizardStepVenueWithMapsProvider
                 venuePresetId={venuePresetId}
                 onVenuePresetChange={handleVenuePresetChange}
@@ -1145,7 +1187,7 @@ export function MarketSetupWizard({
                 onApplySavedVenue={handleApplySavedVenue}
                 onPlaceSelect={handleGooglePlaceSelect}
               />
-              <WizardNav step={1} onNext={goNext} nextDisabled={transitioning} />
+              <WizardNav step={1} onNext={goNext} nextDisabled={transitioning} stepReady={step1Ready} />
             </div>
           ) : null}
 
@@ -1230,6 +1272,6 @@ export function MarketSetupWizard({
         ) : null}
       </div>
 
-    </div>
+    </WizardAmbientShell>
   )
 }

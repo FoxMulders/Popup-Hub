@@ -1,8 +1,8 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { WizardProceedButton } from '@/components/coordinator/wizard/wizard-ui'
 import {
-  WIZARD_BTN_PRIMARY,
   WIZARD_BTN_SECONDARY,
   WIZARD_NAV_DIVIDER,
 } from '@/lib/wizard/wizard-panel-styles'
@@ -20,9 +20,11 @@ interface WizardNavProps {
   onNext?: () => void
   nextDisabled?: boolean
   nextLabel?: string
+  /** Step 1 only — enables proceed CTA pulse when validation passes. */
+  stepReady?: boolean
 }
 
-export function WizardNav({ step, onBack, onNext, nextDisabled, nextLabel }: WizardNavProps) {
+export function WizardNav({ step, onBack, onNext, nextDisabled, nextLabel, stepReady }: WizardNavProps) {
   const defaultNext =
     step === 1
       ? 'Proceed to Capacity Settings →'
@@ -51,14 +53,14 @@ export function WizardNav({ step, onBack, onNext, nextDisabled, nextLabel }: Wiz
         <span className="hidden sm:block" />
       )}
       {onNext ? (
-        <Button
-          type="button"
-          className={`${WIZARD_BTN_PRIMARY} w-full sm:w-auto`}
+        <WizardProceedButton
+          ready={step === 1 && stepReady}
           disabled={nextDisabled}
           onClick={onNext}
+          className="w-full sm:w-auto"
         >
           {nextLabel ?? defaultNext}
-        </Button>
+        </WizardProceedButton>
       ) : null}
     </div>
   )

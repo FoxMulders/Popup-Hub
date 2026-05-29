@@ -313,6 +313,299 @@
     @apply bg-stone-300/80;
   }
 
+  /* ─── Market Setup Wizard — glassmorphism & motion ─── */
+  :root {
+    --wizard-blur: 12px;
+    --wizard-glass-bg: rgb(255 253 249 / 0.68);
+    --wizard-glass-border-from: rgb(255 255 255 / 0.85);
+    --wizard-glass-border-to: rgb(200 190 175 / 0.45);
+    --wizard-glow-1: 45 90 39;
+    --wizard-glow-2: 196 137 46;
+    --wizard-glow-3: 90 143 94;
+  }
+
+  .wizard-glass-panel {
+    @apply rounded-2xl text-card-foreground;
+    background: var(--wizard-glass-bg);
+    backdrop-filter: blur(var(--wizard-blur));
+    -webkit-backdrop-filter: blur(var(--wizard-blur));
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.55) inset,
+      0 1px 0 rgb(255 255 255 / 0.4) inset,
+      var(--shadow-market-md);
+    position: relative;
+  }
+
+  .wizard-glass-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      var(--wizard-glass-border-from),
+      var(--wizard-glass-border-to)
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .wizard-glass-inset {
+    @apply rounded-xl;
+    background: rgb(255 255 255 / 0.42);
+    border: 1px solid rgb(255 255 255 / 0.55);
+    box-shadow: 0 1px 2px rgb(62 45 28 / 0.04) inset;
+  }
+
+  .wizard-ambient {
+    --wizard-orb-a: rgb(var(--wizard-glow-1) / 0.14);
+    --wizard-orb-b: rgb(var(--wizard-glow-2) / 0.1);
+  }
+
+  .wizard-ambient--step-1 {
+    --wizard-orb-a: rgb(var(--wizard-glow-1) / 0.16);
+    --wizard-orb-b: rgb(var(--wizard-glow-2) / 0.11);
+  }
+
+  .wizard-ambient--step-2 {
+    --wizard-orb-a: rgb(var(--wizard-glow-2) / 0.15);
+    --wizard-orb-b: rgb(var(--wizard-glow-3) / 0.12);
+  }
+
+  .wizard-ambient--step-3 {
+    --wizard-orb-a: rgb(var(--wizard-glow-3) / 0.14);
+    --wizard-orb-b: rgb(var(--wizard-glow-1) / 0.1);
+  }
+
+  .wizard-ambient__orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(72px);
+    pointer-events: none;
+    z-index: 0;
+    animation: wizard-orb-drift 18s ease-in-out infinite alternate;
+  }
+
+  .wizard-ambient__orb--a {
+    width: min(42vw, 420px);
+    height: min(42vw, 420px);
+    top: -8%;
+    left: -6%;
+    background: radial-gradient(circle, var(--wizard-orb-a), transparent 68%);
+  }
+
+  .wizard-ambient__orb--b {
+    width: min(36vw, 360px);
+    height: min(36vw, 360px);
+    bottom: -6%;
+    right: -4%;
+    background: radial-gradient(circle, var(--wizard-orb-b), transparent 68%);
+    animation-delay: -6s;
+  }
+
+  .wizard-section-title {
+    font-size: clamp(0.8125rem, 0.75rem + 0.35vw, 0.9375rem);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .wizard-field-label {
+    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
+  }
+
+  .wizard-floating-field {
+    --spotlight-x: 50%;
+    --spotlight-y: 50%;
+    @apply relative;
+  }
+
+  .wizard-floating-field::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 0.625rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    background: radial-gradient(
+      120px circle at var(--spotlight-x) var(--spotlight-y),
+      rgb(45 90 39 / 0.22),
+      transparent 65%
+    );
+    z-index: 0;
+  }
+
+  .wizard-floating-field:focus-within::after {
+    opacity: 1;
+  }
+
+  .wizard-floating-input {
+    @apply relative z-[1] pt-5 pb-1.5;
+  }
+
+  .wizard-floating-field--textarea .wizard-floating-input {
+    @apply pt-6;
+  }
+
+  .wizard-floating-label {
+    @apply pointer-events-none absolute left-3 top-1/2 z-[2] origin-left -translate-y-1/2 text-sm text-muted-foreground transition-all duration-200;
+  }
+
+  .wizard-floating-field--textarea .wizard-floating-label {
+    @apply top-4 translate-y-0;
+  }
+
+  .wizard-floating-field:focus-within .wizard-floating-label,
+  .wizard-floating-field--filled .wizard-floating-label,
+  .wizard-floating-input:not(:placeholder-shown) + .wizard-floating-label {
+    @apply top-2 translate-y-0 text-[10px] font-semibold uppercase tracking-wider text-forest;
+  }
+
+  .wizard-floating-field--textarea:focus-within .wizard-floating-label,
+  .wizard-floating-field--textarea.wizard-floating-field--filled .wizard-floating-label {
+    @apply top-2;
+  }
+
+  .wizard-selection-card {
+    @apply min-h-11 rounded-xl border px-3 py-2.5 text-left text-xs font-medium transition-colors duration-200;
+    background: rgb(255 255 255 / 0.5);
+    border-color: rgb(227 221 210 / 0.9);
+    box-shadow: 0 1px 2px rgb(62 45 28 / 0.04);
+  }
+
+  .wizard-selection-card:hover {
+    background: rgb(255 255 255 / 0.72);
+  }
+
+  .wizard-selection-card:focus-visible {
+    @apply outline-none ring-2 ring-forest/35 ring-offset-2;
+  }
+
+  .wizard-selection-card--selected {
+    @apply border-forest bg-forest text-primary-foreground;
+    box-shadow:
+      0 0 0 1px rgb(45 90 39 / 0.25),
+      0 4px 14px rgb(45 90 39 / 0.18);
+  }
+
+  .wizard-map-container {
+    @apply h-72 overflow-hidden rounded-xl;
+    border: 1px solid rgb(255 255 255 / 0.55);
+    box-shadow:
+      0 0 0 1px rgb(227 221 210 / 0.6),
+      var(--shadow-market);
+    transition: box-shadow 0.35s ease, transform 0.35s ease;
+  }
+
+  .wizard-map-container[data-pin-dropped='true'] {
+    box-shadow:
+      0 0 0 1px rgb(90 143 94 / 0.45),
+      0 0 24px rgb(90 143 94 / 0.12),
+      var(--shadow-market-md);
+  }
+
+  .wizard-proceed-btn--ready {
+    animation: wizard-proceed-pulse 2.4s ease-in-out infinite;
+    background-image: linear-gradient(
+      110deg,
+      #fffdf9 0%,
+      #f4f8f4 35%,
+      #fffdf9 70%,
+      #fdf6eb 100%
+    );
+    background-size: 220% 100%;
+  }
+
+  .wizard-field-error {
+    animation: wizard-field-shake 0.45s ease-in-out;
+    box-shadow:
+      0 0 0 2px rgb(184 92 69 / 0.35),
+      0 0 16px rgb(184 92 69 / 0.18) !important;
+  }
+
+  .wizard-field-error.wizard-floating-field::after {
+    background: radial-gradient(
+      120px circle at var(--spotlight-x) var(--spotlight-y),
+      rgb(184 92 69 / 0.28),
+      transparent 65%
+    );
+    opacity: 1;
+  }
+
+  @keyframes wizard-orb-drift {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    100% {
+      transform: translate(3%, 2%) scale(1.06);
+    }
+  }
+
+  @keyframes wizard-proceed-pulse {
+    0%,
+    100% {
+      background-position: 0% 50%;
+      box-shadow: var(--shadow-market-md);
+    }
+    50% {
+      background-position: 100% 50%;
+      box-shadow:
+        0 0 0 2px rgb(45 90 39 / 0.2),
+        var(--shadow-market-md);
+    }
+  }
+
+  @keyframes wizard-field-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20% {
+      transform: translateX(-4px);
+    }
+    40% {
+      transform: translateX(4px);
+    }
+    60% {
+      transform: translateX(-3px);
+    }
+    80% {
+      transform: translateX(3px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wizard-ambient__orb {
+      animation: none;
+    }
+
+    .wizard-proceed-btn--ready {
+      animation: none;
+    }
+
+    .wizard-field-error {
+      animation: none;
+    }
+
+    .wizard-map-container {
+      transition: none;
+    }
+
+    .wizard-select-content {
+      animation: none;
+    }
+  }
+
   /* Market day operations (existing) */
   .market-day-page {
     @apply bg-gradient-to-b from-sage-50/50 via-linen to-harvest-50/30;

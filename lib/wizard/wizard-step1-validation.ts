@@ -5,6 +5,7 @@ import {
   type ScheduleBoundsFailureReason,
 } from '@/lib/events/schedule-bounds'
 import type { EventListingType } from '@/types/database'
+import { WIZARD_FIELD_ERROR_CLASS } from '@/components/coordinator/wizard/wizard-ui'
 import type { DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 
 export type WizardStep1FieldId =
@@ -156,7 +157,28 @@ export function focusWizardField(
 
   if (!el) return
 
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' })
+
+  el.classList.remove(WIZARD_FIELD_ERROR_CLASS)
+  // Force reflow so repeated validation re-triggers the shake animation.
+  void el.offsetWidth
+
+  const errorTargets = new Set<HTMLElement>([el])
+  const floatingWrapper = el.closest<HTMLElement>('.wizard-floating-field')
+  if (floatingWrapper) errorTargets.add(floatingWrapper)
+
+  for (const target of errorTargets) {
+    target.classList.add(WIZARD_FIELD_ERROR_CLASS)
+    const removeErrorClass = () => {
+      target.classList.remove(WIZARD_FIELD_ERROR_CLASS)
+      target.removeEventListener('animationend', removeErrorClass)
+    }
+    target.addEventListener('animationend', removeErrorClass)
+  }
 
   const focusTarget =
     el instanceof HTMLInputElement ||

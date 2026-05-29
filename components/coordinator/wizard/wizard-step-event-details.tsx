@@ -4,7 +4,14 @@ import { buildNextEventDayRow } from '@/lib/events/event-day-rows'
 import { Trash2, HelpCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import {
+  WizardFloatingInput,
+  WizardFloatingTextarea,
+  WizardSectionTitle,
+  WizardSelectionCard,
+  WizardSelectionGroup,
+  WizardSwitchRow,
+} from '@/components/coordinator/wizard/wizard-ui'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -26,12 +33,6 @@ import {
   WIZARD_SELECT_CONTENT,
   WIZARD_SELECT_ITEM,
   WIZARD_SELECT_TRIGGER,
-  WIZARD_STEP_TITLE,
-  WIZARD_TEXTAREA,
-  WIZARD_TOGGLE_GROUP,
-  WIZARD_TOGGLE_OPTION,
-  WIZARD_TOGGLE_OPTION_ACTIVE,
-  WIZARD_TOGGLE_OPTION_INACTIVE,
 } from '@/lib/wizard/wizard-panel-styles'
 import { ScheduleWeekendShortcuts } from '@/components/shared/schedule-weekend-shortcuts'
 import { cn } from '@/lib/utils'
@@ -122,9 +123,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         </div>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className={WIZARD_STEP_TITLE}>
-          Core Event Setup
-        </h2>
+        <WizardSectionTitle active>Core Event Setup</WizardSectionTitle>
         <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">Draft</span>
       </div>
 
@@ -137,32 +136,22 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
 
       <div className="space-y-2">
         <Label className={WIZARD_FIELD_LABEL}>Listing Type</Label>
-        <div className={WIZARD_TOGGLE_GROUP}>
-          <button
-            type="button"
-            onClick={() => props.onListingTypeChange('community_market')}
-            className={cn(
-              WIZARD_TOGGLE_OPTION,
-              props.listingType === 'community_market'
-                ? WIZARD_TOGGLE_OPTION_ACTIVE
-                : WIZARD_TOGGLE_OPTION_INACTIVE
-            )}
+        <WizardSelectionGroup label="Listing type">
+          <WizardSelectionCard
+            selected={props.listingType === 'community_market'}
+            onSelect={() => props.onListingTypeChange('community_market')}
+            aria-label="Community Market"
           >
             🎪 Community Market
-          </button>
-          <button
-            type="button"
-            onClick={() => props.onListingTypeChange('garage_yard_sale')}
-            className={cn(
-              WIZARD_TOGGLE_OPTION,
-              props.listingType === 'garage_yard_sale'
-                ? WIZARD_TOGGLE_OPTION_ACTIVE
-                : WIZARD_TOGGLE_OPTION_INACTIVE
-            )}
+          </WizardSelectionCard>
+          <WizardSelectionCard
+            selected={props.listingType === 'garage_yard_sale'}
+            onSelect={() => props.onListingTypeChange('garage_yard_sale')}
+            aria-label="Quarter Auction"
           >
             🪙 Quarter Auction
-          </button>
-        </div>
+          </WizardSelectionCard>
+        </WizardSelectionGroup>
         {props.listingType === 'garage_yard_sale' ? (
           <p className={WIZARD_INFO_BOX}>
             Quarter auctions appear on the patron map when published. Vendor booth applications are required —
@@ -173,16 +162,12 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
       </div>
 
       <FlyerFieldHighlight fieldKey="name" autoFilledFields={autoFilled}>
-        <div className="space-y-1">
-          <Label htmlFor="wizard-event-name" className={WIZARD_FIELD_LABEL}>Event Name *</Label>
-          <Input
-            id="wizard-event-name"
-            value={props.name}
-            onChange={(e) => props.onNameChange(e.target.value)}
-            placeholder="e.g. Spring Makers Market"
-            className={WIZARD_INPUT}
-          />
-        </div>
+        <WizardFloatingInput
+          id="wizard-event-name"
+          label="Event Name *"
+          value={props.name}
+          onChange={(e) => props.onNameChange(e.target.value)}
+        />
       </FlyerFieldHighlight>
 
       <div className="space-y-2">
@@ -193,25 +178,21 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             listing type.
           </p>
         ) : (
-          <div className={WIZARD_TOGGLE_GROUP}>
+          <WizardSelectionGroup label="Schedule type">
             {(['single', 'multi'] as const).map((type) => (
-              <button
+              <WizardSelectionCard
                 key={type}
-                type="button"
-                onClick={() => props.onScheduleTypeChange(type)}
-                className={cn(
-                  WIZARD_TOGGLE_OPTION,
-                  props.scheduleType === type
-                    ? WIZARD_TOGGLE_OPTION_ACTIVE
-                    : WIZARD_TOGGLE_OPTION_INACTIVE
-                )}
+                selected={props.scheduleType === type}
+                onSelect={() => props.onScheduleTypeChange(type)}
+                aria-label={type === 'single' ? 'Single Day' : 'Multi-Day'}
               >
                 {type === 'single' ? 'Single Day' : 'Multi-Day'}
-              </button>
+              </WizardSelectionCard>
             ))}
-          </div>
+          </WizardSelectionGroup>
         )}
         <ScheduleWeekendShortcuts
+          variant="wizard"
           scheduleType={
             isQuarterAuctionListing(props.listingType) ? 'single' : props.scheduleType
           }
@@ -221,15 +202,13 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
 
       <FlyerFieldHighlight fieldKey="description" autoFilledFields={autoFilled}>
         <div className="space-y-1">
-          <Label htmlFor="wizard-description" className={WIZARD_FIELD_LABEL}>Description *</Label>
-          <Textarea
+          <WizardFloatingTextarea
             id="wizard-description"
+            label="Description *"
             value={props.description}
             onChange={(e) => props.onDescriptionChange(e.target.value)}
             rows={3}
             maxLength={800}
-            placeholder="Example: Kilkenny indoor makers market — local artisans, baked goods, and vintage finds near 71 St. Family-friendly Saturday shopping."
-            className={WIZARD_TEXTAREA}
           />
         <p
           className={cn(
@@ -411,38 +390,32 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
       )}
 
       {props.scheduleType === 'multi' ? (
-        <div className="flex items-start justify-between gap-4 rounded-xl border border-stone-200 bg-canvas px-4 py-3">
-          <div className="space-y-1">
-            <Label htmlFor="wizard-require-full-attendance" className={WIZARD_FIELD_LABEL}>
-              Require attendance for all event days
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Turn this off if vendors are allowed to apply for single or partial days.
-            </p>
-          </div>
-          <Switch
-            id="wizard-require-full-attendance"
-            checked={props.requireFullAttendance}
-            onCheckedChange={props.onRequireFullAttendanceChange}
-          />
-        </div>
+        <WizardSwitchRow
+          id="wizard-require-full-attendance"
+          label="Require attendance for all event days"
+          description="Turn this off if vendors are allowed to apply for single or partial days."
+          control={
+            <Switch
+              id="wizard-require-full-attendance"
+              checked={props.requireFullAttendance}
+              onCheckedChange={props.onRequireFullAttendanceChange}
+            />
+          }
+        />
       ) : null}
 
-      <div className="flex items-start justify-between gap-4 rounded-xl border border-stone-200 bg-canvas px-4 py-3">
-        <div className="space-y-1">
-          <Label htmlFor="wizard-market-insurance-required" className={WIZARD_FIELD_LABEL}>
-            Require Market Insurance from Vendors?
-          </Label>
-          <p className="text-xs text-muted-foreground">
-            Approved vendors must upload proof of insurance before their booth is finalized.
-          </p>
-        </div>
-        <Switch
-          id="wizard-market-insurance-required"
-          checked={props.marketInsuranceRequired}
-          onCheckedChange={props.onMarketInsuranceRequiredChange}
-        />
-      </div>
+      <WizardSwitchRow
+        id="wizard-market-insurance-required"
+        label="Require Market Insurance from Vendors?"
+        description="Approved vendors must upload proof of insurance before their booth is finalized."
+        control={
+          <Switch
+            id="wizard-market-insurance-required"
+            checked={props.marketInsuranceRequired}
+            onCheckedChange={props.onMarketInsuranceRequiredChange}
+          />
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
@@ -509,28 +482,21 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
 
       {props.listingType === 'community_market' ? (
         <>
-      <div className="flex items-center justify-between rounded-lg border border-stone-200 bg-card p-4">
-        <div>
-          <p className="text-sm font-medium">Allow Direct Sales / MLM Vendors</p>
-          <p className="text-xs text-muted-foreground mt-0.5 whitespace-normal break-words">
-            Enables MLM brand categories in the category selector.
-          </p>
-        </div>
-        <Switch checked={props.allowMlm} onCheckedChange={props.onAllowMlmChange} className="ml-4 shrink-0" />
-      </div>
+      <WizardSwitchRow
+        id="wizard-allow-mlm"
+        label="Allow Direct Sales / MLM Vendors"
+        description="Enables MLM brand categories in the category selector."
+        control={<Switch id="wizard-allow-mlm" checked={props.allowMlm} onCheckedChange={props.onAllowMlmChange} />}
+      />
 
       <FlyerFieldHighlight fieldKey="raffleDonationRequirement" autoFilledFields={autoFilled}>
-        <div className="space-y-1">
-          <Label htmlFor="wizard-raffle" className={WIZARD_FIELD_LABEL}>Raffle Donation Requirement</Label>
-          <Textarea
-            id="wizard-raffle"
-            value={props.raffleDonationRequirement}
-            onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
-            placeholder="Optional — describe raffle or donation expectations for vendors"
-            rows={2}
-            className={WIZARD_TEXTAREA}
-          />
-        </div>
+        <WizardFloatingTextarea
+          id="wizard-raffle"
+          label="Raffle Donation Requirement"
+          value={props.raffleDonationRequirement}
+          onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
+          rows={2}
+        />
       </FlyerFieldHighlight>
         </>
       ) : null}

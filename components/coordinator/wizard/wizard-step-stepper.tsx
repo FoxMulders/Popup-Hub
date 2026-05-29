@@ -46,7 +46,7 @@ export function WizardStepStepper({
   return (
     <nav
       aria-label="Market setup wizard progress"
-      className={cn(WIZARD_PANEL, 'px-4 py-3 border-2 border-stone-300 bg-linen/80')}
+      className={cn(WIZARD_PANEL, 'px-4 py-3')}
     >
       <ol className="flex flex-wrap items-center justify-between gap-2 sm:gap-0">
         {steps.map((step, index) => {
@@ -69,9 +69,9 @@ export function WizardStepStepper({
                 onClick={() => isReachable && onStepChange?.(step.id)}
                 aria-current={isActive ? 'step' : undefined}
                 className={cn(
-                  'group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors',
+                  'group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-all duration-200',
                   isReachable && onStepChange && !isActive
-                    ? 'hover:bg-canvas/80 cursor-pointer'
+                    ? 'hover:bg-white/40 cursor-pointer'
                     : 'cursor-default',
                   !isReachable && 'opacity-50'
                 )}

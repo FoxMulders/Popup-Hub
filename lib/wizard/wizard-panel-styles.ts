@@ -1,22 +1,21 @@
 import { cn } from '@/lib/utils'
 
-/** Canonical wizard shell — Step 4 `market-panel` (cream/white, stone borders). */
-export const WIZARD_PANEL = 'market-panel'
+/** Glass wizard shell — backdrop blur, gradient border (see globals `.wizard-glass-panel`). */
+export const WIZARD_PANEL = 'wizard-glass-panel'
 
 /** Step body spacing (no nested panel — parent `WIZARD_PANEL` provides the card). */
 export const WIZARD_PANEL_INNER = 'space-y-4'
 
 /** Wizard page kicker — "Market Setup Wizard · Step N of 4". */
 export const WIZARD_PAGE_KICKER =
-  'text-xs font-heading font-semibold uppercase tracking-wide text-muted-foreground'
+  'text-[11px] font-sans font-semibold uppercase tracking-[0.12em] text-muted-foreground'
 
 /** Primary wizard page title — e.g. "Edit Market". */
 export const WIZARD_PAGE_TITLE =
-  'font-heading text-2xl sm:text-3xl font-semibold text-foreground whitespace-normal break-words'
+  'font-serif text-[clamp(1.625rem,1.35rem+1.1vw,2.125rem)] font-semibold leading-tight text-foreground whitespace-normal break-words'
 
-/** Step heading — booth-planner Step 4 titles. */
-export const WIZARD_STEP_TITLE =
-  'text-sm font-heading font-semibold uppercase tracking-wide text-forest'
+/** Step heading — fluid sans with active letter-spacing transition. */
+export const WIZARD_STEP_TITLE = 'wizard-section-title'
 
 /** Section / rail heading — e.g. layout-room-bar "Rooms / zones". */
 export const WIZARD_SECTION_LABEL =
