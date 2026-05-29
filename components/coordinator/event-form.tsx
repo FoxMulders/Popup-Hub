@@ -42,6 +42,10 @@ import type { EdmontonHall } from '@/lib/data/edmonton-halls'
 import { CLEARANCE_POLICY_OPTIONS } from '@/lib/booth-clearance-policy'
 import { sortCategoriesByName } from '@/lib/categories'
 import { selectValueOrNull } from '@/lib/wizard/wizard-autosave'
+import {
+  formatUnknownSaveError,
+  isPostgrestSchemaCacheError,
+} from '@/lib/supabase/postgrest-errors'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
 import { marketStatusBadge, marketTheme } from '@/lib/theme/market'
 import { cn } from '@/lib/utils'
@@ -423,7 +427,14 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
       router.push(`/coordinator/events/${eventId}`)
       router.refresh()
     } catch (err) {
-      toast.error('Failed to save event. Please try again.')
+      const detail = formatUnknownSaveError(err)
+      toast.error(
+        isPostgrestSchemaCacheError(
+          err && typeof err === 'object' ? (err as { code?: string; message?: string }) : {}
+        )
+          ? detail
+          : 'Failed to save event. Please try again.'
+      )
       console.error(err)
     } finally {
       setSaving(false)

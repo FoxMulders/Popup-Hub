@@ -3,6 +3,7 @@ import type { BoothClearancePolicy, EventListingType } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
 import { effectiveScheduleTypeForListing } from '@/lib/events/listing-type'
+import { errorFromSupabase } from '@/lib/supabase/postgrest-errors'
 
 export interface EventDraftPayload {
   coordinatorId: string
@@ -82,7 +83,7 @@ export async function persistEventVenueFields(
       longitude: Number.isFinite(fields.longitude) ? fields.longitude : -113.4938,
     })
     .eq('id', eventId)
-  return { error: error ? new Error(error.message) : null }
+  return { error: error ? errorFromSupabase(error) : null }
 }
 
 export async function persistEventDraft(
@@ -135,7 +136,7 @@ export async function persistEventDraft(
 
   if (resolvedId) {
     const { error } = await supabase.from('events').update(eventDatabasePayload).eq('id', resolvedId)
-    if (error) return { eventId: resolvedId, error: new Error(error.message) }
+    if (error) return { eventId: resolvedId, error: errorFromSupabase(error) }
   } else {
     const { data, error } = await supabase
       .from('events')
@@ -143,7 +144,10 @@ export async function persistEventDraft(
       .select('id')
       .single()
     if (error || !data?.id) {
-      return { eventId: '', error: new Error(error?.message ?? 'Failed to create event') }
+      return {
+        eventId: '',
+        error: error ? errorFromSupabase(error) : new Error('Failed to create event'),
+      }
     }
     resolvedId = data.id as string
   }
@@ -161,7 +165,7 @@ export async function persistEventDraft(
       }))
     if (rows.length > 0) {
       const { error } = await supabase.from('event_category_limits').insert(rows)
-      if (error) return { eventId: resolvedId, error: new Error(error.message) }
+      if (error) return { eventId: resolvedId, error: errorFromSupabase(error) }
     }
   }
 
@@ -180,7 +184,7 @@ export async function persistEventDraft(
           sort_order: i,
         }))
       )
-      if (error) return { eventId: resolvedId, error: new Error(error.message) }
+      if (error) return { eventId: resolvedId, error: errorFromSupabase(error) }
     }
   } else {
     await supabase.from('event_days').delete().eq('event_id', resolvedId)
@@ -216,5 +220,5 @@ export async function persistLayoutDraft(
   const { error } = await supabase
     .from('booth_layouts')
     .upsert(sanitizedPayload, { onConflict: 'event_id' })
-  return { error: error ? new Error(error.message) : null }
+  return { error: error ? errorFromSupabase(error) : null }
 }

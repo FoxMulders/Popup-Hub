@@ -38,6 +38,7 @@ import {
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { sortCategoriesByName } from '@/lib/categories'
 import { persistEventDraft, persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
+import { EVENTS_SCHEMA_MIGRATION_MESSAGE } from '@/lib/supabase/postgrest-errors'
 import {
   applyMlmLimitRules,
   DEFAULT_GLOBAL_MLM_CAP,
@@ -102,6 +103,9 @@ function autosaveFailureMessage(result: Extract<AutosaveResult, { ok: false }>, 
     return scheduleBoundsFailureMessage(result.scheduleReason)
   }
   if (result.reason === 'error' && result.message) {
+    if (result.message === EVENTS_SCHEMA_MIGRATION_MESSAGE) {
+      return result.message
+    }
     return `Could not save draft: ${result.message}`
   }
   return fallback ?? 'Could not save draft — try again'
