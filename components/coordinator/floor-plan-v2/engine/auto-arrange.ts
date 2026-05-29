@@ -41,6 +41,7 @@ import type {
   BoothObject,
   FloorPlanDoc,
   PlacedObject,
+  RoomFrame,
 } from '../state/types'
 import { rotatedAabb } from '../interactions/geometry'
 import {
@@ -99,6 +100,11 @@ export interface AutoArrangeResult {
    * "wanted to place but the canvas had no room".
    */
   overflowCount: number
+}
+
+export interface AutoArrangeInRoomResult extends AutoArrangeResult {
+  /** Room frame the pass ran inside. */
+  roomId: string
 }
 
 interface Rect {
@@ -454,6 +460,120 @@ export function autoArrange(
     unsatisfiedCategoryCount,
     overflowCount,
   }
+}
+
+/**
+ * Returns true when a booth's AABB sits entirely inside a room frame
+ * on the unified canvas (global coordinates).
+ */
+export function boothWithinRoomFrame(
+  booth: BoothObject,
+  frame: RoomFrame
+): boolean {
+  return (
+    booth.x >= frame.originX - 1e-6 &&
+    booth.y >= frame.originY - 1e-6 &&
+    booth.x + booth.width <= frame.originX + frame.widthFt + 1e-6 &&
+    booth.y + booth.height <= frame.originY + frame.lengthFt + 1e-6
+  )
+}
+
+/**
+ * Run auto-arrange for a single room on a unified multi-room doc.
+ *
+ * Only objects tagged via `doc.objectRoom[id] === roomId` participate
+ * in the pass; every other object is left untouched at its global
+ * position. Booths are laid out in room-local coordinates bounded by
+ * `[0, frame.widthFt] × [0, frame.lengthFt]`, then translated back
+ * to global canvas space.
+ */
+export function autoArrangeInRoom(
+  doc: FloorPlanDoc,
+  roomId: string,
+  options: AutoArrangeOptions = {}
+): AutoArrangeInRoomResult | null {
+  const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
+  if (!frame) return null
+
+  const objectRoom = doc.objectRoom ?? {}
+  const inRoom = doc.objects.filter((o) => objectRoom[o.id] === roomId)
+  const others = doc.objects.filter((o) => objectRoom[o.id] !== roomId)
+
+  const boothCount = inRoom.filter((o) => o.kind === 'booth').length
+  if (boothCount === 0) {
+    return {
+      doc,
+      placedCount: 0,
+      droppedCount: 0,
+      unsatisfiedCategoryCount: 0,
+      overflowCount: 0,
+      roomId,
+    }
+  }
+
+  const localObjects = inRoom.map(
+    (o) =>
+      ({
+        ...o,
+        x: o.x - frame.originX,
+        y: o.y - frame.originY,
+      }) as PlacedObject
+  )
+  const localDoc: FloorPlanDoc = {
+    canvasWidthFt: frame.widthFt,
+    canvasLengthFt: frame.lengthFt,
+    gridSpacingFt: doc.gridSpacingFt,
+    snapFt: doc.snapFt,
+    objects: localObjects,
+  }
+
+  const result = autoArrange(localDoc, options)
+  const reglobal = result.doc.objects.map(
+    (o) =>
+      ({
+        ...o,
+        x: o.x + frame.originX,
+        y: o.y + frame.originY,
+      }) as PlacedObject
+  )
+
+  for (const obj of reglobal) {
+    if (obj.kind !== 'booth') continue
+    if (!boothWithinRoomFrame(obj, frame)) {
+      throw new Error(
+        `auto-arrange placed booth ${obj.id} outside room ${roomId} bounds`
+      )
+    }
+  }
+
+  return {
+    ...result,
+    doc: {
+      ...doc,
+      objects: [...others, ...reglobal],
+    },
+    roomId,
+  }
+}
+
+/**
+ * Run auto-arrange independently inside every room frame. Each pass
+ * only repositions booths owned by that room; proximity checks never
+ * compare against booths in sibling rooms.
+ */
+export function autoArrangeAllRooms(
+  doc: FloorPlanDoc,
+  options: AutoArrangeOptions = {}
+): AutoArrangeInRoomResult[] {
+  const results: AutoArrangeInRoomResult[] = []
+  let currentDoc = doc
+  for (const frame of doc.rooms ?? []) {
+    const result = autoArrangeInRoom(currentDoc, frame.id, options)
+    if (!result) continue
+    currentDoc = result.doc
+    results.push(result)
+  }
+  return results
 }
 
 function roundHalf(n: number): number {

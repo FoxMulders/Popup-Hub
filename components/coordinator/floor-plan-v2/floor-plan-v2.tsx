@@ -31,12 +31,12 @@ import { LayoutRoomBar } from '../layout-room-bar'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
 import { CanvasLeftDock } from './tools/canvas-left-dock'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
-import { autoArrange } from './engine/auto-arrange'
+import { autoArrangeInRoom } from './engine/auto-arrange'
 import {
   docFromLegacyRooms,
   legacyRoomsFromDoc,
-  unifiedCanvasExtents,
 } from './state/legacy-bridge'
+import { reconcileCanvasExtents } from './state/room-canvas'
 import {
   clearMultiRoomDraft,
   loadMultiRoomDraft,
@@ -61,6 +61,7 @@ import {
   aabbFitsCanvas,
   alignSelectionPatches,
   canvasClampDelta,
+  detectPlacedObjectOverlaps,
   groupCanvasClampDelta,
   groupRotatedAabb,
   rotatedAabb,
@@ -153,6 +154,8 @@ export interface FloorPlanV2Props {
    */
   layoutCapacity?: number
   className?: string
+  /** Notifies the host when the layout has unresolved object overlaps. */
+  onOverlapChange?: (hasOverlap: boolean) => void
 }
 
 /**
@@ -187,6 +190,7 @@ export function FloorPlanV2({
   onBaselineTableLengthChange,
   layoutCapacity,
   className,
+  onOverlapChange,
 }: FloorPlanV2Props) {
   // Initial unified doc — seed from server-loaded rooms first; if a
   // fresher crash-recovery draft exists in localStorage for this
@@ -200,6 +204,13 @@ export function FloorPlanV2({
   }, [])
 
   const store = useFloorPlanDoc(initialDoc)
+  const layoutOverlaps = useMemo(
+    () => detectPlacedObjectOverlaps(store.doc.objects),
+    [store.doc.objects]
+  )
+  useEffect(() => {
+    onOverlapChange?.(layoutOverlaps.size > 0)
+  }, [layoutOverlaps.size, onOverlapChange])
   const [tool, setTool] = useState<ToolId>(DEFAULT_TOOL_STATE.tool)
   const [drawShape, setDrawShape] = useState<DrawShape>(
     DEFAULT_TOOL_STATE.drawShape
@@ -268,12 +279,12 @@ export function FloorPlanV2({
 
     if (sameFrames) return
 
-    const extents = unifiedCanvasExtents(merged)
+    const extents = reconcileCanvasExtents(merged)
     store.patchDoc(
       {
         rooms: merged,
-        canvasWidthFt: Math.max(extents.width, 50),
-        canvasLengthFt: Math.max(extents.length, 50),
+        canvasWidthFt: extents.canvasWidthFt,
+        canvasLengthFt: extents.canvasLengthFt,
       },
       { pushHistory: false }
     )
@@ -970,39 +981,18 @@ export function FloorPlanV2({
       toast.message('Nothing to arrange — draw at least one booth first.')
       return
     }
-    const frame = (store.doc.rooms ?? []).find((f) => f.id === activeRoomId)
-    if (!frame) return
-    const objectRoom = store.doc.objectRoom ?? {}
-    const inRoom = store.doc.objects.filter(
-      (o) => objectRoom[o.id] === activeRoomId
-    )
-    const others = store.doc.objects.filter(
-      (o) => objectRoom[o.id] !== activeRoomId
-    )
-    const localObjects = inRoom.map(
-      (o) => ({ ...o, x: o.x - frame.originX, y: o.y - frame.originY }) as PlacedObject
-    )
-    const localDoc: FloorPlanDoc = {
-      canvasWidthFt: frame.widthFt,
-      canvasLengthFt: frame.lengthFt,
-      gridSpacingFt: store.doc.gridSpacingFt,
-      snapFt: store.doc.snapFt,
-      objects: localObjects,
-    }
-    const result = autoArrange(localDoc, {
+    const result = autoArrangeInRoom(store.doc, activeRoomId, {
       eventCategoryNames,
       ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
         ? { maxBooths: layoutCapacity }
         : {}),
     })
+    if (!result) return
     if (result.placedCount === 0) {
       toast.error('Auto-Arrange could not fit any booths inside the room.')
       return
     }
-    const reglobal = result.doc.objects.map(
-      (o) => ({ ...o, x: o.x + frame.originX, y: o.y + frame.originY }) as PlacedObject
-    )
-    store.replaceObjects([...others, ...reglobal])
+    store.replaceObjects(result.doc.objects)
     if (result.overflowCount > 0) {
       // Capacity gate from Step 2 prevented overflow booths from
       // ever entering the placement loop. Tell the coordinator
@@ -1477,6 +1467,18 @@ export function FloorPlanV2({
               toast.error(
                 `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
                 { duration: 2400 }
+              )
+            }}
+            onOverlapViolation={() => {
+              toast.error(
+                'Objects cannot overlap — move the selection so it clears other fixtures, then try again.',
+                { duration: 2400 }
+              )
+            }}
+            onRoomCanvasLimitBlocked={() => {
+              toast.message(
+                'Canvas limit reached — rooms cannot extend beyond 5× the primary room dimensions.',
+                { duration: 2200 }
               )
             }}
           />

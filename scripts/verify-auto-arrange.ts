@@ -17,11 +17,15 @@
 
 import {
   autoArrange,
+  autoArrangeAllRooms,
+  autoArrangeInRoom,
+  boothWithinRoomFrame,
   validateClearances,
   WALL_BUFFER_FT,
   BACK_TO_BACK_GAP_FT,
   FRONT_CLEARANCE_FT,
 } from '../components/coordinator/floor-plan-v2/engine/auto-arrange'
+import { docFromLegacyRooms } from '../components/coordinator/floor-plan-v2/state/legacy-bridge'
 import {
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
@@ -82,6 +86,80 @@ function makeDoc(
     snapFt: 1,
     objects,
   }
+}
+
+import type {
+  BoothCell,
+  LayoutRoom,
+} from '../types/database'
+
+function makeBoothCell(id: string, col: number, row: number): BoothCell {
+  return {
+    id,
+    col,
+    row,
+    colSpan: 4,
+    rowSpan: 3,
+    vendorName: id,
+    categoryName: '',
+    categoryColor: '#94a3b8',
+    boothNumber: 1,
+    boothType: 'inside',
+    vendorUnitType: 'table',
+    tableLengthFt: null,
+    tableOrientation: null,
+    facingTarget: null,
+  }
+}
+
+function makeLayoutRoom(
+  id: string,
+  name: string,
+  width: number,
+  length: number,
+  originX: number,
+  originY: number,
+  boothCount: number,
+  idOffset = 0
+): LayoutRoom {
+  return {
+    id,
+    name,
+    venue_width: width,
+    venue_length: length,
+    booth_width: 1,
+    booth_length: 1,
+    entrance: 'south',
+    spacing_mode: 'one_foot',
+    cells: Array.from({ length: boothCount }, (_, i) =>
+      makeBoothCell(`b-${idOffset + i}`, 5 + (i % 4) * 8, 5 + Math.floor(i / 4) * 8)
+    ),
+    venue_elements: [],
+    canvas_origin_x: originX,
+    canvas_origin_y: originY,
+  }
+}
+
+function boothsInRoom(doc: FloorPlanDoc, roomId: string): BoothObject[] {
+  const objectRoom = doc.objectRoom ?? {}
+  return doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && objectRoom[o.id] === roomId
+  )
+}
+
+function allBoothsWithinRoomFrames(doc: FloorPlanDoc): boolean {
+  const frames = doc.rooms ?? []
+  const frameById = new Map(frames.map((f) => [f.id, f]))
+  const objectRoom = doc.objectRoom ?? {}
+  for (const obj of doc.objects) {
+    if (obj.kind !== 'booth') continue
+    const roomId = objectRoom[obj.id]
+    if (!roomId) continue
+    const frame = frameById.get(roomId)
+    if (!frame) return false
+    if (!boothWithinRoomFrame(obj, frame)) return false
+  }
+  return true
 }
 
 interface Case {
@@ -231,7 +309,7 @@ for (const c of cases) {
   // pair that violates is a bug in the engine — we only allow the
   // exception when the engine reported it via unsatisfiedCategoryCount
   // (i.e. it knew the canvas was too tight to fit every category).
-  let proximityViolations: Array<{
+  const proximityViolations: Array<{
     a: string
     b: string
     cat: string
@@ -301,6 +379,71 @@ for (const c of cases) {
     console.log(`      !! expected unsatisfiedCategoryCount > 0`)
   }
   if (ok && !adjacentDuplicate && proximityOk && fallbackOk) pass++
+  else fail++
+}
+
+// ----- Multi-room regression: booths must stay in assigned rooms -----
+{
+  const multiDoc = docFromLegacyRooms([
+    makeLayoutRoom('r-main', 'Main Hall', 40, 72, 0, 0, 12, 0),
+    makeLayoutRoom('r-annex', 'Room 2', 40, 72, 50, 0, 10, 100),
+  ])
+
+  const mainBefore = boothsInRoom(multiDoc, 'r-main')
+  const annexBefore = boothsInRoom(multiDoc, 'r-annex')
+
+  // Running autoArrange on the unified doc (wrong) scatters booths
+  // across the full canvas union — Room 2 booths can land in Main Hall.
+  const wrongResult = autoArrange(multiDoc, {
+    eventCategoryNames: ['Art', 'Food', 'Crafts'],
+  })
+  const mainAfterWrong = boothsInRoom(wrongResult.doc, 'r-main')
+  const annexAfterWrong = boothsInRoom(wrongResult.doc, 'r-annex')
+  const wrongScattered =
+    mainAfterWrong.some((b) => b.x >= 50) ||
+    annexAfterWrong.some((b) => b.x < 50) ||
+    !allBoothsWithinRoomFrames(wrongResult.doc)
+
+  const perRoomResult = autoArrangeInRoom(multiDoc, 'r-main', {
+    eventCategoryNames: ['Art', 'Food', 'Crafts'],
+  })!
+  const bothRoomsResult = autoArrangeInRoom(perRoomResult.doc, 'r-annex', {
+    eventCategoryNames: ['Art', 'Food', 'Crafts'],
+  })!
+
+  const mainAfter = boothsInRoom(bothRoomsResult.doc, 'r-main')
+  const annexAfter = boothsInRoom(bothRoomsResult.doc, 'r-annex')
+  const perRoomOk =
+    perRoomResult.placedCount === mainBefore.length &&
+    bothRoomsResult.placedCount === annexBefore.length &&
+    mainAfter.every((b) => b.x < 50) &&
+    annexAfter.every((b) => b.x >= 50) &&
+    allBoothsWithinRoomFrames(bothRoomsResult.doc)
+
+  const allRoomsResults = autoArrangeAllRooms(multiDoc, {
+    eventCategoryNames: ['Art', 'Food', 'Crafts'],
+  })
+  const allRoomsOk =
+    allRoomsResults.length === 2 &&
+    allRoomsResults.every((r) => r.placedCount > 0) &&
+    allBoothsWithinRoomFrames(allRoomsResults[allRoomsResults.length - 1]!.doc)
+
+  console.log('')
+  console.log('=== Multi-room auto-arrange ===')
+  console.log(
+    `${wrongScattered ? 'PASS' : 'FAIL'}  unified-doc autoArrange scatters booths across rooms (regression guard)`
+  )
+  console.log(
+    `${perRoomOk ? 'PASS' : 'FAIL'}  autoArrangeInRoom keeps each room's booths inside its frame`
+  )
+  console.log(
+    `${allRoomsOk ? 'PASS' : 'FAIL'}  autoArrangeAllRooms arranges every room independently`
+  )
+  if (wrongScattered) pass++
+  else fail++
+  if (perRoomOk) pass++
+  else fail++
+  if (allRoomsOk) pass++
   else fail++
 }
 
