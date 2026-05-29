@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import type {
   AisleObject,
   BoothObject,
@@ -13,11 +13,17 @@ import type {
   WallObject,
 } from '../state/types'
 import { paletteForCategory, DEFAULT_BOOTH_PALETTE } from './category-palette'
+import { EXTERIOR_LABEL_OFFSET_PX } from '../interactions/geometry'
+import { PERIMETER_WALL_LABEL } from '../interactions/perimeter-walls'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
   selectedIds: ReadonlySet<string>
   pxPerFt: number
+  /** When false, hide architectural overlay labels (walls, doors, exits). */
+  showLabels?: boolean
+  /** Object ids currently overlapping another placed object. */
+  overlappingIds?: ReadonlySet<string>
   /**
    * Object whose label is currently being edited inline. The editing
    * input is rendered as a sibling overlay; we suppress the static
@@ -33,10 +39,16 @@ interface CanvasObjectsProps {
   eventCategoryNames?: ReadonlyArray<string>
 }
 
+/** Warning red for overlap validation failures. */
+const OVERLAP_FILL = '#fecaca'
+const OVERLAP_STROKE = '#ef4444'
+
 function fillForObject(
   obj: PlacedObject,
-  eventCategoryNames?: ReadonlyArray<string>
+  eventCategoryNames?: ReadonlyArray<string>,
+  isOverlapping?: boolean
 ): string {
+  if (isOverlapping) return OVERLAP_FILL
   switch (obj.kind) {
     case 'booth': {
       const booth = obj as BoothObject
@@ -69,8 +81,10 @@ function fillForObject(
 function strokeForObject(
   obj: PlacedObject,
   isSelected: boolean,
-  eventCategoryNames?: ReadonlyArray<string>
+  eventCategoryNames?: ReadonlyArray<string>,
+  isOverlapping?: boolean
 ): string {
+  if (isOverlapping) return OVERLAP_STROKE
   if (isSelected) return '#0f766e'
   switch (obj.kind) {
     case 'booth': {
@@ -221,13 +235,151 @@ function computeWallSegments(
   return visible.filter((iv) => iv.to - iv.from > 1)
 }
 
+function isMacroPerimeterWall(obj: PlacedObject): boolean {
+  return (
+    obj.kind === 'wall' &&
+    obj.locked === true &&
+    (obj.label ?? '').toLowerCase() === PERIMETER_WALL_LABEL.toLowerCase()
+  )
+}
+
+function aabbTouches(
+  a: PlacedObject,
+  b: PlacedObject,
+  tolFt: number
+): boolean {
+  return !(
+    a.x + a.width < b.x - tolFt ||
+    b.x + b.width < a.x - tolFt ||
+    a.y + a.height < b.y - tolFt ||
+    b.y + b.height < a.y - tolFt
+  )
+}
+
+/** Cluster macro perimeter walls; each group gets one exterior label. */
+function macroPerimeterWallGroups(
+  objects: ReadonlyArray<PlacedObject>
+): Array<{ ids: Set<string>; minX: number; minY: number; maxX: number; maxY: number }> {
+  const walls = objects.filter(isMacroPerimeterWall)
+  if (walls.length === 0) return []
+
+  const parent = new Map<string, string>()
+  for (const w of walls) parent.set(w.id, w.id)
+  function find(id: string): string {
+    let root = parent.get(id)!
+    while (root !== parent.get(root)) root = parent.get(root)!
+    parent.set(id, root)
+    return root
+  }
+  function unite(a: string, b: string) {
+    const ra = find(a)
+    const rb = find(b)
+    if (ra !== rb) parent.set(ra, rb)
+  }
+
+  const tolFt = 0.5
+  for (let i = 0; i < walls.length; i++) {
+    for (let j = i + 1; j < walls.length; j++) {
+      const a = walls[i]!
+      const b = walls[j]!
+      if (aabbTouches(a, b, tolFt)) unite(a.id, b.id)
+    }
+  }
+
+  const byRoot = new Map<
+    string,
+    { ids: Set<string>; minX: number; minY: number; maxX: number; maxY: number }
+  >()
+  for (const w of walls) {
+    const root = find(w.id)
+    const minX = w.x
+    const minY = w.y
+    const maxX = w.x + w.width
+    const maxY = w.y + w.height
+    const existing = byRoot.get(root)
+    if (!existing) {
+      byRoot.set(root, {
+        ids: new Set([w.id]),
+        minX,
+        minY,
+        maxX,
+        maxY,
+      })
+    } else {
+      existing.ids.add(w.id)
+      existing.minX = Math.min(existing.minX, minX)
+      existing.minY = Math.min(existing.minY, minY)
+      existing.maxX = Math.max(existing.maxX, maxX)
+      existing.maxY = Math.max(existing.maxY, maxY)
+    }
+  }
+  return Array.from(byRoot.values())
+}
+
+function renderGlobalPerimeterLabel(
+  bounds: { minX: number; minY: number; maxX: number; maxY: number },
+  pxPerFt: number
+) {
+  const x = bounds.minX * pxPerFt
+  const y = bounds.minY * pxPerFt
+  const w = (bounds.maxX - bounds.minX) * pxPerFt
+  const labelText = 'Perimeter Wall'
+  const truncated = truncate(labelText, 18)
+  const fontSize = 11
+  const padX = 6
+  const padY = 3
+  const approxCharW = fontSize * 0.6
+  const tagW = approxCharW * truncated.length + padX * 2
+  const tagH = fontSize + padY * 2
+  const tagX = x + w / 2 - tagW / 2
+  const tagY = y - tagH - EXTERIOR_LABEL_OFFSET_PX
+  return (
+    <g pointerEvents="none">
+      <rect
+        x={tagX}
+        y={tagY}
+        width={tagW}
+        height={tagH}
+        rx={3}
+        fill="#fafaf9"
+        fillOpacity={0.96}
+        stroke="#1c1917"
+        strokeWidth={1}
+      />
+      <text
+        x={tagX + padX}
+        y={tagY + tagH - padY - 1}
+        fontSize={fontSize}
+        fontWeight={700}
+        fill="#1c1917"
+      >
+        {truncated}
+      </text>
+    </g>
+  )
+}
+
 function CanvasObjectsBase({
   objects,
   selectedIds,
   pxPerFt,
+  showLabels = true,
+  overlappingIds,
   editingObjectId,
   eventCategoryNames,
 }: CanvasObjectsProps) {
+  const macroPerimeterGroups = useMemo(
+    () => (showLabels ? macroPerimeterWallGroups(objects) : []),
+    [objects, showLabels]
+  )
+  const suppressedPerimeterIds = useMemo(() => {
+    const out = new Set<string>()
+    for (const group of macroPerimeterGroups) {
+      for (const id of group.ids) out.add(id)
+    }
+    return out
+  }, [macroPerimeterGroups])
+
   return (
     <g>
       {objects.map((obj) => {
@@ -236,17 +388,18 @@ function CanvasObjectsBase({
         const w = obj.width * pxPerFt
         const h = obj.height * pxPerFt
         const isSelected = selectedIds.has(obj.id)
-        const fill = fillForObject(obj, eventCategoryNames)
+        const isOverlapping = overlappingIds?.has(obj.id) ?? false
+        const fill = fillForObject(obj, eventCategoryNames, isOverlapping)
         // When the object is part of an explicit join group its
         // perimeter is no longer "owned" by the object — the
         // dissolved zone polygon (rendered in <RoomFrames>) draws
         // the unified outer wall. Suppress the per-object stroke
         // so the two boundaries don't double up.
         const isJoined = !!obj.joinGroupId
-        const stroke = isJoined && !isSelected
+        const stroke = isJoined && !isSelected && !isOverlapping
           ? 'transparent'
-          : strokeForObject(obj, isSelected, eventCategoryNames)
-        const strokeWidth = isSelected ? 2.5 : isJoined ? 0 : 1.5
+          : strokeForObject(obj, isSelected, eventCategoryNames, isOverlapping)
+        const strokeWidth = isOverlapping ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
         const transform =
           obj.rotation && obj.rotation !== 0
             ? `rotate(${obj.rotation} ${x + w / 2} ${y + h / 2})`
@@ -422,12 +575,22 @@ function CanvasObjectsBase({
                 )
               })()
             ) : null}
-            {labelText && !isEditing
+            {showLabels &&
+            labelText &&
+            !isEditing &&
+            !(obj.kind === 'wall' && suppressedPerimeterIds.has(obj.id))
               ? renderObjectLabel(obj, { x, y, w, h, labelText })
               : null}
           </g>
         )
       })}
+      {showLabels
+        ? macroPerimeterGroups.map((group, idx) => (
+            <g key={`perimeter-label-${idx}`}>
+              {renderGlobalPerimeterLabel(group, pxPerFt)}
+            </g>
+          ))
+        : null}
     </g>
   )
 }
@@ -491,7 +654,7 @@ function renderObjectLabel(
     const approxCharW = fontSize * 0.6
     const tagW = approxCharW * truncated.length + padX * 2
     const tagH = fontSize + padY * 2
-    const gap = 6
+    const gap = EXTERIOR_LABEL_OFFSET_PX
     let tagX: number
     let tagY: number
     if (isLandscape) {

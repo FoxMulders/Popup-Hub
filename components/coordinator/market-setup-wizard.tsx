@@ -378,7 +378,7 @@ export function MarketSetupWizard({
   // separate refs for blank-save / auto-plan / generic placeholder
   // population — none of those concepts exist in v2 (no auto-presets,
   // no capacity-driven population), so we no longer wire those refs.
-  const [plannerOverlap] = useState(false)
+  const [plannerOverlap, setPlannerOverlap] = useState(false)
 
   const scheduleLines = useMemo(
     () =>
@@ -1165,6 +1165,7 @@ export function MarketSetupWizard({
                 onBaselineTableLengthChange={handleBaselineTableLengthChange}
                 layoutCapacity={layoutCapacity}
                 className="flex-1 min-h-0"
+                onOverlapChange={setPlannerOverlap}
               />
               <div className="shrink-0">
                 <WizardNav step={3} onBack={goBack} onNext={goNext} nextDisabled={transitioning || plannerOverlap} />

@@ -17,9 +17,15 @@ import {
 } from './canvas-overlays'
 import { InlineLabelEditor } from './inline-label-editor'
 import { RoomFrames } from './room-frames'
+import { RoomSelectionOverlay } from './room-selection-overlay'
+import { roomUnionBounds } from '../state/room-canvas'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
 import { useBoothCategoryTooltip } from '../interactions/use-booth-category-tooltip'
+import {
+  detectPlacedObjectOverlaps,
+  placedObjectOverlapsAny,
+} from '../interactions/geometry'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { ToolState } from '../tools/types'
@@ -73,6 +79,12 @@ interface FloorPlanCanvasProps {
     dxColumns: number
     dyRows: number
   }) => void
+  /** Notifies the host when a placement is rejected due to overlap. */
+  onOverlapViolation?: () => void
+  /** Fired when room drag/resize hits the 5× canvas dimension cap. */
+  onRoomCanvasLimitBlocked?: () => void
+  /** When false, hide architectural overlay labels on the canvas. */
+  showLabels?: boolean
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
@@ -91,6 +103,8 @@ export function FloorPlanCanvas({
   onZoomChange,
   eventCategoryNames,
   onProximityViolation,
+  onOverlapViolation,
+  onRoomCanvasLimitBlocked,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
 }: FloorPlanCanvasProps) {
@@ -181,6 +195,68 @@ export function FloorPlanCanvas({
     onZoomChange?.(viewport.zoom)
   }, [onZoomChange, viewport.zoom])
 
+  /**
+   * Adaptive auto-zoom: when room frames spread apart, step zoom down
+   * (80% per step from 1.0) so every room stays framed. Only zooms
+   * out — never forces zoom-in while the user is inspecting detail.
+   */
+  const roomsLayoutKey = useMemo(() => {
+    const frames = store.doc.rooms ?? []
+    return frames
+      .map(
+        (f) =>
+          `${f.id}:${f.originX},${f.originY},${f.widthFt},${f.lengthFt}`
+      )
+      .join('|')
+  }, [store.doc.rooms])
+
+  const lastAutoZoomRef = useRef<number | null>(null)
+  useEffect(() => {
+    const frames = store.doc.rooms ?? []
+    if (frames.length === 0) return
+    const scroll = scrollRef.current
+    if (!scroll || scroll.clientWidth === 0 || scroll.clientHeight === 0) {
+      return
+    }
+    const bounds = roomUnionBounds(frames)
+    const widthFt = bounds.maxX - bounds.minX
+    const heightFt = bounds.maxY - bounds.minY
+    if (widthFt <= 0 || heightFt <= 0) return
+
+    const padding = 0.12
+    const stepFactor = 0.8
+    const usableW = Math.max(40, scroll.clientWidth * (1 - padding * 2))
+    const usableH = Math.max(40, scroll.clientHeight * (1 - padding * 2))
+    let targetZoom = 1
+    while (targetZoom >= 0.25) {
+      const pxPerFt = basePxPerFt * targetZoom
+      if (widthFt * pxPerFt <= usableW && heightFt * pxPerFt <= usableH) {
+        break
+      }
+      targetZoom *= stepFactor
+    }
+    targetZoom = Math.max(0.25, Math.min(3, targetZoom))
+
+    if (
+      lastAutoZoomRef.current !== null &&
+      targetZoom >= viewport.zoom - 0.02
+    ) {
+      return
+    }
+    lastAutoZoomRef.current = targetZoom
+    if (targetZoom < viewport.zoom - 0.02) {
+      viewport.fitToBoundsStepped(
+        {
+          minX: bounds.minX,
+          minY: bounds.minY,
+          maxX: bounds.maxX,
+          maxY: bounds.maxY,
+        },
+        { padding, stepFactor, zoomMax: 1 }
+      )
+    }
+  }, [basePxPerFt, roomsLayoutKey, viewport, store.doc.rooms])
+
   const transform = useMemo(
     () => ({ basePxPerFt, zoom: viewport.zoom }),
     [basePxPerFt, viewport.zoom]
@@ -199,7 +275,35 @@ export function FloorPlanCanvas({
     selectedRoomId: selectedRoomId ?? null,
     onRoomFrameClick,
     onProximityViolation,
+    onOverlapViolation,
+    onRoomCanvasLimitBlocked,
   })
+
+  const overlappingIds = useMemo(
+    () => detectPlacedObjectOverlaps(store.doc.objects),
+    [store.doc.objects]
+  )
+
+  const draftOverlaps = useMemo(() => {
+    const rect = pointer.draftRect
+    const kind = pointer.draftKind
+    if (!rect || !kind) return false
+    const probe = {
+      id: '__draft__',
+      kind,
+      x: rect.x,
+      y: rect.y,
+      width: Math.max(store.doc.snapFt || 1, rect.width),
+      height: Math.max(store.doc.snapFt || 1, rect.height),
+      rotation: 0,
+    } as PlacedObject
+    return placedObjectOverlapsAny(probe, store.doc.objects)
+  }, [
+    pointer.draftKind,
+    pointer.draftRect,
+    store.doc.objects,
+    store.doc.snapFt,
+  ])
 
   const categoryTooltip = useBoothCategoryTooltip({
     surfaceRef,
@@ -406,6 +510,7 @@ export function FloorPlanCanvas({
             objects={store.doc.objects}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
+            overlappingIds={overlappingIds}
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
           />
@@ -414,13 +519,30 @@ export function FloorPlanCanvas({
               objects={store.doc.objects}
               selectedIds={store.selectedIds}
               pxPerFt={pxPerFt}
-              suppressHandle={pointer.draftRect !== null}
+              suppressHandle={
+                pointer.draftRect !== null || pointer.roomGestureActive
+              }
             />
           ) : null}
+          {toolState.tool === 'select' && selectedRoomId
+            ? (() => {
+                const frame = (store.doc.rooms ?? []).find(
+                  (f) => f.id === selectedRoomId
+                )
+                return frame ? (
+                  <RoomSelectionOverlay
+                    frame={frame}
+                    pxPerFt={pxPerFt}
+                    suppressHandles={pointer.roomGestureActive}
+                  />
+                ) : null
+              })()
+            : null}
           <DraftPreview
             rect={pointer.draftRect}
             kind={pointer.draftKind}
             pxPerFt={pxPerFt}
+            hasOverlap={draftOverlaps}
           />
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
           {editingObj ? (

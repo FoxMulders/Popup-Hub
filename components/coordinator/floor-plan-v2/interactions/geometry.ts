@@ -11,6 +11,9 @@ import type { PlacedObject } from '../state/types'
  *                     native coordinate system.
  */
 
+/** Clearance (px) between exterior wall strokes and architectural labels. */
+export const EXTERIOR_LABEL_OFFSET_PX = 12
+
 export interface ViewportTransform {
   /** Pixels per foot at zoom = 1.0 */
   basePxPerFt: number
@@ -77,6 +80,23 @@ export function rectsIntersect(a: Rect, b: Rect): boolean {
     a.y + a.height < b.y ||
     b.y + b.height < a.y
   )
+}
+
+/**
+ * True when two rects share a non-zero intersection area. Edge-touching
+ * (zero overlap on either axis) returns false so flush booth placement
+ * is allowed while true overlaps still block.
+ */
+export function rectsOverlapPositiveArea(
+  a: Rect,
+  b: Rect,
+  epsilon = 1e-6
+): boolean {
+  const overlapX =
+    Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+  const overlapY =
+    Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+  return overlapX > epsilon && overlapY > epsilon
 }
 
 export function objectRect(obj: PlacedObject): Rect {
@@ -298,6 +318,92 @@ export function hitTest(
     if (rectContainsPointRotated(obj, p)) return obj
   }
   return null
+}
+
+/** Axis-aligned bounding-box overlap (alias for placement validation). */
+export function aabbOverlap(a: Rect, b: Rect): boolean {
+  return rectsIntersect(a, b)
+}
+
+/**
+ * Doors and emergency exits are meant to sit on perimeter walls;
+ * their overlap dissolves the wall segment at render time. Skip
+ * those pairs so placement validation doesn't fight wall carving.
+ */
+export function shouldSkipOverlapPair(
+  a: PlacedObject,
+  b: PlacedObject
+): boolean {
+  const kinds = new Set([a.kind, b.kind])
+  if (!kinds.has('wall')) return false
+  return kinds.has('door') || kinds.has('emergency_exit')
+}
+
+/**
+ * True when the rotated AABBs of `a` and `b` intersect with non-zero
+ * area. Edge-touching (zero overlap) returns false.
+ */
+export function placedObjectsOverlap(
+  a: PlacedObject,
+  b: PlacedObject
+): boolean {
+  if (shouldSkipOverlapPair(a, b)) return false
+  return rectsOverlapPositiveArea(rotatedAabb(a), rotatedAabb(b))
+}
+
+/**
+ * Return every object id that participates in at least one overlap
+ * with another placed object. Used for static red warning chrome.
+ */
+export function detectPlacedObjectOverlaps(
+  objects: ReadonlyArray<PlacedObject>
+): Set<string> {
+  const overlapping = new Set<string>()
+  for (let i = 0; i < objects.length; i++) {
+    const a = objects[i]!
+    for (let j = i + 1; j < objects.length; j++) {
+      const b = objects[j]!
+      if (placedObjectsOverlap(a, b)) {
+        overlapping.add(a.id)
+        overlapping.add(b.id)
+      }
+    }
+  }
+  return overlapping
+}
+
+/** True when `probe` overlaps any object in `others`. */
+export function placedObjectOverlapsAny(
+  probe: PlacedObject,
+  others: ReadonlyArray<PlacedObject>,
+  excludeIds?: ReadonlySet<string>
+): boolean {
+  for (const other of others) {
+    if (excludeIds?.has(other.id)) continue
+    if (probe.id === other.id) continue
+    if (placedObjectsOverlap(probe, other)) return true
+  }
+  return false
+}
+
+/**
+ * True when any moved object overlaps another moved object or any
+ * object outside the move set. Used to block drag/drop commits.
+ */
+export function findOverlapInMove(
+  moved: ReadonlyArray<PlacedObject>,
+  others: ReadonlyArray<PlacedObject>
+): boolean {
+  for (let i = 0; i < moved.length; i++) {
+    const m = moved[i]!
+    for (const o of others) {
+      if (placedObjectsOverlap(m, o)) return true
+    }
+    for (let j = i + 1; j < moved.length; j++) {
+      if (placedObjectsOverlap(m, moved[j]!)) return true
+    }
+  }
+  return false
 }
 
 /* -------------------------------------------------------------------
@@ -598,6 +704,20 @@ export function detectMergedRoomPairs(
  * click on the wall stroke selects the room frame instead of falling
  * through to whatever child object happens to sit on the wall.
  */
+/** True when `p` lies inside the frame interior (not just the stroke). */
+export function pointInsideFrame(
+  frame: RoomFrameGeom,
+  p: Point,
+  epsilon = 0.05
+): boolean {
+  return (
+    p.x >= frame.originX + epsilon &&
+    p.x <= frame.originX + frame.widthFt - epsilon &&
+    p.y >= frame.originY + epsilon &&
+    p.y <= frame.originY + frame.lengthFt - epsilon
+  )
+}
+
 export function pointHitsFrameStroke(
   frame: RoomFrameGeom,
   p: Point,

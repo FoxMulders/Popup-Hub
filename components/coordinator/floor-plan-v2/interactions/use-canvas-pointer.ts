@@ -14,9 +14,13 @@ import type { ToolState } from '../tools/types'
 import {
   aabbFitsCanvas,
   canvasClampDelta,
+  findOverlapInMove,
   groupCanvasClampDelta,
   normalizeRect,
   objectCenter,
+  placedObjectOverlapsAny,
+  pointInsideFrame,
+  pointHitsFrameStroke,
   rectsIntersect,
   rotatedAabb,
   snapPoint,
@@ -29,6 +33,11 @@ import {
   findFirstViolationInMove,
   findBoothProximityViolation,
 } from './category-rules'
+import {
+  roomResizeFromHandle,
+  type RoomResizeHandle,
+} from '../state/room-canvas'
+import type { RoomFrame } from '../state/types'
 
 interface UseCanvasPointerOptions {
   store: FloorPlanDocStore
@@ -71,6 +80,8 @@ interface UseCanvasPointerOptions {
   selectedRoomId?: string | null
   /** Notifies the host when a click selects a room frame. */
   onRoomFrameClick?: (roomId: string) => void
+  /** Fired when a room drag/resize is blocked (e.g. origin at 0,0). */
+  onRoomCanvasLimitBlocked?: () => void
   /**
    * Notifies the host that a placement (draw or drag) was rejected by
    * the same-category proximity rule (`category-rules.ts`). The host
@@ -82,6 +93,8 @@ interface UseCanvasPointerOptions {
     dxColumns: number
     dyRows: number
   }) => void
+  /** Notifies the host when a placement is rejected due to overlap. */
+  onOverlapViolation?: () => void
 }
 
 type DrawDraft =
@@ -155,6 +168,19 @@ type RoomDragState =
       lastDx: number
       lastDy: number
       moved: boolean
+      limitNotified: boolean
+    }
+
+type RoomResizeState =
+  | null
+  | {
+      pointerId: number
+      roomId: string
+      handle: RoomResizeHandle
+      initialFrame: RoomFrame
+      anchor: Point
+      moved: boolean
+      limitNotified: boolean
     }
 
 /**
@@ -186,6 +212,8 @@ export interface CanvasPointerApi {
   marqueeRect: Rect | null
   /** True while the user is actively dragging an on-canvas rotate handle. */
   rotating: boolean
+  /** True during macro room drag or resize. */
+  roomGestureActive: boolean
   onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerMove: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerUp: (e: ReactPointerEvent<SVGSVGElement>) => void
@@ -204,6 +232,11 @@ export function useCanvasPointer(
   useEffect(() => {
     onProximityViolationRef.current = onProximityViolation
   }, [onProximityViolation])
+  const onOverlapViolation = options.onOverlapViolation
+  const onOverlapViolationRef = useRef(onOverlapViolation)
+  useEffect(() => {
+    onOverlapViolationRef.current = onOverlapViolation
+  }, [onOverlapViolation])
 
   // The host re-renders this hook every time the doc changes (because
   // `store.doc` is a different object), but `commitDraft` only fires
@@ -220,7 +253,15 @@ export function useCanvasPointer(
   const [marquee, setMarquee] = useState<MarqueeState>(null)
   const rotateRef = useRef<RotateState>(null)
   const [rotating, setRotating] = useState(false)
+  const [roomGestureActive, setRoomGestureActive] = useState(false)
   const roomDragRef = useRef<RoomDragState>(null)
+  const roomResizeRef = useRef<RoomResizeState>(null)
+  const onRoomCanvasLimitBlockedRef = useRef(
+    options.onRoomCanvasLimitBlocked
+  )
+  useEffect(() => {
+    onRoomCanvasLimitBlockedRef.current = options.onRoomCanvasLimitBlocked
+  }, [options.onRoomCanvasLimitBlocked])
   const activeRoomIdRef = useRef(options.activeRoomId ?? null)
   useEffect(() => {
     activeRoomIdRef.current = options.activeRoomId ?? null
@@ -338,27 +379,26 @@ export function useCanvasPointer(
       // SELECT
       const target = e.target as Element | null
 
-      // Macro-level room frame drag — clicking on a frame's perimeter
-      // stroke selects the room and starts a translate gesture for
-      // the whole room (including all of its child objects). The
-      // hit target is identified by `data-room-stroke="true"` +
-      // `data-room-id` set on each visible perimeter line segment.
-      const roomStroke = target?.closest('[data-room-stroke="true"]')
-      if (roomStroke && toolState.tool === 'select') {
-        const roomId = roomStroke.getAttribute('data-room-id')
-        if (roomId) {
+      const resizeHandleEl = target?.closest('[data-room-resize-handle]')
+      if (resizeHandleEl && toolState.tool === 'select') {
+        const roomId = resizeHandleEl.getAttribute('data-room-id')
+        const handle = resizeHandleEl.getAttribute(
+          'data-room-resize-handle'
+        ) as RoomResizeHandle | null
+        const frame = (store.doc.rooms ?? []).find((f) => f.id === roomId)
+        if (roomId && handle && frame) {
           capturePointer(e.currentTarget, e.pointerId)
-          // Selecting the frame clears any object selection so the
-          // selection chrome doesn't fight with the frame chrome.
           store.clearSelection()
           onRoomFrameClickRef.current?.(roomId)
-          roomDragRef.current = {
+          setRoomGestureActive(true)
+          roomResizeRef.current = {
             pointerId: e.pointerId,
             roomId,
-            origin: ft,
-            lastDx: 0,
-            lastDy: 0,
+            handle,
+            initialFrame: { ...frame },
+            anchor: ft,
             moved: false,
+            limitNotified: false,
           }
           return
         }
@@ -430,6 +470,41 @@ export function useCanvasPointer(
         return
       }
 
+      // Room frame select + drag (perimeter stroke or interior).
+      if (toolState.tool === 'select') {
+        const roomStroke = target?.closest('[data-room-stroke="true"]')
+        let roomId = roomStroke?.getAttribute('data-room-id') ?? null
+        if (!roomId) {
+          const frames = store.doc.rooms ?? []
+          for (let i = frames.length - 1; i >= 0; i--) {
+            const f = frames[i]!
+            if (
+              pointInsideFrame(f, ft) ||
+              pointHitsFrameStroke(f, ft, 0.75)
+            ) {
+              roomId = f.id
+              break
+            }
+          }
+        }
+        if (roomId) {
+          capturePointer(e.currentTarget, e.pointerId)
+          store.clearSelection()
+          onRoomFrameClickRef.current?.(roomId)
+          setRoomGestureActive(true)
+          roomDragRef.current = {
+            pointerId: e.pointerId,
+            roomId,
+            origin: ft,
+            lastDx: 0,
+            lastDy: 0,
+            moved: false,
+            limitNotified: false,
+          }
+          return
+        }
+      }
+
       // Empty canvas in select mode → marquee.
       capturePointer(e.currentTarget, e.pointerId)
       if (!(e.shiftKey || e.metaKey || e.ctrlKey)) {
@@ -460,7 +535,38 @@ export function useCanvasPointer(
       const drag = dragRef.current
       const rotate = rotateRef.current
       const roomDrag = roomDragRef.current
+      const roomResize = roomResizeRef.current
       const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
+
+      if (roomResize && roomResize.pointerId === pointerId) {
+        const patch = roomResizeFromHandle(
+          roomResize.initialFrame,
+          roomResize.handle,
+          ft,
+          roomResize.anchor
+        )
+        const wasMoved = roomResize.moved
+        const isMovedNow =
+          wasMoved ||
+          patch.widthFt !== roomResize.initialFrame.widthFt ||
+          patch.lengthFt !== roomResize.initialFrame.lengthFt ||
+          patch.originX !== roomResize.initialFrame.originX ||
+          patch.originY !== roomResize.initialFrame.originY
+        const ok = store.resizeRoomFrame(roomResize.roomId, patch, {
+          pushHistory: !wasMoved,
+        })
+        let limitNotified = roomResize.limitNotified
+        if (!ok && !limitNotified) {
+          onRoomCanvasLimitBlockedRef.current?.()
+          limitNotified = true
+        }
+        roomResizeRef.current = {
+          ...roomResize,
+          moved: isMovedNow,
+          limitNotified,
+        }
+        return
+      }
 
       if (roomDrag && roomDrag.pointerId === pointerId) {
         const snap = store.doc.snapFt
@@ -473,21 +579,22 @@ export function useCanvasPointer(
         const wasMoved = roomDrag.moved
         const isMovedNow =
           wasMoved || Math.abs(rawDx) > 0.05 || Math.abs(rawDy) > 0.05
+        let limitNotified = roomDrag.limitNotified
+        if (stepDx !== 0 || stepDy !== 0) {
+          const ok = store.moveRoomFrame(roomDrag.roomId, stepDx, stepDy, {
+            pushHistory: !wasMoved,
+          })
+          if (!ok && !limitNotified) {
+            onRoomCanvasLimitBlockedRef.current?.()
+            limitNotified = true
+          }
+        }
         roomDragRef.current = {
           ...roomDrag,
           lastDx: dxTotal,
           lastDy: dyTotal,
           moved: isMovedNow,
-        }
-        if (stepDx !== 0 || stepDy !== 0) {
-          // Apply the *step* delta — moveRoomFrame is additive, so
-          // accumulating would compound over every paint. The first
-          // committing step of the gesture pushes the pre-drag doc
-          // onto the undo stack so a single Ctrl+Z restores the
-          // room origin (and child translations) atomically.
-          store.moveRoomFrame(roomDrag.roomId, stepDx, stepDy, {
-            pushHistory: !wasMoved,
-          })
+          limitNotified,
         }
         return
       }
@@ -699,6 +806,13 @@ export function useCanvasPointer(
         flushMove(pending)
       }
 
+      const roomResize = roomResizeRef.current
+      if (roomResize && roomResize.pointerId === e.pointerId) {
+        roomResizeRef.current = null
+        setRoomGestureActive(false)
+        return
+      }
+
       const roomDrag = roomDragRef.current
       if (roomDrag && roomDrag.pointerId === e.pointerId) {
         // Clamp the room frame back to non-negative origin so the
@@ -721,6 +835,7 @@ export function useCanvasPointer(
           })
         }
         roomDragRef.current = null
+        setRoomGestureActive(false)
         return
       }
 
@@ -797,7 +912,8 @@ export function useCanvasPointer(
             rect,
             eventCategoryNamesRef.current,
             drawRoomId,
-            onProximityViolationRef.current
+            onProximityViolationRef.current,
+            onOverlapViolationRef.current
           )
           onAfterDrawCommit?.()
         }
@@ -856,6 +972,29 @@ export function useCanvasPointer(
               dxColumns: violation.dxColumns,
               dyRows: violation.dyRows,
             })
+          } else if (
+            findOverlapInMove(
+              store.doc.objects.filter((o) => movedIdSet.has(o.id)),
+              store.doc.objects.filter((o) => !movedIdSet.has(o.id))
+            )
+          ) {
+            const revertPatches: Array<{
+              id: string
+              patch: Partial<PlacedObject>
+            }> = []
+            for (const id of drag.ids) {
+              const orig = drag.originals.get(id)
+              if (orig) {
+                revertPatches.push({
+                  id,
+                  patch: { x: orig.x, y: orig.y },
+                })
+              }
+            }
+            if (revertPatches.length > 0) {
+              store.updateObjects(revertPatches, { pushHistory: false })
+            }
+            onOverlapViolationRef.current?.()
           } else {
             // Commit the move with a single history entry. We've been
             // mutating without history during the gesture; now snapshot.
@@ -925,6 +1064,7 @@ export function useCanvasPointer(
       ? normalizeRect(marquee.anchor, marquee.current)
       : null,
     rotating,
+    roomGestureActive,
     onPointerDown,
     onPointerMove,
     onPointerUp,
@@ -974,7 +1114,8 @@ function commitDraft(
     category: string
     dxColumns: number
     dyRows: number
-  }) => void
+  }) => void,
+  onOverlapViolation?: () => void
 ): void {
   const id = `obj-${crypto.randomUUID()}`
   const base = {
@@ -1045,6 +1186,12 @@ function commitDraft(
       })
       return
     }
+  }
+  if (
+    placedObjectOverlapsAny(obj, store.doc.objects)
+  ) {
+    onOverlapViolation?.()
+    return
   }
   store.addObject(obj, {
     select: true,

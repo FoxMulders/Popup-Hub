@@ -7,23 +7,31 @@ interface DraftPreviewProps {
   rect: Rect | null
   kind: ObjectKind | null
   pxPerFt: number
+  /** When true, preview uses overlap warning styling. */
+  hasOverlap?: boolean
 }
 
-export function DraftPreview({ rect, kind, pxPerFt }: DraftPreviewProps) {
+export function DraftPreview({
+  rect,
+  kind,
+  pxPerFt,
+  hasOverlap = false,
+}: DraftPreviewProps) {
   if (!rect || !kind) return null
   const x = rect.x * pxPerFt
   const y = rect.y * pxPerFt
   const w = Math.max(1, rect.width * pxPerFt)
   const h = Math.max(1, rect.height * pxPerFt)
-  const stroke = previewStroke(kind)
+  const stroke = hasOverlap ? '#ef4444' : previewStroke(kind)
+  const fill = hasOverlap ? '#fecaca' : previewFill(kind)
   return (
     <rect
       x={x}
       y={y}
       width={w}
       height={h}
-      fill={previewFill(kind)}
-      fillOpacity={0.35}
+      fill={fill}
+      fillOpacity={hasOverlap ? 0.55 : 0.35}
       stroke={stroke}
       strokeWidth={2}
       strokeDasharray="6 3"
