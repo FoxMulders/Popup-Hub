@@ -130,9 +130,10 @@ export type PlacedObject =
  * Room frame on the unified canvas. Each frame represents one
  * `LayoutRoom` projected onto a shared coordinate space; frames can be
  * placed side-by-side, butted up against each other (wall-merge), and
- * dragged as macro-level entities — child objects translate with the
- * frame because they're stored in *global* canvas coords with a
- * sidecar room association (`FloorPlanDoc.objectRoom`).
+ * dragged/resized as macro-level entities (see `state/room-canvas.ts`
+ * for the 5× primary-room canvas ceiling) — child objects translate
+ * with the frame because they're stored in *global* canvas coords with
+ * a sidecar room association (`FloorPlanDoc.objectRoom`).
  *
  * Frames are part of the doc so room moves participate in the same
  * undo/redo stack as object edits — a single Ctrl+Z restores the
