@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { flyerHasExtractedSignal } from '@/lib/flyer/has-extracted-signal'
 import { parseFlyerWithVision } from '@/lib/flyer/parse-flyer-vision'
 import { parsedFlyerSchema } from '@/lib/flyer/types'
 
@@ -58,17 +59,7 @@ export async function POST(request: Request) {
       fileName: file.name,
     })
 
-    const hasSignal = Boolean(
-      data.eventName ||
-        data.date ||
-        data.startTime ||
-        data.endTime ||
-        data.location ||
-        data.description ||
-        data.ticketPrice
-    )
-
-    if (!hasSignal) {
+    if (!flyerHasExtractedSignal(data)) {
       return NextResponse.json(
         { error: 'Could not read event details from this flyer' },
         { status: 422 }
@@ -77,6 +68,8 @@ export async function POST(request: Request) {
 
     const payload = parsedFlyerSchema.parse({
       eventName: data.eventName ?? null,
+      venueName: data.venueName ?? null,
+      address: data.address ?? null,
       date: data.date ?? null,
       startTime: data.startTime ?? null,
       endTime: data.endTime ?? null,

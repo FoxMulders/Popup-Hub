@@ -10,6 +10,19 @@ interface ParseFlyerApiResponse extends ParsedFlyerResponse {
   meta?: { source?: string }
 }
 
+const FLYER_PARSE_FALLBACK =
+  'Could not automatically read flyer details, but you can still type them in manually.'
+
+function flyerParseErrorMessage(apiError: string | undefined, noFieldsMapped: boolean): string {
+  if (apiError?.trim()) {
+    return `${apiError.trim()} You can still enter details manually.`
+  }
+  if (noFieldsMapped) {
+    return 'We read your flyer but could not map any fields to the form. Please enter details manually.'
+  }
+  return FLYER_PARSE_FALLBACK
+}
+
 export function useFlyerScan() {
   const [parsing, setParsing] = useState(false)
   const [autoFilledFields, setAutoFilledFields] = useState<Set<FlyerFieldKey>>(new Set())
@@ -38,17 +51,13 @@ export function useFlyerScan() {
         if (generation !== scanGeneration.current) return false
 
         if (!res.ok || json.error) {
-          toast.error(
-            'Could not automatically read flyer details, but you can still type them in manually.'
-          )
+          toast.error(flyerParseErrorMessage(json.error, false))
           return false
         }
 
         const filled = applyParsedFlyer(json, handlers)
         if (filled.size === 0) {
-          toast.error(
-            'Could not automatically read flyer details, but you can still type them in manually.'
-          )
+          toast.error(flyerParseErrorMessage(undefined, true))
           return false
         }
 
@@ -65,9 +74,7 @@ export function useFlyerScan() {
         return true
       } catch {
         if (generation === scanGeneration.current) {
-          toast.error(
-            'Could not automatically read flyer details, but you can still type them in manually.'
-          )
+          toast.error(FLYER_PARSE_FALLBACK)
         }
         return false
       } finally {
