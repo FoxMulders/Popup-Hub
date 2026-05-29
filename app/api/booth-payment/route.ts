@@ -118,9 +118,16 @@ export async function POST(request: Request) {
     )
   }
 
-  if (application.payment_method === 'ETRANSFER') {
+  if (application.payment_method === 'ETRANSFER' || application.payment_method === 'CASH') {
     return NextResponse.json(
-      { error: 'This application uses e-transfer. The coordinator will confirm payment manually.' },
+      { error: 'This application uses offline payment. The coordinator will confirm payment manually.' },
+      { status: 400 }
+    )
+  }
+
+  if (application.payment_method === 'STRIPE') {
+    return NextResponse.json(
+      { error: 'This application uses Stripe checkout. Complete payment via the Stripe flow.' },
       { status: 400 }
     )
   }

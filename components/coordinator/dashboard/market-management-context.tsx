@@ -40,6 +40,7 @@ export interface MarketTelemetry {
   collectedRevenueCents: number
   pendingRevenueCents: number
   squareConnected: boolean
+  stripeConnected: boolean
 }
 
 export interface MarketManagementState {
@@ -84,6 +85,7 @@ interface MarketManagementProviderProps {
   pendingByEventId: Record<string, VendorApplicationSnapshot[]>
   boothPriceByEventAndApplicationId: Record<string, Record<string, number>>
   squareConnected: boolean
+  stripeConnected?: boolean
   totalRevenueCents: number
 }
 
@@ -96,6 +98,7 @@ export function MarketManagementProvider({
   pendingByEventId,
   boothPriceByEventAndApplicationId,
   squareConnected,
+  stripeConnected = false,
   totalRevenueCents,
 }: MarketManagementProviderProps) {
   const [selectedEventId, setSelectedEventId] = useState(initialEventId ?? events[0]?.id ?? null)
@@ -208,6 +211,7 @@ export function MarketManagementProvider({
       collectedRevenueCents,
       pendingRevenueCents,
       squareConnected,
+      stripeConnected,
     }
   }, [
     appByVendorId,
@@ -215,6 +219,7 @@ export function MarketManagementProvider({
     docRevision,
     floorPlanStore,
     squareConnected,
+    stripeConnected,
     vipHoldIds,
   ])
 

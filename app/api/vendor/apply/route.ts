@@ -21,6 +21,8 @@ import {
   sendMarketApplicationReceivedEmail,
 } from '@/lib/email/application-received'
 import {
+  isOfflinePaymentMethod,
+  isPaymentMethodAllowed,
   normalizePaymentMethod,
   resolvePaymentFieldsForPaidApplication,
 } from '@/lib/applications/payment-fields'
@@ -123,7 +125,7 @@ export async function POST(request: Request) {
     attendanceTermsAcknowledged?: boolean
     attendingEventDayIds?: string[]
     attendingDates?: string[]
-    paymentMethod?: 'SQUARE' | 'ETRANSFER'
+    paymentMethod?: 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH'
     applicableDocumentationUrl?: string | null
     tableCount?: number
   }
@@ -155,7 +157,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -332,8 +334,9 @@ export async function POST(request: Request) {
   )
   const requiresPayment = boothPrice > 0
   const paymentMethod = normalizePaymentMethod(rawPaymentMethod)
+  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
 
-  if (requiresPayment && paymentMethod === 'SQUARE') {
+  if (requiresPayment) {
     const serviceSupabase = await createServiceClient()
     const credentials = await getCoordinatorAccessToken(
       serviceSupabase,
@@ -342,10 +345,31 @@ export async function POST(request: Request) {
     const squareReady =
       !!event.square_merchant_id ||
       (!!credentials?.accessToken && !!credentials.merchantId)
+    const stripeReady =
+      !!coordinator?.stripe_connected_id && coordinator?.stripe_onboarding_complete === true
 
-    if (!squareReady) {
+    if (
+      !isPaymentMethodAllowed(paymentMethod, event, {
+        squareConnected: squareReady,
+        stripeConnected: stripeReady,
+      })
+    ) {
+      return NextResponse.json(
+        { error: 'Selected payment method is not available for this market' },
+        { status: 422 }
+      )
+    }
+
+    if (paymentMethod === 'SQUARE' && !squareReady) {
       return NextResponse.json(
         { error: 'Coordinator has not connected Square for paid booths yet' },
+        { status: 422 }
+      )
+    }
+
+    if (paymentMethod === 'STRIPE' && !stripeReady) {
+      return NextResponse.json(
+        { error: 'Coordinator has not connected Stripe for paid booths yet' },
         { status: 422 }
       )
     }
@@ -390,7 +414,10 @@ export async function POST(request: Request) {
    * flow (vendor pays with card after approval), since Square clears
    * funds atomically inside the tokenization handshake.
    */
-  if (paymentMethod === 'ETRANSFER' && (status === 'approved' || status === 'pending_insurance')) {
+  if (
+    isOfflinePaymentMethod(paymentMethod) &&
+    (status === 'approved' || status === 'pending_insurance')
+  ) {
     status = 'pending'
     waitlistPosition = null
   }
@@ -403,11 +430,13 @@ export async function POST(request: Request) {
   })
 
   const hasCategoryOverflow = match.hasCategoryOverflow && !match.allCategoriesFull
-  const etransferPending =
-    paymentMethod === 'ETRANSFER' &&
+  const offlinePending =
+    isOfflinePaymentMethod(paymentMethod) &&
     paymentFields.application_payment_status === 'PENDING_REVIEW'
-  const etransferReferenceCode = etransferPending ? generateEtransferReferenceCode() : null
-  const etransferExpiresAt = etransferPending ? etransferHoldExpiresAt() : null
+  const etransferReferenceCode =
+    offlinePending && paymentMethod === 'ETRANSFER' ? generateEtransferReferenceCode() : null
+  const etransferExpiresAt =
+    offlinePending && paymentMethod === 'ETRANSFER' ? etransferHoldExpiresAt() : null
 
   async function insertApplication() {
     return supabase
@@ -518,7 +547,7 @@ export async function POST(request: Request) {
     })
   }
 
-  if (etransferPending && inserted?.id && requiresPayment) {
+  if (offlinePending && paymentMethod === 'ETRANSFER' && inserted?.id && requiresPayment) {
     const serviceSupabase = await createServiceClient()
     dispatchEtransferInstructions(serviceSupabase, {
       applicationId: inserted.id,

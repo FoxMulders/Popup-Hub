@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { resolveEnabledPaymentMethods } from '@/lib/applications/payment-fields'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import { resolveCoordinatorEtransferEmail } from '@/lib/coordinator/etransfer-email'
@@ -19,10 +20,20 @@ export async function GET(
       coordinator_id,
       square_merchant_id,
       status,
+      accepts_square,
+      accepts_stripe,
+      accepts_offline_etransfer,
+      accepts_offline_cash,
       platform_fee_mode,
       platform_fee_flat_cents,
       platform_fee_bps,
-      coordinator:profiles!events_coordinator_id_fkey(email, etransfer_payment_email)
+      coordinator:profiles!events_coordinator_id_fkey(
+        email,
+        etransfer_payment_email,
+        offline_payment_instructions,
+        stripe_connected_id,
+        stripe_onboarding_complete
+      )
     `)
     .eq('id', eventId)
     .single()
@@ -39,21 +50,32 @@ export async function GET(
   const squareConnected =
     !!event.square_merchant_id || !!credentials?.accessToken
 
+  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
+  const stripeConnected =
+    !!coordinator?.stripe_connected_id && coordinator?.stripe_onboarding_complete === true
+
   const locationId =
     credentials?.locationId ??
     process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID ??
     null
 
   const feeConfig = resolveEventFeeConfig(event)
-  const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const coordinatorEtransferEmail = resolveCoordinatorEtransferEmail(coordinator)
+  const enabledPaymentMethods = resolveEnabledPaymentMethods(event, {
+    squareConnected,
+    stripeConnected,
+  })
 
   return NextResponse.json({
     eventId: event.id,
     squareAppId: process.env.NEXT_PUBLIC_SQUARE_APP_ID,
     squareLocationId: locationId,
     squareConnected,
+    stripeConnected,
+    stripePublishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null,
+    enabledPaymentMethods,
     feeConfig,
     coordinatorEtransferEmail,
+    offlinePaymentInstructions: coordinator?.offline_payment_instructions ?? null,
   })
 }

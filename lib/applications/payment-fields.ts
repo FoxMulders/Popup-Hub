@@ -7,7 +7,9 @@ import type {
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   SQUARE: 'Square (card)',
+  STRIPE: 'Stripe (card)',
   ETRANSFER: 'E-transfer',
+  CASH: 'Cash',
 }
 
 export const APPLICATION_PAYMENT_STATUS_LABELS: Record<ApplicationPaymentStatus, string> = {
@@ -16,8 +18,22 @@ export const APPLICATION_PAYMENT_STATUS_LABELS: Record<ApplicationPaymentStatus,
   EXPIRED: 'Expired',
 }
 
+export const OFFLINE_PAYMENT_GATE_MESSAGE =
+  'Vendor cannot be marked as Approved until their offline payment is marked as Paid.'
+
+export function isOfflinePaymentMethod(method: PaymentMethod | null | undefined): boolean {
+  return method === 'ETRANSFER' || method === 'CASH'
+}
+
+export function isDigitalPaymentMethod(method: PaymentMethod | null | undefined): boolean {
+  return method === 'SQUARE' || method === 'STRIPE'
+}
+
 export function normalizePaymentMethod(value: unknown): PaymentMethod {
-  return value === 'ETRANSFER' ? 'ETRANSFER' : 'SQUARE'
+  if (value === 'STRIPE') return 'STRIPE'
+  if (value === 'ETRANSFER') return 'ETRANSFER'
+  if (value === 'CASH') return 'CASH'
+  return 'SQUARE'
 }
 
 export function isApplicationPaid(
@@ -26,13 +42,13 @@ export function isApplicationPaid(
     'payment_status' | 'payment_method' | 'application_payment_status'
   >
 ): boolean {
-  if (app.payment_method === 'ETRANSFER') {
+  if (isOfflinePaymentMethod(app.payment_method)) {
     return app.application_payment_status === 'COMPLETED'
   }
   return app.payment_status === 'paid'
 }
 
-export function needsSquareCheckout(
+export function needsDigitalCheckout(
   app: Pick<
     BoothApplication,
     'payment_status' | 'payment_method' | 'application_payment_status' | 'status'
@@ -40,12 +56,15 @@ export function needsSquareCheckout(
 ): boolean {
   return (
     app.status === 'approved' &&
-    app.payment_method !== 'ETRANSFER' &&
+    isDigitalPaymentMethod(app.payment_method) &&
     app.payment_status === 'payment_required'
   )
 }
 
-export function needsEtransferCoordinatorReview(
+/** @deprecated Use needsDigitalCheckout */
+export const needsSquareCheckout = needsDigitalCheckout
+
+export function needsOfflineCoordinatorReview(
   app: Pick<
     BoothApplication,
     'payment_method' | 'application_payment_status' | 'status'
@@ -53,41 +72,30 @@ export function needsEtransferCoordinatorReview(
 ): boolean {
   return (
     app.status === 'approved' &&
-    app.payment_method === 'ETRANSFER' &&
+    isOfflinePaymentMethod(app.payment_method) &&
     app.application_payment_status === 'PENDING_REVIEW'
   )
 }
 
-/**
- * Hard gate: an Interac e-Transfer application must NOT be approvable
- * until the coordinator has marked the funds as cleared. Used both
- * server-side (status route refuses the mutation) and client-side
- * (Approve button is greyed-out with the explanatory banner).
- *
- * Returns true when the application would slot into the
- * "Awaiting Funds Verification" queue — i.e. the vendor picked
- * E-Transfer but the cash hasn't been ticked off yet.
- */
-export function isEtransferAwaitingPayment(
+/** @deprecated Use needsOfflineCoordinatorReview */
+export const needsEtransferCoordinatorReview = needsOfflineCoordinatorReview
+
+export function isOfflineAwaitingPayment(
   app: Pick<
     BoothApplication,
     'payment_method' | 'application_payment_status'
   >
 ): boolean {
   return (
-    app.payment_method === 'ETRANSFER' &&
+    isOfflinePaymentMethod(app.payment_method) &&
     app.application_payment_status !== 'COMPLETED'
   )
 }
 
-/**
- * Coordinator-facing copy used for the disabled Approve button
- * tooltip / banner. Centralized so the wording stays in lockstep
- * across the application board, the review drawer, and any future
- * approval surface.
- */
-export const ETRANSFER_PAYMENT_GATE_MESSAGE =
-  'Vendor cannot be marked as Approved until their Interac e-Transfer is marked as Paid.'
+/** @deprecated Use isOfflineAwaitingPayment */
+export const isEtransferAwaitingPayment = isOfflineAwaitingPayment
+
+export const ETRANSFER_PAYMENT_GATE_MESSAGE = OFFLINE_PAYMENT_GATE_MESSAGE
 
 export function resolvePaymentFieldsForPaidApplication({
   paymentMethod,
@@ -110,24 +118,16 @@ export function resolvePaymentFieldsForPaidApplication({
     }
   }
 
-  if (paymentMethod === 'ETRANSFER') {
-    /*
-     * E-Transfer apps live in PENDING_REVIEW from the moment they
-     * apply — the coordinator must verify funds before the app can
-     * transition to Approved. Keeping the flag set even on apps that
-     * haven't been approved yet means the "Mark as Paid" workflow
-     * can find them on the dashboard and clear payment + advance
-     * status in one atomic move.
-     */
+  if (isOfflinePaymentMethod(paymentMethod)) {
     return {
-      payment_method: 'ETRANSFER',
+      payment_method: paymentMethod,
       payment_status: 'pending',
       application_payment_status: 'PENDING_REVIEW',
     }
   }
 
   return {
-    payment_method: 'SQUARE',
+    payment_method: paymentMethod,
     payment_status: approved ? 'payment_required' : 'unpaid',
     application_payment_status: null,
   }
@@ -139,11 +139,57 @@ export function formatApplicationPaymentLabel(
     'payment_status' | 'payment_method' | 'application_payment_status'
   >
 ): string {
-  if (app.payment_method === 'ETRANSFER') {
+  if (isOfflinePaymentMethod(app.payment_method)) {
+    const methodLabel = app.payment_method ? PAYMENT_METHOD_LABELS[app.payment_method] : 'Offline'
     const status = app.application_payment_status ?? 'PENDING_REVIEW'
-    return `E-transfer · ${APPLICATION_PAYMENT_STATUS_LABELS[status]}`
+    return `${methodLabel} · ${APPLICATION_PAYMENT_STATUS_LABELS[status]}`
+  }
+  if (app.payment_method === 'STRIPE') {
+    if (app.payment_status === 'paid') return 'Paid (Stripe)'
+    if (app.payment_status === 'payment_required') return 'Awaiting Stripe payment'
   }
   if (app.payment_status === 'paid') return 'Paid (Square)'
   if (app.payment_status === 'payment_required') return 'Awaiting Square payment'
   return app.payment_status
+}
+
+export type EventPaymentAcceptance = {
+  accepts_square?: boolean | null
+  accepts_stripe?: boolean | null
+  accepts_offline_etransfer?: boolean | null
+  accepts_offline_cash?: boolean | null
+}
+
+export function resolveEnabledPaymentMethods(
+  event: EventPaymentAcceptance,
+  options: {
+    squareConnected?: boolean
+    stripeConnected?: boolean
+  } = {}
+): PaymentMethod[] {
+  const methods: PaymentMethod[] = []
+  if (event.accepts_square !== false && options.squareConnected !== false) {
+    methods.push('SQUARE')
+  }
+  if (event.accepts_stripe === true && options.stripeConnected === true) {
+    methods.push('STRIPE')
+  }
+  if (event.accepts_offline_etransfer !== false) {
+    methods.push('ETRANSFER')
+  }
+  if (event.accepts_offline_cash === true) {
+    methods.push('CASH')
+  }
+  return methods
+}
+
+export function isPaymentMethodAllowed(
+  method: PaymentMethod,
+  event: EventPaymentAcceptance,
+  options: {
+    squareConnected?: boolean
+    stripeConnected?: boolean
+  } = {}
+): boolean {
+  return resolveEnabledPaymentMethods(event, options).includes(method)
 }

@@ -1,13 +1,21 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { DollarSign, RefreshCw, Square, TrendingUp } from 'lucide-react'
+import { CheckCircle2, CreditCard, DollarSign, Loader2, RefreshCw, TrendingUp } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { needsOfflineCoordinatorReview } from '@/lib/applications/payment-fields'
+import type { PaymentMethod } from '@/types/database'
 import { useMarketManagement, formatCadCurrency } from './market-management-context'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 
 export function TelemetryDeskColumn() {
+  const router = useRouter()
+  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
   const {
     telemetry,
     totalRevenueCents,
@@ -37,10 +45,42 @@ export function TelemetryDeskColumn() {
     ? approvedPool.find((a) => a.vendor_id === selectedVendorId)
     : null
 
+  const offlinePending =
+    selectedApp != null &&
+    needsOfflineCoordinatorReview({
+      payment_method: selectedApp.payment_method as PaymentMethod | null,
+      application_payment_status: selectedApp.application_payment_status as
+        | 'PENDING_REVIEW'
+        | 'COMPLETED'
+        | 'EXPIRED'
+        | null,
+      status: selectedApp.status,
+    })
+
   const fillRate =
     telemetry.totalBooths > 0
       ? Math.round((telemetry.assignedBooths / telemetry.totalBooths) * 100)
       : 0
+
+  function markOfflinePaid(applicationId: string) {
+    setMarkingPaidId(applicationId)
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/coordinator/confirm-etransfer/${applicationId}`, {
+          method: 'POST',
+        })
+        const data = (await res.json()) as { error?: string }
+        if (!res.ok) {
+          toast.error(data.error ?? 'Could not mark payment as paid')
+          return
+        }
+        toast.success('Payment marked as paid')
+        router.refresh()
+      } finally {
+        setMarkingPaidId(null)
+      }
+    })
+  }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -49,17 +89,17 @@ export function TelemetryDeskColumn() {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/90">
             Telemetry desk
           </p>
-          <h2 className="market-panel-title text-base">Square sync</h2>
+          <h2 className="market-panel-title text-base">Payments</h2>
         </div>
         <span
           className={
-            telemetry.squareConnected
+            telemetry.squareConnected || telemetry.stripeConnected
               ? 'inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-900'
               : 'inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-900'
           }
         >
-          <Square className="h-3 w-3" aria-hidden />
-          {telemetry.squareConnected ? 'Connected' : 'Not connected'}
+          <CreditCard className="h-3 w-3" aria-hidden />
+          {telemetry.squareConnected || telemetry.stripeConnected ? 'Connected' : 'Setup needed'}
         </span>
       </div>
 
@@ -133,6 +173,22 @@ export function TelemetryDeskColumn() {
             <p className="text-xs text-muted-foreground">{statusTheme.label}</p>
             {selectedApp ? (
               <div className="mt-3 flex flex-wrap gap-2">
+                {offlinePending ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="text-xs bg-sky-700 hover:bg-sky-800 text-white"
+                    disabled={isPending && markingPaidId === selectedApp.id}
+                    onClick={() => markOfflinePaid(selectedApp.id)}
+                  >
+                    {isPending && markingPaidId === selectedApp.id ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                    )}
+                    Mark as Paid
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   size="sm"
@@ -152,19 +208,18 @@ export function TelemetryDeskColumn() {
         )}
 
         <div className="mt-5 flex flex-col gap-2">
-          {!telemetry.squareConnected ? (
-            <Link href="/coordinator/square-connect">
-              <Button size="sm" className="w-full gap-1.5">
-                <Square className="h-4 w-4" aria-hidden />
-                Connect Square payouts
-              </Button>
-            </Link>
-          ) : (
+          <Link href="/coordinator/payment-methods">
+            <Button size="sm" className="w-full gap-1.5">
+              <CreditCard className="h-4 w-4" aria-hidden />
+              Payment methods
+            </Button>
+          </Link>
+          {telemetry.squareConnected || telemetry.stripeConnected ? (
             <Button size="sm" variant="outline" className="w-full gap-1.5" disabled>
               <RefreshCw className="h-4 w-4" aria-hidden />
-              Square sync active
+              Payout sync active
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

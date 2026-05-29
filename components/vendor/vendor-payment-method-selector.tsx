@@ -1,9 +1,10 @@
 'use client'
 
-import { CreditCard, Landmark, Sparkles, Timer } from 'lucide-react'
+import { Banknote, CreditCard, Landmark, Sparkles, Timer } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { formatCents } from '@/lib/square/client'
 import type { PaymentMethod } from '@/types/database'
+import { PAYMENT_METHOD_LABELS } from '@/lib/applications/payment-fields'
 import { cn } from '@/lib/utils'
 
 export interface VendorPaymentMethodSelectorProps {
@@ -12,19 +13,37 @@ export interface VendorPaymentMethodSelectorProps {
   boothPriceCents: number
   platformFeeCents: number
   coordinatorEtransferEmail: string | null
-  squareConnected?: boolean
+  offlinePaymentInstructions?: string | null
+  enabledMethods: PaymentMethod[]
   disabled?: boolean
   className?: string
 }
 
-const METHODS: Array<{
-  id: PaymentMethod
-  title: string
-  icon: typeof CreditCard
-}> = [
-  { id: 'SQUARE', title: 'Pay with Card (Square)', icon: CreditCard },
-  { id: 'ETRANSFER', title: 'Pay via E-Transfer', icon: Landmark },
-]
+const METHOD_META: Record<
+  PaymentMethod,
+  { title: string; icon: typeof CreditCard; description: string }
+> = {
+  SQUARE: {
+    title: PAYMENT_METHOD_LABELS.SQUARE,
+    icon: CreditCard,
+    description: 'Instant approval after payment',
+  },
+  STRIPE: {
+    title: PAYMENT_METHOD_LABELS.STRIPE,
+    icon: CreditCard,
+    description: 'Pay by card via Stripe',
+  },
+  ETRANSFER: {
+    title: PAYMENT_METHOD_LABELS.ETRANSFER,
+    icon: Landmark,
+    description: 'Pay the organizer directly by Interac e-Transfer',
+  },
+  CASH: {
+    title: PAYMENT_METHOD_LABELS.CASH,
+    icon: Banknote,
+    description: 'Pay the organizer in cash at load-in',
+  },
+}
 
 export function VendorPaymentMethodSelector({
   value,
@@ -32,26 +51,24 @@ export function VendorPaymentMethodSelector({
   boothPriceCents,
   platformFeeCents,
   coordinatorEtransferEmail,
-  squareConnected = true,
+  offlinePaymentInstructions,
+  enabledMethods,
   disabled = false,
   className,
 }: VendorPaymentMethodSelectorProps) {
-  const squareTotalCents = boothPriceCents + platformFeeCents
-  const etransferTotalCents = boothPriceCents
+  const methods = enabledMethods.length > 0 ? enabledMethods : (['SQUARE'] as PaymentMethod[])
 
   return (
     <fieldset className={cn('space-y-3', className)} disabled={disabled}>
       <legend className="sr-only">Choose payment method</legend>
       <Label className="text-sm font-medium text-foreground">Payment method</Label>
 
-      <div
-        className="grid gap-3 sm:grid-cols-2"
-        role="radiogroup"
-        aria-label="Payment method"
-      >
-        {METHODS.map(({ id, title, icon: Icon }) => {
+      <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Payment method">
+        {methods.map((id) => {
+          const { title, icon: Icon, description } = METHOD_META[id]
           const selected = value === id
-          const squareDisabled = id === 'SQUARE' && !squareConnected
+          const isDigital = id === 'SQUARE' || id === 'STRIPE'
+          const displayTotal = isDigital ? boothPriceCents + platformFeeCents : boothPriceCents
 
           return (
             <label
@@ -62,7 +79,7 @@ export function VendorPaymentMethodSelector({
                 selected
                   ? 'border-harvest-500 bg-harvest-50/80 shadow-sm'
                   : 'border-stone-200 bg-white hover:border-stone-300',
-                (disabled || squareDisabled) && id === 'SQUARE' && 'cursor-not-allowed opacity-60'
+                disabled && 'cursor-not-allowed opacity-60'
               )}
             >
               <input
@@ -70,7 +87,7 @@ export function VendorPaymentMethodSelector({
                 name="vendor-payment-method"
                 value={id}
                 checked={selected}
-                disabled={disabled || squareDisabled}
+                disabled={disabled}
                 onChange={() => onChange(id)}
                 className="sr-only"
               />
@@ -86,59 +103,54 @@ export function VendorPaymentMethodSelector({
                 </span>
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="font-semibold text-sm text-foreground leading-tight">{title}</p>
-                  {id === 'SQUARE' ? (
+                  <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    Total {formatCents(displayTotal)}
+                  </p>
+                  {isDigital ? (
+                    <p className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
+                      <Sparkles className="h-3 w-3" aria-hidden />
+                      Instant booth confirmation
+                    </p>
+                  ) : id === 'ETRANSFER' ? (
                     <>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Instant approval after payment
-                      </p>
-                      <p className="text-sm font-semibold text-foreground">
-                        Total {formatCents(squareTotalCents)}
-                      </p>
-                      {/*
-                       * Public-facing copy: the unified "Total"
-                       * already absorbs every line item the buyer
-                       * is charged. The internal platform-margin
-                       * breakdown stays on coordinator-only views
-                       * (e.g. the Square Connect dashboard).
-                       */}
-                      <p className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700">
-                        <Sparkles className="h-3 w-3" aria-hidden />
-                        Instant booth confirmation
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        0% fees · pay the organizer directly
-                      </p>
-                      <p className="text-sm font-semibold text-foreground">
-                        Total {formatCents(etransferTotalCents)}
-                      </p>
                       {coordinatorEtransferEmail ? (
                         <p className="text-xs text-sky-900 break-all">
                           Send to:{' '}
                           <span className="font-medium">{coordinatorEtransferEmail}</span>
                         </p>
-                      ) : (
-                        <p className="text-xs text-harvest-700">
-                          Coordinator payment email will be included in your instructions.
-                        </p>
-                      )}
+                      ) : null}
                       <p className="inline-flex items-start gap-1 rounded-md bg-terracotta-50 px-2 py-1.5 text-[11px] font-medium text-terracotta-800 leading-snug">
                         <Timer className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
                         Spot held 24 hours pending manual verification
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      {offlinePaymentInstructions ? (
+                        <p className="text-xs text-stone-700 whitespace-pre-wrap">
+                          {offlinePaymentInstructions}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-harvest-700">
+                          Coordinator payment instructions will be included after you apply.
+                        </p>
+                      )}
+                      <p className="inline-flex items-start gap-1 rounded-md bg-stone-100 px-2 py-1.5 text-[11px] font-medium text-stone-800 leading-snug">
+                        <Timer className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+                        Pending until coordinator marks you paid
                       </p>
                     </>
                   )}
                 </div>
               </div>
 
-              {selected && (
+              {selected ? (
                 <span
                   className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-harvest-500"
                   aria-hidden
                 />
-              )}
+              ) : null}
             </label>
           )
         })}

@@ -10,7 +10,7 @@ import { getSquareOAuthRedirectUri } from '@/lib/square/connect-url'
 
 function redirectWithError(code: string, detail?: string) {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? ''
-  const url = new URL(`${base}/coordinator/square-connect`)
+  const url = new URL(`${base}/coordinator/payment-methods`)
   url.searchParams.set('error', code)
   if (detail) url.searchParams.set('detail', detail.slice(0, 200))
   return NextResponse.redirect(url.toString())
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       .is('square_merchant_id', null)
 
     const successUrl = new URL(
-      `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/square-connect`
+      `${process.env.NEXT_PUBLIC_APP_URL}/coordinator/payment-methods`
     )
     successUrl.searchParams.set('success', 'true')
     return NextResponse.redirect(successUrl.toString())

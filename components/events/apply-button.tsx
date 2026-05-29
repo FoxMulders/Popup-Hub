@@ -65,8 +65,10 @@ import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import {
   formatApplicationPaymentLabel,
   isApplicationPaid,
-  needsEtransferCoordinatorReview,
-  needsSquareCheckout,
+  isOfflinePaymentMethod,
+  needsDigitalCheckout,
+  needsOfflineCoordinatorReview,
+  resolveEnabledPaymentMethods,
 } from '@/lib/applications/payment-fields'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
@@ -117,7 +119,10 @@ export function ApplyButton({
   const [standBeside, setStandBeside] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [squareConnected, setSquareConnected] = useState(true)
+  const [stripeConnected, setStripeConnected] = useState(false)
+  const [enabledPaymentMethods, setEnabledPaymentMethods] = useState<PaymentMethod[]>(['SQUARE', 'ETRANSFER'])
   const [coordinatorEtransferEmail, setCoordinatorEtransferEmail] = useState<string | null>(null)
+  const [offlinePaymentInstructions, setOfflinePaymentInstructions] = useState<string | null>(null)
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [pendingApplicationId, setPendingApplicationId] = useState<string | null>(null)
   const [pendingBoothPrice, setPendingBoothPrice] = useState(0)
@@ -140,7 +145,7 @@ export function ApplyButton({
   }, [applicationStatus])
 
   useEffect(() => {
-    if (existingApplication && needsSquareCheckout(existingApplication)) {
+    if (existingApplication && needsDigitalCheckout(existingApplication)) {
       setPendingApplicationId(existingApplication.id)
       setPendingBoothPrice(boothPriceCents)
     }
@@ -207,7 +212,11 @@ export function ApplyButton({
     categoryMatch &&
     categoryMatch.passportSlots.length > 0 &&
     (!requiresDocumentation || !!permitFile) &&
-    (allCategoriesFull || !requiresPayment || paymentMethod === 'ETRANSFER' || squareConnected)
+    (allCategoriesFull ||
+      !requiresPayment ||
+      isOfflinePaymentMethod(paymentMethod) ||
+      (paymentMethod === 'SQUARE' && squareConnected) ||
+      (paymentMethod === 'STRIPE' && stripeConnected))
 
   function toggleDaySelection(dayKey: string) {
     if (requireFullAttendance) return
@@ -273,20 +282,43 @@ export function ApplyButton({
     loadSlots()
     fetch(`/api/events/${event.id}/payment-config`)
       .then((res) => res.json())
-      .then((data: { squareConnected?: boolean; coordinatorEtransferEmail?: string | null }) => {
-        setSquareConnected(!!data.squareConnected)
-        setCoordinatorEtransferEmail(data.coordinatorEtransferEmail ?? null)
+      .then(
+        (data: {
+          squareConnected?: boolean
+          stripeConnected?: boolean
+          enabledPaymentMethods?: PaymentMethod[]
+          coordinatorEtransferEmail?: string | null
+          offlinePaymentInstructions?: string | null
+        }) => {
+          setSquareConnected(!!data.squareConnected)
+          setStripeConnected(!!data.stripeConnected)
+          const methods =
+            data.enabledPaymentMethods ??
+            resolveEnabledPaymentMethods(event, {
+              squareConnected: !!data.squareConnected,
+              stripeConnected: !!data.stripeConnected,
+            })
+          setEnabledPaymentMethods(methods)
+          setCoordinatorEtransferEmail(data.coordinatorEtransferEmail ?? null)
+          setOfflinePaymentInstructions(data.offlinePaymentInstructions ?? null)
+          if (methods.length > 0 && !methods.includes(paymentMethod)) {
+            setPaymentMethod(methods[0])
+          }
+        }
+      )
+      .catch(() => {
+        setSquareConnected(false)
+        setStripeConnected(false)
       })
-      .catch(() => setSquareConnected(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   useEffect(() => {
-    if (!open) return
-    if (!squareConnected && requiresPayment) {
-      setPaymentMethod('ETRANSFER')
+    if (!open || enabledPaymentMethods.length === 0) return
+    if (!enabledPaymentMethods.includes(paymentMethod)) {
+      setPaymentMethod(enabledPaymentMethods[0])
     }
-  }, [open, squareConnected, requiresPayment])
+  }, [open, enabledPaymentMethods, paymentMethod])
 
   async function handleApplyClick() {
     setPassportLoading(true)
@@ -581,8 +613,8 @@ export function ApplyButton({
 
   if (trackedApplicationStatus === 'approved') {
     const paymentApp = existingApplication ?? null
-    const requiresPaymentNow = paymentApp ? needsSquareCheckout(paymentApp) : false
-    const eTransferPending = paymentApp ? needsEtransferCoordinatorReview(paymentApp) : false
+    const requiresPaymentNow = paymentApp ? needsDigitalCheckout(paymentApp) : false
+    const offlinePending = paymentApp ? needsOfflineCoordinatorReview(paymentApp) : false
     const paid = paymentApp ? isApplicationPaid(paymentApp) : false
 
     if (requiresPaymentNow) {
@@ -629,14 +661,15 @@ export function ApplyButton({
       )
     }
 
-    if (eTransferPending) {
+    if (offlinePending) {
       return (
         <div className="space-y-2">
           <Badge className="w-full justify-center bg-sky-100 text-sky-900 py-1.5">
-            E-transfer pending review
+            Offline payment pending review
           </Badge>
           <p className="text-center text-xs text-muted-foreground">
-            Send your e-transfer if you haven&apos;t already. The organizer will confirm payment.
+            Complete payment using the organizer&apos;s instructions. They will mark you paid when
+            funds are received.
           </p>
         </div>
       )
@@ -866,7 +899,8 @@ export function ApplyButton({
                 boothPriceCents={checkoutBoothPriceCents}
                 platformFeeCents={feePreview}
                 coordinatorEtransferEmail={coordinatorEtransferEmail}
-                squareConnected={squareConnected}
+                offlinePaymentInstructions={offlinePaymentInstructions}
+                enabledMethods={enabledPaymentMethods}
                 disabled={submitting}
               />
             )}

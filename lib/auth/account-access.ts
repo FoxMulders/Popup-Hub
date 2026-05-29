@@ -65,7 +65,7 @@ export const ACCOUNT_CAPABILITIES: AccountCapability[] = [
     label: 'Connect Square & receive booth payouts',
     description: 'OAuth Square account for paid booth checkout',
     requiredRole: 'coordinator',
-    href: '/coordinator/square-connect',
+    href: '/coordinator/payment-methods',
   },
 ]
 

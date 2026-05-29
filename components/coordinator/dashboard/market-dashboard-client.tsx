@@ -20,6 +20,7 @@ export interface MarketDashboardClientProps {
   pendingByEventId: Record<string, VendorApplicationSnapshot[]>
   boothPriceByEventAndApplicationId: Record<string, Record<string, number>>
   squareConnected: boolean
+  stripeConnected: boolean
   totalRevenueCents: number
 }
 
@@ -31,6 +32,7 @@ export function MarketDashboardClient({
   pendingByEventId,
   boothPriceByEventAndApplicationId,
   squareConnected,
+  stripeConnected,
   totalRevenueCents,
 }: MarketDashboardClientProps) {
   if (events.length === 0) {
@@ -59,6 +61,7 @@ export function MarketDashboardClient({
       pendingByEventId={pendingByEventId}
       boothPriceByEventAndApplicationId={boothPriceByEventAndApplicationId}
       squareConnected={squareConnected}
+      stripeConnected={stripeConnected}
       totalRevenueCents={totalRevenueCents}
     >
       <DashboardBootstrap
@@ -69,13 +72,13 @@ export function MarketDashboardClient({
                 Market command center
               </h1>
               <p className="text-sm text-muted-foreground">
-                CAD booth designer · curation queue · Square telemetry
+                CAD booth designer · curation queue · payment telemetry
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/coordinator/square-connect">
+              <Link href="/coordinator/payment-methods">
                 <Button variant="outline" size="sm">
-                  Square
+                  Payments
                 </Button>
               </Link>
               <Link href="/coordinator/events/new">

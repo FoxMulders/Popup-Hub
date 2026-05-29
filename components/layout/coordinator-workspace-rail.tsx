@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 const RAIL_LINKS = [
   { href: '/coordinator/dashboard', label: 'Command center', icon: LayoutDashboard },
   { href: '/coordinator/events/new', label: 'New market', icon: Plus },
-  { href: '/coordinator/square-connect', label: 'Square sync', icon: CreditCard },
+  { href: '/coordinator/payment-methods', label: 'Payments', icon: CreditCard },
   { href: '/wallet', label: 'Wallet', icon: Settings },
 ] as const
 

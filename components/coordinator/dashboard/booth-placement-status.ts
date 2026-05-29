@@ -1,4 +1,4 @@
-import type { ApplicationStatus, PaymentStatus } from '@/types/database'
+import type { ApplicationStatus, PaymentStatus, PaymentMethod } from '@/types/database'
 import { isApplicationPaid } from '@/lib/applications/payment-fields'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
@@ -30,7 +30,7 @@ export function deriveBoothPlacementStatus(
   if (
     isApplicationPaid({
       payment_status: app.payment_status,
-      payment_method: app.payment_method as 'SQUARE' | 'ETRANSFER' | null,
+      payment_method: app.payment_method as PaymentMethod | null,
       application_payment_status: app.application_payment_status as
         | 'PENDING_REVIEW'
         | 'COMPLETED'

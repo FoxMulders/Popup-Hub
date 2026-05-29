@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PlatformFeeMode } from '@/types/database'
 
+export type PaymentProcessorKind = 'square' | 'stripe' | 'offline'
+
 export interface RecordPlatformTransactionParams {
   boothApplicationId: string | null
   eventId: string
@@ -13,6 +15,7 @@ export interface RecordPlatformTransactionParams {
   processorChargeId: string
   processorTransferId?: string | null
   status?: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded'
+  processor?: PaymentProcessorKind
 }
 
 /**
@@ -34,12 +37,7 @@ export async function recordPlatformTransaction(
       if (params.boothApplicationId) {
         await supabase
           .from('booth_applications')
-          .update({
-            platform_transaction_id: existing.id,
-            payment_status: 'paid',
-            square_payment_id: params.processorChargeId,
-            payment_processing_at: null,
-          })
+          .update(buildApplicationPaymentUpdate(params, existing.id))
           .eq('id', params.boothApplicationId)
       }
 
@@ -80,12 +78,7 @@ export async function recordPlatformTransaction(
         if (params.boothApplicationId) {
           await supabase
             .from('booth_applications')
-            .update({
-              platform_transaction_id: raced.id,
-              payment_status: 'paid',
-              square_payment_id: params.processorChargeId,
-              payment_processing_at: null,
-            })
+            .update(buildApplicationPaymentUpdate(params, raced.id))
             .eq('id', params.boothApplicationId)
         }
 
@@ -99,14 +92,29 @@ export async function recordPlatformTransaction(
   if (params.boothApplicationId) {
     await supabase
       .from('booth_applications')
-      .update({
-        platform_transaction_id: tx.id,
-        payment_status: 'paid',
-        square_payment_id: params.processorChargeId,
-        payment_processing_at: null,
-      })
+      .update(buildApplicationPaymentUpdate(params, tx.id))
       .eq('id', params.boothApplicationId)
   }
 
   return { transactionId: tx.id, error: null, duplicate: false as const }
+}
+
+function buildApplicationPaymentUpdate(
+  params: RecordPlatformTransactionParams,
+  platformTransactionId?: string
+) {
+  const processor = params.processor ?? 'square'
+  const update: Record<string, unknown> = {
+    platform_transaction_id: platformTransactionId ?? undefined,
+    payment_status: 'paid',
+    payment_processing_at: null,
+  }
+
+  if (processor === 'stripe') {
+    update.stripe_payment_id = params.processorChargeId
+  } else if (processor === 'square') {
+    update.square_payment_id = params.processorChargeId
+  }
+
+  return update
 }

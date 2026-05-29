@@ -45,7 +45,7 @@ export default async function CoordinatorDashboard() {
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('payout_onboarding_status, payout_account_id')
+      .select('payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete')
       .eq('id', user.id)
       .single(),
     supabase
@@ -173,6 +173,8 @@ export default async function CoordinatorDashboard() {
 
   const squareConnected =
     profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
+  const stripeConnected =
+    !!profile?.stripe_connected_id && profile?.stripe_onboarding_complete === true
 
   return (
     <MarketDashboardClient
@@ -183,6 +185,7 @@ export default async function CoordinatorDashboard() {
       pendingByEventId={pendingByEventId}
       boothPriceByEventAndApplicationId={boothPriceByEventAndApplicationId}
       squareConnected={squareConnected}
+      stripeConnected={stripeConnected}
       totalRevenueCents={totalRevenueCents}
     />
   )

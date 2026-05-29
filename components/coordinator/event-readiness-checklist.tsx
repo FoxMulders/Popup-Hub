@@ -92,7 +92,7 @@ export function EventReadinessChecklist({
       },
       square: {
         type: 'link',
-        href: '/coordinator/square-connect',
+        href: '/coordinator/payment-methods',
         label: 'Connect Square',
       },
       applied: {
@@ -140,7 +140,7 @@ export function EventReadinessChecklist({
       },
       square: {
         type: 'link',
-        href: '/coordinator/square-connect',
+        href: '/coordinator/payment-methods',
         label: 'Manage Square connection',
       },
       applied: {

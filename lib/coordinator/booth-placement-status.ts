@@ -29,7 +29,7 @@ export const BOOTH_STATUS_THEME: Record<
   paid: {
     fill: '#bbf7d0',
     stroke: '#15803d',
-    label: 'Paid via Square',
+    label: 'Paid',
     patternId: 'booth-pattern-paid',
     icon: 'paid',
   },

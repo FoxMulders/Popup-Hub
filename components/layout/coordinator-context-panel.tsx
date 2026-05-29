@@ -48,7 +48,7 @@ export function CoordinatorContextPanel() {
           pending balances in telemetry.
         </p>
         <Link
-          href="/coordinator/square-connect"
+          href="/coordinator/payment-methods"
           className="mt-2 inline-flex text-sky-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
         >
           Manage connection

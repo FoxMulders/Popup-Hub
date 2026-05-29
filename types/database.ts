@@ -6,7 +6,7 @@ export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'
 export type EventStatus = 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'cancelled' | 'pending_insurance'
 export type PaymentStatus = 'unpaid' | 'pending' | 'payment_required' | 'processing' | 'paid' | 'refunded'
-export type PaymentMethod = 'SQUARE' | 'ETRANSFER'
+export type PaymentMethod = 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH'
 export type ApplicationPaymentStatus = 'PENDING_REVIEW' | 'COMPLETED' | 'EXPIRED'
 export type PayoutOnboardingStatus = 'not_started' | 'pending' | 'complete' | 'restricted'
 export type PlatformFeeMode = 'percent' | 'flat' | 'greater_of' | 'percent_plus_flat'
@@ -108,6 +108,11 @@ export interface Profile {
   square_location_id?: string | null
   share_contact_with_vendors?: boolean
   etransfer_payment_email?: string | null
+  stripe_connected_id?: string | null
+  stripe_onboarding_complete?: boolean
+  offline_payment_instructions?: string | null
+  platform_wallet_grace_until?: string | null
+  platform_wallet_blocked?: boolean
   updated_at: string
 }
 
@@ -199,6 +204,10 @@ export interface Event {
   status: EventStatus
   cover_image_url: string | null
   square_merchant_id: string | null
+  accepts_square?: boolean
+  accepts_stripe?: boolean
+  accepts_offline_etransfer?: boolean
+  accepts_offline_cash?: boolean
   allow_mlm: boolean
   max_mlm_slots: number | null
   is_multi_day?: boolean
@@ -249,6 +258,7 @@ export interface BoothApplication {
   status: ApplicationStatus
   booth_number: number | null
   square_payment_id: string | null
+  stripe_payment_id: string | null
   payment_status: PaymentStatus
   payment_processing_at: string | null
   payment_method: PaymentMethod | null
