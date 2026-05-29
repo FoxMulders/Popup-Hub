@@ -58,8 +58,14 @@ export function LandingHeroActions() {
         Discover markets
       </button>
       <Link
-        href="/signup"
+        href="/login"
         className="inline-flex min-h-11 items-center rounded-lg border-2 border-stone-200 bg-white px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-canvas touch-manipulation"
+      >
+        Sign in
+      </Link>
+      <Link
+        href="/signup"
+        className="inline-flex min-h-11 items-center rounded-lg border-2 border-stone-200 bg-white px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-canvas touch-manipulation sm:border-harvest-300 sm:bg-harvest-50"
       >
         Create free account
       </Link>

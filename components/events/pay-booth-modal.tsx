@@ -84,7 +84,18 @@ export function PayBoothModal({
    * disable the Pay button until every field has a sane shape.
    */
   const [cardValue, setCardValue] = useState<StructuredCardValue>(EMPTY_STRUCTURED_CARD)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [cardResetKey, setCardResetKey] = useState(0)
   const payingRef = useRef(false)
+
+  function resetPaymentForm(message?: string) {
+    payingRef.current = false
+    setPaying(false)
+    setCardValue(EMPTY_STRUCTURED_CARD)
+    setCard(null)
+    setCardResetKey((k) => k + 1)
+    setPaymentError(message ?? null)
+  }
 
   /*
    * Reset the structured grid every time the modal closes so the next
@@ -92,7 +103,10 @@ export function PayBoothModal({
    * left over from a prior approved-but-unpaid attempt).
    */
   useEffect(() => {
-    if (!open) setCardValue(EMPTY_STRUCTURED_CARD)
+    if (!open) {
+      setCardValue(EMPTY_STRUCTURED_CARD)
+      setPaymentError(null)
+    }
   }, [open])
 
   useEffect(() => {
@@ -120,12 +134,12 @@ export function PayBoothModal({
         await newCard.attach(cardContainer!)
         setCard(newCard)
       } catch {
-        toast.error('Could not initialize card form')
+        resetPaymentForm('Could not initialize card form — try again.')
       }
     }
 
     initCard()
-  }, [open, squareLoaded, config, cardContainer])
+  }, [open, squareLoaded, config, cardContainer, cardResetKey])
 
   async function handlePay() {
     if (payingRef.current) return
@@ -140,10 +154,13 @@ export function PayBoothModal({
 
     payingRef.current = true
     setPaying(true)
+    setPaymentError(null)
     try {
       const result = await card.tokenize()
       if (result.status !== 'OK' || !result.token) {
-        toast.error(result.errors?.[0]?.message ?? 'Card error')
+        const message = result.errors?.[0]?.message ?? 'Card error'
+        toast.error(message)
+        resetPaymentForm(message)
         return
       }
 
@@ -157,13 +174,19 @@ export function PayBoothModal({
       })
       const json = await res.json()
       if (!res.ok) {
-        toast.error(json.error ?? 'Payment failed')
+        const message = json.error ?? 'Payment failed'
+        toast.error(message)
+        resetPaymentForm(message)
         return
       }
 
       toast.success('Payment complete — your booth is confirmed!')
       onOpenChange(false)
       onSuccess?.()
+    } catch {
+      const message = 'Payment could not be processed — please try again.'
+      toast.error(message)
+      resetPaymentForm(message)
     } finally {
       payingRef.current = false
       setPaying(false)
@@ -233,6 +256,21 @@ export function PayBoothModal({
                       onChange={setCardValue}
                       disabled={paying}
                     />
+
+                    {paymentError ? (
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                        <p>{paymentError}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => resetPaymentForm()}
+                        >
+                          Try again
+                        </Button>
+                      </div>
+                    ) : null}
 
                     {/*
                      * Square's tokenization iframe stays mounted as

@@ -15,7 +15,7 @@ import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { Loader2 } from 'lucide-react'
 
-export default function LoginForm() {
+export function LoginForm({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') ?? searchParams.get('next') ?? '/discover'
@@ -138,22 +138,26 @@ export default function LoginForm() {
     }
   }
 
-  return (
-    <div className="w-full max-w-md space-y-6">
-      <div className="text-center">
-        <div className="mb-4 flex justify-center">
-          <BrandLogoMark size="auth" />
+  const formBody = (
+    <>
+      {!embedded ? (
+        <div className="text-center">
+          <div className="mb-4 flex justify-center">
+            <BrandLogoMark size="auth" />
+          </div>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">Welcome back</h1>
+          <p className="text-muted-foreground mt-1">Sign in to your Popup Hub account</p>
         </div>
-        <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">Welcome back</h1>
-        <p className="text-muted-foreground mt-1">Sign in to your Popup Hub account</p>
-      </div>
+      ) : null}
 
-      <Card className="shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Sign in</CardTitle>
-          <CardDescription>Enter your credentials to continue</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Card className={embedded ? 'border-0 shadow-none' : 'shadow-sm'}>
+        {!embedded ? (
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Sign in</CardTitle>
+            <CardDescription>Enter your credentials to continue</CardDescription>
+          </CardHeader>
+        ) : null}
+        <CardContent className={embedded ? 'px-0 pt-0 space-y-4' : 'space-y-4'}>
           <Button
             variant="outline"
             className="w-full min-h-11 gap-2 touch-manipulation"
@@ -203,15 +207,23 @@ export default function LoginForm() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center border-t pt-4">
-          <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-semibold text-forest hover:underline">
-              Sign up free
-            </Link>
-          </p>
-        </CardFooter>
+        {!embedded ? (
+          <CardFooter className="flex justify-center border-t pt-4">
+            <p className="text-sm text-muted-foreground">
+              Don&apos;t have an account?{' '}
+              <Link href="/signup" className="font-semibold text-forest hover:underline">
+                Sign up free
+              </Link>
+            </p>
+          </CardFooter>
+        ) : null}
       </Card>
-    </div>
+    </>
   )
+
+  if (embedded) return formBody
+
+  return <div className="w-full max-w-md space-y-6">{formBody}</div>
 }
+
+export default LoginForm

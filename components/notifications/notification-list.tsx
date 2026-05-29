@@ -9,10 +9,13 @@ import type { Notification } from '@/types/database'
 import { format } from 'date-fns'
 import { Bell, CheckCheck, Trophy, Store, Calendar, AlertCircle, Info, MessageSquare } from 'lucide-react'
 import { dispatchNotificationsChanged } from '@/lib/notifications/sync'
+import { filterNotificationsForPortal } from '@/lib/notifications/portal-filter'
+import type { ActivePortal } from '@/lib/portals/active-portal'
 
 interface NotificationListProps {
   initialNotifications: Notification[]
   userId: string
+  activePortal?: ActivePortal
 }
 
 /**
@@ -71,7 +74,11 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   default: { icon: <Info className="h-4 w-4" />, color: 'text-muted-foreground bg-stone-100' },
 }
 
-export function NotificationList({ initialNotifications, userId }: NotificationListProps) {
+export function NotificationList({
+  initialNotifications,
+  userId,
+  activePortal = 'patron',
+}: NotificationListProps) {
   const router = useRouter()
   // Guard against an upstream caller passing `null`/`undefined`. Even though
   // the typed prop says it's an array, when this component is rendered mid
@@ -80,9 +87,21 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
   // `.filter is not a function` style throws from tripping the segment
   // error boundary.
   const [notifications, setNotifications] = useState<Notification[]>(() =>
-    Array.isArray(initialNotifications) ? initialNotifications : []
+    filterNotificationsForPortal(
+      Array.isArray(initialNotifications) ? initialNotifications : [],
+      activePortal
+    )
   )
   const [markingAll, setMarkingAll] = useState(false)
+
+  useEffect(() => {
+    setNotifications(
+      filterNotificationsForPortal(
+        Array.isArray(initialNotifications) ? initialNotifications : [],
+        activePortal
+      )
+    )
+  }, [initialNotifications, activePortal])
 
   useEffect(() => {
     if (!userId) return
@@ -101,7 +120,13 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
           },
           (payload) => {
             if (!isRenderableNotification(payload.new)) return
-            setNotifications((prev) => [payload.new as Notification, ...prev])
+            const next = payload.new as Notification
+            setNotifications((prev) => {
+              if (!filterNotificationsForPortal([next], activePortal).length) {
+                return prev
+              }
+              return [next, ...prev]
+            })
           }
         )
         .on(
@@ -115,9 +140,15 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
           (payload) => {
             if (!isRenderableNotification(payload.new)) return
             const next = payload.new as Notification
-            setNotifications((prev) =>
-              prev.map((n) => (n.id === next.id ? next : n))
-            )
+            setNotifications((prev) => {
+              const visible = filterNotificationsForPortal([next], activePortal).length > 0
+              if (!visible) {
+                return prev.filter((n) => n.id !== next.id)
+              }
+              const idx = prev.findIndex((n) => n.id === next.id)
+              if (idx === -1) return [next, ...prev]
+              return prev.map((n) => (n.id === next.id ? next : n))
+            })
           }
         )
         .subscribe()
@@ -139,7 +170,7 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
         // Cleanup is best-effort.
       }
     }
-  }, [userId])
+  }, [userId, activePortal])
 
   async function markAsRead(id: string) {
     const supabase = createClient()
@@ -181,7 +212,30 @@ export function NotificationList({ initialNotifications, userId }: NotificationL
           ? metadata.event_id
           : null
       if (notification.type === 'application_follow_up' && eventId) {
-        router.push(`/coordinator/events/${eventId}/applications`)
+        router.push(
+          activePortal === 'coordinator'
+            ? `/coordinator/events/${eventId}/applications`
+            : `/vendor/applications`
+        )
+        return
+      }
+
+      if (
+        (notification.type === 'application_approved' ||
+          notification.type === 'application_rejected' ||
+          notification.type === 'payment_failed') &&
+        activePortal === 'vendor'
+      ) {
+        router.push('/vendor/applications?filter=approved')
+        return
+      }
+
+      if (
+        (notification.type === 'vendor_access_approved' ||
+          notification.type === 'vendor_access_rejected') &&
+        activePortal === 'vendor'
+      ) {
+        router.push('/vendor/dashboard')
       }
     } catch (err) {
       // Click-handler errors don't bubble to error boundaries, so we

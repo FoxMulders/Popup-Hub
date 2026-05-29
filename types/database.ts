@@ -31,11 +31,13 @@ export type AuctionItemStatus =
   | 'cancelled'
 export type NotificationType =
   | 'waitlist_triggered'
+  | 'waitlist_promoted'
   | 'application_approved'
   | 'application_rejected'
   | 'auction_won'
   | 'auction_starting'
   | 'payment_received'
+  | 'payment_failed'
   | 'coordinator_announcement'
   | 'event_cancelled'
   | 'market_reminder'
@@ -44,6 +46,7 @@ export type NotificationType =
   | 'vendor_access_approved'
   | 'vendor_access_rejected'
   | 'application_follow_up'
+  | 'payment_failed'
   | 'market_feedback'
   | 'feedback_addressed'
 

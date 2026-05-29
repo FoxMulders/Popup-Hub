@@ -1,4 +1,4 @@
-const CACHE_NAME = 'popup-hub-shell-v9'
+const CACHE_NAME = 'popup-hub-shell-v10'
 const STATIC_ASSETS = [
   '/manifest.json',
   '/site.webmanifest',
@@ -167,4 +167,16 @@ self.addEventListener('notificationclick', (event) => {
       return undefined
     })
   )
+})
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'passport-scan-sync') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'PASSPORT_SCAN_FLUSH' })
+        }
+      })
+    )
+  }
 })

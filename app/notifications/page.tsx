@@ -1,8 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import type { Notification } from '@/types/database'
+import type { Notification, Profile } from '@/types/database'
 import { NotificationList } from '@/components/notifications/notification-list'
 import { NotificationPageHeader } from '@/components/notifications/notification-page-header'
+import {
+  ACTIVE_PORTAL_COOKIE,
+  resolveActivePortal,
+} from '@/lib/portals/active-portal'
 
 /**
  * Coerce an unknown row from supabase into a `Notification` we can safely
@@ -47,6 +52,7 @@ export default async function NotificationsPage() {
   // unhandled exception.
   let userId: string | null = null
   let initialNotifications: Notification[] = []
+  let activePortal = resolveActivePortal(undefined, null)
   try {
     const supabase = await createClient()
     const {
@@ -54,6 +60,19 @@ export default async function NotificationsPage() {
     } = await supabase.auth.getUser()
     if (!user) redirect('/login')
     userId = user.id
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('id', user.id)
+      .single()
+
+    const cookieStore = await cookies()
+    const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
+    activePortal = resolveActivePortal(
+      portalCookie,
+      profile as unknown as Profile | null
+    )
 
     try {
       const { data, error } = await supabase
@@ -105,6 +124,7 @@ export default async function NotificationsPage() {
         <NotificationList
           initialNotifications={initialNotifications}
           userId={userId}
+          activePortal={activePortal}
         />
 
         {/* Sidebar: key */}

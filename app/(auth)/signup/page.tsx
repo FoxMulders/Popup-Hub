@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { type SignupRole } from '@/lib/auth/rbac'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { marketStatusBadge } from '@/lib/theme/market'
+import { LoginForm } from '@/app/(auth)/login/login-form'
 
 const ROLE_OPTIONS = [
   {
@@ -45,8 +46,13 @@ function SignupForm() {
   const supabase = createClient()
 
   const paramRole = params.get('role')
+  const paramMode = params.get('mode')
   const defaultRole: SignupRole =
     paramRole === 'coordinator' ? 'coordinator' : paramRole === 'vendor' ? 'vendor' : 'shopper'
+
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>(
+    paramMode === 'login' ? 'login' : 'signup'
+  )
 
   const [role, setRole] = useState<SignupRole>(defaultRole)
   const [fullName, setFullName] = useState('')
@@ -161,10 +167,41 @@ function SignupForm() {
         <div className="mx-auto mb-4 flex justify-center">
           <BrandLogoMark size="auth" />
         </div>
-        <CardTitle className="font-heading text-2xl">Create your account</CardTitle>
-          <CardDescription>Choose how you&apos;ll use Popup Hub</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-1 flex-col">
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <Button
+            type="button"
+            variant={authMode === 'signup' ? 'default' : 'outline'}
+            className="min-h-11 touch-manipulation"
+            onClick={() => setAuthMode('signup')}
+          >
+            Create account
+          </Button>
+          <Button
+            type="button"
+            variant={authMode === 'login' ? 'default' : 'outline'}
+            className="min-h-11 touch-manipulation"
+            onClick={() => setAuthMode('login')}
+          >
+            Sign in
+          </Button>
+        </div>
+        {authMode === 'signup' ? (
+          <>
+            <CardTitle className="font-heading text-2xl">Create your account</CardTitle>
+            <CardDescription>Choose how you&apos;ll use Popup Hub</CardDescription>
+          </>
+        ) : (
+          <>
+            <CardTitle className="font-heading text-2xl">Welcome back</CardTitle>
+            <CardDescription>Sign in to your Popup Hub account</CardDescription>
+          </>
+        )}
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col">
+        {authMode === 'login' ? (
+          <LoginForm embedded />
+        ) : (
+          <>
           <fieldset className="mb-6">
             <legend className="mb-2 block text-sm font-medium">I am a… *</legend>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -281,10 +318,18 @@ function SignupForm() {
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-forest hover:underline">Sign in</Link>
+            <button
+              type="button"
+              className="font-semibold text-forest hover:underline"
+              onClick={() => setAuthMode('login')}
+            >
+              Sign in
+            </button>
           </p>
-        </CardContent>
-      </Card>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

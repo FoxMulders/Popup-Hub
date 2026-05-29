@@ -4,7 +4,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Button } from '@/components/ui/button'
 import { CheckCircle2, Loader2, PartyPopper, X } from 'lucide-react'
-import { parsePassportScanPayload } from '@/lib/market-passport/scan-token'
+import { parsePassportScanPayload } from '@/lib/passport/passport-token'
+import { queuePassportScan } from '@/lib/pwa/passport-offline-queue'
 
 interface PassportProgress {
   scannedCount: number
@@ -26,7 +27,7 @@ interface PassportScannerProps {
 type ScanFeedback =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | { kind: 'success'; vendorName: string | null; alreadyScanned: boolean }
+  | { kind: 'success'; vendorName: string | null; alreadyScanned: boolean; queued?: boolean }
   | { kind: 'error'; message: string }
 
 export function PassportScanner({ open, onClose, onScanComplete }: PassportScannerProps) {
@@ -102,8 +103,28 @@ export function PassportScanner({ open, onClose, onScanComplete }: PassportScann
         await scanner.stop().catch(() => {})
         scannerRef.current = null
       } catch {
-        setFeedback({ kind: 'error', message: 'Network error — try again' })
-        submittingRef.current = false
+        try {
+          await queuePassportScan(token)
+          if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            const registration = await navigator.serviceWorker.ready
+            const syncManager = (
+              registration as ServiceWorkerRegistration & {
+                sync?: { register: (tag: string) => Promise<void> }
+              }
+            ).sync
+            await syncManager?.register('passport-scan-sync')
+          }
+          setFeedback({
+            kind: 'success',
+            vendorName: null,
+            alreadyScanned: false,
+            queued: true,
+          })
+        } catch {
+          setFeedback({ kind: 'error', message: 'Network error — try again' })
+          submittingRef.current = false
+          return
+        }
       }
     }
 
@@ -166,9 +187,17 @@ export function PassportScanner({ open, onClose, onScanComplete }: PassportScann
             </div>
             <div className="space-y-1">
               <p className="text-lg font-semibold text-foreground">
-                {feedback.alreadyScanned ? 'Already checked off' : 'Vendor checked off! 🎉'}
+                {feedback.queued
+                  ? 'Scan saved offline'
+                  : feedback.alreadyScanned
+                    ? 'Already checked off'
+                    : 'Vendor checked off! 🎉'}
               </p>
-              {feedback.vendorName ? (
+              {feedback.queued ? (
+                <p className="text-sm text-muted-foreground">
+                  We&apos;ll sync this stamp when you&apos;re back online.
+                </p>
+              ) : feedback.vendorName ? (
                 <p className="text-sm text-muted-foreground">{feedback.vendorName}</p>
               ) : null}
             </div>

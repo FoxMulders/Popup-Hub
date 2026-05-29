@@ -245,6 +245,9 @@
    */
   body.workspace-fullscreen .market-page {
     overflow: hidden !important;
+    height: 100svh;
+    height: 100dvh;
+    min-height: 0;
   }
 
 
