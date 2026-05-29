@@ -305,12 +305,16 @@ export function FloorPlanV2({
   // command-bar pill binds to this; upstream the value comes from
   // `activeRoom.baseline_table_length_ft` so the ribbon always
   // reflects the active room's size. Unrecognised lengths fall back
-  // to the default rather than blowing up the selector.
-  const safeTableSizeFt = useMemo<LayoutBaselineTableLengthFt | undefined>(() => {
-    if (baselineTableLengthFt == null) return undefined
-    return isLayoutBaselineTableLengthFt(baselineTableLengthFt)
-      ? baselineTableLengthFt
-      : DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
+  // to the default rather than blowing up the selector. When the
+  // wizard hasn't supplied a value at all we still pre-select 6′
+  // so the pill is operational on first paint and any drag-time
+  // booth math has a real footprint to scale against — coordinators
+  // never see an empty / undefined baseline.
+  const safeTableSizeFt = useMemo<LayoutBaselineTableLengthFt>(() => {
+    if (baselineTableLengthFt != null && isLayoutBaselineTableLengthFt(baselineTableLengthFt)) {
+      return baselineTableLengthFt
+    }
+    return DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
   }, [baselineTableLengthFt])
 
   // Live booth rescaling. Tracks the previously-applied baseline
