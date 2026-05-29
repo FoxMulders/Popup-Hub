@@ -235,6 +235,17 @@
     padding-bottom: 0.25rem !important;
     padding-block: 0.5rem 0.25rem !important;
   }
+  /*
+   * `market-page` carries `overflow-x: hidden` which CSS implicitly
+   * promotes to `overflow-y: auto` per spec — that re-introduces a
+   * thin viewport-level scrollbar on the floor plan step even after
+   * we've height-pinned html and body. Force both axes hidden while
+   * fullscreen is active so the canvas is unambiguously the only
+   * scroll surface.
+   */
+  body.workspace-fullscreen .market-page {
+    overflow: hidden !important;
+  }
 
 
   /* Signage-style panels (clipboards on a table) */
