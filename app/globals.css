@@ -230,8 +230,11 @@
     max-height: 100dvh;
   }
 
-  html.command-center-canvas-fullscreen body > div {
-    min-height: 0;
+  html.command-center-canvas-fullscreen body > div,
+  html.command-center-canvas-fullscreen body .flex.min-h-full {
+    min-height: 0 !important;
+    height: 100%;
+    max-height: 100dvh;
     flex: 1 1 auto;
     overflow: hidden;
   }
