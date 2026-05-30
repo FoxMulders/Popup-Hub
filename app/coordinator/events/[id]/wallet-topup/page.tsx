@@ -6,13 +6,14 @@ import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 
 interface Props {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ u?: string; user?: string }>
+  searchParams: Promise<{ u?: string; user?: string; mode?: string }>
 }
 
 export default async function EventWalletTopUpPage({ params, searchParams }: Props) {
   const { id } = await params
   const query = await searchParams
   const initialUserId = parseWalletTopUpQrPayload(query.u ?? query.user ?? '')
+  const initialMode = query.mode === 'payout' ? 'payout' : 'topup'
   const supabase = await createClient()
   const {
     data: { user },
@@ -30,7 +31,7 @@ export default async function EventWalletTopUpPage({ params, searchParams }: Pro
 
   return (
     <MarketDayShell eventId={id} eventName={event.name} activeSection="wallet">
-      <DoorWalletTopUp eventId={id} initialUserId={initialUserId} />
+      <DoorWalletTopUp eventId={id} initialUserId={initialUserId} initialMode={initialMode} />
     </MarketDayShell>
   )
 }

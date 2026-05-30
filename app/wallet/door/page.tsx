@@ -65,7 +65,7 @@ export default async function WalletDoorPage({ searchParams }: Props) {
                 Credit wallet (top-up)
               </Link>
               <Link
-                href={`/coordinator/wallet-topup?u=${userId}`}
+                href={`/coordinator/wallet-topup?u=${userId}&mode=payout`}
                 className={cn(buttonVariants({ variant: 'outline', className: 'w-full min-h-11 gap-2' }))}
               >
                 <Banknote className="h-4 w-4" />

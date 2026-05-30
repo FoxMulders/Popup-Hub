@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { debitWalletWithdrawal } from '@/lib/wallet/debit-withdrawal'
 import { adjustWalletBalanceForUser } from '@/lib/wallet/adjust-balance'
+import { ensureWallet } from '@/lib/wallet/credit-deposit'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -68,14 +69,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Patron account not found' }, { status: 404 })
   }
 
-  const { data: wallet } = await admin
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', shopperUserId)
-    .maybeSingle()
+  const wallet = await ensureWallet(admin, shopperUserId)
+  if (!wallet) {
+    return NextResponse.json(
+      { error: 'Could not open a wallet for this patron. Try again or contact support.' },
+      { status: 500 }
+    )
+  }
 
-  if (!wallet || wallet.balance < amountCents) {
-    return NextResponse.json({ error: 'Insufficient wallet balance for this payout' }, { status: 422 })
+  if (wallet.balance < amountCents) {
+    return NextResponse.json(
+      {
+        error: `Insufficient wallet balance (${(wallet.balance / 100).toFixed(2)} available)`,
+      },
+      { status: 422 }
+    )
   }
 
   const debit = await debitWalletWithdrawal(admin, {

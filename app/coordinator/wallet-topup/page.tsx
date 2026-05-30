@@ -4,12 +4,13 @@ import { DoorWalletTopUp } from '@/components/coordinator/door-wallet-topup'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 
 interface Props {
-  searchParams: Promise<{ u?: string; user?: string }>
+  searchParams: Promise<{ u?: string; user?: string; mode?: string }>
 }
 
 export default async function CoordinatorWalletTopUpPage({ searchParams }: Props) {
   const query = await searchParams
   const initialUserId = parseWalletTopUpQrPayload(query.u ?? query.user ?? '')
+  const initialMode = query.mode === 'payout' ? 'payout' : 'topup'
   const supabase = await createClient()
   const {
     data: { user },
@@ -35,7 +36,7 @@ export default async function CoordinatorWalletTopUpPage({ searchParams }: Props
           balance reclaims. Patrons without a phone can be looked up by name or wallet number at the desk.
         </p>
       </div>
-      <DoorWalletTopUp initialUserId={initialUserId} />
+      <DoorWalletTopUp initialUserId={initialUserId} initialMode={initialMode} />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,9 +28,17 @@ interface PendingWithdrawalRow extends WalletWithdrawalRequest {
 interface DoorWalletTopUpProps {
   eventId?: string
   initialUserId?: string | null
+  /** Scroll to payout section when opened from wallet door "Cash payout" link. */
+  initialMode?: 'topup' | 'payout'
 }
 
-export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps) {
+export function DoorWalletTopUp({
+  eventId,
+  initialUserId,
+  initialMode = 'topup',
+}: DoorWalletTopUpProps) {
+  const payoutSectionRef = useRef<HTMLDivElement>(null)
+  const [patronId, setPatronId] = useState<string | null>(initialUserId ?? null)
   const [scanInput, setScanInput] = useState(initialUserId ?? '')
   const [amountCents, setAmountCents] = useState(1000)
   const [customDollars, setCustomDollars] = useState('')
@@ -53,7 +61,18 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
   } | null>(null)
   const [scannerOpen, setScannerOpen] = useState(false)
 
-  const resolvedUserId = parseWalletTopUpQrPayload(scanInput)
+  const resolvedUserId = patronId ?? parseWalletTopUpQrPayload(scanInput)
+
+  function bindPatronFromScan(value: string) {
+    const parsed = parseWalletTopUpQrPayload(value)
+    setScanInput(value)
+    setPatronId(parsed)
+  }
+
+  function clearPatron() {
+    setPatronId(null)
+    setScanInput('')
+  }
 
   const loadPending = useCallback(async () => {
     const params = eventId ? `?eventId=${eventId}` : ''
@@ -119,7 +138,6 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
         newBalance: json.newBalance,
       })
       toast.success(`Added ${formatCents(cents)} to wallet`)
-      setScanInput('')
       setCustomDollars('')
     } finally {
       setCrediting(false)
@@ -202,7 +220,6 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
         newBalance: json.newBalance,
       })
       toast.success(`Paid ${formatCents(cents)} in cash`)
-      setScanInput('')
       setCashoutCustomDollars('')
     } finally {
       setPayingOut(false)
@@ -221,10 +238,11 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
           selectedPatronId={resolvedUserId}
           allowWalkUpCreate
           onSelect={(patron) => {
+            setPatronId(patron.id)
             setScanInput(patron.id)
             toast.success(`Selected ${patron.full_name ?? 'patron'}`)
           }}
-          onClear={() => setScanInput('')}
+          onClear={clearPatron}
         />
       </CardContent>
     </Card>
@@ -232,6 +250,12 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
       open={scannerOpen}
       onClose={() => setScannerOpen(false)}
       onScan={(payload) => {
+        const parsed = parseWalletTopUpQrPayload(payload)
+        if (!parsed) {
+          toast.error('Could not read a wallet ID from that QR code')
+          return
+        }
+        setPatronId(parsed)
         setScanInput(payload)
         toast.success('Patron wallet QR scanned')
       }}
@@ -260,7 +284,7 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
                   className="min-h-11 pl-9 font-mono text-sm"
                   placeholder="Scan QR or paste wallet ID"
                   value={scanInput}
-                  onChange={(e) => setScanInput(e.target.value)}
+                  onChange={(e) => bindPatronFromScan(e.target.value)}
                 />
               </div>
               <Button
@@ -274,7 +298,16 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
               </Button>
             </div>
             {resolvedUserId ? (
-              <p className="text-xs text-sage-700">Patron ID recognized</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs text-sage-700">Patron ID recognized</p>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-muted-foreground underline hover:text-foreground"
+                  onClick={clearPatron}
+                >
+                  Clear patron
+                </button>
+              </div>
             ) : scanInput.trim() ? (
               <p className="text-xs text-destructive">Could not read a wallet ID from this code</p>
             ) : null}
@@ -399,8 +432,12 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
       </Card>
     </div>
 
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card>
+    <div ref={payoutSectionRef} className="grid gap-6 lg:grid-cols-2 scroll-mt-6">
+      <Card
+        className={
+          initialMode === 'payout' ? 'ring-2 ring-harvest-400/80 ring-offset-2' : undefined
+        }
+      >
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Undo2 className="h-5 w-5 text-harvest-600" />
@@ -423,7 +460,7 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
                   className="min-h-11 pl-9 font-mono text-sm"
                   placeholder="Scan QR or paste wallet ID"
                   value={scanInput}
-                  onChange={(e) => setScanInput(e.target.value)}
+                  onChange={(e) => bindPatronFromScan(e.target.value)}
                 />
               </div>
               <Button
@@ -436,6 +473,17 @@ export function DoorWalletTopUp({ eventId, initialUserId }: DoorWalletTopUpProps
                 <span className="hidden sm:inline">Scan</span>
               </Button>
             </div>
+            {resolvedUserId ? (
+              <p className="text-xs text-harvest-800">
+                Patron ready for payout
+                {(() => {
+                  const balance = lastPayout?.newBalance ?? lastCredit?.newBalance
+                  return balance != null ? ` · wallet balance: ${formatCents(balance)}` : ''
+                })()}
+              </p>
+            ) : scanInput.trim() ? (
+              <p className="text-xs text-destructive">Could not read a wallet ID from this code</p>
+            ) : null}
           </div>
 
           <div className="space-y-2">
