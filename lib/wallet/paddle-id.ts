@@ -17,7 +17,7 @@ export function formatPaddleIdDisplay(paddleId: string): string {
 
 /** Normalize search input to stored wallet paddle_id (P-XXXXXXXX). */
 export function normalizeWalletPaddleIdQuery(raw: string): string | null {
-  let q = raw.trim().replace(/^#+/, '')
+  const q = raw.trim().replace(/^#+/, '')
   if (!q) return null
 
   const upper = q.toUpperCase()
