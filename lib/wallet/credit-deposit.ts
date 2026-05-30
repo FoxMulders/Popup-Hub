@@ -21,14 +21,25 @@ export async function ensureWallet(
 
   if (existing) return existing
 
-  const { data: created, error } = await supabase
+  // Upsert avoids races with handle_new_user() also inserting a wallet row on signup.
+  const { data: upserted, error: upsertError } = await supabase
     .from('wallets')
-    .insert({ user_id: userId })
+    .upsert({ user_id: userId }, { onConflict: 'user_id' })
     .select('id, balance, paddle_id')
-    .single()
+    .maybeSingle()
 
-  if (error || !created) return null
-  return created
+  if (upserted) return upserted
+
+  if (upsertError) {
+    const { data: raced } = await supabase
+      .from('wallets')
+      .select('id, balance, paddle_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (raced) return raced
+  }
+
+  return null
 }
 
 /** Credit wallet balance, assign paddle on first deposit, and record transaction. */
@@ -41,7 +52,7 @@ export async function creditWalletDeposit(
 > {
   const wallet = await ensureWallet(supabase, params.userId)
   if (!wallet) {
-    return { ok: false, error: 'Wallet not found' }
+    return { ok: false, error: 'Could not open a wallet for this account. Try again or contact support.' }
   }
 
   const credit = await adjustWalletBalance(supabase, {

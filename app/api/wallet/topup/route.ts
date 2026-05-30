@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createWalletDeposit } from '@/lib/square/payments'
+import { ensureWallet } from '@/lib/wallet/credit-deposit'
 
 export async function POST(request: Request) {
   const supabase = await createServiceClient()
@@ -16,21 +17,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Minimum deposit is $1.00' }, { status: 400 })
   }
 
-  const { data: wallet } = await supabase
-    .from('wallets')
-    .select('id, square_customer_id')
-    .eq('user_id', user.id)
-    .single()
-
+  const wallet = await ensureWallet(supabase, user.id)
   if (!wallet) {
-    return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Could not open your wallet. Please try again or contact support.' },
+      { status: 500 }
+    )
   }
+
+  const { data: walletRow } = await supabase
+    .from('wallets')
+    .select('square_customer_id')
+    .eq('id', wallet.id)
+    .single()
 
   const { paymentId, error } = await createWalletDeposit({
     sourceId,
     amountCents,
     userId: user.id,
-    squareCustomerId: wallet.square_customer_id ?? undefined,
+    squareCustomerId: walletRow?.square_customer_id ?? undefined,
   })
 
   if (error) {

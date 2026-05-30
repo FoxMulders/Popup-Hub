@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { ensureWallet } from '@/lib/wallet/credit-deposit'
 
 /** Record a shopper purchase at a vendor booth (atomic wallet debit via RPC). */
 export async function POST(request: Request) {
@@ -22,6 +23,15 @@ export async function POST(request: Request) {
   const { vendor_id, event_id, amount_cents, description, square_payment_id } = body
   if (!vendor_id || !amount_cents || amount_cents < 1) {
     return NextResponse.json({ error: 'Invalid purchase data' }, { status: 400 })
+  }
+
+  const service = await createServiceClient()
+  const wallet = await ensureWallet(service, user.id)
+  if (!wallet) {
+    return NextResponse.json(
+      { error: 'Could not open your wallet. Please try again or contact support.' },
+      { status: 500 }
+    )
   }
 
   const { data, error } = await supabase.rpc('record_shopper_purchase', {

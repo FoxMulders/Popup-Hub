@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { creditWalletDeposit } from '@/lib/wallet/credit-deposit'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const service = await createServiceClient()
+  const service = createAdminClient()
 
   const { data: shopper } = await service
     .from('profiles')

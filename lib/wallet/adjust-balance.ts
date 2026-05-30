@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { ensureWallet } from '@/lib/wallet/credit-deposit'
 
 export type AdjustBalanceError = 'not_found' | 'insufficient' | 'conflict'
 
@@ -51,12 +52,7 @@ export async function adjustWalletBalanceForUser(
   userId: string,
   deltaCents: number
 ): Promise<AdjustBalanceResult> {
-  const { data: wallet } = await supabase
-    .from('wallets')
-    .select('id')
-    .eq('user_id', userId)
-    .single()
-
+  const wallet = await ensureWallet(supabase, userId)
   if (!wallet) {
     return { ok: false, error: 'not_found' }
   }

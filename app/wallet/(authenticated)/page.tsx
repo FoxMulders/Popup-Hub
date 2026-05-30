@@ -1,7 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { WalletView } from '@/components/wallet/wallet-view'
 import { BoothCheckout } from '@/components/wallet/booth-checkout'
+import { ensureWallet } from '@/lib/wallet/credit-deposit'
 import type { Wallet, WalletTransaction } from '@/types/database'
 
 export default async function WalletPage() {
@@ -10,6 +11,9 @@ export default async function WalletPage() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const service = await createServiceClient()
+  await ensureWallet(service, user.id)
 
   const { data: walletRow } = await supabase.from('wallets').select('*').eq('user_id', user.id).maybeSingle()
 

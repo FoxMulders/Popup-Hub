@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createWalletDeposit } from '@/lib/square/payments'
 import { applyWalletDepositCredit } from '@/lib/wallet/adjust-balance'
+import { ensureWallet } from '@/lib/wallet/credit-deposit'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -20,21 +21,25 @@ export async function POST(request: Request) {
 
   const service = await createServiceClient()
 
-  const { data: wallet } = await service
-    .from('wallets')
-    .select('id, balance, square_customer_id, paddle_id')
-    .eq('user_id', user.id)
-    .single()
-
+  const wallet = await ensureWallet(service, user.id)
   if (!wallet) {
-    return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'Could not open your wallet. Please try again or contact support.' },
+      { status: 500 }
+    )
   }
+
+  const { data: walletRow } = await service
+    .from('wallets')
+    .select('square_customer_id')
+    .eq('id', wallet.id)
+    .single()
 
   const { paymentId, error } = await createWalletDeposit({
     sourceId,
     amountCents,
     userId: user.id,
-    squareCustomerId: wallet.square_customer_id ?? undefined,
+    squareCustomerId: walletRow?.square_customer_id ?? undefined,
   })
 
   if (error || !paymentId) {
