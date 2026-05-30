@@ -209,7 +209,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         )}
 
         {categoryCapacityRows.length > 0 && (
-          <CategoryCapacityMatrix rows={categoryCapacityRows} />
+          <CategoryCapacityMatrix rows={categoryCapacityRows} applications={applications ?? []} />
         )}
       </div>
 
