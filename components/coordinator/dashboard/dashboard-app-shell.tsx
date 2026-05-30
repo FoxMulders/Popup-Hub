@@ -75,7 +75,8 @@ export function DashboardAppShell({
         <section
           className={cn(
             'dashboard-app-shell__center relative min-h-0 min-w-0 flex-1 overflow-hidden',
-            'min-h-[min(420px,72dvh)]',
+            !immersive && 'min-h-[min(420px,72dvh)]',
+            immersive && 'flex min-h-0 flex-col',
             !immersive &&
               'border-b border-stone-200/70 lg:border-b-0 lg:border-r lg:border-stone-200/70'
           )}

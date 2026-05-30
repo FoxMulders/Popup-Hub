@@ -42,6 +42,8 @@ export interface ZoomMath {
 export interface UseViewportOptions {
   scrollRef: RefObject<HTMLDivElement | null>
   initialZoom?: number
+  /** Floor for fit/zoom-out; default 0.25. Command center uses ~0.55 for steadier drags. */
+  zoomMin?: number
   /**
    * Read on every zoom event. Returning a fresh value from the closure
    * (rather than passing as a prop) avoids re-binding the handlers on
@@ -133,8 +135,8 @@ interface PinchInternal {
   startZoom: number
 }
 
-function clampZoom(z: number): number {
-  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
+function clampZoom(z: number, min = ZOOM_MIN): number {
+  return Math.min(ZOOM_MAX, Math.max(min, z))
 }
 
 function distance(a: ActivePointer, b: ActivePointer): number {
@@ -166,7 +168,14 @@ function computeScroll(
 }
 
 export function useViewport(options: UseViewportOptions): ViewportApi {
-  const { scrollRef, initialZoom = 1, getZoomMath, getToolMode } = options
+  const {
+    scrollRef,
+    initialZoom = 1,
+    getZoomMath,
+    getToolMode,
+    zoomMin = ZOOM_MIN,
+  } = options
+  const clamp = useCallback((z: number) => clampZoom(z, zoomMin), [zoomMin])
 
   const [zoom, setZoomState] = useState(initialZoom)
   const [isPanning, setIsPanning] = useState(false)
@@ -233,7 +242,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     (nextZoom: number, localScreenX: number, localScreenY: number) => {
       const scroll = scrollRef.current
       const oldZoom = zoomRef.current
-      const clamped = clampZoom(nextZoom)
+      const clamped = clamp(nextZoom)
       if (clamped === oldZoom) return
       if (!scroll) {
         setZoomState(clamped)
@@ -259,7 +268,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       )
       setZoomState(clamped)
     },
-    [scrollRef]
+    [scrollRef, clamp]
   )
 
   /**
@@ -273,7 +282,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     (nextZoom: number) => {
       const scroll = scrollRef.current
       const oldZoom = zoomRef.current
-      const clamped = clampZoom(nextZoom)
+      const clamped = clamp(nextZoom)
       if (clamped === oldZoom) return
       if (!scroll) {
         setZoomState(clamped)
@@ -294,7 +303,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       )
       setZoomState(clamped)
     },
-    [scrollRef]
+    [scrollRef, clamp]
   )
 
   const setZoom = useCallback(
@@ -331,7 +340,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       return
     }
     const math = getZoomMathRef.current()
-    const targetZoom = clampZoom(1)
+    const targetZoom = clamp(1)
     const newPxPerFt = math.basePxPerFt * targetZoom
     const localScreenX = scroll.clientWidth / 2
     const localScreenY = scroll.clientHeight / 2
@@ -383,7 +392,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
 
       const zoomForWidth = usableW / (widthFt * math.basePxPerFt)
       const zoomForHeight = usableH / (heightFt * math.basePxPerFt)
-      const targetZoom = clampZoom(Math.min(zoomForWidth, zoomForHeight))
+      const targetZoom = clamp(Math.min(zoomForWidth, zoomForHeight))
 
       const newPxPerFt = math.basePxPerFt * targetZoom
       const centerXFt = (bounds.minX + bounds.maxX) / 2
@@ -405,7 +414,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         scroll.scrollTop = target.top
       }
     },
-    [scrollRef]
+    [scrollRef, clamp]
   )
 
   const fitToBoundsStepped = useCallback<ViewportApi['fitToBoundsStepped']>(
@@ -428,7 +437,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       const usableH = Math.max(40, viewportPxH * (1 - padding * 2))
 
       let targetZoom = zoomMax
-      while (targetZoom >= ZOOM_MIN) {
+      while (targetZoom >= zoomMin) {
         const pxPerFt = math.basePxPerFt * targetZoom
         if (
           widthFt * pxPerFt <= usableW &&
@@ -438,7 +447,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         }
         targetZoom *= stepFactor
       }
-      targetZoom = clampZoom(targetZoom)
+      targetZoom = clamp(targetZoom)
 
       const newPxPerFt = math.basePxPerFt * targetZoom
       const centerXFt = (bounds.minX + bounds.maxX) / 2
@@ -460,7 +469,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         scroll.scrollTop = target.top
       }
     },
-    [scrollRef]
+    [scrollRef, clamp, zoomMin]
   )
 
   const onWheel = useCallback(

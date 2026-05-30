@@ -37,7 +37,7 @@ export function DashboardCanvasColumn({
   }, [mountCanvas, reducedMotion, handleInteractive])
 
   return (
-    <div className="relative h-full min-h-0 w-full">
+    <div className="dashboard-canvas-column relative flex h-full min-h-0 w-full flex-1 flex-col">
       <AnimatePresence mode="wait">
         {showBlueprint ? (
           <motion.div

@@ -218,6 +218,28 @@
   }
 
   /* Command center booth designer: hide site chrome, keep back link in dashboard header */
+  html.command-center-canvas-fullscreen {
+    overflow: hidden;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  html.command-center-canvas-fullscreen body {
+    overflow: hidden;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  html.command-center-canvas-fullscreen body > div {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  html.command-center-canvas-fullscreen footer[aria-label='Site footer'] {
+    display: none;
+  }
+
   html.command-center-canvas-fullscreen #site-app-nav,
   html.command-center-canvas-fullscreen .build-version-strip {
     display: none;
@@ -226,6 +248,8 @@
   html.command-center-canvas-fullscreen .site-app-shell {
     height: 100dvh;
     max-height: 100dvh;
+    min-height: 0;
+    flex: 1 1 auto;
   }
 
   html.command-center-canvas-fullscreen #coordinator-dashboard-root {
@@ -246,7 +270,19 @@
 
   html.command-center-canvas-fullscreen
     .dashboard-app-shell__center {
-    flex: 1;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  html.command-center-canvas-fullscreen .dashboard-canvas-column {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  html.command-center-canvas-fullscreen #floor-plan-workspace {
+    height: 100%;
     min-height: 0;
   }
 

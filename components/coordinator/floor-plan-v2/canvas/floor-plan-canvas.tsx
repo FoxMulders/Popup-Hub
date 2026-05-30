@@ -99,9 +99,13 @@ interface FloorPlanCanvasProps {
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
   autoArrangeMode?: AutoArrangeMode
+  /** Command center: higher zoom floor so drags feel less jumpy when framed out. */
+  commandCenterViewport?: boolean
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
+/** Minimum zoom on coordinator dashboard — avoids 0.25× hypersensitive drags. */
+const COMMAND_CENTER_ZOOM_MIN = 0.55
 
 export function FloorPlanCanvas({
   store,
@@ -123,6 +127,7 @@ export function FloorPlanCanvas({
   boothPlacementStatusByObjectId,
   onVendorDrop,
   autoArrangeMode = 'center-out',
+  commandCenterViewport = false,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -191,6 +196,7 @@ export function FloorPlanCanvas({
     scrollRef,
     initialZoom: 1,
     getZoomMath,
+    zoomMin: commandCenterViewport ? COMMAND_CENTER_ZOOM_MIN : undefined,
     // Tool ref so the viewport hook can route a single-touch drag into
     // a pan when the Hand tool is active. (Mouse panning already uses
     // middle-click / Shift+drag.)

@@ -1501,12 +1501,68 @@ export function FloorPlanV2({
       </header>
       ) : null}
 
-      <div
-        className={cn(
-          'flex min-h-0 flex-1 flex-col gap-1 overflow-hidden',
-          isDashboard && 'min-h-[min(58vh,640px)]'
-        )}
-      >
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+        {isDashboard ? (
+          <CanvasCommandBar
+            className="shrink-0"
+            toolState={{ tool, drawShape }}
+            onToolChange={handleToolChange}
+            onDrawShapeChange={handleDrawShapeChange}
+            canUndo={store.canUndo}
+            canRedo={store.canRedo}
+            onUndo={store.undo}
+            onRedo={store.redo}
+            onClearAll={handleClearAll}
+            selectedCount={selectedCount}
+            onDeleteSelected={handleDeleteSelected}
+            onCopy={handleCopy}
+            onPaste={handlePaste}
+            clipboardHasContents={clipboardHasContents}
+            onRotateLeft={handleRotateLeft}
+            onRotateRight={handleRotateRight}
+            onRotateRoomLeft={handleRotateRoomLeft}
+            onRotateRoomRight={handleRotateRoomRight}
+            selectedRoomId={selectedRoomId}
+            onAlignVertical={handleAlignVertical}
+            onAlignHorizontal={handleAlignHorizontal}
+            zoom={currentZoom}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
+            onCenterView={handleCenterView}
+            onAutoArrange={handleAutoArrange}
+            canAutoArrange={boothCount > 0}
+            autoArrangeMode={autoArrangeMode}
+            onAutoArrangeModeChange={setAutoArrangeMode}
+            onAddPerimeterWalls={handleAddPerimeterWalls}
+            onJoinRooms={handleJoinRooms}
+            canJoinRooms={joinPlan.canJoin}
+            joinCandidateCount={
+              joinPlan.canJoin
+                ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
+                : undefined
+            }
+            joinBlockedReason={joinPlan.blockedReason}
+            onUnjoinRoom={handleUnjoinRoom}
+            canUnjoinRoom={joinPlan.unjoinGroupId !== null}
+            tableSizeFt={tableSizePillValue}
+            onTableSizeChange={handleTableSizeChange}
+            rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
+            activeRoomId={selectedRoomId ?? activeRoomId}
+            onSelectRoom={handleSelectRoom}
+            onAddRoom={onAddRoom}
+            onRenameRoom={onRenameRoom}
+            onDeleteRoom={onDeleteRoom}
+            highlightedRoomMetrics={highlightedRoomMetrics}
+            showLabels={showLabels}
+            onShowLabelsChange={setShowLabels}
+            canvasFullscreen={canvasFullscreen}
+            onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+            onSaveMarket={onSaveMarket}
+            saveMarketDisabled={saveMarketDisabled}
+            saveMarketLoading={saveMarketLoading}
+          />
+        ) : null}
         {!isDashboard ? (
           <CanvasCommandBar
             toolState={{ tool, drawShape }}
@@ -1577,11 +1633,12 @@ export function FloorPlanV2({
           <div
             className={cn(
               'relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100',
-              isDashboard ? 'min-h-[280px]' : 'min-h-[280px] h-full'
+              isDashboard ? 'h-full min-h-0' : 'min-h-[280px] h-full'
             )}
           >
             <FloorPlanCanvas
               className="absolute inset-0"
+              commandCenterViewport={isDashboard}
               store={store}
               toolState={{ tool, drawShape }}
               defaultBoothTableLengthFt={defaultPlacementSizeFt}
@@ -1650,68 +1707,6 @@ export function FloorPlanV2({
             </div>
           ) : null}
         </div>
-
-        {isDashboard ? (
-        <CanvasCommandBar
-          className="max-h-28 shrink-0 overflow-y-auto scrollbar-none"
-          toolState={{ tool, drawShape }}
-          onToolChange={handleToolChange}
-          onDrawShapeChange={handleDrawShapeChange}
-          canUndo={store.canUndo}
-          canRedo={store.canRedo}
-          onUndo={store.undo}
-          onRedo={store.redo}
-          onClearAll={handleClearAll}
-          selectedCount={selectedCount}
-          onDeleteSelected={handleDeleteSelected}
-          onCopy={handleCopy}
-          onPaste={handlePaste}
-          clipboardHasContents={clipboardHasContents}
-          onRotateLeft={handleRotateLeft}
-          onRotateRight={handleRotateRight}
-          onRotateRoomLeft={handleRotateRoomLeft}
-          onRotateRoomRight={handleRotateRoomRight}
-          selectedRoomId={selectedRoomId}
-          onAlignVertical={handleAlignVertical}
-          onAlignHorizontal={handleAlignHorizontal}
-          zoom={currentZoom}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          onZoomReset={handleZoomReset}
-          onCenterView={handleCenterView}
-          onAutoArrange={handleAutoArrange}
-          canAutoArrange={boothCount > 0}
-          autoArrangeMode={autoArrangeMode}
-          onAutoArrangeModeChange={setAutoArrangeMode}
-          onAddPerimeterWalls={handleAddPerimeterWalls}
-          onJoinRooms={handleJoinRooms}
-          canJoinRooms={joinPlan.canJoin}
-          joinCandidateCount={
-            joinPlan.canJoin
-              ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
-              : undefined
-          }
-          joinBlockedReason={joinPlan.blockedReason}
-          onUnjoinRoom={handleUnjoinRoom}
-          canUnjoinRoom={joinPlan.unjoinGroupId !== null}
-          tableSizeFt={tableSizePillValue}
-          onTableSizeChange={handleTableSizeChange}
-          rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
-          activeRoomId={selectedRoomId ?? activeRoomId}
-          onSelectRoom={handleSelectRoom}
-          onAddRoom={onAddRoom}
-          onRenameRoom={onRenameRoom}
-          onDeleteRoom={onDeleteRoom}
-          highlightedRoomMetrics={highlightedRoomMetrics}
-          showLabels={showLabels}
-          onShowLabelsChange={setShowLabels}
-          canvasFullscreen={canvasFullscreen}
-          onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
-          onSaveMarket={onSaveMarket}
-          saveMarketDisabled={saveMarketDisabled}
-          saveMarketLoading={saveMarketLoading}
-        />
-        ) : null}
       </div>
     </div>
   )
