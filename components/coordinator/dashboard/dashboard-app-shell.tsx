@@ -50,7 +50,7 @@ export function DashboardAppShell({
         <header
           className={cn(
             'dashboard-app-shell__header shrink-0 border-b border-stone-200/80 bg-card/90 px-4 backdrop-blur-sm',
-            immersive ? 'py-2' : 'py-3'
+            immersive ? 'py-2' : 'py-2'
           )}
         >
           {header}
@@ -61,7 +61,9 @@ export function DashboardAppShell({
           'dashboard-app-shell__grid grid min-h-0 flex-1 overflow-hidden',
           immersive
             ? 'grid-cols-1'
-            : 'grid-cols-1 lg:grid-cols-[var(--command-center-left,320px)_minmax(0,1fr)_var(--command-center-right,360px)]'
+            : right
+              ? 'grid-cols-1 lg:grid-cols-[var(--command-center-left,320px)_minmax(0,1fr)_var(--command-center-right,360px)]'
+              : 'grid-cols-1 lg:grid-cols-[var(--command-center-left,320px)_minmax(0,1fr)]'
         )}
       >
         {immersive ? null : (
@@ -74,9 +76,7 @@ export function DashboardAppShell({
         )}
         <section
           className={cn(
-            'dashboard-app-shell__center relative min-h-0 min-w-0 flex-1 overflow-hidden',
-            !immersive && 'min-h-[min(420px,72dvh)]',
-            immersive && 'flex min-h-0 flex-col',
+            'dashboard-app-shell__center relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
             !immersive &&
               'border-b border-stone-200/70 lg:border-b-0 lg:border-r lg:border-stone-200/70'
           )}

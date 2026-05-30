@@ -121,7 +121,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="dashboard-floor-plan-viewport flex h-full min-h-0 flex-1 flex-col">
       <FloorPlanV2
         key={selectedEventId}
         variant="dashboard"

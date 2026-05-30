@@ -260,31 +260,67 @@
     min-height: 0;
   }
 
-  .coordinator-dashboard-workspace {
+  /* Coordinator dashboard — fill viewport (immersive + Panels mode) */
+  body[data-dashboard-command-center='true'] {
+    overflow: hidden;
+  }
+
+  body[data-dashboard-command-center='true'] > div,
+  body[data-dashboard-command-center='true'] .flex.min-h-full {
+    min-height: 0 !important;
+    height: 100%;
+    max-height: 100dvh;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  body[data-dashboard-command-center='true'] .site-app-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+  }
+
+  body[data-dashboard-command-center='true'] #site-main {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  body[data-dashboard-command-center='true'] #coordinator-dashboard-root,
+  body[data-dashboard-command-center='true'] .coordinator-dashboard-workspace,
+  body[data-dashboard-command-center='true'] .dashboard-app-shell__grid,
+  body[data-dashboard-command-center='true'] .dashboard-app-shell__center,
+  body[data-dashboard-command-center='true'] .dashboard-canvas-column,
+  body[data-dashboard-command-center='true'] #floor-plan-workspace {
+    min-height: 0;
+  }
+
+  body[data-dashboard-command-center='true'] #coordinator-dashboard-root,
+  body[data-dashboard-command-center='true'] .coordinator-dashboard-workspace {
     flex: 1 1 auto;
     height: 100%;
-    min-height: min(480px, 80dvh);
   }
 
-  html.command-center-canvas-fullscreen .coordinator-dashboard-workspace {
-    min-height: 0;
-    height: 100%;
-  }
-
-  html.command-center-canvas-fullscreen
-    .dashboard-app-shell__center {
+  body[data-dashboard-command-center='true'] .dashboard-app-shell__center,
+  body[data-dashboard-command-center='true'] .dashboard-canvas-column {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    min-height: 0;
   }
 
-  html.command-center-canvas-fullscreen .dashboard-canvas-column {
+  body[data-dashboard-command-center='true'] #floor-plan-workspace {
+    height: 100%;
+  }
+
+  body[data-dashboard-command-center='true'] .dashboard-floor-plan-viewport {
     flex: 1 1 auto;
     min-height: 0;
   }
 
-  html.command-center-canvas-fullscreen #floor-plan-workspace {
+  .coordinator-dashboard-workspace {
+    flex: 1 1 auto;
     height: 100%;
     min-height: 0;
   }

@@ -26,6 +26,13 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
   const [fullscreen, setFullscreen] = useState(true)
 
   useLayoutEffect(() => {
+    document.body.dataset.dashboardCommandCenter = 'true'
+    return () => {
+      delete document.body.dataset.dashboardCommandCenter
+    }
+  }, [])
+
+  useLayoutEffect(() => {
     const root = document.documentElement
     root.classList.toggle(HTML_CLASS, fullscreen)
     return () => root.classList.remove(HTML_CLASS)

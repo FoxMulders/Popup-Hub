@@ -56,9 +56,9 @@ export function DashboardCommandCenterHeader() {
           />
         ) : null}
         <div className="min-w-0">
-          <h1 className="font-heading text-xl font-semibold sm:text-2xl">Booth layout designer</h1>
-          <p className="text-sm text-muted-foreground">
-            CAD floor plan · vendor curation queue · revenue on Payments
+          <h1 className="font-heading text-lg font-semibold sm:text-xl">Booth layout designer</h1>
+          <p className="hidden text-sm text-muted-foreground sm:block">
+            CAD floor plan · curation queue · Payments for revenue
           </p>
         </div>
       </div>

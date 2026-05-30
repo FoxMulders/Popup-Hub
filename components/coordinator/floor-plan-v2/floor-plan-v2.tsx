@@ -1436,7 +1436,8 @@ export function FloorPlanV2({
     <div
       id="floor-plan-workspace"
       className={cn(
-        'flex min-h-0 flex-1 flex-col gap-2 overflow-hidden',
+        'flex min-h-0 flex-1 flex-col overflow-hidden',
+        isDashboard ? 'h-full gap-0' : 'gap-2',
         canvasFullscreen &&
           !isDashboard &&
           'fixed inset-0 z-50 h-screen w-screen bg-stone-50 p-2 sm:p-3',
@@ -1632,8 +1633,10 @@ export function FloorPlanV2({
         >
           <div
             className={cn(
-              'relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-stone-200 bg-stone-100',
-              isDashboard ? 'h-full min-h-0' : 'min-h-[280px] h-full'
+              'relative min-h-0 min-w-0 flex-1 overflow-hidden bg-stone-100',
+              isDashboard
+                ? 'h-full min-h-0 border-0'
+                : 'min-h-[280px] h-full rounded-lg border border-stone-200'
             )}
           >
             <FloorPlanCanvas
