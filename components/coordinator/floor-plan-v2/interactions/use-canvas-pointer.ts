@@ -24,6 +24,9 @@ import {
   pointHitsFrameStroke,
   rectsIntersect,
   rotatedAabb,
+  roomDragMotionScale,
+  roomDragSnapFt,
+  scalePointFromAnchor,
   snapPoint,
   snapToGrid,
   type Point,
@@ -84,6 +87,8 @@ interface UseCanvasPointerOptions {
   selectedRoomId?: string | null
   /** Notifies the host when a click selects a room frame. */
   onRoomFrameClick?: (roomId: string, options?: { additive?: boolean }) => void
+  /** Fired after a room drag/resize gesture commits geometry. */
+  onRoomGeometryCommit?: () => void
   /** Fired when a room drag/resize is blocked (e.g. origin at 0,0). */
   onRoomCanvasLimitBlocked?: () => void
   /**
@@ -103,6 +108,8 @@ interface UseCanvasPointerOptions {
   defaultBoothTableLengthFt?: number
   /** When `perimeter-only`, booths snap/orient to room walls after drag. */
   autoArrangeMode?: AutoArrangeMode
+  /** Dashboard command center: damp room drag/resize and raise zoom floor. */
+  commandCenterViewport?: boolean
 }
 
 type DrawDraft =
@@ -281,6 +288,7 @@ export function useCanvasPointer(
   const onAfterDrawCommit = options.onAfterDrawCommit
   const eventCategoryNames = options.eventCategoryNames
   const autoArrangeMode = options.autoArrangeMode ?? 'center-out'
+  const commandCenterViewport = options.commandCenterViewport ?? false
   const onProximityViolation = options.onProximityViolation
   const onProximityViolationRef = useRef(onProximityViolation)
   useEffect(() => {
@@ -330,6 +338,10 @@ export function useCanvasPointer(
   useEffect(() => {
     onRoomFrameClickRef.current = options.onRoomFrameClick
   }, [options.onRoomFrameClick])
+  const onRoomGeometryCommitRef = useRef(options.onRoomGeometryCommit)
+  useEffect(() => {
+    onRoomGeometryCommitRef.current = options.onRoomGeometryCommit
+  }, [options.onRoomGeometryCommit])
 
   /**
    * Pointermove can fire at the device's native rate (often 120 Hz on
@@ -511,43 +523,45 @@ export function useCanvasPointer(
         }
       }
 
-      const objectId = target?.closest('[data-object-id]')?.getAttribute(
-        'data-object-id'
-      )
-      if (objectId) {
-        const additive = e.shiftKey || e.metaKey || e.ctrlKey
-        const wasSelected = store.selectedIds.has(objectId)
-        if (additive) {
-          store.toggleSelection(objectId)
-        } else if (!wasSelected) {
-          store.setSelection([objectId])
-        }
-        const targetIds = wasSelected || additive
-          ? Array.from(new Set([...store.selectedIds, objectId]))
-          : [objectId]
-        capturePointer(e.currentTarget, e.pointerId)
-        beginDrag(e.pointerId, ft, targetIds)
-        return
-      }
-
-      // Room frame select + drag (perimeter stroke or interior).
+      // Room frame select + drag before object hit-test so empty/new
+      // rooms (and the active room) stay grabbable over nearby booths.
       if (toolState.tool === 'select') {
         const roomStroke = target?.closest('[data-room-stroke="true"]')
         let roomId = roomStroke?.getAttribute('data-room-id') ?? null
         if (!roomId) {
           const frames = store.doc.rooms ?? []
-          for (let i = frames.length - 1; i >= 0; i--) {
-            const f = frames[i]!
-            if (
-              pointInsideFrame(f, ft) ||
-              pointHitsFrameStroke(f, ft, 0.75)
-            ) {
-              roomId = f.id
-              break
+          const activeId = activeRoomIdRef.current
+          const activeFrame = activeId
+            ? frames.find((f) => f.id === activeId)
+            : null
+          if (
+            activeFrame &&
+            !activeFrame.mergedIntoObjectId &&
+            (pointInsideFrame(activeFrame, ft) ||
+              pointHitsFrameStroke(activeFrame, ft, 0.75))
+          ) {
+            roomId = activeFrame.id
+          } else {
+            for (let i = frames.length - 1; i >= 0; i--) {
+              const f = frames[i]!
+              if (f.mergedIntoObjectId) continue
+              if (
+                pointInsideFrame(f, ft) ||
+                pointHitsFrameStroke(f, ft, 0.75)
+              ) {
+                roomId = f.id
+                break
+              }
             }
           }
         }
         if (roomId) {
+          const frames = store.doc.rooms ?? []
+          const resolvedFrame = frames.find((f) => f.id === roomId)
+          if (!resolvedFrame) {
+            const viaMerge = frames.find((f) => f.mergedIntoObjectId === roomId)
+            if (viaMerge) roomId = viaMerge.id
+          }
           const additive = e.shiftKey || e.metaKey || e.ctrlKey
           store.clearSelection()
           onRoomFrameClickRef.current?.(roomId, { additive })
@@ -567,6 +581,25 @@ export function useCanvasPointer(
           }
           return
         }
+      }
+
+      const objectId = target?.closest('[data-object-id]')?.getAttribute(
+        'data-object-id'
+      )
+      if (objectId) {
+        const additive = e.shiftKey || e.metaKey || e.ctrlKey
+        const wasSelected = store.selectedIds.has(objectId)
+        if (additive) {
+          store.toggleSelection(objectId)
+        } else if (!wasSelected) {
+          store.setSelection([objectId])
+        }
+        const targetIds = wasSelected || additive
+          ? Array.from(new Set([...store.selectedIds, objectId]))
+          : [objectId]
+        capturePointer(e.currentTarget, e.pointerId)
+        beginDrag(e.pointerId, ft, targetIds)
+        return
       }
 
       // Empty canvas in select mode → marquee.
@@ -603,10 +636,19 @@ export function useCanvasPointer(
       const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
 
       if (roomResize && roomResize.pointerId === pointerId) {
+        const motionScale = roomDragMotionScale(
+          transform.zoom,
+          commandCenterViewport
+        )
+        const scaledFt = scalePointFromAnchor(
+          roomResize.anchor,
+          ft,
+          motionScale
+        )
         const patch = roomResizeFromHandle(
           roomResize.initialFrame,
           roomResize.handle,
-          ft,
+          scaledFt,
           roomResize.anchor
         )
         const wasMoved = roomResize.moved
@@ -633,9 +675,13 @@ export function useCanvasPointer(
       }
 
       if (roomDrag && roomDrag.pointerId === pointerId) {
-        const snap = store.doc.snapFt
-        const rawDx = ft.x - roomDrag.origin.x
-        const rawDy = ft.y - roomDrag.origin.y
+        const motionScale = roomDragMotionScale(
+          transform.zoom,
+          commandCenterViewport
+        )
+        const snap = roomDragSnapFt(store.doc.snapFt, commandCenterViewport)
+        const rawDx = (ft.x - roomDrag.origin.x) * motionScale
+        const rawDy = (ft.y - roomDrag.origin.y) * motionScale
         const dxTotal = snap > 0 ? Math.round(rawDx / snap) * snap : rawDx
         const dyTotal = snap > 0 ? Math.round(rawDy / snap) * snap : rawDy
         const stepDx = dxTotal - roomDrag.lastDx
@@ -822,7 +868,13 @@ export function useCanvasPointer(
         setMarquee({ ...marqueeNow, current: ft })
       }
     },
-    [draft, marquee, store]
+    [
+      commandCenterViewport,
+      draft,
+      marquee,
+      store,
+      transform.zoom,
+    ]
   )
 
   const onPointerMove = useCallback(
@@ -872,6 +924,9 @@ export function useCanvasPointer(
 
       const roomResize = roomResizeRef.current
       if (roomResize && roomResize.pointerId === e.pointerId) {
+        if (roomResize.moved) {
+          onRoomGeometryCommitRef.current?.()
+        }
         roomResizeRef.current = null
         setRoomGestureActive(false)
         return
@@ -897,6 +952,9 @@ export function useCanvasPointer(
           store.moveRoomFrame(roomDrag.roomId, cleanupDx, cleanupDy, {
             pushHistory: false,
           })
+        }
+        if (roomDrag.moved) {
+          onRoomGeometryCommitRef.current?.()
         }
         roomDragRef.current = null
         setRoomGestureActive(false)
@@ -1040,7 +1098,8 @@ export function useCanvasPointer(
           } else if (
             findOverlapInMove(
               store.doc.objects.filter((o) => movedIdSet.has(o.id)),
-              store.doc.objects.filter((o) => !movedIdSet.has(o.id))
+              store.doc.objects.filter((o) => !movedIdSet.has(o.id)),
+              { rooms: store.doc.rooms ?? [] }
             )
           ) {
             const revertPatches: Array<{
@@ -1248,6 +1307,8 @@ function commitDraft(
     case 'label':
       obj = { ...base, kind: 'label', text: 'Label' }
       break
+    default:
+      return
   }
   // Same-category proximity gate for newly-drawn booths. Walls,
   // doors, etc. skip the check (it only applies to booths).
@@ -1268,7 +1329,9 @@ function commitDraft(
     }
   }
   if (
-    placedObjectOverlapsAny(obj, store.doc.objects)
+    placedObjectOverlapsAny(obj, store.doc.objects, undefined, {
+      rooms: store.doc.rooms ?? [],
+    })
   ) {
     onOverlapViolation?.()
     return

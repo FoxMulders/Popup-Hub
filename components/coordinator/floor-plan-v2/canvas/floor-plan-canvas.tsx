@@ -51,6 +51,8 @@ interface FloorPlanCanvasProps {
   selectedRoomId?: string | null
   /** Called when the user clicks on a room frame stroke. */
   onRoomFrameClick?: (roomId: string) => void
+  /** After a room drag/resize commits — sync wizard room origins. */
+  onRoomGeometryCommit?: () => void
   /**
    * Fired immediately after a draw gesture commits a new object. The
    * default behaviour is to leave the tool sticky — the host owns
@@ -104,8 +106,8 @@ interface FloorPlanCanvasProps {
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
-/** Minimum zoom on coordinator dashboard — avoids 0.25× hypersensitive drags. */
-const COMMAND_CENTER_ZOOM_MIN = 0.55
+/** Minimum zoom on coordinator dashboard — avoids hypersensitive room drags when framed out. */
+const COMMAND_CENTER_ZOOM_MIN = 0.72
 
 export function FloorPlanCanvas({
   store,
@@ -113,6 +115,7 @@ export function FloorPlanCanvas({
   activeRoomId,
   selectedRoomId,
   onRoomFrameClick,
+  onRoomGeometryCommit,
   onAfterDrawCommit,
   onViewportReady,
   onZoomChange,
@@ -199,6 +202,7 @@ export function FloorPlanCanvas({
     initialZoom: 1,
     getZoomMath,
     zoomMin: commandCenterViewport ? COMMAND_CENTER_ZOOM_MIN : undefined,
+    zoomStepMultiplier: commandCenterViewport ? 2 : 4,
     // Tool ref so the viewport hook can route a single-touch drag into
     // a pan when the Hand tool is active. (Mouse panning already uses
     // middle-click / Shift+drag.)
@@ -219,14 +223,14 @@ export function FloorPlanCanvas({
     onZoomChange?.(viewport.zoom)
   }, [onZoomChange, viewport.zoom])
 
-  /** Re-frame the active room when its layout or the viewport size changes. */
-  const roomsLayoutKey = useMemo(() => {
+  /**
+   * Re-frame when the active room or room *dimensions* change — not when
+   * origins move (drag), so zoom and pan are not reset on every move.
+   */
+  const roomsFramingKey = useMemo(() => {
     const frames = store.doc.rooms ?? []
     return `${activeRoomId ?? ''}:${frames
-      .map(
-        (f) =>
-          `${f.id}:${f.originX},${f.originY},${f.widthFt},${f.lengthFt}`
-      )
+      .map((f) => `${f.id}:${f.widthFt},${f.lengthFt}`)
       .join('|')}`
   }, [activeRoomId, store.doc.rooms])
 
@@ -251,14 +255,17 @@ export function FloorPlanCanvas({
     viewport,
   ])
 
+  const didInitialFrameRef = useRef(false)
   useEffect(() => {
     frameActiveRoom()
-  }, [frameActiveRoom, roomsLayoutKey])
+    didInitialFrameRef.current = true
+  }, [frameActiveRoom, roomsFramingKey])
 
   useEffect(() => {
     const scroll = scrollRef.current
     if (!scroll || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
+      if (!didInitialFrameRef.current) return
       if (scroll.clientWidth > 0 && scroll.clientHeight > 0) {
         frameActiveRoom()
       }
@@ -284,16 +291,23 @@ export function FloorPlanCanvas({
     activeRoomId: activeRoomId ?? null,
     selectedRoomId: selectedRoomId ?? null,
     onRoomFrameClick,
+    onRoomGeometryCommit,
     onProximityViolation,
     onOverlapViolation,
     onRoomCanvasLimitBlocked,
     defaultBoothTableLengthFt,
     autoArrangeMode,
+    commandCenterViewport,
   })
 
+  const mergeOverlapCtx = useMemo(
+    () => ({ rooms: store.doc.rooms ?? [] }),
+    [store.doc.rooms]
+  )
+
   const overlappingIds = useMemo(
-    () => detectPlacedObjectOverlaps(store.doc.objects),
-    [store.doc.objects]
+    () => detectPlacedObjectOverlaps(store.doc.objects, mergeOverlapCtx),
+    [mergeOverlapCtx, store.doc.objects]
   )
 
   const draftOverlaps = useMemo(() => {
@@ -309,8 +323,9 @@ export function FloorPlanCanvas({
       height: Math.max(store.doc.snapFt || 1, rect.height),
       rotation: 0,
     } as PlacedObject
-    return placedObjectOverlapsAny(probe, store.doc.objects)
+    return placedObjectOverlapsAny(probe, store.doc.objects, undefined, mergeOverlapCtx)
   }, [
+    mergeOverlapCtx,
     pointer.draftKind,
     pointer.draftRect,
     store.doc.objects,
@@ -540,6 +555,7 @@ export function FloorPlanCanvas({
           ) : null}
           <CanvasObjects
             objects={store.doc.objects}
+            rooms={store.doc.rooms}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
             showLabels={showLabels}
@@ -558,18 +574,20 @@ export function FloorPlanCanvas({
               }
             />
           ) : null}
-          {toolState.tool === 'select' && selectedRoomId
+          {toolState.tool === 'select' && (selectedRoomId ?? activeRoomId)
             ? (() => {
+                const interactionRoomId = selectedRoomId ?? activeRoomId
                 const frame = (store.doc.rooms ?? []).find(
-                  (f) => f.id === selectedRoomId
+                  (f) => f.id === interactionRoomId
                 )
-                return frame ? (
+                if (!frame || frame.mergedIntoObjectId) return null
+                return (
                   <RoomSelectionOverlay
                     frame={frame}
                     pxPerFt={pxPerFt}
                     suppressHandles={pointer.roomGestureActive}
                   />
-                ) : null
+                )
               })()
             : null}
           <DraftPreview

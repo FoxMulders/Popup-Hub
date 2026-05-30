@@ -191,6 +191,8 @@ function prettyKindHint(kind: PlacedObject['kind']): string {
       return 'Performance area. Re-size to match the platform footprint.'
     case 'label':
       return 'Free-form text annotation.'
+    case 'merged_zone':
+      return 'Boolean-merged shape. Unjoin by deleting and re-drawing, or undo.'
   }
 }
 

@@ -52,6 +52,8 @@ export interface CanvasToolHostProps {
    * staring at a silent disabled state.
    */
   joinBlockedReason?: string | null
+  /** True when Merge will boolean-union selected shapes (walls, stages, …). */
+  mergePrefersShapes?: boolean
   /**
    * Split the active room (or joined fixture) out of its existing
    * join group. Falsy when the active selection is not part of a

@@ -57,7 +57,10 @@ import {
   mergeAdjacentStructuresMany,
   pathsToClosedRings,
   structureFromRect,
+  type ArchitecturalStructure,
+  type WallSegment2,
 } from '@/lib/floor-plan/merge-adjacent-structures'
+import { placedObjectFootprintRing } from '@/lib/floor-plan/shape-union'
 
 import type {
   ObjectKind,
@@ -118,6 +121,8 @@ export interface JoinedZone {
   objectIds: string[]
   /** Outer rings of the dissolved perimeter. */
   rings: Ring[]
+  /** Outer wall segments after boolean union (no interior dividers). */
+  perimeterWalls: WallSegment2[]
   /** Bounding box of the union polygon. */
   aabb: RoomJoinBbox
   /** Total floor-area of the dissolved zone, in square feet. */
@@ -248,6 +253,16 @@ export function objectToRing(obj: PlacedObject): Ring {
 /** Convenience: a single-ring polygon for one placed object. */
 export function objectToPolygon(obj: PlacedObject): Polygon {
   return [objectToRing(obj)]
+}
+
+/** Rotation-aware footprint for boolean union / dissolved zones. */
+export function structureFromPlacedObject(obj: PlacedObject): ArchitecturalStructure {
+  const polygon = placedObjectFootprintRing(obj)
+  return {
+    id: obj.id,
+    walls: [],
+    polygon,
+  }
 }
 
 /**
@@ -547,9 +562,7 @@ export function buildJoinedZone(
     ...frames.map((f) =>
       structureFromRect(f.id, f.originX, f.originY, f.widthFt, f.lengthFt)
     ),
-    ...eligibleObjects.map((o) =>
-      structureFromRect(o.id, o.x, o.y, o.width, o.height)
-    ),
+    ...eligibleObjects.map((o) => structureFromPlacedObject(o)),
   ]
 
   const merged = mergeAdjacentStructuresMany(structures, DEFAULT_TOUCH_EPSILON_FT)
@@ -562,6 +575,7 @@ export function buildJoinedZone(
     frameIds,
     objectIds,
     rings,
+    perimeterWalls: merged.activeWalls,
     aabb: merged.aabb,
     areaSqFt: merged.areaSqFt,
   }

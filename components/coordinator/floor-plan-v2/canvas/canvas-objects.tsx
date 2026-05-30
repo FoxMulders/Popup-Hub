@@ -6,11 +6,13 @@ import type {
   DoorObject,
   EmergencyExitObject,
   LabelObject,
+  MergedZoneObject,
   OpenWallObject,
   PlacedObject,
   StageObject,
   WallObject,
 } from '../state/types'
+import { ringsToSvgPathD } from '@/lib/floor-plan/shape-union'
 import { paletteForCategory, DEFAULT_BOOTH_PALETTE } from './category-palette'
 import { EXTERIOR_LABEL_OFFSET_PX, objectCenter } from '../interactions/geometry'
 import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
@@ -46,6 +48,8 @@ interface CanvasObjectsProps {
    * name-hash fallback.
    */
   eventCategoryNames?: ReadonlyArray<string>
+  /** Room frames — used to detect dissolved perimeter join groups. */
+  rooms?: ReadonlyArray<{ joinGroupId?: string }>
 }
 
 function fillForObject(
@@ -81,6 +85,8 @@ function fillForObject(
       return '#fca5a5'
     case 'label':
       return 'transparent'
+    case 'merged_zone':
+      return '#ccfbf1'
   }
 }
 
@@ -116,6 +122,8 @@ function strokeForObject(
       return '#991b1b'
     case 'label':
       return '#57534e'
+    case 'merged_zone':
+      return '#0f766e'
   }
 }
 
@@ -408,7 +416,23 @@ function CanvasObjectsBase({
   overlappingIds,
   editingObjectId,
   eventCategoryNames,
+  rooms,
 }: CanvasObjectsProps) {
+  const dissolvedJoinGroupIds = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const r of rooms ?? []) {
+      if (!r.joinGroupId) continue
+      counts.set(r.joinGroupId, (counts.get(r.joinGroupId) ?? 0) + 1)
+    }
+    for (const o of objects) {
+      if (!o.joinGroupId || !isJoinableObject(o)) continue
+      counts.set(o.joinGroupId, (counts.get(o.joinGroupId) ?? 0) + 1)
+    }
+    return new Set(
+      [...counts.entries()].filter(([, n]) => n >= 2).map(([id]) => id)
+    )
+  }, [objects, rooms])
+
   const macroPerimeterGroups = useMemo(
     () => (showLabels ? macroPerimeterWallGroups(objects) : []),
     [objects, showLabels]
@@ -425,6 +449,19 @@ function CanvasObjectsBase({
     <g>
       {boothPlacementStatusByObjectId ? <BoothStatusPatterns /> : null}
       {objects.map((obj) => {
+        if (obj.kind === 'merged_zone') {
+          return (
+            <MergedZoneNode
+              key={obj.id}
+              obj={obj as MergedZoneObject}
+              pxPerFt={pxPerFt}
+              isSelected={selectedIds.has(obj.id)}
+              isOverlapping={overlappingIds?.has(obj.id) ?? false}
+              showLabels={showLabels}
+            />
+          )
+        }
+
         const x = obj.x * pxPerFt
         const y = obj.y * pxPerFt
         const w = obj.width * pxPerFt
@@ -447,7 +484,9 @@ function CanvasObjectsBase({
         // dissolved zone polygon (rendered in <RoomFrames>) draws
         // the unified outer wall. Suppress the per-object stroke
         // so the two boundaries don't double up.
-        const isJoined = !!obj.joinGroupId
+        const isJoined = Boolean(
+          obj.joinGroupId && dissolvedJoinGroupIds.has(obj.joinGroupId)
+        )
         const hideJoinedFixtureBody = isJoined && isJoinableObject(obj)
         const displayFill = hideJoinedFixtureBody ? 'transparent' : patternFill ?? fill
         const displayFillOpacity = hideJoinedFixtureBody ? 0 : 0.85
@@ -860,7 +899,73 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return (obj as EmergencyExitObject).label || 'Emergency Exit'
     case 'label':
       return ''
+    case 'merged_zone':
+      return (obj as MergedZoneObject).label || 'Merged'
   }
+}
+
+function MergedZoneNode({
+  obj,
+  pxPerFt,
+  isSelected,
+  isOverlapping,
+  showLabels,
+}: {
+  obj: MergedZoneObject
+  pxPerFt: number
+  isSelected: boolean
+  isOverlapping: boolean
+  showLabels: boolean
+}) {
+  const localRings = obj.rings.map((ring) =>
+    ring.map(([px, py]) => [px, py] as [number, number])
+  )
+  const pathD = ringsToSvgPathD(localRings, pxPerFt)
+  const offsetX = obj.x * pxPerFt
+  const offsetY = obj.y * pxPerFt
+  const fill = obj.fill ?? '#0f766e'
+  const stroke = isOverlapping
+    ? PLACEMENT_VIOLATION.stroke
+    : isSelected
+      ? '#0f766e'
+      : obj.stroke ?? '#1c1917'
+  const strokeWidth = isOverlapping || isSelected ? 3 : 2
+
+  return (
+    <g
+      transform={`translate(${offsetX} ${offsetY})`}
+      data-object-id={obj.id}
+      data-kind="merged_zone"
+      data-locked={obj.locked ? 'true' : 'false'}
+    >
+      <path
+        d={pathD}
+        fill={fill}
+        fillOpacity={obj.fillOpacity ?? 0.22}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        strokeLinejoin="miter"
+        strokeLinecap="square"
+        shapeRendering="geometricPrecision"
+        pointerEvents="all"
+        data-room-stroke="true"
+        data-room-id={obj.sourceRoomIds?.[0] ?? obj.id}
+        style={{ cursor: 'grab' }}
+      />
+      {showLabels && obj.label ? (
+        <text
+          x={8}
+          y={16}
+          fontSize={11}
+          fontWeight={700}
+          fill="#fafaf9"
+          pointerEvents="none"
+        >
+          {obj.label}
+        </text>
+      ) : null}
+    </g>
+  )
 }
 
 function TableClusterShapes({

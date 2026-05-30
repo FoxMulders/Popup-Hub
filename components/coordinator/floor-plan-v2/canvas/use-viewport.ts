@@ -42,8 +42,10 @@ export interface ZoomMath {
 export interface UseViewportOptions {
   scrollRef: RefObject<HTMLDivElement | null>
   initialZoom?: number
-  /** Floor for fit/zoom-out; default 0.25. Command center uses ~0.55 for steadier drags. */
+  /** Floor for fit/zoom-out; default 0.25. Command center uses ~0.72 for steadier drags. */
   zoomMin?: number
+  /** Multiplier on wheel/button zoom step; lower = less jumpy (default 4). */
+  zoomStepMultiplier?: number
   /**
    * Read on every zoom event. Returning a fresh value from the closure
    * (rather than passing as a prop) avoids re-binding the handlers on
@@ -174,8 +176,13 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     getZoomMath,
     getToolMode,
     zoomMin = ZOOM_MIN,
+    zoomStepMultiplier = 4,
   } = options
   const clamp = useCallback((z: number) => clampZoom(z, zoomMin), [zoomMin])
+  const zoomStepMulRef = useRef(zoomStepMultiplier)
+  useEffect(() => {
+    zoomStepMulRef.current = zoomStepMultiplier
+  }, [zoomStepMultiplier])
 
   const [zoom, setZoomState] = useState(initialZoom)
   const [isPanning, setIsPanning] = useState(false)
@@ -314,11 +321,17 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
   )
 
   const zoomIn = useCallback(
-    () => applyZoomAtDocAnchor(zoomRef.current + ZOOM_STEP * 4),
+    () =>
+      applyZoomAtDocAnchor(
+        zoomRef.current + ZOOM_STEP * zoomStepMulRef.current
+      ),
     [applyZoomAtDocAnchor]
   )
   const zoomOut = useCallback(
-    () => applyZoomAtDocAnchor(zoomRef.current - ZOOM_STEP * 4),
+    () =>
+      applyZoomAtDocAnchor(
+        zoomRef.current - ZOOM_STEP * zoomStepMulRef.current
+      ),
     [applyZoomAtDocAnchor]
   )
   const resetZoom = useCallback(
@@ -477,20 +490,17 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
       const scroll = scrollRef.current
+      const step = ZOOM_STEP * zoomStepMulRef.current
       if (!scroll) {
         const direction = e.deltaY > 0 ? -1 : 1
-        applyZoomAtDocAnchor(zoomRef.current + direction * ZOOM_STEP * 4)
+        applyZoomAtDocAnchor(zoomRef.current + direction * step)
         return
       }
       const rect = scroll.getBoundingClientRect()
       const localX = e.clientX - rect.left
       const localY = e.clientY - rect.top
       const direction = e.deltaY > 0 ? -1 : 1
-      applyZoomAtScreen(
-        zoomRef.current + direction * ZOOM_STEP * 4,
-        localX,
-        localY
-      )
+      applyZoomAtScreen(zoomRef.current + direction * step, localX, localY)
     },
     [applyZoomAtDocAnchor, applyZoomAtScreen, scrollRef]
   )

@@ -1,4 +1,10 @@
+import {
+  isMergeOverlapExempt,
+  type MergeOverlapContext,
+} from '@/lib/floor-plan/merge-overlap-policy'
 import type { PlacedObject } from '../state/types'
+
+export type { MergeOverlapContext }
 import {
   objectFootprintAabb,
   placementProbesForObject,
@@ -58,6 +64,37 @@ export function snapToGrid(value: number, snapFt: number): number {
 
 export function snapPoint(p: Point, snapFt: number): Point {
   return { x: snapToGrid(p.x, snapFt), y: snapToGrid(p.y, snapFt) }
+}
+
+/**
+ * Scale room drag/resize deltas so zoomed-out canvases do not turn a
+ * small pointer move into a large foot jump (1:1 ft mapping feels
+ * hypersensitive below ~100% zoom).
+ */
+export function roomDragMotionScale(
+  zoom: number,
+  commandCenter = false
+): number {
+  const floor = commandCenter ? 0.72 : 0.55
+  const zoomFactor = Math.max(floor, Math.min(1, zoom))
+  return commandCenter ? zoomFactor * 0.98 : zoomFactor * 0.95
+}
+
+/** Coarser grid while positioning whole rooms on the command-center canvas. */
+export function roomDragSnapFt(baseSnapFt: number, commandCenter = false): number {
+  if (baseSnapFt <= 0) return commandCenter ? 1 : 0
+  return commandCenter ? Math.max(baseSnapFt, 1) : baseSnapFt
+}
+
+export function scalePointFromAnchor(
+  anchor: Point,
+  target: Point,
+  scale: number
+): Point {
+  return {
+    x: anchor.x + (target.x - anchor.x) * scale,
+    y: anchor.y + (target.y - anchor.y) * scale,
+  }
 }
 
 export function normalizeRect(a: Point, b: Point): Rect {
@@ -352,9 +389,11 @@ export function shouldSkipOverlapPair(
  */
 export function placedObjectsOverlap(
   a: PlacedObject,
-  b: PlacedObject
+  b: PlacedObject,
+  ctx?: MergeOverlapContext
 ): boolean {
   if (shouldSkipOverlapPair(a, b)) return false
+  if (ctx && isMergeOverlapExempt(a, b, ctx)) return false
   const probesA = placementProbesForObject(a)
   const probesB = placementProbesForObject(b)
   for (const pa of probesA) {
@@ -372,14 +411,15 @@ export function placedObjectsOverlap(
  * with another placed object. Used for static red warning chrome.
  */
 export function detectPlacedObjectOverlaps(
-  objects: ReadonlyArray<PlacedObject>
+  objects: ReadonlyArray<PlacedObject>,
+  ctx?: MergeOverlapContext
 ): Set<string> {
   const overlapping = new Set<string>()
   for (let i = 0; i < objects.length; i++) {
     const a = objects[i]!
     for (let j = i + 1; j < objects.length; j++) {
       const b = objects[j]!
-      if (placedObjectsOverlap(a, b)) {
+      if (placedObjectsOverlap(a, b, ctx)) {
         overlapping.add(a.id)
         overlapping.add(b.id)
       }
@@ -392,12 +432,13 @@ export function detectPlacedObjectOverlaps(
 export function placedObjectOverlapsAny(
   probe: PlacedObject,
   others: ReadonlyArray<PlacedObject>,
-  excludeIds?: ReadonlySet<string>
+  excludeIds?: ReadonlySet<string>,
+  ctx?: MergeOverlapContext
 ): boolean {
   for (const other of others) {
     if (excludeIds?.has(other.id)) continue
     if (probe.id === other.id) continue
-    if (placedObjectsOverlap(probe, other)) return true
+    if (placedObjectsOverlap(probe, other, ctx)) return true
   }
   return false
 }
@@ -408,15 +449,16 @@ export function placedObjectOverlapsAny(
  */
 export function findOverlapInMove(
   moved: ReadonlyArray<PlacedObject>,
-  others: ReadonlyArray<PlacedObject>
+  others: ReadonlyArray<PlacedObject>,
+  ctx?: MergeOverlapContext
 ): boolean {
   for (let i = 0; i < moved.length; i++) {
     const m = moved[i]!
     for (const o of others) {
-      if (placedObjectsOverlap(m, o)) return true
+      if (placedObjectsOverlap(m, o, ctx)) return true
     }
     for (let j = i + 1; j < moved.length; j++) {
-      if (placedObjectsOverlap(m, moved[j]!)) return true
+      if (placedObjectsOverlap(m, moved[j]!, ctx)) return true
     }
   }
   return false
@@ -545,6 +587,8 @@ export interface RoomFrameGeom {
   originY: number
   widthFt: number
   lengthFt: number
+  /** When set on both neighbours, shared walls are never painted. */
+  joinGroupId?: string
 }
 
 /** Returns the four perimeter edges of a frame in canvas-global coords. */
@@ -637,6 +681,12 @@ export function computeRoomWallSegments(
       const holes: Array<[number, number]> = []
       for (const other of allEdges) {
         if (other.frame.id === frame.id) continue
+        if (
+          frame.joinGroupId &&
+          frame.joinGroupId === other.frame.joinGroupId
+        ) {
+          continue
+        }
         for (const candidate of other.edges) {
           if (candidate.axis !== edge.axis) continue
           // Two edges merge when they share the same perpendicular

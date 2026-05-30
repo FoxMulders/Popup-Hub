@@ -24,6 +24,8 @@ export type ObjectKind =
   | 'door'
   | 'emergency_exit'
   | 'stage'
+  /** Boolean-union result — one selectable path replacing merged shapes. */
+  | 'merged_zone'
 
 export interface BasePlacedObject {
   id: string
@@ -130,6 +132,22 @@ export interface StageObject extends BasePlacedObject {
   kind: 'stage'
 }
 
+/**
+ * Single element produced by Merge (boolean union). `rings` are closed
+ * loops in feet relative to `(x, y)` — the union AABB origin.
+ */
+export interface MergedZoneObject extends BasePlacedObject {
+  kind: 'merged_zone'
+  rings: number[][][]
+  fill?: string
+  stroke?: string
+  fillOpacity?: number
+  /** Source ids removed from the doc (debug / undo context). */
+  mergedFromIds?: string[]
+  /** Room frames hidden by this merge (for drag + save bridge). */
+  sourceRoomIds?: string[]
+}
+
 export type PlacedObject =
   | BoothObject
   | WallObject
@@ -138,6 +156,7 @@ export type PlacedObject =
   | DoorObject
   | EmergencyExitObject
   | StageObject
+  | MergedZoneObject
 
 /**
  * Room frame on the unified canvas. Each frame represents one
@@ -190,6 +209,11 @@ export interface RoomFrame {
    * zone via "Unjoin".
    */
   joinGroupId?: string
+  /**
+   * When set, this room's perimeter is not drawn — a `merged_zone`
+   * object (`mergedIntoObjectId`) owns the unified union path.
+   */
+  mergedIntoObjectId?: string
 }
 
 export interface FloorPlanDoc {

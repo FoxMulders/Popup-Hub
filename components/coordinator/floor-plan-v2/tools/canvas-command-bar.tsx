@@ -94,6 +94,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     canJoinRooms,
     joinCandidateCount,
     joinBlockedReason,
+    mergePrefersShapes,
     onUnjoinRoom,
     canUnjoinRoom,
     onAddPerimeterWalls,
@@ -136,13 +137,15 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
 
   const joinLabel =
     canJoinRooms && joinCandidateCount && joinCandidateCount > 1
-      ? `Join (${joinCandidateCount})`
-      : 'Join'
+      ? `Merge (${joinCandidateCount})`
+      : 'Merge'
   const joinTitle = canJoinRooms
-    ? 'Extend the perimeter wall: dissolve shared edges with every overlapping/touching auxiliary room or joinable fixture (Stage)'
+    ? mergePrefersShapes
+      ? 'Boolean union: fuse selected shapes into one path (interior edges removed)'
+      : 'Dissolve shared walls between touching rooms into one outer perimeter'
     : joinBlockedReason
-      ? `Can't join: ${joinBlockedReason}`
-      : 'Select an auxiliary room (Kitchen / Storage / Washroom / Annex) or a Stage to extend the perimeter'
+      ? `Can't merge: ${joinBlockedReason}`
+      : 'Select 2+ shapes, or move rooms flush together, then Merge'
 
   const blockContext = useMemo<CanvasCommandBarBlockContext>(
     () => ({

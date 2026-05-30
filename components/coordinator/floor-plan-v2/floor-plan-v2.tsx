@@ -49,8 +49,10 @@ import {
   isJoinableObject,
   mixedNeighborsOf,
   neighborsOf,
+  objectFrameOverlapsOrTouches,
   roomIdsFormConnectedComponent,
 } from './state/room-joins'
+import { isMergeUnionEligible } from './state/merge-selection-union'
 import { vendorTableMetaFromApplications } from '@/lib/booth-planner/table-booth-consolidation'
 import { planTableSizeChange } from './state/table-size-selection'
 import type {
@@ -82,6 +84,19 @@ import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/c
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
 const ROTATE_STEP_DEG = 15
+
+function joinableObjectsOverlapAnyRoom(
+  objects: ReadonlyArray<PlacedObject>,
+  frames: ReadonlyArray<RoomFrame>
+): boolean {
+  for (const obj of objects) {
+    if (!isJoinableObject(obj)) continue
+    for (const frame of frames) {
+      if (objectFrameOverlapsOrTouches(obj, frame)) return true
+    }
+  }
+  return false
+}
 
 /**
  * Clipboard entry — every selected object is captured as a kind-typed
@@ -262,8 +277,11 @@ export function FloorPlanV2({
     onSelectionChange?.(store)
   }, [onSelectionChange, store, store.selectedIds])
   const layoutOverlaps = useMemo(
-    () => detectPlacedObjectOverlaps(store.doc.objects),
-    [store.doc.objects]
+    () =>
+      detectPlacedObjectOverlaps(store.doc.objects, {
+        rooms: store.doc.rooms ?? [],
+      }),
+    [store.doc.objects, store.doc.rooms]
   )
   useEffect(() => {
     onOverlapChange?.(layoutOverlaps.size > 0)
@@ -375,7 +393,7 @@ export function FloorPlanV2({
     // Note: any objects that belonged to a now-deleted room get left
     // in the doc orphaned; the save bridge folds them into the first
     // surviving room as a safety net.
-  }, [layoutRooms, store])
+  }, [layoutRooms, store.doc.rooms, store.doc.canvasWidthFt, store.doc.canvasLengthFt])
 
   // The "active room" follows the wizard's `layoutActiveRoomId` so
   // sidebar selections in the parent flow keep working. Selection of
@@ -398,6 +416,26 @@ export function FloorPlanV2({
       ? rawSelectedRoomId
       : null
   }, [layoutRooms, rawSelectedRoomId])
+
+  const layoutRoomIdsKey = useMemo(
+    () => layoutRooms.map((r) => r.id).join('|'),
+    [layoutRooms]
+  )
+  const prevActiveRoomRef = useRef(activeRoomId)
+  const prevLayoutRoomIdsRef = useRef(layoutRoomIdsKey)
+  // New rooms become the active room in the sidebar but did not set
+  // canvas selection — without this, resize handles never appear.
+  useEffect(() => {
+    const activeChanged = prevActiveRoomRef.current !== activeRoomId
+    const idsChanged = prevLayoutRoomIdsRef.current !== layoutRoomIdsKey
+    prevActiveRoomRef.current = activeRoomId
+    prevLayoutRoomIdsRef.current = layoutRoomIdsKey
+    if (!activeChanged && !idsChanged) return
+    if (!activeRoomId) return
+    if (!layoutRooms.some((r) => r.id === activeRoomId)) return
+    setSelectedRoomId(activeRoomId)
+    setSelectedRoomIds(new Set([activeRoomId]))
+  }, [activeRoomId, layoutRoomIdsKey, layoutRooms])
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
   const highlightedRoomMetrics = useMemo(() => {
@@ -1018,6 +1056,10 @@ export function FloorPlanV2({
     [activeRoomId, layoutRooms, onLayoutRoomsChange]
   )
 
+  const handleRoomGeometryCommit = useCallback(() => {
+    syncLayoutRoomsFromDoc(store.doc)
+  }, [store.doc, syncLayoutRoomsFromDoc])
+
   const handleRotateRoomLeft = useCallback(() => {
     if (!rotateTargetRoomId) {
       toast.message('Click the room perimeter on the canvas, then rotate.')
@@ -1227,6 +1269,7 @@ export function FloorPlanV2({
 
   const handleRoomFrameClick = useCallback(
     (roomId: string, options?: { additive?: boolean }) => {
+      store.clearSelection()
       if (options?.additive) {
         setSelectedRoomIds((prev) => {
           const next = new Set(prev)
@@ -1242,10 +1285,10 @@ export function FloorPlanV2({
         onLayoutRoomsChange(layoutRooms, roomId)
       }
     },
-    [activeRoomId, layoutRooms, onLayoutRoomsChange]
+    [activeRoomId, layoutRooms, onLayoutRoomsChange, store]
   )
 
-  /** Join eligibility: touching/overlapping rooms (5px tolerance) or stages. */
+  /** Join eligibility: touching/overlapping rooms (~5 in tolerance) or stages. */
   const joinPlan = useMemo(() => {
     const frames = store.doc.rooms ?? []
     const objects = store.doc.objects ?? []
@@ -1258,25 +1301,38 @@ export function FloorPlanV2({
       blockedReason: null as string | null,
     }
 
-    // -------------------------------------------------------------
-    // Initiator detection. A single selection is required so the
-    // join action has unambiguous semantics.
-    // -------------------------------------------------------------
     const selectedIdsArray = Array.from(store.selectedIds)
     const singleSelectedObj =
       selectedIdsArray.length === 1
         ? objects.find((o) => o.id === selectedIdsArray[0]!)
         : null
 
-    // Case A: a `PlacedObject` is selected.
-    if (singleSelectedObj) {
-      // Standard floor assets block the action entirely.
-      if (!isJoinableObject(singleSelectedObj)) {
-        return {
-          ...empty,
-          blockedReason: `${singleSelectedObj.kind} can't extend the perimeter`,
-        }
+    // Case B: two+ rooms selected on canvas (Shift+click) for explicit join.
+    const prunedRoomIds = Array.from(selectedRoomIds).filter((id) =>
+      frames.some((f) => f.id === id)
+    )
+    if (prunedRoomIds.length >= 2) {
+      const connected = roomIdsFormConnectedComponent(
+        prunedRoomIds,
+        frames,
+        DEFAULT_TOUCH_EPSILON_FT
+      )
+      const groupId =
+        frames.find((f) => prunedRoomIds.includes(f.id))?.joinGroupId ?? null
+      return {
+        canJoin: connected,
+        joinRoomIds: prunedRoomIds,
+        joinObjectIds: [] as string[],
+        candidateCount: prunedRoomIds.length,
+        unjoinGroupId: groupId,
+        blockedReason: connected
+          ? null
+          : 'Selected rooms must touch or overlap to join',
       }
+    }
+
+    // Case A: a joinable `PlacedObject` (e.g. stage) is the initiator.
+    if (singleSelectedObj && isJoinableObject(singleSelectedObj)) {
       const initiatorGroupId = singleSelectedObj.joinGroupId ?? null
       const neighbors = mixedNeighborsOf(
         { kind: 'object', id: singleSelectedObj.id },
@@ -1310,33 +1366,14 @@ export function FloorPlanV2({
       }
     }
 
-    // Case B: two+ rooms selected on canvas (Shift+click) for explicit join.
-    const prunedRoomIds = Array.from(selectedRoomIds).filter((id) =>
-      frames.some((f) => f.id === id)
-    )
-    if (prunedRoomIds.length >= 2) {
-      const connected = roomIdsFormConnectedComponent(
-        prunedRoomIds,
-        frames,
-        DEFAULT_TOUCH_EPSILON_FT
-      )
-      const groupId =
-        frames.find((f) => prunedRoomIds.includes(f.id))?.joinGroupId ?? null
-      return {
-        canJoin: connected,
-        joinRoomIds: prunedRoomIds,
-        joinObjectIds: [] as string[],
-        candidateCount: prunedRoomIds.length,
-        unjoinGroupId: groupId,
-        blockedReason: connected
-          ? null
-          : 'Selected rooms must touch or overlap to join',
-      }
-    }
-
-    // Case C: single selected/active room + geometric neighbours.
-    const joinTargetRoomId = selectedRoomId ?? activeRoomId
-    if (!joinTargetRoomId || frames.length < 2) {
+    // Case C: selected/active room + geometric neighbours. When a booth
+    // (or other non-joinable asset) is still selected, use the active room
+    // from the sidebar — not a stale canvas room pick — so Join still works.
+    const joinTargetRoomId =
+      singleSelectedObj && !isJoinableObject(singleSelectedObj)
+        ? activeRoomId
+        : (selectedRoomId ?? activeRoomId)
+    if (!joinTargetRoomId) {
       return empty
     }
     const target = frames.find((f) => f.id === joinTargetRoomId)
@@ -1375,7 +1412,7 @@ export function FloorPlanV2({
       blockedReason:
         candidateCount > 0
           ? null
-          : 'Move rooms flush together (within ~5px), then Join',
+          : 'Move rooms flush together (within ~5 in), then Join',
     }
   }, [
     store.doc.rooms,
@@ -1399,38 +1436,153 @@ export function FloorPlanV2({
     return count
   }, [store.doc.rooms])
 
-  const handleJoinRooms = useCallback(() => {
-    if (!joinPlan.canJoin) {
-      if (joinPlan.blockedReason) {
-        toast.message(joinPlan.blockedReason, { duration: 2200 })
+  const destructiveMergePlan = useMemo(() => {
+    let joinRoomIds = [...joinPlan.joinRoomIds]
+    let joinObjectIds = [...joinPlan.joinObjectIds]
+
+    if (joinRoomIds.length + joinObjectIds.length < 2) {
+      const frames = store.doc.rooms ?? []
+      const selected = Array.from(store.selectedIds)
+      const joinableSelected = store.doc.objects.filter(
+        (o) => selected.includes(o.id) && isJoinableObject(o)
+      )
+      if (joinableSelected.length >= 1 && frames.length >= 1) {
+        for (const obj of joinableSelected) {
+          for (const frame of frames) {
+            if (frame.mergedIntoObjectId) continue
+            if (!objectFrameOverlapsOrTouches(obj, frame)) continue
+            if (!joinRoomIds.includes(frame.id)) joinRoomIds.push(frame.id)
+            if (!joinObjectIds.includes(obj.id)) joinObjectIds.push(obj.id)
+          }
+        }
+      }
+    }
+
+    const total = joinRoomIds.length + joinObjectIds.length
+    return {
+      canMerge: total >= 2,
+      joinRoomIds,
+      joinObjectIds,
+      count: total,
+    }
+  }, [
+    joinPlan.joinObjectIds,
+    joinPlan.joinRoomIds,
+    store.doc.objects,
+    store.doc.rooms,
+    store.selectedIds,
+  ])
+
+  const shapeMergePlan = useMemo(() => {
+    const selected = Array.from(store.selectedIds)
+    const eligible = store.doc.objects.filter(
+      (o) => selected.includes(o.id) && isMergeUnionEligible(o)
+    )
+    const hasRoomParticipant = destructiveMergePlan.joinRoomIds.length > 0
+    const objectOnly =
+      eligible.length >= 2 &&
+      !hasRoomParticipant &&
+      !joinableObjectsOverlapAnyRoom(eligible, store.doc.rooms ?? [])
+    return {
+      canMergeShapes: objectOnly,
+      objectIds: eligible.map((o) => o.id),
+      count: eligible.length,
+    }
+  }, [
+    destructiveMergePlan.joinRoomIds.length,
+    store.doc.objects,
+    store.doc.rooms,
+    store.selectedIds,
+  ])
+
+  const canMerge =
+    destructiveMergePlan.canMerge || shapeMergePlan.canMergeShapes
+
+  const mergeBlockedReason = canMerge
+    ? null
+    : joinPlan.blockedReason ??
+      'Overlap or touch a stage against a room (or select two fixtures), then Merge'
+
+  const runDestructiveMerge = useCallback(() => {
+    if (!destructiveMergePlan.canMerge) {
+      if (mergeBlockedReason) {
+        toast.message(mergeBlockedReason, { duration: 2200 })
       }
       return
     }
-    const totalParticipants =
-      joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
-    if (totalParticipants < 2) return
-    const groupId = store.joinSelection({
-      roomIds: joinPlan.joinRoomIds,
-      objectIds: joinPlan.joinObjectIds,
+    const result = store.destructiveMerge({
+      roomIds: destructiveMergePlan.joinRoomIds,
+      objectIds: destructiveMergePlan.joinObjectIds,
     })
-    if (!groupId) return
-    const roomCount = joinPlan.joinRoomIds.length
-    const objectCount = joinPlan.joinObjectIds.length
-    const summary =
-      objectCount > 0
-        ? `Joined ${roomCount} room${roomCount === 1 ? '' : 's'} + ${objectCount} fixture${objectCount === 1 ? '' : 's'} — perimeter walls extended.`
-        : `Joined ${roomCount} rooms into one zone — interior walls dissolved.`
-    toast.success(summary, { duration: 1800 })
-  }, [joinPlan, store])
+    if (!result.mergedId) {
+      if (result.reason) toast.message(result.reason, { duration: 2200 })
+      return
+    }
+    setSelectedRoomIds(new Set())
+    setSelectedRoomId(null)
+    toast.success(
+      'Merged into one shape — original paths replaced, interior edges removed.',
+      { duration: 2000 }
+    )
+  }, [destructiveMergePlan, mergeBlockedReason, store])
+
+  const handleMerge = useCallback(() => {
+    if (destructiveMergePlan.canMerge) {
+      runDestructiveMerge()
+      return
+    }
+    if (shapeMergePlan.canMergeShapes) {
+      const result = store.mergeUnionSelection(shapeMergePlan.objectIds)
+      if (result.mergedId) {
+        setSelectedRoomIds(new Set())
+        setSelectedRoomId(null)
+        toast.success('Merged into one shape — shared edges removed.', {
+          duration: 1800,
+        })
+      } else if (result.reason) {
+        toast.message(result.reason, { duration: 2200 })
+      }
+      return
+    }
+    runDestructiveMerge()
+  }, [
+    destructiveMergePlan.canMerge,
+    runDestructiveMerge,
+    shapeMergePlan,
+    store,
+  ])
+
+  const selectedMergedZoneId = useMemo(() => {
+    for (const id of store.selectedIds) {
+      const o = store.doc.objects.find((x) => x.id === id)
+      if (o?.kind === 'merged_zone') return id
+    }
+    const frames = store.doc.rooms ?? []
+    for (const f of frames) {
+      if (f.mergedIntoObjectId && store.selectedIds.has(f.id)) {
+        return f.mergedIntoObjectId
+      }
+    }
+    return null
+  }, [store.doc.objects, store.doc.rooms, store.selectedIds])
+
+  const canSplitMerge = selectedMergedZoneId !== null || joinPlan.unjoinGroupId !== null
 
   const handleUnjoinRoom = useCallback(() => {
+    if (selectedMergedZoneId) {
+      store.splitDestructiveMerge(selectedMergedZoneId)
+      toast.message('Merge split — room outlines restored (use Undo to recover stages).', {
+        duration: 2000,
+      })
+      return
+    }
     const groupId = joinPlan.unjoinGroupId
     if (!groupId) return
     store.unjoinRooms(groupId)
     toast.message('Joined zone split — each member is standalone again.', {
       duration: 1500,
     })
-  }, [joinPlan.unjoinGroupId, store])
+  }, [joinPlan.unjoinGroupId, selectedMergedZoneId, store])
 
   return (
     <div
@@ -1537,16 +1689,19 @@ export function FloorPlanV2({
             autoArrangeMode={autoArrangeMode}
             onAutoArrangeModeChange={setAutoArrangeMode}
             onAddPerimeterWalls={handleAddPerimeterWalls}
-            onJoinRooms={handleJoinRooms}
-            canJoinRooms={joinPlan.canJoin}
+            onJoinRooms={handleMerge}
+            canJoinRooms={canMerge}
             joinCandidateCount={
-              joinPlan.canJoin
-                ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
-                : undefined
+              destructiveMergePlan.canMerge
+                ? destructiveMergePlan.count
+                : shapeMergePlan.canMergeShapes
+                  ? shapeMergePlan.count
+                  : undefined
             }
-            joinBlockedReason={joinPlan.blockedReason}
+            joinBlockedReason={mergeBlockedReason}
+            mergePrefersShapes={shapeMergePlan.canMergeShapes}
             onUnjoinRoom={handleUnjoinRoom}
-            canUnjoinRoom={joinPlan.unjoinGroupId !== null}
+            canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
             rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
@@ -1597,16 +1752,19 @@ export function FloorPlanV2({
             autoArrangeMode={autoArrangeMode}
             onAutoArrangeModeChange={setAutoArrangeMode}
             onAddPerimeterWalls={handleAddPerimeterWalls}
-            onJoinRooms={handleJoinRooms}
-            canJoinRooms={joinPlan.canJoin}
+            onJoinRooms={handleMerge}
+            canJoinRooms={canMerge}
             joinCandidateCount={
-              joinPlan.canJoin
-                ? joinPlan.joinRoomIds.length + joinPlan.joinObjectIds.length
-                : undefined
+              destructiveMergePlan.canMerge
+                ? destructiveMergePlan.count
+                : shapeMergePlan.canMergeShapes
+                  ? shapeMergePlan.count
+                  : undefined
             }
-            joinBlockedReason={joinPlan.blockedReason}
+            joinBlockedReason={mergeBlockedReason}
+            mergePrefersShapes={shapeMergePlan.canMergeShapes}
             onUnjoinRoom={handleUnjoinRoom}
-            canUnjoinRoom={joinPlan.unjoinGroupId !== null}
+            canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
             rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
@@ -1649,6 +1807,7 @@ export function FloorPlanV2({
               activeRoomId={activeRoomId}
               selectedRoomId={selectedRoomId}
               onRoomFrameClick={handleRoomFrameClick}
+              onRoomGeometryCommit={handleRoomGeometryCommit}
               onViewportReady={handleViewportReady}
               onZoomChange={setCurrentZoom}
               eventCategoryNames={eventCategoryNames}
@@ -1669,7 +1828,7 @@ export function FloorPlanV2({
               }}
               onRoomCanvasLimitBlocked={() => {
                 toast.message(
-                  'Canvas limit reached — rooms cannot extend beyond 5× the primary room dimensions.',
+                  'Canvas limit reached — drag the primary (largest) room smaller or move annex rooms closer.',
                   { duration: 2200 }
                 )
               }}

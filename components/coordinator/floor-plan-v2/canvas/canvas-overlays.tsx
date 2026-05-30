@@ -99,6 +99,8 @@ function previewFill(kind: ObjectKind): string {
       return '#fca5a5'
     case 'label':
       return 'transparent'
+    case 'merged_zone':
+      return '#ccfbf1'
   }
 }
 
@@ -118,6 +120,8 @@ function previewStroke(kind: ObjectKind): string {
       return '#991b1b'
     case 'label':
       return '#57534e'
+    case 'merged_zone':
+      return '#0f766e'
   }
 }
 

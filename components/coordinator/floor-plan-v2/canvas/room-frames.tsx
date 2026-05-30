@@ -32,9 +32,9 @@ const PERIMETER_STROKE = '#1c1917'
 const PERIMETER_STROKE_ACTIVE = '#0f766e'
 const PERIMETER_STROKE_SELECTED = '#0f766e'
 const PERIMETER_STROKE_MERGED = '#15803d'
-/** Joined zone uses primary-room chrome (active hall), not stage/fixture colors. */
-const JOINED_ZONE_FILL = '#ef4444'
-const JOINED_ZONE_STROKE = '#b91c1c'
+/** Dissolved join zone — matches active hall chrome, not fixture colors. */
+const JOINED_ZONE_FILL = '#0f766e'
+const JOINED_ZONE_STROKE = '#0f766e'
 const PERIMETER_WIDTH = 2.5
 const PERIMETER_WIDTH_SELECTED = 3.5
 const PERIMETER_WIDTH_JOINED = 3.5
@@ -75,6 +75,7 @@ function RoomFramesBase({
   const groupMembers = useMemo(() => {
     const out = new Map<string, RoomFrame[]>()
     for (const f of frames) {
+      if (f.mergedIntoObjectId) continue
       if (!f.joinGroupId) continue
       if (!out.has(f.joinGroupId)) out.set(f.joinGroupId, [])
       out.get(f.joinGroupId)!.push(f)
@@ -109,6 +110,12 @@ function RoomFramesBase({
       members: RoomFrame[]
       objects: PlacedObject[]
       pathData: string
+      perimeterLines: Array<{
+        x1: number
+        y1: number
+        x2: number
+        y2: number
+      }>
       labelX: number
       labelY: number
       width: number
@@ -142,6 +149,12 @@ function RoomFramesBase({
         segments.push('Z')
       }
       const pathData = segments.join(' ')
+      const perimeterLines = zone.perimeterWalls.map(([a, b]) => ({
+        x1: a[0] * pxPerFt,
+        y1: a[1] * pxPerFt,
+        x2: b[0] * pxPerFt,
+        y2: b[1] * pxPerFt,
+      }))
       // Anchor the label to the top-left-most participant (room or
       // joinable object), so a stage annexed to the upper edge of
       // a hall can host the label too.
@@ -191,6 +204,7 @@ function RoomFramesBase({
         members,
         objects: groupObjs,
         pathData,
+        perimeterLines,
         labelX: anchorX * pxPerFt,
         labelY: anchorY * pxPerFt,
         width: (zone.aabb.maxX - zone.aabb.minX) * pxPerFt,
@@ -217,12 +231,17 @@ function RoomFramesBase({
     joinedNeighbors.get(b)!.add(a)
   }
   const nameById = new Map(frames.map((f) => [f.id, f.name]))
-  // Frames that belong to an explicit join group skip their
-  // individual perimeter outline — the dissolved zone polygon
-  // renders the outer wall instead.
+  // Any room in a join group with 2+ participants (rooms and/or
+  // joinable fixtures) dissolves its box — one outer perimeter only.
   const joinedFrameIds = new Set<string>()
-  for (const members of groupMembers.values()) {
-    if (members.length < 2) continue
+  const explicitJoinGroupIds = new Set<string>([
+    ...groupMembers.keys(),
+    ...groupObjects.keys(),
+  ])
+  for (const groupId of explicitJoinGroupIds) {
+    const members = groupMembers.get(groupId) ?? []
+    const objs = groupObjects.get(groupId) ?? []
+    if (members.length + objs.length < 2) continue
     for (const m of members) joinedFrameIds.add(m.id)
   }
 
@@ -233,17 +252,51 @@ function RoomFramesBase({
           still float on top. */}
       {joinedZones.map((zone) => (
         <g key={`joined-${zone.groupId}`} data-joined-group={zone.groupId}>
-          <path
-            d={zone.pathData}
-            fill={JOINED_ZONE_FILL}
-            fillOpacity={JOINED_ZONE_FILL_OPACITY}
-            stroke={JOINED_ZONE_STROKE}
-            strokeWidth={PERIMETER_WIDTH_JOINED}
-            strokeLinejoin="round"
-            shapeRendering="geometricPrecision"
-            pointerEvents="all"
-            data-joined-zone-path={zone.groupId}
-          />
+          {zone.pathData ? (
+            <path
+              d={zone.pathData}
+              fill={JOINED_ZONE_FILL}
+              fillOpacity={JOINED_ZONE_FILL_OPACITY}
+              stroke="none"
+              shapeRendering="geometricPrecision"
+              pointerEvents="all"
+              data-joined-zone-path={zone.groupId}
+              data-room-stroke="true"
+              data-room-id={zone.members[0]?.id ?? zone.groupId}
+              style={{ cursor: 'grab' }}
+            />
+          ) : null}
+          <g data-joined-zone-walls={zone.groupId}>
+            {zone.perimeterLines.map((line, idx) => (
+              <g key={`${zone.groupId}-wall-${idx}`}>
+                <line
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke="transparent"
+                  strokeWidth={14}
+                  strokeLinecap="square"
+                  pointerEvents="stroke"
+                  data-room-stroke="true"
+                  data-room-id={zone.members[0]?.id ?? zone.groupId}
+                  style={{ cursor: 'grab' }}
+                />
+                <line
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke={JOINED_ZONE_STROKE}
+                  strokeWidth={PERIMETER_WIDTH_JOINED}
+                  strokeLinecap="square"
+                  shapeRendering="geometricPrecision"
+                  pointerEvents="none"
+                  data-joined-zone-path={zone.groupId}
+                />
+              </g>
+            ))}
+          </g>
           <g pointerEvents="none">
             {showLabels
               ? (() => {
@@ -286,6 +339,7 @@ function RoomFramesBase({
       ))}
 
       {frames.map((frame) => {
+        if (frame.mergedIntoObjectId) return null
         const x = frame.originX * pxPerFt
         const y = frame.originY * pxPerFt
         const w = frame.widthFt * pxPerFt
@@ -293,7 +347,8 @@ function RoomFramesBase({
         const isActive = activeRoomId === frame.id
         const isSelected = selectedRoomId === frame.id
         const isJoined = joinedFrameIds.has(frame.id)
-        const isMerged = (joinedNeighbors.get(frame.id)?.size ?? 0) > 0
+        const isMerged =
+          !isJoined && (joinedNeighbors.get(frame.id)?.size ?? 0) > 0
         const stroke = isSelected
           ? PERIMETER_STROKE_SELECTED
           : isMerged
@@ -348,21 +403,32 @@ function RoomFramesBase({
                   const x2 = (isHorizontal ? seg.to : seg.coord) * pxPerFt
                   const y2 = (isHorizontal ? seg.coord : seg.to) * pxPerFt
                   return (
-                    <line
-                      key={`${frame.id}-edge-${idx}`}
-                      x1={x1}
-                      y1={y1}
-                      x2={x2}
-                      y2={y2}
-                      stroke={stroke}
-                      strokeWidth={strokeWidth}
-                      strokeLinecap="square"
-                      data-room-id={frame.id}
-                      data-room-stroke="true"
-                      data-room-side={seg.side}
-                      pointerEvents="stroke"
-                      style={{ cursor: 'grab' }}
-                    />
+                    <g key={`${frame.id}-edge-${idx}`}>
+                      <line
+                        x1={x1}
+                        y1={y1}
+                        x2={x2}
+                        y2={y2}
+                        stroke="transparent"
+                        strokeWidth={14}
+                        strokeLinecap="square"
+                        data-room-id={frame.id}
+                        data-room-stroke="true"
+                        data-room-side={seg.side}
+                        pointerEvents="stroke"
+                        style={{ cursor: 'grab' }}
+                      />
+                      <line
+                        x1={x1}
+                        y1={y1}
+                        x2={x2}
+                        y2={y2}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="square"
+                        pointerEvents="none"
+                      />
+                    </g>
                   )
                 })
               : null}
@@ -396,7 +462,7 @@ function RoomFramesBase({
                 tag's bottom edge clears the perimeter stroke by a
                 consistent margin at every zoom level. */}
             <g pointerEvents="none">
-              {showLabels
+              {showLabels && !isJoined
                 ? (() => {
                     const tagH = 22
                     const tagGap = EXTERIOR_LABEL_OFFSET_PX

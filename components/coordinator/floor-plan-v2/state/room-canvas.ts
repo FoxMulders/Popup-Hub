@@ -39,7 +39,18 @@ export interface CanvasDimensionLimits {
 export function getPrimaryRoomFrame(
   frames: ReadonlyArray<RoomFrame>
 ): RoomFrame | null {
-  return frames[0] ?? null
+  if (frames.length === 0) return null
+  let primary = frames[0]!
+  let bestArea = primary.widthFt * primary.lengthFt
+  for (let i = 1; i < frames.length; i++) {
+    const f = frames[i]!
+    const area = f.widthFt * f.lengthFt
+    if (area > bestArea) {
+      bestArea = area
+      primary = f
+    }
+  }
+  return primary
 }
 
 export function canvasDimensionLimits(
@@ -53,6 +64,37 @@ export function canvasDimensionLimits(
   return {
     maxWidthFt: span,
     maxLengthFt: span,
+  }
+}
+
+/**
+ * Limits for clamping room drag/resize: at least the nominal 5× primary
+ * cap, the current canvas size, and the post-gesture room union (+ margin).
+ * Without this, `reconcileCanvasExtents` can grow the canvas past 5× while
+ * moves still hit the stricter cap and feel "stuck".
+ */
+export function limitsForRoomUnion(
+  frames: ReadonlyArray<RoomFrame>,
+  trialFrames: ReadonlyArray<RoomFrame>,
+  canvasWidthFt = 0,
+  canvasLengthFt = 0
+): CanvasDimensionLimits {
+  const nominal = canvasDimensionLimits(frames)
+  const bounds = roomUnionBounds(trialFrames)
+  const margin = UNIFIED_CANVAS_MARGIN_FT
+  const neededW = Math.max(50, bounds.maxX + margin)
+  const neededL = Math.max(50, bounds.maxY + margin)
+  return {
+    maxWidthFt: Math.max(
+      nominal?.maxWidthFt ?? neededW,
+      canvasWidthFt,
+      neededW
+    ),
+    maxLengthFt: Math.max(
+      nominal?.maxLengthFt ?? neededL,
+      canvasLengthFt,
+      neededL
+    ),
   }
 }
 
@@ -194,21 +236,23 @@ export function clampRoomMoveDelta(
   frames: ReadonlyArray<RoomFrame>,
   roomId: string,
   dx: number,
-  dy: number
+  dy: number,
+  options?: { canvasWidthFt?: number; canvasLengthFt?: number }
 ): { dx: number; dy: number } {
   if (dx === 0 && dy === 0) return { dx: 0, dy: 0 }
   const frame = frames.find((f) => f.id === roomId)
   if (!frame) return { dx: 0, dy: 0 }
+
+  const canvasW = options?.canvasWidthFt ?? 0
+  const canvasL = options?.canvasLengthFt ?? 0
 
   let outDx = dx
   let outDy = dy
   if (frame.originX + outDx < 0) outDx = -frame.originX
   if (frame.originY + outDy < 0) outDy = -frame.originY
 
-  const limits = canvasDimensionLimits(frames)
-  if (!limits) return { dx: outDx, dy: outDy }
-
   const trial = framesWithMovedRoom(frames, roomId, outDx, outDy)
+  const limits = limitsForRoomUnion(frames, trial, canvasW, canvasL)
   const bounds = roomUnionBounds(trial)
   if (bounds.maxX <= limits.maxWidthFt && bounds.maxY <= limits.maxLengthFt) {
     return { dx: outDx, dy: outDy }
@@ -226,9 +270,16 @@ export function clampRoomMoveDelta(
       hi = mid
       continue
     }
+    const moveLimits = limitsForRoomUnion(frames, moved, canvasW, canvasL)
     const b = roomUnionBounds(moved)
-    if (b.maxX <= limits.maxWidthFt && b.maxY <= limits.maxLengthFt) lo = mid
-    else hi = mid
+    if (
+      b.maxX <= moveLimits.maxWidthFt &&
+      b.maxY <= moveLimits.maxLengthFt
+    ) {
+      lo = mid
+    } else {
+      hi = mid
+    }
   }
   return { dx: outDx * lo, dy: outDy * lo }
 }
@@ -330,7 +381,8 @@ export function roomResizeFromHandle(
 export function clampRoomResizePatch(
   frames: ReadonlyArray<RoomFrame>,
   roomId: string,
-  patch: RoomResizePatch
+  patch: RoomResizePatch,
+  options?: { canvasWidthFt?: number; canvasLengthFt?: number }
 ): RoomResizePatch | null {
   const next = { ...patch }
   next.widthFt = Math.max(MIN_ROOM_DIMENSION_FT, next.widthFt)
@@ -338,10 +390,14 @@ export function clampRoomResizePatch(
   if (next.originX < 0) next.originX = 0
   if (next.originY < 0) next.originY = 0
 
-  const limits = canvasDimensionLimits(frames)
   const trial = framesWithResizedRoom(frames, roomId, next)
+  const limits = limitsForRoomUnion(
+    frames,
+    trial,
+    options?.canvasWidthFt ?? 0,
+    options?.canvasLengthFt ?? 0
+  )
   const bounds = roomUnionBounds(trial)
-  if (!limits) return next
   if (bounds.maxX <= limits.maxWidthFt && bounds.maxY <= limits.maxLengthFt) {
     return next
   }

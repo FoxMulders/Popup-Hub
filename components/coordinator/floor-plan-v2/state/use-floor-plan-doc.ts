@@ -21,6 +21,11 @@ import {
 } from '../interactions/room-perimeter-sync'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from './types'
 import { applyBoothObjectPatch } from './table-cluster-layout'
+import { mergeUnionSelectionInDoc } from './merge-selection-union'
+import {
+  clearDestructiveMergeInDoc,
+  destructiveMergeInDoc,
+} from './destructive-merge'
 
 /**
  * useFloorPlanDoc — pure state hook for a v2 floor plan document.
@@ -199,6 +204,32 @@ export interface FloorPlanDocStore {
    */
   unjoinRooms: (
     groupId: string,
+    options?: { pushHistory?: boolean }
+  ) => void
+
+  /**
+   * Boolean Merge: replace 2+ selected architectural shapes with one
+   * `merged_zone` path (union perimeter, interior edges removed).
+   */
+  mergeUnionSelection: (
+    objectIds: ReadonlyArray<string>,
+    options?: { pushHistory?: boolean; select?: boolean }
+  ) => { mergedId: string | null; reason?: string }
+
+  /**
+   * Boolean union for rooms + stages: one `merged_zone` path, originals
+   * hidden/removed from the canvas.
+   */
+  destructiveMerge: (
+    selection: {
+      roomIds?: ReadonlyArray<string>
+      objectIds?: ReadonlyArray<string>
+    },
+    options?: { pushHistory?: boolean; select?: boolean }
+  ) => { mergedId: string | null; reason?: string }
+
+  splitDestructiveMerge: (
+    mergedObjectId: string,
     options?: { pushHistory?: boolean }
   ) => void
 
@@ -394,18 +425,27 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         frames,
         roomId,
         dx,
-        dy
+        dy,
+        {
+          canvasWidthFt: current.canvasWidthFt,
+          canvasLengthFt: current.canvasLengthFt,
+        }
       )
       if (clampedDx === 0 && clampedDy === 0) return false
 
       const anchor = frames.find((f) => f.id === roomId)
       if (!anchor) return false
 
+      const mergeId = anchor.mergedIntoObjectId
       const groupId = anchor.joinGroupId
       const movingRoomIds = new Set(
-        groupId
-          ? frames.filter((f) => f.joinGroupId === groupId).map((f) => f.id)
-          : [roomId]
+        mergeId
+          ? frames
+              .filter((f) => f.mergedIntoObjectId === mergeId)
+              .map((f) => f.id)
+          : groupId
+            ? frames.filter((f) => f.joinGroupId === groupId).map((f) => f.id)
+            : [roomId]
       )
 
       const objectRoom = current.objectRoom ?? {}
@@ -418,7 +458,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
             }
           : f
       )
-      const nextObjects = current.objects.map((o) => {
+      let nextObjects = current.objects.map((o) => {
         const ownerRoom = objectRoom[o.id]
         if (!ownerRoom || !movingRoomIds.has(ownerRoom)) return o
         return {
@@ -427,7 +467,18 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
           y: o.y + clampedDy,
         } as PlacedObject
       })
-      const extents = reconcileCanvasExtents(nextFrames)
+      if (mergeId) {
+        nextObjects = nextObjects.map((o) =>
+          o.id === mergeId
+            ? { ...o, x: o.x + clampedDx, y: o.y + clampedDy }
+            : o
+        ) as PlacedObject[]
+      }
+      const extents = reconcileCanvasExtents(
+        nextFrames,
+        undefined,
+        nextObjects
+      )
 
       let nextDoc: FloorPlanDoc = {
         ...current,
@@ -456,7 +507,10 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const oldFrame = frames.find((f) => f.id === roomId)
       if (!oldFrame) return false
 
-      const clamped = clampRoomResizePatch(frames, roomId, patch)
+      const clamped = clampRoomResizePatch(frames, roomId, patch, {
+        canvasWidthFt: current.canvasWidthFt,
+        canvasLengthFt: current.canvasLengthFt,
+      })
       const nextFrame = { ...oldFrame, ...clamped }
 
       const nextFrames = frames.map((f) => (f.id === roomId ? nextFrame : f))
@@ -666,6 +720,50 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     [commit]
   )
 
+  const mergeUnionSelection = useCallback<FloorPlanDocStore['mergeUnionSelection']>(
+    (objectIds, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const select = options?.select ?? true
+      const { doc: next, mergedId, reason } = mergeUnionSelectionInDoc(
+        docRef.current,
+        objectIds
+      )
+      if (!mergedId) return { mergedId: null, reason }
+      commit(next, pushHistory)
+      if (select) setSelectedIds(new Set([mergedId]))
+      return { mergedId }
+    },
+    [commit]
+  )
+
+  const destructiveMerge = useCallback<FloorPlanDocStore['destructiveMerge']>(
+    (selection, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const select = options?.select ?? true
+      const { doc: next, mergedId, reason } = destructiveMergeInDoc(
+        docRef.current,
+        selection
+      )
+      if (!mergedId) return { mergedId: null, reason }
+      commit(next, pushHistory)
+      if (select) setSelectedIds(new Set([mergedId]))
+      return { mergedId }
+    },
+    [commit]
+  )
+
+  const splitDestructiveMerge = useCallback<
+    FloorPlanDocStore['splitDestructiveMerge']
+  >(
+    (mergedObjectId, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const next = clearDestructiveMergeInDoc(docRef.current, mergedObjectId)
+      commit(next, pushHistory)
+      setSelectedIds(new Set())
+    },
+    [commit]
+  )
+
   const setSelection = useCallback((ids: Iterable<string>) => {
     setSelectedIds(new Set(ids))
   }, [])
@@ -747,6 +845,9 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       joinRooms,
       joinSelection,
       unjoinRooms,
+      mergeUnionSelection,
+      destructiveMerge,
+      splitDestructiveMerge,
       setSelection,
       toggleSelection,
       clearSelection,
@@ -772,6 +873,9 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       joinRooms,
       joinSelection,
       unjoinRooms,
+      mergeUnionSelection,
+      destructiveMerge,
+      splitDestructiveMerge,
       setSelection,
       toggleSelection,
       clearSelection,
