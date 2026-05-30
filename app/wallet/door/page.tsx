@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { buttonVariants } from '@/components/ui/button'
-import { WalletDoorCopyButton } from '@/components/wallet/wallet-door-copy-button'
+import { WalletQrPanel } from '@/components/wallet/wallet-qr-panel'
+import { buildWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { Banknote, QrCode } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +17,8 @@ export default async function WalletDoorPage({ searchParams }: Props) {
   const userId = parseWalletTopUpQrPayload(params.u ?? params.user ?? '')
 
   if (!userId) notFound()
+
+  const qrPayload = buildWalletTopUpQrPayload(userId)
 
   const supabase = await createClient()
   const {
@@ -33,48 +36,58 @@ export default async function WalletDoorPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4 py-10">
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
+    <div className="min-h-[100dvh] overflow-x-hidden bg-canvas">
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center px-3 py-6 sm:px-4 sm:py-10">
+        <div className="min-w-0 rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
           <div className="mb-4 flex items-center gap-2 text-forest">
-            <QrCode className="h-5 w-5" />
-            <h1 className="font-heading text-xl font-semibold text-foreground">Patron wallet</h1>
+            <QrCode className="h-5 w-5 shrink-0" />
+            <h1 className="font-heading text-lg font-semibold leading-snug text-foreground sm:text-xl">
+              Patron wallet
+            </h1>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Staff can scan this code to credit cash at the door. The wallet ID is below if you need to
-            paste it manually.
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Staff can scan this code to credit cash at the door or pay out your balance at exit.
           </p>
-          <div className="mt-5 rounded-xl border bg-canvas p-4 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Wallet ID
-            </p>
-            <p className="mt-2 break-all font-mono text-xs text-foreground">{userId}</p>
-            <WalletDoorCopyButton value={userId} className="mt-3" />
+
+          <div className="mt-5">
+            <WalletQrPanel
+              title="Scan at the door"
+              qrPayload={qrPayload}
+              copyValue={userId}
+              ariaLabel="Patron wallet QR for door staff"
+            />
           </div>
+
           {isCoordinator ? (
             <div className="mt-5 space-y-2">
               <Link
                 href={`/coordinator/wallet-topup?u=${userId}`}
                 className={cn(
                   buttonVariants({
-                    className: 'w-full min-h-11 gap-2 bg-forest hover:bg-forest-deep',
+                    className:
+                      'w-full min-h-11 gap-2 touch-manipulation bg-forest hover:bg-forest-deep',
                   })
                 )}
               >
-                <Banknote className="h-4 w-4" />
+                <Banknote className="h-4 w-4 shrink-0" />
                 Credit wallet (top-up)
               </Link>
               <Link
                 href={`/coordinator/wallet-topup?u=${userId}&mode=payout`}
-                className={cn(buttonVariants({ variant: 'outline', className: 'w-full min-h-11 gap-2' }))}
+                className={cn(
+                  buttonVariants({
+                    variant: 'outline',
+                    className: 'w-full min-h-11 gap-2 touch-manipulation',
+                  })
+                )}
               >
-                <Banknote className="h-4 w-4" />
+                <Banknote className="h-4 w-4 shrink-0" />
                 Cash payout (reclaim)
               </Link>
             </div>
           ) : (
-            <p className="mt-5 text-center text-xs text-muted-foreground">
-              Coordinators: sign in to credit this wallet from the top-up desk.
+            <p className="mt-5 text-center text-xs leading-relaxed text-muted-foreground">
+              Coordinators: sign in to credit or pay out this wallet from the top-up desk.
             </p>
           )}
         </div>

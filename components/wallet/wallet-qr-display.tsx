@@ -11,13 +11,6 @@ interface WalletQrDisplayProps {
    */
   value: string
   /**
-   * Visual size in pixels of the SVG matrix itself. The component also
-   * applies an explicit `w-32 h-32` (or computed equivalent) on the
-   * outer card so layout stays stable even if the SVG fails to mount —
-   * matches the spec's "explicit fallback dimensions" requirement.
-   */
-  size?: number
-  /**
    * Accessible alt text. The QR image uses `role="img"` + this label
    * because react-qr-code emits a raw SVG without a built-in alt.
    */
@@ -26,20 +19,11 @@ interface WalletQrDisplayProps {
 }
 
 /**
- * Inline QR matrix renderer. Replaces the legacy
- * `walletTopUpQrImageUrl` flow (which proxied through
- * `api.qrserver.com` and failed silently when the third-party
- * service was unreachable, behind a corporate proxy, or rate-limited)
- * with a fully-local SVG render via `react-qr-code`.
- *
- * No network round-trip means no failure mode; scanners get a clean
- * matrix the instant the component paints. The fallback box keeps the
- * `w-32 h-32` floor even on the rare paint where `value` is empty,
- * so layout never collapses.
+ * Responsive QR matrix — scales to the container width on mobile (max 17rem)
+ * without forcing horizontal scroll.
  */
 export function WalletQrDisplay({
   value,
-  size = 160,
   ariaLabel = 'Wallet QR code for door staff',
   className,
 }: WalletQrDisplayProps) {
@@ -47,7 +31,7 @@ export function WalletQrDisplay({
     return (
       <div
         className={cn(
-          'mx-auto flex h-32 w-32 items-center justify-center rounded-lg border bg-stone-100 p-2 text-center text-[10px] text-muted-foreground',
+          'mx-auto flex aspect-square w-full max-w-[min(17rem,100%)] items-center justify-center rounded-xl border bg-stone-100 p-3 text-center text-[10px] text-muted-foreground',
           className
         )}
         role="img"
@@ -61,7 +45,7 @@ export function WalletQrDisplay({
   return (
     <div
       className={cn(
-        'mx-auto flex h-32 w-32 items-center justify-center rounded-lg border bg-white p-2',
+        'mx-auto flex aspect-square w-full max-w-[min(17rem,100%)] items-center justify-center rounded-xl border bg-white p-3 sm:p-4',
         className
       )}
       role="img"
@@ -69,11 +53,9 @@ export function WalletQrDisplay({
     >
       <QRCode
         value={value}
-        size={size}
-        // 100% lets the SVG fluidly fill the explicit-sized container
-        // so the matrix scales up cleanly on retina without blurring,
-        // while the parent enforces the `w-32 h-32` floor.
-        style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
+        size={256}
+        className="h-full w-full"
+        style={{ height: '100%', width: '100%', maxWidth: '100%' }}
       />
     </div>
   )

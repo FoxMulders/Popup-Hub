@@ -11,6 +11,8 @@ import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
 import type { Wallet, WalletTransaction } from '@/types/database'
 import { AlternativeDepositPanel } from '@/components/wallet/alternative-deposit-panel'
 import { WalletReclaimPanel } from '@/components/wallet/wallet-reclaim-panel'
+import { WalletAmountChips } from '@/components/wallet/wallet-amount-chips'
+import { WalletCardTitle } from '@/components/wallet/wallet-card-title'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Wallet as WalletIcon,
@@ -25,6 +27,7 @@ import {
   Gavel,
   Banknote,
   Send,
+  History,
 } from 'lucide-react'
 import Script from 'next/script'
 import { format } from 'date-fns'
@@ -153,7 +156,7 @@ export function WalletView({ wallet, transactions, userId, userEmail = '' }: Wal
   const balance = wallet?.balance ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5 sm:space-y-6">
       <Script
         src="https://web.squarecdn.com/v1/square.js"
         onLoad={() => setSquareLoaded(true)}
@@ -161,35 +164,41 @@ export function WalletView({ wallet, transactions, userId, userEmail = '' }: Wal
 
       {/* Balance card */}
       <Card className="overflow-hidden border-2 border-harvest-200 bg-gradient-to-br from-linen via-canvas to-harvest-50">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-harvest-500">
-              <WalletIcon className="h-6 w-6 text-white" />
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:items-center">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-harvest-500 sm:h-12 sm:w-12">
+              <WalletIcon className="h-5 w-5 text-white sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <p className="text-sm text-muted-foreground">Available Balance</p>
                 <Tooltip>
-                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
+                  <TooltipTrigger type="button" className="touch-manipulation">
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[min(18rem,calc(100vw-2rem))]">
                     Quarters for quarter auctions. 1 quarter = $0.25. Used for virtual paddles and bid
                     entries.
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-3xl font-bold text-foreground">{formatCents(balance)}</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground sm:text-3xl">
+                {formatCents(balance)}
+              </p>
               <p className="text-sm text-muted-foreground">{formatCredits(centsToCredits(balance))}</p>
             </div>
           </div>
 
           {paddleId ? (
-            <div className="mt-4 flex items-center gap-2">
-              <Coins className="h-4 w-4 text-harvest-500" />
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Coins className="h-4 w-4 shrink-0 text-harvest-500" />
               <span className="text-sm text-muted-foreground">Paddle ID:</span>
-              <Badge className="bg-harvest-500 font-mono text-white">#{paddleId}</Badge>
+              <Badge className="max-w-full truncate bg-harvest-500 font-mono text-white">
+                #{paddleId}
+              </Badge>
             </div>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
               Add funds to get a permanent Paddle ID for auctions.
             </p>
           )}
@@ -270,42 +279,56 @@ export function WalletView({ wallet, transactions, userId, userEmail = '' }: Wal
       </Card>
 
       {/* Transaction history */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            Transaction History
-            <Tooltip>
-              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-              <TooltipContent className="max-w-xs">A record of all deposits, withdrawals, auction drops, and winnings.</TooltipContent>
-            </Tooltip>
+      <Card className="min-w-0 overflow-hidden">
+        <CardHeader className="px-4 pb-2 sm:px-6">
+          <CardTitle className="text-base font-semibold">
+            <WalletCardTitle
+              icon={<History className="h-4 w-4 text-muted-foreground" />}
+              trailing={
+                <Tooltip>
+                  <TooltipTrigger type="button" className="touch-manipulation">
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[min(18rem,calc(100vw-2rem))]">
+                    A record of all deposits, withdrawals, auction drops, and winnings.
+                  </TooltipContent>
+                </Tooltip>
+              }
+            >
+              Transaction History
+            </WalletCardTitle>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
           {transactions.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">No transactions yet.</p>
           ) : (
-            <div className="space-y-1">
+            <ul className="divide-y divide-stone-100">
               {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-canvas">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 flex-shrink-0">
+                <li
+                  key={tx.id}
+                  className="flex gap-3 py-3 first:pt-0 last:pb-0 sm:items-center"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-100">
                     {txIcon(tx)}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">{txLabel(tx)}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm font-medium leading-snug text-foreground">{txLabel(tx)}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                       {format(new Date(tx.created_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
                   <span
-                    className={`text-sm font-semibold ${
+                    className={`shrink-0 self-start text-sm font-semibold tabular-nums sm:self-center ${
                       tx.amount > 0 ? 'text-green-600' : 'text-red-500'
                     }`}
                   >
-                    {tx.amount > 0 ? '+' : ''}{formatCents(tx.amount)}
+                    {tx.amount > 0 ? '+' : ''}
+                    {formatCents(tx.amount)}
                   </span>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </CardContent>
       </Card>

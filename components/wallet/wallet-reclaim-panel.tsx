@@ -10,8 +10,8 @@ import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
 import { BANKING_PORTAL_LINKS } from '@/lib/wallet/etransfer-config'
 import { buildWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
-import { WalletDoorCopyButton } from '@/components/wallet/wallet-door-copy-button'
-import { WalletQrDisplay } from '@/components/wallet/wallet-qr-display'
+import { WalletQrPanel } from '@/components/wallet/wallet-qr-panel'
+import { WalletCardTitle } from '@/components/wallet/wallet-card-title'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
 import type { WalletWithdrawalRequest } from '@/types/database'
 import {
@@ -141,10 +141,10 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
   const pendingEtransfer = pending.find((row) => row.method === 'etransfer')
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Reclaim leftover balance</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h2 className="text-lg font-semibold leading-snug text-foreground">Reclaim leftover balance</h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           At the end of the event, get unused wallet funds back by cash, Interac e-Transfer, or card
           refund.
         </p>
@@ -182,7 +182,7 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
               type="button"
               variant="outline"
               size="sm"
-              className="gap-1.5"
+              className="min-h-10 gap-1.5 touch-manipulation"
               disabled={submitting === pendingEtransfer.id}
               onClick={() => cancelPending(pendingEtransfer.id)}
             >
@@ -199,40 +199,37 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
 
       {availableCents > 0 ? (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Banknote className="h-4 w-4 text-forest" />
-                Cash at the door
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="px-4 pb-2 sm:px-6">
+              <CardTitle className="text-base font-semibold">
+                <WalletCardTitle icon={<Banknote className="h-4 w-4 text-forest" />}>
+                  Cash at the door
+                </WalletCardTitle>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+            <CardContent className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 Show this QR to staff at the exit. They&apos;ll scan it and pay you your remaining
                 balance in cash.
               </p>
-              <div className="rounded-xl border bg-canvas p-4 text-center">
-                <p className="mb-3 text-sm font-medium text-foreground">Show this QR for cash payout</p>
-                <WalletQrDisplay
-                  value={qrPayload}
-                  size={220}
-                  ariaLabel="Wallet reclaim QR code for door staff"
-                  className="h-44 w-44"
-                />
-                <p className="mt-3 break-all font-mono text-[10px] text-muted-foreground">{qrPayload}</p>
-                <WalletDoorCopyButton value={userId} className="mt-3" />
-              </div>
+              <WalletQrPanel
+                title="Show this QR for cash payout"
+                qrPayload={qrPayload}
+                copyValue={userId}
+                ariaLabel="Wallet reclaim QR code for door staff"
+              />
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Send className="h-4 w-4 text-blue-600" />
-                Interac e-Transfer
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="px-4 pb-2 sm:px-6">
+              <CardTitle className="text-base font-semibold">
+                <WalletCardTitle icon={<Send className="h-4 w-4 text-blue-600" />}>
+                  Interac e-Transfer
+                </WalletCardTitle>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
               <p className="text-sm text-muted-foreground">
                 Request an e-transfer payout. Event staff will send funds to your email after
                 confirming.
@@ -263,7 +260,7 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
               </div>
               <Button
                 type="button"
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="min-h-11 w-full touch-manipulation bg-blue-600 hover:bg-blue-700"
                 disabled={submitting === 'etransfer' || etransferAmount < 100}
                 onClick={startEtransferReclaim}
               >
@@ -276,17 +273,17 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Open your banking
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2 min-[400px]:grid-cols-3">
                   {BANKING_PORTAL_LINKS.map((bank) => (
                     <a
                       key={bank.href}
                       href={bank.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                      className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border px-2 py-2 text-center text-xs font-medium leading-tight hover:bg-muted touch-manipulation"
                     >
                       {bank.label}
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-3 w-3 shrink-0" />
                     </a>
                   ))}
                 </div>
@@ -295,14 +292,15 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
           </Card>
 
           {cardReclaimCents >= 100 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <CreditCard className="h-4 w-4 text-sage-600" />
-                  Refund to card
+            <Card className="min-w-0 overflow-hidden">
+              <CardHeader className="px-4 pb-2 sm:px-6">
+                <CardTitle className="text-base font-semibold">
+                  <WalletCardTitle icon={<CreditCard className="h-4 w-4 text-sage-600" />}>
+                    Refund to card
+                  </WalletCardTitle>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
                 <p className="text-sm text-muted-foreground">
                   Up to {formatCents(cardReclaimCents)} can be returned to the card you used to add
                   funds.
@@ -329,7 +327,7 @@ export function WalletReclaimPanel({ userId, userEmail, balanceCents }: WalletRe
                 </div>
                 <Button
                   type="button"
-                  className="w-full bg-sage-500 hover:bg-green-600 text-white"
+                  className="min-h-11 w-full touch-manipulation bg-sage-500 text-white hover:bg-green-600"
                   disabled={submitting === 'card' || cardAmount < 100}
                   onClick={refundToCard}
                 >

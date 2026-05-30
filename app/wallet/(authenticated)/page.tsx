@@ -33,15 +33,17 @@ export default async function WalletPage() {
       : { data: [] }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Digital Wallet</h1>
-      <WalletView
-        wallet={walletRow as Wallet | null}
-        transactions={(transactions as WalletTransaction[]) ?? []}
-        userId={user.id}
-        userEmail={user.email ?? ''}
-      />
-      <div className="mt-6">
+    <div className="wallet-page mx-auto min-w-0 w-full max-w-2xl overflow-x-hidden px-3 pt-4 pb-6 sm:px-4 sm:py-8 sm:pb-8">
+      <h1 className="mb-4 font-heading text-xl font-bold tracking-tight text-foreground sm:mb-6 sm:text-2xl">
+        Digital Wallet
+      </h1>
+      <div className="min-w-0 space-y-5 sm:space-y-6">
+        <WalletView
+          wallet={walletRow as Wallet | null}
+          transactions={(transactions as WalletTransaction[]) ?? []}
+          userId={user.id}
+          userEmail={user.email ?? ''}
+        />
         <BoothCheckout balance={walletRow?.balance ?? 0} userId={user.id} />
       </div>
     </div>

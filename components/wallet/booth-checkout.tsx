@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
 import { buildWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
-import { WalletQrDisplay } from '@/components/wallet/wallet-qr-display'
+import { WalletQrPanel } from '@/components/wallet/wallet-qr-panel'
+import { WalletCardTitle } from '@/components/wallet/wallet-card-title'
 import { Loader2, QrCode, Store } from 'lucide-react'
 
 interface BoothCheckoutProps {
@@ -73,41 +74,37 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Store className="h-4 w-4 text-forest" />
-          Pay at a booth
+    <Card className="min-w-0 overflow-hidden">
+      <CardHeader className="px-4 pb-2 sm:px-6">
+        <CardTitle className="text-base font-semibold">
+          <WalletCardTitle icon={<Store className="h-4 w-4 text-forest" />}>
+            Pay at a booth
+          </WalletCardTitle>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">
+      <CardContent className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
+        <p className="text-sm leading-relaxed text-muted-foreground">
           Scan a vendor&apos;s QR or enter their booth checkout code, then pay from your wallet balance.
         </p>
 
         <Button
           type="button"
           variant="outline"
-          className="w-full min-h-11 gap-2"
+          className="min-h-11 w-full touch-manipulation gap-2"
           onClick={() => setShowQr((v) => !v)}
         >
-          <QrCode className="h-4 w-4" />
+          <QrCode className="h-4 w-4 shrink-0" />
           {showQr ? 'Hide' : 'Show'} my wallet QR
         </Button>
 
-        {showQr && (
-          <div className="rounded-lg border bg-canvas p-4 text-center">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
-              Vendors and door staff can scan this to identify your wallet
-            </p>
-            <WalletQrDisplay
-              value={qrPayload}
-              size={160}
-              ariaLabel="Your wallet QR code"
-            />
-            <p className="mt-2 break-all font-mono text-[10px] text-muted-foreground">{qrPayload}</p>
-          </div>
-        )}
+        {showQr ? (
+          <WalletQrPanel
+            title="Vendors and door staff can scan this to identify your wallet"
+            qrPayload={qrPayload}
+            copyValue={userId}
+            ariaLabel="Your wallet QR code"
+          />
+        ) : null}
 
         <div className="space-y-3">
           <div className="space-y-1">
@@ -117,7 +114,9 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
               placeholder="From vendor booth QR"
               value={vendorId}
               onChange={(e) => setVendorId(e.target.value)}
-              className="min-h-11"
+              className="min-h-11 font-mono text-sm"
+              autoComplete="off"
+              spellCheck={false}
             />
           </div>
           <div className="space-y-1">
@@ -127,6 +126,9 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
               placeholder="Links receipt to this market"
               value={eventId}
               onChange={(e) => setEventId(e.target.value)}
+              className="min-h-11 font-mono text-sm"
+              autoComplete="off"
+              spellCheck={false}
             />
           </div>
           <div className="space-y-1">
@@ -136,6 +138,7 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
               type="number"
               min="0.01"
               step="0.01"
+              inputMode="decimal"
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -149,13 +152,14 @@ export function BoothCheckout({ balance, userId }: BoothCheckoutProps) {
               placeholder="What you bought"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="min-h-11"
             />
           </div>
         </div>
 
         <Button
           type="button"
-          className="w-full min-h-11 bg-forest hover:bg-forest-deep"
+          className="min-h-11 w-full touch-manipulation bg-forest hover:bg-forest-deep"
           disabled={paying || balance <= 0}
           onClick={payAtBooth}
         >
