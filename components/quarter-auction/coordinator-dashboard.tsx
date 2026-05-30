@@ -44,7 +44,7 @@ export function CoordinatorQuarterAuction({
   const [settingsForm, setSettingsForm] = useState({
     paddle_purchase_credits: String(initialSettings.paddle_purchase_credits),
     default_entry_credits: String(initialSettings.default_entry_credits),
-    paddle_pool_size: String(initialSettings.paddle_pool_size ?? 100),
+    paddle_pool_size: String(initialSettings.paddle_pool_size ?? 200),
     scheduled_start_at: initialSettings.scheduled_start_at
       ? initialSettings.scheduled_start_at.slice(0, 16)
       : eventStartAt.slice(0, 16),
@@ -721,7 +721,7 @@ export function CoordinatorQuarterAuction({
 
       <p className="text-xs text-muted-foreground">
         Paddles: {formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)} each · Pool:{' '}
-        {settings.paddle_pool_size ?? 100} numbers · Default item entry:{' '}
+        {settings.paddle_pool_size ?? 200} numbers · Default item entry:{' '}
         {formatCredits(settings.default_entry_credits)} (per item, per paddle at bid time)
       </p>
     </div>

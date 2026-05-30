@@ -21,6 +21,7 @@ import {
   BOOTH_STATUS_THEME,
   type BoothPlacementStatus,
 } from '@/lib/coordinator/booth-placement-status'
+import { isJoinableObject } from '../state/room-joins'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
@@ -447,6 +448,9 @@ function CanvasObjectsBase({
         // the unified outer wall. Suppress the per-object stroke
         // so the two boundaries don't double up.
         const isJoined = !!obj.joinGroupId
+        const hideJoinedFixtureBody = isJoined && isJoinableObject(obj)
+        const displayFill = hideJoinedFixtureBody ? 'transparent' : patternFill ?? fill
+        const displayFillOpacity = hideJoinedFixtureBody ? 0 : 0.85
         const stroke = isJoined && !isSelected && !isOverlapping
           ? 'transparent'
           : strokeForObject(
@@ -531,8 +535,8 @@ function CanvasObjectsBase({
                 y={y}
                 width={w}
                 height={h}
-                fill={patternFill ?? fill}
-                fillOpacity={0.85}
+                fill={displayFill}
+                fillOpacity={displayFillOpacity}
                 stroke={stroke}
                 strokeWidth={strokeWidth}
                 strokeDasharray={

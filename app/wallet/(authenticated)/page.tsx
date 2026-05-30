@@ -32,6 +32,14 @@ export default async function WalletPage() {
           .limit(30)
       : { data: [] }
 
+  const { data: eventPaddles } = await supabase
+    .from('event_paddles')
+    .select('paddle_number')
+    .eq('user_id', user.id)
+    .order('purchased_at', { ascending: false })
+
+  const paddleNumbers = (eventPaddles ?? []).map((p) => p.paddle_number as string)
+
   return (
     <div className="wallet-page mx-auto min-w-0 w-full max-w-2xl overflow-x-hidden px-3 pt-4 pb-6 sm:px-4 sm:py-8 sm:pb-8">
       <h1 className="mb-4 font-heading text-xl font-bold tracking-tight text-foreground sm:mb-6 sm:text-2xl">
@@ -41,6 +49,7 @@ export default async function WalletPage() {
         <WalletView
           wallet={walletRow as Wallet | null}
           transactions={(transactions as WalletTransaction[]) ?? []}
+          paddleNumbers={paddleNumbers}
           userId={user.id}
           userEmail={user.email ?? ''}
         />

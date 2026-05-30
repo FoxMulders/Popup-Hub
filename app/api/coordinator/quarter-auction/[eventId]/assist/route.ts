@@ -6,6 +6,7 @@ import { purchaseEventPaddles, fetchTakenPaddleNumbers } from '@/lib/quarter-auc
 import { registerStaffAssistedParticipation } from '@/lib/quarter-auction/participation'
 import { placeCatalogBidEntries } from '@/lib/quarter-auction/place-catalog-bid'
 import { lookupPatronById } from '@/lib/coordinator/patron-lookup'
+import { DEFAULT_PADDLE_POOL_SIZE } from '@/lib/quarter-auction/paddle-pool'
 
 interface RouteParams {
   params: Promise<{ eventId: string }>
@@ -187,7 +188,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       userId: patronUserId,
       rawNumbers,
       creditsPerPaddle: settings.paddle_purchase_credits,
-      poolSize: settings.paddle_pool_size ?? 100,
+      poolSize: settings.paddle_pool_size ?? DEFAULT_PADDLE_POOL_SIZE,
     })
 
     if (!purchase.ok) {

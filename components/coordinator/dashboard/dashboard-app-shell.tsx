@@ -5,7 +5,8 @@ export interface DashboardAppShellProps {
   header?: ReactNode
   left: ReactNode
   center: ReactNode
-  right: ReactNode
+  /** Omitted on booth designer — payment telemetry lives under Payments. */
+  right?: ReactNode | null
   /** Hides side columns; header should be minimal (back link only). */
   immersive?: boolean
   className?: string
@@ -31,7 +32,7 @@ export function DashboardAppShell({
   className,
   leftLabel = 'Curation and navigation',
   centerLabel = 'Primary workspace',
-  rightLabel = 'Telemetry and sync desk',
+  rightLabel = 'Inspector',
   id = 'coordinator-dashboard-root',
   ariaBusy,
 }: DashboardAppShellProps) {
@@ -81,7 +82,7 @@ export function DashboardAppShell({
         >
           {center}
         </section>
-        {immersive ? null : (
+        {immersive || !right ? null : (
           <aside
             className="ecosystem-panel dashboard-app-shell__right min-h-0 overflow-hidden"
             aria-label={rightLabel}

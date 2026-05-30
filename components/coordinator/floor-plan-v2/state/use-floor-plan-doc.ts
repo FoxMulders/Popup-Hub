@@ -12,9 +12,13 @@ import {
 import {
   roomFrameCenter,
   roomRotateDeltaDeg,
-  rotateObjectInRoom,
   rotateRoomFrame90,
 } from './rotate-room-frame'
+import {
+  reconcileRoomPerimeterChildren,
+  rotateRoomChildren,
+  transformObjectsOnRoomResize,
+} from '../interactions/room-perimeter-sync'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from './types'
 import { applyBoothObjectPatch } from './table-cluster-layout'
 
@@ -394,9 +398,19 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       )
       if (clampedDx === 0 && clampedDy === 0) return false
 
+      const anchor = frames.find((f) => f.id === roomId)
+      if (!anchor) return false
+
+      const groupId = anchor.joinGroupId
+      const movingRoomIds = new Set(
+        groupId
+          ? frames.filter((f) => f.joinGroupId === groupId).map((f) => f.id)
+          : [roomId]
+      )
+
       const objectRoom = current.objectRoom ?? {}
       const nextFrames = frames.map((f) =>
-        f.id === roomId
+        movingRoomIds.has(f.id)
           ? {
               ...f,
               originX: f.originX + clampedDx,
@@ -405,7 +419,8 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
           : f
       )
       const nextObjects = current.objects.map((o) => {
-        if (objectRoom[o.id] !== roomId) return o
+        const ownerRoom = objectRoom[o.id]
+        if (!ownerRoom || !movingRoomIds.has(ownerRoom)) return o
         return {
           ...o,
           x: o.x + clampedDx,
@@ -414,16 +429,18 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       })
       const extents = reconcileCanvasExtents(nextFrames)
 
-      commit(
-        {
-          ...current,
-          objects: nextObjects,
-          rooms: nextFrames,
-          canvasWidthFt: extents.canvasWidthFt,
-          canvasLengthFt: extents.canvasLengthFt,
-        },
-        pushHistory
-      )
+      let nextDoc: FloorPlanDoc = {
+        ...current,
+        objects: nextObjects,
+        rooms: nextFrames,
+        canvasWidthFt: extents.canvasWidthFt,
+        canvasLengthFt: extents.canvasLengthFt,
+      }
+      for (const id of movingRoomIds) {
+        nextDoc = reconcileRoomPerimeterChildren(nextDoc, id)
+      }
+
+      commit(nextDoc, pushHistory)
       return true
     },
     [commit]
@@ -436,22 +453,35 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const frames = current.rooms ?? []
       if (frames.length === 0) return false
 
+      const oldFrame = frames.find((f) => f.id === roomId)
+      if (!oldFrame) return false
+
       const clamped = clampRoomResizePatch(frames, roomId, patch)
+      const nextFrame = { ...oldFrame, ...clamped }
 
-      const nextFrames = frames.map((f) =>
-        f.id === roomId ? { ...f, ...clamped } : f
+      const nextFrames = frames.map((f) => (f.id === roomId ? nextFrame : f))
+      const objectRoom = current.objectRoom ?? {}
+      const nextObjects = transformObjectsOnRoomResize(
+        current.objects,
+        objectRoom,
+        roomId,
+        oldFrame,
+        nextFrame
       )
-      const extents = reconcileCanvasExtents(nextFrames)
+      const extents = reconcileCanvasExtents(nextFrames, undefined, nextObjects)
 
-      commit(
+      const nextDoc = reconcileRoomPerimeterChildren(
         {
           ...current,
+          objects: nextObjects,
           rooms: nextFrames,
           canvasWidthFt: extents.canvasWidthFt,
           canvasLengthFt: extents.canvasLengthFt,
         },
-        pushHistory
+        roomId
       )
+
+      commit(nextDoc, pushHistory)
       return true
     },
     [commit]
@@ -460,54 +490,67 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
   const rotateRoomFrame = useCallback<FloorPlanDocStore['rotateRoomFrame']>(
     (roomId, direction, options) => {
       const pushHistory = options?.pushHistory ?? true
-      const current = docRef.current
-      const frames = current.rooms ?? []
-      const frame = frames.find((f) => f.id === roomId)
-      if (!frame) return null
+      let working = docRef.current
+      const frames = working.rooms ?? []
+      const anchor = frames.find((f) => f.id === roomId)
+      if (!anchor) return null
 
-      const roomCenter = roomFrameCenter(frame)
+      const groupId = anchor.joinGroupId
+      const rotatingIds = groupId
+        ? frames.filter((f) => f.joinGroupId === groupId).map((f) => f.id)
+        : [roomId]
+
       const deltaDeg = roomRotateDeltaDeg(direction)
-      let rotatedFrame = rotateRoomFrame90(frame, direction)
 
-      let fixDx = 0
-      let fixDy = 0
-      if (rotatedFrame.originX < 0) fixDx = -rotatedFrame.originX
-      if (rotatedFrame.originY < 0) fixDy = -rotatedFrame.originY
-      if (fixDx !== 0 || fixDy !== 0) {
-        rotatedFrame = {
-          ...rotatedFrame,
-          originX: rotatedFrame.originX + fixDx,
-          originY: rotatedFrame.originY + fixDy,
+      for (const id of rotatingIds) {
+        const frame = (working.rooms ?? []).find((f) => f.id === id)
+        if (!frame) continue
+
+        const roomCenter = roomFrameCenter(frame)
+        let rotatedFrame = rotateRoomFrame90(frame, direction)
+
+        let fixDx = 0
+        let fixDy = 0
+        if (rotatedFrame.originX < 0) fixDx = -rotatedFrame.originX
+        if (rotatedFrame.originY < 0) fixDy = -rotatedFrame.originY
+        if (fixDx !== 0 || fixDy !== 0) {
+          rotatedFrame = {
+            ...rotatedFrame,
+            originX: rotatedFrame.originX + fixDx,
+            originY: rotatedFrame.originY + fixDy,
+          }
         }
+
+        const nextFrames = (working.rooms ?? []).map((f) =>
+          f.id === id ? rotatedFrame : f
+        )
+        const objectRoom = working.objectRoom ?? {}
+        const nextObjects = rotateRoomChildren(
+          working.objects,
+          objectRoom,
+          id,
+          roomCenter,
+          deltaDeg,
+          fixDx,
+          fixDy
+        )
+        const extents = reconcileCanvasExtents(nextFrames, undefined, nextObjects)
+
+        working = reconcileRoomPerimeterChildren(
+          {
+            ...working,
+            objects: nextObjects,
+            rooms: nextFrames,
+            canvasWidthFt: extents.canvasWidthFt,
+            canvasLengthFt: extents.canvasLengthFt,
+          },
+          id,
+          { perimeterOnlyBoothOrient: true }
+        )
       }
 
-      const nextFrames = frames.map((f) =>
-        f.id === roomId ? rotatedFrame : f
-      )
-
-      const objectRoom = current.objectRoom ?? {}
-      const nextObjects = current.objects.map((o) => {
-        if (objectRoom[o.id] !== roomId) return o
-        if (o.locked) return o
-        const patch = rotateObjectInRoom(o, roomCenter, deltaDeg)
-        return {
-          ...o,
-          ...patch,
-          x: patch.x + fixDx,
-          y: patch.y + fixDy,
-        } as PlacedObject
-      })
-      const extents = reconcileCanvasExtents(nextFrames, undefined, nextObjects)
-
-      const nextDoc: FloorPlanDoc = {
-        ...current,
-        objects: nextObjects,
-        rooms: nextFrames,
-        canvasWidthFt: extents.canvasWidthFt,
-        canvasLengthFt: extents.canvasLengthFt,
-      }
-      commit(nextDoc, pushHistory)
-      return nextDoc
+      commit(working, pushHistory)
+      return working
     },
     [commit]
   )

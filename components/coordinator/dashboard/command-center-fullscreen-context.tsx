@@ -22,7 +22,8 @@ const CommandCenterFullscreenContext =
   createContext<CommandCenterFullscreenContextValue | null>(null)
 
 export function CommandCenterFullscreenProvider({ children }: { children: ReactNode }) {
-  const [fullscreen, setFullscreen] = useState(false)
+  /** Blueprint-first: full-width canvas hides curation/telemetry chrome by default. */
+  const [fullscreen, setFullscreen] = useState(true)
 
   useEffect(() => {
     const root = document.documentElement

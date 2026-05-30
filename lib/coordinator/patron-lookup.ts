@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { ensureWallet } from '@/lib/wallet/credit-deposit'
+import { normalizeWalletPaddleIdQuery } from '@/lib/wallet/paddle-id'
 import { getAuctionParticipation } from '@/lib/quarter-auction/participation'
 import { centsToCredits } from '@/lib/quarter-auction/credits'
 
@@ -93,13 +94,26 @@ export async function lookupPatrons(
     userIds.add(query)
   }
 
-  if (/^\d{4}$/.test(query)) {
+  const paddleId = normalizeWalletPaddleIdQuery(query)
+  if (paddleId) {
     const { data: walletRows } = await supabase
       .from('wallets')
       .select('user_id')
-      .eq('paddle_id', query)
+      .eq('paddle_id', paddleId)
     for (const row of walletRows ?? []) {
       if (row.user_id) userIds.add(row.user_id as string)
+    }
+  } else {
+    const hexSuffix = query.replace(/^#+/, '').replace(/^P-?/i, '')
+    if (/^[A-F0-9]{4,8}$/i.test(hexSuffix)) {
+      const { data: walletRows } = await supabase
+        .from('wallets')
+        .select('user_id')
+        .ilike('paddle_id', `P-%${hexSuffix.toUpperCase()}%`)
+        .limit(12)
+      for (const row of walletRows ?? []) {
+        if (row.user_id) userIds.add(row.user_id as string)
+      }
     }
   }
 

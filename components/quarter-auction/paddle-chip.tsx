@@ -5,22 +5,16 @@ import type { PaddleChipTier } from '@/lib/quarter-auction/paddle-pool'
 
 export type PaddleChipState = 'available' | 'taken' | 'owned' | 'selected'
 
-const TIER_STYLES: Record<
-  PaddleChipTier,
-  { rim: string; face: string; text: string; edge: string }
-> = {
-  white: {
-    rim: 'bg-stone-100',
-    face: 'bg-white',
-    text: 'text-stone-900',
-    edge: 'border-stone-400',
-  },
-  green: {
-    rim: 'bg-emerald-800',
-    face: 'bg-emerald-600',
-    text: 'text-white',
-    edge: 'border-emerald-900',
-  },
+const TIER_FACE: Record<PaddleChipTier, { face: string; text: string }> = {
+  white: { face: 'bg-white', text: 'text-stone-900' },
+  green: { face: 'bg-emerald-600', text: 'text-white' },
+}
+
+const TIER_RIM: Record<PaddleChipTier, string> = {
+  white:
+    'bg-[repeating-conic-gradient(from_0deg,#ffffff_0deg_14deg,#2563eb_14deg_28deg)]',
+  green:
+    'bg-[repeating-conic-gradient(from_0deg,#ffffff_0deg_14deg,#15803d_14deg_28deg)]',
 }
 
 interface PaddleChipProps {
@@ -29,9 +23,20 @@ interface PaddleChipProps {
   state: PaddleChipState
   onClick?: () => void
   disabled?: boolean
-  size?: 'md' | 'lg'
+  size?: 'md' | 'lg' | 'xl'
   selectableOwned?: boolean
+  spinning?: boolean
+  /** Slow continuous rotation (wallet hero). */
+  spinLoop?: boolean
+  /** Non-interactive display (no button, no state badges). */
+  presentation?: boolean
 }
+
+const SIZE_CLASSES = {
+  md: { outer: 'h-11 w-11 p-[3px]', inner: 'text-[10px]' },
+  lg: { outer: 'h-14 w-14 p-[3px]', inner: 'text-xs' },
+  xl: { outer: 'h-28 w-28 p-1 sm:h-32 sm:w-32', inner: 'text-xl sm:text-2xl' },
+} as const
 
 export function PaddleChip({
   number,
@@ -41,16 +46,67 @@ export function PaddleChip({
   disabled,
   size = 'md',
   selectableOwned = false,
+  spinning = false,
+  spinLoop = false,
+  presentation = false,
 }: PaddleChipProps) {
-  const styles = TIER_STYLES[tier]
+  const face = TIER_FACE[tier]
   const isSelected = state === 'selected'
   const isTaken = state === 'taken'
   const isOwned = state === 'owned'
   const interactive =
-    state === 'available' || state === 'selected' || (isOwned && selectableOwned)
+    !presentation &&
+    (state === 'available' || state === 'selected' || (isOwned && selectableOwned))
 
-  const dim = size === 'lg' ? 'h-14 w-14' : 'h-11 w-11'
-  const inner = size === 'lg' ? 'h-10 w-10 text-xs' : 'h-8 w-8 text-[10px]'
+  const sizeClass = SIZE_CLASSES[size]
+  const label = `Paddle number ${number}`
+
+  const chipBody = (
+    <>
+      <span
+        className={cn(
+          'flex h-full w-full items-center justify-center rounded-full border border-stone-300/80 font-bold tabular-nums',
+          sizeClass.inner,
+          face.face,
+          face.text
+        )}
+      >
+        {number}
+      </span>
+      {!presentation && isTaken ? (
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-stone-800 px-1 text-[8px] font-semibold uppercase tracking-wide text-white">
+          taken
+        </span>
+      ) : null}
+      {!presentation && isOwned ? (
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-forest px-1 text-[8px] font-semibold uppercase tracking-wide text-white">
+          yours
+        </span>
+      ) : null}
+    </>
+  )
+
+  const className = cn(
+    'relative flex shrink-0 items-center justify-center rounded-full shadow-[0_3px_0_rgba(0,0,0,0.2)]',
+    sizeClass.outer,
+    TIER_RIM[tier],
+    interactive && !disabled && 'hover:scale-105 active:scale-95 cursor-pointer',
+    isSelected && 'ring-2 ring-harvest-500 ring-offset-2 scale-105',
+    !presentation &&
+      (isTaken || (isOwned && !selectableOwned)) &&
+      'opacity-45 cursor-not-allowed grayscale-[0.35]',
+    !presentation && disabled && 'opacity-60 cursor-not-allowed',
+    spinning && 'animate-paddle-chip-spin',
+    spinLoop && 'animate-paddle-chip-spin-loop'
+  )
+
+  if (presentation) {
+    return (
+      <div className={className} role="img" aria-label={label}>
+        {chipBody}
+      </div>
+    )
+  }
 
   return (
     <button
@@ -67,39 +123,9 @@ export function PaddleChip({
               ? `Paddle ${number}, selected`
               : `Select paddle ${number}`
       }
-      className={cn(
-        'relative flex shrink-0 items-center justify-center rounded-full border-2 shadow-[0_2px_0_rgba(0,0,0,0.25)] transition-transform',
-        dim,
-        styles.edge,
-        styles.rim,
-        interactive && !disabled && 'hover:scale-105 active:scale-95 cursor-pointer',
-        isSelected && 'ring-2 ring-harvest-500 ring-offset-2 scale-105',
-        (isTaken || (isOwned && !selectableOwned)) &&
-          'opacity-45 cursor-not-allowed grayscale-[0.35]',
-        disabled && 'opacity-60 cursor-not-allowed'
-      )}
+      className={className}
     >
-      <span
-        className={cn(
-          'flex items-center justify-center rounded-full border font-bold tabular-nums',
-          inner,
-          styles.face,
-          styles.text,
-          styles.edge
-        )}
-      >
-        {number}
-      </span>
-      {isTaken ? (
-        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-stone-800 px-1 text-[8px] font-semibold uppercase tracking-wide text-white">
-          taken
-        </span>
-      ) : null}
-      {isOwned ? (
-        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded bg-forest px-1 text-[8px] font-semibold uppercase tracking-wide text-white">
-          yours
-        </span>
-      ) : null}
+      {chipBody}
     </button>
   )
 }

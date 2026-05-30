@@ -82,7 +82,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         enabled: existing.enabled,
         paddle_purchase_credits: existing.paddle_purchase_credits,
         default_entry_credits: existing.default_entry_credits,
-        paddle_pool_size: existing.paddle_pool_size ?? 100,
+        paddle_pool_size: existing.paddle_pool_size ?? 200,
         scheduled_start_at: existing.scheduled_start_at ?? null,
         ...patch,
       },

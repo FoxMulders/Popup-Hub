@@ -42,7 +42,7 @@ export function MarketDashboardClient({
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center">
         <h1 className="font-heading text-2xl font-semibold">Coordinator command center</h1>
         <p className="mt-2 text-muted-foreground">
-          Create your first market to unlock the 3-column booth designer and live telemetry desk.
+          Create your first market to unlock the full-screen booth layout designer.
         </p>
         <Link href="/coordinator/events/new" className="mt-6">
           <Button className="gap-1.5">
@@ -55,6 +55,7 @@ export function MarketDashboardClient({
   }
 
   return (
+    <div className="flex min-h-0 flex-1 flex-col">
     <MarketManagementProvider
       events={events}
       initialEventId={initialEventId}
@@ -67,8 +68,11 @@ export function MarketDashboardClient({
       totalRevenueCents={totalRevenueCents}
     >
       <CommandCenterFullscreenProvider>
-        <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
+        <div className="coordinator-dashboard-workspace flex min-h-0 flex-1 flex-col overflow-hidden">
+          <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
+        </div>
       </CommandCenterFullscreenProvider>
     </MarketManagementProvider>
+    </div>
   )
 }

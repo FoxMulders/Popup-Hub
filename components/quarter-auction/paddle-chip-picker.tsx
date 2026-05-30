@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { PaddleChip } from '@/components/quarter-auction/paddle-chip'
+import { PaddlePurchaseCelebration } from '@/components/quarter-auction/paddle-purchase-celebration'
 import {
+  DEFAULT_PADDLE_POOL_SIZE,
   formatPaddleNumber,
   paddleChipTier,
   poolNumbers,
@@ -32,7 +34,7 @@ export function PaddleChipPicker({
   canCheckout = true,
   onPurchased,
 }: PaddleChipPickerProps) {
-  const poolSize = settings.paddle_pool_size ?? 100
+  const poolSize = settings.paddle_pool_size ?? DEFAULT_PADDLE_POOL_SIZE
   const priceCredits = settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS
   const numbers = useMemo(() => poolNumbers(poolSize), [poolSize])
 
@@ -40,6 +42,7 @@ export function PaddleChipPicker({
   const [cart, setCart] = useState<Set<number>>(new Set())
   const [loadingPool, setLoadingPool] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
+  const [celebrationNumbers, setCelebrationNumbers] = useState<string[] | null>(null)
 
   const ownedNumbers = useMemo(
     () => new Set(ownedPaddles.map((p) => p.paddle_number)),
@@ -125,11 +128,7 @@ export function PaddleChipPicker({
         for (const p of purchased) next.add(p.paddle_number)
         return next
       })
-      toast.success(
-        purchased.length === 1
-          ? `Paddle #${purchased[0]!.paddle_number} is yours!`
-          : `${purchased.length} paddles purchased!`
-      )
+      setCelebrationNumbers(purchased.map((p) => p.paddle_number))
     } finally {
       setCheckingOut(false)
     }
@@ -148,7 +147,7 @@ export function PaddleChipPicker({
 
   function renderGrid(list: number[]) {
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10">
         {list.map((n) => {
           const label = formatPaddleNumber(n, poolSize)
           return (
@@ -168,6 +167,13 @@ export function PaddleChipPicker({
   }
 
   return (
+    <>
+      {celebrationNumbers && celebrationNumbers.length > 0 ? (
+        <PaddlePurchaseCelebration
+          paddleNumbers={celebrationNumbers}
+          onDone={() => setCelebrationNumbers(null)}
+        />
+      ) : null}
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Choose your paddle numbers</CardTitle>
@@ -272,5 +278,6 @@ export function PaddleChipPicker({
         ) : null}
       </CardContent>
     </Card>
+    </>
   )
 }

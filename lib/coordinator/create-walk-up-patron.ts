@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { randomBytes } from 'node:crypto'
 import { ensureWallet } from '@/lib/wallet/credit-deposit'
+import { assignWalletPaddleIdIfMissing } from '@/lib/wallet/paddle-id'
 
 export async function createWalkUpPatron(
   admin: SupabaseClient,
@@ -47,10 +48,9 @@ export async function createWalkUpPatron(
   )
 
   const wallet = await ensureWallet(admin, userId)
-  if (wallet && !wallet.paddle_id) {
-    const paddleId = Math.floor(1000 + Math.random() * 9000).toString()
-    await admin.from('wallets').update({ paddle_id: paddleId }).eq('id', wallet.id)
-    wallet.paddle_id = paddleId
+  let walletNumber = wallet?.paddle_id ?? null
+  if (wallet) {
+    walletNumber = (await assignWalletPaddleIdIfMissing(admin, wallet)) ?? walletNumber
   }
 
   return {
@@ -58,6 +58,6 @@ export async function createWalkUpPatron(
     userId,
     fullName,
     email,
-    walletNumber: wallet?.paddle_id ?? null,
+    walletNumber,
   }
 }

@@ -39,7 +39,9 @@ import {
   roomResizeFromHandle,
   type RoomResizeHandle,
 } from '../state/room-canvas'
+import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { RoomFrame } from '../state/types'
+import { snapBoothToRoomPerimeter } from './perimeter-booth-orientation'
 
 interface UseCanvasPointerOptions {
   store: FloorPlanDocStore
@@ -99,6 +101,8 @@ interface UseCanvasPointerOptions {
   onOverlapViolation?: () => void
   /** Table length (ft) for width/height of newly drawn booths. */
   defaultBoothTableLengthFt?: number
+  /** When `perimeter-only`, booths snap/orient to room walls after drag. */
+  autoArrangeMode?: AutoArrangeMode
 }
 
 type DrawDraft =
@@ -210,6 +214,51 @@ function normalizeDegrees(deg: number): number {
   return d
 }
 
+function roomFrameForBooth(
+  booth: BoothObject,
+  rooms: ReadonlyArray<RoomFrame>,
+  objectRoom: Record<string, string>
+): RoomFrame | null {
+  const ownerId = objectRoom[booth.id]
+  if (ownerId) {
+    return rooms.find((r) => r.id === ownerId) ?? null
+  }
+  const cx = booth.x + booth.width / 2
+  const cy = booth.y + booth.height / 2
+  for (const frame of rooms) {
+    if (
+      cx >= frame.originX &&
+      cx <= frame.originX + frame.widthFt &&
+      cy >= frame.originY &&
+      cy <= frame.originY + frame.lengthFt
+    ) {
+      return frame
+    }
+  }
+  return null
+}
+
+function perimeterSnapPatch(
+  booth: BoothObject,
+  doc: { rooms?: RoomFrame[]; objectRoom?: Record<string, string> }
+): Partial<BoothObject> | null {
+  const frame = roomFrameForBooth(
+    booth,
+    doc.rooms ?? [],
+    doc.objectRoom ?? {}
+  )
+  if (!frame) return null
+  const snapped = snapBoothToRoomPerimeter(booth, frame)
+  if (!snapped) return null
+  return {
+    x: snapped.x,
+    y: snapped.y,
+    width: snapped.width,
+    height: snapped.height,
+    rotation: snapped.rotation,
+  }
+}
+
 export interface CanvasPointerApi {
   draftRect: Rect | null
   draftKind: PlacedObject['kind'] | null
@@ -231,6 +280,7 @@ export function useCanvasPointer(
     options
   const onAfterDrawCommit = options.onAfterDrawCommit
   const eventCategoryNames = options.eventCategoryNames
+  const autoArrangeMode = options.autoArrangeMode ?? 'center-out'
   const onProximityViolation = options.onProximityViolation
   const onProximityViolationRef = useRef(onProximityViolation)
   useEffect(() => {
@@ -1018,7 +1068,14 @@ export function useCanvasPointer(
               patch: Partial<PlacedObject>
             }> = []
             for (const obj of store.doc.objects) {
-              if (drag.ids.includes(obj.id)) {
+              if (!drag.ids.includes(obj.id)) continue
+              if (obj.kind === 'booth' && autoArrangeMode === 'perimeter-only') {
+                const snap = perimeterSnapPatch(obj as BoothObject, store.doc)
+                finalPatches.push({
+                  id: obj.id,
+                  patch: snap ?? { x: obj.x, y: obj.y },
+                })
+              } else {
                 finalPatches.push({
                   id: obj.id,
                   patch: { x: obj.x, y: obj.y },
@@ -1049,7 +1106,7 @@ export function useCanvasPointer(
         setMarquee(null)
       }
     },
-    [draft, flushMove, marquee, onAfterDrawCommit, store]
+    [autoArrangeMode, draft, flushMove, marquee, onAfterDrawCommit, store]
   )
 
   // Cancel any in-flight rAF on unmount so we don't fire flushMove

@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import { formatCents } from '@/lib/square/client'
 import { centsToCredits, formatCredits } from '@/lib/quarter-auction/credits'
 import type { Wallet, WalletTransaction } from '@/types/database'
+import { WalletPaddleHero } from '@/components/wallet/wallet-paddle-hero'
 import { AlternativeDepositPanel } from '@/components/wallet/alternative-deposit-panel'
 import { WalletReclaimPanel } from '@/components/wallet/wallet-reclaim-panel'
 import { WalletAmountChips } from '@/components/wallet/wallet-amount-chips'
@@ -37,6 +37,7 @@ const DEPOSIT_AMOUNTS = [500, 1000, 2500, 5000] // cents
 interface WalletViewProps {
   wallet: Wallet | null
   transactions: WalletTransaction[]
+  paddleNumbers?: string[]
   userId: string
   userEmail?: string
 }
@@ -88,7 +89,13 @@ interface SquareCardInstance {
   }>
 }
 
-export function WalletView({ wallet, transactions, userId, userEmail = '' }: WalletViewProps) {
+export function WalletView({
+  wallet,
+  transactions,
+  paddleNumbers = [],
+  userId,
+  userEmail = '',
+}: WalletViewProps) {
   const [squareLoaded, setSquareLoaded] = useState(false)
   const [depositAmount, setDepositAmount] = useState(1000)
   const [depositing, setDepositing] = useState(false)
@@ -189,19 +196,7 @@ export function WalletView({ wallet, transactions, userId, userEmail = '' }: Wal
             </div>
           </div>
 
-          {paddleId ? (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <Coins className="h-4 w-4 shrink-0 text-harvest-500" />
-              <span className="text-sm text-muted-foreground">Paddle ID:</span>
-              <Badge className="max-w-full truncate bg-harvest-500 font-mono text-white">
-                #{paddleId}
-              </Badge>
-            </div>
-          ) : (
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              Add funds to get a permanent Paddle ID for auctions.
-            </p>
-          )}
+          <WalletPaddleHero paddleNumbers={paddleNumbers} paddleId={paddleId} />
         </CardContent>
       </Card>
 

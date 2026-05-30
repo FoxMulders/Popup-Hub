@@ -1592,6 +1592,7 @@ export function FloorPlanV2({
               eventCategoryNames={eventCategoryNames}
               boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
               onVendorDrop={onVendorDrop}
+              autoArrangeMode={autoArrangeMode}
               onProximityViolation={(info) => {
                 toast.error(
                   `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,

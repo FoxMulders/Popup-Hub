@@ -50,6 +50,11 @@ export {
   PATRON_VISION_CONE_DEG,
 } from './patron-centric-layout'
 import { PERIMETER_WALL_THICKNESS_FT } from '../interactions/perimeter-walls'
+import {
+  orientBoothForPerimeterSlot,
+  perimeterSlotsWithEdges,
+  type PerimeterSlot,
+} from '../interactions/perimeter-booth-orientation'
 
 /** Standard chair = 1.75 ft on a side. */
 export const CHAIR_LENGTH_FT = 1.75
@@ -172,10 +177,7 @@ function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
   return out
 }
 
-interface Slot {
-  x: number
-  y: number
-}
+type Slot = { x: number; y: number; dist?: number; perimeter?: PerimeterSlot }
 
 /** Center-out: grid slots sorted by distance from room centroid. */
 function centerOutSlots(
@@ -199,34 +201,6 @@ function centerOutSlots(
   return slots
 }
 
-/** Perimeter-only: booths flush to interior wall faces, clockwise. */
-function perimeterSlots(
-  cw: number,
-  cl: number,
-  boothW: number,
-  boothH: number
-): Slot[] {
-  const inset = PERIMETER_WALL_THICKNESS_FT + 0.5
-  const step = boothW + BOOTH_EDGE_CLEARANCE_FT
-  const stepY = boothH + BOOTH_EDGE_CLEARANCE_FT
-  const slots: Slot[] = []
-
-  for (let x = inset; x + boothW <= cw - inset; x += step) {
-    slots.push({ x, y: inset })
-  }
-  for (let y = inset + boothH + BOOTH_EDGE_CLEARANCE_FT; y + boothH <= cl - inset; y += stepY) {
-    slots.push({ x: cw - inset - boothW, y })
-  }
-  for (let x = cw - inset - boothW - step; x >= inset; x -= step) {
-    slots.push({ x, y: cl - inset - boothH })
-  }
-  for (let y = cl - inset - boothH - stepY; y >= inset + boothH + BOOTH_EDGE_CLEARANCE_FT; y -= stepY) {
-    slots.push({ x: inset, y })
-  }
-
-  return slots
-}
-
 interface PlacementContext {
   cw: number
   cl: number
@@ -236,6 +210,8 @@ interface PlacementContext {
   sourceBooths: BoothObject[]
   eventCategoryNames?: ReadonlyArray<string>
   gridSpacingFt: number
+  /** When set, perimeter slots orient booths against this frame. */
+  perimeterOrientFrame?: RoomFrame
 }
 
 function placeBoothsAtSlots(
@@ -255,6 +231,7 @@ function placeBoothsAtSlots(
     sourceBooths,
     eventCategoryNames,
     gridSpacingFt,
+    perimeterOrientFrame,
   } = ctx
   const placedRects: Rect[] = []
   const newBooths: BoothObject[] = []
@@ -340,7 +317,7 @@ function placeBoothsAtSlots(
     }
     const finalCategory =
       categoryCount > 0 ? category : src.categoryName ?? null
-    const placed: BoothObject = {
+    let placed: BoothObject = {
       ...src,
       x: candidate.x,
       y: candidate.y,
@@ -349,8 +326,18 @@ function placeBoothsAtSlots(
       rotation: 0,
       categoryName: finalCategory,
     }
+    if (slot.perimeter && perimeterOrientFrame) {
+      placed = orientBoothForPerimeterSlot(
+        placed,
+        slot.perimeter,
+        boothW,
+        boothH,
+        perimeterOrientFrame
+      )
+    }
+    const placedRect = rotatedAabb(placed)
     newBooths.push(placed)
-    placedRects.push(candidate)
+    placedRects.push(placedRect)
   }
 
   return { newBooths, placedRects, unsatisfiedCategoryCount }
@@ -432,8 +419,18 @@ export function autoArrange(
   const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
 
   if (mode === 'perimeter-only') {
-    const slots = perimeterSlots(cw, cl, boothW, boothH)
-    if (slots.length === 0) {
+    const perimeterSlots = perimeterSlotsWithEdges(cw, cl, boothW, boothH).map(
+      (p) => ({ x: p.x, y: p.y, perimeter: p })
+    )
+    const perimeterOrientFrame: RoomFrame = {
+      id: '__auto_arrange_canvas__',
+      name: 'Canvas',
+      originX: 0,
+      originY: 0,
+      widthFt: cw,
+      lengthFt: cl,
+    }
+    if (perimeterSlots.length === 0) {
       return {
         doc: { ...doc, objects: otherObjects },
         placedCount: 0,
@@ -442,7 +439,7 @@ export function autoArrange(
         overflowCount,
       }
     }
-    const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(slots, {
+    const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(perimeterSlots, {
       cw,
       cl,
       boothW,
@@ -451,6 +448,7 @@ export function autoArrange(
       sourceBooths,
       eventCategoryNames,
       gridSpacingFt,
+      perimeterOrientFrame,
     })
     const placedCount = newBooths.length
     return {

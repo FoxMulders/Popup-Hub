@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Search, UserPlus } from 'lucide-react'
 import type { PatronLookupResult } from '@/lib/coordinator/patron-lookup'
 import { formatCredits } from '@/lib/quarter-auction/credits'
+import { formatPaddleIdDisplay } from '@/lib/wallet/paddle-id'
 import { formatCents } from '@/lib/square/client'
 import { toast } from 'sonner'
 
@@ -166,13 +167,13 @@ export function PatronLookupField({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <Label htmlFor="patron-search">Find patron (name, email, wallet #, or ID)</Label>
+        <Label htmlFor="patron-search">Find patron (name, email, wallet ID, or profile ID)</Label>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="patron-search"
             className="min-h-11 pl-9"
-            placeholder="e.g. Jane Smith or 4821"
+            placeholder="e.g. Jane Smith or P-6E8156FD"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             disabled={creating}
@@ -197,7 +198,7 @@ export function PatronLookupField({
               >
                 <span className="font-medium">{patron.full_name ?? 'Patron'}</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {patron.walletNumber ? `#${patron.walletNumber} · ` : ''}
+                  {patron.walletNumber ? `${formatPaddleIdDisplay(patron.walletNumber)} · ` : ''}
                   {formatCredits(patron.walletBalanceCredits)} ({formatCents(patron.walletBalanceCents)})
                   {eventId && patron.participated ? ' · checked in' : ''}
                   {patron.paddles.length > 0 ? ` · ${patron.paddles.length} paddle(s)` : ''}
@@ -281,7 +282,7 @@ export function PatronLookupField({
           <p className="text-xs text-muted-foreground">
             Wallet{' '}
             {selectedPatron.walletNumber
-              ? `#${selectedPatron.walletNumber}`
+              ? formatPaddleIdDisplay(selectedPatron.walletNumber)
               : selectedPatron.id.slice(0, 8)}
             {' · '}
             {formatCredits(selectedPatron.walletBalanceCredits)}

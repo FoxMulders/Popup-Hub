@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getOrCreateSettings } from '@/lib/quarter-auction/catalog'
-import { clampPoolSize } from '@/lib/quarter-auction/paddle-pool'
+import { clampPoolSize, DEFAULT_PADDLE_POOL_SIZE } from '@/lib/quarter-auction/paddle-pool'
 import {
   fetchTakenPaddleNumbers,
   purchaseEventPaddles,
@@ -47,7 +47,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     userId: user.id,
     rawNumbers,
     creditsPerPaddle: settings.paddle_purchase_credits,
-    poolSize: settings.paddle_pool_size ?? 100,
+    poolSize: settings.paddle_pool_size ?? DEFAULT_PADDLE_POOL_SIZE,
   })
 
   if (!result.ok) {
@@ -77,7 +77,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const service = await createServiceClient()
   const settings = await getOrCreateSettings(service, eventId)
-  const poolSize = clampPoolSize(settings.paddle_pool_size ?? 100)
+  const poolSize = clampPoolSize(settings.paddle_pool_size ?? DEFAULT_PADDLE_POOL_SIZE)
 
   const [{ data: paddles }, taken] = await Promise.all([
     supabase

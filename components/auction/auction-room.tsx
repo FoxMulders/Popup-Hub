@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { buildLeaderboard } from '@/lib/auction/winner'
 import type { Auction, AuctionDrop, Wallet } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
+import { formatPaddleIdDisplay } from '@/lib/wallet/paddle-id'
 import { Trophy, Zap, Clock, Users, Coins, HelpCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AuctionParticipationGate } from '@/components/quarter-auction/auction-participation-gate'
@@ -87,7 +88,9 @@ export function AuctionRoom({
               if (isWinner) {
                 toast.success('🎉 You won the auction!', { duration: 8000 })
               } else {
-                toast.info(`Auction ended! Winner: Paddle #${payload.new.winning_paddle_id}`)
+                toast.info(
+                  `Auction ended! Winner: ${formatPaddleIdDisplay(payload.new.winning_paddle_id as string)}`
+                )
               }
             } else {
               toast.info('Auction ended with no drops.')
@@ -266,7 +269,9 @@ export function AuctionRoom({
             ) : (
               <div className="flex items-center gap-2 rounded-lg bg-sage-50 p-2">
                 <span className="text-xs text-sage-700">Your Paddle:</span>
-                <span className="font-mono font-bold text-sage-800">#{paddleId}</span>
+                <span className="font-mono font-bold text-sage-800">
+                  {formatPaddleIdDisplay(paddleId)}
+                </span>
               </div>
             )}
 
@@ -334,7 +339,7 @@ export function AuctionRoom({
                         {i === 0 ? '👑' : `#${i + 1}`}
                       </span>
                       <span className="flex-1 font-mono text-sm">
-                        Paddle #{entry.paddleId}
+                        {formatPaddleIdDisplay(entry.paddleId)}
                         {isMe && <span className="ml-1 text-xs text-harvest-600">(you)</span>}
                       </span>
                       <div className="text-right">

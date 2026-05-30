@@ -32,10 +32,13 @@ const PERIMETER_STROKE = '#1c1917'
 const PERIMETER_STROKE_ACTIVE = '#0f766e'
 const PERIMETER_STROKE_SELECTED = '#0f766e'
 const PERIMETER_STROKE_MERGED = '#15803d'
-const PERIMETER_STROKE_JOINED = '#0e7490'
+/** Joined zone uses primary-room chrome (active hall), not stage/fixture colors. */
+const JOINED_ZONE_FILL = '#ef4444'
+const JOINED_ZONE_STROKE = '#b91c1c'
 const PERIMETER_WIDTH = 2.5
 const PERIMETER_WIDTH_SELECTED = 3.5
-const PERIMETER_WIDTH_JOINED = 4
+const PERIMETER_WIDTH_JOINED = 3.5
+const JOINED_ZONE_FILL_OPACITY = 0.12
 
 /**
  * Renders one perimeter group per room frame on the unified canvas.
@@ -232,13 +235,14 @@ function RoomFramesBase({
         <g key={`joined-${zone.groupId}`} data-joined-group={zone.groupId}>
           <path
             d={zone.pathData}
-            fill={PERIMETER_STROKE_JOINED}
-            fillOpacity={0.05}
-            stroke={PERIMETER_STROKE_JOINED}
+            fill={JOINED_ZONE_FILL}
+            fillOpacity={JOINED_ZONE_FILL_OPACITY}
+            stroke={JOINED_ZONE_STROKE}
             strokeWidth={PERIMETER_WIDTH_JOINED}
             strokeLinejoin="round"
             shapeRendering="geometricPrecision"
-            pointerEvents="none"
+            pointerEvents="all"
+            data-joined-zone-path={zone.groupId}
           />
           <g pointerEvents="none">
             {showLabels

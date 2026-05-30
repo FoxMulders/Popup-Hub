@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { createWalletDeposit } from '@/lib/square/payments'
 import { applyWalletDepositCredit } from '@/lib/wallet/adjust-balance'
 import { ensureWallet } from '@/lib/wallet/credit-deposit'
+import { assignWalletPaddleIdIfMissing } from '@/lib/wallet/paddle-id'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -75,10 +76,7 @@ export async function POST(request: Request) {
     )
   }
 
-  if (!wallet.paddle_id) {
-    const paddleId = Math.floor(1000 + Math.random() * 9000).toString()
-    await service.from('wallets').update({ paddle_id: paddleId }).eq('id', wallet.id)
-  }
+  await assignWalletPaddleIdIfMissing(service, wallet)
 
   return NextResponse.json({ success: true, newBalance: credit.newBalance })
 }

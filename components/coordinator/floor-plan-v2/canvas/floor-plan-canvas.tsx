@@ -28,6 +28,7 @@ import {
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { LabelObject, PlacedObject } from '../state/types'
+import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { ToolState } from '../tools/types'
 import { cn } from '@/lib/utils'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
@@ -97,6 +98,7 @@ interface FloorPlanCanvasProps {
   basePxPerFt?: number
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
+  autoArrangeMode?: AutoArrangeMode
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
@@ -120,6 +122,7 @@ export function FloorPlanCanvas({
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
   boothPlacementStatusByObjectId,
   onVendorDrop,
+  autoArrangeMode = 'center-out',
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -274,6 +277,7 @@ export function FloorPlanCanvas({
     onOverlapViolation,
     onRoomCanvasLimitBlocked,
     defaultBoothTableLengthFt,
+    autoArrangeMode,
   })
 
   const overlappingIds = useMemo(

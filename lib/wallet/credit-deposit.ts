@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { adjustWalletBalance } from '@/lib/wallet/adjust-balance'
+import { assignWalletPaddleIdIfMissing } from '@/lib/wallet/paddle-id'
 import type { TransactionType } from '@/types/database'
 
 export interface CreditWalletDepositParams {
@@ -64,10 +65,7 @@ export async function creditWalletDeposit(
     return { ok: false, error: credit.error }
   }
 
-  if (!wallet.paddle_id) {
-    const paddleId = Math.floor(1000 + Math.random() * 9000).toString()
-    await supabase.from('wallets').update({ paddle_id: paddleId }).eq('id', wallet.id)
-  }
+  await assignWalletPaddleIdIfMissing(supabase, wallet)
 
   const { data: tx, error: txError } = await supabase
     .from('wallet_transactions')

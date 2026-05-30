@@ -6,7 +6,6 @@ import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardAppShell } from './dashboard-app-shell'
 import { DashboardCurationColumn } from './dashboard-curation-column'
 import { DashboardCanvasColumn } from './dashboard-canvas-column'
-import { DashboardTelemetryColumn } from './dashboard-telemetry-column'
 
 type BootstrapPhase = 'shell' | 'blueprint' | 'hydrating' | 'ready'
 
@@ -48,7 +47,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
       setPhase('ready')
       setMountCanvas(true)
       setAriaBusy(false)
-      setLiveMessage('Market command center ready.')
+      setLiveMessage('Booth layout designer ready.')
       return
     }
 
@@ -110,9 +109,6 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
             reducedMotion={reducedMotion}
             onCanvasInteractive={handleCanvasInteractive}
           />
-        }
-        right={
-          <DashboardTelemetryColumn ready={hydrateSidebars} animate={animateSidebars} />
         }
       />
     </>

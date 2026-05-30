@@ -9,7 +9,13 @@ import { toast } from 'sonner'
 import { Banknote, Gavel, Loader2, MapPin, Ticket } from 'lucide-react'
 import { PatronLookupField } from '@/components/coordinator/patron-lookup-field'
 import { PaddleChip } from '@/components/quarter-auction/paddle-chip'
-import { paddleChipTier, poolNumbers, formatPaddleNumber } from '@/lib/quarter-auction/paddle-pool'
+import {
+  DEFAULT_PADDLE_POOL_SIZE,
+  paddleChipTier,
+  poolNumbers,
+  formatPaddleNumber,
+} from '@/lib/quarter-auction/paddle-pool'
+import { formatPaddleIdDisplay } from '@/lib/wallet/paddle-id'
 import { formatCredits, DEFAULT_PADDLE_PURCHASE_CREDITS } from '@/lib/quarter-auction/credits'
 import { formatCents } from '@/lib/square/client'
 import type { PatronLookupResult } from '@/lib/coordinator/patron-lookup'
@@ -42,7 +48,7 @@ export function AuctionClerkDesk({ eventId, settings, liveItem }: AuctionClerkDe
   const [enteredPaddleIds, setEnteredPaddleIds] = useState<Set<string>>(new Set())
   const patronRefreshSeq = useRef(0)
 
-  const poolSize = settings.paddle_pool_size ?? 100
+  const poolSize = settings.paddle_pool_size ?? DEFAULT_PADDLE_POOL_SIZE
   const priceCredits = settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS
   const numbers = useMemo(() => poolNumbers(poolSize), [poolSize])
 
@@ -245,7 +251,7 @@ export function AuctionClerkDesk({ eventId, settings, liveItem }: AuctionClerkDe
               </Badge>
               {patron.walletNumber ? (
                 <Badge variant="outline" className="font-mono">
-                  Wallet #{patron.walletNumber}
+                  Wallet {formatPaddleIdDisplay(patron.walletNumber)}
                 </Badge>
               ) : null}
               {patron.paddles.length > 0 ? (
@@ -447,7 +453,9 @@ export function AuctionClerkDesk({ eventId, settings, liveItem }: AuctionClerkDe
               <div className="rounded-lg border border-dashed bg-white p-3 text-center text-sm">
                 <p className="font-medium">Exit card — save for cash reclaim</p>
                 <p className="mt-1 text-2xl font-mono font-bold">{patron.full_name}</p>
-                <p className="text-lg font-mono text-forest">Wallet #{patron.walletNumber}</p>
+                <p className="text-lg font-mono text-forest">
+                  Wallet {formatPaddleIdDisplay(patron.walletNumber)}
+                </p>
               </div>
             ) : null}
           </>

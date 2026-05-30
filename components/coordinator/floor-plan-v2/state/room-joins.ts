@@ -53,11 +53,30 @@ import type {
 
 import polygonClippingDefault from 'polygon-clipping'
 
+import {
+  mergeAdjacentStructuresMany,
+  pathsToClosedRings,
+  structureFromRect,
+} from '@/lib/floor-plan/merge-adjacent-structures'
+
 import type {
   ObjectKind,
   PlacedObject,
   RoomFrame,
 } from './types'
+
+export {
+  mergeAdjacentStructures,
+  mergeAdjacentStructuresMany,
+  structureFromRect,
+  wallsFromRect,
+  segmentsAreInternalBarrier,
+  type ArchitecturalStructure,
+  type MergeAdjacentStructuresResult,
+  type NormalizedSeg,
+  type Vec2,
+  type WallSegment2,
+} from '@/lib/floor-plan/merge-adjacent-structures'
 
 // `Geom` is the polygon-clipping internal union type — re-derive it
 // because the package only exports it privately.
@@ -524,58 +543,27 @@ export function buildJoinedZone(
   const frameIds = frames.map((f) => f.id)
   const objectIds = eligibleObjects.map((o) => o.id)
 
-  // Build a list of polygons for both rooms and joinable objects.
-  // A single union call (with all polygons unpacked as varargs)
-  // dissolves shared edges across the mixed input — the clipper
-  // doesn't care which polygons originated as frames vs objects.
-  const polygons: Polygon[] = [
-    ...frames.map(frameToPolygon),
-    ...eligibleObjects.map(objectToPolygon),
+  const structures = [
+    ...frames.map((f) =>
+      structureFromRect(f.id, f.originX, f.originY, f.widthFt, f.lengthFt)
+    ),
+    ...eligibleObjects.map((o) =>
+      structureFromRect(o.id, o.x, o.y, o.width, o.height)
+    ),
   ]
-  if (polygons.length === 0) return null
 
-  let mp: MultiPolygon
-  if (polygons.length === 1) {
-    mp = [polygons[0]!]
-  } else {
-    const [first, ...rest] = polygons
-    mp = polygonClipping.union(first as Geom, ...(rest as Geom[]))
-  }
-  if (mp.length === 0) return null
+  const merged = mergeAdjacentStructuresMany(structures, DEFAULT_TOUCH_EPSILON_FT)
+  if (!merged || merged.paths.length === 0) return null
 
-  const rings: Ring[] = []
-  let area = 0
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-
-  for (const polygon of mp) {
-    // outer ring is polygon[0]; holes are polygon[1..]. We render
-    // outer rings only (rooms + axis-aligned stages can't form
-    // holes via union-of-rects in any sane configuration, but we
-    // filter defensively).
-    const outer = polygon[0]
-    if (!outer) continue
-    rings.push(outer)
-    for (const [px, py] of outer) {
-      if (px < minX) minX = px
-      if (py < minY) minY = py
-      if (px > maxX) maxX = px
-      if (py > maxY) maxY = py
-    }
-    area += signedRingArea(outer)
-  }
-
-  if (rings.length === 0) return null
+  const rings = pathsToClosedRings(merged.paths) as Ring[]
 
   return {
     groupId,
     frameIds,
     objectIds,
     rings,
-    aabb: { minX, minY, maxX, maxY },
-    areaSqFt: Math.abs(area),
+    aabb: merged.aabb,
+    areaSqFt: merged.areaSqFt,
   }
 }
 
