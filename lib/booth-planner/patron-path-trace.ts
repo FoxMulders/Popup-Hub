@@ -22,9 +22,18 @@ export interface PatronPathArrow {
   angle: number
 }
 
+export interface PatronPathStop {
+  row: number
+  col: number
+  /** 1-based visit order along the tour. */
+  order: number
+}
+
 export interface PatronPathTrace {
   points: PatronPathPoint[]
   arrows: PatronPathArrow[]
+  /** Optional numbered stops (exposition tour booth visits). */
+  stops?: PatronPathStop[]
 }
 
 const WALKWAY_TYPES = new Set(['aisle', 'entrance', 'exit', 'door'])
@@ -719,11 +728,15 @@ export function getEntranceWalkPoint(
 
 export function buildPathTrace(
   points: PatronPathPoint[],
-  options?: { simplify?: boolean }
+  options?: { simplify?: boolean; stops?: PatronPathStop[] }
 ): PatronPathTrace | null {
   const simplified = options?.simplify === false ? points : simplifyPath(points)
   if (simplified.length < 2) return null
-  return { points: simplified, arrows: arrowsAlongPath(simplified, 8) }
+  return {
+    points: simplified,
+    arrows: arrowsAlongPath(simplified, 8),
+    stops: options?.stops,
+  }
 }
 
 /** Local patron-flow direction at a grid cell (nearest path segment). */

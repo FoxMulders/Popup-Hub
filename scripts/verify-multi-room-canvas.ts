@@ -407,25 +407,26 @@ console.log('=== Multi-room canvas verification ===\n')
   )
 }
 
-// ----- Case 10: 5× primary-room per-dimension cap on canvas extents -----
+// ----- Case 10: canvas grows past nominal 5× when union requires it -----
 {
   const primary = makeRoom('r-main', 'Main Hall', 50, 50, 0, 0)
   const farAnnex = makeRoom('r-far', 'Far Wing', 40, 40, 220, 0)
   const frames = frameListFromRooms([primary, farAnnex])
   const extents = reconcileCanvasExtents(frames)
   const capW = 50 * CANVAS_DIMENSION_SCALE
+  const neededW = roomUnionBounds(frames).maxX + 24
   check(
-    'Canvas width clamps to 5× primary width when union exceeds cap',
-    extents.canvasWidthFt === capW,
-    `canvasWidthFt=${extents.canvasWidthFt} expected ${capW}`
+    'Canvas width grows to fit union when beyond nominal 5× cap',
+    extents.canvasWidthFt === neededW && extents.canvasWidthFt > capW,
+    `canvasWidthFt=${extents.canvasWidthFt} expected > ${capW} and ${neededW}`
   )
   check(
-    'Room union maxX is beyond the cap (geometry uncapped)',
+    'Room union maxX is beyond the nominal cap (geometry uncapped)',
     roomUnionBounds(frames).maxX === 260
   )
 }
 
-// ----- Case 11: room drag clamped at canvas ceiling -----
+// ----- Case 11: room drag uses expanded union limits (not stale 5× only) -----
 {
   const main = makeRoom('r-main', 'Main Hall', 50, 50, 0, 0)
   const annex = makeRoom('r-annex', 'Annex', 40, 40, 200, 0)
@@ -436,13 +437,13 @@ console.log('=== Multi-room canvas verification ===\n')
   )
   const bounds = roomUnionBounds(moved)
   check(
-    'Drag toward limit is partially applied',
-    dx > 0 && dx < 100,
-    `dx=${dx}`
+    'Annex drag applies full delta when union limit expands',
+    dx === 100 && dy === 0,
+    `dx=${dx} dy=${dy}`
   )
   check(
-    'Post-drag union respects 5× primary width cap',
-    bounds.maxX <= 50 * CANVAS_DIMENSION_SCALE
+    'Post-drag union maxX reflects moved annex',
+    bounds.maxX === 340
   )
 }
 

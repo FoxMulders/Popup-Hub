@@ -113,6 +113,37 @@ export function PatronFlowOverlay({
         vectorEffect="non-scaling-stroke"
       />
 
+      {mode === 'exposition' &&
+        trace.stops?.map((stop) => {
+          const x = px(stop.col)
+          const y = py(stop.row)
+          const r = cellPx * 0.55
+          return (
+            <g key={`patron-stop-${stop.order}`}>
+              <circle
+                cx={x}
+                cy={y}
+                r={r}
+                fill="#fff"
+                stroke="#D97706"
+                strokeWidth={1.5}
+                opacity={0.95}
+              />
+              <text
+                x={x}
+                y={y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={Math.max(7, cellPx * 0.42)}
+                fontWeight={700}
+                fill="#92400E"
+              >
+                {stop.order}
+              </text>
+            </g>
+          )
+        })}
+
       {trace.arrows.map((arrow, i) => {
         const x = px(arrow.col)
         const y = py(arrow.row)

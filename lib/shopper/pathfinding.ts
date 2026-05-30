@@ -1,14 +1,20 @@
 import { cellKey } from '@/lib/booth-planner/venue-elements'
 import { BOOTH_SAFETY_BUFFER_CELLS } from '@/lib/booth-planner/layout-clearance-constants'
 import {
+  computeInteriorBounds,
+} from '@/lib/booth-planner/indoor-corridor-layout'
+import {
   buildPathTrace,
   buildWalkabilityGrid,
+  computePatronPathTrace,
   getCenterlineWalkwayKeys,
   getEntranceWalkPoint,
   snapToWalkableCell,
   type PatronPathPoint,
+  type PatronPathStop,
   type PatronPathTrace,
 } from '@/lib/booth-planner/patron-path-trace'
+import { sharedAisleRowsToPaint } from '@/lib/booth-planner/shared-aisle'
 import { getRoomCanvasMetrics, type RoomCanvasMetrics } from '@/lib/shopper/room-canvas'
 import type { BoothCell, LayoutRoom } from '@/types/database'
 
@@ -179,18 +185,56 @@ function dedupeApproachNodes(nodes: PatronPathPoint[]): PatronPathPoint[] {
   return out
 }
 
-function serpentineOrder(nodes: PatronPathPoint[], hallRows: number): PatronPathPoint[] {
-  const byRow = new Map<number, PatronPathPoint[]>()
-  for (const n of nodes) {
-    const band = n.row >= hallRows ? hallRows : Math.floor(n.row / 4) * 4
-    const list = byRow.get(band) ?? []
-    list.push(n)
-    byRow.set(band, list)
+function vendorBoothCells(cells: BoothCell[]): BoothCell[] {
+  return cells.filter(
+    (c) =>
+      c.col >= 0 &&
+      c.row >= 0 &&
+      (c.vendorName?.trim().length ?? 0) > 0
+  )
+}
+
+function nearestAisleBand(row: number, sharedRows: number[]): number {
+  if (sharedRows.length === 0) return Math.floor(row / 4) * 4
+  let best = sharedRows[0]
+  let bestDist = Math.abs(row - best)
+  for (const r of sharedRows) {
+    const d = Math.abs(row - r)
+    if (d < bestDist) {
+      bestDist = d
+      best = r
+    }
   }
-  const bands = [...byRow.keys()].sort((a, b) => a - b)
+  return best
+}
+
+/** Order booth approach nodes in serpentine aisle bands (west→east, alternating direction). */
+function serpentineOrder(
+  nodes: PatronPathPoint[],
+  hallRows: number,
+  cols: number,
+  entrance: LayoutRoom['entrance']
+): PatronPathPoint[] {
+  const bounds = computeInteriorBounds(cols, hallRows)
+  const sharedRows = sharedAisleRowsToPaint(bounds)
+
+  const byAisle = new Map<number, PatronPathPoint[]>()
+  for (const n of nodes) {
+    const band =
+      n.row >= hallRows ? hallRows + 1000 : nearestAisleBand(n.row, sharedRows)
+    const list = byAisle.get(band) ?? []
+    list.push(n)
+    byAisle.set(band, list)
+  }
+
+  let bands = [...byAisle.keys()].sort((a, b) => a - b)
+  if (entrance === 'north' || entrance === 'west') {
+    bands = [...bands].reverse()
+  }
+
   const ordered: PatronPathPoint[] = []
   bands.forEach((band, idx) => {
-    const row = [...(byRow.get(band) ?? [])].sort((a, b) => a.col - b.col)
+    const row = [...(byAisle.get(band) ?? [])].sort((a, b) => a.col - b.col)
     if (idx % 2 === 1) row.reverse()
     ordered.push(...row)
   })
@@ -328,9 +372,32 @@ export function computeVendorDirectRoute(
   return buildPathTrace(path)
 }
 
+function buildExpositionStops(visitNodes: PatronPathPoint[]): PatronPathStop[] {
+  return visitNodes.map((node, i) => ({
+    row: node.row,
+    col: node.col,
+    order: i + 1,
+  }))
+}
+
+function corridorPatronFallback(room: LayoutRoom, vendorCells: BoothCell[]): PatronPathTrace | null {
+  const metrics = getRoomCanvasMetrics(room)
+  return computePatronPathTrace(
+    metrics.venueElements,
+    metrics.cols,
+    metrics.canvasRows,
+    room.entrance,
+    {
+      placedCells: vendorCells,
+      destination: 'stage',
+    }
+  )
+}
+
 /** Option B — TSP-style serpentine tour visiting every booth approach node once. */
 export function computeExpositionTourWaypoints(room: LayoutRoom): PatronPathPoint[] | null {
   const metrics = getRoomCanvasMetrics(room)
+  const vendorCells = vendorBoothCells(metrics.placedCells)
   const walkable = buildWalkabilityGrid(
     metrics.canvasRows,
     metrics.cols,
@@ -348,7 +415,7 @@ export function computeExpositionTourWaypoints(room: LayoutRoom): PatronPathPoin
   if (!entrance) return null
 
   const approaches = dedupeApproachNodes(
-    metrics.placedCells
+    vendorCells
       .map((booth) =>
         boothApproachNode(
           booth,
@@ -364,7 +431,12 @@ export function computeExpositionTourWaypoints(room: LayoutRoom): PatronPathPoin
 
   if (approaches.length === 0) return null
 
-  const serpentineSeed = serpentineOrder(approaches, metrics.hallRows)
+  const serpentineSeed = serpentineOrder(
+    approaches,
+    metrics.hallRows,
+    metrics.cols,
+    room.entrance
+  )
   let tour = nearestNeighborTour(entrance, serpentineSeed, metrics, room, centerline)
   tour = twoOptImprove(tour, metrics, room, centerline)
 
@@ -378,6 +450,12 @@ export function computeExpositionTourWaypoints(room: LayoutRoom): PatronPathPoin
 
 export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | null {
   const metrics = getRoomCanvasMetrics(room)
+  const vendorCells = vendorBoothCells(metrics.placedCells)
+
+  if (vendorCells.length === 0) {
+    return corridorPatronFallback(room, metrics.placedCells)
+  }
+
   const walkable = buildWalkabilityGrid(
     metrics.canvasRows,
     metrics.cols,
@@ -386,8 +464,12 @@ export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | 
   )
   const centerline = getCenterlineWalkwayKeys(metrics.venueElements)
   const tour = computeExpositionTourWaypoints(room)
-  if (!tour) return null
 
+  if (!tour) {
+    return corridorPatronFallback(room, vendorCells)
+  }
+
+  const visitNodes = tour.slice(1, tour.length - 1)
   const stitched = stitchRouteSegments(
     tour,
     walkable,
@@ -395,6 +477,15 @@ export function computeExpositionTourRoute(room: LayoutRoom): PatronPathTrace | 
     metrics.cols,
     centerline
   )
-  if (stitched.length < 2) return null
-  return buildPathTrace(stitched, { simplify: false })
+
+  if (stitched.length < 2) {
+    const fallback = corridorPatronFallback(room, vendorCells)
+    if (fallback) return fallback
+    return buildPathTrace(tour, { simplify: false, stops: buildExpositionStops(visitNodes) })
+  }
+
+  return buildPathTrace(stitched, {
+    simplify: false,
+    stops: buildExpositionStops(visitNodes),
+  })
 }

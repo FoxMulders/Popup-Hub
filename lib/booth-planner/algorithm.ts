@@ -24,7 +24,13 @@ import {
 } from '@/lib/booth-planner/co-generated-aisles'
 import { categoryIsolationScore, normalizeCategoryKey } from '@/lib/booth-planner/category-isolation'
 import { VendorPlacementGuard } from '@/lib/booth-planner/vendor-placement-guards'
-import { resolveBoothSpansAtOrigin } from '@/lib/booth-planner/perimeter-orientation'
+import {
+  alignOriginToPerimeterWall,
+  boothStorefrontFacesPerimeterConcourse,
+  perimeterPlacementAtOrigin,
+  resolveBoothSpansAtOrigin,
+} from '@/lib/booth-planner/perimeter-orientation'
+import { BOOTH_CORE_SEPARATION_CELLS } from '@/lib/booth-planner/layout-clearance-constants'
 import { gridSpansForTableOrientation, type TableOrientation } from '@/lib/booth-planner/table-orientation'
 import { detectLayoutOverlaps } from '@/lib/booth-planner/layout-overlap'
 import {
@@ -462,7 +468,8 @@ export class AutoLayoutSession {
       strictStorefront: structured ? undefined : strictStorefront,
       requireClearanceRing: !paintedAislePreset,
       skipStrollerSeparation: paintedAislePreset,
-      skipClusterLimit: structured,
+      skipClusterLimit: structured || this.usePerimeterOnly,
+      perimeterConcourseFrontage: this.usePerimeterOnly,
       placementForbidden: this.placementForbidden,
     }
   }
@@ -617,6 +624,18 @@ export class AutoLayoutSession {
       }
     }
 
+    if (this.usePerimeterOnly) {
+      const placed = perimeterPlacementAtOrigin(row, col, tableFt, this.rows, this.cols)
+      if (placed) {
+        return {
+          colSpan: placed.colSpan,
+          rowSpan: placed.rowSpan,
+          orientation: placed.orientation,
+          storefront: placed.storefront,
+        }
+      }
+    }
+
     return resolveBoothSpansAtOrigin(row, col, tableFt, this.rows, this.cols)
   }
 
@@ -754,6 +773,11 @@ export class AutoLayoutSession {
           storefront: storefrontSideForOrientation(spans.colSpan, spans.rowSpan, orientation),
         }
       })
+    }
+
+    if (this.usePerimeterOnly) {
+      const placed = perimeterPlacementAtOrigin(0, 0, tableFt, this.rows, this.cols)
+      if (placed) return [placed]
     }
 
     return [
@@ -971,6 +995,83 @@ export class AutoLayoutSession {
                 const c1 = col + colSpan - 1
                 return boothHasAisleFrontage(row, col, r1, c1, this.rows, this.cols, this.walkway)
               })
+            : this.usePerimeterOnly
+            ? (() => {
+                const tableFt = vendor.tableLengthFt ?? 6
+                const placed = perimeterPlacementAtOrigin(row, col, tableFt, this.rows, this.cols)
+                if (!placed) return []
+                const aligned = alignOriginToPerimeterWall(
+                  row,
+                  col,
+                  placed.rowSpan,
+                  placed.colSpan,
+                  this.rows,
+                  this.cols
+                )
+                const atWall = perimeterPlacementAtOrigin(
+                  aligned.row,
+                  aligned.col,
+                  tableFt,
+                  this.rows,
+                  this.cols
+                )
+                if (!atWall) return []
+                const { colSpan, rowSpan, orientation, storefront } = atWall
+                if (aligned.row + rowSpan > this.rows || aligned.col + colSpan > this.cols) {
+                  return []
+                }
+                if (
+                  !isPerimeterPlacement(
+                    aligned.row,
+                    aligned.col,
+                    rowSpan,
+                    colSpan,
+                    this.rows,
+                    this.cols
+                  )
+                ) {
+                  return []
+                }
+                for (let r = aligned.row; r < aligned.row + rowSpan; r++) {
+                  for (let c = aligned.col; c < aligned.col + colSpan; c++) {
+                    if (this.grid[r][c] !== 'empty') return []
+                  }
+                }
+                if (
+                  placementViolatesStrollerSeparation(
+                    this.boothRects,
+                    aligned.row,
+                    aligned.col,
+                    rowSpan,
+                    colSpan,
+                    this.boothWidth,
+                    this.boothLength,
+                    BOOTH_CORE_SEPARATION_CELLS,
+                    BOOTH_CORE_SEPARATION_CELLS,
+                    this.walkway
+                  )
+                ) {
+                  return []
+                }
+                const r1 = aligned.row + rowSpan - 1
+                const c1 = aligned.col + colSpan - 1
+                if (
+                  !boothStorefrontFacesPerimeterConcourse(
+                    aligned.row,
+                    aligned.col,
+                    r1,
+                    c1,
+                    storefront,
+                    this.rows,
+                    this.cols,
+                    this.walkway,
+                    this.wallKeys
+                  )
+                ) {
+                  return []
+                }
+                return [{ colSpan, rowSpan, orientation, storefront, alignedRow: aligned.row, alignedCol: aligned.col }]
+              })()
             : (() => {
                 const gridOccupied = (r: number, c: number) => {
                   if (r < 0 || c < 0 || r >= this.rows || c >= this.cols) return false
@@ -997,7 +1098,21 @@ export class AutoLayoutSession {
                 })
               })()
 
-        for (const { colSpan, rowSpan, orientation, storefront: baselineStorefront } of candidates) {
+        for (const candidate of candidates) {
+          const {
+            colSpan,
+            rowSpan,
+            orientation,
+            storefront: baselineStorefront,
+          } = candidate
+          const slotRow =
+            'alignedRow' in candidate && typeof candidate.alignedRow === 'number'
+              ? candidate.alignedRow
+              : row
+          const slotCol =
+            'alignedCol' in candidate && typeof candidate.alignedCol === 'number'
+              ? candidate.alignedCol
+              : col
           const placementStorefront = baselineStorefront
           if (
             this.useOutdoorClusters &&
@@ -1065,7 +1180,7 @@ export class AutoLayoutSession {
             ctx,
             rowSpan,
             colSpan,
-            [[row, col]],
+            [[slotRow, slotCol]],
             preferWall,
             isolationOpts,
             searchBudget
@@ -1074,8 +1189,8 @@ export class AutoLayoutSession {
           const score = slots[0].score
           if (!best || score > best.score) {
             best = {
-              row,
-              col,
+              row: slotRow,
+              col: slotCol,
               colSpan,
               rowSpan,
               score,

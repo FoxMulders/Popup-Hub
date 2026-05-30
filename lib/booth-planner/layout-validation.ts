@@ -1,6 +1,7 @@
 import type { BoothCell, VenueElement } from '@/types/database'
 import { cellKey } from '@/lib/booth-planner/venue-elements'
 import { allPlacedBoothsAccessible, buildWalkwayCells } from '@/lib/booth-planner/accessible-placement'
+import { buildBlockedWallKeys } from '@/lib/booth-planner/aisle-orientation'
 
 export interface LayoutValidationResult {
   valid: boolean
@@ -18,6 +19,7 @@ export function validateAutoLayoutPlacement(input: {
   const { cells, rows, cols, blocked, venueElements } = input
   const violations: string[] = []
   const walkway = buildWalkwayCells(venueElements)
+  const wallKeys = buildBlockedWallKeys(venueElements, cols, rows)
   const occupancy = new Map<string, string>()
 
   for (const cell of cells) {
@@ -42,7 +44,7 @@ export function validateAutoLayoutPlacement(input: {
     }
   }
 
-  if (!allPlacedBoothsAccessible(cells, rows, cols, walkway)) {
+  if (!allPlacedBoothsAccessible(cells, rows, cols, walkway, wallKeys)) {
     violations.push('One or more booths lack mandatory aisle frontage')
   }
 

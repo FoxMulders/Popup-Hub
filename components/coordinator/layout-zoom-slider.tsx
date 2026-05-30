@@ -10,6 +10,8 @@ export const LAYOUT_ZOOM_MIN = 0.25
 export const LAYOUT_ZOOM_MAX = 2
 export const LAYOUT_ZOOM_DEFAULT = 1
 export const LAYOUT_ZOOM_STEP = 0.05
+/** Range input snaps in 8% steps so the thumb does not whip through zoom levels. */
+export const LAYOUT_ZOOM_SLIDER_STEP_PERCENT = 8
 
 export interface LayoutZoomSliderProps {
   zoom: number
@@ -58,7 +60,7 @@ export function LayoutZoomSlider({ zoom, onZoomChange, className }: LayoutZoomSl
         type="range"
         min={Math.round(LAYOUT_ZOOM_MIN * 100)}
         max={Math.round(LAYOUT_ZOOM_MAX * 100)}
-        step={Math.round(LAYOUT_ZOOM_STEP * 100)}
+        step={LAYOUT_ZOOM_SLIDER_STEP_PERCENT}
         value={pct}
         onChange={(event) => setFromPercent(Number(event.target.value))}
         // Native range inputs already support touch on iOS / Android.

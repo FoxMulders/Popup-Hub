@@ -609,7 +609,7 @@ export function BoothPlanner({
   const [autoPlanRunning, setAutoPlanRunning] = useState(false)
   const [randomFillRunning, setRandomFillRunning] = useState(false)
   const [seedFillRunning, setSeedFillRunning] = useState(false)
-  const [showPatronFlow, setShowPatronFlow] = useState(false)
+  const [showPatronFlow, setShowPatronFlow] = useState(true)
   const autoPlanAbortRef = useRef(false)
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => new Set())
   const [layoutAlert, setLayoutAlert] = useState<string | null>(null)

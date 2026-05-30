@@ -32,7 +32,7 @@ export function isShopperRouteAvailable(
   if (!entrance) return false
 
   if (mode === 'exposition') {
-    return metrics.placedCells.length > 0
+    return true
   }
 
   return resolveShopperRouteTrace(room, mode, selectedBooth) != null

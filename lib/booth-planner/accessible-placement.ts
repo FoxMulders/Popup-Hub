@@ -1,6 +1,13 @@
 import type { BoothCell, VenueElement, VenueElementType } from '@/types/database'
 import { cellKey } from '@/lib/booth-planner/venue-elements'
-import { PERIMETER_VENDING_MARGIN_CELLS, isOuterPerimeterCell } from '@/lib/booth-planner/perimeter-clearance'
+import {
+  PERIMETER_VENDING_MARGIN_CELLS,
+  boothOverlapsPerimeterVendingLane,
+  isOuterPerimeterCell,
+} from '@/lib/booth-planner/perimeter-clearance'
+import { boothStorefrontFacesPerimeterConcourse } from '@/lib/booth-planner/perimeter-orientation'
+import { storefrontSideForFacingTarget } from '@/lib/booth-planner/facing-target'
+import type { FacingTarget } from '@/lib/booth-planner/facing-target'
 import { boothClearanceRingViolates } from '@/lib/booth-planner/booth-edge-clearance'
 import { placementViolatesStrollerSeparation } from '@/lib/booth-planner/stroller-clearance'
 import type { CategorySpatialIndex } from '@/lib/booth-planner/category-quadtree'
@@ -251,6 +258,8 @@ export interface PlacementContext {
   skipClusterLimit?: boolean
   /** Stair landings + exit keep-out — booth core may not occupy these cells. */
   placementForbidden?: Set<string>
+  /** Outside-only ring: storefront must face the 4′ concourse, not interior aisles. */
+  perimeterConcourseFrontage?: boolean
 }
 
 export function canPlaceAccessible(
@@ -260,7 +269,20 @@ export function canPlaceAccessible(
   rowSpan: number,
   colSpan: number
 ): boolean {
-  const { rows, cols, grid, walkway, boothRects, boothWidthFt, boothLengthFt, wallKeys, strictStorefront, skipStrollerSeparation, skipClusterLimit } = ctx
+  const {
+    rows,
+    cols,
+    grid,
+    walkway,
+    boothRects,
+    boothWidthFt,
+    boothLengthFt,
+    wallKeys,
+    strictStorefront,
+    skipStrollerSeparation,
+    skipClusterLimit,
+    perimeterConcourseFrontage,
+  } = ctx
 
   if (startRow < 0 || startCol < 0 || startRow + rowSpan > rows || startCol + colSpan > cols) {
     return false
@@ -308,7 +330,23 @@ export function canPlaceAccessible(
   const r1 = startRow + rowSpan - 1
   const c1 = startCol + colSpan - 1
 
-  if (strictStorefront && wallKeys) {
+  if (perimeterConcourseFrontage && strictStorefront && wallKeys) {
+    if (
+      !boothStorefrontFacesPerimeterConcourse(
+        r0,
+        c0,
+        r1,
+        c1,
+        strictStorefront,
+        rows,
+        cols,
+        walkway,
+        wallKeys
+      )
+    ) {
+      return false
+    }
+  } else if (strictStorefront && wallKeys) {
     if (
       !boothStorefrontFacesWalkway(r0, c0, r1, c1, strictStorefront, rows, cols, walkway, wallKeys)
     ) {
@@ -414,7 +452,8 @@ export function allPlacedBoothsAccessible(
   cells: BoothCell[],
   rows: number,
   cols: number,
-  walkway: Set<string>
+  walkway: Set<string>,
+  wallKeys?: Set<string>
 ): boolean {
   for (const cell of cells) {
     if (cell.col < 0 || cell.row < 0) continue
@@ -422,6 +461,34 @@ export function allPlacedBoothsAccessible(
     const c0 = cell.col
     const r1 = cell.row + cell.rowSpan - 1
     const c1 = cell.col + cell.colSpan - 1
+    if (
+      wallKeys &&
+      cell.facingTarget &&
+      boothOverlapsPerimeterVendingLane(r0, c0, cell.rowSpan, cell.colSpan, rows, cols)
+    ) {
+      const storefront = storefrontSideForFacingTarget(
+        cell.facingTarget as FacingTarget,
+        r0,
+        c0,
+        rows,
+        cols
+      )
+      if (
+        boothStorefrontFacesPerimeterConcourse(
+          r0,
+          c0,
+          r1,
+          c1,
+          storefront,
+          rows,
+          cols,
+          walkway,
+          wallKeys
+        )
+      ) {
+        continue
+      }
+    }
     if (!boothHasAisleFrontage(r0, c0, r1, c1, rows, cols, walkway)) return false
   }
   return true

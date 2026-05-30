@@ -65,8 +65,14 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
   const [activeRoomId, setActiveRoomId] = useState(rooms[0]?.id ?? 'main')
   const [search, setSearch] = useState('')
   const [focusElementType, setFocusElementType] = useState<VenueElementType | null>(null)
-  const [showPatronFlow, setShowPatronFlow] = useState(false)
-  const [routeMode, setRouteMode] = useState<ShopperRouteMode>('baseline')
+  const [showPatronFlow, setShowPatronFlow] = useState(true)
+  const [routeMode, setRouteMode] = useState<ShopperRouteMode>(() => {
+    const firstRoom = rooms[0]
+    const hasVendors = (firstRoom?.cells ?? []).some(
+      (c) => c.col >= 0 && c.row >= 0 && (c.vendorName?.trim().length ?? 0) > 0
+    )
+    return hasVendors ? 'exposition' : 'baseline'
+  })
   const [selectedBoothNumber, setSelectedBoothNumber] = useState<number | null>(
     highlightBoothNumber ?? null
   )
@@ -152,6 +158,16 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
       setShowPatronFlow(true)
     }
   }, [routeMode, selectedBooth])
+
+  useEffect(() => {
+    if (!room) return
+    const vendorCount = (room.cells ?? []).filter(
+      (c) => c.col >= 0 && c.row >= 0 && (c.vendorName?.trim().length ?? 0) > 0
+    ).length
+    if (vendorCount === 0 && routeMode === 'exposition') {
+      setRouteMode('baseline')
+    }
+  }, [room, routeMode])
 
   const matchingBooths = useMemo(() => {
     if (!room || !searchLower) return new Set<number>()
