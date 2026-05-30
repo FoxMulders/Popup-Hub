@@ -68,7 +68,7 @@ export function MarketDashboardClient({
       totalRevenueCents={totalRevenueCents}
     >
       <CommandCenterFullscreenProvider>
-        <div className="coordinator-dashboard-workspace flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
         </div>
       </CommandCenterFullscreenProvider>

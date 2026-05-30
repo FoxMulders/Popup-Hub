@@ -234,11 +234,13 @@
   }
 
   .coordinator-dashboard-workspace {
-    height: calc(100dvh - 4rem);
-    min-height: 0;
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: min(480px, 80dvh);
   }
 
   html.command-center-canvas-fullscreen .coordinator-dashboard-workspace {
+    min-height: 0;
     height: 100%;
   }
 
@@ -893,7 +895,7 @@ body.loader-active {
 
 /* Coordinator dashboard — LCP-friendly blueprint draw (inline SVG in blueprint-loader) */
 .dashboard-app-shell__grid {
-  contain: layout style;
+  min-height: 0;
 }
 
 .dashboard-blueprint__stroke {

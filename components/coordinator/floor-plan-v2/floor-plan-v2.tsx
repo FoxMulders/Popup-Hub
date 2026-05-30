@@ -272,8 +272,9 @@ export function FloorPlanV2({
   const [drawShape, setDrawShape] = useState<DrawShape>(
     DEFAULT_TOOL_STATE.drawShape
   )
-  const [autoArrangeMode, setAutoArrangeMode] =
-    useState<AutoArrangeMode>('center-out')
+  const [autoArrangeMode, setAutoArrangeMode] = useState<AutoArrangeMode>(
+    isDashboard ? 'perimeter-only' : 'center-out'
+  )
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
 

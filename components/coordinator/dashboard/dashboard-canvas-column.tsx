@@ -57,21 +57,9 @@ export function DashboardCanvasColumn({
 
       {mountCanvas ? (
         <Suspense fallback={<CanvasZoneSkeleton />}>
-          <motion.div
-            className="absolute inset-0 flex min-h-0 flex-col"
-            initial={reducedMotion ? false : { opacity: 0, scale: 0.985 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={
-              reducedMotion
-                ? { duration: 0.01 }
-                : { type: 'spring', stiffness: 340, damping: 32, mass: 0.85 }
-            }
-            onAnimationComplete={() => {
-              if (!reducedMotion) handleInteractive()
-            }}
-          >
+          <div className="absolute inset-0 flex min-h-0 flex-col">
             <DashboardFloorPlanViewport onInteractive={handleInteractive} />
-          </motion.div>
+          </div>
         </Suspense>
       ) : showBlueprint ? null : (
         <CanvasZoneSkeleton />

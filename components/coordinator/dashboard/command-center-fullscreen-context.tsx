@@ -4,7 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -25,7 +25,7 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
   /** Blueprint-first: full-width canvas hides curation/telemetry chrome by default. */
   const [fullscreen, setFullscreen] = useState(true)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement
     root.classList.toggle(HTML_CLASS, fullscreen)
     return () => root.classList.remove(HTML_CLASS)
