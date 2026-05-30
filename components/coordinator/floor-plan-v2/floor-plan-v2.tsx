@@ -1505,6 +1505,7 @@ export function FloorPlanV2({
       <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
         {isDashboard ? (
           <CanvasCommandBar
+            staticLayout
             className="shrink-0"
             toolState={{ tool, drawShape }}
             onToolChange={handleToolChange}

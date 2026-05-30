@@ -11,9 +11,12 @@ import {
   renderCanvasCommandBarBlock,
   type CanvasCommandBarBlockContext,
 } from './canvas-command-bar-blocks'
+import type { CanvasToolbarBlockId } from './toolbar-order'
 import { CanvasToolbarReorder } from './canvas-toolbar-reorder'
 
 interface CanvasCommandBarProps extends CanvasToolHostProps {
+  /** Fixed tool rows — no drag-reorder (command center). */
+  staticLayout?: boolean
   className?: string
   rooms?: LayoutRoom[]
   activeRoomId?: string
@@ -41,8 +44,30 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
  * Unified top ribbon with draggable tool groups (framer-motion Reorder).
  * Drop handlers into `canvas-command-bar-blocks.tsx` per block id.
  */
+function CanvasToolbarStatic({
+  visibleBlockIds,
+  renderBlock,
+}: {
+  visibleBlockIds: readonly CanvasToolbarBlockId[]
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+}) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-1">
+      {visibleBlockIds.map((id) => (
+        <div
+          key={id}
+          className="inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-1 py-0.5 shadow-sm"
+        >
+          {renderBlock(id)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function CanvasCommandBar(props: CanvasCommandBarProps) {
   const {
+    staticLayout = false,
     className,
     toolState,
     onToolChange,
@@ -245,16 +270,24 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
   return (
     <div
       className={cn(
-        'shrink-0 rounded-lg border border-stone-200 bg-white px-2 py-1 shadow-sm',
+        'shrink-0 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm',
+        staticLayout && 'max-h-[min(42vh,220px)] overflow-x-auto overflow-y-auto',
         className
       )}
       role="toolbar"
       aria-label="Canvas command ribbon"
     >
-      <CanvasToolbarReorder
-        visibleBlockIds={visibleBlockIds}
-        renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
-      />
+      {staticLayout ? (
+        <CanvasToolbarStatic
+          visibleBlockIds={visibleBlockIds}
+          renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
+        />
+      ) : (
+        <CanvasToolbarReorder
+          visibleBlockIds={visibleBlockIds}
+          renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
+        />
+      )}
     </div>
   )
 }

@@ -136,7 +136,9 @@ export function FloorPlanCanvas({
   // pan into negative coordinates and place objects "off the field".
   // This pad value is also what the zoom math needs for anchoring, so
   // we compute it once here and pass it to the viewport.
-  const padFt = Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
+  const padFt = commandCenterViewport
+    ? 8
+    : Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
 
   /**
    * Anchor priority for "discrete" zoom (buttons, reset, programmatic):
@@ -237,9 +239,12 @@ export function FloorPlanCanvas({
       store.doc.objects,
       store.doc.objectRoom
     )
-    viewport.fitToBounds(bounds, { padding: 0.08 })
+    viewport.fitToBounds(bounds, {
+      padding: commandCenterViewport ? 0.03 : 0.08,
+    })
   }, [
     activeRoomId,
+    commandCenterViewport,
     store.doc.objectRoom,
     store.doc.objects,
     store.doc.rooms,
@@ -469,7 +474,8 @@ export function FloorPlanCanvas({
     <div
       ref={scrollRef}
       className={cn(
-        'relative h-full w-full overflow-auto bg-stone-50 outline-none',
+        'relative h-full w-full overflow-auto bg-stone-100 outline-none',
+        commandCenterViewport && 'bg-stone-100',
         className
       )}
       tabIndex={0}

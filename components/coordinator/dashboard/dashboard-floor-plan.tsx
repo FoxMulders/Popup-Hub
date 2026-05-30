@@ -8,6 +8,13 @@ import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/s
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
+import {
+  addLayoutRoomToList,
+  deleteLayoutRoomFromList,
+  renameLayoutRoomInList,
+} from '@/lib/coordinator/dashboard-layout-rooms'
 import { useMarketManagement } from './market-management-context'
 import { BoothMatrixA11yTable } from './booth-matrix-a11y-table'
 
@@ -59,6 +66,39 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       setLayoutRooms(rooms, activeRoomId)
     },
     [setLayoutRooms]
+  )
+
+  const handleAddRoom = useCallback(
+    (presetId?: LayoutRoomPresetId) => {
+      const { rooms, activeRoomId } = addLayoutRoomToList(layoutRooms, presetId)
+      setLayoutRooms(rooms, activeRoomId)
+      toast.success(`Added ${rooms.find((r) => r.id === activeRoomId)?.name ?? 'room'}`)
+    },
+    [layoutRooms, setLayoutRooms]
+  )
+
+  const handleRenameRoom = useCallback(
+    (roomId: string, name: string) => {
+      setLayoutRooms(renameLayoutRoomInList(layoutRooms, roomId, name), layoutActiveRoomId)
+    },
+    [layoutRooms, layoutActiveRoomId, setLayoutRooms]
+  )
+
+  const handleDeleteRoom = useCallback(
+    (roomId: string) => {
+      const next = deleteLayoutRoomFromList(layoutRooms, roomId, layoutActiveRoomId)
+      if (!next) return
+      setLayoutRooms(next.rooms, next.activeRoomId)
+      toast.message('Room deleted')
+    },
+    [layoutRooms, layoutActiveRoomId, setLayoutRooms]
+  )
+
+  const handleSelectRoom = useCallback(
+    (roomId: string) => {
+      setLayoutRooms(layoutRooms, roomId)
+    },
+    [layoutRooms, setLayoutRooms]
   )
 
   const handleSelectionChange = useCallback(
@@ -129,6 +169,9 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         layoutRooms={layoutRooms}
         layoutActiveRoomId={layoutActiveRoomId}
         onLayoutRoomsChange={handleLayoutRoomsChange}
+        onAddRoom={handleAddRoom}
+        onRenameRoom={handleRenameRoom}
+        onDeleteRoom={handleDeleteRoom}
         eventCategoryNames={categoryNames}
         applications={approvedPool}
         boothPlacementStatusByObjectId={boothStatusMap}
