@@ -6,76 +6,27 @@ function newId(): string {
 }
 
 /**
- * Paint the outer border as merged horizontal/vertical runs — one element per continuous
- * wall segment instead of hundreds of overlapping 1×1 column cells.
+ * Locked perimeter column paint is disabled — the outer shell is enforced
+ * virtually via `virtualPerimeterWallCellKeys` (placement / pathfinding).
  */
 export function buildMergedPerimeterWallElements(
-  cols: number,
-  rows: number,
-  skipCells: Set<string> = new Set(),
-  label = 'Perimeter wall'
+  _cols: number,
+  _rows: number,
+  _skipCells: Set<string> = new Set(),
+  _label = 'Perimeter wall'
 ): VenueElement[] {
-  if (cols < 1 || rows < 1) return []
+  return []
+}
 
-  const elements: VenueElement[] = []
-
-  const pushHorizontalRun = (row: number, col: number, colSpan: number) => {
-    if (colSpan <= 0) return
-    elements.push({
-      id: newId(),
-      type: 'column',
-      row,
-      col,
-      colSpan,
-      rowSpan: 1,
-      label,
-      locked: true,
-    })
-  }
-
-  const pushVerticalRun = (row: number, col: number, rowSpan: number) => {
-    if (rowSpan <= 0) return
-    elements.push({
-      id: newId(),
-      type: 'column',
-      row,
-      col,
-      colSpan: 1,
-      rowSpan,
-      label,
-      locked: true,
-    })
-  }
-
-  for (const row of [0, rows - 1]) {
-    let runStart: number | null = null
-    for (let c = 0; c < cols; c++) {
-      const open = !skipCells.has(`${row}-${c}`)
-      if (open) {
-        if (runStart === null) runStart = c
-      } else if (runStart !== null) {
-        pushHorizontalRun(row, runStart, c - runStart)
-        runStart = null
-      }
-    }
-    if (runStart !== null) pushHorizontalRun(row, runStart, cols - runStart)
-  }
-
-  for (const col of [0, cols - 1]) {
-    let runStart: number | null = null
-    for (let r = 1; r < rows - 1; r++) {
-      const open = !skipCells.has(`${r}-${col}`)
-      if (open) {
-        if (runStart === null) runStart = r
-      } else if (runStart !== null) {
-        pushVerticalRun(runStart, col, r - runStart)
-        runStart = null
-      }
-    }
-    if (runStart !== null) pushVerticalRun(runStart, col, rows - 1 - runStart)
-  }
-
-  return elements
+/** Drop legacy locked perimeter column segments from saved venue_elements. */
+export function stripLockedPerimeterWallElements(
+  elements: ReadonlyArray<VenueElement>,
+  cols: number,
+  rows: number
+): VenueElement[] {
+  return elements.filter(
+    (el) => !(el.type === 'column' && isPerimeterWallElement(el, cols, rows))
+  )
 }
 
 /** True when every cell in the element lies on the outer shell. */

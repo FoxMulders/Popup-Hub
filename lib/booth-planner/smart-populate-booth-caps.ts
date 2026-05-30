@@ -172,7 +172,7 @@ export function calculateNetUsableFloorSpace(
     options?.venueElements ??
     (cols > 0 && rows > 0 ? buildDefaultVenueElements(entrance, cols, rows) : [])
 
-  const blocked = blockedCellKeys(elements)
+  const blocked = blockedCellKeys(elements, cols, rows)
   const deductions = classifyFloorDeductions(elements)
   const centralAisleDeductionSqFt = reserveCentralAisleCells(cols, rows, blocked)
   const openGridSqFt = Math.max(0, grossSqFt - blocked.size)

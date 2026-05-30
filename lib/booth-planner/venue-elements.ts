@@ -3,7 +3,12 @@ import {
   buildExpoStyleDoorwaysOnly,
   buildExpoStyleVenueShell,
 } from '@/lib/booth-planner/expo-floor-shell'
-import { cellsOfElement, isOuterPerimeterCell } from '@/lib/booth-planner/perimeter-clearance'
+import {
+  cellsOfElement,
+  collectOpeningCellKeys,
+  isOuterPerimeterCell,
+  virtualPerimeterWallCellKeys,
+} from '@/lib/booth-planner/perimeter-clearance'
 import {
   buildMergedPerimeterWallElements,
   isPerimeterWallElement,
@@ -108,7 +113,11 @@ export function buildVenueElementMap(elements: VenueElement[]): Map<string, Venu
 }
 
 /** All cells blocked by venue fixtures (no booth placement). Stage alcoves stay vendor-placeable for markets. */
-export function blockedCellKeys(elements: VenueElement[]): Set<string> {
+export function blockedCellKeys(
+  elements: VenueElement[],
+  cols: number,
+  rows: number
+): Set<string> {
   const keys = new Set<string>()
   for (const el of elements) {
     if (el.type === 'stage') continue
@@ -119,6 +128,13 @@ export function blockedCellKeys(elements: VenueElement[]): Set<string> {
         keys.add(cellKey(r, c))
       }
     }
+  }
+  for (const key of virtualPerimeterWallCellKeys(
+    cols,
+    rows,
+    collectOpeningCellKeys(elements)
+  )) {
+    keys.add(key)
   }
   return keys
 }
@@ -265,27 +281,6 @@ export function moveDoorOnWall(
 
   let next = elements.filter((e) => e.id !== door.id)
 
-  const stampWall = (row: number, col: number) => {
-    if (wallAtCell(row, col, cols, rows) !== requiredWall) return
-    next = next.filter((e) => !(e.row === row && e.col === col && (e.colSpan ?? 1) === 1))
-    next.push({
-      id: crypto.randomUUID(),
-      type: 'column',
-      row,
-      col,
-      colSpan: 1,
-      rowSpan: 1,
-      locked: true,
-      label: 'Perimeter wall',
-    })
-  }
-
-  for (let r = door.row; r < door.row + spanR; r++) {
-    for (let c = door.col; c < door.col + spanC; c++) {
-      stampWall(r, c)
-    }
-  }
-
   for (let r = targetRow; r < targetRow + spanR; r++) {
     for (let c = targetCol; c < targetCol + spanC; c++) {
       next = next.filter((e) => !(e.row === r && e.col === c && (e.colSpan ?? 1) === 1))
@@ -407,8 +402,6 @@ export function isImmutableVenueElement(
 ): boolean {
   if (el.locked) return true
 
-  if (isPerimeterWallElement(el, cols, rows)) return true
-
   if (el.type === 'entrance' || el.type === 'exit' || el.type === 'door') {
     return wallAtCell(el.row, el.col, cols, rows) !== null
   }
@@ -423,7 +416,7 @@ export function isImmutableVenueElement(
   }
 
   const label = (el.label ?? '').trim()
-  if (/^(Perimeter wall|Raised Stage|Stage Stairs|Main Entrance|Emergency Exit)$/i.test(label)) {
+  if (/^(Raised Stage|Stage Stairs|Main Entrance|Emergency Exit)$/i.test(label)) {
     return true
   }
 

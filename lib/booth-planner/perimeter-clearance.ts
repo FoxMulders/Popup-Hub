@@ -11,6 +11,39 @@ export function isOuterPerimeterCell(row: number, col: number, cols: number, row
   return row === 0 || row === rows - 1 || col === 0 || col === cols - 1
 }
 
+/** Entrance / exit / door cells carved from the outer shell. */
+export function collectOpeningCellKeys(elements: ReadonlyArray<VenueElement>): Set<string> {
+  const keys = new Set<string>()
+  for (const el of elements) {
+    if (el.type !== 'entrance' && el.type !== 'exit' && el.type !== 'door') continue
+    for (const { row, col } of cellsOfElement(el)) {
+      keys.add(`${row}-${col}`)
+    }
+  }
+  return keys
+}
+
+/**
+ * Outer shell wall cells when perimeter is not painted as locked columns.
+ * Respects door openings on row/col 0 / max edges.
+ */
+export function virtualPerimeterWallCellKeys(
+  cols: number,
+  rows: number,
+  openings: Set<string> = new Set()
+): Set<string> {
+  const keys = new Set<string>()
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!isOuterPerimeterCell(r, c, cols, rows)) continue
+      const key = `${r}-${c}`
+      if (openings.has(key)) continue
+      keys.add(key)
+    }
+  }
+  return keys
+}
+
 /** 4′ walkable concourse ring parallel to outer walls — fixtures are clipped from this band. */
 export function isInnerClearanceCell(row: number, col: number, cols: number, rows: number): boolean {
   return isPerimeterVendingLaneCell(row, col, cols, rows)

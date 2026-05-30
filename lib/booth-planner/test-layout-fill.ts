@@ -105,7 +105,7 @@ export function estimateMaxVendorsFit(params: TestLayoutFillParams): number {
   const cols = Math.max(1, Math.floor(params.venueWidth / params.boothWidth))
   const rows = Math.max(1, Math.floor(params.venueLength / params.boothLength))
   const venueElements = venueElementsForPreset(params.preset, cols, rows, params.entrance)
-  const blocked = blockedCellKeys(venueElements)
+  const blocked = blockedCellKeys(venueElements, cols, rows)
   const openCells = cols * rows - blocked.size
   if (openCells <= 0) return 0
 

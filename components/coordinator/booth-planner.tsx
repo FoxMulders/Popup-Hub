@@ -169,7 +169,10 @@ import {
 import { computePatronPathTrace } from '@/lib/booth-planner/patron-path-trace'
 import { SvgPatronFlowLayer } from '@/components/coordinator/svg-patron-flow-layer'
 import { ModifiedLoopFlowOverlay } from '@/components/coordinator/modified-loop-flow-overlay'
-import { isPerimeterWallElement } from '@/lib/booth-planner/perimeter-wall-segments'
+import {
+  isPerimeterWallElement,
+  stripLockedPerimeterWallElements,
+} from '@/lib/booth-planner/perimeter-wall-segments'
 import {
   resolveVendorGridSpans,
   tentVendorsAllowed,
@@ -527,7 +530,7 @@ export function BoothPlanner({
     spacing_mode: spacingMode,
     baseline_table_length_ft: roomBaselineTableLengthFt,
     cells,
-    venue_elements: venueElements,
+    venue_elements: venueElementsRaw,
     venue_preset_id: roomVenuePresetId,
     unmanaged_mode: roomUnmanagedMode,
   } = activeRoom
@@ -863,6 +866,10 @@ export function BoothPlanner({
   )
   const gridCols = gridConfig.cols
   const gridRows = gridConfig.rows
+  const venueElements = useMemo(
+    () => stripLockedPerimeterWallElements(venueElementsRaw, gridCols, gridRows),
+    [venueElementsRaw, gridCols, gridRows]
+  )
   const cellPx = gridConfig.cellPx
   const offFloorZones = useMemo(
     () => getOffFloorZonesForPreset(activeTemplateId),
@@ -880,7 +887,7 @@ export function BoothPlanner({
   const blocked = useMemo(
     () =>
       mergeSafetyBlockedKeys(
-        blockedCellKeys(venueElementsWithDoors),
+        blockedCellKeys(venueElementsWithDoors, gridCols, gridRows),
         venueElementsWithDoors,
         gridCols,
         canvasRows,

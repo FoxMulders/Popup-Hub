@@ -229,10 +229,20 @@ export function FloorPlanCanvas({
    */
   const roomsFramingKey = useMemo(() => {
     const frames = store.doc.rooms ?? []
+    const mergedSig = (store.doc.objects ?? [])
+      .filter((o) => o.kind === 'merged_zone')
+      .map(
+        (o) =>
+          `${o.id}:${o.x},${o.y},${o.width},${o.height},${o.rotation ?? 0}`
+      )
+      .join(';')
     return `${activeRoomId ?? ''}:${frames
-      .map((f) => `${f.id}:${f.widthFt},${f.lengthFt}`)
-      .join('|')}`
-  }, [activeRoomId, store.doc.rooms])
+      .map(
+        (f) =>
+          `${f.id}:${f.originX},${f.originY},${f.widthFt},${f.lengthFt},${f.mergedIntoObjectId ?? ''}`
+      )
+      .join('|')}:${mergedSig}`
+  }, [activeRoomId, store.doc.objects, store.doc.rooms])
 
   const frameActiveRoom = useCallback(() => {
     const frames = store.doc.rooms ?? []

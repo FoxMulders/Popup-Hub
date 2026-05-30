@@ -10,13 +10,14 @@ import {
   type RoomResizePatch,
 } from './room-canvas'
 import {
-  roomFrameCenter,
-  roomRotateDeltaDeg,
-  rotateRoomFrame90,
-} from './rotate-room-frame'
+  finalizeDocGeometry,
+  rotateRoomContentsAroundPivot,
+  rotateRoomFrameAroundPivot,
+  roomRotationPivot,
+} from './placement-surface'
 import {
   reconcileRoomPerimeterChildren,
-  rotateRoomChildren,
+  stripMacroPerimeterWallsFromDoc,
   transformObjectsOnRoomResize,
 } from '../interactions/room-perimeter-sync'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from './types'
@@ -242,7 +243,9 @@ export interface FloorPlanDocStore {
 }
 
 export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
-  const [doc, setDoc] = useState<FloorPlanDoc>(initial)
+  const [doc, setDoc] = useState<FloorPlanDoc>(() =>
+    stripMacroPerimeterWallsFromDoc(initial)
+  )
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
     () => new Set()
   )
@@ -274,7 +277,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
   )
 
   const resetDoc = useCallback((next: FloorPlanDoc) => {
-    setDoc(next)
+    setDoc(stripMacroPerimeterWallsFromDoc(next))
     setSelectedIds(new Set())
     setHistory({ past: [], future: [] })
   }, [])
@@ -554,53 +557,27 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         ? frames.filter((f) => f.joinGroupId === groupId).map((f) => f.id)
         : [roomId]
 
-      const deltaDeg = roomRotateDeltaDeg(direction)
-
       for (const id of rotatingIds) {
         const frame = (working.rooms ?? []).find((f) => f.id === id)
         if (!frame) continue
 
-        const roomCenter = roomFrameCenter(frame)
-        let rotatedFrame = rotateRoomFrame90(frame, direction)
-
-        let fixDx = 0
-        let fixDy = 0
-        if (rotatedFrame.originX < 0) fixDx = -rotatedFrame.originX
-        if (rotatedFrame.originY < 0) fixDy = -rotatedFrame.originY
-        if (fixDx !== 0 || fixDy !== 0) {
-          rotatedFrame = {
-            ...rotatedFrame,
-            originX: rotatedFrame.originX + fixDx,
-            originY: rotatedFrame.originY + fixDy,
-          }
-        }
-
+        const pivot = roomRotationPivot(working, id)
+        const rotatedFrame = rotateRoomFrameAroundPivot(frame, pivot, direction)
         const nextFrames = (working.rooms ?? []).map((f) =>
           f.id === id ? rotatedFrame : f
         )
-        const objectRoom = working.objectRoom ?? {}
-        const nextObjects = rotateRoomChildren(
-          working.objects,
-          objectRoom,
+        const nextObjects = rotateRoomContentsAroundPivot(
+          working,
           id,
-          roomCenter,
-          deltaDeg,
-          fixDx,
-          fixDy
+          pivot,
+          direction
         )
-        const extents = reconcileCanvasExtents(nextFrames, undefined, nextObjects)
 
-        working = reconcileRoomPerimeterChildren(
-          {
-            ...working,
-            objects: nextObjects,
-            rooms: nextFrames,
-            canvasWidthFt: extents.canvasWidthFt,
-            canvasLengthFt: extents.canvasLengthFt,
-          },
-          id,
-          { perimeterOnlyBoothOrient: true }
-        )
+        working = finalizeDocGeometry({
+          ...working,
+          objects: nextObjects,
+          rooms: nextFrames,
+        })
       }
 
       commit(working, pushHistory)
@@ -745,7 +722,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         selection
       )
       if (!mergedId) return { mergedId: null, reason }
-      commit(next, pushHistory)
+      commit(finalizeDocGeometry(next), pushHistory)
       if (select) setSelectedIds(new Set([mergedId]))
       return { mergedId }
     },

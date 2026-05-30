@@ -74,7 +74,6 @@ export function buildPerimeterWalls(
 
   const baseProps = {
     rotation: 0,
-    locked: true,
     label: PERIMETER_WALL_LABEL,
   } as const
 
@@ -150,7 +149,6 @@ export function targetHasPerimeterWalls(
     objects.some(
       (o) =>
         o.kind === 'wall' &&
-        o.locked === true &&
         o.label === PERIMETER_WALL_LABEL &&
         Math.abs(o.x - exp.x) < tolFt &&
         Math.abs(o.y - exp.y) < tolFt &&

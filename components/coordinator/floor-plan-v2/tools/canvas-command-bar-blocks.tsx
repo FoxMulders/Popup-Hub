@@ -22,7 +22,6 @@ import {
   Siren,
   Split,
   Square,
-  SquareDashed,
   Tag,
   Trash2,
   Undo2,
@@ -86,7 +85,6 @@ export interface CanvasCommandBarBlockContext {
   joinTitle: string
   onUnjoinRoom?: () => void
   canUnjoinRoom?: boolean
-  onAddPerimeterWalls?: () => void
   onClearAll: () => void
   onDeleteSelected: () => void
   tableSizeFt?: LayoutBaselineTableLengthFt
@@ -194,15 +192,6 @@ export function renderCanvasCommandBarBlock(
                 <shape.icon className="h-3.5 w-3.5" />
               </CommandButton>
             ))}
-            {ctx.onAddPerimeterWalls ? (
-              <CommandButton
-                onClick={ctx.onAddPerimeterWalls}
-                title="Seal the active room with four locked perimeter walls"
-                label="Add perimeter"
-              >
-                <SquareDashed className="h-3.5 w-3.5" />
-              </CommandButton>
-            ) : null}
             <CommandButton
               onClick={ctx.onDeleteSelected}
               disabled={!hasSelection}

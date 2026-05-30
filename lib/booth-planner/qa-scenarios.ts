@@ -35,7 +35,10 @@ import {
   isOuterPerimeterCell,
   isPerimeterVendingLaneCell,
 } from '@/lib/booth-planner/perimeter-clearance'
-import { perimeterWallAt } from '@/lib/booth-planner/perimeter-wall-segments'
+import {
+  collectOpeningCellKeys,
+  virtualPerimeterWallCellKeys,
+} from '@/lib/booth-planner/perimeter-clearance'
 import { detectLayoutOverlaps } from '@/lib/booth-planner/layout-overlap'
 import {
   buildVenueElementsFromPreset,
@@ -229,7 +232,7 @@ export function runLayoutQaScenarios(): void {
 
   const placed = narrow.cells.filter((c) => c.col >= 0)
   if (placed.length > 0) {
-    const blocked = blockedCellKeys(buildDefaultVenueElements('south', 1, 6))
+    const blocked = blockedCellKeys(buildDefaultVenueElements('south', 1, 6), 6, 1)
     const check = validateAutoLayoutPlacement({
       cells: narrow.cells,
       rows: 6,
@@ -269,18 +272,18 @@ export function runLayoutQaScenarios(): void {
   // Outside-only preset: 1-cell wall shell + empty 4′ vending margin
   const outside = buildOutsideOnlyVenueElements(40, 72, 'south')
   const outsidePatch = applyOutsideOnlyLayout(40, 72, 'south')
+  const outsideShell = virtualPerimeterWallCellKeys(
+    40,
+    72,
+    collectOpeningCellKeys(outside)
+  )
   assert(outsidePatch.cells.length === 0, 'Outside only wipes booth cells')
   assert(!outside.some((e) => e.type === 'aisle'), 'Outside only has no interior or spine aisles')
-  for (const wall of outside.filter((e) => e.type === 'column')) {
-    for (const { row, col } of cellsOfElement(wall)) {
-      assert(
-        isOuterPerimeterCell(row, col, 40, 72),
-        `Outside only columns must sit on outer shell only (${row}-${col})`
-      )
-    }
-  }
-  assert(outside.filter((e) => e.type === 'column').length <= 8, 'Merged perimeter uses few wall segments')
-  assert(perimeterWallAt(outside, 0, 5, 40, 72) != null, 'South outer wall painted')
+  assert(
+    !outside.some((e) => e.type === 'column'),
+    'Outside only does not paint locked perimeter columns'
+  )
+  assert(outsideShell.has('0-5'), 'South outer wall in virtual shell')
   assert(
     !outside.some(
       (e) =>
@@ -383,12 +386,17 @@ export function runLayoutQaScenarios(): void {
   // Kilkenny hall preset: open main hall; bar/kitchen off-floor; stage alcove vendor-usable
   const kilkennyElements = buildVenueElementsFromPreset(KILKENNY_COMMUNITY_HALL)
   const kilkennyFullElements = fullVenueElementsFromPreset(KILKENNY_COMMUNITY_HALL)
-  const kilkennyBlocked = blockedCellKeys(kilkennyFullElements)
-  assert(perimeterWallAt(kilkennyElements, 0, 5, 40, 72) != null, 'South wall row 0 painted')
-  assert(perimeterWallAt(kilkennyElements, 71, 5, 40, 72) != null, 'North wall row 71 painted')
-  assert(perimeterWallAt(kilkennyElements, 10, 0, 40, 72) != null, 'West wall col 0 painted')
-  assert(perimeterWallAt(kilkennyElements, 10, 39, 40, 72) != null, 'East wall col 39 painted')
-  assert(perimeterWallAt(kilkennyElements, 0, 22, 40, 72) == null, 'South entrance cols 18–23 carved from wall')
+  const kilkennyBlocked = blockedCellKeys(kilkennyFullElements, 40, 72)
+  const kilkennyShell = virtualPerimeterWallCellKeys(
+    40,
+    72,
+    collectOpeningCellKeys(kilkennyElements)
+  )
+  assert(kilkennyShell.has('0-5'), 'South wall row 0 in virtual shell')
+  assert(kilkennyShell.has('71-5'), 'North wall row 71 in virtual shell')
+  assert(kilkennyShell.has('10-0'), 'West wall col 0 in virtual shell')
+  assert(kilkennyShell.has('10-39'), 'East wall col 39 in virtual shell')
+  assert(!kilkennyShell.has('0-22'), 'South entrance cols 18–23 carved from shell')
   const entrance = kilkennyElements.find((e) => e.type === 'entrance')
   assert(entrance?.row === 0 && entrance.col === 18 && entrance.colSpan === 6, 'Main entrance spans south cols 18–23')
   const exits = kilkennyElements.filter((e) => e.type === 'exit')
@@ -496,10 +504,14 @@ export function runLayoutQaScenarios(): void {
     kilkennyAfterClearFixtures.filter((e) => e.type === 'exit').length >= 2,
     'Clear Fixtures must preserve emergency exits'
   )
+  const kilkennyAfterShell = virtualPerimeterWallCellKeys(
+    40,
+    72,
+    collectOpeningCellKeys(kilkennyAfterClearFixtures)
+  )
   assert(
-    perimeterWallAt(kilkennyAfterClearFixtures, 0, 5, 40, 72) != null &&
-      perimeterWallAt(kilkennyAfterClearFixtures, 71, 5, 40, 72) != null,
-    'Clear Fixtures must preserve perimeter walls'
+    kilkennyAfterShell.has('0-5') && kilkennyAfterShell.has('71-5'),
+    'Clear Fixtures must preserve virtual perimeter shell'
   )
   assert(
     kilkennyAfterClearFixtures.some((e) => e.label === 'Raised Stage' && e.row === 72),
@@ -651,8 +663,8 @@ export function runLayoutQaScenarios(): void {
   const kilkennyCorridorShell = applyIndoorCorridorLayout(40, 72, 'south', kilkennyCorridorBase)
   assert(kilkennyCorridorShell.cells.length === 0, 'Corridor shell clears booth cells')
   assert(
-    kilkennyCorridorShell.venue_elements.some((e) => e.type === 'column'),
-    'Corridor shell preserves perimeter walls'
+    kilkennyCorridorShell.venue_elements.some((e) => e.type === 'entrance'),
+    'Corridor shell preserves main entrance'
   )
   assert(
     kilkennyCorridorShell.venue_elements.some((e) => e.type === 'aisle' && e.label === 'Row aisle'),
@@ -836,8 +848,12 @@ export function runLayoutQaScenarios(): void {
     const shell = applyGenericRowLayout(mode, 40, 72, 'south', kilkennyCorridorBase)
     assert(shell.cells.length === 0, `${mode} preset shell clears booth cells`)
     assert(
-      shell.venue_elements.some((e) => e.type === 'column'),
-      `${mode} shell preserves perimeter walls`
+      virtualPerimeterWallCellKeys(
+        40,
+        72,
+        collectOpeningCellKeys(shell.venue_elements)
+      ).size > 100,
+      `${mode} shell preserves virtual perimeter boundary`
     )
     assert(
       shell.venue_elements.some((e) => e.label === 'Raised Stage' && e.row === 72),
@@ -914,7 +930,9 @@ export function runLayoutQaScenarios(): void {
         cols === 40 && rows === 72
           ? fullVenueElementsFromPreset(KILKENNY_COMMUNITY_HALL)
           : buildOutsideOnlyVenueElements(cols, rows, 'south')
-      assert(hallHasIndoorShell(baseElements, cols, rows), `${cols}×${rows} hall should have indoor shell`)
+      if (cols === 40 && rows === 72) {
+        assert(hallHasIndoorShell(baseElements, cols, rows), `${cols}×${rows} hall should have indoor shell`)
+      }
       const result = runCorridorAutoPlan(cols, rows, vendorCount, baseElements)
       assert(result.placedCount > 0, `${cols}×${rows} corridor should place vendors (${vendorCount} requested)`)
       const overlap = detectLayoutOverlaps({

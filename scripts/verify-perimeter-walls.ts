@@ -44,8 +44,8 @@ function expect(cond: boolean, label: string) {
     'every emitted object is a WallObject'
   )
   expect(
-    walls.every((w) => w.locked === true),
-    'every macro wall is locked'
+    walls.every((w) => w.locked !== true),
+    'macro walls are not locked (room frame owns the boundary)'
   )
   expect(
     walls.every((w) => w.label === PERIMETER_WALL_LABEL),
@@ -96,12 +96,10 @@ function expect(cond: boolean, label: string) {
     targetHasPerimeterWalls(target, []) === false,
     'predicate returns false on empty object list'
   )
-  // Same coords but missing the locked flag should NOT trip it (so a
-  // hand-drawn wall doesn't accidentally satisfy the predicate).
-  const unlockedClones = walls.map((w) => ({ ...w, locked: false }))
+  const handDrawn = walls.map((w) => ({ ...w, label: 'User wall' }))
   expect(
-    targetHasPerimeterWalls(target, unlockedClones) === false,
-    'predicate ignores walls without `locked: true` (user drew them)'
+    targetHasPerimeterWalls(target, handDrawn) === false,
+    'predicate ignores walls without PERIMETER_WALL_LABEL'
   )
 }
 

@@ -228,7 +228,7 @@ export class AutoLayoutSession {
         ? venueElements
         : buildDefaultVenueElements(entrance, this.cols, this.rows)
 
-    this.blocked = blockedCellKeys(this.fixtures)
+    this.blocked = blockedCellKeys(this.fixtures, this.cols, this.rows)
     this.placementForbidden = mergeSafetyBlockedKeys(
       new Set(this.blocked),
       this.fixtures,

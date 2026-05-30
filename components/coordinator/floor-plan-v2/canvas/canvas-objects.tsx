@@ -253,7 +253,6 @@ function computeWallSegments(
 function isMacroPerimeterWall(obj: PlacedObject): boolean {
   return (
     obj.kind === 'wall' &&
-    obj.locked === true &&
     (obj.label ?? '').toLowerCase() === PERIMETER_WALL_LABEL.toLowerCase()
   )
 }

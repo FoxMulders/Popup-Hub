@@ -71,11 +71,6 @@ import {
   groupRotatedAabb,
   rotatedAabb,
 } from './interactions/geometry'
-import {
-  buildPerimeterWalls,
-  resolvePerimeterTarget,
-  targetHasPerimeterWalls,
-} from './interactions/perimeter-walls'
 import type { LayoutRoom } from '@/types/database'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
@@ -530,7 +525,6 @@ export function FloorPlanV2({
   }, [])
 
   const handleClearAll = useCallback(() => {
-    // Clearing is scoped to the active room. Locked perimeter walls stay.
     const activeId = activeRoomId
     const objectRoom = store.doc.objectRoom ?? {}
     const remaining = store.doc.objects.filter((o) => {
@@ -542,7 +536,6 @@ export function FloorPlanV2({
     toast.success('Active room cleared')
   }, [activeRoomId, store])
 
-  /** Delete selected objects; locked macro perimeter walls are kept. */
   const handleDeleteSelected = useCallback(() => {
     const ids = Array.from(store.selectedIds)
     if (ids.length === 0) return
@@ -1068,13 +1061,6 @@ export function FloorPlanV2({
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'ccw')
     if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
-    const bounds = activeRoomFramingBounds(
-      nextDoc.rooms ?? [],
-      rotateTargetRoomId,
-      nextDoc.objects,
-      nextDoc.objectRoom
-    )
-    viewportApiRef.current?.fitToBounds(bounds, { padding: 0.08 })
   }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const handleRotateRoomRight = useCallback(() => {
@@ -1085,13 +1071,6 @@ export function FloorPlanV2({
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'cw')
     if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
-    const bounds = activeRoomFramingBounds(
-      nextDoc.rooms ?? [],
-      rotateTargetRoomId,
-      nextDoc.objects,
-      nextDoc.objectRoom
-    )
-    viewportApiRef.current?.fitToBounds(bounds, { padding: 0.08 })
   }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const [currentZoom, setCurrentZoom] = useState(1)
@@ -1213,49 +1192,6 @@ export function FloorPlanV2({
     store,
     vendorTableMetaByKey,
   ])
-
-  /**
-   * Macro: emit four locked perimeter wall rects matching the active
-   * room's bounding box (or the canvas rect if there's no active
-   * room). Walls are tagged with `PERIMETER_WALL_LABEL` and
-   * `locked: true` so the wall-immutability gate in
-   * `handleDeleteSelected` and `handleClearAll` keeps them intact
-   * across the rest of the editing session. If the active target
-   * already has a complete macro perimeter the call is a no-op
-   * (toast feedback informs the user) so re-clicks don't double-
-   * stack walls.
-   */
-  const handleAddPerimeterWalls = useCallback(() => {
-    const target = resolvePerimeterTarget(
-      store.doc.rooms,
-      activeRoomId,
-      store.doc.canvasWidthFt,
-      store.doc.canvasLengthFt
-    )
-    if (target.widthFt <= 0 || target.lengthFt <= 0) {
-      toast.error('Cannot add perimeter walls — invalid room dimensions.')
-      return
-    }
-    if (targetHasPerimeterWalls(target, store.doc.objects)) {
-      toast.message('Perimeter walls are already in place.')
-      return
-    }
-    const walls = buildPerimeterWalls(target)
-    const ids = store.addObjects(walls, {
-      select: false,
-      pushHistory: true,
-      roomId: activeRoomId ?? undefined,
-    })
-    if (ids.length === 4) {
-      toast.success('Sealed the room with four perimeter walls.', {
-        duration: 1800,
-      })
-    } else {
-      toast.warning(
-        `Added ${ids.length} of 4 perimeter walls — some failed to fit.`
-      )
-    }
-  }, [activeRoomId, store])
 
   const handleSelectRoom = useCallback(
     (roomId: string) => {
@@ -1688,7 +1624,6 @@ export function FloorPlanV2({
             canAutoArrange={boothCount > 0}
             autoArrangeMode={autoArrangeMode}
             onAutoArrangeModeChange={setAutoArrangeMode}
-            onAddPerimeterWalls={handleAddPerimeterWalls}
             onJoinRooms={handleMerge}
             canJoinRooms={canMerge}
             joinCandidateCount={
@@ -1751,7 +1686,6 @@ export function FloorPlanV2({
             canAutoArrange={boothCount > 0}
             autoArrangeMode={autoArrangeMode}
             onAutoArrangeModeChange={setAutoArrangeMode}
-            onAddPerimeterWalls={handleAddPerimeterWalls}
             onJoinRooms={handleMerge}
             canJoinRooms={canMerge}
             joinCandidateCount={

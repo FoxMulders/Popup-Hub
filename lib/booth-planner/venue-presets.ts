@@ -7,7 +7,11 @@ import {
   type EdmontonVenueId,
 } from '@/lib/booth-planner/edmonton-venue-registry'
 import { SpatialBitGrid, CELL_LOCK, CELL_WALL } from '@/lib/booth-planner/spatial-bitmap'
-import { clearInnerClearanceRing } from '@/lib/booth-planner/perimeter-clearance'
+import {
+  clearInnerClearanceRing,
+  collectOpeningCellKeys,
+} from '@/lib/booth-planner/perimeter-clearance'
+import { stripLockedPerimeterWallElements } from '@/lib/booth-planner/perimeter-wall-segments'
 import {
   buildLockedStructuralElements,
   buildUniversalPerimeterWalls,
@@ -113,7 +117,11 @@ export function buildVenueElementsFromPreset(preset: VenuePreset): VenueElement[
   const structural = buildLockedStructuralElements(fixedAssets, rows)
   const openings = openingElementsFromSegments(doorSegments)
 
-  return clearInnerClearanceRing([...walls, ...structural, ...openings], cols, rows)
+  return stripLockedPerimeterWallElements(
+    clearInnerClearanceRing([...walls, ...structural, ...openings], cols, rows),
+    cols,
+    rows
+  )
 }
 
 /** Write preset walls (0b01) + locked zones (0b100) into the spatial matrix. */
@@ -123,6 +131,7 @@ export function buildPresetSpatialBitmap(preset: VenuePreset): SpatialBitGrid {
   const grid = new SpatialBitGrid(cols, rows)
   const elements = buildVenueElementsFromPreset(preset)
   grid.markVenueElements(elements)
+  grid.markVirtualPerimeterShell(collectOpeningCellKeys(elements))
   return grid
 }
 

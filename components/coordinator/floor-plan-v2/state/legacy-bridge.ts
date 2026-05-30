@@ -42,6 +42,7 @@ import type {
   RoomFrame,
 } from './types'
 import { reconcileCanvasExtents } from './room-canvas'
+import { stripMacroPerimeterWallsFromDoc } from '../interactions/room-perimeter-sync'
 import { makeEmptyDoc } from './types'
 
 const FT = 1
@@ -380,7 +381,7 @@ export function docFromLegacyRooms(
   }
 
   const extents = unifiedCanvasExtents(frames)
-  return {
+  return stripMacroPerimeterWallsFromDoc({
     canvasWidthFt: extents.width,
     canvasLengthFt: extents.length,
     gridSpacingFt: 1,
@@ -388,7 +389,7 @@ export function docFromLegacyRooms(
     objects,
     rooms: frames,
     objectRoom,
-  }
+  })
 }
 
 /**

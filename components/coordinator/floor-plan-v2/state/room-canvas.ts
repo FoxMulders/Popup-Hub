@@ -1,5 +1,9 @@
 import { rotatedAabb } from '../interactions/geometry'
-import type { PlacedObject, RoomFrame } from './types'
+import {
+  placementSurfaceFramingBounds,
+  resolveRoomPlacementSurface,
+} from './placement-surface'
+import type { FloorPlanDoc, PlacedObject, RoomFrame } from './types'
 
 /**
  * Multi-room canvas sizing and limits.
@@ -157,8 +161,24 @@ export function activeRoomFramingBounds(
     frames[0]
   if (!frame) return roomUnionBounds(frames)
 
-  let minX = Math.max(0, frame.originX)
-  let minY = Math.max(0, frame.originY)
+  if (activeRoomId && objects) {
+    const doc: FloorPlanDoc = {
+      canvasWidthFt: 0,
+      canvasLengthFt: 0,
+      gridSpacingFt: 1,
+      snapFt: 1,
+      objects: [...objects],
+      rooms: [...frames],
+      objectRoom: objectRoom ? { ...objectRoom } : undefined,
+    }
+    const surface = resolveRoomPlacementSurface(doc, activeRoomId)
+    if (surface) {
+      return placementSurfaceFramingBounds(surface)
+    }
+  }
+
+  let minX = frame.originX
+  let minY = frame.originY
   let maxX = minX + frame.widthFt
   let maxY = minY + frame.lengthFt
 

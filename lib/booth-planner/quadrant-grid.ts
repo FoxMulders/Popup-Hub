@@ -1,5 +1,10 @@
 import type { BoothCell, VenueElement } from '@/types/database'
 import {
+  collectOpeningCellKeys,
+  isOuterPerimeterCell,
+} from '@/lib/booth-planner/perimeter-clearance'
+import { cellKey } from '@/lib/booth-planner/venue-elements'
+import {
   CELL_EMPTY,
   CELL_WALL,
   CELL_BOOTH,
@@ -172,6 +177,16 @@ export class QuadrantMemoryGrid {
     return true
   }
 
+  markVirtualPerimeterShell(openings: Set<string> = new Set()): void {
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (!isOuterPerimeterCell(r, c, this.cols, this.rows)) continue
+        if (openings.has(cellKey(r, c))) continue
+        this.fillRect(c, r, 1, 1, CELL_WALL, false)
+      }
+    }
+  }
+
   markVenueElements(elements: VenueElement[]): void {
     for (const el of elements) {
       const spanC = el.colSpan ?? 1
@@ -206,6 +221,7 @@ export class QuadrantMemoryGrid {
   ): QuadrantMemoryGrid {
     const grid = new QuadrantMemoryGrid(cols, rows)
     grid.markVenueElements(venueElements)
+    grid.markVirtualPerimeterShell(collectOpeningCellKeys(venueElements))
     grid.markBoothCells(boothCells, excludeBoothId)
     return grid
   }

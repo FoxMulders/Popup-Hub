@@ -5,7 +5,10 @@ import {
 import { BOOTH_SAFETY_BUFFER_CELLS } from '@/lib/booth-planner/layout-clearance-constants'
 import { cellKey } from '@/lib/booth-planner/venue-elements'
 import { isOuterPerimeterCell } from '@/lib/booth-planner/perimeter-clearance'
-import { isPerimeterWallElement } from '@/lib/booth-planner/perimeter-wall-segments'
+import {
+  collectOpeningCellKeys,
+  virtualPerimeterWallCellKeys,
+} from '@/lib/booth-planner/perimeter-clearance'
 import type { VenueElement } from '@/types/database'
 
 export type StorefrontSide = 'top' | 'bottom' | 'left' | 'right'
@@ -195,19 +198,7 @@ function storefrontClearanceBandClear(
 }
 
 export function buildBlockedWallKeys(elements: VenueElement[], cols: number, rows: number): Set<string> {
-  const keys = new Set<string>()
-  for (const el of elements) {
-    if (el.type !== 'column') continue
-    if (!isPerimeterWallElement(el, cols, rows)) continue
-    const spanC = el.colSpan ?? 1
-    const spanR = el.rowSpan ?? 1
-    for (let r = el.row; r < el.row + spanR; r++) {
-      for (let c = el.col; c < el.col + spanC; c++) {
-        keys.add(cellKey(r, c))
-      }
-    }
-  }
-  return keys
+  return virtualPerimeterWallCellKeys(cols, rows, collectOpeningCellKeys(elements))
 }
 
 /** Pick orientation where storefront faces walkway, not walls; prefer best sightline score. */

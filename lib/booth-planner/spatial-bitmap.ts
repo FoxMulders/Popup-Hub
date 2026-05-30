@@ -1,4 +1,8 @@
 import type { BoothCell, VenueElement } from '@/types/database'
+import {
+  collectOpeningCellKeys,
+  isOuterPerimeterCell,
+} from '@/lib/booth-planner/perimeter-clearance'
 import { cellKey } from '@/lib/booth-planner/venue-elements'
 import {
   QuadrantMemoryGrid,
@@ -129,6 +133,17 @@ export class SpatialBitGrid {
     return true
   }
 
+  /** Mark virtual outer shell as wall cells (no painted perimeter columns). */
+  markVirtualPerimeterShell(openings: Set<string> = new Set()): void {
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (!isOuterPerimeterCell(r, c, this.cols, this.rows)) continue
+        if (openings.has(cellKey(r, c))) continue
+        this.set(r, c, CELL_WALL)
+      }
+    }
+  }
+
   markVenueElements(elements: VenueElement[]): void {
     for (const el of elements) {
       const spanC = el.colSpan ?? 1
@@ -187,6 +202,7 @@ export class SpatialBitGrid {
     }
     const grid = new SpatialBitGrid(cols, rows)
     grid.markVenueElements(venueElements)
+    grid.markVirtualPerimeterShell(collectOpeningCellKeys(venueElements))
     grid.markBoothCells(boothCells, excludeBoothId)
     return grid
   }

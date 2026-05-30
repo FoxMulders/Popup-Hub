@@ -2,7 +2,11 @@ import {
   isMergeOverlapExempt,
   type MergeOverlapContext,
 } from '@/lib/floor-plan/merge-overlap-policy'
-import type { PlacedObject } from '../state/types'
+import {
+  pointInsidePlacementSurface,
+  resolveRoomPlacementSurface,
+} from '../state/placement-surface'
+import type { FloorPlanDoc, PlacedObject } from '../state/types'
 
 export type { MergeOverlapContext }
 import {
@@ -782,6 +786,26 @@ export function pointInsideFrame(
     p.y >= frame.originY + epsilon &&
     p.y <= frame.originY + frame.lengthFt - epsilon
   )
+}
+
+/**
+ * Prefer union placement surface when `doc` + `roomId` are provided;
+ * falls back to rectangular frame interior.
+ */
+export function pointInsideRoomPlacement(
+  frame: RoomFrameGeom,
+  p: Point,
+  doc?: Pick<FloorPlanDoc, 'rooms' | 'objects' | 'objectRoom'>,
+  roomId?: string
+): boolean {
+  if (doc && roomId) {
+    const surface = resolveRoomPlacementSurface(
+      doc as FloorPlanDoc,
+      roomId
+    )
+    if (surface) return pointInsidePlacementSurface(p, surface)
+  }
+  return pointInsideFrame(frame, p)
 }
 
 export function pointHitsFrameStroke(

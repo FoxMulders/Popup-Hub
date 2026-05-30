@@ -62,16 +62,6 @@ export interface CanvasToolHostProps {
   onUnjoinRoom?: () => void
   canUnjoinRoom?: boolean
   /**
-   * Macro: emit four locked perimeter wall rects sealing the
-   * active room (or canvas) along its outer rectangle. Walls are
-   * tagged with `PERIMETER_WALL_LABEL` so the
-   * `targetHasPerimeterWalls` predicate can detect duplicates and
-   * the wall-immutability gate downstream blocks deletion. When
-   * undefined the dock falls back to its prior layout — keeps the
-   * prop optional for any consumer that hasn't wired it up yet.
-   */
-  onAddPerimeterWalls?: () => void
-  /**
    * Baseline table length (ft) for the active room — this is the
    * single venue-wide table size that drives newly-drawn booth
    * dimensions and gets persisted on the room. Hosts the toolbar

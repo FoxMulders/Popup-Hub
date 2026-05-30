@@ -10,7 +10,12 @@ import {
 } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import { boothDimensionsForTableLength } from '@/lib/booth-planner/table-booth-consolidation'
-import type { BoothObject, PlacedObject } from '../state/types'
+import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
+import {
+  findRoomIdForPlacementPoint,
+  objectCenterInsidePlacementSurface,
+  resolveRoomPlacementSurface,
+} from '../state/placement-surface'
 import type { ToolState } from '../tools/types'
 import {
   aabbFitsCanvas,
@@ -21,6 +26,7 @@ import {
   objectCenter,
   placedObjectOverlapsAny,
   pointInsideFrame,
+  pointInsideRoomPlacement,
   pointHitsFrameStroke,
   rectsIntersect,
   rotatedAabb,
@@ -43,7 +49,6 @@ import {
   type RoomResizeHandle,
 } from '../state/room-canvas'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
-import type { RoomFrame } from '../state/types'
 import { snapBoothToRoomPerimeter } from './perimeter-booth-orientation'
 
 interface UseCanvasPointerOptions {
@@ -537,16 +542,15 @@ export function useCanvasPointer(
           if (
             activeFrame &&
             !activeFrame.mergedIntoObjectId &&
-            (pointInsideFrame(activeFrame, ft) ||
+            (pointInsideRoomPlacement(activeFrame, ft, store.doc, activeFrame.id) ||
               pointHitsFrameStroke(activeFrame, ft, 0.75))
           ) {
             roomId = activeFrame.id
           } else {
             for (let i = frames.length - 1; i >= 0; i--) {
               const f = frames[i]!
-              if (f.mergedIntoObjectId) continue
               if (
-                pointInsideFrame(f, ft) ||
+                pointInsideRoomPlacement(f, ft, store.doc, f.id) ||
                 pointHitsFrameStroke(f, ft, 0.75)
               ) {
                 roomId = f.id
@@ -1335,6 +1339,13 @@ function commitDraft(
   ) {
     onOverlapViolation?.()
     return
+  }
+  if (roomId) {
+    const surface = resolveRoomPlacementSurface(store.doc, roomId)
+    if (surface && !objectCenterInsidePlacementSurface(obj, surface)) {
+      onOverlapViolation?.()
+      return
+    }
   }
   store.addObject(obj, {
     select: true,
