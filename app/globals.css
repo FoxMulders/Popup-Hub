@@ -265,6 +265,10 @@
     overflow: hidden;
   }
 
+  body[data-dashboard-command-center='true'] footer[aria-label='Site footer'] {
+    display: none;
+  }
+
   body[data-dashboard-command-center='true'] > div,
   body[data-dashboard-command-center='true'] .flex.min-h-full {
     min-height: 0 !important;

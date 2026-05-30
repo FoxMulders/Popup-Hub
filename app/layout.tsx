@@ -6,7 +6,7 @@ import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
 import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
 import { PopupLoaderProvider } from '@/components/brand/popup-loader-provider'
-import { SiteFooterGate } from '@/components/layout/site-footer-gate'
+import { BuildVersionFooter } from '@/components/brand/build-version-footer'
 import { InstallPrompt } from '@/components/navigation/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import { Toaster } from '@/components/ui/sonner'
@@ -95,7 +95,7 @@ export default async function RootLayout({
             <TooltipProvider>
               {children}
             </TooltipProvider>
-            <SiteFooterGate />
+            <BuildVersionFooter />
           </div>
           <InstallPrompt />
           <Toaster richColors position="top-right" />
