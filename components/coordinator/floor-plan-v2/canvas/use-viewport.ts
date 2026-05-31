@@ -67,6 +67,8 @@ export interface ViewportApi extends ViewportState {
   zoomIn: () => void
   zoomOut: () => void
   resetZoom: () => void
+  /** Reset zoom to 100% and re-center the scroll viewport on the doc anchor. */
+  resetViewport: () => void
   /**
    * Reset zoom to 1.0 *and* scroll the canvas so the doc anchor
    * (current selection or room center) sits in the centre of the
@@ -374,7 +376,11 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       scroll.scrollLeft = target.left
       scroll.scrollTop = target.top
     }
-  }, [scrollRef])
+  }, [scrollRef, clamp])
+
+  const resetViewport = useCallback(() => {
+    centerView()
+  }, [centerView])
 
   /**
    * Pick the zoom that makes a doc-ft `bounds` fit inside the visible
@@ -487,20 +493,27 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
 
   const onWheel = useCallback(
     (e: WheelEvent<HTMLDivElement>) => {
-      if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
+      e.stopPropagation()
       const scroll = scrollRef.current
-      const step = ZOOM_STEP * zoomStepMulRef.current
-      if (!scroll) {
+      if (e.ctrlKey || e.metaKey) {
+        const step = ZOOM_STEP * zoomStepMulRef.current
+        if (!scroll) {
+          const direction = e.deltaY > 0 ? -1 : 1
+          applyZoomAtDocAnchor(zoomRef.current + direction * step)
+          return
+        }
+        const rect = scroll.getBoundingClientRect()
+        const localX = e.clientX - rect.left
+        const localY = e.clientY - rect.top
         const direction = e.deltaY > 0 ? -1 : 1
-        applyZoomAtDocAnchor(zoomRef.current + direction * step)
+        applyZoomAtScreen(zoomRef.current + direction * step, localX, localY)
         return
       }
-      const rect = scroll.getBoundingClientRect()
-      const localX = e.clientX - rect.left
-      const localY = e.clientY - rect.top
-      const direction = e.deltaY > 0 ? -1 : 1
-      applyZoomAtScreen(zoomRef.current + direction * step, localX, localY)
+      if (scroll) {
+        scroll.scrollLeft += e.deltaX
+        scroll.scrollTop += e.deltaY
+      }
     },
     [applyZoomAtDocAnchor, applyZoomAtScreen, scrollRef]
   )
@@ -657,6 +670,23 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     []
   )
 
+  /** Block Safari gesture zoom on the canvas viewport (passive: false). */
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (!scroll) return
+    const blockGesture = (ev: Event) => {
+      ev.preventDefault()
+    }
+    scroll.addEventListener('gesturestart', blockGesture, { passive: false })
+    scroll.addEventListener('gesturechange', blockGesture, { passive: false })
+    scroll.addEventListener('gestureend', blockGesture, { passive: false })
+    return () => {
+      scroll.removeEventListener('gesturestart', blockGesture)
+      scroll.removeEventListener('gesturechange', blockGesture)
+      scroll.removeEventListener('gestureend', blockGesture)
+    }
+  }, [scrollRef, zoom])
+
   return {
     zoom,
     isPanning,
@@ -665,6 +695,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     zoomIn,
     zoomOut,
     resetZoom,
+    resetViewport,
     centerView,
     fitToBounds,
     fitToBoundsStepped,

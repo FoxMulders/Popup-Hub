@@ -7,6 +7,8 @@ interface CanvasGridProps {
   lengthFt: number
   spacingFt: number
   pxPerFt: number
+  /** Major line every N minor cells (default 5). */
+  majorEvery?: number
 }
 
 /**
@@ -15,19 +17,19 @@ interface CanvasGridProps {
  * triggers preset application. Objects can sit on grid lines, between
  * them, or completely off the venue rectangle.
  *
- * Implemented with two SVG <pattern> tiles (1ft hairline + 5ft major
- * stroke) plus an outline rectangle showing the advisory venue extent.
+ * Two SVG pattern tiles (minor + major strokes) plus the advisory
+ * venue outline. Spacing comes from the active TABLE SIZE pill.
  */
 function CanvasGridBase({
   widthFt,
   lengthFt,
   spacingFt,
   pxPerFt,
+  majorEvery = 5,
 }: CanvasGridProps) {
   const widthPx = widthFt * pxPerFt
   const heightPx = lengthFt * pxPerFt
   const minorPx = spacingFt * pxPerFt
-  const majorEvery = 5
   const majorPx = spacingFt * majorEvery * pxPerFt
 
   const baseId = useId().replace(/[:]/g, '')

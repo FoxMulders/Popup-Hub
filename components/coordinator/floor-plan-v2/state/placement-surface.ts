@@ -8,6 +8,10 @@ import {
   rotatePointAround,
   type Point,
 } from '../interactions/geometry'
+import {
+  ensurePlacementOuterRing,
+  pointInsideOuterRing,
+} from '@/lib/floor-plan/placement-ring-orientation'
 import { buildJoinedZone } from './room-joins'
 import { stripMacroPerimeterWallsFromDoc } from '../interactions/room-perimeter-sync'
 import { rotateObjectInRoom } from './rotate-room-frame'
@@ -20,6 +24,37 @@ import type {
 } from './types'
 
 export type PlacementRing = ReadonlyArray<readonly [number, number]>
+
+const placementSurfaceCache = new WeakMap<
+  FloorPlanDoc,
+  Map<string, PlacementSurface | null>
+>()
+
+function placementCacheFor(doc: FloorPlanDoc): Map<string, PlacementSurface | null> {
+  let cache = placementSurfaceCache.get(doc)
+  if (!cache) {
+    cache = new Map()
+    placementSurfaceCache.set(doc, cache)
+  }
+  return cache
+}
+
+/**
+ * Invalidate and rebuild the placement surface for a room (post-merge).
+ * Ensures booth/stage drop validation uses the latest union perimeter.
+ */
+export function rebuildSpatialIndexForRoom(
+  doc: FloorPlanDoc,
+  roomId: string
+): void {
+  const cache = placementCacheFor(doc)
+  cache.delete(roomId)
+  const frame = doc.rooms?.find((f) => f.id === roomId)
+  if (frame?.mergedIntoObjectId) {
+    cache.delete(frame.mergedIntoObjectId)
+  }
+  resolveRoomPlacementSurface(doc, roomId)
+}
 
 export interface PlacementSurface {
   roomId: string
@@ -47,9 +82,16 @@ function frameToRing(frame: RoomFrame): PlacementRing {
 }
 
 function mergedZoneGlobalRings(obj: MergedZoneObject): PlacementRing[] {
-  return obj.rings.map((ring) =>
-    ring.map(([lx, ly]) => [obj.x + lx, obj.y + ly] as [number, number])
-  )
+  const anchor = {
+    x: obj.x + obj.width / 2,
+    y: obj.y + obj.height / 2,
+  }
+  return obj.rings.map((ring) => {
+    const global = ring.map(
+      ([lx, ly]) => [obj.x + lx, obj.y + ly] as [number, number]
+    )
+    return ensurePlacementOuterRing(global, anchor)
+  })
 }
 
 function ringCentroid(ring: PlacementRing): Point {
@@ -101,33 +143,12 @@ function ringsBounds(rings: ReadonlyArray<PlacementRing>): {
   return { minX, minY, maxX, maxY, centroid }
 }
 
-/** Ray-cast point-in-polygon (global ft). */
+/** Point-in-polygon for placement validation (global ft, union outers). */
 export function pointInsidePlacementRing(
   p: Point,
-  ring: PlacementRing,
-  epsilon = 0.05
+  ring: PlacementRing
 ): boolean {
-  const pts =
-    ring.length > 1 &&
-    ring[0]![0] === ring[ring.length - 1]![0] &&
-    ring[0]![1] === ring[ring.length - 1]![1]
-      ? ring.slice(0, -1)
-      : [...ring]
-  if (pts.length < 3) return false
-
-  let inside = false
-  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
-    const xi = pts[i]![0]
-    const yi = pts[i]![1]
-    const xj = pts[j]![0]
-    const yj = pts[j]![1]
-    const intersect =
-      yi > p.y + epsilon !== yj > p.y + epsilon &&
-      p.x + epsilon <
-        ((xj - xi) * (p.y - yi)) / (yj - yi + 1e-12) + xi
-    if (intersect) inside = !inside
-  }
-  return inside
+  return pointInsideOuterRing(p, ring as Array<[number, number]>)
 }
 
 export function pointInsidePlacementSurface(
@@ -152,9 +173,17 @@ export function resolveRoomPlacementSurface(
   doc: FloorPlanDoc,
   roomId: string
 ): PlacementSurface | null {
+  const cache = placementCacheFor(doc)
+  if (cache.has(roomId)) {
+    return cache.get(roomId) ?? null
+  }
+
   const frames = doc.rooms ?? []
   const frame = frames.find((f) => f.id === roomId)
-  if (!frame) return null
+  if (!frame) {
+    cache.set(roomId, null)
+    return null
+  }
 
   if (frame.mergedIntoObjectId) {
     const mz = doc.objects.find(
@@ -164,7 +193,17 @@ export function resolveRoomPlacementSurface(
     if (mz && mz.rings.length > 0) {
       const outerRings = mergedZoneGlobalRings(mz)
       const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
-      return { roomId, outerRings, centroid, minX, minY, maxX, maxY }
+      const surface: PlacementSurface = {
+        roomId,
+        outerRings,
+        centroid,
+        minX,
+        minY,
+        maxX,
+        maxY,
+      }
+      cache.set(roomId, surface)
+      return surface
     }
   }
 
@@ -177,13 +216,33 @@ export function resolveRoomPlacementSurface(
     if (zone && zone.rings.length > 0) {
       const outerRings = zone.rings as PlacementRing[]
       const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
-      return { roomId, outerRings, centroid, minX, minY, maxX, maxY }
+      const surface: PlacementSurface = {
+        roomId,
+        outerRings,
+        centroid,
+        minX,
+        minY,
+        maxX,
+        maxY,
+      }
+      cache.set(roomId, surface)
+      return surface
     }
   }
 
   const outerRings = [frameToRing(frame)]
   const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
-  return { roomId, outerRings, centroid, minX, minY, maxX, maxY }
+  const surface: PlacementSurface = {
+    roomId,
+    outerRings,
+    centroid,
+    minX,
+    minY,
+    maxX,
+    maxY,
+  }
+  cache.set(roomId, surface)
+  return surface
 }
 
 /** Pick the topmost room whose placement surface contains `p`. */

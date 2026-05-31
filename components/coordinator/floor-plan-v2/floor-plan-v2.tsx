@@ -23,7 +23,9 @@ import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
 import { FloorPlanCanvas } from './canvas/floor-plan-canvas'
+import { canvasGridSpacingForTableFt } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
+import { focusFloorPlanCanvas } from './canvas/canvas-focus'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
@@ -189,6 +191,14 @@ export interface FloorPlanV2Props {
   saveMarketLoading?: boolean
   /** Dashboard embed — compact chrome, telemetry-driven booth fills. */
   variant?: 'wizard' | 'dashboard'
+  /**
+   * When `embedded`, the parent layout shell owns top chrome and the
+   * room rail — hide the internal "Layout tools" header and keep rooms
+   * out of the command bar.
+   */
+  chrome?: 'default' | 'embedded'
+  /** Fired when the number of placed canvas objects changes. */
+  onPlacedCountChange?: (count: number) => void
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
   onStoreReady?: (store: FloorPlanDocStore | null) => void
   onSelectionChange?: (store: FloorPlanDocStore) => void
@@ -233,6 +243,8 @@ export function FloorPlanV2({
   saveMarketDisabled,
   saveMarketLoading,
   variant = 'wizard',
+  chrome = 'default',
+  onPlacedCountChange,
   boothPlacementStatusByObjectId,
   onStoreReady,
   onSelectionChange,
@@ -261,6 +273,7 @@ export function FloorPlanV2({
 
   const store = useFloorPlanDoc(initialDoc)
   const isDashboard = variant === 'dashboard'
+  const isEmbedded = chrome === 'embedded'
   const commandCenterFullscreen = useCommandCenterFullscreen()
 
   useEffect(() => {
@@ -418,6 +431,16 @@ export function FloorPlanV2({
   )
   const prevActiveRoomRef = useRef(activeRoomId)
   const prevLayoutRoomIdsRef = useRef(layoutRoomIdsKey)
+  const viewportApiRef = useRef<ViewportApi | null>(null)
+
+  const recoverCanvasFocus = useCallback(() => {
+    focusFloorPlanCanvas()
+  }, [])
+
+  const resetCanvasViewport = useCallback(() => {
+    viewportApiRef.current?.resetViewport()
+    focusFloorPlanCanvas()
+  }, [])
   // New rooms become the active room in the sidebar but did not set
   // canvas selection — without this, resize handles never appear.
   useEffect(() => {
@@ -465,7 +488,12 @@ export function FloorPlanV2({
 
   useEffect(() => {
     setDefaultPlacementSizeFt(safeTableSizeFt)
-  }, [safeTableSizeFt])
+    const grid = canvasGridSpacingForTableFt(safeTableSizeFt)
+    store.patchDoc(
+      { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
+      { pushHistory: false }
+    )
+  }, [safeTableSizeFt, store])
 
   const tableSizePillValue = useMemo<LayoutBaselineTableLengthFt>(() => {
     const selected = Array.from(store.selectedIds)
@@ -498,9 +526,14 @@ export function FloorPlanV2({
       if (nextDefaultPlacementSizeFt != null) {
         setDefaultPlacementSizeFt(nextDefaultPlacementSizeFt)
         onBaselineTableLengthChange?.(nextDefaultPlacementSizeFt)
+        const grid = canvasGridSpacingForTableFt(nextDefaultPlacementSizeFt)
+        store.patchDoc(
+          { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
+          { pushHistory: false }
+        )
       }
     },
-    [store.doc.objects, store.selectedIds, store, onBaselineTableLengthChange]
+    [store, onBaselineTableLengthChange]
   )
 
   // Crash-recovery autosave: every doc commit lands a serialized
@@ -533,8 +566,12 @@ export function FloorPlanV2({
       return false
     })
     store.replaceObjects(remaining)
+    store.clearSelection()
+    setSelectedRoomIds(new Set())
+    setSelectedRoomId(null)
+    resetCanvasViewport()
     toast.success('Active room cleared')
-  }, [activeRoomId, store])
+  }, [activeRoomId, resetCanvasViewport, store])
 
   const handleDeleteSelected = useCallback(() => {
     const ids = Array.from(store.selectedIds)
@@ -780,9 +817,10 @@ export function FloorPlanV2({
       }
 
       store.updateObjects(entries.map((e) => ({ id: e.id, patch: e.patch })))
+      recoverCanvasFocus()
       return true
     },
-    [store]
+    [recoverCanvasFocus, store]
   )
 
   /**
@@ -1030,6 +1068,10 @@ export function FloorPlanV2({
   const placedCount = store.doc.objects.length
   const selectedCount = store.selectedIds.size
 
+  useEffect(() => {
+    onPlacedCountChange?.(placedCount)
+  }, [onPlacedCountChange, placedCount])
+
   const handleRotateLeft = useCallback(() => {
     handleRotateBy(-ROTATE_STEP_DEG)
   }, [handleRotateBy])
@@ -1037,7 +1079,6 @@ export function FloorPlanV2({
     handleRotateBy(ROTATE_STEP_DEG)
   }, [handleRotateBy])
 
-  const viewportApiRef = useRef<ViewportApi | null>(null)
   const rotateTargetRoomId = selectedRoomId ?? activeRoomId
 
   const syncLayoutRoomsFromDoc = useCallback(
@@ -1061,7 +1102,8 @@ export function FloorPlanV2({
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'ccw')
     if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
-  }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
+    recoverCanvasFocus()
+  }, [recoverCanvasFocus, rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const handleRotateRoomRight = useCallback(() => {
     if (!rotateTargetRoomId) {
@@ -1071,7 +1113,8 @@ export function FloorPlanV2({
     const nextDoc = store.rotateRoomFrame(rotateTargetRoomId, 'cw')
     if (!nextDoc) return
     syncLayoutRoomsFromDoc(nextDoc)
-  }, [rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
+    recoverCanvasFocus()
+  }, [recoverCanvasFocus, rotateTargetRoomId, store, syncLayoutRoomsFromDoc])
 
   const [currentZoom, setCurrentZoom] = useState(1)
 
@@ -1086,7 +1129,8 @@ export function FloorPlanV2({
   }, [])
   const handleZoomReset = useCallback(() => {
     viewportApiRef.current?.resetZoom()
-  }, [])
+    recoverCanvasFocus()
+  }, [recoverCanvasFocus])
   /**
    * "Center View" — the toolbar button that recovers framing.
    *
@@ -1109,6 +1153,7 @@ export function FloorPlanV2({
     const bbox = groupRotatedAabb(store.doc.objects)
     if (!bbox) {
       api.centerView()
+      recoverCanvasFocus()
       return
     }
     api.fitToBounds(
@@ -1120,7 +1165,8 @@ export function FloorPlanV2({
       },
       { padding: 0.1 }
     )
-  }, [store.doc.objects])
+    recoverCanvasFocus()
+  }, [recoverCanvasFocus, store.doc.objects])
 
 
   /**
@@ -1373,8 +1419,8 @@ export function FloorPlanV2({
   }, [store.doc.rooms])
 
   const destructiveMergePlan = useMemo(() => {
-    let joinRoomIds = [...joinPlan.joinRoomIds]
-    let joinObjectIds = [...joinPlan.joinObjectIds]
+    const joinRoomIds = [...joinPlan.joinRoomIds]
+    const joinObjectIds = [...joinPlan.joinObjectIds]
 
     if (joinRoomIds.length + joinObjectIds.length < 2) {
       const frames = store.doc.rooms ?? []
@@ -1475,6 +1521,7 @@ export function FloorPlanV2({
         toast.success('Merged into one shape — shared edges removed.', {
           duration: 1800,
         })
+        recoverCanvasFocus()
       } else if (result.reason) {
         toast.message(result.reason, { duration: 2200 })
       }
@@ -1483,6 +1530,7 @@ export function FloorPlanV2({
     runDestructiveMerge()
   }, [
     destructiveMergePlan.canMerge,
+    recoverCanvasFocus,
     runDestructiveMerge,
     shapeMergePlan,
     store,
@@ -1544,7 +1592,7 @@ export function FloorPlanV2({
           </button>
         </div>
       ) : null}
-      {!isDashboard ? (
+      {!isDashboard && !isEmbedded ? (
       <header className="flex flex-wrap items-center gap-3 border-b border-stone-200/80 bg-card/60 px-2 py-2 rounded-lg shrink-0">
         <div className="min-w-0">
           <h2 className="font-heading text-base font-bold tracking-tight text-forest sm:text-lg">
@@ -1639,12 +1687,12 @@ export function FloorPlanV2({
             canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
-            rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
+            rooms={!isEmbedded && onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
-            onSelectRoom={handleSelectRoom}
-            onAddRoom={onAddRoom}
-            onRenameRoom={onRenameRoom}
-            onDeleteRoom={onDeleteRoom}
+            onSelectRoom={!isEmbedded ? handleSelectRoom : undefined}
+            onAddRoom={!isEmbedded ? onAddRoom : undefined}
+            onRenameRoom={!isEmbedded ? onRenameRoom : undefined}
+            onDeleteRoom={!isEmbedded ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
@@ -1701,12 +1749,12 @@ export function FloorPlanV2({
             canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
-            rooms={onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
+            rooms={!isEmbedded && onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
-            onSelectRoom={handleSelectRoom}
-            onAddRoom={onAddRoom}
-            onRenameRoom={onRenameRoom}
-            onDeleteRoom={onDeleteRoom}
+            onSelectRoom={!isEmbedded ? handleSelectRoom : undefined}
+            onAddRoom={!isEmbedded ? onAddRoom : undefined}
+            onRenameRoom={!isEmbedded ? onRenameRoom : undefined}
+            onDeleteRoom={!isEmbedded ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
@@ -1738,6 +1786,7 @@ export function FloorPlanV2({
               store={store}
               toolState={{ tool, drawShape }}
               defaultBoothTableLengthFt={defaultPlacementSizeFt}
+              tableSizeFt={tableSizePillValue}
               activeRoomId={activeRoomId}
               selectedRoomId={selectedRoomId}
               onRoomFrameClick={handleRoomFrameClick}

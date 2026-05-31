@@ -52,9 +52,16 @@ export {
 import { PERIMETER_WALL_THICKNESS_FT } from '../interactions/perimeter-walls'
 import {
   orientBoothForPerimeterSlot,
+  perimeterSlotsAlongRing,
   perimeterSlotsWithEdges,
+  rotationForPerimeterEdge,
   type PerimeterSlot,
 } from '../interactions/perimeter-booth-orientation'
+import {
+  pointInsidePlacementSurface,
+  resolveRoomPlacementSurface,
+  type PlacementRing,
+} from '../state/placement-surface'
 
 /** Standard chair = 1.75 ft on a side. */
 export const CHAIR_LENGTH_FT = 1.75
@@ -96,6 +103,13 @@ export interface AutoArrangeOptions {
    * the coordinator that they're over the safe ceiling.
    */
   maxBooths?: number
+  /**
+   * When set, perimeter-only mode walks this union ring instead of the
+   * rectangular canvas bounds (post-merge / joined zones).
+   */
+  placementOuterRing?: PlacementRing
+  /** Local origin for `placementOuterRing` (defaults to 0,0). */
+  placementOrigin?: { x: number; y: number }
 }
 
 export interface AutoArrangeResult {
@@ -171,7 +185,7 @@ function boothsCloserThan(
 function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
   const out: Rect[] = []
   for (const obj of doc.objects) {
-    if (obj.kind === 'booth') continue // booths are the *input* count
+    if (obj.kind === 'booth' || obj.kind === 'merged_zone') continue
     out.push(rotatedAabb(obj))
   }
   return out
@@ -326,7 +340,16 @@ function placeBoothsAtSlots(
       rotation: 0,
       categoryName: finalCategory,
     }
-    if (slot.perimeter && perimeterOrientFrame) {
+    if (slot.perimeter?.direct) {
+      placed = {
+        ...placed,
+        x: slot.perimeter.x,
+        y: slot.perimeter.y,
+        width: boothW,
+        height: boothH,
+        rotation: rotationForPerimeterEdge(slot.perimeter.edge),
+      }
+    } else if (slot.perimeter && perimeterOrientFrame) {
       placed = orientBoothForPerimeterSlot(
         placed,
         slot.perimeter,
@@ -419,9 +442,21 @@ export function autoArrange(
   const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
 
   if (mode === 'perimeter-only') {
-    const perimeterSlots = perimeterSlotsWithEdges(cw, cl, boothW, boothH).map(
-      (p) => ({ x: p.x, y: p.y, perimeter: p })
-    )
+    const placementOrigin = options.placementOrigin ?? { x: 0, y: 0 }
+    const localRing = options.placementOuterRing
+      ? options.placementOuterRing.map(
+          ([x, y]) =>
+            [x - placementOrigin.x, y - placementOrigin.y] as [
+              number,
+              number,
+            ]
+        )
+      : null
+    const perimeterSlots = (
+      localRing
+        ? perimeterSlotsAlongRing(localRing, boothW, boothH)
+        : perimeterSlotsWithEdges(cw, cl, boothW, boothH)
+    ).map((p) => ({ x: p.x, y: p.y, perimeter: p }))
     const perimeterOrientFrame: RoomFrame = {
       id: '__auto_arrange_canvas__',
       name: 'Canvas',
@@ -542,8 +577,17 @@ export function autoArrange(
  */
 export function boothWithinRoomFrame(
   booth: BoothObject,
-  frame: RoomFrame
+  frame: RoomFrame,
+  doc?: FloorPlanDoc
 ): boolean {
+  if (doc && frame.mergedIntoObjectId) {
+    const surface = resolveRoomPlacementSurface(doc, frame.id)
+    if (surface) {
+      const cx = booth.x + booth.width / 2
+      const cy = booth.y + booth.height / 2
+      return pointInsidePlacementSurface({ x: cx, y: cy }, surface)
+    }
+  }
   return (
     booth.x >= frame.originX - 1e-6 &&
     booth.y >= frame.originY - 1e-6 &&
@@ -585,35 +629,53 @@ export function autoArrangeInRoom(
     }
   }
 
-  const localObjects = inRoom.map(
-    (o) =>
-      ({
-        ...o,
-        x: o.x - frame.originX,
-        y: o.y - frame.originY,
-      }) as PlacedObject
-  )
+  const surface = resolveRoomPlacementSurface(doc, roomId)
+  const originX = surface?.minX ?? frame.originX
+  const originY = surface?.minY ?? frame.originY
+  const localW = surface
+    ? Math.max(1, surface.maxX - surface.minX)
+    : frame.widthFt
+  const localL = surface
+    ? Math.max(1, surface.maxY - surface.minY)
+    : frame.lengthFt
+
+  const localObjects = inRoom
+    .filter((o) => o.kind !== 'merged_zone')
+    .map(
+      (o) =>
+        ({
+          ...o,
+          x: o.x - originX,
+          y: o.y - originY,
+        }) as PlacedObject
+    )
   const localDoc: FloorPlanDoc = {
-    canvasWidthFt: frame.widthFt,
-    canvasLengthFt: frame.lengthFt,
+    canvasWidthFt: localW,
+    canvasLengthFt: localL,
     gridSpacingFt: doc.gridSpacingFt,
     snapFt: doc.snapFt,
     objects: localObjects,
   }
 
-  const result = autoArrange(localDoc, options)
+  const arrangeOptions: AutoArrangeOptions = {
+    ...options,
+    placementOrigin: { x: originX, y: originY },
+    placementOuterRing: surface?.outerRings[0],
+  }
+
+  const result = autoArrange(localDoc, arrangeOptions)
   const reglobal = result.doc.objects.map(
     (o) =>
       ({
         ...o,
-        x: o.x + frame.originX,
-        y: o.y + frame.originY,
+        x: o.x + originX,
+        y: o.y + originY,
       }) as PlacedObject
   )
 
   for (const obj of reglobal) {
     if (obj.kind !== 'booth') continue
-    if (!boothWithinRoomFrame(obj, frame)) {
+    if (!boothWithinRoomFrame(obj, frame, doc)) {
       throw new Error(
         `auto-arrange placed booth ${obj.id} outside room ${roomId} bounds`
       )

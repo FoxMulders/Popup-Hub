@@ -2,20 +2,20 @@
  * Boolean union of placed-object footprints for canvas Merge.
  */
 
-import type { MultiPolygon, Polygon, Ring } from 'polygon-clipping'
-import polygonClippingDefault from 'polygon-clipping'
+import type { Polygon, Ring } from 'polygon-clipping'
 import type { PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
   objectCenter,
   rotatePointAround,
   type Point,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-
-type Geom = Polygon | MultiPolygon
-type PolygonClipping = {
-  union: (geom: Geom, ...geoms: Geom[]) => MultiPolygon
-}
-const polygonClipping = polygonClippingDefault as unknown as PolygonClipping
+import {
+  ensureOuterRingCCW,
+  guardedPolygonUnion,
+  multiPolygonOuterArea,
+  normalizePolygonForUnion,
+  signedRingArea,
+} from '@/lib/floor-plan/polygon-clipping-union'
 
 export interface ShapeUnionResult {
   /** Closed rings in global canvas feet. */
@@ -43,17 +43,7 @@ export function placedObjectFootprintRing(obj: PlacedObject): Ring {
   const ring: Ring = pts.map((p) => [p.x, p.y] as [number, number])
   const first = ring[0]!
   ring.push([first[0], first[1]])
-  return ring
-}
-
-function signedRingArea(ring: Ring): number {
-  let sum = 0
-  for (let i = 0; i < ring.length - 1; i++) {
-    const a = ring[i]!
-    const b = ring[i + 1]!
-    sum += a[0] * b[1] - b[0] * a[1]
-  }
-  return sum / 2
+  return ensureOuterRingCCW(ring)
 }
 
 /**
@@ -63,25 +53,22 @@ export function unionPlacedObjectFootprints(
   objects: ReadonlyArray<PlacedObject>
 ): ShapeUnionResult | null {
   if (objects.length < 2) return null
-  const polygons: Polygon[] = objects.map((o) => [placedObjectFootprintRing(o)])
-  const [first, ...rest] = polygons
-  const mp =
-    rest.length === 0
-      ? ([first!] as MultiPolygon)
-      : polygonClipping.union(first as Geom, ...(rest as Geom[]))
+  const polygons: Polygon[] = objects.map((o) =>
+    normalizePolygonForUnion([placedObjectFootprintRing(o)])
+  )
+  const mp = guardedPolygonUnion(polygons)
+  const area = multiPolygonOuterArea(mp)
 
   const rings: Ring[] = []
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
   let maxY = -Infinity
-  let area = 0
 
   for (const polygon of mp) {
     const outer = polygon[0]
     if (!outer || outer.length < 4) continue
-    rings.push(outer)
-    area += Math.abs(signedRingArea(outer))
+    rings.push(ensureOuterRingCCW(outer))
     for (const [px, py] of outer) {
       if (px < minX) minX = px
       if (py < minY) minY = py

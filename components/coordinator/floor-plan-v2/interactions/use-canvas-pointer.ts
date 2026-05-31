@@ -49,7 +49,10 @@ import {
   type RoomResizeHandle,
 } from '../state/room-canvas'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
-import { snapBoothToRoomPerimeter } from './perimeter-booth-orientation'
+import {
+  snapBoothToRoomPerimeter,
+  snapBoothToUnionPerimeter,
+} from './perimeter-booth-orientation'
 
 interface UseCanvasPointerOptions {
   store: FloorPlanDocStore
@@ -252,7 +255,11 @@ function roomFrameForBooth(
 
 function perimeterSnapPatch(
   booth: BoothObject,
-  doc: { rooms?: RoomFrame[]; objectRoom?: Record<string, string> }
+  doc: {
+    rooms?: RoomFrame[]
+    objectRoom?: Record<string, string>
+    objects?: PlacedObject[]
+  }
 ): Partial<BoothObject> | null {
   const frame = roomFrameForBooth(
     booth,
@@ -260,7 +267,25 @@ function perimeterSnapPatch(
     doc.objectRoom ?? {}
   )
   if (!frame) return null
-  const snapped = snapBoothToRoomPerimeter(booth, frame)
+
+  const roomId = doc.objectRoom?.[booth.id] ?? frame.id
+  const surface = resolveRoomPlacementSurface(
+    {
+      canvasWidthFt: 0,
+      canvasLengthFt: 0,
+      gridSpacingFt: 1,
+      snapFt: 1,
+      objects: doc.objects ?? [],
+      rooms: doc.rooms ?? [],
+      objectRoom: doc.objectRoom,
+    },
+    roomId
+  )
+  const unionRing = surface?.outerRings[0]
+  const snapped = unionRing
+    ? snapBoothToUnionPerimeter(booth, unionRing) ??
+      snapBoothToRoomPerimeter(booth, frame)
+    : snapBoothToRoomPerimeter(booth, frame)
   if (!snapped) return null
   return {
     x: snapped.x,

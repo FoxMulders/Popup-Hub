@@ -60,6 +60,14 @@ import {
   type ArchitecturalStructure,
   type WallSegment2,
 } from '@/lib/floor-plan/merge-adjacent-structures'
+import {
+  guardedPolygonUnion,
+  normalizePolygonForUnion,
+} from '@/lib/floor-plan/polygon-clipping-union'
+import {
+  ensurePlacementOuterRings,
+  interiorAnchorFromBounds,
+} from '@/lib/floor-plan/placement-ring-orientation'
 import { placedObjectFootprintRing } from '@/lib/floor-plan/shape-union'
 
 import type {
@@ -321,15 +329,10 @@ export function joinableObjectsOverlapOrTouch(
  */
 export function unionFrames(frames: ReadonlyArray<RoomFrame>): MultiPolygon {
   if (frames.length === 0) return []
-  const polygons = frames.map(frameToPolygon)
-  if (polygons.length === 1) {
-    // The library only requires one arg for a no-op union, but we
-    // wrap it in a MultiPolygon for consistency with the multi-frame
-    // case below.
-    return [polygons[0]!]
-  }
-  const [first, ...rest] = polygons
-  return polygonClipping.union(first as Geom, ...(rest as Geom[]))
+  const polygons = frames.map((f) =>
+    normalizePolygonForUnion(frameToPolygon(f))
+  )
+  return guardedPolygonUnion(polygons)
 }
 
 /**
@@ -568,7 +571,21 @@ export function buildJoinedZone(
   const merged = mergeAdjacentStructuresMany(structures, DEFAULT_TOUCH_EPSILON_FT)
   if (!merged || merged.paths.length === 0) return null
 
-  const rings = pathsToClosedRings(merged.paths) as Ring[]
+  const rawRings = pathsToClosedRings(merged.paths) as Ring[]
+  const anchorPoints = [
+    ...frames.map((f) => ({
+      x: f.originX + f.widthFt / 2,
+      y: f.originY + f.lengthFt / 2,
+    })),
+    ...eligibleObjects.map((o) => ({
+      x: o.x + o.width / 2,
+      y: o.y + o.height / 2,
+    })),
+  ]
+  const rings = ensurePlacementOuterRings(
+    rawRings,
+    interiorAnchorFromBounds(anchorPoints)
+  )
 
   return {
     groupId,

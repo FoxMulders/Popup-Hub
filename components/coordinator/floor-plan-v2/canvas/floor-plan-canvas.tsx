@@ -19,6 +19,7 @@ import { InlineLabelEditor } from './inline-label-editor'
 import { RoomFrames } from './room-frames'
 import { RoomSelectionOverlay } from './room-selection-overlay'
 import { activeRoomFramingBounds } from '../state/room-canvas'
+import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
 import {
@@ -27,6 +28,7 @@ import {
 } from '../interactions/geometry'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
+import { canvasGridSpacingForTableFt } from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { ToolState } from '../tools/types'
@@ -95,6 +97,8 @@ interface FloorPlanCanvasProps {
    * places a new booth. Ignored for non-booth draw shapes.
    */
   defaultBoothTableLengthFt?: LayoutBaselineTableLengthFt
+  /** Active TABLE SIZE pill — drives minor/major grid spacing. */
+  tableSizeFt?: LayoutBaselineTableLengthFt
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
@@ -125,6 +129,7 @@ export function FloorPlanCanvas({
   onRoomCanvasLimitBlocked,
   showLabels = true,
   defaultBoothTableLengthFt,
+  tableSizeFt,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
   boothPlacementStatusByObjectId,
@@ -142,6 +147,14 @@ export function FloorPlanCanvas({
   const padFt = commandCenterViewport
     ? 8
     : Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
+
+  const gridSpacing = useMemo(
+    () =>
+      canvasGridSpacingForTableFt(
+        tableSizeFt ?? defaultBoothTableLengthFt ?? 6
+      ),
+    [defaultBoothTableLengthFt, tableSizeFt]
+  )
 
   /**
    * Anchor priority for "discrete" zoom (buttons, reset, programmatic):
@@ -497,6 +510,7 @@ export function FloorPlanCanvas({
 
   return (
     <div
+      id={FLOOR_PLAN_CANVAS_ID}
       ref={scrollRef}
       className={cn(
         'relative h-full w-full overflow-auto bg-stone-100 outline-none',
@@ -550,7 +564,8 @@ export function FloorPlanCanvas({
           <CanvasGrid
             widthFt={store.doc.canvasWidthFt}
             lengthFt={store.doc.canvasLengthFt}
-            spacingFt={store.doc.gridSpacingFt}
+            spacingFt={gridSpacing.minorFt}
+            majorEvery={gridSpacing.majorEvery}
             pxPerFt={pxPerFt}
           />
           {store.doc.rooms && store.doc.rooms.length > 0 ? (

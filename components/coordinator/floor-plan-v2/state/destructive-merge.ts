@@ -4,7 +4,12 @@
  * removed; room frames stay in the doc for save-bridge but are hidden.
  */
 
+import {
+  ensurePlacementOuterRing,
+  interiorAnchorFromBounds,
+} from '@/lib/floor-plan/placement-ring-orientation'
 import { ringsToLocalSpace } from '@/lib/floor-plan/shape-union'
+import { rebuildSpatialIndexForRoom } from './placement-surface'
 import { buildJoinedZone } from './room-joins'
 import type { FloorPlanDoc, MergedZoneObject, PlacedObject, RoomFrame } from './types'
 
@@ -43,7 +48,20 @@ export function destructiveMergeInDoc(
   const { minX, minY, maxX, maxY } = zone.aabb
   const width = Math.max(doc.snapFt || 1, maxX - minX)
   const height = Math.max(doc.snapFt || 1, maxY - minY)
-  const localRings = ringsToLocalSpace(zone.rings, minX, minY)
+  const anchor = interiorAnchorFromBounds([
+    ...frames.map((f) => ({
+      x: f.originX + f.widthFt / 2,
+      y: f.originY + f.lengthFt / 2,
+    })),
+    ...objects.map((o) => ({
+      x: o.x + o.width / 2,
+      y: o.y + o.height / 2,
+    })),
+  ])
+  const outwardRings = zone.rings.map((ring) =>
+    ensurePlacementOuterRing(ring, anchor)
+  )
+  const localRings = ringsToLocalSpace(outwardRings, minX, minY)
 
   const primary =
     objects[0] ??
@@ -98,16 +116,34 @@ export function destructiveMergeInDoc(
     if (!roomIdSet.has(f.id)) return f
     const { joinGroupId: _dropJoin, ...rest } = f
     void _dropJoin
-    return { ...rest, mergedIntoObjectId: mergedId }
+    return {
+      ...rest,
+      mergedIntoObjectId: mergedId,
+      originX: minX,
+      originY: minY,
+      widthFt: width,
+      lengthFt: height,
+    }
   })
 
+  const nextDoc: FloorPlanDoc = {
+    ...doc,
+    rooms: nextFrames,
+    objects: nextObjects,
+    objectRoom,
+  }
+
+  if (ownerRoom) {
+    rebuildSpatialIndexForRoom(nextDoc, ownerRoom)
+  }
+  for (const f of frames) {
+    if (f.id !== ownerRoom) {
+      rebuildSpatialIndexForRoom(nextDoc, f.id)
+    }
+  }
+
   return {
-    doc: {
-      ...doc,
-      rooms: nextFrames,
-      objects: nextObjects,
-      objectRoom,
-    },
+    doc: nextDoc,
     mergedId,
   }
 }

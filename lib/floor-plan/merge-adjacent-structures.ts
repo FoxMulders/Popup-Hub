@@ -7,7 +7,13 @@
  */
 
 import type { MultiPolygon, Polygon, Ring } from 'polygon-clipping'
-import polygonClippingDefault from 'polygon-clipping'
+import {
+  ensureOuterRingCCW,
+  guardedPolygonUnion,
+  normalizePolygonForUnion,
+  signedRingArea,
+} from '@/lib/floor-plan/polygon-clipping-union'
+import { ensurePlacementOuterRing } from '@/lib/floor-plan/placement-ring-orientation'
 
 /** Canvas-global feet, `[x, y]`. */
 export type Vec2 = readonly [number, number]
@@ -38,12 +44,6 @@ export interface MergeAdjacentStructuresResult {
 export const DEFAULT_MERGE_EPSILON_FT = 5 / 12
 
 const EPS = 1e-9
-
-type Geom = Polygon | MultiPolygon
-type PolygonClipping = {
-  union: (geom: Geom, ...geoms: Geom[]) => MultiPolygon
-}
-const polygonClipping = polygonClippingDefault as unknown as PolygonClipping
 
 export function nearlyEqual(a: number, b: number, epsilon: number): boolean {
   return Math.abs(a - b) <= epsilon
@@ -153,13 +153,13 @@ function rectToRing(
   const y0 = originY
   const x1 = originX + widthFt
   const y1 = originY + lengthFt
-  return [
+  return ensureOuterRingCCW([
     [x0, y0],
     [x1, y0],
     [x1, y1],
     [x0, y1],
     [x0, y0],
-  ]
+  ])
 }
 
 export function taggedWallsFromRect(
@@ -248,25 +248,13 @@ function collectInternalBarriers(
 }
 
 function unionPolygons(polygons: Polygon[]): MultiPolygon {
-  if (polygons.length === 0) return []
-  if (polygons.length === 1) return [polygons[0]!]
-  const [first, ...rest] = polygons
-  return polygonClipping.union(first as Geom, ...(rest as Geom[]))
+  return guardedPolygonUnion(polygons.map((p) => normalizePolygonForUnion(p)))
 }
 
-function signedRingArea(ring: Ring): number {
-  let sum = 0
-  for (let i = 0; i < ring.length - 1; i++) {
-    const a = ring[i]!
-    const b = ring[i + 1]!
-    sum += a[0] * b[1] - b[0] * a[1]
-  }
-  return sum / 2
-}
-
-function ringToPath(ring: Ring): Vec2[] {
-  if (ring.length === 0) return []
-  const out: Vec2[] = ring.map(([x, y]) => [x, y] as Vec2)
+function ringToPath(ring: Ring, interiorAnchor?: { x: number; y: number }): Vec2[] {
+  const oriented = ensurePlacementOuterRing(ring, interiorAnchor)
+  if (oriented.length === 0) return []
+  const out: Vec2[] = oriented.map(([x, y]) => [x, y] as Vec2)
   const first = out[0]!
   const last = out[out.length - 1]!
   if (first[0] !== last[0] || first[1] !== last[1]) {
@@ -331,7 +319,10 @@ export function mergeAdjacentStructures(
   roomB: ArchitecturalStructure,
   epsilon = DEFAULT_MERGE_EPSILON_FT
 ): MergeAdjacentStructuresResult {
-  const mp = unionPolygons([[roomA.polygon], [roomB.polygon]])
+  const mp = unionPolygons([
+    normalizePolygonForUnion([roomA.polygon]),
+    normalizePolygonForUnion([roomB.polygon]),
+  ])
   const { paths, aabb, areaSqFt } = summarizeUnion(mp)
   const internalBarriers = collectInternalBarriers(
     normalizeStructureWalls(roomA, epsilon),
@@ -374,7 +365,9 @@ export function mergeAdjacentStructuresMany(
     }
   }
 
-  const mp = unionPolygons(structures.map((s) => [s.polygon]))
+  const mp = unionPolygons(
+    structures.map((s) => normalizePolygonForUnion([s.polygon]))
+  )
   const { paths, aabb, areaSqFt } = summarizeUnion(mp)
   if (paths.length === 0) return null
 
