@@ -67,7 +67,7 @@ export interface PlacementSurface {
   maxY: number
 }
 
-function frameToRing(frame: RoomFrame): PlacementRing {
+export function frameToRing(frame: RoomFrame): PlacementRing {
   const x0 = frame.originX
   const y0 = frame.originY
   const x1 = x0 + frame.widthFt
@@ -185,6 +185,22 @@ export function resolveRoomPlacementSurface(
     return null
   }
 
+  if (frame.perimeterRing && frame.perimeterRing.length >= 3) {
+    const outerRings = [frame.perimeterRing as PlacementRing]
+    const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
+    const surface: PlacementSurface = {
+      roomId,
+      outerRings,
+      centroid,
+      minX,
+      minY,
+      maxX,
+      maxY,
+    }
+    cache.set(roomId, surface)
+    return surface
+  }
+
   const mergedZoneForRoom = doc.objects.find(
     (o): o is MergedZoneObject =>
       o.kind === 'merged_zone' &&
@@ -262,9 +278,12 @@ export function findRoomIdForPlacementPoint(
 
 /** Geometric pivot for room rotation (union centroid, not stale AABB center). */
 export function roomRotationPivot(doc: FloorPlanDoc, roomId: string): Point {
+  const frame = doc.rooms?.find((f) => f.id === roomId)
+  if (frame?.perimeterRing && frame.perimeterRing.length >= 3) {
+    return ringCentroid(frame.perimeterRing)
+  }
   const surface = resolveRoomPlacementSurface(doc, roomId)
   if (surface) return surface.centroid
-  const frame = doc.rooms?.find((f) => f.id === roomId)
   if (!frame) return { x: 0, y: 0 }
   return {
     x: frame.originX + frame.widthFt / 2,
@@ -293,13 +312,28 @@ export function rotateRoomFrameAroundPivot(
   direction: 'cw' | 'ccw'
 ): RoomFrame {
   const delta = direction === 'cw' ? 90 : -90
-  const corners: Point[] = [
-    { x: frame.originX, y: frame.originY },
-    { x: frame.originX + frame.widthFt, y: frame.originY },
-    { x: frame.originX + frame.widthFt, y: frame.originY + frame.lengthFt },
-    { x: frame.originX, y: frame.originY + frame.lengthFt },
-  ]
-  const rotated = corners.map((c) => rotatePointAround(c, pivot, delta))
+  const sourcePts: Point[] =
+    frame.perimeterRing && frame.perimeterRing.length >= 3
+      ? frame.perimeterRing
+          .filter((_, i, arr) => {
+            if (i === arr.length - 1 && arr.length > 1) {
+              const a = arr[0]!
+              const b = arr[i]!
+              return a[0] === b[0] && a[1] === b[1]
+            }
+            return true
+          })
+          .map(([x, y]) => ({ x, y }))
+      : [
+          { x: frame.originX, y: frame.originY },
+          { x: frame.originX + frame.widthFt, y: frame.originY },
+          {
+            x: frame.originX + frame.widthFt,
+            y: frame.originY + frame.lengthFt,
+          },
+          { x: frame.originX, y: frame.originY + frame.lengthFt },
+        ]
+  const rotated = sourcePts.map((c) => rotatePointAround(c, pivot, delta))
   let minX = Number.POSITIVE_INFINITY
   let minY = Number.POSITIVE_INFINITY
   let maxX = Number.NEGATIVE_INFINITY
@@ -310,12 +344,20 @@ export function rotateRoomFrameAroundPivot(
     if (c.x > maxX) maxX = c.x
     if (c.y > maxY) maxY = c.y
   }
+  const perimeterRing: PlacementRing | undefined =
+    frame.perimeterRing && frame.perimeterRing.length >= 3
+      ? [
+          ...rotated.map((p) => [p.x, p.y] as [number, number]),
+          [rotated[0]!.x, rotated[0]!.y] as [number, number],
+        ]
+      : frame.perimeterRing
   return {
     ...frame,
     originX: minX,
     originY: minY,
     widthFt: Math.max(1e-6, maxX - minX),
     lengthFt: Math.max(1e-6, maxY - minY),
+    perimeterRing,
   }
 }
 

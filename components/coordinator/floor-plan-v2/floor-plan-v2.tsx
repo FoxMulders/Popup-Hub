@@ -22,7 +22,7 @@ import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
-import { FloorPlanCanvas } from './canvas/floor-plan-canvas'
+import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridSpacingForTableFt } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
 import {
@@ -1527,12 +1527,12 @@ export function FloorPlanV2({
       if (result.reason) toast.message(result.reason, { duration: 2200 })
       return
     }
-    setSelectedRoomIds(new Set())
-    setSelectedRoomId(null)
+    setSelectedRoomId(result.mergedId)
+    setSelectedRoomIds(new Set([result.mergedId]))
     syncLayoutRoomsFromDoc(store.doc)
     recoverCanvasFocus()
     toast.success(
-      'Merged into one shape — source rooms removed, interior edges cleared.',
+      'Merged into one hall — source rooms removed, union perimeter saved.',
       { duration: 2000 }
     )
   }, [
@@ -1815,7 +1815,7 @@ export function FloorPlanV2({
                 : 'min-h-[280px] h-full rounded-lg border border-stone-200'
             )}
           >
-            <FloorPlanCanvas
+            <LayoutCanvas
               className="absolute inset-0"
               commandCenterViewport={isDashboard}
               store={store}

@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
 
-interface FloorPlanCanvasProps {
+export interface FloorPlanCanvasProps {
   store: FloorPlanDocStore
   toolState: ToolState
   /**
@@ -113,6 +113,10 @@ interface FloorPlanCanvasProps {
 const DEFAULT_BASE_PX_PER_FT = 12
 /** Minimum zoom on coordinator dashboard — avoids hypersensitive room drags when framed out. */
 const COMMAND_CENTER_ZOOM_MIN = 0.72
+
+export function LayoutCanvas(props: FloorPlanCanvasProps) {
+  return <FloorPlanCanvas {...props} />
+}
 
 export function FloorPlanCanvas({
   store,
@@ -555,7 +559,14 @@ export function FloorPlanCanvas({
             WebkitUserSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          onPointerDown={pointer.onPointerDown}
+          onWheel={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
+          onPointerDown={(e) => {
+            e.preventDefault()
+            pointer.onPointerDown(e)
+          }}
           onPointerMove={pointer.onPointerMove}
           onPointerUp={pointer.onPointerUp}
           onPointerCancel={pointer.onPointerUp}

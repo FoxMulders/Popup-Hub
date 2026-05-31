@@ -728,7 +728,9 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       )
       if (!mergedId) return { mergedId: null, reason }
       commit(finalizeDocGeometry(next), pushHistory)
-      if (select) setSelectedIds(new Set([mergedId]))
+      if (select) {
+        setSelectedIds(new Set())
+      }
       return { mergedId }
     },
     [commit]

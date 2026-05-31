@@ -5,11 +5,12 @@
 
 import { objectCenter, type Point } from '../interactions/geometry'
 import {
-  findRoomIdForPlacementPoint,
-  pointInsidePlacementSurface,
-  resolveRoomPlacementSurface,
-  roomRotationPivot,
-} from '../state/placement-surface'
+  pointInAnyRing,
+  pointInPolygon,
+  ringBounds,
+  ringCentroid,
+} from '../geometry/point-in-polygon'
+import { frameToRing } from '../state/placement-surface'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from '../state/types'
 
 export const MAIN_HALL_ROOM_ID = 'main-hall'
@@ -21,6 +22,8 @@ export interface ViewportMatrix {
   panY: number
 }
 
+export type LayoutViewportMatrix = ViewportMatrix
+
 export interface RoomBounds {
   minX: number
   minY: number
@@ -28,42 +31,65 @@ export interface RoomBounds {
   maxY: number
 }
 
-/** Rooms that participate in hit-testing and rendering (no merge ghosts). */
+/** Active rooms only — no merge ghosts or hidden guides. */
 export function activeRoomFrames(doc: FloorPlanDoc): RoomFrame[] {
-  return (doc.rooms ?? []).filter((f) => !f.mergedIntoObjectId)
+  return (doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId)
+}
+
+export const layoutRooms = activeRoomFrames
+
+function roomOuterRings(
+  frame: RoomFrame
+): ReadonlyArray<ReadonlyArray<readonly [number, number]>> {
+  if (frame.perimeterRing && frame.perimeterRing.length >= 3) {
+    return [frame.perimeterRing]
+  }
+  return [frameToRing(frame)]
 }
 
 /**
- * Union bounding box of all active room placement surfaces (ft).
- * Used by Center View when the canvas has no placed objects yet.
+ * Strict placement: inside any active room polygon ⇒ true; background ⇒ false.
  */
+export function isValidPlacementLocation(
+  doc: FloorPlanDoc,
+  probeFt: Point,
+  obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
+): boolean {
+  const p = obj ? objectCenter(obj as PlacedObject) : probeFt
+  const rooms = activeRoomFrames(doc)
+  if (rooms.length === 0) return false
+
+  for (const frame of rooms) {
+    const rings = roomOuterRings(frame)
+    if (pointInAnyRing(p, rings)) return true
+  }
+  return false
+}
+
 export function unionActiveRoomBounds(doc: FloorPlanDoc): RoomBounds | null {
-  const frames = activeRoomFrames(doc)
-  if (frames.length === 0) return null
+  const rooms = activeRoomFrames(doc)
+  if (rooms.length === 0) return null
 
   let minX = Number.POSITIVE_INFINITY
   let minY = Number.POSITIVE_INFINITY
   let maxX = Number.NEGATIVE_INFINITY
   let maxY = Number.NEGATIVE_INFINITY
 
-  for (const frame of frames) {
-    const surface = resolveRoomPlacementSurface(doc, frame.id)
-    if (surface) {
-      minX = Math.min(minX, surface.minX)
-      minY = Math.min(minY, surface.minY)
-      maxX = Math.max(maxX, surface.maxX)
-      maxY = Math.max(maxY, surface.maxY)
-      continue
+  for (const frame of rooms) {
+    for (const ring of roomOuterRings(frame)) {
+      const b = ringBounds(ring)
+      minX = Math.min(minX, b.minX)
+      minY = Math.min(minY, b.minY)
+      maxX = Math.max(maxX, b.maxX)
+      maxY = Math.max(maxY, b.maxY)
     }
-    minX = Math.min(minX, frame.originX)
-    minY = Math.min(minY, frame.originY)
-    maxX = Math.max(maxX, frame.originX + frame.widthFt)
-    maxY = Math.max(maxY, frame.originY + frame.lengthFt)
   }
 
   if (!Number.isFinite(minX)) return null
   return { minX, minY, maxX, maxY }
 }
+
+export const unionRoomBounds = unionActiveRoomBounds
 
 export function boundsCentroid(bounds: RoomBounds): Point {
   return {
@@ -72,32 +98,32 @@ export function boundsCentroid(bounds: RoomBounds): Point {
   }
 }
 
-/**
- * Strict placement gate: drops must land inside a room perimeter polygon.
- * Empty canvas background (outside all room unions) is always rejected.
- */
-export function isValidPlacementLocation(
-  doc: FloorPlanDoc,
-  probeFt: Point,
-  obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
-): boolean {
-  const p = obj ? objectCenter(obj as PlacedObject) : probeFt
-  const roomId = findRoomIdForPlacementPoint(doc, p)
-  if (!roomId) return false
-  const surface = resolveRoomPlacementSurface(doc, roomId)
-  if (!surface) return false
-  return pointInsidePlacementSurface(p, surface)
-}
+export const boundsCenter = boundsCentroid
 
-/** Geometric pivot for room rotation (union centroid when merged). */
 export function roomGeometricCentroid(
   doc: FloorPlanDoc,
   roomId: string
 ): Point {
-  return roomRotationPivot(doc, roomId)
+  const frame = activeRoomFrames(doc).find((r) => r.id === roomId)
+  if (!frame) return { x: 0, y: 0 }
+  const rings = roomOuterRings(frame)
+  if (rings[0]) return ringCentroid(rings[0])
+  return {
+    x: frame.originX + frame.widthFt / 2,
+    y: frame.originY + frame.lengthFt / 2,
+  }
 }
 
+export const roomPerimeterCentroid = roomGeometricCentroid
+
 export function makeDefaultMainHallFrame(): RoomFrame {
+  const ring: Array<[number, number]> = [
+    [0, 0],
+    [DEFAULT_MAIN_HALL_SIZE_FT, 0],
+    [DEFAULT_MAIN_HALL_SIZE_FT, DEFAULT_MAIN_HALL_SIZE_FT],
+    [0, DEFAULT_MAIN_HALL_SIZE_FT],
+    [0, 0],
+  ]
   return {
     id: MAIN_HALL_ROOM_ID,
     name: 'Main Hall',
@@ -105,15 +131,14 @@ export function makeDefaultMainHallFrame(): RoomFrame {
     originY: 0,
     widthFt: DEFAULT_MAIN_HALL_SIZE_FT,
     lengthFt: DEFAULT_MAIN_HALL_SIZE_FT,
+    perimeterRing: ring,
   }
 }
 
-/**
- * Infinite-void safeguard — never leave the doc without a placeable room.
- */
+export const makeDefaultMainHall = makeDefaultMainHallFrame
+
 export function ensureCanvasHasPlaceableRoom(doc: FloorPlanDoc): FloorPlanDoc {
-  const active = activeRoomFrames(doc)
-  if (active.length > 0) return doc
+  if (activeRoomFrames(doc).length > 0) return doc
   const hall = makeDefaultMainHallFrame()
   return {
     ...doc,
@@ -123,3 +148,19 @@ export function ensureCanvasHasPlaceableRoom(doc: FloorPlanDoc): FloorPlanDoc {
     objectRoom: { ...(doc.objectRoom ?? {}) },
   }
 }
+
+export const ensureLayoutNotVoid = ensureCanvasHasPlaceableRoom
+
+export function findRoomAtPoint(
+  doc: FloorPlanDoc,
+  p: Point
+): string | null {
+  const rooms = activeRoomFrames(doc)
+  for (let i = rooms.length - 1; i >= 0; i--) {
+    const frame = rooms[i]!
+    if (pointInAnyRing(p, roomOuterRings(frame))) return frame.id
+  }
+  return null
+}
+
+export { pointInPolygon }

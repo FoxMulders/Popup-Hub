@@ -212,8 +212,15 @@ export interface RoomFrame {
   /**
    * When set, this room's perimeter is not drawn — a `merged_zone`
    * object (`mergedIntoObjectId`) owns the unified union path.
+   * @deprecated Prefer `perimeterRing` on the surviving room after merge.
    */
   mergedIntoObjectId?: string
+  /**
+   * Boolean-union outer boundary in canvas feet (closed ring, CCW).
+   * When present, placement validation and rendering use this ring
+   * instead of the axis-aligned `originX/Y + widthFt/lengthFt` rect.
+   */
+  perimeterRing?: ReadonlyArray<readonly [number, number]>
 }
 
 export interface FloorPlanDoc {

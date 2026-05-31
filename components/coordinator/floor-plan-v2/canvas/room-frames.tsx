@@ -40,6 +40,22 @@ const PERIMETER_WIDTH_SELECTED = 3.5
 const PERIMETER_WIDTH_JOINED = 3.5
 const JOINED_ZONE_FILL_OPACITY = 0.12
 
+function ringToPathD(
+  ring: ReadonlyArray<readonly [number, number]>,
+  pxPerFt: number
+): string {
+  if (ring.length === 0) return ''
+  const pts = ring
+  const first = pts[0]!
+  let d = `M ${first[0] * pxPerFt} ${first[1] * pxPerFt}`
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i]!
+    if (p[0] === first[0] && p[1] === first[1] && i === pts.length - 1) continue
+    d += ` L ${p[0] * pxPerFt} ${p[1] * pxPerFt}`
+  }
+  return `${d} Z`
+}
+
 /**
  * Renders one perimeter group per room frame on the unified canvas.
  *
@@ -360,6 +376,10 @@ function RoomFramesBase({
           ? PERIMETER_WIDTH_SELECTED
           : PERIMETER_WIDTH
         const fillOpacity = isActive ? 0.06 : 0.025
+        const unionPath =
+          frame.perimeterRing && frame.perimeterRing.length >= 3
+            ? ringToPathD(frame.perimeterRing, pxPerFt)
+            : null
         const segments = wallSegments.get(frame.id) ?? []
         const neighborNames = isMerged
           ? Array.from(joinedNeighbors.get(frame.id) ?? [])
@@ -377,7 +397,14 @@ function RoomFramesBase({
                 hit target promotes a click into a frame-level drag.
                 Members of an explicit join group skip the fill so
                 the dissolved-zone polygon's tinted fill takes over. */}
-            {!isJoined ? (
+            {!isJoined && unionPath ? (
+              <path
+                d={unionPath}
+                fill={isActive ? '#0f766e' : '#1c1917'}
+                fillOpacity={fillOpacity}
+                pointerEvents="none"
+              />
+            ) : !isJoined ? (
               <rect
                 x={x}
                 y={y}
@@ -390,12 +417,25 @@ function RoomFramesBase({
               />
             ) : null}
 
+            {!isJoined && unionPath ? (
+              <path
+                d={unionPath}
+                fill="none"
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                data-room-id={frame.id}
+                data-room-stroke="true"
+                pointerEvents="stroke"
+                style={{ cursor: 'grab' }}
+              />
+            ) : null}
+
             {/* Visible perimeter walls — segmented, with shared edges
                 subtracted out so two adjacent rooms render as a
                 single combined interior pathway. Suppressed entirely
                 for members of an explicit join group: their wall is
                 the dissolved zone's outer polygon, painted above. */}
-            {!isJoined
+            {!isJoined && !unionPath
               ? segments.map((seg, idx) => {
                   const isHorizontal = seg.axis === 'horizontal'
                   const x1 = (isHorizontal ? seg.from : seg.coord) * pxPerFt
