@@ -51,11 +51,15 @@ export {
 } from './patron-centric-layout'
 
 export {
+  computeMarketLayout,
   generateDeterministicMarketLayout,
   maxPerimeterTableCapacity,
+  placementsToJson,
   type DeterministicMarketLayoutInput,
   type DeterministicMarketLayoutResult,
   type MarketLayoutMode,
+  type MarketLayoutPlacementJson,
+  type MarketLayoutRequest,
   type MarketLayoutTablePlacement,
   DEFAULT_AISLE_WIDTH_FT,
 } from '@/lib/floor-plan/deterministic-market-layout'

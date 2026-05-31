@@ -1,17 +1,74 @@
 /**
- * Deterministic market table layout for PopupHub.ca.
+ * Deterministic Computational Geometry & Market Layout Engine — PopupHub.ca
  *
+ * Same inputs always yield the same layout. No randomness.
  * Modes: grid | staggered | perimeter
- * — No randomness; identical inputs always yield identical outputs.
- * — Tables snap to a uniform grid; aisles default to 8 ft between rows.
- * — Rotations are 0° or 90° only (perimeter uses edge-aligned rotation).
+ *
+ * Room merge unions (A ∪ B outer perimeter only) are handled separately in
+ * `polygon-clipping-union.ts` and `placement-surface.ts`.
  */
 
 export type MarketLayoutMode = 'grid' | 'staggered' | 'perimeter'
 
+export type LayoutConstraintType =
+  | 'entrance'
+  | 'exit'
+  | 'wall'
+  | 'restricted_zone'
+
 export interface MarketLayoutPoint {
   x: number
   y: number
+}
+
+/** Canonical API request (Section I). */
+export interface MarketLayoutRequest {
+  marketDimensions: { width: number; height: number }
+  tableDimensions: { width: number; height: number }
+  totalTables: number
+  /** Defaults to `table_001` … `table_N`. */
+  tableIds?: ReadonlyArray<string>
+  layoutMode: MarketLayoutMode
+  /** Minimum straight aisle width (ft). Default 8. */
+  aisleSpacing?: number
+  constraints?: ReadonlyArray<{
+    type: LayoutConstraintType
+    bounds: ReadonlyArray<MarketLayoutPoint>
+  }>
+  /** Inset from market rectangle (ft). Default 3.5. */
+  wallInsetFt?: number
+  premiumLocations?: ReadonlyArray<MarketLayoutPoint>
+}
+
+/** Canonical JSON placement (Section V). */
+export interface MarketLayoutPlacementJson {
+  id: string
+  x: number
+  y: number
+  rotation: 0 | 90
+  /** 1-based row index; row 1 is closest to the entrance. */
+  row: number
+  /** 1-based column index; columns increase left → right. */
+  column: number
+  aisleSpacing: number
+  layoutMode: MarketLayoutMode
+}
+
+/** @deprecated Use `MarketLayoutRequest` — kept for auto-arrange bridge. */
+export interface DeterministicMarketLayoutInput {
+  marketWidthFt: number
+  marketHeightFt: number
+  tableWidthFt: number
+  tableHeightFt: number
+  tableCount: number
+  tableIds: ReadonlyArray<string>
+  layoutMode: MarketLayoutMode
+  aisleWidthFt?: number
+  wallInsetFt?: number
+  snapFt?: number
+  entrance?: MarketLayoutPoint
+  restrictedZones?: ReadonlyArray<MarketLayoutRect>
+  premiumLocations?: ReadonlyArray<MarketLayoutPoint>
 }
 
 export interface MarketLayoutRect {
@@ -21,31 +78,7 @@ export interface MarketLayoutRect {
   height: number
 }
 
-export interface DeterministicMarketLayoutInput {
-  /** Usable market width (ft). */
-  marketWidthFt: number
-  /** Usable market height (ft). */
-  marketHeightFt: number
-  tableWidthFt: number
-  tableHeightFt: number
-  tableCount: number
-  /** Table ids in placement order (length must equal tableCount). */
-  tableIds: ReadonlyArray<string>
-  layoutMode: MarketLayoutMode
-  /** Minimum aisle width between rows / along perimeter (ft). Default 8. */
-  aisleWidthFt?: number
-  /** Inset from market boundary (ft). Default 3.5. */
-  wallInsetFt?: number
-  /** Snap coordinates to this grid (ft). Default 0.5. */
-  snapFt?: number
-  /** Main entrance — first row is placed closest to this point. */
-  entrance?: MarketLayoutPoint
-  /** Zones where tables may not be placed. */
-  restrictedZones?: ReadonlyArray<MarketLayoutRect>
-  /** Premium anchor points — nearest slots are filled first. */
-  premiumLocations?: ReadonlyArray<MarketLayoutPoint>
-}
-
+/** Internal placement before JSON export. */
 export interface MarketLayoutTablePlacement {
   tableId: string
   x: number
@@ -60,6 +93,7 @@ export interface MarketLayoutTablePlacement {
 export type DeterministicMarketLayoutSuccess = {
   ok: true
   placements: MarketLayoutTablePlacement[]
+  jsonPlacements: MarketLayoutPlacementJson[]
   asciiDiagram: string
   explanation: string
   layoutMode: MarketLayoutMode
@@ -79,20 +113,90 @@ export type DeterministicMarketLayoutResult =
 
 export const DEFAULT_AISLE_WIDTH_FT = 8
 export const DEFAULT_WALL_INSET_FT = 3.5
-export const DEFAULT_SNAP_FT = 0.5
 
 interface SlotCandidate {
   x: number
   y: number
+  /** 0-based row index (emit as row + 1). */
   row: number
+  /** 0-based column index (emit as column + 1). */
   column: number
   rotation: 0 | 90
-  perimeterSequence?: number
 }
 
-function snapFtValue(n: number, snap: number): number {
-  if (snap <= 0) return n
-  return Math.round(n / snap) * snap
+function defaultTableIds(count: number): string[] {
+  return Array.from({ length: count }, (_, i) =>
+    `table_${String(i + 1).padStart(3, '0')}`
+  )
+}
+
+function polygonBounds(
+  points: ReadonlyArray<MarketLayoutPoint>
+): MarketLayoutRect | null {
+  if (points.length === 0) return null
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const p of points) {
+    minX = Math.min(minX, p.x)
+    minY = Math.min(minY, p.y)
+    maxX = Math.max(maxX, p.x)
+    maxY = Math.max(maxY, p.y)
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+function polygonCentroid(
+  points: ReadonlyArray<MarketLayoutPoint>
+): MarketLayoutPoint | null {
+  if (points.length === 0) return null
+  let sx = 0
+  let sy = 0
+  for (const p of points) {
+    sx += p.x
+    sy += p.y
+  }
+  return { x: sx / points.length, y: sy / points.length }
+}
+
+function parseConstraints(constraints: MarketLayoutRequest['constraints']): {
+  entrance?: MarketLayoutPoint
+  restrictedZones: MarketLayoutRect[]
+} {
+  const restrictedZones: MarketLayoutRect[] = []
+  let entrance: MarketLayoutPoint | undefined
+
+  for (const c of constraints ?? []) {
+    const box = polygonBounds(c.bounds)
+    if (!box) continue
+    if (c.type === 'entrance') {
+      entrance = polygonCentroid(c.bounds) ?? {
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+      }
+    }
+    if (
+      c.type === 'restricted_zone' ||
+      c.type === 'wall' ||
+      c.type === 'exit'
+    ) {
+      restrictedZones.push(box)
+    }
+  }
+
+  return { entrance, restrictedZones }
+}
+
+/** Snap to uniform grid cells sized by table width / height. */
+function snapToTableGrid(
+  value: number,
+  cell: number,
+  origin: number
+): number {
+  if (cell <= 0) return value
+  const steps = Math.round((value - origin) / cell)
+  return origin + steps * cell
 }
 
 function rectOverlaps(a: MarketLayoutRect, b: MarketLayoutRect): boolean {
@@ -138,111 +242,128 @@ function fitsBounds(
   )
 }
 
-/** Rows start at the edge nearest the entrance (first row = front). */
-function rowOriginY(
+/**
+ * Row 1 sits on the market edge nearest the entrance; subsequent rows
+ * step along +Y when the entrance is on the top edge, else −Y.
+ */
+function rowY(
   entrance: MarketLayoutPoint | undefined,
   ch: number,
   inset: number,
-  tableH: number,
-  rowIndex: number,
+  th: number,
+  rowIndex0: number,
   rowStep: number
 ): number {
-  const frontAtBottom =
-    entrance != null ? entrance.y > ch / 2 : false
-  if (frontAtBottom) {
-    return ch - inset - tableH - rowIndex * rowStep
+  const entranceOnTop =
+    entrance == null ? true : entrance.y <= ch / 2
+  if (entranceOnTop) {
+    return inset + rowIndex0 * rowStep
   }
-  return inset + rowIndex * rowStep
+  return ch - inset - th - rowIndex0 * rowStep
+}
+
+/** Stagger: 1-based odd rows (1,3,5) at min X; even rows (2,4,6) offset by half width. */
+function staggerOffsetX(rowIndex0: number, tw: number): number {
+  const rowNumber = rowIndex0 + 1
+  return rowNumber % 2 === 0 ? tw / 2 : 0
 }
 
 function buildInteriorSlots(
-  input: DeterministicMarketLayoutInput,
-  mode: 'grid' | 'staggered'
-): SlotCandidate[] {
-  const {
-    marketWidthFt: cw,
-    marketHeightFt: ch,
-    tableWidthFt: tw,
-    tableHeightFt: th,
-    aisleWidthFt = DEFAULT_AISLE_WIDTH_FT,
-    wallInsetFt = DEFAULT_WALL_INSET_FT,
-    snapFt = DEFAULT_SNAP_FT,
-    entrance,
-    restrictedZones = [],
-  } = input
-
-  const rowStep = th + aisleWidthFt
-  const colStep = tw
-  const slots: SlotCandidate[] = []
-  let row = 0
-
-  while (true) {
-    const y = snapFtValue(
-      rowOriginY(entrance, ch, wallInsetFt, th, row, rowStep),
-      snapFt
-    )
-    if (y + th > ch - wallInsetFt + 1e-6) break
-    if (y < wallInsetFt - 1e-6) break
-
-    const staggerOffset =
-      mode === 'staggered' && row % 2 === 1 ? tw / 2 : 0
-    let col = 0
-    let x = snapFtValue(wallInsetFt + staggerOffset, snapFt)
-
-    while (x + tw <= cw - wallInsetFt + 1e-6) {
-      const rect = tableRect(x, y, tw, th, 0)
-      if (
-        fitsBounds(rect, cw, ch, wallInsetFt) &&
-        !hitsRestricted(rect, restrictedZones)
-      ) {
-        slots.push({ x, y, row, column: col, rotation: 0 })
-      }
-      col++
-      x = snapFtValue(x + colStep, snapFt)
-    }
-
-    row++
-    const nextY = rowOriginY(entrance, ch, wallInsetFt, th, row, rowStep)
-    if (entrance != null && entrance.y > ch / 2) {
-      if (nextY < wallInsetFt - 1e-6) break
-    } else if (nextY + th > ch - wallInsetFt + 1e-6) {
-      break
-    }
-    if (row > 5000) break
-  }
-
-  return slots
-}
-
-/** Perimeter slot order: top L→R, right T→B, bottom R→L, left B→T. */
-function buildPerimeterSlots(
   cw: number,
   ch: number,
   tw: number,
   th: number,
   aisleFt: number,
   inset: number,
-  snap: number
+  mode: 'grid' | 'staggered',
+  entrance: MarketLayoutPoint | undefined,
+  restrictedZones: ReadonlyArray<MarketLayoutRect>
+): SlotCandidate[] {
+  const rowStep = th + aisleFt
+  const colStep = tw
+  const minX = inset
+  const slots: SlotCandidate[] = []
+  let rowIndex0 = 0
+
+  while (rowIndex0 < 5000) {
+    const y = snapToTableGrid(
+      rowY(entrance, ch, inset, th, rowIndex0, rowStep),
+      th,
+      inset
+    )
+    if (y + th > ch - inset + 1e-6 || y < inset - 1e-6) {
+      if (rowIndex0 === 0) break
+      const entranceOnTop = entrance == null ? true : entrance.y <= ch / 2
+      if (entranceOnTop && y + th > ch - inset + 1e-6) break
+      if (!entranceOnTop && y < inset - 1e-6) break
+      if (rowIndex0 > 0) break
+    }
+
+    const xOffset = mode === 'staggered' ? staggerOffsetX(rowIndex0, tw) : 0
+    let colIndex0 = 0
+
+    while (minX + xOffset + colIndex0 * colStep + tw <= cw - inset + 1e-6) {
+      const x =
+        mode === 'grid'
+          ? snapToTableGrid(minX + colIndex0 * colStep, tw, minX)
+          : minX + xOffset + colIndex0 * colStep
+      const rect = tableRect(x, y, tw, th, 0)
+      if (
+        fitsBounds(rect, cw, ch, inset) &&
+        !hitsRestricted(rect, restrictedZones)
+      ) {
+        slots.push({
+          x,
+          y,
+          row: rowIndex0,
+          column: colIndex0,
+          rotation: 0,
+        })
+      }
+      colIndex0++
+    }
+
+    rowIndex0++
+    const nextY = rowY(entrance, ch, inset, th, rowIndex0, rowStep)
+    if (entrance == null || entrance.y <= ch / 2) {
+      if (nextY + th > ch - inset + 1e-6) break
+    } else if (nextY < inset - 1e-6) {
+      break
+    }
+  }
+
+  return slots.sort((a, b) => {
+    if (a.row !== b.row) return a.row - b.row
+    return a.column - b.column
+  })
+}
+
+/** Clockwise perimeter ribbon: top L→R, right T→B, bottom R→L, left B→T. */
+function buildPerimeterSlots(
+  cw: number,
+  ch: number,
+  tw: number,
+  th: number,
+  aisleFt: number,
+  inset: number
 ): SlotCandidate[] {
   const alongStep = tw + aisleFt
   const alongStepY = th + aisleFt
   const slots: SlotCandidate[] = []
-  let seq = 0
 
   const push = (
     x: number,
     y: number,
     rotation: 0 | 90,
-    row: number,
-    column: number
+    edgeIndex: number,
+    col: number
   ) => {
     slots.push({
-      x: snapFtValue(x, snap),
-      y: snapFtValue(y, snap),
-      row,
-      column,
+      x: snapToTableGrid(x, tw, inset),
+      y: snapToTableGrid(y, th, inset),
+      row: edgeIndex,
+      column: col,
       rotation,
-      perimeterSequence: seq++,
     })
   }
 
@@ -251,14 +372,12 @@ function buildPerimeterSlots(
     push(x, inset, 0, 0, col++)
   }
 
-  const topCount = col
   col = 0
   const rightStartY = inset + th + aisleFt
   for (let y = rightStartY; y + th <= ch - inset + 1e-6; y += alongStepY) {
     push(cw - inset - tw, y, 90, 1, col++)
   }
 
-  const rightCount = col
   col = 0
   const bottomY = ch - inset - th
   for (
@@ -269,16 +388,12 @@ function buildPerimeterSlots(
     push(x, bottomY, 0, 2, col++)
   }
 
-  const bottomCount = col
   col = 0
   const leftMaxY = ch - inset - th - alongStepY
   for (let y = leftMaxY; y >= rightStartY - 1e-6; y -= alongStepY) {
     push(inset, y, 90, 3, col++)
   }
 
-  void topCount
-  void rightCount
-  void bottomCount
   return slots
 }
 
@@ -296,8 +411,7 @@ export function maxPerimeterTableCapacity(
     tableWidthFt,
     tableHeightFt,
     aisleWidthFt,
-    wallInsetFt,
-    DEFAULT_SNAP_FT
+    wallInsetFt
   ).length
 }
 
@@ -326,6 +440,39 @@ function orderSlotsWithPremium(
   return [...ordered, ...remaining]
 }
 
+export function placementsToJson(
+  placements: ReadonlyArray<MarketLayoutTablePlacement>
+): MarketLayoutPlacementJson[] {
+  return placements.map((p) => ({
+    id: p.tableId,
+    x: p.x,
+    y: p.y,
+    rotation: p.rotation,
+    row: p.row,
+    column: p.column,
+    aisleSpacing: p.aisleSpacingFt,
+    layoutMode: p.layoutMode,
+  }))
+}
+
+function toTablePlacement(
+  tableId: string,
+  slot: SlotCandidate,
+  aisleFt: number,
+  layoutMode: MarketLayoutMode
+): MarketLayoutTablePlacement {
+  return {
+    tableId,
+    x: slot.x,
+    y: slot.y,
+    rotation: slot.rotation,
+    row: slot.row + 1,
+    column: slot.column + 1,
+    aisleSpacingFt: aisleFt,
+    layoutMode,
+  }
+}
+
 function buildAsciiDiagram(
   cw: number,
   ch: number,
@@ -347,7 +494,7 @@ function buildAsciiDiagram(
     const chMark =
       p.layoutMode === 'perimeter'
         ? 'P'
-        : p.row % 2 === 1 && p.layoutMode === 'staggered'
+        : p.row % 2 === 0 && p.layoutMode === 'staggered'
           ? 'S'
           : 'T'
     for (let dy = 0; dy < gh; dy++) {
@@ -360,87 +507,176 @@ function buildAsciiDiagram(
   }
 
   const border = '+'.padEnd(cols + 2, '-')
-  const lines = [border, ...grid.map((r) => '|' + r.join('') + '|'), border]
-  return lines.join('\n')
+  return [border, ...grid.map((r) => '|' + r.join('') + '|'), border].join('\n')
 }
 
 function buildExplanation(
-  input: DeterministicMarketLayoutInput,
-  placed: number,
+  layoutMode: MarketLayoutMode,
+  cw: number,
+  ch: number,
+  tw: number,
+  th: number,
   aisleFt: number,
   inset: number,
+  placed: number,
+  entrance?: MarketLayoutPoint,
   perimeterCapacity?: number
 ): string {
-  const { layoutMode, marketWidthFt, marketHeightFt, tableWidthFt, tableHeightFt } =
-    input
-  const rowStep = tableHeightFt + aisleFt
+  const rowStep = th + aisleFt
   const parts = [
-    `Mode: ${layoutMode}. Market ${marketWidthFt}×${marketHeightFt} ft, tables ${tableWidthFt}×${tableHeightFt} ft.`,
-    `Wall inset ${inset} ft; aisle ${aisleFt} ft between rows (and along perimeter).`,
-    `Row pitch ${rowStep} ft; column pitch ${tableWidthFt} ft.`,
+    `Mode: ${layoutMode}. Market ${cw}×${ch} ft; tables ${tw}×${th} ft.`,
+    `Aisle spacing ${aisleFt} ft (straight continuous rows); wall inset ${inset} ft.`,
+    `Grid snap: ${tw} ft × ${th} ft cells; rotations 0° or 90° only.`,
   ]
-  if (input.entrance) {
+  if (entrance) {
     parts.push(
-      `Entrance at (${input.entrance.x}, ${input.entrance.y}) — row 0 is closest to that point.`
+      `Row 1 anchored nearest entrance at (${entrance.x.toFixed(1)}, ${entrance.y.toFixed(1)}).`
     )
   }
-  if (layoutMode === 'staggered') {
-    parts.push('Odd rows offset by half table width for alternating visibility.')
-  }
-  if (layoutMode === 'perimeter' && perimeterCapacity != null) {
+  if (layoutMode === 'grid') {
     parts.push(
-      `Perimeter capacity ${perimeterCapacity} slots (top→right→bottom→left). Placed ${placed}.`
+      `Rows front→back along Y; columns left→right along X; row pitch ${rowStep} ft.`
     )
-  } else {
-    parts.push(`Placed ${placed} table(s) in row-major order (left→right, front→back).`)
+  } else if (layoutMode === 'staggered') {
+    parts.push(
+      'Odd rows (1,3,5…) at min X; even rows (2,4,6…) offset by half table width.'
+    )
+  } else if (perimeterCapacity != null) {
+    parts.push(
+      `Perimeter ribbon clockwise (top→right→bottom→left); capacity ${perimeterCapacity}; placed ${placed}.`
+    )
   }
   return parts.join(' ')
 }
 
 /**
- * Generate a deterministic market layout from explicit dimensions and mode.
+ * Primary entry — canonical `MarketLayoutRequest` schema (Section I).
  */
-export function generateDeterministicMarketLayout(
-  input: DeterministicMarketLayoutInput
+export function computeMarketLayout(
+  request: MarketLayoutRequest
 ): DeterministicMarketLayoutResult {
-  const aisleFt = input.aisleWidthFt ?? DEFAULT_AISLE_WIDTH_FT
-  const inset = input.wallInsetFt ?? DEFAULT_WALL_INSET_FT
-  const snap = input.snapFt ?? DEFAULT_SNAP_FT
+  const cw = request.marketDimensions.width
+  const ch = request.marketDimensions.height
+  const tw = request.tableDimensions.width
+  const th = request.tableDimensions.height
+  const tableCount = request.totalTables
+  const tableIds =
+    request.tableIds?.length === tableCount
+      ? [...request.tableIds]
+      : defaultTableIds(tableCount)
+  const aisleFt = request.aisleSpacing ?? DEFAULT_AISLE_WIDTH_FT
+  const inset = request.wallInsetFt ?? DEFAULT_WALL_INSET_FT
+  const { entrance, restrictedZones } = parseConstraints(request.constraints)
+
+  return runLayout({
+    cw,
+    ch,
+    tw,
+    th,
+    tableCount,
+    tableIds,
+    layoutMode: request.layoutMode,
+    aisleFt,
+    inset,
+    entrance,
+    restrictedZones,
+    premiumLocations: request.premiumLocations,
+  })
+}
+
+function requestFromLegacy(
+  input: DeterministicMarketLayoutInput
+): MarketLayoutRequest {
+  const constraints: Array<{
+    type: LayoutConstraintType
+    bounds: MarketLayoutPoint[]
+  }> = []
+  if (input.entrance) {
+    constraints.push({
+      type: 'entrance',
+      bounds: [input.entrance],
+    })
+  }
+  for (const z of input.restrictedZones ?? []) {
+    constraints.push({
+      type: 'restricted_zone',
+      bounds: [
+        { x: z.x, y: z.y },
+        { x: z.x + z.width, y: z.y },
+        { x: z.x + z.width, y: z.y + z.height },
+        { x: z.x, y: z.y + z.height },
+      ],
+    })
+  }
+  return {
+    marketDimensions: {
+      width: input.marketWidthFt,
+      height: input.marketHeightFt,
+    },
+    tableDimensions: {
+      width: input.tableWidthFt,
+      height: input.tableHeightFt,
+    },
+    totalTables: input.tableCount,
+    tableIds: input.tableIds,
+    layoutMode: input.layoutMode,
+    aisleSpacing: input.aisleWidthFt,
+    wallInsetFt: input.wallInsetFt,
+    constraints,
+    premiumLocations: input.premiumLocations,
+  }
+}
+
+function runLayout(params: {
+  cw: number
+  ch: number
+  tw: number
+  th: number
+  tableCount: number
+  tableIds: string[]
+  layoutMode: MarketLayoutMode
+  aisleFt: number
+  inset: number
+  entrance?: MarketLayoutPoint
+  restrictedZones: MarketLayoutRect[]
+  premiumLocations?: ReadonlyArray<MarketLayoutPoint>
+}): DeterministicMarketLayoutResult {
   const {
-    marketWidthFt: cw,
-    marketHeightFt: ch,
-    tableWidthFt: tw,
-    tableHeightFt: th,
+    cw,
+    ch,
+    tw,
+    th,
     tableCount,
     tableIds,
     layoutMode,
-    restrictedZones = [],
-  } = input
+    aisleFt,
+    inset,
+    entrance,
+    restrictedZones,
+    premiumLocations,
+  } = params
 
   if (tableCount < 0 || tableIds.length < tableCount) {
     return {
       ok: false,
-      error: 'tableIds must provide at least tableCount entries.',
+      error: 'tableIds must provide at least totalTables entries.',
       maxPerimeterCapacity: 0,
       layoutMode: 'perimeter',
     }
   }
 
   if (layoutMode === 'perimeter') {
-    const perimeterSlots = buildPerimeterSlots(cw, ch, tw, th, aisleFt, inset, snap)
+    const perimeterSlots = buildPerimeterSlots(cw, ch, tw, th, aisleFt, inset)
     const capacity = perimeterSlots.length
     if (tableCount > capacity) {
       return {
         ok: false,
-        error: `Perimeter capacity exceeded: requested ${tableCount} tables but only ${capacity} fit along the boundary.`,
+        error: `Perimeter capacity exceeded: requested ${tableCount} tables but maximum ${capacity} fit with ${aisleFt} ft aisle spacing.`,
         maxPerimeterCapacity: capacity,
         layoutMode: 'perimeter',
       }
     }
-    const ordered = orderSlotsWithPremium(
-      perimeterSlots,
-      input.premiumLocations
-    )
+    const ordered = orderSlotsWithPremium(perimeterSlots, premiumLocations)
     const placements: MarketLayoutTablePlacement[] = []
     for (let i = 0; i < tableCount; i++) {
       const slot = ordered[i]!
@@ -451,40 +687,44 @@ export function generateDeterministicMarketLayout(
       ) {
         continue
       }
-      placements.push({
-        tableId: tableIds[i]!,
-        x: slot.x,
-        y: slot.y,
-        rotation: slot.rotation,
-        row: slot.row,
-        column: slot.column,
-        aisleSpacingFt: aisleFt,
-        layoutMode: 'perimeter',
-      })
+      placements.push(
+        toTablePlacement(tableIds[i]!, slot, aisleFt, 'perimeter')
+      )
     }
-    const asciiDiagram = buildAsciiDiagram(cw, ch, placements, tw, th)
-    const explanation = buildExplanation(
-      input,
-      placements.length,
-      aisleFt,
-      inset,
-      capacity
-    )
     return {
       ok: true,
       placements,
-      asciiDiagram,
-      explanation,
+      jsonPlacements: placementsToJson(placements),
+      asciiDiagram: buildAsciiDiagram(cw, ch, placements, tw, th),
+      explanation: buildExplanation(
+        'perimeter',
+        cw,
+        ch,
+        tw,
+        th,
+        aisleFt,
+        inset,
+        placements.length,
+        entrance,
+        capacity
+      ),
       layoutMode: 'perimeter',
       perimeterCapacity: capacity,
     }
   }
 
   const interiorSlots = buildInteriorSlots(
-    input,
-    layoutMode === 'staggered' ? 'staggered' : 'grid'
+    cw,
+    ch,
+    tw,
+    th,
+    aisleFt,
+    inset,
+    layoutMode === 'staggered' ? 'staggered' : 'grid',
+    entrance,
+    restrictedZones
   )
-  const ordered = orderSlotsWithPremium(interiorSlots, input.premiumLocations)
+  const ordered = orderSlotsWithPremium(interiorSlots, premiumLocations)
   const placements: MarketLayoutTablePlacement[] = []
 
   for (let i = 0; i < tableCount && i < ordered.length; i++) {
@@ -493,33 +733,34 @@ export function generateDeterministicMarketLayout(
     if (!fitsBounds(rect, cw, ch, inset) || hitsRestricted(rect, restrictedZones)) {
       continue
     }
-    placements.push({
-      tableId: tableIds[i]!,
-      x: slot.x,
-      y: slot.y,
-      rotation: slot.rotation,
-      row: slot.row,
-      column: slot.column,
-      aisleSpacingFt: aisleFt,
-      layoutMode,
-    })
+    placements.push(toTablePlacement(tableIds[i]!, slot, aisleFt, layoutMode))
   }
-
-  const asciiDiagram = buildAsciiDiagram(cw, ch, placements, tw, th)
-  const explanation = buildExplanation(
-    input,
-    placements.length,
-    aisleFt,
-    inset
-  )
 
   return {
     ok: true,
     placements,
-    asciiDiagram,
-    explanation,
+    jsonPlacements: placementsToJson(placements),
+    asciiDiagram: buildAsciiDiagram(cw, ch, placements, tw, th),
+    explanation: buildExplanation(
+      layoutMode,
+      cw,
+      ch,
+      tw,
+      th,
+      aisleFt,
+      inset,
+      placements.length,
+      entrance
+    ),
     layoutMode,
   }
+}
+
+/** Legacy entry — delegates to `computeMarketLayout`. */
+export function generateDeterministicMarketLayout(
+  input: DeterministicMarketLayoutInput
+): DeterministicMarketLayoutResult {
+  return computeMarketLayout(requestFromLegacy(input))
 }
 
 /** Map auto-arrange mode strings onto deterministic layout modes. */

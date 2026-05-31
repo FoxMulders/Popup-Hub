@@ -4,8 +4,9 @@
  */
 
 import {
-  generateDeterministicMarketLayout,
+  computeMarketLayout,
   maxPerimeterTableCapacity,
+  placementsToJson,
 } from '../lib/floor-plan/deterministic-market-layout'
 
 let pass = 0
@@ -25,105 +26,102 @@ const W = 60
 const H = 80
 const TW = 6
 const TH = 2.5
-const ids = (n: number) => Array.from({ length: n }, (_, i) => `t-${i}`)
 
-const gridA = generateDeterministicMarketLayout({
-  marketWidthFt: W,
-  marketHeightFt: H,
-  tableWidthFt: TW,
-  tableHeightFt: TH,
-  tableCount: 8,
-  tableIds: ids(8),
+const gridA = computeMarketLayout({
+  marketDimensions: { width: W, height: H },
+  tableDimensions: { width: TW, height: TH },
+  totalTables: 8,
   layoutMode: 'grid',
-  entrance: { x: W / 2, y: H },
+  constraints: [
+    {
+      type: 'entrance',
+      bounds: [{ x: W / 2, y: 0 }],
+    },
+  ],
 })
 
-const gridB = generateDeterministicMarketLayout({
-  marketWidthFt: W,
-  marketHeightFt: H,
-  tableWidthFt: TW,
-  tableHeightFt: TH,
-  tableCount: 8,
-  tableIds: ids(8),
+const gridB = computeMarketLayout({
+  marketDimensions: { width: W, height: H },
+  tableDimensions: { width: TW, height: TH },
+  totalTables: 8,
   layoutMode: 'grid',
-  entrance: { x: W / 2, y: H },
+  constraints: [
+    {
+      type: 'entrance',
+      bounds: [{ x: W / 2, y: 0 }],
+    },
+  ],
 })
 
 assert(gridA.ok && gridB.ok, 'grid layout succeeds')
 if (gridA.ok && gridB.ok) {
-  const sigA = JSON.stringify(gridA.placements)
-  const sigB = JSON.stringify(gridB.placements)
-  assert(sigA === sigB, 'grid layout is deterministic (identical runs)')
   assert(
-    gridA.placements.every((p) => p.rotation === 0),
+    JSON.stringify(placementsToJson(gridA.placements)) ===
+      JSON.stringify(placementsToJson(gridB.placements)),
+    'grid layout is deterministic'
+  )
+  assert(
+    gridA.jsonPlacements.every((p) => p.rotation === 0),
     'grid uses 0° rotation only'
   )
-  const row0 = gridA.placements.filter((p) => p.row === 0)
-  assert(row0.length > 0, 'grid has a front row')
-  const maxY0 = Math.max(...row0.map((p) => p.y))
-  const row1 = gridA.placements.filter((p) => p.row === 1)
-  if (row1.length > 0) {
+  assert(
+    gridA.jsonPlacements.every((p) => p.row >= 1 && p.column >= 1),
+    'grid uses 1-based row/column indices'
+  )
+  const row1 = gridA.jsonPlacements.filter((p) => p.row === 1)
+  const row2 = gridA.jsonPlacements.filter((p) => p.row === 2)
+  if (row1.length && row2.length) {
     assert(
-      Math.max(...row1.map((p) => p.y)) < maxY0 - 1,
-      'row 1 is behind row 0 when entrance is at bottom'
+      Math.min(...row1.map((p) => p.y)) < Math.min(...row2.map((p) => p.y)),
+      'row 1 is closer to top entrance than row 2'
     )
   }
 }
 
-const stagger = generateDeterministicMarketLayout({
-  marketWidthFt: W,
-  marketHeightFt: H,
-  tableWidthFt: TW,
-  tableHeightFt: TH,
-  tableCount: 12,
-  tableIds: ids(12),
+const stagger = computeMarketLayout({
+  marketDimensions: { width: W, height: H },
+  tableDimensions: { width: TW, height: TH },
+  totalTables: 12,
   layoutMode: 'staggered',
 })
 
 assert(stagger.ok, 'staggered layout succeeds')
 if (stagger.ok) {
-  const odd = stagger.placements.filter((p) => p.row % 2 === 1)
-  const even = stagger.placements.filter((p) => p.row % 2 === 0)
-  if (odd.length && even.length) {
-    const minOddX = Math.min(...odd.map((p) => p.x))
-    const minEvenX = Math.min(...even.map((p) => p.x))
+  const row1Col1 = stagger.jsonPlacements.find((p) => p.row === 1 && p.column === 1)
+  const row2Col1 = stagger.jsonPlacements.find((p) => p.row === 2 && p.column === 1)
+  if (row1Col1 && row2Col1) {
     assert(
-      Math.abs(minOddX - minEvenX - TW / 2) < 0.01,
-      'odd rows offset by half table width'
+      Math.abs(row2Col1.x - row1Col1.x - TW / 2) < 0.01,
+      'even rows (2,4,6…) offset by half table width'
     )
   }
 }
 
 const cap = maxPerimeterTableCapacity(W, H, TW, TH)
-const over = generateDeterministicMarketLayout({
-  marketWidthFt: W,
-  marketHeightFt: H,
-  tableWidthFt: TW,
-  tableHeightFt: TH,
-  tableCount: cap + 5,
-  tableIds: ids(cap + 5),
-  layoutMode: 'perimeter',
-})
 
-assert(!over.ok && 'maxPerimeterCapacity' in over, 'perimeter overflow returns error')
-if (!over.ok) {
-  assert(over.maxPerimeterCapacity === cap, 'error reports max perimeter capacity')
-}
+{
+  const over = computeMarketLayout({
+    marketDimensions: { width: W, height: H },
+    tableDimensions: { width: TW, height: TH },
+    totalTables: cap + 5,
+    layoutMode: 'perimeter',
+  })
+  assert(!over.ok, 'perimeter overflow returns error')
+  if (!over.ok) {
+    assert(over.maxPerimeterCapacity === cap, 'error reports max perimeter capacity')
+  }
 
-const perimeter = generateDeterministicMarketLayout({
-  marketWidthFt: W,
-  marketHeightFt: H,
-  tableWidthFt: TW,
-  tableHeightFt: TH,
-  tableCount: Math.min(6, cap),
-  tableIds: ids(Math.min(6, cap)),
-  layoutMode: 'perimeter',
-})
-
-assert(perimeter.ok, 'perimeter layout within capacity')
-if (perimeter.ok) {
-  assert(perimeter.asciiDiagram.includes('+'), 'ascii diagram has border')
-  assert(perimeter.explanation.length > 20, 'explanation is non-empty')
+  const perimeter = computeMarketLayout({
+    marketDimensions: { width: W, height: H },
+    tableDimensions: { width: TW, height: TH },
+    totalTables: Math.min(6, cap),
+    layoutMode: 'perimeter',
+  })
+  assert(perimeter.ok, 'perimeter layout within capacity')
+  if (perimeter.ok) {
+    assert(perimeter.asciiDiagram.includes('+'), 'ascii diagram has border')
+    assert(perimeter.jsonPlacements[0]?.id.startsWith('table_'), 'default table ids')
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)
