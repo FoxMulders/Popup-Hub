@@ -27,6 +27,7 @@ import {
   clearDestructiveMergeInDoc,
   destructiveMergeInDoc,
 } from './destructive-merge'
+import { ensureCanvasHasPlaceableRoom } from '../canvas/canvas-engine'
 
 /**
  * useFloorPlanDoc — pure state hook for a v2 floor plan document.
@@ -411,7 +412,11 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
   const patchDoc = useCallback<FloorPlanDocStore['patchDoc']>(
     (patch, options) => {
       const pushHistory = options?.pushHistory ?? true
-      commit({ ...docRef.current, ...patch }, pushHistory)
+      let next: FloorPlanDoc = { ...docRef.current, ...patch }
+      if (patch.rooms !== undefined || (next.rooms ?? []).length === 0) {
+        next = ensureCanvasHasPlaceableRoom(next)
+      }
+      commit(next, pushHistory)
     },
     [commit]
   )

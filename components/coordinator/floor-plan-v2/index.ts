@@ -13,3 +13,9 @@ export type {
   StageObject,
 } from './state/types'
 export type { ToolId, DrawShape, ToolState } from './tools/types'
+export {
+  activeRoomFrames,
+  ensureCanvasHasPlaceableRoom,
+  isValidPlacementLocation,
+  unionActiveRoomBounds,
+} from './canvas/canvas-engine'

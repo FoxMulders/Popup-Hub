@@ -19,6 +19,7 @@ import { InlineLabelEditor } from './inline-label-editor'
 import { RoomFrames } from './room-frames'
 import { RoomSelectionOverlay } from './room-selection-overlay'
 import { activeRoomFramingBounds } from '../state/room-canvas'
+import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer } from '../interactions/use-canvas-pointer'
@@ -568,9 +569,9 @@ export function FloorPlanCanvas({
             majorEvery={gridSpacing.majorEvery}
             pxPerFt={pxPerFt}
           />
-          {store.doc.rooms && store.doc.rooms.length > 0 ? (
+          {activeRoomFrames(store.doc).length > 0 ? (
             <RoomFrames
-              frames={store.doc.rooms}
+              frames={activeRoomFrames(store.doc)}
               objects={store.doc.objects}
               activeRoomId={activeRoomId ?? null}
               selectedRoomId={selectedRoomId ?? null}

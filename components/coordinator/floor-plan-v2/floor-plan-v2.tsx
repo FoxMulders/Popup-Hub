@@ -25,6 +25,10 @@ import { cn } from '@/lib/utils'
 import { FloorPlanCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridSpacingForTableFt } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
+import {
+  ensureCanvasHasPlaceableRoom,
+  unionActiveRoomBounds,
+} from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
@@ -454,6 +458,21 @@ export function FloorPlanV2({
     setSelectedRoomId(activeRoomId)
     setSelectedRoomIds(new Set([activeRoomId]))
   }, [activeRoomId, layoutRoomIdsKey, layoutRooms])
+
+  useEffect(() => {
+    const active = (store.doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId)
+    if (active.length > 0) return
+    const next = ensureCanvasHasPlaceableRoom(store.doc)
+    store.patchDoc(
+      {
+        rooms: next.rooms,
+        canvasWidthFt: next.canvasWidthFt,
+        canvasLengthFt: next.canvasLengthFt,
+      },
+      { pushHistory: false }
+    )
+    resetCanvasViewport()
+  }, [resetCanvasViewport, store])
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
   const highlightedRoomMetrics = useMemo(() => {
@@ -1150,23 +1169,27 @@ export function FloorPlanV2({
   const handleCenterView = useCallback(() => {
     const api = viewportApiRef.current
     if (!api) return
-    const bbox = groupRotatedAabb(store.doc.objects)
-    if (!bbox) {
-      api.centerView()
-      recoverCanvasFocus()
-      return
+    const objectBbox = groupRotatedAabb(store.doc.objects)
+    if (objectBbox) {
+      api.fitToBounds(
+        {
+          minX: objectBbox.x,
+          minY: objectBbox.y,
+          maxX: objectBbox.x + objectBbox.width,
+          maxY: objectBbox.y + objectBbox.height,
+        },
+        { padding: 0.1 }
+      )
+    } else {
+      const roomBounds = unionActiveRoomBounds(store.doc)
+      if (roomBounds) {
+        api.fitToBounds(roomBounds, { padding: 0.12 })
+      } else {
+        api.resetViewport()
+      }
     }
-    api.fitToBounds(
-      {
-        minX: bbox.x,
-        minY: bbox.y,
-        maxX: bbox.x + bbox.width,
-        maxY: bbox.y + bbox.height,
-      },
-      { padding: 0.1 }
-    )
     recoverCanvasFocus()
-  }, [recoverCanvasFocus, store.doc.objects])
+  }, [recoverCanvasFocus, store.doc])
 
 
   /**
@@ -1506,11 +1529,19 @@ export function FloorPlanV2({
     }
     setSelectedRoomIds(new Set())
     setSelectedRoomId(null)
+    syncLayoutRoomsFromDoc(store.doc)
+    recoverCanvasFocus()
     toast.success(
-      'Merged into one shape — original paths replaced, interior edges removed.',
+      'Merged into one shape — source rooms removed, interior edges cleared.',
       { duration: 2000 }
     )
-  }, [destructiveMergePlan, mergeBlockedReason, store])
+  }, [
+    destructiveMergePlan,
+    mergeBlockedReason,
+    recoverCanvasFocus,
+    store,
+    syncLayoutRoomsFromDoc,
+  ])
 
   const handleMerge = useCallback(() => {
     if (destructiveMergePlan.canMerge) {

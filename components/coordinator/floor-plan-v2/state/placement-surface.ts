@@ -185,26 +185,27 @@ export function resolveRoomPlacementSurface(
     return null
   }
 
-  if (frame.mergedIntoObjectId) {
-    const mz = doc.objects.find(
-      (o): o is MergedZoneObject =>
-        o.id === frame.mergedIntoObjectId && o.kind === 'merged_zone'
-    )
-    if (mz && mz.rings.length > 0) {
-      const outerRings = mergedZoneGlobalRings(mz)
-      const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
-      const surface: PlacementSurface = {
-        roomId,
-        outerRings,
-        centroid,
-        minX,
-        minY,
-        maxX,
-        maxY,
-      }
-      cache.set(roomId, surface)
-      return surface
+  const mergedZoneForRoom = doc.objects.find(
+    (o): o is MergedZoneObject =>
+      o.kind === 'merged_zone' &&
+      (o.sourceRoomIds?.includes(roomId) ||
+        doc.objectRoom?.[o.id] === roomId ||
+        frame.mergedIntoObjectId === o.id)
+  )
+  if (mergedZoneForRoom && mergedZoneForRoom.rings.length > 0) {
+    const outerRings = mergedZoneGlobalRings(mergedZoneForRoom)
+    const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
+    const surface: PlacementSurface = {
+      roomId,
+      outerRings,
+      centroid,
+      minX,
+      minY,
+      maxX,
+      maxY,
     }
+    cache.set(roomId, surface)
+    return surface
   }
 
   if (frame.joinGroupId) {
@@ -250,14 +251,9 @@ export function findRoomIdForPlacementPoint(
   doc: FloorPlanDoc,
   p: Point
 ): string | null {
-  const frames = doc.rooms ?? []
+  const frames = (doc.rooms ?? []).filter((f) => !f.mergedIntoObjectId)
   for (let i = frames.length - 1; i >= 0; i--) {
     const f = frames[i]!
-    if (f.mergedIntoObjectId) {
-      const surface = resolveRoomPlacementSurface(doc, f.id)
-      if (surface && pointInsidePlacementSurface(p, surface)) return f.id
-      continue
-    }
     const surface = resolveRoomPlacementSurface(doc, f.id)
     if (surface && pointInsidePlacementSurface(p, surface)) return f.id
   }

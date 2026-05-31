@@ -105,26 +105,40 @@ export function destructiveMergeInDoc(
     merged,
   ]
 
+  const primaryRoomId = frames[0]!.id
+  const removedRoomIds = new Set(frames.map((f) => f.id))
+  removedRoomIds.delete(primaryRoomId)
+
   const objectRoom = { ...(doc.objectRoom ?? {}) }
   for (const id of removeObjectIds) {
     delete objectRoom[id]
   }
-  const ownerRoom = frames[0]?.id ?? doc.objectRoom?.[objects[0]?.id ?? '']
-  if (ownerRoom) objectRoom[mergedId] = ownerRoom
-
-  const nextFrames: RoomFrame[] = (doc.rooms ?? []).map((f) => {
-    if (!roomIdSet.has(f.id)) return f
-    const { joinGroupId: _dropJoin, ...rest } = f
-    void _dropJoin
-    return {
-      ...rest,
-      mergedIntoObjectId: mergedId,
-      originX: minX,
-      originY: minY,
-      widthFt: width,
-      lengthFt: height,
+  for (const [objId, roomId] of Object.entries(objectRoom)) {
+    if (removedRoomIds.has(roomId)) {
+      objectRoom[objId] = primaryRoomId
     }
-  })
+  }
+  objectRoom[mergedId] = primaryRoomId
+
+  const primaryFrame = frames.find((f) => f.id === primaryRoomId)!
+  const { joinGroupId: _dropJoin, mergedIntoObjectId: _dropMerge, ...primaryRest } =
+    primaryFrame
+  void _dropJoin
+  void _dropMerge
+
+  const nextFrames: RoomFrame[] = (doc.rooms ?? [])
+    .filter((f) => !removedRoomIds.has(f.id))
+    .map((f) =>
+      f.id === primaryRoomId
+        ? {
+            ...primaryRest,
+            originX: minX,
+            originY: minY,
+            widthFt: width,
+            lengthFt: height,
+          }
+        : f
+    )
 
   const nextDoc: FloorPlanDoc = {
     ...doc,
@@ -133,14 +147,7 @@ export function destructiveMergeInDoc(
     objectRoom,
   }
 
-  if (ownerRoom) {
-    rebuildSpatialIndexForRoom(nextDoc, ownerRoom)
-  }
-  for (const f of frames) {
-    if (f.id !== ownerRoom) {
-      rebuildSpatialIndexForRoom(nextDoc, f.id)
-    }
-  }
+  rebuildSpatialIndexForRoom(nextDoc, primaryRoomId)
 
   return {
     doc: nextDoc,

@@ -11,9 +11,9 @@ import {
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import { boothDimensionsForTableLength } from '@/lib/booth-planner/table-booth-consolidation'
 import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
+import { isValidPlacementLocation } from '../canvas/canvas-engine'
 import {
   findRoomIdForPlacementPoint,
-  objectCenterInsidePlacementSurface,
   resolveRoomPlacementSurface,
 } from '../state/placement-surface'
 import type { ToolState } from '../tools/types'
@@ -574,6 +574,7 @@ export function useCanvasPointer(
           } else {
             for (let i = frames.length - 1; i >= 0; i--) {
               const f = frames[i]!
+              if (f.mergedIntoObjectId) continue
               if (
                 pointInsideRoomPlacement(f, ft, store.doc, f.id) ||
                 pointHitsFrameStroke(f, ft, 0.75)
@@ -1045,17 +1046,23 @@ export function useCanvasPointer(
             x: rect.x + rect.width / 2,
             y: rect.y + rect.height / 2,
           }
-          let drawRoomId = activeRoomIdRef.current ?? null
-          for (const f of store.doc.rooms ?? []) {
-            if (
-              center.x >= f.originX &&
-              center.x <= f.originX + f.widthFt &&
-              center.y >= f.originY &&
-              center.y <= f.originY + f.lengthFt
-            ) {
-              drawRoomId = f.id
-              break
-            }
+          const drawRoomId =
+            findRoomIdForPlacementPoint(store.doc, center) ??
+            activeRoomIdRef.current ??
+            null
+          if (
+            !drawRoomId ||
+            !isValidPlacementLocation(store.doc, center, {
+              x: rect.x,
+              y: rect.y,
+              width: rect.width,
+              height: rect.height,
+              rotation: 0,
+            })
+          ) {
+            onOverlapViolationRef.current?.()
+            setDraft(null)
+            return
           }
           commitDraft(
             store,
@@ -1365,15 +1372,17 @@ function commitDraft(
     onOverlapViolation?.()
     return
   }
-  if (roomId) {
-    const surface = resolveRoomPlacementSurface(store.doc, roomId)
-    if (surface && !objectCenterInsidePlacementSurface(obj, surface)) {
-      onOverlapViolation?.()
-      return
-    }
+  const placementRoomId =
+    roomId ?? findRoomIdForPlacementPoint(store.doc, objectCenter(obj))
+  if (
+    !placementRoomId ||
+    !isValidPlacementLocation(store.doc, objectCenter(obj), obj)
+  ) {
+    onOverlapViolation?.()
+    return
   }
   store.addObject(obj, {
     select: true,
-    ...(roomId ? { roomId } : {}),
+    roomId: placementRoomId,
   })
 }
