@@ -57,7 +57,7 @@ export function ensurePlacementOuterRing(
   ring: Ring,
   interiorAnchor?: PlacementPoint
 ): Ring {
-  let closed = simplifyRingCollinear(closeRing(ring))
+  const closed = simplifyRingCollinear(closeRing(ring))
   if (closed.length < 4) return closed
 
   const forward = closed
