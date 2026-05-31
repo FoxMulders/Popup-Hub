@@ -1,19 +1,15 @@
 /**
- * Auto-Arrange engine — patron-centric winding aisles and perimeter mode.
+ * Auto-Arrange engine — deterministic grid, staggered, and perimeter modes.
  *
- * Modes:
- *   - `center-out` (default) — `calculatePatronCentricLayout`: serpentine
- *     patron corridor, chevron/herringbone angles, 60° sightline equity,
- *     rotated AABB collision (replaces rigid parallel rows).
- *   - `perimeter-only` — trace exterior walls, snap booths flush to
- *     interior faces with 2′ edge clearance between booths.
+ * Modes (see `lib/floor-plan/deterministic-market-layout.ts`):
+ *   - `grid` — aligned rows/columns, 8′ aisles, entrance-first row order.
+ *   - `staggered` — alternating half-width row offset for patron sightlines.
+ *   - `perimeter-only` — boundary loop (top→right→bottom→left).
  *
- * Both modes honor structural obstacles, multi-table consolidation,
- * and same-category proximity rules.
+ * Legacy alias `center-out` maps to `grid`.
  *
- * The function is pure: it returns a fresh `FloorPlanDoc` and does
- * not mutate the input. Boundaries are enforced — no booth ever sits
- * outside `[0, canvasWidthFt] × [0, canvasLengthFt]`.
+ * Honors structural obstacles (restricted zones), multi-table consolidation,
+ * and same-category proximity when slots remain after deterministic placement.
  */
 
 import type {
@@ -39,7 +35,11 @@ import {
   consolidateBoothsForAutoArrange,
   type VendorTableMeta,
 } from '@/lib/booth-planner/table-booth-consolidation'
-import { calculatePatronCentricLayout } from './patron-centric-layout'
+import {
+  autoArrangeModeToMarketLayout,
+  DEFAULT_AISLE_WIDTH_FT,
+  generateDeterministicMarketLayout,
+} from '@/lib/floor-plan/deterministic-market-layout'
 
 export {
   calculatePatronCentricLayout,
@@ -49,11 +49,20 @@ export {
   PATRON_CORRIDOR_WIDTH_FT,
   PATRON_VISION_CONE_DEG,
 } from './patron-centric-layout'
+
+export {
+  generateDeterministicMarketLayout,
+  maxPerimeterTableCapacity,
+  type DeterministicMarketLayoutInput,
+  type DeterministicMarketLayoutResult,
+  type MarketLayoutMode,
+  type MarketLayoutTablePlacement,
+  DEFAULT_AISLE_WIDTH_FT,
+} from '@/lib/floor-plan/deterministic-market-layout'
 import { PERIMETER_WALL_THICKNESS_FT } from '../interactions/perimeter-walls'
 import {
   orientBoothForPerimeterSlot,
   perimeterSlotsAlongRing,
-  perimeterSlotsWithEdges,
   rotationForPerimeterEdge,
   type PerimeterSlot,
 } from '../interactions/perimeter-booth-orientation'
@@ -80,11 +89,23 @@ export const FRONT_CLEARANCE_FT = PATRON_PAIR_WIDTH_FT
  */
 export const BOOTH_EDGE_CLEARANCE_FT = 2
 
-export type AutoArrangeMode = 'center-out' | 'perimeter-only'
+export type AutoArrangeMode = 'grid' | 'staggered' | 'perimeter-only'
+
+/** @deprecated Use `grid` — kept for persisted UI / old URLs. */
+export type AutoArrangeModeLegacy = AutoArrangeMode | 'center-out'
+
+function normalizeAutoArrangeMode(
+  mode: AutoArrangeModeLegacy | undefined
+): AutoArrangeMode {
+  if (mode === 'center-out' || mode == null) return 'grid'
+  return mode
+}
 
 export interface AutoArrangeOptions {
-  /** Placement strategy — defaults to center-out spiral. */
-  mode?: AutoArrangeMode
+  /** Placement strategy — defaults to aligned grid. */
+  mode?: AutoArrangeModeLegacy
+  /** Aisle width between rows / along perimeter (ft). Default 8. */
+  aisleWidthFt?: number
   /** Venue baseline table length for multi-table consolidation. */
   baselineTableLengthFt?: LayoutBaselineTableLengthFt
   /** Per-vendor table counts from approved applications. */
@@ -135,6 +156,10 @@ export interface AutoArrangeResult {
    * "wanted to place but the canvas had no room".
    */
   overflowCount: number
+  /** Set when perimeter-only mode cannot fit all booths on the boundary. */
+  perimeterCapacityError?: string
+  /** Human-readable summary of the deterministic layout pass. */
+  layoutExplanation?: string
 }
 
 export interface AutoArrangeInRoomResult extends AutoArrangeResult {
@@ -192,28 +217,6 @@ function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
 }
 
 type Slot = { x: number; y: number; dist?: number; perimeter?: PerimeterSlot }
-
-/** Center-out: grid slots sorted by distance from room centroid. */
-function centerOutSlots(
-  cw: number,
-  cl: number,
-  boothW: number,
-  boothH: number
-): Slot[] {
-  const cx = cw / 2
-  const cy = cl / 2
-  const stepX = boothW + BOOTH_EDGE_CLEARANCE_FT
-  const stepY = boothH + FRONT_CLEARANCE_FT
-  const slots: Array<Slot & { dist: number }> = []
-  for (let y = WALL_BUFFER_FT; y + boothH <= cl - WALL_BUFFER_FT; y += stepY) {
-    for (let x = WALL_BUFFER_FT; x + boothW <= cw - WALL_BUFFER_FT; x += stepX) {
-      const dist = Math.hypot(x + boothW / 2 - cx, y + boothH / 2 - cy)
-      slots.push({ x, y, dist })
-    }
-  }
-  slots.sort((a, b) => a.dist - b.dist)
-  return slots
-}
 
 interface PlacementContext {
   cw: number
@@ -367,18 +370,43 @@ function placeBoothsAtSlots(
 }
 
 /**
- * Run auto-arrange in the selected mode (center-out or perimeter-only).
+ * Run auto-arrange in the selected mode (grid, staggered, or perimeter-only).
  */
+function restrictedZonesFromObstacles(obstacles: Rect[]): Array<{
+  x: number
+  y: number
+  width: number
+  height: number
+}> {
+  return obstacles.map((r) => ({
+    x: r.x,
+    y: r.y,
+    width: r.width,
+    height: r.height,
+  }))
+}
+
+const PERIMETER_ROW_TO_EDGE: Record<
+  number,
+  import('../interactions/perimeter-booth-orientation').RoomEdgeSide
+> = {
+  0: 'top',
+  1: 'right',
+  2: 'bottom',
+  3: 'left',
+}
+
 export function autoArrange(
   doc: FloorPlanDoc,
   options: AutoArrangeOptions = {}
 ): AutoArrangeResult {
+  const mode = normalizeAutoArrangeMode(options.mode)
   const {
-    mode = 'center-out',
     eventCategoryNames,
     maxBooths,
     baselineTableLengthFt,
     vendorTableMetaByKey,
+    aisleWidthFt = DEFAULT_AISLE_WIDTH_FT,
   } = options
 
   const rawSourceBooths = doc.objects.filter(
@@ -440,23 +468,31 @@ export function autoArrange(
   const obstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
 
   const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
+  const snapFt = doc.snapFt > 0 ? doc.snapFt : 0.5
 
-  if (mode === 'perimeter-only') {
-    const placementOrigin = options.placementOrigin ?? { x: 0, y: 0 }
-    const localRing = options.placementOuterRing
-      ? options.placementOuterRing.map(
-          ([x, y]) =>
-            [x - placementOrigin.x, y - placementOrigin.y] as [
-              number,
-              number,
-            ]
-        )
-      : null
-    const perimeterSlots = (
-      localRing
-        ? perimeterSlotsAlongRing(localRing, boothW, boothH)
-        : perimeterSlotsWithEdges(cw, cl, boothW, boothH)
-    ).map((p) => ({ x: p.x, y: p.y, perimeter: p }))
+  const doors = otherObjects.filter((o) => o.kind === 'door')
+  const entranceDoor =
+    doors.find((d) => d.kind === 'door' && d.doorType === 'entrance') ??
+    doors[0]
+  const entrance = entranceDoor
+    ? {
+        x: entranceDoor.x + entranceDoor.width / 2,
+        y: entranceDoor.y + entranceDoor.height / 2,
+      }
+    : undefined
+
+  const placementOrigin = options.placementOrigin ?? { x: 0, y: 0 }
+  const localRing = options.placementOuterRing
+    ? options.placementOuterRing.map(
+        ([x, y]) =>
+          [x - placementOrigin.x, y - placementOrigin.y] as [number, number]
+      )
+    : null
+
+  if (mode === 'perimeter-only' && localRing) {
+    const perimeterSlots = perimeterSlotsAlongRing(localRing, boothW, boothH).map(
+      (p) => ({ x: p.x, y: p.y, perimeter: p })
+    )
     const perimeterOrientFrame: RoomFrame = {
       id: '__auto_arrange_canvas__',
       name: 'Canvas',
@@ -474,17 +510,20 @@ export function autoArrange(
         overflowCount,
       }
     }
-    const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(perimeterSlots, {
-      cw,
-      cl,
-      boothW,
-      boothH,
-      obstacles,
-      sourceBooths,
-      eventCategoryNames,
-      gridSpacingFt,
-      perimeterOrientFrame,
-    })
+    const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(
+      perimeterSlots,
+      {
+        cw,
+        cl,
+        boothW,
+        boothH,
+        obstacles,
+        sourceBooths,
+        eventCategoryNames,
+        gridSpacingFt,
+        perimeterOrientFrame,
+      }
+    )
     const placedCount = newBooths.length
     return {
       doc: { ...doc, objects: [...otherObjects, ...newBooths] },
@@ -495,66 +534,68 @@ export function autoArrange(
     }
   }
 
-  const doors = otherObjects.filter((o) => o.kind === 'door')
-  const entranceDoor =
-    doors.find((d) => d.kind === 'door' && d.doorType === 'entrance') ??
-    doors[0]
-  const exitObj =
-    otherObjects.find((o) => o.kind === 'emergency_exit') ??
-    doors.find((d) => d.kind === 'door' && d.doorType === 'exit')
-
-  const entrance = entranceDoor
-    ? {
-        x: entranceDoor.x + entranceDoor.width / 2,
-        y: entranceDoor.y + entranceDoor.height / 2,
-      }
-    : undefined
-  const exit = exitObj
-    ? {
-        x: exitObj.x + exitObj.width / 2,
-        y: exitObj.y + exitObj.height / 2,
-      }
-    : undefined
-
-  const patronLayout = calculatePatronCentricLayout(cw, cl, sourceBooths, {
-    obstacles,
+  const layoutMode = autoArrangeModeToMarketLayout(mode)
+  const deterministic = generateDeterministicMarketLayout({
+    marketWidthFt: cw,
+    marketHeightFt: cl,
+    tableWidthFt: boothW,
+    tableHeightFt: boothH,
+    tableCount: sourceBooths.length,
+    tableIds: sourceBooths.map((b) => b.id),
+    layoutMode,
+    aisleWidthFt,
+    wallInsetFt: WALL_BUFFER_FT,
+    snapFt,
     entrance,
-    exit,
-    gridSpacingFt,
-    eventCategoryNames,
-    layoutStyle: 'chevron-45',
+    restrictedZones: restrictedZonesFromObstacles(obstacles),
   })
 
-  let newBooths: BoothObject[] = patronLayout.placed.map((p) => ({
-    ...p,
-    kind: 'booth' as const,
-    accentColor: p.accentColor ?? null,
-  }))
-
-  const placedIds = new Set(newBooths.map((b) => b.id))
-  const remaining = sourceBooths.filter((s) => !placedIds.has(s.id))
-
-  if (remaining.length > 0) {
-    const fillSlots = centerOutSlots(cw, cl, boothW, boothH)
-    const { newBooths: filled, unsatisfiedCategoryCount: fillUnsat } =
-      placeBoothsAtSlots(fillSlots, {
-        cw,
-        cl,
-        boothW,
-        boothH,
-        obstacles: [
-          ...obstacles,
-          ...newBooths.map((b) =>
-            expandRectForClearance(rotatedAabb(b), BOOTH_EDGE_CLEARANCE_FT)
-          ),
-        ],
-        sourceBooths: remaining,
-        eventCategoryNames,
-        gridSpacingFt,
-      })
-    newBooths = [...newBooths, ...filled]
-    patronLayout.unsatisfiedCategoryCount += fillUnsat
+  if (!deterministic.ok) {
+    return {
+      doc: { ...doc, objects: otherObjects },
+      placedCount: 0,
+      droppedCount: sourceBooths.length,
+      unsatisfiedCategoryCount: 0,
+      overflowCount,
+      perimeterCapacityError: deterministic.error,
+    }
   }
+
+  const perimeterOrientFrame: RoomFrame = {
+    id: '__auto_arrange_canvas__',
+    name: 'Canvas',
+    originX: 0,
+    originY: 0,
+    widthFt: cw,
+    lengthFt: cl,
+  }
+
+  const slots: Slot[] = deterministic.placements.map((place) => {
+    if (layoutMode === 'perimeter') {
+      const edge = PERIMETER_ROW_TO_EDGE[place.row]
+      return {
+        x: place.x,
+        y: place.y,
+        perimeter: edge
+          ? { x: place.x, y: place.y, edge }
+          : undefined,
+      }
+    }
+    return { x: place.x, y: place.y }
+  })
+
+  const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(slots, {
+    cw,
+    cl,
+    boothW,
+    boothH,
+    obstacles,
+    sourceBooths,
+    eventCategoryNames,
+    gridSpacingFt,
+    perimeterOrientFrame:
+      layoutMode === 'perimeter' ? perimeterOrientFrame : undefined,
+  })
 
   const placedCount = newBooths.length
   const droppedCount = sourceBooths.length - placedCount
@@ -566,8 +607,9 @@ export function autoArrange(
     },
     placedCount,
     droppedCount,
-    unsatisfiedCategoryCount: patronLayout.unsatisfiedCategoryCount,
+    unsatisfiedCategoryCount,
     overflowCount,
+    layoutExplanation: deterministic.explanation,
   }
 }
 

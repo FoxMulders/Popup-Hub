@@ -541,7 +541,7 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
     Array.from({ length: 12 }, (_, i) => makeBooth(i))
   )
   const centerResult = autoArrange(baseDoc, {
-    mode: 'center-out',
+    mode: 'grid',
     eventCategoryNames: ['Art', 'Food', 'Crafts'],
   })
   const perimeterResult = autoArrange(baseDoc, {

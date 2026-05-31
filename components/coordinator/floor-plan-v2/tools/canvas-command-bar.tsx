@@ -116,7 +116,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onShowLabelsChange,
     canvasFullscreen = false,
     onToggleCanvasFullscreen,
-    autoArrangeMode = 'center-out',
+    autoArrangeMode = 'grid',
     onAutoArrangeModeChange,
     onSaveMarket,
     saveMarketDisabled,

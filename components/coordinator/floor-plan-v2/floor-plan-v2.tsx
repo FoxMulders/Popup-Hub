@@ -299,7 +299,7 @@ export function FloorPlanV2({
     DEFAULT_TOOL_STATE.drawShape
   )
   const [autoArrangeMode, setAutoArrangeMode] = useState<AutoArrangeMode>(
-    isDashboard ? 'perimeter-only' : 'center-out'
+    isDashboard ? 'perimeter-only' : 'grid'
   )
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
@@ -1203,6 +1203,10 @@ export function FloorPlanV2({
         : {}),
     })
     if (!result) return
+    if (result.perimeterCapacityError) {
+      toast.error(result.perimeterCapacityError, { duration: 6000 })
+      return
+    }
     if (result.placedCount === 0) {
       toast.error('Auto-Arrange could not fit any booths inside the room.')
       return

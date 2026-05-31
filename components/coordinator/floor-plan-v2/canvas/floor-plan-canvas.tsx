@@ -134,7 +134,7 @@ export function FloorPlanCanvas({
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
   boothPlacementStatusByObjectId,
   onVendorDrop,
-  autoArrangeMode = 'center-out',
+  autoArrangeMode = 'grid',
   commandCenterViewport = false,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)

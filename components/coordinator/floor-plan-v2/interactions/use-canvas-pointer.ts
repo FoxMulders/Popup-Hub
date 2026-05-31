@@ -317,7 +317,7 @@ export function useCanvasPointer(
     options
   const onAfterDrawCommit = options.onAfterDrawCommit
   const eventCategoryNames = options.eventCategoryNames
-  const autoArrangeMode = options.autoArrangeMode ?? 'center-out'
+  const autoArrangeMode = options.autoArrangeMode ?? 'grid'
   const commandCenterViewport = options.commandCenterViewport ?? false
   const onProximityViolation = options.onProximityViolation
   const onProximityViolationRef = useRef(onProximityViolation)

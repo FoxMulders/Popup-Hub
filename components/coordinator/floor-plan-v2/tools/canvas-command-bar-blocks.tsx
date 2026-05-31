@@ -349,7 +349,7 @@ export function renderCanvasCommandBarBlock(
             >
               {ctx.onAutoArrangeModeChange ? (
                 <select
-                  value={ctx.autoArrangeMode ?? 'center-out'}
+                  value={ctx.autoArrangeMode ?? 'grid'}
                   onChange={(e) =>
                     ctx.onAutoArrangeModeChange!(
                       e.target.value as AutoArrangeMode
@@ -359,8 +359,9 @@ export function renderCanvasCommandBarBlock(
                   aria-label="Auto-arrange mode"
                   className="h-8 rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700"
                 >
-                  <option value="center-out">Patron flow</option>
-                  <option value="perimeter-only">Perimeter-Only</option>
+                  <option value="grid">Grid</option>
+                  <option value="staggered">Staggered</option>
+                  <option value="perimeter-only">Perimeter</option>
                 </select>
               ) : null}
               <CommandButton
