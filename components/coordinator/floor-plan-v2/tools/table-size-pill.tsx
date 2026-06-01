@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import {
-  LAYOUT_BASELINE_TABLE_LENGTHS_FT,
+  TABLE_SIZES,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 
@@ -44,7 +44,7 @@ export function TableSizePill({
         Table size
       </span>
       <div className="flex h-full max-w-[min(100%,28rem)] overflow-x-auto sm:border-l sm:border-stone-200">
-        {LAYOUT_BASELINE_TABLE_LENGTHS_FT.map((ft) => {
+        {TABLE_SIZES.map((ft) => {
           const active = value === ft
           return (
             <button

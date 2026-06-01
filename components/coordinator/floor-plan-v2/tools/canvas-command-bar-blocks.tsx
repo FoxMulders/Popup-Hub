@@ -464,7 +464,9 @@ export function renderCanvasCommandBarBlock(
           ) : null}
           {ctx.onToggleCanvasFullscreen ? (
             <CommandButton
-              onClick={ctx.onToggleCanvasFullscreen}
+              onClick={() => {
+                ctx.onToggleCanvasFullscreen?.()
+              }}
               title={
                 ctx.canvasFullscreen
                   ? 'Exit full screen (Esc)'

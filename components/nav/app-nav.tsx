@@ -79,7 +79,7 @@ export function AppNav({
   return (
     <nav
       id="site-app-nav"
-      className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
+      className="popup-hub-chrome-header sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
       style={{ minHeight: 'var(--app-nav-height, 4.5rem)' }}
     >
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">

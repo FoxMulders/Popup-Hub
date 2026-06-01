@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -16,6 +17,7 @@ export interface DebugLogContextValue {
   addLog: (message: string) => void
   /** Alias for `addLog` — geometry coordinate / placement events. */
   logState: (message: string) => void
+  logError: (message: string, err?: unknown) => void
   clearLogs: () => void
 }
 
@@ -33,9 +35,22 @@ export function DebugLogProvider({ children }: { children: ReactNode }) {
     setLogs([])
   }, [])
 
+  const logError = useCallback(
+    (message: string, err?: unknown) => {
+      const detail =
+        err instanceof Error
+          ? err.message
+          : err != null
+            ? String(err)
+            : ''
+      addLog(detail ? `${message} — ${detail}` : message)
+    },
+    [addLog]
+  )
+
   const value = useMemo(
-    () => ({ logs, addLog, logState: addLog, clearLogs }),
-    [addLog, clearLogs, logs]
+    () => ({ logs, addLog, logState: addLog, logError, clearLogs }),
+    [addLog, clearLogs, logError, logs]
   )
 
   return (
@@ -50,6 +65,7 @@ export function useDebugLog(): DebugLogContextValue {
       logs: [],
       addLog: () => {},
       logState: () => {},
+      logError: () => {},
       clearLogs: () => {},
     }
   }

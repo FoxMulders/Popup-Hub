@@ -82,8 +82,24 @@ export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
   }, [logState, store])
 
   useEffect(() => {
+    if (activeRoomFrames(store.doc).length === 0) {
+      logState('doc.rooms empty on load — injecting default Main Hall')
+      resetState()
+      return
+    }
+    if (!roomsGeometryValid(store.doc.rooms)) {
+      logState('Invalid doc.rooms detected — running resetState()')
+      resetState()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
     const active = activeRoomFrames(store.doc)
-    if (!roomsGeometryValid(active)) {
+    if (active.length === 0) {
+      logState('doc.rooms became empty — running resetState()')
+      resetState()
+    } else if (!roomsGeometryValid(active)) {
       logState('Invalid doc.rooms detected — running resetState()')
       resetState()
     }

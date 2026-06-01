@@ -1,6 +1,7 @@
 export { FloorPlanV2 } from './floor-plan-v2'
 export { DebugLogProvider, useDebugLog } from './debug/debug-log-context'
 export { DebugLogConsole } from './debug/debug-log-console'
+export { DebugLogFooter } from './debug/debug-log-footer'
 export type { FloorPlanV2Props } from './floor-plan-v2'
 export { useFloorPlanDoc } from './state/use-floor-plan-doc'
 export { useCanvasStore } from './state/use-canvas-store'

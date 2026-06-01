@@ -1,5 +1,6 @@
 'use client'
 
+import { usePlacesApiStatus } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   APIProvider,
@@ -110,6 +111,7 @@ function AddressAutocomplete({
   onPlaceSelect: (place: PlaceResult) => void
   cityId: string
 }) {
+  const { reportPlacesApi } = usePlacesApiStatus()
   const apiLoaded = useApiIsLoaded()
   const city = getMarketCityById(cityId)
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([])

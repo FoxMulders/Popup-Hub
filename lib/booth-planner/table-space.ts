@@ -10,6 +10,7 @@ export const TABLE_LENGTH_BUFFER_FT = 3
 export const TABLE_GRID_CELL_WIDTH_FT = 4
 export const TABLE_GRID_CELL_LENGTH_FT = 1
 
+/** @deprecated Use `TABLE_SIZES` from `layout-table-size` — kept for legacy table_provided math. */
 export const TABLE_LENGTH_OPTIONS_FT = [5, 6, 7, 8, 9, 10] as const
 
 export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'

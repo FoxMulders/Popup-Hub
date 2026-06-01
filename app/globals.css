@@ -369,9 +369,38 @@
   }
 
   #floor-plan-workspace .floor-plan-canvas-host > [role='application'] {
-    position: absolute;
-    inset: 0;
+    position: relative;
+    inset: unset;
     overflow: auto;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* Native canvas editor fullscreen — hide site chrome */
+  html.popup-hub-canvas-fullscreen .popup-hub-chrome-header,
+  html.popup-hub-canvas-fullscreen .popup-hub-chrome-footer,
+  html.popup-hub-canvas-fullscreen .site-app-shell > header,
+  html.popup-hub-canvas-fullscreen .site-app-shell > nav,
+  html.popup-hub-canvas-fullscreen body > div > footer {
+    display: none !important;
+  }
+
+  html.popup-hub-canvas-fullscreen .canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9998;
+    max-height: 100vh;
+  }
+
+  html.popup-hub-canvas-fullscreen .canvas-editor-header {
+    display: none !important;
+  }
+
+  html.popup-hub-canvas-fullscreen .canvas-diagnostic-footer {
+    display: flex !important;
   }
 
   html.command-center-canvas-fullscreen .dashboard-booth-matrix-panel {

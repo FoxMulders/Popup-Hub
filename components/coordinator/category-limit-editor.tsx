@@ -13,7 +13,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import type { Category } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
-import { TABLE_LENGTH_OPTIONS_FT } from '@/lib/booth-planner/table-space'
 import { selectValueOrNull } from '@/lib/wizard/wizard-autosave'
 import { WIZARD_BTN_PRIMARY } from '@/lib/wizard/wizard-panel-styles'
 import {
@@ -29,7 +28,7 @@ export interface CategoryLimit {
   categoryName: string
   maxSlots: number
   pricePerBooth: number
-  /** Default table length (ft) when market provides tables; booth size = (4' + L + 3') × 4'. */
+  /** @deprecated Per-category table lengths — venue uses hall-wide baseline only. */
   tableLengthFt?: number | null
 }
 
@@ -139,13 +138,12 @@ export function CategoryLimitEditor({
         categoryName: cat.name,
         maxSlots: nextSlots,
         pricePerBooth: useUnifiedFee ? unifiedCents : Math.round(priceDollars * 100),
-        tableLengthFt: tableLengthFt === '' ? null : tableLengthFt,
+        tableLengthFt: null,
       },
     ])
     setSelectedCategoryId('')
     setSlots(DEFAULT_NEW_SLOTS)
     setPriceDollars(0)
-    setTableLengthFt('')
   }
 
   function addOneOfEveryCategory() {
@@ -175,12 +173,6 @@ export function CategoryLimitEditor({
           : Math.max(1, newSlots)
 
     commitLimits(value.map((v) => (v.categoryId === categoryId ? { ...v, maxSlots: slots } : v)))
-  }
-
-  function updateTableLength(categoryId: string, ft: number | null) {
-    commitLimits(
-      value.map((v) => (v.categoryId === categoryId ? { ...v, tableLengthFt: ft } : v))
-    )
   }
 
   /**
@@ -257,17 +249,6 @@ export function CategoryLimitEditor({
                     <Tooltip>
                       <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                       <TooltipContent className="max-w-xs">The maximum number of vendors allowed in this category at this event.</TooltipContent>
-                    </Tooltip>
-                  </span>
-                </th>
-                <th className="text-center px-4 py-2.5 font-semibold text-muted-foreground w-28">
-                  <span className="inline-flex items-center gap-1">
-                    Table (ft)
-                    <Tooltip>
-                      <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        Optional default table length L. Booth space is (4&apos; + L + 3&apos;) × 4&apos; wide.
-                      </TooltipContent>
                     </Tooltip>
                   </span>
                 </th>
@@ -350,31 +331,6 @@ export function CategoryLimitEditor({
                       title={singleSlotLocked ? 'MLM brands are locked to 1 slot each' : undefined}
                     />
                   </td>
-                  <td className="px-4 py-2.5 text-center">
-                    <Select
-                      value={limit.tableLengthFt != null ? String(limit.tableLengthFt) : 'none'}
-                      onValueChange={(v) => {
-                        const next = selectValueOrNull(v)
-                        if (!next) return
-                        updateTableLength(
-                          limit.categoryId,
-                          next === 'none' ? null : Number(next)
-                        )
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-[88px] mx-auto text-xs">
-                        <SelectValue placeholder="—" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">—</SelectItem>
-                        {TABLE_LENGTH_OPTIONS_FT.map((ft) => (
-                          <SelectItem key={ft} value={String(ft)}>
-                            {ft}&apos;
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </td>
                   {useUnifiedFee ? null : (
                     <td className="px-4 py-2.5">
                       <div className="relative mx-auto w-24">
@@ -413,7 +369,7 @@ export function CategoryLimitEditor({
                 <td className="px-4 py-2.5 text-center text-xs font-bold text-foreground">
                   {totalSlots} total
                 </td>
-                <td colSpan={3} />
+                <td colSpan={useUnifiedFee ? 1 : 2} />
               </tr>
             </tfoot>
           </table>
@@ -481,29 +437,6 @@ export function CategoryLimitEditor({
                 className={`h-9 ${addingMlmLocked ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-70' : ''}`}
                 title={addingMlmLocked ? 'MLM brands are locked to 1 slot each' : undefined}
               />
-            </div>
-            <div className="w-24 space-y-1">
-              <Label className="text-xs">Table (ft)</Label>
-              <Select
-                value={tableLengthFt === '' ? 'none' : String(tableLengthFt)}
-                onValueChange={(v) => {
-                  const next = selectValueOrNull(v)
-                  if (!next) return
-                  setTableLengthFt(next === 'none' ? '' : Number(next))
-                }}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
-                  {TABLE_LENGTH_OPTIONS_FT.map((ft) => (
-                    <SelectItem key={ft} value={String(ft)}>
-                      {ft}&apos;
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             {useUnifiedFee ? null : (
               <div className="w-28 space-y-1">

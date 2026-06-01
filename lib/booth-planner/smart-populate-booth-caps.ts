@@ -6,8 +6,8 @@ import {
   isMlmCategory,
 } from '@/lib/categories/mlm-constraints'
 import {
-  DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
-  LAYOUT_BASELINE_TABLE_LENGTHS_FT,
+  DEFAULT_TABLE_SIZE,
+  TABLE_SIZES,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import { MIN_STROLLER_AISLE_WIDTH_FT } from '@/lib/booth-planner/stroller-clearance'
@@ -26,10 +26,10 @@ export const BOOTH_UNIT_DEPTH_FT = BOOTH_OPERATIONAL_DEPTH_FT
 /** 4′ wall-to-table pocket — part of each booth footprint, not a blank perimeter band cut from gross. */
 export const VENDOR_WALL_POCKET_FT = TABLE_DEPTH_LEADING_FT
 
-export const TABLE_LENGTH_OPTIONS_FT = LAYOUT_BASELINE_TABLE_LENGTHS_FT
+export const TABLE_LENGTH_OPTIONS_FT = TABLE_SIZES
 export type TableLengthOptionFt = LayoutBaselineTableLengthFt
 
-export const DEFAULT_TABLE_LENGTH_FT: TableLengthOptionFt = DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
+export const DEFAULT_TABLE_LENGTH_FT: TableLengthOptionFt = DEFAULT_TABLE_SIZE
 
 /**
  * @deprecated Perimeter blank buffer removed — perimeter rows are vendor seating.

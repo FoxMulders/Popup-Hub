@@ -11,6 +11,8 @@ export interface UsePlacesAutocompleteOptions {
   debounceMs?: number
   /** Return null to skip a fetch (e.g. missing bias). */
   buildRequest: () => google.maps.places.AutocompletionRequest | null
+  /** Diagnostic footer — `API_SUCCESS` / `API_ERROR`. */
+  onApiStatus?: (success: boolean) => void
 }
 
 export function usePlacesAutocomplete({
@@ -18,6 +20,7 @@ export function usePlacesAutocomplete({
   minLength = 3,
   debounceMs = DEFAULT_DEBOUNCE_MS,
   buildRequest,
+  onApiStatus,
 }: UsePlacesAutocompleteOptions) {
   const apiLoaded = useApiIsLoaded()
   const [predictions, setPredictions] = useState<
@@ -41,8 +44,9 @@ export function usePlacesAutocomplete({
     } catch {
       setApiUnavailable(true)
       serviceRef.current = null
+      onApiStatus?.(false)
     }
-  }, [apiLoaded])
+  }, [apiLoaded, onApiStatus])
 
   useEffect(() => {
     if (apiUnavailable || !serviceRef.current || !input || input.length < minLength) {
@@ -66,6 +70,7 @@ export function usePlacesAutocomplete({
         setLoading(false)
         setPredictions([])
         setOpen(false)
+        onApiStatus?.(false)
         return
       }
 
@@ -87,15 +92,18 @@ export function usePlacesAutocomplete({
               setOpen(true)
               setHighlightIndex(-1)
               setApiUnavailable(false)
+              onApiStatus?.(true)
             } else {
               setPredictions([])
               setOpen(false)
               setHighlightIndex(-1)
+              onApiStatus?.(false)
             }
           } catch {
             setApiUnavailable(true)
             setPredictions([])
             setOpen(false)
+            onApiStatus?.(false)
           }
         })
       } catch {
@@ -103,13 +111,14 @@ export function usePlacesAutocomplete({
         setLoading(false)
         setPredictions([])
         setOpen(false)
+        onApiStatus?.(false)
       }
     }, debounceMs)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [apiUnavailable, buildRequest, debounceMs, input, minLength])
+  }, [apiUnavailable, buildRequest, debounceMs, input, minLength, onApiStatus])
 
   const clearPredictions = useCallback(() => {
     setPredictions([])

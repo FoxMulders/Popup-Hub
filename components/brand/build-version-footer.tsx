@@ -16,7 +16,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
   return (
     <footer
       className={cn(
-        'mt-auto shrink-0 border-t border-stone-200/80 bg-cream/95 backdrop-blur-sm',
+        'popup-hub-chrome-footer mt-auto shrink-0 border-t border-stone-200/80 bg-cream/95 backdrop-blur-sm',
         'max-md:pb-[calc(4.5rem+env(safe-area-inset-bottom))]',
         className
       )}

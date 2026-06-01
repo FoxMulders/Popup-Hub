@@ -49,6 +49,7 @@ import {
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
 import { marketStatusBadge, marketTheme } from '@/lib/theme/market'
 import { cn } from '@/lib/utils'
+import { usePlacesApiStatus } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
 import {
   fetchPlaceDetailsSafe,
   usePlacesAutocomplete,
@@ -996,6 +997,7 @@ function AddressAutocomplete({
   onPlaceSelect: (place: PlaceResult) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const { reportPlacesApi } = usePlacesApiStatus()
   const {
     predictions,
     open,
@@ -1008,6 +1010,7 @@ function AddressAutocomplete({
       input: value,
       componentRestrictions: { country: ['ca', 'us'] },
     }),
+    onApiStatus: reportPlacesApi,
   })
 
   async function selectPrediction(

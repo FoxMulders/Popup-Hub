@@ -16,6 +16,7 @@ import {
   SelectionOverlay,
 } from './canvas-overlays'
 import { InlineLabelEditor } from './inline-label-editor'
+import { RoomDropZones } from './room-drop-zones'
 import { RoomFrames } from './room-frames'
 import { RoomSelectionOverlay } from './room-selection-overlay'
 import { activeRoomFramingBounds } from '../state/room-canvas'
@@ -28,7 +29,10 @@ import {
   placedObjectOverlapsAny,
 } from '../interactions/geometry'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
-import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
+import {
+  DEFAULT_TABLE_SIZE,
+  type LayoutBaselineTableLengthFt,
+} from '@/lib/booth-planner/layout-table-size'
 import { canvasGridSpacingForTableFt } from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
@@ -156,7 +160,7 @@ export function FloorPlanCanvas({
   const gridSpacing = useMemo(
     () =>
       canvasGridSpacingForTableFt(
-        tableSizeFt ?? defaultBoothTableLengthFt ?? 6
+        tableSizeFt ?? defaultBoothTableLengthFt ?? DEFAULT_TABLE_SIZE
       ),
     [defaultBoothTableLengthFt, tableSizeFt]
   )
@@ -518,7 +522,7 @@ export function FloorPlanCanvas({
       id={FLOOR_PLAN_CANVAS_ID}
       ref={scrollRef}
       className={cn(
-        'relative h-full w-full overflow-auto bg-stone-100 outline-none',
+        'canvas-container relative h-full w-full overflow-auto bg-stone-100 outline-none',
         commandCenterViewport && 'bg-stone-100',
         className
       )}
@@ -579,6 +583,11 @@ export function FloorPlanCanvas({
             spacingFt={gridSpacing.minorFt}
             majorEvery={gridSpacing.majorEvery}
             pxPerFt={pxPerFt}
+          />
+          <RoomDropZones
+            doc={store.doc}
+            pxPerFt={pxPerFt}
+            activeRoomId={activeRoomId ?? null}
           />
           {activeRoomFrames(store.doc).length > 0 ? (
             <RoomFrames

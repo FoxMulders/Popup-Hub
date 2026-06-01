@@ -5,6 +5,10 @@
 
 import { objectCenter, type Point } from '../interactions/geometry'
 import {
+  isPointInRoom,
+  isPointInRoomForObject,
+} from '../geometry/is-point-in-room'
+import {
   pointInAnyRing,
   pointInPolygon,
   ringBounds,
@@ -55,16 +59,13 @@ export function isValidPlacementLocation(
   probeFt: Point,
   obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
 ): boolean {
-  const p = obj ? objectCenter(obj as PlacedObject) : probeFt
-  const rooms = activeRoomFrames(doc)
-  if (rooms.length === 0) return false
-
-  for (const frame of rooms) {
-    const rings = roomOuterRings(frame)
-    if (pointInAnyRing(p, rings)) return true
+  if (obj) {
+    return isPointInRoomForObject(doc, obj)
   }
-  return false
+  return isPointInRoom(doc, probeFt.x, probeFt.y)
 }
+
+export { isPointInRoom, isPointInRoomForObject }
 
 export function unionActiveRoomBounds(doc: FloorPlanDoc): RoomBounds | null {
   const rooms = activeRoomFrames(doc)

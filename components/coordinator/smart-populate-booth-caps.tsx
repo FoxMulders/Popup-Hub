@@ -8,11 +8,11 @@ import { toast } from 'sonner'
 import type { Category } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import {
-  TABLE_LENGTH_OPTIONS_FT,
   type TableLengthOptionFt,
   buildSmartPopulateLimits,
   DEFAULT_TABLE_LENGTH_FT,
 } from '@/lib/booth-planner/smart-populate-booth-caps'
+import { TABLE_SIZES } from '@/lib/booth-planner/layout-table-size'
 
 interface SmartPopulateBoothCapsProps {
   categories: Category[]
@@ -162,7 +162,7 @@ export function SmartPopulateBoothCaps({
           <div className="space-y-1 col-span-2 sm:col-span-2">
             <Label className="text-[10px] uppercase tracking-wide text-sage-700">Table length</Label>
             <div className="flex rounded-lg border-2 border-stone-200 overflow-hidden bg-card">
-              {TABLE_LENGTH_OPTIONS_FT.map((ft) => (
+              {TABLE_SIZES.map((ft) => (
                 <button
                   key={ft}
                   type="button"

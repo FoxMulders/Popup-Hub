@@ -81,7 +81,7 @@ export function WizardStepCapacity({
             title="Floor capacity"
             subtitle="Table size and C_max from your venue — use smart populate to draft category caps."
           >
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="wizard-step2-section1 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
               <span className="wizard-glass-inset rounded-md px-2.5 py-1 tabular-nums">
                 Floor <strong className="text-foreground">{venueWidth}×{venueLength} ft</strong>
               </span>
@@ -91,15 +91,21 @@ export function WizardStepCapacity({
               >
                 C<sub>max</sub> <strong className="text-foreground">{layoutCapacity}</strong>
               </span>
-              <span className="wizard-glass-inset rounded-md border-harvest-200/80 px-2.5 py-1 tabular-nums">
+              <span className="wizard-glass-inset col-span-2 rounded-md border-harvest-200/80 px-2.5 py-1 tabular-nums sm:col-span-1">
                 Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
               </span>
             </div>
-            <TableSizeSelector
-              value={baselineTableLengthFt}
-              onChange={onBaselineTableLengthChange}
-              className="wizard-glass-inset border-stone-200/80 bg-white/50 shadow-none"
-            />
+            <section
+              aria-label="Section 2: venue table standard"
+              className="wizard-step2-section2-wrap wizard-glass-inset rounded-xl border-stone-200/80 bg-white/50 p-2.5"
+            >
+              <TableSizeSelector
+                variant="inline"
+                value={baselineTableLengthFt}
+                onChange={onBaselineTableLengthChange}
+                labelTitle="Venue standard size or vendor-permitted footprint."
+              />
+            </section>
             <SmartPopulateBoothCaps
               compact
               categories={categories}

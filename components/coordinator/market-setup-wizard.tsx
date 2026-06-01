@@ -79,6 +79,7 @@ import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-
 import { WizardStepFloorPlan } from '@/components/coordinator/wizard/wizard-step-floor-plan'
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
+import { PlacesApiStatusProvider } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
 import { WizardContextStrip } from '@/components/coordinator/wizard/wizard-context-strip'
 import { buildWizardScheduleLines } from '@/lib/wizard/wizard-schedule-summary'
@@ -1044,6 +1045,7 @@ export function MarketSetupWizard({
   ])
 
   return (
+    <PlacesApiStatusProvider>
     <WizardAmbientShell
       step={currentStep}
       className={cn(
@@ -1285,5 +1287,6 @@ export function MarketSetupWizard({
       </div>
 
     </WizardAmbientShell>
+    </PlacesApiStatusProvider>
   )
 }

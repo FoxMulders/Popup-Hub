@@ -14,7 +14,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import {
-  DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
+  DEFAULT_TABLE_SIZE,
   isLayoutBaselineTableLengthFt,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
@@ -30,7 +30,10 @@ import {
   unionActiveRoomBounds,
 } from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
+import { CanvasDiagnosticFooter } from './debug/canvas-diagnostic-footer'
 import { DebugLogConsole } from './debug/debug-log-console'
+import { PlacesApiStatusProvider, usePlacesApiStatus } from './debug/places-api-status-context'
+import { FullscreenLayout } from './canvas/fullscreen-layout'
 import { DebugLogProvider, useDebugLog } from './debug/debug-log-context'
 import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
@@ -240,8 +243,10 @@ export function FloorPlanV2(props: FloorPlanV2Props) {
   const debugGeometry = props.debugGeometry ?? true
   return (
     <DebugLogProvider>
-      <FloorPlanV2Workspace {...props} debugGeometry={debugGeometry} />
-      <DebugLogConsole enabled={debugGeometry} />
+      <PlacesApiStatusProvider>
+        <FloorPlanV2Workspace {...props} debugGeometry={debugGeometry} />
+        <DebugLogConsole enabled={debugGeometry} />
+      </PlacesApiStatusProvider>
     </DebugLogProvider>
   )
 }
@@ -295,7 +300,7 @@ function FloorPlanV2Workspace({
   }, [])
 
   const store = useCanvasStore(initialDoc)
-  const { addLog, logState } = useDebugLog()
+  const { addLog, logState, logError } = useDebugLog()
 
   const docRoomsKey = useMemo(
     () => serializeRooms(store.doc),
@@ -316,6 +321,7 @@ function FloorPlanV2Workspace({
   const isDashboard = variant === 'dashboard'
   const isEmbedded = chrome === 'embedded'
   const commandCenterFullscreen = useCommandCenterFullscreen()
+  const { status: placesApiStatus } = usePlacesApiStatus()
 
   useEffect(() => {
     onStoreReady?.(store)
@@ -535,10 +541,10 @@ function FloorPlanV2Workspace({
     if (baselineTableLengthFt != null && isLayoutBaselineTableLengthFt(baselineTableLengthFt)) {
       return baselineTableLengthFt
     }
-    return DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
+    return DEFAULT_TABLE_SIZE
   }, [baselineTableLengthFt])
 
-  // Footprint for the next booth draw when nothing is selected.
+  // Footprint for the next booth draw — synced to venue baseline (Section 2).
   const [defaultPlacementSizeFt, setDefaultPlacementSizeFt] =
     useState<LayoutBaselineTableLengthFt>(safeTableSizeFt)
 
@@ -1660,32 +1666,9 @@ function FloorPlanV2Workspace({
     })
   }, [joinPlan.unjoinGroupId, selectedMergedZoneId, store])
 
-  return (
-    <div
-      id="floor-plan-workspace"
-      className={cn(
-        'flex min-h-0 flex-1 flex-col overflow-hidden',
-        isDashboard ? 'h-full gap-0' : 'gap-2',
-        canvasFullscreen &&
-          !isDashboard &&
-          'fixed inset-0 z-50 h-screen w-screen bg-stone-50 p-2 sm:p-3',
-        className
-      )}
-    >
-      {canvasFullscreen && !isDashboard ? (
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex justify-center pt-2">
-          <button
-            type="button"
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-lg border border-stone-300 bg-stone-900 px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-stone-800"
-            onClick={() => setCanvasFullscreen(false)}
-          >
-            Exit Full Screen
-            <span className="text-[10px] font-normal text-stone-300">(Esc)</span>
-          </button>
-        </div>
-      ) : null}
-      {!isDashboard && !isEmbedded ? (
-      <header className="flex flex-wrap items-center gap-3 border-b border-stone-200/80 bg-card/60 px-2 py-2 rounded-lg shrink-0">
+  const layoutHeader =
+    !isDashboard && !isEmbedded ? (
+      <header className="flex flex-wrap items-center gap-3 rounded-lg border-b border-stone-200/80 bg-card/60 px-2 py-2">
         <div className="min-w-0">
           <h2 className="font-heading text-base font-bold tracking-tight text-forest sm:text-lg">
             Layout tools
@@ -1728,9 +1711,35 @@ function FloorPlanV2Workspace({
           </div>
         </div>
       </header>
-      ) : null}
+    ) : null
 
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+  const fullscreenExitToolbar = (
+    <button
+      type="button"
+      onClick={() => setCanvasFullscreen(false)}
+      className="rounded-lg border border-stone-600 bg-stone-900/95 px-4 py-2 font-sans text-sm font-semibold text-white shadow-lg hover:bg-stone-800"
+      aria-label="Exit fullscreen canvas editor"
+    >
+      Exit Fullscreen
+    </button>
+  )
+
+  return (
+    <div
+      id="floor-plan-workspace"
+      className={cn(
+        'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pb-28',
+        className
+      )}
+    >
+      <FullscreenLayout
+        active={canvasFullscreen}
+        onActiveChange={(next) => setCanvasFullscreen(next)}
+        header={layoutHeader}
+        fullscreenToolbar={fullscreenExitToolbar}
+        className="min-h-0 flex-1"
+      >
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
         {isDashboard ? (
           <CanvasCommandBar
             staticLayout
@@ -1886,7 +1895,7 @@ function FloorPlanV2Workspace({
               commandCenterViewport={isDashboard}
               store={store}
               toolState={{ tool, drawShape }}
-              defaultBoothTableLengthFt={defaultPlacementSizeFt}
+              defaultBoothTableLengthFt={safeTableSizeFt}
               tableSizeFt={tableSizePillValue}
               activeRoomId={activeRoomId}
               selectedRoomId={selectedRoomId}
@@ -1955,7 +1964,9 @@ function FloorPlanV2Workspace({
             </div>
           ) : null}
         </div>
-      </div>
+        </div>
+        <CanvasDiagnosticFooter doc={store.doc} placesApiStatus={placesApiStatus} />
+      </FullscreenLayout>
     </div>
   )
 }

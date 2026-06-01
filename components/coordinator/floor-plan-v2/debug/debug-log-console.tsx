@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useDebugLog } from './debug-log-context'
+import { formatDebugLogText } from './format-debug-log-text'
 
 export interface DebugLogConsoleProps {
   /** When false, the console is hidden entirely. */
@@ -80,7 +81,7 @@ export function DebugLogConsole({
             </p>
           ) : (
             <pre className="whitespace-pre-wrap break-all">
-              {logs.slice().reverse().join('\n')}
+              {formatDebugLogText(logs)}
             </pre>
           )}
         </div>

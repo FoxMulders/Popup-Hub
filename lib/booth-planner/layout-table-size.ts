@@ -12,9 +12,17 @@ import { marketUnitGridSpans, tableFootprintToGridSpans } from '@/lib/booth-plan
 export const LAYOUT_BASELINE_TABLE_LENGTHS_FT = [
   5, 6, 7, 8, 9, 10, 12, 15, 18,
 ] as const
+
+/** Canonical table-size options for layout editor UI and canvas engine. */
+export const TABLE_SIZES = LAYOUT_BASELINE_TABLE_LENGTHS_FT
+
 export type LayoutBaselineTableLengthFt = (typeof LAYOUT_BASELINE_TABLE_LENGTHS_FT)[number]
+export type TableSizeFt = LayoutBaselineTableLengthFt
 
 export const DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT: LayoutBaselineTableLengthFt = 6
+
+/** Default footprint for newly dropped booths and venue baseline. */
+export const DEFAULT_TABLE_SIZE: TableSizeFt = DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
 
 export function isLayoutBaselineTableLengthFt(ft: number): ft is LayoutBaselineTableLengthFt {
   return (LAYOUT_BASELINE_TABLE_LENGTHS_FT as readonly number[]).includes(ft)
