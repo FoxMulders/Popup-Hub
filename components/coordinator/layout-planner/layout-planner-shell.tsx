@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { useLayoutCanvasViewportLock } from './use-layout-canvas-viewport-lock'
 
 export interface LayoutPlannerShellProps {
   mode: 'wizard' | 'standalone'
@@ -28,6 +29,7 @@ export function LayoutPlannerShell({
   footer,
   className,
 }: LayoutPlannerShellProps) {
+  useLayoutCanvasViewportLock(true)
   const showSideRail = Boolean(leftRail || stats)
 
   return (

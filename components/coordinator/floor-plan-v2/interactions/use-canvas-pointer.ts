@@ -12,6 +12,8 @@ import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import { boothDimensionsForTableLength } from '@/lib/booth-planner/table-booth-consolidation'
 import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { isValidPlacementLocation } from '../canvas/canvas-engine'
+import { useDebugLog } from '../debug/debug-log-context'
+import { formatPlacementProbe } from '../debug/format-geometry-log'
 import {
   findRoomIdForPlacementPoint,
   resolveRoomPlacementSurface,
@@ -315,6 +317,11 @@ export function useCanvasPointer(
 ): CanvasPointerApi {
   const { store, toolState, scrollRef, surfaceRef, transform, panActive } =
     options
+  const { addLog } = useDebugLog()
+  const addLogRef = useRef(addLog)
+  useEffect(() => {
+    addLogRef.current = addLog
+  }, [addLog])
   const onAfterDrawCommit = options.onAfterDrawCommit
   const eventCategoryNames = options.eventCategoryNames
   const autoArrangeMode = options.autoArrangeMode ?? 'grid'
@@ -1060,6 +1067,9 @@ export function useCanvasPointer(
               rotation: 0,
             })
           ) {
+            addLogRef.current(
+              `Placement rejected (draw ${draft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} validSurface=${Boolean(drawRoomId)}`
+            )
             onOverlapViolationRef.current?.()
             setDraft(null)
             return
@@ -1072,7 +1082,8 @@ export function useCanvasPointer(
             drawRoomId,
             onProximityViolationRef.current,
             onOverlapViolationRef.current,
-            defaultBoothTableLengthFtRef.current
+            defaultBoothTableLengthFtRef.current,
+            (msg) => addLogRef.current(msg)
           )
           onAfterDrawCommit?.()
         }
@@ -1283,8 +1294,10 @@ function commitDraft(
     dyRows: number
   }) => void,
   onOverlapViolation?: () => void,
-  defaultBoothTableLengthFt?: number
+  defaultBoothTableLengthFt?: number,
+  debugLog?: (message: string) => void
 ): void {
+  const log = debugLog ?? (() => {})
   let width = Math.max(store.doc.snapFt || 1, rect.width)
   let height = Math.max(store.doc.snapFt || 1, rect.height)
   if (kind === 'booth' && defaultBoothTableLengthFt != null) {
@@ -1356,6 +1369,9 @@ function commitDraft(
       gridSpacingFt
     )
     if (violation) {
+      log(
+        `Placement rejected (${obj.kind}): proximity category=${violation.category}`
+      )
       onProximityViolation?.({
         category: violation.category,
         dxColumns: violation.dxColumns,
@@ -1369,6 +1385,7 @@ function commitDraft(
       rooms: store.doc.rooms ?? [],
     })
   ) {
+    log(`Placement rejected (${obj.kind}): overlaps existing object`)
     onOverlapViolation?.()
     return
   }
@@ -1378,9 +1395,15 @@ function commitDraft(
     !placementRoomId ||
     !isValidPlacementLocation(store.doc, objectCenter(obj), obj)
   ) {
+    log(
+      `Placement rejected (${obj.kind}): center=(${objectCenter(obj).x},${objectCenter(obj).y}) room=${placementRoomId ?? 'none'}`
+    )
     onOverlapViolation?.()
     return
   }
+  log(
+    `Placement committed (${obj.kind}): ${formatPlacementProbe(obj)} room=${placementRoomId}`
+  )
   store.addObject(obj, {
     select: true,
     roomId: placementRoomId,

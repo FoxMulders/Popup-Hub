@@ -350,6 +350,30 @@
     overflow: hidden;
   }
 
+  /* Canvas owns scroll/zoom — prevent document-level double scrollbars */
+  html[data-layout-canvas='true'],
+  body[data-layout-canvas='true'] {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body[data-layout-canvas='true'] #site-main {
+    overflow: hidden;
+  }
+
+  #floor-plan-workspace .floor-plan-canvas-host {
+    position: relative;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  #floor-plan-workspace .floor-plan-canvas-host > [role='application'] {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+  }
+
   html.command-center-canvas-fullscreen .dashboard-booth-matrix-panel {
     display: none;
   }

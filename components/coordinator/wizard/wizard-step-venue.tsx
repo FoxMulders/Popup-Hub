@@ -145,30 +145,45 @@ function AddressAutocomplete({
 
     debounceRef.current = setTimeout(() => {
       const requestId = ++requestIdRef.current
-      serviceRef.current!.getPlacePredictions(
-        {
-          input: value,
-          componentRestrictions: { country: ['ca'] },
-          locationBias: {
-            center: { lat: city.lat, lng: city.lng },
-            radius: 50000,
+      try {
+        serviceRef.current!.getPlacePredictions(
+          {
+            input: value,
+            componentRestrictions: { country: ['ca'] },
+            locationBias: {
+              center: { lat: city.lat, lng: city.lng },
+              radius: 50000,
+            },
           },
-        },
-        (results, status) => {
-          if (requestId !== requestIdRef.current) return
-          setLoading(false)
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-            setPredictions(results)
-            setOpen(true)
-            setHighlightIndex(-1)
-          } else {
-            setPredictions([])
-            setOpen(false)
-            setHighlightIndex(-1)
+          (results, status) => {
+            if (requestId !== requestIdRef.current) return
+            setLoading(false)
+            try {
+              if (
+                status === window.google.maps.places.PlacesServiceStatus.OK &&
+                results
+              ) {
+                setPredictions(results)
+                setOpen(true)
+                setHighlightIndex(-1)
+              } else {
+                setPredictions([])
+                setOpen(false)
+                setHighlightIndex(-1)
+              }
+            } catch {
+              setPredictions([])
+              setOpen(false)
+              setLoading(false)
+            }
           }
-        }
-      )
-    }, 300)
+        )
+      } catch {
+        setLoading(false)
+        setPredictions([])
+        setOpen(false)
+      }
+    }, 500)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -266,7 +281,11 @@ function AddressAutocomplete({
           onFocus={() => {
             if (predictions.length > 0) setOpen(true)
           }}
-          placeholder={`Search address near ${city.label}…`}
+          placeholder={
+            !apiLoaded
+              ? `Enter address manually near ${city.label}…`
+              : `Search address near ${city.label}…`
+          }
           className={cn(WIZARD_INPUT, 'w-full min-w-[200px] h-auto whitespace-normal break-words py-2 pr-9')}
           aria-autocomplete="list"
           aria-expanded={open && predictions.length > 0}

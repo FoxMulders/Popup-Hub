@@ -30,6 +30,9 @@ import {
   unionActiveRoomBounds,
 } from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
+import { DebugLogConsole } from './debug/debug-log-console'
+import { DebugLogProvider, useDebugLog } from './debug/debug-log-context'
+import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
@@ -49,7 +52,8 @@ import {
   loadMultiRoomDraft,
   saveMultiRoomDraft,
 } from './state/local-draft'
-import { useFloorPlanDoc } from './state/use-floor-plan-doc'
+import { useCanvasStore } from './state/use-canvas-store'
+import { CanvasRootErrorBoundary } from './canvas/canvas-root-error-boundary'
 import {
   DEFAULT_TOUCH_EPSILON_FT,
   isJoinableObject,
@@ -207,6 +211,11 @@ export interface FloorPlanV2Props {
   onStoreReady?: (store: FloorPlanDocStore | null) => void
   onSelectionChange?: (store: FloorPlanDocStore) => void
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
+  /**
+   * Floating geometry debug console (rooms, merges, placement).
+   * Defaults to on in development builds.
+   */
+  debugGeometry?: boolean
 }
 
 /**
@@ -227,7 +236,17 @@ export interface FloorPlanV2Props {
  *     within 0.5 ft, the shared wall segment is suppressed at render
  *     time so the rooms read as a single combined interior.
  */
-export function FloorPlanV2({
+export function FloorPlanV2(props: FloorPlanV2Props) {
+  const debugGeometry = props.debugGeometry ?? true
+  return (
+    <DebugLogProvider>
+      <FloorPlanV2Workspace {...props} debugGeometry={debugGeometry} />
+      <DebugLogConsole enabled={debugGeometry} />
+    </DebugLogProvider>
+  )
+}
+
+function FloorPlanV2Workspace({
   eventId,
   layoutRooms,
   layoutActiveRoomId,
@@ -275,7 +294,25 @@ export function FloorPlanV2({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const store = useFloorPlanDoc(initialDoc)
+  const store = useCanvasStore(initialDoc)
+  const { addLog, logState } = useDebugLog()
+
+  const docRoomsKey = useMemo(
+    () => serializeRooms(store.doc),
+    [store.doc.rooms]
+  )
+  const prevDocRoomsKeyRef = useRef(docRoomsKey)
+  useEffect(() => {
+    if (prevDocRoomsKeyRef.current === docRoomsKey) return
+    prevDocRoomsKeyRef.current = docRoomsKey
+    addLog(
+      `doc.rooms updated (${store.doc.rooms?.length ?? 0} frames): ${docRoomsKey}`
+    )
+  }, [addLog, docRoomsKey, store.doc.rooms?.length])
+
+  useEffect(() => {
+    addLog('Geometry debug console ready.')
+  }, [addLog])
   const isDashboard = variant === 'dashboard'
   const isEmbedded = chrome === 'embedded'
   const commandCenterFullscreen = useCommandCenterFullscreen()
@@ -1169,6 +1206,7 @@ export function FloorPlanV2({
   const handleCenterView = useCallback(() => {
     const api = viewportApiRef.current
     if (!api) return
+    addLog('Center view: fitting camera to content bounds')
     const objectBbox = groupRotatedAabb(store.doc.objects)
     if (objectBbox) {
       api.fitToBounds(
@@ -1189,7 +1227,7 @@ export function FloorPlanV2({
       }
     }
     recoverCanvasFocus()
-  }, [recoverCanvasFocus, store.doc])
+  }, [addLog, recoverCanvasFocus, store.doc])
 
 
   /**
@@ -1519,14 +1557,26 @@ export function FloorPlanV2({
       }
       return
     }
+    addLog('Triggering destructive union merge...')
+    addLog(
+      `Merge input roomIds=${JSON.stringify(destructiveMergePlan.joinRoomIds)} objectIds=${JSON.stringify(destructiveMergePlan.joinObjectIds)}`
+    )
+    addLog(`doc.rooms before merge: ${serializeRooms(store.doc)}`)
     const result = store.destructiveMerge({
       roomIds: destructiveMergePlan.joinRoomIds,
       objectIds: destructiveMergePlan.joinObjectIds,
     })
     if (!result.mergedId) {
-      if (result.reason) toast.message(result.reason, { duration: 2200 })
+      if (result.reason) {
+        addLog(`Merge failed: ${result.reason}`)
+        toast.message(result.reason, { duration: 2200 })
+      }
       return
     }
+    const mergedFrame = store.doc.rooms?.find((r) => r.id === result.mergedId)
+    const newRoomVertices = mergedFrame?.perimeterRing ?? []
+    addLog(`Merge output vertices: ${JSON.stringify(newRoomVertices)}`)
+    addLog(`doc.rooms after merge: ${serializeRooms(store.doc)}`)
     setSelectedRoomId(result.mergedId)
     setSelectedRoomIds(new Set([result.mergedId]))
     syncLayoutRoomsFromDoc(store.doc)
@@ -1536,6 +1586,7 @@ export function FloorPlanV2({
       { duration: 2000 }
     )
   }, [
+    addLog,
     destructiveMergePlan,
     mergeBlockedReason,
     recoverCanvasFocus,
@@ -1549,8 +1600,12 @@ export function FloorPlanV2({
       return
     }
     if (shapeMergePlan.canMergeShapes) {
+      addLog(
+        `Triggering fixture union merge objectIds=${JSON.stringify(shapeMergePlan.objectIds)}`
+      )
       const result = store.mergeUnionSelection(shapeMergePlan.objectIds)
       if (result.mergedId) {
+        addLog(`Fixture merge created merged_zone id=${result.mergedId}`)
         setSelectedRoomIds(new Set())
         setSelectedRoomId(null)
         toast.success('Merged into one shape — shared edges removed.', {
@@ -1558,12 +1613,14 @@ export function FloorPlanV2({
         })
         recoverCanvasFocus()
       } else if (result.reason) {
+        addLog(`Fixture merge failed: ${result.reason}`)
         toast.message(result.reason, { duration: 2200 })
       }
       return
     }
     runDestructiveMerge()
   }, [
+    addLog,
     destructiveMergePlan.canMerge,
     recoverCanvasFocus,
     runDestructiveMerge,
@@ -1809,12 +1866,21 @@ export function FloorPlanV2({
         >
           <div
             className={cn(
-              'relative min-h-0 min-w-0 flex-1 overflow-hidden bg-stone-100',
+              'floor-plan-canvas-host relative min-h-0 min-w-0 flex-1 overflow-hidden bg-stone-100',
               isDashboard
                 ? 'h-full min-h-0 border-0'
                 : 'min-h-[280px] h-full rounded-lg border border-stone-200'
             )}
           >
+            <CanvasRootErrorBoundary
+              onReset={() => {
+                logState('Canvas error boundary: reset triggered')
+                store.resetState()
+              }}
+              onError={(error) => {
+                logState(`Canvas error: ${error.message}`)
+              }}
+            >
             <LayoutCanvas
               className="absolute inset-0"
               commandCenterViewport={isDashboard}
@@ -1852,6 +1918,7 @@ export function FloorPlanV2({
               }}
               showLabels={showLabels}
             />
+            </CanvasRootErrorBoundary>
             <CanvasLegend />
           </div>
 

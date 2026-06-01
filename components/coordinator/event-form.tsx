@@ -49,6 +49,10 @@ import {
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
 import { marketStatusBadge, marketTheme } from '@/lib/theme/market'
 import { cn } from '@/lib/utils'
+import {
+  fetchPlaceDetailsSafe,
+  usePlacesAutocomplete,
+} from '@/hooks/use-places-autocomplete'
 import type { BoothClearancePolicy, Category, Event, EventDay } from '@/types/database'
 
 const TIME_OPTIONS: { value: string; label: string }[] = (() => {
@@ -991,56 +995,41 @@ function AddressAutocomplete({
   onChange: (v: string) => void
   onPlaceSelect: (place: PlaceResult) => void
 }) {
-  const apiLoaded = useApiIsLoaded()
-  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([])
-  const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const serviceRef = useRef<google.maps.places.AutocompleteService | null>(null)
+  const {
+    predictions,
+    open,
+    setOpen,
+    apiUnavailable,
+    clearPredictions,
+  } = usePlacesAutocomplete({
+    input: value,
+    buildRequest: () => ({
+      input: value,
+      componentRestrictions: { country: ['ca', 'us'] },
+    }),
+  })
 
-  useEffect(() => {
-    if (apiLoaded && window.google?.maps?.places) {
-      serviceRef.current = new window.google.maps.places.AutocompleteService()
-    }
-  }, [apiLoaded])
-
-  useEffect(() => {
-    if (!serviceRef.current || !value || value.length < 3) {
-      setPredictions([])
-      return
-    }
-    serviceRef.current.getPlacePredictions(
-      { input: value, componentRestrictions: { country: ['ca', 'us'] } },
-      (results, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-          setPredictions(results)
-          setOpen(true)
-        } else {
-          setPredictions([])
-        }
-      }
-    )
-  }, [value])
-
-  function selectPrediction(prediction: google.maps.places.AutocompletePrediction) {
+  async function selectPrediction(
+    prediction: google.maps.places.AutocompletePrediction
+  ) {
     setOpen(false)
-    setPredictions([])
+    clearPredictions()
     onChange(prediction.description)
 
-    const mapDiv = document.createElement('div')
-    const placesService = new window.google.maps.places.PlacesService(mapDiv)
-    placesService.getDetails(
-      { placeId: prediction.place_id, fields: ['formatted_address', 'geometry', 'name'] },
-      (place, status) => {
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
-          onPlaceSelect({
-            address: place.formatted_address ?? prediction.description,
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-            name: place.name ?? '',
-          })
-        }
-      }
-    )
+    const place = await fetchPlaceDetailsSafe(prediction.place_id, [
+      'formatted_address',
+      'geometry',
+      'name',
+    ])
+    if (place?.geometry?.location) {
+      onPlaceSelect({
+        address: place.formatted_address ?? prediction.description,
+        lat: place.geometry.location.lat(),
+        lng: place.geometry.location.lng(),
+        name: place.name ?? '',
+      })
+    }
   }
 
   useEffect(() => {
@@ -1057,12 +1046,21 @@ function AddressAutocomplete({
     <div ref={containerRef} className="relative">
       <Input
         id="address"
-        placeholder="Start typing an address…"
+        placeholder={
+          apiUnavailable
+            ? 'Enter address manually (suggestions unavailable)'
+            : 'Start typing an address…'
+        }
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete="off"
         className="text-foreground"
       />
+      {apiUnavailable ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Address suggestions are unavailable — type the full address manually.
+        </p>
+      ) : null}
       {open && predictions.length > 0 && (
         <ul className="absolute z-50 mt-1 w-full rounded-lg border-2 border-stone-200 bg-card shadow-[var(--shadow-market)] overflow-hidden">
           {predictions.map((p) => (
