@@ -217,7 +217,7 @@ export interface FloorPlanV2Props {
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
   /**
    * Floating geometry debug console (rooms, merges, placement).
-   * Defaults to on in development builds.
+   * Side geometry diagnostic panel — off by default.
    */
   debugGeometry?: boolean
   /**
@@ -246,7 +246,7 @@ export interface FloorPlanV2Props {
  *     time so the rooms read as a single combined interior.
  */
 export function FloorPlanV2(props: FloorPlanV2Props) {
-  const debugGeometry = props.debugGeometry ?? true
+  const debugGeometry = props.debugGeometry ?? false
   return (
     <DebugLogProvider>
       <PlacesApiStatusProvider>
@@ -282,7 +282,7 @@ function FloorPlanV2Workspace({
   onStoreReady,
   onSelectionChange,
   onVendorDrop,
-  debugGeometry = true,
+  debugGeometry = false,
   preferServerLayout = false,
 }: FloorPlanV2Props) {
   const initialDoc = useMemo<FloorPlanDoc>(

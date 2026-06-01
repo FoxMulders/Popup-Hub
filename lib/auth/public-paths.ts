@@ -27,6 +27,8 @@ export function isPublicPath(pathname: string): boolean {
     pathname === '/sw.js' ||
     pathname === '/manifest.json' ||
     pathname === '/site.webmanifest' ||
+    pathname === '/version' ||
+    pathname === '/api/build-info' ||
     pathname.startsWith('/icons/') ||
     pathname.startsWith('/legal/') ||
     pathname.startsWith('/wallet/door')

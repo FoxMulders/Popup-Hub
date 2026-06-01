@@ -13,6 +13,23 @@ export interface BuildInfo {
   label: string
 }
 
+/** Public `/version` JSON payload. */
+export interface SiteVersionPayload {
+  version: string
+  build: string
+  geminiConfigured: boolean
+}
+
+const GEMINI_ENV_KEYS = [
+  'GEMINI_API_KEY',
+  'GOOGLE_GENERATIVE_AI_API_KEY',
+  'GOOGLE_GEMINI_API_KEY',
+] as const
+
+export function isGeminiConfigured(): boolean {
+  return GEMINI_ENV_KEYS.some((key) => Boolean(process.env[key]?.trim()))
+}
+
 /** Display version: major.minor.buildNumber (e.g. 1.0.154). */
 export function formatAppVersion(baseVersion: string, buildNumber: number): string {
   const match = baseVersion.match(/^(\d+)\.(\d+)/)
@@ -115,5 +132,15 @@ export function getBuildInfo(): BuildInfo {
     builtAt,
     environment,
     label: detailLabel,
+  }
+}
+
+/** `GET /version` — `version` is major.minor.buildNumber; `build` is the git hash. */
+export function getSiteVersionPayload(): SiteVersionPayload {
+  const build = getBuildInfo()
+  return {
+    version: build.version,
+    build: build.commit,
+    geminiConfigured: isGeminiConfigured(),
   }
 }
