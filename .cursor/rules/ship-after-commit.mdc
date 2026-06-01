@@ -1,0 +1,35 @@
+---
+description: After user-requested commits, push to origin and deploy production
+alwaysApply: true
+---
+
+# Ship after commit
+
+## Commit gate
+
+Only create commits when the user explicitly asks. Do not commit proactively.
+
+## After a successful commit
+
+Run these steps **sequentially** without waiting for a separate push or deploy request:
+
+1. `git push -u origin HEAD` (use `git push` if the branch already tracks `origin`)
+2. `npx vercel deploy --prod --yes`
+
+## Report back
+
+Include:
+
+- Commit hash and short message
+- Push result (branch, remote)
+- Production deployment URL and alias (e.g. https://popuphub.ca when aliased)
+
+## Never
+
+- `git push --force` to `main` or `master` unless the user explicitly requests it
+- `--no-verify` or other hook skips unless the user explicitly requests them
+- Commit `.env`, credentials, or other secret files
+
+## If commit fails
+
+Fix the issue and create a **new** commit. Do not amend unless the user's amend rules apply (hook auto-modified files, HEAD commit was yours, not pushed, etc.).
