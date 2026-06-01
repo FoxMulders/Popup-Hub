@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2/floor-plan-v2'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
+import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
 import type { BoothLayout, Event } from '@/types/database'
 import { SpatialLayoutShell } from './spatial-layout-shell'
 import { SpatialLayoutToolbar } from './spatial-layout-toolbar'
@@ -36,6 +37,7 @@ export function SpatialLayoutEditor({
   const [hasOverlap, setHasOverlap] = useState(false)
   const [placedCount, setPlacedCount] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [layoutGeneration, setLayoutGeneration] = useState(0)
 
   const {
     rooms,
@@ -49,6 +51,12 @@ export function SpatialLayoutEditor({
     handleDeleteRoom,
     handleBaselineTableLengthChange,
   } = useSpatialLayoutState({ event, existingLayout })
+
+  const handleReloadFromServer = useCallback(() => {
+    clearMultiRoomDraft(eventId)
+    setLayoutGeneration((n) => n + 1)
+    toast.message('Reloaded layout from server — merge overlays cleared from cache.')
+  }, [eventId])
 
   const handleSave = useCallback(async () => {
     if (hasOverlap) {
@@ -100,10 +108,12 @@ export function SpatialLayoutEditor({
           saving={saving}
           onSave={handleSave}
           saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
+          onReloadFromServer={handleReloadFromServer}
         />
       }
     >
       <FloorPlanV2
+        key={layoutGeneration}
         eventId={eventId}
         layoutRooms={rooms}
         layoutActiveRoomId={activeRoomId}
@@ -123,6 +133,7 @@ export function SpatialLayoutEditor({
         saveMarketDisabled={hasOverlap || saving}
         saveMarketLoading={saving}
         chrome="default"
+        preferServerLayout
         debugGeometry={process.env.NODE_ENV === 'development'}
         className="h-full min-h-0"
       />

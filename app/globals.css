@@ -395,7 +395,11 @@
   #floor-plan-workspace .canvas-overlay-layer,
   #floor-plan-workspace .canvas-merged-zone-layer,
   #floor-plan-workspace .merged-zone-decorative,
-  #floor-plan-workspace [data-kind='merged_zone'] {
+  #floor-plan-workspace [data-kind='merged_zone'],
+  .floor-plan-editor-root .canvas-overlay-layer,
+  .floor-plan-editor-root .canvas-merged-zone-layer,
+  .floor-plan-editor-root .merged-zone-decorative,
+  .floor-plan-editor-root [data-kind='merged_zone'] {
     pointer-events: none !important;
   }
 

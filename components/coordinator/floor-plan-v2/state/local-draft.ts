@@ -20,7 +20,8 @@
 
 import type { FloorPlanDoc } from './types'
 
-const STORAGE_VERSION = 1
+/** Bump when draft shape or hydration policy changes — invalidates stale browser caches. */
+const STORAGE_VERSION = 2
 const KEY_PREFIX = 'floorplan:v2:draft'
 
 interface LocalDraftEnvelope {

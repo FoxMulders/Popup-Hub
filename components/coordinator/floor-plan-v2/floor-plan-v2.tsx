@@ -40,10 +40,8 @@ import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import { autoArrangeInRoom, type AutoArrangeMode } from './engine/auto-arrange'
-import {
-  docFromLegacyRooms,
-  legacyRoomsFromDoc,
-} from './state/legacy-bridge'
+import { legacyRoomsFromDoc } from './state/legacy-bridge'
+import { hydrateFloorPlanDoc } from './state/layout-hydration'
 import {
   activeRoomFramingBounds,
   reconcileCanvasExtents,
@@ -51,7 +49,6 @@ import {
 } from './state/room-canvas'
 import {
   clearMultiRoomDraft,
-  loadMultiRoomDraft,
   saveMultiRoomDraft,
 } from './state/local-draft'
 import { getSuppressAutoMainHall } from './state/canvas-session-guards'
@@ -223,6 +220,11 @@ export interface FloorPlanV2Props {
    * Defaults to on in development builds.
    */
   debugGeometry?: boolean
+  /**
+   * Standalone layout route — hydrate from server/project rooms only and
+   * clear the multi-room localStorage draft (avoids stale merged_zone masks).
+   */
+  preferServerLayout?: boolean
 }
 
 /**
@@ -281,27 +283,13 @@ function FloorPlanV2Workspace({
   onSelectionChange,
   onVendorDrop,
   debugGeometry = true,
+  preferServerLayout = false,
 }: FloorPlanV2Props) {
-  // Initial unified doc — seed from server-loaded rooms first; if a
-  // fresher crash-recovery draft exists in localStorage for this
-  // event, prefer that.
-  const initialDoc = useMemo<FloorPlanDoc>(() => {
-    const seeded = docFromLegacyRooms(layoutRooms)
-    const reconcileDoc = (doc: FloorPlanDoc): FloorPlanDoc => {
-      const frames = doc.rooms ?? []
-      if (frames.length === 0) return doc
-      const extents = reconcileCanvasExtents(frames)
-      return {
-        ...doc,
-        canvasWidthFt: Math.max(extents.canvasWidthFt, doc.canvasWidthFt, 50),
-        canvasLengthFt: Math.max(extents.canvasLengthFt, doc.canvasLengthFt, 50),
-      }
-    }
-    if (!eventId) return reconcileDoc(seeded)
-    const cached = loadMultiRoomDraft(eventId)
-    return reconcileDoc(cached?.doc ?? seeded)
+  const initialDoc = useMemo<FloorPlanDoc>(
+    () => hydrateFloorPlanDoc(eventId, layoutRooms, { preferServerLayout }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    []
+  )
 
   const store = useCanvasStore(initialDoc)
   const { addLog, logState, logError } = useDebugLog()
@@ -506,12 +494,13 @@ function FloorPlanV2Workspace({
   }, [activeRoomId, layoutRoomIdsKey, layoutRooms])
 
   const hardResetCanvas = useCallback(() => {
+    if (eventId) clearMultiRoomDraft(eventId)
     store.resetState()
     setSelectedRoomIds(new Set())
     setSelectedRoomId(null)
     resetCanvasViewport()
     logState('hardResetCanvas(): blank canvas — auto Main Hall disabled for session')
-  }, [logState, resetCanvasViewport, store])
+  }, [eventId, logState, resetCanvasViewport, store])
 
   useEffect(() => {
     if (!docNeedsGeometrySanitize(store.doc)) return

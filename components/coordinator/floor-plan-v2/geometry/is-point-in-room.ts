@@ -66,9 +66,9 @@ export function isPointInRoomForObject(
   return isPointInRoom(doc, cx, cy, roomId)
 }
 
-/** All room frames in the doc — used for placement (ignores merged_zone overlays). */
+/** Active room frames used for placement (ignores dissolved ghosts and merged_zone). */
 export function basePlacementRooms(doc: FloorPlanDoc): RoomFrame[] {
-  return doc.rooms ?? []
+  return activeDropZoneRooms(doc)
 }
 
 /** Topmost base room whose polygon contains `p` (no merged_zone). */
