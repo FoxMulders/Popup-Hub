@@ -12,6 +12,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
   const build = getBuildInfo()
   const year = new Date().getFullYear()
   const tooltip = build.label
+  const buildLine = `v${build.version} · build ${build.buildNumber} · ${build.commit}`
 
   return (
     <footer
@@ -22,14 +23,19 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
       )}
       aria-label="Site footer"
     >
-      <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-1.5 px-4 py-3 sm:gap-2 sm:py-3.5 xl:px-10">
-        <nav aria-label="Legal and help">
-          <ul className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 sm:gap-x-5">
+      <div
+        className={cn(
+          'mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1',
+          'px-4 py-2 sm:justify-between sm:gap-x-5 sm:py-2.5 xl:px-10'
+        )}
+      >
+        <nav aria-label="Legal and help" className="min-w-0">
+          <ul className="m-0 flex list-none flex-row flex-wrap items-center justify-center gap-x-3 gap-y-0 p-0 sm:justify-start sm:gap-x-4">
             {LEGAL_LINKS.map(({ href, label }) => (
-              <li key={href}>
+              <li key={href} className="m-0">
                 <Link
                   href={href}
-                  className="inline-flex min-h-11 items-center px-1 text-sm font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation"
+                  className="inline-flex min-h-9 items-center px-0.5 text-xs font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation sm:text-sm"
                 >
                   {label}
                 </Link>
@@ -40,22 +46,25 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
 
         <PopupHubLogo compact className="relative z-20 shrink-0" title="Popup Hub" />
 
-        <div className="flex flex-col items-center gap-0.5 text-center">
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            © {year} Popup Hub. All rights reserved.
-          </p>
-          <p
-            className="font-mono text-[10px] leading-snug text-muted-foreground sm:text-[11px]"
-            title={tooltip}
+        <p
+          className="m-0 flex shrink-0 flex-row flex-wrap items-center justify-center gap-x-1.5 text-xs leading-snug text-muted-foreground sm:justify-end sm:text-sm"
+          title={tooltip}
+        >
+          <span>© {year} Popup Hub</span>
+          <span className="text-stone-300" aria-hidden>
+            ·
+          </span>
+          <span
+            className="font-mono text-[10px] sm:text-[11px]"
             data-testid="build-version-footer"
             data-build-version={build.version}
             data-build-number={build.buildNumber}
             data-build-commit={build.commit}
             data-build-environment={build.environment}
           >
-            v{build.version} · build {build.buildNumber} · {build.commit}
-          </p>
-        </div>
+            {buildLine}
+          </span>
+        </p>
       </div>
     </footer>
   )
