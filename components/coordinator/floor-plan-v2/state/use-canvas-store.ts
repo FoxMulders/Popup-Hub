@@ -65,8 +65,21 @@ export interface CanvasStore extends FloorPlanDocStore {
   seedMainHall: () => void
 }
 
-export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
-  const store = useFloorPlanDoc(forceRecomputeGeometry(initial))
+export interface UseCanvasStoreOptions {
+  disableAutoMainHall?: boolean
+  eventId?: string
+}
+
+export function useCanvasStore(
+  initial: FloorPlanDoc,
+  options?: UseCanvasStoreOptions
+): CanvasStore {
+  const disableAutoMainHall = options?.disableAutoMainHall ?? false
+  const eventId = options?.eventId
+  const store = useFloorPlanDoc(forceRecomputeGeometry(initial), {
+    disableAutoMainHall,
+    eventId,
+  })
   const { addLog } = useDebugLog()
 
   const logState = useCallback(
@@ -97,7 +110,7 @@ export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
     })
     store.resetDoc(next)
     logState('resetState() complete: blank canvas (auto Main Hall suppressed)')
-  }, [logState, store])
+  }, [eventId, logState, store])
 
   const seedMainHall = useCallback(() => {
     logState('seedMainHall(): injecting default 50×50′ Main Hall')
@@ -107,7 +120,7 @@ export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
   }, [logState, store])
 
   useEffect(() => {
-    if (getSuppressAutoMainHall()) return
+    if (disableAutoMainHall || getSuppressAutoMainHall(eventId)) return
     if (activeRoomFrames(store.doc).length === 0) {
       logState('doc.rooms empty on load — seedMainHall()')
       seedMainHall()
@@ -121,7 +134,7 @@ export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
   }, [])
 
   useEffect(() => {
-    if (getSuppressAutoMainHall()) return
+    if (disableAutoMainHall || getSuppressAutoMainHall(eventId)) return
     const active = activeRoomFrames(store.doc)
     if (active.length === 0) {
       logState('doc.rooms became empty — seedMainHall()')

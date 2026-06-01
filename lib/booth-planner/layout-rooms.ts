@@ -4,6 +4,7 @@ import {
   inferBaselineTableLengthFromCells,
 } from '@/lib/booth-planner/layout-table-size'
 import { migrateRoomToCurrentPreset } from '@/lib/booth-planner/venue-presets'
+import { MAIN_HALL_ROOM_ID } from '@/components/coordinator/floor-plan-v2/state/canvas-init'
 
 export type { LayoutRoom }
 
@@ -67,7 +68,7 @@ export function roomsFromBoothLayout(layout: BoothLayout | null): {
     return { rooms: [main], activeRoomId: main.id }
   }
 
-  const main = createLayoutRoom('Main Hall')
+  const main = createLayoutRoom('Main Hall', { id: MAIN_HALL_ROOM_ID })
   return { rooms: [main], activeRoomId: main.id }
 }
 

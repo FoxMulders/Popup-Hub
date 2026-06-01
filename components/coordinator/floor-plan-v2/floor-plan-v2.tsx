@@ -291,7 +291,11 @@ function FloorPlanV2Workspace({
     []
   )
 
-  const store = useCanvasStore(initialDoc)
+  const disableAutoMainHall = preferServerLayout
+  const store = useCanvasStore(initialDoc, {
+    disableAutoMainHall,
+    eventId: eventId ?? undefined,
+  })
   const { addLog, logState, logError } = useDebugLog()
 
   const docRoomsKey = useMemo(
@@ -512,7 +516,8 @@ function FloorPlanV2Workspace({
   }, [])
 
   useEffect(() => {
-    if (getSuppressAutoMainHall()) return
+    if (disableAutoMainHall || getSuppressAutoMainHall(eventId ?? undefined))
+      return
     if ((store.doc.rooms ?? []).length === 0) {
       logState('doc.rooms empty on mount — seedMainHall()')
       store.seedMainHall()
@@ -531,7 +536,7 @@ function FloorPlanV2Workspace({
       { pushHistory: false }
     )
     resetCanvasViewport()
-  }, [logState, resetCanvasViewport, store])
+  }, [disableAutoMainHall, eventId, logState, resetCanvasViewport, store])
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
   const highlightedRoomMetrics = useMemo(() => {

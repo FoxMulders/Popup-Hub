@@ -260,7 +260,18 @@ export interface FloorPlanDocStore {
   redo: () => void
 }
 
-export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
+export interface UseFloorPlanDocOptions {
+  /** Skip `ensureCanvasHasPlaceableRoom` on patches (standalone layout route). */
+  disableAutoMainHall?: boolean
+  eventId?: string
+}
+
+export function useFloorPlanDoc(
+  initial: FloorPlanDoc,
+  options?: UseFloorPlanDocOptions
+): FloorPlanDocStore {
+  const disableAutoMainHall = options?.disableAutoMainHall ?? false
+  const eventId = options?.eventId
   const [doc, setDoc] = useState<FloorPlanDoc>(() =>
     stripMacroPerimeterWallsFromDoc(initial)
   )
@@ -431,7 +442,8 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       const pushHistory = options?.pushHistory ?? true
       let next: FloorPlanDoc = { ...docRef.current, ...patch }
       if (
-        !getSuppressAutoMainHall() &&
+        !disableAutoMainHall &&
+        !getSuppressAutoMainHall(eventId) &&
         (patch.rooms !== undefined || (next.rooms ?? []).length === 0)
       ) {
         next = ensureCanvasHasPlaceableRoom(next)
@@ -441,7 +453,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       }
       commit(next, pushHistory)
     },
-    [commit]
+    [commit, disableAutoMainHall, eventId]
   )
 
   const moveRoomFrame = useCallback<FloorPlanDocStore['moveRoomFrame']>(

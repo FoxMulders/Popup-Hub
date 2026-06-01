@@ -25,6 +25,7 @@ import {
 } from '@/lib/booth-planner/smart-populate-booth-caps'
 import { resolveTemplateAnchoredDimensions } from '@/lib/booth-planner/venue-presets'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
+import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
 import type { BoothLayout, Event, LayoutRoom } from '@/types/database'
 
 export interface UseSpatialLayoutStateOptions {
@@ -36,18 +37,24 @@ export function useSpatialLayoutState({
   event,
   existingLayout,
 }: UseSpatialLayoutStateOptions) {
-  const initial = useMemo(
-    () => roomsFromBoothLayout(existingLayout),
-    [existingLayout]
-  )
+  const initial = useMemo(() => {
+    if (existingLayout == null) {
+      return { rooms: [] as LayoutRoom[], activeRoomId: '' }
+    }
+    return roomsFromBoothLayout(existingLayout)
+  }, [existingLayout])
+
+  const allowEmptyRooms = existingLayout == null
 
   const [rooms, setRooms] = useState(initial.rooms)
   const [activeRoomId, setActiveRoomId] = useState(initial.activeRoomId)
 
-  const activeRoom = useMemo(
-    () => getActiveRoom(rooms, activeRoomId),
-    [rooms, activeRoomId]
-  )
+  const activeRoom = useMemo(() => {
+    if (rooms.length === 0) {
+      return createLayoutRoom('Room', { venue_width: 50, venue_length: 50 })
+    }
+    return getActiveRoom(rooms, activeRoomId)
+  }, [rooms, activeRoomId])
 
   const venuePresetId: VenuePresetId =
     (activeRoom.venue_preset_id as VenuePresetId | null | undefined) ?? 'blank'
@@ -150,10 +157,15 @@ export function useSpatialLayoutState({
       }
       const next = rooms.filter((r) => r.id !== roomId)
       setRooms(next)
-      if (activeRoomId === roomId) setActiveRoomId(next[0]!.id)
+      if (activeRoomId === roomId) {
+        setActiveRoomId(next[0]?.id ?? '')
+      }
+      if (next.length === 0) {
+        setSuppressAutoMainHall(true, event.id)
+      }
       toast.message('Room deleted')
     },
-    [rooms, activeRoomId]
+    [rooms, activeRoomId, allowEmptyRooms]
   )
 
   const handleBaselineTableLengthChange = useCallback(

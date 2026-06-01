@@ -99,7 +99,6 @@ export function SpatialLayoutEditor({
           saving={saving}
           onSave={handleSave}
           saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
-          onReloadFromServer={handleReloadFromServer}
         />
       }
     >
