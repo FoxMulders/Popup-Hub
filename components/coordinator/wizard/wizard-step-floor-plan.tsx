@@ -73,7 +73,6 @@ export function WizardStepFloorPlan({
           hasOverlap={plannerOverlap}
           showDraftBadge
           onBack={onBack}
-          fullEditorHref={eventId ? `/coordinator/events/${eventId}/layout` : undefined}
         />
       }
       leftRail={roomBar}

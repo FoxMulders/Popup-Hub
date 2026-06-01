@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
@@ -23,8 +23,6 @@ export interface LayoutPlannerHeaderProps {
   stepLabel?: string
   title?: string
   showDraftBadge?: boolean
-  /** Optional link to open the full layout editor (wizard mode) */
-  fullEditorHref?: string
   className?: string
 }
 
@@ -43,7 +41,6 @@ export function LayoutPlannerHeader({
   stepLabel,
   title = 'Spatial layout',
   showDraftBadge = false,
-  fullEditorHref,
   className,
 }: LayoutPlannerHeaderProps) {
   const resolvedBackHref = backHref ?? (eventId ? `/coordinator/events/${eventId}` : '/coordinator/events')
@@ -109,15 +106,6 @@ export function LayoutPlannerHeader({
           <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">
             Draft
           </span>
-        ) : null}
-        {fullEditorHref ? (
-          <Link
-            href={fullEditorHref}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2.5 text-xs font-medium text-foreground hover:bg-canvas"
-          >
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            Full editor
-          </Link>
         ) : null}
         {onSave ? (
           <Button

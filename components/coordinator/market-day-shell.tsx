@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowLeft, ClipboardList, LayoutDashboard, ListOrdered, CheckSquare, QrCode, Gavel, Wallet } from 'lucide-react'
+import { ArrowLeft, ClipboardList, ListOrdered, CheckSquare, QrCode, Gavel, Wallet } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +18,6 @@ const SECTIONS = [
   { id: 'operations' as const, label: 'Operations', href: (id: string) => `/coordinator/events/${id}/operations`, icon: ClipboardList },
   { id: 'wallet' as const, label: 'Wallet top-up', href: (id: string) => `/coordinator/events/${id}/wallet-topup`, icon: Wallet },
   { id: 'auctions' as const, label: 'Auctions', href: (id: string) => `/coordinator/events/${id}/auctions`, icon: Gavel },
-  { id: 'layout' as const, label: 'Spatial Planner', href: (id: string) => `/coordinator/events/${id}/layout`, icon: LayoutDashboard },
   { id: 'checkin' as const, label: 'Check-In QR', href: (id: string) => `/coordinator/events/${id}/checkin`, icon: QrCode },
 ]
 
