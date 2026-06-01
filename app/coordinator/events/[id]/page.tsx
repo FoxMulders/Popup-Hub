@@ -155,11 +155,11 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
                 />
                 {!event.skip_venue_layout ? (
                   <Link
-                    href={`/coordinator/events/${id}/setup?step=3`}
+                    href={`/coordinator/events/${id}/layout`}
                     className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
                   >
                     <LayoutDashboard className="h-4 w-4" />
-                    Floor plan
+                    Layout
                   </Link>
                 ) : null}
                 <Link

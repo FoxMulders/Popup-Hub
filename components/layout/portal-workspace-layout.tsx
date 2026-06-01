@@ -20,6 +20,11 @@ function isFullCommandCenterRoute(pathname: string): boolean {
   return pathname === '/coordinator/dashboard'
 }
 
+/** Dedicated spatial layout editor — owns the full viewport below nav. */
+function isSpatialLayoutRoute(pathname: string): boolean {
+  return /\/coordinator\/events\/[^/]+\/layout\/?$/.test(pathname)
+}
+
 /** Routes that need full width (print, check-in scanners, etc.). */
 function bypassWorkspace(pathname: string): boolean {
   return (
@@ -31,6 +36,7 @@ function bypassWorkspace(pathname: string): boolean {
 function useWorkspaceMode(pathname: string, portal: WorkspacePortal): boolean {
   if (bypassWorkspace(pathname)) return false
   if (isFullCommandCenterRoute(pathname)) return false
+  if (isSpatialLayoutRoute(pathname)) return false
 
   if (portal === 'coordinator') {
     return pathname.startsWith('/coordinator')

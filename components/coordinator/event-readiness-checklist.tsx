@@ -110,8 +110,8 @@ export function EventReadinessChecklist({
       },
       layout: {
         type: 'link',
-        href: `/coordinator/events/${eventId}/setup?step=3`,
-        label: 'Open floor plan setup',
+        href: `/coordinator/events/${eventId}/layout`,
+        label: 'Open spatial planner',
       },
       auction: {
         type: 'link',
@@ -155,8 +155,8 @@ export function EventReadinessChecklist({
       },
       layout: {
         type: 'link',
-        href: `/coordinator/events/${eventId}/setup?step=3`,
-        label: 'Edit floor plan',
+        href: `/coordinator/events/${eventId}/layout`,
+        label: 'Edit booth layout',
       },
       auction: {
         type: 'link',
