@@ -163,7 +163,7 @@ export function SelectionOverlay({
   if (items.length === 0) return null
 
   return (
-    <g aria-hidden="true">
+    <g aria-hidden="true" className="canvas-overlay-layer" pointerEvents="none">
       {items.map((obj) => {
         const aabb = rotatedAabb(obj)
         const left = aabb.x * pxPerFt

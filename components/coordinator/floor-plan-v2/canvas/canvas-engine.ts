@@ -1,6 +1,6 @@
 /**
- * Canvas engine — deterministic room list, placement validation, and viewport math.
- * Single source of truth: `doc.rooms` with no ghost frames after merge.
+ * Canvas engine — room list helpers and viewport math.
+ * Placement validation lives in `state/use-floor-plan-doc.ts`.
  */
 
 import { objectCenter, type Point } from '../interactions/geometry'
@@ -16,9 +16,25 @@ import {
 } from '../geometry/point-in-polygon'
 import { frameToRing } from '../state/placement-surface'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from '../state/types'
+import {
+  DEFAULT_MAIN_HALL_SIZE_FT,
+  ensureCanvasHasPlaceableRoom,
+  ensureLayoutNotVoid,
+  MAIN_HALL_ROOM_ID,
+  makeDefaultMainHallFrame,
+  makeDefaultMainHall,
+} from '../state/canvas-init'
+import { isValidPlacementLocation } from '../state/use-floor-plan-doc'
 
-export const MAIN_HALL_ROOM_ID = 'main-hall'
-export const DEFAULT_MAIN_HALL_SIZE_FT = 50
+export {
+  DEFAULT_MAIN_HALL_SIZE_FT,
+  ensureCanvasHasPlaceableRoom,
+  ensureLayoutNotVoid,
+  MAIN_HALL_ROOM_ID,
+  makeDefaultMainHallFrame,
+  makeDefaultMainHall,
+  isValidPlacementLocation,
+}
 
 export interface ViewportMatrix {
   zoom: number
@@ -49,20 +65,6 @@ function roomOuterRings(
     return [frame.perimeterRing]
   }
   return [frameToRing(frame)]
-}
-
-/**
- * Strict placement: inside any active room polygon ⇒ true; background ⇒ false.
- */
-export function isValidPlacementLocation(
-  doc: FloorPlanDoc,
-  probeFt: Point,
-  obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
-): boolean {
-  if (obj) {
-    return isPointInRoomForObject(doc, obj)
-  }
-  return isPointInRoom(doc, probeFt.x, probeFt.y)
 }
 
 export { isPointInRoom, isPointInRoomForObject }
@@ -116,41 +118,6 @@ export function roomGeometricCentroid(
 }
 
 export const roomPerimeterCentroid = roomGeometricCentroid
-
-export function makeDefaultMainHallFrame(): RoomFrame {
-  const ring: Array<[number, number]> = [
-    [0, 0],
-    [DEFAULT_MAIN_HALL_SIZE_FT, 0],
-    [DEFAULT_MAIN_HALL_SIZE_FT, DEFAULT_MAIN_HALL_SIZE_FT],
-    [0, DEFAULT_MAIN_HALL_SIZE_FT],
-    [0, 0],
-  ]
-  return {
-    id: MAIN_HALL_ROOM_ID,
-    name: 'Main Hall',
-    originX: 0,
-    originY: 0,
-    widthFt: DEFAULT_MAIN_HALL_SIZE_FT,
-    lengthFt: DEFAULT_MAIN_HALL_SIZE_FT,
-    perimeterRing: ring,
-  }
-}
-
-export const makeDefaultMainHall = makeDefaultMainHallFrame
-
-export function ensureCanvasHasPlaceableRoom(doc: FloorPlanDoc): FloorPlanDoc {
-  if (activeRoomFrames(doc).length > 0) return doc
-  const hall = makeDefaultMainHallFrame()
-  return {
-    ...doc,
-    canvasWidthFt: Math.max(doc.canvasWidthFt, DEFAULT_MAIN_HALL_SIZE_FT),
-    canvasLengthFt: Math.max(doc.canvasLengthFt, DEFAULT_MAIN_HALL_SIZE_FT),
-    rooms: [hall],
-    objectRoom: { ...(doc.objectRoom ?? {}) },
-  }
-}
-
-export const ensureLayoutNotVoid = ensureCanvasHasPlaceableRoom
 
 export function findRoomAtPoint(
   doc: FloorPlanDoc,

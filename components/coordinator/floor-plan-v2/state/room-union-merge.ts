@@ -1,37 +1,13 @@
 /**
- * Destructive room merge — polygon-clipping union → single `RoomFrame`.
- * Source rooms are removed from `doc.rooms`; no ghost frames or parallel guides.
+ * Destructive room merge — axis-aligned bounding union → single `RoomFrame` (4 vertices).
  */
 
 import {
-  closeRing,
-  ensureOuterRingCCW,
-  guardedPolygonUnion,
-  simplifyRingCollinear,
-} from '@/lib/floor-plan/polygon-clipping-union'
-import type { Polygon, Ring } from 'polygon-clipping'
-import { frameToRing } from './placement-surface'
+  clockwiseRectRing,
+  sanitizeRoomFrame,
+  unionParticipantBounds,
+} from './geometry-sanitize'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from './types'
-import { rotatedAabb } from '../interactions/geometry'
-
-function rectPolygon(frame: RoomFrame): Polygon {
-  const ring = closeRing(
-    frameToRing(frame).map(([x, y]) => [x, y] as [number, number])
-  )
-  return [ensureOuterRingCCW(ring)]
-}
-
-function objectPolygon(obj: PlacedObject): Polygon | null {
-  const aabb = rotatedAabb(obj)
-  const ring: Ring = [
-    [aabb.x, aabb.y],
-    [aabb.x + aabb.width, aabb.y],
-    [aabb.x + aabb.width, aabb.y + aabb.height],
-    [aabb.x, aabb.y + aabb.height],
-    [aabb.x, aabb.y],
-  ]
-  return [ensureOuterRingCCW(ring)]
-}
 
 export interface UnionMergeSelection {
   roomIds: ReadonlyArray<string>
@@ -45,8 +21,7 @@ export interface UnionMergeResult {
 }
 
 /**
- * Merge participants into one room with `perimeterRing` (CCW outer, clipper-safe).
- * Splices non-primary rooms out of `doc.rooms` entirely.
+ * Merge participants into one rectangular room. Non-primary rooms are removed.
  */
 export function mergeRoomsToUnion(
   doc: FloorPlanDoc,
@@ -65,34 +40,13 @@ export function mergeRoomsToUnion(
     }
   }
 
-  const polygons: Polygon[] = []
-  for (const f of frames) polygons.push(rectPolygon(f))
-  for (const o of objects) {
-    const poly = objectPolygon(o)
-    if (poly) polygons.push(poly)
-  }
-
-  const mp = guardedPolygonUnion(polygons)
-  const poly = mp[0]
-  const outer = poly?.[0]
-  if (!outer || outer.length < 4) {
+  const union = unionParticipantBounds(frames, objects)
+  if (!union) {
     return {
       doc,
       primaryRoomId: frames[0]?.id ?? '',
       reason: 'Could not compute union perimeter — overlap shapes first',
     }
-  }
-
-  const perimeterRing = simplifyRingCollinear(ensureOuterRingCCW(outer))
-  let minX = Number.POSITIVE_INFINITY
-  let minY = Number.POSITIVE_INFINITY
-  let maxX = Number.NEGATIVE_INFINITY
-  let maxY = Number.NEGATIVE_INFINITY
-  for (const [x, y] of perimeterRing) {
-    if (x < minX) minX = x
-    if (y < minY) minY = y
-    if (x > maxX) maxX = x
-    if (y > maxY) maxY = y
   }
 
   const primaryRoomId = frames[0]!.id
@@ -102,15 +56,22 @@ export function mergeRoomsToUnion(
   const primaryName =
     frames.map((f) => f.name).filter(Boolean).join(' + ') || 'Merged hall'
 
-  const primaryFrame: RoomFrame = {
+  const perimeterRing = clockwiseRectRing(
+    union.minX,
+    union.minY,
+    union.maxX,
+    union.maxY
+  )
+
+  const primaryFrame: RoomFrame = sanitizeRoomFrame({
     id: primaryRoomId,
     name: primaryName,
-    originX: minX,
-    originY: minY,
-    widthFt: Math.max(doc.snapFt || 1, maxX - minX),
-    lengthFt: Math.max(doc.snapFt || 1, maxY - minY),
+    originX: union.minX,
+    originY: union.minY,
+    widthFt: Math.max(doc.snapFt || 1, union.maxX - union.minX),
+    lengthFt: Math.max(doc.snapFt || 1, union.maxY - union.minY),
     perimeterRing,
-  }
+  })
 
   const removeObjectIds = new Set(objects.map((o) => o.id))
   const nextObjects = doc.objects.filter((o) => !removeObjectIds.has(o.id))

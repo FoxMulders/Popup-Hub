@@ -3,6 +3,7 @@
  */
 
 import { destructiveMergeInDoc } from '../components/coordinator/floor-plan-v2/state/destructive-merge'
+import { vertexCountForRoom } from '../components/coordinator/floor-plan-v2/state/geometry-sanitize'
 import type { FloorPlanDoc, RoomFrame } from '../components/coordinator/floor-plan-v2/state/types'
 
 function frame(
@@ -47,13 +48,12 @@ function expect(label: string, ok: boolean) {
 
 expect('merged id', mergedId != null)
 expect('stage removed', !doc.objects.some((o) => o.id === 'stage-1'))
-expect('merged_zone added', doc.objects.some((o) => o.kind === 'merged_zone'))
+expect('no merged_zone object', !doc.objects.some((o) => o.kind === 'merged_zone'))
 const hall = doc.rooms?.find((r) => r.id === 'hall')
 expect('single room remains', doc.rooms?.length === 1)
 expect('no merge ghost frames', doc.rooms?.every((r) => !r.mergedIntoObjectId) ?? false)
-expect('hall bounds updated', (hall?.widthFt ?? 0) > 80)
-const mz = doc.objects.find((o) => o.kind === 'merged_zone')
-expect('union rings', (mz && 'rings' in mz && mz.rings.length > 0) ?? false)
+expect('hall bounds updated', (hall?.widthFt ?? 0) >= 90)
+expect('hall has simple perimeter', vertexCountForRoom(hall!) <= 4)
 
 if (process.exitCode) process.exit(1)
 console.log('All destructive-merge checks passed.')

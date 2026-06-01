@@ -39,7 +39,7 @@ function CanvasGridBase({
   }
 
   return (
-    <g aria-hidden>
+    <g aria-hidden className="canvas-overlay-layer" pointerEvents="none">
       <defs>
         <pattern
           id={ids.minor}

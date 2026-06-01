@@ -30,9 +30,8 @@ import {
   unionActiveRoomBounds,
 } from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
-import { DiagnosticLogger } from './debug/diagnostic-logger'
-import { DiagnosticLoggerPortal } from './debug/diagnostic-logger-portal'
-import { PlacesApiStatusProvider, usePlacesApiStatus } from './debug/places-api-status-context'
+import { DiagnosticSidebar } from './debug/diagnostic-sidebar'
+import { PlacesApiStatusProvider } from './debug/places-api-status-context'
 import { FullscreenLayout } from './canvas/fullscreen-layout'
 import { DebugLogProvider, useDebugLog } from './debug/debug-log-context'
 import { serializeRooms } from './debug/format-geometry-log'
@@ -55,6 +54,10 @@ import {
   loadMultiRoomDraft,
   saveMultiRoomDraft,
 } from './state/local-draft'
+import {
+  docNeedsGeometrySanitize,
+  forceRecomputeGeometry,
+} from './state/geometry-sanitize'
 import { useCanvasStore } from './state/use-canvas-store'
 import { CanvasRootErrorBoundary } from './canvas/canvas-root-error-boundary'
 import {
@@ -321,7 +324,6 @@ function FloorPlanV2Workspace({
   const isDashboard = variant === 'dashboard'
   const isEmbedded = chrome === 'embedded'
   const commandCenterFullscreen = useCommandCenterFullscreen()
-  const { status: placesApiStatus } = usePlacesApiStatus()
 
   useEffect(() => {
     onStoreReady?.(store)
@@ -502,7 +504,27 @@ function FloorPlanV2Workspace({
     setSelectedRoomIds(new Set([activeRoomId]))
   }, [activeRoomId, layoutRoomIdsKey, layoutRooms])
 
+  const resetToMainHall = useCallback(() => {
+    store.resetState()
+    resetCanvasViewport()
+    logState('resetToMainHall(): default 50×50′ Main Hall injected')
+  }, [logState, resetCanvasViewport, store])
+
   useEffect(() => {
+    if (!docNeedsGeometrySanitize(store.doc)) return
+    const sanitized = forceRecomputeGeometry(store.doc)
+    store.patchDoc({ rooms: sanitized.rooms }, { pushHistory: false })
+    store.replaceObjects(sanitized.objects, { pushHistory: false })
+    logState('forceRecomputeGeometry(): sanitized malformed room/merged_zone paths')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if ((store.doc.rooms ?? []).length === 0) {
+      logState('doc.rooms empty on mount — resetToMainHall()')
+      resetToMainHall()
+      return
+    }
     const active = (store.doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId)
     if (active.length > 0) return
     const next = ensureCanvasHasPlaceableRoom(store.doc)
@@ -515,7 +537,7 @@ function FloorPlanV2Workspace({
       { pushHistory: false }
     )
     resetCanvasViewport()
-  }, [resetCanvasViewport, store])
+  }, [logState, resetCanvasViewport, resetToMainHall, store])
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
   const highlightedRoomMetrics = useMemo(() => {
@@ -1728,10 +1750,14 @@ function FloorPlanV2Workspace({
     <div
       id="floor-plan-workspace"
       className={cn(
-        'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+        'floor-plan-editor-root relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+        debugGeometry && 'pr-[300px]',
         className
       )}
     >
+      {debugGeometry ? (
+        <DiagnosticSidebar doc={store.doc} onClearAndReset={resetToMainHall} />
+      ) : null}
       <FullscreenLayout
         active={canvasFullscreen}
         onActiveChange={(next) => setCanvasFullscreen(next)}
@@ -1740,12 +1766,6 @@ function FloorPlanV2Workspace({
         className="min-h-0 min-w-0 flex-1"
       >
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-        {debugGeometry && isEmbedded ? (
-          <DiagnosticLoggerPortal
-            doc={store.doc}
-            placesApiStatus={placesApiStatus}
-          />
-        ) : null}
         {isDashboard ? (
           <CanvasCommandBar
             staticLayout
@@ -1810,14 +1830,6 @@ function FloorPlanV2Workspace({
             saveMarketLoading={saveMarketLoading}
           />
         ) : null}
-        {debugGeometry && isDashboard ? (
-          <DiagnosticLogger
-            doc={store.doc}
-            placesApiStatus={placesApiStatus}
-            sectionLabel="Diagnostics"
-            className="mx-1 shrink-0"
-          />
-        ) : null}
         {!isDashboard ? (
           <CanvasCommandBar
             toolState={{ tool, drawShape }}
@@ -1878,14 +1890,6 @@ function FloorPlanV2Workspace({
             onSaveMarket={onSaveMarket}
             saveMarketDisabled={saveMarketDisabled}
             saveMarketLoading={saveMarketLoading}
-          />
-        ) : null}
-        {debugGeometry && !isDashboard ? (
-          <DiagnosticLogger
-            doc={store.doc}
-            placesApiStatus={placesApiStatus}
-            sectionLabel="Section 2"
-            className="mx-1 shrink-0 lg:hidden"
           />
         ) : null}
 
@@ -1981,14 +1985,6 @@ function FloorPlanV2Workspace({
                     eventCategoryNames={eventCategoryNames}
                     className="min-h-0 flex-1 overflow-y-auto"
                   />
-                  {debugGeometry ? (
-                    <DiagnosticLogger
-                      doc={store.doc}
-                      placesApiStatus={placesApiStatus}
-                      sectionLabel="Log"
-                      className="shrink-0 lg:hidden"
-                    />
-                  ) : null}
                 </div>
               )}
             </div>

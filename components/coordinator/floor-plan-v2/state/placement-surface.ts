@@ -12,6 +12,7 @@ import {
   ensurePlacementOuterRing,
   pointInsideOuterRing,
 } from '@/lib/floor-plan/placement-ring-orientation'
+import { findRoomIdForPlacementPointBBox } from './geometry-sanitize'
 import { buildJoinedZone } from './room-joins'
 import { stripMacroPerimeterWallsFromDoc } from '../interactions/room-perimeter-sync'
 import { rotateObjectInRoom } from './rotate-room-frame'
@@ -262,18 +263,12 @@ export function resolveRoomPlacementSurface(
   return surface
 }
 
-/** Pick the topmost room whose placement surface contains `p`. */
+/** Pick the topmost room whose placement bounds contain `p`. */
 export function findRoomIdForPlacementPoint(
   doc: FloorPlanDoc,
   p: Point
 ): string | null {
-  const frames = (doc.rooms ?? []).filter((f) => !f.mergedIntoObjectId)
-  for (let i = frames.length - 1; i >= 0; i--) {
-    const f = frames[i]!
-    const surface = resolveRoomPlacementSurface(doc, f.id)
-    if (surface && pointInsidePlacementSurface(p, surface)) return f.id
-  }
-  return null
+  return findRoomIdForPlacementPointBBox(doc, p)
 }
 
 /** Geometric pivot for room rotation (union centroid, not stale AABB center). */

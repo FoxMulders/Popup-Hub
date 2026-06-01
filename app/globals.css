@@ -381,6 +381,24 @@
     width: 100%;
   }
 
+  /* Canvas receives pointer events; decorative overlays must not block placement */
+  #floor-plan-workspace .canvas-container svg.floor-plan-canvas-surface {
+    pointer-events: auto;
+  }
+
+  #floor-plan-workspace .canvas-overlay-layer {
+    pointer-events: none;
+  }
+
+  #floor-plan-workspace .canvas-overlay-layer [data-rotate-handle],
+  #floor-plan-workspace .canvas-overlay-layer [data-room-resize-handle] {
+    pointer-events: auto;
+  }
+
+  #floor-plan-workspace .diagnostic-sidebar {
+    pointer-events: auto;
+  }
+
   /* Native canvas editor fullscreen — hide site chrome */
   html.popup-hub-canvas-fullscreen .popup-hub-chrome-header,
   html.popup-hub-canvas-fullscreen .popup-hub-chrome-footer,

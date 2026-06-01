@@ -3,6 +3,7 @@
  * Source rooms are spliced out of `doc.rooms`; no `merged_zone` ghost object.
  */
 
+import { forceRecomputeGeometry } from './geometry-sanitize'
 import { mergeRoomsToUnion } from './room-union-merge'
 import { rebuildSpatialIndexForRoom } from './placement-surface'
 import type { FloorPlanDoc, RoomFrame } from './types'
@@ -23,8 +24,9 @@ export function destructiveMergeInDoc(
   if (!primaryRoomId || reason) {
     return { doc, mergedId: null, reason }
   }
-  rebuildSpatialIndexForRoom(next, primaryRoomId)
-  return { doc: next, mergedId: primaryRoomId }
+  const sanitized = forceRecomputeGeometry(next)
+  rebuildSpatialIndexForRoom(sanitized, primaryRoomId)
+  return { doc: sanitized, mergedId: primaryRoomId }
 }
 
 /** Legacy: clear `mergedIntoObjectId` binding and remove old `merged_zone` objects. */

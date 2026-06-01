@@ -1,11 +1,12 @@
 /**
- * Destructive boolean Merge: replace selected shapes with one `merged_zone`.
+ * Destructive boolean Merge: replace selected shapes with one `merged_zone` (simple AABB).
  */
 
 import {
-  ringsToLocalSpace,
-  unionPlacedObjectFootprints,
-} from '@/lib/floor-plan/shape-union'
+  clockwiseRectRing,
+  sanitizeMergedZone,
+  unionParticipantBounds,
+} from './geometry-sanitize'
 import type { FloorPlanDoc, MergedZoneObject, PlacedObject } from './types'
 
 /** Kinds eligible for geometric union (not booths — use room Join). */
@@ -41,19 +42,20 @@ export function mergeUnionSelectionInDoc(
     }
   }
 
-  const union = unionPlacedObjectFootprints(eligible)
-  if (!union || union.rings.length === 0) {
+  const union = unionParticipantBounds([], eligible)
+  if (!union) {
     return { doc, mergedId: null, reason: 'Could not compute a union path' }
   }
 
-  const { minX, minY, maxX, maxY } = union.aabb
-  const width = Math.max(doc.snapFt || 1, maxX - minX)
-  const height = Math.max(doc.snapFt || 1, maxY - minY)
+  const minX = union.minX
+  const minY = union.minY
+  const width = Math.max(doc.snapFt || 1, union.maxX - union.minX)
+  const height = Math.max(doc.snapFt || 1, union.maxY - union.minY)
   const primary = eligible[0]!
-  const localRings = ringsToLocalSpace(union.rings, minX, minY)
+  const localRing = clockwiseRectRing(0, 0, width, height).map(([x, y]) => [x, y])
 
   const mergedId = `obj-${crypto.randomUUID()}`
-  const merged: MergedZoneObject = {
+  const merged: MergedZoneObject = sanitizeMergedZone({
     id: mergedId,
     kind: 'merged_zone',
     x: minX,
@@ -62,11 +64,11 @@ export function mergeUnionSelectionInDoc(
     height,
     rotation: 0,
     label: primary.label,
-    rings: localRings,
+    rings: [localRing],
     fill: accentForPrimary(primary),
     stroke: '#1c1917',
     mergedFromIds: eligible.map((o) => o.id),
-  }
+  })
 
   const removeIds = new Set(eligible.map((o) => o.id))
   const objectRoom = { ...(doc.objectRoom ?? {}) }

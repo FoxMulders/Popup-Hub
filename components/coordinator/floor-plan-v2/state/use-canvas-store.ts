@@ -5,12 +5,12 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react'
+import { activeRoomFrames } from '../canvas/canvas-engine'
 import {
-  activeRoomFrames,
   ensureCanvasHasPlaceableRoom,
-  isValidPlacementLocation,
   makeDefaultMainHallFrame,
-} from '../canvas/canvas-engine'
+} from './canvas-init'
+import { forceRecomputeGeometry, isValidPlacementLocation } from './use-floor-plan-doc'
 import { useDebugLog } from '../debug/debug-log-context'
 import { serializeRooms } from '../debug/format-geometry-log'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from './types'
@@ -48,7 +48,7 @@ export interface CanvasStore extends FloorPlanDocStore {
 }
 
 export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
-  const store = useFloorPlanDoc(initial)
+  const store = useFloorPlanDoc(forceRecomputeGeometry(initial))
   const { addLog } = useDebugLog()
 
   const logState = useCallback(
@@ -71,12 +71,14 @@ export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
   const resetState = useCallback(() => {
     logState('resetState(): re-initializing to default Main Hall')
     const hall = makeDefaultMainHallFrame()
-    const next = ensureCanvasHasPlaceableRoom({
-      ...store.doc,
-      rooms: [hall],
-      objects: store.doc.objects.filter((o) => o.kind !== 'merged_zone'),
-      objectRoom: {},
-    })
+    const next = forceRecomputeGeometry(
+      ensureCanvasHasPlaceableRoom({
+        ...store.doc,
+        rooms: [hall],
+        objects: store.doc.objects.filter((o) => o.kind !== 'merged_zone'),
+        objectRoom: {},
+      })
+    )
     store.resetDoc(next)
     logState(`resetState() complete: ${serializeRooms(next)}`)
   }, [logState, store])

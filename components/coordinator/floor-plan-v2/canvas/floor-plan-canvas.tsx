@@ -543,6 +543,7 @@ export function FloorPlanCanvas({
       >
         <svg
           ref={surfaceRef}
+          className="floor-plan-canvas-surface"
           width={docWidthPx}
           height={docHeightPx}
           style={{
@@ -550,6 +551,7 @@ export function FloorPlanCanvas({
             left: padPx,
             top: padPx,
             display: 'block',
+            pointerEvents: 'auto',
             background: '#fafaf9',
             boxShadow: '0 0 0 1px #e7e5e4, 0 12px 28px rgba(28,25,23,0.08)',
             cursor,

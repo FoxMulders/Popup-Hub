@@ -20,14 +20,37 @@ import {
   stripMacroPerimeterWallsFromDoc,
   transformObjectsOnRoomResize,
 } from '../interactions/room-perimeter-sync'
+import type { Point } from '../interactions/geometry'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from './types'
 import { applyBoothObjectPatch } from './table-cluster-layout'
+import {
+  forceRecomputeGeometry,
+  isValidPlacementLocationBBox,
+} from './geometry-sanitize'
 import { mergeUnionSelectionInDoc } from './merge-selection-union'
 import {
   clearDestructiveMergeInDoc,
   destructiveMergeInDoc,
 } from './destructive-merge'
-import { ensureCanvasHasPlaceableRoom } from '../canvas/canvas-engine'
+import { ensureCanvasHasPlaceableRoom } from './canvas-init'
+
+export { forceRecomputeGeometry } from './geometry-sanitize'
+
+/**
+ * Placement gate — axis-aligned bounds on `doc.rooms` and `merged_zone` AABBs.
+ * (Ray-cast disabled until polygon winding is stable.)
+ */
+export function isValidPlacementLocation(
+  doc: FloorPlanDoc,
+  probeFt: Point,
+  obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
+): boolean {
+  const x = obj != null ? obj.x + obj.width / 2 : probeFt.x
+  const y = obj != null ? obj.y + obj.height / 2 : probeFt.y
+  const result = isValidPlacementLocationBBox(doc, probeFt, obj)
+  console.log(`[PlacementCheck] x:${x}, y:${y}, Result:${result}`)
+  return result
+}
 
 /**
  * useFloorPlanDoc — pure state hook for a v2 floor plan document.
@@ -416,6 +439,9 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
       if (patch.rooms !== undefined || (next.rooms ?? []).length === 0) {
         next = ensureCanvasHasPlaceableRoom(next)
       }
+      if (patch.rooms !== undefined) {
+        next = forceRecomputeGeometry(next)
+      }
       commit(next, pushHistory)
     },
     [commit]
@@ -711,7 +737,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         objectIds
       )
       if (!mergedId) return { mergedId: null, reason }
-      commit(next, pushHistory)
+      commit(forceRecomputeGeometry(next), pushHistory)
       if (select) setSelectedIds(new Set([mergedId]))
       return { mergedId }
     },
@@ -727,7 +753,7 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
         selection
       )
       if (!mergedId) return { mergedId: null, reason }
-      commit(finalizeDocGeometry(next), pushHistory)
+      commit(forceRecomputeGeometry(finalizeDocGeometry(next)), pushHistory)
       if (select) {
         setSelectedIds(new Set())
       }

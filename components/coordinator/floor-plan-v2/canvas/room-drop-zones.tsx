@@ -63,7 +63,7 @@ function RoomDropZonesBase({
   if (zones.length === 0) return null
 
   return (
-    <g aria-label="Room drop zones" pointerEvents="none">
+    <g aria-label="Room drop zones" className="canvas-overlay-layer" pointerEvents="none">
       <defs>
         {zones.map((z) => (
           <clipPath key={z.clipId} id={z.clipId}>

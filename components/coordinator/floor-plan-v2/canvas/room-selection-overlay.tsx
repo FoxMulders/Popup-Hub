@@ -40,7 +40,7 @@ export function RoomSelectionOverlay({
   const h = frame.lengthFt * pxPerFt
 
   return (
-    <g aria-hidden="true" pointerEvents="none">
+    <g aria-hidden="true" className="canvas-overlay-layer" pointerEvents="none">
       <rect
         x={x}
         y={y}
