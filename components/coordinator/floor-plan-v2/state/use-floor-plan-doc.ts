@@ -37,20 +37,13 @@ import { getSuppressAutoMainHall } from './canvas-session-guards'
 
 export { forceRecomputeGeometry } from './geometry-sanitize'
 
-/**
- * Placement gate — axis-aligned bounds on `doc.rooms` and `merged_zone` AABBs.
- * (Ray-cast disabled until polygon winding is stable.)
- */
+/** Placement gate — base `doc.rooms` polygons only (not merged_zone overlays). */
 export function isValidPlacementLocation(
   doc: FloorPlanDoc,
   probeFt: Point,
   obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
 ): boolean {
-  const x = obj != null ? obj.x + obj.width / 2 : probeFt.x
-  const y = obj != null ? obj.y + obj.height / 2 : probeFt.y
-  const result = isValidPlacementLocationBBox(doc, probeFt, obj)
-  console.log(`[PlacementCheck] x:${x}, y:${y}, Result:${result}`)
-  return result
+  return isValidPlacementLocationBBox(doc, probeFt, obj)
 }
 
 /**

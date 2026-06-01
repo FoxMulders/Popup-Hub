@@ -1,6 +1,6 @@
 /**
- * Placement surfaces — union perimeters for drop validation and room rotation.
- * Uses merged_zone rings / join-group unions instead of historic rectangular frames.
+ * Placement surfaces — room frame polygons and join-group unions for rotation/framing.
+ * Booth placement validation uses base `doc.rooms` only (see `is-point-in-room.ts`).
  */
 
 import {
@@ -188,29 +188,6 @@ export function resolveRoomPlacementSurface(
 
   if (frame.perimeterRing && frame.perimeterRing.length >= 3) {
     const outerRings = [frame.perimeterRing as PlacementRing]
-    const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
-    const surface: PlacementSurface = {
-      roomId,
-      outerRings,
-      centroid,
-      minX,
-      minY,
-      maxX,
-      maxY,
-    }
-    cache.set(roomId, surface)
-    return surface
-  }
-
-  const mergedZoneForRoom = doc.objects.find(
-    (o): o is MergedZoneObject =>
-      o.kind === 'merged_zone' &&
-      (o.sourceRoomIds?.includes(roomId) ||
-        doc.objectRoom?.[o.id] === roomId ||
-        frame.mergedIntoObjectId === o.id)
-  )
-  if (mergedZoneForRoom && mergedZoneForRoom.rings.length > 0) {
-    const outerRings = mergedZoneGlobalRings(mergedZoneForRoom)
     const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
     const surface: PlacementSurface = {
       roomId,

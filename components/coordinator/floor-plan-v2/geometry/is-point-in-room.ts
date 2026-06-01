@@ -65,3 +65,32 @@ export function isPointInRoomForObject(
   const cy = obj.y + obj.height / 2
   return isPointInRoom(doc, cx, cy, roomId)
 }
+
+/** All room frames in the doc — used for placement (ignores merged_zone overlays). */
+export function basePlacementRooms(doc: FloorPlanDoc): RoomFrame[] {
+  return doc.rooms ?? []
+}
+
+/** Topmost base room whose polygon contains `p` (no merged_zone). */
+export function findRoomIdForPlacementPoint(
+  doc: FloorPlanDoc,
+  p: { x: number; y: number }
+): string | null {
+  const rooms = basePlacementRooms(doc)
+  for (let i = rooms.length - 1; i >= 0; i--) {
+    const frame = rooms[i]!
+    if (pointInRoomRings(p, roomRings(frame))) return frame.id
+  }
+  return null
+}
+
+/** True when `p` lies inside any base room polygon. */
+export function isValidPlacementPoint(
+  doc: FloorPlanDoc,
+  p: { x: number; y: number }
+): boolean {
+  for (const frame of basePlacementRooms(doc)) {
+    if (pointInRoomRings(p, roomRings(frame))) return true
+  }
+  return false
+}

@@ -2,6 +2,10 @@
  * Geometry sanitization — simple axis-aligned rooms/zones until clipper paths stabilize.
  */
 
+import {
+  findRoomIdForPlacementPoint as findRoomIdInBaseRooms,
+  isValidPlacementPoint,
+} from '../geometry/is-point-in-room'
 import { openRingVertices } from '../geometry/point-in-polygon'
 import { rotatedAabb, type Point } from '../interactions/geometry'
 import type {
@@ -172,44 +176,14 @@ export function isValidPlacementLocationBBox(
     obj != null
       ? { x: obj.x + obj.width / 2, y: obj.y + obj.height / 2 }
       : probeFt
-
-  for (const frame of doc.rooms ?? []) {
-    if (frame.mergedIntoObjectId) continue
-    if (pointInsideBounds(p, roomFrameBounds(frame))) return true
-  }
-
-  for (const o of doc.objects) {
-    if (o.kind !== 'merged_zone') continue
-    const mz = o as MergedZoneObject
-    if (pointInsideBounds(p, mergedZoneGlobalBounds(mz))) return true
-  }
-
-  return false
+  return isValidPlacementPoint(doc, p)
 }
 
 export function findRoomIdForPlacementPointBBox(
   doc: FloorPlanDoc,
   p: Point
 ): string | null {
-  const frames = (doc.rooms ?? []).filter((f) => !f.mergedIntoObjectId)
-  for (let i = frames.length - 1; i >= 0; i--) {
-    const f = frames[i]!
-    if (pointInsideBounds(p, roomFrameBounds(f))) return f.id
-  }
-
-  for (let i = doc.objects.length - 1; i >= 0; i--) {
-    const o = doc.objects[i]!
-    if (o.kind !== 'merged_zone') continue
-    const mz = o as MergedZoneObject
-    if (!pointInsideBounds(p, mergedZoneGlobalBounds(mz))) continue
-    const roomId =
-      mz.sourceRoomIds?.[0] ??
-      doc.objectRoom?.[mz.id] ??
-      null
-    if (roomId) return roomId
-  }
-
-  return null
+  return findRoomIdInBaseRooms(doc, p)
 }
 
 export function unionParticipantBounds(
