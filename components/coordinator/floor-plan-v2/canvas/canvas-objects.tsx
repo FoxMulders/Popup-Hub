@@ -50,6 +50,11 @@ interface CanvasObjectsProps {
   eventCategoryNames?: ReadonlyArray<string>
   /** Room frames — used to detect dissolved perimeter join groups. */
   rooms?: ReadonlyArray<{ joinGroupId?: string }>
+  /**
+   * Split render pass — `merged_zone` is painted under room frames and
+   * furniture when the host mounts two instances.
+   */
+  renderLayer?: 'all' | 'merged_zone' | 'placable'
 }
 
 function fillForObject(
@@ -416,6 +421,7 @@ function CanvasObjectsBase({
   editingObjectId,
   eventCategoryNames,
   rooms,
+  renderLayer = 'all',
 }: CanvasObjectsProps) {
   const dissolvedJoinGroupIds = useMemo(() => {
     const counts = new Map<string, number>()
@@ -444,23 +450,47 @@ function CanvasObjectsBase({
     return out
   }, [macroPerimeterGroups])
 
+  const { mergedZoneObjects, placableObjects } = useMemo(() => {
+    const merged: MergedZoneObject[] = []
+    const placable: PlacedObject[] = []
+    for (const obj of objects) {
+      if (obj.kind === 'merged_zone') {
+        merged.push(obj as MergedZoneObject)
+      } else {
+        placable.push(obj)
+      }
+    }
+    return { mergedZoneObjects: merged, placableObjects: placable }
+  }, [objects])
+
+  const showMergedLayer = renderLayer === 'all' || renderLayer === 'merged_zone'
+  const showPlacableLayer = renderLayer === 'all' || renderLayer === 'placable'
+
   return (
     <g>
-      {boothPlacementStatusByObjectId ? <BoothStatusPatterns /> : null}
-      {objects.map((obj) => {
-        if (obj.kind === 'merged_zone') {
-          return (
+      {showPlacableLayer && boothPlacementStatusByObjectId ? (
+        <BoothStatusPatterns />
+      ) : null}
+      {showMergedLayer ? (
+        <g
+          className="canvas-merged-zone-layer canvas-overlay-layer"
+          pointerEvents="none"
+          aria-hidden={mergedZoneObjects.length > 0 ? undefined : true}
+        >
+          {mergedZoneObjects.map((obj) => (
             <MergedZoneNode
               key={obj.id}
-              obj={obj as MergedZoneObject}
+              obj={obj}
               pxPerFt={pxPerFt}
               isSelected={selectedIds.has(obj.id)}
               isOverlapping={overlappingIds?.has(obj.id) ?? false}
               showLabels={showLabels}
             />
-          )
-        }
-
+          ))}
+        </g>
+      ) : null}
+      {showPlacableLayer
+        ? placableObjects.map((obj) => {
         const x = obj.x * pxPerFt
         const y = obj.y * pxPerFt
         const w = obj.width * pxPerFt
@@ -710,8 +740,9 @@ function CanvasObjectsBase({
               : null}
           </g>
         )
-      })}
-      {showLabels
+      })
+        : null}
+      {showPlacableLayer && showLabels
         ? macroPerimeterGroups.map((group, idx) => (
             <g key={`perimeter-label-${idx}`}>
               {renderGlobalPerimeterLabel(group, pxPerFt)}
@@ -936,6 +967,9 @@ function MergedZoneNode({
       data-object-id={obj.id}
       data-kind="merged_zone"
       data-locked={obj.locked ? 'true' : 'false'}
+      className="merged-zone-decorative"
+      pointerEvents="none"
+      style={{ pointerEvents: 'none' }}
     >
       <path
         d={pathD}
@@ -946,10 +980,8 @@ function MergedZoneNode({
         strokeLinejoin="miter"
         strokeLinecap="square"
         shapeRendering="geometricPrecision"
-        pointerEvents="all"
-        data-room-stroke="true"
-        data-room-id={obj.sourceRoomIds?.[0] ?? obj.id}
-        style={{ cursor: 'grab' }}
+        pointerEvents="none"
+        style={{ pointerEvents: 'none' }}
       />
       {showLabels && obj.label ? (
         <text

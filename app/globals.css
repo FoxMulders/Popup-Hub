@@ -392,8 +392,11 @@
     pointer-events: auto;
   }
 
-  #floor-plan-workspace .canvas-overlay-layer {
-    pointer-events: none;
+  #floor-plan-workspace .canvas-overlay-layer,
+  #floor-plan-workspace .canvas-merged-zone-layer,
+  #floor-plan-workspace .merged-zone-decorative,
+  #floor-plan-workspace [data-kind='merged_zone'] {
+    pointer-events: none !important;
   }
 
   #floor-plan-workspace .canvas-overlay-layer [data-rotate-handle],

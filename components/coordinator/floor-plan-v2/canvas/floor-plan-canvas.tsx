@@ -499,6 +499,14 @@ export function FloorPlanCanvas({
     [onVendorDrop]
   )
 
+  const warnOverlayCapture = useCallback((target: EventTarget | null) => {
+    if (!target || !(target instanceof Element)) return
+    const overlay = target.closest('[data-kind="merged_zone"]')
+    if (overlay) {
+      console.warn('Click captured by overlay:', target)
+    }
+  }, [])
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       if (!onVendorDrop) return
@@ -552,6 +560,7 @@ export function FloorPlanCanvas({
             top: padPx,
             display: 'block',
             pointerEvents: 'auto',
+            zIndex: 1,
             background: '#fafaf9',
             boxShadow: '0 0 0 1px #e7e5e4, 0 12px 28px rgba(28,25,23,0.08)',
             cursor,
@@ -569,7 +578,11 @@ export function FloorPlanCanvas({
             e.preventDefault()
             e.stopPropagation()
           }}
+          onMouseDownCapture={(e) => {
+            warnOverlayCapture(e.target)
+          }}
           onPointerDown={(e) => {
+            warnOverlayCapture(e.target)
             e.preventDefault()
             pointer.onPointerDown(e)
           }}
@@ -591,6 +604,18 @@ export function FloorPlanCanvas({
             pxPerFt={pxPerFt}
             activeRoomId={activeRoomId ?? null}
           />
+          <CanvasObjects
+            objects={store.doc.objects}
+            rooms={store.doc.rooms}
+            selectedIds={store.selectedIds}
+            pxPerFt={pxPerFt}
+            showLabels={showLabels}
+            overlappingIds={overlappingIds}
+            editingObjectId={editingObjectId}
+            eventCategoryNames={eventCategoryNames}
+            boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+            renderLayer="merged_zone"
+          />
           {activeRoomFrames(store.doc).length > 0 ? (
             <RoomFrames
               frames={activeRoomFrames(store.doc)}
@@ -611,6 +636,7 @@ export function FloorPlanCanvas({
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+            renderLayer="placable"
           />
           {toolState.tool === 'select' ? (
             <SelectionOverlay
