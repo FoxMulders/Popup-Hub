@@ -390,27 +390,13 @@
     top: 0;
     left: 0;
     width: 100vw;
-    height: calc(100vh - var(--canvas-diagnostic-footer-h, 2.75rem));
+    height: 100vh;
     z-index: 9998;
-    max-height: calc(100vh - var(--canvas-diagnostic-footer-h, 2.75rem));
+    max-height: 100vh;
   }
 
   html.popup-hub-canvas-fullscreen .canvas-editor-header {
     display: none !important;
-  }
-
-  #floor-plan-workspace .canvas-diagnostic-footer {
-    --canvas-diagnostic-footer-h: 2.75rem;
-    z-index: 9999;
-  }
-
-  html.popup-hub-canvas-fullscreen
-    #floor-plan-workspace
-    .canvas-diagnostic-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
   }
 
   html.command-center-canvas-fullscreen .dashboard-booth-matrix-panel {

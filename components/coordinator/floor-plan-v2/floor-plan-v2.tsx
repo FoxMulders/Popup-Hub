@@ -30,8 +30,7 @@ import {
   unionActiveRoomBounds,
 } from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
-import { CanvasDiagnosticFooter } from './debug/canvas-diagnostic-footer'
-import { DebugLogConsole } from './debug/debug-log-console'
+import { DiagnosticLogger } from './debug/diagnostic-logger'
 import { PlacesApiStatusProvider, usePlacesApiStatus } from './debug/places-api-status-context'
 import { FullscreenLayout } from './canvas/fullscreen-layout'
 import { DebugLogProvider, useDebugLog } from './debug/debug-log-context'
@@ -245,7 +244,6 @@ export function FloorPlanV2(props: FloorPlanV2Props) {
     <DebugLogProvider>
       <PlacesApiStatusProvider>
         <FloorPlanV2Workspace {...props} debugGeometry={debugGeometry} />
-        <DebugLogConsole enabled={debugGeometry} />
       </PlacesApiStatusProvider>
     </DebugLogProvider>
   )
@@ -277,6 +275,7 @@ function FloorPlanV2Workspace({
   onStoreReady,
   onSelectionChange,
   onVendorDrop,
+  debugGeometry = true,
 }: FloorPlanV2Props) {
   // Initial unified doc — seed from server-loaded rooms first; if a
   // fresher crash-recovery draft exists in localStorage for this
@@ -1964,9 +1963,16 @@ function FloorPlanV2Workspace({
             </div>
           ) : null}
         </div>
+        {isDashboard && debugGeometry ? (
+          <DiagnosticLogger
+            doc={store.doc}
+            placesApiStatus={placesApiStatus}
+            sectionLabel="Diagnostics"
+            className="shrink-0 border-stone-200"
+          />
+        ) : null}
         </div>
       </FullscreenLayout>
-      <CanvasDiagnosticFooter doc={store.doc} placesApiStatus={placesApiStatus} />
     </div>
   )
 }

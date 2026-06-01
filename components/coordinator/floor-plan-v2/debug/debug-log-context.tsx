@@ -53,6 +53,37 @@ export function DebugLogProvider({ children }: { children: ReactNode }) {
     [addLog, clearLogs, logError, logs]
   )
 
+  useEffect(() => {
+    const onError = (event: ErrorEvent) => {
+      addLog(`window.error: ${event.message}`)
+    }
+    const onRejection = (event: PromiseRejectionEvent) => {
+      const reason =
+        event.reason instanceof Error
+          ? event.reason.message
+          : String(event.reason ?? 'unknown')
+      addLog(`unhandledrejection: ${reason}`)
+    }
+    const origWarn = console.warn
+    const origError = console.error
+    console.warn = (...args: unknown[]) => {
+      addLog(`console.warn: ${args.map((a) => String(a)).join(' ')}`)
+      origWarn.apply(console, args)
+    }
+    console.error = (...args: unknown[]) => {
+      addLog(`console.error: ${args.map((a) => String(a)).join(' ')}`)
+      origError.apply(console, args)
+    }
+    window.addEventListener('error', onError)
+    window.addEventListener('unhandledrejection', onRejection)
+    return () => {
+      window.removeEventListener('error', onError)
+      window.removeEventListener('unhandledrejection', onRejection)
+      console.warn = origWarn
+      console.error = origError
+    }
+  }, [addLog])
+
   return (
     <DebugLogContext.Provider value={value}>{children}</DebugLogContext.Provider>
   )
