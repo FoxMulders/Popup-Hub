@@ -147,8 +147,8 @@ export function DiagnosticSidebar({
           Clear All &amp; Reset
         </button>
         <p className="m-0 font-sans text-[9px] leading-snug text-stone-500">
-          Lines in red have more than 4 vertices. Reset rebuilds a simple Main
-          Hall. Console: <code className="text-stone-400">[PlacementCheck]</code>
+          Lines in red have more than 4 vertices. Clear All hard-resets the
+          canvas. Console: <code className="text-stone-400">[PlacementCheck]</code>
         </p>
       </footer>
     </aside>

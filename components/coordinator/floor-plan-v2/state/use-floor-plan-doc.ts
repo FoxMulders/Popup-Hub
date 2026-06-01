@@ -33,6 +33,7 @@ import {
   destructiveMergeInDoc,
 } from './destructive-merge'
 import { ensureCanvasHasPlaceableRoom } from './canvas-init'
+import { getSuppressAutoMainHall } from './canvas-session-guards'
 
 export { forceRecomputeGeometry } from './geometry-sanitize'
 
@@ -436,7 +437,10 @@ export function useFloorPlanDoc(initial: FloorPlanDoc): FloorPlanDocStore {
     (patch, options) => {
       const pushHistory = options?.pushHistory ?? true
       let next: FloorPlanDoc = { ...docRef.current, ...patch }
-      if (patch.rooms !== undefined || (next.rooms ?? []).length === 0) {
+      if (
+        !getSuppressAutoMainHall() &&
+        (patch.rooms !== undefined || (next.rooms ?? []).length === 0)
+      ) {
         next = ensureCanvasHasPlaceableRoom(next)
       }
       if (patch.rooms !== undefined) {

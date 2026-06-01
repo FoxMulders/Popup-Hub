@@ -54,6 +54,7 @@ import {
   loadMultiRoomDraft,
   saveMultiRoomDraft,
 } from './state/local-draft'
+import { getSuppressAutoMainHall } from './state/canvas-session-guards'
 import {
   docNeedsGeometrySanitize,
   forceRecomputeGeometry,
@@ -504,10 +505,12 @@ function FloorPlanV2Workspace({
     setSelectedRoomIds(new Set([activeRoomId]))
   }, [activeRoomId, layoutRoomIdsKey, layoutRooms])
 
-  const resetToMainHall = useCallback(() => {
+  const hardResetCanvas = useCallback(() => {
     store.resetState()
+    setSelectedRoomIds(new Set())
+    setSelectedRoomId(null)
     resetCanvasViewport()
-    logState('resetToMainHall(): default 50×50′ Main Hall injected')
+    logState('hardResetCanvas(): blank canvas — auto Main Hall disabled for session')
   }, [logState, resetCanvasViewport, store])
 
   useEffect(() => {
@@ -520,9 +523,11 @@ function FloorPlanV2Workspace({
   }, [])
 
   useEffect(() => {
+    if (getSuppressAutoMainHall()) return
     if ((store.doc.rooms ?? []).length === 0) {
-      logState('doc.rooms empty on mount — resetToMainHall()')
-      resetToMainHall()
+      logState('doc.rooms empty on mount — seedMainHall()')
+      store.seedMainHall()
+      resetCanvasViewport()
       return
     }
     const active = (store.doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId)
@@ -537,7 +542,7 @@ function FloorPlanV2Workspace({
       { pushHistory: false }
     )
     resetCanvasViewport()
-  }, [logState, resetCanvasViewport, resetToMainHall, store])
+  }, [logState, resetCanvasViewport, store])
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
   const highlightedRoomMetrics = useMemo(() => {
@@ -642,20 +647,9 @@ function FloorPlanV2Workspace({
   }, [])
 
   const handleClearAll = useCallback(() => {
-    const activeId = activeRoomId
-    const objectRoom = store.doc.objectRoom ?? {}
-    const remaining = store.doc.objects.filter((o) => {
-      if (objectRoom[o.id] && objectRoom[o.id] !== activeId) return true
-      if (o.locked === true) return true
-      return false
-    })
-    store.replaceObjects(remaining)
-    store.clearSelection()
-    setSelectedRoomIds(new Set())
-    setSelectedRoomId(null)
-    resetCanvasViewport()
-    toast.success('Active room cleared')
-  }, [activeRoomId, resetCanvasViewport, store])
+    hardResetCanvas()
+    toast.success('Canvas cleared — draw or add a room to continue')
+  }, [hardResetCanvas])
 
   const handleDeleteSelected = useCallback(() => {
     const ids = Array.from(store.selectedIds)
@@ -1756,7 +1750,7 @@ function FloorPlanV2Workspace({
       )}
     >
       {debugGeometry ? (
-        <DiagnosticSidebar doc={store.doc} onClearAndReset={resetToMainHall} />
+        <DiagnosticSidebar doc={store.doc} onClearAndReset={hardResetCanvas} />
       ) : null}
       <FullscreenLayout
         active={canvasFullscreen}

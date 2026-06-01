@@ -10,6 +10,10 @@ import {
   ensureCanvasHasPlaceableRoom,
   makeDefaultMainHallFrame,
 } from './canvas-init'
+import {
+  getSuppressAutoMainHall,
+  setSuppressAutoMainHall,
+} from './canvas-session-guards'
 import { forceRecomputeGeometry, isValidPlacementLocation } from './use-floor-plan-doc'
 import { useDebugLog } from '../debug/debug-log-context'
 import { serializeRooms } from '../debug/format-geometry-log'
@@ -30,6 +34,18 @@ function roomsGeometryValid(rooms: RoomFrame[] | undefined): boolean {
   )
 }
 
+function buildMainHallDoc(base: FloorPlanDoc): FloorPlanDoc {
+  const hall = makeDefaultMainHallFrame()
+  return forceRecomputeGeometry(
+    ensureCanvasHasPlaceableRoom({
+      ...base,
+      rooms: [hall],
+      objects: [],
+      objectRoom: {},
+    })
+  )
+}
+
 export interface CanvasStore extends FloorPlanDocStore {
   /** Active, non-ghost room frames from `doc.rooms`. */
   rooms: RoomFrame[]
@@ -41,10 +57,12 @@ export interface CanvasStore extends FloorPlanDocStore {
     obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
   ) => boolean
   /**
-   * Recover from corrupt/empty geometry — 50×50′ Main Hall at origin,
-   * zoom-safe doc extents, cleared ghosts.
+   * Hard reset — clears `rooms`, `objects`, and `objectRoom`.
+   * Sets a session flag so auto Main Hall injection stays off until reload.
    */
   resetState: () => void
+  /** Bootstrap a default 50×50′ Main Hall (auto-init only). */
+  seedMainHall: () => void
 }
 
 export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
@@ -69,43 +87,50 @@ export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
   )
 
   const resetState = useCallback(() => {
-    logState('resetState(): re-initializing to default Main Hall')
-    const hall = makeDefaultMainHallFrame()
-    const next = forceRecomputeGeometry(
-      ensureCanvasHasPlaceableRoom({
-        ...store.doc,
-        rooms: [hall],
-        objects: store.doc.objects.filter((o) => o.kind !== 'merged_zone'),
-        objectRoom: {},
-      })
-    )
+    setSuppressAutoMainHall(true)
+    logState('resetState(): hard clear — rooms[], objects[], objectRoom{}')
+    const next: FloorPlanDoc = forceRecomputeGeometry({
+      ...store.doc,
+      rooms: [],
+      objects: [],
+      objectRoom: {},
+    })
     store.resetDoc(next)
-    logState(`resetState() complete: ${serializeRooms(next)}`)
+    logState('resetState() complete: blank canvas (auto Main Hall suppressed)')
+  }, [logState, store])
+
+  const seedMainHall = useCallback(() => {
+    logState('seedMainHall(): injecting default 50×50′ Main Hall')
+    const next = buildMainHallDoc(store.doc)
+    store.resetDoc(next)
+    logState(`seedMainHall() complete: ${serializeRooms(next)}`)
   }, [logState, store])
 
   useEffect(() => {
+    if (getSuppressAutoMainHall()) return
     if (activeRoomFrames(store.doc).length === 0) {
-      logState('doc.rooms empty on load — injecting default Main Hall')
-      resetState()
+      logState('doc.rooms empty on load — seedMainHall()')
+      seedMainHall()
       return
     }
     if (!roomsGeometryValid(store.doc.rooms)) {
-      logState('Invalid doc.rooms detected — running resetState()')
-      resetState()
+      logState('Invalid doc.rooms on load — seedMainHall()')
+      seedMainHall()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
+    if (getSuppressAutoMainHall()) return
     const active = activeRoomFrames(store.doc)
     if (active.length === 0) {
-      logState('doc.rooms became empty — running resetState()')
-      resetState()
+      logState('doc.rooms became empty — seedMainHall()')
+      seedMainHall()
     } else if (!roomsGeometryValid(active)) {
-      logState('Invalid doc.rooms detected — running resetState()')
-      resetState()
+      logState('Invalid doc.rooms detected — seedMainHall()')
+      seedMainHall()
     }
-  }, [logState, resetState, store.doc])
+  }, [logState, seedMainHall, store.doc])
 
   return {
     ...store,
@@ -113,5 +138,6 @@ export function useCanvasStore(initial: FloorPlanDoc): CanvasStore {
     logState,
     validatePlacement,
     resetState,
+    seedMainHall,
   }
 }

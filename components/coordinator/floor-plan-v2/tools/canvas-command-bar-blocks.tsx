@@ -203,7 +203,7 @@ export function renderCanvasCommandBarBlock(
             </CommandButton>
             <CommandButton
               onClick={ctx.onClearAll}
-              title="Clear all objects in active room"
+              title="Hard reset — clear all rooms and objects"
               label="Clear all"
               className="text-rose-700 hover:bg-rose-50"
             >

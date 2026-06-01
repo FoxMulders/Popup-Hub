@@ -522,7 +522,7 @@ export function FloorPlanCanvas({
       id={FLOOR_PLAN_CANVAS_ID}
       ref={scrollRef}
       className={cn(
-        'canvas-container relative h-full w-full overflow-auto bg-stone-100 outline-none',
+        'canvas-container pointer-events-auto relative h-full w-full overflow-auto bg-stone-100 outline-none',
         commandCenterViewport && 'bg-stone-100',
         className
       )}

@@ -382,6 +382,12 @@
   }
 
   /* Canvas receives pointer events; decorative overlays must not block placement */
+  #floor-plan-workspace .canvas-editor-root,
+  #floor-plan-workspace .floor-plan-canvas-host,
+  #floor-plan-workspace .canvas-container {
+    pointer-events: auto;
+  }
+
   #floor-plan-workspace .canvas-container svg.floor-plan-canvas-surface {
     pointer-events: auto;
   }
