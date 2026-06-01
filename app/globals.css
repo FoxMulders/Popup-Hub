@@ -361,6 +361,11 @@
     overflow: hidden;
   }
 
+  /* Layout canvas owns the viewport — hide marketing site footer */
+  body[data-layout-canvas='true'] .popup-hub-chrome-footer {
+    display: none !important;
+  }
+
   #floor-plan-workspace .floor-plan-canvas-host {
     position: relative;
     min-height: 0;

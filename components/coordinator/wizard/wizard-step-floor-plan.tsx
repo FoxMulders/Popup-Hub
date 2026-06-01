@@ -85,7 +85,7 @@ export function WizardStepFloorPlan({
         />
       }
       footer={
-        <div className="px-3 py-2 sm:px-4">
+        <div className="px-3 py-1 sm:px-4">
           <WizardNav step={3} onBack={onBack} nextDisabled={navDisabled} />
         </div>
       }

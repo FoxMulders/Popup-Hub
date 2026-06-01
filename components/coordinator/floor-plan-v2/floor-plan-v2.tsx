@@ -31,6 +31,7 @@ import {
 } from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
 import { DiagnosticLogger } from './debug/diagnostic-logger'
+import { DiagnosticLoggerPortal } from './debug/diagnostic-logger-portal'
 import { PlacesApiStatusProvider, usePlacesApiStatus } from './debug/places-api-status-context'
 import { FullscreenLayout } from './canvas/fullscreen-layout'
 import { DebugLogProvider, useDebugLog } from './debug/debug-log-context'
@@ -1739,6 +1740,12 @@ function FloorPlanV2Workspace({
         className="min-h-0 min-w-0 flex-1"
       >
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+        {debugGeometry && isEmbedded ? (
+          <DiagnosticLoggerPortal
+            doc={store.doc}
+            placesApiStatus={placesApiStatus}
+          />
+        ) : null}
         {isDashboard ? (
           <CanvasCommandBar
             staticLayout
@@ -1803,6 +1810,14 @@ function FloorPlanV2Workspace({
             saveMarketLoading={saveMarketLoading}
           />
         ) : null}
+        {debugGeometry && isDashboard ? (
+          <DiagnosticLogger
+            doc={store.doc}
+            placesApiStatus={placesApiStatus}
+            sectionLabel="Diagnostics"
+            className="mx-1 shrink-0"
+          />
+        ) : null}
         {!isDashboard ? (
           <CanvasCommandBar
             toolState={{ tool, drawShape }}
@@ -1863,6 +1878,14 @@ function FloorPlanV2Workspace({
             onSaveMarket={onSaveMarket}
             saveMarketDisabled={saveMarketDisabled}
             saveMarketLoading={saveMarketLoading}
+          />
+        ) : null}
+        {debugGeometry && !isDashboard ? (
+          <DiagnosticLogger
+            doc={store.doc}
+            placesApiStatus={placesApiStatus}
+            sectionLabel="Section 2"
+            className="mx-1 shrink-0 lg:hidden"
           />
         ) : null}
 
@@ -1943,7 +1966,7 @@ function FloorPlanV2Workspace({
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               ) : (
-                <div className="relative w-[min(100%,260px)]">
+                <div className="relative flex h-full max-h-full w-[min(100%,260px)] min-h-0 flex-col">
                   <button
                     type="button"
                     onClick={() => setRightInspectorOpen(false)}
@@ -1956,21 +1979,21 @@ function FloorPlanV2Workspace({
                   <PropertyInspector
                     store={store}
                     eventCategoryNames={eventCategoryNames}
-                    className="h-full max-h-full overflow-y-auto"
+                    className="min-h-0 flex-1 overflow-y-auto"
                   />
+                  {debugGeometry ? (
+                    <DiagnosticLogger
+                      doc={store.doc}
+                      placesApiStatus={placesApiStatus}
+                      sectionLabel="Log"
+                      className="shrink-0 lg:hidden"
+                    />
+                  ) : null}
                 </div>
               )}
             </div>
           ) : null}
         </div>
-        {isDashboard && debugGeometry ? (
-          <DiagnosticLogger
-            doc={store.doc}
-            placesApiStatus={placesApiStatus}
-            sectionLabel="Diagnostics"
-            className="shrink-0 border-stone-200"
-          />
-        ) : null}
         </div>
       </FullscreenLayout>
     </div>

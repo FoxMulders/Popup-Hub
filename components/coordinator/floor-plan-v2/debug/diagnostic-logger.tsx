@@ -142,12 +142,12 @@ export function DiagnosticLogger({
 
       {expanded ? (
         <div
-          className="max-h-[2rem] overflow-y-auto overflow-x-hidden border-t border-stone-800/60 px-1.5 py-0.5"
+          className="max-h-[3rem] min-h-[1.25rem] overflow-y-auto overflow-x-hidden border-t border-stone-800/60 px-1.5 py-0.5"
           role="log"
           aria-live="polite"
           aria-relevant="additions"
         >
-          <pre className="whitespace-pre-wrap break-all text-[7.5px] leading-[1.12] text-stone-500">
+          <pre className="whitespace-pre-wrap break-all text-[8px] leading-[1.2] text-stone-400">
             {recentLogText || 'Waiting for geometry events…'}
           </pre>
         </div>

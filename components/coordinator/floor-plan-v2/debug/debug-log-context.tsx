@@ -24,7 +24,9 @@ export interface DebugLogContextValue {
 const DebugLogContext = createContext<DebugLogContextValue | null>(null)
 
 export function DebugLogProvider({ children }: { children: ReactNode }) {
-  const [logs, setLogs] = useState<string[]>([])
+  const [logs, setLogs] = useState<string[]>(() => [
+    `[${new Date().toLocaleTimeString()}] Debug log ready`,
+  ])
 
   const addLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString()

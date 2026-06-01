@@ -67,6 +67,11 @@ export function LayoutPlannerShell({
             {stats ? (
               <div className="shrink-0 border-t border-stone-200/70 p-3">{stats}</div>
             ) : null}
+            <div
+              id="layout-planner-debug-slot"
+              className="shrink-0 border-t border-stone-200/70 p-2 empty:hidden"
+              aria-label="Section 2 diagnostic log mount"
+            />
           </aside>
         ) : null}
 
@@ -78,7 +83,16 @@ export function LayoutPlannerShell({
         </main>
       </div>
 
-      {footer ? <footer className="shrink-0 border-t border-stone-200/70 bg-card/60">{footer}</footer> : null}
+      {footer ? (
+        <footer
+          className={cn(
+            'shrink-0 border-t border-stone-200/70 bg-card/60',
+            mode === 'wizard' && 'py-1'
+          )}
+        >
+          {footer}
+        </footer>
+      ) : null}
     </div>
   )
 }
