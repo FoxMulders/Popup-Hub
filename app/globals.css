@@ -385,22 +385,32 @@
     display: none !important;
   }
 
-  html.popup-hub-canvas-fullscreen .canvas-container {
+  html.popup-hub-canvas-fullscreen #floor-plan-workspace .canvas-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: calc(100vh - var(--canvas-diagnostic-footer-h, 2.75rem));
     z-index: 9998;
-    max-height: 100vh;
+    max-height: calc(100vh - var(--canvas-diagnostic-footer-h, 2.75rem));
   }
 
   html.popup-hub-canvas-fullscreen .canvas-editor-header {
     display: none !important;
   }
 
-  html.popup-hub-canvas-fullscreen .canvas-diagnostic-footer {
-    display: flex !important;
+  #floor-plan-workspace .canvas-diagnostic-footer {
+    --canvas-diagnostic-footer-h: 2.75rem;
+    z-index: 9999;
+  }
+
+  html.popup-hub-canvas-fullscreen
+    #floor-plan-workspace
+    .canvas-diagnostic-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
   }
 
   html.command-center-canvas-fullscreen .dashboard-booth-matrix-panel {

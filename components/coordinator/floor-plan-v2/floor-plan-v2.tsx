@@ -1728,7 +1728,7 @@ function FloorPlanV2Workspace({
     <div
       id="floor-plan-workspace"
       className={cn(
-        'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pb-28',
+        'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
         className
       )}
     >
@@ -1737,7 +1737,7 @@ function FloorPlanV2Workspace({
         onActiveChange={(next) => setCanvasFullscreen(next)}
         header={layoutHeader}
         fullscreenToolbar={fullscreenExitToolbar}
-        className="min-h-0 flex-1"
+        className="min-h-0 min-w-0 flex-1"
       >
         <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
         {isDashboard ? (
@@ -1965,8 +1965,8 @@ function FloorPlanV2Workspace({
           ) : null}
         </div>
         </div>
-        <CanvasDiagnosticFooter doc={store.doc} placesApiStatus={placesApiStatus} />
       </FullscreenLayout>
+      <CanvasDiagnosticFooter doc={store.doc} placesApiStatus={placesApiStatus} />
     </div>
   )
 }

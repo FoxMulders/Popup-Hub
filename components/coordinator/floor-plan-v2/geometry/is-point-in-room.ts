@@ -2,8 +2,8 @@
  * Room polygon hit-testing — the only valid placement surface.
  */
 
+import { pointInsideOuterRing } from '@/lib/floor-plan/placement-ring-orientation'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from '../state/types'
-import { pointInAnyRing } from './point-in-polygon'
 import { frameToRing } from '../state/placement-surface'
 
 function roomRings(
@@ -13,6 +13,17 @@ function roomRings(
     return [frame.perimeterRing]
   }
   return [frameToRing(frame)]
+}
+
+/** Same winding test as `findRoomIdForPlacementPoint` / placement surfaces. */
+function pointInRoomRings(
+  p: { x: number; y: number },
+  rings: ReadonlyArray<ReadonlyArray<readonly [number, number]>>
+): boolean {
+  for (const ring of rings) {
+    if (pointInsideOuterRing(p, ring as Array<[number, number]>)) return true
+  }
+  return false
 }
 
 export function activeDropZoneRooms(doc: FloorPlanDoc): RoomFrame[] {
@@ -36,11 +47,11 @@ export function isPointInRoom(
   if (roomId) {
     const frame = rooms.find((r) => r.id === roomId)
     if (!frame) return false
-    return pointInAnyRing(p, roomRings(frame))
+    return pointInRoomRings(p, roomRings(frame))
   }
 
   for (const frame of rooms) {
-    if (pointInAnyRing(p, roomRings(frame))) return true
+    if (pointInRoomRings(p, roomRings(frame))) return true
   }
   return false
 }

@@ -41,6 +41,7 @@ import type {
   PlacedObject,
   RoomFrame,
 } from './types'
+import { frameToRing } from './placement-surface'
 import { reconcileCanvasExtents } from './room-canvas'
 import { stripMacroPerimeterWallsFromDoc } from '../interactions/room-perimeter-sync'
 import { makeEmptyDoc } from './types'
@@ -332,14 +333,17 @@ export function unifiedCanvasExtents(frames: ReadonlyArray<RoomFrame>): {
 export function frameListFromRooms(
   rooms: ReadonlyArray<LayoutRoom>
 ): RoomFrame[] {
-  return rooms.map((r) => ({
-    id: r.id,
-    name: r.name,
-    originX: Math.max(0, r.canvas_origin_x ?? 0),
-    originY: Math.max(0, r.canvas_origin_y ?? 0),
-    widthFt: r.venue_width || 50,
-    lengthFt: r.venue_length || 50,
-  }))
+  return rooms.map((r) => {
+    const frame: RoomFrame = {
+      id: r.id,
+      name: r.name,
+      originX: Math.max(0, r.canvas_origin_x ?? 0),
+      originY: Math.max(0, r.canvas_origin_y ?? 0),
+      widthFt: r.venue_width || 50,
+      lengthFt: r.venue_length || 50,
+    }
+    return { ...frame, perimeterRing: frameToRing(frame) }
+  })
 }
 
 /**

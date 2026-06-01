@@ -45,11 +45,15 @@ export function useNativeFullscreen({
 
   useEffect(() => {
     if (active) {
+      document.documentElement.classList.add(CANVAS_FULLSCREEN_CLASS)
       void enter()
-    } else {
-      void exit()
+      return
     }
-    // Only react to `active` prop toggles from the editor chrome.
+    document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {})
+    }
+    // Do not call `exit()` here — it would invoke onActiveChange(false) on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
 

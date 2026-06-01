@@ -16,7 +16,7 @@ export interface CanvasDiagnosticFooterProps {
 }
 
 /**
- * Fixed "truth window" — room count, Places API status, full state export.
+ * Compact truth window at the bottom of the floor-plan workspace (not viewport-fixed).
  */
 export function CanvasDiagnosticFooter({
   doc,
@@ -25,6 +25,7 @@ export function CanvasDiagnosticFooter({
 }: CanvasDiagnosticFooterProps) {
   const { logs, addLog } = useDebugLog()
   const [copied, setCopied] = useState(false)
+  const [logExpanded, setLogExpanded] = useState(false)
 
   const roomCount = activeDropZoneRooms(doc).length
   const placesLabel =
@@ -37,6 +38,11 @@ export function CanvasDiagnosticFooter({
   useEffect(() => {
     addLog(`Canvas diagnostic ready — doc.rooms.length=${roomCount}`)
   }, [addLog, roomCount])
+
+  const recentLogText = useMemo(() => {
+    if (logs.length === 0) return ''
+    return formatDebugLogText(logs.slice(0, 8))
+  }, [logs])
 
   const exportPayload = useMemo(
     () =>
@@ -72,20 +78,18 @@ export function CanvasDiagnosticFooter({
   return (
     <footer
       className={cn(
-        'canvas-diagnostic-footer popup-hub-chrome-footer',
-        'fixed bottom-0 left-0 right-0 z-[9999]',
-        'border-t border-stone-600 bg-stone-950/98 text-stone-100 shadow-[0_-8px_24px_rgba(0,0,0,0.35)]',
-        'font-mono text-[10px] backdrop-blur-sm',
+        'canvas-diagnostic-footer shrink-0 border-t border-stone-600 bg-stone-950 text-stone-100',
+        'font-mono text-[10px]',
         className
       )}
       aria-label="Canvas diagnostic truth window"
     >
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2">
-        <span className="font-sans text-[10px] font-semibold uppercase tracking-wide text-stone-400">
-          Truth window
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-2 py-1">
+        <span className="font-sans text-[9px] font-semibold uppercase tracking-wide text-stone-400">
+          Truth
         </span>
-        <span data-testid="diagnostic-room-count">
-          doc.rooms.length = <strong className="text-emerald-300">{roomCount}</strong>
+        <span data-testid="diagnostic-room-count" className="tabular-nums">
+          rooms=<strong className="text-emerald-300">{roomCount}</strong>
         </span>
         <span
           data-testid="diagnostic-places-api"
@@ -95,20 +99,33 @@ export function CanvasDiagnosticFooter({
             placesLabel === 'API_IDLE' && 'text-stone-500'
           )}
         >
-          Places: {placesLabel}
+          Places:{placesLabel}
         </span>
-        <span className="text-stone-500">{logs.length} log lines</span>
+        <span className="text-stone-500">{logs.length} lines</span>
         <button
           type="button"
-          className="ml-auto rounded bg-emerald-700 px-3 py-1 font-sans text-[11px] font-semibold text-white hover:bg-emerald-600"
+          className="text-[9px] text-stone-400 underline hover:text-stone-200"
+          onClick={() => setLogExpanded((v) => !v)}
+          aria-expanded={logExpanded}
+        >
+          {logExpanded ? 'Hide log' : 'Show log'}
+        </button>
+        <button
+          type="button"
+          className="ml-auto rounded bg-emerald-700 px-2 py-0.5 font-sans text-[10px] font-semibold text-white hover:bg-emerald-600"
           onClick={() => void copyState()}
         >
           {copied ? 'Copied' : 'Copy Logs'}
         </button>
       </div>
-      <div className="max-h-16 overflow-y-auto border-t border-stone-800 px-3 py-1 text-stone-500">
-        <pre className="whitespace-pre-wrap break-all">
-          {formatDebugLogText(logs).slice(-1200) || 'Waiting for geometry events…'}
+      <div
+        className={cn(
+          'border-t border-stone-800 px-2 text-stone-400',
+          logExpanded ? 'max-h-20 overflow-y-auto py-1' : 'max-h-5 overflow-hidden py-0.5'
+        )}
+      >
+        <pre className="whitespace-pre-wrap break-all leading-tight">
+          {recentLogText || 'Waiting for geometry events…'}
         </pre>
       </div>
     </footer>

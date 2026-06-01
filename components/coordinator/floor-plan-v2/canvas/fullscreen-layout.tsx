@@ -88,7 +88,7 @@ export function FullscreenLayout({
           </header>
         ) : null}
 
-        <div className="canvas-container relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className="canvas-container relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {children}
         </div>
 
