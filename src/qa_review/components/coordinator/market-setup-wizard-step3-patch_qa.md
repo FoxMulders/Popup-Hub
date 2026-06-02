@@ -6,7 +6,9 @@ Apply after QA sign-off. **Do not merge this file**; use it as a checklist.
 
 1. **Stale localStorage draft** — Production `hydrateFloorPlanDoc` restores a multi-room crash-recovery draft on Step 3 entry, which could show frozen geometry, ghost objects, or a non-interactive canvas with a stuck "0 objects placed" readout.
 2. **Auto Main Hall seed** — Production `useCanvasStore` + mount effects inject a default Main Hall when `doc.rooms` is empty, fighting the wizard's intentional blank start.
-3. **Hydration** — QA clears the draft, loads room frames from Step 1/2 `layoutRooms` with zero objects, and only hydrates saved booth geometry when editing a market with `existingLayout`.
+3. **Hydration** — QA clears the draft, starts with a fully blank 50×50 ft canvas (no room frames, no objects), and only hydrates saved geometry when editing a market with `existingLayout`.
+4. **Open-grid placement** — QA pointer + validation allow draw/drop on the canvas when no room polygons exist (production blocked all placement without a room hit-test).
+5. **No sidebar room projection** — QA does not sync wizard `layoutRooms` onto `doc.rooms` on mount (that caused structural outlines + frozen "0 objects placed").
 
 ## 1. `market-setup-wizard.tsx`
 

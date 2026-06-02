@@ -48,18 +48,22 @@ See `components/coordinator/market-setup-wizard-step3-patch_qa.md`.
 
 | QA path | Role |
 |---------|------|
-| `lib/floor-plan/layout-hydration-wizard_qa.ts` | Clears multi-room draft; room frames only (or full server hydrate) |
-| `components/coordinator/floor-plan-v2/use-canvas-store-wizard_qa.ts` | Canvas store with `disableAutoMainHall`, no seed on load |
-| `components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa.tsx` | Wizard floor plan workspace (QA hydration + store) |
-| `components/coordinator/wizard/wizard-step-floor-plan_qa.tsx` | Step 3 shell; imports `FloorPlanV2WizardQa`, passes `existingLayout` |
+| `lib/floor-plan/layout-hydration-wizard_qa.ts` | Clears draft; fully blank 50×50 workspace (no rooms/objects) |
+| `lib/floor-plan/placement-validation-wizard_qa.ts` | Open-canvas placement when no room frames exist |
+| `components/coordinator/floor-plan-v2/use-canvas-store-wizard_qa.ts` | Store with `disableAutoMainHall`, wizard placement validation |
+| `components/coordinator/floor-plan-v2/interactions/use-canvas-pointer-wizard_qa.ts` | Draw/drop on open grid without requiring room polygon |
+| `components/coordinator/floor-plan-v2/canvas/floor-plan-canvas-wizard_qa.tsx` | Canvas wired to wizard pointer hook |
+| `components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa.tsx` | Wizard workspace; no sidebar→doc room projection on mount |
+| `components/coordinator/wizard/wizard-step-floor-plan_qa.tsx` | Step 3 shell → `FloorPlanV2WizardQa` |
 | `components/coordinator/market-setup-wizard-step3-patch_qa.md` | Promotion checklist |
 
 ### Fixes
 
 1. **Stale draft** — `hydrateFloorPlanDocForWizardQa` + mount `clearMultiRoomDraft` so crash-recovery localStorage cannot freeze the canvas.
-2. **Blank start** — Room frames from wizard `layoutRooms`, zero placed objects for new markets; no auto Main Hall injection.
-3. **Object count** — `onPlacedCountChange` wired through QA step shell; left-rail stats update as objects are drawn.
-4. **C<sub>max</sub> readout** — Displays Step 2 `layoutCapacity` (e.g. 48); not a drop validator (Auto-Arrange cap only).
+2. **Blank start** — Empty doc (no room outlines, no objects) for new markets; no auto Main Hall injection; sidebar `layoutRooms` are not projected onto the canvas on mount.
+3. **Open-grid placement** — When `doc.rooms` is empty, booths/labels/walls/doors may be drawn anywhere on the canvas bounds (production required a room polygon).
+4. **Object count** — `onPlacedCountChange` wired through QA step shell; left-rail stats update as objects are drawn.
+5. **C<sub>max</sub> readout** — Displays Step 2 `layoutCapacity` (e.g. 48); not a drop validator (Auto-Arrange cap only).
 
 ---
 

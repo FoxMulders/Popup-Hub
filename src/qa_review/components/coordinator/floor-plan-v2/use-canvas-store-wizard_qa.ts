@@ -6,9 +6,10 @@
 
 import { useCallback, useMemo } from 'react'
 import { activeRoomFrames } from '@/components/coordinator/floor-plan-v2/canvas/canvas-engine'
-import { forceRecomputeGeometry, isValidPlacementLocation } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
+import { isValidPlacementLocationWizardQa } from '@/src/qa_review/lib/floor-plan/placement-validation-wizard_qa'
 import { useDebugLog } from '@/components/coordinator/floor-plan-v2/debug/debug-log-context'
 import type { FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
+import { forceRecomputeGeometry } from '@/components/coordinator/floor-plan-v2/state/geometry-sanitize'
 import {
   useFloorPlanDoc,
   type FloorPlanDocStore,
@@ -38,7 +39,7 @@ export function useCanvasStoreWizardQa(
     (
       probeFt: { x: number; y: number },
       obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
-    ) => isValidPlacementLocation(store.doc, probeFt, obj),
+    ) => isValidPlacementLocationWizardQa(store.doc, probeFt, obj),
     [store.doc]
   )
 

@@ -22,7 +22,7 @@ import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
-import { LayoutCanvas } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-canvas'
+import { LayoutCanvasWizardQa } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/floor-plan-canvas-wizard_qa'
 import { canvasGridSpacingForTableFt } from '@/components/coordinator/floor-plan-v2/canvas/canvas-grid-spacing'
 import { CanvasLegend } from '@/components/coordinator/floor-plan-v2/canvas/canvas-legend'
 import { unionActiveRoomBounds } from '@/components/coordinator/floor-plan-v2/canvas/canvas-engine'
@@ -349,104 +349,9 @@ function FloorPlanV2Workspace({
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
 
-  // The wizard's room list is the canonical source of (rooms, names,
-  // dims). The unified doc's `rooms` field is updated whenever the
-  // wizard list changes — but we DON'T blow away in-progress object
-  // edits, only re-sync the room frame metadata. This preserves the
-  // user's draws and drags across add-room / rename-room flows.
-  const lastRoomIdsKeyRef = useRef<string | null>(null)
-  useEffect(() => {
-    const idsKey = layoutRooms.map((r) => r.id).join('|')
-    const isFirstSync = lastRoomIdsKeyRef.current === null
-    lastRoomIdsKeyRef.current = idsKey
-
-    // Build fresh frame data from the wizard rooms.
-    const wizardFrames: RoomFrame[] = layoutRooms.map((r) => ({
-      id: r.id,
-      name: r.name,
-      originX: Math.max(0, r.canvas_origin_x ?? 0),
-      originY: Math.max(0, r.canvas_origin_y ?? 0),
-      widthFt: r.venue_width || 50,
-      lengthFt: r.venue_length || 50,
-    }))
-    const docFrames = store.doc.rooms ?? []
-    const docFrameById = new Map(docFrames.map((f) => [f.id, f]))
-
-    // Reconcile: keep doc-side origin (so a freshly-dragged room
-    // doesn't snap back to the wizard's stored origin until save),
-    // but pull through any name / size changes from the wizard.
-    const merged: RoomFrame[] = wizardFrames.map((wf) => {
-      const existing = docFrameById.get(wf.id)
-      if (!existing) return wf
-      // Keep canvas geometry (drag, resize, rotate). Wizard only
-      // updates the display name while the editor is open.
-      return {
-        ...existing,
-        name: wf.name,
-      }
-    })
-
-    const sameFrames =
-      merged.length === docFrames.length &&
-      merged.every((m, i) => {
-        const d = docFrames[i]
-        return (
-          d &&
-          d.id === m.id &&
-          d.name === m.name &&
-          d.widthFt === m.widthFt &&
-          d.lengthFt === m.lengthFt &&
-          d.originX === m.originX &&
-          d.originY === m.originY
-        )
-      })
-
-    // First sync after mount: when wizard and doc already agree on the
-    // same room ids, only reconcile canvas extents (crash-recovery
-    // drafts can undersize the workspace vs room union). When the
-    // wizard has rooms the doc doesn't know about yet, fall through
-    // and merge normally so secondary rooms aren't trapped inside the
-    // primary hall bounds.
-    if (isFirstSync && docFrames.length > 0) {
-      const wizardIdSet = new Set(wizardFrames.map((f) => f.id))
-      const sameRoomSet =
-        wizardIdSet.size === docFrames.length &&
-        docFrames.every((f) => wizardIdSet.has(f.id))
-      if (sameRoomSet) {
-        const extents = reconcileCanvasExtents(merged)
-        if (
-          store.doc.canvasWidthFt !== extents.canvasWidthFt ||
-          store.doc.canvasLengthFt !== extents.canvasLengthFt ||
-          !sameFrames
-        ) {
-          store.patchDoc(
-            {
-              rooms: merged,
-              canvasWidthFt: extents.canvasWidthFt,
-              canvasLengthFt: extents.canvasLengthFt,
-            },
-            { pushHistory: false }
-          )
-        }
-        return
-      }
-    }
-
-    if (sameFrames) return
-
-    const extents = reconcileCanvasExtents(merged)
-    store.patchDoc(
-      {
-        rooms: merged,
-        canvasWidthFt: extents.canvasWidthFt,
-        canvasLengthFt: extents.canvasLengthFt,
-      },
-      { pushHistory: false }
-    )
-    // Note: any objects that belonged to a now-deleted room get left
-    // in the doc orphaned; the save bridge folds them into the first
-    // surviving room as a safety net.
-  }, [layoutRooms, store.doc.rooms, store.doc.canvasWidthFt, store.doc.canvasLengthFt])
+  // Wizard Step 3 QA: do not project sidebar `layoutRooms` onto the canvas
+  // doc on mount — that injected structural room outlines and blocked open-grid
+  // placement when room polygons did not match the interactive surface.
 
   // The "active room" follows the wizard's `layoutActiveRoomId` so
   // sidebar selections in the parent flow keep working. Selection of
@@ -1886,7 +1791,7 @@ function FloorPlanV2Workspace({
                 logState(`Canvas error: ${error.message}`)
               }}
             >
-            <LayoutCanvas
+            <LayoutCanvasWizardQa
               className="absolute inset-0"
               commandCenterViewport={isDashboard}
               store={store}

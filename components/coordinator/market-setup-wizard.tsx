@@ -75,7 +75,7 @@ import {
   WizardStepStepper,
 } from '@/components/coordinator/wizard/wizard-step-stepper'
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
-import { WizardStepFloorPlan } from '@/components/coordinator/wizard/wizard-step-floor-plan'
+import { WizardStepFloorPlan } from '@/src/qa_review/components/coordinator/wizard/wizard-step-floor-plan_qa'
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 import { WizardStepVenueWithMapsProvider } from '@/src/qa_review/components/coordinator/wizard/wizard-step-venue_predictive_search'
 import { applyWizardGooglePlaceSelect } from '@/src/qa_review/lib/wizard/wizard-google-place-select_qa'
@@ -1262,6 +1262,7 @@ export function MarketSetupWizard({
               onBack={goBack}
               navDisabled={transitioning}
               plannerOverlap={plannerOverlap}
+              existingLayout={existingLayout ?? null}
             />
           ) : null}
         </div>
