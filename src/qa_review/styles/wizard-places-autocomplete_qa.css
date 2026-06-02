@@ -1,0 +1,18 @@
+/* Google Places dropdown must sit above wizard glass panels */
+.pac-container {
+  z-index: 10000 !important;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-market, 0 4px 12px rgb(0 0 0 / 0.12));
+  font-family: inherit;
+}
+
+.pac-item {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.pac-item:hover,
+.pac-item-selected {
+  background: rgb(var(--canvas-rgb, 245 243 238) / 1);
+}

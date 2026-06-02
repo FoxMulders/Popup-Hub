@@ -14,6 +14,7 @@ import {
   setPopupLoaderPlayHandler,
 } from '@/lib/brand/popup-loader-play'
 import { PopupLoaderContext } from '@/components/brand/popup-loader-context'
+import { InitialLoaderReveal } from '@/components/brand/initial-loader-reveal'
 import { PopupLoaderScene } from '@/components/brand/popup-loader-scene'
 import {
   pickRandomLoaderVariant,
@@ -87,7 +88,7 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
       /* private browsing — in-memory guard above still applies */
     }
 
-    setSession({ key: 0, variantId: 'walk-to-market', mode: 'initial' })
+    setSession({ key: 0, variantId: 'walk-to-market', mode: 'initial' as LoaderControllerMode })
   }, [])
 
   useEffect(() => {
@@ -126,14 +127,18 @@ export function PopupLoaderProvider({ children }: { children: ReactNode }) {
       aria-hidden={exiting}
       aria-busy={!exiting}
       role="status"
-      aria-label="Popup Hub market animation"
+      aria-label={session.mode === 'initial' ? 'Popup Hub loading' : 'Popup Hub market animation'}
     >
-      <PopupLoaderScene
-        key={session.key}
-        variantId={session.variantId}
-        mode={session.mode}
-        onReadyToDismiss={dismiss}
-      />
+      {session.mode === 'initial' ? (
+        <InitialLoaderReveal onReadyToDismiss={dismiss} />
+      ) : (
+        <PopupLoaderScene
+          key={session.key}
+          variantId={session.variantId}
+          mode={session.mode}
+          onReadyToDismiss={dismiss}
+        />
+      )}
     </div>
   ) : null
 

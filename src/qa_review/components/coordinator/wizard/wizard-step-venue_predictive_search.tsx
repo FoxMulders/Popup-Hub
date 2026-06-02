@@ -1,13 +1,14 @@
 'use client'
 
+import '@/src/qa_review/styles/wizard-places-autocomplete_qa.css'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  APIProvider,
   Map,
   AdvancedMarker,
   type MapMouseEvent,
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
+import { WizardPlacesApiProviderQa } from '@/src/qa_review/components/coordinator/wizard/wizard-places-api-provider_qa'
 import { MapRecenter } from '@/components/map/map-recenter'
 import { MapPin } from 'lucide-react'
 import {
@@ -458,8 +459,8 @@ export function WizardStepVenueWithMapsProvider(props: WizardStepVenueProps) {
     )
   }
   return (
-    <APIProvider apiKey={apiKey}>
+    <WizardPlacesApiProviderQa apiKey={apiKey}>
       <WizardStepVenue {...props} />
-    </APIProvider>
+    </WizardPlacesApiProviderQa>
   )
 }

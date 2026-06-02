@@ -1,15 +1,9 @@
 'use client'
 
 import { usePlacesApiStatus } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
-import { useApiIsLoaded } from '@vis.gl/react-google-maps'
 import { Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useRef } from 'react'
-import { Input } from '@/components/ui/input'
+import { useCallback, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
-import {
-  fetchPlaceDetailsSafe,
-  usePlacesAutocomplete,
-} from '@/hooks/use-places-autocomplete'
 import { getMarketCityById } from '@/lib/wizard/market-cities'
 import {
   isNamedEstablishmentPlace,
@@ -17,10 +11,8 @@ import {
 } from '@/lib/wizard/google-place-venue'
 import { WIZARD_FIELD_LABEL, WIZARD_INPUT } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
-import {
-  buildWizardPlacesAutocompleteRequest,
-  type WizardPlacesAutocompleteMode,
-} from '@/src/qa_review/lib/wizard/places-autocomplete-request_qa'
+import { useGooglePlacesAutocompleteWidgetQa } from '@/src/qa_review/hooks/use-google-places-autocomplete-widget_qa'
+import type { WizardPlacesAutocompleteMode } from '@/src/qa_review/lib/wizard/places-autocomplete-request_qa'
 import {
   MARKET_CITIES,
   inferMarketCityId,
@@ -38,8 +30,7 @@ function pickAddressComponent(
 
 function resolveCityIdFromPlace(
   place: google.maps.places.PlaceResult,
-  fallbackAddress: string,
-  inferMarketCityId: (address: string) => string
+  fallbackAddress: string
 ): string | null {
   const components = place.address_components ?? undefined
   const candidates = [
@@ -72,7 +63,6 @@ export interface VenuePlacesAutocompleteProps {
   cityId: string
   currentVenueName: string
   onPlaceSelect: (place: PlaceResult) => void
-  /** Floating label variant (venue name row). */
   variant?: 'floating' | 'stacked'
 }
 
@@ -88,59 +78,18 @@ export function VenuePlacesAutocomplete({
   variant = 'stacked',
 }: VenuePlacesAutocompleteProps) {
   const { reportPlacesApi } = usePlacesApiStatus()
-  const apiLoaded = useApiIsLoaded()
   const city = getMarketCityById(cityId)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const listId = `${id}-predictions`
 
-  const buildRequest = useCallback(
-    () => buildWizardPlacesAutocompleteRequest(value, cityId, mode),
-    [cityId, mode, value]
-  )
+  const handlePlaceChanged = useCallback(
+    (place: google.maps.places.PlaceResult) => {
+      if (!place.geometry?.location) return
 
-  const {
-    predictions,
-    open,
-    setOpen,
-    loading,
-    apiUnavailable,
-    highlightIndex,
-    setHighlightIndex,
-    clearPredictions,
-  } = usePlacesAutocomplete({
-    input: value,
-    minLength: mode === 'venue' ? 2 : 3,
-    buildRequest,
-    onApiStatus: reportPlacesApi,
-  })
-
-  const selectPrediction = useCallback(
-    async (prediction: google.maps.places.AutocompletePrediction) => {
-      setOpen(false)
-      clearPredictions()
-
-      const display =
-        mode === 'venue'
-          ? prediction.structured_formatting.main_text
-          : prediction.description
-      onChange(display)
-
-      const place = await fetchPlaceDetailsSafe(prediction.place_id, [
-        'formatted_address',
-        'geometry',
-        'name',
-        'types',
-        'address_components',
-      ])
-      if (!place?.geometry?.location) return
-
-      const address = place.formatted_address ?? prediction.description
+      const address = place.formatted_address ?? ''
       const isEstablishment = isNamedEstablishmentPlace(place.types ?? undefined)
 
       const venueName =
         mode === 'venue'
           ? (place.name?.trim() ||
-              prediction.structured_formatting.main_text ||
               resolveVenueNameForPlace({
                 placeName: place.name ?? '',
                 formattedAddress: address,
@@ -155,64 +104,38 @@ export function VenuePlacesAutocomplete({
               currentVenueName,
             }) ?? place.name ?? '')
 
+      if (mode === 'venue') {
+        onChange(venueName)
+      } else {
+        onChange(address)
+      }
+
       onPlaceSelect({
         address,
         lat: place.geometry.location.lat(),
         lng: place.geometry.location.lng(),
         name: venueName,
-        cityId: resolveCityIdFromPlace(place, address, inferMarketCityId),
+        cityId: resolveCityIdFromPlace(place, address),
         isEstablishment,
         postalCode: pickAddressComponent(place.address_components, 'postal_code'),
         country: pickAddressComponent(place.address_components, 'country'),
         preferVenueName: mode === 'venue',
       })
     },
-    [
-      cityId,
-      clearPredictions,
-      currentVenueName,
-      mode,
-      onChange,
-      onPlaceSelect,
-      setOpen,
-    ]
+    [cityId, currentVenueName, mode, onChange, onPlaceSelect]
   )
 
-  useEffect(() => {
-    function handleClickOutside(e: PointerEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
-        setHighlightIndex(-1)
-      }
-    }
-    document.addEventListener('pointerdown', handleClickOutside)
-    return () => document.removeEventListener('pointerdown', handleClickOutside)
-  }, [setHighlightIndex, setOpen])
+  const { inputRef, placesReady, apiLoaded } = useGooglePlacesAutocompleteWidgetQa({
+    mode,
+    cityId,
+    onPlaceChanged: handlePlaceChanged,
+    onApiStatus: reportPlacesApi,
+  })
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open || predictions.length === 0) {
-      if (e.key === 'Escape') setOpen(false)
-      return
-    }
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setHighlightIndex((prev) => (prev + 1) % predictions.length)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setHighlightIndex((prev) => (prev <= 0 ? predictions.length - 1 : prev - 1))
-    } else if (e.key === 'Enter') {
-      e.preventDefault()
-      const target = highlightIndex >= 0 ? predictions[highlightIndex] : predictions[0]
-      if (target) void selectPrediction(target)
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      setOpen(false)
-      setHighlightIndex(-1)
-    }
-  }
+  const waitingForPlaces = apiLoaded && !placesReady
 
   const placeholder =
-    !apiLoaded || apiUnavailable
+    !apiLoaded || waitingForPlaces
       ? mode === 'venue'
         ? `Enter venue name near ${city.label}…`
         : `Enter address manually near ${city.label}…`
@@ -222,23 +145,24 @@ export function VenuePlacesAutocomplete({
 
   const inputEl = (
     <div className="relative">
-      <Input
+      <input
+        ref={inputRef}
         id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => {
-          if (predictions.length > 0) setOpen(true)
-        }}
+        type="text"
+        key={`${id}-${cityId}-${placesReady ? 'ready' : 'pending'}`}
+        defaultValue={value}
+        onInput={(e) => onChange(e.currentTarget.value)}
         placeholder={placeholder}
-        className={cn(WIZARD_INPUT, 'w-full min-w-[200px] h-auto whitespace-normal break-words py-2 pr-9')}
+        className={cn(
+          WIZARD_INPUT,
+          'flex h-10 w-full min-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors',
+          'whitespace-normal break-words pr-9',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+        )}
         aria-autocomplete="list"
-        aria-expanded={open && predictions.length > 0}
-        aria-controls={listId}
-        role="combobox"
         autoComplete="off"
       />
-      {loading ? (
+      {waitingForPlaces ? (
         <Loader2
           className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground pointer-events-none"
           aria-hidden
@@ -248,7 +172,7 @@ export function VenuePlacesAutocomplete({
   )
 
   return (
-    <div ref={containerRef} className="relative space-y-1">
+    <div className="relative space-y-1">
       {variant === 'floating' ? (
         <div className="relative">
           <Label htmlFor={id} className={cn(WIZARD_FIELD_LABEL, 'sr-only')}>
@@ -267,33 +191,8 @@ export function VenuePlacesAutocomplete({
           {inputEl}
         </>
       )}
-      {open && predictions.length > 0 ? (
-        <ul
-          id={listId}
-          role="listbox"
-          className="wizard-select-content absolute z-20 mt-1 w-full rounded-lg border border-white/60 bg-card/95 backdrop-blur-md shadow-[var(--shadow-market)] max-h-48 overflow-y-auto"
-        >
-          {predictions.map((p, index) => (
-            <li key={p.place_id} role="option" aria-selected={index === highlightIndex}>
-              <button
-                type="button"
-                className={cn(
-                  'w-full text-left px-3 py-2 text-sm whitespace-normal break-words hover:bg-canvas',
-                  index === highlightIndex && 'bg-canvas'
-                )}
-                onMouseEnter={() => setHighlightIndex(index)}
-                onClick={() => void selectPrediction(p)}
-              >
-                <span className="font-medium">{p.structured_formatting.main_text}</span>
-                {p.structured_formatting.secondary_text ? (
-                  <span className="text-muted-foreground block text-xs">
-                    {p.structured_formatting.secondary_text}
-                  </span>
-                ) : null}
-              </button>
-            </li>
-          ))}
-        </ul>
+      {!placesReady && apiLoaded ? (
+        <p className="text-xs text-muted-foreground">Loading place suggestions…</p>
       ) : null}
     </div>
   )
