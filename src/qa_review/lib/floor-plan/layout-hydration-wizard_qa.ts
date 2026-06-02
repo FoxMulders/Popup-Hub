@@ -1,20 +1,40 @@
 /**
- * Wizard Step 3 hydration — fully blank canvas on load (no rooms, no objects).
+ * Wizard Step 3 + layout editor hydration — blank canvas unless real geometry exists.
  * Clears stale localStorage multi-room drafts.
  */
 
+import { docFromLegacyRooms } from '@/components/coordinator/floor-plan-v2/state/legacy-bridge'
 import { stripMergedZoneOverlays } from '@/components/coordinator/floor-plan-v2/state/layout-hydration'
-import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
+import {
+  clearMultiRoomDraft,
+  loadMultiRoomDraft,
+} from '@/components/coordinator/floor-plan-v2/state/local-draft'
 import { forceRecomputeGeometry } from '@/components/coordinator/floor-plan-v2/state/geometry-sanitize'
 import { makeEmptyDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { BoothLayout, LayoutRoom } from '@/types/database'
-import { docFromLegacyRooms } from '@/components/coordinator/floor-plan-v2/state/legacy-bridge'
 
 export interface HydrateWizardFloorPlanDocOptions {
   existingLayout?: BoothLayout | null
-  /** Load saved booth/venue objects from server layout (edit existing market). */
+  /** Load saved booth/venue objects from server layout (cells or venue_elements). */
   hydrateSavedObjects?: boolean
+  /** Standalone layout editor — ignore localStorage draft, prefer server rows. */
+  preferServerLayout?: boolean
+}
+
+/** True only when the saved layout has drawable geometry, not room metadata alone. */
+export function layoutHasPlacedGeometry(layout: BoothLayout | null | undefined): boolean {
+  if (!layout) return false
+
+  const rooms = layout.layout_rooms as LayoutRoom[] | undefined
+  if (Array.isArray(rooms) && rooms.length > 0) {
+    for (const room of rooms) {
+      if ((room.cells?.length ?? 0) > 0) return true
+      if ((room.venue_elements?.length ?? 0) > 0) return true
+    }
+  }
+
+  return (layout.cells?.length ?? 0) > 0
 }
 
 function blankWizardDoc(): FloorPlanDoc {
@@ -26,31 +46,46 @@ function blankWizardDoc(): FloorPlanDoc {
   })
 }
 
+function docFromSavedLayout(layoutRooms: LayoutRoom[]): FloorPlanDoc {
+  return stripMergedZoneOverlays(
+    forceRecomputeGeometry(docFromLegacyRooms(layoutRooms))
+  )
+}
+
 /**
- * Wizard floor plan initial doc:
+ * Floor plan initial doc:
  * - Clears multi-room localStorage draft (prevents frozen stale geometry).
  * - Default: empty 50×50 ft workspace — no room frames, no placed objects.
- * - Optional: full server layout when editing an existing saved market.
+ * - Hydrates server/draft geometry only when cells or venue_elements exist.
  */
 export function hydrateFloorPlanDocForWizardQa(
   eventId: string | null | undefined,
-  _layoutRooms: LayoutRoom[],
+  layoutRooms: LayoutRoom[],
   options: HydrateWizardFloorPlanDocOptions = {}
 ): FloorPlanDoc {
+  const { preferServerLayout = false } = options
+  const shouldHydrate =
+    options.hydrateSavedObjects ??
+    layoutHasPlacedGeometry(options.existingLayout)
+
   if (eventId) {
-    clearMultiRoomDraft(eventId)
+    if (preferServerLayout || !shouldHydrate) {
+      clearMultiRoomDraft(eventId)
+    }
   }
 
-  const hasSavedGeometry =
-    options.hydrateSavedObjects &&
-    options.existingLayout &&
-    ((options.existingLayout.layout_rooms?.length ?? 0) > 0 ||
-      (options.existingLayout.cells?.length ?? 0) > 0)
+  if (shouldHydrate && layoutRooms.length > 0) {
+    return docFromSavedLayout(layoutRooms)
+  }
 
-  if (hasSavedGeometry) {
-    return stripMergedZoneOverlays(
-      forceRecomputeGeometry(docFromLegacyRooms(_layoutRooms))
-    )
+  if (eventId && !preferServerLayout && !shouldHydrate) {
+    const cached = loadMultiRoomDraft(eventId)
+    const cachedObjects = cached?.doc?.objects?.length ?? 0
+    const cachedRooms = cached?.doc?.rooms?.length ?? 0
+    if (cached?.doc && (cachedObjects > 0 || cachedRooms > 0)) {
+      return stripMergedZoneOverlays(forceRecomputeGeometry(cached.doc))
+    }
+    clearMultiRoomDraft(eventId)
   }
 
   return blankWizardDoc()

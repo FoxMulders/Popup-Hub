@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import {
   SpatialLayoutEditor,
   type SpatialLayoutEditorProps,
-} from '@/components/coordinator/spatial-layout/spatial-layout-editor'
+} from '@/src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa'
 import { createClient } from '@/lib/supabase/server'
 import type { BoothLayout, Event } from '@/types/database'
 

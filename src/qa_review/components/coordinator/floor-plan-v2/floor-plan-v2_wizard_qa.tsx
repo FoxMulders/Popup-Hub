@@ -38,7 +38,7 @@ import { CanvasCommandBar } from '@/components/coordinator/floor-plan-v2/tools/c
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from '@/components/coordinator/floor-plan-v2/tools/types'
 import { autoArrangeInRoom, type AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import { legacyRoomsFromDoc } from '@/components/coordinator/floor-plan-v2/state/legacy-bridge'
-import { hydrateFloorPlanDocForWizardQa } from '@/src/qa_review/lib/floor-plan/layout-hydration-wizard_qa'
+import { hydrateFloorPlanDocForWizardQa, layoutHasPlacedGeometry } from '@/src/qa_review/lib/floor-plan/layout-hydration-wizard_qa'
 import { reconcileCanvasExtents } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
 import {
   clearMultiRoomDraft,
@@ -280,14 +280,15 @@ function FloorPlanV2Workspace({
   onSelectionChange,
   onVendorDrop,
   debugGeometry = false,
+  preferServerLayout = false,
   existingLayout = null,
 }: FloorPlanV2Props) {
-  const isWizardVariant = variant === 'wizard'
   const initialDoc = useMemo<FloorPlanDoc>(
     () =>
       hydrateFloorPlanDocForWizardQa(eventId, layoutRooms, {
-        existingLayout: isWizardVariant ? existingLayout : null,
-        hydrateSavedObjects: isWizardVariant && Boolean(existingLayout),
+        existingLayout: existingLayout ?? null,
+        hydrateSavedObjects: layoutHasPlacedGeometry(existingLayout),
+        preferServerLayout,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []

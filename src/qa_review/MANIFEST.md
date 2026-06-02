@@ -48,7 +48,8 @@ See `components/coordinator/market-setup-wizard-step3-patch_qa.md`.
 
 | QA path | Role |
 |---------|------|
-| `lib/floor-plan/layout-hydration-wizard_qa.ts` | Clears draft; fully blank 50×50 workspace (no rooms/objects) |
+| `lib/floor-plan/layout-hydration-wizard_qa.ts` | Clears draft; blank canvas unless cells/venue_elements exist |
+| `components/coordinator/spatial-layout/spatial-layout-editor_qa.tsx` | Full layout editor (`/events/.../layout`) on QA canvas |
 | `lib/floor-plan/placement-validation-wizard_qa.ts` | Open-canvas placement when no room frames exist |
 | `components/coordinator/floor-plan-v2/use-canvas-store-wizard_qa.ts` | Store with `disableAutoMainHall`, wizard placement validation |
 | `components/coordinator/floor-plan-v2/interactions/use-canvas-pointer-wizard_qa.ts` | Draw/drop on open grid without requiring room polygon |
