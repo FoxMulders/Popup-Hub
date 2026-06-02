@@ -58,7 +58,6 @@ import {
   WIZARD_PANEL,
 } from '@/lib/wizard/wizard-panel-styles'
 import { resetWizardScrollAnchor } from '@/lib/wizard/wizard-scroll-anchor'
-import { resolveVenueNameForPlace } from '@/lib/wizard/google-place-venue'
 import {
   focusWizardField,
   getWizardStep1ValidationError,
@@ -67,7 +66,7 @@ import {
   focusWizardStep2Field,
   getWizardStep2ValidationError,
 } from '@/lib/wizard/wizard-step2-validation'
-import type { PlaceResult } from '@/components/coordinator/wizard/wizard-step-venue'
+import type { PlaceResult } from '@/src/qa_review/components/coordinator/wizard/wizard-place-types_qa'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import { WizardAmbientShell, WizardDivider } from '@/components/coordinator/wizard/wizard-ui'
 import {
@@ -78,7 +77,8 @@ import {
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
 import { WizardStepFloorPlan } from '@/components/coordinator/wizard/wizard-step-floor-plan'
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
-import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
+import { WizardStepVenueWithMapsProvider } from '@/src/qa_review/components/coordinator/wizard/wizard-step-venue_predictive_search'
+import { applyWizardGooglePlaceSelect } from '@/src/qa_review/lib/wizard/wizard-google-place-select_qa'
 import { PlacesApiStatusProvider } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
 import { WizardContextStrip } from '@/components/coordinator/wizard/wizard-context-strip'
@@ -827,21 +827,13 @@ export function MarketSetupWizard({
    */
   const handleGooglePlaceSelect = useCallback(
     (place: PlaceResult) => {
-      setAddress(place.address)
-      setLat(place.lat)
-      setLng(place.lng)
-      setPinDropped(true)
-      if (place.cityId) {
-        setMarketCity((current) => (place.cityId !== current ? place.cityId! : current))
-      }
-      setLocationName((current) => {
-        const next = resolveVenueNameForPlace({
-          placeName: place.name,
-          formattedAddress: place.address,
-          isEstablishment: place.isEstablishment,
-          currentVenueName: current,
-        })
-        return next ?? current
+      applyWizardGooglePlaceSelect(place, {
+        setAddress,
+        setLat,
+        setLng,
+        setPinDropped,
+        setMarketCity,
+        setLocationName,
       })
     },
     []
