@@ -383,21 +383,19 @@ export function LayoutRoomBar({
                   >
                     <Pencil className={inlineToolbar ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                   </button>
-                  {rooms.length > 1 && (
-                    <button
-                      type="button"
-                      title="Delete room"
-                      className={cn(
-                        'border-l-2 border-stone-200 text-terracotta-600 hover:bg-terracotta-50',
-                        inlineToolbar
-                          ? 'flex h-8 w-7 items-center justify-center border-l'
-                          : 'touch-target'
-                      )}
-                      onClick={() => onDeleteRoom(room.id)}
-                    >
-                      <Trash2 className={inlineToolbar ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    title="Delete room"
+                    className={cn(
+                      'border-l-2 border-stone-200 text-terracotta-600 hover:bg-terracotta-50',
+                      inlineToolbar
+                        ? 'flex h-8 w-7 items-center justify-center border-l'
+                        : 'touch-target'
+                    )}
+                    onClick={() => onDeleteRoom(room.id)}
+                  >
+                    <Trash2 className={inlineToolbar ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+                  </button>
                 </>
               )}
             </div>

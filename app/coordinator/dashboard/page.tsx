@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { partitionEventsByPhase, sortEventsByStartAsc } from '@/lib/queries/events'
 import type { Event } from '@/types/database'
-import { roomsFromBoothLayout } from '@/lib/booth-planner/layout-rooms'
+import { roomsFromBoothLayoutForEditor } from '@/lib/booth-planner/layout-rooms'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { MarketDashboardClient } from '@/components/coordinator/dashboard/market-dashboard-client'
 import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
@@ -88,11 +88,11 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
 
   const layoutsByEventId: Record<
     string,
-    { rooms: ReturnType<typeof roomsFromBoothLayout>['rooms']; activeRoomId: string }
+    { rooms: ReturnType<typeof roomsFromBoothLayoutForEditor>['rooms']; activeRoomId: string }
   > = {}
   for (const layout of layouts ?? []) {
     if (!coordinatorEventIdSet.has(layout.event_id)) continue
-    const bundle = roomsFromBoothLayout(layout)
+    const bundle = roomsFromBoothLayoutForEditor(layout)
     layoutsByEventId[layout.event_id] = {
       rooms: bundle.rooms,
       activeRoomId: bundle.activeRoomId,
@@ -101,7 +101,7 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
 
   for (const event of events) {
     if (!layoutsByEventId[event.id]) {
-      const empty = roomsFromBoothLayout(null)
+      const empty = roomsFromBoothLayoutForEditor(null)
       layoutsByEventId[event.id] = {
         rooms: empty.rooms,
         activeRoomId: empty.activeRoomId,

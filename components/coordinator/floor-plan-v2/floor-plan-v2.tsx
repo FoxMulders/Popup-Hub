@@ -26,7 +26,6 @@ import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridSpacingForTableFt } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
 import {
-  ensureCanvasHasPlaceableRoom,
   unionActiveRoomBounds,
 } from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
@@ -51,7 +50,7 @@ import {
   clearMultiRoomDraft,
   saveMultiRoomDraft,
 } from './state/local-draft'
-import { getSuppressAutoMainHall } from './state/canvas-session-guards'
+import { setSuppressAutoMainHall } from './state/canvas-session-guards'
 import {
   docNeedsGeometrySanitize,
   forceRecomputeGeometry,
@@ -291,7 +290,7 @@ function FloorPlanV2Workspace({
     []
   )
 
-  const disableAutoMainHall = preferServerLayout
+  const disableAutoMainHall = true
   const store = useCanvasStore(initialDoc, {
     disableAutoMainHall,
     eventId: eventId ?? undefined,
@@ -516,27 +515,14 @@ function FloorPlanV2Workspace({
   }, [])
 
   useEffect(() => {
-    if (disableAutoMainHall || getSuppressAutoMainHall(eventId ?? undefined))
-      return
-    if ((store.doc.rooms ?? []).length === 0) {
-      logState('doc.rooms empty on mount — seedMainHall()')
-      store.seedMainHall()
-      resetCanvasViewport()
-      return
-    }
-    const active = (store.doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId)
-    if (active.length > 0) return
-    const next = ensureCanvasHasPlaceableRoom(store.doc)
-    store.patchDoc(
-      {
-        rooms: next.rooms,
-        canvasWidthFt: next.canvasWidthFt,
-        canvasLengthFt: next.canvasLengthFt,
-      },
-      { pushHistory: false }
-    )
-    resetCanvasViewport()
-  }, [disableAutoMainHall, eventId, logState, resetCanvasViewport, store])
+    if (layoutRooms.length > 0) return
+    if (eventId) clearMultiRoomDraft(eventId)
+    setSuppressAutoMainHall(true, eventId ?? undefined)
+    store.resetState()
+    setSelectedRoomIds(new Set())
+    setSelectedRoomId(null)
+    logState('layoutRooms empty: blank canvas (no room frames or fixtures)')
+  }, [eventId, layoutRoomIdsKey, layoutRooms.length, logState, store])
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
   const highlightedRoomMetrics = useMemo(() => {
@@ -642,8 +628,10 @@ function FloorPlanV2Workspace({
 
   const handleClearAll = useCallback(() => {
     hardResetCanvas()
-    toast.success('Canvas cleared — draw or add a room to continue')
-  }, [hardResetCanvas])
+    setSuppressAutoMainHall(true, eventId ?? undefined)
+    onLayoutRoomsChange([], '')
+    toast.success('Canvas cleared — add a room when you are ready')
+  }, [eventId, hardResetCanvas, onLayoutRoomsChange])
 
   const handleDeleteSelected = useCallback(() => {
     const ids = Array.from(store.selectedIds)

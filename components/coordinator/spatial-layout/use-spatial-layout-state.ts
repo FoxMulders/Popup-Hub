@@ -5,7 +5,6 @@ import { toast } from 'sonner'
 import {
   createLayoutRoom,
   getActiveRoom,
-  layoutHasDrawableGeometry,
   roomsFromBoothLayoutForEditor,
   updateRoomInList,
 } from '@/lib/booth-planner/layout-rooms'
@@ -42,9 +41,6 @@ export function useSpatialLayoutState({
     () => roomsFromBoothLayoutForEditor(existingLayout),
     [existingLayout]
   )
-
-  const allowEmptyRooms =
-    existingLayout == null || !layoutHasDrawableGeometry(existingLayout)
 
   const [rooms, setRooms] = useState(initial.rooms)
   const [activeRoomId, setActiveRoomId] = useState(initial.activeRoomId)
@@ -161,7 +157,7 @@ export function useSpatialLayoutState({
       }
       toast.message('Room deleted')
     },
-    [rooms, activeRoomId, allowEmptyRooms]
+    [rooms, activeRoomId, event.id]
   )
 
   const handleBaselineTableLengthChange = useCallback(

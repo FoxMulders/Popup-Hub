@@ -1,4 +1,3 @@
-import { toast } from 'sonner'
 import type { LayoutRoom } from '@/types/database'
 import {
   createLayoutRoom,
@@ -61,10 +60,6 @@ export function deleteLayoutRoomFromList(
   roomId: string,
   activeRoomId: string
 ): { rooms: LayoutRoom[]; activeRoomId: string } | null {
-  if (rooms.length <= 1) {
-    toast.error('At least one room is required')
-    return null
-  }
   const room = rooms.find((r) => r.id === roomId)
   if (
     !window.confirm(
@@ -76,6 +71,6 @@ export function deleteLayoutRoomFromList(
   const next = rooms.filter((r) => r.id !== roomId)
   return {
     rooms: next,
-    activeRoomId: activeRoomId === roomId ? next[0]!.id : activeRoomId,
+    activeRoomId: activeRoomId === roomId ? next[0]?.id ?? '' : activeRoomId,
   }
 }

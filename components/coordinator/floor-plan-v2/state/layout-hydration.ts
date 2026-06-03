@@ -1,13 +1,21 @@
 /**
  * Initial doc hydration — server layout vs localStorage crash-recovery draft.
+ *
+ * Only booth `cells` count as saved geometry. Metadata-only rows (room frames,
+ * entrance/exit fixtures in `venue_elements`) open on a blank grid.
  */
 
 import { docFromLegacyRooms } from './legacy-bridge'
 import { clearMultiRoomDraft, loadMultiRoomDraft } from './local-draft'
 import { forceRecomputeGeometry } from './geometry-sanitize'
 import { reconcileCanvasExtents } from './room-canvas'
+import { makeEmptyDoc } from './types'
 import type { FloorPlanDoc } from './types'
 import type { LayoutRoom } from '@/types/database'
+
+function layoutRoomsHaveSavedBooths(rooms: ReadonlyArray<LayoutRoom>): boolean {
+  return rooms.some((r) => (r.cells?.length ?? 0) > 0)
+}
 
 function reconcileDocExtents(doc: FloorPlanDoc): FloorPlanDoc {
   const frames = doc.rooms ?? []
@@ -29,6 +37,21 @@ export function stripMergedZoneOverlays(doc: FloorPlanDoc): FloorPlanDoc {
   })
 }
 
+function blankEditorDoc(): FloorPlanDoc {
+  return forceRecomputeGeometry({
+    ...makeEmptyDoc(50, 50),
+    rooms: [],
+    objects: [],
+    objectRoom: {},
+  })
+}
+
+function docFromSavedLayout(layoutRooms: LayoutRoom[]): FloorPlanDoc {
+  return stripMergedZoneOverlays(
+    forceRecomputeGeometry(docFromLegacyRooms(layoutRooms))
+  )
+}
+
 export interface HydrateFloorPlanDocOptions {
   /**
    * Standalone layout editor — load Supabase/project rooms only.
@@ -42,23 +65,28 @@ export function hydrateFloorPlanDoc(
   layoutRooms: LayoutRoom[],
   options: HydrateFloorPlanDocOptions = {}
 ): FloorPlanDoc {
-  const seeded = reconcileDocExtents(
-    stripMergedZoneOverlays(
-      forceRecomputeGeometry(docFromLegacyRooms(layoutRooms))
-    )
-  )
+  const { preferServerLayout = false } = options
+  const shouldHydrate = layoutRoomsHaveSavedBooths(layoutRooms)
 
-  if (!eventId) return seeded
-
-  if (options.preferServerLayout) {
+  if (eventId && (preferServerLayout || !shouldHydrate)) {
     clearMultiRoomDraft(eventId)
-    return seeded
   }
 
-  const cached = loadMultiRoomDraft(eventId)
-  if (!cached?.doc) return seeded
+  if (shouldHydrate && layoutRooms.length > 0) {
+    return reconcileDocExtents(docFromSavedLayout(layoutRooms))
+  }
 
-  return reconcileDocExtents(
-    stripMergedZoneOverlays(forceRecomputeGeometry(cached.doc))
-  )
+  if (eventId && !preferServerLayout && !shouldHydrate && layoutRooms.length > 0) {
+    const cached = loadMultiRoomDraft(eventId)
+    const cachedObjects = cached?.doc?.objects?.length ?? 0
+    const cachedRooms = cached?.doc?.rooms?.length ?? 0
+    if (cached?.doc && (cachedObjects > 0 || cachedRooms > 0)) {
+      return reconcileDocExtents(
+        stripMergedZoneOverlays(forceRecomputeGeometry(cached.doc))
+      )
+    }
+    clearMultiRoomDraft(eventId)
+  }
+
+  return blankEditorDoc()
 }

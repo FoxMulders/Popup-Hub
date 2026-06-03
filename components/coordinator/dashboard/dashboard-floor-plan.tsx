@@ -9,6 +9,7 @@ import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/t
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import {
   addLayoutRoomToList,
@@ -89,9 +90,12 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       const next = deleteLayoutRoomFromList(layoutRooms, roomId, layoutActiveRoomId)
       if (!next) return
       setLayoutRooms(next.rooms, next.activeRoomId)
+      if (next.rooms.length === 0) {
+        setSuppressAutoMainHall(true, selectedEventId ?? undefined)
+      }
       toast.message('Room deleted')
     },
-    [layoutRooms, layoutActiveRoomId, setLayoutRooms]
+    [layoutRooms, layoutActiveRoomId, selectedEventId, setLayoutRooms]
   )
 
   const handleSelectRoom = useCallback(

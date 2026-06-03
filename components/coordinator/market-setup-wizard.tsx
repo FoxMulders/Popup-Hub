@@ -80,6 +80,7 @@ import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wi
 import { WizardStepVenueWithMapsProvider } from '@/src/qa_review/components/coordinator/wizard/wizard-step-venue_predictive_search'
 import { applyWizardGooglePlaceSelect } from '@/src/qa_review/lib/wizard/wizard-google-place-select_qa'
 import { PlacesApiStatusProvider } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
+import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'
 import { WizardContextStrip } from '@/components/coordinator/wizard/wizard-context-strip'
 import { buildWizardScheduleLines } from '@/lib/wizard/wizard-schedule-summary'
@@ -372,6 +373,9 @@ export function MarketSetupWizard({
     const next = rooms.filter((r) => r.id !== roomId)
     setRooms(next)
     setActiveRoomId(next[0]?.id ?? '')
+    if (next.length === 0) {
+      setSuppressAutoMainHall(true, eventId ?? undefined)
+    }
     toast.message('Room deleted')
   }
 
