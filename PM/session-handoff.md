@@ -3,81 +3,66 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` (last pushed `5ce02ef`)
-- Production: https://popuphub.ca (build **84**) — **does not include fixes below until commit + deploy**
-- **Local WIP (uncommitted):** command-center nav + blank canvas + build fix (see below)
-- **Local build:** passes (`npm run build`, build **85** in working tree)
+- Branch: `master` @ `e764f5e` (pushed to `origin/master`)
+- Production: https://popuphub.ca — **build 90** · commit `e764f5e` (footer + `/version` confirmed 2026-06-03)
+- Deploy: https://popup-gurygz96z-thetipsyfoxyeg-2911s-projects.vercel.app (aliased popuphub.ca)
+- **Stashed (not shipped):** `git stash` entry `loader WIP` — brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix`
+- Local `build-number.json` may show **89** until next local `npm run build`; Vercel prebuild bumped to **90** on deploy
 
 ## Goal
 **Redesign layout surfaces with zero preassigned objects** — open grid only; coordinators add rooms and fixtures manually. Restore reliable exit navigation from wizard Step 3, command center, and `/coordinator/events/[id]/layout`.
 
-## Active work — Layout blank start + navigation
+## Shipped this session
+- FF-merge `feature/step-2-fix` → `master`: Step 2 scroll (`setup-wizard-body` + `overflow-y-auto` on setup page; Step 3 keeps `overflow: hidden` via `.layout-planner-root`)
+- Layout blank-start + command-center nav already on `master` from `3147712` / `59ec24f`
+- `chore: ship build 89` commit + push + `npx vercel deploy --prod --yes`
 
-### Step 2 scroll (local fix)
-- **Root cause:** Setup route uses viewport-fill (`overflow-hidden` on `#site-main` + `.coordinator-setup-page`) for Step 3 canvas — Steps 1–2 had no scroll container, so long Capacity content (category limits + nav) was clipped below the fold.
-- **Fix:** `.setup-wizard-body` on setup page uses `overflow-y-auto`; CSS reverts to `overflow: hidden` when `.layout-planner-root` is present (Step 3).
+## Active work — Layout blank start + navigation (on prod)
 
-### Root causes addressed (WIP)
-1. **`roomsFromBoothLayout(null)`** seeded a default Main Hall (50×50) into wizard/layout sidebar state.
-2. **`layoutHasPlacedGeometry`** treated `venue_elements` (entrance/exit fixtures) as “saved geometry,” hydrating Door · IN / EXIT onto the canvas from metadata-only saves.
-3. **localStorage multi-room draft** could restore stale room + doors even when sidebar rooms were empty.
-4. **`handleDeleteRoom`** blocked deleting the last room (“At least one room is required”).
-5. **Canvas fullscreen CSS** (`popup-hub-canvas-fullscreen`, `command-center-canvas-fullscreen`) could persist after leaving the editor and hide `#site-app-nav`.
-6. **Command center** wired `command-center-canvas-fullscreen` into `FullscreenLayout` → `popup-hub-canvas-fullscreen` fixed the canvas at `z-index: 9998` over the whole viewport, swallowing clicks on **Back to market**, **New market**, and site nav.
+### Root causes addressed
+1. **`roomsFromBoothLayout(null)`** seeded default Main Hall — replaced by `roomsFromBoothLayoutForEditor`
+2. **`layoutHasPlacedGeometry`** — now `layoutHasDrawableGeometry` (cells only)
+3. **localStorage multi-room draft** — cleared when no drawable geometry / empty `layoutRooms`
+4. **Delete last room** — allowed in wizard + standalone layout
+5. **Fullscreen CSS** — stripped on route change + command-center mount
+6. **Command center** — exit/new-market as `Link` + `buttonVariants`; dashboard decoupled from viewport-swallowing fullscreen
 
-### Fixes (WIP files)
-| Area | Change |
-|------|--------|
-| **Build / nav (this pass)** | Removed invalid `Button asChild` (Base UI Button has no slot) — exit/new-market links are styled `Link` + `buttonVariants`; strip `popup-hub-canvas-fullscreen` on command-center mount |
-| **Sidebar + Add room (this pass)** | Restore `layoutRooms`→doc sync in QA floor plan; inspector rail stretch + in-bounds toggle; drop row `overflow-hidden`; left-rail preset menu overflow; toolbar Add room fallback when embedded + zero rooms |
-| `lib/booth-planner/layout-rooms.ts` | `layoutHasDrawableGeometry` (cells only); `roomsFromBoothLayoutForEditor` (empty unless booths saved); `getActiveRoom` safe when no rooms |
-| `src/qa_review/lib/floor-plan/layout-hydration-wizard_qa.ts` | No draft restore when `layoutRooms` empty; hydration uses cells-only rule |
-| `market-setup-wizard.tsx` | `roomsFromBoothLayoutForEditor`; delete last room allowed |
-| `use-spatial-layout-state.ts` | Same empty start + delete last room on standalone layout |
-| `floor-plan-v2_wizard_qa.tsx` | Reset canvas when `layoutRooms` becomes `[]` |
-| `spatial-layout-editor_qa.tsx` | Floor plan re-wired (not empty shell) |
-| `use-coordinator-route-chrome-cleanup.ts` + `portal-site-chrome.tsx` | Strip fullscreen classes on every route change |
-| `layout-planner-header.tsx` | Wizard: **Event overview** link beside Back |
-| `spatial-layout-toolbar.tsx` | **Event overview** link with higher z-index |
-| Nav (prior WIP) | `coordinatorNavBackHref`, immersive routes for setup/new/layout |
-| Command center (this pass) | Decouple dashboard immersive from `FullscreenLayout`; `preferServerLayout` on dashboard; `Button asChild`+`Link` for exit/new market; default panels visible; skip/clear local draft when canvas empty |
+### Wizard Step 3 QA wiring
+- `floor-plan-v2_wizard_qa.tsx` via `WizardStepFloorPlan`
+- Hydration: `layout-hydration-wizard_qa.ts` + `roomsFromBoothLayoutForEditor`
 
-### Wizard Step 1 & 3 QA (unchanged wiring)
-- Step 3 still uses `floor-plan-v2_wizard_qa.tsx` via `WizardStepFloorPlan`
-- Step 1 venue Places autocomplete wired; event details QA not promoted
-
-## Files in scope (QA tree)
-| Entry | Notes |
+## Smoke-test status (2026-06-03)
+| Check | Result |
 |-------|--------|
-| `market-setup-wizard.tsx` | `roomsFromBoothLayoutForEditor` |
-| `spatial-layout-editor_qa.tsx` | Standalone layout page |
-| `layout-hydration-wizard_qa.ts` | Blank + draft rules |
-| `floor-plan-v2_wizard_qa.tsx` | Empty-room canvas reset |
+| Prod build / alias | **Pass** — login footer `v0.1.90 · build 90 · e764f5e`, `/version` JSON matches |
+| Step 3 blank canvas (interactive) | **Blocked** — needs coordinator login; verify on a draft event with `?step=3` |
+| Step 2 Capacity scroll | **Not run** — same auth blocker |
+| Command center nav | **Not run** — same auth blocker |
+| Saved markets with booth cells | **Not run** — post-login checklist |
+
+**Manual checklist after sign-in:** Command center **Back to market** / **+ New market** / site nav; wizard Step 3 empty grid (use **Clear all** if stale local draft); layout page same rules; event with saved **cells** still hydrates booths.
 
 ## Do not touch
 - `booth-planner.tsx`, production `floor-plan-v2.tsx` until QA promotion
 - Vendor / shopper / auction flows unless asked
 
 ## Blockers
-- **Production** still on build 84 until WIP is committed and deployed
-- Markets with **only** saved `venue_elements` (doors) and no cells will now open **blank** — coordinators use **Add room** then draw; intentional for redesign
-- **`Button asChild`** was breaking TypeScript build and nesting `<Link>` inside `<button>` broke navigation clicks
+- Interactive coordinator smoke-test requires user credentials (no prod mock-login)
+- Markets with **only** `venue_elements` and no cells open **blank** by design
 
 ## Decisions
-- **Drawable geometry = booth `cells` only** — not `venue_elements`, not `layout_rooms` metadata alone
-- **Zero rooms by default** on wizard Step 3 and layout editor until user adds a room or has saved booth cells
-- **Hydration rule (unchanged intent):** metadata-only Main Hall rows → blank canvas
+- **Drawable geometry = booth `cells` only**
+- **Zero rooms by default** until user adds a room or saved booth cells exist
 - **Handoff:** always update this file when finishing a task
 
 ## Next actions
-1. **Deploy WIP** — commit, push, `npx vercel deploy --prod --yes` so popuphub.ca matches local fixes
-2. **Smoke-test** — Command center: **Back to Spring market**, **+ New market**, site nav work with panels default; empty grid (use **Clear all** once if a stale local draft remains); Step 3 + layout: same blank-start rules
-3. **Saved markets with real booths** — confirm cells still restore after deploy
-4. Continue Step 1 QA promotion per patch docs when layout sign-off is done
+1. **Coordinator smoke-test** — Step 2 scroll, Step 3 blank start, command center exit links, cell hydration on a real market
+2. **Pop stash** if resuming brand loader work: `git stash list` → apply on `feature/step-2-fix` or new branch
+3. Step 1 QA promotion per patch docs when layout sign-off is done
 
 ## How to start the next chat
 ```
 @PM/session-handoff.md
 
-Task: [e.g. deploy layout blank-start fixes / smoke-test Step 3]
+Task: [e.g. coordinator smoke-test Step 3 on Spring market]
 ```
