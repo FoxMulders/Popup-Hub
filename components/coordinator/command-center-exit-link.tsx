@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export function CommandCenterExitLink({
@@ -24,20 +24,17 @@ export function CommandCenterExitLink({
     : 'Event overview'
 
   return (
-    <Button
-      asChild
-      variant="ghost"
-      size="sm"
+    <Link
+      href={`/coordinator/events/${eventId}`}
       className={cn(
+        buttonVariants({ variant: 'ghost', size: 'sm' }),
         'gap-1.5 text-stone-700 hover:text-forest',
         compact && 'h-8 px-2 text-xs',
         className
       )}
     >
-      <Link href={`/coordinator/events/${eventId}`}>
-        <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-        <span className="truncate">{label}</span>
-      </Link>
-    </Button>
+      <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="truncate">{label}</span>
+    </Link>
   )
 }

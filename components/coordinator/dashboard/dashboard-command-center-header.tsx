@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { LayoutGrid, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useMarketManagement } from './market-management-context'
+import { cn } from '@/lib/utils'
 
 export function DashboardCommandCenterHeader() {
   const { events, selectedEventId } = useMarketManagement()
@@ -35,9 +36,12 @@ export function DashboardCommandCenterHeader() {
             <LayoutGrid className="h-4 w-4" aria-hidden />
             Panels
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/coordinator/payment-methods">Payments</Link>
-          </Button>
+          <Link
+            href="/coordinator/payment-methods"
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+          >
+            Payments
+          </Link>
         </div>
       </div>
     )
@@ -70,15 +74,19 @@ export function DashboardCommandCenterHeader() {
         >
           Full canvas
         </Button>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/coordinator/payment-methods">Payments</Link>
-        </Button>
-        <Button asChild size="sm" className="gap-1.5">
-          <Link href="/coordinator/events/new">
-            <Plus className="h-4 w-4" aria-hidden />
-            New market
-          </Link>
-        </Button>
+        <Link
+          href="/coordinator/payment-methods"
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+        >
+          Payments
+        </Link>
+        <Link
+          href="/coordinator/events/new"
+          className={cn(buttonVariants({ size: 'sm' }), 'gap-1.5')}
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          New market
+        </Link>
       </div>
     </div>
   )

@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { CANVAS_FULLSCREEN_CLASS } from '@/components/coordinator/floor-plan-v2/canvas/use-native-fullscreen'
 
 const HTML_CLASS = 'command-center-canvas-fullscreen'
 
@@ -26,9 +27,12 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
   const [fullscreen, setFullscreen] = useState(false)
 
   useLayoutEffect(() => {
+    document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
     document.body.dataset.dashboardCommandCenter = 'true'
     return () => {
       delete document.body.dataset.dashboardCommandCenter
+      document.documentElement.classList.remove(HTML_CLASS)
+      document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
     }
   }, [])
 

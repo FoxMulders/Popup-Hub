@@ -7,8 +7,9 @@ import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import {
@@ -153,12 +154,13 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       <div className="flex h-full items-center justify-center p-8 text-center">
         <div>
           <p className="text-muted-foreground">Select a market to open the booth designer.</p>
-          <Button asChild size="sm" className="mt-4 gap-1.5">
-            <Link href="/coordinator/events/new">
-              <Plus className="h-4 w-4" aria-hidden />
-              Create market
-            </Link>
-          </Button>
+          <Link
+            href="/coordinator/events/new"
+            className={cn(buttonVariants({ size: 'sm' }), 'mt-4 gap-1.5')}
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            Create market
+          </Link>
         </div>
       </div>
     )

@@ -268,7 +268,18 @@ export function FloorPlanCanvas({
 
   const frameActiveRoom = useCallback(() => {
     const frames = store.doc.rooms ?? []
-    if (frames.length === 0) return
+    if (frames.length === 0) {
+      viewport.fitToBounds(
+        {
+          minX: 0,
+          minY: 0,
+          maxX: store.doc.canvasWidthFt,
+          maxY: store.doc.canvasLengthFt,
+        },
+        { padding: commandCenterViewport ? 0.06 : 0.08 }
+      )
+      return
+    }
     const bounds = activeRoomFramingBounds(
       frames,
       activeRoomId,
@@ -281,6 +292,8 @@ export function FloorPlanCanvas({
   }, [
     activeRoomId,
     commandCenterViewport,
+    store.doc.canvasLengthFt,
+    store.doc.canvasWidthFt,
     store.doc.objectRoom,
     store.doc.objects,
     store.doc.rooms,

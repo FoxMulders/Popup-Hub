@@ -422,14 +422,13 @@ export function renderCanvasCommandBarBlock(
       ) : null
 
     case 'rooms':
-      return ctx.rooms?.length &&
-        ctx.onSelectRoom &&
+      return ctx.onSelectRoom &&
         ctx.onAddRoom &&
         ctx.onRenameRoom &&
         ctx.onDeleteRoom ? (
         <LayoutRoomBar
-          rooms={ctx.rooms}
-          activeRoomId={ctx.activeRoomId ?? ctx.rooms[0]!.id}
+          rooms={ctx.rooms ?? []}
+          activeRoomId={ctx.activeRoomId ?? ctx.rooms?.[0]?.id ?? ''}
           onSelectRoom={ctx.onSelectRoom}
           onAddRoom={ctx.onAddRoom}
           onRenameRoom={ctx.onRenameRoom}

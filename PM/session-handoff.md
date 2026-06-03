@@ -5,7 +5,8 @@
 ## Baseline
 - Branch: `master` (last pushed `5ce02ef`)
 - Production: https://popuphub.ca (build **84**) — **does not include fixes below until commit + deploy**
-- **Local WIP (uncommitted):** command-center nav unblock + blank canvas hydration (see below)
+- **Local WIP (uncommitted):** command-center nav + blank canvas + build fix (see below)
+- **Local build:** passes (`npm run build`, build **85** in working tree)
 
 ## Goal
 **Redesign layout surfaces with zero preassigned objects** — open grid only; coordinators add rooms and fixtures manually. Restore reliable exit navigation from wizard Step 3, command center, and `/coordinator/events/[id]/layout`.
@@ -23,6 +24,8 @@
 ### Fixes (WIP files)
 | Area | Change |
 |------|--------|
+| **Build / nav (this pass)** | Removed invalid `Button asChild` (Base UI Button has no slot) — exit/new-market links are styled `Link` + `buttonVariants`; strip `popup-hub-canvas-fullscreen` on command-center mount |
+| **Placement (this pass)** | Show **Add room** toolbar when `rooms.length === 0`; fit blank canvas to viewport; toast when drawing with no room |
 | `lib/booth-planner/layout-rooms.ts` | `layoutHasDrawableGeometry` (cells only); `roomsFromBoothLayoutForEditor` (empty unless booths saved); `getActiveRoom` safe when no rooms |
 | `src/qa_review/lib/floor-plan/layout-hydration-wizard_qa.ts` | No draft restore when `layoutRooms` empty; hydration uses cells-only rule |
 | `market-setup-wizard.tsx` | `roomsFromBoothLayoutForEditor`; delete last room allowed |
@@ -53,7 +56,8 @@
 
 ## Blockers
 - **Production** still on build 84 until WIP is committed and deployed
-- Markets with **only** saved `venue_elements` (doors) and no cells will now open **blank** — coordinators re-draw; intentional for redesign
+- Markets with **only** saved `venue_elements` (doors) and no cells will now open **blank** — coordinators use **Add room** then draw; intentional for redesign
+- **`Button asChild`** was breaking TypeScript build and nesting `<Link>` inside `<button>` broke navigation clicks
 
 ## Decisions
 - **Drawable geometry = booth `cells` only** — not `venue_elements`, not `layout_rooms` metadata alone

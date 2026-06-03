@@ -1925,6 +1925,13 @@ function FloorPlanV2Workspace({
                 )
               }}
               onOverlapViolation={() => {
+                if ((store.doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId).length === 0) {
+                  toast.message(
+                    'Add a room first — use Add room in the toolbar, then draw booths inside it.',
+                    { duration: 3200 }
+                  )
+                  return
+                }
                 toast.error(
                   'Objects cannot overlap — move the selection so it clears other fixtures, then try again.',
                   { duration: 2400 }

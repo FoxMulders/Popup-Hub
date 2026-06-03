@@ -11,7 +11,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import {
   coordinatorEventIdFromPath,
@@ -92,25 +92,30 @@ export function CoordinatorWorkspaceRail() {
             : 'Open the command center for the CAD booth designer and live financial desk.'}
         </p>
         {eventIdFromRoute ? (
-          <Button asChild size="sm" variant="outline" className="mt-2 w-full text-xs">
-            <Link href={coordinatorNavBackHref(pathname)}>Event overview</Link>
-          </Button>
-        ) : null}
-        <Button
-          asChild
-          size="sm"
-          className={cn('w-full text-xs', eventIdFromRoute ? 'mt-1.5' : 'mt-2')}
-        >
           <Link
-            href={
-              eventIdFromRoute
-                ? `/coordinator/dashboard?event=${eventIdFromRoute}`
-                : '/coordinator/dashboard'
-            }
+            href={coordinatorNavBackHref(pathname)}
+            className={cn(
+              buttonVariants({ size: 'sm', variant: 'outline' }),
+              'mt-2 w-full text-xs'
+            )}
           >
-            Open command center
+            Event overview
           </Link>
-        </Button>
+        ) : null}
+        <Link
+          href={
+            eventIdFromRoute
+              ? `/coordinator/dashboard?event=${eventIdFromRoute}`
+              : '/coordinator/dashboard'
+          }
+          className={cn(
+            buttonVariants({ size: 'sm' }),
+            'w-full text-xs',
+            eventIdFromRoute ? 'mt-1.5' : 'mt-2'
+          )}
+        >
+          Open command center
+        </Link>
       </motion.div>
     </nav>
   )

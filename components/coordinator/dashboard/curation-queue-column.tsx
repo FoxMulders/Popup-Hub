@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import { ClipboardList, Filter } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { useMarketManagement } from './market-management-context'
 import { VendorPoolShelf } from './vendor-pool-shelf'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { cn } from '@/lib/utils'
 
 export function CurationQueueColumn() {
   const { pendingApplications, approvedPool, events, selectedEventId, setSelectedEventId } =
@@ -107,12 +108,16 @@ export function CurationQueueColumn() {
         </AnimatePresence>
 
         {pendingApplications.length > 0 && selectedEventId ? (
-          <Button asChild variant="outline" size="sm" className="mt-3 w-full gap-1.5">
-            <Link href={`/coordinator/events/${selectedEventId}/applications`}>
-              <ClipboardList className="h-4 w-4" aria-hidden />
-              Review all applications
-            </Link>
-          </Button>
+          <Link
+            href={`/coordinator/events/${selectedEventId}/applications`}
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'mt-3 w-full gap-1.5'
+            )}
+          >
+            <ClipboardList className="h-4 w-4" aria-hidden />
+            Review all applications
+          </Link>
         ) : null}
 
         <div className="mt-5 border-t border-stone-200/80 pt-4">

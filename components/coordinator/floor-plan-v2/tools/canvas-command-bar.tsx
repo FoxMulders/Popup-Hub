@@ -126,7 +126,6 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
   const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
   const showTableSize = Boolean(onTableSizeChange) && tableSizeFt != null
   const showRooms =
-    Boolean(rooms?.length) &&
     Boolean(onSelectRoom) &&
     Boolean(onAddRoom) &&
     Boolean(onRenameRoom) &&
