@@ -56,16 +56,26 @@ export function LayoutPlannerHeader({
     >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
         {mode === 'wizard' && onBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 shrink-0 gap-1.5 px-2 text-muted-foreground"
-            onClick={onBack}
-          >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-            Back
-          </Button>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2 text-muted-foreground"
+              onClick={onBack}
+            >
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+              Back
+            </Button>
+            {eventId ? (
+              <Link
+                href={`/coordinator/events/${eventId}`}
+                className="inline-flex h-8 items-center rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground"
+              >
+                Event overview
+              </Link>
+            ) : null}
+          </div>
         ) : (
           <Link
             href={resolvedBackHref}

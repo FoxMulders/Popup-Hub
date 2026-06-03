@@ -11,7 +11,7 @@ import {
   createLayoutRoom,
   getActiveRoom,
   layoutPayloadFromRooms,
-  roomsFromBoothLayout,
+  roomsFromBoothLayoutForEditor,
   updateRoomInList,
 } from '@/lib/booth-planner/layout-rooms'
 import {
@@ -219,7 +219,10 @@ export function MarketSetupWizard({
   const supabase = createClient()
   const sortedCategories = sortCategoriesByName(categories)
 
-  const initialRoomsState = useMemo(() => roomsFromBoothLayout(existingLayout ?? null), [existingLayout])
+  const initialRoomsState = useMemo(
+    () => roomsFromBoothLayoutForEditor(existingLayout ?? null),
+    [existingLayout]
+  )
 
   const [eventId, setEventId] = useState<string | null>(existing?.id ?? null)
   const [currentStep, setCurrentStep] = useState<WizardStep>(initialStep)
@@ -358,10 +361,6 @@ export function MarketSetupWizard({
   }
 
   function handleDeleteRoom(roomId: string) {
-    if (rooms.length <= 1) {
-      toast.error('At least one room is required')
-      return
-    }
     const room = rooms.find((r) => r.id === roomId)
     if (
       !window.confirm(
@@ -372,7 +371,7 @@ export function MarketSetupWizard({
     }
     const next = rooms.filter((r) => r.id !== roomId)
     setRooms(next)
-    if (activeRoomId === roomId) setActiveRoomId(next[0]!.id)
+    setActiveRoomId(next[0]?.id ?? '')
     toast.message('Room deleted')
   }
 

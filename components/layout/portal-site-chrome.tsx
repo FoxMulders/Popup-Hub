@@ -8,6 +8,7 @@ import {
   routeUsesViewportFill,
   type WorkspacePortal,
 } from '@/components/layout/portal-workspace-layout'
+import { useCoordinatorRouteChromeCleanup } from '@/components/layout/use-coordinator-route-chrome-cleanup'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 
@@ -31,6 +32,7 @@ export function PortalSiteChrome({
 }: PortalSiteChromeProps) {
   const pathname = usePathname() ?? ''
   const viewportFill = routeUsesViewportFill(pathname)
+  useCoordinatorRouteChromeCleanup()
 
   return (
     <SiteAppShell

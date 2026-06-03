@@ -3,83 +3,71 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` (last pushed `5ce02ef` — fix(layout): blank canvas when layout has room metadata only)
-- Production: https://popuphub.ca (build **84** per last deploy)
-- **Local WIP (uncommitted):** empty standalone layout editor + coordinator back-navigation fixes (see Active work)
+- Branch: `master` (last pushed `5ce02ef`)
+- Production: https://popuphub.ca (build **84**) — **does not include fixes below until commit + deploy**
+- **Local WIP (uncommitted):** blank layout start (no preassigned rooms/fixtures), delete-last-room, nav/chrome cleanup, layout editor restored
 
 ## Goal
-Finish QA validation of the **Market Setup Wizard** (Steps 1 & 3), restore the **standalone layout editor** canvas when ready, then promote `src/qa_review/` modules into production paths when signed off.
+**Redesign layout surfaces with zero preassigned objects** — open grid only; coordinators add rooms and fixtures manually. Restore reliable exit navigation from wizard Step 3 and `/coordinator/events/[id]/layout`.
 
-## Active work — Wizard QA staging
+## Active work — Layout blank start + navigation
 
-QA modules live under `src/qa_review/` and are wired into production entry points via direct imports. **Do not promote to `@/components` / `@/lib` until QA approves** — use the patch checklists in `src/qa_review/components/coordinator/market-setup-wizard-step*-patch_qa.md`.
+### Root causes addressed (WIP)
+1. **`roomsFromBoothLayout(null)`** seeded a default Main Hall (50×50) into wizard/layout sidebar state.
+2. **`layoutHasPlacedGeometry`** treated `venue_elements` (entrance/exit fixtures) as “saved geometry,” hydrating Door · IN / EXIT onto the canvas from metadata-only saves.
+3. **localStorage multi-room draft** could restore stale room + doors even when sidebar rooms were empty.
+4. **`handleDeleteRoom`** blocked deleting the last room (“At least one room is required”).
+5. **Canvas fullscreen CSS** (`popup-hub-canvas-fullscreen`, `command-center-canvas-fullscreen`) could persist after leaving the editor and hide `#site-app-nav`.
 
-### Step 1 — Event & Venue (partially wired)
-- **Wired in prod wizard:** Places autocomplete (`WizardStepVenueWithMapsProvider`, `applyWizardGooglePlaceSelect`, `PlaceResult` types)
-- **Still production:** `WizardStepEventDetails` (description overlap fix + multi-payment toggles live in QA only)
-- Patch doc: `src/qa_review/components/coordinator/market-setup-wizard-step1-patch_qa.md`
-- Requires: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` with Places API enabled
+### Fixes (WIP files)
+| Area | Change |
+|------|--------|
+| `lib/booth-planner/layout-rooms.ts` | `layoutHasDrawableGeometry` (cells only); `roomsFromBoothLayoutForEditor` (empty unless booths saved); `getActiveRoom` safe when no rooms |
+| `src/qa_review/lib/floor-plan/layout-hydration-wizard_qa.ts` | No draft restore when `layoutRooms` empty; hydration uses cells-only rule |
+| `market-setup-wizard.tsx` | `roomsFromBoothLayoutForEditor`; delete last room allowed |
+| `use-spatial-layout-state.ts` | Same empty start + delete last room on standalone layout |
+| `floor-plan-v2_wizard_qa.tsx` | Reset canvas when `layoutRooms` becomes `[]` |
+| `spatial-layout-editor_qa.tsx` | Floor plan re-wired (not empty shell) |
+| `use-coordinator-route-chrome-cleanup.ts` + `portal-site-chrome.tsx` | Strip fullscreen classes on every route change |
+| `layout-planner-header.tsx` | Wizard: **Event overview** link beside Back |
+| `spatial-layout-toolbar.tsx` | **Event overview** link with higher z-index |
+| Nav (prior WIP) | `coordinatorNavBackHref`, immersive routes for setup/new/layout |
 
-### Step 3 — Floor plan canvas (wired in wizard only)
-- Blank 50×50 canvas on new markets; open-grid placement without room polygons
-- Clears stale `localStorage` multi-room drafts on entry
-- Hydrates saved geometry only when `cells` or `venue_elements` exist (`layoutHasPlacedGeometry`)
-- Patch doc: `src/qa_review/components/coordinator/market-setup-wizard-step3-patch_qa.md`
-- Wizard still uses `floor-plan-v2_wizard_qa.tsx` via `WizardStepFloorPlan` in `market-setup-wizard.tsx`
-
-### Layout editor — **reset to empty shell (WIP)**
-- `/coordinator/events/[id]/layout` still imports `spatial-layout-editor_qa.tsx`, but the editor **no longer mounts** `FloorPlanV2WizardQa` — toolbar + blank canvas only (intentional rebuild surface)
-- Save shows “being rebuilt” toast; draft save still navigates to event overview
-- **Not removed from repo:** `floor-plan-v2_wizard_qa.tsx`, hydration QA — re-wire when standalone editor is ready again
-
-### Coordinator navigation fixes (WIP, production paths)
-- `coordinatorNavBackHref(pathname)` in `lib/coordinator/coordinator-event-route.ts` — logo/back targets **event overview** when pathname is `/coordinator/events/[id]/…`, else command center
-- Wired: `app-nav.tsx` (logo), `coordinator-workspace-rail.tsx`, `coordinator-context-panel.tsx`, `payment-methods-form.tsx`
-- `portal-workspace-layout.tsx`: immersive routes include `…/layout`, `…/setup`, `/coordinator/events/new` (no 3-column shell)
-- `spatial-layout-shell.tsx`: unmount clears `popup-hub-canvas-fullscreen` / `command-center-canvas-fullscreen` so top nav stays usable after leaving canvas
+### Wizard Step 1 & 3 QA (unchanged wiring)
+- Step 3 still uses `floor-plan-v2_wizard_qa.tsx` via `WizardStepFloorPlan`
+- Step 1 venue Places autocomplete wired; event details QA not promoted
 
 ## Files in scope (QA tree)
-See full list in `src/qa_review/MANIFEST.md`. Key entry points:
-
-| Entry | QA import / status |
-|-------|-------------------|
-| `components/coordinator/market-setup-wizard.tsx` | Step 1 venue + Step 3 floor plan QA modules |
-| `app/coordinator/events/[id]/layout/page.tsx` | `spatial-layout-editor_qa.tsx` (empty shell) |
-| `src/qa_review/lib/floor-plan/layout-hydration-wizard_qa.ts` | Blank-canvas hydration + `layoutHasPlacedGeometry` |
-| `src/qa_review/components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa.tsx` | Wizard Step 3 only (not layout page until re-wired) |
+| Entry | Notes |
+|-------|--------|
+| `market-setup-wizard.tsx` | `roomsFromBoothLayoutForEditor` |
+| `spatial-layout-editor_qa.tsx` | Standalone layout page |
+| `layout-hydration-wizard_qa.ts` | Blank + draft rules |
+| `floor-plan-v2_wizard_qa.tsx` | Empty-room canvas reset |
 
 ## Do not touch
-- `components/coordinator/booth-planner.tsx` — legacy planner; wizard uses floor-plan-v2 QA stack
-- Production `floor-plan-v2.tsx` / `use-canvas-store.ts` — changes belong in QA modules until promotion
-- Vendor / shopper / passport / wallet flows unless explicitly asked
-- Quarter-auction planning (`app/coordinator/auctions`, `components/auction/**`) — separate initiative
+- `booth-planner.tsx`, production `floor-plan-v2.tsx` until QA promotion
+- Vendor / shopper / auction flows unless asked
 
 ## Blockers
-- **Standalone layout route:** floor plan intentionally stripped; must re-attach `FloorPlanV2WizardQa` + `useSpatialLayoutState` (or promoted prod stack) before layout QA can resume
-- Step 1 QA promotion blocked on: wiring `WizardStepEventDetailsQa` + `vendorPaymentMethods` array state in `market-setup-wizard.tsx`
+- **Production** still on build 84 until WIP is committed and deployed
+- Markets with **only** saved `venue_elements` (doors) and no cells will now open **blank** — coordinators re-draw; intentional for redesign
 
 ## Decisions
-- **QA-first:** stage under `src/qa_review/`, wire via imports, promote with patch docs — never edit production modules in place during QA
-- **Hydration rule:** `layout_rooms` metadata alone → blank canvas; doors/booths load only when real geometry exists
-- **C<sub>max</sub> readout:** Step 2 `layoutCapacity` display only; not a draw/drop validator (Auto-Arrange cap only)
-- **Coordinator back nav:** event routes use event overview as “home”; command center remains explicit (`/coordinator/dashboard` or `?event=`)
-- **Next.js 16:** read `node_modules/next/dist/docs/` before writing framework code
-- **Release:** commit only when explicitly asked; after commit → `git push` → `npx vercel deploy --prod --yes`
-- **Handoff:** always update `PM/session-handoff.md` when finishing a task
+- **Drawable geometry = booth `cells` only** — not `venue_elements`, not `layout_rooms` metadata alone
+- **Zero rooms by default** on wizard Step 3 and layout editor until user adds a room or has saved booth cells
+- **Hydration rule (unchanged intent):** metadata-only Main Hall rows → blank canvas
+- **Handoff:** always update this file when finishing a task
 
 ## Next actions
-1. **Smoke-test navigation (WIP)** — from layout/setup/event pages: logo → event overview; Dashboard nav → command center; payment-methods back link; nav visible after leaving layout
-2. **Re-wire standalone layout editor** — restore `FloorPlanV2WizardQa` in `spatial-layout-editor_qa.tsx` with `preferServerLayout` + hydration QA; confirm blank canvas + back nav still work
-3. **Smoke-test Step 3 (wizard)** — new draft: blank grid, draw/drag, no stale localStorage; saved booths restore when cells exist
-4. **Smoke-test Step 1 venue search** — Places autocomplete fills fields + map pin
-5. **Wire Step 1 QA event details** — see step1 patch doc
-6. **Promote Step 3 / Step 1** — per patch docs after QA sign-off
+1. **Deploy WIP** — commit, push, `npx vercel deploy --prod --yes` so popuphub.ca matches local fixes
+2. **Smoke-test** — Step 3 + layout: empty grid, no door/room until user adds; delete last room; logo / Event overview / top nav leave the page
+3. **Saved markets with real booths** — confirm cells still restore after deploy
+4. Continue Step 1 QA promotion per patch docs when layout sign-off is done
 
 ## How to start the next chat
 ```
 @PM/session-handoff.md
 
-Task: [pick one next action above — local only unless commit/deploy requested]
+Task: [e.g. deploy layout blank-start fixes / smoke-test Step 3]
 ```
-
-Keep new chats scoped: cite this file + at most 1–2 target files. Avoid opening `floor-plan-v2.tsx`, `booth-planner.tsx`, or broad repo searches unless the task requires it.

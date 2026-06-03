@@ -12,6 +12,7 @@ import {
 import { forceRecomputeGeometry } from '@/components/coordinator/floor-plan-v2/state/geometry-sanitize'
 import { makeEmptyDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
+import { layoutHasDrawableGeometry } from '@/lib/booth-planner/layout-rooms'
 import type { BoothLayout, LayoutRoom } from '@/types/database'
 
 export interface HydrateWizardFloorPlanDocOptions {
@@ -22,19 +23,9 @@ export interface HydrateWizardFloorPlanDocOptions {
   preferServerLayout?: boolean
 }
 
-/** True only when the saved layout has drawable geometry, not room metadata alone. */
+/** @deprecated Use `layoutHasDrawableGeometry` from `@/lib/booth-planner/layout-rooms`. */
 export function layoutHasPlacedGeometry(layout: BoothLayout | null | undefined): boolean {
-  if (!layout) return false
-
-  const rooms = layout.layout_rooms as LayoutRoom[] | undefined
-  if (Array.isArray(rooms) && rooms.length > 0) {
-    for (const room of rooms) {
-      if ((room.cells?.length ?? 0) > 0) return true
-      if ((room.venue_elements?.length ?? 0) > 0) return true
-    }
-  }
-
-  return (layout.cells?.length ?? 0) > 0
+  return layoutHasDrawableGeometry(layout)
 }
 
 function blankWizardDoc(): FloorPlanDoc {
@@ -79,6 +70,10 @@ export function hydrateFloorPlanDocForWizardQa(
   }
 
   if (eventId && !preferServerLayout && !shouldHydrate) {
+    if (layoutRooms.length === 0) {
+      clearMultiRoomDraft(eventId)
+      return blankWizardDoc()
+    }
     const cached = loadMultiRoomDraft(eventId)
     const cachedObjects = cached?.doc?.objects?.length ?? 0
     const cachedRooms = cached?.doc?.rooms?.length ?? 0

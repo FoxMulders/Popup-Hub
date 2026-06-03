@@ -5,7 +5,8 @@ import { toast } from 'sonner'
 import {
   createLayoutRoom,
   getActiveRoom,
-  roomsFromBoothLayout,
+  layoutHasDrawableGeometry,
+  roomsFromBoothLayoutForEditor,
   updateRoomInList,
 } from '@/lib/booth-planner/layout-rooms'
 import {
@@ -37,14 +38,13 @@ export function useSpatialLayoutState({
   event,
   existingLayout,
 }: UseSpatialLayoutStateOptions) {
-  const initial = useMemo(() => {
-    if (existingLayout == null) {
-      return { rooms: [] as LayoutRoom[], activeRoomId: '' }
-    }
-    return roomsFromBoothLayout(existingLayout)
-  }, [existingLayout])
+  const initial = useMemo(
+    () => roomsFromBoothLayoutForEditor(existingLayout),
+    [existingLayout]
+  )
 
-  const allowEmptyRooms = existingLayout == null
+  const allowEmptyRooms =
+    existingLayout == null || !layoutHasDrawableGeometry(existingLayout)
 
   const [rooms, setRooms] = useState(initial.rooms)
   const [activeRoomId, setActiveRoomId] = useState(initial.activeRoomId)
@@ -143,10 +143,6 @@ export function useSpatialLayoutState({
 
   const handleDeleteRoom = useCallback(
     (roomId: string) => {
-      if (rooms.length <= 1) {
-        toast.error('At least one room is required')
-        return
-      }
       const room = rooms.find((r) => r.id === roomId)
       if (
         !window.confirm(

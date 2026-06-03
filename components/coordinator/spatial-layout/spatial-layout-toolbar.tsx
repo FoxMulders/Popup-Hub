@@ -34,10 +34,11 @@ export function SpatialLayoutToolbar({
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
         <Link
           href={`/coordinator/events/${eventId}`}
-          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground"
+          prefetch
+          className="relative z-20 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          Event
+          Event overview
         </Link>
         <div className="min-w-0">
           <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">

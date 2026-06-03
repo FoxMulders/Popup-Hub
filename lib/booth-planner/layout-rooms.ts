@@ -72,8 +72,45 @@ export function roomsFromBoothLayout(layout: BoothLayout | null): {
   return { rooms: [main], activeRoomId: main.id }
 }
 
+/** True when the layout has placed booth cells — not room metadata or fixtures alone. */
+export function layoutHasDrawableGeometry(layout: BoothLayout | null | undefined): boolean {
+  if (!layout) return false
+
+  const rooms = layout.layout_rooms as LayoutRoom[] | undefined
+  if (Array.isArray(rooms) && rooms.length > 0) {
+    for (const room of rooms) {
+      if ((room.cells?.length ?? 0) > 0) return true
+    }
+  }
+
+  return (layout.cells?.length ?? 0) > 0
+}
+
+/**
+ * Wizard + standalone layout editor — start with no rooms unless saved booths exist.
+ * Avoids painting Main Hall / entrance / exit fixtures from metadata-only rows.
+ */
+export function roomsFromBoothLayoutForEditor(layout: BoothLayout | null): {
+  rooms: LayoutRoom[]
+  activeRoomId: string
+} {
+  if (!layout || !layoutHasDrawableGeometry(layout)) {
+    return { rooms: [], activeRoomId: '' }
+  }
+  return roomsFromBoothLayout(layout)
+}
+
 export function getActiveRoom(rooms: LayoutRoom[], activeRoomId: string): LayoutRoom {
-  return rooms.find((r) => r.id === activeRoomId) ?? rooms[0]
+  const match = rooms.find((r) => r.id === activeRoomId)
+  if (match) return match
+  if (rooms[0]) return rooms[0]
+  return createLayoutRoom('Room', {
+    venue_width: 50,
+    venue_length: 50,
+    cells: [],
+    venue_elements: [],
+    entrance: 'south',
+  })
 }
 
 export function updateRoomInList(

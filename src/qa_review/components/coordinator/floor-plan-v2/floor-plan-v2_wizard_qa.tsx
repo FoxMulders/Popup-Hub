@@ -424,6 +424,16 @@ function FloorPlanV2Workspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Sidebar cleared all rooms — reset canvas to a blank open grid.
+  useEffect(() => {
+    if (layoutRooms.length > 0) return
+    if (eventId) clearMultiRoomDraft(eventId)
+    store.resetState()
+    setSelectedRoomIds(new Set())
+    setSelectedRoomId(null)
+    logState('layoutRooms empty: blank canvas (no room frames or fixtures)')
+  }, [eventId, layoutRoomIdsKey, layoutRooms.length, logState, store])
+
   // Wizard Step 3: no auto Main Hall seed — coordinator adds rooms or uses Step 1 frames.
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
