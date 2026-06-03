@@ -16,7 +16,7 @@
 - FF-merge `feature/step-2-fix` → `master`: Step 2 scroll (`setup-wizard-body` + `overflow-y-auto` on setup page; Step 3 keeps `overflow: hidden` via `.layout-planner-root`)
 - Layout blank-start + command-center nav already on `master` from `3147712` / `59ec24f`
 - `chore: ship build 89` commit + push + `npx vercel deploy --prod --yes`
-- **Footer chrome trim:** removed 1″ footer wordmark + duplicate `BuildVersionStrip`; footer is a single ~2rem row on all viewports (legal links scroll inline, version right)
+- **Footer chrome trim:** removed duplicate `BuildVersionStrip` above the footer; kept single footer row with legal links, logo, and copyright + build version
 - **Blank room interiors:** removed interior tints from `room-frames` / `room-drop-zones`; all room presets seed zero `venue_elements`
 
 ## Active work — Layout blank start + navigation (on prod)

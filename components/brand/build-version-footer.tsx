@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PopupHubLogo } from '@/components/brand/popup-hub-logo'
 import { getBuildInfo } from '@/lib/build-info'
 import { LEGAL_LINKS } from '@/lib/legal/links'
 import { cn } from '@/lib/utils'
@@ -23,20 +24,17 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
     >
       <div
         className={cn(
-          'mx-auto flex h-8 max-w-[1600px] items-center justify-between gap-3',
-          'px-4 xl:px-10'
+          'mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1',
+          'px-4 py-2 sm:justify-between sm:gap-x-5 sm:py-2.5 xl:px-10'
         )}
       >
-        <nav
-          aria-label="Legal and help"
-          className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-        >
-          <ul className="m-0 flex list-none items-center gap-x-3 whitespace-nowrap p-0 sm:gap-x-4">
+        <nav aria-label="Legal and help" className="min-w-0">
+          <ul className="m-0 flex list-none flex-row flex-wrap items-center justify-center gap-x-3 gap-y-0 p-0 sm:justify-start sm:gap-x-4">
             {LEGAL_LINKS.map(({ href, label }) => (
-              <li key={href} className="m-0 shrink-0">
+              <li key={href} className="m-0">
                 <Link
                   href={href}
-                  className="inline-flex items-center text-xs font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation sm:text-sm"
+                  className="inline-flex min-h-9 items-center px-0.5 text-xs font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation sm:text-sm"
                 >
                   {label}
                 </Link>
@@ -45,12 +43,18 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
           </ul>
         </nav>
 
+        <PopupHubLogo compact className="relative z-20 shrink-0" title="Popup Hub" />
+
         <p
-          className="m-0 shrink-0 whitespace-nowrap font-mono text-[10px] leading-none text-muted-foreground sm:text-[11px]"
+          className="m-0 flex shrink-0 flex-row flex-wrap items-center justify-center gap-x-1.5 text-xs leading-snug text-muted-foreground sm:justify-end sm:text-sm"
           title={tooltip}
         >
-          <span className="sr-only">© {year} Popup Hub. </span>
+          <span>© {year} Popup Hub</span>
+          <span className="text-stone-300" aria-hidden>
+            ·
+          </span>
           <span
+            className="font-mono text-[10px] sm:text-[11px]"
             data-testid="build-version-footer"
             data-build-version={build.version}
             data-build-number={build.buildNumber}
