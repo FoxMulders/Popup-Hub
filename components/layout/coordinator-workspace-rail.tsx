@@ -13,7 +13,10 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
-import { coordinatorEventIdFromPath } from '@/lib/coordinator/coordinator-event-route'
+import {
+  coordinatorEventIdFromPath,
+  coordinatorNavBackHref,
+} from '@/lib/coordinator/coordinator-event-route'
 
 const RAIL_LINKS = [
   { href: '/coordinator/dashboard', label: 'Command center', icon: LayoutDashboard },
@@ -84,10 +87,28 @@ export function CoordinatorWorkspaceRail() {
           Floor plan & assignments
         </p>
         <p className="mt-1 text-[0.6875rem] leading-snug text-sky-800/90">
-          Open the command center for the CAD booth designer and live financial
-          desk.
+          {eventIdFromRoute
+            ? 'Return to this market’s overview, or open the command center for CAD and payments.'
+            : 'Open the command center for the CAD booth designer and live financial desk.'}
         </p>
-        <Link href="/coordinator/dashboard" className="mt-2 block">
+        {eventIdFromRoute ? (
+          <Link
+            href={coordinatorNavBackHref(pathname)}
+            className="mt-2 block"
+          >
+            <Button size="sm" variant="outline" className="w-full text-xs">
+              Event overview
+            </Button>
+          </Link>
+        ) : null}
+        <Link
+          href={
+            eventIdFromRoute
+              ? `/coordinator/dashboard?event=${eventIdFromRoute}`
+              : '/coordinator/dashboard'
+          }
+          className={cn('block', eventIdFromRoute ? 'mt-1.5' : 'mt-2')}
+        >
           <Button size="sm" className="w-full text-xs">
             Open command center
           </Button>

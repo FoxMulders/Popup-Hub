@@ -61,7 +61,7 @@ See `components/coordinator/market-setup-wizard-step3-patch_qa.md`.
 ### Fixes
 
 1. **Stale draft** — `hydrateFloorPlanDocForWizardQa` + mount `clearMultiRoomDraft` so crash-recovery localStorage cannot freeze the canvas.
-2. **Blank start** — Empty doc (no room outlines, no objects) for new markets; no auto Main Hall injection; sidebar `layoutRooms` are not projected onto the canvas on mount.
+2. **Blank start** — Empty doc unless saved layout has cells or venue_elements (room metadata alone no longer paints Main Hall).
 3. **Open-grid placement** — When `doc.rooms` is empty, booths/labels/walls/doors may be drawn anywhere on the canvas bounds (production required a room polygon).
 4. **Object count** — `onPlacedCountChange` wired through QA step shell; left-rail stats update as objects are drawn.
 5. **C<sub>max</sub> readout** — Displays Step 2 `layoutCapacity` (e.g. 48); not a drop validator (Auto-Arrange cap only).

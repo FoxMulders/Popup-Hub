@@ -1,8 +1,11 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLayoutCanvasViewportLock } from '@/components/coordinator/layout-planner/use-layout-canvas-viewport-lock'
+import { CANVAS_FULLSCREEN_CLASS } from '@/components/coordinator/floor-plan-v2/canvas/use-native-fullscreen'
+
+const COMMAND_CENTER_FULLSCREEN_CLASS = 'command-center-canvas-fullscreen'
 
 export interface SpatialLayoutShellProps {
   toolbar: ReactNode
@@ -17,6 +20,14 @@ export function SpatialLayoutShell({
   className,
 }: SpatialLayoutShellProps) {
   useLayoutCanvasViewportLock(true)
+
+  useEffect(() => {
+    return () => {
+      document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+      document.documentElement.classList.remove(COMMAND_CENTER_FULLSCREEN_CLASS)
+      delete document.body.dataset.dashboardCommandCenter
+    }
+  }, [])
 
   return (
     <div

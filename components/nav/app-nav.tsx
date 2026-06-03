@@ -8,6 +8,7 @@ import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { PortalTabs } from '@/components/nav/portal-tabs'
 import { getPortalHome, resolveActivePortal } from '@/lib/portals/active-portal'
+import { coordinatorNavBackHref } from '@/lib/coordinator/coordinator-event-route'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
@@ -60,7 +61,11 @@ export function AppNav({
         ? 'vendor'
         : 'patron'
   const links = NAV_LINKS[navRole] ?? []
-  const homeHref = getPortalHome(activePortal)
+  const pathnameSafe = pathname ?? ''
+  const homeHref =
+    activePortal === 'coordinator'
+      ? coordinatorNavBackHref(pathnameSafe)
+      : getPortalHome(activePortal)
 
   async function handleSignOut() {
     await supabase.auth.signOut()

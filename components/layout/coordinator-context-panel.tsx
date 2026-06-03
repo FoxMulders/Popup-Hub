@@ -5,7 +5,10 @@ import { usePathname } from 'next/navigation'
 import { Activity, ArrowRight, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
-import { coordinatorEventIdFromPath } from '@/lib/coordinator/coordinator-event-route'
+import {
+  coordinatorEventIdFromPath,
+  coordinatorNavBackHref,
+} from '@/lib/coordinator/coordinator-event-route'
 
 export function CoordinatorContextPanel() {
   const pathname = usePathname() ?? ''
@@ -37,10 +40,17 @@ export function CoordinatorContextPanel() {
               Booth assignments, payment status, and fill-rate metrics update in
               real time from the command center canvas.
             </p>
-            <Link href="/coordinator/dashboard" className="mt-3 block">
+            <Link
+              href={
+                eventIdFromRoute
+                  ? `/coordinator/dashboard?event=${eventIdFromRoute}`
+                  : coordinatorNavBackHref(pathname)
+              }
+              className="mt-3 block"
+            >
               <Button variant="outline" size="sm" className="w-full gap-1 text-xs">
                 <Activity className="h-3.5 w-3.5" aria-hidden />
-                View live telemetry
+                {eventIdFromRoute ? 'Command center telemetry' : 'View live telemetry'}
                 <ArrowRight className="h-3 w-3" aria-hidden />
               </Button>
             </Link>

@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import {
+  coordinatorEventIdFromPath,
+  coordinatorNavBackHref,
+} from '@/lib/coordinator/coordinator-event-route'
 import {
   Banknote,
   CheckCircle,
@@ -63,7 +67,10 @@ export function PaymentMethodsForm({
   showDevSandboxBypass,
 }: PaymentMethodsFormProps) {
   const router = useRouter()
+  const pathname = usePathname() ?? ''
   const searchParams = useSearchParams()
+  const backHref = coordinatorNavBackHref(pathname)
+  const backOnEvent = coordinatorEventIdFromPath(pathname) != null
   const [settings, setSettings] = useState<PaymentSettingsState | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, startSave] = useTransition()
@@ -355,9 +362,9 @@ export function PaymentMethodsForm({
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Save payment settings
         </Button>
-        <Link href="/coordinator/dashboard">
+        <Link href={backHref}>
           <Button type="button" variant="ghost">
-            ← Back to dashboard
+            {backOnEvent ? '← Back to event' : '← Back to command center'}
           </Button>
         </Link>
       </div>
