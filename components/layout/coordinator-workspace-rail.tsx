@@ -92,27 +92,25 @@ export function CoordinatorWorkspaceRail() {
             : 'Open the command center for the CAD booth designer and live financial desk.'}
         </p>
         {eventIdFromRoute ? (
-          <Link
-            href={coordinatorNavBackHref(pathname)}
-            className="mt-2 block"
-          >
-            <Button size="sm" variant="outline" className="w-full text-xs">
-              Event overview
-            </Button>
-          </Link>
-        ) : null}
-        <Link
-          href={
-            eventIdFromRoute
-              ? `/coordinator/dashboard?event=${eventIdFromRoute}`
-              : '/coordinator/dashboard'
-          }
-          className={cn('block', eventIdFromRoute ? 'mt-1.5' : 'mt-2')}
-        >
-          <Button size="sm" className="w-full text-xs">
-            Open command center
+          <Button asChild size="sm" variant="outline" className="mt-2 w-full text-xs">
+            <Link href={coordinatorNavBackHref(pathname)}>Event overview</Link>
           </Button>
-        </Link>
+        ) : null}
+        <Button
+          asChild
+          size="sm"
+          className={cn('w-full text-xs', eventIdFromRoute ? 'mt-1.5' : 'mt-2')}
+        >
+          <Link
+            href={
+              eventIdFromRoute
+                ? `/coordinator/dashboard?event=${eventIdFromRoute}`
+                : '/coordinator/dashboard'
+            }
+          >
+            Open command center
+          </Link>
+        </Button>
       </motion.div>
     </nav>
   )

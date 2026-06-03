@@ -5,10 +5,10 @@
 ## Baseline
 - Branch: `master` (last pushed `5ce02ef`)
 - Production: https://popuphub.ca (build **84**) — **does not include fixes below until commit + deploy**
-- **Local WIP (uncommitted):** blank layout start (no preassigned rooms/fixtures), delete-last-room, nav/chrome cleanup, layout editor restored
+- **Local WIP (uncommitted):** command-center nav unblock + blank canvas hydration (see below)
 
 ## Goal
-**Redesign layout surfaces with zero preassigned objects** — open grid only; coordinators add rooms and fixtures manually. Restore reliable exit navigation from wizard Step 3 and `/coordinator/events/[id]/layout`.
+**Redesign layout surfaces with zero preassigned objects** — open grid only; coordinators add rooms and fixtures manually. Restore reliable exit navigation from wizard Step 3, command center, and `/coordinator/events/[id]/layout`.
 
 ## Active work — Layout blank start + navigation
 
@@ -18,6 +18,7 @@
 3. **localStorage multi-room draft** could restore stale room + doors even when sidebar rooms were empty.
 4. **`handleDeleteRoom`** blocked deleting the last room (“At least one room is required”).
 5. **Canvas fullscreen CSS** (`popup-hub-canvas-fullscreen`, `command-center-canvas-fullscreen`) could persist after leaving the editor and hide `#site-app-nav`.
+6. **Command center** wired `command-center-canvas-fullscreen` into `FullscreenLayout` → `popup-hub-canvas-fullscreen` fixed the canvas at `z-index: 9998` over the whole viewport, swallowing clicks on **Back to market**, **New market**, and site nav.
 
 ### Fixes (WIP files)
 | Area | Change |
@@ -32,6 +33,7 @@
 | `layout-planner-header.tsx` | Wizard: **Event overview** link beside Back |
 | `spatial-layout-toolbar.tsx` | **Event overview** link with higher z-index |
 | Nav (prior WIP) | `coordinatorNavBackHref`, immersive routes for setup/new/layout |
+| Command center (this pass) | Decouple dashboard immersive from `FullscreenLayout`; `preferServerLayout` on dashboard; `Button asChild`+`Link` for exit/new market; default panels visible; skip/clear local draft when canvas empty |
 
 ### Wizard Step 1 & 3 QA (unchanged wiring)
 - Step 3 still uses `floor-plan-v2_wizard_qa.tsx` via `WizardStepFloorPlan`
@@ -61,7 +63,7 @@
 
 ## Next actions
 1. **Deploy WIP** — commit, push, `npx vercel deploy --prod --yes` so popuphub.ca matches local fixes
-2. **Smoke-test** — Step 3 + layout: empty grid, no door/room until user adds; delete last room; logo / Event overview / top nav leave the page
+2. **Smoke-test** — Command center: **Back to Spring market**, **+ New market**, site nav work with panels default; empty grid (use **Clear all** once if a stale local draft remains); Step 3 + layout: same blank-start rules
 3. **Saved markets with real booths** — confirm cells still restore after deploy
 4. Continue Step 1 QA promotion per patch docs when layout sign-off is done
 

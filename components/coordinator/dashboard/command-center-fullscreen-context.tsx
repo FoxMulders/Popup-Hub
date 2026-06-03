@@ -22,8 +22,8 @@ const CommandCenterFullscreenContext =
   createContext<CommandCenterFullscreenContextValue | null>(null)
 
 export function CommandCenterFullscreenProvider({ children }: { children: ReactNode }) {
-  /** Blueprint-first: full-width canvas hides curation/telemetry chrome by default. */
-  const [fullscreen, setFullscreen] = useState(true)
+  /** Panels visible by default so back / New market links stay reachable. */
+  const [fullscreen, setFullscreen] = useState(false)
 
   useLayoutEffect(() => {
     document.body.dataset.dashboardCommandCenter = 'true'

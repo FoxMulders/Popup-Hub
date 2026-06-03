@@ -44,12 +44,12 @@ export function MarketDashboardClient({
         <p className="mt-2 text-muted-foreground">
           Create your first market to unlock the full-screen booth layout designer.
         </p>
-        <Link href="/coordinator/events/new" className="mt-6">
-          <Button className="gap-1.5">
+        <Button asChild className="mt-6 gap-1.5">
+          <Link href="/coordinator/events/new">
             <Plus className="h-4 w-4" aria-hidden />
             New Event
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     )
   }

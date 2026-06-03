@@ -35,11 +35,9 @@ export function DashboardCommandCenterHeader() {
             <LayoutGrid className="h-4 w-4" aria-hidden />
             Panels
           </Button>
-          <Link href="/coordinator/payment-methods">
-            <Button variant="outline" size="sm">
-              Payments
-            </Button>
-          </Link>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/coordinator/payment-methods">Payments</Link>
+          </Button>
         </div>
       </div>
     )
@@ -72,17 +70,15 @@ export function DashboardCommandCenterHeader() {
         >
           Full canvas
         </Button>
-        <Link href="/coordinator/payment-methods">
-          <Button variant="outline" size="sm">
-            Payments
-          </Button>
-        </Link>
-        <Link href="/coordinator/events/new">
-          <Button size="sm" className="gap-1.5">
+        <Button asChild variant="outline" size="sm">
+          <Link href="/coordinator/payment-methods">Payments</Link>
+        </Button>
+        <Button asChild size="sm" className="gap-1.5">
+          <Link href="/coordinator/events/new">
             <Plus className="h-4 w-4" aria-hidden />
             New market
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     </div>
   )

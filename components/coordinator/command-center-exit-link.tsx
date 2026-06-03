@@ -24,18 +24,20 @@ export function CommandCenterExitLink({
     : 'Event overview'
 
   return (
-    <Link
-      href={`/coordinator/events/${eventId}`}
-      className={cn('inline-flex', className)}
+    <Button
+      asChild
+      variant="ghost"
+      size="sm"
+      className={cn(
+        'gap-1.5 text-stone-700 hover:text-forest',
+        compact && 'h-8 px-2 text-xs',
+        className
+      )}
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn('gap-1.5 text-stone-700 hover:text-forest', compact && 'h-8 px-2 text-xs')}
-      >
+      <Link href={`/coordinator/events/${eventId}`}>
         <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
         <span className="truncate">{label}</span>
-      </Button>
-    </Link>
+      </Link>
+    </Button>
   )
 }

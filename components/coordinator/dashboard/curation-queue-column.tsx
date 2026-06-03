@@ -107,12 +107,12 @@ export function CurationQueueColumn() {
         </AnimatePresence>
 
         {pendingApplications.length > 0 && selectedEventId ? (
-          <Link href={`/coordinator/events/${selectedEventId}/applications`} className="mt-3 block">
-            <Button variant="outline" size="sm" className="w-full gap-1.5">
+          <Button asChild variant="outline" size="sm" className="mt-3 w-full gap-1.5">
+            <Link href={`/coordinator/events/${selectedEventId}/applications`}>
               <ClipboardList className="h-4 w-4" aria-hidden />
               Review all applications
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         ) : null}
 
         <div className="mt-5 border-t border-stone-200/80 pt-4">

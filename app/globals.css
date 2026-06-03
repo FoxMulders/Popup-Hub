@@ -421,7 +421,9 @@
     display: none !important;
   }
 
-  html.popup-hub-canvas-fullscreen #floor-plan-workspace .canvas-container {
+  html.popup-hub-canvas-fullscreen:not(.command-center-canvas-fullscreen)
+    #floor-plan-workspace
+    .canvas-container {
     position: fixed;
     top: 0;
     left: 0;

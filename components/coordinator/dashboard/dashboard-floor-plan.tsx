@@ -153,12 +153,12 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       <div className="flex h-full items-center justify-center p-8 text-center">
         <div>
           <p className="text-muted-foreground">Select a market to open the booth designer.</p>
-          <Link href="/coordinator/events/new">
-            <Button size="sm" className="mt-4 gap-1.5">
+          <Button asChild size="sm" className="mt-4 gap-1.5">
+            <Link href="/coordinator/events/new">
               <Plus className="h-4 w-4" aria-hidden />
               Create market
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
     )
@@ -169,6 +169,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       <FloorPlanV2
         key={selectedEventId}
         variant="dashboard"
+        preferServerLayout
         eventId={selectedEventId}
         layoutRooms={layoutRooms}
         layoutActiveRoomId={layoutActiveRoomId}

@@ -612,11 +612,15 @@ function FloorPlanV2Workspace({
   // wiring below).
   useEffect(() => {
     if (!eventId) return
+    if (layoutRooms.length === 0 && (store.doc.rooms?.length ?? 0) === 0 && store.doc.objects.length === 0) {
+      clearMultiRoomDraft(eventId)
+      return
+    }
     const id = window.setTimeout(() => {
       saveMultiRoomDraft(eventId, store.doc)
     }, 250)
     return () => window.clearTimeout(id)
-  }, [eventId, store.doc])
+  }, [eventId, layoutRooms.length, store.doc])
 
   const handleToolChange = useCallback((next: ToolId) => {
     setTool(next)
@@ -947,9 +951,13 @@ function FloorPlanV2Workspace({
   )
 
   const [wizardCanvasFullscreen, setWizardCanvasFullscreen] = useState(false)
-  const canvasFullscreen = isDashboard
-    ? commandCenterFullscreen.fullscreen
-    : wizardCanvasFullscreen
+  /** Command center panels mode — hides side columns, not native canvas overlay. */
+  const dashboardImmersive = isDashboard && commandCenterFullscreen.fullscreen
+  /**
+   * Native `popup-hub-canvas-fullscreen` pins the canvas over the viewport and
+   * blocks site/dashboard chrome clicks — never enable on the command center.
+   */
+  const layoutNativeFullscreen = isDashboard ? false : wizardCanvasFullscreen
   const setCanvasFullscreen = useCallback(
     (value: boolean | ((prev: boolean) => boolean)) => {
       if (isDashboard) {
@@ -1058,7 +1066,7 @@ function FloorPlanV2Workspace({
       else if (e.key === 'v') setTool('select')
       else if (e.key === 'd') setTool('draw')
       else if (e.key === 'Escape') {
-        if (canvasFullscreen) {
+        if (layoutNativeFullscreen) {
           e.preventDefault()
           setCanvasFullscreen(false)
           return
@@ -1078,7 +1086,8 @@ function FloorPlanV2Workspace({
     handleDeleteSelected,
     handlePaste,
     handleRotateBy,
-    canvasFullscreen,
+    layoutNativeFullscreen,
+    setCanvasFullscreen,
     store,
   ])
 
@@ -1735,7 +1744,7 @@ function FloorPlanV2Workspace({
         <DiagnosticSidebar doc={store.doc} onClearAndReset={hardResetCanvas} />
       ) : null}
       <FullscreenLayout
-        active={canvasFullscreen}
+        active={layoutNativeFullscreen}
         onActiveChange={(next) => setCanvasFullscreen(next)}
         header={layoutHeader}
         fullscreenToolbar={fullscreenExitToolbar}
@@ -1799,7 +1808,7 @@ function FloorPlanV2Workspace({
             highlightedRoomMetrics={highlightedRoomMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
-            canvasFullscreen={canvasFullscreen}
+            canvasFullscreen={isDashboard ? dashboardImmersive : layoutNativeFullscreen}
             onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
             onSaveMarket={onSaveMarket}
             saveMarketDisabled={saveMarketDisabled}
@@ -1861,7 +1870,7 @@ function FloorPlanV2Workspace({
             highlightedRoomMetrics={highlightedRoomMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
-            canvasFullscreen={canvasFullscreen}
+            canvasFullscreen={isDashboard ? dashboardImmersive : layoutNativeFullscreen}
             onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
             onSaveMarket={onSaveMarket}
             saveMarketDisabled={saveMarketDisabled}
