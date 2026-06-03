@@ -96,7 +96,7 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
           Back to event
         </Link>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+      <div className="setup-wizard-body flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
       <MarketSetupWizard
         coordinatorId={user.id}
         categories={(categories as Category[]) ?? []}

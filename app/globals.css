@@ -356,6 +356,11 @@
     flex: 1 1 auto;
   }
 
+  /* Steps 1–2: form content scrolls inside the viewport shell. Step 3 canvas keeps overflow hidden. */
+  .coordinator-setup-page:has(.layout-planner-root) .setup-wizard-body {
+    overflow: hidden;
+  }
+
   .coordinator-setup-page:has(.layout-planner-root) .setup-page-chrome {
     display: none;
   }

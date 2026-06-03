@@ -13,6 +13,10 @@
 
 ## Active work — Layout blank start + navigation
 
+### Step 2 scroll (local fix)
+- **Root cause:** Setup route uses viewport-fill (`overflow-hidden` on `#site-main` + `.coordinator-setup-page`) for Step 3 canvas — Steps 1–2 had no scroll container, so long Capacity content (category limits + nav) was clipped below the fold.
+- **Fix:** `.setup-wizard-body` on setup page uses `overflow-y-auto`; CSS reverts to `overflow: hidden` when `.layout-planner-root` is present (Step 3).
+
 ### Root causes addressed (WIP)
 1. **`roomsFromBoothLayout(null)`** seeded a default Main Hall (50×50) into wizard/layout sidebar state.
 2. **`layoutHasPlacedGeometry`** treated `venue_elements` (entrance/exit fixtures) as “saved geometry,” hydrating Door · IN / EXIT onto the canvas from metadata-only saves.
