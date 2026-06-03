@@ -1045,7 +1045,7 @@ export function MarketSetupWizard({
       step={currentStep}
       className={cn(
         isFloorPlanStep
-          ? 'mx-[calc(50%-50vw)] flex min-h-0 w-screen flex-col gap-2 overflow-hidden px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] sm:px-3 lg:px-4 h-[calc(100dvh-theme(spacing.header))] max-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))]'
+          ? 'min-h-0 flex-1 flex-col gap-2 overflow-hidden'
           : 'space-y-6'
       )}
     >

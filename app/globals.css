@@ -334,6 +334,7 @@
     --layout-planner-left: 240px;
   }
 
+  #site-main:has(.coordinator-setup-page),
   #site-main:has(.layout-planner-root) {
     display: flex;
     min-height: 0;
@@ -348,6 +349,39 @@
     min-height: 0;
     flex: 1 1 auto;
     overflow: hidden;
+  }
+
+  .coordinator-setup-page {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .coordinator-setup-page:has(.layout-planner-root) .setup-page-chrome {
+    display: none;
+  }
+
+  .wizard-layout-planner-root {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  #floor-plan-workspace {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .layout-planner-left-rail {
+    overflow-x: visible;
+  }
+
+  .layout-planner-left-rail .relative {
+    overflow: visible;
+  }
+
+  #floor-plan-workspace .canvas-editor-root,
+  #floor-plan-workspace .canvas-container {
+    min-height: 0;
+    flex: 1 1 auto;
   }
 
   /* Canvas owns scroll/zoom — prevent document-level double scrollbars */

@@ -25,7 +25,7 @@
 | Area | Change |
 |------|--------|
 | **Build / nav (this pass)** | Removed invalid `Button asChild` (Base UI Button has no slot) — exit/new-market links are styled `Link` + `buttonVariants`; strip `popup-hub-canvas-fullscreen` on command-center mount |
-| **Placement (this pass)** | Show **Add room** toolbar when `rooms.length === 0`; fit blank canvas to viewport; toast when drawing with no room |
+| **Sidebar + Add room (this pass)** | Restore `layoutRooms`→doc sync in QA floor plan; inspector rail stretch + in-bounds toggle; drop row `overflow-hidden`; left-rail preset menu overflow; toolbar Add room fallback when embedded + zero rooms |
 | `lib/booth-planner/layout-rooms.ts` | `layoutHasDrawableGeometry` (cells only); `roomsFromBoothLayoutForEditor` (empty unless booths saved); `getActiveRoom` safe when no rooms |
 | `src/qa_review/lib/floor-plan/layout-hydration-wizard_qa.ts` | No draft restore when `layoutRooms` empty; hydration uses cells-only rule |
 | `market-setup-wizard.tsx` | `roomsFromBoothLayoutForEditor`; delete last room allowed |

@@ -84,14 +84,19 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
     .order('applied_at', { ascending: true })
 
   return (
-    <div className="w-full px-4 py-8 sm:px-6 lg:px-8">
-      <Link
-        href={`/coordinator/events/${id}`}
-        className={buttonVariants({ variant: 'ghost', size: 'sm' }) + ' gap-1.5 mb-6 -ml-2'}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to event
-      </Link>
+    <div className="coordinator-setup-page flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="setup-page-chrome shrink-0 px-4 pt-4 sm:px-6 lg:px-8">
+        <Link
+          href={`/coordinator/events/${id}`}
+          className={
+            buttonVariants({ variant: 'ghost', size: 'sm' }) + ' setup-page-back-link gap-1.5 -ml-2'
+          }
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to event
+        </Link>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
       <MarketSetupWizard
         coordinatorId={user.id}
         categories={(categories as Category[]) ?? []}
@@ -100,6 +105,7 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
         applications={(applications ?? []) as unknown as Parameters<typeof MarketSetupWizard>[0]['applications']}
         initialStep={parseInitialStep(step, Boolean((event as Event).skip_venue_layout))}
       />
+      </div>
     </div>
   )
 }

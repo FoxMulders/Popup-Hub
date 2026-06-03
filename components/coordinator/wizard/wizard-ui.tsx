@@ -35,10 +35,16 @@ export function WizardAmbientShell({
   className?: string
 }) {
   return (
-    <div className={cn('wizard-ambient relative isolate', stepGlowClass[step], className)}>
+    <div
+      className={cn(
+        'wizard-ambient relative isolate flex min-h-0 flex-col',
+        stepGlowClass[step],
+        className
+      )}
+    >
       <div className="wizard-ambient__orb wizard-ambient__orb--a" aria-hidden />
       <div className="wizard-ambient__orb wizard-ambient__orb--b" aria-hidden />
-      <div className="relative z-[1]">{children}</div>
+      <div className="relative z-[1] flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   )
 }

@@ -315,6 +315,10 @@ function FloorPlanV2Workspace({
   }, [addLog])
   const isDashboard = variant === 'dashboard'
   const isEmbedded = chrome === 'embedded'
+  const roomHandlersReady =
+    Boolean(onAddRoom) && Boolean(onRenameRoom) && Boolean(onDeleteRoom)
+  const showToolbarRoomControls =
+    roomHandlersReady && (!isEmbedded || layoutRooms.length === 0)
   const commandCenterFullscreen = useCommandCenterFullscreen()
 
   useEffect(() => {
@@ -1750,7 +1754,7 @@ function FloorPlanV2Workspace({
         fullscreenToolbar={fullscreenExitToolbar}
         className="min-h-0 min-w-0 flex-1"
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+        <div className="flex min-h-0 flex-1 basis-0 flex-col gap-1 overflow-hidden">
         {isDashboard ? (
           <CanvasCommandBar
             staticLayout
@@ -1799,12 +1803,12 @@ function FloorPlanV2Workspace({
             canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
-            rooms={!isEmbedded && onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
+            rooms={showToolbarRoomControls ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
-            onSelectRoom={!isEmbedded ? handleSelectRoom : undefined}
-            onAddRoom={!isEmbedded ? onAddRoom : undefined}
-            onRenameRoom={!isEmbedded ? onRenameRoom : undefined}
-            onDeleteRoom={!isEmbedded ? onDeleteRoom : undefined}
+            onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
+            onAddRoom={showToolbarRoomControls ? onAddRoom : undefined}
+            onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
+            onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
@@ -1861,12 +1865,12 @@ function FloorPlanV2Workspace({
             canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
-            rooms={!isEmbedded && onAddRoom && onRenameRoom && onDeleteRoom ? layoutRooms : undefined}
+            rooms={showToolbarRoomControls ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
-            onSelectRoom={!isEmbedded ? handleSelectRoom : undefined}
-            onAddRoom={!isEmbedded ? onAddRoom : undefined}
-            onRenameRoom={!isEmbedded ? onRenameRoom : undefined}
-            onDeleteRoom={!isEmbedded ? onDeleteRoom : undefined}
+            onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
+            onAddRoom={showToolbarRoomControls ? onAddRoom : undefined}
+            onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
+            onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
@@ -1880,16 +1884,16 @@ function FloorPlanV2Workspace({
 
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 overflow-hidden',
+            'flex min-h-0 min-w-0 flex-1 basis-0 items-stretch',
             !isDashboard && 'gap-2'
           )}
         >
           <div
             className={cn(
-              'floor-plan-canvas-host relative min-h-0 min-w-0 flex-1 overflow-hidden bg-stone-100',
+              'floor-plan-canvas-host relative min-h-0 min-w-0 flex-1 basis-0 overflow-hidden bg-stone-100',
               isDashboard
                 ? 'h-full min-h-0 border-0'
-                : 'min-h-[280px] h-full rounded-lg border border-stone-200'
+                : 'min-h-[200px] h-full rounded-lg border border-stone-200'
             )}
           >
             <CanvasRootErrorBoundary
@@ -1950,32 +1954,32 @@ function FloorPlanV2Workspace({
           </div>
 
           {!isDashboard ? (
-            <div className="relative flex shrink-0">
+            <div className="relative z-20 flex h-full min-h-0 shrink-0 self-stretch">
               {!rightInspectorOpen ? (
                 <button
                   type="button"
                   onClick={() => setRightInspectorOpen(true)}
                   title="Show inspector (])"
                   aria-label="Show inspector"
-                  className="flex h-full w-7 items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 hover:bg-stone-50"
+                  className="flex min-h-[10rem] w-8 shrink-0 self-stretch items-center justify-center rounded-md border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               ) : (
-                <div className="relative flex h-full max-h-full w-[min(100%,260px)] min-h-0 flex-col">
+                <div className="relative flex h-full min-h-0 w-[min(100%,260px)] max-w-[min(42vw,260px)] shrink-0 flex-col overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
                   <button
                     type="button"
                     onClick={() => setRightInspectorOpen(false)}
                     title="Hide inspector (])"
                     aria-label="Hide inspector"
-                    className="absolute -left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
+                    className="absolute left-1 top-2 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-500 shadow-sm hover:bg-stone-50"
                   >
-                    <ChevronRight className="h-3 w-3" />
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                   <PropertyInspector
                     store={store}
                     eventCategoryNames={eventCategoryNames}
-                    className="min-h-0 flex-1 overflow-y-auto"
+                    className="min-h-0 flex-1 overflow-y-auto pt-1"
                   />
                 </div>
               )}

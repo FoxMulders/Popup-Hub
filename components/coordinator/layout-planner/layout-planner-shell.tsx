@@ -50,7 +50,7 @@ export function LayoutPlannerShell({
 
       <div
         className={cn(
-          'grid min-h-0 flex-1 overflow-hidden',
+          'grid min-h-0 flex-1 basis-0 overflow-hidden',
           showSideRail
             ? 'grid-cols-1 lg:grid-cols-[var(--layout-planner-left,240px)_minmax(0,1fr)]'
             : 'grid-cols-1'
@@ -58,11 +58,13 @@ export function LayoutPlannerShell({
       >
         {showSideRail ? (
           <aside
-            className="hidden min-h-0 flex-col overflow-hidden border-stone-200/70 lg:flex lg:border-r"
+            className="hidden min-h-0 min-w-0 flex-col lg:flex lg:border-r lg:border-stone-200/70"
             aria-label="Rooms and layout stats"
           >
             {leftRail ? (
-              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3">{leftRail}</div>
+              <div className="layout-planner-left-rail min-h-0 flex-1 overflow-y-auto overflow-x-visible p-3">
+                {leftRail}
+              </div>
             ) : null}
             {stats ? (
               <div className="shrink-0 border-t border-stone-200/70 p-3">{stats}</div>
