@@ -1,7 +1,6 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { BuildVersionStrip } from '@/components/brand/build-version-strip'
 import { AppNav } from '@/components/nav/app-nav'
 import { cn } from '@/lib/utils'
 import type { ActivePortal } from '@/lib/portals/active-portal'
@@ -51,7 +50,6 @@ export function SiteAppShell({
       >
         {children}
       </main>
-      <BuildVersionStrip />
     </div>
   )
 }

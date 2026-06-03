@@ -7,10 +7,8 @@
  * generic "Room N" into the canvas every time and resize from 50×50
  * adds friction.
  *
- * Each preset here ships with a sensible default footprint plus a
- * starter `venue_elements` list, so dropping in a "Kitchen Area" or an
- * "Outdoor Stage" produces a recognisable room that the user can then
- * fill with vendor booths.
+ * Each preset ships with a sensible default footprint only — interiors
+ * start blank so coordinators place fixtures and booths manually.
  *
  * Presets are pure data — `createLayoutRoom(name, partial)` from
  * `layout-rooms.ts` does the actual room construction so all the
@@ -18,7 +16,7 @@
  * etc.) stay in one place.
  */
 
-import type { LayoutRoom, VenueElement } from '@/types/database'
+import type { LayoutRoom } from '@/types/database'
 
 export type LayoutRoomPresetId =
   | 'blank'
@@ -35,12 +33,6 @@ export interface LayoutRoomPreset {
   /** Default canvas footprint in feet (advisory; user can resize). */
   width: number
   length: number
-  /**
-   * Pre-baked venue elements that should appear inside the room when
-   * it's first created. Keep these conservative — the preset only
-   * seeds *structural* fixtures, never vendor booths.
-   */
-  seedVenueElements?: ReadonlyArray<Omit<VenueElement, 'id'>>
 }
 
 /**
@@ -58,80 +50,33 @@ export const LAYOUT_ROOM_PRESETS: ReadonlyArray<LayoutRoomPreset> = [
   {
     id: 'kitchen',
     name: 'Kitchen Area',
-    description: 'Compact 30×24 ft prep zone with a back-of-house exit.',
+    description: 'Compact 30×24 ft prep zone. No seeded fixtures.',
     width: 30,
     length: 24,
-    seedVenueElements: [
-      // Single rear emergency exit so vendors and staff have a clear
-      // back-of-house egress out of the box. The label sentinel
-      // (`EMERGENCY:`) is the round-trip marker used by the
-      // floor-plan-v2 legacy bridge so this shows up as a proper
-      // emergency exit fixture, not a generic door.
-      {
-        type: 'exit',
-        col: 14,
-        row: 0,
-        colSpan: 4,
-        rowSpan: 1,
-        label: 'EMERGENCY:Back exit',
-      },
-    ],
   },
   {
     id: 'outdoor_stage',
     name: 'Outdoor Stage',
-    description: 'Open 60×30 ft sidewalk patio with a centred stage.',
+    description: 'Open 60×30 ft sidewalk patio. No seeded fixtures.',
     width: 60,
     length: 30,
-    seedVenueElements: [
-      {
-        type: 'stage',
-        col: 22,
-        row: 4,
-        colSpan: 16,
-        rowSpan: 8,
-        label: 'Main stage',
-      },
-    ],
   },
   {
     id: 'annex',
     name: 'Annex Room',
-    description: 'Overflow vendor space, 40×40 ft. Mirrors Main Hall feel.',
+    description: 'Overflow vendor space, 40×40 ft. No seeded fixtures.',
     width: 40,
     length: 40,
-    seedVenueElements: [
-      // A connecting "entrance" door so coordinators can see at a
-      // glance how the annex links to the main hall.
-      {
-        type: 'entrance',
-        col: 18,
-        row: 0,
-        colSpan: 4,
-        rowSpan: 1,
-        label: 'From hall',
-      },
-    ],
   },
 ]
 
-/**
- * Convert a preset into the shape `createLayoutRoom`'s `partial` arg
- * accepts, with seed fixtures already given fresh ids. Pure helper
- * (no `crypto` usage out at module load — that's deferred until call
- * time so SSR doesn't trip).
- */
+/** Convert a preset into the shape `createLayoutRoom`'s `partial` arg accepts. */
 export function presetToRoomPartial(
   preset: LayoutRoomPreset
 ): Partial<LayoutRoom> {
-  const venue_elements: VenueElement[] =
-    preset.seedVenueElements?.map((el) => ({
-      ...el,
-      id: `el-${crypto.randomUUID()}`,
-    })) ?? []
   return {
     venue_width: preset.width,
     venue_length: preset.length,
-    venue_elements,
+    venue_elements: [],
   }
 }

@@ -32,13 +32,10 @@ const PERIMETER_STROKE = '#1c1917'
 const PERIMETER_STROKE_ACTIVE = '#0f766e'
 const PERIMETER_STROKE_SELECTED = '#0f766e'
 const PERIMETER_STROKE_MERGED = '#15803d'
-/** Dissolved join zone — matches active hall chrome, not fixture colors. */
-const JOINED_ZONE_FILL = '#0f766e'
 const JOINED_ZONE_STROKE = '#0f766e'
 const PERIMETER_WIDTH = 2.5
 const PERIMETER_WIDTH_SELECTED = 3.5
 const PERIMETER_WIDTH_JOINED = 3.5
-const JOINED_ZONE_FILL_OPACITY = 0.12
 
 function ringToPathD(
   ring: ReadonlyArray<readonly [number, number]>,
@@ -60,16 +57,14 @@ function ringToPathD(
  * Renders one perimeter group per room frame on the unified canvas.
  *
  * Responsibilities:
- *   1. Paint a faint floor fill so coordinators can tell at a glance
- *      where a room's interior begins and ends.
- *   2. Paint the perimeter walls — but with shared portions (where
- *      two rooms touch) suppressed so adjacent rooms read as one
- *      combined interior.
- *   3. Surface the room name at the top-left of every frame.
- *   4. Tag each frame with `data-room-id` + `data-room-stroke` so
+ *   1. Paint perimeter walls — shared portions (where two rooms touch)
+ *      are suppressed so adjacent rooms read as one combined interior.
+ *      Interiors stay blank; placement uses the open grid inside.
+ *   2. Surface the room name at the top-left of every frame.
+ *   3. Tag each frame with `data-room-id` + `data-room-stroke` so
  *      the canvas pointer hook can detect a click on the wall and
  *      promote it into a macro-level room drag.
- *   5. Render a "Joined" badge under the name when the room shares
+ *   4. Render a "Joined" badge under the name when the room shares
  *      at least one wall with a neighbour.
  *
  * The wall geometry is recomputed every render in pixel space —
@@ -271,8 +266,7 @@ function RoomFramesBase({
           {zone.pathData ? (
             <path
               d={zone.pathData}
-              fill={JOINED_ZONE_FILL}
-              fillOpacity={JOINED_ZONE_FILL_OPACITY}
+              fill="none"
               stroke="none"
               shapeRendering="geometricPrecision"
               pointerEvents="all"
@@ -375,7 +369,6 @@ function RoomFramesBase({
         const strokeWidth = isSelected
           ? PERIMETER_WIDTH_SELECTED
           : PERIMETER_WIDTH
-        const fillOpacity = isActive ? 0.06 : 0.025
         const unionPath =
           frame.perimeterRing && frame.perimeterRing.length >= 3
             ? ringToPathD(frame.perimeterRing, pxPerFt)
@@ -390,33 +383,6 @@ function RoomFramesBase({
 
         return (
           <g key={`frame-${frame.id}`} data-room-id={frame.id}>
-            {/* Interior floor fill — extremely faint so booths still
-                read clearly on top. Pointer-events are disabled so a
-                click on the interior falls through to whatever booth
-                / aisle / wall sits on top; only the perimeter stroke
-                hit target promotes a click into a frame-level drag.
-                Members of an explicit join group skip the fill so
-                the dissolved-zone polygon's tinted fill takes over. */}
-            {!isJoined && unionPath ? (
-              <path
-                d={unionPath}
-                fill={isActive ? '#0f766e' : '#1c1917'}
-                fillOpacity={fillOpacity}
-                pointerEvents="none"
-              />
-            ) : !isJoined ? (
-              <rect
-                x={x}
-                y={y}
-                width={w}
-                height={h}
-                fill={isActive ? '#0f766e' : '#1c1917'}
-                fillOpacity={fillOpacity}
-                pointerEvents="none"
-                shapeRendering="crispEdges"
-              />
-            ) : null}
-
             {!isJoined && unionPath ? (
               <path
                 d={unionPath}

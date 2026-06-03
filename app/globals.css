@@ -405,6 +405,12 @@
     display: none !important;
   }
 
+  @media (max-width: 767px) {
+    body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {
+      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    }
+  }
+
   #floor-plan-workspace .floor-plan-canvas-host {
     position: relative;
     min-height: 0;

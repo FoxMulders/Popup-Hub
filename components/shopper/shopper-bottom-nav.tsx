@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Compass, Heart, User } from 'lucide-react'
@@ -17,7 +18,17 @@ interface ShopperBottomNavProps {
 
 export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
   const pathname = usePathname()
-  if (hide || pathname.startsWith('/auctions/')) return null
+  const visible = !hide && !pathname.startsWith('/auctions/')
+
+  useEffect(() => {
+    if (!visible) return
+    document.body.dataset.mobileBottomNav = 'shopper'
+    return () => {
+      delete document.body.dataset.mobileBottomNav
+    }
+  }, [visible])
+
+  if (!visible) return null
 
   return (
     <nav
