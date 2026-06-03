@@ -1,0 +1,21 @@
+---
+description: Keep PM/session-handoff.md current at the end of every scoped task
+alwaysApply: true
+---
+
+# Session handoff
+
+**File:** `PM/session-handoff.md` (same path as `pm/session-handoff.md` on Windows). **Always** update it at the end of every scoped task — never leave a stale handoff when reporting work complete.
+
+At the end of **every scoped task** (feature, fix, deploy, or doc-only wrap-up):
+
+1. Edit `PM/session-handoff.md` — baseline (branch, commit, prod/build), what shipped, blockers, next actions.
+2. Run `.\scripts\update-session-handoff.ps1` after deploys (or use a deploy script below) so baseline matches HEAD and production build metadata.
+3. Do not mark the task done with a stale handoff or an old baseline commit.
+
+Deploy paths that refresh baseline (and commit handoff when it changed):
+
+- `PM\Deploy-popuphub.bat` or `.\scripts\deploy-popuphub.ps1` (works from Explorer, cmd, or PowerShell)
+- `.\scripts\ship.ps1 -Message "..."`
+
+Agents still must edit narrative sections (goal, smoke-test, next actions) when they change; the script only refreshes baseline and last-deploy metadata.

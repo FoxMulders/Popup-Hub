@@ -15,7 +15,14 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+    $PSNativeCommandUseErrorActionPreference = $false
+}
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'init-shell-env.ps1')
+. (Join-Path $PSScriptRoot 'git-sync.ps1')
+
+Initialize-ProjectShellEnv
 Push-Location $ProjectRoot
 
 function Write-Step($text) {
@@ -48,24 +55,27 @@ try {
     }
 
     if (-not $SkipPush) {
+        Write-Step "Syncing with origin"
+        Sync-GitWithOrigin -AllowRebase
         Write-Step "Pushing to origin"
-        git push origin HEAD 2>&1 | ForEach-Object { Write-Host $_ }
-        if ($LASTEXITCODE -ne 0) {
-            git fetch origin 2>$null
-            $local = git rev-parse HEAD
-            $remote = git rev-parse origin/master 2>$null
-            if ($local -eq $remote) {
-                Write-Host "Push reported error but remote is up to date ($local)." -ForegroundColor Yellow
-            } else {
-                throw "Push failed"
-            }
-        }
+        Push-GitOriginHead
     }
 
     if (-not $SkipDeploy) {
         Write-Step "Deploying to Vercel (production)"
-        npx vercel deploy --prod
+        npx vercel deploy --prod --yes
         if ($LASTEXITCODE -ne 0) { throw "Deploy failed" }
+    }
+
+    Write-Step "Updating session handoff"
+    & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -Note "Ship via ship.ps1"
+    $handoffStatus = git status --porcelain -- 'PM/session-handoff.md'
+    if ($handoffStatus) {
+        git add PM/session-handoff.md
+        $short = git rev-parse --short HEAD
+        git commit -m "docs: session handoff after ship ($short)"
+        if ($LASTEXITCODE -ne 0) { throw "Handoff commit failed" }
+        if (-not $SkipPush) { Push-GitOriginHead }
     }
 
     Write-Host ""

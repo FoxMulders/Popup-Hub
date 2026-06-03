@@ -4,6 +4,10 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## Session handoff
+
+At the end of every scoped task, update `PM/session-handoff.md` (baseline, shipped work, blockers, next actions). After deploys, run `.\scripts\update-session-handoff.ps1` or use `PM/Deploy-popuphub.bat` / `ship.ps1`, which refresh baseline automatically.
+
 ## Release workflow
 
 When the user explicitly asks for a commit:
