@@ -37,7 +37,7 @@ export function DashboardCanvasColumn({
   }, [mountCanvas, reducedMotion, handleInteractive])
 
   return (
-    <div className="dashboard-canvas-column relative flex h-full min-h-0 w-full flex-1 flex-col">
+    <div className="dashboard-canvas-column relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <AnimatePresence mode="wait">
         {showBlueprint ? (
           <motion.div
@@ -57,7 +57,7 @@ export function DashboardCanvasColumn({
 
       {mountCanvas ? (
         <Suspense fallback={<CanvasZoneSkeleton />}>
-          <div className="absolute inset-0 flex min-h-0 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <DashboardFloorPlanViewport onInteractive={handleInteractive} />
           </div>
         </Suspense>

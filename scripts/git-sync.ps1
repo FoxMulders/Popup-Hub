@@ -1,14 +1,52 @@
 # Shared git fetch / pull / push with race recovery. Dot-source from ship/deploy scripts.
 
-function Write-GitLines {
-    param([object[]]$Lines)
-    foreach ($line in $Lines) {
-        if ($null -eq $line) { continue }
-        if ($line -is [System.Management.Automation.ErrorRecord]) {
-            Write-Host $line.ToString()
+function Get-NativeCommandLineText {
+    param([object]$Line)
+
+    if ($null -eq $Line) { return $null }
+    if ($Line -is [System.Management.Automation.ErrorRecord]) {
+        return $Line.ToString()
+    }
+    return [string]$Line
+}
+
+# Run a native exe without stderr tripping $ErrorActionPreference = 'Stop'.
+# With -CaptureLines, returns @{ ExitCode; Lines } instead of an exit code alone.
+function Invoke-NativeCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [string[]]$ArgumentList = @(),
+        [switch]$CaptureLines
+    )
+
+    $prevEa = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $captured = [System.Collections.Generic.List[string]]::new()
+    try {
+        $raw = if ($ArgumentList.Count -gt 0) {
+            & $FilePath @ArgumentList 2>&1
         } else {
-            Write-Host $line
+            & $FilePath 2>&1
         }
+        foreach ($line in @($raw)) {
+            $text = Get-NativeCommandLineText $line
+            if (-not $text) { continue }
+            Write-Host $text
+            if ($CaptureLines) {
+                [void]$captured.Add($text)
+            }
+        }
+        $exitCode = 0
+        if ($null -ne $LASTEXITCODE) {
+            $exitCode = [int]$LASTEXITCODE
+        }
+        if ($CaptureLines) {
+            return @{ ExitCode = $exitCode; Lines = $captured }
+        }
+        return $exitCode
+    } finally {
+        $ErrorActionPreference = $prevEa
     }
 }
 
@@ -18,15 +56,7 @@ function Invoke-Git {
         [string[]]$GitArgs
     )
 
-    $prevEa = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    try {
-        $output = & git @GitArgs 2>&1
-        Write-GitLines $output
-        return $LASTEXITCODE
-    } finally {
-        $ErrorActionPreference = $prevEa
-    }
+    return Invoke-NativeCommand -FilePath 'git' -ArgumentList $GitArgs
 }
 
 function Get-GitUpstreamRef {
@@ -93,13 +123,12 @@ function Push-GitOriginHead {
     for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         if ((Invoke-Git push -u origin HEAD) -eq 0) { return }
 
-        git fetch origin 2>$null
-        $local = git rev-parse HEAD
+        $null = Invoke-Git fetch origin
+        $local = (git rev-parse HEAD 2>$null | Out-String).Trim()
 
         if ($remoteRef) {
-            $null = git rev-parse $remoteRef 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                $remote = git rev-parse $remoteRef
+            if ((Invoke-Git rev-parse $remoteRef) -eq 0) {
+                $remote = (git rev-parse $remoteRef 2>$null | Out-String).Trim()
                 if ($local -eq $remote) {
                     Write-Host "Push reported an error but $remoteRef already matches HEAD ($local)." -ForegroundColor Yellow
                     return
@@ -109,7 +138,7 @@ function Push-GitOriginHead {
 
         if ($attempt -lt $MaxAttempts) {
             Write-Host 'Push failed; fetching and retrying once...' -ForegroundColor Yellow
-            Sync-GitWithOrigin -AllowRebase
+            $null = Sync-GitWithOrigin -AllowRebase
             $info = Get-GitUpstreamRef
             $remoteRef = $info.RemoteRef
             continue
@@ -119,18 +148,55 @@ function Push-GitOriginHead {
     }
 }
 
+function Clear-StaleDeployLock {
+    param([string]$LockPath)
+
+    if (-not (Test-Path -LiteralPath $LockPath)) { return $false }
+
+    try {
+        $meta = Get-Content -LiteralPath $LockPath -Raw -ErrorAction Stop
+        if ($meta -match 'pid:(\d+)') {
+            $ownerPid = [int]$Matches[1]
+            if ($ownerPid -eq $PID) { return $false }
+            $proc = Get-Process -Id $ownerPid -ErrorAction SilentlyContinue
+            if ($proc) { return $false }
+        }
+        Remove-Item -LiteralPath $LockPath -Force -ErrorAction Stop
+        Write-Host "Removed stale deploy lock (owner process not running): $LockPath" -ForegroundColor Yellow
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 function Enter-DeployLock {
     param([string]$Name = 'popup-hub-deploy')
 
     $lockPath = Join-Path $env:TEMP "$Name.lock"
     $script:DeployLockPath = $lockPath
-    $script:DeployLockStream = [System.IO.File]::Open(
-        $lockPath,
-        [System.IO.FileMode]::OpenOrCreate,
-        [System.IO.FileAccess]::ReadWrite,
-        [System.IO.FileShare]::None
-    )
-    Write-Host "Deploy lock: $lockPath" -ForegroundColor DarkGray
+
+    for ($attempt = 1; $attempt -le 2; $attempt++) {
+        try {
+            $script:DeployLockStream = [System.IO.File]::Open(
+                $lockPath,
+                [System.IO.FileMode]::OpenOrCreate,
+                [System.IO.FileAccess]::ReadWrite,
+                [System.IO.FileShare]::None
+            )
+            $script:DeployLockStream.SetLength(0)
+            $writer = New-Object System.IO.StreamWriter($script:DeployLockStream, [System.Text.UTF8Encoding]::new($false))
+            $writer.Write("pid:$PID")
+            $writer.Flush()
+            $script:DeployLockStream.Flush()
+            Write-Host "Deploy lock: $lockPath" -ForegroundColor DarkGray
+            return
+        } catch {
+            if ($attempt -eq 1 -and (Clear-StaleDeployLock -LockPath $lockPath)) {
+                continue
+            }
+            throw
+        }
+    }
 }
 
 function Exit-DeployLock {

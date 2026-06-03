@@ -66,8 +66,7 @@ try {
     if (-not $SkipBuild) {
         Write-Step 'Building (next build)'
         $env:BUMP_BUILD_NUMBER = '1'
-        npm run build
-        if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+        if ((Invoke-NativeCommand -FilePath 'npm' -ArgumentList @('run', 'build')) -ne 0) { throw 'Build failed' }
     }
 
     if (-not $SkipCommit) {
@@ -89,7 +88,7 @@ try {
     }
 
     Write-Step 'Syncing with origin'
-    Sync-GitWithOrigin -AllowRebase
+    $null = Sync-GitWithOrigin -AllowRebase
 
     Write-Step 'Pushing to origin'
     Push-GitOriginHead
@@ -97,12 +96,9 @@ try {
     $deployUrl = 'https://popuphub.ca'
     if (-not $SkipDeploy) {
         Write-Step 'Deploying to Vercel (production)'
-        $deployOutput = npx vercel deploy --prod --yes 2>&1 | ForEach-Object {
-            Write-Host $_
-            $_
-        }
-        if ($LASTEXITCODE -ne 0) { throw 'Vercel deploy failed' }
-        $urlMatch = ($deployOutput | Select-String -Pattern 'https://[^\s]+\.vercel\.app' -AllMatches | Select-Object -Last 1)
+        $deployResult = Invoke-NativeCommand -FilePath 'npx' -ArgumentList @('vercel', 'deploy', '--prod', '--yes') -CaptureLines
+        if ($deployResult.ExitCode -ne 0) { throw 'Vercel deploy failed' }
+        $urlMatch = ($deployResult.Lines | Select-String -Pattern 'https://[^\s]+\.vercel\.app' -AllMatches | Select-Object -Last 1)
         if ($urlMatch) {
             $deployUrl = $urlMatch.Matches[0].Value
         }
@@ -131,7 +127,8 @@ try {
     exit 0
 } catch {
     Write-Host ''
-    Write-Host "==> Deploy failed: $_" -ForegroundColor Red
+    $failMsg = if ($_.Exception -and $_.Exception.Message) { $_.Exception.Message } else { "$_" }
+    Write-Host "==> Deploy failed: $failMsg" -ForegroundColor Red
     exit 1
 } finally {
     Exit-DeployLock

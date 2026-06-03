@@ -44,7 +44,10 @@ if not exist "%DEPLOY_PS1%" (
     goto :fail
 )
 
-set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+set "PS_EXE="
+where pwsh >nul 2>&1
+if not errorlevel 1 set "PS_EXE=pwsh.exe"
+if not defined PS_EXE set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
 if not exist "%PS_EXE%" set "PS_EXE=powershell.exe"
 
 "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%" !DEPLOY_PS_ARGS!

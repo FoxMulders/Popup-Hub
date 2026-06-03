@@ -33,8 +33,7 @@ function Write-Step($text) {
 try {
     Write-Step "Building (next build)"
     $env:BUMP_BUILD_NUMBER = "1"
-    npm run build
-    if ($LASTEXITCODE -ne 0) { throw "Build failed" }
+    if ((Invoke-NativeCommand -FilePath 'npm' -ArgumentList @('run', 'build')) -ne 0) { throw "Build failed" }
 
     if (-not $SkipCommit) {
         Write-Step "Staging source (excluding .next, .env*, secrets)"
@@ -56,15 +55,14 @@ try {
 
     if (-not $SkipPush) {
         Write-Step "Syncing with origin"
-        Sync-GitWithOrigin -AllowRebase
+        $null = Sync-GitWithOrigin -AllowRebase
         Write-Step "Pushing to origin"
         Push-GitOriginHead
     }
 
     if (-not $SkipDeploy) {
         Write-Step "Deploying to Vercel (production)"
-        npx vercel deploy --prod --yes
-        if ($LASTEXITCODE -ne 0) { throw "Deploy failed" }
+        if ((Invoke-NativeCommand -FilePath 'npx' -ArgumentList @('vercel', 'deploy', '--prod', '--yes')) -ne 0) { throw "Deploy failed" }
     }
 
     Write-Step "Updating session handoff"
