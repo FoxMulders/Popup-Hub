@@ -16,6 +16,7 @@ export interface SpatialLayoutToolbarProps {
   saving: boolean
   onSave: () => void
   saveLabel: string
+  onReloadFromServer?: () => void
 }
 
 export function SpatialLayoutToolbar({
@@ -28,6 +29,7 @@ export function SpatialLayoutToolbar({
   saving,
   onSave,
   saveLabel,
+  onReloadFromServer,
 }: SpatialLayoutToolbarProps) {
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200/80 bg-card/95 px-3 py-2.5 backdrop-blur-sm sm:px-4">
@@ -77,6 +79,18 @@ export function SpatialLayoutToolbar({
           <span className={cn(WIZARD_DRAFT_BADGE, 'py-1')} aria-label="Event status">
             Draft
           </span>
+        ) : null}
+        {onReloadFromServer ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0"
+            disabled={saving}
+            onClick={onReloadFromServer}
+          >
+            Reload saved layout
+          </Button>
         ) : null}
         <Button
           type="button"
