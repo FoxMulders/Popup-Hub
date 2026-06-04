@@ -3,13 +3,13 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `4fa079d` (pushed to `origin/master`)
-- Production: https://popup-8pd7lp90f-thetipsyfoxyeg-2911s-projects.vercel.app — **build 93** · commit `841b258` (handoff updated 2026-06-03 18:20)
+- Branch: `master` @ `6e593db` (pushed to `origin/master`)
+- Production: https://popup-jvl0ulrjk-thetipsyfoxyeg-2911s-projects.vercel.app — **build 94** · commit `0f42ecc` (handoff updated 2026-06-03 18:59)
 - **Deploy script:** `PM/Deploy-popuphub.bat` → `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` — brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 ## Last deploy
-- 2026-06-03 18:20 - Deploy via deploy-popuphub.ps1 (4fa079d)
+- 2026-06-03 18:59 - Deploy via deploy-popuphub.ps1 (6e593db)
 
 
 ## Goal
