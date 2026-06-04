@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { CanvasToolHostProps } from './canvas-tool-types'
 import { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
-import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
+import type { AddLayoutRoomOptions } from '@/lib/coordinator/add-layout-room'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import {
   getVisibleToolbarBlockIds,
@@ -21,7 +21,7 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   rooms?: LayoutRoom[]
   activeRoomId?: string
   onSelectRoom?: (roomId: string) => void
-  onAddRoom?: (presetId?: LayoutRoomPresetId) => void
+  onAddRoom?: (options?: AddLayoutRoomOptions) => void
   onRenameRoom?: (roomId: string, name: string) => void
   onDeleteRoom?: (roomId: string) => void
   highlightedRoomMetrics?: {
@@ -29,6 +29,7 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
     widthFt: number
     lengthFt: number
   } | null
+  highlightedSelectionMetrics?: string | null
   showLabels?: boolean
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
@@ -101,6 +102,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onDeleteSelected,
     tableSizeFt,
     onTableSizeChange,
+    onPrepareTableDraw,
     zoom,
     onZoomOut,
     onZoomIn,
@@ -112,6 +114,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onRenameRoom,
     onDeleteRoom,
     highlightedRoomMetrics,
+    highlightedSelectionMetrics,
     showLabels = true,
     onShowLabelsChange,
     canvasFullscreen = false,
@@ -130,6 +133,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     Boolean(onAddRoom) &&
     Boolean(onRenameRoom) &&
     Boolean(onDeleteRoom)
+  const needsRoomFirst = showRooms && (rooms?.length ?? 0) === 0
   const showArrangement = Boolean(onAutoArrange) || showJoinGroup
   const showRoomTransform = Boolean(onRotateRoomLeft) && Boolean(onRotateRoomRight)
 
@@ -178,6 +182,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onDeleteSelected,
       tableSizeFt,
       onTableSizeChange,
+      onPrepareTableDraw,
       zoom,
       onZoomOut,
       onZoomIn,
@@ -189,6 +194,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onRenameRoom,
       onDeleteRoom,
       highlightedRoomMetrics,
+      highlightedSelectionMetrics,
       showLabels,
       onShowLabelsChange,
       canvasFullscreen,
@@ -231,6 +237,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onDeleteSelected,
       tableSizeFt,
       onTableSizeChange,
+      onPrepareTableDraw,
       zoom,
       onZoomOut,
       onZoomIn,
@@ -242,6 +249,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onRenameRoom,
       onDeleteRoom,
       highlightedRoomMetrics,
+      highlightedSelectionMetrics,
       showLabels,
       onShowLabelsChange,
       canvasFullscreen,
@@ -257,13 +265,21 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
   const visibleBlockIds = useMemo(
     () =>
       getVisibleToolbarBlockIds({
+        needsRoomFirst,
         showTableSize,
         showJoinGroup,
         showRooms,
         showArrangement,
         showRoomTransform,
       }),
-    [showTableSize, showJoinGroup, showRooms, showArrangement, showRoomTransform]
+    [
+      needsRoomFirst,
+      showTableSize,
+      showJoinGroup,
+      showRooms,
+      showArrangement,
+      showRoomTransform,
+    ]
   )
 
   return (

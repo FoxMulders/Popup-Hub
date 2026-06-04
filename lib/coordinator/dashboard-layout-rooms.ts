@@ -1,50 +1,20 @@
 import type { LayoutRoom } from '@/types/database'
+import { updateRoomInList } from '@/lib/booth-planner/layout-rooms'
+import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import {
-  createLayoutRoom,
-  updateRoomInList,
-} from '@/lib/booth-planner/layout-rooms'
-import {
-  LAYOUT_ROOM_PRESETS,
-  presetToRoomPartial,
-  type LayoutRoomPresetId,
-} from '@/lib/booth-planner/layout-room-presets'
+  appendLayoutRoom,
+  type AddLayoutRoomOptions,
+} from '@/lib/coordinator/add-layout-room'
+
+export type { AddLayoutRoomOptions }
 
 export function addLayoutRoomToList(
   rooms: LayoutRoom[],
-  presetId?: LayoutRoomPresetId
+  options?: AddLayoutRoomOptions | LayoutRoomPresetId
 ): { rooms: LayoutRoom[]; activeRoomId: string } {
-  const preset =
-    LAYOUT_ROOM_PRESETS.find((p) => p.id === presetId) ??
-    LAYOUT_ROOM_PRESETS[0]!
-  const isFirstRoom = rooms.length === 0
-  let name: string
-  if (preset.id !== 'blank') {
-    name = preset.name
-  } else if (isFirstRoom) {
-    name = 'Main Hall'
-  } else {
-    name = `Room ${rooms.length + 1}`
-  }
-  const partial = presetToRoomPartial(preset)
-  let nextOriginX = 0
-  const nextOriginY = 0
-  if (!isFirstRoom) {
-    let maxRight = 0
-    for (const r of rooms) {
-      const right = (r.canvas_origin_x ?? 0) + (r.venue_width || 50)
-      if (right > maxRight) maxRight = right
-    }
-    nextOriginX = maxRight + 4
-  }
-  const room = createLayoutRoom(name, {
-    ...partial,
-    canvas_origin_x: nextOriginX,
-    canvas_origin_y: nextOriginY,
-  })
-  return {
-    rooms: [...rooms, room],
-    activeRoomId: room.id,
-  }
+  const normalized: AddLayoutRoomOptions | undefined =
+    typeof options === 'string' ? { presetId: options } : options
+  return appendLayoutRoom(rooms, normalized)
 }
 
 export function renameLayoutRoomInList(

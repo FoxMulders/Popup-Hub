@@ -11,7 +11,6 @@ import { buttonVariants } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
-import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import {
   addLayoutRoomToList,
   deleteLayoutRoomFromList,
@@ -71,8 +70,8 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
   )
 
   const handleAddRoom = useCallback(
-    (presetId?: LayoutRoomPresetId) => {
-      const { rooms, activeRoomId } = addLayoutRoomToList(layoutRooms, presetId)
+    (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
+      const { rooms, activeRoomId } = addLayoutRoomToList(layoutRooms, options)
       setLayoutRooms(rooms, activeRoomId)
       toast.success(`Added ${rooms.find((r) => r.id === activeRoomId)?.name ?? 'room'}`)
     },

@@ -183,13 +183,13 @@ import {
 import { StrollerClearancePanel } from '@/components/coordinator/stroller-clearance-panel'
 import { TableVendorSpacingPanel } from '@/components/coordinator/table-vendor-spacing-panel'
 import {
-  createLayoutRoom,
   getActiveRoom,
   layoutPayloadFromRooms,
   roomsFromBoothLayout,
   updateRoomInList,
   type LayoutRoom,
 } from '@/lib/booth-planner/layout-rooms'
+import { appendLayoutRoom } from '@/lib/coordinator/add-layout-room'
 import { analyzeStrollerClearance } from '@/lib/booth-planner/stroller-clearance'
 import {
   TABLE_GRID_CELL_LENGTH_FT,
@@ -491,12 +491,11 @@ export function BoothPlanner({
     setActiveRoomId(roomId)
   }
 
-  function handleAddRoom() {
-    const room = createLayoutRoom(
-      rooms.length === 0 ? 'Main Hall' : `Room ${rooms.length + 1}`
-    )
-    commitRoomsChange([...rooms, room], room.id)
-    toast.success(`Added ${room.name}`)
+  function handleAddRoom(options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) {
+    const { rooms: nextRooms, activeRoomId } = appendLayoutRoom(rooms, options)
+    commitRoomsChange(nextRooms, activeRoomId)
+    const added = nextRooms.find((r) => r.id === activeRoomId)
+    toast.success(`Added ${added?.name ?? 'room'}`)
   }
 
   function handleRenameRoom(roomId: string, name: string) {

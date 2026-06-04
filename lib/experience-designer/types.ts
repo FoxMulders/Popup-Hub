@@ -29,6 +29,10 @@ export interface ZoneBomLine {
   unitCostCents: number
 }
 
+import type { MaterialChecklistLinkItem } from '@/lib/experience-designer/material-checklist-schema'
+
+export type { MaterialChecklistLinkItem }
+
 export interface RoomZone {
   id: string
   name: string
@@ -37,6 +41,8 @@ export interface RoomZone {
   puzzleTitle?: string
   puzzleSummary?: string
   bom?: ZoneBomLine[]
+  /** Normalized puzzle materials with Amazon.ca affiliate links (no static prices). */
+  materialChecklist?: MaterialChecklistLinkItem[]
   arduinoCode?: string
 }
 

@@ -3,7 +3,8 @@
 # Usage:
 #   .\scripts\deploy-popuphub.ps1
 #   .\scripts\deploy-popuphub.ps1 -Message "fix: footer version row"
-#   PM\Deploy-popuphub.bat "fix: footer version row"
+#   PM\Deploy-popuphub.bat [commit message]
+# Default commit message matches current WIP — override via -Message or bat arg 1.
 
 param(
     [string]$Message = '',
@@ -34,7 +35,7 @@ if ($MessageArgs -and $MessageArgs.Count -gt 0) {
     $Message = $MessageArgs -join ' '
 }
 if (-not $Message) {
-    $Message = "chore: deploy popuphub ($(Get-Date -Format 'yyyy-MM-dd HH:mm'))"
+    $Message = 'feat: floor-plan object resize, measurements, viewport lock, and layout fixes'
 }
 
 function Test-CommandAvailable($name) {
@@ -107,7 +108,7 @@ try {
     if (-not $SkipHandoff) {
         Write-Step 'Updating session handoff'
         $short = git rev-parse --short HEAD
-        & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -DeployUrl $deployUrl -Note "Deploy via deploy-popuphub.ps1"
+        & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -DeployUrl $deployUrl -Note 'Deploy via deploy-popuphub.ps1' -CommitMessage $Message
 
         $handoffGit = 'PM/session-handoff.md'
         $handoffStatus = git status --porcelain -- $handoffGit

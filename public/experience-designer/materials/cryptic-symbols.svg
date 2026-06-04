@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" role="img" aria-label="Cryptic symbols sample">
+  <rect width="240" height="120" fill="#0f172a" rx="8"/>
+  <g fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round">
+    <circle cx="40" cy="60" r="18"/>
+    <path d="M40 42v36M22 60h36"/>
+    <path d="M95 35l20 50M115 35L95 85"/>
+    <rect x="150" y="38" width="36" height="44" rx="4"/>
+    <path d="M168 38v44M150 60h36"/>
+    <path d="M210 42c-12 8-12 28 0 36M210 42c12 8 12 28 0 36"/>
+  </g>
+  <text x="120" y="108" text-anchor="middle" fill="#94a3b8" font-family="system-ui,sans-serif" font-size="10">Cryptic Symbols</text>
+</svg>

@@ -8,6 +8,27 @@ import {
 } from '@/lib/floor-plan/placement-ring-orientation'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from '../state/types'
 import { frameToRing } from '../state/placement-surface'
+import {
+  isJoinableObject,
+  objectFrameOverlapsOrTouches,
+} from '../state/room-joins'
+
+export type PlacementProbe = Pick<
+  PlacedObject,
+  'x' | 'y' | 'width' | 'height' | 'rotation' | 'kind'
+>
+
+function joinablePlacementProbe(obj: PlacementProbe): PlacedObject {
+  return {
+    id: '__placement_probe__',
+    kind: obj.kind,
+    x: obj.x,
+    y: obj.y,
+    width: obj.width,
+    height: obj.height,
+    rotation: obj.rotation ?? 0,
+  } as PlacedObject
+}
 
 function roomInteriorAnchor(frame: RoomFrame): { x: number; y: number } {
   return {
@@ -126,4 +147,62 @@ export function resolvePlacementRoomId(
     return preferredRoomId
   }
   return null
+}
+
+/** Joinable fixtures (stage) may attach flush outside a room perimeter. */
+export function findRoomIdForJoinableObjectPlacement(
+  doc: FloorPlanDoc,
+  obj: PlacementProbe
+): string | null {
+  if (!isJoinableObject(joinablePlacementProbe(obj))) return null
+  const probe = joinablePlacementProbe(obj)
+  const rooms = activeDropZoneRooms(doc)
+  for (let i = rooms.length - 1; i >= 0; i--) {
+    const frame = rooms[i]!
+    if (objectFrameOverlapsOrTouches(probe, frame)) return frame.id
+  }
+  return null
+}
+
+/**
+ * Resolve owning room for a drawn/moved object. Interior centroid wins;
+ * joinable kinds may attach via perimeter touch when the center sits outside.
+ */
+export function resolvePlacementRoomIdForObject(
+  doc: FloorPlanDoc,
+  obj: PlacementProbe,
+  preferredRoomId?: string | null
+): string | null {
+  const center = {
+    x: obj.x + obj.width / 2,
+    y: obj.y + obj.height / 2,
+  }
+  const hit = findRoomIdForPlacementPoint(doc, center)
+  if (hit) return hit
+
+  const joinHit = findRoomIdForJoinableObjectPlacement(doc, obj)
+  if (joinHit) return joinHit
+
+  if (preferredRoomId && isPointInRoom(doc, center.x, center.y, preferredRoomId)) {
+    return preferredRoomId
+  }
+  return null
+}
+
+/** True when an object may be placed (inside room, or stage touching a room). */
+export function isValidObjectPlacement(
+  doc: FloorPlanDoc,
+  obj: PlacementProbe,
+  roomId?: string | null
+): boolean {
+  const resolved =
+    roomId ?? resolvePlacementRoomIdForObject(doc, obj, null)
+  if (!resolved) return false
+
+  if (isPointInRoomForObject(doc, obj, resolved)) return true
+
+  if (!isJoinableObject(joinablePlacementProbe(obj))) return false
+  const frame = activeDropZoneRooms(doc).find((r) => r.id === resolved)
+  if (!frame) return false
+  return objectFrameOverlapsOrTouches(joinablePlacementProbe(obj), frame)
 }

@@ -26,17 +26,57 @@ import {
   Trash2,
   Undo2,
   RectangleHorizontal,
+  Circle,
   Eye,
   EyeOff,
 } from 'lucide-react'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
+import {
+  DEFAULT_TABLE_SIZE,
+  isLayoutBaselineTableLengthFt,
+} from '@/lib/booth-planner/layout-table-size'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { DrawShape, ToolState } from './types'
 import { CommandButton } from './command-button'
 import { TableSizePill } from './table-size-pill'
 import type { CanvasToolbarBlockId } from './toolbar-order'
-import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
+import {
+  guestRectTableSpec,
+  guestRoundTableSpec,
+  isGuestTableLengthFt,
+  vendorTableSpec,
+  type GuestTableLengthFt,
+  type TableSizeSpec,
+} from '@/lib/booth-planner/table-shape'
+
+type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
+
+const TABLE_PLACEMENT_TOOLS: Array<{
+  mode: TablePlacementMode
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+}> = [
+  {
+    mode: 'vendor',
+    label: 'Booth',
+    icon: Square,
+    title: 'Draw vendor booth — size from Booth column in Table size',
+  },
+  {
+    mode: 'guest-round',
+    label: 'Patron round',
+    icon: Circle,
+    title: 'Draw patron round table — size from Round column in Table size',
+  },
+  {
+    mode: 'guest-rect',
+    label: 'Patron rect',
+    icon: RectangleHorizontal,
+    title: 'Draw patron rectangular banquet table — size from Patron column in Table size',
+  },
+]
 
 const CREATION_SHAPES: Array<{
   id: DrawShape
@@ -44,7 +84,6 @@ const CREATION_SHAPES: Array<{
   icon: React.ComponentType<{ className?: string }>
   variant?: 'floor' | 'arch' | 'destructive'
 }> = [
-  { id: 'booth', label: 'Booth', icon: Square, variant: 'floor' },
   { id: 'label', label: 'Label', icon: Tag, variant: 'floor' },
   { id: 'wall', label: 'Wall', icon: Square, variant: 'arch' },
   { id: 'open_wall', label: 'Open wall', icon: RectangleHorizontal, variant: 'arch' },
@@ -89,6 +128,8 @@ export interface CanvasCommandBarBlockContext {
   onDeleteSelected: () => void
   tableSizeFt?: TableSizeSpec
   onTableSizeChange?: (selection: TableSizeSpec) => void
+  /** Atomically sets placement spec (sync ref) and activates booth draw. */
+  onPrepareTableDraw?: (selection: TableSizeSpec) => void
   zoom: number
   onZoomOut: () => void
   onZoomIn: () => void
@@ -96,7 +137,7 @@ export interface CanvasCommandBarBlockContext {
   rooms?: LayoutRoom[]
   activeRoomId?: string
   onSelectRoom?: (roomId: string) => void
-  onAddRoom?: (presetId?: import('@/lib/booth-planner/layout-room-presets').LayoutRoomPresetId) => void
+  onAddRoom?: (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => void
   onRenameRoom?: (roomId: string, name: string) => void
   onDeleteRoom?: (roomId: string) => void
   highlightedRoomMetrics?: {
@@ -104,6 +145,8 @@ export interface CanvasCommandBarBlockContext {
     widthFt: number
     lengthFt: number
   } | null
+  /** W×H label for the single selected canvas object (booth/table). */
+  highlightedSelectionMetrics?: string | null
   showLabels?: boolean
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
@@ -130,6 +173,64 @@ export function renderCanvasCommandBarBlock(
   function activateDrawShape(shape: DrawShape) {
     ctx.onToolChange('draw')
     ctx.onDrawShapeChange(shape)
+  }
+
+  function resolveGuestTableFt(
+    spec: TableSizeSpec | undefined,
+    shape: 'round' | 'rectangular'
+  ): GuestTableLengthFt {
+    if (
+      spec?.purpose === 'guest' &&
+      spec.shape === shape &&
+      isGuestTableLengthFt(spec.ft)
+    ) {
+      return spec.ft
+    }
+    return 6
+  }
+
+  function isTablePlacementActive(mode: TablePlacementMode): boolean {
+    if (ctx.toolState.tool !== 'draw' || ctx.toolState.drawShape !== 'booth') {
+      return false
+    }
+    const spec = ctx.tableSizeFt
+    switch (mode) {
+      case 'vendor':
+        return spec?.purpose !== 'guest'
+      case 'guest-round':
+        return spec?.purpose === 'guest' && spec.shape === 'round'
+      case 'guest-rect':
+        return spec?.purpose === 'guest' && spec.shape === 'rectangular'
+    }
+  }
+
+  function tableSpecForPlacementMode(mode: TablePlacementMode): TableSizeSpec {
+    switch (mode) {
+      case 'vendor': {
+        const ft =
+          ctx.tableSizeFt?.purpose === 'vendor' &&
+          isLayoutBaselineTableLengthFt(ctx.tableSizeFt.ft)
+            ? ctx.tableSizeFt.ft
+            : DEFAULT_TABLE_SIZE
+        return vendorTableSpec(ft)
+      }
+      case 'guest-round':
+        return guestRoundTableSpec(resolveGuestTableFt(ctx.tableSizeFt, 'round'))
+      case 'guest-rect':
+        return guestRectTableSpec(
+          resolveGuestTableFt(ctx.tableSizeFt, 'rectangular')
+        )
+    }
+  }
+
+  function activateTablePlacement(mode: TablePlacementMode) {
+    const spec = tableSpecForPlacementMode(mode)
+    if (ctx.onPrepareTableDraw) {
+      ctx.onPrepareTableDraw(spec)
+      return
+    }
+    ctx.onTableSizeChange?.(spec)
+    activateDrawShape('booth')
   }
 
   switch (id) {
@@ -165,6 +266,25 @@ export function renderCanvasCommandBarBlock(
             role="group"
             aria-label="Creation tools"
           >
+            {TABLE_PLACEMENT_TOOLS.map((tool) => {
+              const active = isTablePlacementActive(tool.mode)
+              return (
+                <CommandButton
+                  key={tool.mode}
+                  onClick={() => activateTablePlacement(tool.mode)}
+                  title={tool.title}
+                  label={tool.label}
+                  active={active}
+                  className={
+                    active
+                      ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
+                      : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
+                  }
+                >
+                  <tool.icon className="h-3.5 w-3.5" />
+                </CommandButton>
+              )
+            })}
             {CREATION_SHAPES.map((shape) => (
               <CommandButton
                 key={shape.id}
@@ -414,11 +534,21 @@ export function renderCanvasCommandBarBlock(
 
     case 'table-size':
       return ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
-        <TableSizePill
-          value={ctx.tableSizeFt}
-          onChange={ctx.onTableSizeChange}
-          className="shrink-0"
-        />
+        <div className="inline-flex max-w-full items-center gap-1">
+          <TableSizePill
+            value={ctx.tableSizeFt}
+            onChange={ctx.onTableSizeChange}
+            className="shrink-0"
+          />
+          {ctx.highlightedSelectionMetrics ? (
+            <span
+              className="hidden shrink-0 rounded-md border border-teal-200/90 bg-teal-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-teal-900 sm:inline"
+              aria-live="polite"
+            >
+              {ctx.highlightedSelectionMetrics}
+            </span>
+          ) : null}
+        </div>
       ) : null
 
     case 'rooms':
@@ -535,12 +665,16 @@ export function renderCanvasCommandBarBlock(
 }
 
 export function getVisibleToolbarBlockIds(ctx: {
+  needsRoomFirst: boolean
   showTableSize: boolean
   showJoinGroup: boolean
   showRooms: boolean
   showArrangement: boolean
   showRoomTransform: boolean
 }): CanvasToolbarBlockId[] {
+  if (ctx.needsRoomFirst && ctx.showRooms) {
+    return ['rooms']
+  }
   const ids: CanvasToolbarBlockId[] = [
     'primitives',
     'history-clipboard',

@@ -50,7 +50,7 @@ export function WizardStepFloorPlan({
   }
 
   const roomBar =
-    onAddRoom && onRenameRoom && onDeleteRoom ? (
+    onAddRoom && onRenameRoom && onDeleteRoom && layoutRooms.length > 0 ? (
       <LayoutRoomBar
         rooms={layoutRooms}
         activeRoomId={layoutActiveRoomId}

@@ -7,6 +7,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
+  type MutableRefObject,
 } from 'react'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
 import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
@@ -49,10 +50,16 @@ import {
   findBoothProximityViolation,
 } from '@/components/coordinator/floor-plan-v2/interactions/category-rules'
 import {
-  isPointInRoomForObject,
-  resolvePlacementRoomId,
+  isValidObjectPlacement,
+  resolvePlacementRoomIdForObject,
 } from '@/components/coordinator/floor-plan-v2/geometry/is-point-in-room'
 import { resolveDrawCommitRect } from '@/components/coordinator/floor-plan-v2/interactions/use-canvas-pointer'
+import {
+  objectResizeFromHandle,
+  patchForObjectResize,
+  pointerInObjectSpace,
+  type ObjectResizeHandle,
+} from '@/components/coordinator/floor-plan-v2/interactions/object-resize'
 import {
   roomResizeFromHandle,
   type RoomResizeHandle,
@@ -123,6 +130,7 @@ interface UseCanvasPointerOptions {
   onOverlapViolation?: () => void
   /** Footprint template for newly drawn booths. */
   defaultBoothTableSpec?: TableSizeSpec
+  defaultBoothTableSpecRef?: MutableRefObject<TableSizeSpec | undefined>
   /** When `perimeter-only`, booths snap/orient to room walls after drag. */
   autoArrangeMode?: AutoArrangeMode
   /** Dashboard command center: damp room drag/resize and raise zoom floor. */
@@ -201,6 +209,16 @@ type RoomDragState =
       lastDy: number
       moved: boolean
       limitNotified: boolean
+    }
+
+type ObjectResizeState =
+  | null
+  | {
+      pointerId: number
+      objectId: string
+      handle: ObjectResizeHandle
+      initial: PlacedObject
+      moved: boolean
     }
 
 type RoomResizeState =
@@ -313,6 +331,8 @@ export interface CanvasPointerApi {
   rotating: boolean
   /** True during macro room drag or resize. */
   roomGestureActive: boolean
+  /** True while dragging an object resize handle. */
+  objectGestureActive: boolean
   onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerMove: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerUp: (e: ReactPointerEvent<SVGSVGElement>) => void
@@ -354,9 +374,15 @@ export function useCanvasPointerWizardQa(
     eventCategoryNamesRef.current = eventCategoryNames
   }, [eventCategoryNames])
   const defaultBoothTableSpecRef = useRef(options.defaultBoothTableSpec)
-  useEffect(() => {
+  const defaultBoothTableSpecSourceRef =
+    options.defaultBoothTableSpecRef ?? defaultBoothTableSpecRef
+  if (!options.defaultBoothTableSpecRef) {
     defaultBoothTableSpecRef.current = options.defaultBoothTableSpec
-  }, [options.defaultBoothTableSpec])
+  }
+
+  const readDefaultBoothTableSpec = useCallback((): TableSizeSpec | undefined => {
+    return defaultBoothTableSpecSourceRef.current
+  }, [defaultBoothTableSpecSourceRef])
 
   const [draft, setDraftState] = useState<DrawDraft>(null)
   const draftRef = useRef<DrawDraft>(null)
@@ -371,6 +397,8 @@ export function useCanvasPointerWizardQa(
   const [roomGestureActive, setRoomGestureActive] = useState(false)
   const roomDragRef = useRef<RoomDragState>(null)
   const roomResizeRef = useRef<RoomResizeState>(null)
+  const objectResizeRef = useRef<ObjectResizeState>(null)
+  const [objectGestureActive, setObjectGestureActive] = useState(false)
   const onRoomCanvasLimitBlockedRef = useRef(
     options.onRoomCanvasLimitBlocked
   )
@@ -497,6 +525,31 @@ export function useCanvasPointerWizardQa(
 
       // SELECT
       const target = e.target as Element | null
+
+      const objectResizeEl = target?.closest('[data-object-resize-handle]')
+      if (objectResizeEl && toolState.tool === 'select') {
+        const objectId = objectResizeEl.getAttribute('data-object-id')
+        const handle = objectResizeEl.getAttribute(
+          'data-object-resize-handle'
+        ) as ObjectResizeHandle | null
+        const obj =
+          objectId && store.doc.objects.find((o) => o.id === objectId)
+        if (objectId && handle && obj && !obj.locked) {
+          capturePointer(e.currentTarget, e.pointerId)
+          if (!store.selectedIds.has(objectId)) {
+            store.setSelection([objectId])
+          }
+          setObjectGestureActive(true)
+          objectResizeRef.current = {
+            pointerId: e.pointerId,
+            objectId,
+            handle,
+            initial: { ...obj },
+            moved: false,
+          }
+          return
+        }
+      }
 
       const resizeHandleEl = target?.closest('[data-room-resize-handle]')
       if (resizeHandleEl && toolState.tool === 'select') {
@@ -690,7 +743,47 @@ export function useCanvasPointerWizardQa(
       const rotate = rotateRef.current
       const roomDrag = roomDragRef.current
       const roomResize = roomResizeRef.current
+      const objectResize = objectResizeRef.current
       const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
+
+      if (objectResize && objectResize.pointerId === pointerId) {
+        const localPointer = pointerInObjectSpace(objectResize.initial, ft)
+        const geom = objectResizeFromHandle(
+          objectResize.initial,
+          objectResize.handle,
+          localPointer,
+          store.doc.snapFt
+        )
+        const patch = patchForObjectResize(objectResize.initial, geom)
+        const objNow = store.doc.objects.find(
+          (o) => o.id === objectResize.objectId
+        )
+        if (!objNow) return
+        const probe = { ...objNow, ...patch } as PlacedObject
+        const cw = store.doc.canvasWidthFt
+        const cl = store.doc.canvasLengthFt
+        const clampDelta = canvasClampDelta(probe, cw, cl)
+        const clamped = {
+          ...patch,
+          x: (patch.x ?? objNow.x) + clampDelta.dx,
+          y: (patch.y ?? objNow.y) + clampDelta.dy,
+        }
+        const wasMoved = objectResize.moved
+        const isMovedNow =
+          wasMoved ||
+          clamped.x !== objectResize.initial.x ||
+          clamped.y !== objectResize.initial.y ||
+          clamped.width !== objectResize.initial.width ||
+          clamped.height !== objectResize.initial.height
+        store.updateObject(objectResize.objectId, clamped, {
+          pushHistory: false,
+        })
+        objectResizeRef.current = {
+          ...objectResize,
+          moved: isMovedNow,
+        }
+        return
+      }
 
       if (roomResize && roomResize.pointerId === pointerId) {
         const motionScale = roomDragMotionScale(
@@ -980,6 +1073,66 @@ export function useCanvasPointerWizardQa(
         flushMove(pending)
       }
 
+      const objectResize = objectResizeRef.current
+      if (objectResize && objectResize.pointerId === e.pointerId) {
+        if (objectResize.moved) {
+          const obj = store.doc.objects.find(
+            (o) => o.id === objectResize.objectId
+          )
+          const initial = objectResize.initial
+          if (obj) {
+            const others = store.doc.objects.filter(
+              (o) => o.id !== objectResize.objectId
+            )
+            if (
+              findOverlapInMove([obj], others, {
+                rooms: store.doc.rooms ?? [],
+              })
+            ) {
+              store.updateObject(
+                objectResize.objectId,
+                {
+                  x: initial.x,
+                  y: initial.y,
+                  width: initial.width,
+                  height: initial.height,
+                  ...(initial.kind === 'booth'
+                    ? {
+                        tableLengthFt: (initial as BoothObject).tableLengthFt,
+                        tableShape: (initial as BoothObject).tableShape,
+                        tablePurpose: (initial as BoothObject).tablePurpose,
+                      }
+                    : {}),
+                },
+                { pushHistory: false }
+              )
+              onOverlapViolationRef.current?.()
+            } else {
+              store.updateObject(
+                objectResize.objectId,
+                {
+                  x: obj.x,
+                  y: obj.y,
+                  width: obj.width,
+                  height: obj.height,
+                  ...(obj.kind === 'booth'
+                    ? {
+                        tableLengthFt: (obj as BoothObject).tableLengthFt,
+                        tableShape: (obj as BoothObject).tableShape,
+                        tablePurpose: (obj as BoothObject).tablePurpose,
+                      }
+                    : {}),
+                },
+                { pushHistory: true }
+              )
+            }
+          }
+        }
+        objectResizeRef.current = null
+        setObjectGestureActive(false)
+        return
+      }
+
       const roomResize = roomResizeRef.current
       if (roomResize && roomResize.pointerId === e.pointerId) {
         if (roomResize.moved) {
@@ -1071,14 +1224,15 @@ export function useCanvasPointerWizardQa(
                 height: 0,
               },
           store.doc.snapFt,
-          defaultBoothTableSpecRef.current
+          readDefaultBoothTableSpec()
         )
         const boothProbe = {
           x: rect.x,
           y: rect.y,
           width: rect.width,
           height: rect.height,
-          rotation: 0,
+          rotation: 0 as const,
+          kind: activeDraft.kind,
         }
         const center = {
           x: rect.x + rect.width / 2,
@@ -1089,15 +1243,15 @@ export function useCanvasPointerWizardQa(
           ? (findRoomIdForPlacementPointWizardQa(store.doc, center) ??
             activeRoomIdRef.current ??
             null)
-          : resolvePlacementRoomId(
+          : resolvePlacementRoomIdForObject(
               store.doc,
-              center,
+              boothProbe,
               activeRoomIdRef.current
             )
         const placementValid = openCanvas
           ? isValidPlacementLocationWizardQa(store.doc, center, boothProbe)
           : drawRoomId != null &&
-            isPointInRoomForObject(store.doc, boothProbe, drawRoomId)
+            isValidObjectPlacement(store.doc, boothProbe, drawRoomId)
         if ((!openCanvas && !drawRoomId) || !placementValid) {
           addLogRef.current(
             `Placement rejected (draw ${activeDraft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} openCanvas=${openCanvas}`
@@ -1114,7 +1268,7 @@ export function useCanvasPointerWizardQa(
           drawRoomId,
           onProximityViolationRef.current,
           onOverlapViolationRef.current,
-          defaultBoothTableSpecRef.current,
+          readDefaultBoothTableSpec(),
           (msg) => addLogRef.current(msg)
         )
         onAfterDrawCommit?.()
@@ -1274,6 +1428,7 @@ export function useCanvasPointerWizardQa(
       : null,
     rotating,
     roomGestureActive,
+    objectGestureActive,
     onPointerDown,
     onPointerMove,
     onPointerUp,
@@ -1347,12 +1502,10 @@ function commitDraft(
   let obj: PlacedObject
   switch (kind) {
     case 'booth': {
-      // Booth fills now derive from category + a deterministic palette.
-      // accentColor stays null so colors flow from the category mapping.
-      // Auto-assign the least-occupied category at draw time so two
-      // newly-placed booths never default into the same bucket — this
-      // is the engine-level half of the "diverse vendor mix" rule.
-      const seedCategory = pickLeastUsedCategory(store, eventCategoryNames)
+      const isGuestTable = defaultBoothTableSpec?.purpose === 'guest'
+      const seedCategory = isGuestTable
+        ? null
+        : pickLeastUsedCategory(store, eventCategoryNames)
       obj = {
         ...base,
         kind: 'booth',
@@ -1395,7 +1548,7 @@ function commitDraft(
   }
   // Same-category proximity gate for newly-drawn booths. Walls,
   // doors, etc. skip the check (it only applies to booths).
-  if (obj.kind === 'booth') {
+  if (obj.kind === 'booth' && (obj as BoothObject).tablePurpose !== 'guest') {
     const gridSpacingFt = store.doc.gridSpacingFt || 1
     const violation = findBoothProximityViolation(
       obj as BoothObject,
@@ -1424,17 +1577,16 @@ function commitDraft(
     return
   }
   const openCanvas = allowsWizardPlacementWithoutRoom(store.doc)
-  const center = objectCenter(obj)
   const placementRoomId = openCanvas
     ? (roomId ??
-      findRoomIdForPlacementPointWizardQa(store.doc, center) ??
+      findRoomIdForPlacementPointWizardQa(store.doc, objectCenter(obj)) ??
       null)
     : (roomId ??
-      resolvePlacementRoomId(store.doc, center, null))
+      resolvePlacementRoomIdForObject(store.doc, obj, null))
   const placementValid = openCanvas
-    ? isValidPlacementLocationWizardQa(store.doc, center, obj)
+    ? isValidPlacementLocationWizardQa(store.doc, objectCenter(obj), obj)
     : placementRoomId != null &&
-      isPointInRoomForObject(store.doc, obj, placementRoomId)
+      isValidObjectPlacement(store.doc, obj, placementRoomId)
   if (!placementValid || (!openCanvas && !placementRoomId)) {
     log(
       `Placement rejected (${obj.kind}): center=(${objectCenter(obj).x},${objectCenter(obj).y}) room=${placementRoomId ?? 'none'}`

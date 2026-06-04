@@ -1,9 +1,10 @@
 # Refresh PM/session-handoff.md baseline after a deploy or scoped task.
-# Usage: .\scripts\update-session-handoff.ps1 [-DeployUrl <url>] [-Note <text>]
+# Usage: .\scripts\update-session-handoff.ps1 [-DeployUrl <url>] [-Note <text>] [-CommitMessage <msg>]
 
 param(
     [string]$DeployUrl = 'https://popuphub.ca',
-    [string]$Note = ''
+    [string]$Note = '',
+    [string]$CommitMessage = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -54,13 +55,23 @@ try {
     $date = Get-Date -Format 'yyyy-MM-dd HH:mm'
     $content = Get-Content $HandoffPath -Raw
 
-    $baselineBlock = @"
-## Baseline
-- Branch: ``$branch`` @ ``$commit`` ($pushed)
-- Production: $DeployUrl — $buildLine (handoff updated $date)
-- **Deploy script:** ``PM/Deploy-popuphub.bat`` → ``scripts/deploy-popuphub.ps1`` (build, commit, sync push, Vercel prod, handoff)
-- **Stashed (not shipped):** ``git stash`` entry ``loader WIP`` — brand loader scene / ``ship.ps1`` tweaks on ``feature/step-2-fix`` (verify with ``git stash list``)
-"@
+    $commitLine = if ($CommitMessage) {
+        "- Last deploy commit: ``$commit`` — $CommitMessage"
+    } else {
+        ''
+    }
+
+    $baselineLines = @(
+        '## Baseline',
+        "- Branch: ``$branch`` @ ``$commit`` ($pushed)"
+    )
+    if ($commitLine) { $baselineLines += $commitLine }
+    $baselineLines += @(
+        "- Production: $DeployUrl — $buildLine (handoff updated $date)",
+        '- **Deploy script:** ``PM/Deploy-popuphub.bat`` [commit message] → ``scripts/deploy-popuphub.ps1`` (build, commit, sync push, Vercel prod, handoff)',
+        '- **Stashed (not shipped):** ``git stash`` entry ``loader WIP`` — brand loader scene / ``ship.ps1`` tweaks on ``feature/step-2-fix`` (verify with ``git stash list``)'
+    )
+    $baselineBlock = ($baselineLines -join "`r`n") + "`r`n"
 
     if ($content -match '(?s)## Baseline\r?\n.*?(?=\r?\n## )') {
         $content = $content -replace '(?s)## Baseline\r?\n.*?(?=\r?\n## )', ($baselineBlock + "`r`n")
@@ -69,7 +80,8 @@ try {
     }
 
     if ($Note) {
-        $deployLog = "## Last deploy`r`n- $date - $Note ($commit)`r`n`r`n"
+        $deployDetail = if ($CommitMessage) { "$Note — ``$CommitMessage``" } else { $Note }
+        $deployLog = "## Last deploy`r`n- $date - $deployDetail ($commit)`r`n`r`n"
         if ($content -match '(?s)## Last deploy\r?\n.*?(?=\r?\n## )') {
             $content = $content -replace '(?s)## Last deploy\r?\n.*?(?=\r?\n## )', $deployLog
         } elseif ($content -match '(?s)(## Baseline\r?\n.*?\r?\n)(## )') {

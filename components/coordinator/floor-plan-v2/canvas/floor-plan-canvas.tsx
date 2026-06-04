@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
 } from 'react'
 import { CanvasGrid } from './canvas-grid'
 import { CanvasObjects } from './canvas-objects'
@@ -100,6 +101,8 @@ export interface FloorPlanCanvasProps {
   showLabels?: boolean
   /** Footprint template for newly drawn booths. */
   defaultBoothTableSpec?: TableSizeSpec
+  /** Sync ref for draw-time booth footprint (see use-canvas-pointer). */
+  defaultBoothTableSpecRef?: MutableRefObject<TableSizeSpec | undefined>
   /** Active TABLE SIZE pill — drives minor/major grid spacing. */
   tableSizeFt?: TableSizeSpec
   className?: string
@@ -136,6 +139,7 @@ export function FloorPlanCanvas({
   onRoomCanvasLimitBlocked,
   showLabels = true,
   defaultBoothTableSpec,
+  defaultBoothTableSpecRef,
   tableSizeFt,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
@@ -264,7 +268,7 @@ export function FloorPlanCanvas({
     return `${activeRoomId ?? ''}:${frames
       .map(
         (f) =>
-          `${f.id}:${f.originX},${f.originY},${f.widthFt},${f.lengthFt},${f.mergedIntoObjectId ?? ''}`
+          `${f.id}:${f.widthFt},${f.lengthFt},${f.mergedIntoObjectId ?? ''}`
       )
       .join('|')}:${mergedSig}`
   }, [activeRoomId, store.doc.objects, store.doc.rooms])
@@ -309,14 +313,22 @@ export function FloorPlanCanvas({
     didInitialFrameRef.current = true
   }, [frameActiveRoom, roomsFramingKey])
 
+  const observedViewportSizeRef = useRef({ w: 0, h: 0 })
   useEffect(() => {
     const scroll = scrollRef.current
     if (!scroll || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
       if (!didInitialFrameRef.current) return
-      if (scroll.clientWidth > 0 && scroll.clientHeight > 0) {
-        frameActiveRoom()
-      }
+      const w = scroll.clientWidth
+      const h = scroll.clientHeight
+      if (w <= 0 || h <= 0) return
+      const last = observedViewportSizeRef.current
+      // Reframe once when the viewport first becomes measurable (flex
+      // layout after mount). Skip later resizes — scrollbar toggles and
+      // window resizes were resetting pan/zoom and locking the room center.
+      if (last.w > 0 && last.h > 0) return
+      observedViewportSizeRef.current = { w, h }
+      frameActiveRoom()
     })
     observer.observe(scroll)
     return () => observer.disconnect()
@@ -344,6 +356,7 @@ export function FloorPlanCanvas({
     onOverlapViolation,
     onRoomCanvasLimitBlocked,
     defaultBoothTableSpec,
+    defaultBoothTableSpecRef,
     autoArrangeMode,
     commandCenterViewport,
   })
@@ -686,9 +699,7 @@ export function FloorPlanCanvas({
               objects={store.doc.objects}
               selectedIds={store.selectedIds}
               pxPerFt={pxPerFt}
-              suppressHandle={
-                pointer.draftRect !== null || pointer.roomGestureActive
-              }
+              layer="outline"
             />
           ) : null}
           {toolState.tool === 'select' && (selectedRoomId ?? activeRoomId)
@@ -702,11 +713,26 @@ export function FloorPlanCanvas({
                   <RoomSelectionOverlay
                     frame={frame}
                     pxPerFt={pxPerFt}
-                    suppressHandles={pointer.roomGestureActive}
+                    suppressHandles={
+                      pointer.roomGestureActive || pointer.objectGestureActive
+                    }
                   />
                 )
               })()
             : null}
+          {toolState.tool === 'select' ? (
+            <SelectionOverlay
+              objects={store.doc.objects}
+              selectedIds={store.selectedIds}
+              pxPerFt={pxPerFt}
+              layer="controls"
+              suppressHandle={
+                pointer.draftRect !== null ||
+                pointer.roomGestureActive ||
+                pointer.objectGestureActive
+              }
+            />
+          ) : null}
           <DraftPreview
             rect={draftPreviewRect}
             kind={pointer.draftKind}

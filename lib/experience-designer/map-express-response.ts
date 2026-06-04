@@ -1,3 +1,4 @@
+import { processLegacyMaterialLists } from '@/lib/experience-designer/material-checklist'
 import type {
   CouncilTelemetry,
   ExperienceConstraints,
@@ -83,16 +84,27 @@ function parseBomLine(raw: string, index: number): ZoneBomLine {
 }
 
 function mergePuzzleIntoZone(zone: RoomZone, puzzle: ExpressPuzzle): RoomZone {
+  const electronicParts = puzzle.electronicDetails?.parts ?? []
+  const materialChecklist = processLegacyMaterialLists({
+    materialChecklist: puzzle.material_checklist,
+    billOfMaterials: [
+      ...(puzzle.bill_of_materials ?? []),
+      ...electronicParts,
+    ],
+    requiredPartsAndProps: puzzle.required_parts_and_props,
+  })
+
   const bomSources = [
     ...(puzzle.bill_of_materials ?? []),
     ...(puzzle.required_parts_and_props ?? []),
-    ...(puzzle.electronicDetails?.parts ?? []),
+    ...electronicParts,
   ]
 
   return {
     ...zone,
     puzzleTitle: puzzle.title,
     puzzleSummary: puzzle.howItWorks ?? puzzle.objective ?? zone.puzzleSummary,
+    materialChecklist: materialChecklist.length ? materialChecklist : zone.materialChecklist,
     bom: bomSources.length
       ? bomSources.map((line, index) => parseBomLine(line, index))
       : zone.bom,

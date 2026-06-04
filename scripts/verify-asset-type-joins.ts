@@ -15,6 +15,10 @@
  */
 
 import {
+  isValidObjectPlacement,
+  resolvePlacementRoomIdForObject,
+} from '../components/coordinator/floor-plan-v2/geometry/is-point-in-room'
+import {
   buildJoinedZone,
   isAuxiliaryRoom,
   isJoinableObject,
@@ -110,6 +114,41 @@ console.log('objectFrameOverlapsOrTouches — stage flush against the room edge'
   // Stage overlapping by 5 ft.
   const overlappingStage = obj('stage3', 'stage', 45, 20, 12, 16)
   expect('overlapping stage detected', objectFrameOverlapsOrTouches(overlappingStage, mainHall), true)
+}
+
+console.log('isValidObjectPlacement — stage may attach outside room interior')
+{
+  const mainHall = frame('hall', 'Main Hall', 0, 0, 50, 80)
+  const doc = {
+    canvasWidthFt: 120,
+    canvasLengthFt: 120,
+    gridSpacingFt: 1,
+    snapFt: 1,
+    objects: [],
+    rooms: [mainHall],
+  }
+  const touchingStage = obj('stage1', 'stage', 50, 20, 12, 16)
+  const roomId = resolvePlacementRoomIdForObject(doc, touchingStage, null)
+  expect('touching stage resolves to hall', roomId, 'hall')
+  expect(
+    'touching stage placement valid',
+    isValidObjectPlacement(doc, touchingStage, roomId),
+    true
+  )
+
+  const detachedStage = obj('stage2', 'stage', 80, 20, 12, 16)
+  expect(
+    'detached stage rejected',
+    isValidObjectPlacement(doc, detachedStage, null),
+    false
+  )
+
+  const boothOutside = obj('booth1', 'booth', 50, 20, 6, 10)
+  expect(
+    'booth outside room rejected',
+    isValidObjectPlacement(doc, boothOutside, null),
+    false
+  )
 }
 
 console.log('mixedNeighborsOf — gates booths/walls out, surfaces auxiliary rooms + stages')

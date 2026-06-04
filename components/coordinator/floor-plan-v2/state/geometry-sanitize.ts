@@ -4,7 +4,9 @@
 
 import {
   findRoomIdForPlacementPoint as findRoomIdInBaseRooms,
+  isValidObjectPlacement,
   isValidPlacementPoint,
+  type PlacementProbe,
 } from '../geometry/is-point-in-room'
 import { openRingVertices } from '../geometry/point-in-polygon'
 import { rotatedAabb, type Point } from '../interactions/geometry'
@@ -170,8 +172,12 @@ export function forceRecomputeGeometry(doc: FloorPlanDoc): FloorPlanDoc {
 export function isValidPlacementLocationBBox(
   doc: FloorPlanDoc,
   probeFt: Point,
-  obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>
+  obj?: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> &
+    Partial<Pick<PlacedObject, 'kind'>>
 ): boolean {
+  if (obj?.kind != null) {
+    return isValidObjectPlacement(doc, obj as PlacementProbe)
+  }
   const p =
     obj != null
       ? { x: obj.x + obj.width / 2, y: obj.y + obj.height / 2 }

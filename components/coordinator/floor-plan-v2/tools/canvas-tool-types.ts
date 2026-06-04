@@ -73,4 +73,6 @@ export interface CanvasToolHostProps {
    */
   tableSizeFt?: TableSizeSpec
   onTableSizeChange?: (selection: TableSizeSpec) => void
+  /** Sets default booth footprint synchronously and switches to draw mode. */
+  onPrepareTableDraw?: (selection: TableSizeSpec) => void
 }

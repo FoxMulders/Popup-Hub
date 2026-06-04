@@ -101,7 +101,7 @@ export function TableSizePill({
             </button>
           )
         })}
-        {sectionLabel('Rect')}
+        {sectionLabel('Patron')}
         {GUEST_TABLE_LENGTHS_FT.map((ft) => {
           const selection = guestRectTableSpec(ft)
           const active = tableSizeSpecsEqual(value, selection)
@@ -112,7 +112,7 @@ export function TableSizePill({
               disabled={disabled}
               onClick={() => onChange(selection)}
               aria-pressed={active}
-              title={`Set guest rectangular table length to ${ft} ft`}
+              title={`Set patron rectangular banquet table length to ${ft} ft`}
               className={sizeButtonClass(active, disabled)}
             >
               {ft}′

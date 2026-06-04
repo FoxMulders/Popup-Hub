@@ -6,6 +6,8 @@ import {
   LAYOUT_ROOM_PRESETS,
   type LayoutRoomPresetId,
 } from '@/lib/booth-planner/layout-room-presets'
+import type { AddLayoutRoomOptions } from '@/lib/coordinator/add-layout-room'
+import { MIN_ROOM_DIMENSION_FT } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
 import { Button } from '@/components/ui/button'
 import { Plus, Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,7 +22,7 @@ interface LayoutRoomBarProps {
    * bar falls back to the legacy `blank` preset for the existing
    * "+ Add room" button affordance.
    */
-  onAddRoom: (presetId?: LayoutRoomPresetId) => void
+  onAddRoom: (options?: AddLayoutRoomOptions) => void
   onRenameRoom: (roomId: string, name: string) => void
   onDeleteRoom: (roomId: string) => void
   /** Vertical room list for the floor-plan sidebar. */
@@ -48,6 +50,84 @@ interface LayoutRoomBarProps {
    * inside the primary CanvasCommandBar row (no secondary ribbon).
    */
   embedded?: boolean
+}
+
+const DEFAULT_FIRST_ROOM_WIDTH_FT = 50
+const DEFAULT_FIRST_ROOM_LENGTH_FT = 50
+
+function FirstRoomAddPanel({
+  onAddRoom,
+  embedded,
+}: {
+  onAddRoom: (options?: AddLayoutRoomOptions) => void
+  embedded?: boolean
+}) {
+  const [widthFt, setWidthFt] = useState(DEFAULT_FIRST_ROOM_WIDTH_FT)
+  const [lengthFt, setLengthFt] = useState(DEFAULT_FIRST_ROOM_LENGTH_FT)
+
+  function commitAdd() {
+    onAddRoom({
+      presetId: 'blank',
+      widthFt,
+      lengthFt,
+    })
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-wrap items-end gap-2',
+        embedded ? 'flex-1' : 'w-full'
+      )}
+    >
+      <p
+        className={cn(
+          'w-full text-xs font-semibold text-foreground',
+          embedded ? 'mb-0' : 'mb-1'
+        )}
+      >
+        Add your first room to start the floor plan
+      </p>
+      <label className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Width (ft)
+        </span>
+        <input
+          type="number"
+          min={MIN_ROOM_DIMENSION_FT}
+          step={1}
+          value={widthFt}
+          onChange={(e) => setWidthFt(Number(e.target.value) || MIN_ROOM_DIMENSION_FT)}
+          className="h-8 w-20 rounded-md border border-stone-200 bg-card px-2 text-sm tabular-nums"
+        />
+      </label>
+      <label className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Length (ft)
+        </span>
+        <input
+          type="number"
+          min={MIN_ROOM_DIMENSION_FT}
+          step={1}
+          value={lengthFt}
+          onChange={(e) => setLengthFt(Number(e.target.value) || MIN_ROOM_DIMENSION_FT)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitAdd()
+          }}
+          className="h-8 w-20 rounded-md border border-stone-200 bg-card px-2 text-sm tabular-nums"
+        />
+      </label>
+      <Button
+        type="button"
+        size="sm"
+        className={cn('gap-1', embedded ? 'h-8' : 'min-h-11')}
+        onClick={commitAdd}
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Add room
+      </Button>
+    </div>
+  )
 }
 
 export function LayoutRoomBar({
@@ -107,6 +187,24 @@ export function LayoutRoomBar({
 
   const inlineToolbar = slim || embedded
 
+  if (rooms.length === 0) {
+    return (
+      <div
+        className={cn(
+          embedded
+            ? 'flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1'
+            : slim
+              ? 'flex flex-wrap items-center gap-2 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
+              : 'market-panel p-3'
+        )}
+        role={embedded ? 'group' : 'toolbar'}
+        aria-label="Add first room"
+      >
+        <FirstRoomAddPanel onAddRoom={onAddRoom} embedded={embedded} />
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(
@@ -164,7 +262,7 @@ export function LayoutRoomBar({
                 'gap-1 rounded-none border-0',
                 slim ? 'h-8 min-h-0 px-2 text-xs' : 'min-h-11'
               )}
-              onClick={() => onAddRoom()}
+              onClick={() => onAddRoom({ presetId: 'blank' })}
             >
               <Plus className="h-3.5 w-3.5" />
               Add room
@@ -201,7 +299,7 @@ export function LayoutRoomBar({
                   role="menuitem"
                   onClick={() => {
                     setPresetMenuOpen(false)
-                    onAddRoom(preset.id)
+                    onAddRoom({ presetId: preset.id })
                   }}
                   className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
                 >
@@ -236,7 +334,7 @@ export function LayoutRoomBar({
               variant="ghost"
               size="sm"
               className="h-8 min-h-0 gap-1 rounded-none border-0 px-2 text-xs"
-              onClick={() => onAddRoom()}
+              onClick={() => onAddRoom({ presetId: 'blank' })}
             >
               <Plus className="h-3.5 w-3.5" />
               Add room
@@ -270,7 +368,7 @@ export function LayoutRoomBar({
                   role="menuitem"
                   onClick={() => {
                     setPresetMenuOpen(false)
-                    onAddRoom(preset.id)
+                    onAddRoom({ presetId: preset.id })
                   }}
                   className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
                 >

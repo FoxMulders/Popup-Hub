@@ -2,6 +2,12 @@
 
 import type { ObjectKind, PlacedObject } from '../state/types'
 import { rotatedAabb, type Rect } from '../interactions/geometry'
+import {
+  formatObjectDimensions,
+  OBJECT_RESIZE_HANDLES,
+  objectHandleWorldPosition,
+  objectSupportsCanvasResize,
+} from '../interactions/object-resize'
 import { PLACEMENT_AVAILABLE, PLACEMENT_VIOLATION } from './placement-theme'
 
 interface DraftPreviewProps {
@@ -129,9 +135,15 @@ interface SelectionOverlayProps {
   objects: ReadonlyArray<PlacedObject>
   selectedIds: ReadonlySet<string>
   pxPerFt: number
-  /** Hide the rotate handle while a different gesture is in flight. */
+  /** Hide interactive handles while a different gesture is in flight. */
   suppressHandle?: boolean
+  /** Outline only (below room chrome) vs handles/labels (above room chrome). */
+  layer?: 'outline' | 'controls'
 }
+
+const RESIZE_HANDLE_RADIUS_PX = 5
+const RESIZE_HANDLE_HIT_RADIUS_PX = 14
+const STROKE = '#0f766e'
 
 /**
  * Rotate handle in pixels. Sits above the rotated AABB top-center.
@@ -157,10 +169,41 @@ export function SelectionOverlay({
   selectedIds,
   pxPerFt,
   suppressHandle = false,
+  layer = 'controls',
 }: SelectionOverlayProps) {
   if (selectedIds.size === 0) return null
   const items = objects.filter((o) => selectedIds.has(o.id))
   if (items.length === 0) return null
+
+  if (layer === 'outline') {
+    return (
+      <g aria-hidden="true" className="canvas-overlay-layer" pointerEvents="none">
+        {items.map((obj) => {
+          const aabb = rotatedAabb(obj)
+          const left = aabb.x * pxPerFt
+          const top = aabb.y * pxPerFt
+          const width = aabb.width * pxPerFt
+          const height = aabb.height * pxPerFt
+          return (
+            <rect
+              key={`sel-outline-${obj.id}`}
+              x={left}
+              y={top}
+              width={width}
+              height={height}
+              fill="none"
+              stroke={STROKE}
+              strokeWidth={1}
+              strokeOpacity={0.55}
+              strokeDasharray="4 3"
+              pointerEvents="none"
+              shapeRendering="crispEdges"
+            />
+          )
+        })}
+      </g>
+    )
+  }
 
   return (
     <g aria-hidden="true" className="canvas-overlay-layer" pointerEvents="none">
@@ -173,39 +216,70 @@ export function SelectionOverlay({
         const handleX = left + width / 2
         const handleY = top - ROTATE_HANDLE_OFFSET_PX
         const locked = !!obj.locked
+        const canResize =
+          !locked && !suppressHandle && objectSupportsCanvasResize(obj)
+        const showRotate = !locked && !suppressHandle
+        const label = formatObjectDimensions(obj)
+        const labelY = top + height + 14
         return (
           <g key={`sel-${obj.id}`}>
-            {/* Bounding-box ghost — keeps users oriented when the
-                object is rotated and its native rect would no longer
-                hug the visible chrome. */}
-            <rect
-              x={left}
-              y={top}
-              width={width}
-              height={height}
-              fill="none"
-              stroke="#0f766e"
-              strokeWidth={1}
-              strokeOpacity={0.55}
-              strokeDasharray="4 3"
+            {canResize
+              ? OBJECT_RESIZE_HANDLES.map((handle) => {
+                  const world = objectHandleWorldPosition(obj, handle.id)
+                  const cx = world.x * pxPerFt
+                  const cy = world.y * pxPerFt
+                  return (
+                    <g key={`${obj.id}-${handle.id}`} pointerEvents="all">
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={RESIZE_HANDLE_HIT_RADIUS_PX}
+                        fill="transparent"
+                        data-object-resize-handle={handle.id}
+                        data-object-id={obj.id}
+                        style={{ cursor: handle.cursor, touchAction: 'none' }}
+                      />
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={RESIZE_HANDLE_RADIUS_PX}
+                        fill="#ffffff"
+                        stroke={STROKE}
+                        strokeWidth={2}
+                        data-object-resize-handle={handle.id}
+                        data-object-id={obj.id}
+                        style={{ cursor: handle.cursor, touchAction: 'none' }}
+                      />
+                    </g>
+                  )
+                })
+              : null}
+            <text
+              x={handleX}
+              y={labelY}
+              textAnchor="middle"
+              fontSize={11}
+              fontWeight={600}
+              fill="#0f766e"
+              stroke="#ffffff"
+              strokeWidth={3}
+              paintOrder="stroke"
               pointerEvents="none"
-              shapeRendering="crispEdges"
-            />
-            {locked || suppressHandle ? null : (
+            >
+              {label}
+            </text>
+            {showRotate ? (
               <g>
                 <line
                   x1={handleX}
                   y1={top}
                   x2={handleX}
                   y2={handleY}
-                  stroke="#0f766e"
+                  stroke={STROKE}
                   strokeWidth={1.25}
                   strokeDasharray="3 2"
                   pointerEvents="none"
                 />
-                {/* Invisible 44px-diameter hit target — Apple HIG
-                    touch-target minimum. Pointer-events explicit so
-                    the transparent fill still receives taps. */}
                 <circle
                   cx={handleX}
                   cy={handleY}
@@ -221,14 +295,14 @@ export function SelectionOverlay({
                   cy={handleY}
                   r={ROTATE_HANDLE_RADIUS_PX}
                   fill="#ffffff"
-                  stroke="#0f766e"
+                  stroke={STROKE}
                   strokeWidth={2}
                   data-rotate-handle="true"
                   data-object-id={obj.id}
                   style={{ cursor: 'grab' }}
                 />
               </g>
-            )}
+            ) : null}
           </g>
         )
       })}

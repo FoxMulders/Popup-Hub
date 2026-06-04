@@ -7,6 +7,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
   type RefObject,
+  type MutableRefObject,
 } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import {
@@ -17,8 +18,8 @@ import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { useDebugLog } from '../debug/debug-log-context'
 import { formatPlacementProbe } from '../debug/format-geometry-log'
 import {
-  isPointInRoomForObject,
-  resolvePlacementRoomId,
+  isValidObjectPlacement,
+  resolvePlacementRoomIdForObject,
 } from '../geometry/is-point-in-room'
 import { resolveRoomPlacementSurface } from '../state/placement-surface'
 import type { ToolState } from '../tools/types'
@@ -50,6 +51,12 @@ import {
   findFirstViolationInMove,
   findBoothProximityViolation,
 } from './category-rules'
+import {
+  objectResizeFromHandle,
+  patchForObjectResize,
+  pointerInObjectSpace,
+  type ObjectResizeHandle,
+} from './object-resize'
 import {
   roomResizeFromHandle,
   type RoomResizeHandle,
@@ -120,6 +127,8 @@ interface UseCanvasPointerOptions {
   onOverlapViolation?: () => void
   /** Footprint template for newly drawn booths. */
   defaultBoothTableSpec?: TableSizeSpec
+  /** When set, pointer reads placement spec from this ref (sync updates). */
+  defaultBoothTableSpecRef?: MutableRefObject<TableSizeSpec | undefined>
   /** When `perimeter-only`, booths snap/orient to room walls after drag. */
   autoArrangeMode?: AutoArrangeMode
   /** Dashboard command center: damp room drag/resize and raise zoom floor. */
@@ -198,6 +207,16 @@ type RoomDragState =
       lastDy: number
       moved: boolean
       limitNotified: boolean
+    }
+
+type ObjectResizeState =
+  | null
+  | {
+      pointerId: number
+      objectId: string
+      handle: ObjectResizeHandle
+      initial: PlacedObject
+      moved: boolean
     }
 
 type RoomResizeState =
@@ -341,6 +360,8 @@ export interface CanvasPointerApi {
   rotating: boolean
   /** True during macro room drag or resize. */
   roomGestureActive: boolean
+  /** True while dragging an object resize handle. */
+  objectGestureActive: boolean
   onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerMove: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerUp: (e: ReactPointerEvent<SVGSVGElement>) => void
@@ -382,9 +403,15 @@ export function useCanvasPointer(
     eventCategoryNamesRef.current = eventCategoryNames
   }, [eventCategoryNames])
   const defaultBoothTableSpecRef = useRef(options.defaultBoothTableSpec)
-  useEffect(() => {
+  const defaultBoothTableSpecSourceRef =
+    options.defaultBoothTableSpecRef ?? defaultBoothTableSpecRef
+  if (!options.defaultBoothTableSpecRef) {
     defaultBoothTableSpecRef.current = options.defaultBoothTableSpec
-  }, [options.defaultBoothTableSpec])
+  }
+
+  const readDefaultBoothTableSpec = useCallback((): TableSizeSpec | undefined => {
+    return defaultBoothTableSpecSourceRef.current
+  }, [defaultBoothTableSpecSourceRef])
 
   const [draft, setDraftState] = useState<DrawDraft>(null)
   // Gesture lifecycle reads the ref so pointerup always sees the draft
@@ -401,6 +428,8 @@ export function useCanvasPointer(
   const [roomGestureActive, setRoomGestureActive] = useState(false)
   const roomDragRef = useRef<RoomDragState>(null)
   const roomResizeRef = useRef<RoomResizeState>(null)
+  const objectResizeRef = useRef<ObjectResizeState>(null)
+  const [objectGestureActive, setObjectGestureActive] = useState(false)
   const onRoomCanvasLimitBlockedRef = useRef(
     options.onRoomCanvasLimitBlocked
   )
@@ -533,6 +562,31 @@ export function useCanvasPointer(
 
       // SELECT
       const target = e.target as Element | null
+
+      const objectResizeEl = target?.closest('[data-object-resize-handle]')
+      if (objectResizeEl && activeTool.tool === 'select') {
+        const objectId = objectResizeEl.getAttribute('data-object-id')
+        const handle = objectResizeEl.getAttribute(
+          'data-object-resize-handle'
+        ) as ObjectResizeHandle | null
+        const obj =
+          objectId && store.doc.objects.find((o) => o.id === objectId)
+        if (objectId && handle && obj && !obj.locked) {
+          capturePointer(e.currentTarget, e.pointerId)
+          if (!store.selectedIds.has(objectId)) {
+            store.setSelection([objectId])
+          }
+          setObjectGestureActive(true)
+          objectResizeRef.current = {
+            pointerId: e.pointerId,
+            objectId,
+            handle,
+            initial: { ...obj },
+            moved: false,
+          }
+          return
+        }
+      }
 
       const resizeHandleEl = target?.closest('[data-room-resize-handle]')
       if (resizeHandleEl && activeTool.tool === 'select') {
@@ -719,7 +773,47 @@ export function useCanvasPointer(
       const rotate = rotateRef.current
       const roomDrag = roomDragRef.current
       const roomResize = roomResizeRef.current
+      const objectResize = objectResizeRef.current
       const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
+
+      if (objectResize && objectResize.pointerId === pointerId) {
+        const localPointer = pointerInObjectSpace(objectResize.initial, ft)
+        const geom = objectResizeFromHandle(
+          objectResize.initial,
+          objectResize.handle,
+          localPointer,
+          store.doc.snapFt
+        )
+        const patch = patchForObjectResize(objectResize.initial, geom)
+        const objNow = store.doc.objects.find(
+          (o) => o.id === objectResize.objectId
+        )
+        if (!objNow) return
+        const probe = { ...objNow, ...patch } as PlacedObject
+        const cw = store.doc.canvasWidthFt
+        const cl = store.doc.canvasLengthFt
+        const clampDelta = canvasClampDelta(probe, cw, cl)
+        const clamped = {
+          ...patch,
+          x: (patch.x ?? objNow.x) + clampDelta.dx,
+          y: (patch.y ?? objNow.y) + clampDelta.dy,
+        }
+        const wasMoved = objectResize.moved
+        const isMovedNow =
+          wasMoved ||
+          clamped.x !== objectResize.initial.x ||
+          clamped.y !== objectResize.initial.y ||
+          clamped.width !== objectResize.initial.width ||
+          clamped.height !== objectResize.initial.height
+        store.updateObject(objectResize.objectId, clamped, {
+          pushHistory: false,
+        })
+        objectResizeRef.current = {
+          ...objectResize,
+          moved: isMovedNow,
+        }
+        return
+      }
 
       if (roomResize && roomResize.pointerId === pointerId) {
         const motionScale = roomDragMotionScale(
@@ -1009,6 +1103,66 @@ export function useCanvasPointer(
         flushMove(pending)
       }
 
+      const objectResize = objectResizeRef.current
+      if (objectResize && objectResize.pointerId === e.pointerId) {
+        if (objectResize.moved) {
+          const obj = store.doc.objects.find(
+            (o) => o.id === objectResize.objectId
+          )
+          const initial = objectResize.initial
+          if (obj) {
+            const others = store.doc.objects.filter(
+              (o) => o.id !== objectResize.objectId
+            )
+            if (
+              findOverlapInMove([obj], others, {
+                rooms: store.doc.rooms ?? [],
+              })
+            ) {
+              store.updateObject(
+                objectResize.objectId,
+                {
+                  x: initial.x,
+                  y: initial.y,
+                  width: initial.width,
+                  height: initial.height,
+                  ...(initial.kind === 'booth'
+                    ? {
+                        tableLengthFt: (initial as BoothObject).tableLengthFt,
+                        tableShape: (initial as BoothObject).tableShape,
+                        tablePurpose: (initial as BoothObject).tablePurpose,
+                      }
+                    : {}),
+                },
+                { pushHistory: false }
+              )
+              onOverlapViolationRef.current?.()
+            } else {
+              store.updateObject(
+                objectResize.objectId,
+                {
+                  x: obj.x,
+                  y: obj.y,
+                  width: obj.width,
+                  height: obj.height,
+                  ...(obj.kind === 'booth'
+                    ? {
+                        tableLengthFt: (obj as BoothObject).tableLengthFt,
+                        tableShape: (obj as BoothObject).tableShape,
+                        tablePurpose: (obj as BoothObject).tablePurpose,
+                      }
+                    : {}),
+                },
+                { pushHistory: true }
+              )
+            }
+          }
+        }
+        objectResizeRef.current = null
+        setObjectGestureActive(false)
+        return
+      }
+
       const roomResize = roomResizeRef.current
       if (roomResize && roomResize.pointerId === e.pointerId) {
         if (roomResize.moved) {
@@ -1104,31 +1258,29 @@ export function useCanvasPointer(
                 height: 0,
               },
           store.doc.snapFt,
-          defaultBoothTableSpecRef.current
+          readDefaultBoothTableSpec()
         )
         // Multi-room association: the new object inherits the room
         // whose perimeter contains its centroid (or, failing that,
         // the active room set by the host). This lets a coordinator
         // draw inside any room frame on the unified canvas without
         // first having to flip the active selection.
-        const center = {
-          x: rect.x + rect.width / 2,
-          y: rect.y + rect.height / 2,
+        const placementProbe = {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+          rotation: 0 as const,
+          kind: activeDraft.kind,
         }
-        const drawRoomId = resolvePlacementRoomId(
+        const drawRoomId = resolvePlacementRoomIdForObject(
           store.doc,
-          center,
+          placementProbe,
           activeRoomIdRef.current
         )
         if (
           !drawRoomId ||
-          !isPointInRoomForObject(store.doc, {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-            rotation: 0,
-          }, drawRoomId)
+          !isValidObjectPlacement(store.doc, placementProbe, drawRoomId)
         ) {
           addLogRef.current(
             `Placement rejected (draw ${activeDraft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} validSurface=${Boolean(drawRoomId)}`
@@ -1145,7 +1297,7 @@ export function useCanvasPointer(
           drawRoomId,
           onProximityViolationRef.current,
           onOverlapViolationRef.current,
-          defaultBoothTableSpecRef.current,
+          readDefaultBoothTableSpec(),
           (msg) => addLogRef.current(msg)
         )
         onAfterDrawCommit?.()
@@ -1305,6 +1457,7 @@ export function useCanvasPointer(
       : null,
     rotating,
     roomGestureActive,
+    objectGestureActive,
     onPointerDown,
     onPointerMove,
     onPointerUp,
@@ -1378,12 +1531,12 @@ function commitDraft(
   let obj: PlacedObject
   switch (kind) {
     case 'booth': {
-      // Booth fills now derive from category + a deterministic palette.
-      // accentColor stays null so colors flow from the category mapping.
-      // Auto-assign the least-occupied category at draw time so two
-      // newly-placed booths never default into the same bucket — this
-      // is the engine-level half of the "diverse vendor mix" rule.
-      const seedCategory = pickLeastUsedCategory(store, eventCategoryNames)
+      const isGuestTable = defaultBoothTableSpec?.purpose === 'guest'
+      // Vendor booths get a category seed for the proximity mix rule;
+      // patron seating tables stay untagged.
+      const seedCategory = isGuestTable
+        ? null
+        : pickLeastUsedCategory(store, eventCategoryNames)
       obj = {
         ...base,
         kind: 'booth',
@@ -1424,9 +1577,8 @@ function commitDraft(
     default:
       return
   }
-  // Same-category proximity gate for newly-drawn booths. Walls,
-  // doors, etc. skip the check (it only applies to booths).
-  if (obj.kind === 'booth') {
+  // Same-category proximity gate for newly-drawn vendor booths.
+  if (obj.kind === 'booth' && (obj as BoothObject).tablePurpose !== 'guest') {
     const gridSpacingFt = store.doc.gridSpacingFt || 1
     const violation = findBoothProximityViolation(
       obj as BoothObject,
@@ -1456,11 +1608,8 @@ function commitDraft(
   }
   const placementRoomId =
     roomId ??
-    resolvePlacementRoomId(store.doc, objectCenter(obj), null)
-  if (
-    !placementRoomId ||
-    !isPointInRoomForObject(store.doc, obj, placementRoomId)
-  ) {
+    resolvePlacementRoomIdForObject(store.doc, obj, null)
+  if (!placementRoomId || !isValidObjectPlacement(store.doc, obj, placementRoomId)) {
     log(
       `Placement rejected (${obj.kind}): center=(${objectCenter(obj).x},${objectCenter(obj).y}) room=${placementRoomId ?? 'none'}`
     )

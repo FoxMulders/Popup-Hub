@@ -84,6 +84,7 @@ import {
   groupRotatedAabb,
   rotatedAabb,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
+import { formatObjectDimensions } from '@/components/coordinator/floor-plan-v2/interactions/object-resize'
 import type { BoothLayout, LayoutRoom } from '@/types/database'
 import type { LayoutRoomPresetId } from '@/lib/booth-planner/layout-room-presets'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
@@ -162,7 +163,7 @@ export interface FloorPlanV2Props {
    * without leaving the floor-plan workspace. The rooms bar that used
    * to live above the canvas was retired in favour of this sidebar.
    */
-  onAddRoom?: (presetId?: LayoutRoomPresetId) => void
+  onAddRoom?: (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => void
   onRenameRoom?: (roomId: string, name: string) => void
   onDeleteRoom?: (roomId: string) => void
   /**
@@ -363,6 +364,12 @@ function FloorPlanV2Workspace({
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
 
+  useEffect(() => {
+    if (layoutRooms.length === 0 && tool !== 'hand') {
+      setTool('hand')
+    }
+  }, [layoutRooms.length, tool])
+
   // Project wizard `layoutRooms` onto doc room frames when the coordinator
   // adds or edits rooms — skip when both sides are empty (blank-start).
   const lastRoomIdsKeyRef = useRef<string | null>(null)
@@ -538,6 +545,13 @@ function FloorPlanV2Workspace({
     }
   }, [store.doc.rooms, highlightedRoomId])
 
+  const highlightedSelectionMetrics = useMemo(() => {
+    if (store.selectedIds.size !== 1) return null
+    const obj = store.doc.objects.find((o) => store.selectedIds.has(o.id))
+    if (!obj) return null
+    return formatObjectDimensions(obj)
+  }, [store.selectedIds, store.doc.objects])
+
   // Validated copy of the wizard-owned baseline table length. The
   // command-bar pill binds to this; upstream the value comes from
   // `activeRoom.baseline_table_length_ft` so the ribbon always
@@ -558,11 +572,43 @@ function FloorPlanV2Workspace({
   const [defaultPlacementSpec, setDefaultPlacementSpec] = useState<TableSizeSpec>(() =>
     vendorTableSpec(safeTableSizeFt)
   )
+  const defaultPlacementSpecRef = useRef(defaultPlacementSpec)
+
+  const applyDefaultPlacementSpec = useCallback(
+    (
+      nextDefaultPlacement: TableSizeSpec,
+      options?: { activateDraw?: boolean }
+    ) => {
+      defaultPlacementSpecRef.current = nextDefaultPlacement
+      setDefaultPlacementSpec(nextDefaultPlacement)
+      if (options?.activateDraw ?? nextDefaultPlacement.purpose === 'guest') {
+        setTool('draw')
+        setDrawShape('booth')
+      }
+      if (
+        nextDefaultPlacement.purpose === 'vendor' &&
+        nextDefaultPlacement.shape === 'rectangular'
+      ) {
+        onBaselineTableLengthChange?.(
+          nextDefaultPlacement.ft as LayoutBaselineTableLengthFt
+        )
+        const grid = canvasGridSpacingForTableFt(nextDefaultPlacement.ft)
+        store.patchDoc(
+          { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
+          { pushHistory: false }
+        )
+      }
+    },
+    [onBaselineTableLengthChange, store]
+  )
 
   useEffect(() => {
-    setDefaultPlacementSpec((prev) =>
-      prev.purpose === 'vendor' ? vendorTableSpec(safeTableSizeFt) : prev
-    )
+    setDefaultPlacementSpec((prev) => {
+      if (prev.purpose !== 'vendor') return prev
+      const next = vendorTableSpec(safeTableSizeFt)
+      defaultPlacementSpecRef.current = next
+      return next
+    })
     const grid = canvasGridSpacingForTableFt(safeTableSizeFt)
     store.patchDoc(
       { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
@@ -595,18 +641,30 @@ function FloorPlanV2Workspace({
         return
       }
       if (nextDefaultPlacement != null) {
-        setDefaultPlacementSpec(nextDefaultPlacement)
-        if (nextDefaultPlacement.purpose === 'vendor' && nextDefaultPlacement.shape === 'rectangular') {
-          onBaselineTableLengthChange?.(nextDefaultPlacement.ft as LayoutBaselineTableLengthFt)
-          const grid = canvasGridSpacingForTableFt(nextDefaultPlacement.ft)
-          store.patchDoc(
-            { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
-            { pushHistory: false }
-          )
-        }
+        applyDefaultPlacementSpec(nextDefaultPlacement)
       }
     },
-    [store, onBaselineTableLengthChange, safeTableSizeFt]
+    [store, safeTableSizeFt, applyDefaultPlacementSpec]
+  )
+
+  const handlePrepareTableDraw = useCallback(
+    (selection: TableSizeSpec) => {
+      const normalized = normalizeTableSizeSpec(selection, safeTableSizeFt)
+      const { objectPatches, nextDefaultPlacement } = planTableSizeChange({
+        objects: store.doc.objects,
+        selectedIds: store.selectedIds,
+        selection: normalized,
+      })
+      if (objectPatches.length > 0) {
+        store.updateObjects(objectPatches)
+      } else if (nextDefaultPlacement != null) {
+        applyDefaultPlacementSpec(nextDefaultPlacement, { activateDraw: true })
+      } else {
+        setTool('draw')
+        setDrawShape('booth')
+      }
+    },
+    [store, safeTableSizeFt, applyDefaultPlacementSpec]
   )
 
   // Crash-recovery autosave: every doc commit lands a serialized
@@ -1792,6 +1850,7 @@ function FloorPlanV2Workspace({
             canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
+            onPrepareTableDraw={handlePrepareTableDraw}
             rooms={showToolbarRoomControls ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
             onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
@@ -1799,6 +1858,7 @@ function FloorPlanV2Workspace({
             onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
             onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
+            highlightedSelectionMetrics={highlightedSelectionMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
             canvasFullscreen={canvasFullscreen}
@@ -1854,6 +1914,7 @@ function FloorPlanV2Workspace({
             canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
+            onPrepareTableDraw={handlePrepareTableDraw}
             rooms={showToolbarRoomControls ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
             onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
@@ -1861,6 +1922,7 @@ function FloorPlanV2Workspace({
             onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
             onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
+            highlightedSelectionMetrics={highlightedSelectionMetrics}
             showLabels={showLabels}
             onShowLabelsChange={setShowLabels}
             canvasFullscreen={canvasFullscreen}
@@ -1900,6 +1962,7 @@ function FloorPlanV2Workspace({
               store={store}
               toolState={{ tool, drawShape }}
               defaultBoothTableSpec={defaultPlacementSpec}
+              defaultBoothTableSpecRef={defaultPlacementSpecRef}
               tableSizeFt={tableSizePillValue}
               activeRoomId={activeRoomId}
               selectedRoomId={selectedRoomId}

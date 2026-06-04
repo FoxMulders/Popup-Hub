@@ -8,17 +8,12 @@ import { createClient } from '@/lib/supabase/client'
 import { BoothPlanner } from '@/components/coordinator/booth-planner'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import {
-  createLayoutRoom,
   getActiveRoom,
   layoutPayloadFromRooms,
   roomsFromBoothLayoutForEditor,
   updateRoomInList,
 } from '@/lib/booth-planner/layout-rooms'
-import {
-  LAYOUT_ROOM_PRESETS,
-  presetToRoomPartial,
-  type LayoutRoomPresetId,
-} from '@/lib/booth-planner/layout-room-presets'
+import { appendLayoutRoom } from '@/lib/coordinator/add-layout-room'
 import {
   DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
   isLayoutBaselineTableLengthFt,
@@ -315,46 +310,15 @@ export function MarketSetupWizard({
   const [activeRoomId, setActiveRoomId] = useState(initialRoomsState.activeRoomId)
   const activeRoom = useMemo(() => getActiveRoom(rooms, activeRoomId), [rooms, activeRoomId])
 
-  function handleAddRoom(presetId?: LayoutRoomPresetId) {
-    // Look up the structural preset (kitchen / outdoor stage / annex
-    // / blank). Any unknown id falls back to the blank preset so the
-    // legacy single-button code path keeps working unchanged.
-    const preset =
-      LAYOUT_ROOM_PRESETS.find((p) => p.id === presetId) ??
-      LAYOUT_ROOM_PRESETS[0]!
-    const isFirstRoom = rooms.length === 0
-    let name: string
-    if (preset.id !== 'blank') {
-      name = preset.name
-    } else if (isFirstRoom) {
-      name = 'Main Hall'
-    } else {
-      name = `Room ${rooms.length + 1}`
-    }
-    const partial = presetToRoomPartial(preset)
-    // Tile new rooms to the right of the existing union so the first
-    // added preset / room never collides with the Main Hall on the
-    // unified canvas. The 4 ft gap leaves enough air between rooms
-    // for coordinators to grab and drag the new frame; once they
-    // butt the rooms together the wall-merge logic kicks in.
-    let nextOriginX = 0
-    const nextOriginY = 0
-    if (!isFirstRoom) {
-      let maxRight = 0
-      for (const r of rooms) {
-        const right = (r.canvas_origin_x ?? 0) + (r.venue_width || 50)
-        if (right > maxRight) maxRight = right
-      }
-      nextOriginX = maxRight + 4
-    }
-    const room = createLayoutRoom(name, {
-      ...partial,
-      canvas_origin_x: nextOriginX,
-      canvas_origin_y: nextOriginY,
-    })
-    setRooms((prev) => [...prev, room])
-    setActiveRoomId(room.id)
-    toast.success(`Added ${room.name}`)
+  function handleAddRoom(options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) {
+    const { rooms: nextRooms, activeRoomId: nextActiveId } = appendLayoutRoom(
+      rooms,
+      options
+    )
+    setRooms(nextRooms)
+    setActiveRoomId(nextActiveId)
+    const added = nextRooms.find((r) => r.id === nextActiveId)
+    toast.success(`Added ${added?.name ?? 'room'}`)
   }
 
   function handleRenameRoom(roomId: string, name: string) {

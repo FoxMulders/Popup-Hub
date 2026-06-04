@@ -66,7 +66,7 @@ try {
     }
 
     Write-Step "Updating session handoff"
-    & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -Note "Ship via ship.ps1"
+    & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -Note 'Ship via ship.ps1' -CommitMessage $Message
     $handoffStatus = git status --porcelain -- 'PM/session-handoff.md'
     if ($handoffStatus) {
         git add PM/session-handoff.md

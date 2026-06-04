@@ -43,6 +43,8 @@ export interface ExpressPuzzle {
   stageHint?: string
   bill_of_materials?: string[]
   required_parts_and_props?: string[]
+  /** AI-generated checklist; may be a string[] or { required, optional } buckets. */
+  material_checklist?: unknown
   electronicDetails?: {
     parts?: string[]
     arduinoCode?: string

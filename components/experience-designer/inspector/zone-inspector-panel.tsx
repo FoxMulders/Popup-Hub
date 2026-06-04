@@ -1,8 +1,10 @@
 'use client'
 
-import { ArrowLeft, Cpu, Package } from 'lucide-react'
+import { ArrowLeft, Cpu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { processMaterialChecklist } from '@/lib/experience-designer/material-checklist'
 import type { RoomZone } from '@/lib/experience-designer/types'
+import { MaterialChecklistPanel } from '@/components/experience-designer/inspector/material-checklist-panel'
 
 export interface ZoneInspectorPanelProps {
   zone: RoomZone
@@ -10,8 +12,12 @@ export interface ZoneInspectorPanelProps {
 }
 
 export function ZoneInspectorPanel({ zone, onBack }: ZoneInspectorPanelProps) {
-  const bomTotalCents =
-    zone.bom?.reduce((sum, line) => sum + line.quantity * line.unitCostCents, 0) ?? 0
+  const checklistItems =
+    zone.materialChecklist?.length
+      ? zone.materialChecklist
+      : zone.bom?.length
+        ? processMaterialChecklist(zone.bom.map((line) => line.name))
+        : []
 
   return (
     <div className="flex h-full flex-col">
@@ -45,35 +51,12 @@ export function ZoneInspectorPanel({ zone, onBack }: ZoneInspectorPanelProps) {
           </section>
         ) : null}
 
-        {zone.bom?.length ? (
-          <section>
-            <div className="mb-2 flex items-center gap-2">
-              <Package className="h-4 w-4 text-amber-300" />
-              <h3 className="text-sm font-semibold text-white">Bill of Materials</h3>
-            </div>
-            <ul className="space-y-1.5">
-              {zone.bom.map((line) => (
-                <li
-                  key={line.sku}
-                  className="flex items-center justify-between gap-2 rounded-md border border-white/10 bg-white/[0.02] px-2.5 py-2 text-xs"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-white">{line.name}</p>
-                    <p className="text-white/40">{line.sku}</p>
-                  </div>
-                  <div className="shrink-0 text-right tabular-nums">
-                    <p className="text-white">×{line.quantity}</p>
-                    <p className="text-white/45">
-                      ${((line.unitCostCents * line.quantity) / 100).toFixed(2)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 text-right text-xs tabular-nums text-white/50">
-              Est. total ${(bomTotalCents / 100).toFixed(2)}
-            </p>
-          </section>
+        {checklistItems.length ? (
+          <MaterialChecklistPanel items={checklistItems} />
+        ) : zone.puzzleTitle ? (
+          <p className="text-xs text-white/45">
+            No materials listed yet for this puzzle zone.
+          </p>
         ) : null}
 
         {zone.arduinoCode ? (
@@ -88,7 +71,7 @@ export function ZoneInspectorPanel({ zone, onBack }: ZoneInspectorPanelProps) {
           </section>
         ) : (
           <p className="text-xs text-white/45">
-            Generate puzzles in step 3 to populate BOM and Arduino previews for puzzle zones.
+            Generate puzzles in step 3 to populate materials and Arduino previews for puzzle zones.
           </p>
         )}
       </div>
