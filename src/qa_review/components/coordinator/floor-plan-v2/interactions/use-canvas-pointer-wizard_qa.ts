@@ -9,7 +9,7 @@ import {
   type RefObject,
 } from 'react'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
-import { boothDimensionsForTableLength } from '@/lib/booth-planner/table-booth-consolidation'
+import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, PlacedObject, RoomFrame } from '@/components/coordinator/floor-plan-v2/state/types'
 import { useDebugLog } from '@/components/coordinator/floor-plan-v2/debug/debug-log-context'
 import { formatPlacementProbe } from '@/components/coordinator/floor-plan-v2/debug/format-geometry-log'
@@ -120,8 +120,8 @@ interface UseCanvasPointerOptions {
   }) => void
   /** Notifies the host when a placement is rejected due to overlap. */
   onOverlapViolation?: () => void
-  /** Table length (ft) for width/height of newly drawn booths. */
-  defaultBoothTableLengthFt?: number
+  /** Footprint template for newly drawn booths. */
+  defaultBoothTableSpec?: TableSizeSpec
   /** When `perimeter-only`, booths snap/orient to room walls after drag. */
   autoArrangeMode?: AutoArrangeMode
   /** Dashboard command center: damp room drag/resize and raise zoom floor. */
@@ -352,12 +352,10 @@ export function useCanvasPointerWizardQa(
   useEffect(() => {
     eventCategoryNamesRef.current = eventCategoryNames
   }, [eventCategoryNames])
-  const defaultBoothTableLengthFtRef = useRef(
-    options.defaultBoothTableLengthFt
-  )
+  const defaultBoothTableSpecRef = useRef(options.defaultBoothTableSpec)
   useEffect(() => {
-    defaultBoothTableLengthFtRef.current = options.defaultBoothTableLengthFt
-  }, [options.defaultBoothTableLengthFt])
+    defaultBoothTableSpecRef.current = options.defaultBoothTableSpec
+  }, [options.defaultBoothTableSpec])
 
   const [draft, setDraftState] = useState<DrawDraft>(null)
   const draftRef = useRef<DrawDraft>(null)
@@ -1062,7 +1060,7 @@ export function useCanvasPointerWizardQa(
                 height: 0,
               },
           store.doc.snapFt,
-          defaultBoothTableLengthFtRef.current
+          defaultBoothTableSpecRef.current
         )
         const boothProbe = {
           x: rect.x,
@@ -1105,7 +1103,7 @@ export function useCanvasPointerWizardQa(
           drawRoomId,
           onProximityViolationRef.current,
           onOverlapViolationRef.current,
-          defaultBoothTableLengthFtRef.current,
+          defaultBoothTableSpecRef.current,
           (msg) => addLogRef.current(msg)
         )
         onAfterDrawCommit?.()
@@ -1316,24 +1314,23 @@ function commitDraft(
     dyRows: number
   }) => void,
   onOverlapViolation?: () => void,
-  defaultBoothTableLengthFt?: number,
+  defaultBoothTableSpec?: TableSizeSpec,
   debugLog?: (message: string) => void
 ): void {
   const log = debugLog ?? (() => {})
-  let width = Math.max(store.doc.snapFt || 1, rect.width)
-  let height = Math.max(store.doc.snapFt || 1, rect.height)
-  if (kind === 'booth' && defaultBoothTableLengthFt != null) {
-    const dims = boothDimensionsForTableLength(defaultBoothTableLengthFt)
-    width = dims.width
-    height = dims.height
-  }
+  const resolved = resolveDrawCommitRect(
+    kind,
+    rect,
+    store.doc.snapFt,
+    defaultBoothTableSpec
+  )
   const id = `obj-${crypto.randomUUID()}`
   const base = {
     id,
-    x: rect.x,
-    y: rect.y,
-    width,
-    height,
+    x: resolved.x,
+    y: resolved.y,
+    width: resolved.width,
+    height: resolved.height,
     rotation: 0,
   }
   let obj: PlacedObject
@@ -1349,8 +1346,12 @@ function commitDraft(
         ...base,
         kind: 'booth',
         accentColor: null,
-        ...(defaultBoothTableLengthFt != null
-          ? { tableLengthFt: defaultBoothTableLengthFt }
+        ...(defaultBoothTableSpec != null
+          ? {
+              tableLengthFt: defaultBoothTableSpec.ft,
+              tableShape: defaultBoothTableSpec.shape,
+              tablePurpose: defaultBoothTableSpec.purpose,
+            }
           : {}),
         ...(seedCategory ? { categoryName: seedCategory } : {}),
       }

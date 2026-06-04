@@ -33,6 +33,7 @@ import {
   DEFAULT_TABLE_SIZE,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
+import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import { canvasGridSpacingForTableFt } from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
@@ -97,13 +98,10 @@ export interface FloorPlanCanvasProps {
   onRoomCanvasLimitBlocked?: () => void
   /** When false, hide architectural overlay labels on the canvas. */
   showLabels?: boolean
-  /**
-   * Table length (ft) used for width/height when the coordinator
-   * places a new booth. Ignored for non-booth draw shapes.
-   */
-  defaultBoothTableLengthFt?: LayoutBaselineTableLengthFt
+  /** Footprint template for newly drawn booths. */
+  defaultBoothTableSpec?: TableSizeSpec
   /** Active TABLE SIZE pill — drives minor/major grid spacing. */
-  tableSizeFt?: LayoutBaselineTableLengthFt
+  tableSizeFt?: TableSizeSpec
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
@@ -137,7 +135,7 @@ export function FloorPlanCanvas({
   onOverlapViolation,
   onRoomCanvasLimitBlocked,
   showLabels = true,
-  defaultBoothTableLengthFt,
+  defaultBoothTableSpec,
   tableSizeFt,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
@@ -159,8 +157,10 @@ export function FloorPlanCanvas({
 
   const effectiveTableSizeFt = useMemo(
     () =>
-      tableSizeFt ?? defaultBoothTableLengthFt ?? DEFAULT_TABLE_SIZE,
-    [defaultBoothTableLengthFt, tableSizeFt]
+      tableSizeFt?.ft ??
+      defaultBoothTableSpec?.ft ??
+      DEFAULT_TABLE_SIZE,
+    [defaultBoothTableSpec, tableSizeFt]
   )
 
   const gridSpacing = useMemo(
@@ -343,7 +343,7 @@ export function FloorPlanCanvas({
     onProximityViolation,
     onOverlapViolation,
     onRoomCanvasLimitBlocked,
-    defaultBoothTableLengthFt,
+    defaultBoothTableSpec,
     autoArrangeMode,
     commandCenterViewport,
   })
@@ -366,7 +366,7 @@ export function FloorPlanCanvas({
       kind,
       rawRect,
       store.doc.snapFt,
-      defaultBoothTableLengthFt
+      defaultBoothTableSpec
     )
     const probe = {
       id: '__draft__',
@@ -379,7 +379,7 @@ export function FloorPlanCanvas({
     } as PlacedObject
     return placedObjectOverlapsAny(probe, store.doc.objects, undefined, mergeOverlapCtx)
   }, [
-    defaultBoothTableLengthFt,
+    defaultBoothTableSpec,
     mergeOverlapCtx,
     pointer.draftKind,
     pointer.draftRect,
@@ -395,10 +395,10 @@ export function FloorPlanCanvas({
       kind,
       rawRect,
       store.doc.snapFt,
-      defaultBoothTableLengthFt
+      defaultBoothTableSpec
     )
   }, [
-    defaultBoothTableLengthFt,
+    defaultBoothTableSpec,
     pointer.draftKind,
     pointer.draftRect,
     store.doc.snapFt,

@@ -9,7 +9,10 @@ import {
   type RefObject,
 } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
-import { boothDimensionsForTableLength } from '@/lib/booth-planner/table-booth-consolidation'
+import {
+  boothDimensionsForTableSpec,
+} from '@/lib/booth-planner/table-booth-consolidation'
+import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { useDebugLog } from '../debug/debug-log-context'
 import { formatPlacementProbe } from '../debug/format-geometry-log'
@@ -114,8 +117,8 @@ interface UseCanvasPointerOptions {
   }) => void
   /** Notifies the host when a placement is rejected due to overlap. */
   onOverlapViolation?: () => void
-  /** Table length (ft) for width/height of newly drawn booths. */
-  defaultBoothTableLengthFt?: number
+  /** Footprint template for newly drawn booths. */
+  defaultBoothTableSpec?: TableSizeSpec
   /** When `perimeter-only`, booths snap/orient to room walls after drag. */
   autoArrangeMode?: AutoArrangeMode
   /** Dashboard command center: damp room drag/resize and raise zoom floor. */
@@ -240,10 +243,10 @@ export function resolveDrawCommitRect(
   kind: PlacedObject['kind'],
   rect: Rect,
   snapFt: number,
-  defaultBoothTableLengthFt?: number
+  defaultBoothTableSpec?: TableSizeSpec
 ): Rect {
   const minSize = snapFt || 1
-  if (kind !== 'booth' || defaultBoothTableLengthFt == null) {
+  if (kind !== 'booth' || defaultBoothTableSpec == null) {
     return {
       x: rect.x,
       y: rect.y,
@@ -251,9 +254,7 @@ export function resolveDrawCommitRect(
       height: Math.max(minSize, rect.height),
     }
   }
-  const { width, height } = boothDimensionsForTableLength(
-    defaultBoothTableLengthFt
-  )
+  const { width, height } = boothDimensionsForTableSpec(defaultBoothTableSpec)
   const cx = rect.x + rect.width / 2
   const cy = rect.y + rect.height / 2
   return {
@@ -379,12 +380,10 @@ export function useCanvasPointer(
   useEffect(() => {
     eventCategoryNamesRef.current = eventCategoryNames
   }, [eventCategoryNames])
-  const defaultBoothTableLengthFtRef = useRef(
-    options.defaultBoothTableLengthFt
-  )
+  const defaultBoothTableSpecRef = useRef(options.defaultBoothTableSpec)
   useEffect(() => {
-    defaultBoothTableLengthFtRef.current = options.defaultBoothTableLengthFt
-  }, [options.defaultBoothTableLengthFt])
+    defaultBoothTableSpecRef.current = options.defaultBoothTableSpec
+  }, [options.defaultBoothTableSpec])
 
   const [draft, setDraftState] = useState<DrawDraft>(null)
   // Gesture lifecycle reads the ref so pointerup always sees the draft
@@ -1096,7 +1095,7 @@ export function useCanvasPointer(
                 height: 0,
               },
           store.doc.snapFt,
-          defaultBoothTableLengthFtRef.current
+          defaultBoothTableSpecRef.current
         )
         // Multi-room association: the new object inherits the room
         // whose perimeter contains its centroid (or, failing that,
@@ -1137,7 +1136,7 @@ export function useCanvasPointer(
           drawRoomId,
           onProximityViolationRef.current,
           onOverlapViolationRef.current,
-          defaultBoothTableLengthFtRef.current,
+          defaultBoothTableSpecRef.current,
           (msg) => addLogRef.current(msg)
         )
         onAfterDrawCommit?.()
@@ -1348,7 +1347,7 @@ function commitDraft(
     dyRows: number
   }) => void,
   onOverlapViolation?: () => void,
-  defaultBoothTableLengthFt?: number,
+  defaultBoothTableSpec?: TableSizeSpec,
   debugLog?: (message: string) => void
 ): void {
   const log = debugLog ?? (() => {})
@@ -1356,7 +1355,7 @@ function commitDraft(
     kind,
     rect,
     store.doc.snapFt,
-    defaultBoothTableLengthFt
+    defaultBoothTableSpec
   )
   const id = `obj-${crypto.randomUUID()}`
   const base = {
@@ -1380,8 +1379,12 @@ function commitDraft(
         ...base,
         kind: 'booth',
         accentColor: null,
-        ...(defaultBoothTableLengthFt != null
-          ? { tableLengthFt: defaultBoothTableLengthFt }
+        ...(defaultBoothTableSpec != null
+          ? {
+              tableLengthFt: defaultBoothTableSpec.ft,
+              tableShape: defaultBoothTableSpec.shape,
+              tablePurpose: defaultBoothTableSpec.purpose,
+            }
           : {}),
         ...(seedCategory ? { categoryName: seedCategory } : {}),
       }

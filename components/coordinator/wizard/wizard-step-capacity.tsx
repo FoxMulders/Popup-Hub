@@ -102,7 +102,11 @@ export function WizardStepCapacity({
               <TableSizeSelector
                 variant="inline"
                 value={baselineTableLengthFt}
-                onChange={onBaselineTableLengthChange}
+                onChange={(selection) => {
+                  if (typeof selection === 'number') {
+                    onBaselineTableLengthChange(selection)
+                  }
+                }}
                 labelTitle="Venue standard size or vendor-permitted footprint."
               />
             </section>

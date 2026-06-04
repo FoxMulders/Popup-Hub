@@ -30,10 +30,8 @@ import {
   placedObjectOverlapsAny,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
-import {
-  DEFAULT_TABLE_SIZE,
-  type LayoutBaselineTableLengthFt,
-} from '@/lib/booth-planner/layout-table-size'
+import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
+import { DEFAULT_TABLE_SIZE } from '@/lib/booth-planner/layout-table-size'
 import { canvasGridSpacingForTableFt } from '@/components/coordinator/floor-plan-v2/canvas/canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
@@ -98,13 +96,10 @@ export interface FloorPlanCanvasProps {
   onRoomCanvasLimitBlocked?: () => void
   /** When false, hide architectural overlay labels on the canvas. */
   showLabels?: boolean
-  /**
-   * Table length (ft) used for width/height when the coordinator
-   * places a new booth. Ignored for non-booth draw shapes.
-   */
-  defaultBoothTableLengthFt?: LayoutBaselineTableLengthFt
+  /** Footprint template for newly drawn booths. */
+  defaultBoothTableSpec?: TableSizeSpec
   /** Active TABLE SIZE pill — drives minor/major grid spacing. */
-  tableSizeFt?: LayoutBaselineTableLengthFt
+  tableSizeFt?: TableSizeSpec
   className?: string
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
@@ -138,7 +133,7 @@ export function FloorPlanCanvasWizardQa({
   onOverlapViolation,
   onRoomCanvasLimitBlocked,
   showLabels = true,
-  defaultBoothTableLengthFt,
+  defaultBoothTableSpec,
   tableSizeFt,
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
@@ -158,12 +153,17 @@ export function FloorPlanCanvasWizardQa({
     ? 8
     : Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
 
-  const gridSpacing = useMemo(
+  const effectiveTableSizeFt = useMemo(
     () =>
-      canvasGridSpacingForTableFt(
-        tableSizeFt ?? defaultBoothTableLengthFt ?? DEFAULT_TABLE_SIZE
-      ),
-    [defaultBoothTableLengthFt, tableSizeFt]
+      tableSizeFt?.ft ??
+      defaultBoothTableSpec?.ft ??
+      DEFAULT_TABLE_SIZE,
+    [defaultBoothTableSpec, tableSizeFt]
+  )
+
+  const gridSpacing = useMemo(
+    () => canvasGridSpacingForTableFt(effectiveTableSizeFt),
+    [effectiveTableSizeFt]
   )
 
   /**
@@ -328,7 +328,7 @@ export function FloorPlanCanvasWizardQa({
     onProximityViolation,
     onOverlapViolation,
     onRoomCanvasLimitBlocked,
-    defaultBoothTableLengthFt,
+    defaultBoothTableSpec,
     autoArrangeMode,
     commandCenterViewport,
   })
@@ -351,7 +351,7 @@ export function FloorPlanCanvasWizardQa({
       kind,
       rawRect,
       store.doc.snapFt,
-      defaultBoothTableLengthFt
+      defaultBoothTableSpec
     )
     const probe = {
       id: '__draft__',
@@ -364,7 +364,7 @@ export function FloorPlanCanvasWizardQa({
     } as PlacedObject
     return placedObjectOverlapsAny(probe, store.doc.objects, undefined, mergeOverlapCtx)
   }, [
-    defaultBoothTableLengthFt,
+    defaultBoothTableSpec,
     mergeOverlapCtx,
     pointer.draftKind,
     pointer.draftRect,
@@ -380,10 +380,10 @@ export function FloorPlanCanvasWizardQa({
       kind,
       rawRect,
       store.doc.snapFt,
-      defaultBoothTableLengthFt
+      defaultBoothTableSpec
     )
   }, [
-    defaultBoothTableLengthFt,
+    defaultBoothTableSpec,
     pointer.draftKind,
     pointer.draftRect,
     store.doc.snapFt,

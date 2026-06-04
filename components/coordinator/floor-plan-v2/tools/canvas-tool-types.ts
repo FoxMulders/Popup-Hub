@@ -1,4 +1,4 @@
-import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
+import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { DrawShape, ToolId, ToolState } from './types'
 
 export interface CanvasToolHostProps {
@@ -71,6 +71,6 @@ export interface CanvasToolHostProps {
    * without a page reload. Optional — when both fields are omitted
    * the pill hides cleanly so non-Step-3 hosts stay unaffected.
    */
-  tableSizeFt?: LayoutBaselineTableLengthFt
-  onTableSizeChange?: (ft: LayoutBaselineTableLengthFt) => void
+  tableSizeFt?: TableSizeSpec
+  onTableSizeChange?: (selection: TableSizeSpec) => void
 }

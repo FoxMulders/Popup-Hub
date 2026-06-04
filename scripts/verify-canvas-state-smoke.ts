@@ -13,6 +13,10 @@ import {
   applyObjectPatches,
   planTableSizeChange,
 } from '../components/coordinator/floor-plan-v2/state/table-size-selection'
+import {
+  guestRoundTableSpec,
+  vendorTableSpec,
+} from '../lib/booth-planner/table-shape'
 import type {
   BoothObject,
   FloorPlanDoc,
@@ -151,9 +155,9 @@ const selected = new Set(['b-5'])
 const planOne = planTableSizeChange({
   objects: baseDoc.objects,
   selectedIds: selected,
-  ft: 10,
+  selection: vendorTableSpec(10),
 })
-assert(planOne.nextDefaultPlacementSizeFt === null, 'selection path skips default template')
+assert(planOne.nextDefaultPlacement === null, 'selection path skips default template')
 assert(planOne.objectPatches.length === 1, 'exactly one booth patched')
 assert(planOne.objectPatches[0]!.id === 'b-5', 'patch targets selected booth')
 
@@ -167,10 +171,25 @@ console.log('--- Table size: empty selection → template only ---')
 const planDefault = planTableSizeChange({
   objects: afterOne,
   selectedIds: new Set(),
-  ft: 8,
+  selection: vendorTableSpec(8),
 })
 assert(planDefault.objectPatches.length === 0, 'no object patches without selection')
-assert(planDefault.nextDefaultPlacementSizeFt === 8, 'default placement template updates')
+assert(
+  planDefault.nextDefaultPlacement?.ft === 8 &&
+    planDefault.nextDefaultPlacement.purpose === 'vendor',
+  'default placement template updates'
+)
+
+console.log('--- Guest round table: 6′ diameter footprint ---')
+const planRound = planTableSizeChange({
+  objects: afterOne,
+  selectedIds: new Set(['b-5']),
+  selection: guestRoundTableSpec(6),
+})
+const afterRound = applyObjectPatches(afterOne, planRound.objectPatches)
+const b5Round = afterRound.find((o) => o.id === 'b-5') as BoothObject
+assert(b5Round.width === 6 && b5Round.height === 6, 'guest round booth is 6×6')
+assert(b5Round.tableShape === 'round' && b5Round.tablePurpose === 'guest', 'guest round metadata')
 
 console.log('--- Immutability: source array not mutated ---')
 const frozen = baseDoc.objects

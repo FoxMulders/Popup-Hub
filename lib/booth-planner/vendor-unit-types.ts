@@ -73,15 +73,24 @@ export function resolveVendorGridSpans(input: VendorGridSpanInput): {
 export function vendorUnitLabel(
   unitType?: VendorUnitType | null,
   tableLengthFt?: number | null,
-  tableOrientation?: TableOrientation | null
+  tableOrientation?: TableOrientation | null,
+  tableShape?: 'rectangular' | 'round' | null,
+  tablePurpose?: 'vendor' | 'guest' | null
 ): string {
   if (isTentVendor(unitType)) return 'Tent 10×10'
   if (tableLengthFt != null) {
+    const purpose = tablePurpose ?? (tableShape === 'round' ? 'guest' : 'vendor')
+    if (purpose === 'guest' && tableShape === 'round') {
+      return `${tableLengthFt}′ round`
+    }
+    if (purpose === 'guest' && tableShape === 'rectangular') {
+      return `${tableLengthFt}′ rect table`
+    }
     if (tableOrientation) {
       const axis = tableOrientation === 'horizontal' ? 'E-W' : 'N-S'
       return `${tableLengthFt}′ table ${axis}`
     }
-    return `${tableLengthFt}′ table`
+    return `${tableLengthFt}′ booth table`
   }
   return 'Table'
 }

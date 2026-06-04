@@ -36,7 +36,7 @@ import type { DrawShape, ToolState } from './types'
 import { CommandButton } from './command-button'
 import { TableSizePill } from './table-size-pill'
 import type { CanvasToolbarBlockId } from './toolbar-order'
-import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
+import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 
 const CREATION_SHAPES: Array<{
   id: DrawShape
@@ -87,8 +87,8 @@ export interface CanvasCommandBarBlockContext {
   canUnjoinRoom?: boolean
   onClearAll: () => void
   onDeleteSelected: () => void
-  tableSizeFt?: LayoutBaselineTableLengthFt
-  onTableSizeChange?: (ft: LayoutBaselineTableLengthFt) => void
+  tableSizeFt?: TableSizeSpec
+  onTableSizeChange?: (selection: TableSizeSpec) => void
   zoom: number
   onZoomOut: () => void
   onZoomIn: () => void

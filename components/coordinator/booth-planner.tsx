@@ -3493,7 +3493,11 @@ export function BoothPlanner({
                 {usesTableUnits && (
                   <TableSizeSelector
                     value={baselineTableLengthFt}
-                    onChange={handleBaselineTableSizeChange}
+                    onChange={(selection) => {
+                      if (typeof selection === 'number') {
+                        handleBaselineTableSizeChange(selection)
+                      }
+                    }}
                   />
                 )}
               </div>
@@ -3536,7 +3540,11 @@ export function BoothPlanner({
               {usesTableUnits && (
                 <TableSizeSelector
                   value={baselineTableLengthFt}
-                  onChange={handleBaselineTableSizeChange}
+                  onChange={(selection) => {
+                    if (typeof selection === 'number') {
+                      handleBaselineTableSizeChange(selection)
+                    }
+                  }}
                 />
               )}
               <div className="flex flex-col gap-1">

@@ -70,8 +70,12 @@ export interface BoothObject extends BasePlacedObject {
   categoryName?: string | null
   /** Optional accent color (hex). When unset, derived from category or default. */
   accentColor?: string | null
-  /** Consolidated table length in feet (width on the 1′ grid). */
+  /** Consolidated table length in feet (width on the 1′ grid). Round tables store diameter. */
   tableLengthFt?: number
+  /** Vendor booth unit vs guest seating table. */
+  tablePurpose?: 'vendor' | 'guest'
+  /** Folding table (default) vs round banquet table footprint. */
+  tableShape?: 'rectangular' | 'round'
   /** Tables requested for this vendor (used for multi-table cluster presets). */
   tableCount?: number
   /**

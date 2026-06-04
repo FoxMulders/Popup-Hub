@@ -550,6 +550,10 @@ export interface BoothCell {
   /** Table (default) or outdoor-only tent footprint. */
   vendorUnitType?: 'table' | 'tent'
   tableLengthFt?: number | null
+  /** Vendor booth unit vs guest seating table. */
+  tablePurpose?: 'vendor' | 'guest' | null
+  /** Folding table (default) vs round banquet table footprint. */
+  tableShape?: 'rectangular' | 'round' | null
   /** Manual table length axis; when unset, perimeter placement may auto-rotate. */
   tableOrientation?: 'horizontal' | 'vertical' | null
   /** Manual storefront direction toward wall or corner quadrant. */

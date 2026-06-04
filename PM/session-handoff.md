@@ -16,6 +16,8 @@
 **Booth draw commit** — click/drag with Booth (or wall/stage) tool must persist objects inside room polygons on Step 3, standalone layout (`/coordinator/events/[id]/layout`), and command center.
 
 ## Shipped this session (local, uncommitted)
+- **Guest seating tables (not vendor booths):** `tablePurpose: 'vendor' | 'guest'` on booths. Step 3 **Table size** pill has three groups — **Booth** (vendor rectangular, hall baseline), **Round** (5′/6′/8′ guest), **Rect** (5′/6′/8′ guest banquet, 2.5′ depth). Guest tables do not change venue capacity or hall baseline. Canvas: round = ellipse; guest rect = dashed rectangle; vendor = solid booth rect.
+- **Round table options (5′ / 6′ / 8′):** `lib/booth-planner/table-shape.ts` — guest round diameters, footprint math, `tableShape` + `tablePurpose` on booths. Verification: `npx tsx scripts/verify-round-table-options.ts`.
 - **Table size pill reset fix:** baseline sync `useEffect` depended on whole `store` (identity changes every doc mutation) — reverted pill selection after `patchDoc` on size change. Now `[safeTableSizeFt, store.patchDoc]` in `floor-plan-v2.tsx` + QA mirrors.
 - **Table size → draw footprint:** QA canvas used `safeTableSizeFt` (wizard prop) instead of `defaultPlacementSizeFt` (local pill state) for `defaultBoothTableLengthFt` and auto-arrange — new draws ignored pill until Step 2 baseline changed.
 - **QA placement room resolve:** `use-canvas-pointer-wizard_qa` uses `resolvePlacementRoomId` + `isPointInRoomForObject` when rooms exist (matches production); keeps open-canvas path for blank start.
@@ -52,7 +54,9 @@
 | Add room → draw booth inside room | **Fixed locally** — `verify-room-add-placement.ts`; needs deploy + sign-in |
 | Booth draw click-to-place | **Fixed locally** — `draftRef` + QA `useLayoutEffect` room sync; needs deploy + sign-in |
 | Booth select / move / rearrange | **Fixed locally** — needs deploy + sign-in |
-| Table size pill drives new draws | **Fixed locally** — store-dep reset + QA `defaultPlacementSizeFt` wiring |
+| Table size pill drives new draws | **Fixed locally** — store-dep reset + QA `defaultPlacementSpec` wiring |
+| Round table 5′ / 6′ / 8′ pill + canvas | **Fixed locally** — needs deploy + sign-in |
+| Guest rect table 5′ / 6′ / 8′ pill + canvas | **Fixed locally** — needs deploy + sign-in |
 | Booth placement inside room | **Fixed locally** — QA `resolvePlacementRoomId` parity; needs deploy + sign-in |
 | Rotate room / auto-arrange toolbar | **Wired** — re-test after deploy (blocked on object select before) |
 | Step 3 blank canvas (interactive) | **Fixed locally** (wheel/pan/draw) — needs deploy + sign-in |
@@ -76,7 +80,7 @@
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Deploy** table-size + placement fixes; smoke-test pill → draw footprint + booth/wall/stage inside room on Step 3 + `/coordinator/events/[id]/layout` + dashboard
+1. **Deploy** round-table + table-size + placement fixes; smoke-test pill → draw footprint (rect + round) + booth/wall/stage inside room on Step 3 + `/coordinator/events/[id]/layout` + dashboard
 2. If placement still rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
 3. **Coordinator smoke-test** — select/move, table size pill, rotate room, zoom/pan
 4. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch

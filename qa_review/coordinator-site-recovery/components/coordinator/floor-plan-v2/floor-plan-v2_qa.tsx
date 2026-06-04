@@ -18,6 +18,12 @@ import {
   isLayoutBaselineTableLengthFt,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
+import {
+  normalizeTableSizeSpec,
+  tableSizeSpecFromBooth,
+  vendorTableSpec,
+  type TableSizeSpec,
+} from '@/lib/booth-planner/table-shape'
 import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
@@ -566,13 +572,14 @@ function FloorPlanV2Workspace({
   }, [baselineTableLengthFt])
 
   // Footprint for the next booth draw — synced to venue baseline (Section 2).
-  const [defaultPlacementSizeFt, setDefaultPlacementSizeFt] =
-    useState<LayoutBaselineTableLengthFt>(safeTableSizeFt)
+  const [defaultPlacementSpec, setDefaultPlacementSpec] = useState<TableSizeSpec>(() =>
+    vendorTableSpec(safeTableSizeFt)
+  )
 
-  // Sync only when the wizard-owned baseline changes — not on every doc
-  // mutation (store identity changes whenever `doc` updates).
   useEffect(() => {
-    setDefaultPlacementSizeFt(safeTableSizeFt)
+    setDefaultPlacementSpec((prev) =>
+      prev.purpose === 'vendor' ? vendorTableSpec(safeTableSizeFt) : prev
+    )
     const grid = canvasGridSpacingForTableFt(safeTableSizeFt)
     store.patchDoc(
       { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
@@ -580,45 +587,43 @@ function FloorPlanV2Workspace({
     )
   }, [safeTableSizeFt, store.patchDoc])
 
-  const tableSizePillValue = useMemo<LayoutBaselineTableLengthFt>(() => {
+  const tableSizePillValue = useMemo<TableSizeSpec>(() => {
     const selected = Array.from(store.selectedIds)
-    if (selected.length !== 1) return defaultPlacementSizeFt
+    if (selected.length !== 1) return defaultPlacementSpec
     const obj = store.doc.objects.find((o) => o.id === selected[0])
-    if (obj?.kind !== 'booth') return defaultPlacementSizeFt
+    if (obj?.kind !== 'booth') return defaultPlacementSpec
     const booth = obj as BoothObject
-    if (
-      booth.tableLengthFt != null &&
-      isLayoutBaselineTableLengthFt(booth.tableLengthFt)
-    ) {
-      return booth.tableLengthFt
-    }
-    const longEdge = Math.max(booth.width, booth.height)
-    if (isLayoutBaselineTableLengthFt(longEdge)) return longEdge
-    return defaultPlacementSizeFt
-  }, [store.selectedIds, store.doc.objects, defaultPlacementSizeFt])
+    return (
+      tableSizeSpecFromBooth(booth) ??
+      normalizeTableSizeSpec(defaultPlacementSpec, safeTableSizeFt)
+    )
+  }, [store.selectedIds, store.doc.objects, defaultPlacementSpec, safeTableSizeFt])
 
   const handleTableSizeChange = useCallback(
-    (ft: LayoutBaselineTableLengthFt) => {
-      const { objectPatches, nextDefaultPlacementSizeFt } = planTableSizeChange({
+    (selection: TableSizeSpec) => {
+      const normalized = normalizeTableSizeSpec(selection, safeTableSizeFt)
+      const { objectPatches, nextDefaultPlacement } = planTableSizeChange({
         objects: store.doc.objects,
         selectedIds: store.selectedIds,
-        ft,
+        selection: normalized,
       })
       if (objectPatches.length > 0) {
         store.updateObjects(objectPatches)
         return
       }
-      if (nextDefaultPlacementSizeFt != null) {
-        setDefaultPlacementSizeFt(nextDefaultPlacementSizeFt)
-        onBaselineTableLengthChange?.(nextDefaultPlacementSizeFt)
-        const grid = canvasGridSpacingForTableFt(nextDefaultPlacementSizeFt)
-        store.patchDoc(
-          { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
-          { pushHistory: false }
-        )
+      if (nextDefaultPlacement != null) {
+        setDefaultPlacementSpec(nextDefaultPlacement)
+        if (nextDefaultPlacement.purpose === 'vendor' && nextDefaultPlacement.shape === 'rectangular') {
+          onBaselineTableLengthChange?.(nextDefaultPlacement.ft as LayoutBaselineTableLengthFt)
+          const grid = canvasGridSpacingForTableFt(nextDefaultPlacement.ft)
+          store.patchDoc(
+            { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
+            { pushHistory: false }
+          )
+        }
       }
     },
-    [store, onBaselineTableLengthChange]
+    [store, onBaselineTableLengthChange, safeTableSizeFt]
   )
 
   // Crash-recovery autosave: every doc commit lands a serialized
@@ -1275,7 +1280,7 @@ function FloorPlanV2Workspace({
     const result = autoArrangeInRoom(store.doc, activeRoomId, {
       mode: autoArrangeMode,
       eventCategoryNames,
-      baselineTableLengthFt: defaultPlacementSizeFt,
+      baselineTableLengthFt: safeTableSizeFt,
       vendorTableMetaByKey,
       ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
         ? { maxBooths: layoutCapacity }
@@ -1317,7 +1322,7 @@ function FloorPlanV2Workspace({
     boothCount,
     eventCategoryNames,
     layoutCapacity,
-    defaultPlacementSizeFt,
+    defaultPlacementSpec,
     store,
     vendorTableMetaByKey,
   ])
@@ -1911,7 +1916,7 @@ function FloorPlanV2Workspace({
               commandCenterViewport={isDashboard}
               store={store}
               toolState={{ tool, drawShape }}
-              defaultBoothTableLengthFt={defaultPlacementSizeFt}
+              defaultBoothTableSpec={defaultPlacementSpec}
               tableSizeFt={tableSizePillValue}
               activeRoomId={activeRoomId}
               selectedRoomId={selectedRoomId}

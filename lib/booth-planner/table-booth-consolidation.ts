@@ -8,7 +8,11 @@ import {
   isLayoutBaselineTableLengthFt,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
-import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
+import {
+  boothDimensionsForTable,
+  type TableShape,
+  type TableSizeSpec,
+} from '@/lib/booth-planner/table-shape'
 
 export interface VendorTableMeta {
   vendorKey: string
@@ -29,27 +33,64 @@ export function consolidatedTableLengthFt(
   return isLayoutBaselineTableLengthFt(total) ? total : null
 }
 
-export function boothDimensionsForTableLength(tableLengthFt: number): {
-  width: number
-  height: number
-} {
+export function boothDimensionsForTableLength(
+  tableLengthFt: number,
+  tableShape: TableShape = 'rectangular'
+): { width: number; height: number } {
+  return boothDimensionsForTable({ tableLengthFt, tableShape, tablePurpose: 'vendor' })
+}
+
+export function boothDimensionsForTableSpec(
+  spec: TableSizeSpec
+): { width: number; height: number } {
+  return boothDimensionsForTable({
+    tableLengthFt: spec.ft,
+    tableShape: spec.shape,
+    tablePurpose: spec.purpose,
+  })
+}
+
+/** Patch a booth so its footprint matches the table size spec. */
+export function boothPatchForTableSize(
+  booth: Pick<BoothObject, 'width' | 'height'>,
+  spec: TableSizeSpec
+): Pick<BoothObject, 'width' | 'height' | 'tableLengthFt' | 'tableShape' | 'tablePurpose'> {
+  const { width: tableW, height: tableH } = boothDimensionsForTableSpec(spec)
+
+  if (spec.purpose === 'guest') {
+    return {
+      width: tableW,
+      height: tableH,
+      tableLengthFt: spec.ft,
+      tableShape: spec.shape,
+      tablePurpose: 'guest',
+    }
+  }
+
+  if (booth.width >= booth.height) {
+    return {
+      width: tableW,
+      height: tableH,
+      tableLengthFt: spec.ft,
+      tableShape: 'rectangular',
+      tablePurpose: 'vendor',
+    }
+  }
   return {
-    width: tableLengthFt,
-    height: BOOTH_EQUIPMENT_DEPTH_FT,
+    width: tableH,
+    height: tableW,
+    tableLengthFt: spec.ft,
+    tableShape: 'rectangular',
+    tablePurpose: 'vendor',
   }
 }
 
-/** Patch a booth so its long edge matches `tableLengthFt` (preserves orientation). */
+/** @deprecated Use {@link boothPatchForTableSize}. */
 export function boothPatchForTableLength(
   booth: Pick<BoothObject, 'width' | 'height'>,
   tableLengthFt: LayoutBaselineTableLengthFt
-): Pick<BoothObject, 'width' | 'height' | 'tableLengthFt'> {
-  const { width: tableW, height: tableH } =
-    boothDimensionsForTableLength(tableLengthFt)
-  if (booth.width >= booth.height) {
-    return { width: tableW, height: tableH, tableLengthFt }
-  }
-  return { width: tableH, height: tableW, tableLengthFt }
+): Pick<BoothObject, 'width' | 'height' | 'tableLengthFt' | 'tableShape' | 'tablePurpose'> {
+  return boothPatchForTableSize(booth, { purpose: 'vendor', shape: 'rectangular', ft: tableLengthFt })
 }
 
 function vendorKeyForBooth(booth: BoothObject): string {
@@ -105,6 +146,8 @@ export function consolidateBoothsForAutoArrange(
             tableCluster: createTableCluster(preset),
             tableLengthFt: baseFt,
             tableCount,
+            tablePurpose: 'vendor',
+            tableShape: 'rectangular',
             label:
               lead.label ??
               `${tableCount}×${baseFt}′ cluster`,
@@ -119,6 +162,8 @@ export function consolidateBoothsForAutoArrange(
         height: dims.height,
         tableLengthFt: megaFt,
         tableCount,
+        tablePurpose: 'vendor',
+        tableShape: 'rectangular',
         label:
           lead.label ??
           `${megaFt}′ table (${tableCount}×${baseFt}′)`,
@@ -139,6 +184,8 @@ export function consolidateBoothsForAutoArrange(
         height: dims.height,
         tableLengthFt: ft,
         tableCount: count,
+        tablePurpose: member.tablePurpose ?? 'vendor',
+        tableShape: member.tableShape ?? 'rectangular',
       })
     }
   }

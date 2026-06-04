@@ -531,6 +531,16 @@ function CanvasObjectsBase({
         const strokeWidth = isOverlapping ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
         const isTableClusterBooth =
           obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)
+        const isRoundBooth =
+          obj.kind === 'booth' &&
+          (obj as BoothObject).tableShape === 'round' &&
+          ((obj as BoothObject).tablePurpose ?? 'guest') === 'guest' &&
+          !isTableClusterBooth
+        const isGuestRectBooth =
+          obj.kind === 'booth' &&
+          (obj as BoothObject).tablePurpose === 'guest' &&
+          (obj as BoothObject).tableShape === 'rectangular' &&
+          !isTableClusterBooth
         const transform =
           !isTableClusterBooth && obj.rotation && obj.rotation !== 0
             ? `rotate(${obj.rotation} ${x + w / 2} ${y + h / 2})`
@@ -596,6 +606,42 @@ function CanvasObjectsBase({
                 compoundY={y}
                 compoundW={w}
                 compoundH={h}
+              />
+            ) : isRoundBooth ? (
+              <>
+                <rect
+                  x={x}
+                  y={y}
+                  width={w}
+                  height={h}
+                  fill="transparent"
+                  pointerEvents="all"
+                />
+                <ellipse
+                  cx={x + w / 2}
+                  cy={y + h / 2}
+                  rx={w / 2}
+                  ry={h / 2}
+                  fill={displayFill}
+                  fillOpacity={displayFillOpacity}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                  pointerEvents="none"
+                />
+              </>
+            ) : isGuestRectBooth ? (
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                fill={displayFill}
+                fillOpacity={displayFillOpacity * 0.9}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                strokeDasharray="3 2"
+                pointerEvents="all"
+                shapeRendering="crispEdges"
               />
             ) : (
               <rect

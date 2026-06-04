@@ -1,30 +1,28 @@
-import {
-  boothPatchForTableLength,
-} from '@/lib/booth-planner/table-booth-consolidation'
-import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
+import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
+import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, PlacedObject } from './types'
 
 export interface TableSizeChangeInput {
   objects: ReadonlyArray<PlacedObject>
   selectedIds: ReadonlySet<string>
-  ft: LayoutBaselineTableLengthFt
+  selection: TableSizeSpec
 }
 
 export interface TableSizeChangeResult {
   /** Patches to apply when at least one booth is selected. */
   objectPatches: Array<{ id: string; patch: Partial<PlacedObject> }>
   /** Set when no booth is selected — updates the placement template only. */
-  nextDefaultPlacementSizeFt: LayoutBaselineTableLengthFt | null
+  nextDefaultPlacement: TableSizeSpec | null
 }
 
 /**
  * Pure table-size handler: selected booths get individual patches;
- * otherwise only the default placement length changes (no global rescale).
+ * otherwise only the default placement spec changes (no global rescale).
  */
 export function planTableSizeChange({
   objects,
   selectedIds,
-  ft,
+  selection,
 }: TableSizeChangeInput): TableSizeChangeResult {
   const selectedBoothIds = [...selectedIds].filter((id) => {
     const obj = objects.find((o) => o.id === id)
@@ -35,13 +33,13 @@ export function planTableSizeChange({
     return {
       objectPatches: selectedBoothIds.map((id) => {
         const booth = objects.find((o) => o.id === id) as BoothObject
-        return { id, patch: boothPatchForTableLength(booth, ft) }
+        return { id, patch: boothPatchForTableSize(booth, selection) }
       }),
-      nextDefaultPlacementSizeFt: null,
+      nextDefaultPlacement: null,
     }
   }
 
-  return { objectPatches: [], nextDefaultPlacementSizeFt: ft }
+  return { objectPatches: [], nextDefaultPlacement: selection }
 }
 
 /** Immutable apply — mirrors `use-floor-plan-doc` `updateObjects`. */
