@@ -3,19 +3,20 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `eb14c5b` (pushed to `origin/master`)
-- Production: https://popup-8gsnahq8j-thetipsyfoxyeg-2911s-projects.vercel.app — **build 99** · commit `4125379` (handoff updated 2026-06-03 20:59)
+- Branch: `master` @ `af1cff8` (pushed to `origin/master`)
+- Production: https://popup-hr5dearnf-thetipsyfoxyeg-2911s-projects.vercel.app — **build 100** · commit `b9c4500` (handoff updated 2026-06-04 07:46)
 - **Deploy script:** `PM/Deploy-popuphub.bat` → `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` — brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 ## Last deploy
-- 2026-06-03 20:59 - Deploy via deploy-popuphub.ps1 (eb14c5b)
+- 2026-06-04 07:46 - Deploy via deploy-popuphub.ps1 (af1cff8)
 
 
 ## Goal
 **Booth draw commit** — click/drag with Booth (or wall/stage) tool must persist objects inside room polygons on Step 3, standalone layout (`/coordinator/events/[id]/layout`), and command center.
 
 ## Shipped this session (local, uncommitted)
+- **Booth select/move after auto-arrange:** Wizard QA pointer hook ran room drag before booth hit-test — any click inside the room moved the room instead of selecting booths. Reordered to match production (booths first). `hitTest()` now uses table-cluster compound bounds (gaps between sub-tables after consolidation). Transparent compound hit rect on cluster SVG; geometric fallback when DOM misses.
 - **Guest seating tables (not vendor booths):** `tablePurpose: 'vendor' | 'guest'` on booths. Step 3 **Table size** pill has three groups — **Booth** (vendor rectangular, hall baseline), **Round** (5′/6′/8′ guest), **Rect** (5′/6′/8′ guest banquet, 2.5′ depth). Guest tables do not change venue capacity or hall baseline. Canvas: round = ellipse; guest rect = dashed rectangle; vendor = solid booth rect.
 - **Round table options (5′ / 6′ / 8′):** `lib/booth-planner/table-shape.ts` — guest round diameters, footprint math, `tableShape` + `tablePurpose` on booths. Verification: `npx tsx scripts/verify-round-table-options.ts`.
 - **Table size pill reset fix:** baseline sync `useEffect` depended on whole `store` (identity changes every doc mutation) — reverted pill selection after `patchDoc` on size change. Now `[safeTableSizeFt, store.patchDoc]` in `floor-plan-v2.tsx` + QA mirrors.
@@ -53,7 +54,7 @@
 | Command center layout (footer / viewport) | **Shipped** build 92 — re-verify after booth fix deploy |
 | Add room → draw booth inside room | **Fixed locally** — `verify-room-add-placement.ts`; needs deploy + sign-in |
 | Booth draw click-to-place | **Fixed locally** — `draftRef` + QA `useLayoutEffect` room sync; needs deploy + sign-in |
-| Booth select / move / rearrange | **Fixed locally** — needs deploy + sign-in |
+| Booth select / move / rearrange | **Fixed locally** (QA room-drag order + cluster hit-test) — needs deploy + sign-in |
 | Table size pill drives new draws | **Fixed locally** — store-dep reset + QA `defaultPlacementSpec` wiring |
 | Round table 5′ / 6′ / 8′ pill + canvas | **Fixed locally** — needs deploy + sign-in |
 | Guest rect table 5′ / 6′ / 8′ pill + canvas | **Fixed locally** — needs deploy + sign-in |
