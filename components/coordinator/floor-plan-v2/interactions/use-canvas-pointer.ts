@@ -440,6 +440,11 @@ export function useCanvasPointer(
     panActiveRef.current = panActive
   }, [panActive])
 
+  const toolStateRef = useRef(toolState)
+  useEffect(() => {
+    toolStateRef.current = toolState
+  }, [toolState])
+
   const ftAt = useCallback(
     (clientX: number, clientY: number): Point => {
       const surface = surfaceRef.current
@@ -496,24 +501,25 @@ export function useCanvasPointer(
 
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
-      if (panActive) return
+      if (panActiveRef.current) return
       // Only react to primary mouse / pen / touch.
       if (e.button !== 0 && e.pointerType === 'mouse') return
 
       const ft = ftAt(e.clientX, e.clientY)
+      const activeTool = toolStateRef.current
 
-      if (toolState.tool === 'hand') {
+      if (activeTool.tool === 'hand') {
         // Hand mode is a no-op at this layer — pan-zoom hook handles motion.
         return
       }
 
-      if (toolState.tool === 'draw') {
+      if (activeTool.tool === 'draw') {
         capturePointer(e.currentTarget, e.pointerId)
         const snapped = snapPoint(ft, store.doc.snapFt)
         setDraft({
           anchor: snapped,
           current: snapped,
-          kind: toolState.drawShape,
+          kind: activeTool.drawShape,
         })
         return
       }
@@ -522,7 +528,7 @@ export function useCanvasPointer(
       const target = e.target as Element | null
 
       const resizeHandleEl = target?.closest('[data-room-resize-handle]')
-      if (resizeHandleEl && toolState.tool === 'select') {
+      if (resizeHandleEl && activeTool.tool === 'select') {
         const roomId = resizeHandleEl.getAttribute('data-room-id')
         const handle = resizeHandleEl.getAttribute(
           'data-room-resize-handle'
@@ -551,7 +557,7 @@ export function useCanvasPointer(
       // `data-object-id` so we can pick up the right object without
       // walking the doc.
       const rotateHandle = target?.closest('[data-rotate-handle="true"]')
-      if (rotateHandle && toolState.tool === 'select') {
+      if (rotateHandle && activeTool.tool === 'select') {
         const handleObjectId = rotateHandle.getAttribute('data-object-id')
         const anchorObj =
           handleObjectId &&
@@ -597,7 +603,7 @@ export function useCanvasPointer(
       // booth click inside a room starts a macro room drag instead of
       // selecting or moving the booth.
       const objectId =
-        toolState.tool === 'select'
+        activeTool.tool === 'select'
           ? target?.closest('[data-object-id]')?.getAttribute('data-object-id')
           : null
       if (objectId) {
@@ -617,7 +623,7 @@ export function useCanvasPointer(
       }
 
       // Room perimeter stroke, or empty interior when no object was hit.
-      if (toolState.tool === 'select') {
+      if (activeTool.tool === 'select') {
         const roomStroke = target?.closest('[data-room-stroke="true"]')
         let roomId = roomStroke?.getAttribute('data-room-id') ?? null
         if (!roomId) {
@@ -682,15 +688,7 @@ export function useCanvasPointer(
       }
       setMarquee({ pointerId: e.pointerId, anchor: ft, current: ft })
     },
-    [
-      beginDrag,
-      capturePointer,
-      ftAt,
-      panActive,
-      store,
-      toolState.drawShape,
-      toolState.tool,
-    ]
+    [beginDrag, capturePointer, ftAt, store]
   )
 
   /**
@@ -952,7 +950,7 @@ export function useCanvasPointer(
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
-      if (panActive) return
+      if (panActiveRef.current) return
       // Stash the latest pointer position. Modifier keys are captured
       // here because React event objects are technically still safe
       // post-handler in React 19, but keeping a plain snapshot is
@@ -973,7 +971,7 @@ export function useCanvasPointer(
         flushMove(pending)
       })
     },
-    [flushMove, ftAt, panActive]
+    [flushMove, ftAt]
   )
 
   const onPointerUp = useCallback(

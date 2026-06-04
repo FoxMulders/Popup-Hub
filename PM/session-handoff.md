@@ -13,12 +13,12 @@
 
 
 ## Goal
-**Add-room → place objects** — after adding a room on a blank canvas, booth/fixture draws must commit inside that room (Step 3 wizard + command center + standalone layout).
+**Canvas interaction lock** — wheel zoom, scroll pan, tool placement, and toolbar brush state must work on Step 3 + command center (`floor-plan-canvas.tsx`, not legacy `designer/Canvas.tsx`).
 
 ## Shipped this session (local, uncommitted)
-- **Add-room placement fix:** `hydrateFloorPlanDoc` seeds `doc.rooms` from wizard `layoutRooms` (frames only, no cells); wizard→doc sync uses id-based frame match + `useLayoutEffect` so new rooms are placeable before paint; placement rings use `ensurePlacementOuterRing`; draw/commit uses `resolvePlacementRoomId` + `isPointInRoomForObject` with active-room fallback; clearer overlap toast when draw is outside walls
-- **Verify:** `npx tsx scripts/verify-room-add-placement.ts`
-- **Prior (on master, needs deploy smoke):** booth select/move, default-size booth draw, table-size pill → draw, command center layout (`d382293` / build 92)
+- **Canvas input lock fix:** SVG `onWheel` was calling `stopPropagation()`, so zoom/scroll never reached the viewport scroll container when the cursor was over the drawing surface; wheel now uses `onWheelCapture` on the scroll host and the SVG swallow handler was removed. Hand-tool pointer down no longer `preventDefault`s so pan can bubble to the viewport hook. `use-canvas-pointer` reads `toolState` / `panActive` from refs (avoids stale gesture gates). `use-viewport` clears orphaned pan/pinch if the pointer ends outside the canvas.
+- **QA mirror:** same wheel/hand fixes in `floor-plan-canvas-wizard_qa.tsx`
+- **Add-room placement fix (prior):** `hydrateFloorPlanDoc` + `resolvePlacementRoomId` / `isPointInRoomForObject`; verify with `npx tsx scripts/verify-room-add-placement.ts`
 
 ## Prior shipped (prod build 91)
 - FF-merge `feature/step-2-fix` → `master`: Step 2 scroll (`setup-wizard-body` + `overflow-y-auto` on setup page; Step 3 keeps `overflow: hidden` via `.layout-planner-root`)
@@ -50,7 +50,8 @@
 | Booth select / move / rearrange | **Fixed locally** — needs deploy + sign-in |
 | Table size pill drives new draws | **Fixed locally** |
 | Rotate room / auto-arrange toolbar | **Wired** — re-test after deploy (blocked on object select before) |
-| Step 3 blank canvas (interactive) | **Blocked** — coordinator login |
+| Step 3 blank canvas (interactive) | **Fixed locally** (wheel/pan/draw) — needs deploy + sign-in |
+| Wheel zoom / scroll pan over canvas | **Fixed locally** — SVG stopPropagation removed |
 | Step 2 Capacity scroll | **Not run** |
 
 **Manual checklist after sign-in:** `/coordinator/dashboard` — site footer hidden, canvas fills viewport below nav, toolbar buttons respond, curation queue select works; **Back to market** / **+ New market** / **Full canvas** toggle.
@@ -70,11 +71,10 @@
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Commit + deploy** add-room placement + booth interaction fixes (`layout-hydration`, `is-point-in-room`, `floor-plan-v2`, `use-canvas-pointer`)
-2. **Smoke-test** — blank Step 3: Add room → draw booth inside frame; repeat on `/coordinator/dashboard`
-3. **Coordinator smoke-test** — select/move, table size pill, rotate room, auto-arrange
-3. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
-4. Step 1 QA promotion per patch docs when layout sign-off is done
+1. **Commit + deploy** canvas input lock + add-room placement (`floor-plan-canvas.tsx`, `use-viewport.ts`, `use-canvas-pointer.ts`)
+2. **Smoke-test** — wheel zoom, hand pan, Booth draw inside room on Step 3 + `/coordinator/dashboard`
+3. **Coordinator smoke-test** — toolbar active states, table size pill, select/move, rotate room
+4. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 
 ## How to start the next chat
 ```

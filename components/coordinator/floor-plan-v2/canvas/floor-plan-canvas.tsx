@@ -565,6 +565,9 @@ export function FloorPlanCanvas({
     [ftAtClient, onVendorDrop]
   )
 
+  const { onWheel: onViewportWheel, ...viewportPointerHandlers } =
+    viewport.scrollHandlers
+
   return (
     <div
       id={FLOOR_PLAN_CANVAS_ID}
@@ -578,7 +581,8 @@ export function FloorPlanCanvas({
       role="application"
       aria-label="Floor plan canvas viewport"
       style={{ touchAction: 'none', cursor }}
-      {...viewport.scrollHandlers}
+      {...viewportPointerHandlers}
+      onWheelCapture={onViewportWheel}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -614,15 +618,14 @@ export function FloorPlanCanvas({
             WebkitUserSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          onWheel={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-          }}
           onMouseDownCapture={(e) => {
             warnOverlayCapture(e.target)
           }}
           onPointerDown={(e) => {
             warnOverlayCapture(e.target)
+            // Hand / pan gestures are owned by the scroll viewport hook.
+            // Skip preventDefault so bubbled pointer events can start pan.
+            if (toolState.tool === 'hand') return
             e.preventDefault()
             pointer.onPointerDown(e)
           }}

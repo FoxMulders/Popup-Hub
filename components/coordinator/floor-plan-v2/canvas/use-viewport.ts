@@ -670,6 +670,37 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     []
   )
 
+  /** Recover if a pan/pinch ends outside the scroll container (lost pointer). */
+  useEffect(() => {
+    const releaseStaleGestures = () => {
+      const pan = panRef.current
+      if (pan && !activePointers.current.has(pan.pointerId)) {
+        panRef.current = null
+        setIsPanning(false)
+        setPanActive(false)
+      }
+      const pinch = pinchRef.current
+      if (pinch) {
+        const [a, b] = pinch.pointerIds
+        if (
+          !activePointers.current.has(a) ||
+          !activePointers.current.has(b)
+        ) {
+          pinchRef.current = null
+          setPanActive(false)
+        }
+      }
+    }
+    window.addEventListener('pointerup', releaseStaleGestures)
+    window.addEventListener('pointercancel', releaseStaleGestures)
+    window.addEventListener('blur', releaseStaleGestures)
+    return () => {
+      window.removeEventListener('pointerup', releaseStaleGestures)
+      window.removeEventListener('pointercancel', releaseStaleGestures)
+      window.removeEventListener('blur', releaseStaleGestures)
+    }
+  }, [])
+
   /** Block Safari gesture zoom on the canvas viewport (passive: false). */
   useEffect(() => {
     const scroll = scrollRef.current

@@ -525,6 +525,9 @@ export function FloorPlanCanvasWizardQa({
     [ftAtClient, onVendorDrop]
   )
 
+  const { onWheel: onViewportWheel, ...viewportPointerHandlers } =
+    viewport.scrollHandlers
+
   return (
     <div
       id={FLOOR_PLAN_CANVAS_ID}
@@ -538,7 +541,8 @@ export function FloorPlanCanvasWizardQa({
       role="application"
       aria-label="Floor plan canvas viewport"
       style={{ touchAction: 'none', cursor }}
-      {...viewport.scrollHandlers}
+      {...viewportPointerHandlers}
+      onWheelCapture={onViewportWheel}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -574,15 +578,12 @@ export function FloorPlanCanvasWizardQa({
             WebkitUserSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          onWheel={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-          }}
           onMouseDownCapture={(e) => {
             warnOverlayCapture(e.target)
           }}
           onPointerDown={(e) => {
             warnOverlayCapture(e.target)
+            if (toolState.tool === 'hand') return
             e.preventDefault()
             pointer.onPointerDown(e)
           }}
