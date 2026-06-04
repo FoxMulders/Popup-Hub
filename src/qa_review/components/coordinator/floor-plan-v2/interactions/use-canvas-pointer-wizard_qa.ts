@@ -47,6 +47,10 @@ import {
   findFirstViolationInMove,
   findBoothProximityViolation,
 } from '@/components/coordinator/floor-plan-v2/interactions/category-rules'
+import {
+  isPointInRoomForObject,
+  resolvePlacementRoomId,
+} from '@/components/coordinator/floor-plan-v2/geometry/is-point-in-room'
 import { resolveDrawCommitRect } from '@/components/coordinator/floor-plan-v2/interactions/use-canvas-pointer'
 import {
   roomResizeFromHandle,
@@ -1060,25 +1064,32 @@ export function useCanvasPointerWizardQa(
           store.doc.snapFt,
           defaultBoothTableLengthFtRef.current
         )
+        const boothProbe = {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+          rotation: 0,
+        }
         const center = {
           x: rect.x + rect.width / 2,
           y: rect.y + rect.height / 2,
         }
         const openCanvas = allowsWizardPlacementWithoutRoom(store.doc)
-        const drawRoomId =
-          findRoomIdForPlacementPointWizardQa(store.doc, center) ??
-          activeRoomIdRef.current ??
-          null
-        if (
-          (!openCanvas && !drawRoomId) ||
-          !isValidPlacementLocationWizardQa(store.doc, center, {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-            rotation: 0,
-          })
-        ) {
+        const drawRoomId = openCanvas
+          ? (findRoomIdForPlacementPointWizardQa(store.doc, center) ??
+            activeRoomIdRef.current ??
+            null)
+          : resolvePlacementRoomId(
+              store.doc,
+              center,
+              activeRoomIdRef.current
+            )
+        const placementValid = openCanvas
+          ? isValidPlacementLocationWizardQa(store.doc, center, boothProbe)
+          : drawRoomId != null &&
+            isPointInRoomForObject(store.doc, boothProbe, drawRoomId)
+        if ((!openCanvas && !drawRoomId) || !placementValid) {
           addLogRef.current(
             `Placement rejected (draw ${activeDraft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} openCanvas=${openCanvas}`
           )
@@ -1401,12 +1412,18 @@ function commitDraft(
     return
   }
   const openCanvas = allowsWizardPlacementWithoutRoom(store.doc)
-  const placementRoomId =
-    roomId ?? findRoomIdForPlacementPointWizardQa(store.doc, objectCenter(obj))
-  if (
-    (!openCanvas && !placementRoomId) ||
-    !isValidPlacementLocationWizardQa(store.doc, objectCenter(obj), obj)
-  ) {
+  const center = objectCenter(obj)
+  const placementRoomId = openCanvas
+    ? (roomId ??
+      findRoomIdForPlacementPointWizardQa(store.doc, center) ??
+      null)
+    : (roomId ??
+      resolvePlacementRoomId(store.doc, center, null))
+  const placementValid = openCanvas
+    ? isValidPlacementLocationWizardQa(store.doc, center, obj)
+    : placementRoomId != null &&
+      isPointInRoomForObject(store.doc, obj, placementRoomId)
+  if (!placementValid || (!openCanvas && !placementRoomId)) {
     log(
       `Placement rejected (${obj.kind}): center=(${objectCenter(obj).x},${objectCenter(obj).y}) room=${placementRoomId ?? 'none'}`
     )

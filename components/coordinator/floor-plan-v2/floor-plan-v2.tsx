@@ -565,6 +565,8 @@ function FloorPlanV2Workspace({
   const [defaultPlacementSizeFt, setDefaultPlacementSizeFt] =
     useState<LayoutBaselineTableLengthFt>(safeTableSizeFt)
 
+  // Sync only when the wizard-owned baseline changes — not on every doc
+  // mutation (store identity changes whenever `doc` updates).
   useEffect(() => {
     setDefaultPlacementSizeFt(safeTableSizeFt)
     const grid = canvasGridSpacingForTableFt(safeTableSizeFt)
@@ -572,7 +574,7 @@ function FloorPlanV2Workspace({
       { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
       { pushHistory: false }
     )
-  }, [safeTableSizeFt, store])
+  }, [safeTableSizeFt, store.patchDoc])
 
   const tableSizePillValue = useMemo<LayoutBaselineTableLengthFt>(() => {
     const selected = Array.from(store.selectedIds)
