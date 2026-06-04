@@ -3,19 +3,22 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `a2e5286` (pushed to `origin/master`)
-- Production: https://popup-7styr08ee-thetipsyfoxyeg-2911s-projects.vercel.app — **build 101** · commit `03d5bf1` (handoff updated 2026-06-04 07:59)
-- **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] → `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff + commit message in baseline)
-- **Stashed (not shipped):** `git stash` entry `loader WIP` — brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
+- Branch: `master` @ `cde554e` (pushed to `origin/master`)
+- Last deploy commit: `cde554e` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 106** | commit `d56a663` (handoff updated 2026-06-04 09:43)
+- **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
+- **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
+
 
 ## Last deploy
-- 2026-06-04 07:59 - Deploy via deploy-popuphub.ps1 (a2e5286)
+- 2026-06-04 09:43 - Handoff script fix - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (cde554e)
 
 
 ## Goal
-**Booth/table select metrics + resize** — clicking a booth or table shows its measurements and supports canvas resize handles (alongside table-size pill and inspector).
+**Coordinator smoke-test on prod** — verify layout fixes shipped in build **106** (`cde554e` @ https://popuphub.ca).
 
-## Shipped this session (local, uncommitted)
+## Shipped this session (prod build 106, `cde554e`)
+- **Deploy tooling fix:** `update-session-handoff.ps1` uses ASCII `-` / `->` / `|` instead of Unicode dashes/arrows so Windows PowerShell 5 parses strings; `deploy-popuphub.ps1` always records https://popuphub.ca in baseline.
 - **Tipsy Fox material checklist (Experience Designer):** `processMaterialChecklist` + Zod schema normalize AI `material_checklist` (and legacy BOM strings) into sorted required/optional rows with Amazon.ca affiliate search URLs (`tag=thetipsyfox08-20`), title-case names, catalog hints (Cryptic Symbols → SVG art, Elemental Weights → periodic table chart note). Zone inspector renders `MaterialChecklistPanel` with mandatory associate disclosure and **no static prices**. Verify: `npx tsx scripts/verify-material-checklist.ts`.
 - **Build fix (TS):** `joinablePlacementProbe` probe object cast to `PlacedObject`; `isValidPlacementLocationBBox` accepts optional `kind` on placement probes so legacy callers without `kind` still type-check. Local `npm run build` passes (build **105**).
 - **Object select measurements:** Single-select shows W×H (or diameter for round guest tables) on-canvas below the selection and in the toolbar next to the Table size pill (`formatObjectDimensions` + `highlightedSelectionMetrics`).
@@ -55,25 +58,26 @@
 6. **Command center** — exit/new-market as `Link` + `buttonVariants`
 7. **Command center viewport** — route cleanup hook preserved dashboard body flag; `:has()` CSS + flex canvas column
 
-## Smoke-test status (2026-06-03)
+## Smoke-test status (2026-06-04)
 | Check | Result |
 |-------|--------|
-| Prod build / alias | **OK** — build 92 / `d382293` at https://popuphub.ca |
-| Command center layout (footer / viewport) | **Shipped** build 92 — re-verify after booth fix deploy |
-| Add room → draw booth inside room | **Fixed locally** — `verify-room-add-placement.ts`; needs deploy + sign-in |
-| Booth draw click-to-place | **Fixed locally** — `draftRef` + QA `useLayoutEffect` room sync; needs deploy + sign-in |
-| Booth select / move / rearrange | **Fixed locally** (QA room-drag order + cluster hit-test) — needs deploy + sign-in |
-| Booth/table select → measurements + resize handles | **Fixed locally** — on-canvas label + toolbar pill + drag handles; needs deploy + sign-in |
-| Table size pill drives new draws | **Fixed locally** — store-dep reset + QA `defaultPlacementSpec` wiring |
-| Round table 5′ / 6′ / 8′ pill + canvas | **Fixed locally** — Patron round draw tool + pill auto-draw; needs deploy + sign-in |
-| Patron rect table 5′ / 6′ / 8′ pill + canvas | **Fixed locally** — Patron rect draw tool, no vendor proximity block; needs deploy + sign-in |
-| Booth placement inside room | **Fixed locally** — QA `resolvePlacementRoomId` parity; needs deploy + sign-in |
-| Rotate room / auto-arrange toolbar | **Wired** — re-test after deploy (blocked on object select before) |
-| Step 3 blank canvas (interactive) | **Fixed locally** (wheel/pan/draw) — needs deploy + sign-in |
-| Wheel zoom / scroll pan over canvas | **Fixed locally** — ResizeObserver reframe + roomsFramingKey origin leak |
-| Stage draw outside room (join) | **Fixed locally** — joinable touch placement; verify-asset-type-joins |
+| Prod build / alias | **OK** — build **106** / `cde554e` at https://popuphub.ca |
+| Command center layout (footer / viewport) | **Re-verify** on prod after sign-in |
+| Add room → draw booth inside room | **Deployed** — run `verify-room-add-placement.ts` + sign-in smoke |
+| Booth draw click-to-place | **Deployed** — sign-in smoke |
+| Booth select / move / rearrange | **Deployed** — sign-in smoke |
+| Booth/table select → measurements + resize handles | **Deployed** — sign-in smoke |
+| Table size pill drives new draws | **Deployed** — sign-in smoke |
+| Round table 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
+| Patron rect table 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
+| Booth placement inside room | **Deployed** — sign-in smoke |
+| Rotate room / auto-arrange toolbar | **Deployed** — re-test on prod |
+| Step 3 blank canvas (interactive) | **Deployed** — sign-in smoke |
+| Wheel zoom / scroll pan over canvas | **Deployed** — sign-in smoke |
+| Stage draw outside room (join) | **Deployed** — verify-asset-type-joins + sign-in |
 | Step 2 Capacity scroll | **Not run** |
-| Blank start — only add-room + size fields | **Fixed locally** — needs deploy + sign-in |
+| Blank start — only add-room + size fields | **Deployed** — sign-in smoke |
+| Deploy / handoff script | **Fixed** — `update-session-handoff.ps1` ASCII punctuation (Windows PS parse error) |
 
 **Manual checklist after sign-in:** `/coordinator/dashboard` — site footer hidden, canvas fills viewport below nav, toolbar buttons respond, curation queue select works; **Back to market** / **+ New market** / **Full canvas** toggle.
 
@@ -92,13 +96,11 @@
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Deploy** object resize + measurement chrome; smoke-test select booth/table → see W×H label, drag corner handle, table-size pill stays in sync
-2. **Deploy** viewport + stage-placement fixes; smoke-test wheel pan/zoom (pan away from room, zoom in/out, drag room — camera should stay put) and stage flush against room edge → **Join**
-2. **Deploy** round-table + table-size + placement fixes; smoke-test pill → draw footprint (rect + round) + booth/wall inside room on Step 3 + `/coordinator/events/[id]/layout` + dashboard
-2. Blank start: set room W×L in toolbar, **Add room**, then draw booths — full toolbar returns after first room
-3. If placement still rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
-4. **Coordinator smoke-test** — select/move, table size pill, rotate room, zoom/pan
-5. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
+1. **Coordinator smoke-test on prod** (build 106): select booth/table → W×H + resize handles; wheel pan/zoom; stage join at room edge; table-size pill → draw; blank start add-room flow
+2. **Step 2 Capacity scroll** — manual check after sign-in
+3. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
+4. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
+5. Commit handoff + script fix when ready (`update-session-handoff.ps1`, `deploy-popuphub.ps1`, `PM/session-handoff.md`)
 
 ## How to start the next chat
 ```

@@ -49,14 +49,14 @@ try {
     $buildJson = Join-Path $ProjectRoot 'build-number.json'
     if (Test-Path $buildJson) {
         $bn = Get-Content $buildJson -Raw | ConvertFrom-Json
-        $buildLine = "**build $($bn.build)** · commit ``$($bn.commit)``"
+        $buildLine = "**build $($bn.build)** | commit ``$($bn.commit)``"
     }
 
     $date = Get-Date -Format 'yyyy-MM-dd HH:mm'
     $content = Get-Content $HandoffPath -Raw
 
     $commitLine = if ($CommitMessage) {
-        "- Last deploy commit: ``$commit`` — $CommitMessage"
+        "- Last deploy commit: ``$commit`` - $CommitMessage"
     } else {
         ''
     }
@@ -67,9 +67,9 @@ try {
     )
     if ($commitLine) { $baselineLines += $commitLine }
     $baselineLines += @(
-        "- Production: $DeployUrl — $buildLine (handoff updated $date)",
-        '- **Deploy script:** ``PM/Deploy-popuphub.bat`` [commit message] → ``scripts/deploy-popuphub.ps1`` (build, commit, sync push, Vercel prod, handoff)',
-        '- **Stashed (not shipped):** ``git stash`` entry ``loader WIP`` — brand loader scene / ``ship.ps1`` tweaks on ``feature/step-2-fix`` (verify with ``git stash list``)'
+        "- Production: $DeployUrl - $buildLine (handoff updated $date)",
+        '- **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)',
+        '- **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)'
     )
     $baselineBlock = ($baselineLines -join "`r`n") + "`r`n"
 
@@ -80,7 +80,7 @@ try {
     }
 
     if ($Note) {
-        $deployDetail = if ($CommitMessage) { "$Note — ``$CommitMessage``" } else { $Note }
+        $deployDetail = if ($CommitMessage) { "$Note - ``$CommitMessage``" } else { $Note }
         $deployLog = "## Last deploy`r`n- $date - $deployDetail ($commit)`r`n`r`n"
         if ($content -match '(?s)## Last deploy\r?\n.*?(?=\r?\n## )') {
             $content = $content -replace '(?s)## Last deploy\r?\n.*?(?=\r?\n## )', $deployLog

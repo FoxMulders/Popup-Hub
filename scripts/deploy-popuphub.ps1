@@ -4,7 +4,7 @@
 #   .\scripts\deploy-popuphub.ps1
 #   .\scripts\deploy-popuphub.ps1 -Message "fix: footer version row"
 #   PM\Deploy-popuphub.bat [commit message]
-# Default commit message matches current WIP — override via -Message or bat arg 1.
+# Default commit message matches current WIP - override via -Message or bat arg 1.
 
 param(
     [string]$Message = '',
@@ -108,7 +108,8 @@ try {
     if (-not $SkipHandoff) {
         Write-Step 'Updating session handoff'
         $short = git rev-parse --short HEAD
-        & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -DeployUrl $deployUrl -Note 'Deploy via deploy-popuphub.ps1' -CommitMessage $Message
+        $handoffProdUrl = 'https://popuphub.ca'
+        & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -DeployUrl $handoffProdUrl -Note 'Deploy via deploy-popuphub.ps1' -CommitMessage $Message
 
         $handoffGit = 'PM/session-handoff.md'
         $handoffStatus = git status --porcelain -- $handoffGit
