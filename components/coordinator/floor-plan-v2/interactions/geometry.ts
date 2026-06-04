@@ -10,9 +10,11 @@ import type { FloorPlanDoc, PlacedObject } from '../state/types'
 
 export type { MergeOverlapContext }
 import {
+  boothHasTableCluster,
   objectFootprintAabb,
   placementProbesForObject,
 } from '../state/table-cluster-layout'
+import type { BoothObject } from '../state/types'
 
 /**
  * Geometry helpers — pure math, no React, no DOM.
@@ -360,6 +362,12 @@ export function hitTest(
 ): PlacedObject | null {
   for (let i = objects.length - 1; i >= 0; i--) {
     const obj = objects[i]
+    // Multi-table clusters leave gaps between sub-table SVG rects;
+    // the parent booth compound bounds cover those aisles.
+    if (obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)) {
+      if (rectContainsPointRotated(obj, p)) return obj
+      continue
+    }
     const probes = placementProbesForObject(obj)
     for (const probe of probes) {
       if (rectContainsPointRotated(probe, p)) return obj

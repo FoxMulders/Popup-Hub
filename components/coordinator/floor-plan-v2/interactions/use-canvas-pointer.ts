@@ -27,6 +27,7 @@ import {
   canvasClampDelta,
   findOverlapInMove,
   groupCanvasClampDelta,
+  hitTest,
   normalizeRect,
   objectCenter,
   placedObjectOverlapsAny,
@@ -610,7 +611,9 @@ export function useCanvasPointer(
       // selecting or moving the booth.
       const objectId =
         activeTool.tool === 'select'
-          ? target?.closest('[data-object-id]')?.getAttribute('data-object-id')
+          ? (target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
+              hitTest(store.doc.objects, ft)?.id ??
+              null)
           : null
       if (objectId) {
         const additive = e.shiftKey || e.metaKey || e.ctrlKey
@@ -623,8 +626,14 @@ export function useCanvasPointer(
         const targetIds = wasSelected || additive
           ? Array.from(new Set([...store.selectedIds, objectId]))
           : [objectId]
+        const dragIds = targetIds.filter((id) => {
+          const obj = store.doc.objects.find((o) => o.id === id)
+          return obj && !obj.locked
+        })
         capturePointer(e.currentTarget, e.pointerId)
-        beginDrag(e.pointerId, ft, targetIds)
+        if (dragIds.length > 0) {
+          beginDrag(e.pointerId, ft, dragIds)
+        }
         return
       }
 

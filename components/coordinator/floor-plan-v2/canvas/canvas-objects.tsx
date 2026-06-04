@@ -1077,6 +1077,14 @@ function TableClusterShapes({
 
   return (
     <>
+      <rect
+        x={compoundX}
+        y={compoundY}
+        width={compoundW}
+        height={compoundH}
+        fill="transparent"
+        pointerEvents="all"
+      />
       <g transform={`translate(${cx} ${cy}) rotate(${clusterRot})`}>
         {cluster.subTables.map((sub) => {
           const tw = sub.tableLengthFt * pxPerFt

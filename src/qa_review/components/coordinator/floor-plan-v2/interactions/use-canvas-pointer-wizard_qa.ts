@@ -25,6 +25,7 @@ import {
   canvasClampDelta,
   findOverlapInMove,
   groupCanvasClampDelta,
+  hitTest,
   normalizeRect,
   objectCenter,
   placedObjectOverlapsAny,
@@ -569,8 +570,37 @@ export function useCanvasPointerWizardQa(
         }
       }
 
-      // Room frame select + drag before object hit-test so empty/new
-      // rooms (and the active room) stay grabbable over nearby booths.
+      // Booths win over room interior — auto-arrange clusters leave
+      // gaps between sub-table SVG rects; hitTest fills those misses.
+      const objectId =
+        toolState.tool === 'select'
+          ? (target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
+              hitTest(store.doc.objects, ft)?.id ??
+              null)
+          : null
+      if (objectId) {
+        const additive = e.shiftKey || e.metaKey || e.ctrlKey
+        const wasSelected = store.selectedIds.has(objectId)
+        if (additive) {
+          store.toggleSelection(objectId)
+        } else if (!wasSelected) {
+          store.setSelection([objectId])
+        }
+        const targetIds = wasSelected || additive
+          ? Array.from(new Set([...store.selectedIds, objectId]))
+          : [objectId]
+        const dragIds = targetIds.filter((id) => {
+          const obj = store.doc.objects.find((o) => o.id === id)
+          return obj && !obj.locked
+        })
+        capturePointer(e.currentTarget, e.pointerId)
+        if (dragIds.length > 0) {
+          beginDrag(e.pointerId, ft, dragIds)
+        }
+        return
+      }
+
+      // Room perimeter stroke, or empty interior when no booth was hit.
       if (toolState.tool === 'select') {
         const roomStroke = target?.closest('[data-room-stroke="true"]')
         let roomId = roomStroke?.getAttribute('data-room-id') ?? null
@@ -627,25 +657,6 @@ export function useCanvasPointerWizardQa(
           }
           return
         }
-      }
-
-      const objectId = target?.closest('[data-object-id]')?.getAttribute(
-        'data-object-id'
-      )
-      if (objectId) {
-        const additive = e.shiftKey || e.metaKey || e.ctrlKey
-        const wasSelected = store.selectedIds.has(objectId)
-        if (additive) {
-          store.toggleSelection(objectId)
-        } else if (!wasSelected) {
-          store.setSelection([objectId])
-        }
-        const targetIds = wasSelected || additive
-          ? Array.from(new Set([...store.selectedIds, objectId]))
-          : [objectId]
-        capturePointer(e.currentTarget, e.pointerId)
-        beginDrag(e.pointerId, ft, targetIds)
-        return
       }
 
       // Empty canvas in select mode → marquee.
