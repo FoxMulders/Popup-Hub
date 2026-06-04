@@ -3,19 +3,22 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `f6bd1fb` (pushed to `origin/master`)
-- Last deploy commit: `f6bd1fb` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 107** | commit `cde554e` (handoff updated 2026-06-04 12:29)
+- Branch: `master` @ `b6d5b44` (pushed to `origin/master`)
+- Last deploy commit: `b6d5b44` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 108** | commit `5113bb5` (handoff updated 2026-06-04 13:04)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-04 12:29 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (f6bd1fb)
+- 2026-06-04 13:04 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (b6d5b44)
 
 
 ## Goal
-**Coordinator smoke-test on prod** — verify layout fixes shipped in build **106** (`cde554e` @ https://popuphub.ca).
+**Coordinator smoke-test on prod** — verify layout fixes shipped in build **106** (`cde554e` @ https://popuphub.ca). Auto-arrange now keeps guest/patron tables separate from vendor booths (verify with `npx tsx scripts/verify-auto-arrange.ts` guest-table section).
+
+## Shipped this session (local, not deployed)
+- **Auto-arrange: guest tables separate from vendor booths:** Vendor booths still use grid/staggered/perimeter consolidation and layout. Guest/patron round and rect tables are excluded from vendor consolidation and the vendor grid — they pack in the area where they were drawn (or room center / open space away from vendor units), preserving each table's laid width/height (round tables stay circular). `isGuestTableBooth` in `table-shape.ts`; `arrangeGuestTables` in `auto-arrange.ts`. Verification: guest-table block in `scripts/verify-auto-arrange.ts` (4/4 pass).
 
 ## Shipped this session (prod build 106, `cde554e`)
 - **Deploy tooling fix:** `update-session-handoff.ps1` uses ASCII `-` / `->` / `|` instead of Unicode dashes/arrows so Windows PowerShell 5 parses strings; `deploy-popuphub.ps1` always records https://popuphub.ca in baseline.
@@ -71,7 +74,7 @@
 | Round table 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
 | Patron rect table 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
 | Booth placement inside room | **Deployed** — sign-in smoke |
-| Rotate room / auto-arrange toolbar | **Deployed** — re-test on prod |
+| Rotate room / auto-arrange toolbar | **Deployed** — re-test on prod; guest tables stay separate from vendor booths (local) |
 | Step 3 blank canvas (interactive) | **Deployed** — sign-in smoke |
 | Wheel zoom / scroll pan over canvas | **Deployed** — sign-in smoke |
 | Stage draw outside room (join) | **Deployed** — verify-asset-type-joins + sign-in |
@@ -96,7 +99,8 @@
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Coordinator smoke-test on prod** (build 106): select booth/table → W×H + resize handles; wheel pan/zoom; stage join at room edge; table-size pill → draw; blank start add-room flow
+1. **Commit + deploy** guest/patron auto-arrange separation when ready
+2. **Coordinator smoke-test on prod** (build 106): select booth/table → W×H + resize handles; wheel pan/zoom; stage join at room edge; table-size pill → draw; blank start add-room flow; auto-arrange with mixed vendor booths + patron round tables
 2. **Step 2 Capacity scroll** — manual check after sign-in
 3. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
 4. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
