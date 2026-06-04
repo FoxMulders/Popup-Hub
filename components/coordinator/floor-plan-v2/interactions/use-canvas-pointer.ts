@@ -1069,64 +1069,69 @@ export function useCanvasPointer(
 
       if (draft) {
         const rawRect = normalizeRect(draft.anchor, draft.current)
-        if (
+        const hasDragExtent =
           rawRect.width >= store.doc.snapFt ||
           rawRect.height >= store.doc.snapFt
-        ) {
-          // A click without drag still produces a 1ft × 1ft object so the
-          // user gets immediate visual feedback. Only commit when there's
-          // at least one snap-unit of extent — guards against accidental
-          // 0-area objects when the user just taps and lifts.
-          const rect = resolveDrawCommitRect(
-            draft.kind,
-            rawRect,
-            store.doc.snapFt,
-            defaultBoothTableLengthFtRef.current
-          )
-          // Multi-room association: the new object inherits the room
-          // whose perimeter contains its centroid (or, failing that,
-          // the active room set by the host). This lets a coordinator
-          // draw inside any room frame on the unified canvas without
-          // first having to flip the active selection.
-          const center = {
-            x: rect.x + rect.width / 2,
-            y: rect.y + rect.height / 2,
-          }
-          const drawRoomId = resolvePlacementRoomId(
-            store.doc,
-            center,
-            activeRoomIdRef.current
-          )
-          if (
-            !drawRoomId ||
-            !isPointInRoomForObject(store.doc, {
-              x: rect.x,
-              y: rect.y,
-              width: rect.width,
-              height: rect.height,
-              rotation: 0,
-            }, drawRoomId)
-          ) {
-            addLogRef.current(
-              `Placement rejected (draw ${draft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} validSurface=${Boolean(drawRoomId)}`
-            )
-            onOverlapViolationRef.current?.()
-            setDraft(null)
-            return
-          }
-          commitDraft(
-            store,
-            draft.kind,
-            rect,
-            eventCategoryNamesRef.current,
-            drawRoomId,
-            onProximityViolationRef.current,
-            onOverlapViolationRef.current,
-            defaultBoothTableLengthFtRef.current,
-            (msg) => addLogRef.current(msg)
-          )
-          onAfterDrawCommit?.()
+        // Tap-to-place: the draft preview already shows the resolved
+        // booth footprint (table-length pill), but a click has zero
+        // freehand extent. Anchor at the snapped pointer so
+        // resolveDrawCommitRect can center the real object there.
+        const rect = resolveDrawCommitRect(
+          draft.kind,
+          hasDragExtent
+            ? rawRect
+            : {
+                x: draft.anchor.x,
+                y: draft.anchor.y,
+                width: 0,
+                height: 0,
+              },
+          store.doc.snapFt,
+          defaultBoothTableLengthFtRef.current
+        )
+        // Multi-room association: the new object inherits the room
+        // whose perimeter contains its centroid (or, failing that,
+        // the active room set by the host). This lets a coordinator
+        // draw inside any room frame on the unified canvas without
+        // first having to flip the active selection.
+        const center = {
+          x: rect.x + rect.width / 2,
+          y: rect.y + rect.height / 2,
         }
+        const drawRoomId = resolvePlacementRoomId(
+          store.doc,
+          center,
+          activeRoomIdRef.current
+        )
+        if (
+          !drawRoomId ||
+          !isPointInRoomForObject(store.doc, {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            rotation: 0,
+          }, drawRoomId)
+        ) {
+          addLogRef.current(
+            `Placement rejected (draw ${draft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} validSurface=${Boolean(drawRoomId)}`
+          )
+          onOverlapViolationRef.current?.()
+          setDraft(null)
+          return
+        }
+        commitDraft(
+          store,
+          draft.kind,
+          rect,
+          eventCategoryNamesRef.current,
+          drawRoomId,
+          onProximityViolationRef.current,
+          onOverlapViolationRef.current,
+          defaultBoothTableLengthFtRef.current,
+          (msg) => addLogRef.current(msg)
+        )
+        onAfterDrawCommit?.()
         setDraft(null)
         return
       }

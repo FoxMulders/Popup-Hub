@@ -16,6 +16,7 @@
 **Canvas interaction lock** — wheel zoom, scroll pan, tool placement, and toolbar brush state must work on Step 3 + command center (`floor-plan-canvas.tsx`, not legacy `designer/Canvas.tsx`).
 
 ## Shipped this session (local, uncommitted)
+- **Booth tap-to-place:** Draw commit no longer requires a drag extent — a click with the Booth tool now commits the table-length footprint at the snapped anchor (preview and commit both use `resolveDrawCommitRect`). Fixes “ghost on cursor, nothing places in room.”
 - **Spatial layout remount + reload:** Restored `layoutGeneration` state, `key={layoutGeneration}` on `<FloorPlanV2 />`, and "Reload saved layout" toolbar button. Handler clears multi-room localStorage draft and increments generation for a clean canvas remount (fixes 500de9d regression without dangling props).
 - **Canvas input lock fix:** SVG `onWheel` was calling `stopPropagation()`, so zoom/scroll never reached the viewport scroll container when the cursor was over the drawing surface; wheel now uses `onWheelCapture` on the scroll host and the SVG swallow handler was removed. Hand-tool pointer down no longer `preventDefault`s so pan can bubble to the viewport hook. `use-canvas-pointer` reads `toolState` / `panActive` from refs (avoids stale gesture gates). `use-viewport` clears orphaned pan/pinch if the pointer ends outside the canvas.
 - **QA mirror:** same wheel/hand fixes in `floor-plan-canvas-wizard_qa.tsx`
@@ -47,7 +48,7 @@
 | Prod build / alias | **OK** — build 92 / `d382293` at https://popuphub.ca |
 | Command center layout (footer / viewport) | **Shipped** build 92 — re-verify after booth fix deploy |
 | Add room → draw booth inside room | **Fixed locally** — `verify-room-add-placement.ts`; needs deploy + sign-in |
-| Booth draw (any size → table footprint) | **Fixed locally** — needs deploy + sign-in |
+| Booth draw (any size → table footprint) | **Fixed locally** (tap + drag) — needs deploy + sign-in |
 | Booth select / move / rearrange | **Fixed locally** — needs deploy + sign-in |
 | Table size pill drives new draws | **Fixed locally** |
 | Rotate room / auto-arrange toolbar | **Wired** — re-test after deploy (blocked on object select before) |
@@ -73,7 +74,7 @@
 
 ## Next actions
 1. **Smoke-test** `/coordinator/events/[id]/layout` — verify "Reload saved layout" remounts canvas; zoom/pan/draw after reload
-2. **Commit + deploy** spatial remount + canvas input lock + add-room placement
+2. **Commit + deploy** tap-to-place + spatial remount + canvas input lock + add-room placement
 3. **Coordinator smoke-test** — toolbar active states, table size pill, select/move, rotate room on Step 3 + dashboard
 4. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 
