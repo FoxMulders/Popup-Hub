@@ -1274,7 +1274,7 @@ function FloorPlanV2Workspace({
     const result = autoArrangeInRoom(store.doc, activeRoomId, {
       mode: autoArrangeMode,
       eventCategoryNames,
-      baselineTableLengthFt: safeTableSizeFt,
+      baselineTableLengthFt: defaultPlacementSizeFt,
       vendorTableMetaByKey,
       ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
         ? { maxBooths: layoutCapacity }
@@ -1316,7 +1316,7 @@ function FloorPlanV2Workspace({
     boothCount,
     eventCategoryNames,
     layoutCapacity,
-    safeTableSizeFt,
+    defaultPlacementSizeFt,
     store,
     vendorTableMetaByKey,
   ])
@@ -1910,7 +1910,7 @@ function FloorPlanV2Workspace({
               commandCenterViewport={isDashboard}
               store={store}
               toolState={{ tool, drawShape }}
-              defaultBoothTableLengthFt={safeTableSizeFt}
+              defaultBoothTableLengthFt={defaultPlacementSizeFt}
               tableSizeFt={tableSizePillValue}
               activeRoomId={activeRoomId}
               selectedRoomId={selectedRoomId}

@@ -23,7 +23,7 @@ import { activeRoomFramingBounds } from '../state/room-canvas'
 import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
-import { useCanvasPointer } from '../interactions/use-canvas-pointer'
+import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
 import {
   detectPlacedObjectOverlaps,
   placedObjectOverlapsAny,
@@ -157,12 +157,15 @@ export function FloorPlanCanvas({
     ? 8
     : Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
 
-  const gridSpacing = useMemo(
+  const effectiveTableSizeFt = useMemo(
     () =>
-      canvasGridSpacingForTableFt(
-        tableSizeFt ?? defaultBoothTableLengthFt ?? DEFAULT_TABLE_SIZE
-      ),
+      tableSizeFt ?? defaultBoothTableLengthFt ?? DEFAULT_TABLE_SIZE,
     [defaultBoothTableLengthFt, tableSizeFt]
+  )
+
+  const gridSpacing = useMemo(
+    () => canvasGridSpacingForTableFt(effectiveTableSizeFt),
+    [effectiveTableSizeFt]
   )
 
   /**
@@ -356,24 +359,48 @@ export function FloorPlanCanvas({
   )
 
   const draftOverlaps = useMemo(() => {
-    const rect = pointer.draftRect
+    const rawRect = pointer.draftRect
     const kind = pointer.draftKind
-    if (!rect || !kind) return false
+    if (!rawRect || !kind) return false
+    const rect = resolveDrawCommitRect(
+      kind,
+      rawRect,
+      store.doc.snapFt,
+      defaultBoothTableLengthFt
+    )
     const probe = {
       id: '__draft__',
       kind,
       x: rect.x,
       y: rect.y,
-      width: Math.max(store.doc.snapFt || 1, rect.width),
-      height: Math.max(store.doc.snapFt || 1, rect.height),
+      width: rect.width,
+      height: rect.height,
       rotation: 0,
     } as PlacedObject
     return placedObjectOverlapsAny(probe, store.doc.objects, undefined, mergeOverlapCtx)
   }, [
+    defaultBoothTableLengthFt,
     mergeOverlapCtx,
     pointer.draftKind,
     pointer.draftRect,
     store.doc.objects,
+    store.doc.snapFt,
+  ])
+
+  const draftPreviewRect = useMemo(() => {
+    const rawRect = pointer.draftRect
+    const kind = pointer.draftKind
+    if (!rawRect || !kind) return null
+    return resolveDrawCommitRect(
+      kind,
+      rawRect,
+      store.doc.snapFt,
+      defaultBoothTableLengthFt
+    )
+  }, [
+    defaultBoothTableLengthFt,
+    pointer.draftKind,
+    pointer.draftRect,
     store.doc.snapFt,
   ])
 
@@ -678,7 +705,7 @@ export function FloorPlanCanvas({
               })()
             : null}
           <DraftPreview
-            rect={pointer.draftRect}
+            rect={draftPreviewRect}
             kind={pointer.draftKind}
             pxPerFt={pxPerFt}
             hasOverlap={draftOverlaps}

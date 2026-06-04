@@ -13,12 +13,13 @@
 
 
 ## Goal
-**Coordinator command center layout fix** — stop the runaway panel above the site footer from blocking the booth designer viewport; restore canvas/toolbar interactivity on `/coordinator/dashboard`.
+**Floor-plan booth interactions** — restore default table-size booth draws, object select/move, table-size pill driving new booths, and auto-arrange baseline; command center layout fix shipped in build 92.
 
 ## Shipped this session (local, uncommitted)
-- **Command center layout regression fix:** `useCoordinatorRouteChromeCleanup` no longer clears `data-dashboard-command-center` on the dashboard route (was racing with `CommandCenterFullscreenProvider` and leaving site footer + broken flex height chain visible)
-- **CSS fallback:** `body:has(.coordinator-dashboard-workspace)` mirrors command-center viewport constraints so footer hides and flex chain holds even if the body data attr is stale
-- **Canvas column:** replaced `absolute inset-0` mount with flex `flex-1 overflow-hidden` in `dashboard-canvas-column.tsx`
+- **Booth select/move:** pointer router now hit-tests placed objects before empty room interior (clicks on booths no longer start room drag)
+- **Default-size booth draw:** `resolveDrawCommitRect` centers a standard table footprint inside any freehand draw; preview + overlap checks use resolved size
+- **Table size pill → draw:** canvas `defaultBoothTableLengthFt` wired to `defaultPlacementSizeFt` (was stuck on venue baseline); auto-arrange uses same baseline
+- **Command center layout regression fix:** `useCoordinatorRouteChromeCleanup` preserved dashboard body flag; `:has()` CSS + flex canvas column (`d382293` / build 92 on prod)
 
 ## Prior shipped (prod build 91)
 - FF-merge `feature/step-2-fix` → `master`: Step 2 scroll (`setup-wizard-body` + `overflow-y-auto` on setup page; Step 3 keeps `overflow: hidden` via `.layout-planner-root`)
@@ -43,12 +44,14 @@
 ## Smoke-test status (2026-06-03)
 | Check | Result |
 |-------|--------|
-| Prod build / alias | **OK** — build 91 / `c661640` at https://popuphub.ca |
-| Command center layout (footer / viewport) | **Fixed locally** — needs deploy + coordinator sign-in |
+| Prod build / alias | **OK** — build 92 / `d382293` at https://popuphub.ca |
+| Command center layout (footer / viewport) | **Shipped** build 92 — re-verify after booth fix deploy |
+| Booth draw (any size → table footprint) | **Fixed locally** — needs deploy + sign-in |
+| Booth select / move / rearrange | **Fixed locally** — needs deploy + sign-in |
+| Table size pill drives new draws | **Fixed locally** |
+| Rotate room / auto-arrange toolbar | **Wired** — re-test after deploy (blocked on object select before) |
 | Step 3 blank canvas (interactive) | **Blocked** — coordinator login |
 | Step 2 Capacity scroll | **Not run** |
-| Command center nav | **Not run** |
-| Saved markets with booth cells | **Not run** |
 
 **Manual checklist after sign-in:** `/coordinator/dashboard` — site footer hidden, canvas fills viewport below nav, toolbar buttons respond, curation queue select works; **Back to market** / **+ New market** / **Full canvas** toggle.
 
@@ -67,11 +70,10 @@
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Commit + deploy command center layout fix** (this session's changes)
-2. **Coordinator smoke-test** — dashboard viewport, toolbar/canvas interactivity, Step 2 scroll, Step 3 blank start, exit links
-3. **Commit deploy fix** — `Invoke-NativeCommand` in `git-sync.ps1` if not bundled with layout fix
-4. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
-5. Step 1 QA promotion per patch docs when layout sign-off is done
+1. **Commit + deploy booth interaction fix** (`use-canvas-pointer`, `floor-plan-v2`, `floor-plan-canvas`)
+2. **Coordinator smoke-test** — draw booth any size, select/move, table size pill, rotate room, auto-arrange on `/coordinator/dashboard`
+3. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
+4. Step 1 QA promotion per patch docs when layout sign-off is done
 
 ## How to start the next chat
 ```

@@ -231,6 +231,39 @@ function normalizeDegrees(deg: number): number {
   return d
 }
 
+/**
+ * Map a freehand draw rect to the object that will actually be placed.
+ * Booths snap to the active table-length footprint and center inside
+ * the drawn area so coordinators need not drag exact dimensions.
+ */
+export function resolveDrawCommitRect(
+  kind: PlacedObject['kind'],
+  rect: Rect,
+  snapFt: number,
+  defaultBoothTableLengthFt?: number
+): Rect {
+  const minSize = snapFt || 1
+  if (kind !== 'booth' || defaultBoothTableLengthFt == null) {
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: Math.max(minSize, rect.width),
+      height: Math.max(minSize, rect.height),
+    }
+  }
+  const { width, height } = boothDimensionsForTableLength(
+    defaultBoothTableLengthFt
+  )
+  const cx = rect.x + rect.width / 2
+  const cy = rect.y + rect.height / 2
+  return {
+    x: snapToGrid(cx - width / 2, snapFt),
+    y: snapToGrid(cy - height / 2, snapFt),
+    width,
+    height,
+  }
+}
+
 function roomFrameForBooth(
   booth: BoothObject,
   rooms: ReadonlyArray<RoomFrame>,
@@ -560,8 +593,30 @@ export function useCanvasPointer(
         }
       }
 
-      // Room frame select + drag before object hit-test so empty/new
-      // rooms (and the active room) stay grabbable over nearby booths.
+      // Placed objects win over empty room interior — otherwise every
+      // booth click inside a room starts a macro room drag instead of
+      // selecting or moving the booth.
+      const objectId =
+        toolState.tool === 'select'
+          ? target?.closest('[data-object-id]')?.getAttribute('data-object-id')
+          : null
+      if (objectId) {
+        const additive = e.shiftKey || e.metaKey || e.ctrlKey
+        const wasSelected = store.selectedIds.has(objectId)
+        if (additive) {
+          store.toggleSelection(objectId)
+        } else if (!wasSelected) {
+          store.setSelection([objectId])
+        }
+        const targetIds = wasSelected || additive
+          ? Array.from(new Set([...store.selectedIds, objectId]))
+          : [objectId]
+        capturePointer(e.currentTarget, e.pointerId)
+        beginDrag(e.pointerId, ft, targetIds)
+        return
+      }
+
+      // Room perimeter stroke, or empty interior when no object was hit.
       if (toolState.tool === 'select') {
         const roomStroke = target?.closest('[data-room-stroke="true"]')
         let roomId = roomStroke?.getAttribute('data-room-id') ?? null
@@ -618,25 +673,6 @@ export function useCanvasPointer(
           }
           return
         }
-      }
-
-      const objectId = target?.closest('[data-object-id]')?.getAttribute(
-        'data-object-id'
-      )
-      if (objectId) {
-        const additive = e.shiftKey || e.metaKey || e.ctrlKey
-        const wasSelected = store.selectedIds.has(objectId)
-        if (additive) {
-          store.toggleSelection(objectId)
-        } else if (!wasSelected) {
-          store.setSelection([objectId])
-        }
-        const targetIds = wasSelected || additive
-          ? Array.from(new Set([...store.selectedIds, objectId]))
-          : [objectId]
-        capturePointer(e.currentTarget, e.pointerId)
-        beginDrag(e.pointerId, ft, targetIds)
-        return
       }
 
       // Empty canvas in select mode → marquee.
@@ -1034,16 +1070,21 @@ export function useCanvasPointer(
       }
 
       if (draft) {
-        const rect = normalizeRect(draft.anchor, draft.current)
+        const rawRect = normalizeRect(draft.anchor, draft.current)
         if (
-          rect.width >= store.doc.snapFt ||
-          rect.height >= store.doc.snapFt
+          rawRect.width >= store.doc.snapFt ||
+          rawRect.height >= store.doc.snapFt
         ) {
           // A click without drag still produces a 1ft × 1ft object so the
           // user gets immediate visual feedback. Only commit when there's
           // at least one snap-unit of extent — guards against accidental
           // 0-area objects when the user just taps and lifts.
-          //
+          const rect = resolveDrawCommitRect(
+            draft.kind,
+            rawRect,
+            store.doc.snapFt,
+            defaultBoothTableLengthFtRef.current
+          )
           // Multi-room association: the new object inherits the room
           // whose perimeter contains its centroid (or, failing that,
           // the active room set by the host). This lets a coordinator
@@ -1298,20 +1339,19 @@ function commitDraft(
   debugLog?: (message: string) => void
 ): void {
   const log = debugLog ?? (() => {})
-  let width = Math.max(store.doc.snapFt || 1, rect.width)
-  let height = Math.max(store.doc.snapFt || 1, rect.height)
-  if (kind === 'booth' && defaultBoothTableLengthFt != null) {
-    const dims = boothDimensionsForTableLength(defaultBoothTableLengthFt)
-    width = dims.width
-    height = dims.height
-  }
+  const resolved = resolveDrawCommitRect(
+    kind,
+    rect,
+    store.doc.snapFt,
+    defaultBoothTableLengthFt
+  )
   const id = `obj-${crypto.randomUUID()}`
   const base = {
     id,
-    x: rect.x,
-    y: rect.y,
-    width,
-    height,
+    x: resolved.x,
+    y: resolved.y,
+    width: resolved.width,
+    height: resolved.height,
     rotation: 0,
   }
   let obj: PlacedObject
