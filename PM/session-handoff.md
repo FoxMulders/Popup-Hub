@@ -13,13 +13,12 @@
 
 
 ## Goal
-**Floor-plan booth interactions** — restore default table-size booth draws, object select/move, table-size pill driving new booths, and auto-arrange baseline; command center layout fix shipped in build 92.
+**Add-room → place objects** — after adding a room on a blank canvas, booth/fixture draws must commit inside that room (Step 3 wizard + command center + standalone layout).
 
 ## Shipped this session (local, uncommitted)
-- **Booth select/move:** pointer router now hit-tests placed objects before empty room interior (clicks on booths no longer start room drag)
-- **Default-size booth draw:** `resolveDrawCommitRect` centers a standard table footprint inside any freehand draw; preview + overlap checks use resolved size
-- **Table size pill → draw:** canvas `defaultBoothTableLengthFt` wired to `defaultPlacementSizeFt` (was stuck on venue baseline); auto-arrange uses same baseline
-- **Command center layout regression fix:** `useCoordinatorRouteChromeCleanup` preserved dashboard body flag; `:has()` CSS + flex canvas column (`d382293` / build 92 on prod)
+- **Add-room placement fix:** `hydrateFloorPlanDoc` seeds `doc.rooms` from wizard `layoutRooms` (frames only, no cells); wizard→doc sync uses id-based frame match + `useLayoutEffect` so new rooms are placeable before paint; placement rings use `ensurePlacementOuterRing`; draw/commit uses `resolvePlacementRoomId` + `isPointInRoomForObject` with active-room fallback; clearer overlap toast when draw is outside walls
+- **Verify:** `npx tsx scripts/verify-room-add-placement.ts`
+- **Prior (on master, needs deploy smoke):** booth select/move, default-size booth draw, table-size pill → draw, command center layout (`d382293` / build 92)
 
 ## Prior shipped (prod build 91)
 - FF-merge `feature/step-2-fix` → `master`: Step 2 scroll (`setup-wizard-body` + `overflow-y-auto` on setup page; Step 3 keeps `overflow: hidden` via `.layout-planner-root`)
@@ -46,6 +45,7 @@
 |-------|--------|
 | Prod build / alias | **OK** — build 92 / `d382293` at https://popuphub.ca |
 | Command center layout (footer / viewport) | **Shipped** build 92 — re-verify after booth fix deploy |
+| Add room → draw booth inside room | **Fixed locally** — `verify-room-add-placement.ts`; needs deploy + sign-in |
 | Booth draw (any size → table footprint) | **Fixed locally** — needs deploy + sign-in |
 | Booth select / move / rearrange | **Fixed locally** — needs deploy + sign-in |
 | Table size pill drives new draws | **Fixed locally** |
@@ -70,8 +70,9 @@
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Commit + deploy booth interaction fix** (`use-canvas-pointer`, `floor-plan-v2`, `floor-plan-canvas`)
-2. **Coordinator smoke-test** — draw booth any size, select/move, table size pill, rotate room, auto-arrange on `/coordinator/dashboard`
+1. **Commit + deploy** add-room placement + booth interaction fixes (`layout-hydration`, `is-point-in-room`, `floor-plan-v2`, `use-canvas-pointer`)
+2. **Smoke-test** — blank Step 3: Add room → draw booth inside frame; repeat on `/coordinator/dashboard`
+3. **Coordinator smoke-test** — select/move, table size pill, rotate room, auto-arrange
 3. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 4. Step 1 QA promotion per patch docs when layout sign-off is done
 

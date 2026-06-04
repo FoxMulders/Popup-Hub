@@ -5,7 +5,7 @@
  * entrance/exit fixtures in `venue_elements`) open on a blank grid.
  */
 
-import { docFromLegacyRooms } from './legacy-bridge'
+import { docFromLegacyRooms, frameListFromRooms } from './legacy-bridge'
 import { clearMultiRoomDraft, loadMultiRoomDraft } from './local-draft'
 import { forceRecomputeGeometry } from './geometry-sanitize'
 import { reconcileCanvasExtents } from './room-canvas'
@@ -86,6 +86,18 @@ export function hydrateFloorPlanDoc(
       )
     }
     clearMultiRoomDraft(eventId)
+  }
+
+  if (layoutRooms.length > 0) {
+    const frames = frameListFromRooms(layoutRooms)
+    return reconcileDocExtents(
+      forceRecomputeGeometry({
+        ...makeEmptyDoc(50, 50),
+        rooms: frames,
+        objects: [],
+        objectRoom: {},
+      })
+    )
   }
 
   return blankEditorDoc()

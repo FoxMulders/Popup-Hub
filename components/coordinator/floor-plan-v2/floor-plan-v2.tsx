@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -355,7 +356,8 @@ function FloorPlanV2Workspace({
   // edits, only re-sync the room frame metadata. This preserves the
   // user's draws and drags across add-room / rename-room flows.
   const lastRoomIdsKeyRef = useRef<string | null>(null)
-  useEffect(() => {
+
+  const syncLayoutRoomsToDoc = useCallback(() => {
     const idsKey = layoutRooms.map((r) => r.id).join('|')
     const isFirstSync = lastRoomIdsKeyRef.current === null
     lastRoomIdsKeyRef.current = idsKey
@@ -388,11 +390,10 @@ function FloorPlanV2Workspace({
 
     const sameFrames =
       merged.length === docFrames.length &&
-      merged.every((m, i) => {
-        const d = docFrames[i]
+      merged.every((m) => {
+        const d = docFrameById.get(m.id)
         return (
           d &&
-          d.id === m.id &&
           d.name === m.name &&
           d.widthFt === m.widthFt &&
           d.lengthFt === m.lengthFt &&
@@ -446,7 +447,12 @@ function FloorPlanV2Workspace({
     // Note: any objects that belonged to a now-deleted room get left
     // in the doc orphaned; the save bridge folds them into the first
     // surviving room as a safety net.
-  }, [layoutRooms, store.doc.rooms, store.doc.canvasWidthFt, store.doc.canvasLengthFt])
+  }, [layoutRooms, store])
+
+  // Run before paint so a newly added wizard room is placeable immediately.
+  useLayoutEffect(() => {
+    syncLayoutRoomsToDoc()
+  }, [syncLayoutRoomsToDoc])
 
   // The "active room" follows the wizard's `layoutActiveRoomId` so
   // sidebar selections in the parent flow keep working. Selection of
@@ -1929,16 +1935,29 @@ function FloorPlanV2Workspace({
                 )
               }}
               onOverlapViolation={() => {
-                if ((store.doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId).length === 0) {
+                const placeableRooms = (store.doc.rooms ?? []).filter(
+                  (r) => !r.mergedIntoObjectId
+                )
+                if (placeableRooms.length === 0) {
                   toast.message(
                     'Add a room first — use Add room in the toolbar, then draw booths inside it.',
                     { duration: 3200 }
                   )
                   return
                 }
+                if (
+                  layoutActiveRoomId &&
+                  !placeableRooms.some((r) => r.id === layoutActiveRoomId)
+                ) {
+                  toast.message(
+                    'Room is still loading on the canvas — try drawing again in a moment.',
+                    { duration: 2800 }
+                  )
+                  return
+                }
                 toast.error(
-                  'Objects cannot overlap — move the selection so it clears other fixtures, then try again.',
-                  { duration: 2400 }
+                  'Draw inside the room interior — booths cannot overlap fixtures or sit outside the walls.',
+                  { duration: 2800 }
                 )
               }}
               onRoomCanvasLimitBlocked={() => {

@@ -11,13 +11,13 @@ import {
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import { boothDimensionsForTableLength } from '@/lib/booth-planner/table-booth-consolidation'
 import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
-import { isValidPlacementLocation } from '../canvas/canvas-engine'
 import { useDebugLog } from '../debug/debug-log-context'
 import { formatPlacementProbe } from '../debug/format-geometry-log'
 import {
-  findRoomIdForPlacementPoint,
-  resolveRoomPlacementSurface,
-} from '../state/placement-surface'
+  isPointInRoomForObject,
+  resolvePlacementRoomId,
+} from '../geometry/is-point-in-room'
+import { resolveRoomPlacementSurface } from '../state/placement-surface'
 import type { ToolState } from '../tools/types'
 import {
   aabbFitsCanvas,
@@ -1094,19 +1094,20 @@ export function useCanvasPointer(
             x: rect.x + rect.width / 2,
             y: rect.y + rect.height / 2,
           }
-          const drawRoomId =
-            findRoomIdForPlacementPoint(store.doc, center) ??
-            activeRoomIdRef.current ??
-            null
+          const drawRoomId = resolvePlacementRoomId(
+            store.doc,
+            center,
+            activeRoomIdRef.current
+          )
           if (
             !drawRoomId ||
-            !isValidPlacementLocation(store.doc, center, {
+            !isPointInRoomForObject(store.doc, {
               x: rect.x,
               y: rect.y,
               width: rect.width,
               height: rect.height,
               rotation: 0,
-            })
+            }, drawRoomId)
           ) {
             addLogRef.current(
               `Placement rejected (draw ${draft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} validSurface=${Boolean(drawRoomId)}`
@@ -1430,10 +1431,11 @@ function commitDraft(
     return
   }
   const placementRoomId =
-    roomId ?? findRoomIdForPlacementPoint(store.doc, objectCenter(obj))
+    roomId ??
+    resolvePlacementRoomId(store.doc, objectCenter(obj), null)
   if (
     !placementRoomId ||
-    !isValidPlacementLocation(store.doc, objectCenter(obj), obj)
+    !isPointInRoomForObject(store.doc, obj, placementRoomId)
   ) {
     log(
       `Placement rejected (${obj.kind}): center=(${objectCenter(obj).x},${objectCenter(obj).y}) room=${placementRoomId ?? 'none'}`

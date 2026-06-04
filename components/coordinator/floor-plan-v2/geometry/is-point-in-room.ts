@@ -2,15 +2,30 @@
  * Room polygon hit-testing — the only valid placement surface.
  */
 
-import { pointInsideOuterRing } from '@/lib/floor-plan/placement-ring-orientation'
+import {
+  ensurePlacementOuterRing,
+  pointInsideOuterRing,
+} from '@/lib/floor-plan/placement-ring-orientation'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from '../state/types'
 import { frameToRing } from '../state/placement-surface'
+
+function roomInteriorAnchor(frame: RoomFrame): { x: number; y: number } {
+  return {
+    x: frame.originX + frame.widthFt / 2,
+    y: frame.originY + frame.lengthFt / 2,
+  }
+}
 
 function roomRings(
   frame: RoomFrame
 ): ReadonlyArray<ReadonlyArray<readonly [number, number]>> {
   if (frame.perimeterRing && frame.perimeterRing.length >= 3) {
-    return [frame.perimeterRing]
+    return [
+      ensurePlacementOuterRing(
+        frame.perimeterRing as Array<[number, number]>,
+        roomInteriorAnchor(frame)
+      ),
+    ]
   }
   return [frameToRing(frame)]
 }
@@ -93,4 +108,22 @@ export function isValidPlacementPoint(
     if (pointInRoomRings(p, roomRings(frame))) return true
   }
   return false
+}
+
+/**
+ * Resolve which room should own a placement at `p`. Ray-cast hit wins;
+ * otherwise fall back to `preferredRoomId` when the point lies inside
+ * that frame (covers active-room draws before sync catches up).
+ */
+export function resolvePlacementRoomId(
+  doc: FloorPlanDoc,
+  p: { x: number; y: number },
+  preferredRoomId?: string | null
+): string | null {
+  const hit = findRoomIdForPlacementPoint(doc, p)
+  if (hit) return hit
+  if (preferredRoomId && isPointInRoom(doc, p.x, p.y, preferredRoomId)) {
+    return preferredRoomId
+  }
+  return null
 }
