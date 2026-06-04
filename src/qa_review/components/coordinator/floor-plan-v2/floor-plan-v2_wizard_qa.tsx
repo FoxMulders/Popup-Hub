@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -359,7 +360,8 @@ function FloorPlanV2Workspace({
   // Project wizard `layoutRooms` onto doc room frames when the coordinator
   // adds or edits rooms — skip when both sides are empty (blank-start).
   const lastRoomIdsKeyRef = useRef<string | null>(null)
-  useEffect(() => {
+  // Run before paint so a newly added wizard room is placeable immediately.
+  useLayoutEffect(() => {
     const idsKey = layoutRooms.map((r) => r.id).join('|')
     const isFirstSync = lastRoomIdsKeyRef.current === null
     lastRoomIdsKeyRef.current = idsKey
@@ -386,11 +388,10 @@ function FloorPlanV2Workspace({
 
     const sameFrames =
       merged.length === docFrames.length &&
-      merged.every((m, i) => {
-        const d = docFrames[i]
+      merged.every((m) => {
+        const d = docFrameById.get(m.id)
         return (
           d &&
-          d.id === m.id &&
           d.name === m.name &&
           d.widthFt === m.widthFt &&
           d.lengthFt === m.lengthFt &&
@@ -435,7 +436,7 @@ function FloorPlanV2Workspace({
       },
       { pushHistory: false }
     )
-  }, [layoutRooms, store.doc.rooms, store.doc.canvasWidthFt, store.doc.canvasLengthFt])
+  }, [layoutRooms, store])
 
   // The "active room" follows the wizard's `layoutActiveRoomId` so
   // sidebar selections in the parent flow keep working. Selection of

@@ -355,7 +355,12 @@ export function useCanvasPointerWizardQa(
     defaultBoothTableLengthFtRef.current = options.defaultBoothTableLengthFt
   }, [options.defaultBoothTableLengthFt])
 
-  const [draft, setDraft] = useState<DrawDraft>(null)
+  const [draft, setDraftState] = useState<DrawDraft>(null)
+  const draftRef = useRef<DrawDraft>(null)
+  const setDraft = useCallback((next: DrawDraft) => {
+    draftRef.current = next
+    setDraftState(next)
+  }, [])
   const dragRef = useRef<DragState>(null)
   const [marquee, setMarquee] = useState<MarqueeState>(null)
   const rotateRef = useRef<RotateState>(null)
@@ -847,12 +852,13 @@ export function useCanvasPointerWizardQa(
         return
       }
 
-      if (draft) {
+      const activeDraft = draftRef.current
+      if (activeDraft) {
         const snapped = snapPoint(ft, store.doc.snapFt)
         setDraft({
-          anchor: draft.anchor,
+          anchor: activeDraft.anchor,
           current: snapped,
-          kind: draft.kind,
+          kind: activeDraft.kind,
         })
         return
       }
@@ -909,8 +915,8 @@ export function useCanvasPointerWizardQa(
     },
     [
       commandCenterViewport,
-      draft,
       marquee,
+      setDraft,
       store,
       transform.zoom,
     ]
@@ -1035,18 +1041,19 @@ export function useCanvasPointerWizardQa(
         return
       }
 
-      if (draft) {
-        const rawRect = normalizeRect(draft.anchor, draft.current)
+      const activeDraft = draftRef.current
+      if (activeDraft) {
+        const rawRect = normalizeRect(activeDraft.anchor, activeDraft.current)
         const hasDragExtent =
           rawRect.width >= store.doc.snapFt ||
           rawRect.height >= store.doc.snapFt
         const rect = resolveDrawCommitRect(
-          draft.kind,
+          activeDraft.kind,
           hasDragExtent
             ? rawRect
             : {
-                x: draft.anchor.x,
-                y: draft.anchor.y,
+                x: activeDraft.anchor.x,
+                y: activeDraft.anchor.y,
                 width: 0,
                 height: 0,
               },
@@ -1073,7 +1080,7 @@ export function useCanvasPointerWizardQa(
           })
         ) {
           addLogRef.current(
-            `Placement rejected (draw ${draft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} openCanvas=${openCanvas}`
+            `Placement rejected (draw ${activeDraft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} openCanvas=${openCanvas}`
           )
           onOverlapViolationRef.current?.()
           setDraft(null)
@@ -1081,7 +1088,7 @@ export function useCanvasPointerWizardQa(
         }
         commitDraft(
           store,
-          draft.kind,
+          activeDraft.kind,
           rect,
           eventCategoryNamesRef.current,
           drawRoomId,
@@ -1216,7 +1223,7 @@ export function useCanvasPointerWizardQa(
         setMarquee(null)
       }
     },
-    [autoArrangeMode, draft, flushMove, marquee, onAfterDrawCommit, store]
+    [autoArrangeMode, flushMove, marquee, onAfterDrawCommit, setDraft, store]
   )
 
   // Cancel any in-flight rAF on unmount so we don't fire flushMove

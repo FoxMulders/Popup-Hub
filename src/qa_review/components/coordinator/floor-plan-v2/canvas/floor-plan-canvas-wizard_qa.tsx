@@ -24,6 +24,7 @@ import { activeRoomFrames } from '@/components/coordinator/floor-plan-v2/canvas/
 import { FLOOR_PLAN_CANVAS_ID } from '@/components/coordinator/floor-plan-v2/canvas/canvas-focus'
 import { useViewport, type ViewportApi, type ZoomMath } from '@/components/coordinator/floor-plan-v2/canvas/use-viewport'
 import { useCanvasPointerWizardQa } from '@/src/qa_review/components/coordinator/floor-plan-v2/interactions/use-canvas-pointer-wizard_qa'
+import { resolveDrawCommitRect } from '@/components/coordinator/floor-plan-v2/interactions/use-canvas-pointer'
 import {
   detectPlacedObjectOverlaps,
   placedObjectOverlapsAny,
@@ -343,24 +344,48 @@ export function FloorPlanCanvasWizardQa({
   )
 
   const draftOverlaps = useMemo(() => {
-    const rect = pointer.draftRect
+    const rawRect = pointer.draftRect
     const kind = pointer.draftKind
-    if (!rect || !kind) return false
+    if (!rawRect || !kind) return false
+    const rect = resolveDrawCommitRect(
+      kind,
+      rawRect,
+      store.doc.snapFt,
+      defaultBoothTableLengthFt
+    )
     const probe = {
       id: '__draft__',
       kind,
       x: rect.x,
       y: rect.y,
-      width: Math.max(store.doc.snapFt || 1, rect.width),
-      height: Math.max(store.doc.snapFt || 1, rect.height),
+      width: rect.width,
+      height: rect.height,
       rotation: 0,
     } as PlacedObject
     return placedObjectOverlapsAny(probe, store.doc.objects, undefined, mergeOverlapCtx)
   }, [
+    defaultBoothTableLengthFt,
     mergeOverlapCtx,
     pointer.draftKind,
     pointer.draftRect,
     store.doc.objects,
+    store.doc.snapFt,
+  ])
+
+  const draftPreviewRect = useMemo(() => {
+    const rawRect = pointer.draftRect
+    const kind = pointer.draftKind
+    if (!rawRect || !kind) return null
+    return resolveDrawCommitRect(
+      kind,
+      rawRect,
+      store.doc.snapFt,
+      defaultBoothTableLengthFt
+    )
+  }, [
+    defaultBoothTableLengthFt,
+    pointer.draftKind,
+    pointer.draftRect,
     store.doc.snapFt,
   ])
 
@@ -666,7 +691,7 @@ export function FloorPlanCanvasWizardQa({
               })()
             : null}
           <DraftPreview
-            rect={pointer.draftRect}
+            rect={draftPreviewRect}
             kind={pointer.draftKind}
             pxPerFt={pxPerFt}
             hasOverlap={draftOverlaps}
