@@ -18,6 +18,7 @@
 **Coordinator smoke-test on prod** — verify layout fixes shipped in build **106** (`cde554e` @ https://popuphub.ca). Auto-arrange now keeps guest/patron tables separate from vendor booths (verify with `npx tsx scripts/verify-auto-arrange.ts` guest-table section).
 
 ## Shipped this session (local, not deployed)
+- **Table size / draw mode: last placed table stays put:** New draws auto-select the booth; switching Patron round ↔ Booth (vendor) or Round ↔ Booth pill columns was reshaping the selection via `planTableSizeChange`. Now patches apply only when purpose+shape match the selection; cross-category changes update the next-draw template and clear selection. Draw-toolbar buttons use `templateOnly`. `table-size-selection.ts` + `floor-plan-v2.tsx` / wizard QA. Verify: `npx tsx scripts/verify-canvas-state-smoke.ts`.
 - **Auto-arrange: guest tables separate from vendor booths:** Vendor booths still use grid/staggered/perimeter consolidation and layout. Guest/patron round and rect tables are excluded from vendor consolidation and the vendor grid — they pack in the area where they were drawn (or room center / open space away from vendor units), preserving each table's laid width/height (round tables stay circular). `isGuestTableBooth` in `table-shape.ts`; `arrangeGuestTables` in `auto-arrange.ts`. Verification: guest-table block in `scripts/verify-auto-arrange.ts` (4/4 pass).
 
 ## Shipped this session (prod build 106, `cde554e`)

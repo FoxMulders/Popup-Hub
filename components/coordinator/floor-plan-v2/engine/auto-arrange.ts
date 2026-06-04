@@ -9,7 +9,8 @@
  * Legacy alias `center-out` maps to `grid`.
  *
  * Honors structural obstacles (restricted zones), multi-table consolidation,
- * and same-category proximity when slots remain after deterministic placement.
+ * same-category proximity when slots remain after deterministic placement,
+ * and keeps guest/patron seating tables separate from vendor booth layout.
  */
 
 import type {
@@ -31,6 +32,7 @@ import {
   DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import {
   consolidateBoothsForAutoArrange,
   type VendorTableMeta,
@@ -400,79 +402,301 @@ const PERIMETER_ROW_TO_EDGE: Record<
   3: 'left',
 }
 
-export function autoArrange(
-  doc: FloorPlanDoc,
-  options: AutoArrangeOptions = {}
-): AutoArrangeResult {
-  const mode = normalizeAutoArrangeMode(options.mode)
-  const {
-    eventCategoryNames,
-    maxBooths,
-    baselineTableLengthFt,
-    vendorTableMetaByKey,
-    aisleWidthFt = DEFAULT_AISLE_WIDTH_FT,
-  } = options
+interface VendorAutoArrangePassResult {
+  newVendorBooths: BoothObject[]
+  vendorDroppedCount: number
+  unsatisfiedCategoryCount: number
+  overflowCount: number
+  perimeterCapacityError?: string
+  layoutExplanation?: string
+}
 
-  const rawSourceBooths = doc.objects.filter(
-    (o): o is BoothObject => o.kind === 'booth'
+interface GuestAutoArrangePassResult {
+  placed: BoothObject[]
+  dropped: BoothObject[]
+}
+
+function boothCenter(b: Pick<BoothObject, 'x' | 'y' | 'width' | 'height'>): {
+  x: number
+  y: number
+} {
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+}
+
+function sortGuestTablesByPlacement(booths: BoothObject[]): BoothObject[] {
+  return [...booths].sort((a, b) => {
+    const ac = boothCenter(a)
+    const bc = boothCenter(b)
+    if (Math.abs(ac.y - bc.y) > 0.01) return ac.y - bc.y
+    return ac.x - bc.x
+  })
+}
+
+function rectOverlapsAny(rect: Rect, rects: Rect[], clearanceFt = 0): boolean {
+  const padded =
+    clearanceFt > 0 ? expandRectForClearance(rect, clearanceFt) : rect
+  return rects.some((other) => aabbOverlap(padded, other))
+}
+
+function guestTableFits(
+  rect: Rect,
+  cw: number,
+  cl: number,
+  wallInsetFt: number,
+  obstacles: Rect[],
+  vendorRects: Rect[],
+  placedRects: Rect[]
+): boolean {
+  if (
+    rect.x < wallInsetFt - 1e-6 ||
+    rect.y < wallInsetFt - 1e-6 ||
+    rect.x + rect.width > cw - wallInsetFt + 1e-6 ||
+    rect.y + rect.height > cl - wallInsetFt + 1e-6
+  ) {
+    return false
+  }
+  if (rectOverlapsAny(rect, obstacles, BOOTH_EDGE_CLEARANCE_FT)) return false
+  if (rectOverlapsAny(rect, vendorRects, BOOTH_EDGE_CLEARANCE_FT)) return false
+  if (rectOverlapsAny(rect, placedRects, BOOTH_EDGE_CLEARANCE_FT)) return false
+  return true
+}
+
+function guestPlacementBounds(booths: BoothObject[]): Rect | null {
+  if (booths.length === 0) return null
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const b of booths) {
+    minX = Math.min(minX, b.x)
+    minY = Math.min(minY, b.y)
+    maxX = Math.max(maxX, b.x + b.width)
+    maxY = Math.max(maxY, b.y + b.height)
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+/** Prefer the area guest tables were drawn in; fall back to room center or open space away from vendors. */
+function guestPackOrigins(
+  cw: number,
+  cl: number,
+  wallInsetFt: number,
+  guestBooths: BoothObject[],
+  vendorRects: Rect[]
+): Array<{ x: number; y: number }> {
+  const origins: Array<{ x: number; y: number }> = []
+  const bounds = guestPlacementBounds(guestBooths)
+  if (bounds) {
+    origins.push({ x: bounds.x, y: bounds.y })
+    origins.push({
+      x: bounds.x + bounds.width / 2,
+      y: bounds.y + bounds.height / 2,
+    })
+  }
+  origins.push({ x: cw / 2, y: cl / 2 })
+  origins.push({ x: wallInsetFt + 2, y: wallInsetFt + 2 })
+  origins.push({
+    x: Math.max(wallInsetFt, cw / 2 - 12),
+    y: Math.max(wallInsetFt, cl / 2 - 12),
+  })
+
+  const scored = origins.map((origin) => {
+    let minDist = Infinity
+    for (const vr of vendorRects) {
+      const vcx = vr.x + vr.width / 2
+      const vcy = vr.y + vr.height / 2
+      minDist = Math.min(minDist, Math.hypot(origin.x - vcx, origin.y - vcy))
+    }
+    if (vendorRects.length === 0) minDist = Infinity
+    const overlapsVendor = vendorRects.some((vr) =>
+      aabbOverlap(
+        expandRectForClearance(
+          { x: origin.x, y: origin.y, width: 1, height: 1 },
+          BOOTH_EDGE_CLEARANCE_FT
+        ),
+        vr
+      )
+    )
+    return { origin, score: minDist - (overlapsVendor ? 1000 : 0) }
+  })
+  scored.sort((a, b) => b.score - a.score)
+  const seen = new Set<string>()
+  const unique: Array<{ x: number; y: number }> = []
+  for (const { origin } of scored) {
+    const key = `${roundHalf(origin.x)},${roundHalf(origin.y)}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(origin)
+  }
+  return unique
+}
+
+function preserveGuestTableFootprint(booth: BoothObject): BoothObject {
+  const w = roundHalf(booth.width)
+  const h = roundHalf(booth.height)
+  const isRound =
+    booth.tableShape === 'round' ||
+    (Math.abs(w - h) < 0.01 && booth.tableShape !== 'rectangular')
+  const diameter = isRound ? Math.max(w, h) : null
+  return {
+    ...booth,
+    width: diameter ?? w,
+    height: diameter ?? h,
+    rotation: 0,
+    tablePurpose: 'guest',
+    tableShape: isRound ? 'round' : booth.tableShape ?? 'rectangular',
+  }
+}
+
+/**
+ * Pack patron / guest tables separately from vendor booths — preserves
+ * each table's laid size (round tables stay circular) and sorts them
+ * near where they were placed or in open space away from vendor units.
+ */
+export function arrangeGuestTables(
+  guestBooths: BoothObject[],
+  ctx: {
+    cw: number
+    cl: number
+    obstacles: Rect[]
+    vendorRects: Rect[]
+    wallInsetFt?: number
+  }
+): GuestAutoArrangePassResult {
+  if (guestBooths.length === 0) {
+    return { placed: [], dropped: [] }
+  }
+
+  const wallInsetFt = ctx.wallInsetFt ?? WALL_BUFFER_FT
+  const sorted = sortGuestTablesByPlacement(guestBooths.map(preserveGuestTableFootprint))
+  const origins = guestPackOrigins(
+    ctx.cw,
+    ctx.cl,
+    wallInsetFt,
+    sorted,
+    ctx.vendorRects
   )
-  const baselineFt =
-    baselineTableLengthFt ?? DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
-  const allSourceBooths = consolidateBoothsForAutoArrange(
-    rawSourceBooths,
-    baselineFt,
-    vendorTableMetaByKey
-  )
-  if (allSourceBooths.length === 0) {
-    return {
-      doc,
-      placedCount: 0,
-      droppedCount: 0,
-      unsatisfiedCategoryCount: 0,
-      overflowCount: 0,
+
+  for (const anchor of origins) {
+    const placed: BoothObject[] = []
+    const placedRects: Rect[] = []
+    const dropped: BoothObject[] = []
+    let rowX = anchor.x
+    let rowY = anchor.y
+    let rowMaxH = 0
+    let rowStartX = anchor.x
+    const maxRowWidth = ctx.cw - wallInsetFt * 2
+
+    for (const src of sorted) {
+      let placedOne = false
+      let attempts = 0
+      while (!placedOne && attempts < sorted.length + 4) {
+        attempts++
+        const candidate: Rect = {
+          x: rowX,
+          y: rowY,
+          width: src.width,
+          height: src.height,
+        }
+
+        const rowOverflow =
+          candidate.x + candidate.width > anchor.x + maxRowWidth &&
+          candidate.x > rowStartX
+
+        if (rowOverflow) {
+          rowX = rowStartX
+          rowY += rowMaxH + BOOTH_EDGE_CLEARANCE_FT
+          rowMaxH = 0
+          continue
+        }
+
+        if (
+          guestTableFits(
+            candidate,
+            ctx.cw,
+            ctx.cl,
+            wallInsetFt,
+            ctx.obstacles,
+            ctx.vendorRects,
+            placedRects
+          )
+        ) {
+          const item: BoothObject = {
+            ...src,
+            x: candidate.x,
+            y: candidate.y,
+            width: src.width,
+            height: src.height,
+            rotation: 0,
+          }
+          placed.push(item)
+          placedRects.push(objectFootprintAabb(item))
+          rowX += src.width + BOOTH_EDGE_CLEARANCE_FT
+          rowMaxH = Math.max(rowMaxH, src.height)
+          placedOne = true
+          continue
+        }
+
+        rowX = rowStartX
+        rowY += (rowMaxH || src.height) + BOOTH_EDGE_CLEARANCE_FT
+        rowMaxH = 0
+      }
+
+      if (!placedOne) {
+        dropped.push(src)
+      }
+    }
+
+    if (dropped.length === 0) {
+      return { placed, dropped }
     }
   }
 
-  /*
-   * Apply the structural booth ceiling from Step 2 (which already
-   * subtracts walking aisles and fire paths). Booths past the cap
-   * are dropped before any physical placement attempt — they don't
-   * deserve a slot because the venue can't safely host them.
-   */
-  const sourceBooths =
-    typeof maxBooths === 'number' && maxBooths >= 0
-      ? allSourceBooths.slice(0, Math.floor(maxBooths))
-      : allSourceBooths
-  const overflowCount = allSourceBooths.length - sourceBooths.length
+  return { placed: [], dropped: sorted }
+}
+
+function autoArrangeVendorBooths(
+  doc: FloorPlanDoc,
+  sourceBooths: BoothObject[],
+  options: {
+    mode: AutoArrangeMode
+    eventCategoryNames?: ReadonlyArray<string>
+    aisleWidthFt: number
+    overflowCount: number
+    placementOrigin: { x: number; y: number }
+    localRing: PlacementRing | null
+    otherObjects: PlacedObject[]
+    obstacles: Rect[]
+  }
+): VendorAutoArrangePassResult {
+  const {
+    mode,
+    eventCategoryNames,
+    aisleWidthFt,
+    overflowCount,
+    localRing,
+    otherObjects,
+    obstacles,
+  } = options
+
   if (sourceBooths.length === 0) {
     return {
-      doc: {
-        ...doc,
-        objects: doc.objects.filter((o) => o.kind !== 'booth'),
-      },
-      placedCount: 0,
-      droppedCount: 0,
+      newVendorBooths: [],
+      vendorDroppedCount: 0,
       unsatisfiedCategoryCount: 0,
       overflowCount,
     }
   }
 
-  // Use the median footprint so a single oversized outlier booth
-  // doesn't blow up every row's spacing. Snap to 0.5ft for tidy grid
-  // alignment.
+  const cw = doc.canvasWidthFt
+  const cl = doc.canvasLengthFt
+  const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
+  const snapFt = doc.snapFt > 0 ? doc.snapFt : 0.5
+
   const widths = [...sourceBooths.map((b) => b.width)].sort((a, b) => a - b)
   const heights = [...sourceBooths.map((b) => b.height)].sort((a, b) => a - b)
   const boothW = roundHalf(widths[Math.floor(widths.length / 2)] ?? 6)
   const boothH = roundHalf(heights[Math.floor(heights.length / 2)] ?? 5)
-
-  const cw = doc.canvasWidthFt
-  const cl = doc.canvasLengthFt
-
-  const otherObjects = doc.objects.filter((o) => o.kind !== 'booth')
-  const obstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
-
-  const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
-  const snapFt = doc.snapFt > 0 ? doc.snapFt : 0.5
 
   const doors = otherObjects.filter((o) => o.kind === 'door')
   const entranceDoor =
@@ -484,14 +708,6 @@ export function autoArrange(
         y: entranceDoor.y + entranceDoor.height / 2,
       }
     : undefined
-
-  const placementOrigin = options.placementOrigin ?? { x: 0, y: 0 }
-  const localRing = options.placementOuterRing
-    ? options.placementOuterRing.map(
-        ([x, y]) =>
-          [x - placementOrigin.x, y - placementOrigin.y] as [number, number]
-      )
-    : null
 
   if (mode === 'perimeter-only' && localRing) {
     const perimeterSlots = perimeterSlotsAlongRing(localRing, boothW, boothH).map(
@@ -507,9 +723,8 @@ export function autoArrange(
     }
     if (perimeterSlots.length === 0) {
       return {
-        doc: { ...doc, objects: otherObjects },
-        placedCount: 0,
-        droppedCount: sourceBooths.length,
+        newVendorBooths: [],
+        vendorDroppedCount: sourceBooths.length,
         unsatisfiedCategoryCount: 0,
         overflowCount,
       }
@@ -528,11 +743,9 @@ export function autoArrange(
         perimeterOrientFrame,
       }
     )
-    const placedCount = newBooths.length
     return {
-      doc: { ...doc, objects: [...otherObjects, ...newBooths] },
-      placedCount,
-      droppedCount: sourceBooths.length - placedCount,
+      newVendorBooths: newBooths,
+      vendorDroppedCount: sourceBooths.length - newBooths.length,
       unsatisfiedCategoryCount,
       overflowCount,
     }
@@ -556,9 +769,8 @@ export function autoArrange(
 
   if (!deterministic.ok) {
     return {
-      doc: { ...doc, objects: otherObjects },
-      placedCount: 0,
-      droppedCount: sourceBooths.length,
+      newVendorBooths: [],
+      vendorDroppedCount: sourceBooths.length,
       unsatisfiedCategoryCount: 0,
       overflowCount,
       perimeterCapacityError: deterministic.error,
@@ -601,20 +813,115 @@ export function autoArrange(
       layoutMode === 'perimeter' ? perimeterOrientFrame : undefined,
   })
 
-  const placedCount = newBooths.length
-  const droppedCount = sourceBooths.length - placedCount
-
   return {
-    doc: {
-      ...doc,
-      objects: [...otherObjects, ...newBooths],
-    },
-    placedCount,
-    droppedCount,
+    newVendorBooths: newBooths,
+    vendorDroppedCount: sourceBooths.length - newBooths.length,
     unsatisfiedCategoryCount,
     overflowCount,
     layoutExplanation: deterministic.explanation,
   }
+}
+
+function mergeAutoArrangeResult(
+  doc: FloorPlanDoc,
+  otherObjects: PlacedObject[],
+  vendorPass: VendorAutoArrangePassResult,
+  guestPass: GuestAutoArrangePassResult
+): AutoArrangeResult {
+  const allBooths = [...vendorPass.newVendorBooths, ...guestPass.placed]
+  return {
+    doc: { ...doc, objects: [...otherObjects, ...allBooths] },
+    placedCount: allBooths.length,
+    droppedCount: vendorPass.vendorDroppedCount + guestPass.dropped.length,
+    unsatisfiedCategoryCount: vendorPass.unsatisfiedCategoryCount,
+    overflowCount: vendorPass.overflowCount,
+    perimeterCapacityError: vendorPass.perimeterCapacityError,
+    layoutExplanation: vendorPass.layoutExplanation,
+  }
+}
+
+export function autoArrange(
+  doc: FloorPlanDoc,
+  options: AutoArrangeOptions = {}
+): AutoArrangeResult {
+  const mode = normalizeAutoArrangeMode(options.mode)
+  const {
+    eventCategoryNames,
+    maxBooths,
+    baselineTableLengthFt,
+    vendorTableMetaByKey,
+    aisleWidthFt = DEFAULT_AISLE_WIDTH_FT,
+  } = options
+
+  const rawBooths = doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth'
+  )
+  const guestBooths = rawBooths.filter((b) => isGuestTableBooth(b))
+  const vendorRawBooths = rawBooths.filter((b) => !isGuestTableBooth(b))
+
+  const baselineFt =
+    baselineTableLengthFt ?? DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
+  const allVendorBooths = consolidateBoothsForAutoArrange(
+    vendorRawBooths,
+    baselineFt,
+    vendorTableMetaByKey
+  )
+
+  const cw = doc.canvasWidthFt
+  const cl = doc.canvasLengthFt
+  const otherObjects = doc.objects.filter((o) => o.kind !== 'booth')
+  const obstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
+
+  if (allVendorBooths.length === 0 && guestBooths.length === 0) {
+    return {
+      doc,
+      placedCount: 0,
+      droppedCount: 0,
+      unsatisfiedCategoryCount: 0,
+      overflowCount: 0,
+    }
+  }
+
+  const sourceBooths =
+    typeof maxBooths === 'number' && maxBooths >= 0
+      ? allVendorBooths.slice(0, Math.floor(maxBooths))
+      : allVendorBooths
+  const overflowCount = allVendorBooths.length - sourceBooths.length
+
+  const placementOrigin = options.placementOrigin ?? { x: 0, y: 0 }
+  const localRing = options.placementOuterRing
+    ? options.placementOuterRing.map(
+        ([x, y]) =>
+          [x - placementOrigin.x, y - placementOrigin.y] as [number, number]
+      )
+    : null
+
+  const vendorPass = autoArrangeVendorBooths(doc, sourceBooths, {
+    mode,
+    eventCategoryNames,
+    aisleWidthFt,
+    overflowCount,
+    placementOrigin,
+    localRing,
+    otherObjects,
+    obstacles,
+  })
+
+  const vendorRects = vendorPass.newVendorBooths.map((b) =>
+    objectFootprintAabb(b)
+  )
+  const guestPass = arrangeGuestTables(guestBooths, {
+    cw,
+    cl,
+    obstacles,
+    vendorRects,
+  })
+
+  const merged = mergeAutoArrangeResult(doc, otherObjects, vendorPass, guestPass)
+  if (vendorPass.perimeterCapacityError && merged.placedCount === 0) {
+    merged.perimeterCapacityError = vendorPass.perimeterCapacityError
+  }
+  return merged
 }
 
 /**

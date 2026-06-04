@@ -642,6 +642,7 @@ function FloorPlanV2Workspace({
       }
       if (nextDefaultPlacement != null) {
         applyDefaultPlacementSpec(nextDefaultPlacement)
+        store.setSelection([])
       }
     },
     [store, safeTableSizeFt, applyDefaultPlacementSpec]
@@ -650,15 +651,15 @@ function FloorPlanV2Workspace({
   const handlePrepareTableDraw = useCallback(
     (selection: TableSizeSpec) => {
       const normalized = normalizeTableSizeSpec(selection, safeTableSizeFt)
-      const { objectPatches, nextDefaultPlacement } = planTableSizeChange({
+      const { nextDefaultPlacement } = planTableSizeChange({
         objects: store.doc.objects,
         selectedIds: store.selectedIds,
         selection: normalized,
+        templateOnly: true,
       })
-      if (objectPatches.length > 0) {
-        store.updateObjects(objectPatches)
-      } else if (nextDefaultPlacement != null) {
+      if (nextDefaultPlacement != null) {
         applyDefaultPlacementSpec(nextDefaultPlacement, { activateDraw: true })
+        store.setSelection([])
       } else {
         setTool('draw')
         setDrawShape('booth')

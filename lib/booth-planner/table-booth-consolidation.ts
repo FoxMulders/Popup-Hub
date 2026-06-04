@@ -10,6 +10,7 @@ import {
 } from '@/lib/booth-planner/layout-table-size'
 import {
   boothDimensionsForTable,
+  isGuestTableBooth,
   type TableShape,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
@@ -106,10 +107,20 @@ export function consolidateBoothsForAutoArrange(
   baselineTableLengthFt: LayoutBaselineTableLengthFt,
   vendorMetaByKey?: Map<string, VendorTableMeta>
 ): BoothObject[] {
+  const guestBooths: BoothObject[] = []
+  const vendorBooths: BoothObject[] = []
+  for (const booth of booths) {
+    if (isGuestTableBooth(booth)) {
+      guestBooths.push(booth)
+    } else {
+      vendorBooths.push(booth)
+    }
+  }
+
   const groups = new Map<string, BoothObject[]>()
   const order: string[] = []
 
-  for (const booth of booths) {
+  for (const booth of vendorBooths) {
     const key = vendorKeyForBooth(booth)
     if (!groups.has(key)) {
       groups.set(key, [])
@@ -190,7 +201,7 @@ export function consolidateBoothsForAutoArrange(
     }
   }
 
-  return consolidated
+  return [...consolidated, ...guestBooths]
 }
 
 function isApprovedForLayout(status?: string): boolean {

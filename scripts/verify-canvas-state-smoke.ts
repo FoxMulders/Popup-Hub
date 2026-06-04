@@ -180,16 +180,54 @@ assert(
   'default placement template updates'
 )
 
-console.log('--- Guest round table: 6′ diameter footprint ---')
+console.log('--- Guest round table: same-category resize ---')
+const guestRoundBooth: BoothObject = {
+  ...booth('b-guest', 40, 16, 6, 6, 6),
+  tableShape: 'round',
+  tablePurpose: 'guest',
+}
+const docWithGuest = {
+  ...baseDoc,
+  objects: [...afterOne, guestRoundBooth],
+}
 const planRound = planTableSizeChange({
-  objects: afterOne,
-  selectedIds: new Set(['b-5']),
-  selection: guestRoundTableSpec(6),
+  objects: docWithGuest.objects,
+  selectedIds: new Set(['b-guest']),
+  selection: guestRoundTableSpec(8),
 })
-const afterRound = applyObjectPatches(afterOne, planRound.objectPatches)
-const b5Round = afterRound.find((o) => o.id === 'b-5') as BoothObject
-assert(b5Round.width === 6 && b5Round.height === 6, 'guest round booth is 6×6')
-assert(b5Round.tableShape === 'round' && b5Round.tablePurpose === 'guest', 'guest round metadata')
+assert(planRound.objectPatches.length === 1, 'guest round selection patches one booth')
+const afterRound = applyObjectPatches(docWithGuest.objects, planRound.objectPatches)
+const guestRound = afterRound.find((o) => o.id === 'b-guest') as BoothObject
+assert(guestRound.width === 8 && guestRound.height === 8, 'guest round booth resized to 8×8')
+assert(
+  guestRound.tableShape === 'round' && guestRound.tablePurpose === 'guest',
+  'guest round metadata preserved'
+)
+
+console.log('--- Table size: cross-purpose keeps placed booth ---')
+const planGuestToVendor = planTableSizeChange({
+  objects: afterRound,
+  selectedIds: new Set(['b-guest']),
+  selection: vendorTableSpec(8),
+})
+assert(
+  planGuestToVendor.objectPatches.length === 0,
+  'guest selection does not patch when switching to vendor template'
+)
+assert(
+  planGuestToVendor.nextDefaultPlacement?.purpose === 'vendor',
+  'cross-purpose updates default placement only'
+)
+const planToolbarVendor = planTableSizeChange({
+  objects: afterRound,
+  selectedIds: new Set(['b-guest']),
+  selection: vendorTableSpec(6),
+  templateOnly: true,
+})
+assert(
+  planToolbarVendor.objectPatches.length === 0,
+  'draw-toolbar mode switch never patches selection'
+)
 
 console.log('--- Immutability: source array not mutated ---')
 const frozen = baseDoc.objects

@@ -1,11 +1,27 @@
 import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
-import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
+import { tableSizeSpecFromBooth, type TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, PlacedObject } from './types'
 
 export interface TableSizeChangeInput {
   objects: ReadonlyArray<PlacedObject>
   selectedIds: ReadonlySet<string>
   selection: TableSizeSpec
+  /**
+   * Draw-toolbar mode switches (Patron round / Booth / etc.) — only update
+   * the next-placement template, never reshape the current selection.
+   */
+  templateOnly?: boolean
+}
+
+function boothMatchesTableSizeCategory(
+  booth: BoothObject,
+  selection: TableSizeSpec
+): boolean {
+  const current = tableSizeSpecFromBooth(booth)
+  if (!current) return false
+  return (
+    current.purpose === selection.purpose && current.shape === selection.shape
+  )
 }
 
 export interface TableSizeChangeResult {
@@ -16,17 +32,25 @@ export interface TableSizeChangeResult {
 }
 
 /**
- * Pure table-size handler: selected booths get individual patches;
- * otherwise only the default placement spec changes (no global rescale).
+ * Pure table-size handler: selected booths are patched only when the new
+ * spec matches their purpose + shape (e.g. 6′ → 8′ round). Switching
+ * guest ↔ vendor or round ↔ rect updates the next-draw template only.
+ * `templateOnly` skips patches entirely (draw-toolbar mode buttons).
  */
 export function planTableSizeChange({
   objects,
   selectedIds,
   selection,
+  templateOnly = false,
 }: TableSizeChangeInput): TableSizeChangeResult {
+  if (templateOnly) {
+    return { objectPatches: [], nextDefaultPlacement: selection }
+  }
+
   const selectedBoothIds = [...selectedIds].filter((id) => {
     const obj = objects.find((o) => o.id === id)
-    return obj?.kind === 'booth' && obj.locked !== true
+    if (obj?.kind !== 'booth' || obj.locked === true) return false
+    return boothMatchesTableSizeCategory(obj as BoothObject, selection)
   })
 
   if (selectedBoothIds.length > 0) {

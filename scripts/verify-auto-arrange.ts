@@ -612,5 +612,121 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
   else fail++
 }
 
+// ----- Guest / patron tables separate from vendor auto-arrange -----
+{
+  const vendorId = 'vendor-a'
+  const mixedDoc = makeDoc(40, 72, [
+    makeBooth(0, { width: 6, height: 2, tablePurpose: 'vendor' }),
+    makeBooth(1, { width: 6, height: 2, tablePurpose: 'vendor' }),
+    makeBooth(2, {
+      width: 6,
+      height: 6,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      tableLengthFt: 6,
+      x: 20,
+      y: 40,
+    }),
+    makeBooth(3, {
+      width: 8,
+      height: 8,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      tableLengthFt: 8,
+      x: 28,
+      y: 40,
+    }),
+  ])
+
+  const result = autoArrange(mixedDoc, {
+    eventCategoryNames: ['Art', 'Food'],
+  })
+  const booths = result.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth'
+  )
+  const vendors = booths.filter((b) => b.tablePurpose !== 'guest')
+  const guests = booths.filter((b) => b.tablePurpose === 'guest')
+
+  const guestSizesOk =
+    guests.length === 2 &&
+    guests.some((b) => b.width === 6 && b.height === 6 && b.tableShape === 'round') &&
+    guests.some((b) => b.width === 8 && b.height === 8 && b.tableShape === 'round')
+
+  const guestAwayFromVendors =
+    guests.length > 0 &&
+    vendors.every((v) =>
+      guests.every((g) => {
+        const vcx = v.x + v.width / 2
+        const vcy = v.y + v.height / 2
+        const gcx = g.x + g.width / 2
+        const gcy = g.y + g.height / 2
+        return Math.hypot(vcx - gcx, vcy - gcy) >= 4
+      })
+    )
+
+  const guestOnlyDoc = makeDoc(40, 72, [
+    makeBooth(0, {
+      width: 5,
+      height: 5,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      tableLengthFt: 5,
+      x: 10,
+      y: 10,
+    }),
+    makeBooth(1, {
+      width: 6,
+      height: 6,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      tableLengthFt: 6,
+      x: 18,
+      y: 10,
+    }),
+  ])
+  const guestOnlyResult = autoArrange(guestOnlyDoc)
+  const guestOnly = guestOnlyResult.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth'
+  )
+  const guestOnlyOk =
+    guestOnlyResult.placedCount === 2 &&
+    guestOnly.every(
+      (b) =>
+        b.tablePurpose === 'guest' &&
+        b.tableShape === 'round' &&
+        Math.abs(b.width - b.height) < 0.01
+    )
+
+  const guestNotConsolidated = consolidateBoothsForAutoArrange(
+    guestOnlyDoc.objects.filter((o): o is BoothObject => o.kind === 'booth'),
+    5,
+    undefined
+  )
+  const noGuestMergeOk = guestNotConsolidated.length === 2
+
+  console.log('')
+  console.log('=== Guest tables separate from vendor auto-arrange ===')
+  console.log(
+    `${guestSizesOk ? 'PASS' : 'FAIL'}  round guest tables keep laid diameter after auto-arrange`
+  )
+  console.log(
+    `${guestAwayFromVendors ? 'PASS' : 'FAIL'}  guest tables pack away from vendor booths`
+  )
+  console.log(
+    `${guestOnlyOk ? 'PASS' : 'FAIL'}  guest-only auto-arrange places patron tables`
+  )
+  console.log(
+    `${noGuestMergeOk ? 'PASS' : 'FAIL'}  guest tables are never consolidated with vendors`
+  )
+  if (guestSizesOk) pass++
+  else fail++
+  if (guestAwayFromVendors) pass++
+  else fail++
+  if (guestOnlyOk) pass++
+  else fail++
+  if (noGuestMergeOk) pass++
+  else fail++
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail === 0 ? 0 : 1)

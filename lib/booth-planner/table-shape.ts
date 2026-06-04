@@ -70,6 +70,14 @@ export function resolveTablePurpose(input: {
   return DEFAULT_TABLE_PURPOSE
 }
 
+/** Guest / patron seating tables — excluded from vendor consolidation and grid layout. */
+export function isGuestTableBooth(input: {
+  tablePurpose?: TablePurpose | null
+  tableShape?: TableShape | null
+}): boolean {
+  return resolveTablePurpose(input) === 'guest'
+}
+
 export function boothDimensionsForTable(input: {
   tableLengthFt: number
   tableShape?: TableShape | null
