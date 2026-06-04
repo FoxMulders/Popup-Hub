@@ -9,6 +9,10 @@ import {
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from '../state/types'
 import { frameToRing } from '../state/placement-surface'
 import {
+  isCanvasOpenPlacementKind,
+  isValidCanvasOpenPlacement,
+} from '@/lib/floor-plan/canvas-open-placement'
+import {
   isJoinableObject,
   objectFrameOverlapsOrTouches,
 } from '../state/room-joins'
@@ -180,6 +184,8 @@ export function resolvePlacementRoomIdForObject(
   const hit = findRoomIdForPlacementPoint(doc, center)
   if (hit) return hit
 
+  if (isCanvasOpenPlacementKind(obj.kind)) return null
+
   const joinHit = findRoomIdForJoinableObjectPlacement(doc, obj)
   if (joinHit) return joinHit
 
@@ -189,12 +195,16 @@ export function resolvePlacementRoomIdForObject(
   return null
 }
 
-/** True when an object may be placed (inside room, or stage touching a room). */
+/** True when an object may be placed (inside room, stage touching a room, or canvas-open kinds). */
 export function isValidObjectPlacement(
   doc: FloorPlanDoc,
   obj: PlacementProbe,
   roomId?: string | null
 ): boolean {
+  if (isCanvasOpenPlacementKind(obj.kind)) {
+    return isValidCanvasOpenPlacement(doc, obj)
+  }
+
   const resolved =
     roomId ?? resolvePlacementRoomIdForObject(doc, obj, null)
   if (!resolved) return false

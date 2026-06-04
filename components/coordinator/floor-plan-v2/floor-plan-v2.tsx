@@ -586,13 +586,17 @@ function FloorPlanV2Workspace({
   )
   const defaultPlacementSpecRef = useRef(defaultPlacementSpec)
 
+  const syncPlacementTemplate = useCallback((spec: TableSizeSpec) => {
+    defaultPlacementSpecRef.current = spec
+    setDefaultPlacementSpec(spec)
+  }, [])
+
   const applyDefaultPlacementSpec = useCallback(
     (
       nextDefaultPlacement: TableSizeSpec,
       options?: { activateDraw?: boolean }
     ) => {
-      defaultPlacementSpecRef.current = nextDefaultPlacement
-      setDefaultPlacementSpec(nextDefaultPlacement)
+      syncPlacementTemplate(nextDefaultPlacement)
       if (options?.activateDraw ?? nextDefaultPlacement.purpose === 'guest') {
         setTool('draw')
         setDrawShape('booth')
@@ -611,7 +615,7 @@ function FloorPlanV2Workspace({
         )
       }
     },
-    [onBaselineTableLengthChange, store]
+    [onBaselineTableLengthChange, store, syncPlacementTemplate]
   )
 
   // Sync only when the wizard-owned baseline changes — not on every doc
@@ -652,6 +656,9 @@ function FloorPlanV2Workspace({
       })
       if (objectPatches.length > 0) {
         store.updateObjects(objectPatches)
+        // Keep the next-draw template aligned with the pill (e.g. Round 8′ on a
+        // selected patron table) so a follow-up draw does not fall back to vendor.
+        syncPlacementTemplate(normalized)
         return
       }
       if (nextDefaultPlacement != null) {
@@ -659,7 +666,7 @@ function FloorPlanV2Workspace({
         store.setSelection([])
       }
     },
-    [store, safeTableSizeFt, applyDefaultPlacementSpec]
+    [store, safeTableSizeFt, applyDefaultPlacementSpec, syncPlacementTemplate]
   )
 
   const handlePrepareTableDraw = useCallback(

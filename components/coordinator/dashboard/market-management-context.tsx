@@ -23,6 +23,7 @@ import {
   pickBoothForApplication,
 } from '@/lib/coordinator/dashboard-vendor-placement'
 import { formatCadCurrency } from '@/lib/coordinator/booth-placement-status'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 
 export interface DashboardEventSummary {
   id: string
@@ -201,10 +202,12 @@ export function MarketManagementProvider({
     if (!floorPlanStore) return map
     for (const obj of floorPlanStore.doc.objects) {
       if (obj.kind !== 'booth') continue
+      const booth = obj as BoothObject
+      if (isGuestTableBooth(booth)) continue
       map.set(
-        obj.id,
+        booth.id,
         deriveBoothPlacementStatus(
-          obj as BoothObject,
+          booth,
           appByVendorId,
           vipHoldIds,
           appByApplicationId
@@ -226,8 +229,9 @@ export function MarketManagementProvider({
     if (floorPlanStore) {
       for (const obj of floorPlanStore.doc.objects) {
         if (obj.kind !== 'booth') continue
-        totalBooths += 1
         const booth = obj as BoothObject
+        if (isGuestTableBooth(booth)) continue
+        totalBooths += 1
         if (!booth.vendorId) continue
         assignedBooths += 1
         const status = deriveBoothPlacementStatus(

@@ -235,6 +235,9 @@ export function FloorPlanCanvasWizardQa({
     getToolMode: () => toolState.tool,
   })
 
+  const viewportRef = useRef(viewport)
+  viewportRef.current = viewport
+
   // Lift zoom controls to the host so the toolbar (rendered outside
   // this canvas's DOM subtree) can drive zoom in / zoom out / reset.
   // The API object is recreated each render so we only forward it
@@ -271,6 +274,7 @@ export function FloorPlanCanvasWizardQa({
   }, [activeRoomId, store.doc.objects, store.doc.rooms])
 
   const frameActiveRoom = useCallback(() => {
+    const api = viewportRef.current
     const frames = store.doc.rooms ?? []
     if (frames.length === 0) return
     const bounds = activeRoomFramingBounds(
@@ -279,7 +283,7 @@ export function FloorPlanCanvasWizardQa({
       store.doc.objects,
       store.doc.objectRoom
     )
-    viewport.fitToBounds(bounds, {
+    api.fitToBounds(bounds, {
       padding: commandCenterViewport ? 0.03 : 0.08,
     })
   }, [
@@ -288,14 +292,16 @@ export function FloorPlanCanvasWizardQa({
     store.doc.objectRoom,
     store.doc.objects,
     store.doc.rooms,
-    viewport,
   ])
+
+  const frameActiveRoomRef = useRef(frameActiveRoom)
+  frameActiveRoomRef.current = frameActiveRoom
 
   const didInitialFrameRef = useRef(false)
   useEffect(() => {
-    frameActiveRoom()
+    frameActiveRoomRef.current()
     didInitialFrameRef.current = true
-  }, [frameActiveRoom, roomsFramingKey])
+  }, [roomsFramingKey])
 
   const observedViewportSizeRef = useRef({ w: 0, h: 0 })
   useEffect(() => {
@@ -309,11 +315,11 @@ export function FloorPlanCanvasWizardQa({
       const last = observedViewportSizeRef.current
       if (last.w > 0 && last.h > 0) return
       observedViewportSizeRef.current = { w, h }
-      frameActiveRoom()
+      frameActiveRoomRef.current()
     })
     observer.observe(scroll)
     return () => observer.disconnect()
-  }, [frameActiveRoom])
+  }, [])
 
   const transform = useMemo(
     () => ({ basePxPerFt, zoom: viewport.zoom }),

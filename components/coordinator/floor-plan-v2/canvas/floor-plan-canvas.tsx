@@ -238,6 +238,11 @@ export function FloorPlanCanvas({
     getToolMode: () => toolState.tool,
   })
 
+  // Stable ref — the hook returns a fresh API object each render; reading
+  // it from a ref keeps framing effects from re-firing on every zoom/pan.
+  const viewportRef = useRef(viewport)
+  viewportRef.current = viewport
+
   // Lift zoom controls to the host so the toolbar (rendered outside
   // this canvas's DOM subtree) can drive zoom in / zoom out / reset.
   // The API object is recreated each render so we only forward it
@@ -273,10 +278,25 @@ export function FloorPlanCanvas({
       .join('|')}:${mergedSig}`
   }, [activeRoomId, store.doc.objects, store.doc.rooms])
 
-  const frameActiveRoom = useCallback(() => {
+  /** When no rooms exist, reframe if the open canvas dimensions change. */
+  const viewportFramingKey = useMemo(() => {
     const frames = store.doc.rooms ?? []
     if (frames.length === 0) {
-      viewport.fitToBounds(
+      return `${roomsFramingKey}@canvas:${store.doc.canvasWidthFt},${store.doc.canvasLengthFt}`
+    }
+    return roomsFramingKey
+  }, [
+    roomsFramingKey,
+    store.doc.canvasLengthFt,
+    store.doc.canvasWidthFt,
+    store.doc.rooms,
+  ])
+
+  const frameActiveRoom = useCallback(() => {
+    const api = viewportRef.current
+    const frames = store.doc.rooms ?? []
+    if (frames.length === 0) {
+      api.fitToBounds(
         {
           minX: 0,
           minY: 0,
@@ -293,7 +313,7 @@ export function FloorPlanCanvas({
       store.doc.objects,
       store.doc.objectRoom
     )
-    viewport.fitToBounds(bounds, {
+    api.fitToBounds(bounds, {
       padding: commandCenterViewport ? 0.03 : 0.08,
     })
   }, [
@@ -304,14 +324,16 @@ export function FloorPlanCanvas({
     store.doc.objectRoom,
     store.doc.objects,
     store.doc.rooms,
-    viewport,
   ])
+
+  const frameActiveRoomRef = useRef(frameActiveRoom)
+  frameActiveRoomRef.current = frameActiveRoom
 
   const didInitialFrameRef = useRef(false)
   useEffect(() => {
-    frameActiveRoom()
+    frameActiveRoomRef.current()
     didInitialFrameRef.current = true
-  }, [frameActiveRoom, roomsFramingKey])
+  }, [viewportFramingKey])
 
   const observedViewportSizeRef = useRef({ w: 0, h: 0 })
   useEffect(() => {
@@ -328,11 +350,11 @@ export function FloorPlanCanvas({
       // window resizes were resetting pan/zoom and locking the room center.
       if (last.w > 0 && last.h > 0) return
       observedViewportSizeRef.current = { w, h }
-      frameActiveRoom()
+      frameActiveRoomRef.current()
     })
     observer.observe(scroll)
     return () => observer.disconnect()
-  }, [frameActiveRoom])
+  }, [])
 
   const transform = useMemo(
     () => ({ basePxPerFt, zoom: viewport.zoom }),

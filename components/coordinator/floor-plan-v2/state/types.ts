@@ -24,6 +24,8 @@ export type ObjectKind =
   | 'door'
   | 'emergency_exit'
   | 'stage'
+  /** Mobile concession unit — may sit on open canvas (parking lot) outside rooms. */
+  | 'food_truck'
   /** Boolean-union result — one selectable path replacing merged shapes. */
   | 'merged_zone'
 
@@ -136,6 +138,11 @@ export interface StageObject extends BasePlacedObject {
   kind: 'stage'
 }
 
+/** Curbside / parking-lot food truck — canvas-open placement (no room required). */
+export interface FoodTruckObject extends BasePlacedObject {
+  kind: 'food_truck'
+}
+
 /**
  * Single element produced by Merge (boolean union). `rings` are closed
  * loops in feet relative to `(x, y)` — the union AABB origin.
@@ -160,6 +167,7 @@ export type PlacedObject =
   | DoorObject
   | EmergencyExitObject
   | StageObject
+  | FoodTruckObject
   | MergedZoneObject
 
 /**

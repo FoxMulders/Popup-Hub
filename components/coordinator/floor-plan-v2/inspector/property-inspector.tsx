@@ -189,6 +189,8 @@ function prettyKindHint(kind: PlacedObject['kind']): string {
       return 'Emergency egress. Keep paths clear and visible.'
     case 'stage':
       return 'Performance area. Re-size to match the platform footprint.'
+    case 'food_truck':
+      return 'Mobile concession unit. Place anywhere on the canvas, including parking areas outside rooms.'
     case 'label':
       return 'Free-form text annotation.'
     case 'merged_zone':

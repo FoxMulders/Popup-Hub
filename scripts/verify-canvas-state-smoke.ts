@@ -204,6 +204,23 @@ assert(
   'guest round metadata preserved'
 )
 
+console.log('--- Guest round resize: draw template sync (host) ---')
+let drawTemplate = vendorTableSpec(6)
+const planGuestResize = planTableSizeChange({
+  objects: afterRound,
+  selectedIds: new Set(['b-guest']),
+  selection: guestRoundTableSpec(8),
+})
+if (planGuestResize.objectPatches.length > 0) {
+  drawTemplate = guestRoundTableSpec(8)
+}
+assert(
+  drawTemplate.purpose === 'guest' &&
+    drawTemplate.shape === 'round' &&
+    drawTemplate.ft === 8,
+  'after resizing a selected patron round, next draw uses guest round (not vendor)'
+)
+
 console.log('--- Table size: cross-purpose keeps placed booth ---')
 const planGuestToVendor = planTableSizeChange({
   objects: afterRound,

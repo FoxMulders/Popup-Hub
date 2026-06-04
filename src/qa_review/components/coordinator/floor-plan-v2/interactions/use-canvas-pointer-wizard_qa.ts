@@ -49,6 +49,7 @@ import {
   findFirstViolationInMove,
   findBoothProximityViolation,
 } from '@/components/coordinator/floor-plan-v2/interactions/category-rules'
+import { isCanvasOpenPlacementKind } from '@/lib/floor-plan/canvas-open-placement'
 import {
   isValidObjectPlacement,
   resolvePlacementRoomIdForObject,
@@ -1248,11 +1249,17 @@ export function useCanvasPointerWizardQa(
               boothProbe,
               activeRoomIdRef.current
             )
-        const placementValid = openCanvas
-          ? isValidPlacementLocationWizardQa(store.doc, center, boothProbe)
-          : drawRoomId != null &&
-            isValidObjectPlacement(store.doc, boothProbe, drawRoomId)
-        if ((!openCanvas && !drawRoomId) || !placementValid) {
+        const canvasOpenDraw = isCanvasOpenPlacementKind(activeDraft.kind)
+        const placementValid = canvasOpenDraw
+          ? isValidObjectPlacement(store.doc, boothProbe, drawRoomId)
+          : openCanvas
+            ? isValidPlacementLocationWizardQa(store.doc, center, boothProbe)
+            : drawRoomId != null &&
+              isValidObjectPlacement(store.doc, boothProbe, drawRoomId)
+        if (
+          (!canvasOpenDraw && !openCanvas && !drawRoomId) ||
+          !placementValid
+        ) {
           addLogRef.current(
             `Placement rejected (draw ${activeDraft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} openCanvas=${openCanvas}`
           )
@@ -1534,6 +1541,9 @@ function commitDraft(
     case 'stage':
       obj = { ...base, kind: 'stage' }
       break
+    case 'food_truck':
+      obj = { ...base, kind: 'food_truck', label: 'Food truck' }
+      break
     case 'door':
       obj = { ...base, kind: 'door', doorType: 'entrance' }
       break
@@ -1576,6 +1586,7 @@ function commitDraft(
     onOverlapViolation?.()
     return
   }
+  const canvasOpen = isCanvasOpenPlacementKind(obj.kind)
   const openCanvas = allowsWizardPlacementWithoutRoom(store.doc)
   const placementRoomId = openCanvas
     ? (roomId ??
@@ -1583,11 +1594,13 @@ function commitDraft(
       null)
     : (roomId ??
       resolvePlacementRoomIdForObject(store.doc, obj, null))
-  const placementValid = openCanvas
-    ? isValidPlacementLocationWizardQa(store.doc, objectCenter(obj), obj)
-    : placementRoomId != null &&
-      isValidObjectPlacement(store.doc, obj, placementRoomId)
-  if (!placementValid || (!openCanvas && !placementRoomId)) {
+  const placementValid = canvasOpen
+    ? isValidObjectPlacement(store.doc, obj, placementRoomId)
+    : openCanvas
+      ? isValidPlacementLocationWizardQa(store.doc, objectCenter(obj), obj)
+      : placementRoomId != null &&
+        isValidObjectPlacement(store.doc, obj, placementRoomId)
+  if (!placementValid || (!canvasOpen && !openCanvas && !placementRoomId)) {
     log(
       `Placement rejected (${obj.kind}): center=(${objectCenter(obj).x},${objectCenter(obj).y}) room=${placementRoomId ?? 'none'}`
     )

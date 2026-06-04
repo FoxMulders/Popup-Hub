@@ -75,6 +75,8 @@ function venueElementTypeForObject(
       return 'column'
     case 'stage':
       return 'stage'
+    case 'food_truck':
+      return 'custom_label'
     case 'label':
       return 'custom_label'
     case 'door':
@@ -108,6 +110,17 @@ const EMERGENCY_EXIT_LABEL_PREFIX = 'EMERGENCY:'
  * save/load cycles.
  */
 const OPEN_WALL_LABEL_PREFIX = 'OPENWALL@'
+const FOOD_TRUCK_LABEL_PREFIX = 'FOODTRUCK@'
+
+function buildFoodTruckLabel(label: string | undefined): string {
+  return `${FOOD_TRUCK_LABEL_PREFIX}${label ?? ''}`
+}
+
+function parseFoodTruckLabel(raw: string): string | undefined {
+  if (!raw.startsWith(FOOD_TRUCK_LABEL_PREFIX)) return undefined
+  const labelPart = raw.slice(FOOD_TRUCK_LABEL_PREFIX.length)
+  return labelPart.length > 0 ? labelPart : undefined
+}
 
 function buildOpenWallLabel(depthFt: number | undefined, label: string | undefined): string {
   const depth = depthFt && depthFt > 0 ? depthFt : 1.5
@@ -187,6 +200,8 @@ export function legacyRoomFromDoc(
       // round-trip the kind and the configured depth without a
       // schema change.
       projectedLabel = buildOpenWallLabel(obj.counterDepthFt, obj.label)
+    } else if (obj.kind === 'food_truck') {
+      projectedLabel = buildFoodTruckLabel(obj.label)
     } else {
       projectedLabel = obj.label
     }
@@ -238,11 +253,18 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
     rawLabel.startsWith(EMERGENCY_EXIT_LABEL_PREFIX)
   const openWallParsed =
     typeof rawLabel === 'string' ? parseOpenWallLabel(rawLabel) : null
+  const isFoodTruckTagged =
+    typeof rawLabel === 'string' && rawLabel.startsWith(FOOD_TRUCK_LABEL_PREFIX)
+  const foodTruckLabel = isFoodTruckTagged
+    ? parseFoodTruckLabel(rawLabel)
+    : undefined
   const cleanedLabel = isEmergencyTagged
     ? rawLabel.slice(EMERGENCY_EXIT_LABEL_PREFIX.length) || undefined
     : openWallParsed
       ? openWallParsed.label
-      : rawLabel
+      : isFoodTruckTagged
+        ? foodTruckLabel
+        : rawLabel
 
   const base = {
     id: el.id,
@@ -272,6 +294,9 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
     case 'stage':
       return { ...base, kind: 'stage' }
     case 'custom_label':
+      if (isFoodTruckTagged) {
+        return { ...base, kind: 'food_truck', label: foodTruckLabel }
+      }
       return { ...base, kind: 'label', text: el.label ?? '' }
     case 'entrance':
       return { ...base, kind: 'door', doorType: 'entrance' }

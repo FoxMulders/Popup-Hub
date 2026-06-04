@@ -43,6 +43,7 @@ export const GROUPABLE_OBJECT_KINDS: ReadonlySet<ObjectKind> = new Set<ObjectKin
   'door',
   'emergency_exit',
   'stage',
+  'food_truck',
 ])
 
 export function isGroupableObject(obj: PlacedObject): boolean {

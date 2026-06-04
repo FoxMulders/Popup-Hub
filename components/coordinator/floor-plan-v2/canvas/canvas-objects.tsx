@@ -24,6 +24,7 @@ import {
   type BoothPlacementStatus,
 } from '@/lib/coordinator/booth-placement-status'
 import { isJoinableObject } from '../state/room-joins'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
@@ -66,9 +67,11 @@ function fillForObject(
   if (isOverlapping) return PLACEMENT_VIOLATION.fill
   switch (obj.kind) {
     case 'booth': {
-      const status = boothPlacementStatusByObjectId?.get(obj.id)
-      if (status) return BOOTH_STATUS_THEME[status].fill
       const booth = obj as BoothObject
+      const status = isGuestTableBooth(booth)
+        ? undefined
+        : boothPlacementStatusByObjectId?.get(obj.id)
+      if (status) return BOOTH_STATUS_THEME[status].fill
       // Explicit override wins; otherwise fall through to the deterministic
       // category palette so booths read by category color.
       if (booth.accentColor) return booth.accentColor
@@ -84,6 +87,8 @@ function fillForObject(
       return '#fef3c7'
     case 'stage':
       return '#fbcfe8'
+    case 'food_truck':
+      return '#fed7aa'
     case 'door':
       return obj.doorType === 'entrance' ? '#22c55e' : '#ef4444'
     case 'emergency_exit':
@@ -106,9 +111,11 @@ function strokeForObject(
   if (isSelected) return '#0f766e'
   switch (obj.kind) {
     case 'booth': {
-      const status = boothPlacementStatusByObjectId?.get(obj.id)
-      if (status) return BOOTH_STATUS_THEME[status].stroke
       const booth = obj as BoothObject
+      const status = isGuestTableBooth(booth)
+        ? undefined
+        : boothPlacementStatusByObjectId?.get(obj.id)
+      if (status) return BOOTH_STATUS_THEME[status].stroke
       // When the user has set a custom accentColor, keep the legacy
       // amber stroke so contrast stays readable. Otherwise pull the
       // stroke straight from the category palette.
@@ -121,6 +128,8 @@ function strokeForObject(
       return '#92400e'
     case 'stage':
       return '#9d174d'
+    case 'food_truck':
+      return '#c2410c'
     case 'door':
       return obj.doorType === 'entrance' ? '#15803d' : '#b91c1c'
     case 'emergency_exit':
@@ -497,7 +506,10 @@ function CanvasObjectsBase({
         const h = obj.height * pxPerFt
         const isSelected = selectedIds.has(obj.id)
         const isOverlapping = overlappingIds?.has(obj.id) ?? false
-        const placementStatus = boothPlacementStatusByObjectId?.get(obj.id)
+        const placementStatus =
+          obj.kind === 'booth' && isGuestTableBooth(obj as BoothObject)
+            ? undefined
+            : boothPlacementStatusByObjectId?.get(obj.id)
         const fill = fillForObject(
           obj,
           eventCategoryNames,
@@ -642,6 +654,19 @@ function CanvasObjectsBase({
                 strokeDasharray="3 2"
                 pointerEvents="all"
                 shapeRendering="crispEdges"
+              />
+            ) : obj.kind === 'food_truck' ? (
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                rx={Math.min(6, w * 0.06, h * 0.12)}
+                fill={displayFill}
+                fillOpacity={displayFillOpacity}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                pointerEvents="all"
               />
             ) : (
               <rect
@@ -965,6 +990,8 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return (obj as OpenWallObject).label || 'Open wall'
     case 'stage':
       return (obj as StageObject).label || 'Stage'
+    case 'food_truck':
+      return obj.label || 'Food truck'
     case 'door':
       return (obj as DoorObject).label
         ? (obj as DoorObject).label!

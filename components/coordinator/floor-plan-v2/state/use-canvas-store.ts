@@ -145,12 +145,15 @@ export function useCanvasStore(
     }
   }, [logState, seedMainHall, store.doc])
 
-  return {
-    ...store,
-    rooms,
-    logState,
-    validatePlacement,
-    resetState,
-    seedMainHall,
-  }
+  return useMemo(
+    () => ({
+      ...store,
+      rooms,
+      logState,
+      validatePlacement,
+      resetState,
+      seedMainHall,
+    }),
+    [logState, resetState, rooms, seedMainHall, store, validatePlacement]
+  )
 }

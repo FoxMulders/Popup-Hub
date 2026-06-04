@@ -24,6 +24,7 @@ import {
   Square,
   Tag,
   Trash2,
+  Truck,
   Undo2,
   RectangleHorizontal,
   Circle,
@@ -90,6 +91,12 @@ const CREATION_SHAPES: Array<{
   { id: 'door', label: 'Door', icon: DoorOpen, variant: 'arch' },
   { id: 'emergency_exit', label: 'Exit', icon: Siren, variant: 'arch' },
   { id: 'stage', label: 'Stage', icon: Square, variant: 'arch' },
+  {
+    id: 'food_truck',
+    label: 'Food truck',
+    icon: Truck,
+    variant: 'arch',
+  },
 ]
 
 /**

@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { useMarketManagement } from './market-management-context'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 
 export function BoothMatrixA11yTable() {
   const {
@@ -17,7 +18,9 @@ export function BoothMatrixA11yTable() {
   const rows = useMemo(() => {
     if (!floorPlanStore) return []
     return floorPlanStore.doc.objects
-      .filter((o): o is BoothObject => o.kind === 'booth')
+      .filter(
+        (o): o is BoothObject => o.kind === 'booth' && !isGuestTableBooth(o)
+      )
       .map((booth) => {
         const status = boothStatusByObjectId.get(booth.id) ?? 'unassigned'
         const theme = BOOTH_STATUS_THEME[status]

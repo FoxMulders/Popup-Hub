@@ -18,6 +18,10 @@ import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { useDebugLog } from '../debug/debug-log-context'
 import { formatPlacementProbe } from '../debug/format-geometry-log'
 import {
+  isCanvasOpenPlacementKind,
+  defaultFoodTruckFootprintFt,
+} from '@/lib/floor-plan/canvas-open-placement'
+import {
   isValidObjectPlacement,
   resolvePlacementRoomIdForObject,
 } from '../geometry/is-point-in-room'
@@ -266,6 +270,17 @@ export function resolveDrawCommitRect(
   defaultBoothTableSpec?: TableSizeSpec
 ): Rect {
   const minSize = snapFt || 1
+  if (kind === 'food_truck') {
+    const { width, height } = defaultFoodTruckFootprintFt()
+    const cx = rect.x + rect.width / 2
+    const cy = rect.y + rect.height / 2
+    return {
+      x: snapToGrid(cx - width / 2, snapFt),
+      y: snapToGrid(cy - height / 2, snapFt),
+      width,
+      height,
+    }
+  }
   if (kind !== 'booth' || defaultBoothTableSpec == null) {
     return {
       x: rect.x,
@@ -1278,12 +1293,13 @@ export function useCanvasPointer(
           placementProbe,
           activeRoomIdRef.current
         )
+        const canvasOpenDraw = isCanvasOpenPlacementKind(activeDraft.kind)
         if (
-          !drawRoomId ||
+          (!canvasOpenDraw && !drawRoomId) ||
           !isValidObjectPlacement(store.doc, placementProbe, drawRoomId)
         ) {
           addLogRef.current(
-            `Placement rejected (draw ${activeDraft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} validSurface=${Boolean(drawRoomId)}`
+            `Placement rejected (draw ${activeDraft.kind}): ${formatPlacementProbe(rect)} room=${drawRoomId ?? 'none'} canvasOpen=${canvasOpenDraw}`
           )
           onOverlapViolationRef.current?.()
           setDraft(null)
@@ -1565,6 +1581,9 @@ function commitDraft(
     case 'stage':
       obj = { ...base, kind: 'stage' }
       break
+    case 'food_truck':
+      obj = { ...base, kind: 'food_truck', label: 'Food truck' }
+      break
     case 'door':
       obj = { ...base, kind: 'door', doorType: 'entrance' }
       break
@@ -1609,7 +1628,11 @@ function commitDraft(
   const placementRoomId =
     roomId ??
     resolvePlacementRoomIdForObject(store.doc, obj, null)
-  if (!placementRoomId || !isValidObjectPlacement(store.doc, obj, placementRoomId)) {
+  const canvasOpen = isCanvasOpenPlacementKind(obj.kind)
+  if (
+    (!canvasOpen && !placementRoomId) ||
+    !isValidObjectPlacement(store.doc, obj, placementRoomId)
+  ) {
     log(
       `Placement rejected (${obj.kind}): center=(${objectCenter(obj).x},${objectCenter(obj).y}) room=${placementRoomId ?? 'none'}`
     )
@@ -1617,10 +1640,10 @@ function commitDraft(
     return
   }
   log(
-    `Placement committed (${obj.kind}): ${formatPlacementProbe(obj)} room=${placementRoomId}`
+    `Placement committed (${obj.kind}): ${formatPlacementProbe(obj)} room=${placementRoomId ?? 'open-canvas'}`
   )
   store.addObject(obj, {
     select: true,
-    roomId: placementRoomId,
+    roomId: placementRoomId ?? undefined,
   })
 }

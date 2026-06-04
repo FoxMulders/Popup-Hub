@@ -99,6 +99,8 @@ function previewFill(kind: ObjectKind): string {
       return '#fef3c7'
     case 'stage':
       return '#fbcfe8'
+    case 'food_truck':
+      return '#fed7aa'
     case 'door':
       return '#22c55e'
     case 'emergency_exit':
@@ -120,6 +122,8 @@ function previewStroke(kind: ObjectKind): string {
       return '#92400e'
     case 'stage':
       return '#9d174d'
+    case 'food_truck':
+      return '#c2410c'
     case 'door':
       return '#15803d'
     case 'emergency_exit':
