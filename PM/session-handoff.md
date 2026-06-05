@@ -3,15 +3,15 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `aa20291` (pushed to `origin/master`)
-- Last deploy commit: `aa20291` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 117** | commit `cd49a46` (handoff updated 2026-06-04 23:14)
+- Branch: `master` @ `54e1c56` (pushed to `origin/master`)
+- Last deploy commit: `54e1c56` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 118** | commit `28d0de9` (handoff updated 2026-06-05 10:10)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-04 23:14 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (aa20291)
+- 2026-06-05 10:10 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (54e1c56)
 
 
 ## Goal
@@ -53,6 +53,8 @@ Patron (guest) seating tables are non-vendor fixtures (`tablePurpose: 'guest'`).
 | **Verify** | Guest-table block in `scripts/verify-auto-arrange.ts` (4/4 pass); add grid/staggered/perimeter patron cases when mode parity lands |
 
 ## Shipped this session (local, not deployed)
+- **Mobile page scroll fix:** Coordinator/vendor workspace pages (`CommandCenterShell`, `DashboardAppShell`) hide left/right rails below `lg` so the center column fills the viewport and scrolls. `events/new` and setup wizard bodies use the same scroll shell. Fixes clipped main body on phones.
+- **Mobile wizard field overlap fix:** Floating inputs/textareas use `min-h-14` / `!h-auto` instead of fixed `h-11` so labels and entered text no longer collide.
 - **Brand logo refresh:** Replaced master `public/popup-hub-logo.png` with the official forest-green storefront lockup (994x1024). Ran `npm run assets:logo` to regenerate `popup-hub-brand.png`, `popup-hub-icon.png`, `logo.png`, favicons, PWA icons, and `app/icon.png` / `apple-icon.png`. Fixed `scripts/process-logo.mjs` atomic writes on Windows. Updated nav/footer/auth logo dimensions (`popup-hub-logo.tsx`), loader pin offset (`loader-variants/shared.ts`), animation wordmark/stroke colors to `#2d5a27` (`popup-loader-scene.tsx`, `initial-loader-reveal.tsx`), PWA `theme_color`, and service-worker cache `v11`.
 - **CI lint fix:** `prefer-const` on `rowStartX` in `auto-arrange.ts` — GitHub CI `npm run lint` was failing (1 error, 359 warnings). Local lint now exits 0. Booths were dropped from the doc when deterministic slots overlapped obstacles or failed the 2′ edge rule, even with open floor left. Layout now walks **all** valid slot candidates (not just the first N), perimeter slots respect restricted zones, column pitch includes the 2′ edge gap, and a fallback grid scan runs before giving up. Unplaced vendor booths **stay on canvas** at their last valid position (not removed); toast says “left in place”. Verify: `npx tsx scripts/verify-auto-arrange.ts` (15-booth wall case + main grid cases).
 - **Food truck placement (canvas-open):** New `food_truck` fixture kind and toolbar **Food truck** draw tool. Trucks may sit anywhere inside the advisory canvas bounds, including parking areas outside room polygons (no room owner / no perimeter touch required). Inside a room, centroid still resolves `objectRoom` for save bridge. Legacy round-trip via `custom_label` + `FOODTRUCK@` sentinel. `lib/floor-plan/canvas-open-placement.ts`, `is-point-in-room.ts`, `use-canvas-pointer.ts`, canvas render + QA pointer. Verify: `npx tsx scripts/verify-food-truck-placement.ts`.
@@ -124,7 +126,9 @@ Patron (guest) seating tables are non-vendor fixtures (`tablePurpose: 'guest'`).
 | Step 3 blank canvas (interactive) | **Deployed** — sign-in smoke |
 | Wheel zoom / scroll pan over canvas | **Deployed** — sign-in smoke |
 | Stage draw outside room (join) | **Deployed** — verify-asset-type-joins + sign-in |
-| Step 2 Capacity scroll | **Not run** |
+| Step 2 Capacity scroll | **Local** — setup-wizard-body scroll + mobile workspace center scroll; manual check on phone |
+| Mobile workspace page scroll | **Local** — side rails hidden below lg; center column scrolls |
+| Mobile wizard text fields | **Local** — floating label/input overlap fixed |
 | Blank start — only add-room + size fields | **Deployed** — sign-in smoke |
 | Deploy / handoff script | **Fixed** — `update-session-handoff.ps1` ASCII punctuation (Windows PS parse error) |
 
@@ -152,7 +156,7 @@ Patron (guest) seating tables are non-vendor fixtures (`tablePurpose: 'guest'`).
 3. **Patron auto-arrange mode parity** — patron toolbar mode select is wired; engine still ignores mode (row-pack). Implement Grid / Staggered / Perimeter for patron-only pass (`arrangeGuestTables` or patron-centric layout).
 4. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
 5. **Coordinator smoke-test** after deploy: Vendor block auto-arrange (each mode) moves only booths; Patron block auto-arrange moves only guest tables; Room block merge/rotate; mixed layout with round + rect patron tables
-6. **Step 2 Capacity scroll** — manual check after sign-in
+6. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone: page body scrolls; floating fields do not overlap when typing
 7. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room** (food trucks use canvas bounds only)
 8. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 9. Commit handoff + script fix when ready (`update-session-handoff.ps1`, `deploy-popuphub.ps1`, `PM/session-handoff.md`)
