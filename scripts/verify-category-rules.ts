@@ -7,7 +7,7 @@
  *      length).
  *   2. `nextCategoryName` cycles through the list and wraps.
  *   3. `findBoothProximityViolation` flags same-category booths
- *      within `<5 cols AND <2 rows` and ignores everything else.
+ *      within `<4 cols AND <2 rows` and ignores everything else.
  */
 
 import {
@@ -109,25 +109,25 @@ console.log('nextCategoryName — wraps and handles edge cases')
   expect('empty list → null', nextCategoryName('Food', []), null)
 }
 
-console.log('proximity — same-category < 5 cols AND < 2 rows triggers')
+console.log('proximity — same-category < 4 cols AND < 2 rows triggers')
 {
   const gridFt = 1
   const a = booth('a', 0, 0, 'Food')
-  const b = booth('b', 4, 1, 'Food') // dx=4 cols, dy=1 row → both below thresholds
+  const b = booth('b', 1, 1, 'Food') // dx=1 col, dy=1 row → both below thresholds
   const v = findBoothProximityViolation(b, [a], gridFt)
   expect('violation reported', v?.conflictId, 'a')
-  expect('dxColumns reported', v?.dxColumns, 4)
+  expect('dxColumns reported', v?.dxColumns, 1)
   expect('dyRows reported', v?.dyRows, 1)
 }
 
 console.log('proximity — boundary cases')
 {
   const gridFt = 1
-  // dx exactly = 5 (boundary not less than 5) → NO violation
+  // dx exactly = 4 (boundary not less than 4) → NO violation
   const a = booth('a', 0, 0, 'Food')
-  const b = booth('b', 5, 1, 'Food')
+  const b = booth('b', 4, 1, 'Food')
   expect(
-    '5-col gap is exactly the threshold (no violation)',
+    '4-col gap is exactly the threshold (no violation)',
     findBoothProximityViolation(b, [a], gridFt),
     null
   )
@@ -182,13 +182,13 @@ console.log('proximity — non-booth others ignored')
 
 console.log('proximity — grid spacing scales the rule')
 {
-  // gridSpacing = 4 ft → 5 cols = 20 ft, 2 rows = 8 ft
+  // gridSpacing = 4 ft → 4 cols = 16 ft, 2 rows = 8 ft
   const gridFt = 4
   const a = booth('a', 0, 0, 'Food')
-  const b = booth('b', 18, 0, 'Food') // dx=18 ft → 4.5 cols, dy=0 rows → both below thresholds
+  const b = booth('b', 14, 0, 'Food') // dx=14 ft → 3.5 cols, dy=0 rows → both below thresholds
   const v = findBoothProximityViolation(b, [a], gridFt)
   expect('large grid spacing scales threshold', v !== null, true)
-  const c = booth('c', 24, 0, 'Food') // dx=6 cols → above threshold
+  const c = booth('c', 20, 0, 'Food') // dx=20 ft → 5 cols → above threshold
   expect(
     'placement past the scaled threshold is allowed',
     findBoothProximityViolation(c, [a], gridFt),
@@ -198,7 +198,7 @@ console.log('proximity — grid spacing scales the rule')
 
 console.log('proximity — constants match the spec')
 {
-  expect('PROXIMITY_MIN_COLUMNS = 5', PROXIMITY_MIN_COLUMNS, 5)
+  expect('PROXIMITY_MIN_COLUMNS = 4', PROXIMITY_MIN_COLUMNS, 4)
   expect('PROXIMITY_MIN_ROWS = 2', PROXIMITY_MIN_ROWS, 2)
 }
 

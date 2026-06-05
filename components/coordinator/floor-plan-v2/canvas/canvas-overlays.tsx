@@ -98,7 +98,7 @@ function previewFill(kind: ObjectKind): string {
     case 'open_wall':
       return '#fef3c7'
     case 'stage':
-      return '#fbcfe8'
+      return 'transparent'
     case 'food_truck':
       return '#fed7aa'
     case 'door':

@@ -1,0 +1,267 @@
+'use client'
+
+import { ChevronDown, ChevronRight, ChevronUp, RotateCcw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { cn } from '@/lib/utils'
+import type { CanvasToolbarBlockId } from './toolbar-order'
+import {
+  clearSavedStaticToolbarLayout,
+  DEFAULT_STATIC_ROW_ORDER,
+  loadStaticRowCollapsed,
+  loadStaticRowOrder,
+  saveStaticRowCollapsed,
+  saveStaticRowOrder,
+  STATIC_ROW_BLOCKS,
+  STATIC_ROW_LABELS,
+  type CanvasToolbarStaticRowId,
+  type StaticRowCollapsedState,
+} from './toolbar-static-layout'
+
+export interface CanvasToolbarStaticProps {
+  visibleRowIds: readonly CanvasToolbarStaticRowId[]
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  compact?: boolean
+}
+
+function StaticToolbarRow({
+  rowId,
+  label,
+  index,
+  total,
+  expanded,
+  compact,
+  onToggle,
+  onMove,
+  children,
+}: {
+  rowId: CanvasToolbarStaticRowId
+  label: string
+  index: number
+  total: number
+  expanded: boolean
+  compact?: boolean
+  onToggle: (rowId: CanvasToolbarStaticRowId) => void
+  onMove: (rowId: CanvasToolbarStaticRowId, direction: -1 | 1) => void
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 flex-col rounded-md border border-stone-200/90 bg-white shadow-sm',
+        compact ? 'gap-0' : 'gap-0.5'
+      )}
+      data-toolbar-row={rowId}
+    >
+      <div
+        className={cn(
+          'flex min-w-0 items-center gap-0.5 border-b border-stone-100/90 px-0.5',
+          compact ? 'py-[0.2rem]' : 'py-0.5',
+          !expanded && 'border-b-0'
+        )}
+      >
+        <button
+          type="button"
+          onClick={() => onToggle(rowId)}
+          title={expanded ? `Collapse ${label}` : `Expand ${label}`}
+          aria-label={expanded ? `Collapse ${label}` : `Expand ${label}`}
+          aria-expanded={expanded}
+          className={cn(
+            'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 hover:text-stone-700',
+            compact ? 'h-[1.575rem] w-[1.575rem]' : 'h-7 w-7'
+          )}
+        >
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          )}
+        </button>
+        <span
+          className={cn(
+            'min-w-0 flex-1 truncate text-[10px] font-heading font-semibold uppercase tracking-wide text-stone-600',
+            compact ? 'text-[9px]' : undefined
+          )}
+        >
+          {label}
+        </span>
+        <button
+          type="button"
+          disabled={index === 0}
+          onClick={() => onMove(rowId, -1)}
+          title={`Move ${label} up`}
+          aria-label={`Move ${label} up`}
+          className={cn(
+            'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
+            compact ? 'h-[1.575rem] w-[1.575rem]' : 'h-7 w-7'
+          )}
+        >
+          <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+        </button>
+        <button
+          type="button"
+          disabled={index >= total - 1}
+          onClick={() => onMove(rowId, 1)}
+          title={`Move ${label} down`}
+          aria-label={`Move ${label} down`}
+          className={cn(
+            'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
+            compact ? 'h-[1.575rem] w-[1.575rem]' : 'h-7 w-7'
+          )}
+        >
+          <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </div>
+      {expanded ? (
+        <div
+          className={cn(
+            'flex min-w-0 flex-wrap items-center gap-1',
+            compact ? 'px-1 py-[0.35rem]' : 'px-1 py-0.5'
+          )}
+        >
+          {children}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** Stacked dashboard ribbon — collapsible rows with move up/down and persisted layout. */
+export function CanvasToolbarStatic({
+  visibleRowIds,
+  renderBlock,
+  compact,
+}: CanvasToolbarStaticProps) {
+  const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
+
+  const [order, setOrder] = useState<CanvasToolbarStaticRowId[]>(() =>
+    loadStaticRowOrder(visibleRowIds)
+  )
+  const [collapsed, setCollapsed] = useState<StaticRowCollapsedState>(() =>
+    loadStaticRowCollapsed()
+  )
+
+  useEffect(() => {
+    setOrder(loadStaticRowOrder(visibleRowIds))
+  }, [visibleKey, visibleRowIds])
+
+  const displayOrder = useMemo(() => {
+    const visibleSet = new Set(visibleRowIds)
+    const seen = new Set<CanvasToolbarStaticRowId>()
+    const out: CanvasToolbarStaticRowId[] = []
+    for (const id of order) {
+      if (!visibleSet.has(id) || seen.has(id)) continue
+      seen.add(id)
+      out.push(id)
+    }
+    for (const id of visibleRowIds) {
+      if (!seen.has(id)) out.push(id)
+    }
+    return out
+  }, [order, visibleRowIds])
+
+  useEffect(() => {
+    saveStaticRowOrder(order)
+  }, [order])
+
+  useEffect(() => {
+    saveStaticRowCollapsed(collapsed)
+  }, [collapsed])
+
+  const mergeVisibleOrder = useCallback(
+    (nextVisible: CanvasToolbarStaticRowId[]) => {
+      const visibleSet = new Set(visibleRowIds)
+      const queue = [...nextVisible]
+      const merged = order.map((id) => {
+        if (!visibleSet.has(id)) return id
+        return queue.shift()!
+      })
+      for (const id of queue) {
+        if (!merged.includes(id)) merged.push(id)
+      }
+      setOrder(merged)
+    },
+    [order, visibleRowIds]
+  )
+
+  const handleMove = useCallback(
+    (rowId: CanvasToolbarStaticRowId, direction: -1 | 1) => {
+      const idx = displayOrder.indexOf(rowId)
+      if (idx < 0) return
+      const target = idx + direction
+      if (target < 0 || target >= displayOrder.length) return
+      const next = [...displayOrder]
+      const tmp = next[idx]!
+      next[idx] = next[target]!
+      next[target] = tmp
+      mergeVisibleOrder(next)
+    },
+    [displayOrder, mergeVisibleOrder]
+  )
+
+  const handleToggle = useCallback((rowId: CanvasToolbarStaticRowId) => {
+    setCollapsed((prev) => ({ ...prev, [rowId]: !prev[rowId] }))
+  }, [])
+
+  const resetLayout = useCallback(() => {
+    clearSavedStaticToolbarLayout()
+    setOrder([...DEFAULT_STATIC_ROW_ORDER])
+    setCollapsed({
+      room: false,
+      patron: false,
+      vendor: false,
+      tools: false,
+    })
+  }, [])
+
+  if (displayOrder.length === 0) return null
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex min-w-0 items-center justify-end">
+        <button
+          type="button"
+          onClick={resetLayout}
+          title="Reset toolbar to default layout"
+          aria-label="Reset toolbar layout"
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1 rounded-md border border-stone-200',
+            'px-2 text-[10px] font-semibold text-stone-600 hover:bg-stone-50',
+            compact ? 'h-[1.575rem]' : 'h-7'
+          )}
+        >
+          <RotateCcw className="h-3 w-3" aria-hidden />
+          <span className="hidden sm:inline">Reset layout</span>
+        </button>
+      </div>
+      {displayOrder.map((rowId, index) => {
+        const blockIds = STATIC_ROW_BLOCKS[rowId]
+        const expanded = !collapsed[rowId]
+        return (
+          <StaticToolbarRow
+            key={rowId}
+            rowId={rowId}
+            label={STATIC_ROW_LABELS[rowId]}
+            index={index}
+            total={displayOrder.length}
+            expanded={expanded}
+            compact={compact}
+            onToggle={handleToggle}
+            onMove={handleMove}
+          >
+            {blockIds.map((blockId) => (
+              <div
+                key={blockId}
+                className={cn(
+                  'inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-1 shadow-sm',
+                  compact ? 'py-[0.45rem]' : 'py-0.5'
+                )}
+              >
+                {renderBlock(blockId)}
+              </div>
+            ))}
+          </StaticToolbarRow>
+        )
+      })}
+    </div>
+  )
+}

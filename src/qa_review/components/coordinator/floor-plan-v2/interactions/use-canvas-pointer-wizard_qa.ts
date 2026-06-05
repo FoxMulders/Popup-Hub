@@ -1287,7 +1287,7 @@ export function useCanvasPointerWizardQa(
       if (drag && drag.pointerId === e.pointerId) {
         if (drag.moved) {
           // Same-category proximity gate: when the drag would land
-          // any moved booth within `<5 cols AND <2 rows` of another
+          // any moved booth within `<4 cols AND <2 rows` of another
           // same-category booth, snap the entire move back to its
           // pre-gesture origin. Non-booths and untagged booths skip
           // the gate. Other booths in the move are excluded from the

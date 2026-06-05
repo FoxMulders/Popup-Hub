@@ -8,7 +8,7 @@
  *   - No placed booth overlaps an obstacle or another booth.
  *   - Categories rotate so adjacent slots never share one when more
  *     than one category is defined.
- *   - The same-category proximity rule (`< 5 cols AND < 2 rows`,
+ *   - The same-category proximity rule (`< 4 cols AND < 2 rows`,
  *     center-to-center) is satisfied across every same-category
  *     pair the engine produced.
  *
@@ -79,7 +79,7 @@ function makeNarrowBooth(
     x: 0,
     y: 0,
     width: 4, // Narrow enough that adjacent booths in a row are
-    height: 5, // < 5 cols apart center-to-center → triggers proximity
+    height: 5, // narrow row pitch can trigger proximity when categories collide
     rotation: 0,
     label: '',
     accentColor: null,
@@ -246,14 +246,14 @@ const cases: Case[] = [
       Array.from({ length: 16 }, (_, i) => makeBooth(i))
     ),
     // With only one category, every same-category placement after
-    // the first will violate the < 5 cols / < 2 rows rule. The
+    // the first will violate the < 4 cols / < 2 rows rule. The
     // engine should still place every booth (with categoryName=null
     // for the overflow) and report unsatisfiedCategoryCount > 0.
     categories: ['Solo'],
     expectMin: 16,
   },
   {
-    name: '24 booths with 6 categories — every same-category pair must clear < 5/< 2',
+    name: '24 booths with 6 categories — every same-category pair must clear < 4/< 2',
     doc: makeDoc(
       40,
       72,
@@ -263,13 +263,13 @@ const cases: Case[] = [
     expectMin: 20,
   },
   {
-    name: 'narrow 4ft booths × single category with 2ft edge spacing',
+    name: 'narrow 4ft booths × single category with 4ft center pitch',
     doc: makeDoc(
       40,
       72,
       Array.from({ length: 8 }, (_, i) => makeNarrowBooth(i))
     ),
-    // 4-ft booths + 2-ft gap → 6-ft center pitch clears the 5-col rule.
+    // 4-ft booths, flush columns → 4-ft center pitch clears the 4-col rule.
     categories: ['Solo'],
     expectMin: 8,
   },
@@ -300,7 +300,7 @@ for (const c of cases) {
   const adjacentDuplicate = false
 
   // Hard proximity rule: every pair of same-category booths in the
-  // arranged doc must satisfy `dxColumns >= 5 OR dyRows >= 2`. Any
+  // arranged doc must satisfy `dxColumns >= 4 OR dyRows >= 2`. Any
   // pair that violates is a bug in the engine — we only allow the
   // exception when the engine reported it via unsatisfiedCategoryCount
   // (i.e. it knew the canvas was too tight to fit every category).

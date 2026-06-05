@@ -1986,7 +1986,7 @@ function FloorPlanV2Workspace({
               autoArrangeMode={vendorAutoArrangeMode}
               onProximityViolation={(info) => {
                 toast.error(
-                  `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
+                  `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
                   { duration: 2400 }
                 )
               }}

@@ -6,8 +6,27 @@ import {
   clockwiseRectRing,
   sanitizeRoomFrame,
   unionParticipantBounds,
+  type SimpleBounds,
 } from './geometry-sanitize'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from './types'
+
+/** Prefer the participant anchored at the union min corner so origin shifts are minimal. */
+function pickPrimaryRoomFrame(
+  frames: ReadonlyArray<RoomFrame>,
+  union: SimpleBounds
+): RoomFrame {
+  let best = frames[0]!
+  let bestScore = Infinity
+  for (const f of frames) {
+    const score =
+      Math.abs(f.originX - union.minX) + Math.abs(f.originY - union.minY)
+    if (score < bestScore) {
+      bestScore = score
+      best = f
+    }
+  }
+  return best
+}
 
 export interface UnionMergeSelection {
   roomIds: ReadonlyArray<string>
@@ -49,7 +68,15 @@ export function mergeRoomsToUnion(
     }
   }
 
-  const primaryRoomId = frames[0]!.id
+  if (frames.length === 0) {
+    return {
+      doc,
+      primaryRoomId: '',
+      reason: 'Select at least one room to merge fixtures into',
+    }
+  }
+
+  const primaryRoomId = pickPrimaryRoomFrame(frames, union).id
   const removedRoomIds = new Set(frames.map((f) => f.id))
   removedRoomIds.delete(primaryRoomId)
 

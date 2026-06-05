@@ -359,9 +359,19 @@ function FloorPlanV2Workspace({
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
 
+  const prevLayoutRoomCountRef = useRef(layoutRooms.length)
   useEffect(() => {
-    if (layoutRooms.length === 0 && tool !== 'hand') {
+    const prevCount = prevLayoutRoomCountRef.current
+    const nextCount = layoutRooms.length
+    prevLayoutRoomCountRef.current = nextCount
+    if (nextCount === 0 && tool !== 'hand') {
       setTool('hand')
+      return
+    }
+    // Blank start forces Hand until a room exists; switch to Select so
+    // resize handles appear and perimeter/interior drags work immediately.
+    if (prevCount === 0 && nextCount > 0 && tool === 'hand') {
+      setTool('select')
     }
   }, [layoutRooms.length, tool])
 
@@ -1279,10 +1289,17 @@ function FloorPlanV2Workspace({
   const rotateTargetRoomId = selectedRoomId ?? activeRoomId
 
   const syncLayoutRoomsFromDoc = useCallback(
-    (doc: FloorPlanDoc) => {
+    (doc: FloorPlanDoc, nextActiveRoomId?: string) => {
       if (layoutRooms.length === 0) return
       const projected = legacyRoomsFromDoc(layoutRooms, doc)
-      onLayoutRoomsChange(projected, activeRoomId)
+      const liveIds = new Set((doc.rooms ?? []).map((r) => r.id))
+      const resolvedActive =
+        nextActiveRoomId && liveIds.has(nextActiveRoomId)
+          ? nextActiveRoomId
+          : liveIds.has(activeRoomId)
+            ? activeRoomId
+            : (projected[0]?.id ?? activeRoomId)
+      onLayoutRoomsChange(projected, resolvedActive)
     },
     [activeRoomId, layoutRooms, onLayoutRoomsChange]
   )
@@ -1495,12 +1512,21 @@ function FloorPlanV2Workspace({
     vendorTableMetaByKey,
   ])
 
+  const handleAddRoomWithSelectTool = useCallback(
+    (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
+      onAddRoom?.(options)
+      setTool('select')
+    },
+    [onAddRoom]
+  )
+
   const handleSelectRoom = useCallback(
     (roomId: string) => {
       onLayoutRoomsChange(layoutRooms, roomId)
       setSelectedRoomId(roomId)
       setSelectedRoomIds(new Set([roomId]))
       store.clearSelection()
+      setTool('select')
     },
     [layoutRooms, onLayoutRoomsChange, store]
   )
@@ -1519,6 +1545,7 @@ function FloorPlanV2Workspace({
         setSelectedRoomIds(new Set([roomId]))
       }
       setSelectedRoomId(roomId)
+      setTool('select')
       if (roomId !== activeRoomId) {
         onLayoutRoomsChange(layoutRooms, roomId)
       }
@@ -1770,7 +1797,7 @@ function FloorPlanV2Workspace({
     addLog(`doc.rooms after merge: ${serializeRooms(store.doc)}`)
     setSelectedRoomId(result.mergedId)
     setSelectedRoomIds(new Set([result.mergedId]))
-    syncLayoutRoomsFromDoc(store.doc)
+    syncLayoutRoomsFromDoc(store.doc, result.mergedId)
     recoverCanvasFocus()
     toast.success(
       'Merged into one hall — source rooms removed, union perimeter saved.',
@@ -1987,7 +2014,7 @@ function FloorPlanV2Workspace({
             rooms={showToolbarRoomControls ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
             onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
-            onAddRoom={showToolbarRoomControls ? onAddRoom : undefined}
+            onAddRoom={showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined}
             onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
             onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
@@ -2057,7 +2084,7 @@ function FloorPlanV2Workspace({
             rooms={showToolbarRoomControls ? layoutRooms : undefined}
             activeRoomId={selectedRoomId ?? activeRoomId}
             onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
-            onAddRoom={showToolbarRoomControls ? onAddRoom : undefined}
+            onAddRoom={showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined}
             onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
             onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
             highlightedRoomMetrics={highlightedRoomMetrics}
@@ -2115,7 +2142,7 @@ function FloorPlanV2Workspace({
               autoArrangeMode={vendorAutoArrangeMode}
               onProximityViolation={(info) => {
                 toast.error(
-                  `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
+                  `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
                   { duration: 2400 }
                 )
               }}

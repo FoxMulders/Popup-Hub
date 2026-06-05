@@ -6,7 +6,7 @@
  * without React or DOM dependencies:
  *
  *   1. `isBoothProximityViolation` — same-category booths cannot sit
- *      within 5 grid columns AND 2 grid rows of each other. The grid
+ *      within 4 grid columns AND 2 grid rows of each other. The grid
  *      origin is the canvas (0,0); column/row distance is measured
  *      between booth centers and converted from grid spaces to feet
  *      using `gridSpacingFt` (the document's snap unit). Coordinators
@@ -18,17 +18,17 @@
  *   2. `nextCategoryName` (re-exported from the palette module) —
  *      sequential category cycling for paste/duplicate flows.
  *
- * The thresholds (5 columns, 2 rows) match the goal spec verbatim:
+ * The thresholds (4 columns, 2 rows) match the goal spec verbatim:
  *
  *   "If another booth of the exact same Category X is found within
- *    a distance of less than 5 grid spaces horizontally (columns)
+ *    a distance of less than 4 grid spaces horizontally (columns)
  *    AND less than 2 rows vertically, trigger a validation error."
  */
 
 import type { BoothObject, PlacedObject } from '../state/types'
 
-/** "Less than 5 grid columns" — strict inequality. */
-export const PROXIMITY_MIN_COLUMNS = 5
+/** "Less than 4 grid columns" — strict inequality. */
+export const PROXIMITY_MIN_COLUMNS = 4
 /** "Less than 2 grid rows" — strict inequality. */
 export const PROXIMITY_MIN_ROWS = 2
 

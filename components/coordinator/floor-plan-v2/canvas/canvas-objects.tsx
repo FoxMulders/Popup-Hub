@@ -13,7 +13,11 @@ import type {
   WallObject,
 } from '../state/types'
 import { ringsToSvgPathD } from '@/lib/floor-plan/shape-union'
-import { paletteForCategory, DEFAULT_BOOTH_PALETTE } from './category-palette'
+import {
+  paletteForCategory,
+  DEFAULT_BOOTH_PALETTE,
+  PATRON_TABLE_PALETTE,
+} from './category-palette'
 import { EXTERIOR_LABEL_OFFSET_PX, objectCenter } from '../interactions/geometry'
 import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
 import { boothHasTableCluster } from '../state/table-cluster-layout'
@@ -68,13 +72,13 @@ function fillForObject(
   switch (obj.kind) {
     case 'booth': {
       const booth = obj as BoothObject
-      const status = isGuestTableBooth(booth)
+      const isPatron = isGuestTableBooth(booth)
+      const status = isPatron
         ? undefined
         : boothPlacementStatusByObjectId?.get(obj.id)
       if (status) return BOOTH_STATUS_THEME[status].fill
-      // Explicit override wins; otherwise fall through to the deterministic
-      // category palette so booths read by category color.
       if (booth.accentColor) return booth.accentColor
+      if (isPatron) return PATRON_TABLE_PALETTE.fill
       return paletteForCategory(booth.categoryName, eventCategoryNames).fill
     }
     case 'wall':
@@ -86,7 +90,7 @@ function fillForObject(
       // "service window" cue.
       return '#fef3c7'
     case 'stage':
-      return '#fbcfe8'
+      return 'transparent'
     case 'food_truck':
       return '#fed7aa'
     case 'door':
@@ -112,14 +116,15 @@ function strokeForObject(
   switch (obj.kind) {
     case 'booth': {
       const booth = obj as BoothObject
-      const status = isGuestTableBooth(booth)
+      const isPatron = isGuestTableBooth(booth)
+      const status = isPatron
         ? undefined
         : boothPlacementStatusByObjectId?.get(obj.id)
       if (status) return BOOTH_STATUS_THEME[status].stroke
-      // When the user has set a custom accentColor, keep the legacy
-      // amber stroke so contrast stays readable. Otherwise pull the
-      // stroke straight from the category palette.
-      if (booth.accentColor) return DEFAULT_BOOTH_PALETTE.stroke
+      if (booth.accentColor) {
+        return isPatron ? PATRON_TABLE_PALETTE.stroke : DEFAULT_BOOTH_PALETTE.stroke
+      }
+      if (isPatron) return PATRON_TABLE_PALETTE.stroke
       return paletteForCategory(booth.categoryName, eventCategoryNames).stroke
     }
     case 'wall':
@@ -530,7 +535,8 @@ function CanvasObjectsBase({
         )
         const hideJoinedFixtureBody = isJoined && isJoinableObject(obj)
         const displayFill = hideJoinedFixtureBody ? 'transparent' : patternFill ?? fill
-        const displayFillOpacity = hideJoinedFixtureBody ? 0 : 0.85
+        const displayFillOpacity =
+          hideJoinedFixtureBody || obj.kind === 'stage' ? 0 : 0.85
         const stroke = isJoined && !isSelected && !isOverlapping
           ? 'transparent'
           : strokeForObject(

@@ -26,7 +26,7 @@ Vendor units are rectangular sellable placements (`tablePurpose: 'vendor'`). The
 | Aspect | Detail |
 |--------|--------|
 | **Draw** | Toolbar **Vendor**; Table size pill **Vendor** column (rectangular, hall baseline length) |
-| **Canvas** | Solid vendor rectangle; included in booth matrix / placement status / telemetry |
+| **Canvas** | Solid vendor rectangle (amber/yellow fill); included in booth matrix / placement status / telemetry |
 | **Consolidation** | Multi-table vendors collapse to one footprint before arrange (`consolidateBoothsForAutoArrange`) |
 | **Auto-arrange scope** | **Vendor only** — patron is never moved or merged in this pass |
 | **Auto-arrange modes** | **Grid** — aligned rows/columns, 8′ aisles, entrance-first row order · **Staggered** — alternating half-width row offset for sightlines · **Perimeter** — boundary loop (top → right → bottom → left) |
@@ -42,7 +42,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | Aspect | Detail |
 |--------|--------|
 | **Draw** | Toolbar **Round** / **Patron**; Table size pill **Round** or **Patron** columns (5′ / 6′ / 8′) |
-| **Canvas** | Round = ellipse; patron = dashed rectangle; excluded from vendor “Unassigned” styling and booth matrix vendor counts |
+| **Canvas** | Round = violet/purple ellipse; patron = dashed violet/purple rectangle; excluded from vendor “Unassigned” styling and booth matrix vendor counts |
 | **Consolidation** | None — each placement keeps its laid footprint (round stays circular) |
 | **Auto-arrange scope** | **Patron only** — vendor is obstacles/fixed context, not rearranged in this pass |
 | **Auto-arrange modes (target)** | Same three options as vendor: **Grid**, **Staggered**, **Perimeter** — applied only to patron, respecting vendor footprints and structural obstacles |
@@ -55,6 +55,11 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | **Verify** | Guest-table + isolated-scope blocks in `scripts/verify-auto-arrange.ts` (10/10 pass in those sections) |
 
 ## Shipped this session (local, not deployed)
+- **Build fix (TS):** `CanvasPointerApi.onPointerDown` return type updated to `boolean` (implementation already returned handled flag; `floor-plan-canvas.tsx` truthiness check failed typecheck). `scripts/verify-room-merge-two-rooms.ts` — full `LayoutRoom` shape for legacy projection test. Local `npm run build` passes (build **129**).
+- **Vendor booth spacing 4′ pitch:** Vendor auto-arrange no longer adds a 2′ edge gap between booth footprints (`BOOTH_PLACEMENT_GAP_FT = 0` — 4′ units pack at 4′ center pitch instead of 6′). Same-category proximity rule reduced from 5 to 4 grid columns. Patron auto-arrange keeps 2′ table gaps and 2′ vendor obstacle clearance. `auto-arrange.ts`, `category-rules.ts`, `deterministic-market-layout.ts` (`tableEdgeGapFt` per scope). Verify: `npx tsx scripts/verify-category-rules.ts`, `verify-auto-arrange.ts`.
+- **Patron vs vendor canvas colors:** Patron/guest tables render with violet fill (`#ddd6fe` / stroke `#5b21b6`); vendor booths without a category stay amber/yellow (`DEFAULT_BOOTH_PALETTE`). `PATRON_TABLE_PALETTE` in `category-palette.ts`; `fillForObject` / `strokeForObject` in `canvas-objects.tsx`.
+- **Room merge + stage fill fix:** Destructive **Merge (2)** now picks the top-left participant as the surviving room (union min origin), reassigns `objectRoom` for absorbed rooms, and `legacyRoomsFromDoc` drops removed rooms so the wizard sidebar matches the single merged hall. Post-merge sync passes the merged room id as active. Stage assets render with `fill: transparent` / `fillOpacity: 0` (rose stroke retained). `room-union-merge.ts`, `legacy-bridge.ts`, `floor-plan-v2.tsx`, `canvas-objects.tsx`, `canvas-overlays.tsx`. Verify: `npx tsx scripts/verify-room-merge-two-rooms.ts`, `verify-destructive-merge.ts`, `verify-multi-room-canvas.ts`.
+- **Room move/resize on canvas:** Drag the room perimeter or empty interior to reposition; eight corner/edge handles resize the footprint (booth/fixture children move/scale with the frame). **Select** or **Hand** tool — Hand still pans empty canvas but room strokes/handles take priority (clicks on placed objects do not drag the room). Auto-switches to **Select** after **Add room**; room tab / perimeter click also switch to Select. `use-canvas-pointer.ts`, `floor-plan-canvas.tsx`, `floor-plan-v2.tsx`. Verify: `npx tsx scripts/verify-multi-room-canvas.ts` (27/27 pass).
 - **Passport story logo fallback:** Story cards and public carousel use `resolveStoryBackground` (`story image → brand logo → /placeholder-logo.png`). Logo/placeholder thumbnails get `object-contain bg-neutral-900 p-4`; video clips bind `poster={logoUrl}` on `<video>` in uploader detail modal and full-screen viewer. `lib/passport-stories/story-media.ts`, `hooks/use-owner-brand-logo.ts`, `passport-story-uploader.tsx`, `passport-story-viewer.tsx`, `public/placeholder-logo.png`.
 - **Market Promo expandable card:** Passport story preview cards on `/profile/passport` use `object-contain` + `bg-gray-50` for logo thumbnails (no edge clipping). Cards are clickable (`hover:shadow-md transition-all cursor-pointer`) and open a Full Details dialog with uncropped caption + full-size media; backdrop click and Close dismiss. `components/passport/passport-story-uploader.tsx`.
 - **Profile vs Passport split:** Profile settings limited to private account data — Legal Name, Private Email, phone (labeled *Private — Used only for automated system SMS alerts*), shopper auction contact toggle, `AccountSecurityCard` (Change Password), and `NotificationPreferencesGrid` in the main column. Organization name, website, bio, and social links removed from profile form; `use-profile-settings` writes only `profiles`. Passport forms use `use-passport-profile` → `vendor_passports` (bio, social, logistics). `lib/passport/public-passport-index.ts` + service client loads public-safe fields for `/coordinators/[id]` and `/patrons/[id]` via `PassportPublicCard` (Instagram/Facebook/Website icon links). Migration `091_passport_social_logistics.sql`: `facebook_url`, `requires_electricity` on `vendor_passports`; vendor wizard + coordinator review drawer wired.
@@ -80,6 +85,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Toolbar split: Vendor / Patron / Room:** Canvas ribbon reorganized into three labeled blocks — **Vendor** (Vendor draw + Vendor sizes + vendor auto-arrange), **Patron** (Round/Patron + Round/Patron sizes + patron auto-arrange), **Room** (tabs, rotate, merge/unjoin). Canvas tools (select/hand, walls, doors, label, delete) stay in **primitives**; history, align, zoom, save in other blocks. `TableSizePill` accepts `sections: 'vendor' | 'patron'`. Legacy toolbar block ids migrate on load (`toolbar-order.ts`). QA mirrors updated.
 - **Toolbar labels:** Draw tools and size-pill columns use **Vendor** / **Round** / **Patron** (not Booth, Patron rect, or “vendor booths”). Reorder palette block titles match.
 - **Layout toolbar reorder + labels:** Dashboard static ribbon rows — **Room** on top, **Patron** then **Vendor**, workspace tools (select, history, align, zoom, save) on bottom. Patron tools labeled **Patron · Round · Rectangle**; size pill rect column **Rectangle**. Canvas fallback labels: **Vendor** / **Patron** (not Booth). Header row ~10% shorter in static layout (`ToolbarCompactProvider`).
+- **Dashboard toolbar collapse + reorder:** `staticLayout` ribbon rows (Room, Patron, Vendor, Canvas tools) are individually collapsible (chevron toggle) and reorderable (move up/down). Order + collapsed map persist in `localStorage` (`toolbar-static-layout.ts`, `canvas-toolbar-static.tsx`). **Reset layout** restores defaults. Wizard ribbon unchanged (`CanvasToolbarReorder` horizontal drag).
 
 ## Shipped this session (prod build 106, `cde554e`)
 - **Deploy tooling fix:** `update-session-handoff.ps1` uses ASCII `-` / `->` / `|` instead of Unicode dashes/arrows so Windows PowerShell 5 parses strings; `deploy-popuphub.ps1` always records https://popuphub.ca in baseline.
@@ -139,6 +145,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | Patron auto-arrange (separate pass) | **Local** — active bounding box + non-destructive abort; isolated pass + vendor obstacles + mode selector |
 | Toolbar Vendor / Patron / Room blocks | **Local** — sign-in smoke after deploy |
 | Rotate room toolbar | **Deployed** — sign-in smoke |
+| Room drag + resize handles (Select or Hand) | **Local** — auto-Select after Add room; sign-in smoke |
 | Step 3 blank canvas (interactive) | **Deployed** — sign-in smoke |
 | Wheel zoom / scroll pan over canvas | **Deployed** — sign-in smoke |
 | Stage draw outside room (join) | **Deployed** — verify-asset-type-joins + sign-in |
@@ -157,6 +164,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 ## Blockers
 - Interactive coordinator smoke-test requires user credentials
 - Markets with **only** `venue_elements` and no cells open **blank** by design
+- ~~Deploy blocked by TS build failure~~ — fixed locally (pointer return type + verify script)
 
 ## Decisions
 - **Drawable geometry = booth `cells` only**
@@ -167,16 +175,18 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal
-2. **Commit + deploy** profile/passport split + patron bounding-box auto-arrange + market promo card when ready
-3. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
-4. **Passport smoke-test (public)** — bio + Instagram/Facebook/Website on public `/coordinators/[id]` and `/patrons/[id]`; stories strip still opens story viewer
-5. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
-6. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
-7. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
-8. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
-9. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
-10. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
+1. **Room merge smoke-test** — Add two touching rooms, Shift+select both (or park flush), **Merge (2)** → single hall in sidebar, booths stay put, grid shows through stage outline
+2. **Room move/resize smoke-test** — Add room → confirm Select tool active, eight dots on perimeter, drag room interior/wall to move, drag corner/edge dot to resize; toolbar W×L readout updates
+3. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal
+4. **Commit + deploy** room merge + stage fill + prior local fixes when ready
+5. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
+6. **Passport smoke-test (public)** — bio + Instagram/Facebook/Website on public `/coordinators/[id]` and `/patrons/[id]`; stories strip still opens story viewer
+7. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
+8. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
+9. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
+10. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
+11. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
+12. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 
 ## How to start the next chat
 ```

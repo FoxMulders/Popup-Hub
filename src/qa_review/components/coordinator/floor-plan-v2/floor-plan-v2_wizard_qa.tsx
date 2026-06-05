@@ -367,9 +367,17 @@ function FloorPlanV2Workspace({
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
 
+  const prevLayoutRoomCountRef = useRef(layoutRooms.length)
   useEffect(() => {
-    if (layoutRooms.length === 0 && tool !== 'hand') {
+    const prevCount = prevLayoutRoomCountRef.current
+    const nextCount = layoutRooms.length
+    prevLayoutRoomCountRef.current = nextCount
+    if (nextCount === 0 && tool !== 'hand') {
       setTool('hand')
+      return
+    }
+    if (prevCount === 0 && nextCount > 0 && tool === 'hand') {
+      setTool('select')
     }
   }, [layoutRooms.length, tool])
 
@@ -2090,7 +2098,7 @@ function FloorPlanV2Workspace({
               autoArrangeMode={vendorAutoArrangeMode}
               onProximityViolation={(info) => {
                 toast.error(
-                  `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,
+                  `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
                   { duration: 2400 }
                 )
               }}

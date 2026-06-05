@@ -42,7 +42,7 @@ const ITEMS: LegendItem[] = [
     swatchClass: PLACEMENT_VIOLATION.tailwindSwatch,
     label: 'Violation',
     detail:
-      'Constraint violation — fails the 5-column / 2-row same-category freeze, overlaps a barrier, or blocks an emergency corridor.',
+      'Constraint violation — fails the 4-column / 2-row same-category freeze, overlaps a barrier, or blocks an emergency corridor.',
   },
 ]
 

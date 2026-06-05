@@ -19,7 +19,7 @@ import { rotatedAabb, type Point, type Rect } from '../interactions/geometry'
 import type { BoothObject, PlacedObject } from '../state/types'
 
 /** Keep in sync with `auto-arrange.ts` spacing spec. */
-const BOOTH_EDGE_CLEARANCE_FT = 2
+const BOOTH_EDGE_CLEARANCE_FT = 0
 const FRONT_CLEARANCE_FT = 5
 const WALL_BUFFER_FT = 3.5
 

@@ -31,6 +31,8 @@ export interface MarketLayoutRequest {
   layoutMode: MarketLayoutMode
   /** Minimum straight aisle width (ft). Default 8. */
   aisleSpacing?: number
+  /** Edge-to-edge column gap between table footprints (ft). Default 2. */
+  tableEdgeGapFt?: number
   constraints?: ReadonlyArray<{
     type: LayoutConstraintType
     bounds: ReadonlyArray<MarketLayoutPoint>
@@ -64,6 +66,8 @@ export interface DeterministicMarketLayoutInput {
   tableIds: ReadonlyArray<string>
   layoutMode: MarketLayoutMode
   aisleWidthFt?: number
+  /** Edge-to-edge column gap between table footprints (ft). Default 2. */
+  tableEdgeGapFt?: number
   wallInsetFt?: number
   snapFt?: number
   entrance?: MarketLayoutPoint
@@ -115,7 +119,7 @@ export type DeterministicMarketLayoutResult =
 
 export const DEFAULT_AISLE_WIDTH_FT = 8
 export const DEFAULT_WALL_INSET_FT = 3.5
-/** Edge-to-edge gap between booth footprints in grid/staggered columns (ft). */
+/** Default edge-to-edge gap between table footprints in grid/staggered columns (ft). */
 export const TABLE_EDGE_GAP_FT = 2
 
 export interface SlotCandidate {
@@ -281,10 +285,11 @@ function buildInteriorSlots(
   inset: number,
   mode: 'grid' | 'staggered',
   entrance: MarketLayoutPoint | undefined,
-  restrictedZones: ReadonlyArray<MarketLayoutRect>
+  restrictedZones: ReadonlyArray<MarketLayoutRect>,
+  tableEdgeGapFt: number
 ): SlotCandidate[] {
   const rowStep = th + aisleFt
-  const colStep = tw + TABLE_EDGE_GAP_FT
+  const colStep = tw + tableEdgeGapFt
   const minX = inset
   const slots: SlotCandidate[] = []
   let rowIndex0 = 0
@@ -600,6 +605,7 @@ export function computeMarketLayout(
       : defaultTableIds(tableCount)
   const aisleFt = request.aisleSpacing ?? DEFAULT_AISLE_WIDTH_FT
   const inset = request.wallInsetFt ?? DEFAULT_WALL_INSET_FT
+  const tableEdgeGapFt = request.tableEdgeGapFt ?? TABLE_EDGE_GAP_FT
   const { entrance, restrictedZones } = parseConstraints(request.constraints)
 
   return runLayout({
@@ -612,6 +618,7 @@ export function computeMarketLayout(
     layoutMode: request.layoutMode,
     aisleFt,
     inset,
+    tableEdgeGapFt,
     entrance,
     restrictedZones,
     premiumLocations: request.premiumLocations,
@@ -655,6 +662,7 @@ function requestFromLegacy(
     tableIds: input.tableIds,
     layoutMode: input.layoutMode,
     aisleSpacing: input.aisleWidthFt,
+    tableEdgeGapFt: input.tableEdgeGapFt,
     wallInsetFt: input.wallInsetFt,
     constraints,
     premiumLocations: input.premiumLocations,
@@ -671,6 +679,7 @@ function runLayout(params: {
   layoutMode: MarketLayoutMode
   aisleFt: number
   inset: number
+  tableEdgeGapFt: number
   entrance?: MarketLayoutPoint
   restrictedZones: MarketLayoutRect[]
   premiumLocations?: ReadonlyArray<MarketLayoutPoint>
@@ -685,6 +694,7 @@ function runLayout(params: {
     layoutMode,
     aisleFt,
     inset,
+    tableEdgeGapFt,
     entrance,
     restrictedZones,
     premiumLocations,
@@ -766,7 +776,8 @@ function runLayout(params: {
     inset,
     layoutMode === 'staggered' ? 'staggered' : 'grid',
     entrance,
-    restrictedZones
+    restrictedZones,
+    tableEdgeGapFt
   )
   const ordered = orderSlotsWithPremium(interiorSlots, premiumLocations)
   const placements = fillPlacementsFromSlots(

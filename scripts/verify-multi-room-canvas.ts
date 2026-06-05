@@ -29,6 +29,7 @@ import {
   CANVAS_DIMENSION_SCALE,
   clampRoomMoveDelta,
   reconcileCanvasExtents,
+  roomResizeFromHandle,
   roomUnionBounds,
 } from '../components/coordinator/floor-plan-v2/state/room-canvas'
 import {
@@ -444,6 +445,44 @@ console.log('=== Multi-room canvas verification ===\n')
   check(
     'Post-drag union maxX reflects moved annex',
     bounds.maxX === 340
+  )
+}
+
+// ----- Case 12: room resize handle math (SE corner grows footprint) -----
+{
+  const frame = {
+    id: 'r-main',
+    name: 'Main Hall',
+    originX: 10,
+    originY: 5,
+    widthFt: 50,
+    lengthFt: 40,
+  }
+  const patch = roomResizeFromHandle(
+    frame,
+    'se',
+    { x: 70, y: 55 },
+    { x: 10, y: 5 }
+  )
+  check(
+    'SE resize keeps origin and expands width/length to pointer',
+    patch.originX === 10 &&
+      patch.originY === 5 &&
+      patch.widthFt === 60 &&
+      patch.lengthFt === 50
+  )
+  const nwPatch = roomResizeFromHandle(
+    frame,
+    'nw',
+    { x: 20, y: 10 },
+    { x: 60, y: 45 }
+  )
+  check(
+    'NW resize moves origin and shrinks width/length',
+    nwPatch.originX === 20 &&
+      nwPatch.originY === 10 &&
+      nwPatch.widthFt === 40 &&
+      nwPatch.lengthFt === 35
   )
 }
 

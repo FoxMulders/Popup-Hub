@@ -377,7 +377,7 @@ export interface CanvasPointerApi {
   roomGestureActive: boolean
   /** True while dragging an object resize handle. */
   objectGestureActive: boolean
-  onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => void
+  onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => boolean
   onPointerMove: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerUp: (e: ReactPointerEvent<SVGSVGElement>) => void
   onContextMenu: (e: React.MouseEvent<SVGSVGElement>) => void
@@ -551,18 +551,16 @@ export function useCanvasPointer(
   )
 
   const onPointerDown = useCallback(
-    (e: ReactPointerEvent<SVGSVGElement>) => {
-      if (panActiveRef.current) return
+    (e: ReactPointerEvent<SVGSVGElement>): boolean => {
+      if (panActiveRef.current) return false
       // Only react to primary mouse / pen / touch.
-      if (e.button !== 0 && e.pointerType === 'mouse') return
+      if (e.button !== 0 && e.pointerType === 'mouse') return false
 
       const ft = ftAt(e.clientX, e.clientY)
       const activeTool = toolStateRef.current
-
-      if (activeTool.tool === 'hand') {
-        // Hand mode is a no-op at this layer — pan-zoom hook handles motion.
-        return
-      }
+      const allowObjectGestures = activeTool.tool === 'select'
+      const allowRoomGestures =
+        activeTool.tool === 'select' || activeTool.tool === 'hand'
 
       if (activeTool.tool === 'draw') {
         capturePointer(e.currentTarget, e.pointerId)
@@ -572,14 +570,13 @@ export function useCanvasPointer(
           current: snapped,
           kind: activeTool.drawShape,
         })
-        return
+        return true
       }
 
-      // SELECT
       const target = e.target as Element | null
 
       const objectResizeEl = target?.closest('[data-object-resize-handle]')
-      if (objectResizeEl && activeTool.tool === 'select') {
+      if (objectResizeEl && allowObjectGestures) {
         const objectId = objectResizeEl.getAttribute('data-object-id')
         const handle = objectResizeEl.getAttribute(
           'data-object-resize-handle'
@@ -599,12 +596,12 @@ export function useCanvasPointer(
             initial: { ...obj },
             moved: false,
           }
-          return
+          return true
         }
       }
 
       const resizeHandleEl = target?.closest('[data-room-resize-handle]')
-      if (resizeHandleEl && activeTool.tool === 'select') {
+      if (resizeHandleEl && allowRoomGestures) {
         const roomId = resizeHandleEl.getAttribute('data-room-id')
         const handle = resizeHandleEl.getAttribute(
           'data-room-resize-handle'
@@ -624,7 +621,7 @@ export function useCanvasPointer(
             moved: false,
             limitNotified: false,
           }
-          return
+          return true
         }
       }
 
@@ -633,7 +630,7 @@ export function useCanvasPointer(
       // `data-object-id` so we can pick up the right object without
       // walking the doc.
       const rotateHandle = target?.closest('[data-rotate-handle="true"]')
-      if (rotateHandle && activeTool.tool === 'select') {
+      if (rotateHandle && allowObjectGestures) {
         const handleObjectId = rotateHandle.getAttribute('data-object-id')
         const anchorObj =
           handleObjectId &&
@@ -662,7 +659,7 @@ export function useCanvasPointer(
             }))
           // If the only candidate (the anchor itself) is locked we
           // bail entirely — nothing to rotate.
-          if (affected.length === 0) return
+          if (affected.length === 0) return false
           rotateRef.current = {
             pointerId: e.pointerId,
             anchorId: anchorObj.id,
@@ -671,19 +668,18 @@ export function useCanvasPointer(
             affected,
           }
           setRotating(true)
-          return
+          return true
         }
       }
 
       // Placed objects win over empty room interior — otherwise every
       // booth click inside a room starts a macro room drag instead of
       // selecting or moving the booth.
-      const objectId =
-        activeTool.tool === 'select'
-          ? (target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
-              hitTest(store.doc.objects, ft)?.id ??
-              null)
-          : null
+      const objectId = allowObjectGestures
+        ? (target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
+            hitTest(store.doc.objects, ft)?.id ??
+            null)
+        : null
       if (objectId) {
         const additive = e.shiftKey || e.metaKey || e.ctrlKey
         const wasSelected = store.selectedIds.has(objectId)
@@ -703,11 +699,18 @@ export function useCanvasPointer(
         if (dragIds.length > 0) {
           beginDrag(e.pointerId, ft, dragIds)
         }
-        return
+        return true
       }
 
       // Room perimeter stroke, or empty interior when no object was hit.
-      if (activeTool.tool === 'select') {
+      if (allowRoomGestures) {
+        if (activeTool.tool === 'hand') {
+          const objectUnderPointer =
+            target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
+            hitTest(store.doc.objects, ft)?.id ??
+            null
+          if (objectUnderPointer) return false
+        }
         const roomStroke = target?.closest('[data-room-stroke="true"]')
         let roomId = roomStroke?.getAttribute('data-room-id') ?? null
         if (!roomId) {
@@ -748,7 +751,7 @@ export function useCanvasPointer(
           store.clearSelection()
           onRoomFrameClickRef.current?.(roomId, { additive })
           if (additive) {
-            return
+            return true
           }
           capturePointer(e.currentTarget, e.pointerId)
           setRoomGestureActive(true)
@@ -761,9 +764,11 @@ export function useCanvasPointer(
             moved: false,
             limitNotified: false,
           }
-          return
+          return true
         }
       }
+
+      if (!allowObjectGestures) return false
 
       // Empty canvas in select mode → marquee.
       capturePointer(e.currentTarget, e.pointerId)
@@ -771,6 +776,7 @@ export function useCanvasPointer(
         store.clearSelection()
       }
       setMarquee({ pointerId: e.pointerId, anchor: ft, current: ft })
+      return true
     },
     [beginDrag, capturePointer, ftAt, store]
   )
@@ -1325,7 +1331,7 @@ export function useCanvasPointer(
       if (drag && drag.pointerId === e.pointerId) {
         if (drag.moved) {
           // Same-category proximity gate: when the drag would land
-          // any moved booth within `<5 cols AND <2 rows` of another
+          // any moved booth within `<4 cols AND <2 rows` of another
           // same-category booth, snap the entire move back to its
           // pre-gesture origin. Non-booths and untagged booths skip
           // the gate. Other booths in the move are excluded from the

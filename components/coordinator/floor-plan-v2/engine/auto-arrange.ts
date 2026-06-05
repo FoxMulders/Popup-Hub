@@ -41,6 +41,7 @@ import {
   autoArrangeModeToMarketLayout,
   DEFAULT_AISLE_WIDTH_FT,
   generateDeterministicMarketLayout,
+  TABLE_EDGE_GAP_FT,
 } from '@/lib/floor-plan/deterministic-market-layout'
 
 export {
@@ -89,11 +90,16 @@ export const BACK_TO_BACK_GAP_FT = CHAIR_LENGTH_FT * 3
 /** Front-of-booth clearance — uses the patron-pair width. */
 export const FRONT_CLEARANCE_FT = PATRON_PAIR_WIDTH_FT
 /**
- * Mandatory edge-to-edge gap between booth footprints (side and back).
- * Row pack advances X by `boothW + BOOTH_EDGE_CLEARANCE_FT` so slots
- * never sit flush.
+ * Edge-to-edge gap between vendor booth footprints in grid / row pack.
+ * Row pack advances X by `boothW + BOOTH_PLACEMENT_GAP_FT`.
  */
-export const BOOTH_EDGE_CLEARANCE_FT = 2
+export const BOOTH_PLACEMENT_GAP_FT = 0
+/** Walking clearance around fixed vendor/patron footprints treated as obstacles. */
+export const BOOTH_OBSTACLE_CLEARANCE_FT = 2
+/** Column gap between patron tables during row-pack fallback (unchanged from grid default). */
+const PATRON_TABLE_GAP_FT = TABLE_EDGE_GAP_FT
+/** @deprecated Use {@link BOOTH_PLACEMENT_GAP_FT} for vendor spacing; {@link BOOTH_OBSTACLE_CLEARANCE_FT} for cross-group obstacles. */
+export const BOOTH_EDGE_CLEARANCE_FT = BOOTH_PLACEMENT_GAP_FT
 /** Padding added around manually placed patron tables before auto-arrange. */
 export const PATRON_BOUNDING_BOX_PADDING_FT = 1
 /** Shown when patron auto-arrange cannot fit all tables inside the active box. */
@@ -159,7 +165,7 @@ export interface AutoArrangeResult {
   /**
    * How many booths landed without an assigned category because every
    * candidate would have violated the same-category proximity rule
-   * (`< 5 columns AND < 2 rows`) against an already-placed booth.
+   * (`< 4 columns AND < 2 rows`) against an already-placed booth.
    * The caller should surface a warning when this is non-zero so the
    * coordinator knows their canvas is too tight to host every category.
    */
@@ -240,7 +246,7 @@ function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
 /** Fixed booth footprints (patron or vendor) treated as no-go zones with edge clearance. */
 function boothFootprintObstacleRects(
   booths: BoothObject[],
-  clearanceFt = BOOTH_EDGE_CLEARANCE_FT
+  clearanceFt = BOOTH_OBSTACLE_CLEARANCE_FT
 ): Rect[] {
   return booths.map((b) =>
     expandRectForClearance(objectFootprintAabb(b), clearanceFt)
@@ -348,7 +354,7 @@ function placeBoothsAtSlots(
     if (obstacles.some((r) => aabbOverlap(candidate, r))) return false
     if (
       placedRects.some((r) =>
-        boothsCloserThan(candidate, r, BOOTH_EDGE_CLEARANCE_FT)
+        boothsCloserThan(candidate, r, BOOTH_PLACEMENT_GAP_FT)
       )
     ) {
       return false
@@ -424,8 +430,8 @@ function placeBoothsAtSlots(
     const remaining = sourceBooths.slice(nextSourceIdx)
     const maxW = Math.max(boothW, ...remaining.map((b) => b.width))
     const maxH = Math.max(boothH, ...remaining.map((b) => b.height))
-    const colPitch = maxW + BOOTH_EDGE_CLEARANCE_FT
-    const rowPitch = maxH + BOOTH_EDGE_CLEARANCE_FT
+    const colPitch = maxW + BOOTH_PLACEMENT_GAP_FT
+    const rowPitch = maxH + BOOTH_PLACEMENT_GAP_FT
     for (
       let y = inset;
       y + maxH <= cl - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
@@ -574,9 +580,9 @@ function guestTableFits(
   ) {
     return false
   }
-  if (rectOverlapsAny(rect, obstacles, BOOTH_EDGE_CLEARANCE_FT)) return false
-  if (rectOverlapsAny(rect, vendorRects, BOOTH_EDGE_CLEARANCE_FT)) return false
-  if (rectOverlapsAny(rect, placedRects, BOOTH_EDGE_CLEARANCE_FT)) return false
+  if (rectOverlapsAny(rect, obstacles, BOOTH_OBSTACLE_CLEARANCE_FT)) return false
+  if (rectOverlapsAny(rect, vendorRects, BOOTH_OBSTACLE_CLEARANCE_FT)) return false
+  if (rectOverlapsAny(rect, placedRects, PATRON_TABLE_GAP_FT)) return false
   return true
 }
 
@@ -661,7 +667,7 @@ function guestPackOrigins(
       aabbOverlap(
         expandRectForClearance(
           { x: origin.x, y: origin.y, width: 1, height: 1 },
-          BOOTH_EDGE_CLEARANCE_FT
+          BOOTH_OBSTACLE_CLEARANCE_FT
         ),
         vr
       )
@@ -826,7 +832,7 @@ function arrangeGuestTablesDeterministic(
   const restrictedZones = restrictedZonesFromObstacles([
     ...ctx.obstacles,
     ...ctx.vendorRects.map((r) =>
-      expandRectForClearance(r, BOOTH_EDGE_CLEARANCE_FT)
+      expandRectForClearance(r, BOOTH_OBSTACLE_CLEARANCE_FT)
     ),
   ])
 
@@ -1028,7 +1034,7 @@ export function arrangeGuestTables(
 
         if (rowOverflow) {
           rowX = rowStartX
-          rowY += rowMaxH + BOOTH_EDGE_CLEARANCE_FT
+          rowY += rowMaxH + PATRON_TABLE_GAP_FT
           rowMaxH = 0
           continue
         }
@@ -1055,14 +1061,14 @@ export function arrangeGuestTables(
           }
           placed.push(item)
           placedRects.push(objectFootprintAabb(item))
-          rowX += src.width + BOOTH_EDGE_CLEARANCE_FT
+          rowX += src.width + PATRON_TABLE_GAP_FT
           rowMaxH = Math.max(rowMaxH, src.height)
           placedOne = true
           continue
         }
 
         rowX = rowStartX
-        rowY += (rowMaxH || src.height) + BOOTH_EDGE_CLEARANCE_FT
+        rowY += (rowMaxH || src.height) + PATRON_TABLE_GAP_FT
         rowMaxH = 0
       }
 
@@ -1214,6 +1220,7 @@ function autoArrangeVendorBooths(
     tableIds: sourceBooths.map((b) => b.id),
     layoutMode,
     aisleWidthFt,
+    tableEdgeGapFt: BOOTH_PLACEMENT_GAP_FT,
     wallInsetFt: WALL_BUFFER_FT,
     snapFt,
     entrance,
@@ -1661,11 +1668,11 @@ export function validateClearances(
         boothsCloserThan(
           objectFootprintAabb(a),
           objectFootprintAabb(b),
-          BOOTH_EDGE_CLEARANCE_FT
+          BOOTH_PLACEMENT_GAP_FT
         )
       ) {
         errors.push(
-          `booths ${a.id} and ${b.id} closer than ${BOOTH_EDGE_CLEARANCE_FT}ft edge clearance`
+          `booths ${a.id} and ${b.id} closer than ${BOOTH_PLACEMENT_GAP_FT}ft edge clearance`
         )
       }
     }

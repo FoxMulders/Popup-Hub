@@ -8,12 +8,12 @@ import type { AddLayoutRoomOptions } from '@/lib/coordinator/add-layout-room'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import {
   getVisibleToolbarBlockIds,
-  getStaticToolbarRowGroups,
   renderCanvasCommandBarBlock,
   type CanvasCommandBarBlockContext,
 } from './canvas-command-bar-blocks'
-import type { CanvasToolbarBlockId } from './toolbar-order'
 import { CanvasToolbarReorder } from './canvas-toolbar-reorder'
+import { CanvasToolbarStatic } from './canvas-toolbar-static'
+import { getVisibleStaticToolbarRows } from './toolbar-static-layout'
 import { ToolbarCompactProvider } from './command-button'
 
 interface CanvasCommandBarProps extends CanvasToolHostProps {
@@ -47,41 +47,9 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
 
 /**
  * Unified top ribbon with draggable tool groups (framer-motion Reorder).
+ * Dashboard `staticLayout` uses stacked collapsible rows instead.
  * Drop handlers into `canvas-command-bar-blocks.tsx` per block id.
  */
-function CanvasToolbarStatic({
-  rowGroups,
-  renderBlock,
-  compact,
-}: {
-  rowGroups: readonly (readonly CanvasToolbarBlockId[])[]
-  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
-  compact?: boolean
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-1">
-      {rowGroups.map((row, rowIdx) => (
-        <div
-          key={rowIdx}
-          className="flex min-w-0 flex-wrap items-center gap-1"
-        >
-          {row.map((id) => (
-            <div
-              key={id}
-              className={cn(
-                'inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-1 shadow-sm',
-                compact ? 'py-[0.45rem]' : 'py-0.5'
-              )}
-            >
-              {renderBlock(id)}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function CanvasCommandBar(props: CanvasCommandBarProps) {
   const {
     staticLayout = false,
@@ -318,9 +286,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     [needsRoomFirst, showVendor, showPatron, showRoom]
   )
 
-  const staticRowGroups = useMemo(
+  const visibleStaticRowIds = useMemo(
     () =>
-      getStaticToolbarRowGroups({
+      getVisibleStaticToolbarRows({
         needsRoomFirst,
         showVendor,
         showPatron,
@@ -343,7 +311,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       >
         {staticLayout ? (
           <CanvasToolbarStatic
-            rowGroups={staticRowGroups}
+            visibleRowIds={visibleStaticRowIds}
             compact
             renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
           />

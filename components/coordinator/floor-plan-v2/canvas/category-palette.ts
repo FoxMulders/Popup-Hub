@@ -21,10 +21,16 @@ export interface PaletteEntry {
   stroke: string
 }
 
-/** Default booth color when a booth has no category and no override. */
+/** Default vendor booth color when no category and no override (amber / yellow). */
 export const DEFAULT_BOOTH_PALETTE: PaletteEntry = {
   fill: '#fde68a',
   stroke: '#92400e',
+}
+
+/** Patron / guest seating tables — always purple on the layout canvas. */
+export const PATRON_TABLE_PALETTE: PaletteEntry = {
+  fill: '#ddd6fe',
+  stroke: '#5b21b6',
 }
 
 /**

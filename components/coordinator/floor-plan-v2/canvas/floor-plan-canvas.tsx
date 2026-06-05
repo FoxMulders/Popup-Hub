@@ -658,11 +658,17 @@ export function FloorPlanCanvas({
           }}
           onPointerDown={(e) => {
             warnOverlayCapture(e.target)
-            // Hand / pan gestures are owned by the scroll viewport hook.
-            // Skip preventDefault so bubbled pointer events can start pan.
-            if (toolState.tool === 'hand') return
-            e.preventDefault()
-            pointer.onPointerDown(e)
+            const handled = pointer.onPointerDown(e)
+            if (handled) {
+              e.preventDefault()
+              if (toolState.tool === 'hand') {
+                e.stopPropagation()
+              }
+              return
+            }
+            if (toolState.tool !== 'hand') {
+              e.preventDefault()
+            }
           }}
           onPointerMove={pointer.onPointerMove}
           onPointerUp={pointer.onPointerUp}
@@ -724,7 +730,8 @@ export function FloorPlanCanvas({
               layer="outline"
             />
           ) : null}
-          {toolState.tool === 'select' && (selectedRoomId ?? activeRoomId)
+          {(toolState.tool === 'select' || toolState.tool === 'hand') &&
+          (selectedRoomId ?? activeRoomId)
             ? (() => {
                 const interactionRoomId = selectedRoomId ?? activeRoomId
                 const frame = (store.doc.rooms ?? []).find(

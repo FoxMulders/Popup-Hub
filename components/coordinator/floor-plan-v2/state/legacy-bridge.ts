@@ -439,21 +439,25 @@ export function legacyRoomsFromDoc(
 ): LayoutRoom[] {
   if (baseRooms.length === 0) return []
 
-  const frames = doc.rooms ?? []
+  const frames = (doc.rooms ?? []).filter((f) => !f.mergedIntoObjectId)
+  const liveRoomIds = new Set(frames.map((f) => f.id))
+  const activeBaseRooms = baseRooms.filter((r) => liveRoomIds.has(r.id))
+  if (activeBaseRooms.length === 0) return []
+
   const frameById = new Map(frames.map((f) => [f.id, f]))
   const objectRoom = doc.objectRoom ?? {}
-  const fallbackRoomId = baseRooms[0]!.id
+  const fallbackRoomId = activeBaseRooms[0]!.id
 
   // Bucket objects by destination room id.
   const bucketed = new Map<string, PlacedObject[]>()
-  for (const room of baseRooms) bucketed.set(room.id, [])
+  for (const room of activeBaseRooms) bucketed.set(room.id, [])
   for (const obj of doc.objects) {
     const roomId = objectRoom[obj.id] ?? fallbackRoomId
     if (!bucketed.has(roomId)) bucketed.set(fallbackRoomId, bucketed.get(fallbackRoomId) ?? [])
     bucketed.get(bucketed.has(roomId) ? roomId : fallbackRoomId)!.push(obj)
   }
 
-  return baseRooms.map((room) => {
+  return activeBaseRooms.map((room) => {
     const frame = frameById.get(room.id)
     const ox = frame ? frame.originX : Math.max(0, room.canvas_origin_x ?? 0)
     const oy = frame ? frame.originY : Math.max(0, room.canvas_origin_y ?? 0)
