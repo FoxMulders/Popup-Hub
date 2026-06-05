@@ -3,21 +3,24 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `ae437f1` (pushed to `origin/master`)
-- Last deploy commit: `ae437f1` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 140** | commit `1560cc2` (handoff updated 2026-06-05 16:15)
+- Branch: `master` @ `ba80568` (pushed to `origin/master`)
+- Last deploy commit: `ba80568` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 143** | commit `af309b0` (handoff updated 2026-06-05 16:34)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-05 16:15 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (ae437f1)
+- 2026-06-05 16:34 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (ba80568)
 
 
 ## Goal
-**QA folder staging — complete UI polish & structural overrides** — uppercase sidebar titles, hidden-scrollbar left rail, right-popping portal tooltips, stage single-perimeter + drag in `src/qa_review/` (production paths untouched).
+**Vendor Supplies** — Amazon.ca search + curated affiliate suggestions for market vendors (`/vendor/supplies`). Not deployed yet.
 
-## Shipped this session (QA staging, not deployed)
+## Shipped this session (not deployed)
+- **Vendor Supplies:** New `/vendor/supplies` page with Amazon.ca search (associate tag `thetipsyfox08-20`), 15 curated booth/display/packaging picks (all affiliate links), category + local filters, mandatory disclosure. Nav: **Vendor Supplies** in app nav + vendor workspace rail. Shared `lib/affiliate/amazon.ts` (material checklist re-exports). Verify: `npx tsx scripts/verify-vendor-supplies.ts`.
+
+## Shipped earlier this session (QA staging, not deployed)
 - **`Dashboard_qa.tsx`:** `QA_PANEL_SCROLL_CLASSES` (`scrollbar-none` + WebKit/MS/Firefox hide); `DashboardLeftPanelQa` portal target is the sole scroll host (`overflow-x-hidden overflow-y-auto`, no visible tracks).
 - **`canvas-command-bar_qa.tsx`:** Sidebar layout uses `overflow-hidden` so accordions scroll via portal target only (no nested scrollbars).
 - **`tooltip-wrapper_qa.tsx`:** Left-rail anchors always pop right (`translateY(-50%)`, `anchor.right + 8px`); viewport edge clamp; scroll/resize listeners keep portal position in sync.
