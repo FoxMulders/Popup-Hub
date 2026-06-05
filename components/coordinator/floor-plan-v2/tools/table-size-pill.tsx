@@ -57,7 +57,7 @@ export function TableSizePill({
   const showPatron = sections === 'all' || sections === 'patron'
   const ariaLabel =
     sections === 'vendor'
-      ? 'Vendor booth size'
+      ? 'Vendor size'
       : sections === 'patron'
         ? 'Patron table size'
         : 'Table size'
@@ -88,7 +88,7 @@ export function TableSizePill({
       >
         {showVendor ? (
           <>
-            {sectionLabel('Booth')}
+            {sectionLabel('Vendor')}
             {TABLE_SIZES.map((ft) => {
               const selection = vendorTableSpec(ft)
               const active = tableSizeSpecsEqual(value, selection)
@@ -99,7 +99,7 @@ export function TableSizePill({
                   disabled={disabled}
                   onClick={() => onChange(selection)}
                   aria-pressed={active}
-                  title={`Set vendor booth table length to ${ft} ft`}
+                  title={`Set vendor table length to ${ft} ft`}
                   className={sizeButtonClass(active, disabled)}
                 >
                   {ft}′
@@ -139,7 +139,7 @@ export function TableSizePill({
                   disabled={disabled}
                   onClick={() => onChange(selection)}
                   aria-pressed={active}
-                  title={`Set patron rectangular banquet table length to ${ft} ft`}
+                  title={`Set patron banquet table length to ${ft} ft`}
                   className={sizeButtonClass(active, disabled)}
                 >
                   {ft}′

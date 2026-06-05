@@ -62,15 +62,15 @@ const PATRON_PLACEMENT_TOOLS: Array<{
 }> = [
   {
     mode: 'guest-round',
-    label: 'Patron round',
+    label: 'Round',
     icon: Circle,
     title: 'Draw patron round table — size from Round column',
   },
   {
     mode: 'guest-rect',
-    label: 'Patron rect',
+    label: 'Patron',
     icon: RectangleHorizontal,
-    title: 'Draw patron rectangular banquet table — size from Patron column',
+    title: 'Draw patron banquet table — size from Patron column',
   },
 ]
 
@@ -458,8 +458,8 @@ export function renderCanvasCommandBarBlock(
           {toolbarSectionLabel('Vendor', 'amber')}
           <CommandButton
             onClick={() => activateTablePlacement('vendor')}
-            title="Draw vendor booth — size from Booth column"
-            label="Booth"
+            title="Draw vendor — size from Vendor column"
+            label="Vendor"
             active={isTablePlacementActive('vendor')}
             className={
               isTablePlacementActive('vendor')
@@ -498,7 +498,7 @@ export function renderCanvasCommandBarBlock(
                 onModeChange={ctx.onVendorAutoArrangeModeChange}
                 onRun={ctx.onVendorAutoArrange}
                 canRun={ctx.canVendorAutoArrange}
-                runTitle="Auto-arrange vendor booths in the active room"
+                runTitle="Auto-arrange vendor in the active room"
                 tone="amber"
               />
             </>
@@ -564,7 +564,7 @@ export function renderCanvasCommandBarBlock(
                 onModeChange={ctx.onPatronAutoArrangeModeChange}
                 onRun={ctx.onPatronAutoArrange}
                 canRun={ctx.canPatronAutoArrange}
-                runTitle="Auto-arrange patron tables in the active room (vendor booths stay put)"
+                runTitle="Auto-arrange patron in the active room (vendor stays put)"
                 tone="violet"
               />
             </>

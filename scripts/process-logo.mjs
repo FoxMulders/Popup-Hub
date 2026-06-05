@@ -26,18 +26,86 @@ const appDir = path.join(root, 'app')
 /** Cream app background — matches manifest background_color */
 const CREAM = { r: 250, g: 248, b: 245, alpha: 1 }
 
-function backgroundAlpha(r, g, b) {
+/** Neutral export backdrop (cream / off-white / light gray checkerboard). */
+function isBackgroundColor(r, g, b) {
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
   const chroma = max - min
   const lum = (r + g + b) / 3
+  return chroma <= 28 && lum >= 180
+}
 
-  if (chroma < 20) {
-    if (lum >= 232) return 0
-    if (lum >= 205) return Math.round(((232 - lum) / 27) * 255)
+function floodFillBackgroundMask(data, width, height, channels) {
+  const mask = new Uint8Array(width * height)
+  const queue = []
+
+  const trySeed = (x, y) => {
+    const px = y * width + x
+    if (mask[px]) return
+    const i = px * channels
+    if (isBackgroundColor(data[i], data[i + 1], data[i + 2])) {
+      mask[px] = 1
+      queue.push(px)
+    }
   }
 
-  return 255
+  for (let x = 0; x < width; x++) {
+    trySeed(x, 0)
+    trySeed(x, height - 1)
+  }
+  for (let y = 0; y < height; y++) {
+    trySeed(0, y)
+    trySeed(width - 1, y)
+  }
+
+  while (queue.length > 0) {
+    const px = queue.pop()
+    const x = px % width
+    const y = (px / width) | 0
+
+    if (x > 0) {
+      const left = px - 1
+      if (!mask[left]) {
+        const i = left * channels
+        if (isBackgroundColor(data[i], data[i + 1], data[i + 2])) {
+          mask[left] = 1
+          queue.push(left)
+        }
+      }
+    }
+    if (x < width - 1) {
+      const right = px + 1
+      if (!mask[right]) {
+        const i = right * channels
+        if (isBackgroundColor(data[i], data[i + 1], data[i + 2])) {
+          mask[right] = 1
+          queue.push(right)
+        }
+      }
+    }
+    if (y > 0) {
+      const up = px - width
+      if (!mask[up]) {
+        const i = up * channels
+        if (isBackgroundColor(data[i], data[i + 1], data[i + 2])) {
+          mask[up] = 1
+          queue.push(up)
+        }
+      }
+    }
+    if (y < height - 1) {
+      const down = px + width
+      if (!mask[down]) {
+        const i = down * channels
+        if (isBackgroundColor(data[i], data[i + 1], data[i + 2])) {
+          mask[down] = 1
+          queue.push(down)
+        }
+      }
+    }
+  }
+
+  return mask
 }
 
 async function getVisualCentroid(buffer) {
@@ -95,18 +163,21 @@ async function makeTransparentLogo() {
     .raw()
     .toBuffer({ resolveWithObject: true })
 
+  const backgroundMask = floodFillBackgroundMask(data, info.width, info.height, info.channels)
   const out = Buffer.alloc(info.width * info.height * 4)
 
   for (let i = 0, px = 0; i < data.length; i += info.channels, px++) {
     const r = data[i]
     const g = data[i + 1]
     const b = data[i + 2]
-    const alpha = backgroundAlpha(r, g, b)
+    const sourceAlpha = info.channels >= 4 ? data[i + 3] : 255
     const o = px * 4
     out[o] = r
     out[o + 1] = g
     out[o + 2] = b
-    out[o + 3] = alpha
+    const isBackdrop =
+      backgroundMask[px] || (sourceAlpha > 0 && isBackgroundColor(r, g, b))
+    out[o + 3] = isBackdrop ? 0 : sourceAlpha
   }
 
   const transparent = await sharp(out, {

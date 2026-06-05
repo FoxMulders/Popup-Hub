@@ -107,8 +107,8 @@ const BLOCK_LABELS: Record<CanvasToolbarBlockId, string> = {
   primitives: 'Canvas tools',
   'history-clipboard': 'History and clipboard',
   'view-align': 'View and alignment',
-  vendor: 'Vendor booths',
-  patron: 'Patron seating',
+  vendor: 'Vendor',
+  patron: 'Patron',
   room: 'Room layout',
   utilities: 'View and save',
 }
