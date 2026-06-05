@@ -715,7 +715,7 @@
   .wizard-floating-field {
     --spotlight-x: 50%;
     --spotlight-y: 50%;
-    @apply relative;
+    @apply relative isolate;
   }
 
   .wizard-floating-field::after {
@@ -739,11 +739,11 @@
   }
 
   .wizard-floating-input {
-    @apply relative z-[1] pt-5 pb-1.5;
+    @apply relative z-[1] !h-auto min-h-14 pt-6 pb-2;
   }
 
   .wizard-floating-field--textarea .wizard-floating-input {
-    @apply pt-6;
+    @apply min-h-[5rem] pt-7 pb-2;
   }
 
   .wizard-floating-label {

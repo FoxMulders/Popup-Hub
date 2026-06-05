@@ -68,7 +68,7 @@ export function DashboardAppShell({
       >
         {immersive ? null : (
           <aside
-            className="ecosystem-panel dashboard-app-shell__left min-h-0 overflow-hidden border-b border-stone-200/70 lg:mr-0 lg:border-b-0 lg:border-r"
+            className="ecosystem-panel dashboard-app-shell__left hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r"
             aria-label={leftLabel}
           >
             <div className="flex h-full min-h-0 flex-col">{left}</div>
@@ -77,8 +77,7 @@ export function DashboardAppShell({
         <section
           className={cn(
             'dashboard-app-shell__center relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
-            !immersive &&
-              'border-b border-stone-200/70 lg:border-b-0 lg:border-r lg:border-stone-200/70'
+            !immersive && 'lg:border-r lg:border-stone-200/70'
           )}
           aria-label={centerLabel}
         >
@@ -86,7 +85,7 @@ export function DashboardAppShell({
         </section>
         {immersive || !right ? null : (
           <aside
-            className="ecosystem-panel dashboard-app-shell__right min-h-0 overflow-hidden"
+            className="ecosystem-panel dashboard-app-shell__right hidden min-h-0 flex-col overflow-hidden lg:flex"
             aria-label={rightLabel}
           >
             <div className="flex h-full min-h-0 flex-col">{right}</div>

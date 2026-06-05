@@ -4,7 +4,7 @@
  * Asset notes
  * ===========
  * The market storefront uses the icon-only PNG (`/popup-hub-icon.png`,
- * 299 × 299) so the brand wordmark "Popup Hub" can be rendered as
+ * 994 × 994) so the brand wordmark "Popup Hub" can be rendered as
  * separate SVG `<text>` ABOVE the walking canvas instead of riding
  * underneath the storefront and crashing into the sidewalk. Keeping
  * the icon square also means we can sit its bottom edge flush with
@@ -12,7 +12,7 @@
  * space below the storefront art that visually lifted it off the
  * ground.
  */
-export const ICON_NATURAL_SIZE = 299
+export const ICON_NATURAL_SIZE = 994
 
 export const LOADER_LAYOUT = {
   fps: 60,
@@ -36,10 +36,10 @@ export const LOADER_LAYOUT = {
   /**
    * Pin center as a fraction of rendered icon height. The new
    * `popup-hub-icon.png` artwork places the storefront pin/circle at
-   * roughly 60 % from the top of the icon, so the green door overlay
+   * roughly 49 % from the top of the icon, so the green door overlay
    * and the masked cutout line up with it.
    */
-  pinOffsetY: 0.6,
+  pinOffsetY: 0.49,
   pinScale: 200 / 250,
   /** All variants use the slowest timing (sleepy-stroll). */
   approachFrames: 420,

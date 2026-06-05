@@ -50,19 +50,19 @@ export function CommandCenterShell({
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       >
         <aside
-          className="ecosystem-panel min-h-0 overflow-hidden border-b border-stone-200/70 lg:mr-0 lg:border-b-0 lg:border-r"
+          className="ecosystem-panel hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r"
           aria-label={leftLabel}
         >
           <div className="flex h-full min-h-0 flex-col">{left}</div>
         </aside>
         <section
-          className="relative min-h-0 min-w-0 overflow-hidden border-b border-stone-200/70 lg:border-b-0 lg:border-r lg:border-stone-200/70"
+          className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:border-r lg:border-stone-200/70"
           aria-label={centerLabel}
         >
           {center}
         </section>
         <aside
-          className="ecosystem-panel min-h-0 overflow-hidden"
+          className="ecosystem-panel hidden min-h-0 flex-col overflow-hidden lg:flex"
           aria-label={rightLabel}
         >
           <div className="flex h-full min-h-0 flex-col">{right}</div>

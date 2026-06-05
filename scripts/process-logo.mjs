@@ -1,7 +1,20 @@
 import sharp from 'sharp'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rename, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+async function writePngAtomically(targetPath, buffer) {
+  const tempPath = `${targetPath}.tmp`
+  await sharp(buffer).png().toFile(tempPath)
+  try {
+    await unlink(targetPath)
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+      throw error
+    }
+  }
+  await rename(tempPath, targetPath)
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
@@ -77,8 +90,8 @@ async function opticallyCenterBuffer(buffer) {
 }
 
 async function makeTransparentLogo() {
-  const { data, info } = await sharp(input)
-    .ensureAlpha()
+  const source = await sharp(input).ensureAlpha().png().toBuffer()
+  const { data, info } = await sharp(source)
     .raw()
     .toBuffer({ resolveWithObject: true })
 
@@ -96,15 +109,18 @@ async function makeTransparentLogo() {
     out[o + 3] = alpha
   }
 
-  await sharp(out, {
+  const transparent = await sharp(out, {
     raw: { width: info.width, height: info.height, channels: 4 },
   })
     .png()
-    .toFile(outputLogo)
+    .toBuffer()
 
-  await sharp(outputLogo).toFile(path.join(root, 'public', 'popup-hub-brand.png'))
+  await writePngAtomically(outputLogo, transparent)
+  await writePngAtomically(path.join(root, 'public', 'popup-hub-brand.png'), transparent)
+  // Legacy Lottie JSON references `logo.png` at the site root.
+  await writePngAtomically(path.join(root, 'public', 'logo.png'), transparent)
 
-  const meta = await sharp(outputLogo).metadata()
+  const meta = await sharp(transparent).metadata()
   console.log('Wrote transparent logo:', outputLogo, `${meta.width}x${meta.height}`, `alpha=${meta.hasAlpha}`)
 }
 

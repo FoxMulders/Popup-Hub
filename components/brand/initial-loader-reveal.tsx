@@ -10,9 +10,9 @@ import {
 const LOGO_SRC = '/popup-hub-icon.png'
 
 const BRAND = {
-  sage: '#7b9b52',
-  sageLight: '#a8c48a',
-  sageMuted: '#7b9b5240',
+  sage: '#2d5a27',
+  sageLight: '#4a7a4e',
+  sageMuted: '#2d5a2740',
   gold: '#c4892e',
   ink: '#1a1612',
   linen: '#faf8f7',

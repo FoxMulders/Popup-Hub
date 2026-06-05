@@ -14,8 +14,8 @@ const LOGO_VERSION =
   '1'
 const LOGO_SRC = `/popup-hub-brand.png?v=${LOGO_VERSION}`
 const ICON_SRC = `/popup-hub-icon.png?v=${LOGO_VERSION}`
-const LOGO_WIDTH = 1024
-const LOGO_HEIGHT = 559
+const LOGO_WIDTH = 994
+const LOGO_HEIGHT = 1024
 const ICON_SIZE = 512
 
 interface PopupHubLogoProps {

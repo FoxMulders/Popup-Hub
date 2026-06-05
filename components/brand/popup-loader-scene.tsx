@@ -52,7 +52,7 @@ const WORDMARK_TEXT = 'Popup Hub'
 const WORDMARK_Y = 12
 const WORDMARK_FONT_SIZE = 64
 const WORDMARK_LETTER_SPACING = 2
-const WORDMARK_FILL = '#7b9b52'
+const WORDMARK_FILL = '#2d5a27'
 
 /**
  * Continuous phone-flash oscillation. The lead character's phone glows
@@ -363,7 +363,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         <radialGradient id="premium-loader-pin-glow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#fde68a" stopOpacity="0.7" />
           <stop offset="40%" stopColor="#c4892e" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="#7b9b52" stopOpacity="0" />
+          <stop offset="100%" stopColor="#2d5a27" stopOpacity="0" />
         </radialGradient>
         <radialGradient id="premium-loader-market-warmth" cx="50%" cy="80%" r="55%">
           <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.22" />

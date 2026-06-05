@@ -185,7 +185,7 @@ export function WizardFloatingInput({
         id={id}
         value={value}
         placeholder=" "
-        className={cn(WIZARD_INPUT, 'wizard-floating-input peer', className)}
+        className={cn(WIZARD_INPUT, 'wizard-floating-input peer !h-auto min-h-14', className)}
         {...props}
       />
       <label htmlFor={id} className="wizard-floating-label">
@@ -215,7 +215,11 @@ export function WizardFloatingTextarea({
         id={id}
         value={value}
         placeholder=" "
-        className={cn(WIZARD_TEXTAREA, 'wizard-floating-input peer min-h-[5rem]', className)}
+        className={cn(
+          WIZARD_TEXTAREA,
+          'wizard-floating-input peer !h-auto min-h-[5rem] resize-y',
+          className
+        )}
         {...props}
       />
       <label htmlFor={id} className="wizard-floating-label">
