@@ -3,28 +3,29 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `6b613d3` (pushed to `origin/master`)
-- Last deploy commit: `6b613d3` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 137** | commit `e6d7056` (handoff updated 2026-06-05 15:53)
+- Branch: `master` @ `1d74f96` (pushed to `origin/master`)
+- Last deploy commit: `1d74f96` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 139** | commit `891b2d6` (handoff updated 2026-06-05 16:08)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-05 15:53 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (6b613d3)
+- 2026-06-05 16:08 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (1d74f96)
 
 
 ## Goal
 **QA folder staging — tooltip repairs, text headers, stage asset patch** — dashboard left-rail UX and stage geometry/drag fixes mirrored in `src/qa_review/` for manual testing before production promotion.
 
 ## Shipped this session (QA staging, not deployed)
+- **QA mirror modules written to disk** under `src/qa_review/` (previously documented only).
 - **`tooltip-wrapper_qa.tsx`:** Portal tooltips (`fixed z-50` on `document.body`) with sidebar bounds check — flips to the right when hint would clip past `w-80` (320px).
 - **`canvas-toolbar-static_qa.tsx` + `canvas-command-bar_qa.tsx` + `command-button_qa.tsx` + `canvas-command-bar-blocks_qa.tsx`:** Uppercase text accordion headers (**ROOM LAYOUT**, **PATRON PLACEMENTS**, **VENDOR PLACEMENTS**, **CANVAS SETTINGS**); all command-bar tooltips use portal wrapper.
-- **`Dashboard_qa.tsx`:** Re-exports QA toolbar/tooltip modules; left rail comment + relative portal target wrapper.
+- **`Dashboard_qa.tsx`:** `DashboardBootstrapQa` + `DashboardLeftPanelQa` with relative portal target wrapper; mandatory initial room modal gate.
 - **`Canvas_qa.tsx`:** Stage single outer rect (`fill="none"`); excluded from joined-fixture dissolve hiding; `cursor: move` hit target; stays visible after merge join.
-- **`floor-plan-canvas_dashboard_qa.tsx`:** `SelectionOverlayQa` skips duplicate dashed outline on selected stages.
-- **Prior QA (unchanged):** initial room modal, merge 2D bounds, `Merge_qa.ts`, `destructive-merge_qa.ts`.
-- **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` updated with wiring for `CanvasCommandBarQa`.
+- **`floor-plan-canvas_dashboard_qa.tsx`:** `LayoutCanvasDashboardQa` + `SelectionOverlayQa` skips duplicate dashed outline on selected stages.
+- **`Merge_qa.ts` + `destructive-merge_qa.ts`:** Merge (2) 2D union bounds re-export; `npx tsx scripts/verify-merge-qa.ts` — 7/7 pass.
+- **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` wiring for `CanvasCommandBarQa`.
 
 ## Next actions
 1. **Wire QA dashboard** — `DashboardBootstrapQa` in `market-dashboard-client.tsx` + `CanvasCommandBarQa` in `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`)
