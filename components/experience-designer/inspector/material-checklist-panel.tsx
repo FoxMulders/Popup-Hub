@@ -1,9 +1,7 @@
 'use client'
 
 import { ExternalLink, Package } from 'lucide-react'
-import {
-  AMAZON_ASSOCIATE_DISCLOSURE,
-} from '@/lib/experience-designer/material-checklist'
+import { AMAZON_ASSOCIATE_DISCLOSURE } from '@/lib/affiliate/amazon'
 import type { MaterialChecklistLinkItem } from '@/lib/experience-designer/material-checklist-schema'
 
 export interface MaterialChecklistPanelProps {

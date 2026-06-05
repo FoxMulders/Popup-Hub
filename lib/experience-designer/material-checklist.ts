@@ -1,4 +1,9 @@
 import {
+  AMAZON_ASSOCIATE_DISCLOSURE,
+  AMAZON_ASSOCIATE_TAG,
+  buildAmazonCaAffiliateSearchUrl,
+} from '@/lib/affiliate/amazon'
+import {
   materialChecklistLinkItemSchema,
   rawMaterialChecklistSchema,
   type MaterialChecklistLinkItem,
@@ -6,10 +11,7 @@ import {
   type RawMaterialChecklistEntry,
 } from '@/lib/experience-designer/material-checklist-schema'
 
-export const AMAZON_ASSOCIATE_TAG = 'thetipsyfox08-20'
-
-export const AMAZON_ASSOCIATE_DISCLOSURE =
-  'As an Amazon Associate, I earn from qualifying purchases.'
+export { AMAZON_ASSOCIATE_DISCLOSURE, AMAZON_ASSOCIATE_TAG, buildAmazonCaAffiliateSearchUrl }
 
 const OPTIONAL_PREFIX = /^\s*(optional[:\s-]+)/i
 const OPTIONAL_SUFFIX = /\s*\(optional\)\s*$/i
@@ -97,14 +99,6 @@ const MATERIAL_CATALOG: CatalogEntry[] = [
     searchQuery: 'RC522 RFID reader module',
   },
 ]
-
-export function buildAmazonCaAffiliateSearchUrl(
-  searchTerm: string,
-  tag: string = AMAZON_ASSOCIATE_TAG
-): string {
-  const k = encodeURIComponent(searchTerm.trim())
-  return `https://www.amazon.ca/s?k=${k}&tag=${tag}`
-}
 
 function normalizeKey(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()

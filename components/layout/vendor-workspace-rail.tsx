@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   ClipboardList,
   LayoutDashboard,
+  Package,
   Store,
   Ticket,
 } from 'lucide-react'
@@ -13,6 +14,7 @@ import { cn } from '@/lib/utils'
 const RAIL_LINKS = [
   { href: '/vendor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/vendor/applications', label: 'Applications', icon: ClipboardList },
+  { href: '/vendor/supplies', label: 'Supplies', icon: Package },
   { href: '/vendor/events', label: 'Open markets', icon: Store },
   { href: '/vendor/passport', label: 'Passport', icon: Ticket },
 ] as const
