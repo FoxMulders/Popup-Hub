@@ -19,7 +19,6 @@ import { CanvasToolbarReorder } from '@/components/coordinator/floor-plan-v2/too
 import { CanvasToolbarStaticQa as CanvasToolbarStatic } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static_qa'
 import { getVisibleStaticToolbarRows } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
 import { ToolbarCompactProvider } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/command-button_qa'
-import { QA_PANEL_SCROLL_CLASSES } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import {
   QA_TIP_CANT_MERGE,
   QA_TIP_MERGE,
@@ -324,10 +323,7 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
           !sidebarLayout &&
           'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
         sidebarLayout &&
-          cn(
-            'min-h-0 flex-1 overflow-x-hidden overflow-y-auto border-0 bg-transparent px-0 shadow-none',
-            QA_PANEL_SCROLL_CLASSES
-          ),
+          'min-h-0 flex-1 overflow-hidden border-0 bg-transparent px-0 shadow-none',
         className
       )}
         role="toolbar"

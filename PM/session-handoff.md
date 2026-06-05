@@ -15,12 +15,16 @@
 
 
 ## Goal
-**QA folder staging — eliminate sidebar scrollbars & fix tooltip overflows** — hidden-scrollbar left rail + portal tooltips that escape `w-80` clipping in `src/qa_review/`.
+**QA folder staging — complete UI polish & structural overrides** — uppercase sidebar titles, hidden-scrollbar left rail, right-popping portal tooltips, stage single-perimeter + drag in `src/qa_review/` (production paths untouched).
 
 ## Shipped this session (QA staging, not deployed)
-- **`Dashboard_qa.tsx`:** Exported `QA_PANEL_SCROLL_CLASSES` (`scrollbar-none` + WebKit/MS/Firefox hide); `DashboardLeftPanelQa` portal target uses `overflow-y-auto` with hidden scrollbars for smooth scroll on short viewports.
+- **`Dashboard_qa.tsx`:** `QA_PANEL_SCROLL_CLASSES` (`scrollbar-none` + WebKit/MS/Firefox hide); `DashboardLeftPanelQa` portal target is the sole scroll host (`overflow-x-hidden overflow-y-auto`, no visible tracks).
+- **`canvas-command-bar_qa.tsx`:** Sidebar layout uses `overflow-hidden` so accordions scroll via portal target only (no nested scrollbars).
 - **`tooltip-wrapper_qa.tsx`:** Left-rail anchors always pop right (`translateY(-50%)`, `anchor.right + 8px`); viewport edge clamp; scroll/resize listeners keep portal position in sync.
-- **`canvas-command-bar_qa.tsx`:** Sidebar accordion container reuses `QA_PANEL_SCROLL_CLASSES`.
+- **`canvas-toolbar-static_qa.tsx`:** Accordion headers → **ROOM CONTROLS**, **PATRON LAYOUT**, **VENDOR BOOTHS**, **DESIGNER TOOLS** (row icon badges removed; uppercase `h3` titles).
+- **`Canvas_qa.tsx` + `floor-plan-canvas_dashboard_qa.tsx`:** Stage `fill="none"` single perimeter; `pointerEvents="all"` + `cursor: move`; `SelectionOverlayQa` skips duplicate dashed outline on selected stages; stage stays visible after merge join.
+- **`toolbar-tooltip-copy_qa.ts` + command-bar blocks:** Micro-tooltip copy wired across toolbar/object brushes.
+- **Build:** Local `npm run build` passes — **build 142** (uncommitted; `build-number.json` bumped by prebuild).
 
 ## Shipped earlier this session (QA staging, not deployed)
 - **`toolbar-tooltip-copy_qa.ts`:** Centralized micro-tooltip strings (e.g. `Clear all`, `Auto-arrange`, `Merge rooms`, `Space H`) — replaces long descriptive sentences across command-bar blocks.
@@ -39,10 +43,10 @@
 - **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` wiring for `CanvasCommandBarQa`.
 
 ## Next actions
-1. **Wire QA dashboard** — `DashboardBootstrapQa` in `market-dashboard-client.tsx` + `CanvasCommandBarQa` in `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`)
-2. **Smoke-test** — left rail: no visible scrollbar at 1080p/720p but content scrolls when all accordions expanded; tooltips pop right of icons without clipping at sidebar edge; accordion headers (**ROOM CONTROLS** / **PATRON LAYOUT** / **VENDOR BOOTHS** / **DESIGNER TOOLS**)
+1. **Wire QA dashboard for viewport inspection** — temporary import swaps in `market-dashboard-client.tsx` + `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`); run `npm run dev` and open `/coordinator/dashboard`
+2. **Smoke-test** — left rail: no visible scrollbar at 1080p/720p but content scrolls when all accordions expanded; tooltips pop right without clipping; headers **ROOM CONTROLS** / **PATRON LAYOUT** / **VENDOR BOOTHS** / **DESIGNER TOOLS**; stage drag + single rose outline after merge
 3. **Optional canvas/merge E2E** — `LayoutCanvasDashboardQa` + `destructive-merge_qa` import swaps
-4. **Promote to production** after QA sign-off
+4. **Promote to production** after QA sign-off (revert wiring swaps, promote `_qa` modules)
 
 ## Goal (prior)
 **QA folder staging — dashboard layout optimization & stage merge** — all layout/merge/canvas changes mirrored in `src/qa_review/` for manual testing before production promotion.
