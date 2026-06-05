@@ -15,9 +15,27 @@
 
 
 ## Goal
-**QA folder staging — dashboard layout optimization & stage merge** — all layout/merge/canvas changes mirrored in `src/qa_review/` for manual testing before production promotion.
+**QA folder staging — tooltip repairs, text headers, stage asset patch** — dashboard left-rail UX and stage geometry/drag fixes mirrored in `src/qa_review/` for manual testing before production promotion.
 
 ## Shipped this session (QA staging, not deployed)
+- **`tooltip-wrapper_qa.tsx`:** Portal tooltips (`fixed z-50` on `document.body`) with sidebar bounds check — flips to the right when hint would clip past `w-80` (320px).
+- **`canvas-toolbar-static_qa.tsx` + `canvas-command-bar_qa.tsx` + `command-button_qa.tsx` + `canvas-command-bar-blocks_qa.tsx`:** Uppercase text accordion headers (**ROOM LAYOUT**, **PATRON PLACEMENTS**, **VENDOR PLACEMENTS**, **CANVAS SETTINGS**); all command-bar tooltips use portal wrapper.
+- **`Dashboard_qa.tsx`:** Re-exports QA toolbar/tooltip modules; left rail comment + relative portal target wrapper.
+- **`Canvas_qa.tsx`:** Stage single outer rect (`fill="none"`); excluded from joined-fixture dissolve hiding; `cursor: move` hit target; stays visible after merge join.
+- **`floor-plan-canvas_dashboard_qa.tsx`:** `SelectionOverlayQa` skips duplicate dashed outline on selected stages.
+- **Prior QA (unchanged):** initial room modal, merge 2D bounds, `Merge_qa.ts`, `destructive-merge_qa.ts`.
+- **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` updated with wiring for `CanvasCommandBarQa`.
+
+## Next actions
+1. **Wire QA dashboard** — `DashboardBootstrapQa` in `market-dashboard-client.tsx` + `CanvasCommandBarQa` in `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`)
+2. **Optional canvas/merge E2E** — `LayoutCanvasDashboardQa` + `destructive-merge_qa` import swaps
+3. **Smoke-test** — portal tooltips on left rail, text headers, stage single outline + drag, initial room modal, stage merge bump
+4. **Promote to production** after QA sign-off
+
+## Goal (prior)
+**QA folder staging — dashboard layout optimization & stage merge** — all layout/merge/canvas changes mirrored in `src/qa_review/` for manual testing before production promotion.
+
+## Shipped earlier (QA staging, not deployed)
 - **`Dashboard_qa.tsx`:** `DashboardBootstrapQa` — curation queue / Market Intake / Available Pool removed from left rail; `h-[calc(100vh-64px)] overflow-hidden` on aside; mandatory `InitialRoomModalQa` gates canvas mount until first room dimensions confirmed.
 - **`Canvas_qa.tsx`:** Stage placable rects render with `fill="none"` / `fillOpacity={0}` (rose stroke retained) so grid shows through after merge.
 - **`Merge_qa.ts` + `destructive-merge_qa.ts`:** Merge (2) union uses full 2D stage bounding box (`mergeParticipantBounds2d`) — not a width-only horizontal line projection.

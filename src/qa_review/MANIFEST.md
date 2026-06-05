@@ -68,7 +68,31 @@ See `components/coordinator/market-setup-wizard-step3-patch_qa.md`.
 
 ---
 
-## Env
+## Dashboard layout optimization (command center)
+
+**Scope:** Remove curation queue, fixed-height left rail, mandatory initial room modal, stage merge 2D bounds, stage single-perimeter + drag, portal tooltips, text accordion headers.
+
+See `components/coordinator/dashboard-layout-patch_qa.md`.
+
+### Staged files
+
+| QA path | Role |
+|---------|------|
+| `components/coordinator/dashboard/Dashboard_qa.tsx` | Bootstrap — no curation, initial room modal, QA re-exports |
+| `components/coordinator/dashboard/tooltip-wrapper_qa.tsx` | Portal tooltips + `w-80` bounds flip |
+| `components/coordinator/floor-plan-v2/tools/canvas-toolbar-static_qa.tsx` | Uppercase text section headers |
+| `components/coordinator/floor-plan-v2/tools/canvas-command-bar_qa.tsx` | QA dashboard ribbon |
+| `components/coordinator/floor-plan-v2/tools/command-button_qa.tsx` | Portal tooltips on command buttons |
+| `components/coordinator/floor-plan-v2/tools/canvas-command-bar-blocks_qa.tsx` | Block renderer (QA tooltips) |
+| `components/coordinator/floor-plan-v2/canvas/Canvas_qa.tsx` | Stage `fill="none"`, single stroke, draggable |
+| `components/coordinator/floor-plan-v2/canvas/floor-plan-canvas_dashboard_qa.tsx` | Canvas host — no duplicate stage outline |
+| `components/coordinator/floor-plan-v2/state/Merge_qa.ts` | Merge (2) — 2D stage bounding union |
+| `components/coordinator/floor-plan-v2/state/destructive-merge_qa.ts` | QA `destructiveMergeInDoc` re-export |
+| `components/coordinator/dashboard-layout-patch_qa.md` | Wiring + smoke-test checklist |
+
+Verify: `npx tsx scripts/verify-merge-qa.ts`
+
+---
 
 `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` with Places API enabled (Step 1).
 
