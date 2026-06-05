@@ -1,7 +1,17 @@
 'use client'
 
-import { ChevronDown, ChevronRight, ChevronUp, RotateCcw } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Circle,
+  LayoutGrid,
+  MousePointer2,
+  RotateCcw,
+  Square,
+} from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
@@ -16,6 +26,16 @@ import {
   type CanvasToolbarStaticRowId,
   type StaticRowCollapsedState,
 } from './toolbar-static-layout'
+
+const STATIC_ROW_ICONS: Record<
+  CanvasToolbarStaticRowId,
+  React.ComponentType<{ className?: string }>
+> = {
+  room: LayoutGrid,
+  patron: Circle,
+  vendor: Square,
+  tools: MousePointer2,
+}
 
 export interface CanvasToolbarStaticProps {
   visibleRowIds: readonly CanvasToolbarStaticRowId[]
@@ -55,7 +75,7 @@ function StaticToolbarRow({
       <div
         className={cn(
           'flex min-w-0 items-center gap-0.5 border-b border-stone-100/90 px-0.5',
-          compact ? 'py-[0.2rem]' : 'py-0.5',
+          compact ? 'py-0' : 'py-0.5',
           !expanded && 'border-b-0'
         )}
       >
@@ -67,7 +87,7 @@ function StaticToolbarRow({
           aria-expanded={expanded}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 hover:text-stone-700',
-            compact ? 'h-[1.575rem] w-[1.575rem]' : 'h-7 w-7'
+            compact ? 'h-6 w-6' : 'h-7 w-7'
           )}
         >
           {expanded ? (
@@ -76,14 +96,21 @@ function StaticToolbarRow({
             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
           )}
         </button>
-        <span
-          className={cn(
-            'min-w-0 flex-1 truncate text-[10px] font-heading font-semibold uppercase tracking-wide text-stone-600',
-            compact ? 'text-[9px]' : undefined
-          )}
-        >
-          {label}
-        </span>
+        <TooltipWrapper text={label}>
+          <span
+            className={cn(
+              'inline-flex shrink-0 items-center justify-center rounded-sm border border-stone-200 bg-stone-50 text-stone-600',
+              compact ? 'h-6 w-6' : 'h-7 w-7'
+            )}
+            aria-hidden
+          >
+            {(() => {
+              const Icon = STATIC_ROW_ICONS[rowId]
+              return <Icon className="h-3.5 w-3.5" />
+            })()}
+          </span>
+        </TooltipWrapper>
+        <span className="min-w-0 flex-1" aria-hidden />
         <button
           type="button"
           disabled={index === 0}
@@ -92,7 +119,7 @@ function StaticToolbarRow({
           aria-label={`Move ${label} up`}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
-            compact ? 'h-[1.575rem] w-[1.575rem]' : 'h-7 w-7'
+            compact ? 'h-6 w-6' : 'h-7 w-7'
           )}
         >
           <ChevronUp className="h-3.5 w-3.5" aria-hidden />
@@ -105,7 +132,7 @@ function StaticToolbarRow({
           aria-label={`Move ${label} down`}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
-            compact ? 'h-[1.575rem] w-[1.575rem]' : 'h-7 w-7'
+            compact ? 'h-6 w-6' : 'h-7 w-7'
           )}
         >
           <ChevronDown className="h-3.5 w-3.5" aria-hidden />
@@ -114,8 +141,8 @@ function StaticToolbarRow({
       {expanded ? (
         <div
           className={cn(
-            'flex min-w-0 flex-wrap items-center gap-1',
-            compact ? 'px-1 py-[0.35rem]' : 'px-1 py-0.5'
+            'flex min-w-0 flex-wrap items-center gap-0.5',
+            compact ? 'px-0.5 py-0.5' : 'px-1 py-0.5'
           )}
         >
           {children}
@@ -218,20 +245,19 @@ export function CanvasToolbarStatic({
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-w-0 items-center justify-end">
-        <button
-          type="button"
-          onClick={resetLayout}
-          title="Reset toolbar to default layout"
-          aria-label="Reset toolbar layout"
-          className={cn(
-            'inline-flex shrink-0 items-center gap-1 rounded-md border border-stone-200',
-            'px-2 text-[10px] font-semibold text-stone-600 hover:bg-stone-50',
-            compact ? 'h-[1.575rem]' : 'h-7'
-          )}
-        >
-          <RotateCcw className="h-3 w-3" aria-hidden />
-          <span className="hidden sm:inline">Reset layout</span>
-        </button>
+        <TooltipWrapper text="Reset toolbar to default layout">
+          <button
+            type="button"
+            onClick={resetLayout}
+            aria-label="Reset toolbar layout"
+            className={cn(
+              'inline-flex shrink-0 items-center justify-center rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50',
+              compact ? 'h-6 w-6' : 'h-7 w-7'
+            )}
+          >
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </TooltipWrapper>
       </div>
       {displayOrder.map((rowId, index) => {
         const blockIds = STATIC_ROW_BLOCKS[rowId]
@@ -252,8 +278,8 @@ export function CanvasToolbarStatic({
               <div
                 key={blockId}
                 className={cn(
-                  'inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-1 shadow-sm',
-                  compact ? 'py-[0.45rem]' : 'py-0.5'
+                  'inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
+                  compact ? 'py-0.5' : 'py-0.5'
                 )}
               >
                 {renderBlock(blockId)}

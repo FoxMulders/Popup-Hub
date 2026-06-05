@@ -210,7 +210,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
-      compact: staticLayout,
+      compact: true,
     }),
     [
       toolState,
@@ -301,9 +301,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     <ToolbarCompactProvider compact={staticLayout}>
       <div
         className={cn(
-          'shrink-0 rounded-lg border border-stone-200 bg-white px-2 shadow-sm',
-          staticLayout ? 'py-[0.3375rem]' : 'py-1.5',
-          staticLayout && 'max-h-[min(42vh,220px)] overflow-x-auto overflow-y-auto',
+          'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
+          staticLayout ? 'py-0.5' : 'py-1',
+          staticLayout && 'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
           className
         )}
         role="toolbar"

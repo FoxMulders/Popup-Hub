@@ -18,7 +18,7 @@ interface CanvasUtilityToolbarProps {
 }
 
 const UTILITY_BTN =
-  'inline-flex items-center gap-1 rounded-none border-2 border-black bg-white px-2 text-xs font-black text-black min-h-9 hover:bg-zinc-100 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40'
+  'inline-flex h-8 w-8 items-center justify-center rounded-none border-2 border-black bg-white p-0 text-xs font-black text-black hover:bg-zinc-100 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40'
 
 export function CanvasUtilityToolbar({
   canUndo,
@@ -33,34 +33,41 @@ export function CanvasUtilityToolbar({
 }: CanvasUtilityToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Canvas utilities">
-      <TooltipWrapper text="Lock every fixture so template and painted items cannot be erased · Ctrl+L">
-        <button type="button" onClick={onLockAll} className={UTILITY_BTN}>
+      <TooltipWrapper text="Lock all — lock every fixture so template and painted items cannot be erased · Ctrl+L">
+        <button type="button" onClick={onLockAll} className={UTILITY_BTN} aria-label="Lock all">
           <Lock className="h-3.5 w-3.5" />
-          Lock
         </button>
       </TooltipWrapper>
-      <TooltipWrapper text="Remove all vendors and painted fixtures — locked shell stays · Ctrl+Alt+C">
-        <button type="button" onClick={onClear} className={UTILITY_BTN}>
+      <TooltipWrapper text="Clear — remove all vendors and painted fixtures; locked shell stays · Ctrl+Alt+C">
+        <button type="button" onClick={onClear} className={UTILITY_BTN} aria-label="Clear canvas">
           <Trash2 className="h-3.5 w-3.5" />
-          Clear
         </button>
       </TooltipWrapper>
-      <TooltipWrapper text="Reverse the last canvas change · Ctrl+Z">
-        <button type="button" disabled={!canUndo} onClick={onUndo} className={cn(UTILITY_BTN)}>
+      <TooltipWrapper text="Undo — reverse the last canvas change · Ctrl+Z">
+        <button
+          type="button"
+          disabled={!canUndo}
+          onClick={onUndo}
+          className={cn(UTILITY_BTN)}
+          aria-label="Undo"
+        >
           <Undo2 className="h-3.5 w-3.5" />
-          Undo
         </button>
       </TooltipWrapper>
-      <TooltipWrapper text="Reapply an undone change · Ctrl+Y / Ctrl+Shift+Z">
-        <button type="button" disabled={!canRedo} onClick={onRedo} className={cn(UTILITY_BTN)}>
+      <TooltipWrapper text="Redo — reapply an undone change · Ctrl+Y / Ctrl+Shift+Z">
+        <button
+          type="button"
+          disabled={!canRedo}
+          onClick={onRedo}
+          className={cn(UTILITY_BTN)}
+          aria-label="Redo"
+        >
           <Redo2 className="h-3.5 w-3.5" />
-          Redo
         </button>
       </TooltipWrapper>
-      <TooltipWrapper text="Erase vendors, preset aisles, and painted fixtures · Delete / Backspace / R">
-        <button type="button" onClick={onRemove} className={UTILITY_BTN}>
+      <TooltipWrapper text="Remove — erase vendors, preset aisles, and painted fixtures · Delete / Backspace / R">
+        <button type="button" onClick={onRemove} className={UTILITY_BTN} aria-label="Remove">
           <Eraser className="h-3.5 w-3.5" />
-          Remove
         </button>
       </TooltipWrapper>
       {onStripPresetPaint ? (
@@ -75,13 +82,13 @@ export function CanvasUtilityToolbar({
             type="button"
             onClick={onStripPresetPaint}
             aria-pressed={bareGridActive}
+            aria-label={bareGridActive ? 'Bare grid on' : 'Bare grid'}
             className={cn(
               UTILITY_BTN,
               bareGridActive && 'bg-harvest-200 ring-2 ring-harvest-700 ring-offset-1'
             )}
           >
             <PaintBucket className="h-3.5 w-3.5" />
-            {bareGridActive ? 'Bare grid · ON' : 'Bare grid'}
           </button>
         </TooltipWrapper>
       ) : null}

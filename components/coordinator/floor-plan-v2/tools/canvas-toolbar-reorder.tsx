@@ -3,6 +3,7 @@
 import { Reorder, useDragControls } from 'framer-motion'
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
 import {
   clearSavedToolbarOrder,
@@ -42,7 +43,7 @@ function ToolbarReorderItem({
       dragControls={dragControls}
       className={cn(
         'inline-flex max-w-full shrink-0 items-center gap-0.5 rounded-md border border-stone-200/90',
-        'bg-white py-0.5 pl-0.5 pr-1',
+        'bg-white py-0 pl-0.5 pr-0.5',
         'data-[dragging=true]:z-20 data-[dragging=true]:border-stone-300 data-[dragging=true]:shadow-md'
       )}
       whileDrag={{
@@ -54,7 +55,7 @@ function ToolbarReorderItem({
       <button
         type="button"
         className={cn(
-          'inline-flex h-7 w-5 shrink-0 cursor-grab items-center justify-center rounded-sm',
+          'inline-flex h-6 w-4 shrink-0 cursor-grab items-center justify-center rounded-sm',
           'text-stone-400 hover:bg-stone-100 hover:text-stone-600',
           'touch-none active:cursor-grabbing'
         )}
@@ -78,7 +79,7 @@ function ToolbarReorderItem({
         onClick={() => onMove(id, -1)}
         title={`Move ${label} earlier`}
         aria-label={`Move ${label} earlier`}
-        className="inline-flex h-6 w-5 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30"
+        className="inline-flex h-6 w-4 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30"
       >
         <ChevronLeft className="h-3 w-3" aria-hidden />
       </button>
@@ -88,7 +89,7 @@ function ToolbarReorderItem({
         onClick={() => onMove(id, 1)}
         title={`Move ${label} later`}
         aria-label={`Move ${label} later`}
-        className="inline-flex h-6 w-5 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30"
+        className="inline-flex h-6 w-4 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30"
       >
         <ChevronRight className="h-3 w-3" aria-hidden />
       </button>
@@ -188,19 +189,19 @@ export function CanvasToolbarReorder({
         className
       )}
     >
-      <button
-        type="button"
-        onClick={resetOrder}
-        title="Reset toolbar to default layout"
-        aria-label="Reset toolbar layout"
-        className={cn(
-          'inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-stone-200',
-          'px-2 text-[10px] font-semibold text-stone-600 hover:bg-stone-50'
-        )}
-      >
-        <RotateCcw className="h-3 w-3" aria-hidden />
-        <span className="hidden sm:inline">Reset</span>
-      </button>
+      <TooltipWrapper text="Reset toolbar to default layout">
+        <button
+          type="button"
+          onClick={resetOrder}
+          aria-label="Reset toolbar layout"
+          className={cn(
+            'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-stone-200',
+            'text-stone-600 hover:bg-stone-50'
+          )}
+        >
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </TooltipWrapper>
 
       <Reorder.Group
         axis="x"

@@ -46,7 +46,12 @@ $SyncKeys = @(
     'TWILIO_AUTH_TOKEN',
     'TWILIO_PHONE_NUMBER',
     'TWILIO_FROM_NUMBER',
-    'CRON_SECRET'
+    'CRON_SECRET',
+    'GEMINI_API_KEY',
+    'GEMINI_MODEL_ID',
+    'GROQ_API_KEY',
+    'POPUPHUB_API_KEY',
+    'GROQ_MODEL_ID'
 )
 
 $SkipPrefixes = @('DEV_MOCK_')

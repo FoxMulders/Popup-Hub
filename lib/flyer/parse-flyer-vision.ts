@@ -1,5 +1,12 @@
+import { generateJsonFromVision } from '@/lib/ai/generate-json-vision'
+import { resolveGeminiApiKey, resolveGroqApiKey } from '@/lib/ai/env'
 import { parsedFlyerSchema, type ParsedFlyerResponse } from '@/lib/flyer/types'
 import { normalizeFlyerDate, normalizeFlyerTime } from '@/lib/flyer/normalize'
+
+export type FlyerVisionSource = 'gemini' | 'groq' | 'heuristic'
+
+const FLYER_VISION_SYSTEM_PROMPT =
+  'You extract event-listing data from market posters. Output strict JSON only — never prose, never markdown, never wrap in code fences.'
 
 /**
  * Vision prompt for OpenAI's vision-capable chat completions endpoint.
@@ -45,7 +52,7 @@ function fileToDataUrl(buffer: Buffer, mimeType: string): string {
 }
 
 /**
- * Filename-based fallback used when no OpenAI API key is configured.
+ * Filename-based fallback used when no Gemini or Groq API key is configured.
  *
  * Intentionally does NOT populate the event name from the filename — the
  * coordinator complained that uploads like "Craft_Fair_Poster_2024.png"
@@ -84,75 +91,43 @@ function heuristicFromFilename(fileName: string): ParsedFlyerResponse {
   })
 }
 
+function normalizeParsedFlyer(data: ParsedFlyerResponse): ParsedFlyerResponse {
+  return parsedFlyerSchema.parse({
+    eventName: data.eventName ?? null,
+    venueName: data.venueName ?? null,
+    address: data.address ?? null,
+    date: normalizeFlyerDate(data.date ?? null) ?? data.date ?? null,
+    startTime: normalizeFlyerTime(data.startTime ?? null) ?? data.startTime ?? null,
+    endTime: normalizeFlyerTime(data.endTime ?? null) ?? data.endTime ?? null,
+    location: data.location ?? null,
+    description: data.description ?? null,
+    ticketPrice: data.ticketPrice ?? null,
+  })
+}
+
 export async function parseFlyerWithVision(input: {
   buffer: Buffer
   mimeType: string
   fileName: string
-}): Promise<{ data: ParsedFlyerResponse; source: 'openai' | 'heuristic' }> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim()
-
-  if (!apiKey) {
+}): Promise<{ data: ParsedFlyerResponse; source: FlyerVisionSource }> {
+  if (!resolveGeminiApiKey() && !resolveGroqApiKey()) {
     return { data: heuristicFromFilename(input.fileName), source: 'heuristic' }
   }
 
   const dataUrl = fileToDataUrl(input.buffer, input.mimeType)
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_FLYER_MODEL?.trim() || 'gpt-4o-mini',
-      temperature: 0.1,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You extract event-listing data from market posters. Output strict JSON only — never prose, never markdown, never wrap in code fences.',
-        },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: FLYER_PARSE_PROMPT },
-            { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
-          ],
-        },
-      ],
-    }),
+  const { content, provider } = await generateJsonFromVision({
+    systemPrompt: FLYER_VISION_SYSTEM_PROMPT,
+    userPrompt: FLYER_PARSE_PROMPT,
+    dataUrl,
+    mimeType: input.mimeType,
   })
-
-  if (!response.ok) {
-    const detail = await response.text()
-    console.error('[parse-flyer] OpenAI error', response.status, detail)
-    throw new Error('Flyer vision parse failed')
-  }
-
-  const json = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>
-  }
-  const content = json.choices?.[0]?.message?.content
-  if (!content) {
-    throw new Error('Empty flyer parse response')
-  }
 
   const raw = JSON.parse(content) as unknown
   const data = parsedFlyerSchema.parse(raw)
 
   return {
-    data: parsedFlyerSchema.parse({
-      eventName: data.eventName ?? null,
-      venueName: data.venueName ?? null,
-      address: data.address ?? null,
-      date: normalizeFlyerDate(data.date ?? null) ?? data.date ?? null,
-      startTime: normalizeFlyerTime(data.startTime ?? null) ?? data.startTime ?? null,
-      endTime: normalizeFlyerTime(data.endTime ?? null) ?? data.endTime ?? null,
-      location: data.location ?? null,
-      description: data.description ?? null,
-      ticketPrice: data.ticketPrice ?? null,
-    }),
-    source: 'openai',
+    data: normalizeParsedFlyer(data),
+    source: provider,
   }
 }

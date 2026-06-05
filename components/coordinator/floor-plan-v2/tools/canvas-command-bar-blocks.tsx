@@ -41,8 +41,14 @@ import {
 } from '@/lib/booth-planner/layout-table-size'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { DrawShape, ToolState } from './types'
+import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
-import { CommandButton, toolbarControlHeight, toolbarDividerClass } from './command-button'
+import {
+  CommandButton,
+  toolbarControlHeight,
+  toolbarDividerClass,
+  toolbarIconButtonSize,
+} from './command-button'
 import { TableSizePill } from './table-size-pill'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
@@ -75,30 +81,6 @@ const PATRON_PLACEMENT_TOOLS: Array<{
     title: 'Draw patron banquet table — size from Rectangle column',
   },
 ]
-
-function toolbarSectionLabel(
-  text: string,
-  tone: 'amber' | 'violet' | 'teal',
-  compact?: boolean
-): React.ReactNode {
-  const toneClass =
-    tone === 'amber'
-      ? 'border-amber-200/80 bg-amber-50/90 text-amber-900'
-      : tone === 'violet'
-        ? 'border-violet-200/80 bg-violet-50/90 text-violet-900'
-        : 'border-teal-200/80 bg-teal-50/90 text-teal-900'
-  return (
-    <span
-      className={cn(
-        'mr-0.5 inline-flex shrink-0 items-center rounded-sm border px-1.5 text-[9px] font-heading font-semibold tracking-wide',
-        compact ? 'h-[1.575rem]' : 'h-7',
-        toneClass
-      )}
-    >
-      {text}
-    </span>
-  )
-}
 
 function AutoArrangeGroup({
   label,
@@ -145,8 +127,7 @@ function AutoArrangeGroup({
       <CommandButton
         onClick={onRun}
         disabled={!canRun}
-        title={runTitle}
-        label="Auto-Arrange"
+        title={`Auto-arrange — ${runTitle}`}
         className={activeClass}
       >
         <LayoutGrid className="h-3.5 w-3.5" />
@@ -364,7 +345,6 @@ export function renderCanvasCommandBarBlock(
                 key={shape.id}
                 onClick={() => activateDrawShape(shape.id)}
                 title={shape.label}
-                label={shape.label}
                 active={
                   ctx.toolState.tool === 'draw' &&
                   ctx.toolState.drawShape === shape.id
@@ -390,15 +370,13 @@ export function renderCanvasCommandBarBlock(
               onClick={ctx.onDeleteSelected}
               disabled={!hasSelection}
               title={`Delete ${ctx.selectedCount} selected`}
-              label="Delete"
               className="text-rose-700 hover:bg-rose-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onClearAll}
-              title="Hard reset — clear all rooms and objects"
-              label="Clear all"
+              title="Clear all — hard reset rooms and objects"
               className="text-rose-700 hover:bg-rose-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -440,7 +418,6 @@ export function renderCanvasCommandBarBlock(
               onClick={ctx.onCopy}
               disabled={!hasSelection}
               title="Copy selection (Ctrl+C)"
-              label="Copy"
             >
               <Copy className="h-3.5 w-3.5" />
             </CommandButton>
@@ -448,7 +425,6 @@ export function renderCanvasCommandBarBlock(
               onClick={ctx.onPaste}
               disabled={!ctx.clipboardHasContents}
               title="Paste (Ctrl+V)"
-              label="Paste"
             >
               <ClipboardPaste className="h-3.5 w-3.5" />
             </CommandButton>
@@ -473,11 +449,9 @@ export function renderCanvasCommandBarBlock(
     case 'vendor':
       return (
         <>
-          {toolbarSectionLabel('Vendor', 'amber', ctx.compact)}
           <CommandButton
             onClick={() => activateTablePlacement('vendor')}
             title="Draw vendor — size from Vendor column"
-            label="Vendor"
             active={isTablePlacementActive('vendor')}
             className={
               isTablePlacementActive('vendor')
@@ -529,7 +503,6 @@ export function renderCanvasCommandBarBlock(
     case 'patron':
       return (
         <>
-          {toolbarSectionLabel('Patron', 'violet', ctx.compact)}
           <div
             className="inline-flex items-center gap-0.5"
             role="group"
@@ -542,7 +515,6 @@ export function renderCanvasCommandBarBlock(
                   key={tool.mode}
                   onClick={() => activateTablePlacement(tool.mode)}
                   title={tool.title}
-                  label={tool.label}
                   active={active}
                   className={
                     active
@@ -597,7 +569,6 @@ export function renderCanvasCommandBarBlock(
     case 'room':
       return (
         <>
-          {toolbarSectionLabel('Room', 'teal', ctx.compact)}
           {ctx.onSelectRoom &&
           ctx.onAddRoom &&
           ctx.onRenameRoom &&
@@ -629,7 +600,6 @@ export function renderCanvasCommandBarBlock(
                   onClick={ctx.onRotateRoomLeft}
                   disabled={!canRotateRoom}
                   title={canRotateRoom ? `${rotateRoomHint} (left)` : rotateRoomHint}
-                  label="Room ↺"
                   className="text-teal-900 hover:bg-teal-100"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -638,7 +608,6 @@ export function renderCanvasCommandBarBlock(
                   onClick={ctx.onRotateRoomRight}
                   disabled={!canRotateRoom}
                   title={canRotateRoom ? `${rotateRoomHint} (right)` : rotateRoomHint}
-                  label="Room ↻"
                   className="text-teal-900 hover:bg-teal-100"
                 >
                   <RotateCw className="h-3.5 w-3.5" />
@@ -658,8 +627,7 @@ export function renderCanvasCommandBarBlock(
                   <CommandButton
                     onClick={ctx.onJoinRooms}
                     disabled={!ctx.canJoinRooms}
-                    title={ctx.joinTitle}
-                    label={ctx.joinLabel}
+                    title={`${ctx.joinLabel} — ${ctx.joinTitle}`}
                     className="bg-sky-50 text-sky-900 hover:bg-sky-100"
                   >
                     <Combine className="h-3.5 w-3.5" />
@@ -669,8 +637,7 @@ export function renderCanvasCommandBarBlock(
                   <CommandButton
                     onClick={ctx.onUnjoinRoom}
                     disabled={!ctx.canUnjoinRoom}
-                    title="Split the active room out of its joined zone"
-                    label="Unjoin"
+                    title="Unjoin — split the active room out of its joined zone"
                   >
                     <Split className="h-3.5 w-3.5" />
                   </CommandButton>
@@ -687,7 +654,6 @@ export function renderCanvasCommandBarBlock(
           <CommandButton
             onClick={ctx.onCenterView}
             title="Center view on all placed objects"
-            label="Center"
           >
             <Locate className="h-3.5 w-3.5" />
           </CommandButton>
@@ -741,7 +707,6 @@ export function renderCanvasCommandBarBlock(
                   ? 'Hide architectural labels'
                   : 'Show architectural labels'
               }
-              label="Show Labels"
               className={
                 ctx.showLabels ? 'bg-sky-50 text-sky-900 hover:bg-sky-100' : undefined
               }
@@ -763,7 +728,6 @@ export function renderCanvasCommandBarBlock(
                   ? 'Exit full screen (Esc)'
                   : 'Full screen editor'
               }
-              label={ctx.canvasFullscreen ? 'Exit Full Screen' : 'Full Screen'}
               className={
                 ctx.canvasFullscreen
                   ? 'bg-stone-800 text-white hover:bg-stone-700'
@@ -812,19 +776,30 @@ export function renderCanvasCommandBarBlock(
             </button>
           </div>
           {ctx.onSaveMarket ? (
-            <button
-              type="button"
-              onClick={ctx.onSaveMarket}
-              disabled={ctx.saveMarketDisabled || ctx.saveMarketLoading}
-              title="Save market and deploy"
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-3 text-xs font-semibold text-white hover:bg-stone-800 disabled:opacity-40',
-                toolbarControlHeight(compact)
-              )}
+            <TooltipWrapper
+              text={
+                ctx.saveMarketLoading
+                  ? 'Saving market…'
+                  : 'Save market and deploy'
+              }
             >
-              <Save className="h-3.5 w-3.5" />
-              {ctx.saveMarketLoading ? 'Saving…' : 'Save market'}
-            </button>
+              <button
+                type="button"
+                onClick={ctx.onSaveMarket}
+                disabled={ctx.saveMarketDisabled || ctx.saveMarketLoading}
+                aria-label={
+                  ctx.saveMarketLoading
+                    ? 'Saving market'
+                    : 'Save market and deploy'
+                }
+                className={cn(
+                  'inline-flex shrink-0 items-center justify-center rounded-md bg-stone-900 p-0 text-white hover:bg-stone-800 disabled:opacity-40',
+                  toolbarIconButtonSize(compact)
+                )}
+              >
+                <Save className="h-3.5 w-3.5" />
+              </button>
+            </TooltipWrapper>
           ) : null}
         </>
       )

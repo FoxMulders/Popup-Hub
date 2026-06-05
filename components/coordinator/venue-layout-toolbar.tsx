@@ -8,6 +8,9 @@ import {
   Eraser,
   LayoutGrid,
   Lock,
+  Redo2,
+  Trash2,
+  Undo2,
 } from 'lucide-react'
 import { VENUE_ELEMENT_TOOLS } from '@/lib/booth-planner/venue-elements'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
@@ -106,22 +109,24 @@ export function VenueLayoutToolbar({
               shortcut="Ctrl+Z"
               disabled={!canUndo}
               onClick={() => onUndo?.()}
-            >
-              Undo
-            </ToolbarAction>
+              icon={<Undo2 className="h-3.5 w-3.5" />}
+            />
             <ToolbarAction
               label="Redo"
               description="Reapply an undone change"
               shortcut="Ctrl+Shift+Z"
               disabled={!canRedo}
               onClick={() => onRedo?.()}
-            >
-              Redo
-            </ToolbarAction>
+              icon={<Redo2 className="h-3.5 w-3.5" />}
+            />
             {onClearCanvas ? (
-              <ToolbarAction label="Clear Canvas" description="Reset vendors and painted items" shortcut="" onClick={onClearCanvas}>
-                Clear
-              </ToolbarAction>
+              <ToolbarAction
+                label="Clear Canvas"
+                description="Reset vendors and painted items"
+                shortcut=""
+                onClick={onClearCanvas}
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+              />
             ) : null}
             <span className="mx-0.5 h-5 w-px bg-stone-300" aria-hidden />
           </>
@@ -171,34 +176,31 @@ export function VenueLayoutToolbar({
       </TooltipWrapper>
 
       {(canUndo || canRedo || onClearCanvas) && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           <ToolbarAction
             label="Undo"
             description="Reverse the last canvas change"
             shortcut="Ctrl+Z"
             disabled={!canUndo}
             onClick={() => onUndo?.()}
-          >
-            Undo
-          </ToolbarAction>
+            icon={<Undo2 className="h-3.5 w-3.5" />}
+          />
           <ToolbarAction
             label="Redo"
             description="Reapply an undone change"
             shortcut="Ctrl+Shift+Z"
             disabled={!canRedo}
             onClick={() => onRedo?.()}
-          >
-            Redo
-          </ToolbarAction>
+            icon={<Redo2 className="h-3.5 w-3.5" />}
+          />
           {onClearCanvas ? (
             <ToolbarAction
               label="Clear Canvas"
               description="Remove vendors and painted fixtures; locked template shell stays"
               shortcut=""
               onClick={onClearCanvas}
-            >
-              Clear
-            </ToolbarAction>
+              icon={<Trash2 className="h-3.5 w-3.5" />}
+            />
           ) : null}
         </div>
       )}
@@ -295,17 +297,14 @@ function ToolButton({
         aria-label={label}
         onClick={onClick}
         className={cn(
-          'relative inline-flex items-center gap-1.5 rounded-none border-2 border-black text-xs font-black text-black transition-all duration-200',
-          compact ? 'w-full justify-start px-2 py-1.5 min-h-9' : 'px-2.5 py-2 min-h-11 min-w-11',
+          'relative inline-flex items-center justify-center rounded-none border-2 border-black text-xs font-black text-black transition-all duration-200',
+          compact ? 'h-8 w-8 p-0' : 'h-9 w-9 p-0',
           active
             ? 'bg-zinc-900 text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]'
             : 'bg-white hover:bg-zinc-100 active:translate-y-0.5'
         )}
       >
         {icon}
-        <span className={cn(compact ? 'truncate' : 'hidden sm:inline max-w-[4.5rem] truncate')}>
-          {compact ? label : label.split(' ')[0]}
-        </span>
         {shortcut ? (
           <kbd
             className={cn(
@@ -327,14 +326,14 @@ function ToolbarAction({
   shortcut,
   disabled,
   onClick,
-  children,
+  icon,
 }: {
   label: string
   description: string
   shortcut: string
   disabled?: boolean
   onClick: () => void
-  children: React.ReactNode
+  icon: React.ReactNode
 }) {
   const tip = `${label} — ${description}${shortcut ? ` · ${shortcut}` : ''}`
   return (
@@ -343,9 +342,10 @@ function ToolbarAction({
         type="button"
         disabled={disabled}
         onClick={onClick}
-        className="min-h-9 w-full rounded-none border-2 border-black bg-white px-2 text-xs font-black text-black disabled:opacity-40 hover:bg-zinc-100 active:translate-y-0.5"
+        aria-label={label}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-none border-2 border-black bg-white p-0 text-xs font-black text-black disabled:opacity-40 hover:bg-zinc-100 active:translate-y-0.5"
       >
-        {children}
+        {icon}
       </button>
     </TooltipWrapper>
   )

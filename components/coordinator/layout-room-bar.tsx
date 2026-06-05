@@ -9,6 +9,7 @@ import {
 import type { AddLayoutRoomOptions } from '@/lib/coordinator/add-layout-room'
 import { MIN_ROOM_DIMENSION_FT } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
 import { Button } from '@/components/ui/button'
+import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { Plus, Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -329,23 +330,25 @@ export function LayoutRoomBar({
           ) : null}
           <div className="relative shrink-0" ref={presetMenuRef}>
           <div className="flex items-stretch overflow-hidden rounded-md border border-stone-200">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 min-h-0 gap-1 rounded-none border-0 px-2 text-xs"
-              onClick={() => onAddRoom({ presetId: 'blank' })}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add room
-            </Button>
+            <TooltipWrapper text="Add room">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 min-h-0 w-7 gap-0 rounded-none border-0 p-0 text-xs"
+                onClick={() => onAddRoom({ presetId: 'blank' })}
+                aria-label="Add room"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipWrapper>
             <button
               type="button"
               aria-label="Choose room preset"
               aria-expanded={presetMenuOpen}
               aria-haspopup="menu"
               onClick={() => setPresetMenuOpen((v) => !v)}
-              className="flex h-8 min-h-0 items-center justify-center border-l border-stone-200 px-2 text-stone-600 hover:bg-canvas"
+              className="flex h-7 min-h-0 w-6 items-center justify-center border-l border-stone-200 px-0 text-stone-600 hover:bg-canvas"
             >
               <ChevronDown
                 className={cn(
@@ -457,7 +460,7 @@ export function LayoutRoomBar({
                 className={cn(
                   'font-medium transition-all duration-200 active:translate-y-0.5',
                   inlineToolbar
-                    ? 'h-8 px-3 text-xs'
+                    ? 'h-7 px-2.5 text-xs'
                     : 'min-h-11 px-4 text-sm',
                   isActive
                     ? 'bg-forest text-primary-foreground'
@@ -474,7 +477,7 @@ export function LayoutRoomBar({
                     className={cn(
                       'border-l-2 border-stone-200 text-muted-foreground hover:bg-canvas',
                       inlineToolbar
-                        ? 'flex h-8 w-7 items-center justify-center border-l'
+                        ? 'flex h-7 w-6 items-center justify-center border-l'
                         : 'touch-target'
                     )}
                     onClick={() => startRename(room)}
@@ -487,7 +490,7 @@ export function LayoutRoomBar({
                     className={cn(
                       'border-l-2 border-stone-200 text-terracotta-600 hover:bg-terracotta-50',
                       inlineToolbar
-                        ? 'flex h-8 w-7 items-center justify-center border-l'
+                        ? 'flex h-7 w-6 items-center justify-center border-l'
                         : 'touch-target'
                     )}
                     onClick={() => onDeleteRoom(room.id)}

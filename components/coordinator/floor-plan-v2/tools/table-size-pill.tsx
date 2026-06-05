@@ -31,17 +31,6 @@ function sizeButtonClass(active: boolean, disabled: boolean): string {
   )
 }
 
-function sectionLabel(text: string): React.ReactNode {
-  return (
-    <span
-      className="inline-flex h-full items-center border-r border-stone-200 bg-stone-50 px-1 text-[9px] font-heading tracking-wide text-stone-500"
-      aria-hidden
-    >
-      {text}
-    </span>
-  )
-}
-
 /**
  * Compact table-size pill for the floor-plan canvas command ribbon.
  * Vendor booth sizes update the hall baseline; guest round/rect tables
@@ -91,7 +80,6 @@ export function TableSizePill({
       >
         {showVendor ? (
           <>
-            {sectionLabel('Vendor')}
             {TABLE_SIZES.map((ft) => {
               const selection = vendorTableSpec(ft)
               const active = tableSizeSpecsEqual(value, selection)
@@ -113,7 +101,6 @@ export function TableSizePill({
         ) : null}
         {showPatron ? (
           <>
-            {sectionLabel('Round')}
             {GUEST_TABLE_LENGTHS_FT.map((ft) => {
               const selection = guestRoundTableSpec(ft)
               const active = tableSizeSpecsEqual(value, selection)
@@ -131,7 +118,6 @@ export function TableSizePill({
                 </button>
               )
             })}
-            {sectionLabel('Rectangle')}
             {GUEST_TABLE_LENGTHS_FT.map((ft) => {
               const selection = guestRectTableSpec(ft)
               const active = tableSizeSpecsEqual(value, selection)
