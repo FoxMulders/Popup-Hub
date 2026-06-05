@@ -1890,7 +1890,7 @@ function FloorPlanV2Workspace({
     <CanvasCommandBar
       staticLayout
       sidebarLayout={portalToolbarToSidebar}
-      className="shrink-0"
+      className={portalToolbarToSidebar ? 'min-h-0 flex-1 overflow-hidden' : 'shrink-0'}
       toolState={{ tool, drawShape }}
       onToolChange={handleToolChange}
       onDrawShapeChange={handleDrawShapeChange}
@@ -2037,7 +2037,7 @@ function FloorPlanV2Workspace({
         fullscreenToolbar={fullscreenExitToolbar}
         className="min-h-0 min-w-0 flex-1"
       >
-        <div className="flex min-h-0 flex-1 basis-0 flex-col gap-1 overflow-hidden">
+        <div className={cn('flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden', isDashboard ? 'gap-0' : 'gap-1')}>
         {dashboardCommandBar && !portalToolbarToSidebar ? dashboardCommandBar : null}
         {dashboardCommandBar && portalToolbarToSidebar && toolbarPortal?.target
           ? createPortal(dashboardCommandBar, toolbarPortal.target)
@@ -2115,7 +2115,7 @@ function FloorPlanV2Workspace({
 
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 basis-0 items-stretch',
+            'flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden',
             !isDashboard && 'gap-2'
           )}
         >
@@ -2123,7 +2123,7 @@ function FloorPlanV2Workspace({
             className={cn(
               'floor-plan-canvas-host relative min-h-0 min-w-0 flex-1 basis-0 overflow-hidden bg-stone-100',
               isDashboard
-                ? 'h-full min-h-0 border-0'
+                ? 'h-full min-h-0 flex-grow border-0'
                 : 'min-h-[200px] h-full rounded-lg border border-stone-200'
             )}
           >

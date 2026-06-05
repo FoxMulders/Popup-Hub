@@ -77,7 +77,7 @@ export function CanvasLegend({ className }: { className?: string }) {
         aria-label="Show allocation legend"
         aria-expanded={false}
         className={cn(
-          'absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-md backdrop-blur-sm hover:bg-white',
+          'absolute top-4 right-4 z-10 inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-lg backdrop-blur-sm hover:bg-white',
           className
         )}
       >
@@ -104,7 +104,7 @@ export function CanvasLegend({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'absolute top-3 right-3 z-20 max-w-[220px] rounded-lg border border-stone-200/90 bg-white/90 p-2 shadow-md backdrop-blur-sm',
+        'absolute top-4 right-4 z-10 max-w-[220px] rounded-lg border border-stone-200/90 bg-white/95 p-2 shadow-lg backdrop-blur-sm',
         className
       )}
       role="region"

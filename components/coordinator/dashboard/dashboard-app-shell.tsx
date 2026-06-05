@@ -17,6 +17,8 @@ export interface DashboardAppShellProps {
   id?: string
   /** Set while zones are still loading */
   ariaBusy?: boolean
+  /** Optional class overrides for the left utility rail */
+  leftClassName?: string
 }
 
 /**
@@ -35,6 +37,7 @@ export function DashboardAppShell({
   rightLabel = 'Inspector',
   id = 'coordinator-dashboard-root',
   ariaBusy,
+  leftClassName,
 }: DashboardAppShellProps) {
   return (
     <div
@@ -63,12 +66,15 @@ export function DashboardAppShell({
             ? 'grid-cols-1'
             : right
               ? 'grid-cols-1 lg:grid-cols-[var(--command-center-left,320px)_minmax(0,1fr)_var(--command-center-right,360px)]'
-              : 'grid-cols-1 lg:grid-cols-[var(--command-center-left,320px)_minmax(0,1fr)]'
+              : 'grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]'
         )}
       >
         {immersive ? null : (
           <aside
-            className="ecosystem-panel dashboard-app-shell__left hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r"
+            className={cn(
+              'ecosystem-panel dashboard-app-shell__left hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r',
+              leftClassName
+            )}
             aria-label={leftLabel}
           >
             <div className="flex h-full min-h-0 flex-col">{left}</div>

@@ -47,7 +47,7 @@ export function DashboardCommandCenterHeader() {
           {selectedEvent?.name ?? 'Booth layout designer'}
         </h1>
         <p className="hidden text-sm text-muted-foreground sm:block">
-          CAD floor plan · layout tools in left panel · curation queue
+          CAD floor plan · layout tools in left panel
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
