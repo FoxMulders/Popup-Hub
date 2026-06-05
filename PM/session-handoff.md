@@ -3,18 +3,35 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `0f968d6` (pushed to `origin/master`)
-- Last deploy commit: `0f968d6` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 134** | commit `0f968d6` (handoff updated 2026-06-05 15:36)
+- Branch: `master` @ `6b613d3` (pushed to `origin/master`)
+- Last deploy commit: `6b613d3` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 137** | commit `e6d7056` (handoff updated 2026-06-05 15:53)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-05 15:36 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (0f968d6)
+- 2026-06-05 15:53 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (6b613d3)
 
 
 ## Goal
+**QA folder staging — dashboard layout optimization & stage merge** — all layout/merge/canvas changes mirrored in `src/qa_review/` for manual testing before production promotion.
+
+## Shipped this session (QA staging, not deployed)
+- **`Dashboard_qa.tsx`:** `DashboardBootstrapQa` — curation queue / Market Intake / Available Pool removed from left rail; `h-[calc(100vh-64px)] overflow-hidden` on aside; mandatory `InitialRoomModalQa` gates canvas mount until first room dimensions confirmed.
+- **`Canvas_qa.tsx`:** Stage placable rects render with `fill="none"` / `fillOpacity={0}` (rose stroke retained) so grid shows through after merge.
+- **`Merge_qa.ts` + `destructive-merge_qa.ts`:** Merge (2) union uses full 2D stage bounding box (`mergeParticipantBounds2d`) — not a width-only horizontal line projection.
+- **`floor-plan-canvas_dashboard_qa.tsx`:** Canvas host wired to `CanvasObjectsQa` for optional E2E swap.
+- **`dashboard-layout-patch_qa.md` + MANIFEST:** Wiring steps, smoke-test checklist, promotion gate.
+- **Verify:** `npx tsx scripts/verify-merge-qa.ts` — 7/7 pass.
+
+## Next actions
+1. **Wire QA dashboard** — swap `DashboardBootstrap` → `DashboardBootstrapQa` in `market-dashboard-client.tsx` (see `dashboard-layout-patch_qa.md`)
+2. **Optional canvas/merge E2E** — temporary import swaps for `LayoutCanvasDashboardQa` and `destructive-merge_qa`
+3. **Smoke-test** — initial room modal, no left-rail scrollbar, stage merge bump, stage fill none
+4. **Promote to production** after QA sign-off (do not edit main paths until then)
+
+## Goal (prior)
 **UI architecture — maximize canvas space & initial room modal** — purge curation queue from dashboard left rail, mandatory first-room modal before canvas mount, zero inner scrollbars on utility panel, floating Placement HUD.
 
 ## Shipped this session (local, not deployed)
