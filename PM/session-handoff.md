@@ -3,15 +3,15 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `06a0d69` (pushed to `origin/master`)
-- Last deploy commit: `06a0d69` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 121** | commit `d90f755` (handoff updated 2026-06-05 11:26)
+- Branch: `master` @ `a70b42b` (pushed to `origin/master`)
+- Last deploy commit: `a70b42b` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 122** | commit `926a71b` (handoff updated 2026-06-05 11:37)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-05 11:26 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (06a0d69)
+- 2026-06-05 11:37 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (a70b42b)
 
 
 ## Goal
