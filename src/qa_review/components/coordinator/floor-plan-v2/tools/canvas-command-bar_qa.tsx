@@ -19,6 +19,14 @@ import { CanvasToolbarReorder } from '@/components/coordinator/floor-plan-v2/too
 import { CanvasToolbarStaticQa as CanvasToolbarStatic } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static_qa'
 import { getVisibleStaticToolbarRows } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
 import { ToolbarCompactProvider } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/command-button_qa'
+import { QA_PANEL_SCROLL_CLASSES } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
+import {
+  QA_TIP_CANT_MERGE,
+  QA_TIP_MERGE,
+  QA_TIP_MERGE_ROOMS,
+  QA_TIP_MERGE_SHAPES,
+  QA_TIP_SELECT_TO_MERGE,
+} from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/toolbar-tooltip-copy_qa'
 
 interface CanvasCommandBarProps extends CanvasToolHostProps {
   /** Fixed tool rows — no drag-reorder (command center). */
@@ -147,14 +155,14 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
   const joinLabel =
     canJoinRooms && joinCandidateCount && joinCandidateCount > 1
       ? `Merge (${joinCandidateCount})`
-      : 'Merge'
+      : QA_TIP_MERGE
   const joinTitle = canJoinRooms
     ? mergePrefersShapes
-      ? 'Boolean union: fuse selected shapes into one path (interior edges removed)'
-      : 'Dissolve shared walls between touching rooms into one outer perimeter'
+      ? QA_TIP_MERGE_SHAPES
+      : QA_TIP_MERGE_ROOMS
     : joinBlockedReason
-      ? `Can't merge: ${joinBlockedReason}`
-      : 'Select 2+ shapes, or move rooms flush together, then Merge'
+      ? QA_TIP_CANT_MERGE
+      : QA_TIP_SELECT_TO_MERGE
 
   const blockContext = useMemo<CanvasCommandBarBlockContext>(
     () => ({
@@ -191,6 +199,7 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
       canJoinRooms,
       joinLabel,
       joinTitle,
+      joinBlockedReason,
       onUnjoinRoom,
       canUnjoinRoom,
       onClearAll,
@@ -253,6 +262,7 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
       canJoinRooms,
       joinLabel,
       joinTitle,
+      joinBlockedReason,
       onUnjoinRoom,
       canUnjoinRoom,
       onClearAll,
@@ -314,7 +324,10 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
           !sidebarLayout &&
           'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
         sidebarLayout &&
-          'min-h-0 flex-1 overflow-hidden border-0 bg-transparent px-0 shadow-none',
+          cn(
+            'min-h-0 flex-1 overflow-x-hidden overflow-y-auto border-0 bg-transparent px-0 shadow-none',
+            QA_PANEL_SCROLL_CLASSES
+          ),
         className
       )}
         role="toolbar"

@@ -10,6 +10,11 @@ import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboa
 import { DashboardToolbarPortalTarget } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 import { InitialRoomModal } from '@/components/coordinator/dashboard/initial-room-modal'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import { cn } from '@/lib/utils'
+
+/** Hide scrollbar tracks while preserving smooth scroll on short viewports. */
+export const QA_PANEL_SCROLL_CLASSES =
+  'scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]'
 
 export interface DashboardBootstrapQaProps {
   header: ReactNode
@@ -22,7 +27,12 @@ export interface DashboardBootstrapQaProps {
 export function DashboardLeftPanelQa() {
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col justify-start overflow-hidden bg-white">
-      <DashboardToolbarPortalTarget className="min-h-0 flex-1 overflow-hidden border-b-0 px-1 py-1" />
+      <DashboardToolbarPortalTarget
+        className={cn(
+          'min-h-0 flex-1 overflow-x-hidden overflow-y-auto border-b-0 px-1 py-1',
+          QA_PANEL_SCROLL_CLASSES
+        )}
+      />
     </div>
   )
 }

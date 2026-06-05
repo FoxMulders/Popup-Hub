@@ -41,7 +41,15 @@ export function dismissActiveTooltip() {
 }
 
 function estimateTooltipWidth(text: string): number {
-  return Math.min(Math.max(text.length * 7 + 20, 48), 280)
+  return Math.min(Math.max(text.length * 7 + 16, 32), 160)
+}
+
+function estimateTooltipHeight(): number {
+  return 28
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
 }
 
 function computePortalPosition(
@@ -49,13 +57,46 @@ function computePortalPosition(
   tooltipWidth: number
 ): Pick<CSSProperties, 'top' | 'left' | 'transform'> {
   const margin = 8
-  const centeredLeft = anchor.left + anchor.width / 2 - tooltipWidth / 2
+  const tooltipHeight = estimateTooltipHeight()
+  const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1280
+  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800
 
-  if (centeredLeft < QA_SIDEBAR_WIDTH_PX) {
+  // Left-rail anchors always pop to the right — avoids w-80 / overflow clipping.
+  const inLeftRail = anchor.right <= QA_SIDEBAR_WIDTH_PX + 1
+
+  if (inLeftRail) {
+    const top = clamp(
+      anchor.top + anchor.height / 2,
+      margin + tooltipHeight / 2,
+      viewportH - margin - tooltipHeight / 2
+    )
     return {
-      top: anchor.top + anchor.height / 2,
+      top,
       left: anchor.right + margin,
       transform: 'translateY(-50%)',
+    }
+  }
+
+  const centeredLeft = anchor.left + anchor.width / 2 - tooltipWidth / 2
+  const wouldClipLeft = centeredLeft < margin
+  const wouldClipRight = centeredLeft + tooltipWidth > viewportW - margin
+
+  if (wouldClipLeft || wouldClipRight) {
+    const top = clamp(
+      anchor.top + anchor.height / 2,
+      margin + tooltipHeight / 2,
+      viewportH - margin - tooltipHeight / 2
+    )
+    const left =
+      wouldClipLeft && !wouldClipRight
+        ? anchor.right + margin
+        : wouldClipRight && !wouldClipLeft
+          ? anchor.left - margin
+          : anchor.right + margin
+    return {
+      top,
+      left,
+      transform: wouldClipRight && !wouldClipLeft ? 'translate(-100%, -50%)' : 'translateY(-50%)',
     }
   }
 
@@ -94,8 +135,18 @@ export function TooltipWrapperQa({ text, children }: TooltipWrapperProps) {
       setPosition(null)
       return
     }
-    const rect = anchorRef.current.getBoundingClientRect()
-    setPosition(computePortalPosition(rect, estimateTooltipWidth(text)))
+    const update = () => {
+      if (!anchorRef.current) return
+      const rect = anchorRef.current.getBoundingClientRect()
+      setPosition(computePortalPosition(rect, estimateTooltipWidth(text)))
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
   }, [visible, text])
 
   const cancelPending = useCallback(() => {
@@ -127,7 +178,7 @@ export function TooltipWrapperQa({ text, children }: TooltipWrapperProps) {
       ? createPortal(
           <div
             role="tooltip"
-            className="pointer-events-none fixed z-50 rounded-none border-2 border-black bg-zinc-900 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+            className="pointer-events-none fixed z-50 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white shadow-sm"
             style={position}
           >
             {text}

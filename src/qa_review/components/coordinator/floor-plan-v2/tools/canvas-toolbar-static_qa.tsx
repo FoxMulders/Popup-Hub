@@ -17,12 +17,20 @@ import {
   type StaticRowCollapsedState,
 } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
 
+import {
+  QA_TIP_COLLAPSE,
+  QA_TIP_EXPAND,
+  QA_TIP_MOVE_DOWN,
+  QA_TIP_MOVE_UP,
+  QA_TIP_RESET_LAYOUT,
+} from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/toolbar-tooltip-copy_qa'
+
 /** Uppercase semantic section titles — no standalone row icons. */
 const STATIC_ROW_HEADERS: Record<CanvasToolbarStaticRowId, string> = {
-  room: 'ROOM LAYOUT',
-  patron: 'PATRON PLACEMENTS',
-  vendor: 'VENDOR PLACEMENTS',
-  tools: 'CANVAS SETTINGS',
+  room: 'ROOM CONTROLS',
+  patron: 'PATRON LAYOUT',
+  vendor: 'VENDOR BOOTHS',
+  tools: 'DESIGNER TOOLS',
 }
 
 export interface CanvasToolbarStaticQaProps {
@@ -70,8 +78,8 @@ function StaticToolbarRow({
         <button
           type="button"
           onClick={() => onToggle(rowId)}
-          title={expanded ? `Collapse ${header}` : `Expand ${header}`}
-          aria-label={expanded ? `Collapse ${header}` : `Expand ${header}`}
+          title={expanded ? QA_TIP_COLLAPSE : QA_TIP_EXPAND}
+          aria-label={expanded ? `${QA_TIP_COLLAPSE} ${header}` : `${QA_TIP_EXPAND} ${header}`}
           aria-expanded={expanded}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 hover:text-stone-700',
@@ -84,20 +92,15 @@ function StaticToolbarRow({
             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
           )}
         </button>
-        <h3
-          className={cn(
-            'min-w-0 flex-1 truncate font-bold uppercase tracking-wide text-stone-700',
-            compact ? 'text-[10px]' : 'text-[11px]'
-          )}
-        >
+        <h3 className="min-w-0 flex-1 truncate text-xs font-bold uppercase tracking-wider text-slate-700">
           {header}
         </h3>
         <button
           type="button"
           disabled={index === 0}
           onClick={() => onMove(rowId, -1)}
-          title={`Move ${header} up`}
-          aria-label={`Move ${header} up`}
+          title={QA_TIP_MOVE_UP}
+          aria-label={`${QA_TIP_MOVE_UP} ${header}`}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
             compact ? 'h-6 w-6' : 'h-7 w-7'
@@ -109,8 +112,8 @@ function StaticToolbarRow({
           type="button"
           disabled={index >= total - 1}
           onClick={() => onMove(rowId, 1)}
-          title={`Move ${header} down`}
-          aria-label={`Move ${header} down`}
+          title={QA_TIP_MOVE_DOWN}
+          aria-label={`${QA_TIP_MOVE_DOWN} ${header}`}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
             compact ? 'h-6 w-6' : 'h-7 w-7'
@@ -226,7 +229,7 @@ export function CanvasToolbarStaticQa({
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <div className="flex min-w-0 items-center justify-end">
-        <TooltipWrapperQa text="Reset toolbar to default layout">
+        <TooltipWrapperQa text={QA_TIP_RESET_LAYOUT}>
           <button
             type="button"
             onClick={resetLayout}

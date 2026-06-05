@@ -15,9 +15,20 @@
 
 
 ## Goal
-**QA folder staging — tooltip repairs, text headers, stage asset patch** — dashboard left-rail UX and stage geometry/drag fixes mirrored in `src/qa_review/` for manual testing before production promotion.
+**QA folder staging — eliminate sidebar scrollbars & fix tooltip overflows** — hidden-scrollbar left rail + portal tooltips that escape `w-80` clipping in `src/qa_review/`.
 
 ## Shipped this session (QA staging, not deployed)
+- **`Dashboard_qa.tsx`:** Exported `QA_PANEL_SCROLL_CLASSES` (`scrollbar-none` + WebKit/MS/Firefox hide); `DashboardLeftPanelQa` portal target uses `overflow-y-auto` with hidden scrollbars for smooth scroll on short viewports.
+- **`tooltip-wrapper_qa.tsx`:** Left-rail anchors always pop right (`translateY(-50%)`, `anchor.right + 8px`); viewport edge clamp; scroll/resize listeners keep portal position in sync.
+- **`canvas-command-bar_qa.tsx`:** Sidebar accordion container reuses `QA_PANEL_SCROLL_CLASSES`.
+
+## Shipped earlier this session (QA staging, not deployed)
+- **`toolbar-tooltip-copy_qa.ts`:** Centralized micro-tooltip strings (e.g. `Clear all`, `Auto-arrange`, `Merge rooms`, `Space H`) — replaces long descriptive sentences across command-bar blocks.
+- **`tooltip-wrapper_qa.tsx`:** Compact bubble styling (`text-xs px-2 py-1 bg-slate-800 text-white rounded shadow-sm`); narrower width estimate cap (160px).
+- **`canvas-toolbar-static_qa.tsx`:** Accordion headers → **ROOM CONTROLS**, **PATRON LAYOUT**, **VENDOR BOOTHS**, **DESIGNER TOOLS** with `text-xs font-bold tracking-wider text-slate-700 uppercase`; chrome tooltips shortened.
+- **`canvas-command-bar-blocks_qa.tsx` + `canvas-command-bar_qa.tsx`:** All toolbar/object-brush tooltips wired to micro-copy constants; merge/join hints shortened.
+
+## Shipped earlier (QA staging, not deployed)
 - **QA mirror modules written to disk** under `src/qa_review/` (previously documented only).
 - **`tooltip-wrapper_qa.tsx`:** Portal tooltips (`fixed z-50` on `document.body`) with sidebar bounds check — flips to the right when hint would clip past `w-80` (320px).
 - **`canvas-toolbar-static_qa.tsx` + `canvas-command-bar_qa.tsx` + `command-button_qa.tsx` + `canvas-command-bar-blocks_qa.tsx`:** Uppercase text accordion headers (**ROOM LAYOUT**, **PATRON PLACEMENTS**, **VENDOR PLACEMENTS**, **CANVAS SETTINGS**); all command-bar tooltips use portal wrapper.
@@ -29,8 +40,8 @@
 
 ## Next actions
 1. **Wire QA dashboard** — `DashboardBootstrapQa` in `market-dashboard-client.tsx` + `CanvasCommandBarQa` in `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`)
-2. **Optional canvas/merge E2E** — `LayoutCanvasDashboardQa` + `destructive-merge_qa` import swaps
-3. **Smoke-test** — portal tooltips on left rail, text headers, stage single outline + drag, initial room modal, stage merge bump
+2. **Smoke-test** — left rail: no visible scrollbar at 1080p/720p but content scrolls when all accordions expanded; tooltips pop right of icons without clipping at sidebar edge; accordion headers (**ROOM CONTROLS** / **PATRON LAYOUT** / **VENDOR BOOTHS** / **DESIGNER TOOLS**)
+3. **Optional canvas/merge E2E** — `LayoutCanvasDashboardQa` + `destructive-merge_qa` import swaps
 4. **Promote to production** after QA sign-off
 
 ## Goal (prior)

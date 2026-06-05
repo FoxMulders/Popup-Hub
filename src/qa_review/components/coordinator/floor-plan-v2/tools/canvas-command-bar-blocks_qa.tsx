@@ -41,7 +41,44 @@ import {
 } from '@/lib/booth-planner/layout-table-size'
 import type { AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import type { DrawShape, ToolState } from '@/components/coordinator/floor-plan-v2/tools/types'
-import { TooltipWrapperQa } from '@/src/qa_review/components/coordinator/dashboard/tooltip-wrapper_qa'
+import {
+  QA_TIP_ALIGN_H,
+  QA_TIP_ALIGN_V,
+  QA_TIP_ARRANGE_MODE,
+  QA_TIP_AUTO_ARRANGE,
+  QA_TIP_BANQUET_TABLE,
+  QA_TIP_CANT_MERGE,
+  QA_TIP_CENTER,
+  QA_TIP_CLEAR_ALL,
+  QA_TIP_COPY,
+  QA_TIP_EXIT_FULLSCREEN,
+  QA_TIP_FULLSCREEN,
+  QA_TIP_HAND,
+  QA_TIP_LABELS_OFF,
+  QA_TIP_LABELS_ON,
+  QA_TIP_PASTE,
+  QA_TIP_REDO,
+  QA_TIP_ROTATE_LEFT,
+  QA_TIP_ROTATE_RIGHT,
+  QA_TIP_ROTATE_ROOM,
+  QA_TIP_ROTATE_ROOM_LEFT,
+  QA_TIP_ROTATE_ROOM_RIGHT,
+  QA_TIP_ROUND_TABLE,
+  QA_TIP_SAVE,
+  QA_TIP_SAVING,
+  QA_TIP_SELECT,
+  QA_TIP_SELECT_ROOM,
+  QA_TIP_SELECT_TO_MERGE,
+  QA_TIP_SPACE_H,
+  QA_TIP_SPACE_V,
+  QA_TIP_UNDO,
+  QA_TIP_UNJOIN,
+  QA_TIP_VENDOR_DRAW,
+  QA_TIP_ZOOM_IN,
+  QA_TIP_ZOOM_OUT,
+  QA_TIP_ZOOM_RESET,
+  qaTipDelete,
+} from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/toolbar-tooltip-copy_qa'
 import { cn } from '@/lib/utils'
 import {
   CommandButtonQa as CommandButton,
@@ -59,6 +96,7 @@ import {
   type GuestTableLengthFt,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
+import { TooltipWrapperQa } from '@/src/qa_review/components/coordinator/dashboard/tooltip-wrapper_qa'
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
@@ -72,13 +110,13 @@ const PATRON_PLACEMENT_TOOLS: Array<{
     mode: 'guest-round',
     label: 'Round',
     icon: Circle,
-    title: 'Draw patron round table — size from Round column',
+    title: QA_TIP_ROUND_TABLE,
   },
   {
     mode: 'guest-rect',
     label: 'Rectangle',
     icon: RectangleHorizontal,
-    title: 'Draw patron banquet table — size from Rectangle column',
+    title: QA_TIP_BANQUET_TABLE,
   },
 ]
 
@@ -112,7 +150,7 @@ function AutoArrangeGroup({
         <select
           value={mode}
           onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
-          title={`${label} placement mode`}
+          title={QA_TIP_ARRANGE_MODE}
           aria-label={`${label} mode`}
           className={cn(
             'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700',
@@ -127,7 +165,7 @@ function AutoArrangeGroup({
       <CommandButton
         onClick={onRun}
         disabled={!canRun}
-        title={`Auto-arrange — ${runTitle}`}
+        title={QA_TIP_AUTO_ARRANGE}
         className={activeClass}
       >
         <LayoutGrid className="h-3.5 w-3.5" />
@@ -194,6 +232,7 @@ export interface CanvasCommandBarBlockContext {
   canJoinRooms?: boolean
   joinLabel: string
   joinTitle: string
+  joinBlockedReason?: string | null
   onUnjoinRoom?: () => void
   canUnjoinRoom?: boolean
   onClearAll: () => void
@@ -240,9 +279,7 @@ export function renderCanvasCommandBarBlock(
   const compact = ctx.compact ?? false
   const rotateRoomId = ctx.selectedRoomId ?? ctx.activeRoomId ?? null
   const canRotateRoom = Boolean(rotateRoomId) && Boolean(ctx.onRotateRoomLeft)
-  const rotateRoomHint = rotateRoomId
-    ? 'Rotate the room and everything inside it 90°'
-    : 'Select a room on the canvas (click its perimeter) to rotate'
+  const rotateRoomHint = rotateRoomId ? QA_TIP_ROTATE_ROOM : QA_TIP_SELECT_ROOM
 
   function activateDrawShape(shape: DrawShape) {
     ctx.onToolChange('draw')
@@ -318,14 +355,14 @@ export function renderCanvasCommandBarBlock(
           >
             <CommandButton
               onClick={() => ctx.onToolChange('select')}
-              title="Select (V)"
+              title={QA_TIP_SELECT}
               active={ctx.toolState.tool === 'select'}
             >
               <MousePointer2 className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={() => ctx.onToolChange('hand')}
-              title="Hand (H)"
+              title={QA_TIP_HAND}
               active={ctx.toolState.tool === 'hand'}
             >
               <Hand className="h-3.5 w-3.5" />
@@ -369,14 +406,14 @@ export function renderCanvasCommandBarBlock(
             <CommandButton
               onClick={ctx.onDeleteSelected}
               disabled={!hasSelection}
-              title={`Delete ${ctx.selectedCount} selected`}
+              title={qaTipDelete(ctx.selectedCount)}
               className="text-rose-700 hover:bg-rose-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onClearAll}
-              title="Clear all — hard reset rooms and objects"
+              title={QA_TIP_CLEAR_ALL}
               className="text-rose-700 hover:bg-rose-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -396,14 +433,14 @@ export function renderCanvasCommandBarBlock(
             <CommandButton
               onClick={ctx.onUndo}
               disabled={!ctx.canUndo}
-              title="Undo (Ctrl+Z)"
+              title={QA_TIP_UNDO}
             >
               <Undo2 className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onRedo}
               disabled={!ctx.canRedo}
-              title="Redo (Ctrl+Shift+Z)"
+              title={QA_TIP_REDO}
             >
               <Redo2 className="h-3.5 w-3.5" />
             </CommandButton>
@@ -417,28 +454,28 @@ export function renderCanvasCommandBarBlock(
             <CommandButton
               onClick={ctx.onCopy}
               disabled={!hasSelection}
-              title="Copy selection (Ctrl+C)"
+              title={QA_TIP_COPY}
             >
               <Copy className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onPaste}
               disabled={!ctx.clipboardHasContents}
-              title="Paste (Ctrl+V)"
+              title={QA_TIP_PASTE}
             >
               <ClipboardPaste className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onRotateLeft}
               disabled={!hasSelection}
-              title="Rotate -15°"
+              title={QA_TIP_ROTATE_LEFT}
             >
               <RotateCcw className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onRotateRight}
               disabled={!hasSelection}
-              title="Rotate selection +15°"
+              title={QA_TIP_ROTATE_RIGHT}
             >
               <RotateCw className="h-3.5 w-3.5" />
             </CommandButton>
@@ -451,7 +488,7 @@ export function renderCanvasCommandBarBlock(
         <>
           <CommandButton
             onClick={() => activateTablePlacement('vendor')}
-            title="Draw vendor — size from Vendor column"
+            title={QA_TIP_VENDOR_DRAW}
             active={isTablePlacementActive('vendor')}
             className={
               isTablePlacementActive('vendor')
@@ -599,7 +636,7 @@ export function renderCanvasCommandBarBlock(
                 <CommandButton
                   onClick={ctx.onRotateRoomLeft}
                   disabled={!canRotateRoom}
-                  title={canRotateRoom ? `${rotateRoomHint} (left)` : rotateRoomHint}
+                  title={canRotateRoom ? QA_TIP_ROTATE_ROOM_LEFT : rotateRoomHint}
                   className="text-teal-900 hover:bg-teal-100"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -607,7 +644,7 @@ export function renderCanvasCommandBarBlock(
                 <CommandButton
                   onClick={ctx.onRotateRoomRight}
                   disabled={!canRotateRoom}
-                  title={canRotateRoom ? `${rotateRoomHint} (right)` : rotateRoomHint}
+                  title={canRotateRoom ? QA_TIP_ROTATE_ROOM_RIGHT : rotateRoomHint}
                   className="text-teal-900 hover:bg-teal-100"
                 >
                   <RotateCw className="h-3.5 w-3.5" />
@@ -627,7 +664,13 @@ export function renderCanvasCommandBarBlock(
                   <CommandButton
                     onClick={ctx.onJoinRooms}
                     disabled={!ctx.canJoinRooms}
-                    title={`${ctx.joinLabel} — ${ctx.joinTitle}`}
+                    title={
+                      ctx.canJoinRooms
+                        ? ctx.joinLabel
+                        : ctx.joinBlockedReason
+                          ? QA_TIP_CANT_MERGE
+                          : QA_TIP_SELECT_TO_MERGE
+                    }
                     className="bg-sky-50 text-sky-900 hover:bg-sky-100"
                   >
                     <Combine className="h-3.5 w-3.5" />
@@ -637,7 +680,7 @@ export function renderCanvasCommandBarBlock(
                   <CommandButton
                     onClick={ctx.onUnjoinRoom}
                     disabled={!ctx.canUnjoinRoom}
-                    title="Unjoin — split the active room out of its joined zone"
+                    title={QA_TIP_UNJOIN}
                   >
                     <Split className="h-3.5 w-3.5" />
                   </CommandButton>
@@ -653,7 +696,7 @@ export function renderCanvasCommandBarBlock(
         <>
           <CommandButton
             onClick={ctx.onCenterView}
-            title="Center view on all placed objects"
+            title={QA_TIP_CENTER}
           >
             <Locate className="h-3.5 w-3.5" />
           </CommandButton>
@@ -666,14 +709,14 @@ export function renderCanvasCommandBarBlock(
             <CommandButton
               onClick={ctx.onAlignVertical}
               disabled={!canAlign}
-              title="Align vertical centers (Shift+V)"
+              title={QA_TIP_ALIGN_V}
             >
               <AlignCenterVertical className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onAlignHorizontal}
               disabled={!canAlign}
-              title="Align horizontal centers (Shift+H)"
+              title={QA_TIP_ALIGN_H}
             >
               <AlignCenterHorizontal className="h-3.5 w-3.5" />
             </CommandButton>
@@ -681,14 +724,14 @@ export function renderCanvasCommandBarBlock(
             <CommandButton
               onClick={ctx.onDistributeHorizontal}
               disabled={!canDistribute}
-              title="Distribute equal horizontal spacing (3+ objects)"
+              title={QA_TIP_SPACE_H}
             >
               <AlignHorizontalDistributeCenter className="h-3.5 w-3.5" />
             </CommandButton>
             <CommandButton
               onClick={ctx.onDistributeVertical}
               disabled={!canDistribute}
-              title="Distribute equal vertical spacing (3+ objects)"
+              title={QA_TIP_SPACE_V}
             >
               <AlignVerticalDistributeCenter className="h-3.5 w-3.5" />
             </CommandButton>
@@ -702,11 +745,7 @@ export function renderCanvasCommandBarBlock(
           {ctx.onShowLabelsChange ? (
             <CommandButton
               onClick={() => ctx.onShowLabelsChange!(!ctx.showLabels)}
-              title={
-                ctx.showLabels
-                  ? 'Hide architectural labels'
-                  : 'Show architectural labels'
-              }
+              title={ctx.showLabels ? QA_TIP_LABELS_OFF : QA_TIP_LABELS_ON}
               className={
                 ctx.showLabels ? 'bg-sky-50 text-sky-900 hover:bg-sky-100' : undefined
               }
@@ -723,11 +762,7 @@ export function renderCanvasCommandBarBlock(
               onClick={() => {
                 ctx.onToggleCanvasFullscreen?.()
               }}
-              title={
-                ctx.canvasFullscreen
-                  ? 'Exit full screen (Esc)'
-                  : 'Full screen editor'
-              }
+              title={ctx.canvasFullscreen ? QA_TIP_EXIT_FULLSCREEN : QA_TIP_FULLSCREEN}
               className={
                 ctx.canvasFullscreen
                   ? 'bg-stone-800 text-white hover:bg-stone-700'
@@ -750,7 +785,7 @@ export function renderCanvasCommandBarBlock(
             <button
               type="button"
               onClick={ctx.onZoomOut}
-              title="Zoom out"
+              title={QA_TIP_ZOOM_OUT}
               aria-label="Zoom out"
               className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
             >
@@ -759,7 +794,7 @@ export function renderCanvasCommandBarBlock(
             <button
               type="button"
               onClick={ctx.onZoomReset}
-              title="Reset zoom to 100%"
+              title={QA_TIP_ZOOM_RESET}
               aria-label="Reset zoom"
               className="inline-flex h-full min-w-[3rem] items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
             >
@@ -768,7 +803,7 @@ export function renderCanvasCommandBarBlock(
             <button
               type="button"
               onClick={ctx.onZoomIn}
-              title="Zoom in"
+              title={QA_TIP_ZOOM_IN}
               aria-label="Zoom in"
               className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
             >
@@ -777,11 +812,7 @@ export function renderCanvasCommandBarBlock(
           </div>
           {ctx.onSaveMarket ? (
             <TooltipWrapperQa
-              text={
-                ctx.saveMarketLoading
-                  ? 'Saving market…'
-                  : 'Save market and deploy'
-              }
+              text={ctx.saveMarketLoading ? QA_TIP_SAVING : QA_TIP_SAVE}
             >
               <button
                 type="button"
