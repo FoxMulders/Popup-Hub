@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { LayoutGrid, Plus } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useMarketManagement } from './market-management-context'
 import { cn } from '@/lib/utils'
@@ -16,15 +15,9 @@ export function DashboardCommandCenterHeader() {
   if (immersive) {
     return (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {selectedEventId ? (
-          <CommandCenterExitLink
-            eventId={selectedEventId}
-            eventName={selectedEvent?.name}
-            className="shrink-0"
-          />
-        ) : (
-          <span className="text-sm font-medium text-foreground">Booth layout designer</span>
-        )}
+        <span className="truncate text-sm font-medium text-foreground">
+          {selectedEvent?.name ?? 'Booth layout designer'}
+        </span>
         <div className="flex shrink-0 items-center gap-2">
           <Button
             type="button"
@@ -49,20 +42,13 @@ export function DashboardCommandCenterHeader() {
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
-        {selectedEventId ? (
-          <CommandCenterExitLink
-            eventId={selectedEventId}
-            eventName={selectedEvent?.name}
-            className="shrink-0"
-          />
-        ) : null}
-        <div className="min-w-0">
-          <h1 className="font-heading text-lg font-semibold sm:text-xl">Booth layout designer</h1>
-          <p className="hidden text-sm text-muted-foreground sm:block">
-            CAD floor plan · curation queue · Payments for revenue
-          </p>
-        </div>
+      <div className="min-w-0 flex-1">
+        <h1 className="truncate font-heading text-lg font-semibold sm:text-xl">
+          {selectedEvent?.name ?? 'Booth layout designer'}
+        </h1>
+        <p className="hidden text-sm text-muted-foreground sm:block">
+          CAD floor plan · layout tools in left panel · curation queue
+        </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Button

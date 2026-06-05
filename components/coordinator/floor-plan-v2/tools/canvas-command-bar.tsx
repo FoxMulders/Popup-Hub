@@ -19,6 +19,8 @@ import { ToolbarCompactProvider } from './command-button'
 interface CanvasCommandBarProps extends CanvasToolHostProps {
   /** Fixed tool rows — no drag-reorder (command center). */
   staticLayout?: boolean
+  /** Left-rail placement — vertical stack without canvas height cap. */
+  sidebarLayout?: boolean
   className?: string
   rooms?: LayoutRoom[]
   activeRoomId?: string
@@ -53,6 +55,7 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
 export function CanvasCommandBar(props: CanvasCommandBarProps) {
   const {
     staticLayout = false,
+    sidebarLayout = false,
     className,
     toolState,
     onToolChange,
@@ -303,7 +306,10 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
         className={cn(
           'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
           staticLayout ? 'py-0.5' : 'py-1',
-          staticLayout && 'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
+          staticLayout &&
+            !sidebarLayout &&
+            'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
+          sidebarLayout && 'max-h-[min(52vh,420px)] overflow-x-hidden overflow-y-auto border-0 shadow-none',
           className
         )}
         role="toolbar"

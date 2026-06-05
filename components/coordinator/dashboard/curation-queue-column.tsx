@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { useMarketManagement } from './market-management-context'
 import { VendorPoolShelf } from './vendor-pool-shelf'
-import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { DashboardToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { cn } from '@/lib/utils'
 
 export function CurationQueueColumn() {
@@ -19,15 +19,9 @@ export function CurationQueueColumn() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <DashboardToolbarPortalTarget />
       <div className="market-panel-header shrink-0 rounded-none border-0 border-b border-stone-200/80 bg-gradient-to-r from-card via-card to-emerald-50/30 px-4 py-3">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          {selectedEventId ? (
-            <CommandCenterExitLink
-              eventId={selectedEventId}
-              eventName={selectedEvent?.name}
-              compact
-            />
-          ) : null}
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/90">
               Curation queue

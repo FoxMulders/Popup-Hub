@@ -9,6 +9,7 @@ import {
   useState,
   type MutableRefObject,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import {
   ChevronLeft,
@@ -98,6 +99,7 @@ import type { LayoutRoom } from '@/types/database'
 import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
+import { useDashboardToolbarPortal } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
 const ROTATE_STEP_DEG = 15
@@ -329,6 +331,7 @@ function FloorPlanV2Workspace({
   const showToolbarRoomControls =
     roomHandlersReady && (!isEmbedded || layoutRooms.length === 0)
   const commandCenterFullscreen = useCommandCenterFullscreen()
+  const toolbarPortal = useDashboardToolbarPortal()
 
   useEffect(() => {
     onStoreReady?.(store)
@@ -1878,6 +1881,85 @@ function FloorPlanV2Workspace({
     })
   }, [joinPlan.unjoinGroupId, selectedMergedZoneId, store])
 
+  const portalToolbarToSidebar =
+    isDashboard &&
+    !dashboardImmersive &&
+    Boolean(toolbarPortal?.sidebarActive && toolbarPortal.target)
+
+  const dashboardCommandBar = isDashboard ? (
+    <CanvasCommandBar
+      staticLayout
+      sidebarLayout={portalToolbarToSidebar}
+      className="shrink-0"
+      toolState={{ tool, drawShape }}
+      onToolChange={handleToolChange}
+      onDrawShapeChange={handleDrawShapeChange}
+      canUndo={store.canUndo}
+      canRedo={store.canRedo}
+      onUndo={store.undo}
+      onRedo={store.redo}
+      onClearAll={handleClearAll}
+      selectedCount={selectedCount}
+      onDeleteSelected={handleDeleteSelected}
+      onCopy={handleCopy}
+      onPaste={handlePaste}
+      clipboardHasContents={clipboardHasContents}
+      onRotateLeft={handleRotateLeft}
+      onRotateRight={handleRotateRight}
+      onRotateRoomLeft={handleRotateRoomLeft}
+      onRotateRoomRight={handleRotateRoomRight}
+      selectedRoomId={selectedRoomId}
+      onAlignVertical={handleAlignVertical}
+      onAlignHorizontal={handleAlignHorizontal}
+      onDistributeVertical={handleDistributeVertical}
+      onDistributeHorizontal={handleDistributeHorizontal}
+      zoom={currentZoom}
+      onZoomIn={handleZoomIn}
+      onZoomOut={handleZoomOut}
+      onZoomReset={handleZoomReset}
+      onCenterView={handleCenterView}
+      onVendorAutoArrange={handleVendorAutoArrange}
+      canVendorAutoArrange={vendorBoothCount > 0}
+      vendorAutoArrangeMode={vendorAutoArrangeMode}
+      onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
+      onPatronAutoArrange={handlePatronAutoArrange}
+      canPatronAutoArrange={patronTableCount > 0}
+      patronAutoArrangeMode={patronAutoArrangeMode}
+      onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
+      onJoinRooms={handleMerge}
+      canJoinRooms={canMerge}
+      joinCandidateCount={
+        destructiveMergePlan.canMerge
+          ? destructiveMergePlan.count
+          : shapeMergePlan.canMergeShapes
+            ? shapeMergePlan.count
+            : undefined
+      }
+      joinBlockedReason={mergeBlockedReason}
+      mergePrefersShapes={shapeMergePlan.canMergeShapes}
+      onUnjoinRoom={handleUnjoinRoom}
+      canUnjoinRoom={canSplitMerge}
+      tableSizeFt={tableSizePillValue}
+      onTableSizeChange={handleTableSizeChange}
+      onPrepareTableDraw={handlePrepareTableDraw}
+      rooms={showToolbarRoomControls ? layoutRooms : undefined}
+      activeRoomId={selectedRoomId ?? activeRoomId}
+      onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
+      onAddRoom={showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined}
+      onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
+      onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
+      highlightedRoomMetrics={highlightedRoomMetrics}
+      highlightedSelectionMetrics={highlightedSelectionMetrics}
+      showLabels={showLabels}
+      onShowLabelsChange={setShowLabels}
+      canvasFullscreen={dashboardImmersive}
+      onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+      onSaveMarket={onSaveMarket}
+      saveMarketDisabled={saveMarketDisabled}
+      saveMarketLoading={saveMarketLoading}
+    />
+  ) : null
+
   const layoutHeader =
     !isDashboard && !isEmbedded ? (
       <header className="flex flex-wrap items-center gap-3 rounded-lg border-b border-stone-200/80 bg-card/60 px-2 py-2">
@@ -1956,78 +2038,10 @@ function FloorPlanV2Workspace({
         className="min-h-0 min-w-0 flex-1"
       >
         <div className="flex min-h-0 flex-1 basis-0 flex-col gap-1 overflow-hidden">
-        {isDashboard ? (
-          <CanvasCommandBar
-            staticLayout
-            className="shrink-0"
-            toolState={{ tool, drawShape }}
-            onToolChange={handleToolChange}
-            onDrawShapeChange={handleDrawShapeChange}
-            canUndo={store.canUndo}
-            canRedo={store.canRedo}
-            onUndo={store.undo}
-            onRedo={store.redo}
-            onClearAll={handleClearAll}
-            selectedCount={selectedCount}
-            onDeleteSelected={handleDeleteSelected}
-            onCopy={handleCopy}
-            onPaste={handlePaste}
-            clipboardHasContents={clipboardHasContents}
-            onRotateLeft={handleRotateLeft}
-            onRotateRight={handleRotateRight}
-            onRotateRoomLeft={handleRotateRoomLeft}
-            onRotateRoomRight={handleRotateRoomRight}
-            selectedRoomId={selectedRoomId}
-            onAlignVertical={handleAlignVertical}
-            onAlignHorizontal={handleAlignHorizontal}
-            onDistributeVertical={handleDistributeVertical}
-            onDistributeHorizontal={handleDistributeHorizontal}
-            zoom={currentZoom}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onCenterView={handleCenterView}
-            onVendorAutoArrange={handleVendorAutoArrange}
-            canVendorAutoArrange={vendorBoothCount > 0}
-            vendorAutoArrangeMode={vendorAutoArrangeMode}
-            onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
-            onPatronAutoArrange={handlePatronAutoArrange}
-            canPatronAutoArrange={patronTableCount > 0}
-            patronAutoArrangeMode={patronAutoArrangeMode}
-            onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
-            onJoinRooms={handleMerge}
-            canJoinRooms={canMerge}
-            joinCandidateCount={
-              destructiveMergePlan.canMerge
-                ? destructiveMergePlan.count
-                : shapeMergePlan.canMergeShapes
-                  ? shapeMergePlan.count
-                  : undefined
-            }
-            joinBlockedReason={mergeBlockedReason}
-            mergePrefersShapes={shapeMergePlan.canMergeShapes}
-            onUnjoinRoom={handleUnjoinRoom}
-            canUnjoinRoom={canSplitMerge}
-            tableSizeFt={tableSizePillValue}
-            onTableSizeChange={handleTableSizeChange}
-            onPrepareTableDraw={handlePrepareTableDraw}
-            rooms={showToolbarRoomControls ? layoutRooms : undefined}
-            activeRoomId={selectedRoomId ?? activeRoomId}
-            onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
-            onAddRoom={showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined}
-            onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
-            onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
-            highlightedRoomMetrics={highlightedRoomMetrics}
-            highlightedSelectionMetrics={highlightedSelectionMetrics}
-            showLabels={showLabels}
-            onShowLabelsChange={setShowLabels}
-            canvasFullscreen={isDashboard ? dashboardImmersive : layoutNativeFullscreen}
-            onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
-            onSaveMarket={onSaveMarket}
-            saveMarketDisabled={saveMarketDisabled}
-            saveMarketLoading={saveMarketLoading}
-          />
-        ) : null}
+        {dashboardCommandBar && !portalToolbarToSidebar ? dashboardCommandBar : null}
+        {dashboardCommandBar && portalToolbarToSidebar && toolbarPortal?.target
+          ? createPortal(dashboardCommandBar, toolbarPortal.target)
+          : null}
         {!isDashboard ? (
           <CanvasCommandBar
             toolState={{ tool, drawShape }}

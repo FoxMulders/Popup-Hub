@@ -6,6 +6,7 @@ import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardAppShell } from './dashboard-app-shell'
 import { DashboardCurationColumn } from './dashboard-curation-column'
 import { DashboardCanvasColumn } from './dashboard-canvas-column'
+import { DashboardToolbarPortalProvider } from './dashboard-toolbar-portal'
 
 export interface DashboardBootstrapProps {
   header: ReactNode
@@ -27,7 +28,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
   const animateSidebars = !reducedMotion
 
   return (
-    <>
+    <DashboardToolbarPortalProvider>
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {liveMessage}
       </span>
@@ -47,6 +48,6 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
           />
         }
       />
-    </>
+    </DashboardToolbarPortalProvider>
   )
 }
