@@ -7,23 +7,20 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  TOOLTIP_HOVER_DELAY_MS,
-  dismissActiveTooltip,
-} from '@/components/coordinator/tooltip-wrapper'
-import { cn } from '@/lib/utils'
 
-/** Left dashboard rail width — matches `w-80` (20rem @ 16px). */
-export const QA_DASHBOARD_SIDEBAR_WIDTH_PX = 320
+/** Mandatory hover delay before canvas/toolbar tooltips render. */
+export const TOOLTIP_HOVER_DELAY_MS = 400
 
-interface TooltipWrapperQaProps {
+/** Dashboard left rail width — tooltips flip right when they would clip past this edge. */
+export const QA_SIDEBAR_WIDTH_PX = 320
+
+interface TooltipWrapperProps {
   text: string
   children: ReactNode
-  /** When true, flip tooltip to the right if it would clip the left sidebar. */
-  sidebarAware?: boolean
 }
 
 type TooltipListener = (activeId: string | null) => void
@@ -38,68 +35,47 @@ function notifyTooltipListeners(activeId: string | null) {
   }
 }
 
-interface TooltipPosition {
-  top: number
-  left: number
-  placement: 'top' | 'right'
+/** Immediately dismiss any live tooltip — singleton lifecycle. */
+export function dismissActiveTooltip() {
+  notifyTooltipListeners(null)
 }
 
-function measureTooltipPosition(
-  anchor: HTMLElement,
-  tooltipEl: HTMLElement | null,
-  sidebarAware: boolean
-): TooltipPosition {
-  const rect = anchor.getBoundingClientRect()
-  const tooltipWidth = tooltipEl?.offsetWidth ?? 0
-  const tooltipHeight = tooltipEl?.offsetHeight ?? 24
-  const centerX = rect.left + rect.width / 2
-  const wouldClipLeft =
-    sidebarAware && tooltipWidth > 0
-      ? centerX - tooltipWidth / 2 < QA_DASHBOARD_SIDEBAR_WIDTH_PX + 8
-      : false
+function estimateTooltipWidth(text: string): number {
+  return Math.min(Math.max(text.length * 7 + 20, 48), 280)
+}
 
-  if (wouldClipLeft) {
+function computePortalPosition(
+  anchor: DOMRect,
+  tooltipWidth: number
+): Pick<CSSProperties, 'top' | 'left' | 'transform'> {
+  const margin = 8
+  const centeredLeft = anchor.left + anchor.width / 2 - tooltipWidth / 2
+
+  if (centeredLeft < QA_SIDEBAR_WIDTH_PX) {
     return {
-      top: rect.top + rect.height / 2 - tooltipHeight / 2,
-      left: rect.right + 8,
-      placement: 'right',
+      top: anchor.top + anchor.height / 2,
+      left: anchor.right + margin,
+      transform: 'translateY(-50%)',
     }
   }
 
   return {
-    top: rect.top - tooltipHeight - 8,
-    left: centerX,
-    placement: 'top',
+    top: anchor.top - margin,
+    left: anchor.left + anchor.width / 2,
+    transform: 'translate(-50%, -100%)',
   }
 }
 
-/**
- * QA tooltip — portals to `document.body`, `z-50`, with sidebar bounds
- * checking so hints are not clipped by the left rail `overflow-hidden`.
- */
-export function TooltipWrapperQa({
-  text,
-  children,
-  sidebarAware = true,
-}: TooltipWrapperQaProps) {
+/** Portal tooltip — escapes sidebar overflow; flips right when past `w-80`. */
+export function TooltipWrapperQa({ text, children }: TooltipWrapperProps) {
   const id = useId()
   const anchorRef = useRef<HTMLDivElement>(null)
-  const tooltipRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
-  const [position, setPosition] = useState<TooltipPosition>({
-    top: 0,
-    left: 0,
-    placement: 'top',
-  })
+  const [position, setPosition] = useState<Pick<
+    CSSProperties,
+    'top' | 'left' | 'transform'
+  > | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const updatePosition = useCallback(() => {
-    const anchor = anchorRef.current
-    if (!anchor) return
-    setPosition(
-      measureTooltipPosition(anchor, tooltipRef.current, sidebarAware)
-    )
-  }, [sidebarAware])
 
   useEffect(() => {
     const onActiveChange = (nextId: string | null) => {
@@ -114,16 +90,13 @@ export function TooltipWrapperQa({
   }, [id])
 
   useLayoutEffect(() => {
-    if (!visible) return
-    updatePosition()
-    const onLayout = () => updatePosition()
-    window.addEventListener('scroll', onLayout, true)
-    window.addEventListener('resize', onLayout)
-    return () => {
-      window.removeEventListener('scroll', onLayout, true)
-      window.removeEventListener('resize', onLayout)
+    if (!visible || !anchorRef.current) {
+      setPosition(null)
+      return
     }
-  }, [updatePosition, visible])
+    const rect = anchorRef.current.getBoundingClientRect()
+    setPosition(computePortalPosition(rect, estimateTooltipWidth(text)))
+  }, [visible, text])
 
   const cancelPending = useCallback(() => {
     if (timerRef.current) {
@@ -149,8 +122,19 @@ export function TooltipWrapperQa({
     setVisible(false)
   }, [cancelPending, id])
 
-  const portalRoot =
-    typeof document !== 'undefined' ? document.body : null
+  const tooltip =
+    visible && position && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            role="tooltip"
+            className="pointer-events-none fixed z-50 rounded-none border-2 border-black bg-zinc-900 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap text-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+            style={position}
+          >
+            {text}
+          </div>,
+          document.body
+        )
+      : null
 
   return (
     <>
@@ -164,25 +148,7 @@ export function TooltipWrapperQa({
       >
         {children}
       </div>
-      {visible && portalRoot
-        ? createPortal(
-            <div
-              ref={tooltipRef}
-              role="tooltip"
-              className={cn(
-                'pointer-events-none fixed z-50 rounded-none border-2 border-black bg-zinc-900 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider text-white whitespace-nowrap shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]',
-                position.placement === 'top' && '-translate-x-1/2',
-                position.placement === 'right' && '-translate-y-1/2'
-              )}
-              style={{ top: position.top, left: position.left }}
-            >
-              {text}
-            </div>,
-            portalRoot
-          )
-        : null}
+      {tooltip}
     </>
   )
 }
-
-export { dismissActiveTooltip }

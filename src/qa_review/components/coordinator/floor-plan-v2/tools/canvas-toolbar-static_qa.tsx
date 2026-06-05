@@ -17,8 +17,8 @@ import {
   type StaticRowCollapsedState,
 } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
 
-/** Uppercase semantic section titles — replaces standalone row icon badges. */
-export const QA_STATIC_ROW_HEADERS: Record<CanvasToolbarStaticRowId, string> = {
+/** Uppercase semantic section titles — no standalone row icons. */
+const STATIC_ROW_HEADERS: Record<CanvasToolbarStaticRowId, string> = {
   room: 'ROOM LAYOUT',
   patron: 'PATRON PLACEMENTS',
   vendor: 'VENDOR PLACEMENTS',
@@ -31,7 +31,7 @@ export interface CanvasToolbarStaticQaProps {
   compact?: boolean
 }
 
-function StaticToolbarRowQa({
+function StaticToolbarRow({
   rowId,
   header,
   index,
@@ -62,8 +62,8 @@ function StaticToolbarRowQa({
     >
       <div
         className={cn(
-          'flex min-w-0 items-center gap-1 border-b border-stone-100/90 px-1',
-          compact ? 'py-0.5' : 'py-1',
+          'flex min-w-0 items-center gap-0.5 border-b border-stone-100/90 px-0.5',
+          compact ? 'py-0' : 'py-0.5',
           !expanded && 'border-b-0'
         )}
       >
@@ -86,8 +86,8 @@ function StaticToolbarRowQa({
         </button>
         <h3
           className={cn(
-            'min-w-0 flex-1 truncate font-heading text-[11px] font-bold uppercase tracking-wide text-stone-800',
-            compact ? 'leading-tight' : 'leading-snug'
+            'min-w-0 flex-1 truncate font-bold uppercase tracking-wide text-stone-700',
+            compact ? 'text-[10px]' : 'text-[11px]'
           )}
         >
           {header}
@@ -133,7 +133,7 @@ function StaticToolbarRowQa({
   )
 }
 
-/** QA stacked ribbon — text section headers, portal tooltips on reset control. */
+/** QA stacked dashboard ribbon — text section headers, portal tooltips. */
 export function CanvasToolbarStaticQa({
   visibleRowIds,
   renderBlock,
@@ -243,12 +243,11 @@ export function CanvasToolbarStaticQa({
       {displayOrder.map((rowId, index) => {
         const blockIds = STATIC_ROW_BLOCKS[rowId]
         const expanded = !collapsed[rowId]
-        const header = QA_STATIC_ROW_HEADERS[rowId]
         return (
-          <StaticToolbarRowQa
+          <StaticToolbarRow
             key={rowId}
             rowId={rowId}
-            header={header}
+            header={STATIC_ROW_HEADERS[rowId]}
             index={index}
             total={displayOrder.length}
             expanded={expanded}
@@ -263,18 +262,11 @@ export function CanvasToolbarStaticQa({
                   'inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
                   compact ? 'py-0.5' : 'py-0.5'
                 )}
-                data-toolbar-block={blockId}
-                aria-label={
-                  blockId === 'primitives' ? 'Object assets' : undefined
-                }
               >
-                {blockId === 'primitives' ? (
-                  <span className="sr-only">Object assets</span>
-                ) : null}
                 {renderBlock(blockId)}
               </div>
             ))}
-          </StaticToolbarRowQa>
+          </StaticToolbarRow>
         )
       })}
     </div>

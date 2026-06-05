@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * QA dashboard canvas host — renders placable objects via CanvasObjectsQa (stage fill="none").
+ * QA dashboard canvas host — stage single perimeter + draggable object layer.
  */
 
 import {
@@ -14,13 +14,12 @@ import {
   type MutableRefObject,
 } from 'react'
 import { CanvasGrid } from '@/components/coordinator/floor-plan-v2/canvas/canvas-grid'
-import { CanvasObjectsQa } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
+import { CanvasObjectsQa as CanvasObjects } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 import {
   DraftPreview,
   MarqueePreview,
   SelectionOverlay,
 } from '@/components/coordinator/floor-plan-v2/canvas/canvas-overlays'
-import type { LabelObject, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { InlineLabelEditor } from '@/components/coordinator/floor-plan-v2/canvas/inline-label-editor'
 import { RoomDropZones } from '@/components/coordinator/floor-plan-v2/canvas/room-drop-zones'
 import { RoomFrames } from '@/components/coordinator/floor-plan-v2/canvas/room-frames'
@@ -41,6 +40,7 @@ import {
 } from '@/lib/booth-planner/layout-table-size'
 import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import { canvasGridSpacingForTableFt } from '@/components/coordinator/floor-plan-v2/canvas/canvas-grid-spacing'
+import type { LabelObject, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import type { ToolState } from '@/components/coordinator/floor-plan-v2/tools/types'
 import { cn } from '@/lib/utils'
@@ -122,6 +122,47 @@ export interface FloorPlanCanvasProps {
 const DEFAULT_BASE_PX_PER_FT = 12
 /** Minimum zoom on coordinator dashboard — avoids hypersensitive room drags when framed out. */
 const COMMAND_CENTER_ZOOM_MIN = 0.72
+
+/** Skip duplicate dashed outline on stages — object layer already draws the perimeter. */
+function SelectionOverlayQa({
+  objects,
+  selectedIds,
+  pxPerFt,
+  layer,
+  suppressHandle,
+}: {
+  objects: ReadonlyArray<PlacedObject>
+  selectedIds: ReadonlySet<string>
+  pxPerFt: number
+  layer?: 'outline' | 'controls'
+  suppressHandle?: boolean
+}) {
+  if (layer === 'outline') {
+    const filteredIds = new Set(
+      [...selectedIds].filter((id) => {
+        const obj = objects.find((o) => o.id === id)
+        return obj?.kind !== 'stage'
+      })
+    )
+    return (
+      <SelectionOverlay
+        objects={objects}
+        selectedIds={filteredIds}
+        pxPerFt={pxPerFt}
+        layer="outline"
+      />
+    )
+  }
+  return (
+    <SelectionOverlay
+      objects={objects}
+      selectedIds={selectedIds}
+      pxPerFt={pxPerFt}
+      layer={layer}
+      suppressHandle={suppressHandle}
+    />
+  )
+}
 
 export function LayoutCanvasDashboardQa(props: FloorPlanCanvasProps) {
   return <FloorPlanCanvasDashboardQa {...props} />
@@ -692,7 +733,7 @@ export function FloorPlanCanvasDashboardQa({
             pxPerFt={pxPerFt}
             activeRoomId={activeRoomId ?? null}
           />
-          <CanvasObjectsQa
+          <CanvasObjects
             objects={store.doc.objects}
             rooms={store.doc.rooms}
             selectedIds={store.selectedIds}
@@ -714,7 +755,7 @@ export function FloorPlanCanvasDashboardQa({
               showLabels={showLabels}
             />
           ) : null}
-          <CanvasObjectsQa
+          <CanvasObjects
             objects={store.doc.objects}
             rooms={store.doc.rooms}
             selectedIds={store.selectedIds}
@@ -754,7 +795,7 @@ export function FloorPlanCanvasDashboardQa({
               })()
             : null}
           {toolState.tool === 'select' ? (
-            <SelectionOverlay
+            <SelectionOverlayQa
               objects={store.doc.objects}
               selectedIds={store.selectedIds}
               pxPerFt={pxPerFt}
@@ -799,43 +840,5 @@ function cursorForTool(tool: 'hand' | 'select' | 'draw' | 'pan'): string {
     default:
       return 'default'
   }
-}
-
-/**
- * QA selection overlay — stages draw their own single perimeter stroke in
- * CanvasObjectsQa, so skip the duplicate dashed outline on the outline layer.
- */
-function SelectionOverlayQa({
-  objects,
-  selectedIds,
-  pxPerFt,
-  layer = 'controls',
-  suppressHandle,
-}: {
-  objects: ReadonlyArray<PlacedObject>
-  selectedIds: ReadonlySet<string>
-  pxPerFt: number
-  layer?: 'outline' | 'controls'
-  suppressHandle?: boolean
-}) {
-  const filteredIds =
-    layer === 'outline'
-      ? new Set(
-          [...selectedIds].filter((id) => {
-            const obj = objects.find((o) => o.id === id)
-            return obj?.kind !== 'stage'
-          })
-        )
-      : selectedIds
-
-  return (
-    <SelectionOverlay
-      objects={objects}
-      selectedIds={filteredIds}
-      pxPerFt={pxPerFt}
-      layer={layer}
-      suppressHandle={suppressHandle}
-    />
-  )
 }
 

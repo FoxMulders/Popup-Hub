@@ -1,8 +1,7 @@
 'use client'
 
 /**
- * QA command bar — uses CanvasToolbarStaticQa (text headers + portal tooltips).
- * Swap `CanvasCommandBar` → `CanvasCommandBarQa` in floor-plan-v2 when testing.
+ * QA dashboard command ribbon — portal tooltips + uppercase section headers.
  */
 
 import { useMemo } from 'react'
@@ -17,12 +16,14 @@ import {
   type CanvasCommandBarBlockContext,
 } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-command-bar-blocks_qa'
 import { CanvasToolbarReorder } from '@/components/coordinator/floor-plan-v2/tools/canvas-toolbar-reorder'
+import { CanvasToolbarStaticQa as CanvasToolbarStatic } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static_qa'
 import { getVisibleStaticToolbarRows } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
-import { ToolbarCompactProviderQa } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/command-button_qa'
-import { CanvasToolbarStaticQa } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static_qa'
+import { ToolbarCompactProvider } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/command-button_qa'
 
-interface CanvasCommandBarQaProps extends CanvasToolHostProps {
+interface CanvasCommandBarProps extends CanvasToolHostProps {
+  /** Fixed tool rows — no drag-reorder (command center). */
   staticLayout?: boolean
+  /** Left-rail placement — vertical stack without canvas height cap. */
   sidebarLayout?: boolean
   className?: string
   rooms?: LayoutRoom[]
@@ -50,7 +51,12 @@ interface CanvasCommandBarQaProps extends CanvasToolHostProps {
   saveMarketLoading?: boolean
 }
 
-export function CanvasCommandBarQa(props: CanvasCommandBarQaProps) {
+/**
+ * Unified top ribbon with draggable tool groups (framer-motion Reorder).
+ * Dashboard `staticLayout` uses stacked collapsible rows instead.
+ * Drop handlers into `canvas-command-bar-blocks.tsx` per block id.
+ */
+export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
   const {
     staticLayout = false,
     sidebarLayout = false,
@@ -299,23 +305,23 @@ export function CanvasCommandBarQa(props: CanvasCommandBarQaProps) {
   )
 
   return (
-    <ToolbarCompactProviderQa compact={staticLayout}>
+    <ToolbarCompactProvider compact={staticLayout}>
       <div
-        className={cn(
-          'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
-          staticLayout ? 'py-0.5' : 'py-1',
-          staticLayout &&
-            !sidebarLayout &&
-            'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
-          sidebarLayout &&
-            'min-h-0 flex-1 overflow-hidden border-0 bg-transparent px-0 shadow-none',
-          className
-        )}
+      className={cn(
+        'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
+        staticLayout ? 'py-0.5' : 'py-1',
+        staticLayout &&
+          !sidebarLayout &&
+          'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
+        sidebarLayout &&
+          'min-h-0 flex-1 overflow-hidden border-0 bg-transparent px-0 shadow-none',
+        className
+      )}
         role="toolbar"
         aria-label="Canvas command ribbon"
       >
         {staticLayout ? (
-          <CanvasToolbarStaticQa
+          <CanvasToolbarStatic
             visibleRowIds={visibleStaticRowIds}
             compact
             renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
@@ -327,6 +333,6 @@ export function CanvasCommandBarQa(props: CanvasCommandBarQaProps) {
           />
         )}
       </div>
-    </ToolbarCompactProviderQa>
+    </ToolbarCompactProvider>
   )
 }

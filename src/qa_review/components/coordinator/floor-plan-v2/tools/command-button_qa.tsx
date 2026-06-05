@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 const ToolbarCompactContext = createContext(false)
 
-export function ToolbarCompactProviderQa({
+export function ToolbarCompactProvider({
   compact,
   children,
 }: {
@@ -37,7 +37,6 @@ export function toolbarDividerClass(compact: boolean): string {
   return cn('mx-0.5 w-px bg-stone-200', compact ? 'h-[1.25rem]' : 'h-5')
 }
 
-/** QA command button — tooltips portal outside the left rail overflow stack. */
 export function CommandButtonQa({
   onClick,
   disabled,
@@ -50,6 +49,7 @@ export function CommandButtonQa({
   onClick: () => void
   disabled?: boolean
   title: string
+  /** @deprecated Labels are icon-only; use `title` for tooltip text. */
   label?: string
   children: React.ReactNode
   className?: string

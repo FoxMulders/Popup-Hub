@@ -1,9 +1,7 @@
 'use client'
 
 /**
- * QA mirror of canvas-objects — stage fixtures use fill="none" so the grid
- * remains visible through the stage outline after Merge (2). Stages keep a
- * single outer stroke (no joined-wall dissolve) and stay draggable like booths.
+ * QA canvas object layer — stage single perimeter, draggable, visible after merge join.
  */
 
 import { memo, useMemo } from 'react'
@@ -539,31 +537,22 @@ function CanvasObjectsBase({
         const isJoined = Boolean(
           obj.joinGroupId && dissolvedJoinGroupIds.has(obj.joinGroupId)
         )
-        // Stages stay visible and draggable after join — they are placable
-        // fixtures (like booths), not dissolved perimeter wall segments.
-        const isStage = obj.kind === 'stage'
         const hideJoinedFixtureBody =
-          isJoined && isJoinableObject(obj) && !isStage
+          isJoined && isJoinableObject(obj) && obj.kind !== 'stage'
         const displayFill = hideJoinedFixtureBody ? 'transparent' : patternFill ?? fill
         const displayFillOpacity =
-          hideJoinedFixtureBody || isStage ? 0 : 0.85
+          hideJoinedFixtureBody || obj.kind === 'stage' ? 0 : 0.85
         const stroke =
-          isJoined && !isSelected && !isOverlapping && !isStage
+          isJoined && !isSelected && !isOverlapping && obj.kind !== 'stage'
             ? 'transparent'
             : strokeForObject(
-                obj,
-                isSelected,
-                eventCategoryNames,
-                isOverlapping,
-                boothPlacementStatusByObjectId
-              )
-        const strokeWidth = isOverlapping
-          ? 2.5
-          : isSelected
-            ? 2.5
-            : isJoined && !isStage
-              ? 0
-              : 1.5
+              obj,
+              isSelected,
+              eventCategoryNames,
+              isOverlapping,
+              boothPlacementStatusByObjectId
+            )
+        const strokeWidth = isOverlapping ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
         const isTableClusterBooth =
           obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)
         const isRoundBooth =
@@ -691,18 +680,19 @@ function CanvasObjectsBase({
                 strokeWidth={strokeWidth}
                 pointerEvents="all"
               />
-            ) : isStage ? (
+            ) : obj.kind === 'stage' ? (
               <rect
                 x={x}
                 y={y}
                 width={w}
                 height={h}
                 fill="none"
+                fillOpacity={0}
                 stroke={stroke}
                 strokeWidth={strokeWidth}
                 pointerEvents="all"
+                style={{ cursor: 'move' }}
                 shapeRendering="crispEdges"
-                style={{ cursor: 'move', touchAction: 'none' }}
               />
             ) : (
               <rect

@@ -1,9 +1,5 @@
 'use client'
 
-/**
- * QA mirror of canvas-command-bar-blocks — portal tooltips on every CommandButton.
- */
-
 import {
   AlignCenterHorizontal,
   AlignCenterVertical,

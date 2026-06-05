@@ -1,15 +1,10 @@
 /**
- * QA destructive merge entry — delegates to Merge_qa (2D stage bounds).
- *
- * Promotion: replace production destructive-merge.ts merge path with Merge_qa logic.
+ * QA destructive merge — full 2D participant bounds (stage height included).
  */
 
 export {
+  destructiveMergeInDoc as destructiveMergeInDocQa,
   clearDestructiveMergeInDoc,
   framesBoundToMerge,
+  type DestructiveMergeSelection,
 } from '@/components/coordinator/floor-plan-v2/state/destructive-merge'
-
-export {
-  destructiveMergeInDocQa as destructiveMergeInDoc,
-  type DestructiveMergeSelectionQa as DestructiveMergeSelection,
-} from './Merge_qa'
