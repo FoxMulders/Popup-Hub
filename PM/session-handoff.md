@@ -55,6 +55,8 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | **Verify** | Guest-table + isolated-scope blocks in `scripts/verify-auto-arrange.ts` (10/10 pass in those sections) |
 
 ## Shipped this session (local, not deployed)
+- **Passport story logo fallback:** Story cards and public carousel use `resolveStoryBackground` (`story image → brand logo → /placeholder-logo.png`). Logo/placeholder thumbnails get `object-contain bg-neutral-900 p-4`; video clips bind `poster={logoUrl}` on `<video>` in uploader detail modal and full-screen viewer. `lib/passport-stories/story-media.ts`, `hooks/use-owner-brand-logo.ts`, `passport-story-uploader.tsx`, `passport-story-viewer.tsx`, `public/placeholder-logo.png`.
+- **Market Promo expandable card:** Passport story preview cards on `/profile/passport` use `object-contain` + `bg-gray-50` for logo thumbnails (no edge clipping). Cards are clickable (`hover:shadow-md transition-all cursor-pointer`) and open a Full Details dialog with uncropped caption + full-size media; backdrop click and Close dismiss. `components/passport/passport-story-uploader.tsx`.
 - **Profile vs Passport split:** Profile settings limited to private account data — Legal Name, Private Email, phone (labeled *Private — Used only for automated system SMS alerts*), shopper auction contact toggle, `AccountSecurityCard` (Change Password), and `NotificationPreferencesGrid` in the main column. Organization name, website, bio, and social links removed from profile form; `use-profile-settings` writes only `profiles`. Passport forms use `use-passport-profile` → `vendor_passports` (bio, social, logistics). `lib/passport/public-passport-index.ts` + service client loads public-safe fields for `/coordinators/[id]` and `/patrons/[id]` via `PassportPublicCard` (Instagram/Facebook/Website icon links). Migration `091_passport_social_logistics.sql`: `facebook_url`, `requires_electricity` on `vendor_passports`; vendor wizard + coordinator review drawer wired.
 - **Profile settings expansion (prior):** `AccountSecurityCard`, `NotificationPreferencesGrid`, `use-notification-preferences` — still in place; org fields moved off profile per split above.
 - **Toolbar distribute spacing:** View/align ribbon block adds **Distribute horizontal** and **Distribute vertical** buttons (`AlignHorizontalDistributeCenter` / `AlignVerticalDistributeCenter`). Requires 3+ selected objects; `distributeSelectionPatches` in `geometry.ts` evenly spaces centers between endpoint anchors (locked endpoints stay put). Wired through `floor-plan-v2.tsx`, `canvas-command-bar.tsx`, `canvas-tool-types.ts`. Verify: `npx tsx scripts/verify-align-and-center.ts` (20/20 pass).
@@ -165,15 +167,16 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Commit + deploy** profile/passport split + patron bounding-box auto-arrange when ready
-2. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
-3. **Passport smoke-test** — `/profile/passport`: bio + Instagram/Facebook/Website save to passport; vendor product category + requires electricity; public `/coordinators/[id]` and `/patrons/[id]` show bio + social icons; stories still load via API
-4. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
-5. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
-6. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
-7. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
-8. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
-9. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
+1. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal
+2. **Commit + deploy** profile/passport split + patron bounding-box auto-arrange + market promo card when ready
+3. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
+4. **Passport smoke-test (public)** — bio + Instagram/Facebook/Website on public `/coordinators/[id]` and `/patrons/[id]`; stories strip still opens story viewer
+5. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
+6. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
+7. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
+8. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
+9. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
+10. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 
 ## How to start the next chat
 ```

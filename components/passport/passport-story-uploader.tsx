@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, Trash2, Upload, Video, X } from 'lucide-react'
+import { Loader2, Trash2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -28,7 +35,13 @@ import {
 } from '@/lib/passport-stories/promo-validation'
 import type { PassportStoryKind, Role } from '@/types/database'
 import { PASSPORT_STORY_MAX_COUNT } from '@/lib/passport-stories/media'
-import { resolvePublicAssetUrl } from '@/lib/storage/public-url'
+import {
+  resolveStoryBackground,
+  resolveStoryVideoPoster,
+  resolveStoryVideoSrc,
+  storyBackgroundClassName,
+} from '@/lib/passport-stories/story-media'
+import { useOwnerBrandLogo } from '@/hooks/use-owner-brand-logo'
 
 interface PassportStoryUploaderProps {
   ownerId: string
@@ -69,6 +82,7 @@ export function PassportStoryUploader({
   className,
 }: PassportStoryUploaderProps) {
   const supabase = createClient()
+  const logoUrl = useOwnerBrandLogo(ownerId)
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -79,6 +93,7 @@ export function PassportStoryUploader({
   // them, creating one passport story per file.
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
   const [removingId, setRemovingId] = useState<string | null>(null)
+  const [detailStory, setDetailStory] = useState<PassportStoryView | null>(null)
 
   // Coordinator-only market picker. Only loaded when the role is
   // `coordinator` so vendors / shoppers don't pay for the round trip.
@@ -304,6 +319,11 @@ export function PassportStoryUploader({
     }
   }
 
+  const detailStoryBg =
+    detailStory && detailStory.mediaType === 'image'
+      ? resolveStoryBackground(detailStory, logoUrl)
+      : null
+
   return (
     <div className={cn('space-y-4 rounded-2xl border bg-white p-5', className)}>
       <div>
@@ -504,37 +524,47 @@ export function PassportStoryUploader({
 
       {stories.length > 0 ? (
         <ul className="grid gap-3 sm:grid-cols-2">
-          {stories.map((story) => (
+          {stories.map((story) => {
+            const storyBg =
+              story.mediaType === 'image' ? resolveStoryBackground(story, logoUrl) : null
+
+            return (
             <li
               key={story.id}
-              className="flex items-start gap-3 rounded-xl border bg-white p-3 shadow-sm"
+              className="flex items-start gap-3 rounded-xl border bg-white p-3 shadow-sm hover:shadow-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-harvest-400"
+              role="button"
+              tabIndex={0}
+              aria-label={`View full details for ${storyKindLabel(story.storyKind)}`}
+              onClick={() => setDetailStory(story)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setDetailStory(story)
+                }
+              }}
             >
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-2 ring-harvest-400">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-gray-50 ring-2 ring-harvest-400">
                 {story.mediaType === 'video' ? (
-                  <div className="flex h-full w-full items-center justify-center bg-stone-900">
-                    <Video className="h-5 w-5 text-white" />
-                  </div>
-                ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={resolvePublicAssetUrl(story.mediaUrl, 'market-feed') ?? story.mediaUrl}
+                    src={resolveStoryVideoPoster(logoUrl)}
                     alt=""
-                    className="h-full w-full object-cover"
+                    className={storyBackgroundClassName('logo', 'thumb')}
                   />
-                )}
+                ) : storyBg ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={storyBg.url}
+                    alt=""
+                    className={storyBackgroundClassName(storyBg.source, 'thumb')}
+                  />
+                ) : null}
               </div>
               <div className="min-w-0 flex-1">
-                {/*
-                  Mobile fix: drop `truncate` (which sets white-space: nowrap +
-                  overflow: hidden) so the "Market Promo" label and its caption
-                  wrap inside the card on narrow viewports instead of clipping
-                  past the right edge. break-words + whitespace-pre-wrap +
-                  w-full are the spec'd responsive trio.
-                */}
-                <p className="break-words whitespace-pre-wrap w-full text-sm font-medium">
+                <p className="w-full break-words text-sm font-medium line-clamp-2">
                   {storyKindLabel(story.storyKind)}
                 </p>
-                <p className="break-words whitespace-pre-wrap w-full text-xs text-muted-foreground">
+                <p className="w-full break-words whitespace-pre-wrap text-xs text-muted-foreground line-clamp-3">
                   {story.caption || (story.mediaType === 'video' ? 'Video clip' : 'Photo')}
                 </p>
               </div>
@@ -545,7 +575,10 @@ export function PassportStoryUploader({
                 className="shrink-0 text-destructive hover:text-destructive"
                 disabled={removingId === story.id}
                 aria-label="Remove story"
-                onClick={() => void handleRemove(story.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handleRemove(story.id)
+                }}
               >
                 {removingId === story.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -554,11 +587,57 @@ export function PassportStoryUploader({
                 )}
               </Button>
             </li>
-          ))}
+            )
+          })}
         </ul>
       ) : (
         <p className="text-sm text-muted-foreground">No stories published yet.</p>
       )}
+
+      <Dialog
+        open={detailStory !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailStory(null)
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          {detailStory ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{storyKindLabel(detailStory.storyKind)}</DialogTitle>
+              </DialogHeader>
+              <div className="flex max-h-[min(60vh,480px)] items-center justify-center overflow-hidden rounded-lg border bg-gray-50">
+                {detailStory.mediaType === 'video' ? (
+                  <video
+                    src={resolveStoryVideoSrc(detailStory)}
+                    poster={resolveStoryVideoPoster(logoUrl)}
+                    controls
+                    playsInline
+                    className="max-h-[min(60vh,480px)] w-full object-contain bg-gray-50"
+                  />
+                ) : detailStoryBg ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={detailStoryBg.url}
+                    alt=""
+                    className={storyBackgroundClassName(detailStoryBg.source, 'full')}
+                  />
+                ) : null}
+              </div>
+              {detailStory.caption ? (
+                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+                  {detailStory.caption}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {detailStory.mediaType === 'video' ? 'Video clip' : 'Photo'}
+                </p>
+              )}
+              <DialogFooter showCloseButton />
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

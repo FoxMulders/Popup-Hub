@@ -5,7 +5,14 @@ import { Loader2, Volume2, VolumeX, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { storyKindLabel, type PassportStoryView } from '@/lib/passport-stories/stories'
-import { resolveAnyPublicAssetUrl, resolvePublicAssetUrl } from '@/lib/storage/public-url'
+import {
+  resolveStoryBackground,
+  resolveStoryVideoPoster,
+  resolveStoryVideoSrc,
+  storyBackgroundClassName,
+} from '@/lib/passport-stories/story-media'
+import { resolveAnyPublicAssetUrl } from '@/lib/storage/public-url'
+import { useOwnerBrandLogo } from '@/hooks/use-owner-brand-logo'
 
 const DEFAULT_IMAGE_DURATION_MS = 5000
 
@@ -37,6 +44,7 @@ export function PassportStoryViewer({
   const durationMsRef = useRef(DEFAULT_IMAGE_DURATION_MS)
 
   const story = stories[index]
+  const logoUrl = useOwnerBrandLogo(story?.ownerId ?? stories[0]?.ownerId ?? '')
 
   const goNext = useCallback(() => {
     setProgress(0)
@@ -145,8 +153,10 @@ export function PassportStoryViewer({
 
   if (!open || !story) return null
 
-  const resolvedAvatarSrc = resolvePublicAssetUrl(avatarUrl, 'avatars')
-  const resolvedStorySrc = resolvePublicAssetUrl(story.mediaUrl, 'market-feed')
+  const resolvedAvatarSrc = resolveAnyPublicAssetUrl(avatarUrl)
+  const storyBg =
+    story.mediaType === 'image' ? resolveStoryBackground(story, logoUrl) : null
+  const videoPoster = resolveStoryVideoPoster(logoUrl)
 
   return (
     <div
@@ -173,7 +183,7 @@ export function PassportStoryViewer({
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={avatarUrl}
+              src={resolvedAvatarSrc ?? avatarUrl}
               alt=""
               className="h-8 w-8 rounded-full border border-white/40 object-cover"
             />
@@ -234,7 +244,8 @@ export function PassportStoryViewer({
           <video
             ref={videoRef}
             key={story.id}
-            src={resolvedStorySrc ?? story.mediaUrl}
+            src={resolveStoryVideoSrc(story)}
+            poster={videoPoster}
             className="max-h-full max-w-full object-contain"
             playsInline
             muted={isMuted}
@@ -245,16 +256,16 @@ export function PassportStoryViewer({
             onWaiting={() => setIsLoading(true)}
             onCanPlay={() => setIsLoading(false)}
           />
-        ) : (
+        ) : storyBg ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={story.id}
-            src={resolvedStorySrc ?? story.mediaUrl}
+            src={storyBg.url}
             alt=""
-            className="max-h-full max-w-full object-contain"
+            className={storyBackgroundClassName(storyBg.source, 'full')}
             onLoad={() => setIsLoading(false)}
           />
-        )}
+        ) : null}
 
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -297,6 +308,7 @@ export function PassportStoryCarousel({
 }: PassportStoryCarouselProps) {
   const [viewerOpen, setViewerOpen] = useState(false)
   const [startIndex, setStartIndex] = useState(0)
+  const logoUrl = useOwnerBrandLogo(ownerId)
 
   if (stories.length === 0) return null
 
@@ -339,7 +351,11 @@ export function PassportStoryCarousel({
           </span>
         </button>
 
-        {stories.map((story, i) => (
+        {stories.map((story, i) => {
+          const storyBg =
+            story.mediaType === 'image' ? resolveStoryBackground(story, logoUrl) : null
+
+          return (
           <button
             key={story.id}
             type="button"
@@ -351,23 +367,27 @@ export function PassportStoryCarousel({
           >
             <div className="h-14 w-14 overflow-hidden rounded-full ring-2 ring-stone-200 transition group-hover:ring-harvest-400 sm:h-16 sm:w-16">
               {story.mediaType === 'video' ? (
-                <div className="flex h-full w-full items-center justify-center bg-stone-900 text-[10px] font-semibold uppercase tracking-wide text-white">
-                  Clip
-                </div>
-              ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={resolvePublicAssetUrl(story.mediaUrl, 'market-feed') ?? story.mediaUrl}
+                  src={resolveStoryVideoPoster(logoUrl)}
                   alt=""
-                  className="h-full w-full object-cover"
+                  className={storyBackgroundClassName('logo', 'thumb')}
                 />
-              )}
+              ) : storyBg ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={storyBg.url}
+                  alt=""
+                  className={storyBackgroundClassName(storyBg.source, 'thumb')}
+                />
+              ) : null}
             </div>
             <span className="max-w-[72px] truncate text-[10px] text-muted-foreground">
               {storyKindLabel(story.storyKind)}
             </span>
           </button>
-        ))}
+          )
+        })}
       </div>
 
       <PassportStoryViewer
