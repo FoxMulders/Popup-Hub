@@ -3,6 +3,8 @@
 import {
   AlignCenterHorizontal,
   AlignCenterVertical,
+  AlignHorizontalDistributeCenter,
+  AlignVerticalDistributeCenter,
   ClipboardPaste,
   Combine,
   Copy,
@@ -40,7 +42,7 @@ import {
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { DrawShape, ToolState } from './types'
 import { cn } from '@/lib/utils'
-import { CommandButton } from './command-button'
+import { CommandButton, toolbarControlHeight, toolbarDividerClass } from './command-button'
 import { TableSizePill } from './table-size-pill'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
@@ -68,13 +70,17 @@ const PATRON_PLACEMENT_TOOLS: Array<{
   },
   {
     mode: 'guest-rect',
-    label: 'Patron',
+    label: 'Rectangle',
     icon: RectangleHorizontal,
-    title: 'Draw patron banquet table — size from Patron column',
+    title: 'Draw patron banquet table — size from Rectangle column',
   },
 ]
 
-function toolbarSectionLabel(text: string, tone: 'amber' | 'violet' | 'teal'): React.ReactNode {
+function toolbarSectionLabel(
+  text: string,
+  tone: 'amber' | 'violet' | 'teal',
+  compact?: boolean
+): React.ReactNode {
   const toneClass =
     tone === 'amber'
       ? 'border-amber-200/80 bg-amber-50/90 text-amber-900'
@@ -84,7 +90,8 @@ function toolbarSectionLabel(text: string, tone: 'amber' | 'violet' | 'teal'): R
   return (
     <span
       className={cn(
-        'mr-0.5 inline-flex h-7 shrink-0 items-center rounded-sm border px-1.5 text-[9px] font-heading font-semibold uppercase tracking-wide',
+        'mr-0.5 inline-flex shrink-0 items-center rounded-sm border px-1.5 text-[9px] font-heading font-semibold tracking-wide',
+        compact ? 'h-[1.575rem]' : 'h-7',
         toneClass
       )}
     >
@@ -101,6 +108,7 @@ function AutoArrangeGroup({
   canRun,
   runTitle,
   tone,
+  compact,
 }: {
   label: string
   mode: AutoArrangeMode
@@ -109,6 +117,7 @@ function AutoArrangeGroup({
   canRun?: boolean
   runTitle: string
   tone: 'amber' | 'violet'
+  compact?: boolean
 }) {
   if (!onRun) return null
   const activeClass =
@@ -123,7 +132,10 @@ function AutoArrangeGroup({
           onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
           title={`${label} placement mode`}
           aria-label={`${label} mode`}
-          className="h-8 rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700"
+          className={cn(
+            'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700',
+            toolbarControlHeight(compact ?? false)
+          )}
         >
           <option value="grid">Grid</option>
           <option value="staggered">Staggered</option>
@@ -178,6 +190,8 @@ export interface CanvasCommandBarBlockContext {
   onCenterView: () => void
   onAlignVertical: () => void
   onAlignHorizontal: () => void
+  onDistributeVertical: () => void
+  onDistributeHorizontal: () => void
   selectedCount: number
   onCopy: () => void
   onPaste: () => void
@@ -231,6 +245,8 @@ export interface CanvasCommandBarBlockContext {
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  /** Static dashboard ribbon — tighter control heights (~10% shorter). */
+  compact?: boolean
 }
 
 export function renderCanvasCommandBarBlock(
@@ -239,6 +255,8 @@ export function renderCanvasCommandBarBlock(
 ): React.ReactNode {
   const hasSelection = ctx.selectedCount > 0
   const canAlign = ctx.selectedCount >= 2
+  const canDistribute = ctx.selectedCount >= 3
+  const compact = ctx.compact ?? false
   const rotateRoomId = ctx.selectedRoomId ?? ctx.activeRoomId ?? null
   const canRotateRoom = Boolean(rotateRoomId) && Boolean(ctx.onRotateRoomLeft)
   const rotateRoomHint = rotateRoomId
@@ -333,7 +351,7 @@ export function renderCanvasCommandBarBlock(
             </CommandButton>
           </div>
           <div
-            className="mx-0.5 h-6 w-px bg-stone-200"
+            className={toolbarDividerClass(compact)}
             aria-hidden
           />
           <div
@@ -412,7 +430,7 @@ export function renderCanvasCommandBarBlock(
               <Redo2 className="h-3.5 w-3.5" />
             </CommandButton>
           </div>
-          <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+          <div className={toolbarDividerClass(compact)} aria-hidden />
           <div
             className="flex items-center gap-0.5"
             role="group"
@@ -455,7 +473,7 @@ export function renderCanvasCommandBarBlock(
     case 'vendor':
       return (
         <>
-          {toolbarSectionLabel('Vendor', 'amber')}
+          {toolbarSectionLabel('Vendor', 'amber', ctx.compact)}
           <CommandButton
             onClick={() => activateTablePlacement('vendor')}
             title="Draw vendor — size from Vendor column"
@@ -471,11 +489,12 @@ export function renderCanvasCommandBarBlock(
           </CommandButton>
           {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
             <>
-              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <div className={toolbarDividerClass(compact)} aria-hidden />
               <TableSizePill
                 value={ctx.tableSizeFt}
                 onChange={ctx.onTableSizeChange}
                 sections="vendor"
+                compact={compact}
                 className="shrink-0"
               />
               {ctx.highlightedSelectionMetrics &&
@@ -491,7 +510,7 @@ export function renderCanvasCommandBarBlock(
           ) : null}
           {ctx.onVendorAutoArrange ? (
             <>
-              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <div className={toolbarDividerClass(compact)} aria-hidden />
               <AutoArrangeGroup
                 label="Vendor auto-arrange"
                 mode={ctx.vendorAutoArrangeMode ?? 'grid'}
@@ -500,6 +519,7 @@ export function renderCanvasCommandBarBlock(
                 canRun={ctx.canVendorAutoArrange}
                 runTitle="Auto-arrange vendor in the active room"
                 tone="amber"
+                compact={compact}
               />
             </>
           ) : null}
@@ -509,7 +529,7 @@ export function renderCanvasCommandBarBlock(
     case 'patron':
       return (
         <>
-          {toolbarSectionLabel('Patron', 'violet')}
+          {toolbarSectionLabel('Patron', 'violet', ctx.compact)}
           <div
             className="inline-flex items-center gap-0.5"
             role="group"
@@ -537,11 +557,12 @@ export function renderCanvasCommandBarBlock(
           </div>
           {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
             <>
-              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <div className={toolbarDividerClass(compact)} aria-hidden />
               <TableSizePill
                 value={ctx.tableSizeFt}
                 onChange={ctx.onTableSizeChange}
                 sections="patron"
+                compact={compact}
                 className="shrink-0"
               />
               {ctx.highlightedSelectionMetrics &&
@@ -557,7 +578,7 @@ export function renderCanvasCommandBarBlock(
           ) : null}
           {ctx.onPatronAutoArrange ? (
             <>
-              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <div className={toolbarDividerClass(compact)} aria-hidden />
               <AutoArrangeGroup
                 label="Patron auto-arrange"
                 mode={ctx.patronAutoArrangeMode ?? 'grid'}
@@ -566,6 +587,7 @@ export function renderCanvasCommandBarBlock(
                 canRun={ctx.canPatronAutoArrange}
                 runTitle="Auto-arrange patron in the active room (vendor stays put)"
                 tone="violet"
+                compact={compact}
               />
             </>
           ) : null}
@@ -575,7 +597,7 @@ export function renderCanvasCommandBarBlock(
     case 'room':
       return (
         <>
-          {toolbarSectionLabel('Room', 'teal')}
+          {toolbarSectionLabel('Room', 'teal', ctx.compact)}
           {ctx.onSelectRoom &&
           ctx.onAddRoom &&
           ctx.onRenameRoom &&
@@ -596,7 +618,7 @@ export function renderCanvasCommandBarBlock(
               {(ctx.onSelectRoom && ctx.onAddRoom) ||
               ctx.onJoinRooms ||
               ctx.onUnjoinRoom ? (
-                <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+                <div className={toolbarDividerClass(compact)} aria-hidden />
               ) : null}
               <div
                 className="inline-flex items-center gap-0.5"
@@ -626,7 +648,7 @@ export function renderCanvasCommandBarBlock(
           ) : null}
           {ctx.onJoinRooms || ctx.onUnjoinRoom ? (
             <>
-              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <div className={toolbarDividerClass(compact)} aria-hidden />
               <div
                 className="flex items-center gap-0.5"
                 role="group"
@@ -669,11 +691,11 @@ export function renderCanvasCommandBarBlock(
           >
             <Locate className="h-3.5 w-3.5" />
           </CommandButton>
-          <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+          <div className={toolbarDividerClass(compact)} aria-hidden />
           <div
             className="flex items-center gap-0.5"
             role="group"
-            aria-label="Alignment"
+            aria-label="Alignment and spacing"
           >
             <CommandButton
               onClick={ctx.onAlignVertical}
@@ -688,6 +710,21 @@ export function renderCanvasCommandBarBlock(
               title="Align horizontal centers (Shift+H)"
             >
               <AlignCenterHorizontal className="h-3.5 w-3.5" />
+            </CommandButton>
+            <div className={toolbarDividerClass(compact)} aria-hidden />
+            <CommandButton
+              onClick={ctx.onDistributeHorizontal}
+              disabled={!canDistribute}
+              title="Distribute equal horizontal spacing (3+ objects)"
+            >
+              <AlignHorizontalDistributeCenter className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={ctx.onDistributeVertical}
+              disabled={!canDistribute}
+              title="Distribute equal vertical spacing (3+ objects)"
+            >
+              <AlignVerticalDistributeCenter className="h-3.5 w-3.5" />
             </CommandButton>
           </div>
         </>
@@ -740,7 +777,12 @@ export function renderCanvasCommandBarBlock(
               )}
             </CommandButton>
           ) : null}
-          <div className="inline-flex h-8 items-center overflow-hidden rounded-md border border-stone-200">
+          <div
+            className={cn(
+              'inline-flex items-center overflow-hidden rounded-md border border-stone-200',
+              toolbarControlHeight(compact)
+            )}
+          >
             <button
               type="button"
               onClick={ctx.onZoomOut}
@@ -775,7 +817,10 @@ export function renderCanvasCommandBarBlock(
               onClick={ctx.onSaveMarket}
               disabled={ctx.saveMarketDisabled || ctx.saveMarketLoading}
               title="Save market and deploy"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-stone-900 px-3 text-xs font-semibold text-white hover:bg-stone-800 disabled:opacity-40"
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-3 text-xs font-semibold text-white hover:bg-stone-800 disabled:opacity-40',
+                toolbarControlHeight(compact)
+              )}
             >
               <Save className="h-3.5 w-3.5" />
               {ctx.saveMarketLoading ? 'Saving…' : 'Save market'}
@@ -798,14 +843,40 @@ export function getVisibleToolbarBlockIds(ctx: {
   if (ctx.needsRoomFirst && ctx.showRoom) {
     return ['room']
   }
-  const ids: CanvasToolbarBlockId[] = [
-    'primitives',
-    'history-clipboard',
-    'view-align',
-  ]
-  if (ctx.showVendor) ids.push('vendor')
-  if (ctx.showPatron) ids.push('patron')
+  const ids: CanvasToolbarBlockId[] = []
   if (ctx.showRoom) ids.push('room')
+  if (ctx.showPatron) ids.push('patron')
+  if (ctx.showVendor) ids.push('vendor')
   ids.push('utilities')
+  ids.push('primitives', 'history-clipboard', 'view-align')
   return ids
+}
+
+/** Row groups for the fixed dashboard ribbon (room → patron/vendor → tools). */
+export function getStaticToolbarRowGroups(ctx: {
+  needsRoomFirst: boolean
+  showVendor: boolean
+  showPatron: boolean
+  showRoom: boolean
+}): CanvasToolbarBlockId[][] {
+  if (ctx.needsRoomFirst && ctx.showRoom) {
+    return [['room']]
+  }
+
+  const rows: CanvasToolbarBlockId[][] = []
+
+  if (ctx.showRoom) {
+    rows.push(['room'])
+  }
+
+  const placementRow: CanvasToolbarBlockId[] = []
+  if (ctx.showPatron) placementRow.push('patron')
+  if (ctx.showVendor) placementRow.push('vendor')
+  if (placementRow.length > 0) {
+    rows.push(placementRow)
+  }
+
+  rows.push(['primitives', 'history-clipboard', 'view-align', 'utilities'])
+
+  return rows
 }

@@ -77,6 +77,10 @@ export function PassportWizard({
   const [websiteUrl, setWebsiteUrl] = useState(existing?.website_url ?? '')
   const [shopUrl, setShopUrl] = useState(existing?.shop_url ?? '')
   const [instagramUrl, setInstagramUrl] = useState(existing?.instagram_url ?? '')
+  const [facebookUrl, setFacebookUrl] = useState(existing?.facebook_url ?? '')
+  const [requiresElectricity, setRequiresElectricity] = useState(
+    existing?.requires_electricity ?? false
+  )
   const [businessNumber, setBusinessNumber] = useState(existing?.business_number ?? '')
   const [socialHandle, setSocialHandle] = useState(existing?.social_handle ?? '')
 
@@ -137,6 +141,8 @@ export function PassportWizard({
         websiteUrl: normalizeUrl(websiteUrl),
         shopUrl: normalizeUrl(shopUrl),
         instagramUrl: normalizeUrl(instagramUrl),
+        facebookUrl: normalizeUrl(facebookUrl),
+        requiresElectricity,
         businessNumber: verification.business_number,
         socialHandle: verification.social_handle,
         verificationStatus: verification.verification_status,
@@ -298,6 +304,15 @@ export function PassportWizard({
                     onChange={(e) => setInstagramUrl(e.target.value)}
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label htmlFor="facebook">Facebook</Label>
+                  <Input
+                    id="facebook"
+                    placeholder="https://facebook.com/yourbrand"
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                  />
+                </div>
               </div>
             </>
           )}
@@ -307,7 +322,7 @@ export function PassportWizard({
             <div className="space-y-5">
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <Label>Primary category *</Label>
+                  <Label>Product category *</Label>
                   <Tooltip>
                     <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
                     <TooltipContent className="max-w-xs">
@@ -390,6 +405,24 @@ export function PassportWizard({
                   ) : null}
                 </div>
               ) : null}
+
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="requires-electricity" className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    id="requires-electricity"
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-gray-300"
+                    checked={requiresElectricity}
+                    onChange={(e) => setRequiresElectricity(e.target.checked)}
+                  />
+                  <span>
+                    <span className="text-sm font-medium text-foreground">Requires electricity</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      Check if your booth needs a power hookup so coordinators can plan outlet placement.
+                    </span>
+                  </span>
+                </Label>
+              </div>
             </div>
           )}
 

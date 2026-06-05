@@ -2,17 +2,15 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { usePassportProfile } from '@/hooks/use-passport-profile'
+import { PassportSocialFields } from '@/components/passport/passport-social-fields'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from 'sonner'
 import { ArrowLeft, CheckCircle, Loader2 } from 'lucide-react'
 import type { Profile, Role, VendorPassport } from '@/types/database'
-import { buildMinimalPassportSavePayload, formatSupabaseError } from '@/lib/vendor/passport-payload'
 import { displayNameLabel, passportDescription, passportTitle } from '@/lib/passport/requirements'
 
 interface PassportProfileFormProps {
@@ -23,44 +21,19 @@ interface PassportProfileFormProps {
 export function PassportProfileForm({ profile, existing }: PassportProfileFormProps) {
   const role = profile.role as Role
   const router = useRouter()
-  const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [displayName, setDisplayName] = useState(
-    existing?.business_name?.trim() || profile.full_name?.trim() || ''
+  const { state, loading, updateField, updateSocial, saveMinimal } = usePassportProfile(
+    profile.id,
+    role,
+    existing,
+    profile.full_name
   )
-  const [bio, setBio] = useState(existing?.bio ?? '')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!displayName.trim()) {
-      toast.error(`${displayNameLabel(role)} is required`)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const payload = buildMinimalPassportSavePayload({
-        userId: profile.id,
-        displayName,
-        bio,
-      })
-
-      const { error } = existing
-        ? await supabase.from('vendor_passports').update(payload).eq('id', existing.id)
-        : await supabase.from('vendor_passports').insert(payload)
-
-      if (error) {
-        throw new Error(formatSupabaseError(error))
-      }
-
-      toast.success('Passport saved')
+    const ok = await saveMinimal()
+    if (ok) {
       router.push('/profile')
       router.refresh()
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save passport'
-      toast.error(message)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -72,7 +45,7 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to profile
+          Back to profile settings
         </Link>
         <h1 className="mt-3 text-3xl font-bold text-foreground">{passportTitle(role)}</h1>
         <p className="mt-1.5 text-muted-foreground">{passportDescription(role)}</p>
@@ -80,11 +53,10 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
 
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Your details</CardTitle>
+          <CardTitle>Public storefront</CardTitle>
           <CardDescription>
-            {role === 'shopper'
-              ? 'Name and optional bio. Manage phone and contact sharing on your profile.'
-              : 'Name and optional bio. Add your phone on your profile for SMS alerts.'}
+            These details appear on your public passport card. Private account settings stay on
+            profile settings.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -93,19 +65,19 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
               <Label htmlFor="display-name">{displayNameLabel(role)} *</Label>
               <Input
                 id="display-name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                value={state.displayName}
+                onChange={(e) => updateField('displayName', e.target.value)}
                 placeholder={role === 'vendor' ? 'Sweet Petal Candles' : 'Jane Smith'}
                 required
               />
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="bio">Bio</Label>
+              <Label htmlFor="bio">Public Bio</Label>
               <Textarea
                 id="bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
+                value={state.bio}
+                onChange={(e) => updateField('bio', e.target.value)}
                 placeholder={
                   role === 'coordinator'
                     ? 'Tell vendors and patrons about your markets…'
@@ -114,35 +86,25 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
                 rows={4}
                 maxLength={500}
               />
-              <p className="text-right text-xs text-muted-foreground">{bio.length}/500</p>
+              <p className="text-right text-xs text-muted-foreground">{state.bio.length}/500</p>
             </div>
 
+            <PassportSocialFields
+              value={state.social}
+              onChange={updateSocial}
+              idPrefix="coordinator-passport"
+            />
+
             <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4 text-sm text-muted-foreground">
-              {role === 'shopper' ? (
-                <>
-                  Phone and auction contact preferences live on your{' '}
-                  <Link href="/profile" className="font-medium text-forest underline">
-                    profile settings
-                  </Link>
-                  .
-                </>
-              ) : (
-                <>
-                  Add your phone for SMS alerts on your{' '}
-                  <Link href="/profile" className="font-medium text-forest underline">
-                    profile settings
-                  </Link>
-                  .
-                </>
-              )}
+              Phone, email, and password are managed in{' '}
+              <Link href="/profile" className="font-medium text-forest underline">
+                profile settings
+              </Link>
+              .
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button
-                type="submit"
-                className=""
-                disabled={loading || !displayName.trim()}
-              >
+              <Button type="submit" disabled={loading || !state.displayName.trim()}>
                 {loading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (

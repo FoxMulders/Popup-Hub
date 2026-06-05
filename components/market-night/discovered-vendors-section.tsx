@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Camera, ExternalLink, Globe, MapPin, ShoppingBag, Store } from 'lucide-react'
+import { FacebookIcon } from '@/components/icons/facebook-icon'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
@@ -13,6 +14,7 @@ const LINK_ICONS = {
   website_url: Globe,
   shop_url: ShoppingBag,
   instagram_url: Camera,
+  facebook_url: FacebookIcon,
 } as const
 
 interface DiscoveredVendorCardProps {
@@ -24,6 +26,7 @@ export function DiscoveredVendorCard({ vendor }: DiscoveredVendorCardProps) {
     website_url: vendor.websiteUrl,
     shop_url: vendor.shopUrl,
     instagram_url: vendor.instagramUrl,
+    facebook_url: vendor.facebookUrl,
   })
 
   const initials = vendor.businessName

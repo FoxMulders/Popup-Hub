@@ -12,6 +12,7 @@ export interface DiscoveredVendor {
   websiteUrl: string | null
   shopUrl: string | null
   instagramUrl: string | null
+  facebookUrl: string | null
   profileHref: string
 }
 
@@ -94,6 +95,7 @@ export async function getMyNightSummary(
           website_url,
           shop_url,
           instagram_url,
+          facebook_url,
           is_verified
         )
       `)
@@ -170,6 +172,7 @@ export async function getMyNightSummary(
       websiteUrl: passport?.website_url ?? null,
       shopUrl: passport?.shop_url ?? null,
       instagramUrl: passport?.instagram_url ?? null,
+      facebookUrl: passport?.facebook_url ?? null,
       profileHref: buildVendorProfileHref(eventId, vendorId),
     }
   })

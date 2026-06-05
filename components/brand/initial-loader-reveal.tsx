@@ -7,7 +7,13 @@ import {
   type InitialLoaderFrame,
 } from '@/lib/brand/initial-loader-controller'
 
-const LOGO_SRC = '/popup-hub-icon.png'
+/** Full lockup (storefront + wordmark) — matches nav/footer brand asset. */
+const LOGO_SRC = '/popup-hub-brand.png'
+const LOGO_ASPECT = 1024 / 994
+const LOGO_DISPLAY_WIDTH = 220
+const LOGO_DISPLAY_HEIGHT = LOGO_DISPLAY_WIDTH * LOGO_ASPECT
+/** Icon band is ~56% of lockup height from the top (see process-logo.mjs). */
+const LOGO_ICON_CENTER_Y = LOGO_DISPLAY_HEIGHT * 0.28
 
 const BRAND = {
   sage: '#2d5a27',
@@ -42,9 +48,8 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const borderT = drawProgress(progress, 0.08, 0.28)
   const aisleT = drawProgress(progress, 0.22, 0.42)
   const boothT = drawProgress(progress, 0.38, 0.62)
-  const logoT = drawProgress(progress, 0.52, 0.78)
-  const wordT = drawProgress(progress, 0.68, 0.88)
-  const tagT = drawProgress(progress, 0.78, 0.96)
+  const logoT = drawProgress(progress, 0.52, 0.82)
+  const tagT = drawProgress(progress, 0.72, 0.96)
   const barT = drawProgress(progress, 0.85, 1)
 
   const outroFade =
@@ -196,31 +201,14 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           <g opacity={logoOpacity} transform={`scale(${logoScale})`}>
             <image
               href={LOGO_SRC}
-              x="-56"
-              y="-56"
-              width="112"
-              height="112"
+              x={-LOGO_DISPLAY_WIDTH / 2}
+              y={-LOGO_ICON_CENTER_Y}
+              width={LOGO_DISPLAY_WIDTH}
+              height={LOGO_DISPLAY_HEIGHT}
               preserveAspectRatio="xMidYMid meet"
             />
           </g>
         </g>
-
-        <text
-          x="240"
-          y={348 + (1 - wordT) * 12}
-          textAnchor="middle"
-          fontSize="34"
-          fontWeight="700"
-          fill={BRAND.sage}
-          opacity={wordT}
-          style={{
-            letterSpacing: '0.04em',
-            fontFamily:
-              'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-          }}
-        >
-          Popup Hub
-        </text>
 
         <text
           x="240"

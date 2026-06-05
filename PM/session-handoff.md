@@ -46,14 +46,25 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | **Consolidation** | None — each placement keeps its laid footprint (round stays circular) |
 | **Auto-arrange scope** | **Patron only** — vendor is obstacles/fixed context, not rearranged in this pass |
 | **Auto-arrange modes (target)** | Same three options as vendor: **Grid**, **Staggered**, **Perimeter** — applied only to patron, respecting vendor footprints and structural obstacles |
-| **Engine (shipped)** | `arrangeGuestTables` in `auto-arrange.ts` — row-pack near prior placement / open space away from vendor (no mode selector yet) |
-| **Engine (target)** | Patron-only pass mirroring vendor mode API (`grid` / `staggered` / `perimeter-only`); reuse deterministic layout where footprints are uniform, custom pack/orient for mixed round+patron sizes |
+| **Bounding box (shipped)** | Patron auto-arrange computes an **active bounding box** around existing patron tables (+1′ padding) and generates grid/staggered slots **only inside that box** — no full-room sweep into vendor zones |
+| **Non-destructive abort (shipped)** | If tables cannot fit equidistantly inside the box, engine **halts** and keeps original coordinates; toast: *Could not automatically adjust tables. Manual placement is required to fit this density.* |
+| **Engine (shipped)** | `arrangeGuestTables` + `guestActiveBoundingBox` — Grid / Staggered / Perimeter via deterministic slots + row-pack fallback confined to active box; vendor footprints as restricted zones; preserves laid width/height |
+| **Engine (target)** | Patron perimeter on merged-zone rings; mixed-size round+rect grid tuning |
 | **Toolbar** | **Patron** ribbon block: **Round** / **Patron** + Round/Patron size pill + mode select + **Auto-Arrange**; enabled when ≥1 patron in active room — independent of vendor mode state |
 | **Shipped** | Dedicated patron toolbar block; `scope: 'patron'` keeps vendor fixed while `arrangeGuestTables` runs (`isGuestTableBooth` in `lib/booth-planner/table-shape.ts`) |
-| **Verify** | Guest-table block in `scripts/verify-auto-arrange.ts` (4/4 pass); add grid/staggered/perimeter patron cases when mode parity lands |
+| **Verify** | Guest-table + isolated-scope blocks in `scripts/verify-auto-arrange.ts` (10/10 pass in those sections) |
 
 ## Shipped this session (local, not deployed)
-- **Logo transparent background:** `scripts/process-logo.mjs` now flood-fills cream/off-white export backdrop from image edges and strips any remaining neutral backdrop pixels (replaces partial-alpha halo). Ran `npm run assets:logo` to regenerate `popup-hub-brand.png`, `popup-hub-icon.png`, `logo.png`, favicons, PWA icons, and `app/icon.png` / `apple-icon.png`. Service-worker cache bumped to `v12`.
+- **Profile vs Passport split:** Profile settings limited to private account data — Legal Name, Private Email, phone (labeled *Private — Used only for automated system SMS alerts*), shopper auction contact toggle, `AccountSecurityCard` (Change Password), and `NotificationPreferencesGrid` in the main column. Organization name, website, bio, and social links removed from profile form; `use-profile-settings` writes only `profiles`. Passport forms use `use-passport-profile` → `vendor_passports` (bio, social, logistics). `lib/passport/public-passport-index.ts` + service client loads public-safe fields for `/coordinators/[id]` and `/patrons/[id]` via `PassportPublicCard` (Instagram/Facebook/Website icon links). Migration `091_passport_social_logistics.sql`: `facebook_url`, `requires_electricity` on `vendor_passports`; vendor wizard + coordinator review drawer wired.
+- **Profile settings expansion (prior):** `AccountSecurityCard`, `NotificationPreferencesGrid`, `use-notification-preferences` — still in place; org fields moved off profile per split above.
+- **Toolbar distribute spacing:** View/align ribbon block adds **Distribute horizontal** and **Distribute vertical** buttons (`AlignHorizontalDistributeCenter` / `AlignVerticalDistributeCenter`). Requires 3+ selected objects; `distributeSelectionPatches` in `geometry.ts` evenly spaces centers between endpoint anchors (locked endpoints stay put). Wired through `floor-plan-v2.tsx`, `canvas-command-bar.tsx`, `canvas-tool-types.ts`. Verify: `npx tsx scripts/verify-align-and-center.ts` (20/20 pass).
+- **Patron bounding-box auto-arrange:** `guestActiveBoundingBox` (+1′ padding) confines patron grid/staggered slot generation to the imaginary sub-box around manually placed tables. `scope: 'patron'` passes `activeBoundingBox` into `arrangeGuestTables`; slots filtered to `[MinX, MaxX] × [MinY, MaxY]`. All-or-nothing: if every table cannot be rearranged inside the box, `patronArrangeAborted` is set, coordinates unchanged, UI shows density toast (no partial wipe). `PATRON_ARRANGE_DENSITY_ERROR` exported from `engine/auto-arrange.ts`; handlers in `floor-plan-v2.tsx` + QA mirror skip `replaceObjects` on abort.
+- **Isolated vendor / patron auto-arrange:** Vendor pass (`scope: 'vendor'`) treats placed patron tables as fixed obstacles (2′ clearance) while rearranging only vendor booths; patron pass (`scope: 'patron'`) keeps vendor booths fixed and packs only guest tables away from vendor footprints. `AutoArrangeScope` in `engine/auto-arrange.ts`; toolbar handlers already pass `scope`.
+- **Vendor footprint preservation:** `placeBoothsAtSlots` uses each source booth's laid width/height (not median grid cell); single-table vendors skip dimension normalization in `consolidateBoothsForAutoArrange`.
+- **Patron mode parity (Grid / Staggered / Perimeter):** `arrangeGuestTables` accepts `mode` + runs deterministic slot generation (with vendor + structural restricted zones), falling back to row-pack; unmoved tables stay at last valid position. Round/patron diameters preserved.
+- **Scoped placedCount:** Vendor toast counts repositioned vendors only; patron toast counts placed guest tables — fixed patrons inflating vendor success count.
+- **Verify:** `npx tsx scripts/verify-auto-arrange.ts` — patron bounding-box block (3/3 pass: padding, dense abort, roomy rearrange inside box); isolated-scope block (6/6 pass); 27/28 total (remaining failures: pre-existing multi-table consolidation + legacy angled/perimeter mode assertions).
+- **Initial loader full logo:** Replaced icon-only center mark with the full brand lockup (`popup-hub-brand.png`: storefront + "Popup Hub" wordmark). Removed duplicate SVG wordmark text; tagline and progress bar unchanged. Updated master `public/popup-hub-logo.png` from official lockup and ran `npm run assets:logo`. Service-worker cache bumped to `v13`.
 - **Mobile page scroll fix:** Coordinator/vendor workspace pages (`CommandCenterShell`, `DashboardAppShell`) hide left/right rails below `lg` so the center column fills the viewport and scrolls. `events/new` and setup wizard bodies use the same scroll shell. Fixes clipped main body on phones.
 - **Mobile wizard field overlap fix:** Floating inputs/textareas use `min-h-14` / `!h-auto` instead of fixed `h-11` so labels and entered text no longer collide.
 - **Brand logo refresh:** Replaced master `public/popup-hub-logo.png` with the official forest-green storefront lockup (994x1024). Ran `npm run assets:logo` to regenerate `popup-hub-brand.png`, `popup-hub-icon.png`, `logo.png`, favicons, PWA icons, and `app/icon.png` / `apple-icon.png`. Fixed `scripts/process-logo.mjs` atomic writes on Windows. Updated nav/footer/auth logo dimensions (`popup-hub-logo.tsx`), loader pin offset (`loader-variants/shared.ts`), animation wordmark/stroke colors to `#2d5a27` (`popup-loader-scene.tsx`, `initial-loader-reveal.tsx`), PWA `theme_color`, and service-worker cache `v11`.
@@ -66,6 +77,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Auto-arrange: separate vendor vs patron passes:** Vendor uses grid/staggered/perimeter (`autoArrangeVendorBooths`). Patron runs a second pass (`arrangeGuestTables`) — excluded from vendor consolidation and the vendor grid; row-pack near draw origin or open space away from vendor, preserving laid width/height (round stays circular). `AutoArrangeScope` (`vendor` / `patron` / `all`) in `auto-arrange.ts`.
 - **Toolbar split: Vendor / Patron / Room:** Canvas ribbon reorganized into three labeled blocks — **Vendor** (Vendor draw + Vendor sizes + vendor auto-arrange), **Patron** (Round/Patron + Round/Patron sizes + patron auto-arrange), **Room** (tabs, rotate, merge/unjoin). Canvas tools (select/hand, walls, doors, label, delete) stay in **primitives**; history, align, zoom, save in other blocks. `TableSizePill` accepts `sections: 'vendor' | 'patron'`. Legacy toolbar block ids migrate on load (`toolbar-order.ts`). QA mirrors updated.
 - **Toolbar labels:** Draw tools and size-pill columns use **Vendor** / **Round** / **Patron** (not Booth, Patron rect, or “vendor booths”). Reorder palette block titles match.
+- **Layout toolbar reorder + labels:** Dashboard static ribbon rows — **Room** on top, **Patron** then **Vendor**, workspace tools (select, history, align, zoom, save) on bottom. Patron tools labeled **Patron · Round · Rectangle**; size pill rect column **Rectangle**. Canvas fallback labels: **Vendor** / **Patron** (not Booth). Header row ~10% shorter in static layout (`ToolbarCompactProvider`).
 
 ## Shipped this session (prod build 106, `cde554e`)
 - **Deploy tooling fix:** `update-session-handoff.ps1` uses ASCII `-` / `->` / `|` instead of Unicode dashes/arrows so Windows PowerShell 5 parses strings; `deploy-popuphub.ps1` always records https://popuphub.ca in baseline.
@@ -121,8 +133,8 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | Round table 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
 | Patron 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
 | Booth placement inside room | **Deployed** — sign-in smoke |
-| Vendor auto-arrange (Grid / Staggered / Perimeter) | **Local** — vendor toolbar block + `scope: 'vendor'`; re-test after deploy |
-| Patron auto-arrange (separate pass) | **Local** — patron toolbar block + `scope: 'patron'`; mode selector UI shipped; engine still row-pack (Grid/Staggered/Perimeter parity pending) |
+| Vendor auto-arrange (Grid / Staggered / Perimeter) | **Local** — isolated pass + patron obstacles; re-test after deploy |
+| Patron auto-arrange (separate pass) | **Local** — active bounding box + non-destructive abort; isolated pass + vendor obstacles + mode selector |
 | Toolbar Vendor / Patron / Room blocks | **Local** — sign-in smoke after deploy |
 | Rotate room toolbar | **Deployed** — sign-in smoke |
 | Step 3 blank canvas (interactive) | **Deployed** — sign-in smoke |
@@ -153,15 +165,15 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Commit + deploy** auto-arrange space-restriction fix + food truck / viewport / Clear all WIP when ready
-2. **Verify Clear all** on dashboard + wizard Step 3 after sign-in (blank canvas, no crash, toolbar shows Add room only)
-3. **Patron auto-arrange mode parity** — patron toolbar mode select is wired; engine still ignores mode (row-pack). Implement Grid / Staggered / Perimeter for patron-only pass (`arrangeGuestTables` or patron-centric layout).
-4. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
-5. **Coordinator smoke-test** after deploy: Vendor block auto-arrange (each mode) moves only vendor; Patron block auto-arrange moves only patron; Room block merge/rotate; mixed layout with round + patron
-6. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone: page body scrolls; floating fields do not overlap when typing
-7. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room** (food trucks use canvas bounds only)
-8. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
-9. Commit handoff + script fix when ready (`update-session-handoff.ps1`, `deploy-popuphub.ps1`, `PM/session-handoff.md`)
+1. **Commit + deploy** profile/passport split + patron bounding-box auto-arrange when ready
+2. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
+3. **Passport smoke-test** — `/profile/passport`: bio + Instagram/Facebook/Website save to passport; vendor product category + requires electricity; public `/coordinators/[id]` and `/patrons/[id]` show bio + social icons; stories still load via API
+4. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
+5. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
+6. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
+7. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
+8. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
+9. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 
 ## How to start the next chat
 ```

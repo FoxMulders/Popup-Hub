@@ -188,6 +188,16 @@ export function consolidateBoothsForAutoArrange(
         member.tableLengthFt ??
         consolidatedTableLengthFt(baseFt, count) ??
         baseFt
+      if (count === 1) {
+        consolidated.push({
+          ...member,
+          tableLengthFt: member.tableLengthFt ?? ft,
+          tableCount: 1,
+          tablePurpose: member.tablePurpose ?? 'vendor',
+          tableShape: member.tableShape ?? 'rectangular',
+        })
+        continue
+      }
       const dims = boothDimensionsForTableLength(ft)
       consolidated.push({
         ...member,

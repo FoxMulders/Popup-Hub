@@ -30,10 +30,10 @@ export function optionalPassportFields(role: Role): PassportField[] {
     case 'vendor':
       return ['bio', 'tax_id', 'logo', 'product_photos', 'online_presence']
     case 'coordinator':
-      return ['bio', 'phone']
+      return ['bio', 'online_presence']
     case 'shopper':
     default:
-      return ['bio', 'phone']
+      return ['bio', 'online_presence']
   }
 }
 

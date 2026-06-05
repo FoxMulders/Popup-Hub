@@ -23,6 +23,8 @@ export interface CanvasToolHostProps {
   selectedRoomId?: string | null
   onAlignVertical: () => void
   onAlignHorizontal: () => void
+  onDistributeVertical: () => void
+  onDistributeHorizontal: () => void
   zoom: number
   onZoomOut: () => void
   onZoomIn: () => void

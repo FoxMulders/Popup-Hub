@@ -54,7 +54,13 @@ export function getTopCategoryNames(vendors: VendorLineupEntry[], limit = 3): st
     .map((c) => c.name)
 }
 
-export type VendorLinkField = 'website_url' | 'shop_url' | 'instagram_url'
+import {
+  getPassportSocialLinks,
+  type PassportSocialField,
+  type PassportSocialLink,
+} from '@/lib/passport/social-links'
+
+export type VendorLinkField = PassportSocialField
 
 export interface VendorLink {
   field: VendorLinkField
@@ -66,19 +72,15 @@ export function getVendorLinks(passport: {
   website_url?: string | null
   shop_url?: string | null
   instagram_url?: string | null
+  facebook_url?: string | null
 } | null | undefined): VendorLink[] {
-  if (!passport) return []
-  const links: VendorLink[] = []
-  if (passport.website_url) {
-    links.push({ field: 'website_url', label: 'Website', url: passport.website_url })
-  }
-  if (passport.shop_url) {
-    links.push({ field: 'shop_url', label: 'Shop', url: passport.shop_url })
-  }
-  if (passport.instagram_url) {
-    links.push({ field: 'instagram_url', label: 'Instagram', url: passport.instagram_url })
-  }
-  return links
+  return getPassportSocialLinks(passport, { includeShop: true }).map(
+    (link: PassportSocialLink) => ({
+      field: link.field,
+      label: link.label,
+      url: link.url,
+    })
+  )
 }
 
 export function buildVendorProfileHref(eventId: string, vendorId: string): string {

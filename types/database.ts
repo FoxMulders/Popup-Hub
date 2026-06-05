@@ -159,6 +159,8 @@ export interface VendorPassport {
   website_url: string | null
   shop_url: string | null
   instagram_url: string | null
+  facebook_url: string | null
+  requires_electricity: boolean
   created_at: string
   category?: Category
   profile?: Profile

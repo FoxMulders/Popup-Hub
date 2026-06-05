@@ -571,6 +571,64 @@ export function alignSelectionPatches(
   return patches
 }
 
+/**
+ * Compute patches that evenly space selected object centers between
+ * the leftmost/rightmost (horizontal) or topmost/bottommost (vertical)
+ * selection anchors:
+ *
+ *   - axis === 'x' → distribute centers along x, fixing endpoints.
+ *   - axis === 'y' → distribute centers along y, fixing endpoints.
+ *
+ * Requires at least three selected objects. Locked objects stay put
+ * but still define anchor positions when they are endpoints. Middle
+ * unlocked objects move; patches clamp to canvas like alignment.
+ */
+export function distributeSelectionPatches(
+  objects: ReadonlyArray<PlacedObject>,
+  axis: 'x' | 'y',
+  canvasWidthFt: number,
+  canvasLengthFt: number
+): AlignPatch[] {
+  if (objects.length < 3) return []
+
+  const centers = objects.map((o) => objectCenter(o))
+  const sorted = objects
+    .map((obj, index) => ({ obj, center: centers[index]! }))
+    .sort((a, b) =>
+      axis === 'x' ? a.center.x - b.center.x : a.center.y - b.center.y
+    )
+
+  const first = sorted[0]!
+  const last = sorted[sorted.length - 1]!
+  const firstVal = axis === 'x' ? first.center.x : first.center.y
+  const lastVal = axis === 'x' ? last.center.x : last.center.y
+  const span = lastVal - firstVal
+  const patches: AlignPatch[] = []
+  const eps = 1e-4
+  const n = sorted.length
+
+  for (let i = 1; i < n - 1; i++) {
+    const { obj, center } = sorted[i]!
+    if (obj.locked) continue
+    const target = firstVal + (span * i) / (n - 1)
+    if (axis === 'x') {
+      const delta = target - center.x
+      if (Math.abs(delta) < eps) continue
+      const proposed: PlacedObject = { ...obj, x: obj.x + delta }
+      const clamp = canvasClampDelta(proposed, canvasWidthFt, canvasLengthFt)
+      patches.push({ id: obj.id, patch: { x: proposed.x + clamp.dx } })
+    } else {
+      const delta = target - center.y
+      if (Math.abs(delta) < eps) continue
+      const proposed: PlacedObject = { ...obj, y: obj.y + delta }
+      const clamp = canvasClampDelta(proposed, canvasWidthFt, canvasLengthFt)
+      patches.push({ id: obj.id, patch: { y: proposed.y + clamp.dy } })
+    }
+  }
+
+  return patches
+}
+
 /* -------------------------------------------------------------------
  * Multi-room geometry — perimeter walls, edge merging, and frame
  * hit-testing for the unified canvas.

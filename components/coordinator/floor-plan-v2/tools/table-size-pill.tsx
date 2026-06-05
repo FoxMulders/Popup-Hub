@@ -20,6 +20,7 @@ interface TableSizePillProps {
   sections?: TableSizePillSections
   disabled?: boolean
   className?: string
+  compact?: boolean
 }
 
 function sizeButtonClass(active: boolean, disabled: boolean): string {
@@ -33,7 +34,7 @@ function sizeButtonClass(active: boolean, disabled: boolean): string {
 function sectionLabel(text: string): React.ReactNode {
   return (
     <span
-      className="inline-flex h-full items-center border-r border-stone-200 bg-stone-50 px-1 text-[9px] font-heading uppercase tracking-wide text-stone-500"
+      className="inline-flex h-full items-center border-r border-stone-200 bg-stone-50 px-1 text-[9px] font-heading tracking-wide text-stone-500"
       aria-hidden
     >
       {text}
@@ -52,6 +53,7 @@ export function TableSizePill({
   sections = 'all',
   disabled = false,
   className,
+  compact = false,
 }: TableSizePillProps) {
   const showVendor = sections === 'all' || sections === 'vendor'
   const showPatron = sections === 'all' || sections === 'patron'
@@ -65,7 +67,8 @@ export function TableSizePill({
   return (
     <div
       className={cn(
-        'inline-flex h-8 items-stretch overflow-hidden rounded-md border border-stone-200 bg-white text-[11px] font-semibold text-stone-700',
+        'inline-flex items-stretch overflow-hidden rounded-md border border-stone-200 bg-white text-[11px] font-semibold text-stone-700',
+        compact ? 'h-[1.8rem]' : 'h-8',
         disabled && 'opacity-60',
         className
       )}
@@ -128,7 +131,7 @@ export function TableSizePill({
                 </button>
               )
             })}
-            {sectionLabel('Patron')}
+            {sectionLabel('Rectangle')}
             {GUEST_TABLE_LENGTHS_FT.map((ft) => {
               const selection = guestRectTableSpec(ft)
               const active = tableSizeSpecsEqual(value, selection)

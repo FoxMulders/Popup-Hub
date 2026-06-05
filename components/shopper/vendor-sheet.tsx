@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Globe, ShoppingBag, Camera, MapPin } from 'lucide-react'
+import { FacebookIcon } from '@/components/icons/facebook-icon'
 import type { VendorLineupEntry } from '@/lib/shopper/vendors'
 import { getVendorLinks } from '@/lib/shopper/vendors'
 import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
@@ -30,6 +31,7 @@ const LINK_ICONS = {
   website_url: Globe,
   shop_url: ShoppingBag,
   instagram_url: Camera,
+  facebook_url: FacebookIcon,
 } as const
 
 export function VendorSheet({

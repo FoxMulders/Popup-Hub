@@ -17,6 +17,7 @@
 
 import {
   alignSelectionPatches,
+  distributeSelectionPatches,
   groupRotatedAabb,
   median,
   objectCenter,
@@ -222,6 +223,32 @@ console.log('ALIGN — clamps so alignment never pushes off-canvas')
     'off-canvas alignment clamped back to x=0',
     a !== undefined && approxEq(a.patch.x ?? -1, 0)
   )
+}
+
+console.log('DISTRIBUTE — equal spacing between endpoints')
+
+{
+  const objects: PlacedObject[] = [
+    makeBooth({ id: 'a', x: 0, y: 0, width: 8, height: 6 }),
+    makeBooth({ id: 'b', x: 20, y: 0, width: 8, height: 6 }),
+    makeBooth({ id: 'c', x: 50, y: 0, width: 8, height: 6 }),
+  ]
+  const patches = distributeSelectionPatches(objects, 'x', CANVAS_W, CANVAS_L)
+  const b = patches.find((p) => p.id === 'b')
+  assert('middle object moves to evenly spaced center', b !== undefined)
+  if (b?.patch.x != null) {
+    const centerX = b.patch.x + 4
+    assert('middle center lands at 29', approxEq(centerX, 29), String(centerX))
+  }
+}
+
+{
+  const objects: PlacedObject[] = [
+    makeBooth({ id: 'a', x: 0, y: 0 }),
+    makeBooth({ id: 'b', x: 0, y: 10 }),
+  ]
+  const patches = distributeSelectionPatches(objects, 'y', CANVAS_W, CANVAS_L)
+  assert('fewer than three objects yields no patches', patches.length === 0)
 }
 
 console.log()

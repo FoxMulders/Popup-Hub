@@ -37,6 +37,8 @@ export type PassportSaveInput = {
   websiteUrl: string | null
   shopUrl: string | null
   instagramUrl: string | null
+  facebookUrl?: string | null
+  requiresElectricity?: boolean
   businessNumber?: string | null
   socialHandle?: string | null
   verificationStatus?: VendorVerificationStatus | null
@@ -55,6 +57,8 @@ export type PassportSavePayload = {
   website_url: string | null
   shop_url: string | null
   instagram_url: string | null
+  facebook_url: string | null
+  requires_electricity: boolean
   business_number: string | null
   social_handle: string | null
   verification_status: VendorVerificationStatus
@@ -89,6 +93,8 @@ export function buildPassportSavePayload(input: PassportSaveInput): PassportSave
     website_url: input.websiteUrl,
     shop_url: input.shopUrl,
     instagram_url: input.instagramUrl,
+    facebook_url: input.facebookUrl ?? null,
+    requires_electricity: input.requiresElectricity ?? false,
     business_number: input.businessNumber ?? null,
     social_handle: input.socialHandle ?? null,
     verification_status: input.verificationStatus ?? 'unverified',

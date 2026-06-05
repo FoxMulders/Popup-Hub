@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { resolveProfileAvatarForServer } from '@/lib/profile/server-avatar'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { loadPublicPassportIndex } from '@/lib/passport/public-passport-index'
+import { PassportPublicCard } from '@/components/passport/passport-public-card'
 import { PassportStoriesPublicStrip } from '@/components/passport/passport-stories-public-strip'
 import { format } from 'date-fns'
 import { ArrowLeft } from 'lucide-react'
@@ -14,6 +15,7 @@ interface Props {
 export default async function PatronPublicProfilePage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
+  const service = await createServiceClient()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -24,14 +26,12 @@ export default async function PatronPublicProfilePage({ params }: Props) {
 
   if (!profile) notFound()
 
-  const displayAvatarUrl = await resolveProfileAvatarForServer(supabase, profile)
+  const [displayAvatarUrl, publicPassport] = await Promise.all([
+    resolveProfileAvatarForServer(supabase, profile),
+    loadPublicPassportIndex(service, id),
+  ])
 
-  const initials = profile.full_name
-    .split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  const displayName = publicPassport?.businessName?.trim() || profile.full_name
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
@@ -43,29 +43,18 @@ export default async function PatronPublicProfilePage({ params }: Props) {
         Back
       </Link>
 
-      <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
+      <PassportPublicCard
+        displayName={displayName}
+        avatarUrl={displayAvatarUrl}
+        passport={publicPassport}
+        subtitle={`Market Patron · Member since ${format(new Date(profile.created_at), 'MMMM yyyy')}`}
+      >
         <PassportStoriesPublicStrip
           ownerId={profile.id}
-          displayName={profile.full_name}
+          displayName={displayName}
           avatarUrl={displayAvatarUrl}
         />
-
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={displayAvatarUrl ?? undefined} />
-            <AvatarFallback className="bg-harvest-100 text-harvest-700 text-lg font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-foreground truncate">{profile.full_name}</h1>
-            <p className="text-sm text-muted-foreground">Market Patron</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Member since {format(new Date(profile.created_at), 'MMMM yyyy')}
-            </p>
-          </div>
-        </div>
-      </div>
+      </PassportPublicCard>
     </div>
   )
 }

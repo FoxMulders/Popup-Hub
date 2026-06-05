@@ -982,8 +982,11 @@ function pillTextFillForObject(obj: PlacedObject): string {
 
 function objectFallbackLabel(obj: PlacedObject): string {
   switch (obj.kind) {
-    case 'booth':
-      return (obj as BoothObject).vendorId ? '' : 'Booth'
+    case 'booth': {
+      const booth = obj as BoothObject
+      if (booth.vendorId) return ''
+      return booth.tablePurpose === 'guest' ? 'Patron' : 'Vendor'
+    }
     case 'wall':
       return (obj as WallObject).label || 'Perimeter wall'
     case 'open_wall':

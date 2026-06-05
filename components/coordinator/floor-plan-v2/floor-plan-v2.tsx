@@ -86,6 +86,7 @@ import { nextCategoryName } from './canvas/category-palette'
 import {
   aabbFitsCanvas,
   alignSelectionPatches,
+  distributeSelectionPatches,
   canvasClampDelta,
   detectPlacedObjectOverlaps,
   groupCanvasClampDelta,
@@ -1036,6 +1037,47 @@ function FloorPlanV2Workspace({
     [handleAlignSelection]
   )
 
+  const handleDistributeSelection = useCallback(
+    (orientation: 'vertical' | 'horizontal') => {
+      const ids = store.selectedIds
+      if (ids.size < 3) {
+        toast.message('Select three or more objects to distribute spacing.')
+        return false
+      }
+      const selected = store.doc.objects.filter((o) => ids.has(o.id))
+      if (selected.length < 3) return false
+      const axis: 'x' | 'y' = orientation === 'horizontal' ? 'x' : 'y'
+      const patches = distributeSelectionPatches(
+        selected,
+        axis,
+        store.doc.canvasWidthFt,
+        store.doc.canvasLengthFt
+      )
+      if (patches.length === 0) {
+        toast.message('Already evenly spaced.')
+        return false
+      }
+      store.updateObjects(patches)
+      toast.success(
+        orientation === 'horizontal'
+          ? `Distributed ${patches.length} object${patches.length === 1 ? '' : 's'} with equal horizontal spacing.`
+          : `Distributed ${patches.length} object${patches.length === 1 ? '' : 's'} with equal vertical spacing.`,
+        { duration: 1500 }
+      )
+      return true
+    },
+    [store]
+  )
+
+  const handleDistributeHorizontal = useCallback(
+    () => handleDistributeSelection('horizontal'),
+    [handleDistributeSelection]
+  )
+  const handleDistributeVertical = useCallback(
+    () => handleDistributeSelection('vertical'),
+    [handleDistributeSelection]
+  )
+
   const [wizardCanvasFullscreen, setWizardCanvasFullscreen] = useState(false)
   /** Command center panels mode — hides side columns, not native canvas overlay. */
   const dashboardImmersive = isDashboard && commandCenterFullscreen.fullscreen
@@ -1425,6 +1467,10 @@ function FloorPlanV2Workspace({
       vendorTableMetaByKey,
     })
     if (!result) return
+    if (result.patronArrangeAborted) {
+      toast.warning(result.patronArrangeAborted, { duration: 5000 })
+      return
+    }
     if (result.placedCount === 0) {
       toast.error('Patron auto-arrange could not fit any tables inside the room.')
       return
@@ -1907,6 +1953,8 @@ function FloorPlanV2Workspace({
             selectedRoomId={selectedRoomId}
             onAlignVertical={handleAlignVertical}
             onAlignHorizontal={handleAlignHorizontal}
+            onDistributeVertical={handleDistributeVertical}
+            onDistributeHorizontal={handleDistributeHorizontal}
             zoom={currentZoom}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
@@ -1975,6 +2023,8 @@ function FloorPlanV2Workspace({
             selectedRoomId={selectedRoomId}
             onAlignVertical={handleAlignVertical}
             onAlignHorizontal={handleAlignHorizontal}
+            onDistributeVertical={handleDistributeVertical}
+            onDistributeHorizontal={handleDistributeHorizontal}
             zoom={currentZoom}
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}

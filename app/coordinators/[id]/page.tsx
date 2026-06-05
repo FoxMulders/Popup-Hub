@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { resolveProfileAvatarForServer } from '@/lib/profile/server-avatar'
+import { loadPublicPassportIndex } from '@/lib/passport/public-passport-index'
+import { PassportPublicCard } from '@/components/passport/passport-public-card'
+import { PassportStoriesPublicStrip } from '@/components/passport/passport-stories-public-strip'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
-import { CoordinatorStoriesStrip } from '@/components/coordinator/coordinator-stories-strip'
 import { format } from 'date-fns'
 import { Calendar, MapPin, ArrowLeft } from 'lucide-react'
 import type { Event } from '@/types/database'
@@ -44,6 +45,7 @@ export async function generateMetadata({ params }: Props) {
 export default async function CoordinatorPublicProfilePage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
+  const service = await createServiceClient()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -60,7 +62,12 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
 
   if (!profile) notFound()
 
-  const displayAvatarUrl = await resolveProfileAvatarForServer(supabase, profile)
+  const [displayAvatarUrl, publicPassport] = await Promise.all([
+    resolveProfileAvatarForServer(supabase, profile),
+    loadPublicPassportIndex(service, id),
+  ])
+
+  const displayName = publicPassport?.businessName?.trim() || profile.full_name
 
   const { data: events } = await supabase
     .from('events')
@@ -70,13 +77,6 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
     .order('start_at', { ascending: false })
     .limit(12)
 
-  const initials = profile.full_name
-    .split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
       <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
@@ -84,29 +84,20 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
         Back
       </Link>
 
-      <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
-        <CoordinatorStoriesStrip
-          coordinatorId={profile.id}
-          displayName={profile.full_name}
+      <PassportPublicCard
+        displayName={displayName}
+        avatarUrl={displayAvatarUrl}
+        passport={publicPassport}
+        subtitle={`Market Organizer · Member since ${format(new Date(profile.created_at), 'MMMM yyyy')}`}
+      >
+        <PassportStoriesPublicStrip
+          ownerId={profile.id}
+          displayName={displayName}
           avatarUrl={displayAvatarUrl}
         />
+      </PassportPublicCard>
 
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={displayAvatarUrl ?? undefined} />
-            <AvatarFallback className="bg-harvest-100 text-harvest-700 text-lg font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-foreground truncate">{profile.full_name}</h1>
-            <p className="text-sm text-muted-foreground">Market Organizer</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Member since {format(new Date(profile.created_at), 'MMMM yyyy')}
-            </p>
-          </div>
-        </div>
-
+      <div className="rounded-2xl border bg-white p-6 shadow-sm space-y-4">
         <CoordinatorReliabilityBadge
           score={profile.reliability_score as number}
           recentLateCancellationAt={profile.recent_late_cancellation_at as string | null}
@@ -114,9 +105,7 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
 
         <div className="grid grid-cols-2 gap-3 pt-2 text-center text-sm">
           <div className="rounded-xl border bg-canvas p-3">
-            <p className="text-xl font-bold text-foreground">
-              {(events ?? []).length}
-            </p>
+            <p className="text-xl font-bold text-foreground">{(events ?? []).length}</p>
             <p className="text-xs text-muted-foreground">Active & past markets</p>
           </div>
           <div className="rounded-xl border bg-canvas p-3">

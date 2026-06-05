@@ -7,7 +7,8 @@ import { ProfileForm } from './profile-form'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { PurchaseHistory } from '@/components/shopper/purchase-history'
 import { AccountAccessPanel } from '@/components/profile/account-access-panel'
-import { PushNotificationSettings } from '@/components/profile/push-notification-settings'
+import { AccountSecurityCard } from '@/components/profile/account-security-card'
+import { NotificationPreferencesGrid } from '@/components/profile/notification-preferences-grid'
 import { PASSPORT_PATH, passportCompletionSummary } from '@/lib/passport/requirements'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -56,9 +57,18 @@ export default async function ProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-10">
-          <ProfileForm profile={profile as Profile} passportComplete={completion.complete} />
+          <div className="space-y-6">
+            <ProfileForm
+              profile={profile as Profile}
+              passportComplete={completion.complete}
+            />
+            <AccountSecurityCard email={profile.email} />
+            <NotificationPreferencesGrid
+              userId={profile.id}
+              hasPhone={Boolean(profile.phone?.trim())}
+            />
+          </div>
 
-          {/* Sidebar info */}
           <aside className="space-y-6">
             <Link
               href={PASSPORT_PATH}
@@ -92,30 +102,6 @@ export default async function ProfilePage() {
               ) : null}
               <p className="mt-3 text-sm font-medium text-harvest-700">View passport →</p>
             </Link>
-            <div className="rounded-2xl border bg-white p-6">
-              <h3 className="font-semibold text-foreground mb-3">SMS Notifications</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Add your phone number to receive SMS alerts for important events like auction wins,
-                application approvals, and waitlist promotions.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-harvest-400" />
-                  Auction win notifications
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-                  Application approval alerts
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                  Waitlist promotion alerts
-                </li>
-              </ul>
-            </div>
-
-            <PushNotificationSettings />
-
             <AccountAccessPanel
               email={profile.email}
               role={profile.role}

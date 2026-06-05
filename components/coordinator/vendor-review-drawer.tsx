@@ -55,11 +55,13 @@ import {
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FacebookIcon } from '@/components/icons/facebook-icon'
 
 const LINK_ICONS = {
   website_url: Globe,
   shop_url: ShoppingBag,
   instagram_url: Camera,
+  facebook_url: FacebookIcon,
 } as const
 
 const HISTORY_TONE: Record<VendorPlatformHistory['reliabilityTone'], string> = {
@@ -265,6 +267,12 @@ export function VendorReviewDrawer({
                     {passport?.tax_id_encrypted ? (
                       <Badge variant="outline" className="text-xs">
                         Tax ID on file
+                      </Badge>
+                    ) : null}
+                    {passport?.requires_electricity ? (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Zap className="h-3 w-3" />
+                        Needs power
                       </Badge>
                     ) : null}
                   </div>

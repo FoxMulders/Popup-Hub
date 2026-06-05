@@ -20,6 +20,9 @@ import {
   autoArrangeAllRooms,
   autoArrangeInRoom,
   boothWithinRoomFrame,
+  guestActiveBoundingBox,
+  PATRON_ARRANGE_DENSITY_ERROR,
+  PATRON_BOUNDING_BOX_PADDING_FT,
   validateClearances,
   BOOTH_EDGE_CLEARANCE_FT,
   WALL_BUFFER_FT,
@@ -31,6 +34,7 @@ import {
 } from '../components/coordinator/floor-plan-v2/engine/patron-flow'
 import { PERIMETER_WALL_THICKNESS_FT } from '../components/coordinator/floor-plan-v2/interactions/perimeter-walls'
 import { rotatedAabb } from '../components/coordinator/floor-plan-v2/interactions/geometry'
+import { objectFootprintAabb } from '../components/coordinator/floor-plan-v2/state/table-cluster-layout'
 import {
   consolidateBoothsForAutoArrange,
   vendorTableMetaFromApplications,
@@ -554,11 +558,11 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
   )
   const angledCount = centerBooths.filter((b) => Math.abs(b.rotation) > 0.5).length
   const centerOutOk =
-    centerResult.placedCount >= 8 &&
+    centerBooths.length >= 8 &&
     validateClearances(centerResult.doc).length === 0 &&
     angledCount >= Math.min(4, centerBooths.length)
   const perimeterOk =
-    perimeterResult.placedCount >= 4 &&
+    perimeterBooths.length >= 4 &&
     validateClearances(perimeterResult.doc, {
       wallBufferFt: PERIMETER_WALL_THICKNESS_FT + 0.5,
     }).length === 0 &&
@@ -725,6 +729,313 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
   if (guestOnlyOk) pass++
   else fail++
   if (noGuestMergeOk) pass++
+  else fail++
+}
+
+// ----- Isolated vendor / patron auto-arrange scopes -----
+{
+  function boothsOverlap(a: BoothObject, b: BoothObject, clearanceFt = 0): boolean {
+    const ra = objectFootprintAabb(a)
+    const rb = objectFootprintAabb(b)
+    if (clearanceFt <= 0) {
+      return (
+        ra.x < rb.x + rb.width &&
+        ra.x + ra.width > rb.x &&
+        ra.y < rb.y + rb.height &&
+        ra.y + ra.height > rb.y
+      )
+    }
+    const pad = clearanceFt
+    return (
+      ra.x - pad < rb.x + rb.width &&
+      ra.x + ra.width + pad > rb.x &&
+      ra.y - pad < rb.y + rb.height &&
+      ra.y + ra.height + pad > rb.y
+    )
+  }
+
+  const mixedDoc = makeDoc(40, 72, [
+    makeBooth(0, {
+      width: 6,
+      height: 2,
+      tablePurpose: 'vendor',
+      label: 'vendor-a',
+      x: 4,
+      y: 4,
+    }),
+    makeBooth(1, {
+      width: 6,
+      height: 2,
+      tablePurpose: 'vendor',
+      label: 'vendor-b',
+      x: 12,
+      y: 4,
+    }),
+    makeBooth(2, {
+      width: 6,
+      height: 6,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 20,
+      y: 36,
+    }),
+    makeBooth(3, {
+      width: 8,
+      height: 8,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 30,
+      y: 36,
+    }),
+  ])
+
+  const patronBefore = mixedDoc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose === 'guest'
+  )
+  const vendorOnly = autoArrange(mixedDoc, {
+    scope: 'vendor',
+    mode: 'grid',
+    eventCategoryNames: ['Art', 'Food'],
+  })
+  const vendorsAfterVendorScope = vendorOnly.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose !== 'guest'
+  )
+  const patronsAfterVendorScope = vendorOnly.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose === 'guest'
+  )
+
+  const patronPositionsFixed = patronBefore.every((before) => {
+    const after = patronsAfterVendorScope.find((p) => p.id === before.id)
+    return (
+      after != null &&
+      Math.abs(after.x - before.x) < 0.01 &&
+      Math.abs(after.y - before.y) < 0.01
+    )
+  })
+
+  const vendorAvoidsPatrons =
+    vendorsAfterVendorScope.length > 0 &&
+    patronsAfterVendorScope.every((patron) =>
+      vendorsAfterVendorScope.every(
+        (vendor) => !boothsOverlap(vendor, patron, BOOTH_EDGE_CLEARANCE_FT)
+      )
+    )
+
+  const vendorSizesPreserved = vendorsAfterVendorScope.every(
+    (v) => v.width === 6 && v.height === 2
+  )
+
+  const vendorBefore = mixedDoc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose !== 'guest'
+  )
+  const patronOnly = autoArrange(mixedDoc, {
+    scope: 'patron',
+    mode: 'grid',
+  })
+  const vendorsAfterPatronScope = patronOnly.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose !== 'guest'
+  )
+  const patronsAfterPatronScope = patronOnly.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose === 'guest'
+  )
+
+  const vendorPositionsFixed = vendorBefore.every((before) => {
+    const after = vendorsAfterPatronScope.find((v) => v.id === before.id)
+    return (
+      after != null &&
+      Math.abs(after.x - before.x) < 0.01 &&
+      Math.abs(after.y - before.y) < 0.01
+    )
+  })
+
+  const patronAvoidsVendors =
+    patronsAfterPatronScope.length === 2 &&
+    patronsAfterPatronScope.every((patron) =>
+      vendorsAfterPatronScope.every(
+        (vendor) => !boothsOverlap(patron, vendor, BOOTH_EDGE_CLEARANCE_FT)
+      )
+    )
+
+  const patronSizesPreserved =
+    patronsAfterPatronScope.some((b) => b.width === 6 && b.height === 6) &&
+    patronsAfterPatronScope.some((b) => b.width === 8 && b.height === 8)
+
+  console.log('')
+  console.log('=== Isolated vendor / patron auto-arrange ===')
+  console.log(
+    `${patronPositionsFixed ? 'PASS' : 'FAIL'}  vendor scope leaves patron tables fixed`
+  )
+  console.log(
+    `${vendorAvoidsPatrons ? 'PASS' : 'FAIL'}  vendor scope treats patron tables as obstacles`
+  )
+  console.log(
+    `${vendorSizesPreserved ? 'PASS' : 'FAIL'}  vendor scope preserves booth width/height`
+  )
+  console.log(
+    `${vendorPositionsFixed ? 'PASS' : 'FAIL'}  patron scope leaves vendor booths fixed`
+  )
+  console.log(
+    `${patronAvoidsVendors ? 'PASS' : 'FAIL'}  patron scope avoids vendor footprints`
+  )
+  console.log(
+    `${patronSizesPreserved ? 'PASS' : 'FAIL'}  patron scope preserves round table diameters`
+  )
+
+  if (patronPositionsFixed) pass++
+  else fail++
+  if (vendorAvoidsPatrons) pass++
+  else fail++
+  if (vendorSizesPreserved) pass++
+  else fail++
+  if (vendorPositionsFixed) pass++
+  else fail++
+  if (patronAvoidsVendors) pass++
+  else fail++
+  if (patronSizesPreserved) pass++
+  else fail++
+}
+
+// ----- Patron bounding box — localized auto-arrange, non-destructive abort -----
+{
+  const patronTables = [
+    makeBooth(0, {
+      width: 8,
+      height: 8,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 10,
+      y: 20,
+    }),
+    makeBooth(1, {
+      width: 8,
+      height: 8,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 19,
+      y: 20,
+    }),
+    makeBooth(2, {
+      width: 8,
+      height: 8,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 28,
+      y: 20,
+    }),
+    makeBooth(3, {
+      width: 8,
+      height: 8,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 37,
+      y: 20,
+    }),
+  ]
+
+  const box = guestActiveBoundingBox(patronTables)!
+  const minX = Math.min(...patronTables.map((b) => b.x))
+  const maxX = Math.max(...patronTables.map((b) => b.x + b.width))
+  const minY = Math.min(...patronTables.map((b) => b.y))
+  const maxY = Math.max(...patronTables.map((b) => b.y + b.height))
+  const boxOk =
+    box.x === minX - PATRON_BOUNDING_BOX_PADDING_FT &&
+    box.y === minY - PATRON_BOUNDING_BOX_PADDING_FT &&
+    box.width === maxX - minX + PATRON_BOUNDING_BOX_PADDING_FT * 2 &&
+    box.height === maxY - minY + PATRON_BOUNDING_BOX_PADDING_FT * 2
+
+  const denseDoc = makeDoc(40, 72, [
+    makeBooth(0, {
+      width: 6,
+      height: 2,
+      tablePurpose: 'vendor',
+      x: 4,
+      y: 4,
+    }),
+    ...patronTables,
+  ])
+
+  const beforePositions = patronTables.map((b) => ({ id: b.id, x: b.x, y: b.y }))
+  const denseResult = autoArrange(denseDoc, { scope: 'patron', mode: 'grid' })
+  const afterPatrons = denseResult.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose === 'guest'
+  )
+  const positionsPreserved = beforePositions.every((before) => {
+    const after = afterPatrons.find((p) => p.id === before.id)
+    return (
+      after != null &&
+      Math.abs(after.x - before.x) < 0.01 &&
+      Math.abs(after.y - before.y) < 0.01
+    )
+  })
+  const denseAbortOk =
+    denseResult.patronArrangeAborted === PATRON_ARRANGE_DENSITY_ERROR &&
+    positionsPreserved
+
+  const roomyPatrons = [
+    makeBooth(10, {
+      width: 4,
+      height: 4,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 10,
+      y: 12,
+    }),
+    makeBooth(11, {
+      width: 4,
+      height: 4,
+      tablePurpose: 'guest',
+      tableShape: 'round',
+      x: 15,
+      y: 18,
+    }),
+  ]
+  const roomyDoc = makeDoc(40, 72, roomyPatrons)
+  const roomyBefore = roomyPatrons.map((b) => ({ id: b.id, x: b.x, y: b.y }))
+  const roomyResult = autoArrange(roomyDoc, { scope: 'patron', mode: 'grid' })
+  const roomyAfter = roomyResult.doc.objects.filter(
+    (o): o is BoothObject => o.kind === 'booth' && o.tablePurpose === 'guest'
+  )
+  const roomyBox = guestActiveBoundingBox(roomyPatrons)!
+  const allInsideBox = roomyAfter.every((b) => {
+    const right = b.x + b.width
+    const bottom = b.y + b.height
+    return (
+      b.x >= roomyBox.x - 1e-6 &&
+      b.y >= roomyBox.y - 1e-6 &&
+      right <= roomyBox.x + roomyBox.width + 1e-6 &&
+      bottom <= roomyBox.y + roomyBox.height + 1e-6
+    )
+  })
+  const roomyMoved = roomyBefore.some((before) => {
+    const after = roomyAfter.find((p) => p.id === before.id)
+    return (
+      after != null &&
+      (Math.abs(after.x - before.x) > 0.01 || Math.abs(after.y - before.y) > 0.01)
+    )
+  })
+  const roomyOk =
+    !roomyResult.patronArrangeAborted &&
+    roomyResult.droppedCount === 0 &&
+    roomyAfter.length === 2 &&
+    allInsideBox &&
+    (roomyMoved || roomyResult.placedCount === 2)
+
+  console.log('')
+  console.log('=== Patron bounding box auto-arrange ===')
+  console.log(
+    `${boxOk ? 'PASS' : 'FAIL'}  guestActiveBoundingBox adds ${PATRON_BOUNDING_BOX_PADDING_FT}ft padding`
+  )
+  console.log(
+    `${denseAbortOk ? 'PASS' : 'FAIL'}  dense patron cluster aborts without moving tables`
+  )
+  console.log(
+    `${roomyOk ? 'PASS' : 'FAIL'}  roomy patron cluster rearranges inside active box`
+  )
+  if (boxOk) pass++
+  else fail++
+  if (denseAbortOk) pass++
+  else fail++
+  if (roomyOk) pass++
   else fail++
 }
 

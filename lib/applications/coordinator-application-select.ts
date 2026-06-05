@@ -24,7 +24,9 @@ export const COORDINATOR_APPLICATION_SELECT = `
       category_ids,
       website_url,
       shop_url,
-      instagram_url
+      instagram_url,
+      facebook_url,
+      requires_electricity
     )
   ),
   category:categories(name)

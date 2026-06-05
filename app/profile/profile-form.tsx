@@ -1,13 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useProfileSettings } from '@/hooks/use-profile-settings'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AvatarPicker } from '@/components/profile/avatar-picker'
-import { toast } from 'sonner'
 import { ArrowRight, IdCard, Loader2, User } from 'lucide-react'
 import type { Profile } from '@/types/database'
 import { PASSPORT_PATH } from '@/lib/passport/requirements'
@@ -18,51 +15,31 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ profile, passportComplete = true }: ProfileFormProps) {
-  const supabase = createClient()
-  const [fullName, setFullName] = useState(profile.full_name ?? '')
-  const [phone, setPhone] = useState(profile.phone ?? '')
-  const [shareContact, setShareContact] = useState(profile.share_contact_with_vendors ?? false)
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url)
-  const [loading, setLoading] = useState(false)
+  const { state, loading, updateField, save } = useProfileSettings(profile)
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: fullName,
-        phone: phone || null,
-        share_contact_with_vendors: shareContact,
-      })
-      .eq('id', profile.id)
-
-    setLoading(false)
-
-    if (error) {
-      toast.error('Failed to save profile')
-    } else {
-      toast.success('Profile updated successfully')
-    }
+    await save()
   }
 
   return (
-    <form onSubmit={handleSave} className="rounded-2xl border bg-white p-8 space-y-8">
-      <AvatarPicker
-        profile={{ ...profile, avatar_url: avatarUrl }}
-        onAvatarChange={setAvatarUrl}
-      />
+    <form onSubmit={handleSave} className="rounded-2xl border bg-white p-8 space-y-6">
+      <div>
+        <h2 className="text-sm font-semibold text-foreground">Private account details</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Legal identity and contact used for sign-in and automated alerts only.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="full_name" className="text-sm font-medium">
-            Full Name
+          <Label htmlFor="legal_name" className="text-sm font-medium">
+            Legal Name
           </Label>
           <Input
-            id="full_name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            id="legal_name"
+            value={state.legalName}
+            onChange={(e) => updateField('legalName', e.target.value)}
             placeholder="Jane Smith"
             className="h-11"
           />
@@ -70,7 +47,7 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
 
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
-            Email Address
+            Private Email
           </Label>
           <Input
             id="email"
@@ -81,50 +58,55 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
           <p className="text-xs text-muted-foreground">Email cannot be changed here</p>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 md:col-span-2">
           <Label htmlFor="phone" className="text-sm font-medium">
             Phone Number
-            <span className="ml-2 text-xs text-muted-foreground font-normal">(optional — for SMS alerts)</span>
           </Label>
+          <p className="text-xs text-muted-foreground -mt-1">
+            Private — Used only for automated system SMS alerts.
+          </p>
           <Input
             id="phone"
             type="tel"
             inputMode="tel"
             autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            value={state.phone}
+            onChange={(e) => updateField('phone', e.target.value)}
             placeholder="+1 (555) 000-0000"
             className="h-11 max-w-[16rem]"
           />
         </div>
       </div>
 
-      <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4 space-y-2">
-        <label htmlFor="share-contact" className="flex items-start gap-3 cursor-pointer">
-          <input
-            id="share-contact"
-            type="checkbox"
-            className="mt-1 h-4 w-4 rounded border-gray-300"
-            checked={shareContact}
-            onChange={(e) => setShareContact(e.target.checked)}
-          />
-          <span>
-            <span className="text-sm font-medium text-foreground">
-              Share contact info with vendors (Quarter Auctions only)
+      {profile.role === 'shopper' ? (
+        <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4">
+          <label htmlFor="share-contact" className="flex items-start gap-3 cursor-pointer">
+            <input
+              id="share-contact"
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-gray-300"
+              checked={state.shareContactWithVendors}
+              onChange={(e) => updateField('shareContactWithVendors', e.target.checked)}
+            />
+            <span>
+              <span className="text-sm font-medium text-foreground">
+                Share contact info with vendors (Quarter Auctions only)
+              </span>
+              <span className="block text-xs text-muted-foreground mt-0.5">
+                When enabled, donating vendors can see your name, email, and phone after you win a
+                quarter auction item.
+              </span>
             </span>
-            <span className="block text-xs text-muted-foreground mt-0.5">
-              When enabled, donating vendors can see your name, email, and phone after you win a quarter auction item.
-            </span>
-          </span>
-        </label>
-      </div>
+          </label>
+        </div>
+      ) : null}
 
       {!passportComplete ? (
         <div className="rounded-xl border border-harvest-200 bg-harvest-50/70 p-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-harvest-800">Complete your passport</p>
             <p className="text-xs text-harvest-700 mt-0.5">
-              Add the details required for your {profile.role} account.
+              Public brand details live on your passport, not here.
             </p>
           </div>
           <Link href={PASSPORT_PATH}>

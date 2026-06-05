@@ -8,11 +8,13 @@ import type { AddLayoutRoomOptions } from '@/lib/coordinator/add-layout-room'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import {
   getVisibleToolbarBlockIds,
+  getStaticToolbarRowGroups,
   renderCanvasCommandBarBlock,
   type CanvasCommandBarBlockContext,
 } from './canvas-command-bar-blocks'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import { CanvasToolbarReorder } from './canvas-toolbar-reorder'
+import { ToolbarCompactProvider } from './command-button'
 
 interface CanvasCommandBarProps extends CanvasToolHostProps {
   /** Fixed tool rows — no drag-reorder (command center). */
@@ -48,20 +50,32 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
  * Drop handlers into `canvas-command-bar-blocks.tsx` per block id.
  */
 function CanvasToolbarStatic({
-  visibleBlockIds,
+  rowGroups,
   renderBlock,
+  compact,
 }: {
-  visibleBlockIds: readonly CanvasToolbarBlockId[]
+  rowGroups: readonly (readonly CanvasToolbarBlockId[])[]
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  compact?: boolean
 }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-1">
-      {visibleBlockIds.map((id) => (
+    <div className="flex min-w-0 flex-col gap-1">
+      {rowGroups.map((row, rowIdx) => (
         <div
-          key={id}
-          className="inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-1 py-0.5 shadow-sm"
+          key={rowIdx}
+          className="flex min-w-0 flex-wrap items-center gap-1"
         >
-          {renderBlock(id)}
+          {row.map((id) => (
+            <div
+              key={id}
+              className={cn(
+                'inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-1 shadow-sm',
+                compact ? 'py-[0.45rem]' : 'py-0.5'
+              )}
+            >
+              {renderBlock(id)}
+            </div>
+          ))}
         </div>
       ))}
     </div>
@@ -82,6 +96,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onCenterView,
     onAlignVertical,
     onAlignHorizontal,
+    onDistributeVertical,
+    onDistributeHorizontal,
     selectedCount,
     onCopy,
     onPaste,
@@ -177,6 +193,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onCenterView,
       onAlignVertical,
       onAlignHorizontal,
+      onDistributeVertical,
+      onDistributeHorizontal,
       selectedCount,
       onCopy,
       onPaste,
@@ -224,6 +242,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
+      compact: staticLayout,
     }),
     [
       toolState,
@@ -236,6 +255,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onCenterView,
       onAlignVertical,
       onAlignHorizontal,
+      onDistributeVertical,
+      onDistributeHorizontal,
       selectedCount,
       onCopy,
       onPaste,
@@ -297,27 +318,42 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     [needsRoomFirst, showVendor, showPatron, showRoom]
   )
 
+  const staticRowGroups = useMemo(
+    () =>
+      getStaticToolbarRowGroups({
+        needsRoomFirst,
+        showVendor,
+        showPatron,
+        showRoom,
+      }),
+    [needsRoomFirst, showVendor, showPatron, showRoom]
+  )
+
   return (
-    <div
-      className={cn(
-        'shrink-0 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm',
-        staticLayout && 'max-h-[min(42vh,220px)] overflow-x-auto overflow-y-auto',
-        className
-      )}
-      role="toolbar"
-      aria-label="Canvas command ribbon"
-    >
-      {staticLayout ? (
-        <CanvasToolbarStatic
-          visibleBlockIds={visibleBlockIds}
-          renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
-        />
-      ) : (
-        <CanvasToolbarReorder
-          visibleBlockIds={visibleBlockIds}
-          renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
-        />
-      )}
-    </div>
+    <ToolbarCompactProvider compact={staticLayout}>
+      <div
+        className={cn(
+          'shrink-0 rounded-lg border border-stone-200 bg-white px-2 shadow-sm',
+          staticLayout ? 'py-[0.3375rem]' : 'py-1.5',
+          staticLayout && 'max-h-[min(42vh,220px)] overflow-x-auto overflow-y-auto',
+          className
+        )}
+        role="toolbar"
+        aria-label="Canvas command ribbon"
+      >
+        {staticLayout ? (
+          <CanvasToolbarStatic
+            rowGroups={staticRowGroups}
+            compact
+            renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
+          />
+        ) : (
+          <CanvasToolbarReorder
+            visibleBlockIds={visibleBlockIds}
+            renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
+          />
+        )}
+      </div>
+    </ToolbarCompactProvider>
   )
 }

@@ -22,7 +22,13 @@ export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
 ] as const
 
 export const DEFAULT_CANVAS_TOOLBAR_ORDER: CanvasToolbarBlockId[] = [
-  ...CANVAS_TOOLBAR_BLOCK_IDS,
+  'room',
+  'patron',
+  'vendor',
+  'utilities',
+  'primitives',
+  'history-clipboard',
+  'view-align',
 ]
 
 const STORAGE_KEY = 'popup-hub:floor-plan-v2:toolbar-order'

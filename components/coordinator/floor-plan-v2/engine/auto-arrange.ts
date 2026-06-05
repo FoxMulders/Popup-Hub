@@ -94,6 +94,11 @@ export const FRONT_CLEARANCE_FT = PATRON_PAIR_WIDTH_FT
  * never sit flush.
  */
 export const BOOTH_EDGE_CLEARANCE_FT = 2
+/** Padding added around manually placed patron tables before auto-arrange. */
+export const PATRON_BOUNDING_BOX_PADDING_FT = 1
+/** Shown when patron auto-arrange cannot fit all tables inside the active box. */
+export const PATRON_ARRANGE_DENSITY_ERROR =
+  'Could not automatically adjust tables. Manual placement is required to fit this density.'
 
 export type AutoArrangeMode = 'grid' | 'staggered' | 'perimeter-only'
 
@@ -171,6 +176,11 @@ export interface AutoArrangeResult {
   perimeterCapacityError?: string
   /** Human-readable summary of the deterministic layout pass. */
   layoutExplanation?: string
+  /**
+   * Set when patron auto-arrange aborts to preserve manual placement
+   * (tables could not fit equidistantly inside the active bounding box).
+   */
+  patronArrangeAborted?: string
 }
 
 export interface AutoArrangeInRoomResult extends AutoArrangeResult {
@@ -225,6 +235,16 @@ function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
     out.push(rotatedAabb(obj))
   }
   return out
+}
+
+/** Fixed booth footprints (patron or vendor) treated as no-go zones with edge clearance. */
+function boothFootprintObstacleRects(
+  booths: BoothObject[],
+  clearanceFt = BOOTH_EDGE_CLEARANCE_FT
+): Rect[] {
+  return booths.map((b) =>
+    expandRectForClearance(objectFootprintAabb(b), clearanceFt)
+  )
 }
 
 type Slot = { x: number; y: number; dist?: number; perimeter?: PerimeterSlot }
@@ -319,7 +339,9 @@ function placeBoothsAtSlots(
   }
 
   function candidateFits(candidate: Rect): boolean {
-    if (candidate.x + boothW > cw || candidate.y + boothH > cl) return false
+    if (candidate.x + candidate.width > cw || candidate.y + candidate.height > cl) {
+      return false
+    }
     if (candidate.x < WALL_BUFFER_FT - 1e-6 || candidate.y < WALL_BUFFER_FT - 1e-6) {
       return false
     }
@@ -336,15 +358,18 @@ function placeBoothsAtSlots(
 
   function placeAtSlot(slot: Slot): boolean {
     if (nextSourceIdx >= sourceBooths.length) return false
+    const src = sourceBooths[nextSourceIdx]!
+    const w = roundHalf(src.width)
+    const h = roundHalf(src.height)
     const candidate: Rect = {
       x: slot.x,
       y: slot.y,
-      width: boothW,
-      height: boothH,
+      width: w,
+      height: h,
     }
     if (!candidateFits(candidate)) return false
 
-    const src = sourceBooths[nextSourceIdx++]!
+    nextSourceIdx++
     const { category, advanceBy } = pickCategoryForSlot(candidate)
     if (categoryCount > 0) {
       categoryRotor = (categoryRotor + advanceBy) % categoryCount
@@ -360,8 +385,8 @@ function placeBoothsAtSlots(
       ...src,
       x: candidate.x,
       y: candidate.y,
-      width: boothW,
-      height: boothH,
+      width: w,
+      height: h,
       rotation: 0,
       categoryName: finalCategory,
     }
@@ -370,16 +395,16 @@ function placeBoothsAtSlots(
         ...placed,
         x: slot.perimeter.x,
         y: slot.perimeter.y,
-        width: boothW,
-        height: boothH,
+        width: w,
+        height: h,
         rotation: rotationForPerimeterEdge(slot.perimeter.edge),
       }
     } else if (slot.perimeter && perimeterOrientFrame) {
       placed = orientBoothForPerimeterSlot(
         placed,
         slot.perimeter,
-        boothW,
-        boothH,
+        w,
+        h,
         perimeterOrientFrame
       )
     }
@@ -395,17 +420,20 @@ function placeBoothsAtSlots(
   }
 
   if (nextSourceIdx < sourceBooths.length) {
-    const colPitch = boothW + BOOTH_EDGE_CLEARANCE_FT
-    const rowPitch = boothH + BOOTH_EDGE_CLEARANCE_FT
     const inset = WALL_BUFFER_FT
+    const remaining = sourceBooths.slice(nextSourceIdx)
+    const maxW = Math.max(boothW, ...remaining.map((b) => b.width))
+    const maxH = Math.max(boothH, ...remaining.map((b) => b.height))
+    const colPitch = maxW + BOOTH_EDGE_CLEARANCE_FT
+    const rowPitch = maxH + BOOTH_EDGE_CLEARANCE_FT
     for (
       let y = inset;
-      y + boothH <= cl - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
+      y + maxH <= cl - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
       y += rowPitch
     ) {
       for (
         let x = inset;
-        x + boothW <= cw - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
+        x + maxW <= cw - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
         x += colPitch
       ) {
         placeAtSlot({ x: roundHalf(x), y: roundHalf(y) })
@@ -493,6 +521,8 @@ interface VendorAutoArrangePassResult {
 interface GuestAutoArrangePassResult {
   placed: BoothObject[]
   dropped: BoothObject[]
+  /** True when layout aborted — `placed` holds originals unchanged. */
+  aborted?: boolean
 }
 
 function boothCenter(b: Pick<BoothObject, 'x' | 'y' | 'width' | 'height'>): {
@@ -524,9 +554,19 @@ function guestTableFits(
   wallInsetFt: number,
   obstacles: Rect[],
   vendorRects: Rect[],
-  placedRects: Rect[]
+  placedRects: Rect[],
+  region?: Rect | null
 ): boolean {
-  if (
+  if (region) {
+    if (
+      rect.x < region.x - 1e-6 ||
+      rect.y < region.y - 1e-6 ||
+      rect.x + rect.width > region.x + region.width + 1e-6 ||
+      rect.y + rect.height > region.y + region.height + 1e-6
+    ) {
+      return false
+    }
+  } else if (
     rect.x < wallInsetFt - 1e-6 ||
     rect.y < wallInsetFt - 1e-6 ||
     rect.x + rect.width > cw - wallInsetFt + 1e-6 ||
@@ -553,6 +593,36 @@ function guestPlacementBounds(booths: BoothObject[]): Rect | null {
     maxY = Math.max(maxY, b.y + b.height)
   }
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+/** Imaginary sub-box around existing patron tables plus perimeter padding. */
+export function guestActiveBoundingBox(
+  booths: BoothObject[],
+  paddingFt = PATRON_BOUNDING_BOX_PADDING_FT
+): Rect | null {
+  const bounds = guestPlacementBounds(booths)
+  if (!bounds) return null
+  return {
+    x: bounds.x - paddingFt,
+    y: bounds.y - paddingFt,
+    width: bounds.width + paddingFt * 2,
+    height: bounds.height + paddingFt * 2,
+  }
+}
+
+function filterSlotsWithinRegion(
+  slots: Array<{ x: number; y: number }>,
+  region: Rect,
+  maxTableW: number,
+  maxTableH: number
+): Array<{ x: number; y: number }> {
+  return slots.filter(
+    (slot) =>
+      slot.x >= region.x - 1e-6 &&
+      slot.y >= region.y - 1e-6 &&
+      slot.x + maxTableW <= region.x + region.width + 1e-6 &&
+      slot.y + maxTableH <= region.y + region.height + 1e-6
+  )
 }
 
 /** Prefer the area guest tables were drawn in; fall back to room center or open space away from vendors. */
@@ -627,10 +697,235 @@ function preserveGuestTableFootprint(booth: BoothObject): BoothObject {
   }
 }
 
+function retainUnplacedGuestTables(
+  sourceBooths: BoothObject[],
+  placed: BoothObject[],
+  cw: number,
+  cl: number,
+  wallInsetFt: number,
+  obstacles: Rect[],
+  vendorRects: Rect[],
+  region?: Rect | null
+): { merged: BoothObject[]; unmovedCount: number } {
+  const placedIds = new Set(placed.map((b) => b.id))
+  const placedRects = placed.map((b) => objectFootprintAabb(b))
+  const retained = sourceBooths.filter((b) => {
+    if (placedIds.has(b.id)) return false
+    const rect = objectFootprintAabb(b)
+    return guestTableFits(
+      rect,
+      cw,
+      cl,
+      wallInsetFt,
+      obstacles,
+      vendorRects,
+      placedRects,
+      region
+    )
+  })
+  return {
+    merged: [...placed, ...retained],
+    unmovedCount: sourceBooths.length - placed.length,
+  }
+}
+
+function medianGuestTableDimension(values: number[]): number {
+  if (values.length === 0) return 6
+  const sorted = [...values].sort((a, b) => a - b)
+  return roundHalf(sorted[Math.floor(sorted.length / 2)] ?? 6)
+}
+
+function tryPlaceGuestAtSlots(
+  sorted: BoothObject[],
+  slots: Array<{ x: number; y: number }>,
+  ctx: {
+    cw: number
+    cl: number
+    wallInsetFt: number
+    obstacles: Rect[]
+    vendorRects: Rect[]
+    region?: Rect | null
+  }
+): GuestAutoArrangePassResult {
+  const placed: BoothObject[] = []
+  const placedRects: Rect[] = []
+  const remaining = [...sorted]
+
+  for (const slot of slots) {
+    if (remaining.length === 0) break
+    let matchIdx = -1
+    for (let i = 0; i < remaining.length; i++) {
+      const src = remaining[i]!
+      const candidate: Rect = {
+        x: slot.x,
+        y: slot.y,
+        width: src.width,
+        height: src.height,
+      }
+      if (
+        guestTableFits(
+          candidate,
+          ctx.cw,
+          ctx.cl,
+          ctx.wallInsetFt,
+          ctx.obstacles,
+          ctx.vendorRects,
+          placedRects,
+          ctx.region
+        )
+      ) {
+        const item: BoothObject = {
+          ...src,
+          x: candidate.x,
+          y: candidate.y,
+          width: src.width,
+          height: src.height,
+          rotation: 0,
+        }
+        placed.push(item)
+        placedRects.push(objectFootprintAabb(item))
+        matchIdx = i
+        break
+      }
+    }
+    if (matchIdx >= 0) {
+      remaining.splice(matchIdx, 1)
+    }
+  }
+
+  return { placed, dropped: remaining }
+}
+
+function arrangeGuestTablesDeterministic(
+  guestBooths: BoothObject[],
+  ctx: {
+    cw: number
+    cl: number
+    obstacles: Rect[]
+    vendorRects: Rect[]
+    wallInsetFt: number
+    mode: AutoArrangeMode
+    aisleWidthFt: number
+    snapFt: number
+    localRing: PlacementRing | null
+    activeBoundingBox?: Rect | null
+  }
+): GuestAutoArrangePassResult | null {
+  const sorted = sortGuestTablesByPlacement(
+    guestBooths.map(preserveGuestTableFootprint)
+  )
+  const tableW = medianGuestTableDimension(sorted.map((b) => b.width))
+  const tableH = medianGuestTableDimension(sorted.map((b) => b.height))
+  const maxTableW = Math.max(tableW, ...sorted.map((b) => b.width))
+  const maxTableH = Math.max(tableH, ...sorted.map((b) => b.height))
+  const region = ctx.activeBoundingBox ?? null
+  const layoutW = region?.width ?? ctx.cw
+  const layoutH = region?.height ?? ctx.cl
+  const layoutWallInset = region ? 0 : ctx.wallInsetFt
+  const slotCtx = { ...ctx, region }
+  const restrictedZones = restrictedZonesFromObstacles([
+    ...ctx.obstacles,
+    ...ctx.vendorRects.map((r) =>
+      expandRectForClearance(r, BOOTH_EDGE_CLEARANCE_FT)
+    ),
+  ])
+
+  if (ctx.mode === 'perimeter-only' && ctx.localRing && !region) {
+    const perimeterSlots = perimeterSlotsAlongRing(
+      ctx.localRing,
+      tableW,
+      tableH
+    ).map((p) => ({ x: p.x, y: p.y }))
+    if (perimeterSlots.length === 0) return null
+    const attempt = tryPlaceGuestAtSlots(sorted, perimeterSlots, slotCtx)
+    if (attempt.dropped.length === 0) return attempt
+    return null
+  }
+
+  const layoutMode = autoArrangeModeToMarketLayout(ctx.mode)
+  const deterministic = generateDeterministicMarketLayout({
+    marketWidthFt: layoutW,
+    marketHeightFt: layoutH,
+    tableWidthFt: tableW,
+    tableHeightFt: tableH,
+    tableCount: sorted.length,
+    tableIds: sorted.map((b) => b.id),
+    layoutMode,
+    aisleWidthFt: ctx.aisleWidthFt,
+    wallInsetFt: layoutWallInset,
+    snapFt: ctx.snapFt,
+    restrictedZones,
+  })
+
+  if (!deterministic.ok) return null
+
+  const slotCandidates =
+    deterministic.layoutSlotCandidates ??
+    deterministic.placements.map((place) => ({
+      x: place.x,
+      y: place.y,
+    }))
+  const originX = region?.x ?? 0
+  const originY = region?.y ?? 0
+  const rawSlots = slotCandidates.map((place) => ({
+    x: place.x + originX,
+    y: place.y + originY,
+  }))
+  const slots = region
+    ? filterSlotsWithinRegion(rawSlots, region, maxTableW, maxTableH)
+    : rawSlots
+  if (slots.length < sorted.length) return null
+  const attempt = tryPlaceGuestAtSlots(sorted, slots, slotCtx)
+  if (attempt.dropped.length === 0) return attempt
+  return null
+}
+
+function abortGuestArrange(sorted: BoothObject[]): GuestAutoArrangePassResult {
+  return { placed: sorted, dropped: [], aborted: true }
+}
+
+function finalizeGuestArrange(
+  sorted: BoothObject[],
+  result: GuestAutoArrangePassResult,
+  ctx: {
+    cw: number
+    cl: number
+    wallInsetFt: number
+    obstacles: Rect[]
+    vendorRects: Rect[]
+    region?: Rect | null
+    requireFullPlacement: boolean
+  }
+): GuestAutoArrangePassResult {
+  if (ctx.requireFullPlacement && result.dropped.length > 0) {
+    return abortGuestArrange(sorted)
+  }
+  const { merged } = retainUnplacedGuestTables(
+    sorted,
+    result.placed,
+    ctx.cw,
+    ctx.cl,
+    ctx.wallInsetFt,
+    ctx.obstacles,
+    ctx.vendorRects,
+    ctx.region
+  )
+  const mergedIds = new Set(merged.map((b) => b.id))
+  const dropped = sorted.filter((b) => !mergedIds.has(b.id))
+  if (ctx.requireFullPlacement && dropped.length > 0) {
+    return abortGuestArrange(sorted)
+  }
+  return { placed: merged, dropped }
+}
+
 /**
  * Pack patron / guest tables separately from vendor booths — preserves
  * each table's laid size (round tables stay circular) and sorts them
  * near where they were placed or in open space away from vendor units.
+ *
+ * When `activeBoundingBox` is set (patron-only pass), layout is confined
+ * to that imaginary sub-box and aborts non-destructively if every table
+ * cannot be rearranged inside it.
  */
 export function arrangeGuestTables(
   guestBooths: BoothObject[],
@@ -640,6 +935,12 @@ export function arrangeGuestTables(
     obstacles: Rect[]
     vendorRects: Rect[]
     wallInsetFt?: number
+    mode?: AutoArrangeMode
+    aisleWidthFt?: number
+    snapFt?: number
+    localRing?: PlacementRing | null
+    /** Localized perimeter around existing patron tables (patron scope). */
+    activeBoundingBox?: Rect | null
   }
 ): GuestAutoArrangePassResult {
   if (guestBooths.length === 0) {
@@ -647,14 +948,56 @@ export function arrangeGuestTables(
   }
 
   const wallInsetFt = ctx.wallInsetFt ?? WALL_BUFFER_FT
-  const sorted = sortGuestTablesByPlacement(guestBooths.map(preserveGuestTableFootprint))
-  const origins = guestPackOrigins(
-    ctx.cw,
-    ctx.cl,
-    wallInsetFt,
-    sorted,
-    ctx.vendorRects
+  const mode = ctx.mode ?? 'grid'
+  const aisleWidthFt = ctx.aisleWidthFt ?? DEFAULT_AISLE_WIDTH_FT
+  const snapFt = ctx.snapFt ?? 0.5
+  const localRing = ctx.localRing ?? null
+  const region = ctx.activeBoundingBox ?? null
+  const requireFullPlacement = region != null
+  const sorted = sortGuestTablesByPlacement(
+    guestBooths.map(preserveGuestTableFootprint)
   )
+  const finalizeCtx = {
+    cw: ctx.cw,
+    cl: ctx.cl,
+    wallInsetFt,
+    obstacles: ctx.obstacles,
+    vendorRects: ctx.vendorRects,
+    region,
+    requireFullPlacement,
+  }
+
+  const deterministic = arrangeGuestTablesDeterministic(sorted, {
+    cw: ctx.cw,
+    cl: ctx.cl,
+    obstacles: ctx.obstacles,
+    vendorRects: ctx.vendorRects,
+    wallInsetFt,
+    mode,
+    aisleWidthFt,
+    snapFt,
+    localRing,
+    activeBoundingBox: region,
+  })
+  if (deterministic) {
+    return finalizeGuestArrange(sorted, deterministic, finalizeCtx)
+  }
+
+  const origins = region
+    ? [
+        { x: region.x, y: region.y },
+        {
+          x: region.x + region.width / 2,
+          y: region.y + region.height / 2,
+        },
+      ]
+    : guestPackOrigins(
+        ctx.cw,
+        ctx.cl,
+        wallInsetFt,
+        sorted,
+        ctx.vendorRects
+      )
 
   for (const anchor of origins) {
     const placed: BoothObject[] = []
@@ -664,7 +1007,8 @@ export function arrangeGuestTables(
     let rowY = anchor.y
     let rowMaxH = 0
     const rowStartX = anchor.x
-    const maxRowWidth = ctx.cw - wallInsetFt * 2
+    const maxRowWidth = region?.width ?? ctx.cw - wallInsetFt * 2
+    const rowEndX = region ? region.x + region.width : anchor.x + maxRowWidth
 
     for (const src of sorted) {
       let placedOne = false
@@ -679,8 +1023,8 @@ export function arrangeGuestTables(
         }
 
         const rowOverflow =
-          candidate.x + candidate.width > anchor.x + maxRowWidth &&
-          candidate.x > rowStartX
+          candidate.x + candidate.width > rowEndX + 1e-6 &&
+          candidate.x > rowStartX + 1e-6
 
         if (rowOverflow) {
           rowX = rowStartX
@@ -697,7 +1041,8 @@ export function arrangeGuestTables(
             wallInsetFt,
             ctx.obstacles,
             ctx.vendorRects,
-            placedRects
+            placedRects,
+            region
           )
         ) {
           const item: BoothObject = {
@@ -727,11 +1072,33 @@ export function arrangeGuestTables(
     }
 
     if (dropped.length === 0) {
-      return { placed, dropped }
+      return finalizeGuestArrange(
+        sorted,
+        { placed, dropped: [] },
+        finalizeCtx
+      )
     }
   }
 
-  return { placed: [], dropped: sorted }
+  if (requireFullPlacement) {
+    return abortGuestArrange(sorted)
+  }
+
+  const { merged } = retainUnplacedGuestTables(
+    sorted,
+    [],
+    ctx.cw,
+    ctx.cl,
+    wallInsetFt,
+    ctx.obstacles,
+    ctx.vendorRects,
+    region
+  )
+  const mergedIds = new Set(merged.map((b) => b.id))
+  return {
+    placed: merged,
+    dropped: sorted.filter((b) => !mergedIds.has(b.id)),
+  }
 }
 
 function autoArrangeVendorBooths(
@@ -928,17 +1295,33 @@ function mergeAutoArrangeResult(
   doc: FloorPlanDoc,
   otherObjects: PlacedObject[],
   vendorPass: VendorAutoArrangePassResult,
-  guestPass: GuestAutoArrangePassResult
+  guestPass: GuestAutoArrangePassResult,
+  scope: AutoArrangeScope,
+  vendorSourceCount: number
 ): AutoArrangeResult {
   const allBooths = [...vendorPass.newVendorBooths, ...guestPass.placed]
+  const vendorRepositioned = Math.max(0, vendorSourceCount - vendorPass.vendorDroppedCount)
+  const patronRepositioned =
+    guestPass.aborted ? 0 : guestPass.placed.length
+  const placedCount =
+    scope === 'vendor'
+      ? vendorRepositioned
+      : scope === 'patron'
+        ? patronRepositioned
+        : vendorRepositioned + patronRepositioned
   return {
     doc: { ...doc, objects: [...otherObjects, ...allBooths] },
-    placedCount: allBooths.length,
-    droppedCount: vendorPass.vendorDroppedCount + guestPass.dropped.length,
+    placedCount,
+    droppedCount: guestPass.aborted
+      ? 0
+      : vendorPass.vendorDroppedCount + guestPass.dropped.length,
     unsatisfiedCategoryCount: vendorPass.unsatisfiedCategoryCount,
     overflowCount: vendorPass.overflowCount,
     perimeterCapacityError: vendorPass.perimeterCapacityError,
     layoutExplanation: vendorPass.layoutExplanation,
+    patronArrangeAborted: guestPass.aborted
+      ? PATRON_ARRANGE_DENSITY_ERROR
+      : undefined,
   }
 }
 
@@ -973,7 +1356,10 @@ export function autoArrange(
   const cw = doc.canvasWidthFt
   const cl = doc.canvasLengthFt
   const otherObjects = doc.objects.filter((o) => o.kind !== 'booth')
-  const obstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
+  const structuralObstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
+  const patronFixedObstacles =
+    scope === 'patron' ? [] : boothFootprintObstacleRects(guestBooths)
+  const vendorObstacles = [...structuralObstacles, ...patronFixedObstacles]
 
   const hasVendor = allVendorBooths.length > 0
   const hasGuest = guestBooths.length > 0
@@ -1008,7 +1394,7 @@ export function autoArrange(
   const vendorPass =
     scope === 'patron'
       ? {
-          newVendorBooths: sourceBooths,
+          newVendorBooths: vendorRawBooths,
           vendorDroppedCount: 0,
           unsatisfiedCategoryCount: 0,
           overflowCount: 0,
@@ -1021,12 +1407,12 @@ export function autoArrange(
           placementOrigin,
           localRing,
           otherObjects,
-          obstacles,
+          obstacles: vendorObstacles,
         })
 
   const vendorRects =
     scope === 'patron'
-      ? sourceBooths.map((b) => objectFootprintAabb(b))
+      ? vendorRawBooths.map((b) => objectFootprintAabb(b))
       : vendorPass.newVendorBooths.map((b) => objectFootprintAabb(b))
 
   const guestPass =
@@ -1035,11 +1421,24 @@ export function autoArrange(
       : arrangeGuestTables(guestBooths, {
           cw,
           cl,
-          obstacles,
+          obstacles: structuralObstacles,
           vendorRects,
+          mode,
+          aisleWidthFt,
+          snapFt: doc.snapFt > 0 ? doc.snapFt : 0.5,
+          localRing,
+          activeBoundingBox:
+            scope === 'patron' ? guestActiveBoundingBox(guestBooths) : null,
         })
 
-  const merged = mergeAutoArrangeResult(doc, otherObjects, vendorPass, guestPass)
+  const merged = mergeAutoArrangeResult(
+    doc,
+    otherObjects,
+    vendorPass,
+    guestPass,
+    scope,
+    sourceBooths.length
+  )
   if (vendorPass.perimeterCapacityError && merged.placedCount === 0) {
     merged.perimeterCapacityError = vendorPass.perimeterCapacityError
   }
