@@ -17,6 +17,8 @@
 ## Goal
 **Coordinator smoke-test on prod** — verify layout fixes shipped in build **106** (`cde554e` @ https://popuphub.ca). Auto-arrange keeps vendor booths and patron tables on **separate passes** (see **Vendor placements** / **Patron placements** below). Verify vendor-only and patron-only behavior with `npx tsx scripts/verify-auto-arrange.ts` (guest-table section today; extend when patron mode parity ships).
 
+**Fixed (local):** Vendor auto-arrange no longer **deletes** booths when obstacles / space restrictions block some deterministic slots — scans all valid grid slots, fallback row-pack, keeps unmoved booths at their prior position when reposition fails (toast: “left in place”). `lib/floor-plan/deterministic-market-layout.ts` + `engine/auto-arrange.ts`.
+
 ## Vendor placements
 
 Vendor booths are rectangular sellable units (`tablePurpose: 'vendor'`). They drive venue capacity, hall baseline, category proximity, and multi-table consolidation.
@@ -29,8 +31,8 @@ Vendor booths are rectangular sellable units (`tablePurpose: 'vendor'`). They dr
 | **Auto-arrange scope** | **Vendor booths only** — patron/guest tables are never moved or merged in this pass |
 | **Auto-arrange modes** | **Grid** — aligned rows/columns, 8′ aisles, entrance-first row order · **Staggered** — alternating half-width row offset for sightlines · **Perimeter** — boundary loop (top → right → bottom → left) |
 | **Engine** | `autoArrangeVendorBooths` in `components/coordinator/floor-plan-v2/engine/auto-arrange.ts`; layout modes via `lib/floor-plan/deterministic-market-layout.ts` |
-| **Toolbar (target)** | Dedicated **Vendor Auto-Arrange** control: mode select (Grid / Staggered / Perimeter) + run button; enabled when ≥1 vendor booth in active room |
-| **Shipped** | Vendor pass + mode select on shared Auto-Arrange toolbar (`canvas-command-bar-blocks.tsx` arrangement block) |
+| **Toolbar** | **Vendor** ribbon block: **Booth** draw + Booth size pill + mode select (Grid / Staggered / Perimeter) + **Auto-Arrange**; enabled when ≥1 vendor booth in active room |
+| **Shipped** | Dedicated vendor toolbar block (`vendor` in `toolbar-order.ts` / `canvas-command-bar-blocks.tsx`); `scope: 'vendor'` in `auto-arrange.ts` |
 | **Verify** | `npx tsx scripts/verify-auto-arrange.ts` — grid, staggered, perimeter, multi-room, category proximity |
 
 ## Patron placements
@@ -46,17 +48,19 @@ Patron (guest) seating tables are non-vendor fixtures (`tablePurpose: 'guest'`).
 | **Auto-arrange modes (target)** | Same three options as vendor: **Grid**, **Staggered**, **Perimeter** — applied only to guest/patron units, respecting vendor footprints and structural obstacles |
 | **Engine (shipped)** | `arrangeGuestTables` in `auto-arrange.ts` — row-pack near prior placement / open space away from vendors (no mode selector yet) |
 | **Engine (target)** | Patron-only pass mirroring vendor mode API (`grid` / `staggered` / `perimeter-only`); reuse deterministic layout where footprints are uniform, custom pack/orient for mixed round+rect sizes |
-| **Toolbar (target)** | Dedicated **Patron Auto-Arrange** control: mode select (Grid / Staggered / Perimeter) + run button; enabled when ≥1 patron table in active room — independent of vendor mode state |
-| **Shipped** | Patron tables excluded from vendor pass; packed separately on combined Auto-Arrange run (`isGuestTableBooth` in `lib/booth-planner/table-shape.ts`) |
+| **Toolbar** | **Patron** ribbon block: **Patron round** / **Patron rect** + Round/Patron size pill + mode select + **Auto-Arrange**; enabled when ≥1 patron table in active room — independent of vendor mode state |
+| **Shipped** | Dedicated patron toolbar block; `scope: 'patron'` keeps vendor booths fixed while `arrangeGuestTables` runs (`isGuestTableBooth` in `lib/booth-planner/table-shape.ts`) |
 | **Verify** | Guest-table block in `scripts/verify-auto-arrange.ts` (4/4 pass); add grid/staggered/perimeter patron cases when mode parity lands |
 
 ## Shipped this session (local, not deployed)
+- **CI lint fix:** `prefer-const` on `rowStartX` in `auto-arrange.ts` — GitHub CI `npm run lint` was failing (1 error, 359 warnings). Local lint now exits 0. Booths were dropped from the doc when deterministic slots overlapped obstacles or failed the 2′ edge rule, even with open floor left. Layout now walks **all** valid slot candidates (not just the first N), perimeter slots respect restricted zones, column pitch includes the 2′ edge gap, and a fallback grid scan runs before giving up. Unplaced vendor booths **stay on canvas** at their last valid position (not removed); toast says “left in place”. Verify: `npx tsx scripts/verify-auto-arrange.ts` (15-booth wall case + main grid cases).
 - **Food truck placement (canvas-open):** New `food_truck` fixture kind and toolbar **Food truck** draw tool. Trucks may sit anywhere inside the advisory canvas bounds, including parking areas outside room polygons (no room owner / no perimeter touch required). Inside a room, centroid still resolves `objectRoom` for save bridge. Legacy round-trip via `custom_label` + `FOODTRUCK@` sentinel. `lib/floor-plan/canvas-open-placement.ts`, `is-point-in-room.ts`, `use-canvas-pointer.ts`, canvas render + QA pointer. Verify: `npx tsx scripts/verify-food-truck-placement.ts`.
 - **Viewport zoom/pan flicker fix:** `frameActiveRoom` depended on the `viewport` API object, which is recreated every render (including each zoom tick). That re-ran `fitToBounds` continuously — zoom buttons flickered and scroll snapped back to the room center. Framing now reads `viewportRef` and only runs when `viewportFramingKey` / `roomsFramingKey` changes (room switch, resize, merged zone). `floor-plan-canvas.tsx` + QA mirror.
 - **Clear all crash fix:** `useCanvasStore` memoizes its return value so dashboard `onStoreReady` / `registerFloorPlanStore` no longer run every render (max-update-depth / page crash after Clear all). Wizard QA `handleClearAll` clears parent `layoutRooms` and suppresses auto Main Hall (parity with production). `use-canvas-store.ts`, `floor-plan-v2_wizard_qa.tsx`.
 - **Patron tables: no vendor “Unassigned” styling; draw stays patron:** Guest/patron seating is excluded from dashboard booth placement status (canvas fill, booth matrix a11y table, telemetry booth counts). Resizing a selected patron table via the Round/Patron pill now syncs the next-draw template so a follow-up placement does not fall back to a vendor booth. `floor-plan-v2.tsx`, `market-management-context.tsx`, `canvas-objects.tsx`, `booth-matrix-a11y-table.tsx`. Verify: `npx tsx scripts/verify-canvas-state-smoke.ts`.
 - **Table size / draw mode: last placed table stays put:** New draws auto-select the booth; switching Patron round ↔ Booth (vendor) or Round ↔ Booth pill columns was reshaping the selection via `planTableSizeChange`. Now patches apply only when purpose+shape match the selection; cross-category changes update the next-draw template and clear selection. Draw-toolbar buttons use `templateOnly`. `table-size-selection.ts` + `floor-plan-v2.tsx` / wizard QA. Verify: `npx tsx scripts/verify-canvas-state-smoke.ts`.
-- **Auto-arrange: separate vendor vs patron passes:** Vendor booths use grid/staggered/perimeter (`autoArrangeVendorBooths`). Patron tables run a second pass (`arrangeGuestTables`) — excluded from vendor consolidation and the vendor grid; row-pack near draw origin or open space away from vendors, preserving laid width/height (round stays circular). **Next:** split toolbar into Vendor Auto-Arrange and Patron Auto-Arrange, each with its own mode select (Grid / Staggered / Perimeter). See **Vendor placements** / **Patron placements** sections.
+- **Auto-arrange: separate vendor vs patron passes:** Vendor booths use grid/staggered/perimeter (`autoArrangeVendorBooths`). Patron tables run a second pass (`arrangeGuestTables`) — excluded from vendor consolidation and the vendor grid; row-pack near draw origin or open space away from vendors, preserving laid width/height (round stays circular). `AutoArrangeScope` (`vendor` / `patron` / `all`) in `auto-arrange.ts`.
+- **Toolbar split: Vendor / Patron / Room:** Canvas ribbon reorganized into three labeled blocks — **Vendor** (Booth + booth sizes + vendor auto-arrange), **Patron** (round/rect + Round/Patron sizes + patron auto-arrange), **Room** (tabs, rotate, merge/unjoin). Canvas tools (select/hand, walls, doors, label, delete) stay in **primitives**; history, align, zoom, save in other blocks. `TableSizePill` accepts `sections: 'vendor' | 'patron'`. Legacy toolbar block ids migrate on load (`toolbar-order.ts`). QA mirrors updated.
 
 ## Shipped this session (prod build 106, `cde554e`)
 - **Deploy tooling fix:** `update-session-handoff.ps1` uses ASCII `-` / `->` / `|` instead of Unicode dashes/arrows so Windows PowerShell 5 parses strings; `deploy-popuphub.ps1` always records https://popuphub.ca in baseline.
@@ -112,8 +116,9 @@ Patron (guest) seating tables are non-vendor fixtures (`tablePurpose: 'guest'`).
 | Round table 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
 | Patron rect table 5′ / 6′ / 8′ pill + canvas | **Deployed** — sign-in smoke |
 | Booth placement inside room | **Deployed** — sign-in smoke |
-| Vendor auto-arrange (Grid / Staggered / Perimeter) | **Deployed** — vendor booths only; re-test on prod |
-| Patron auto-arrange (separate pass) | **Partial** — patron tables pack separately on combined run; dedicated control + Grid/Staggered/Perimeter modes not yet shipped |
+| Vendor auto-arrange (Grid / Staggered / Perimeter) | **Local** — vendor toolbar block + `scope: 'vendor'`; re-test after deploy |
+| Patron auto-arrange (separate pass) | **Local** — patron toolbar block + `scope: 'patron'`; mode selector UI shipped; engine still row-pack (Grid/Staggered/Perimeter parity pending) |
+| Toolbar Vendor / Patron / Room blocks | **Local** — sign-in smoke after deploy |
 | Rotate room toolbar | **Deployed** — sign-in smoke |
 | Step 3 blank canvas (interactive) | **Deployed** — sign-in smoke |
 | Wheel zoom / scroll pan over canvas | **Deployed** — sign-in smoke |
@@ -125,7 +130,7 @@ Patron (guest) seating tables are non-vendor fixtures (`tablePurpose: 'guest'`).
 **Manual checklist after sign-in:** `/coordinator/dashboard` — site footer hidden, canvas fills viewport below nav, toolbar buttons respond, curation queue select works; **Back to market** / **+ New market** / **Full canvas** toggle.
 
 ## Do not touch
-- `booth-planner.tsx`, production `floor-plan-v2.tsx` until QA promotion
+- `booth-planner.tsx` unless asked
 - Vendor / shopper / auction flows unless asked
 
 ## Blockers
@@ -141,11 +146,11 @@ Patron (guest) seating tables are non-vendor fixtures (`tablePurpose: 'guest'`).
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Commit + deploy** food truck placement + local WIP (viewport/Clear all/patron styling) when ready
+1. **Commit + deploy** auto-arrange space-restriction fix + food truck / viewport / Clear all WIP when ready
 2. **Verify Clear all** on dashboard + wizard Step 3 after sign-in (blank canvas, no crash, toolbar shows Add room only)
-3. **Patron auto-arrange mode parity** — dedicated toolbar control + Grid / Staggered / Perimeter for patron-only pass (`arrangeGuestTables` or patron-centric layout); keep vendor control separate with same three modes
+3. **Patron auto-arrange mode parity** — patron toolbar mode select is wired; engine still ignores mode (row-pack). Implement Grid / Staggered / Perimeter for patron-only pass (`arrangeGuestTables` or patron-centric layout).
 4. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
-5. **Coordinator smoke-test on prod** (build 106): vendor Auto-Arrange (each mode) moves only booths; patron Auto-Arrange moves only guest tables; mixed layout smoke with round + rect patron tables
+5. **Coordinator smoke-test** after deploy: Vendor block auto-arrange (each mode) moves only booths; Patron block auto-arrange moves only guest tables; Room block merge/rotate; mixed layout with round + rect patron tables
 6. **Step 2 Capacity scroll** — manual check after sign-in
 7. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room** (food trucks use canvas bounds only)
 8. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch

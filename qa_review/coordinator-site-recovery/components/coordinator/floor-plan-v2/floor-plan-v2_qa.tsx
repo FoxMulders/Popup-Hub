@@ -19,6 +19,7 @@ import {
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import {
+  isGuestTableBooth,
   normalizeTableSizeSpec,
   tableSizeSpecFromBooth,
   vendorTableSpec,
@@ -346,9 +347,10 @@ function FloorPlanV2Workspace({
   const [drawShape, setDrawShape] = useState<DrawShape>(
     DEFAULT_TOOL_STATE.drawShape
   )
-  const [autoArrangeMode, setAutoArrangeMode] = useState<AutoArrangeMode>(
-    isDashboard ? 'perimeter-only' : 'grid'
-  )
+  const [vendorAutoArrangeMode, setVendorAutoArrangeMode] =
+    useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
+  const [patronAutoArrangeMode, setPatronAutoArrangeMode] =
+    useState<AutoArrangeMode>('grid')
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
 
@@ -1260,10 +1262,23 @@ function FloorPlanV2Workspace({
    * doc), then translate the result back to global coords and merge
    * into the unified doc with a single history step.
    */
-  const boothCount = useMemo(() => {
+  const vendorBoothCount = useMemo(() => {
     const objectRoom = store.doc.objectRoom ?? {}
     return store.doc.objects.filter(
-      (o) => o.kind === 'booth' && objectRoom[o.id] === activeRoomId
+      (o) =>
+        o.kind === 'booth' &&
+        objectRoom[o.id] === activeRoomId &&
+        !isGuestTableBooth(o)
+    ).length
+  }, [activeRoomId, store.doc.objects, store.doc.objectRoom])
+
+  const patronTableCount = useMemo(() => {
+    const objectRoom = store.doc.objectRoom ?? {}
+    return store.doc.objects.filter(
+      (o) =>
+        o.kind === 'booth' &&
+        objectRoom[o.id] === activeRoomId &&
+        isGuestTableBooth(o)
     ).length
   }, [activeRoomId, store.doc.objects, store.doc.objectRoom])
 
@@ -1272,13 +1287,14 @@ function FloorPlanV2Workspace({
     return vendorTableMetaFromApplications(applications, safeTableSizeFt)
   }, [applications, safeTableSizeFt])
 
-  const handleAutoArrange = useCallback(() => {
-    if (boothCount === 0) {
-      toast.message('Nothing to arrange — draw at least one booth first.')
+  const handleVendorAutoArrange = useCallback(() => {
+    if (vendorBoothCount === 0) {
+      toast.message('Nothing to arrange — draw at least one vendor booth first.')
       return
     }
     const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      mode: autoArrangeMode,
+      scope: 'vendor',
+      mode: vendorAutoArrangeMode,
       eventCategoryNames,
       baselineTableLengthFt: safeTableSizeFt,
       vendorTableMetaByKey,
@@ -1292,37 +1308,69 @@ function FloorPlanV2Workspace({
       return
     }
     if (result.placedCount === 0) {
-      toast.error('Auto-Arrange could not fit any booths inside the room.')
+      toast.error('Vendor auto-arrange could not fit any booths inside the room.')
       return
     }
     store.replaceObjects(result.doc.objects)
     const spaceOverflow = result.overflowCount + result.droppedCount
     if (spaceOverflow > 0) {
       toast.warning(
-        `Could not place ${spaceOverflow} booth${spaceOverflow === 1 ? '' : 's'} due to space restrictions.`,
+        `Could not place ${spaceOverflow} vendor booth${spaceOverflow === 1 ? '' : 's'} due to space restrictions.`,
         { duration: 5000 }
       )
     } else if (result.unsatisfiedCategoryCount > 0) {
-      // The clearance pass succeeded but the same-category proximity
-      // rule (< 5 cols AND < 2 rows) couldn't be honored for every
-      // booth — surface the overflow so the coordinator knows their
-      // canvas is too tight to disperse every category.
       toast.warning(
-        `Auto-arrange complete. ${result.unsatisfiedCategoryCount} booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
+        `Vendor auto-arrange complete. ${result.unsatisfiedCategoryCount} booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
         { duration: 4500 }
       )
     } else {
       toast.success(
-        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} with clearance.`
+        `Auto-arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} with clearance.`
       )
     }
   }, [
     activeRoomId,
-    autoArrangeMode,
-    boothCount,
+    vendorAutoArrangeMode,
+    vendorBoothCount,
     eventCategoryNames,
     layoutCapacity,
-    defaultPlacementSpec,
+    safeTableSizeFt,
+    store,
+    vendorTableMetaByKey,
+  ])
+
+  const handlePatronAutoArrange = useCallback(() => {
+    if (patronTableCount === 0) {
+      toast.message('Nothing to arrange — draw at least one patron table first.')
+      return
+    }
+    const result = autoArrangeInRoom(store.doc, activeRoomId, {
+      scope: 'patron',
+      mode: patronAutoArrangeMode,
+      baselineTableLengthFt: safeTableSizeFt,
+      vendorTableMetaByKey,
+    })
+    if (!result) return
+    if (result.placedCount === 0) {
+      toast.error('Patron auto-arrange could not fit any tables inside the room.')
+      return
+    }
+    store.replaceObjects(result.doc.objects)
+    if (result.droppedCount > 0) {
+      toast.warning(
+        `Could not place ${result.droppedCount} patron table${result.droppedCount === 1 ? '' : 's'} due to space restrictions.`,
+        { duration: 5000 }
+      )
+    } else {
+      toast.success(
+        `Auto-arranged ${result.placedCount} patron table${result.placedCount === 1 ? '' : 's'}.`
+      )
+    }
+  }, [
+    activeRoomId,
+    patronAutoArrangeMode,
+    patronTableCount,
+    safeTableSizeFt,
     store,
     vendorTableMetaByKey,
   ])
@@ -1790,10 +1838,14 @@ function FloorPlanV2Workspace({
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
             onCenterView={handleCenterView}
-            onAutoArrange={handleAutoArrange}
-            canAutoArrange={boothCount > 0}
-            autoArrangeMode={autoArrangeMode}
-            onAutoArrangeModeChange={setAutoArrangeMode}
+            onVendorAutoArrange={handleVendorAutoArrange}
+            canVendorAutoArrange={vendorBoothCount > 0}
+            vendorAutoArrangeMode={vendorAutoArrangeMode}
+            onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
+            onPatronAutoArrange={handlePatronAutoArrange}
+            canPatronAutoArrange={patronTableCount > 0}
+            patronAutoArrangeMode={patronAutoArrangeMode}
+            onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
             onJoinRooms={handleMerge}
             canJoinRooms={canMerge}
             joinCandidateCount={
@@ -1852,10 +1904,14 @@ function FloorPlanV2Workspace({
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
             onCenterView={handleCenterView}
-            onAutoArrange={handleAutoArrange}
-            canAutoArrange={boothCount > 0}
-            autoArrangeMode={autoArrangeMode}
-            onAutoArrangeModeChange={setAutoArrangeMode}
+            onVendorAutoArrange={handleVendorAutoArrange}
+            canVendorAutoArrange={vendorBoothCount > 0}
+            vendorAutoArrangeMode={vendorAutoArrangeMode}
+            onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
+            onPatronAutoArrange={handlePatronAutoArrange}
+            canPatronAutoArrange={patronTableCount > 0}
+            patronAutoArrangeMode={patronAutoArrangeMode}
+            onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
             onJoinRooms={handleMerge}
             canJoinRooms={canMerge}
             joinCandidateCount={
@@ -1927,7 +1983,7 @@ function FloorPlanV2Workspace({
               eventCategoryNames={eventCategoryNames}
               boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
               onVendorDrop={onVendorDrop}
-              autoArrangeMode={autoArrangeMode}
+              autoArrangeMode={vendorAutoArrangeMode}
               onProximityViolation={(info) => {
                 toast.error(
                   `Same-category booths must be at least 5 columns or 2 rows apart — "${info.category}" placement reverted.`,

@@ -6,20 +6,18 @@ export type CanvasToolbarBlockId =
   | 'primitives'
   | 'history-clipboard'
   | 'view-align'
-  | 'room-transform'
-  | 'arrangement'
-  | 'table-size'
-  | 'rooms'
+  | 'vendor'
+  | 'patron'
+  | 'room'
   | 'utilities'
 
 export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
   'primitives',
   'history-clipboard',
   'view-align',
-  'room-transform',
-  'arrangement',
-  'table-size',
-  'rooms',
+  'vendor',
+  'patron',
+  'room',
   'utilities',
 ] as const
 
@@ -31,8 +29,20 @@ const STORAGE_KEY = 'popup-hub:floor-plan-v2:toolbar-order'
 
 const BLOCK_SET = new Set<string>(CANVAS_TOOLBAR_BLOCK_IDS)
 
+/** Legacy block ids from pre-split toolbar — expanded on load. */
+const LEGACY_BLOCK_EXPANSION: Record<string, readonly CanvasToolbarBlockId[]> = {
+  'room-transform': ['room'],
+  arrangement: ['vendor', 'patron'],
+  'table-size': ['vendor', 'patron'],
+}
+
 export function isCanvasToolbarBlockId(id: string): id is CanvasToolbarBlockId {
   return BLOCK_SET.has(id)
+}
+
+function expandLegacyBlockId(raw: string): CanvasToolbarBlockId[] {
+  if (isCanvasToolbarBlockId(raw)) return [raw]
+  return [...(LEGACY_BLOCK_EXPANSION[raw] ?? [])]
 }
 
 /** Merge saved order with defaults so new blocks appear without breaking layout. */
@@ -45,9 +55,11 @@ export function normalizeToolbarOrder(
   const out: CanvasToolbarBlockId[] = []
 
   for (const raw of saved) {
-    if (!isCanvasToolbarBlockId(raw) || seen.has(raw)) continue
-    seen.add(raw)
-    out.push(raw)
+    for (const id of expandLegacyBlockId(raw)) {
+      if (seen.has(id)) continue
+      seen.add(id)
+      out.push(id)
+    }
   }
 
   for (const id of DEFAULT_CANVAS_TOOLBAR_ORDER) {

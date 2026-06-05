@@ -11,9 +11,13 @@ import {
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
 
+export type TableSizePillSections = 'all' | 'vendor' | 'patron'
+
 interface TableSizePillProps {
   value: TableSizeSpec
   onChange: (selection: TableSizeSpec) => void
+  /** Which size columns to show — vendor booth, patron round/rect, or all. */
+  sections?: TableSizePillSections
   disabled?: boolean
   className?: string
 }
@@ -45,9 +49,19 @@ function sectionLabel(text: string): React.ReactNode {
 export function TableSizePill({
   value,
   onChange,
+  sections = 'all',
   disabled = false,
   className,
 }: TableSizePillProps) {
+  const showVendor = sections === 'all' || sections === 'vendor'
+  const showPatron = sections === 'all' || sections === 'patron'
+  const ariaLabel =
+    sections === 'vendor'
+      ? 'Vendor booth size'
+      : sections === 'patron'
+        ? 'Patron table size'
+        : 'Table size'
+
   return (
     <div
       className={cn(
@@ -56,69 +70,84 @@ export function TableSizePill({
         className
       )}
       role="group"
-      aria-label="Table size"
+      aria-label={ariaLabel}
     >
-      <span
-        className="hidden items-center px-2 text-[10px] font-heading uppercase tracking-wide text-stone-500 sm:inline-flex"
-        aria-hidden
+      {sections === 'all' ? (
+        <span
+          className="hidden items-center px-2 text-[10px] font-heading uppercase tracking-wide text-stone-500 sm:inline-flex"
+          aria-hidden
+        >
+          Table size
+        </span>
+      ) : null}
+      <div
+        className={cn(
+          'flex h-full max-w-[min(100%,42rem)] overflow-x-auto',
+          sections === 'all' && 'sm:border-l sm:border-stone-200'
+        )}
       >
-        Table size
-      </span>
-      <div className="flex h-full max-w-[min(100%,42rem)] overflow-x-auto sm:border-l sm:border-stone-200">
-        {sectionLabel('Booth')}
-        {TABLE_SIZES.map((ft) => {
-          const selection = vendorTableSpec(ft)
-          const active = tableSizeSpecsEqual(value, selection)
-          return (
-            <button
-              key={`booth-${ft}`}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(selection)}
-              aria-pressed={active}
-              title={`Set vendor booth table length to ${ft} ft`}
-              className={sizeButtonClass(active, disabled)}
-            >
-              {ft}′
-            </button>
-          )
-        })}
-        {sectionLabel('Round')}
-        {GUEST_TABLE_LENGTHS_FT.map((ft) => {
-          const selection = guestRoundTableSpec(ft)
-          const active = tableSizeSpecsEqual(value, selection)
-          return (
-            <button
-              key={`round-${ft}`}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(selection)}
-              aria-pressed={active}
-              title={`Set guest round table diameter to ${ft} ft`}
-              className={sizeButtonClass(active, disabled)}
-            >
-              {ft}′
-            </button>
-          )
-        })}
-        {sectionLabel('Patron')}
-        {GUEST_TABLE_LENGTHS_FT.map((ft) => {
-          const selection = guestRectTableSpec(ft)
-          const active = tableSizeSpecsEqual(value, selection)
-          return (
-            <button
-              key={`guest-rect-${ft}`}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(selection)}
-              aria-pressed={active}
-              title={`Set patron rectangular banquet table length to ${ft} ft`}
-              className={sizeButtonClass(active, disabled)}
-            >
-              {ft}′
-            </button>
-          )
-        })}
+        {showVendor ? (
+          <>
+            {sectionLabel('Booth')}
+            {TABLE_SIZES.map((ft) => {
+              const selection = vendorTableSpec(ft)
+              const active = tableSizeSpecsEqual(value, selection)
+              return (
+                <button
+                  key={`booth-${ft}`}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onChange(selection)}
+                  aria-pressed={active}
+                  title={`Set vendor booth table length to ${ft} ft`}
+                  className={sizeButtonClass(active, disabled)}
+                >
+                  {ft}′
+                </button>
+              )
+            })}
+          </>
+        ) : null}
+        {showPatron ? (
+          <>
+            {sectionLabel('Round')}
+            {GUEST_TABLE_LENGTHS_FT.map((ft) => {
+              const selection = guestRoundTableSpec(ft)
+              const active = tableSizeSpecsEqual(value, selection)
+              return (
+                <button
+                  key={`round-${ft}`}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onChange(selection)}
+                  aria-pressed={active}
+                  title={`Set guest round table diameter to ${ft} ft`}
+                  className={sizeButtonClass(active, disabled)}
+                >
+                  {ft}′
+                </button>
+              )
+            })}
+            {sectionLabel('Patron')}
+            {GUEST_TABLE_LENGTHS_FT.map((ft) => {
+              const selection = guestRectTableSpec(ft)
+              const active = tableSizeSpecsEqual(value, selection)
+              return (
+                <button
+                  key={`guest-rect-${ft}`}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onChange(selection)}
+                  aria-pressed={active}
+                  title={`Set patron rectangular banquet table length to ${ft} ft`}
+                  className={sizeButtonClass(active, disabled)}
+                >
+                  {ft}′
+                </button>
+              )
+            })}
+          </>
+        ) : null}
       </div>
     </div>
   )

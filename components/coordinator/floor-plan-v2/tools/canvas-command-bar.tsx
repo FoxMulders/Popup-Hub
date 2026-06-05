@@ -34,8 +34,10 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
-  autoArrangeMode?: AutoArrangeMode
-  onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  vendorAutoArrangeMode?: AutoArrangeMode
+  onVendorAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  patronAutoArrangeMode?: AutoArrangeMode
+  onPatronAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
@@ -89,8 +91,10 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onRotateRoomLeft,
     onRotateRoomRight,
     selectedRoomId,
-    onAutoArrange,
-    canAutoArrange,
+    onVendorAutoArrange,
+    canVendorAutoArrange,
+    onPatronAutoArrange,
+    canPatronAutoArrange,
     onJoinRooms,
     canJoinRooms,
     joinCandidateCount,
@@ -119,8 +123,10 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onShowLabelsChange,
     canvasFullscreen = false,
     onToggleCanvasFullscreen,
-    autoArrangeMode = 'grid',
-    onAutoArrangeModeChange,
+    vendorAutoArrangeMode = 'grid',
+    onVendorAutoArrangeModeChange,
+    patronAutoArrangeMode = 'grid',
+    onPatronAutoArrangeModeChange,
     onSaveMarket,
     saveMarketDisabled,
     saveMarketLoading,
@@ -134,8 +140,18 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     Boolean(onRenameRoom) &&
     Boolean(onDeleteRoom)
   const needsRoomFirst = showRooms && (rooms?.length ?? 0) === 0
-  const showArrangement = Boolean(onAutoArrange) || showJoinGroup
   const showRoomTransform = Boolean(onRotateRoomLeft) && Boolean(onRotateRoomRight)
+  const showVendor =
+    showTableSize ||
+    Boolean(onVendorAutoArrange) ||
+    Boolean(onPrepareTableDraw) ||
+    Boolean(onTableSizeChange)
+  const showPatron =
+    showTableSize ||
+    Boolean(onPatronAutoArrange) ||
+    Boolean(onPrepareTableDraw) ||
+    Boolean(onTableSizeChange)
+  const showRoom = showRooms || showJoinGroup || showRoomTransform
 
   const joinLabel =
     canJoinRooms && joinCandidateCount && joinCandidateCount > 1
@@ -170,8 +186,14 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onRotateRoomLeft,
       onRotateRoomRight,
       selectedRoomId,
-      onAutoArrange,
-      canAutoArrange,
+      onVendorAutoArrange,
+      canVendorAutoArrange,
+      vendorAutoArrangeMode,
+      onVendorAutoArrangeModeChange,
+      onPatronAutoArrange,
+      canPatronAutoArrange,
+      patronAutoArrangeMode,
+      onPatronAutoArrangeModeChange,
       onJoinRooms,
       canJoinRooms,
       joinLabel,
@@ -199,8 +221,6 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onShowLabelsChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
-      autoArrangeMode,
-      onAutoArrangeModeChange,
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
@@ -225,8 +245,14 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onRotateRoomLeft,
       onRotateRoomRight,
       selectedRoomId,
-      onAutoArrange,
-      canAutoArrange,
+      onVendorAutoArrange,
+      canVendorAutoArrange,
+      vendorAutoArrangeMode,
+      onVendorAutoArrangeModeChange,
+      onPatronAutoArrange,
+      canPatronAutoArrange,
+      patronAutoArrangeMode,
+      onPatronAutoArrangeModeChange,
       onJoinRooms,
       canJoinRooms,
       joinLabel,
@@ -254,8 +280,6 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onShowLabelsChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
-      autoArrangeMode,
-      onAutoArrangeModeChange,
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
@@ -266,20 +290,11 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     () =>
       getVisibleToolbarBlockIds({
         needsRoomFirst,
-        showTableSize,
-        showJoinGroup,
-        showRooms,
-        showArrangement,
-        showRoomTransform,
+        showVendor,
+        showPatron,
+        showRoom,
       }),
-    [
-      needsRoomFirst,
-      showTableSize,
-      showJoinGroup,
-      showRooms,
-      showArrangement,
-      showRoomTransform,
-    ]
+    [needsRoomFirst, showVendor, showPatron, showRoom]
   )
 
   return (

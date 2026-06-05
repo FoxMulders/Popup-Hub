@@ -28,8 +28,10 @@ export interface CanvasToolHostProps {
   onZoomIn: () => void
   onZoomReset: () => void
   onCenterView: () => void
-  onAutoArrange?: () => void
-  canAutoArrange?: boolean
+  onVendorAutoArrange?: () => void
+  canVendorAutoArrange?: boolean
+  onPatronAutoArrange?: () => void
+  canPatronAutoArrange?: boolean
   /**
    * Fuse the active room (or a selected joinable fixture like a
    * Stage) with every overlapping/touching neighbour into a single

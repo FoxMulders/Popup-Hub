@@ -107,7 +107,12 @@ function normalizeAutoArrangeMode(
   return mode
 }
 
+/** Which booth categories participate in a pass — vendor, patron, or both. */
+export type AutoArrangeScope = 'all' | 'vendor' | 'patron'
+
 export interface AutoArrangeOptions {
+  /** Which units to rearrange — defaults to both vendor and patron passes. */
+  scope?: AutoArrangeScope
   /** Placement strategy — defaults to aligned grid. */
   mode?: AutoArrangeModeLegacy
   /** Aisle width between rows / along perimeter (ft). Default 8. */
@@ -313,20 +318,31 @@ function placeBoothsAtSlots(
     return { category: null, advanceBy: 1 }
   }
 
-  for (const slot of slots) {
-    if (nextSourceIdx >= sourceBooths.length) break
+  function candidateFits(candidate: Rect): boolean {
+    if (candidate.x + boothW > cw || candidate.y + boothH > cl) return false
+    if (candidate.x < WALL_BUFFER_FT - 1e-6 || candidate.y < WALL_BUFFER_FT - 1e-6) {
+      return false
+    }
+    if (obstacles.some((r) => aabbOverlap(candidate, r))) return false
+    if (
+      placedRects.some((r) =>
+        boothsCloserThan(candidate, r, BOOTH_EDGE_CLEARANCE_FT)
+      )
+    ) {
+      return false
+    }
+    return true
+  }
+
+  function placeAtSlot(slot: Slot): boolean {
+    if (nextSourceIdx >= sourceBooths.length) return false
     const candidate: Rect = {
       x: slot.x,
       y: slot.y,
       width: boothW,
       height: boothH,
     }
-    if (candidate.x + boothW > cw || candidate.y + boothH > cl) continue
-    const hitsObstacle = obstacles.some((r) => aabbOverlap(candidate, r))
-    const hitsBooth = placedRects.some((r) =>
-      boothsCloserThan(candidate, r, BOOTH_EDGE_CLEARANCE_FT)
-    )
-    if (hitsObstacle || hitsBooth) continue
+    if (!candidateFits(candidate)) return false
 
     const src = sourceBooths[nextSourceIdx++]!
     const { category, advanceBy } = pickCategoryForSlot(candidate)
@@ -370,6 +386,31 @@ function placeBoothsAtSlots(
     const placedRect = rotatedAabb(placed)
     newBooths.push(placed)
     placedRects.push(placedRect)
+    return true
+  }
+
+  for (const slot of slots) {
+    if (nextSourceIdx >= sourceBooths.length) break
+    placeAtSlot(slot)
+  }
+
+  if (nextSourceIdx < sourceBooths.length) {
+    const colPitch = boothW + BOOTH_EDGE_CLEARANCE_FT
+    const rowPitch = boothH + BOOTH_EDGE_CLEARANCE_FT
+    const inset = WALL_BUFFER_FT
+    for (
+      let y = inset;
+      y + boothH <= cl - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
+      y += rowPitch
+    ) {
+      for (
+        let x = inset;
+        x + boothW <= cw - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
+        x += colPitch
+      ) {
+        placeAtSlot({ x: roundHalf(x), y: roundHalf(y) })
+      }
+    }
   }
 
   return { newBooths, placedRects, unsatisfiedCategoryCount }
@@ -390,6 +431,44 @@ function restrictedZonesFromObstacles(obstacles: Rect[]): Array<{
     width: r.width,
     height: r.height,
   }))
+}
+
+/** True when a booth can stay put after a failed reposition attempt. */
+function boothOriginalPositionUsable(
+  booth: BoothObject,
+  cw: number,
+  cl: number,
+  obstacles: Rect[]
+): boolean {
+  const rect = objectFootprintAabb(booth)
+  if (
+    rect.x < WALL_BUFFER_FT - 1e-6 ||
+    rect.y < WALL_BUFFER_FT - 1e-6 ||
+    rect.x + rect.width > cw - WALL_BUFFER_FT + 1e-6 ||
+    rect.y + rect.height > cl - WALL_BUFFER_FT + 1e-6
+  ) {
+    return false
+  }
+  return !obstacles.some((o) => aabbOverlap(rect, o))
+}
+
+function retainUnplacedVendorBooths(
+  sourceBooths: BoothObject[],
+  placed: BoothObject[],
+  cw: number,
+  cl: number,
+  obstacles: Rect[]
+): { merged: BoothObject[]; unmovedCount: number } {
+  const placedIds = new Set(placed.map((b) => b.id))
+  const retained = sourceBooths.filter(
+    (b) =>
+      !placedIds.has(b.id) &&
+      boothOriginalPositionUsable(b, cw, cl, obstacles)
+  )
+  return {
+    merged: [...placed, ...retained],
+    unmovedCount: sourceBooths.length - placed.length,
+  }
 }
 
 const PERIMETER_ROW_TO_EDGE: Record<
@@ -584,7 +663,7 @@ export function arrangeGuestTables(
     let rowX = anchor.x
     let rowY = anchor.y
     let rowMaxH = 0
-    let rowStartX = anchor.x
+    const rowStartX = anchor.x
     const maxRowWidth = ctx.cw - wallInsetFt * 2
 
     for (const src of sorted) {
@@ -723,7 +802,7 @@ function autoArrangeVendorBooths(
     }
     if (perimeterSlots.length === 0) {
       return {
-        newVendorBooths: [],
+        newVendorBooths: sourceBooths,
         vendorDroppedCount: sourceBooths.length,
         unsatisfiedCategoryCount: 0,
         overflowCount,
@@ -743,9 +822,16 @@ function autoArrangeVendorBooths(
         perimeterOrientFrame,
       }
     )
+    const { merged, unmovedCount } = retainUnplacedVendorBooths(
+      sourceBooths,
+      newBooths,
+      cw,
+      cl,
+      obstacles
+    )
     return {
-      newVendorBooths: newBooths,
-      vendorDroppedCount: sourceBooths.length - newBooths.length,
+      newVendorBooths: merged,
+      vendorDroppedCount: unmovedCount,
       unsatisfiedCategoryCount,
       overflowCount,
     }
@@ -769,7 +855,7 @@ function autoArrangeVendorBooths(
 
   if (!deterministic.ok) {
     return {
-      newVendorBooths: [],
+      newVendorBooths: sourceBooths,
       vendorDroppedCount: sourceBooths.length,
       unsatisfiedCategoryCount: 0,
       overflowCount,
@@ -786,7 +872,16 @@ function autoArrangeVendorBooths(
     lengthFt: cl,
   }
 
-  const slots: Slot[] = deterministic.placements.map((place) => {
+  const slotCandidates =
+    deterministic.layoutSlotCandidates ??
+    deterministic.placements.map((place) => ({
+      x: place.x,
+      y: place.y,
+      row: place.row - 1,
+      column: place.column - 1,
+      rotation: place.rotation,
+    }))
+  const slots: Slot[] = slotCandidates.map((place) => {
     if (layoutMode === 'perimeter') {
       const edge = PERIMETER_ROW_TO_EDGE[place.row]
       return {
@@ -813,9 +908,16 @@ function autoArrangeVendorBooths(
       layoutMode === 'perimeter' ? perimeterOrientFrame : undefined,
   })
 
+  const { merged, unmovedCount } = retainUnplacedVendorBooths(
+    sourceBooths,
+    newBooths,
+    cw,
+    cl,
+    obstacles
+  )
   return {
-    newVendorBooths: newBooths,
-    vendorDroppedCount: sourceBooths.length - newBooths.length,
+    newVendorBooths: merged,
+    vendorDroppedCount: unmovedCount,
     unsatisfiedCategoryCount,
     overflowCount,
     layoutExplanation: deterministic.explanation,
@@ -844,6 +946,7 @@ export function autoArrange(
   doc: FloorPlanDoc,
   options: AutoArrangeOptions = {}
 ): AutoArrangeResult {
+  const scope = options.scope ?? 'all'
   const mode = normalizeAutoArrangeMode(options.mode)
   const {
     eventCategoryNames,
@@ -872,7 +975,13 @@ export function autoArrange(
   const otherObjects = doc.objects.filter((o) => o.kind !== 'booth')
   const obstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
 
-  if (allVendorBooths.length === 0 && guestBooths.length === 0) {
+  const hasVendor = allVendorBooths.length > 0
+  const hasGuest = guestBooths.length > 0
+  if (
+    (scope === 'vendor' && !hasVendor) ||
+    (scope === 'patron' && !hasGuest) ||
+    (scope === 'all' && !hasVendor && !hasGuest)
+  ) {
     return {
       doc,
       placedCount: 0,
@@ -896,26 +1005,39 @@ export function autoArrange(
       )
     : null
 
-  const vendorPass = autoArrangeVendorBooths(doc, sourceBooths, {
-    mode,
-    eventCategoryNames,
-    aisleWidthFt,
-    overflowCount,
-    placementOrigin,
-    localRing,
-    otherObjects,
-    obstacles,
-  })
+  const vendorPass =
+    scope === 'patron'
+      ? {
+          newVendorBooths: sourceBooths,
+          vendorDroppedCount: 0,
+          unsatisfiedCategoryCount: 0,
+          overflowCount: 0,
+        }
+      : autoArrangeVendorBooths(doc, sourceBooths, {
+          mode,
+          eventCategoryNames,
+          aisleWidthFt,
+          overflowCount,
+          placementOrigin,
+          localRing,
+          otherObjects,
+          obstacles,
+        })
 
-  const vendorRects = vendorPass.newVendorBooths.map((b) =>
-    objectFootprintAabb(b)
-  )
-  const guestPass = arrangeGuestTables(guestBooths, {
-    cw,
-    cl,
-    obstacles,
-    vendorRects,
-  })
+  const vendorRects =
+    scope === 'patron'
+      ? sourceBooths.map((b) => objectFootprintAabb(b))
+      : vendorPass.newVendorBooths.map((b) => objectFootprintAabb(b))
+
+  const guestPass =
+    scope === 'vendor'
+      ? { placed: guestBooths, dropped: [] as BoothObject[] }
+      : arrangeGuestTables(guestBooths, {
+          cw,
+          cl,
+          obstacles,
+          vendorRects,
+        })
 
   const merged = mergeAutoArrangeResult(doc, otherObjects, vendorPass, guestPass)
   if (vendorPass.perimeterCapacityError && merged.placedCount === 0) {
@@ -970,8 +1092,19 @@ export function autoArrangeInRoom(
   const inRoom = doc.objects.filter((o) => objectRoom[o.id] === roomId)
   const others = doc.objects.filter((o) => objectRoom[o.id] !== roomId)
 
-  const boothCount = inRoom.filter((o) => o.kind === 'booth').length
-  if (boothCount === 0) {
+  const scope = options.scope ?? 'all'
+  const vendorBoothCount = inRoom.filter(
+    (o) => o.kind === 'booth' && !isGuestTableBooth(o)
+  ).length
+  const patronTableCount = inRoom.filter(
+    (o) => o.kind === 'booth' && isGuestTableBooth(o)
+  ).length
+  const boothCount = vendorBoothCount + patronTableCount
+  const scopeEmpty =
+    (scope === 'vendor' && vendorBoothCount === 0) ||
+    (scope === 'patron' && patronTableCount === 0) ||
+    (scope === 'all' && boothCount === 0)
+  if (scopeEmpty) {
     return {
       doc,
       placedCount: 0,

@@ -39,6 +39,7 @@ import {
 } from '@/lib/booth-planner/layout-table-size'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { DrawShape, ToolState } from './types'
+import { cn } from '@/lib/utils'
 import { CommandButton } from './command-button'
 import { TableSizePill } from './table-size-pill'
 import type { CanvasToolbarBlockId } from './toolbar-order'
@@ -53,31 +54,94 @@ import {
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
-const TABLE_PLACEMENT_TOOLS: Array<{
-  mode: TablePlacementMode
+const PATRON_PLACEMENT_TOOLS: Array<{
+  mode: Exclude<TablePlacementMode, 'vendor'>
   label: string
   icon: React.ComponentType<{ className?: string }>
   title: string
 }> = [
   {
-    mode: 'vendor',
-    label: 'Booth',
-    icon: Square,
-    title: 'Draw vendor booth — size from Booth column in Table size',
-  },
-  {
     mode: 'guest-round',
     label: 'Patron round',
     icon: Circle,
-    title: 'Draw patron round table — size from Round column in Table size',
+    title: 'Draw patron round table — size from Round column',
   },
   {
     mode: 'guest-rect',
     label: 'Patron rect',
     icon: RectangleHorizontal,
-    title: 'Draw patron rectangular banquet table — size from Patron column in Table size',
+    title: 'Draw patron rectangular banquet table — size from Patron column',
   },
 ]
+
+function toolbarSectionLabel(text: string, tone: 'amber' | 'violet' | 'teal'): React.ReactNode {
+  const toneClass =
+    tone === 'amber'
+      ? 'border-amber-200/80 bg-amber-50/90 text-amber-900'
+      : tone === 'violet'
+        ? 'border-violet-200/80 bg-violet-50/90 text-violet-900'
+        : 'border-teal-200/80 bg-teal-50/90 text-teal-900'
+  return (
+    <span
+      className={cn(
+        'mr-0.5 inline-flex h-7 shrink-0 items-center rounded-sm border px-1.5 text-[9px] font-heading font-semibold uppercase tracking-wide',
+        toneClass
+      )}
+    >
+      {text}
+    </span>
+  )
+}
+
+function AutoArrangeGroup({
+  label,
+  mode,
+  onModeChange,
+  onRun,
+  canRun,
+  runTitle,
+  tone,
+}: {
+  label: string
+  mode: AutoArrangeMode
+  onModeChange?: (mode: AutoArrangeMode) => void
+  onRun?: () => void
+  canRun?: boolean
+  runTitle: string
+  tone: 'amber' | 'violet'
+}) {
+  if (!onRun) return null
+  const activeClass =
+    tone === 'amber'
+      ? 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+      : 'bg-violet-50 text-violet-900 hover:bg-violet-100'
+  return (
+    <div className="inline-flex items-center gap-1" role="group" aria-label={label}>
+      {onModeChange ? (
+        <select
+          value={mode}
+          onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
+          title={`${label} placement mode`}
+          aria-label={`${label} mode`}
+          className="h-8 rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700"
+        >
+          <option value="grid">Grid</option>
+          <option value="staggered">Staggered</option>
+          <option value="perimeter-only">Perimeter</option>
+        </select>
+      ) : null}
+      <CommandButton
+        onClick={onRun}
+        disabled={!canRun}
+        title={runTitle}
+        label="Auto-Arrange"
+        className={activeClass}
+      >
+        <LayoutGrid className="h-3.5 w-3.5" />
+      </CommandButton>
+    </div>
+  )
+}
 
 const CREATION_SHAPES: Array<{
   id: DrawShape
@@ -123,8 +187,14 @@ export interface CanvasCommandBarBlockContext {
   onRotateRoomLeft?: () => void
   onRotateRoomRight?: () => void
   selectedRoomId?: string | null
-  onAutoArrange?: () => void
-  canAutoArrange?: boolean
+  onVendorAutoArrange?: () => void
+  canVendorAutoArrange?: boolean
+  vendorAutoArrangeMode?: AutoArrangeMode
+  onVendorAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  onPatronAutoArrange?: () => void
+  canPatronAutoArrange?: boolean
+  patronAutoArrangeMode?: AutoArrangeMode
+  onPatronAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   onJoinRooms?: () => void
   canJoinRooms?: boolean
   joinLabel: string
@@ -158,8 +228,6 @@ export interface CanvasCommandBarBlockContext {
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
-  autoArrangeMode?: AutoArrangeMode
-  onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
@@ -273,25 +341,6 @@ export function renderCanvasCommandBarBlock(
             role="group"
             aria-label="Creation tools"
           >
-            {TABLE_PLACEMENT_TOOLS.map((tool) => {
-              const active = isTablePlacementActive(tool.mode)
-              return (
-                <CommandButton
-                  key={tool.mode}
-                  onClick={() => activateTablePlacement(tool.mode)}
-                  title={tool.title}
-                  label={tool.label}
-                  active={active}
-                  className={
-                    active
-                      ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
-                      : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
-                  }
-                >
-                  <tool.icon className="h-3.5 w-3.5" />
-                </CommandButton>
-              )
-            })}
             {CREATION_SHAPES.map((shape) => (
               <CommandButton
                 key={shape.id}
@@ -403,33 +452,212 @@ export function renderCanvasCommandBarBlock(
         </>
       )
 
-    case 'room-transform':
-      return ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
-        <div
-          className="inline-flex items-center gap-0.5"
-          role="group"
-          aria-label="Rotate room"
-        >
+    case 'vendor':
+      return (
+        <>
+          {toolbarSectionLabel('Vendor', 'amber')}
           <CommandButton
-            onClick={ctx.onRotateRoomLeft}
-            disabled={!canRotateRoom}
-            title={canRotateRoom ? `${rotateRoomHint} (left)` : rotateRoomHint}
-            label="Room ↺"
-            className="text-teal-900 hover:bg-teal-100"
+            onClick={() => activateTablePlacement('vendor')}
+            title="Draw vendor booth — size from Booth column"
+            label="Booth"
+            active={isTablePlacementActive('vendor')}
+            className={
+              isTablePlacementActive('vendor')
+                ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
+                : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
+            }
           >
-            <RotateCcw className="h-3.5 w-3.5" />
+            <Square className="h-3.5 w-3.5" />
           </CommandButton>
-          <CommandButton
-            onClick={ctx.onRotateRoomRight}
-            disabled={!canRotateRoom}
-            title={canRotateRoom ? `${rotateRoomHint} (right)` : rotateRoomHint}
-            label="Room ↻"
-            className="text-teal-900 hover:bg-teal-100"
+          {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
+            <>
+              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <TableSizePill
+                value={ctx.tableSizeFt}
+                onChange={ctx.onTableSizeChange}
+                sections="vendor"
+                className="shrink-0"
+              />
+              {ctx.highlightedSelectionMetrics &&
+              ctx.tableSizeFt.purpose !== 'guest' ? (
+                <span
+                  className="hidden shrink-0 rounded-md border border-amber-200/90 bg-amber-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-amber-900 sm:inline"
+                  aria-live="polite"
+                >
+                  {ctx.highlightedSelectionMetrics}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+          {ctx.onVendorAutoArrange ? (
+            <>
+              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <AutoArrangeGroup
+                label="Vendor auto-arrange"
+                mode={ctx.vendorAutoArrangeMode ?? 'grid'}
+                onModeChange={ctx.onVendorAutoArrangeModeChange}
+                onRun={ctx.onVendorAutoArrange}
+                canRun={ctx.canVendorAutoArrange}
+                runTitle="Auto-arrange vendor booths in the active room"
+                tone="amber"
+              />
+            </>
+          ) : null}
+        </>
+      )
+
+    case 'patron':
+      return (
+        <>
+          {toolbarSectionLabel('Patron', 'violet')}
+          <div
+            className="inline-flex items-center gap-0.5"
+            role="group"
+            aria-label="Patron table tools"
           >
-            <RotateCw className="h-3.5 w-3.5" />
-          </CommandButton>
-        </div>
-      ) : null
+            {PATRON_PLACEMENT_TOOLS.map((tool) => {
+              const active = isTablePlacementActive(tool.mode)
+              return (
+                <CommandButton
+                  key={tool.mode}
+                  onClick={() => activateTablePlacement(tool.mode)}
+                  title={tool.title}
+                  label={tool.label}
+                  active={active}
+                  className={
+                    active
+                      ? 'bg-violet-200 text-violet-950 hover:bg-violet-200'
+                      : 'bg-violet-50/80 text-violet-900 hover:bg-violet-100'
+                  }
+                >
+                  <tool.icon className="h-3.5 w-3.5" />
+                </CommandButton>
+              )
+            })}
+          </div>
+          {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
+            <>
+              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <TableSizePill
+                value={ctx.tableSizeFt}
+                onChange={ctx.onTableSizeChange}
+                sections="patron"
+                className="shrink-0"
+              />
+              {ctx.highlightedSelectionMetrics &&
+              ctx.tableSizeFt.purpose === 'guest' ? (
+                <span
+                  className="hidden shrink-0 rounded-md border border-violet-200/90 bg-violet-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-violet-900 sm:inline"
+                  aria-live="polite"
+                >
+                  {ctx.highlightedSelectionMetrics}
+                </span>
+              ) : null}
+            </>
+          ) : null}
+          {ctx.onPatronAutoArrange ? (
+            <>
+              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <AutoArrangeGroup
+                label="Patron auto-arrange"
+                mode={ctx.patronAutoArrangeMode ?? 'grid'}
+                onModeChange={ctx.onPatronAutoArrangeModeChange}
+                onRun={ctx.onPatronAutoArrange}
+                canRun={ctx.canPatronAutoArrange}
+                runTitle="Auto-arrange patron tables in the active room (vendor booths stay put)"
+                tone="violet"
+              />
+            </>
+          ) : null}
+        </>
+      )
+
+    case 'room':
+      return (
+        <>
+          {toolbarSectionLabel('Room', 'teal')}
+          {ctx.onSelectRoom &&
+          ctx.onAddRoom &&
+          ctx.onRenameRoom &&
+          ctx.onDeleteRoom ? (
+            <LayoutRoomBar
+              rooms={ctx.rooms ?? []}
+              activeRoomId={ctx.activeRoomId ?? ctx.rooms?.[0]?.id ?? ''}
+              onSelectRoom={ctx.onSelectRoom}
+              onAddRoom={ctx.onAddRoom}
+              onRenameRoom={ctx.onRenameRoom}
+              onDeleteRoom={ctx.onDeleteRoom}
+              highlightedRoomMetrics={ctx.highlightedRoomMetrics}
+              embedded
+            />
+          ) : null}
+          {ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
+            <>
+              {(ctx.onSelectRoom && ctx.onAddRoom) ||
+              ctx.onJoinRooms ||
+              ctx.onUnjoinRoom ? (
+                <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              ) : null}
+              <div
+                className="inline-flex items-center gap-0.5"
+                role="group"
+                aria-label="Rotate room"
+              >
+                <CommandButton
+                  onClick={ctx.onRotateRoomLeft}
+                  disabled={!canRotateRoom}
+                  title={canRotateRoom ? `${rotateRoomHint} (left)` : rotateRoomHint}
+                  label="Room ↺"
+                  className="text-teal-900 hover:bg-teal-100"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </CommandButton>
+                <CommandButton
+                  onClick={ctx.onRotateRoomRight}
+                  disabled={!canRotateRoom}
+                  title={canRotateRoom ? `${rotateRoomHint} (right)` : rotateRoomHint}
+                  label="Room ↻"
+                  className="text-teal-900 hover:bg-teal-100"
+                >
+                  <RotateCw className="h-3.5 w-3.5" />
+                </CommandButton>
+              </div>
+            </>
+          ) : null}
+          {ctx.onJoinRooms || ctx.onUnjoinRoom ? (
+            <>
+              <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
+              <div
+                className="flex items-center gap-0.5"
+                role="group"
+                aria-label="Room joining"
+              >
+                {ctx.onJoinRooms ? (
+                  <CommandButton
+                    onClick={ctx.onJoinRooms}
+                    disabled={!ctx.canJoinRooms}
+                    title={ctx.joinTitle}
+                    label={ctx.joinLabel}
+                    className="bg-sky-50 text-sky-900 hover:bg-sky-100"
+                  >
+                    <Combine className="h-3.5 w-3.5" />
+                  </CommandButton>
+                ) : null}
+                {ctx.onUnjoinRoom ? (
+                  <CommandButton
+                    onClick={ctx.onUnjoinRoom}
+                    disabled={!ctx.canUnjoinRoom}
+                    title="Split the active room out of its joined zone"
+                    label="Unjoin"
+                  >
+                    <Split className="h-3.5 w-3.5" />
+                  </CommandButton>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+        </>
+      )
 
     case 'view-align':
       return (
@@ -464,116 +692,6 @@ export function renderCanvasCommandBarBlock(
           </div>
         </>
       )
-
-    case 'arrangement':
-      return (
-        <>
-          {ctx.onAutoArrange ? (
-            <div
-              className="inline-flex items-center gap-1"
-              role="group"
-              aria-label="Auto-arrange"
-            >
-              {ctx.onAutoArrangeModeChange ? (
-                <select
-                  value={ctx.autoArrangeMode ?? 'grid'}
-                  onChange={(e) =>
-                    ctx.onAutoArrangeModeChange!(
-                      e.target.value as AutoArrangeMode
-                    )
-                  }
-                  title="Auto-arrange placement mode"
-                  aria-label="Auto-arrange mode"
-                  className="h-8 rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700"
-                >
-                  <option value="grid">Grid</option>
-                  <option value="staggered">Staggered</option>
-                  <option value="perimeter-only">Perimeter</option>
-                </select>
-              ) : null}
-              <CommandButton
-                onClick={ctx.onAutoArrange}
-                disabled={!ctx.canAutoArrange}
-                title="Auto-arrange booths"
-                label="Auto-Arrange"
-                className="bg-amber-50 text-amber-900 hover:bg-amber-100"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </CommandButton>
-            </div>
-          ) : null}
-          {ctx.onJoinRooms || ctx.onUnjoinRoom ? (
-            <>
-              {ctx.onAutoArrange ? (
-                <div className="mx-0.5 h-6 w-px bg-stone-200" aria-hidden />
-              ) : null}
-              <div
-                className="flex items-center gap-0.5"
-                role="group"
-                aria-label="Room joining"
-              >
-                {ctx.onJoinRooms ? (
-                  <CommandButton
-                    onClick={ctx.onJoinRooms}
-                    disabled={!ctx.canJoinRooms}
-                    title={ctx.joinTitle}
-                    label={ctx.joinLabel}
-                    className="bg-sky-50 text-sky-900 hover:bg-sky-100"
-                  >
-                    <Combine className="h-3.5 w-3.5" />
-                  </CommandButton>
-                ) : null}
-                {ctx.onUnjoinRoom ? (
-                  <CommandButton
-                    onClick={ctx.onUnjoinRoom}
-                    disabled={!ctx.canUnjoinRoom}
-                    title="Split the active room out of its joined zone"
-                    label="Unjoin"
-                  >
-                    <Split className="h-3.5 w-3.5" />
-                  </CommandButton>
-                ) : null}
-              </div>
-            </>
-          ) : null}
-        </>
-      )
-
-    case 'table-size':
-      return ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
-        <div className="inline-flex max-w-full items-center gap-1">
-          <TableSizePill
-            value={ctx.tableSizeFt}
-            onChange={ctx.onTableSizeChange}
-            className="shrink-0"
-          />
-          {ctx.highlightedSelectionMetrics ? (
-            <span
-              className="hidden shrink-0 rounded-md border border-teal-200/90 bg-teal-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-teal-900 sm:inline"
-              aria-live="polite"
-            >
-              {ctx.highlightedSelectionMetrics}
-            </span>
-          ) : null}
-        </div>
-      ) : null
-
-    case 'rooms':
-      return ctx.onSelectRoom &&
-        ctx.onAddRoom &&
-        ctx.onRenameRoom &&
-        ctx.onDeleteRoom ? (
-        <LayoutRoomBar
-          rooms={ctx.rooms ?? []}
-          activeRoomId={ctx.activeRoomId ?? ctx.rooms?.[0]?.id ?? ''}
-          onSelectRoom={ctx.onSelectRoom}
-          onAddRoom={ctx.onAddRoom}
-          onRenameRoom={ctx.onRenameRoom}
-          onDeleteRoom={ctx.onDeleteRoom}
-          highlightedRoomMetrics={ctx.highlightedRoomMetrics}
-          embedded
-        />
-      ) : null
 
     case 'utilities':
       return (
@@ -673,24 +791,21 @@ export function renderCanvasCommandBarBlock(
 
 export function getVisibleToolbarBlockIds(ctx: {
   needsRoomFirst: boolean
-  showTableSize: boolean
-  showJoinGroup: boolean
-  showRooms: boolean
-  showArrangement: boolean
-  showRoomTransform: boolean
+  showVendor: boolean
+  showPatron: boolean
+  showRoom: boolean
 }): CanvasToolbarBlockId[] {
-  if (ctx.needsRoomFirst && ctx.showRooms) {
-    return ['rooms']
+  if (ctx.needsRoomFirst && ctx.showRoom) {
+    return ['room']
   }
   const ids: CanvasToolbarBlockId[] = [
     'primitives',
     'history-clipboard',
     'view-align',
   ]
-  if (ctx.showRoomTransform) ids.push('room-transform')
-  if (ctx.showArrangement) ids.push('arrangement')
-  if (ctx.showTableSize) ids.push('table-size')
-  if (ctx.showRooms) ids.push('rooms')
+  if (ctx.showVendor) ids.push('vendor')
+  if (ctx.showPatron) ids.push('patron')
+  if (ctx.showRoom) ids.push('room')
   ids.push('utilities')
   return ids
 }

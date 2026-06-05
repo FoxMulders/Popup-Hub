@@ -93,6 +93,8 @@ export interface MarketLayoutTablePlacement {
 export type DeterministicMarketLayoutSuccess = {
   ok: true
   placements: MarketLayoutTablePlacement[]
+  /** Ordered valid slots (may exceed `placements` when obstacles thin the grid). */
+  layoutSlotCandidates: SlotCandidate[]
   jsonPlacements: MarketLayoutPlacementJson[]
   asciiDiagram: string
   explanation: string
@@ -113,8 +115,10 @@ export type DeterministicMarketLayoutResult =
 
 export const DEFAULT_AISLE_WIDTH_FT = 8
 export const DEFAULT_WALL_INSET_FT = 3.5
+/** Edge-to-edge gap between booth footprints in grid/staggered columns (ft). */
+export const TABLE_EDGE_GAP_FT = 2
 
-interface SlotCandidate {
+export interface SlotCandidate {
   x: number
   y: number
   /** 0-based row index (emit as row + 1). */
@@ -280,7 +284,7 @@ function buildInteriorSlots(
   restrictedZones: ReadonlyArray<MarketLayoutRect>
 ): SlotCandidate[] {
   const rowStep = th + aisleFt
-  const colStep = tw
+  const colStep = tw + TABLE_EDGE_GAP_FT
   const minX = inset
   const slots: SlotCandidate[] = []
   let rowIndex0 = 0
@@ -453,6 +457,36 @@ export function placementsToJson(
     aisleSpacing: p.aisleSpacingFt,
     layoutMode: p.layoutMode,
   }))
+}
+
+/** Assign `tableCount` booths across all valid slots (skip blocked slots, keep scanning). */
+function fillPlacementsFromSlots(
+  ordered: ReadonlyArray<SlotCandidate>,
+  tableCount: number,
+  tableIds: ReadonlyArray<string>,
+  tw: number,
+  th: number,
+  cw: number,
+  ch: number,
+  inset: number,
+  aisleFt: number,
+  layoutMode: MarketLayoutMode,
+  restrictedZones: ReadonlyArray<MarketLayoutRect>
+): MarketLayoutTablePlacement[] {
+  const placements: MarketLayoutTablePlacement[] = []
+  let tableIdx = 0
+  for (const slot of ordered) {
+    if (tableIdx >= tableCount) break
+    const rect = tableRect(slot.x, slot.y, tw, th, slot.rotation)
+    if (!fitsBounds(rect, cw, ch, inset) || hitsRestricted(rect, restrictedZones)) {
+      continue
+    }
+    placements.push(
+      toTablePlacement(tableIds[tableIdx]!, slot, aisleFt, layoutMode)
+    )
+    tableIdx++
+  }
+  return placements
 }
 
 function toTablePlacement(
@@ -667,7 +701,14 @@ function runLayout(params: {
 
   if (layoutMode === 'perimeter') {
     const perimeterSlots = buildPerimeterSlots(cw, ch, tw, th, aisleFt, inset)
-    const capacity = perimeterSlots.length
+    const validPerimeterSlots = perimeterSlots.filter((slot) => {
+      const rect = tableRect(slot.x, slot.y, tw, th, slot.rotation)
+      return (
+        fitsBounds(rect, cw, ch, inset) &&
+        !hitsRestricted(rect, restrictedZones)
+      )
+    })
+    const capacity = validPerimeterSlots.length
     if (tableCount > capacity) {
       return {
         ok: false,
@@ -676,24 +717,27 @@ function runLayout(params: {
         layoutMode: 'perimeter',
       }
     }
-    const ordered = orderSlotsWithPremium(perimeterSlots, premiumLocations)
-    const placements: MarketLayoutTablePlacement[] = []
-    for (let i = 0; i < tableCount; i++) {
-      const slot = ordered[i]!
-      const rect = tableRect(slot.x, slot.y, tw, th, slot.rotation)
-      if (
-        !fitsBounds(rect, cw, ch, inset) ||
-        hitsRestricted(rect, restrictedZones)
-      ) {
-        continue
-      }
-      placements.push(
-        toTablePlacement(tableIds[i]!, slot, aisleFt, 'perimeter')
-      )
-    }
+    const ordered = orderSlotsWithPremium(
+      validPerimeterSlots,
+      premiumLocations
+    )
+    const placements = fillPlacementsFromSlots(
+      ordered,
+      tableCount,
+      tableIds,
+      tw,
+      th,
+      cw,
+      ch,
+      inset,
+      aisleFt,
+      'perimeter',
+      restrictedZones
+    )
     return {
       ok: true,
       placements,
+      layoutSlotCandidates: ordered,
       jsonPlacements: placementsToJson(placements),
       asciiDiagram: buildAsciiDiagram(cw, ch, placements, tw, th),
       explanation: buildExplanation(
@@ -725,20 +769,24 @@ function runLayout(params: {
     restrictedZones
   )
   const ordered = orderSlotsWithPremium(interiorSlots, premiumLocations)
-  const placements: MarketLayoutTablePlacement[] = []
-
-  for (let i = 0; i < tableCount && i < ordered.length; i++) {
-    const slot = ordered[i]!
-    const rect = tableRect(slot.x, slot.y, tw, th, slot.rotation)
-    if (!fitsBounds(rect, cw, ch, inset) || hitsRestricted(rect, restrictedZones)) {
-      continue
-    }
-    placements.push(toTablePlacement(tableIds[i]!, slot, aisleFt, layoutMode))
-  }
+  const placements = fillPlacementsFromSlots(
+    ordered,
+    tableCount,
+    tableIds,
+    tw,
+    th,
+    cw,
+    ch,
+    inset,
+    aisleFt,
+    layoutMode,
+    restrictedZones
+  )
 
   return {
     ok: true,
     placements,
+    layoutSlotCandidates: ordered,
     jsonPlacements: placementsToJson(placements),
     asciiDiagram: buildAsciiDiagram(cw, ch, placements, tw, th),
     explanation: buildExplanation(

@@ -104,13 +104,12 @@ function ToolbarReorderItem({
 }
 
 const BLOCK_LABELS: Record<CanvasToolbarBlockId, string> = {
-  primitives: 'Primitive tools',
+  primitives: 'Canvas tools',
   'history-clipboard': 'History and clipboard',
   'view-align': 'View and alignment',
-  'room-transform': 'Room transform',
-  arrangement: 'Arrangement engine',
-  'table-size': 'Table size',
-  rooms: 'Rooms',
+  vendor: 'Vendor booths',
+  patron: 'Patron seating',
+  room: 'Room layout',
   utilities: 'View and save',
 }
 
