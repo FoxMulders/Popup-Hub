@@ -13,6 +13,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { getSessionRoleForTitle } from '@/lib/auth/session-role-for-title'
 import { roleDocumentTitle } from '@/lib/auth/document-title'
+import { rootLayoutMetadata } from '@/lib/seo/public-metadata'
 
 const display = Lora({
   variable: '--font-display',
@@ -32,8 +33,7 @@ const geistMono = Geist_Mono({
 })
 
 const baseMetadata = {
-  description:
-    'Discover local markets, manage vendor booths, and run digital quarter auctions with Popup Hub.',
+  ...rootLayoutMetadata,
   manifest: '/site.webmanifest',
   icons: {
     icon: [

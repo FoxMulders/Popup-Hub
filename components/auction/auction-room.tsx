@@ -14,6 +14,7 @@ import { formatPaddleIdDisplay } from '@/lib/wallet/paddle-id'
 import { Trophy, Zap, Clock, Users, Coins, HelpCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AuctionParticipationGate } from '@/components/quarter-auction/auction-participation-gate'
+import { ResponsiveNativeImage } from '@/components/ui/responsive-image'
 
 interface AuctionRoomProps {
   auction: Auction
@@ -157,7 +158,13 @@ export function AuctionRoom({
       <Card className={`overflow-hidden border-2 ${auction.status === 'active' ? 'border-harvest-400' : 'border-stone-200'}`}>
         <div className="relative">
           {auction.item_image_url && (
-            <img src={auction.item_image_url} alt={auction.item_name} className="h-56 w-full object-cover" />
+            <ResponsiveNativeImage
+              src={auction.item_image_url}
+              alt={auction.item_name}
+              className="h-56 w-full object-cover"
+              aspectRatio="16/9"
+              priority
+            />
           )}
           <Badge className={`absolute left-3 top-3 text-sm capitalize ${
             auction.status === 'active' ? 'bg-sage-500 text-white' :

@@ -18,7 +18,7 @@ export function PassportPageView({ profile, passport, categories, products }: Pa
 
   if (isVendor) {
     return (
-      <div className="mx-auto max-w-[1100px] px-6 py-10 xl:px-10">
+      <div className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 xl:px-10">
         <div className="mb-8 space-y-3">
           <Link
             href="/profile"
@@ -64,7 +64,7 @@ export function PassportPageView({ profile, passport, categories, products }: Pa
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-6 py-10 xl:px-10">
+    <div className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 xl:px-10">
       <PassportProfileForm profile={profile} existing={passport} />
       <div className="mt-8">
         <PassportStoriesManager ownerId={profile.id} role={profile.role} />

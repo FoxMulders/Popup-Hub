@@ -44,7 +44,7 @@ export default async function ApplicationsPage({ params }: Props) {
   const marketEnded = isEventArchived(event as Event)
 
   return (
-    <div className="mx-auto max-w-[1500px] px-6 py-10 xl:px-10">
+    <div className="mx-auto w-full max-w-[1500px] px-4 py-8 sm:px-6 xl:px-10">
       <div className="mb-8 space-y-2">
         <Link href={`/coordinator/events/${id}`}>
           <Button variant="ghost" size="sm" className="gap-1.5 -ml-2 text-muted-foreground mb-2">

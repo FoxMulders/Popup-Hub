@@ -36,7 +36,8 @@
         "test:e2e:pwa": "playwright test tests/e2e/pwa-secure-context.spec.ts",
         "test:e2e:shopper-floorplan": "playwright test tests/e2e/shopper-floorplan.spec.ts",
         "test:e2e:public-discovery": "playwright test tests/e2e/public-discovery.spec.ts",
-        "test:e2e:ui": "playwright test --ui"
+        "test:e2e:ui": "playwright test --ui",
+        "seo:sitemap": "npx tsx scripts/generate-sitemap.ts"
     },
     "dependencies": {
         "@base-ui/react": "^1.5.0",

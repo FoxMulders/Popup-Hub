@@ -116,7 +116,7 @@ export default async function NotificationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 xl:px-16">
       <NotificationPageHeader userId={userId} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8">

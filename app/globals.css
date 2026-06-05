@@ -146,6 +146,12 @@
   --command-center-right: 360px;
   --ecosystem-neon: 56 189 248;
   --ecosystem-neon-violet: 139 92 246;
+
+  /* Slim panel scrollbars (dashboard canvas + overflow dropdowns) */
+  --scrollbar-size: 8px;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgb(148 163 184 / 0.42);
+  --scrollbar-thumb-hover: rgb(100 116 139 / 0.62);
 }
 
 .dark {
@@ -175,6 +181,9 @@
   --sidebar-accent-foreground: #f5f2eb;
   --sidebar-border: rgb(245 242 235 / 12%);
   --sidebar-ring: #6b9b65;
+
+  --scrollbar-thumb: rgb(148 163 184 / 0.32);
+  --scrollbar-thumb-hover: rgb(148 163 184 / 0.52);
 }
 
 @layer base {
@@ -988,6 +997,75 @@
     display: none;
   }
 
+  /*
+   * Modern slim scrollbars — dashboard layout panes, canvas viewport, dropdowns.
+   * 8px rounded slate thumb with hover transition (WebKit + Firefox thin).
+   */
+  .scrollbar-modern,
+  .dashboard-app-shell :is(.overflow-y-auto, .overflow-auto),
+  .coordinator-dashboard-workspace :is(.overflow-y-auto, .overflow-auto),
+  .layout-planner-root :is(.overflow-y-auto, .overflow-auto),
+  #floor-plan-workspace .floor-plan-canvas-host > [role='application'],
+  [data-slot='select-content'],
+  [data-slot='dropdown-menu-content'] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  .scrollbar-modern::-webkit-scrollbar,
+  .dashboard-app-shell :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar,
+  .coordinator-dashboard-workspace :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar,
+  .layout-planner-root :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar,
+  #floor-plan-workspace .floor-plan-canvas-host > [role='application']::-webkit-scrollbar,
+  [data-slot='select-content']::-webkit-scrollbar,
+  [data-slot='dropdown-menu-content']::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-track,
+  .dashboard-app-shell :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-track,
+  .coordinator-dashboard-workspace :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-track,
+  .layout-planner-root :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-track,
+  #floor-plan-workspace .floor-plan-canvas-host > [role='application']::-webkit-scrollbar-track,
+  [data-slot='select-content']::-webkit-scrollbar-track,
+  [data-slot='dropdown-menu-content']::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-thumb,
+  .dashboard-app-shell :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb,
+  .coordinator-dashboard-workspace :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb,
+  .layout-planner-root :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb,
+  #floor-plan-workspace .floor-plan-canvas-host > [role='application']::-webkit-scrollbar-thumb,
+  [data-slot='select-content']::-webkit-scrollbar-thumb,
+  [data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-thumb:hover,
+  .dashboard-app-shell :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb:hover,
+  .coordinator-dashboard-workspace :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb:hover,
+  .layout-planner-root :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-thumb:hover,
+  #floor-plan-workspace .floor-plan-canvas-host > [role='application']::-webkit-scrollbar-thumb:hover,
+  [data-slot='select-content']::-webkit-scrollbar-thumb:hover,
+  [data-slot='dropdown-menu-content']::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+
+  .scrollbar-modern::-webkit-scrollbar-corner,
+  .dashboard-app-shell :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-corner,
+  .coordinator-dashboard-workspace :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-corner,
+  .layout-planner-root :is(.overflow-y-auto, .overflow-auto)::-webkit-scrollbar-corner,
+  #floor-plan-workspace .floor-plan-canvas-host > [role='application']::-webkit-scrollbar-corner,
+  [data-slot='select-content']::-webkit-scrollbar-corner,
+  [data-slot='dropdown-menu-content']::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   @keyframes paddle-chip-spin {
     0% {
       transform: rotate(0deg) scale(0.65);
@@ -1073,9 +1151,15 @@
   button,
   a.app-tap-target,
   [role='button'],
-  .touch-manipulation {
+  .touch-manipulation,
+  .touch-target {
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  .touch-target {
+    min-height: 3rem;
+    min-width: 3rem;
   }
 
   input,

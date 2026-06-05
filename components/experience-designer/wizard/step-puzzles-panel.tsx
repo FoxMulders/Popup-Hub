@@ -39,7 +39,7 @@ export function StepPuzzlesPanel({
               type="button"
               onClick={onGenerate}
               disabled={generating || !hasSkeleton}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-60"
+              className="touch-target flex w-full min-h-12 items-center justify-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-60 touch-manipulation"
             >
               {generating ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -61,7 +61,7 @@ export function StepPuzzlesPanel({
           type="button"
           onClick={onContinue}
           disabled={!puzzlesGenerated}
-          className="w-full rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+          className="touch-target w-full min-h-12 rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40 touch-manipulation"
         >
           Continue to final review
         </button>

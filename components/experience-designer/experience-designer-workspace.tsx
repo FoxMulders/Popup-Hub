@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { BlueprintCanvas } from '@/components/experience-designer/canvas/blueprint-canvas'
 import { WorkspaceInspector } from '@/components/experience-designer/inspector/workspace-inspector'
 import { WorkspaceShell } from '@/components/experience-designer/workspace-shell'
 import { WorkspaceStepHeader } from '@/components/experience-designer/workspace-step-header'
 import { WizardLeftPanel } from '@/components/experience-designer/wizard/wizard-left-panel'
+import { Skeleton } from '@/components/ui/skeleton'
 import { ApiFetchError } from '@/lib/api/api-fetch'
 import {
   fetchArchitecturalSkeleton,
@@ -18,6 +18,16 @@ import type {
   ExperienceDesignerStep,
   RoomSkeleton,
 } from '@/lib/experience-designer/types'
+
+const BlueprintCanvas = lazy(() =>
+  import('@/components/experience-designer/canvas/blueprint-canvas').then((mod) => ({
+    default: mod.BlueprintCanvas,
+  }))
+)
+
+function BlueprintCanvasFallback() {
+  return <Skeleton className="h-full w-full rounded-none bg-white/[0.04]" aria-hidden />
+}
 
 const DEFAULT_CONSTRAINTS: ExperienceConstraints = {
   theme: 'cyber_heist',
@@ -145,11 +155,13 @@ export function ExperienceDesignerWorkspace() {
           />
         }
         center={
-          <BlueprintCanvas
-            roomSkeleton={roomSkeleton}
-            selectedZoneId={selectedZoneId}
-            onZoneSelect={setSelectedZoneId}
-          />
+          <Suspense fallback={<BlueprintCanvasFallback />}>
+            <BlueprintCanvas
+              roomSkeleton={roomSkeleton}
+              selectedZoneId={selectedZoneId}
+              onZoneSelect={setSelectedZoneId}
+            />
+          </Suspense>
         }
         right={
           <WorkspaceInspector

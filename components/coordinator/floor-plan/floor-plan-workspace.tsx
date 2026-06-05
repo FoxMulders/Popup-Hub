@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { FloorPlanSidebar } from '@/components/coordinator/floor-plan/floor-plan-sidebar'
+import { useMobileViewport } from '@/hooks/use-mobile-viewport'
 import { cn } from '@/lib/utils'
 
 export interface FloorPlanWorkspaceProps {
@@ -19,17 +20,8 @@ export interface FloorPlanWorkspaceProps {
  * 0 px wide between two 240 px rails. Re-evaluates on resize so a viewport
  * rotation re-collapses / re-expands appropriately.
  */
-function useIsMobileViewport(breakpoint = 768): boolean {
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
-    const update = () => setIsMobile(mql.matches)
-    update()
-    mql.addEventListener('change', update)
-    return () => mql.removeEventListener('change', update)
-  }, [breakpoint])
-  return isMobile
+function useIsMobileViewport(): boolean {
+  return useMobileViewport()
 }
 
 export function FloorPlanWorkspace({

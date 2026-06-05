@@ -66,8 +66,9 @@ export function CommandButton({
         aria-label={title}
         aria-pressed={active}
         className={cn(
-          'inline-flex shrink-0 items-center justify-center rounded-md p-0 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-40',
-          toolbarIconButtonSize(isCompact),
+          'inline-flex shrink-0 items-center justify-center rounded-md p-0 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-40 touch-manipulation',
+          'min-h-12 min-w-12 md:min-h-0 md:min-w-0',
+          isCompact ? 'md:h-[1.65rem] md:w-[1.65rem]' : 'md:h-7 md:w-7',
           active && 'bg-stone-900 text-white hover:bg-stone-800',
           className
         )}

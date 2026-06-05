@@ -132,7 +132,7 @@ export function CouncilTelemetryPanel({
         ) : null}
 
         {report?.verdicts?.length ? (
-          <section>
+          <section className="min-h-[8rem]">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
               Council of Ten
             </p>
@@ -157,7 +157,7 @@ export function CouncilTelemetryPanel({
             </ul>
           </section>
         ) : telemetry.activeAgents.length > 0 ? (
-          <section>
+          <section className="min-h-[6rem]">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
               Active agents
             </p>
@@ -175,7 +175,7 @@ export function CouncilTelemetryPanel({
         ) : null}
 
         {telemetry.lastAction ? (
-          <section className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3">
+          <section className="min-h-[4.5rem] rounded-lg border border-sky-500/20 bg-sky-500/5 p-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-300/70">
               Last action
             </p>

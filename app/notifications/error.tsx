@@ -95,7 +95,7 @@ export default function NotificationsError({
   }, [unstable_retry])
 
   return (
-    <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 xl:px-16">
       <div className="mb-10">
         <div className="mb-1.5 flex items-center gap-3">
           <Bell className="h-7 w-7 text-harvest-500" />

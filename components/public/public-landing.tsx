@@ -2,7 +2,7 @@ import { LandingAudienceCards, LandingHeroActions } from '@/components/public/la
 
 export function PublicLanding() {
   return (
-    <div className="flex flex-1 flex-col">
+    <main className="flex flex-1 flex-col">
       <section className="border-b border-stone-200 bg-gradient-to-b from-sage-50 to-cream">
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-24">
           <p className="text-xs font-bold uppercase tracking-widest text-sage-700">Local area markets</p>
@@ -17,6 +17,6 @@ export function PublicLanding() {
       </section>
 
       <LandingAudienceCards />
-    </div>
+    </main>
   )
 }

@@ -41,7 +41,7 @@ export default async function ProfilePage() {
       : { count: 0 }
 
   return (
-    <div className="mx-auto max-w-[1400px] px-6 py-10 xl:px-16">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 xl:px-16">
         <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold text-foreground">Profile Settings</h1>
