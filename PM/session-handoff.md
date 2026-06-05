@@ -3,15 +3,15 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `f38d78b` (pushed to `origin/master`)
-- Last deploy commit: `f38d78b` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 130** | commit `02645e5` (handoff updated 2026-06-05 14:19)
+- Branch: `master` @ `6b68a26` (pushed to `origin/master`)
+- Last deploy commit: `6b68a26` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 132** | commit `642c16b` (handoff updated 2026-06-05 15:28)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-05 14:19 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (f38d78b)
+- 2026-06-05 15:28 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (6b68a26)
 
 
 ## Goal
@@ -55,6 +55,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | **Verify** | Guest-table + isolated-scope blocks in `scripts/verify-auto-arrange.ts` (10/10 pass in those sections) |
 
 ## Shipped this session (local, not deployed)
+- **Dashboard layout tools in left panel:** Removed **Event overview** back links from command-center header and curation column. Floor-plan `CanvasCommandBar` (static layout) portals into the left rail via `dashboard-toolbar-portal.tsx` on desktop — canvas column is toolbar-free for more layout space. Mobile and **Full canvas** immersive mode keep the ribbon above the canvas. `sidebarLayout` on `canvas-command-bar.tsx` drops the 36vh height cap for vertical scrolling in the rail.
 - **Condensed canvas toolbars:** Floor-plan command ribbon, static dashboard rows, venue layout palette, and canvas utility bar are icon-only with `TooltipWrapper` labels. `CommandButton` is square (~1.65rem compact); removed Vendor/Patron/Room section badges and table-size column headers; embedded room bar uses icon **Add room**; reset/reorder chrome tightened. Files: `command-button.tsx`, `canvas-command-bar-blocks.tsx`, `canvas-toolbar-static.tsx`, `canvas-toolbar-reorder.tsx`, `layout-room-bar.tsx`, `table-size-pill.tsx`, `venue-layout-toolbar.tsx`, `canvas-utility-toolbar.tsx`.
 - **Gemini → Groq AI fallback:** Flyer vision parse (`lib/flyer/parse-flyer-vision.ts`) tries Gemini first (`GEMINI_API_KEY` + `GEMINI_MODEL_ID`), then Groq when quota/rate-limit/overload errors occur. Groq key reads `GROQ_API_KEY` or Vercel alias `POPUPHUB_API_KEY`; model defaults to `llama-3.2-90b-vision-preview` (`GROQ_MODEL_ID` optional). Shared helpers in `lib/ai/`. Verify: `npx tsx scripts/verify-ai-provider-fallback.ts`. **Note:** Experience Designer planning sessions still proxy to the external Master Generator backend — that service needs its own Gemini→Groq fallback if theme generation should use this pattern.
 - **Build fix (TS):** `CanvasPointerApi.onPointerDown` return type updated to `boolean` (implementation already returned handled flag; `floor-plan-canvas.tsx` truthiness check failed typecheck). `scripts/verify-room-merge-two-rooms.ts` — full `LayoutRoom` shape for legacy projection test. Local `npm run build` passes (build **131**).
@@ -177,18 +178,19 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
 
 ## Next actions
-1. **Room merge smoke-test** — Add two touching rooms, Shift+select both (or park flush), **Merge (2)** → single hall in sidebar, booths stay put, grid shows through stage outline
-2. **Room move/resize smoke-test** — Add room → confirm Select tool active, eight dots on perimeter, drag room interior/wall to move, drag corner/edge dot to resize; toolbar W×L readout updates
-3. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal
-4. **Commit + deploy** room merge + stage fill + prior local fixes when ready
-5. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
-6. **Passport smoke-test (public)** — bio + Instagram/Facebook/Website on public `/coordinators/[id]` and `/patrons/[id]`; stories strip still opens story viewer
-7. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
-8. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
-9. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
-10. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
-11. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
-12. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
+1. **Dashboard toolbar-in-sidebar smoke-test** — `/coordinator/dashboard`: layout tools (Room / Patron / Vendor / Canvas) appear in left panel above curation queue; canvas fills full column height; **Full canvas** still shows toolbar strip; mobile shows toolbar above canvas
+2. **Room merge smoke-test** — Add two touching rooms, Shift+select both (or park flush), **Merge (2)** → single hall in sidebar, booths stay put, grid shows through stage outline
+3. **Room move/resize smoke-test** — Add room → confirm Select tool active, eight dots on perimeter, drag room interior/wall to move, drag corner/edge dot to resize; toolbar W×L readout updates
+4. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal
+5. **Commit + deploy** room merge + stage fill + prior local fixes when ready
+6. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
+7. **Passport smoke-test (public)** — bio + Instagram/Facebook/Website on public `/coordinators/[id]` and `/patrons/[id]`; stories strip still opens story viewer
+8. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
+9. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
+10. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
+11. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
+12. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
+13. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 
 ## How to start the next chat
 ```
