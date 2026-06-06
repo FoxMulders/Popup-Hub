@@ -25,6 +25,8 @@ import {
   PATRON_BOUNDING_BOX_PADDING_FT,
   validateClearances,
   BOOTH_EDGE_CLEARANCE_FT,
+  BOOTH_OBSTACLE_CLEARANCE_FT,
+  BOOTH_PLACEMENT_GAP_FT,
   WALL_BUFFER_FT,
   FRONT_CLEARANCE_FT,
 } from '../components/coordinator/floor-plan-v2/engine/auto-arrange'
@@ -447,7 +449,9 @@ console.log('')
 console.log(`Spec constants:`)
 console.log(`  WALL_BUFFER_FT      = ${WALL_BUFFER_FT}  (2 chairs)`)
 console.log(`  FRONT_CLEARANCE_FT  = ${FRONT_CLEARANCE_FT}  (2 patrons)`)
-console.log(`  BOOTH_EDGE_CLEARANCE_FT = ${BOOTH_EDGE_CLEARANCE_FT}`)
+console.log(`  BOOTH_PLACEMENT_GAP_FT = ${BOOTH_PLACEMENT_GAP_FT}  (vendor side-to-side: 2′ + 2′)`)
+console.log(`  BOOTH_OBSTACLE_CLEARANCE_FT = ${BOOTH_OBSTACLE_CLEARANCE_FT}  (per-side buffer)`)
+console.log(`  BOOTH_EDGE_CLEARANCE_FT = ${BOOTH_EDGE_CLEARANCE_FT}  (deprecated alias)`)
 console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
 
 // ----- Multi-table consolidation (3×5′ → single 15′ booth) -----
@@ -817,7 +821,7 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
     vendorsAfterVendorScope.length > 0 &&
     patronsAfterVendorScope.every((patron) =>
       vendorsAfterVendorScope.every(
-        (vendor) => !boothsOverlap(vendor, patron, BOOTH_EDGE_CLEARANCE_FT)
+        (vendor) => !boothsOverlap(vendor, patron, BOOTH_OBSTACLE_CLEARANCE_FT)
       )
     )
 
@@ -852,7 +856,7 @@ console.log(`  PATRON_VISION_WIDTH_FT = ${PATRON_VISION_WIDTH_FT}`)
     patronsAfterPatronScope.length === 2 &&
     patronsAfterPatronScope.every((patron) =>
       vendorsAfterPatronScope.every(
-        (vendor) => !boothsOverlap(patron, vendor, BOOTH_EDGE_CLEARANCE_FT)
+        (vendor) => !boothsOverlap(patron, vendor, BOOTH_OBSTACLE_CLEARANCE_FT)
       )
     )
 

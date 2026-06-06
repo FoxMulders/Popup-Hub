@@ -15,11 +15,12 @@ import {
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
 } from '../interactions/category-rules'
+import { BOOTH_SAFETY_BUFFER_FT } from '@/lib/booth-planner/layout-clearance-constants'
 import { rotatedAabb, type Point, type Rect } from '../interactions/geometry'
 import type { BoothObject, PlacedObject } from '../state/types'
 
-/** Keep in sync with `auto-arrange.ts` spacing spec. */
-const BOOTH_EDGE_CLEARANCE_FT = 0
+/** Keep in sync with `auto-arrange.ts` vendor spacing spec. */
+const BOOTH_EDGE_CLEARANCE_FT = BOOTH_SAFETY_BUFFER_FT
 const FRONT_CLEARANCE_FT = 5
 const WALL_BUFFER_FT = 3.5
 

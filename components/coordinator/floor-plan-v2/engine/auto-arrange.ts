@@ -43,6 +43,10 @@ import {
   generateDeterministicMarketLayout,
   TABLE_EDGE_GAP_FT,
 } from '@/lib/floor-plan/deterministic-market-layout'
+import {
+  BOOTH_CORE_SEPARATION_CELLS,
+  BOOTH_SAFETY_BUFFER_FT,
+} from '@/lib/booth-planner/layout-clearance-constants'
 
 export {
   calculatePatronCentricLayout,
@@ -90,15 +94,16 @@ export const BACK_TO_BACK_GAP_FT = CHAIR_LENGTH_FT * 3
 /** Front-of-booth clearance — uses the patron-pair width. */
 export const FRONT_CLEARANCE_FT = PATRON_PAIR_WIDTH_FT
 /**
- * Edge-to-edge gap between vendor booth footprints in grid / row pack.
+ * Edge-to-edge gap between adjacent vendor booth footprints in grid / row pack.
+ * Two booths side-by-side share a 2′ buffer each → 4′ between table edges.
  * Row pack advances X by `boothW + BOOTH_PLACEMENT_GAP_FT`.
  */
-export const BOOTH_PLACEMENT_GAP_FT = 0
-/** Walking clearance around fixed vendor/patron footprints treated as obstacles. */
-export const BOOTH_OBSTACLE_CLEARANCE_FT = 2
+export const BOOTH_PLACEMENT_GAP_FT = BOOTH_CORE_SEPARATION_CELLS
+/** Per-side clearance around fixed vendor/patron footprints treated as obstacles. */
+export const BOOTH_OBSTACLE_CLEARANCE_FT = BOOTH_SAFETY_BUFFER_FT
 /** Column gap between patron tables during row-pack fallback (unchanged from grid default). */
 const PATRON_TABLE_GAP_FT = TABLE_EDGE_GAP_FT
-/** @deprecated Use {@link BOOTH_PLACEMENT_GAP_FT} for vendor spacing; {@link BOOTH_OBSTACLE_CLEARANCE_FT} for cross-group obstacles. */
+/** @deprecated Use {@link BOOTH_PLACEMENT_GAP_FT} for vendor-vendor spacing; {@link BOOTH_OBSTACLE_CLEARANCE_FT} for cross-group obstacles. */
 export const BOOTH_EDGE_CLEARANCE_FT = BOOTH_PLACEMENT_GAP_FT
 /** Padding added around manually placed patron tables before auto-arrange. */
 export const PATRON_BOUNDING_BOX_PADDING_FT = 1
@@ -1617,6 +1622,17 @@ function expandRectForClearance(rect: Rect, margin: number): Rect {
   }
 }
 
+/** Minimum edge-to-edge gap between two booth footprints (ft). */
+function minBoothEdgeGapFt(a: BoothObject, b: BoothObject): number {
+  const aGuest = isGuestTableBooth(a)
+  const bGuest = isGuestTableBooth(b)
+  if (aGuest && bGuest) return PATRON_TABLE_GAP_FT
+  if (aGuest || bGuest) {
+    return BOOTH_OBSTACLE_CLEARANCE_FT * 2
+  }
+  return BOOTH_PLACEMENT_GAP_FT
+}
+
 /**
  * Validate that an arranged doc obeys the v1 spec — used by tests.
  * Returns an array of human-readable violation strings; empty array
@@ -1664,16 +1680,19 @@ export function validateClearances(
       const b = booths[j]!
       if (placedObjectsOverlap(a, b)) {
         errors.push(`booths ${a.id} and ${b.id} overlap`)
-      } else if (
-        boothsCloserThan(
-          objectFootprintAabb(a),
-          objectFootprintAabb(b),
-          BOOTH_PLACEMENT_GAP_FT
-        )
-      ) {
-        errors.push(
-          `booths ${a.id} and ${b.id} closer than ${BOOTH_PLACEMENT_GAP_FT}ft edge clearance`
-        )
+      } else {
+        const minGap = minBoothEdgeGapFt(a, b)
+        if (
+          boothsCloserThan(
+            objectFootprintAabb(a),
+            objectFootprintAabb(b),
+            minGap
+          )
+        ) {
+          errors.push(
+            `booths ${a.id} and ${b.id} closer than ${minGap}ft edge clearance`
+          )
+        }
       }
     }
   }
