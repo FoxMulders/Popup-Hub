@@ -3,6 +3,10 @@
 import { ChevronDown, ChevronRight, ChevronUp, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TooltipWrapperQa } from '@/src/qa_review/components/coordinator/dashboard/tooltip-wrapper_qa'
+import {
+  QA_ACCORDION_HEADERS,
+  QaAccordionHeader,
+} from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { cn } from '@/lib/utils'
 import type { CanvasToolbarBlockId } from '@/components/coordinator/floor-plan-v2/tools/toolbar-order'
 import {
@@ -24,14 +28,6 @@ import {
   QA_TIP_MOVE_UP,
   QA_TIP_RESET_LAYOUT,
 } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/toolbar-tooltip-copy_qa'
-
-/** Uppercase semantic section titles — no standalone row icons. */
-const STATIC_ROW_HEADERS: Record<CanvasToolbarStaticRowId, string> = {
-  room: 'ROOM CONTROLS',
-  patron: 'PATRON LAYOUT',
-  vendor: 'VENDOR BOOTHS',
-  tools: 'DESIGNER TOOLS',
-}
 
 export interface CanvasToolbarStaticQaProps {
   visibleRowIds: readonly CanvasToolbarStaticRowId[]
@@ -92,9 +88,9 @@ function StaticToolbarRow({
             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
           )}
         </button>
-        <h3 className="min-w-0 flex-1 truncate text-xs font-bold uppercase tracking-wider text-slate-700">
-          {header}
-        </h3>
+        <div className="min-w-0 flex-1 truncate">
+          <QaAccordionHeader>{header}</QaAccordionHeader>
+        </div>
         <button
           type="button"
           disabled={index === 0}
@@ -250,7 +246,7 @@ export function CanvasToolbarStaticQa({
           <StaticToolbarRow
             key={rowId}
             rowId={rowId}
-            header={STATIC_ROW_HEADERS[rowId]}
+            header={QA_ACCORDION_HEADERS[rowId]}
             index={index}
             total={displayOrder.length}
             expanded={expanded}

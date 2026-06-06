@@ -10,11 +10,32 @@ import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboa
 import { DashboardToolbarPortalTarget } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 import { InitialRoomModal } from '@/components/coordinator/dashboard/initial-room-modal'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import { QA_CANVAS_VIEWPORT_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 import { cn } from '@/lib/utils'
 
 /** Hide scrollbar tracks while preserving smooth scroll on short viewports. */
 export const QA_PANEL_SCROLL_CLASSES =
   'scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]'
+
+/** Minimal Placement HUD copy — absolute micro-tooltips for QA visual inspection. */
+export const QA_PLACEMENT_TIP_VALID = 'Valid space'
+export const QA_PLACEMENT_TIP_VIOLATION = 'Rule conflict'
+
+/** Uppercase accordion section titles — no standalone row icons. */
+export const QA_ACCORDION_HEADERS = {
+  room: 'ROOM CONTROLS',
+  patron: 'PATRON LAYOUT',
+  vendor: 'VENDOR BOOTHS',
+  tools: 'DESIGNER TOOLS',
+} as const
+
+export function QaAccordionHeader({ children }: { children: string }) {
+  return (
+    <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+      {children}
+    </h3>
+  )
+}
 
 export interface DashboardBootstrapQaProps {
   header: ReactNode
@@ -79,12 +100,14 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
         leftClassName="w-80 flex flex-col justify-start overflow-hidden border-r border-gray-200 bg-white lg:h-[calc(100vh-64px)]"
         left={<DashboardLeftPanelQa />}
         center={
-          <DashboardCanvasColumn
-            showBlueprint={showBlueprint}
-            mountCanvas={Boolean(selectedEventId && hasInitialRoom)}
-            reducedMotion={reducedMotion}
-            onCanvasInteractive={handleCanvasInteractive}
-          />
+          <div className={QA_CANVAS_VIEWPORT_CLASS}>
+            <DashboardCanvasColumn
+              showBlueprint={showBlueprint}
+              mountCanvas={Boolean(selectedEventId && hasInitialRoom)}
+              reducedMotion={reducedMotion}
+              onCanvasInteractive={handleCanvasInteractive}
+            />
+          </div>
         }
       />
       {selectedEventId && !hasInitialRoom ? (

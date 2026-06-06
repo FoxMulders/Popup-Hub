@@ -14,7 +14,10 @@ import {
   type MutableRefObject,
 } from 'react'
 import { CanvasGrid } from '@/components/coordinator/floor-plan-v2/canvas/canvas-grid'
-import { CanvasObjectsQa as CanvasObjects } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
+import {
+  CanvasObjectsQa as CanvasObjects,
+  QA_CANVAS_VIEWPORT_CLASS,
+} from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 import {
   DraftPreview,
   MarqueePreview,
@@ -649,14 +652,15 @@ export function FloorPlanCanvasDashboardQa({
     viewport.scrollHandlers
 
   return (
-    <div
-      id={FLOOR_PLAN_CANVAS_ID}
-      ref={scrollRef}
-      className={cn(
-        'canvas-container pointer-events-auto relative h-full w-full overflow-auto bg-stone-100 outline-none',
-        commandCenterViewport && 'bg-stone-100',
-        className
-      )}
+    <div className={cn(QA_CANVAS_VIEWPORT_CLASS, 'min-h-0 min-w-0')}>
+      <div
+        id={FLOOR_PLAN_CANVAS_ID}
+        ref={scrollRef}
+        className={cn(
+          'canvas-container pointer-events-auto relative h-full w-full overflow-hidden bg-stone-100 outline-none',
+          commandCenterViewport && 'bg-stone-100',
+          className
+        )}
       tabIndex={0}
       role="application"
       aria-label="Floor plan canvas viewport"
@@ -823,6 +827,7 @@ export function FloorPlanCanvasDashboardQa({
             />
           ) : null}
         </svg>
+      </div>
       </div>
     </div>
   )

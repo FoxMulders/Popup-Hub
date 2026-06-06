@@ -17,7 +17,14 @@
 ## Goal
 **Vendor Supplies** — Amazon.ca search + curated affiliate suggestions for market vendors (`/vendor/supplies`). Not deployed yet.
 
-## Shipped this session (not deployed)
+## Shipped this session (QA absolute overrides, not deployed)
+- **`Canvas_qa.tsx`:** Exported `QA_CANVAS_VIEWPORT_CLASS` (`flex-1 h-[calc(100vh-64px)] overflow-hidden relative bg-slate-50`) — structural lock for main hall viewport.
+- **`floor-plan-canvas_dashboard_qa.tsx`:** Canvas container `overflow-auto` → `overflow-hidden`; outer wrapper uses `QA_CANVAS_VIEWPORT_CLASS` (no right-edge scrollbar; pan/zoom handlers unchanged).
+- **`Dashboard_qa.tsx`:** Center column wrapped in `QA_CANVAS_VIEWPORT_CLASS`; exported `QA_PLACEMENT_TIP_VALID` / `QA_PLACEMENT_TIP_VIOLATION` (`Valid space` / `Rule conflict`); `QA_ACCORDION_HEADERS` + `QaAccordionHeader` h3 typography.
+- **`canvas-toolbar-static_qa.tsx`:** Accordion triggers use `QaAccordionHeader` + `QA_ACCORDION_HEADERS` from `Dashboard_qa` (no row icon badges).
+- **`canvas-legend_qa.tsx`:** Placement HUD microcopy wired to Dashboard QA tip constants.
+
+## Shipped earlier this session (not deployed)
 - **Vendor Supplies:** New `/vendor/supplies` page with Amazon.ca search (associate tag `thetipsyfox08-20`), 15 curated booth/display/packaging picks (all affiliate links), category + local filters, mandatory disclosure. Nav: **Vendor Supplies** in app nav + vendor workspace rail. Shared `lib/affiliate/amazon.ts` (material checklist re-exports). Verify: `npx tsx scripts/verify-vendor-supplies.ts`.
 
 ## Shipped earlier this session (QA staging, not deployed)
@@ -46,8 +53,8 @@
 - **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` wiring for `CanvasCommandBarQa`.
 
 ## Next actions
-1. **Wire QA dashboard for viewport inspection** — temporary import swaps in `market-dashboard-client.tsx` + `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`); run `npm run dev` and open `/coordinator/dashboard`
-2. **Smoke-test** — left rail: no visible scrollbar at 1080p/720p but content scrolls when all accordions expanded; tooltips pop right without clipping; headers **ROOM CONTROLS** / **PATRON LAYOUT** / **VENDOR BOOTHS** / **DESIGNER TOOLS**; stage drag + single rose outline after merge
+1. **Wire QA dashboard for viewport inspection** — temporary import swaps in `market-dashboard-client.tsx` + `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`); swap `CanvasLegend` → `CanvasLegendQa` for Placement HUD microcopy
+2. **Smoke-test** — main hall canvas: no right-edge scrollbar at 1080p; pan/hand still work; left rail headers **ROOM CONTROLS** / **PATRON LAYOUT** / **VENDOR BOOTHS** / **DESIGNER TOOLS**; Placement HUD shows **Valid space** / **Rule conflict** only
 3. **Optional canvas/merge E2E** — `LayoutCanvasDashboardQa` + `destructive-merge_qa` import swaps
 4. **Promote to production** after QA sign-off (revert wiring swaps, promote `_qa` modules)
 
