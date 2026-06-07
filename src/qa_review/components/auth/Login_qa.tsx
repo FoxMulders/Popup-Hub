@@ -24,46 +24,8 @@ import {
   validateLoginCredentials,
 } from '@/src/qa_review/lib/auth/login-lockout_qa'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
-import '@/src/qa_review/styles/login-lockout_qa.css'
 
-function NedryLockoutOverlay({ cooldownRemaining }: { cooldownRemaining: number }) {
-  return (
-    <div
-      className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black animate-flash rounded-lg"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="nedry-lockout-title"
-      aria-describedby="nedry-lockout-countdown"
-    >
-      <div className="nedry-lockout-terminal nedry-scanlines relative mx-4 max-w-md px-6 py-8 text-center">
-        <p className="nedry-alert-blink mb-4 text-xs font-bold tracking-[0.35em] text-[#33ff66]">
-          INGEN SECURITY PROTOCOL
-        </p>
-
-        <div className="mx-auto mb-5 flex w-fit items-end gap-2">
-          <div className="nedry-pixel-character" aria-hidden>
-            <div className="nedry-pixel-finger" />
-          </div>
-        </div>
-
-        <h2
-          id="nedry-lockout-title"
-          className="mb-3 font-mono text-lg font-bold leading-snug text-[#ffee66] md:text-xl"
-          style={{ textShadow: '2px 2px 0 #331100' }}
-        >
-          Ah, ah, ah! You didn&apos;t say the magic word!
-        </h2>
-
-        <p
-          id="nedry-lockout-countdown"
-          className="font-mono text-sm text-[#33ff66]"
-        >
-          System Locked: Retry available in {cooldownRemaining}s
-        </p>
-      </div>
-    </div>
-  )
-}
+const NEDRY_LOCKOUT_GIF = 'https://media.giphy.com/media/uOAXDA7ZeJJIs/giphy.gif'
 
 /**
  * QA staging login — trimmed credential handling, local-only password visibility,
@@ -88,7 +50,6 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
   const [passwordVisible, setPasswordVisible] = useState(false)
 
   const isLockedOut = cooldownRemaining > 0
-  const showNedryOverlay = strikes >= 3 && isLockedOut
 
   useEffect(() => {
     if (!authError) return
@@ -248,8 +209,11 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     <>
       {!embedded ? (
         <div className="text-center">
-          <div className="mb-4 flex justify-center">
-            <BrandLogoMark size="auth" />
+          <div className="mb-6 flex justify-center">
+            <BrandLogoMark
+              size="auth"
+              className="h-auto w-48 max-w-[200px] shrink-0 object-contain"
+            />
           </div>
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
             Welcome back
@@ -258,9 +222,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
         </div>
       ) : null}
 
-      <div className="relative">
-        {showNedryOverlay ? <NedryLockoutOverlay cooldownRemaining={cooldownRemaining} /> : null}
-
+      <div>
         <Card className={embedded ? 'border-0 shadow-none' : 'shadow-sm'}>
           {!embedded ? (
             <CardHeader className="pb-4">
@@ -380,9 +342,59 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     </>
   )
 
-  if (embedded) return formBody
+  const lockoutOverlay =
+    strikes >= 3 && cooldownRemaining > 0 ? (
+      <div
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black p-6 font-mono select-none"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="nedry-lockout-title"
+        aria-describedby="nedry-lockout-countdown"
+      >
+        <div className="max-w-sm rounded-md border-4 border-red-600 bg-zinc-950 p-6 text-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+          <h1
+            id="nedry-lockout-title"
+            className="mb-4 animate-pulse text-xl font-black tracking-widest text-red-500"
+          >
+            ⚠️ SECURITY ALERT ⚠️
+          </h1>
 
-  return <div className="w-full max-w-md space-y-6">{formBody}</div>
+          <img
+            src={NEDRY_LOCKOUT_GIF}
+            alt="Ah ah ah! You didn't say the magic word!"
+            className="mb-4 h-auto w-full rounded border-2 border-red-900"
+          />
+
+          <p className="mb-4 text-sm font-bold uppercase tracking-wide text-red-500">
+            &quot;YOU DIDN&apos;T SAY THE MAGIC WORD!&quot;
+          </p>
+
+          <div
+            id="nedry-lockout-countdown"
+            className="rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-400"
+          >
+            ACCESS DENIED. LOCKOUT EXPIRY:{' '}
+            <span className="text-sm font-bold text-white">{cooldownRemaining}s</span>
+          </div>
+        </div>
+      </div>
+    ) : null
+
+  if (embedded) {
+    return (
+      <>
+        {lockoutOverlay}
+        {formBody}
+      </>
+    )
+  }
+
+  return (
+    <>
+      {lockoutOverlay}
+      <div className="w-full max-w-md space-y-6">{formBody}</div>
+    </>
+  )
 }
 
 export default LoginQa

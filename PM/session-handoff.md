@@ -15,10 +15,12 @@
 
 
 ## Goal
-**UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA lockout staged. Not deployed yet.
+**UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout complete. Not deployed yet.
 
 ## Shipped this session (not deployed)
-- **Login QA lockout (`Login_qa.tsx`):** Trimmed credentials + client validation; local-only password visibility toggle; 3-strike exponential cooldown (30s / 120s / 480s); Nedry “magic word” overlay with live countdown; helpers in `login-lockout_qa.ts` + `login-lockout_qa.css`. Not wired to `/login` until promotion.
+- **Login QA Jurassic Park lockout (`Login_qa.tsx`):** Fullscreen `fixed inset-0` takeover on 3rd failed strike; real Nedry finger-wag GIF (`media.giphy.com/.../uOAXDA7ZeJJIs`); retro red/zinc security alert card with live lockout countdown; inputs stay disabled via existing `cooldownRemaining` + exponential backoff (30s / 120s / 480s). Staging-only — production `/login` unchanged until promotion.
+- **Login QA logo scale (`Login_qa.tsx`):** `BrandLogoMark` auth header clamped to `w-48 max-w-[200px]` with `h-auto object-contain` (overrides default `h-40 sm:h-48`); wrapper `mb-6` for spacing above sign-in card. Staging-only — production `/login` unchanged until promotion.
+- **Login QA lockout helpers (`login-lockout_qa.ts`):** Trimmed credentials + client validation; local-only password visibility toggle; strike/cooldown math. Legacy pixel CSS (`login-lockout_qa.css`) unused after GIF overlay — safe to delete on promotion cleanup.
 - **QA dashboard wired:** `market-dashboard-client.tsx` → `DashboardBootstrapQa`; `floor-plan-v2.tsx` → `CanvasCommandBarQa`.
 - **AI guardrails (`ai-generation-guardrails_qa.tsx`):** `countdown` + `isGenerating` lock; 30s cooldown; **5 runs/hour** cap; credits HUD `48 / 50`; depletion toast before generative loop.
 - **Initial loader:** Computed uniform perimeter tables; removed dashed ring; logo fades into geometric ring center (`ringCenterX` / `ringCenterY` in `initial-loader-reveal.tsx`).
@@ -76,7 +78,7 @@
 3. **Wizard smoke-test** — Step 2 booth fee / discount backspace; category price placeholders
 4. **Instant book** — re-run `npx tsx scripts/verify-instant-book-category-limits.ts` after any apply-route edits (currently 4/4)
 5. **OpenRouter (deferred)** — user spec §5 truncated; no OpenRouter spatial-AI wiring in this pass
-6. **Login QA smoke-test** — import `LoginQa` on a staging route; 3 wrong passwords → Nedry overlay + 30s lock; verify trim + toggle do not leak globally
+6. **Login QA smoke-test** — import `LoginQa` on a staging route; 3 wrong passwords → fullscreen Nedry GIF overlay + 30s lock; verify trim + toggle do not leak globally
 7. **Commit + deploy** when ready (`PM/Deploy-popuphub.bat` or `ship.ps1`); promote `_qa` modules after sign-off
 
 ## Goal (prior)
