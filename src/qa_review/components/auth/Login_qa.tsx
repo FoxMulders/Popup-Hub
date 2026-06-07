@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useId, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -48,8 +49,14 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
   const [strikes, setStrikes] = useState(0)
   const [cooldownRemaining, setCooldownRemaining] = useState(0)
   const [passwordVisible, setPasswordVisible] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   const isLockedOut = cooldownRemaining > 0
+  const showLockoutOverlay = strikes >= 3 && cooldownRemaining > 0
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!authError) return
@@ -135,6 +142,15 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     })
   }, [])
 
+  useEffect(() => {
+    if (!showLockoutOverlay) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [showLockoutOverlay])
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     if (isLockedOut) return
@@ -212,7 +228,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
           <div className="mb-6 flex justify-center">
             <BrandLogoMark
               size="auth"
-              className="h-auto w-48 max-w-[200px] shrink-0 object-contain"
+              className="h-20 w-auto max-w-[100px] shrink-0 object-contain sm:h-24"
             />
           </div>
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
@@ -342,48 +358,49 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     </>
   )
 
-  const lockoutOverlay =
-    strikes >= 3 && cooldownRemaining > 0 ? (
-      <div
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black p-6 font-mono select-none"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="nedry-lockout-title"
-        aria-describedby="nedry-lockout-countdown"
-      >
-        <div className="max-w-sm rounded-md border-4 border-red-600 bg-zinc-950 p-6 text-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
-          <h1
-            id="nedry-lockout-title"
-            className="mb-4 animate-pulse text-xl font-black tracking-widest text-red-500"
-          >
-            ⚠️ SECURITY ALERT ⚠️
-          </h1>
+  const lockoutOverlay = showLockoutOverlay ? (
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black p-6 font-mono select-none"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="nedry-lockout-title"
+      aria-describedby="nedry-lockout-countdown"
+    >
+      <div className="max-w-sm rounded-md border-4 border-red-600 bg-zinc-950 p-6 text-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+        <h1
+          id="nedry-lockout-title"
+          className="mb-4 animate-pulse text-xl font-black tracking-widest text-red-500"
+        >
+          ⚠️ SECURITY ALERT ⚠️
+        </h1>
 
-          <img
-            src={NEDRY_LOCKOUT_GIF}
-            alt="Ah ah ah! You didn't say the magic word!"
-            className="mb-4 h-auto w-full rounded border-2 border-red-900"
-          />
+        <img
+          src={NEDRY_LOCKOUT_GIF}
+          alt="Ah ah ah! You didn't say the magic word!"
+          className="mb-4 h-auto w-full rounded border-2 border-red-900"
+        />
 
-          <p className="mb-4 text-sm font-bold uppercase tracking-wide text-red-500">
-            &quot;YOU DIDN&apos;T SAY THE MAGIC WORD!&quot;
-          </p>
+        <p className="mb-4 text-sm font-bold uppercase tracking-wide text-red-500">
+          &quot;YOU DIDN&apos;T SAY THE MAGIC WORD!&quot;
+        </p>
 
-          <div
-            id="nedry-lockout-countdown"
-            className="rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-400"
-          >
-            ACCESS DENIED. LOCKOUT EXPIRY:{' '}
-            <span className="text-sm font-bold text-white">{cooldownRemaining}s</span>
-          </div>
+        <div
+          id="nedry-lockout-countdown"
+          className="rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-400"
+        >
+          ACCESS DENIED. LOCKOUT EXPIRY:{' '}
+          <span className="text-sm font-bold text-white">{cooldownRemaining}s</span>
         </div>
       </div>
-    ) : null
+    </div>
+  ) : null
+
+  const lockoutPortal = mounted && lockoutOverlay ? createPortal(lockoutOverlay, document.body) : null
 
   if (embedded) {
     return (
       <>
-        {lockoutOverlay}
+        {lockoutPortal}
         {formBody}
       </>
     )
@@ -391,7 +408,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <>
-      {lockoutOverlay}
+      {lockoutPortal}
       <div className="w-full max-w-md space-y-6">{formBody}</div>
     </>
   )

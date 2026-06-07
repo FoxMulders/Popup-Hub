@@ -3,14 +3,16 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `7db76c6` (pushed to `origin/master`)
+- Branch: `master` @ `f5afa6a` (pushed to `origin/master`)
 - Last deploy commit: `7db76c6` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 154** | commit `af369cf` (handoff updated 2026-06-07 17:37)
+- Production: https://popuphub.ca - **v0.1.155 · build 155** | commit `f5afa6a` (user-confirmed 2026-06-07)
+- **Local WIP (not in build 155):** `login-form.tsx` → `LoginQa` re-export; `Login_qa.tsx` Nedry portal lockout + halved logo
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
+- 2026-06-07 — Production footer **v0.1.155 · build 155 · f5afa6a** (handoff doc commit; login QA lockout not included)
 - 2026-06-07 17:37 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (7db76c6)
 
 
