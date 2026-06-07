@@ -26,6 +26,7 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
   patron: [
     { href: '/discover', label: 'Discover Markets' },
     { href: '/favorites', label: 'Favorites' },
+    { href: '/supplies', label: 'Market Supplies' },
     { href: '/wallet', label: 'Wallet' },
   ],
   vendor: [

@@ -133,7 +133,7 @@ function LogoShell({
 }
 
 /** Footer wordmark — physical 1″ height for consistent cross-browser sizing. */
-const FOOTER_LOGO_HEIGHT_IN = 1
+const FOOTER_LOGO_HEIGHT_IN = 0.67
 const FOOTER_LOGO_DISPLAY_HEIGHT_PX = 96
 const FOOTER_LOGO_DISPLAY_WIDTH_PX = Math.round(
   FOOTER_LOGO_DISPLAY_HEIGHT_PX * (LOGO_WIDTH / LOGO_HEIGHT),

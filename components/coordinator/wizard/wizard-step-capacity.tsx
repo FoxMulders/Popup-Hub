@@ -133,12 +133,27 @@ export function WizardStepCapacity({
           <WizardZone
             id="wizard-zone-capacity-floor"
             title="Vendor caps"
-            subtitle="Floor plan is off — set category limits manually in the panel on the right."
+            subtitle="Floor plan is off — set table size and category limits manually."
           >
             <p className="wizard-glass-inset px-3 py-2 text-xs text-muted-foreground">
               No CAD layout for this market. Caps you set here control how many vendors can apply per
               category.
             </p>
+            <section
+              aria-label="Venue table standard"
+              className="wizard-glass-inset rounded-xl border-stone-200/80 bg-white/50 p-2.5"
+            >
+              <TableSizeSelector
+                variant="inline"
+                value={baselineTableLengthFt}
+                onChange={(selection) => {
+                  if (typeof selection === 'number') {
+                    onBaselineTableLengthChange(selection)
+                  }
+                }}
+                labelTitle="Standard vendor table length for this market."
+              />
+            </section>
             <span className="wizard-glass-inset inline-flex rounded-md border-harvest-200/80 px-2.5 py-1 text-xs tabular-nums">
               Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
             </span>

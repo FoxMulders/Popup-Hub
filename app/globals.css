@@ -141,7 +141,7 @@
   --sidebar-ring: #8fb892;
 
   --app-nav-height: 4.5rem;
-  --build-strip-height: 1.75rem;
+  --build-strip-height: 1.17rem;
   --command-center-left: 320px;
   --command-center-right: 360px;
   --ecosystem-neon: 56 189 248;
@@ -435,7 +435,7 @@
 
   @media (max-width: 767px) {
     body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {
-      padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+      padding-bottom: calc(3rem + env(safe-area-inset-bottom));
     }
   }
 
@@ -756,7 +756,7 @@
   }
 
   .wizard-floating-label {
-    @apply pointer-events-none absolute left-3 top-1/2 z-[2] origin-left -translate-y-1/2 text-sm text-muted-foreground transition-all duration-200;
+    @apply pointer-events-none absolute left-3 top-1/2 z-[2] max-w-[calc(100%-1.5rem)] origin-left -translate-y-1/2 truncate text-sm text-muted-foreground transition-all duration-200;
   }
 
   .wizard-floating-field--textarea .wizard-floating-label {
@@ -766,7 +766,7 @@
   .wizard-floating-field:focus-within .wizard-floating-label,
   .wizard-floating-field--filled .wizard-floating-label,
   .wizard-floating-input:not(:placeholder-shown) + .wizard-floating-label {
-    @apply top-2 translate-y-0 text-[10px] font-semibold uppercase tracking-wider text-forest;
+    @apply top-2 max-w-[calc(100%-1.5rem)] translate-y-0 truncate text-[10px] font-semibold uppercase tracking-wider text-forest;
   }
 
   .wizard-floating-field--textarea:focus-within .wizard-floating-label,

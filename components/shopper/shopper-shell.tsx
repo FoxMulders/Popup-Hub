@@ -31,13 +31,13 @@ export async function ShopperShell({ children, hideBottomNav, profile: profilePr
   const availablePortals = profile ? getAvailablePortals(profile.role) : []
 
   return (
-    <div className="site-app-shell market-page flex min-h-screen flex-col bg-cream max-w-full overflow-x-hidden">
+    <div className="site-app-shell market-page flex min-h-[100dvh] flex-col bg-cream max-w-full overflow-x-hidden">
       <ShopperTopBar
         profile={profile}
         availablePortals={availablePortals}
         portalCookie={portalCookie}
       />
-      <main className="flex-1 max-w-full overflow-x-hidden pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+      <main className="min-h-0 flex-1 max-w-full overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[calc(3rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:pb-0">
         {children}
       </main>
       <ShopperBottomNav hide={hideBottomNav} />

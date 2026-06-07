@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
+import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
 import { DashboardAppShell } from '@/components/coordinator/dashboard/dashboard-app-shell'
 import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashboard-canvas-column'
@@ -11,6 +12,7 @@ import { DashboardToolbarPortalTarget } from '@/components/coordinator/dashboard
 import { InitialRoomModal } from '@/components/coordinator/dashboard/initial-room-modal'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import { QA_CANVAS_VIEWPORT_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
+import { AiGenerationGuardrailsQa } from '@/src/qa_review/components/coordinator/dashboard/ai-generation-guardrails_qa'
 import { cn } from '@/lib/utils'
 
 /** Hide scrollbar tracks while preserving smooth scroll on short viewports. */
@@ -48,6 +50,7 @@ export interface DashboardBootstrapQaProps {
 export function DashboardLeftPanelQa() {
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col justify-start overflow-hidden bg-white">
+      <AiGenerationGuardrailsQa />
       <DashboardToolbarPortalTarget
         className={cn(
           'min-h-0 flex-1 overflow-x-hidden overflow-y-auto border-b-0 px-1 py-1',
@@ -71,8 +74,12 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
   }, [selectedEventId, layoutRooms.length])
 
   const handleInitialRoomConfirm = useCallback(
-    (widthFt: number, lengthFt: number) => {
-      const { rooms, activeRoomId } = addLayoutRoomToList(layoutRooms, { widthFt, lengthFt })
+    (widthFt: number, lengthFt: number, tableLengthFt?: LayoutBaselineTableLengthFt) => {
+      const { rooms, activeRoomId } = addLayoutRoomToList(layoutRooms, {
+        widthFt,
+        lengthFt,
+        ...(tableLengthFt != null ? { baselineTableLengthFt: tableLengthFt } : {}),
+      })
       setLayoutRooms(rooms, activeRoomId)
       setHasInitialRoom(true)
       setLiveMessage('Room created — booth designer canvas is loading.')

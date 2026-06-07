@@ -43,11 +43,11 @@ export function ShopperBottomNav({ hide }: ShopperBottomNavProps) {
               key={href}
               href={href}
               className={cn(
-                'flex min-h-[52px] min-w-[72px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-2 text-[10px] font-semibold transition-colors',
+                'flex min-h-[35px] min-w-[60px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[9px] font-semibold transition-colors',
                 active ? 'text-forest' : 'text-muted-foreground'
               )}
             >
-              <Icon className={cn('h-5 w-5', active && 'text-forest')} aria-hidden />
+              <Icon className={cn('h-4 w-4', active && 'text-forest')} aria-hidden />
               {label}
             </Link>
           )

@@ -25,7 +25,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
       <div
         className={cn(
           'mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1',
-          'px-4 py-2 sm:justify-between sm:gap-x-5 sm:py-2.5 xl:px-10'
+          'px-3 py-1 sm:justify-between sm:gap-x-4 sm:py-1.5 xl:px-10'
         )}
       >
         <nav aria-label="Legal and help" className="min-w-0">
@@ -34,7 +34,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
               <li key={href} className="m-0">
                 <Link
                   href={href}
-                  className="inline-flex min-h-9 items-center px-0.5 text-xs font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation sm:text-sm"
+                  className="inline-flex min-h-6 items-center px-0.5 text-[10px] font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation sm:min-h-7 sm:text-xs"
                 >
                   {label}
                 </Link>

@@ -31,11 +31,6 @@ function drawProgress(value: number, start: number, end: number) {
   return (value - start) / (end - start)
 }
 
-function strokeReveal(value: number, length: number) {
-  const visible = clamp01(value) * length
-  return { strokeDasharray: length, strokeDashoffset: length - visible }
-}
-
 function clamp01(value: number) {
   return Math.min(1, Math.max(0, value))
 }
@@ -44,11 +39,8 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const { progress, phase, globalFrame } = frame
   const breathe = 1 + Math.sin(globalFrame * 0.06) * 0.012
 
-  const gridOpacity = drawProgress(progress, 0, 0.12) * 0.55
-  const borderT = drawProgress(progress, 0.08, 0.28)
-  const aisleT = drawProgress(progress, 0.22, 0.42)
-  const boothT = drawProgress(progress, 0.38, 0.62)
-  const logoT = drawProgress(progress, 0.52, 0.82)
+  const boothT = drawProgress(progress, 0.1, 0.55)
+  const logoT = drawProgress(progress, 0.4, 0.82)
   const tagT = drawProgress(progress, 0.72, 0.96)
   const barT = drawProgress(progress, 0.85, 1)
 
@@ -59,23 +51,25 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const masterOpacity = 1 - outroFade * 0.35
   const masterScale = 1 - outroFade * 0.04
 
+  /** Uniform perimeter tables — market layout ring around the center logo. */
+  const BOOTH_W = 52
+  const BOOTH_H = 38
   const booths = [
-    { x: 56, y: 52, w: 52, h: 38, delay: 0 },
-    { x: 136, y: 52, w: 52, h: 38, delay: 0.08 },
-    { x: 292, y: 52, w: 52, h: 38, delay: 0.16 },
-    { x: 372, y: 52, w: 52, h: 38, delay: 0.24 },
-    { x: 56, y: 132, w: 52, h: 38, delay: 0.12 },
-    { x: 292, y: 132, w: 132, h: 72, delay: 0.2 },
-    { x: 56, y: 248, w: 52, h: 38, delay: 0.28 },
-    { x: 136, y: 248, w: 52, h: 38, delay: 0.32 },
-    { x: 372, y: 248, w: 52, h: 38, delay: 0.36 },
-  ]
-
-  const outerLen = 1480
-  const aisleLen = 920
-  const outerStroke = strokeReveal(borderT, outerLen)
-  const vAisleStroke = strokeReveal(aisleT, 304)
-  const hAisleStroke = strokeReveal(aisleT, 416)
+    { x: 56, y: 52, delay: 0 },
+    { x: 136, y: 52, delay: 0.06 },
+    { x: 216, y: 52, delay: 0.12 },
+    { x: 296, y: 52, delay: 0.18 },
+    { x: 376, y: 52, delay: 0.24 },
+    { x: 56, y: 132, delay: 0.08 },
+    { x: 56, y: 212, delay: 0.14 },
+    { x: 56, y: 292, delay: 0.2 },
+    { x: 376, y: 132, delay: 0.1 },
+    { x: 376, y: 212, delay: 0.16 },
+    { x: 376, y: 292, delay: 0.22 },
+    { x: 136, y: 292, delay: 0.26 },
+    { x: 216, y: 292, delay: 0.3 },
+    { x: 296, y: 292, delay: 0.34 },
+  ].map((booth) => ({ ...booth, w: BOOTH_W, h: BOOTH_H }))
 
   const logoScale = (0.72 + logoT * 0.28) * breathe
   const logoOpacity = logoT
@@ -101,15 +95,6 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         style={{ transform: `scale(${masterScale})` }}
       >
         <defs>
-          <pattern id="il-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path
-              d="M 20 0 L 0 0 0 20"
-              fill="none"
-              stroke={BRAND.sage}
-              strokeOpacity="0.12"
-              strokeWidth="0.6"
-            />
-          </pattern>
           <radialGradient id="il-logo-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={BRAND.sageLight} stopOpacity="0.55" />
             <stop offset="55%" stopColor={BRAND.sage} stopOpacity="0.18" />
@@ -121,41 +106,7 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           </linearGradient>
         </defs>
 
-        <rect width="480" height="420" fill="url(#il-grid)" opacity={gridOpacity} />
-
-        <g
-          fill="none"
-          stroke={BRAND.sage}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={0.85}
-        >
-          <rect
-            x="40"
-            y="36"
-            width="400"
-            height="280"
-            rx="10"
-            {...outerStroke}
-          />
-          <path
-            d="M 160 36 L 160 316"
-            {...vAisleStroke}
-          />
-          <path
-            d="M 320 36 L 320 316"
-            {...vAisleStroke}
-          />
-          <path
-            d="M 40 128 L 440 128"
-            {...hAisleStroke}
-          />
-          <path
-            d="M 40 228 L 440 228"
-            {...hAisleStroke}
-          />
-        </g>
+        <rect width="480" height="420" fill={BRAND.cream} />
 
         {booths.map((booth, index) => {
           const t = clamp01((boothT - booth.delay) / (1 - booth.delay))

@@ -1,40 +1,56 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { TableSizeSelector } from '@/components/coordinator/table-size-selector'
 import { MIN_ROOM_DIMENSION_FT } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
+import {
+  DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
+  isLayoutBaselineTableLengthFt,
+  type LayoutBaselineTableLengthFt,
+} from '@/lib/booth-planner/layout-table-size'
 
 export interface InitialRoomModalProps {
-  onConfirm: (widthFt: number, lengthFt: number) => void
+  onConfirm: (widthFt: number, lengthFt: number, tableLengthFt?: LayoutBaselineTableLengthFt) => void
 }
 
 const DEFAULT_WIDTH_FT = 50
 const DEFAULT_LENGTH_FT = 50
 
 export function InitialRoomModal({ onConfirm }: InitialRoomModalProps) {
+  const [mounted, setMounted] = useState(false)
   const [widthFt, setWidthFt] = useState(DEFAULT_WIDTH_FT)
   const [lengthFt, setLengthFt] = useState(DEFAULT_LENGTH_FT)
+  const [tableLengthFt, setTableLengthFt] = useState<LayoutBaselineTableLengthFt>(
+    DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
+  )
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     onConfirm(
       Math.max(MIN_ROOM_DIMENSION_FT, Math.round(widthFt)),
-      Math.max(MIN_ROOM_DIMENSION_FT, Math.round(lengthFt))
+      Math.max(MIN_ROOM_DIMENSION_FT, Math.round(lengthFt)),
+      tableLengthFt
     )
   }
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="initial-room-modal-title"
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-xl border border-stone-200 bg-white p-6 shadow-xl"
+        className="max-h-[min(92dvh,640px)] w-full max-w-md overflow-y-auto rounded-xl border border-stone-200 bg-white p-6 shadow-xl"
       >
         <div className="mb-5 flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -48,8 +64,8 @@ export function InitialRoomModal({ onConfirm }: InitialRoomModalProps) {
               Create your first room
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Set the venue footprint before the CAD canvas opens. You can add more rooms later from
-              the toolbar.
+              Set the venue footprint and table size before the CAD canvas opens. You can add more
+              rooms later from the toolbar.
             </p>
           </div>
         </div>
@@ -64,7 +80,10 @@ export function InitialRoomModal({ onConfirm }: InitialRoomModalProps) {
                 min={MIN_ROOM_DIMENSION_FT}
                 step={1}
                 value={widthFt}
-                onChange={(e) => setWidthFt(Number(e.target.value) || DEFAULT_WIDTH_FT)}
+                onChange={(e) => {
+                  const next = Number(e.target.value)
+                  setWidthFt(Number.isFinite(next) ? next : DEFAULT_WIDTH_FT)
+                }}
                 required
               />
             </label>
@@ -75,10 +94,25 @@ export function InitialRoomModal({ onConfirm }: InitialRoomModalProps) {
                 min={MIN_ROOM_DIMENSION_FT}
                 step={1}
                 value={lengthFt}
-                onChange={(e) => setLengthFt(Number(e.target.value) || DEFAULT_LENGTH_FT)}
+                onChange={(e) => {
+                  const next = Number(e.target.value)
+                  setLengthFt(Number.isFinite(next) ? next : DEFAULT_LENGTH_FT)
+                }}
                 required
               />
             </label>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">Vendor table size</p>
+            <TableSizeSelector
+              variant="inline"
+              value={tableLengthFt}
+              onChange={(selection) => {
+                if (typeof selection === 'number' && isLayoutBaselineTableLengthFt(selection)) {
+                  setTableLengthFt(selection)
+                }
+              }}
+            />
           </div>
         </fieldset>
 
@@ -88,4 +122,7 @@ export function InitialRoomModal({ onConfirm }: InitialRoomModalProps) {
       </form>
     </div>
   )
+
+  if (!mounted) return null
+  return createPortal(modal, document.body)
 }

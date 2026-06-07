@@ -75,8 +75,6 @@ export function resolveActivePortal(
     }
   }
 
-  if (role === 'coordinator') return 'coordinator'
-  if (role === 'vendor') return 'vendor'
   return 'patron'
 }
 
@@ -86,13 +84,12 @@ export function getDefaultDashboard(
   activePortal?: ActivePortal | null
 ): string {
   const normalized = (role ?? 'shopper') as Role
-  const portal = activePortal ?? (normalized === 'coordinator' ? 'coordinator' : normalized === 'vendor' ? 'vendor' : 'patron')
 
-  if (canAccessPortal(normalized, portal)) {
-    return getPortalHome(portal)
+  // Everyone lands on the patron discover page unless they have an explicit
+  // active-portal cookie from a prior session switch.
+  if (activePortal && canAccessPortal(normalized, activePortal)) {
+    return getPortalHome(activePortal)
   }
 
-  if (normalized === 'coordinator') return getPortalHome('coordinator')
-  if (normalized === 'vendor') return getPortalHome('vendor')
   return getPortalHome('patron')
 }

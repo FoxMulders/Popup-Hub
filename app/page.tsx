@@ -1,6 +1,11 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getDefaultDashboard } from '@/lib/portals/active-portal'
+import {
+  ACTIVE_PORTAL_COOKIE,
+  getDefaultDashboard,
+  parseActivePortal,
+} from '@/lib/portals/active-portal'
 import { countCoordinatorApprovals } from '@/lib/vendor/access'
 
 export default async function RootPage() {
@@ -27,5 +32,7 @@ export default async function RootPage() {
     .single()
 
   const approvalCount = await countCoordinatorApprovals(supabase, user.id)
-  redirect(getDefaultDashboard(profile?.role ?? 'shopper', approvalCount))
+  const cookieStore = await cookies()
+  const activePortal = parseActivePortal(cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value)
+  redirect(getDefaultDashboard(profile?.role ?? 'shopper', approvalCount, activePortal))
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { formatCents } from '@/lib/square/client'
@@ -11,6 +12,11 @@ export interface MarketBoothPricingFieldsProps {
   onMultiTableDiscountPercentChange?: (percent: number) => void
 }
 
+function formatDollarsInput(cents: number): string {
+  if (cents <= 0) return ''
+  return (cents / 100).toFixed(2)
+}
+
 /**
  * Event-wide booth/table fee — one price for every vendor category.
  */
@@ -20,10 +26,48 @@ export function MarketBoothPricingFields({
   multiTableDiscountPercent = 0,
   onMultiTableDiscountPercentChange,
 }: MarketBoothPricingFieldsProps) {
-  const boothDollars = (boothPriceCents / 100).toFixed(2)
+  const [boothDollarsInput, setBoothDollarsInput] = useState(() =>
+    formatDollarsInput(boothPriceCents)
+  )
+  const [discountInput, setDiscountInput] = useState(() =>
+    multiTableDiscountPercent > 0 ? String(multiTableDiscountPercent) : ''
+  )
+
+  useEffect(() => {
+    setBoothDollarsInput(formatDollarsInput(boothPriceCents))
+  }, [boothPriceCents])
+
+  useEffect(() => {
+    setDiscountInput(multiTableDiscountPercent > 0 ? String(multiTableDiscountPercent) : '')
+  }, [multiTableDiscountPercent])
+
   const showMultiTable =
     onMultiTableDiscountPercentChange != null &&
     multiTableDiscountPercent !== undefined
+
+  function commitBoothDollars(raw: string) {
+    const trimmed = raw.trim()
+    if (trimmed === '') {
+      onBoothPriceCentsChange(0)
+      return
+    }
+    const dollars = Number.parseFloat(trimmed)
+    onBoothPriceCentsChange(
+      Math.max(0, Math.round((Number.isFinite(dollars) ? dollars : 0) * 100))
+    )
+  }
+
+  function commitDiscount(raw: string) {
+    const trimmed = raw.trim()
+    if (trimmed === '') {
+      onMultiTableDiscountPercentChange!(0)
+      return
+    }
+    const pct = Number.parseInt(trimmed, 10)
+    onMultiTableDiscountPercentChange!(
+      Math.min(100, Math.max(0, Number.isFinite(pct) ? pct : 0))
+    )
+  }
 
   return (
     <div className="wizard-glass-inset space-y-4 rounded-xl p-4">
@@ -39,16 +83,12 @@ export function MarketBoothPricingFields({
           <Label htmlFor="market-booth-price">Booth / table price (CAD)</Label>
           <Input
             id="market-booth-price"
-            type="number"
-            min={0}
-            step={0.01}
-            value={boothDollars}
-            onChange={(e) => {
-              const dollars = Number.parseFloat(e.target.value)
-              onBoothPriceCentsChange(
-                Math.max(0, Math.round((Number.isFinite(dollars) ? dollars : 0) * 100))
-              )
-            }}
+            type="text"
+            inputMode="decimal"
+            placeholder="0.00"
+            value={boothDollarsInput}
+            onChange={(e) => setBoothDollarsInput(e.target.value)}
+            onBlur={() => commitBoothDollars(boothDollarsInput)}
           />
           <p className="text-[11px] text-muted-foreground">
             {boothPriceCents > 0
@@ -62,17 +102,12 @@ export function MarketBoothPricingFields({
             <Label htmlFor="market-multi-table-discount">Multi-table discount (%)</Label>
             <Input
               id="market-multi-table-discount"
-              type="number"
-              min={0}
-              max={100}
-              step={1}
-              value={multiTableDiscountPercent}
-              onChange={(e) => {
-                const pct = Number.parseInt(e.target.value, 10)
-                onMultiTableDiscountPercentChange!(
-                  Math.min(100, Math.max(0, Number.isFinite(pct) ? pct : 0))
-                )
-              }}
+              type="text"
+              inputMode="numeric"
+              placeholder="0"
+              value={discountInput}
+              onChange={(e) => setDiscountInput(e.target.value)}
+              onBlur={() => commitDiscount(discountInput)}
             />
             <p className="text-[11px] text-muted-foreground">
               {multiTableDiscountPercent > 0

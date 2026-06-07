@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
+import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardAppShell } from './dashboard-app-shell'
 import { DashboardLeftPanel } from './dashboard-left-panel'
@@ -28,8 +29,12 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
   }, [selectedEventId, layoutRooms.length])
 
   const handleInitialRoomConfirm = useCallback(
-    (widthFt: number, lengthFt: number) => {
-      const { rooms, activeRoomId } = addLayoutRoomToList(layoutRooms, { widthFt, lengthFt })
+    (widthFt: number, lengthFt: number, tableLengthFt?: LayoutBaselineTableLengthFt) => {
+      const { rooms, activeRoomId } = addLayoutRoomToList(layoutRooms, {
+        widthFt,
+        lengthFt,
+        ...(tableLengthFt != null ? { baselineTableLengthFt: tableLengthFt } : {}),
+      })
       setLayoutRooms(rooms, activeRoomId)
       setHasInitialRoom(true)
       setLiveMessage('Room created — booth designer canvas is loading.')

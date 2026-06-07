@@ -15,9 +15,21 @@
 
 
 ## Goal
-**Vendor Supplies** — Amazon.ca search + curated affiliate suggestions for market vendors (`/vendor/supplies`). Not deployed yet.
+**UX + market-setup polish** — full logo, patron-first landing, mobile scroll/footer, booth pricing inputs, room modal on mobile, AI QA guardrails. Not deployed yet.
 
-## Shipped this session (vendor clearance, not deployed)
+## Shipped this session (not deployed)
+- **Full logo:** `popup-loader-scene` + install prompt use `popup-hub-brand.png`; footer wordmark height −33%.
+- **Initial loader:** Grid/aisles removed; uniform perimeter tables; logo fades in center (market layout).
+- **Patron-first:** `getDefaultDashboard` + `resolveActivePortal` default to `/discover` unless active-portal cookie set.
+- **Canvas select:** Draw tool clicks on existing objects select/drag instead of stacking; auto-switch to Select after draw commit.
+- **Mobile/layout:** Main body scroll (`site-app-shell`, `shopper-shell`); menu sheet scroll; footer/bottom-nav −33%; wizard floating-label overlap fix.
+- **Room modal:** Portaled to `document.body` at `z-[200]`; table size picker on first-room create (dashboard + `add-layout-room`).
+- **Market wizard:** Booth/discount fields accept clearable text input; table size on skip-venue-layout capacity step.
+- **Market supplies:** `/supplies` patron page + nav link (reuses `VendorSuppliesSection` affiliate catalog).
+- **Instant book:** Verified category slot caps still enforced — `npx tsx scripts/verify-instant-book-category-limits.ts` 4/4.
+- **QA AI guardrails:** `ai-generation-guardrails_qa.tsx` in `Dashboard_qa` — 30s cooldown, credits HUD, depletion toast.
+
+## Shipped earlier (vendor clearance, not deployed)
 - **Vendor auto-arrange spacing:** `BOOTH_PLACEMENT_GAP_FT` restored to **4′** edge-to-edge (2′ safety buffer per side via `BOOTH_SAFETY_BUFFER_FT` / `BOOTH_CORE_SEPARATION_CELLS` in `layout-clearance-constants.ts`). Grid column pitch, row-pack fallback, and deterministic layout `tableEdgeGapFt` all honor the 4′ gap; adjacent vendor tables no longer pack flush.
 - **`validateClearances`:** Pair-aware minimum gaps — vendor↔vendor 4′, patron↔patron 2′, vendor↔patron 4′.
 - **`patron-centric-layout.ts`:** Local edge clearance synced to 2′ per side.

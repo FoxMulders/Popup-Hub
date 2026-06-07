@@ -2192,6 +2192,7 @@ function FloorPlanV2Workspace({
                   { duration: 2200 }
                 )
               }}
+              onAfterDrawCommit={() => setTool('select')}
               showLabels={showLabels}
             />
             </CanvasRootErrorBoundary>

@@ -33,26 +33,12 @@ function frameForMode(frame: LoaderSceneFrame, mode: LoaderControllerMode): Load
  * market sits flush on the ground and the wordmark renders separately
  * as SVG `<text>` above the canvas.
  */
-const LOGO_SRC = '/popup-hub-icon.png'
+const LOGO_SRC = '/popup-hub-brand.png'
+const LOGO_ASPECT = 1024 / 994
 
-/**
- * Brand wordmark frame — drawn directly in the SVG above the walking
- * canvas. Pinned to the absolute top of the viewport so the typography
- * cannot drift into the storefront / characters / sidewalk band below.
- *
- * `dominantBaseline="hanging"` means `WORDMARK_Y` is the *top* of the
- * letters (ascender line), not the visual middle, so we land cleanly
- * a few units inside the viewBox top edge instead of clipping the
- * cap-height. The viewBox itself is extended upward (see the outer
- * `<svg viewBox>` below) to guarantee there is always breathing room
- * above the wordmark and above the market tent peak, even when the
- * container wrapper is short relative to the SVG's 4:3 aspect.
- */
-const WORDMARK_TEXT = 'Popup Hub'
-const WORDMARK_Y = 12
-const WORDMARK_FONT_SIZE = 64
-const WORDMARK_LETTER_SPACING = 2
-const WORDMARK_FILL = '#2d5a27'
+/** Full lockup width/height derived from shared storefront footprint. */
+const STOREFRONT_LOGO_HEIGHT = LOADER_LAYOUT.logoHeight
+const STOREFRONT_LOGO_WIDTH = STOREFRONT_LOGO_HEIGHT / LOGO_ASPECT
 
 /**
  * Continuous phone-flash oscillation. The lead character's phone glows
@@ -295,7 +281,7 @@ function MarketLights({
 
 function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
   const { hubX, logoWidth, logoHeight, sidewalkY, logoBottomY, pinScale } = LOADER_LAYOUT
-  const { logoTop, logoLeft, pinCenterX, pinCenterY } = LOADER_LAYOUT_COMPUTED
+  const { logoTop, pinCenterX, pinCenterY } = LOADER_LAYOUT_COMPUTED
   const pinOpenAngle = frame.doorOpen * -28
   const pinDoorScale = (1 - frame.doorOpen * 0.12) * pinScale
   const leadMember = frame.members[0]
@@ -386,30 +372,6 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
           of the scene background. */}
       <rect x="0" y="-80" width="800" height="680" fill="url(#premium-loader-sky)" />
 
-      {/*
-       * Brand wordmark — pinned to the absolute top of the viewport
-       * via `dominantBaseline="hanging"` + `WORDMARK_Y = 12`. The
-       * extended viewBox (min-y = -80) keeps a 92-unit cushion of
-       * sky above the cap-height, so the typography never collides
-       * with the storefront, characters, or sidewalk band below.
-       */}
-      <text
-        x={400}
-        y={WORDMARK_Y}
-        textAnchor="middle"
-        dominantBaseline="hanging"
-        fontSize={WORDMARK_FONT_SIZE}
-        fontWeight={700}
-        fill={WORDMARK_FILL}
-        style={{
-          letterSpacing: `${WORDMARK_LETTER_SPACING}px`,
-          fontFamily:
-            'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-        }}
-      >
-        {WORDMARK_TEXT}
-      </text>
-
       {/* Distant buildings — warm canvas tan to harmonize with the linen sky. */}
       <g opacity="0.28" fill="#a89e8b">
         <rect x="40" y="300" width="70" height="120" />
@@ -489,10 +451,10 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
           ) : null}
           <image
             href={LOGO_SRC}
-            x={logoLeft}
-            y={logoTop}
-            width={logoWidth}
-            height={logoHeight}
+            x={hubX - STOREFRONT_LOGO_WIDTH / 2}
+            y={logoTop - (STOREFRONT_LOGO_HEIGHT - logoHeight) * 0.35}
+            width={STOREFRONT_LOGO_WIDTH}
+            height={STOREFRONT_LOGO_HEIGHT}
             preserveAspectRatio="xMidYMax meet"
             mask={frame.doorOpen > 0.02 ? 'url(#premium-loader-pin-cutout)' : undefined}
           />

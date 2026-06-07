@@ -58,14 +58,17 @@ export function AppMenuSheet({
         <Menu className="h-5 w-5" />
       </button>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-72 max-w-[85vw] safe-bottom">
+        <SheetContent side="right" className="flex w-72 max-w-[85vw] flex-col safe-bottom">
           <SheetHeader>
             <SheetTitle className="text-left font-heading">Menu</SheetTitle>
             {profileName ? (
               <p className="text-left text-sm text-muted-foreground truncate">{profileName}</p>
             ) : null}
           </SheetHeader>
-          <nav className="mt-6 flex flex-col gap-1" aria-label="App menu">
+          <nav
+            className="mt-6 flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-y-contain pb-4 [-webkit-overflow-scrolling:touch]"
+            aria-label="App menu"
+          >
             {links.map(({ href, label }) => (
               <Link key={href} href={href} onClick={() => setOpen(false)}>
                 <Button

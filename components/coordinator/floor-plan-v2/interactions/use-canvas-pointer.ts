@@ -558,11 +558,37 @@ export function useCanvasPointer(
 
       const ft = ftAt(e.clientX, e.clientY)
       const activeTool = toolStateRef.current
+      const target = e.target as Element | null
       const allowObjectGestures = activeTool.tool === 'select'
       const allowRoomGestures =
         activeTool.tool === 'select' || activeTool.tool === 'hand'
 
       if (activeTool.tool === 'draw') {
+        const drawHitId =
+          target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
+          hitTest(store.doc.objects, ft)?.id ??
+          null
+        if (drawHitId) {
+          const additive = e.shiftKey || e.metaKey || e.ctrlKey
+          const wasSelected = store.selectedIds.has(drawHitId)
+          if (additive) {
+            store.toggleSelection(drawHitId)
+          } else if (!wasSelected) {
+            store.setSelection([drawHitId])
+          }
+          capturePointer(e.currentTarget, e.pointerId)
+          const targetIds = wasSelected || additive
+            ? Array.from(new Set([...store.selectedIds, drawHitId]))
+            : [drawHitId]
+          const dragIds = targetIds.filter((id) => {
+            const obj = store.doc.objects.find((o) => o.id === id)
+            return obj && !obj.locked
+          })
+          if (dragIds.length > 0) {
+            beginDrag(e.pointerId, ft, dragIds)
+          }
+          return true
+        }
         capturePointer(e.currentTarget, e.pointerId)
         const snapped = snapPoint(ft, store.doc.snapFt)
         setDraft({
@@ -572,8 +598,6 @@ export function useCanvasPointer(
         })
         return true
       }
-
-      const target = e.target as Element | null
 
       const objectResizeEl = target?.closest('[data-object-resize-handle]')
       if (objectResizeEl && allowObjectGestures) {

@@ -8,11 +8,17 @@ import {
   type LayoutRoomPresetId,
 } from '@/lib/booth-planner/layout-room-presets'
 import { MIN_ROOM_DIMENSION_FT } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
+import {
+  DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
+  isLayoutBaselineTableLengthFt,
+  type LayoutBaselineTableLengthFt,
+} from '@/lib/booth-planner/layout-table-size'
 
 export type AddLayoutRoomOptions = {
   presetId?: LayoutRoomPresetId
   widthFt?: number
   lengthFt?: number
+  baselineTableLengthFt?: LayoutBaselineTableLengthFt
 }
 
 function clampRoomDimensionFt(value: number | undefined, fallback: number): number {
@@ -58,10 +64,16 @@ export function appendLayoutRoom(
     }
     nextOriginX = maxRight + 4
   }
+  const tableFt =
+    options?.baselineTableLengthFt != null &&
+    isLayoutBaselineTableLengthFt(options.baselineTableLengthFt)
+      ? options.baselineTableLengthFt
+      : DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
   const room = createLayoutRoom(name, {
     ...partial,
     venue_width: widthFt,
     venue_length: lengthFt,
+    baseline_table_length_ft: tableFt,
     canvas_origin_x: nextOriginX,
     canvas_origin_y: nextOriginY,
   })
