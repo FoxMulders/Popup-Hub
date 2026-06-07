@@ -27,7 +27,7 @@ export function InstallPrompt() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-[60] flex justify-center px-4 md:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(2rem+env(safe-area-inset-bottom))] z-[60] flex justify-center px-4 md:hidden"
       role="region"
       aria-label="Install Popup Hub app"
     >

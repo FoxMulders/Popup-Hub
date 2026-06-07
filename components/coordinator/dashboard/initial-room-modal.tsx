@@ -32,6 +32,15 @@ export function InitialRoomModal({ onConfirm }: InitialRoomModalProps) {
     setMounted(true)
   }, [])
 
+  useEffect(() => {
+    if (!mounted) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [mounted])
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     onConfirm(
@@ -43,10 +52,11 @@ export function InitialRoomModal({ onConfirm }: InitialRoomModalProps) {
 
   const modal = (
     <div
-      className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[9999] flex items-end justify-center bg-slate-900/60 p-4 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="initial-room-modal-title"
+      data-testid="initial-room-modal"
     >
       <form
         onSubmit={handleSubmit}

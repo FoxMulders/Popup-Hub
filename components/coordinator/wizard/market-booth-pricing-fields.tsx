@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { formatCents } from '@/lib/square/client'
@@ -32,12 +32,16 @@ export function MarketBoothPricingFields({
   const [discountInput, setDiscountInput] = useState(() =>
     multiTableDiscountPercent > 0 ? String(multiTableDiscountPercent) : ''
   )
+  const boothFocusedRef = useRef(false)
+  const discountFocusedRef = useRef(false)
 
   useEffect(() => {
+    if (boothFocusedRef.current) return
     setBoothDollarsInput(formatDollarsInput(boothPriceCents))
   }, [boothPriceCents])
 
   useEffect(() => {
+    if (discountFocusedRef.current) return
     setDiscountInput(multiTableDiscountPercent > 0 ? String(multiTableDiscountPercent) : '')
   }, [multiTableDiscountPercent])
 
@@ -88,7 +92,13 @@ export function MarketBoothPricingFields({
             placeholder="0.00"
             value={boothDollarsInput}
             onChange={(e) => setBoothDollarsInput(e.target.value)}
-            onBlur={() => commitBoothDollars(boothDollarsInput)}
+            onFocus={() => {
+              boothFocusedRef.current = true
+            }}
+            onBlur={() => {
+              boothFocusedRef.current = false
+              commitBoothDollars(boothDollarsInput)
+            }}
           />
           <p className="text-[11px] text-muted-foreground">
             {boothPriceCents > 0
@@ -107,7 +117,13 @@ export function MarketBoothPricingFields({
               placeholder="0"
               value={discountInput}
               onChange={(e) => setDiscountInput(e.target.value)}
-              onBlur={() => commitDiscount(discountInput)}
+              onFocus={() => {
+                discountFocusedRef.current = true
+              }}
+              onBlur={() => {
+                discountFocusedRef.current = false
+                commitDiscount(discountInput)
+              }}
             />
             <p className="text-[11px] text-muted-foreground">
               {multiTableDiscountPercent > 0

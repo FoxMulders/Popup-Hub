@@ -399,14 +399,6 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         strokeLinecap="round"
         opacity="0.9"
       />
-      <path
-        d={`M 70 ${sidewalkY + 2} L ${hubX + 20} ${sidewalkY + 2}`}
-        stroke="#64748b"
-        strokeWidth="2.5"
-        strokeDasharray="8 12"
-        opacity="0.5"
-      />
-
       {frame.props.filter(isSceneProp).map((prop, index) => (
         <LoaderPropGraphic key={`scene-${prop.type}-${index}`} prop={prop} />
       ))}

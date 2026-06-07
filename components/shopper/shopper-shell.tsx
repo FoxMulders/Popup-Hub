@@ -37,7 +37,7 @@ export async function ShopperShell({ children, hideBottomNav, profile: profilePr
         availablePortals={availablePortals}
         portalCookie={portalCookie}
       />
-      <main className="min-h-0 flex-1 max-w-full overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[calc(3rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:pb-0">
+      <main className="min-h-0 flex-1 max-w-full overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[calc(2rem+env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch] md:pb-0">
         {children}
       </main>
       <ShopperBottomNav hide={hideBottomNav} />

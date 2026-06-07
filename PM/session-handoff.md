@@ -3,9 +3,10 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `1addd76` (pushed to `origin/master`)
+- Branch: `master` @ `cb4ff73` (local; unpushed WIP on UX polish)
 - Last deploy commit: `1addd76` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
 - Production: https://popuphub.ca - **build 150** | commit `e900651` (handoff updated 2026-06-07 15:32)
+- Local build: **151** passes (`npm run build`)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -15,19 +16,18 @@
 
 
 ## Goal
-**UX + market-setup polish** — full logo, patron-first landing, mobile scroll/footer, booth pricing inputs, room modal on mobile, AI QA guardrails. Not deployed yet.
+**UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Not deployed yet.
 
 ## Shipped this session (not deployed)
-- **Full logo:** `popup-loader-scene` + install prompt use `popup-hub-brand.png`; footer wordmark height −33%.
-- **Initial loader:** Grid/aisles removed; uniform perimeter tables; logo fades in center (market layout).
-- **Patron-first:** `getDefaultDashboard` + `resolveActivePortal` default to `/discover` unless active-portal cookie set.
-- **Canvas select:** Draw tool clicks on existing objects select/drag instead of stacking; auto-switch to Select after draw commit.
-- **Mobile/layout:** Main body scroll (`site-app-shell`, `shopper-shell`); menu sheet scroll; footer/bottom-nav −33%; wizard floating-label overlap fix.
-- **Room modal:** Portaled to `document.body` at `z-[200]`; table size picker on first-room create (dashboard + `add-layout-room`).
-- **Market wizard:** Booth/discount fields accept clearable text input; table size on skip-venue-layout capacity step.
-- **Market supplies:** `/supplies` patron page + nav link (reuses `VendorSuppliesSection` affiliate catalog).
-- **Instant book:** Verified category slot caps still enforced — `npx tsx scripts/verify-instant-book-category-limits.ts` 4/4.
-- **QA AI guardrails:** `ai-generation-guardrails_qa.tsx` in `Dashboard_qa` — 30s cooldown, credits HUD, depletion toast.
+- **QA dashboard wired:** `market-dashboard-client.tsx` → `DashboardBootstrapQa`; `floor-plan-v2.tsx` → `CanvasCommandBarQa`.
+- **AI guardrails (`ai-generation-guardrails_qa.tsx`):** `countdown` + `isGenerating` lock; 30s cooldown; **5 runs/hour** cap; credits HUD `48 / 50`; depletion toast before generative loop.
+- **Initial loader:** Computed uniform perimeter tables; removed dashed ring; logo fades into geometric ring center (`ringCenterX` / `ringCenterY` in `initial-loader-reveal.tsx`).
+- **Branding:** `PopupHubIcon` deprecated → full `popup-hub-brand.png`; sidewalk dash line removed from replay loader.
+- **Mobile footer/nav:** `globals.css` scales `.popup-hub-chrome-footer` to **67%** on ≤767px; `shopper-bottom-nav` + main padding `2rem`; install prompt bottom offset aligned.
+- **Room modal:** Portaled to `document.body`, `z-[9999]`, body scroll lock while open, `data-testid="initial-room-modal"`.
+- **Booth pricing UX:** Focus-aware sync in `market-booth-pricing-fields.tsx`; category fee rows use text + placeholder (`category-limit-editor.tsx`).
+- **Canvas draw/select (wizard QA):** `use-canvas-pointer-wizard_qa.ts` — draw-tool hits select/drag existing objects instead of stacking.
+- **Patron-first / supplies / instant book:** Already in tree — `/discover` default, `/supplies` Market Supplies, `verify-instant-book-category-limits.ts` 4/4.
 
 ## Shipped earlier (vendor clearance, not deployed)
 - **Vendor auto-arrange spacing:** `BOOTH_PLACEMENT_GAP_FT` restored to **4′** edge-to-edge (2′ safety buffer per side via `BOOTH_SAFETY_BUFFER_FT` / `BOOTH_CORE_SEPARATION_CELLS` in `layout-clearance-constants.ts`). Grid column pitch, row-pack fallback, and deterministic layout `tableEdgeGapFt` all honor the 4′ gap; adjacent vendor tables no longer pack flush.
@@ -71,10 +71,12 @@
 - **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` wiring for `CanvasCommandBarQa`.
 
 ## Next actions
-1. **Wire QA dashboard for viewport inspection** — temporary import swaps in `market-dashboard-client.tsx` + `floor-plan-v2.tsx` (see `dashboard-layout-patch_qa.md`); swap `CanvasLegend` → `CanvasLegendQa` for Placement HUD microcopy
-2. **Smoke-test** — main hall canvas: no right-edge scrollbar at 1080p; pan/hand still work; left rail headers **ROOM CONTROLS** / **PATRON LAYOUT** / **VENDOR BOOTHS** / **DESIGNER TOOLS**; Placement HUD shows **Valid space** / **Rule conflict** only
-3. **Optional canvas/merge E2E** — `LayoutCanvasDashboardQa` + `destructive-merge_qa` import swaps
-4. **Promote to production** after QA sign-off (revert wiring swaps, promote `_qa` modules)
+1. **Mobile smoke-test** — `/discover` scroll + reduced footer; `/coordinator/dashboard`: initial room modal first, table size selectable
+2. **Loader smoke-test** — hard refresh: perimeter booths, centered full logo, no grid/dash lines
+3. **Wizard smoke-test** — Step 2 booth fee / discount backspace; category price placeholders
+4. **Instant book** — re-run `npx tsx scripts/verify-instant-book-category-limits.ts` after any apply-route edits (currently 4/4)
+5. **OpenRouter (deferred)** — user spec §5 truncated; no OpenRouter spatial-AI wiring in this pass
+6. **Commit + deploy** when ready (`PM/Deploy-popuphub.bat` or `ship.ps1`); promote `_qa` modules after sign-off
 
 ## Goal (prior)
 **QA folder staging — dashboard layout optimization & stage merge** — all layout/merge/canvas changes mirrored in `src/qa_review/` for manual testing before production promotion.

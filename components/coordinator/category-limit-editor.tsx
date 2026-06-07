@@ -336,11 +336,16 @@ export function CategoryLimitEditor({
                       <div className="relative mx-auto w-24">
                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                         <Input
-                          type="number"
-                          min={0}
-                          step={0.01}
-                          value={(limit.pricePerBooth / 100).toFixed(2)}
-                          onChange={(e) => updatePriceDollars(limit.categoryId, parseFloat(e.target.value))}
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          defaultValue={
+                            limit.pricePerBooth > 0
+                              ? (limit.pricePerBooth / 100).toFixed(2)
+                              : ''
+                          }
+                          key={`${limit.categoryId}-${limit.pricePerBooth}`}
+                          onBlur={(e) => updatePriceDollars(limit.categoryId, parseFloat(e.target.value))}
                           className="h-8 pl-5 text-right tabular-nums"
                           aria-label={`Booth fee for ${limit.categoryName}`}
                         />

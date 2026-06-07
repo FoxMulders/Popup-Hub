@@ -13,10 +13,8 @@ const LOGO_VERSION =
   process.env.NEXT_PUBLIC_BUILD_COMMIT ??
   '1'
 const LOGO_SRC = `/popup-hub-brand.png?v=${LOGO_VERSION}`
-const ICON_SRC = `/popup-hub-icon.png?v=${LOGO_VERSION}`
 const LOGO_WIDTH = 994
 const LOGO_HEIGHT = 1024
-const ICON_SIZE = 512
 
 interface PopupHubLogoProps {
   className?: string
@@ -183,30 +181,9 @@ export function PopupHubLogo({
   )
 }
 
-export function PopupHubIcon({
-  className,
-  title = 'Popup Hub',
-  priority = false,
-  href,
-}: PopupHubLogoProps) {
-  const image = (
-    <Image
-      src={ICON_SRC}
-      alt={title}
-      width={ICON_SIZE}
-      height={ICON_SIZE}
-      unoptimized
-      draggable={false}
-      className="pointer-events-none h-auto w-auto select-none bg-transparent object-contain"
-      priority={priority}
-    />
-  )
-
-  return (
-    <LogoShell className={className} title={title} href={href}>
-      {image}
-    </LogoShell>
-  )
+/** @deprecated Use PopupHubLogo / BrandLogoLockup — full wordmark only. */
+export function PopupHubIcon(props: PopupHubLogoProps) {
+  return <PopupHubLogo {...props} />
 }
 
 type BrandLogoMarkSize = 'nav' | 'auth'

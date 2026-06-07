@@ -51,25 +51,62 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const masterOpacity = 1 - outroFade * 0.35
   const masterScale = 1 - outroFade * 0.04
 
-  /** Uniform perimeter tables — market layout ring around the center logo. */
-  const BOOTH_W = 52
-  const BOOTH_H = 38
-  const booths = [
-    { x: 56, y: 52, delay: 0 },
-    { x: 136, y: 52, delay: 0.06 },
-    { x: 216, y: 52, delay: 0.12 },
-    { x: 296, y: 52, delay: 0.18 },
-    { x: 376, y: 52, delay: 0.24 },
-    { x: 56, y: 132, delay: 0.08 },
-    { x: 56, y: 212, delay: 0.14 },
-    { x: 56, y: 292, delay: 0.2 },
-    { x: 376, y: 132, delay: 0.1 },
-    { x: 376, y: 212, delay: 0.16 },
-    { x: 376, y: 292, delay: 0.22 },
-    { x: 136, y: 292, delay: 0.26 },
-    { x: 216, y: 292, delay: 0.3 },
-    { x: 296, y: 292, delay: 0.34 },
-  ].map((booth) => ({ ...booth, w: BOOTH_W, h: BOOTH_H }))
+  /** Uniform perimeter tables — market ring around the center logo (no grid lines). */
+  const BOOTH_W = 48
+  const BOOTH_H = 36
+  const MARGIN = 44
+  const GAP = 12
+  const innerW = 480 - MARGIN * 2
+  const innerH = 340 - MARGIN
+  const topCount = Math.max(3, Math.floor((innerW + GAP) / (BOOTH_W + GAP)))
+  const sideCount = Math.max(2, Math.floor((innerH + GAP) / (BOOTH_H + GAP)))
+  const topSpan = topCount * BOOTH_W + (topCount - 1) * GAP
+  const sideSpan = sideCount * BOOTH_H + (sideCount - 1) * GAP
+  const startX = (480 - topSpan) / 2
+  const startY = MARGIN
+  const leftX = MARGIN
+  const rightX = 480 - MARGIN - BOOTH_W
+  const bottomY = startY + sideSpan + GAP
+  const booths: Array<{ x: number; y: number; w: number; h: number; delay: number }> = []
+  let delayStep = 0
+  for (let i = 0; i < topCount; i++) {
+    booths.push({
+      x: startX + i * (BOOTH_W + GAP),
+      y: startY,
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+  }
+  for (let i = 0; i < sideCount; i++) {
+    booths.push({
+      x: leftX,
+      y: startY + BOOTH_H + GAP + i * (BOOTH_H + GAP),
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+    booths.push({
+      x: rightX,
+      y: startY + BOOTH_H + GAP + i * (BOOTH_H + GAP),
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+  }
+  for (let i = 0; i < topCount; i++) {
+    booths.push({
+      x: startX + i * (BOOTH_W + GAP),
+      y: bottomY,
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+  }
+
+  /** Geometric center of the perimeter ring interior — logo fades in here. */
+  const ringCenterX = (leftX + rightX + BOOTH_W) / 2
+  const ringCenterY = (startY + bottomY + BOOTH_H) / 2
 
   const logoScale = (0.72 + logoT * 0.28) * breathe
   const logoOpacity = logoT
@@ -134,20 +171,11 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           )
         })}
 
-        <g transform="translate(240, 178)">
+        <g transform={`translate(${ringCenterX}, ${ringCenterY})`}>
           <circle
             r={78 * ringScale}
             fill="url(#il-logo-glow)"
             opacity={ringOpacity}
-          />
-          <circle
-            r={62}
-            fill="none"
-            stroke={BRAND.sageLight}
-            strokeWidth="1.5"
-            opacity={logoT * 0.35}
-            strokeDasharray="4 8"
-            transform={`rotate(${globalFrame * 0.4})`}
           />
           <g opacity={logoOpacity} transform={`scale(${logoScale})`}>
             <image

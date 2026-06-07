@@ -507,6 +507,7 @@ export function useCanvasPointerWizardQa(
       if (e.button !== 0 && e.pointerType === 'mouse') return
 
       const ft = ftAt(e.clientX, e.clientY)
+      const target = e.target as Element | null
 
       if (toolState.tool === 'hand') {
         // Hand mode is a no-op at this layer — pan-zoom hook handles motion.
@@ -514,6 +515,31 @@ export function useCanvasPointerWizardQa(
       }
 
       if (toolState.tool === 'draw') {
+        const drawHitId =
+          target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
+          hitTest(store.doc.objects, ft)?.id ??
+          null
+        if (drawHitId) {
+          const additive = e.shiftKey || e.metaKey || e.ctrlKey
+          const wasSelected = store.selectedIds.has(drawHitId)
+          if (additive) {
+            store.toggleSelection(drawHitId)
+          } else if (!wasSelected) {
+            store.setSelection([drawHitId])
+          }
+          capturePointer(e.currentTarget, e.pointerId)
+          const targetIds = wasSelected || additive
+            ? Array.from(new Set([...store.selectedIds, drawHitId]))
+            : [drawHitId]
+          const dragIds = targetIds.filter((id) => {
+            const obj = store.doc.objects.find((o) => o.id === id)
+            return obj && !obj.locked
+          })
+          if (dragIds.length > 0) {
+            beginDrag(e.pointerId, ft, dragIds)
+          }
+          return
+        }
         capturePointer(e.currentTarget, e.pointerId)
         const snapped = snapPoint(ft, store.doc.snapFt)
         setDraft({
@@ -525,8 +551,6 @@ export function useCanvasPointerWizardQa(
       }
 
       // SELECT
-      const target = e.target as Element | null
-
       const objectResizeEl = target?.closest('[data-object-resize-handle]')
       if (objectResizeEl && toolState.tool === 'select') {
         const objectId = objectResizeEl.getAttribute('data-object-id')

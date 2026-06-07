@@ -12,7 +12,7 @@ import {
 } from './market-management-context'
 import type { VendorApplicationSnapshot } from './booth-placement-status'
 import { CommandCenterFullscreenProvider } from './command-center-fullscreen-context'
-import { DashboardBootstrap } from './dashboard-bootstrap'
+import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
 
 export interface MarketDashboardClientProps {

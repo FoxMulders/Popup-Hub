@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 
 const MONTHLY_RUN_LIMIT = 50
 const COOLDOWN_SECONDS = 30
+const HOURLY_RUN_LIMIT = 5
+const HOURLY_WINDOW_MS = 60 * 60 * 1000
 
 /** Staging profile — mirrors planned `ai_runs_this_month` column. */
 export interface UserProfileQa {
@@ -23,9 +25,14 @@ function triggerToastNotification(message: string) {
   toast.error(message, { duration: 5000 })
 }
 
+function pruneHourlyRuns(timestamps: number[], now = Date.now()): number[] {
+  const cutoff = now - HOURLY_WINDOW_MS
+  return timestamps.filter((t) => t > cutoff)
+}
+
 /**
  * QA staging card for AI theme/puzzle generation guardrails — cooldown,
- * credit depletion, and monthly limit HUD before production API wiring.
+ * hourly cap, credit depletion, and monthly limit HUD before production API wiring.
  */
 export function AiGenerationGuardrailsQa({
   userProfile = DEFAULT_PROFILE_QA,
@@ -33,17 +40,18 @@ export function AiGenerationGuardrailsQa({
   userProfile?: UserProfileQa
 }) {
   const [isGenerating, setIsGenerating] = useState(false)
-  const [cooldownSeconds, setCooldownSeconds] = useState(0)
+  const [countdown, setCountdown] = useState(0)
   const [remainingCredits, setRemainingCredits] = useState(userProfile.remainingCredits)
+  const [hourlyRuns, setHourlyRuns] = useState<number[]>([])
 
   useEffect(() => {
     setRemainingCredits(userProfile.remainingCredits)
   }, [userProfile.remainingCredits])
 
   useEffect(() => {
-    if (cooldownSeconds <= 0) return
+    if (countdown <= 0) return
     const timer = window.setInterval(() => {
-      setCooldownSeconds((prev) => {
+      setCountdown((prev) => {
         if (prev <= 1) {
           setIsGenerating(false)
           return 0
@@ -52,10 +60,10 @@ export function AiGenerationGuardrailsQa({
       })
     }, 1000)
     return () => window.clearInterval(timer)
-  }, [cooldownSeconds])
+  }, [countdown])
 
   const handleGenerateAITheme = useCallback(async () => {
-    if (isGenerating || cooldownSeconds > 0) return
+    if (isGenerating || countdown > 0) return
 
     if (remainingCredits <= 0) {
       triggerToastNotification(
@@ -64,17 +72,27 @@ export function AiGenerationGuardrailsQa({
       return
     }
 
+    const recentRuns = pruneHourlyRuns(hourlyRuns)
+    if (recentRuns.length >= HOURLY_RUN_LIMIT) {
+      triggerToastNotification(
+        `Hourly limit reached (${HOURLY_RUN_LIMIT} runs per hour). Please wait before trying again.`
+      )
+      return
+    }
+
     setIsGenerating(true)
-    setCooldownSeconds(COOLDOWN_SECONDS)
+    setCountdown(COOLDOWN_SECONDS)
 
     // Staging only — production will call the server handler with rate limits.
     await new Promise((resolve) => window.setTimeout(resolve, 1200))
+    setHourlyRuns([...recentRuns, Date.now()])
     setRemainingCredits((prev) => Math.max(0, prev - 1))
     toast.success('AI theme draft staged (QA — no API call).')
-  }, [cooldownSeconds, isGenerating, remainingCredits])
+  }, [countdown, hourlyRuns, isGenerating, remainingCredits])
 
   const used = userProfile.monthlyLimit - remainingCredits
-  const buttonDisabled = isGenerating || cooldownSeconds > 0 || remainingCredits <= 0
+  const hourlyUsed = pruneHourlyRuns(hourlyRuns).length
+  const buttonDisabled = isGenerating || countdown > 0 || remainingCredits <= 0
 
   return (
     <section
@@ -99,6 +117,9 @@ export function AiGenerationGuardrailsQa({
         {used > 0 ? (
           <span className="text-slate-500"> · {used} used this month</span>
         ) : null}
+        <span className="mt-0.5 block text-[10px] text-slate-500">
+          Hourly: {hourlyUsed} / {HOURLY_RUN_LIMIT} runs
+        </span>
       </p>
 
       <Button
@@ -111,9 +132,8 @@ export function AiGenerationGuardrailsQa({
         {isGenerating ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            {cooldownSeconds > 0
-              ? `AI is constructing your room logic… ${cooldownSeconds}s`
-              : 'AI is constructing your room logic… please wait.'}
+            AI is constructing your room logic... please wait.
+            {countdown > 0 ? ` (${countdown}s)` : null}
           </>
         ) : remainingCredits <= 0 ? (
           'Monthly AI limit reached'
@@ -122,9 +142,9 @@ export function AiGenerationGuardrailsQa({
         )}
       </Button>
 
-      {cooldownSeconds > 0 ? (
+      {countdown > 0 ? (
         <p className="mt-2 text-center text-[10px] text-muted-foreground" role="status">
-          Cooldown: {cooldownSeconds}s remaining (30s between runs)
+          Cooldown: {countdown}s remaining ({COOLDOWN_SECONDS}s between runs, max {HOURLY_RUN_LIMIT}/hr)
         </p>
       ) : null}
     </section>
