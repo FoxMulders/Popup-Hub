@@ -3,23 +3,22 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `f5afa6a` (pushed to `origin/master`)
-- Last deploy commit: `7db76c6` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **v0.1.155 · build 155** | commit `f5afa6a` (user-confirmed 2026-06-07)
-- **Local WIP (not in build 155):** `login-form.tsx` → `LoginQa` re-export; `Login_qa.tsx` Nedry portal lockout + halved logo
+- Branch: `master` @ `bb7e2fc` (pushed to `origin/master`)
+- Last deploy commit: `bb7e2fc` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 155** | commit `f5afa6a` (handoff updated 2026-06-07 17:46)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-07 — Production footer **v0.1.155 · build 155 · f5afa6a** (handoff doc commit; login QA lockout not included)
-- 2026-06-07 17:37 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (7db76c6)
+- 2026-06-07 17:46 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (bb7e2fc)
 
 
 ## Goal
 **UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout complete. Not deployed yet.
 
 ## Shipped this session (not deployed)
+- **`Deploy-popuphub.bat` version tracking:** Header comment block documents floor-plan release track (object resize, measurements, viewport lock, layout fixes), prod baseline (build 155 / 7db76c6), `BUMP_BUILD_NUMBER=1` init, 5-step pipeline, optional `verify-canvas-state-smoke` / `verify-multi-room-canvas` / `verify-align-and-center` pre-flight.
 - **Login QA wired to `/login`:** `app/(auth)/login/login-form.tsx` re-exports `LoginQa` — lockout + logo scale now live on `/login` and embedded signup login panel.
 - **Login QA Jurassic Park lockout (`Login_qa.tsx`):** Portal to `document.body` at `z-[9999]`; fullscreen takeover on 3rd Supabase auth failure (valid email + wrong password); Nedry GIF + countdown; body scroll locked during lockout; exponential backoff 30s / 120s / 480s.
 - **Login QA logo scale (`Login_qa.tsx`):** `BrandLogoMark` auth header halved — `h-20 sm:h-24 max-w-[100px]` (was `h-40 sm:h-48` / `w-48 max-w-[200px]`).
