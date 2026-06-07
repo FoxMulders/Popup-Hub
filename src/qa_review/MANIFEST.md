@@ -96,3 +96,28 @@ Verify: `npx tsx scripts/verify-merge-qa.ts`
 
 `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` with Places API enabled (Step 1).
 
+---
+
+## Login — brute-force lockout & Nedry overlay
+
+**Scope:** Trimmed credential validation, local-only password visibility toggle, 3-strike exponential cooldown, Jurassic Park denial overlay.
+
+### Staged files
+
+| QA path | Role |
+|---------|------|
+| `lib/auth/login-lockout_qa.ts` | Trim helpers, client validation, exponential lockout seconds |
+| `styles/login-lockout_qa.css` | `animate-flash`, pixel Nedry finger-wag, retro terminal chrome |
+| `components/auth/Login_qa.tsx` | Staging login form — strikes/cooldown state, overlay, secure handler |
+
+### Fixes
+
+1. **Credential hygiene** — Email/password trimmed before validation and `signInWithPassword`.
+2. **Password visibility** — Toggle state is component-local (`passwordVisible`); forced hidden on lockout; no global/plaintext leak.
+3. **3-strike lockout** — Strike 3 → 30s, 4 → 120s, 5 → 480s (`30 × 4^(strikes−3)`); inputs/buttons disabled while `cooldownRemaining > 0`.
+4. **Nedry overlay** — Full card overlay at `strikes >= 3` during cooldown; live countdown; auto-restores form at 0.
+
+### Promotion target
+
+Replace `app/(auth)/login/login-form.tsx` import on `/login` after QA sign-off (or wire `LoginQa` behind a staging flag).
+
