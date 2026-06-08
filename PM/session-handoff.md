@@ -3,12 +3,27 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `7c2cd99` (pushed to `origin/master`)
-- Last deploy commit: `7c2cd99` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 19** | commit `2054e6a` (handoff updated 2026-06-08 16:48)
+- Branch: `master` @ `8c15bcd` (pushed to `origin/master`)
+- Last deploy commit: `8c15bcd` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 21** | commit `51a871d` (handoff updated 2026-06-08 17:04)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
+
+## Shipped this session (dashboard floor-plan viewport tiers: mobile block + tablet layout, not deployed)
+- **`hooks/use-floor-plan-viewport-tier.ts`:** Three-tier breakpoints — mobile `<768`, tablet `768–1023`, desktop `≥1024`; portrait detection for tablet advisory.
+- **`floor-plan-viewport-advisory.tsx`:** `FloorPlanViewportLayoutProvider`, full-screen **Desktop Screen Required** overlay on phones, fixed portrait **Landscape Mode Recommended** banner on tablets.
+- **`dashboard-tablet-tools-dock.tsx` + `dashboard-app-shell.tsx`:** Tablet rail — 48px icon dock + sliding drawer for layout tools; grid `md:grid-cols-[3rem_1fr]` until `lg`.
+- **`dashboard-toolbar-portal.tsx`:** Portals command bar into left rail on tablet (drawer) and desktop.
+- **`Dashboard_qa.tsx`:** Canvas unmounted on mobile; portrait banner offset (`pt-11`) on canvas column.
+- **`table-size-pill.tsx` + `command-button.tsx`:** Tablet touch padding on `5′`/`6′`/`8′` booth buttons; toolbar icons keep 48px targets through `lg`.
+- **Verify:** `/coordinator/dashboard` — phone shows desktop-required modal (no canvas); iPad portrait shows landscape banner + dock hamburger; iPad landscape / desktop unchanged full rail.
+
+## Shipped this session (vendor booth yellow canvas styling, not deployed)
+- **`category-palette.ts`:** `VENDOR_BOOTH_PALETTE` — fill `#FEF08A`, stroke `#EAB308`.
+- **`canvas-objects.tsx` + QA mirror:** All vendor booths render solid yellow (status patterns retired; payment state via label text).
+- **`placement-theme.ts` + `canvas-legend.tsx`:** Legend adds yellow **Vendor** swatch (`bg-yellow-200 ring-yellow-500`) synced with canvas.
+- **Verify:** `/coordinator/dashboard` — draw vendor booths → yellow fill + amber border; legend top-right shows yellow **Vendor** chip.
 
 ## Shipped this session (Gemini auto-arrange + boundary physics + label clipping, not deployed)
 - **`lib/ai/tasks.ts`:** New `auto_arrange_layout` task → `google/gemini-2.5-pro` (fallback Claude 3.5 Sonnet).
@@ -224,7 +239,7 @@
 
 
 ## Last deploy
-- 2026-06-08 16:48 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (7c2cd99)
+- 2026-06-08 17:04 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (8c15bcd)
 
 
 ## Goal
