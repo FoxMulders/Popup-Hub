@@ -5,7 +5,7 @@ export const ABOUT_INTRO = `Hey everyone,
 
 I want to take a few minutes to talk openly about how Popup Hub works, why the fee structure is set up the way it is, and what it means for coordinators, vendors, and patrons alike.
 
-Look, I get it. We are all here running businesses or organizing events because we want to be successful. We all want to maximize our returns, and every single dollar matters. But our goal in building this platform isn't just about transactions; it's about simplifying a notoriously chaotic process for everyone and bringing our local communities together into one massive, coordinated effort.`
+We totally get it. We are all here running businesses or organizing events because we want to be successful. We all want to maximize our returns, and every single dollar matters. But our goal in building this platform isn't just about transactions; it's about simplifying a notoriously chaotic process for everyone and bringing our local communities together into one massive, coordinated effort.`
 
 export const ABOUT_FOUNDERS = `For those who don't know us personally, I'm Brad, and alongside my wife Sonia, we own and operate The Tipsy Fox. We haven't just sat behind a computer screen guessing at what the market community needs. Sonia and I have been right there in the trenches with you, working beside you as fellow vendors, grinding weekend after weekend. We know firsthand how much work it takes to prepare inventory, how stressful the application process is, and how chaotic market day logistics can get for coordinators.`
 

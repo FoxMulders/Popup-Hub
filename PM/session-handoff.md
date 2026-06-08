@@ -10,6 +10,11 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (wizard venue map auto-pin on address, not deployed)
+- **`components/coordinator/wizard/wizard-step-venue.tsx`:** Address side-effect — debounced + immediate geocode when a complete address is set (template, flyer OCR, manual entry); updates lat/lng, drops pin, and pans map without requiring a map click. Wrapped `onPlaceSelect` tracks last geocoded address to avoid duplicate lookups.
+- **`components/map/map-recenter.tsx`:** Pan + zoom when pin is first dropped even if coordinates were already set externally (venue template load).
+- **Verify:** `/coordinator/events/new` — pick Edmonton venue template or upload flyer with address → red pin appears and map pans immediately; type a full address manually → pin updates after brief debounce.
+
 ## Shipped this session (sign-out redirect fix, not deployed)
 - **`lib/auth/sign-out.ts` (new):** Shared `signOutAndRedirectToLogin()` — sets intentional-signout flag, calls `supabase.auth.signOut()`, then `window.location.replace('/login')` for a clean login page without `redirectTo`.
 - **`components/nav/app-nav.tsx` + `components/shopper/shopper-top-bar.tsx`:** Sign out menu actions use the shared helper instead of soft `router.push`.

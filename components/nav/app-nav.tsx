@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { UserAvatar } from '@/components/profile/user-avatar'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
@@ -51,7 +52,6 @@ export function AppNav({
   vendorPortal = false,
 }: AppNavProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const supabase = createClient()
   const unreadCount = useNotificationCount(profile.id)
 
@@ -70,9 +70,7 @@ export function AppNav({
       : getPortalHome(activePortal)
 
   async function handleSignOut() {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    await signOutAndRedirectToLogin(supabase)
   }
 
   const avatarProfile = {

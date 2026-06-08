@@ -18,7 +18,12 @@ import {
 } from '@/components/coordinator/wizard/wizard-ui'
 import { VenuePlacesAutocomplete } from '@/components/coordinator/wizard/venue-places-autocomplete'
 import type { CoordinatorSavedVenue } from '@/types/database'
-import { isNamedEstablishmentPlace, resolveVenueNameFromGeocoderResult } from '@/lib/wizard/google-place-venue'
+import {
+  formatPlaceAddress,
+  isNamedEstablishmentPlace,
+  resolveVenueNameFromGeocoderResult,
+} from '@/lib/wizard/google-place-venue'
+import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { EdmontonVenueTemplateBar } from '@/components/coordinator/edmonton-venue-template-bar'
@@ -46,6 +51,19 @@ function pickAddressComponent(
   if (!components) return null
   const match = components.find((c) => c.types.includes(type))
   return match?.long_name ?? null
+}
+
+const MIN_ADDRESS_GEOCODE_LENGTH = 10
+
+/** Detect template/AI/paste fills vs single-keystroke edits for immediate geocode. */
+function isBulkAddressUpdate(prev: string, next: string): boolean {
+  const prevTrimmed = prev.trim()
+  const nextTrimmed = next.trim()
+  if (!nextTrimmed || nextTrimmed.length < MIN_ADDRESS_GEOCODE_LENGTH) return false
+  if (!prevTrimmed) return true
+  if (prevTrimmed === nextTrimmed) return false
+  if (!prevTrimmed.includes(',') && nextTrimmed.includes(',')) return true
+  return nextTrimmed.length - prevTrimmed.length >= 8
 }
 
 function VenueMapPin({
@@ -152,15 +170,124 @@ export function WizardStepVenue({
   const marketCity = getMarketCityById(city)
   const cityLabel = marketCity.label
   const prevCityRef = useRef(city)
+  const prevAddressRef = useRef(address)
+  const prevPinDroppedRef = useRef(pinDropped)
+  const apiGeocodeBootstrappedRef = useRef(false)
   const geocoderRef = useRef<google.maps.Geocoder | null>(null)
+  const geocodeRequestIdRef = useRef(0)
+  const lastGeocodedAddressRef = useRef<string | null>(null)
   const locationNameRef = useRef(locationName)
   locationNameRef.current = locationName
+  const debouncedAddress = useDebouncedValue(address, 400)
 
   useEffect(() => {
     if (apiLoaded && window.google?.maps) {
       geocoderRef.current = new window.google.maps.Geocoder()
     }
   }, [apiLoaded])
+
+  const handlePlaceSelect = useCallback(
+    (place: PlaceResult) => {
+      const normalized = place.address.trim()
+      if (normalized) {
+        lastGeocodedAddressRef.current = normalized
+      }
+      onPlaceSelect(place)
+    },
+    [onPlaceSelect]
+  )
+
+  const geocodeAddressToPin = useCallback(
+    (addressText: string) => {
+      const trimmed = addressText.trim()
+      if (!trimmed || trimmed.length < MIN_ADDRESS_GEOCODE_LENGTH) return
+      if (trimmed === lastGeocodedAddressRef.current) return
+
+      const geocoder = geocoderRef.current
+      if (!geocoder || !window.google?.maps) return
+
+      const requestId = ++geocodeRequestIdRef.current
+      lastGeocodedAddressRef.current = trimmed
+
+      geocoder.geocode(
+        {
+          address: trimmed,
+          componentRestrictions: { country: 'ca' },
+          region: 'ca',
+        },
+        (results, status) => {
+          if (requestId !== geocodeRequestIdRef.current) return
+          if (
+            status !== window.google.maps.GeocoderStatus.OK ||
+            !results?.[0]?.geometry?.location
+          ) {
+            if (lastGeocodedAddressRef.current === trimmed) {
+              lastGeocodedAddressRef.current = null
+            }
+            return
+          }
+
+          const result = results[0]
+          const nextLat = result.geometry!.location!.lat()
+          const nextLng = result.geometry!.location!.lng()
+          const formattedAddress = formatPlaceAddress(result) || trimmed
+          const venueName = resolveVenueNameFromGeocoderResult(result, locationNameRef.current)
+          const cityId = formattedAddress ? inferMarketCityId(formattedAddress) : null
+          const isEstablishment = isNamedEstablishmentPlace(result.types)
+
+          lastGeocodedAddressRef.current = formattedAddress.trim()
+          onCoordinatesChange(nextLat, nextLng)
+          onPinDroppedChange(true)
+          handlePlaceSelect({
+            address: formattedAddress,
+            lat: nextLat,
+            lng: nextLng,
+            name: venueName ?? '',
+            cityId,
+            isEstablishment,
+            postalCode: pickAddressComponent(result.address_components, 'postal_code'),
+            country: pickAddressComponent(result.address_components, 'country'),
+          })
+        }
+      )
+    },
+    [handlePlaceSelect, onCoordinatesChange, onPinDroppedChange]
+  )
+
+  useEffect(() => {
+    if (!apiLoaded) return
+    geocodeAddressToPin(debouncedAddress)
+  }, [apiLoaded, debouncedAddress, geocodeAddressToPin])
+
+  // Immediate geocode for template, AI extraction, paste, or autocomplete fills.
+  useEffect(() => {
+    if (!apiLoaded) return
+    const prevAddress = prevAddressRef.current
+    prevAddressRef.current = address
+    const trimmed = address.trim()
+    if (!trimmed || trimmed === prevAddress.trim()) return
+    if (!isBulkAddressUpdate(prevAddress, address)) return
+    geocodeAddressToPin(trimmed)
+  }, [address, apiLoaded, geocodeAddressToPin])
+
+  // When parent drops a pin with an address (template / saved venue), skip re-geocoding.
+  useEffect(() => {
+    const trimmed = address.trim()
+    if (pinDropped && !prevPinDroppedRef.current && trimmed) {
+      lastGeocodedAddressRef.current = trimmed
+    }
+    prevPinDroppedRef.current = pinDropped
+  }, [pinDropped, address])
+
+  // Geocode pre-filled address once Maps API finishes loading.
+  useEffect(() => {
+    if (!apiLoaded || apiGeocodeBootstrappedRef.current) return
+    apiGeocodeBootstrappedRef.current = true
+    const trimmed = address.trim()
+    if (trimmed.length >= MIN_ADDRESS_GEOCODE_LENGTH && !pinDropped) {
+      geocodeAddressToPin(trimmed)
+    }
+  }, [apiLoaded, address, pinDropped, geocodeAddressToPin])
 
   useEffect(() => {
     if (prevCityRef.current === city) return
@@ -201,7 +328,7 @@ export function WizardStepVenue({
         })
       })
     },
-    [onCoordinatesChange, onPinDroppedChange, onPlaceSelect]
+    [onCoordinatesChange, onPinDroppedChange, handlePlaceSelect]
   )
 
   const anchor = resolveTemplateAnchoredDimensions(venuePresetId, venueWidth, venueLength)
@@ -279,7 +406,7 @@ export function WizardStepVenue({
           value={locationName}
           onChange={onLocationNameChange}
           cityId={city}
-          onPlaceSelect={onPlaceSelect}
+          onPlaceSelect={handlePlaceSelect}
         />
         <VenuePlacesAutocomplete
           id="wizard-address"
@@ -288,7 +415,7 @@ export function WizardStepVenue({
           value={address}
           onChange={onAddressChange}
           cityId={city}
-          onPlaceSelect={onPlaceSelect}
+          onPlaceSelect={handlePlaceSelect}
         />
       </div>
 
@@ -311,7 +438,12 @@ export function WizardStepVenue({
         >
           <MapRecenter lat={lat} lng={lng} pinDropped={pinDropped} zoomOnPinDrop />
           {pinDropped ? (
-            <AdvancedMarker position={{ lat, lng }} title={markerTitle} zIndex={9999}>
+            <AdvancedMarker
+              key={`${lat.toFixed(6)}-${lng.toFixed(6)}`}
+              position={{ lat, lng }}
+              title={markerTitle}
+              zIndex={9999}
+            >
               <VenueMapPin venueName={locationName} address={address} cityLabel={cityLabel} />
             </AdvancedMarker>
           ) : null}

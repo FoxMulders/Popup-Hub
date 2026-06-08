@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { PortalTabs } from '@/components/nav/portal-tabs'
@@ -24,7 +25,6 @@ export function ShopperTopBar({
   portalCookie,
 }: ShopperTopBarProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const supabase = createClient()
 
   const activePortal = profile
@@ -40,9 +40,7 @@ export function ShopperTopBar({
     : null
 
   async function signOut() {
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    await signOutAndRedirectToLogin(supabase)
   }
 
   const navLinks = [
