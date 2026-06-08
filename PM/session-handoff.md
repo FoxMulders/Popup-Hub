@@ -3,15 +3,15 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `911a7c3` (pushed to `origin/master`)
-- Last deploy commit: `911a7c3` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 165** | commit `7feab4d` (handoff updated 2026-06-08 08:33)
+- Branch: `master` @ `2419026` (pushed to `origin/master`)
+- Last deploy commit: `2419026` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 165** | commit `7feab4d` (handoff updated 2026-06-08 08:45)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-08 08:33 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (911a7c3)
+- 2026-06-08 08:45 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (2419026)
 
 
 ## Goal
@@ -23,12 +23,20 @@
 - **Web stack:** Next.js App Router on Vercel (`https://popuphub.ca`); PWA already ships (`public/manifest.json`, service worker, `use-install-prompt` iOS/Android coaches).
 - **Apple:** Developer account active — can create App ID, certificates, provisioning profiles, and App Store Connect listing.
 - **Android:** Not started; defer until iOS shell + review flow validated.
-- **Approach (TBD — pick before scaffolding):**
-  1. **Capacitor** — native shell loads prod (or bundled static export); fastest path; reuse 100% of UI; needs auth/deep-link + App Store review notes for web-wrapper apps.
-  2. **Expo / React Native** — full rewrite; only if native-only APIs or offline-first justify the cost.
-  3. **PWA-only on iOS** — already supported via Add to Home Screen; does not satisfy App Store listing goal.
+- **Shell:** **Capacitor 7** — `capacitor.config.ts`, bundle id `ca.popuphub.app`, loads `https://popuphub.ca` via `server.url` (v1 remote web app; see `mobile/README.md` tradeoffs).
+- **Repo layout:** `mobile/www/` fallback shell, `ios/` Xcode project (generated), `scripts/mobile/` asset + sync helpers, `PM/ios-testflight.md` internal TestFlight checklist.
+- **npm scripts:** `mobile:assets`, `mobile:sync`, `mobile:ios:open`, `mobile:ios:add`.
+- **OAuth URL scheme:** `ca.popuphub.app://auth/callback` patched into `ios/App/App/Info.plist` — add same redirect in Supabase Auth before TestFlight sign-in smoke.
 
-**Recommended first spike:** Capacitor iOS project in-repo (`apps/ios/` or `mobile/`), load `https://popuphub.ca`, TestFlight internal build, then iterate on splash, status bar, safe areas, and push/deep links.
+## Shipped this session (Capacitor iOS shell, not deployed)
+- **Capacitor 7 deps:** `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/app`, `@capacitor/splash-screen`, `@capacitor/status-bar`.
+- **`capacitor.config.ts`:** App id `ca.popuphub.app`, prod URL `https://popuphub.ca`, `allowNavigation` for Supabase/OAuth/Stripe/Square domains, splash + status bar brand colors (`#faf8f5` / `#2d5a27`).
+- **`mobile/www/index.html`:** Offline fallback + brand PNG; redirects to `/discover` when loaded from `capacitor:` scheme.
+- **`ios/` Xcode project:** Added via `npx cap add ios`; AppIcon + Splash asset catalog populated from `public/icons/icon-512x512.png`.
+- **`scripts/mobile/generate-ios-resources.mjs`:** Copies brand assets, writes iOS icons/splash, merges OAuth URL scheme into Info.plist.
+- **`scripts/mobile/sync-ios.ps1`:** `mobile:assets` + first-run `cap add ios` + `cap sync ios`; optional `CAPACITOR_SERVER_URL` for preview/local HTTPS.
+- **Docs:** `mobile/README.md` architecture + Mac workflow; `PM/ios-testflight.md` App Store Connect + internal TestFlight smoke checklist.
+- **Verify (Windows):** `npm run mobile:sync` completes; Mac still required for archive/upload.
 
 ## Shipped this session (prod build 163, `6222d13`)
 - **Login QA Nedry lockout playback fix (`Login_qa.tsx`):** Always-mounted portal video preloads `/assets/nedry_magic_word.mp4`; Sign-in click primes audio before async auth; lockout triggers unmuted `play()` (+ muted retry); GIF+audio fallback at `/assets/nedry.gif` when video codec fails.
@@ -116,13 +124,14 @@
 - **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` wiring for `CanvasCommandBarQa`.
 
 ## Next actions — native mobile (iOS)
-1. **Choose shell strategy** — Capacitor vs alternatives; confirm App Store accepts web-wrapper for coordinator + vendor workflows (no in-app purchase bypass of web checkout unless required).
-2. **Apple Developer setup** — App ID (`ca.popuphub.app` or similar), enable Push Notifications / Associated Domains if needed; create Distribution cert + App Store provisioning profile.
-3. **Scaffold iOS project** — Capacitor init, bundle id, app icons (reuse `npm run assets:logo` outputs + App Store sizes), launch URL → `https://popuphub.ca/discover`.
-4. **Native polish pass** — Safe-area insets, splash screen (brand loader parity), disable overscroll bounce where needed, `apple-app-site-association` for universal links.
-5. **TestFlight** — internal testers, sign-in (Supabase OAuth redirect / custom URL scheme), coordinator floor-plan smoke on iPhone + iPad.
-6. **App Store Connect** — metadata, screenshots (6.7" / 6.1" / iPad), privacy nutrition labels, review notes explaining web-backed coordinator tool.
-7. **Android (later)** — same Capacitor shell → Play Console; TWA optional if staying single codebase.
+1. **Commit mobile shell** — `capacitor.config.ts`, `mobile/`, `ios/`, `scripts/mobile/`, `PM/ios-testflight.md` (no `.env`).
+2. **Apple Developer setup** — App ID `ca.popuphub.app`; Distribution cert + App Store provisioning profile (or Xcode automatic signing).
+3. **App Store Connect app** — create iOS app record; SKU `popuphub-ios-001`.
+4. **Supabase Auth** — add redirect `ca.popuphub.app://auth/callback`; smoke email/OAuth on device.
+5. **Mac archive → TestFlight internal** — follow `PM/ios-testflight.md`: `npm run mobile:sync` → `npm run mobile:ios:open` → Archive → Upload → internal testers.
+6. **Native polish pass** — safe-area QA on iPhone/iPad, overscroll bounce, `apple-app-site-association` for universal links.
+7. **App Store (later)** — metadata, screenshots, privacy labels, review notes (coordinator/vendor tooling, not generic web wrapper).
+8. **Android (later)** — `npx cap add android` after iOS path proven.
 
 ## Next actions — web / QA
 1. **Step 3 Add room smoke-test** — `/coordinator/events/new` Step 3 with zero rooms: Width/Length inputs + Add room button visible (not clipped); page scrolls if toolbar exceeds viewport
@@ -346,8 +355,9 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - Vendor / shopper / auction flows unless asked
 
 ## Blockers
-- **iOS:** Mac with Xcode required for builds/signing (Capacitor or native); no in-repo mobile shell yet
-- **iOS App Store:** Wrapper-app review policy + OAuth redirect / universal-link config not yet implemented
+- **iOS build/sign:** Mac + Xcode required to archive and upload TestFlight build (shell scaffolded on Windows; `npm run mobile:sync` OK cross-platform).
+- **Supabase redirect:** `ca.popuphub.app://auth/callback` not yet registered in Supabase Auth dashboard.
+- **Universal links:** `apple-app-site-association` not on `popuphub.ca` yet.
 - Interactive coordinator smoke-test requires user credentials
 - Markets with **only** `venue_elements` and no cells open **blank** by design
 - ~~Deploy blocked by TS build failure~~ — fixed locally (pointer return type + verify script)
@@ -356,6 +366,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 ## Decisions
 - **Mobile strategy:** Ship **iOS App Store app first**, **Android Play Store second**; reuse existing Next.js product rather than rewrite unless native APIs force it
 - **Apple Developer Program:** Enrolled — use for App Store + TestFlight (not PWA-only distribution)
+- **Native shell v1:** **Capacitor 7** remote URL → `https://popuphub.ca`; bundle id **`ca.popuphub.app`**; bundled static export deferred
 - **Drawable geometry = booth `cells` only**
 - **Zero rooms by default** until user adds a room or saved booth cells exist
 - **Room interiors are blank** — perimeter walls + labels only
