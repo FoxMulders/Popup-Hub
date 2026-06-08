@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   WizardDescriptionField,
-  WizardFloatingInput,
+  WizardLabeledInput,
   WizardLabeledTextarea,
   WizardSelectionCard,
   WizardSelectionGroup,
@@ -149,7 +149,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             label="Cover image / flyer"
           />
           <FlyerFieldHighlight fieldKey="name" autoFilledFields={autoFilled}>
-            <WizardFloatingInput
+            <WizardLabeledInput
               id="wizard-event-name"
               label="Event name *"
               value={props.name}

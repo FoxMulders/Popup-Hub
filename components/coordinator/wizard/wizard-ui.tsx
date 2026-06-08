@@ -19,7 +19,10 @@ import {
   WIZARD_INPUT,
   WIZARD_TEXTAREA,
 } from '@/lib/wizard/wizard-panel-styles'
-import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
+import {
+  DESCRIPTION_MAX_LENGTH,
+  DESCRIPTION_MIN_LENGTH,
+} from '@/lib/wizard/critique/copy-audit'
 import type { WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 
 /** Applied by `focusWizardField` on validation errors — shake + soft red glow. */
@@ -202,6 +205,29 @@ export function WizardFloatingInput({
   )
 }
 
+/** Static label above input — avoids floating label inside the field. */
+export function WizardLabeledInput({
+  id,
+  label,
+  className,
+  value,
+  ...props
+}: React.ComponentProps<typeof Input> & { label: string }) {
+  return (
+    <div className={cn('flex min-h-0 flex-col space-y-2', className)}>
+      <label htmlFor={id} className={cn(WIZARD_FIELD_LABEL, 'block')}>
+        {label}
+      </label>
+      <Input
+        id={id}
+        value={value}
+        className={cn(WIZARD_INPUT, 'min-h-11 px-3')}
+        {...props}
+      />
+    </div>
+  )
+}
+
 /** Static label above textarea — avoids floating-label overlap on multi-line fields. */
 export function WizardLabeledTextarea({
   id,
@@ -264,7 +290,7 @@ export function WizardDescriptionField({
   label,
   value,
   onChange,
-  maxLength = 800,
+  maxLength = DESCRIPTION_MAX_LENGTH,
   rows = 4,
   className,
 }: {

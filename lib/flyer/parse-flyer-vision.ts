@@ -1,5 +1,9 @@
 import { generateJsonFromVision } from '@/lib/ai/generate-json-vision'
-import { resolveGeminiApiKey, resolveGroqApiKey } from '@/lib/ai/env'
+import {
+  resolveFlyerGeminiModelId,
+  resolveGeminiApiKey,
+  resolveGroqApiKey,
+} from '@/lib/ai/env'
 import { parsedFlyerSchema, type ParsedFlyerResponse } from '@/lib/flyer/types'
 import { normalizeFlyerDate, normalizeFlyerTime } from '@/lib/flyer/normalize'
 
@@ -49,6 +53,16 @@ If the image is too blurry or has no readable text, return all null values.`
 function fileToDataUrl(buffer: Buffer, mimeType: string): string {
   const base64 = buffer.toString('base64')
   return `data:${mimeType};base64,${base64}`
+}
+
+/** Strip optional markdown fences when the model ignores JSON-only instructions. */
+function extractJsonPayload(text: string): string {
+  const trimmed = text.trim()
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i)
+  if (fenced) return fenced[1].trim()
+  const inline = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (inline) return inline[1].trim()
+  return trimmed
 }
 
 /**
@@ -121,9 +135,10 @@ export async function parseFlyerWithVision(input: {
     userPrompt: FLYER_PARSE_PROMPT,
     dataUrl,
     mimeType: input.mimeType,
+    geminiModelId: resolveFlyerGeminiModelId(),
   })
 
-  const raw = JSON.parse(content) as unknown
+  const raw = JSON.parse(extractJsonPayload(content)) as unknown
   const data = parsedFlyerSchema.parse(raw)
 
   return {

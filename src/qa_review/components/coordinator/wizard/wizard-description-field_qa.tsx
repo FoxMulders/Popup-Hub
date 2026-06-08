@@ -2,7 +2,10 @@
 
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
+import {
+  DESCRIPTION_MAX_LENGTH,
+  DESCRIPTION_MIN_LENGTH,
+} from '@/lib/wizard/critique/copy-audit'
 import { WIZARD_FIELD_LABEL, WIZARD_TEXTAREA } from '@/lib/wizard/wizard-panel-styles'
 
 export interface WizardDescriptionFieldQaProps {
@@ -23,7 +26,7 @@ export function WizardDescriptionFieldQa({
   label,
   value,
   onChange,
-  maxLength = 800,
+  maxLength = DESCRIPTION_MAX_LENGTH,
   rows = 4,
 }: WizardDescriptionFieldQaProps) {
   const trimmedLen = value.trim().length

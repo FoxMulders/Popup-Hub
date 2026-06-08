@@ -564,9 +564,9 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  maxLength={800}
+                  maxLength={2000}
                 />
-                <p className="text-right text-xs text-muted-foreground">{description.length}/800</p>
+                <p className="text-right text-xs text-muted-foreground">{description.length}/2000</p>
               </div>
             </FlyerFieldHighlight>
 

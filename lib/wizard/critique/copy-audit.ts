@@ -8,3 +8,4 @@
  * minimal so the threshold has an obvious home.
  */
 export const DESCRIPTION_MIN_LENGTH = 15
+export const DESCRIPTION_MAX_LENGTH = 2000

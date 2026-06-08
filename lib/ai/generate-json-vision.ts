@@ -1,6 +1,7 @@
 import {
   resolveGeminiApiKey,
   resolveGeminiModelId,
+  resolveFlyerGeminiModelId,
   resolveGroqApiKey,
   resolveGroqModelId,
 } from '@/lib/ai/env'
@@ -32,13 +33,14 @@ async function callGeminiJsonVision(input: {
   userPrompt: string
   dataUrl: string
   mimeType: string
+  modelId?: string
 }): Promise<string> {
   const apiKey = resolveGeminiApiKey()
   if (!apiKey) {
     throw new VisionJsonUnavailableError('Gemini API key is not configured')
   }
 
-  const model = resolveGeminiModelId()
+  const model = input.modelId ?? resolveGeminiModelId()
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`
 
   const response = await fetch(url, {
@@ -166,6 +168,8 @@ export async function generateJsonFromVision(input: {
   userPrompt: string
   dataUrl: string
   mimeType: string
+  /** Override Gemini model (e.g. flyer parse uses gemini-2.5-flash). */
+  geminiModelId?: string
 }): Promise<{ content: string; provider: VisionJsonProvider }> {
   const geminiKey = resolveGeminiApiKey()
   const groqKey = resolveGroqApiKey()
@@ -176,7 +180,10 @@ export async function generateJsonFromVision(input: {
 
   if (geminiKey) {
     try {
-      const content = await callGeminiJsonVision(input)
+      const content = await callGeminiJsonVision({
+        ...input,
+        modelId: input.geminiModelId,
+      })
       return { content, provider: 'gemini' }
     } catch (err) {
       const shouldFallback =
