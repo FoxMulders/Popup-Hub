@@ -3,12 +3,19 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `19bebb5` (pushed to `origin/master`)
-- Last deploy commit: `19bebb5` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 5** | commit `5c297e3` (handoff updated 2026-06-08 14:41)
+- Branch: `master` @ `a6b4fb8` (pushed to `origin/master`)
+- Last deploy commit: `a6b4fb8` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 6** | commit `b3f4d05` (handoff updated 2026-06-08 14:48)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
+
+## Shipped this session (wizard event name + description limits, not deployed)
+- **`copy-audit.ts`:** `DESCRIPTION_MAX_LENGTH = 2000` (was 800 in UI defaults).
+- **`wizard-ui.tsx`:** New `WizardLabeledInput` — static label above field; Step 1 event name uses it instead of floating label inside the box. `WizardDescriptionField` default max 2000.
+- **`wizard-step-event-details.tsx` (+ QA step1):** Event name * label sits above the input, matching description field layout.
+- **`event-form.tsx`:** Description `maxLength` 2000.
+- **Verify:** Market setup wizard Step 1 — event name label outside input; description accepts up to 2000 chars with counter `…/2000`.
 
 ## Shipped this session (vendor booth size → auto-arm draw tool, not deployed)
 - **`canvas-command-bar-blocks.tsx` (+ QA):** Vendor booth size pills (`5′`, `6′`, `8′`, …) now call `activateTableSize` instead of `onTableSizeChange` only — sets size and arms the square/booth draw tool in one click; square icon highlights via existing `isTablePlacementActive('vendor')`.
@@ -77,7 +84,7 @@
 
 
 ## Last deploy
-- 2026-06-08 14:41 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (19bebb5)
+- 2026-06-08 14:48 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (a6b4fb8)
 
 
 ## Goal
