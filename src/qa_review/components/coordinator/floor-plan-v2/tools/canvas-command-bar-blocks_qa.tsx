@@ -486,7 +486,7 @@ export function renderCanvasCommandBarBlock(
               <div className={toolbarDividerClass(compact)} aria-hidden />
               <TableSizePill
                 value={ctx.tableSizeFt}
-                onChange={ctx.onTableSizeChange}
+                onChange={activateTableSize}
                 sections="vendor"
                 compact={compact}
                 className="shrink-0"
