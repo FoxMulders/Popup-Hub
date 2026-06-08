@@ -3,12 +3,26 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `2054e6a` (pushed to `origin/master`)
-- Last deploy commit: `2054e6a` - 2054e6a feat: floor-plan layout fixes
-- Production: https://popuphub.ca - **build 18** | commit `2054e6a` (handoff updated 2026-06-08 16:35)
+- Branch: `master` @ `7c2cd99` (pushed to `origin/master`)
+- Last deploy commit: `7c2cd99` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 19** | commit `2054e6a` (handoff updated 2026-06-08 16:48)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
+
+## Shipped this session (dashboard floor-plan sidebar vertical stack, not deployed)
+- **`toolbar-static-layout.ts`:** `getVisibleSidebarSections` / `getVisibleSidebarSectionsQa` — four full-width blocks (Room Controls, Designer Tools, Patron Layout, Vendor Booths).
+- **`canvas-toolbar-static.tsx` + `_qa`:** `sidebarLayout` renders stacked `SidebarToolbarSection` cards (no `grid-cols-2` split rows).
+- **`dashboard-toolbar-portal.tsx`:** Portal host `flex flex-col gap-4 overflow-y-auto w-[300px] min-w-[300px] flex-shrink-0`.
+- **`dashboard-app-shell.tsx` + `dashboard-bootstrap.tsx`:** Left rail fixed at 300px; **Full canvas** immersive mode keeps the left tools column (canvas expands, panel layout unchanged).
+- **`floor-plan-v2.tsx`:** Dashboard always passes `sidebarLayout`; toolbar portals to left rail on desktop even in full canvas.
+- **Verify:** `/coordinator/dashboard` — four labeled sections stack vertically at 300px; toggle **Full canvas** — left panel stays 300px with same section headers (no horizontal crush).
+
+## Shipped this session (document scroll across portal pages, not deployed)
+- **`portal-workspace-layout.tsx`:** `routeUsesViewportFill` is now an allowlist (command center, setup/layout wizards, experience designer) — removed blanket `/coordinator/*` and vendor dashboard/applications locks that trapped scroll in the center column.
+- **Vendor workspace:** `/vendor/events` and `/vendor/passport` included in the 3-column grid with `documentScroll` mode (same as supplies).
+- **`scripts/verify-document-scroll-routes.ts`:** Smoke test for viewport-locked vs document-scroll routes.
+- **Verify:** Scroll wheel works anywhere on vendor dashboard/applications/events/passport and coordinator payment-methods, event overview, applications board — not only over list/card regions. Immersive routes (dashboard CAD, setup wizard, layout planner) still viewport-locked.
 
 ## Shipped this session (vendor supplies scroll fix, not deployed)
 - **`site-app-shell.tsx`:** Non-viewport-fill routes use document scroll on `#site-main` (removed nested `overflow-y-auto`).
@@ -200,7 +214,7 @@
 
 
 ## Last deploy
-- 2026-06-08 16:35 - Deploy recovery after reported failure - `2054e6a feat: floor-plan layout fixes` (2054e6a)
+- 2026-06-08 16:48 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (7c2cd99)
 
 
 ## Goal
