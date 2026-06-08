@@ -61,7 +61,7 @@ import {
   focusWizardStep2Field,
   getWizardStep2ValidationError,
 } from '@/lib/wizard/wizard-step2-validation'
-import type { PlaceResult } from '@/src/qa_review/components/coordinator/wizard/wizard-place-types_qa'
+import type { PlaceResult } from '@/lib/wizard/wizard-place-types'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import { WizardAmbientShell, WizardDivider } from '@/components/coordinator/wizard/wizard-ui'
 import {
@@ -72,8 +72,8 @@ import {
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
 import { WizardStepFloorPlan } from '@/src/qa_review/components/coordinator/wizard/wizard-step-floor-plan_qa'
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
-import { WizardStepVenueWithMapsProvider } from '@/src/qa_review/components/coordinator/wizard/wizard-step-venue_predictive_search'
-import { applyWizardGooglePlaceSelect } from '@/src/qa_review/lib/wizard/wizard-google-place-select_qa'
+import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
+import { applyWizardGooglePlaceSelect } from '@/lib/wizard/wizard-google-place-select'
 import { PlacesApiStatusProvider } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
 import { WizardSummaryRail } from '@/components/coordinator/wizard/wizard-summary-rail'

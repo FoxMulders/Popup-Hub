@@ -5,8 +5,9 @@ import { Trash2, HelpCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  WizardDescriptionField,
   WizardFloatingInput,
-  WizardFloatingTextarea,
+  WizardLabeledTextarea,
   WizardSelectionCard,
   WizardSelectionGroup,
   WizardSwitchRow,
@@ -39,7 +40,6 @@ import { cn } from '@/lib/utils'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import type { BoothClearancePolicy, EventListingType } from '@/types/database'
 import { WIZARD_TIME_OPTIONS } from './wizard-time-options'
-import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
 import { FlyerCoverUpload } from '@/components/coordinator/flyer-cover-upload'
 import { FlyerFieldHighlight } from '@/components/coordinator/flyer-field-highlight'
 import type { FlyerFieldKey } from '@/lib/flyer/types'
@@ -157,32 +157,12 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             />
           </FlyerFieldHighlight>
           <FlyerFieldHighlight fieldKey="description" autoFilledFields={autoFilled}>
-            <div className="space-y-1">
-              <WizardFloatingTextarea
-                id="wizard-description"
-                label="Description *"
-                value={props.description}
-                onChange={(e) => props.onDescriptionChange(e.target.value)}
-                rows={4}
-                maxLength={800}
-              />
-              <p
-                className={cn(
-                  'text-xs text-right tabular-nums',
-                  props.description.trim().length < DESCRIPTION_MIN_LENGTH
-                    ? 'text-harvest-700'
-                    : 'text-muted-foreground'
-                )}
-              >
-                {props.description.trim().length}/{DESCRIPTION_MIN_LENGTH} min · {props.description.length}
-                /800
-                {props.description.trim().length < DESCRIPTION_MIN_LENGTH ? (
-                  <span className="mt-0.5 block text-left whitespace-normal break-words">
-                    Mention vendor mix, neighborhood, and what makes the market worth visiting.
-                  </span>
-                ) : null}
-              </p>
-            </div>
+            <WizardDescriptionField
+              id="wizard-description"
+              label="Description *"
+              value={props.description}
+              onChange={props.onDescriptionChange}
+            />
           </FlyerFieldHighlight>
         </WizardZone>
 
@@ -528,11 +508,11 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
                 }
               />
               <FlyerFieldHighlight fieldKey="raffleDonationRequirement" autoFilledFields={autoFilled}>
-                <WizardFloatingTextarea
+                <WizardLabeledTextarea
                   id="wizard-raffle"
                   label="Raffle donation requirement"
                   value={props.raffleDonationRequirement}
-                  onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
+                  onChange={props.onRaffleDonationRequirementChange}
                   rows={2}
                 />
               </FlyerFieldHighlight>

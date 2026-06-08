@@ -3,21 +3,21 @@
 import { usePlacesApiStatus } from '@/components/coordinator/floor-plan-v2/debug/places-api-status-context'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect } from 'react'
+import { Label } from '@/components/ui/label'
 import { getMarketCityById } from '@/lib/wizard/market-cities'
 import {
   formatPlaceAddress,
   isNamedEstablishmentPlace,
   resolveVenueNameFromAddressPick,
 } from '@/lib/wizard/google-place-venue'
-import { WIZARD_INPUT } from '@/lib/wizard/wizard-panel-styles'
+import { WIZARD_FIELD_LABEL, WIZARD_INPUT } from '@/lib/wizard/wizard-panel-styles'
+import type { PlaceResult, WizardPlacesAutocompleteMode } from '@/lib/wizard/wizard-place-types'
 import { cn } from '@/lib/utils'
-import { useGooglePlacesAutocompleteWidgetQa } from '@/src/qa_review/hooks/use-google-places-autocomplete-widget_qa'
-import type { WizardPlacesAutocompleteMode } from '@/src/qa_review/lib/wizard/places-autocomplete-request_qa'
+import { useGooglePlacesAutocompleteWidget } from '@/hooks/use-google-places-autocomplete-widget'
 import {
   MARKET_CITIES,
   inferMarketCityId,
 } from '@/lib/wizard/market-cities'
-import type { PlaceResult } from '@/src/qa_review/components/coordinator/wizard/wizard-place-types_qa'
 
 function pickAddressComponent(
   components: google.maps.GeocoderAddressComponent[] | undefined,
@@ -75,7 +75,6 @@ export function VenuePlacesAutocomplete({
 }: VenuePlacesAutocompleteProps) {
   const { reportPlacesApi } = usePlacesApiStatus()
   const city = getMarketCityById(cityId)
-  const filled = Boolean(value.trim())
 
   const handlePlaceChanged = useCallback(
     (place: google.maps.places.PlaceResult) => {
@@ -113,35 +112,36 @@ export function VenuePlacesAutocomplete({
     [mode, onChange, onPlaceSelect]
   )
 
-  const { inputRef, placesReady, apiLoaded } = useGooglePlacesAutocompleteWidgetQa({
+  const { inputRef, placesReady, apiLoaded } = useGooglePlacesAutocompleteWidget({
     mode,
     cityId,
     onPlaceChanged: handlePlaceChanged,
     onApiStatus: reportPlacesApi,
   })
 
-  // Mirror shared wizard state when the sibling field or map/geocode updates this value.
   useEffect(() => {
     const input = inputRef.current
     if (!input || input.value === value) return
     input.value = value
-  }, [value])
+  }, [value, inputRef])
 
   const waitingForPlaces = apiLoaded && !placesReady
-  const hint =
+
+  const placeholder =
     !apiLoaded || waitingForPlaces
       ? mode === 'venue'
-        ? `Enter venue name near ${city.label}`
-        : `Enter address near ${city.label}`
+        ? `Enter venue name near ${city.label}…`
+        : `Enter address manually near ${city.label}…`
       : mode === 'venue'
-        ? `Search venues near ${city.label}`
-        : `Search address near ${city.label}`
+        ? `Search venues near ${city.label}…`
+        : `Search address near ${city.label}…`
 
   return (
     <div className="relative space-y-1">
-      <div
-        className={cn('wizard-floating-field', filled && 'wizard-floating-field--filled')}
-      >
+      <Label htmlFor={id} className={WIZARD_FIELD_LABEL}>
+        {label}
+      </Label>
+      <div className="relative">
         <input
           ref={inputRef}
           id={id}
@@ -149,31 +149,26 @@ export function VenuePlacesAutocomplete({
           key={`${id}-${cityId}`}
           defaultValue={value}
           onInput={(e) => onChange(e.currentTarget.value)}
-          placeholder=" "
-          aria-label={label}
-          aria-description={hint}
+          placeholder={placeholder}
           className={cn(
             WIZARD_INPUT,
-            'wizard-floating-input peer !h-auto min-h-14 whitespace-normal break-words pr-9'
+            'flex h-10 w-full min-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors',
+            'whitespace-normal break-words pr-9',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
           )}
           aria-autocomplete="list"
           autoComplete="off"
         />
-        <label htmlFor={id} className="wizard-floating-label">
-          {label}
-        </label>
         {waitingForPlaces ? (
           <Loader2
-            className="pointer-events-none absolute right-2.5 top-1/2 z-[3] h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+            className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground pointer-events-none"
             aria-hidden
           />
         ) : null}
       </div>
       {!placesReady && apiLoaded ? (
         <p className="text-xs text-muted-foreground">Loading place suggestions…</p>
-      ) : (
-        <p className="sr-only">{hint}</p>
-      )}
+      ) : null}
     </div>
   )
 }

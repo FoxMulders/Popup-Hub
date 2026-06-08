@@ -32,6 +32,9 @@ interface PropertyInspectorProps {
    * events that don't yet have a category list.
    */
   eventCategoryNames?: string[]
+  /** Run intelligent bin-pack + patron pathfind for the active room. */
+  onAutoLayoutAndPathfind?: () => void
+  canAutoLayoutAndPathfind?: boolean
   className?: string
 }
 
@@ -47,6 +50,8 @@ interface PropertyInspectorProps {
 export function PropertyInspector({
   store,
   eventCategoryNames,
+  onAutoLayoutAndPathfind,
+  canAutoLayoutAndPathfind = false,
   className,
 }: PropertyInspectorProps) {
   const selected = useMemo(() => {
@@ -68,6 +73,32 @@ export function PropertyInspector({
             tweak the advisory canvas settings below.
           </p>
         </header>
+        {onAutoLayoutAndPathfind ? (
+          <section aria-label="Layout automation">
+            <button
+              type="button"
+              onClick={onAutoLayoutAndPathfind}
+              disabled={!canAutoLayoutAndPathfind}
+              className={cn(
+                'w-full rounded-md border px-3 py-2 text-left text-[0.6875rem] font-semibold transition-colors',
+                canAutoLayoutAndPathfind
+                  ? 'border-sky-300 bg-sky-50 text-sky-900 hover:bg-sky-100'
+                  : 'cursor-not-allowed border-stone-200 bg-stone-50 text-stone-400'
+              )}
+              title={
+                canAutoLayoutAndPathfind
+                  ? 'Pack vendor booths inside merged zones with 5′ aisles, then compute patron traffic path'
+                  : 'Draw at least one vendor booth in the active room first'
+              }
+            >
+              Auto-Layout &amp; Pathfind
+            </button>
+            <p className="mt-1.5 text-[0.625rem] leading-snug text-stone-500">
+              Clears vendor booth positions, packs inside merged zones with
+              5′ aisles, and draws the optimal viewing path.
+            </p>
+          </section>
+        ) : null}
         <section aria-label="Canvas dimensions">
           <fieldset className={cn(inspectorFieldsetClass, 'flex flex-col gap-3')}>
             <legend className="sr-only">Canvas dimensions and snap</legend>

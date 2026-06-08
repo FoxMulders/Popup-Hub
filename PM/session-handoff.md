@@ -28,9 +28,41 @@
 - **npm scripts:** `mobile:assets`, `mobile:sync`, `mobile:ios:open`, `mobile:ios:add`.
 - **OAuth URL scheme:** `ca.popuphub.app://auth/callback` patched into `ios/App/App/Info.plist` — add same redirect in Supabase Auth before TestFlight sign-in smoke.
 
+## Shipped this session (About Us + FAQ fee transparency, not deployed)
+- **`app/legal/about/page.tsx` (new):** Full Popup Hub story — founders, fee breakdown (patrons/vendors/coordinators), trust/honesty policy, discovery vision.
+- **`lib/legal/about-content.ts` (new):** Section copy for the About page.
+- **`lib/legal/faq-content.tsx`:** Converted from `.ts` to support React answers; added middle-positioned **How much does Popup Hub cost…** (pricing + bypass rules) and **Why does Popup Hub charge fees?** (summary linking to `/legal/about`).
+- **`lib/legal/links.ts`:** Footer nav includes **About Us**.
+- **`app/legal/faq/page.tsx`:** Updated last-modified date; intro links to About Us.
+- **Build fix:** QA floor-plan canvases (`floor-plan-canvas-wizard_qa.tsx`, `floor-plan-canvas_dashboard_qa.tsx`) synced to unified `SelectionOverlay` (removed obsolete `layer="outline"|"controls"` props). `npm run build` passes (build 177).
+
+## Shipped this session (wizard Step 1 layout + venue/map reactivity, not deployed)
+- **`wizard-ui.tsx` / `globals.css`:** Floating textareas `pt-6`; description + labeled textareas use static labels with counters in a flex row below the field (never inside the input).
+- **`venue-places-autocomplete_qa.tsx`:** Wizard floating-label inputs (`placeholder=" "`) with bidirectional `place_changed` sync + `useEffect` DOM mirror for sibling/map updates.
+- **`wizard-google-place-select_qa.ts`:** `fromMapGeocode` flag — map click reverse-geocode fills venue name + address + pin without preserving stale typed venue draft.
+- **`wizard-step-venue_predictive_search.tsx`:** Map click uses `resolveVenueNameFromMapGeocode` + `formatPlaceAddress`; shared `PlaceResult` type.
+- **`map-recenter.tsx`:** Re-pans and re-zooms when pin moves (autocomplete, template, or map click).
+- **`google-place-venue.ts`:** `resolveVenueNameFromMapGeocode` helper.
+
+## Shipped this session (auto-layout & patron pathfind, not deployed)
+- **`engine/BoothArrangementEngine.ts` (new):** `PackBooths()` — greedy MaxRects guillotine bin-packing inside merged_zone / placement surfaces with **5′ aisle** constraint; orients booths toward nearest perimeter wall via `rotationForPerimeterEdge`.
+- **`engine/PathfindingService.ts` (new):** `CalculateOptimalPath()` — custom lightweight A* on a walkability grid (booths + stages impassable); nearest-neighbor booth order; entrance → all vendor booths → exit.
+- **`floor-plan-v2.tsx`:** Inspector action **Auto-Layout & Pathfind** — clears vendor booth coords, packs, pathfinds, `replaceObjects`, stores path for overlay.
+- **`canvas-overlays.tsx`:** `PatronTrafficPathOverlay` — semi-transparent dotted sky-blue polyline.
+- **`property-inspector.tsx`:** Sidebar button when no selection is active.
+- **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — 3/3 pass.
+
 ## Shipped this session (Google Places venue/address autocomplete fix, not deployed)
 - **`venue-places-autocomplete_qa.tsx`:** Removed `placesReady` from input `key` — remounting after Places loaded detached Google Autocomplete from the live input (predictions never appeared).
 - **`wizard-step-venue.tsx`:** `APIProvider` now passes `libraries={['places']}` (parity with event form + QA provider).
+
+## Shipped this session (canvas geometry revert — pointer capture / blue mask, not deployed)
+- **`floor-plan-canvas.tsx` (`LayoutCanvas`):** Reverted viewport-lock framing (`useCanvasViewportFraming`, `fitViewportToContent`, `contentFramingBounds`); restored pre-resize `frameActiveRoom` + scroll-container ResizeObserver; simplified `onPointerDown` (no capture swallow); added temp `console.log('Canvas Interaction State:', e.target)` on `onMouseDown`; single `SelectionOverlay` pass (no split outline/controls layer).
+- **`canvas-overlays.tsx`:** Reverted object resize handles + dimension labels (removed `pointerEvents="all"` resize hit targets).
+- **`canvas-objects.tsx`:** `merged_zone` render — `fillOpacity={0}` (decorative mask no longer tints rooms blue/teal); layer stays `pointerEvents="none"`.
+- **`canvas-grid.tsx`:** Grid layer `pointerEvents="auto"` so clicks reach the surface.
+- **`geometry-sanitize.ts`:** Reverted stricter `isValidPlacementLocationBBox` (centroid-only gate) — restores placement behavior consumed by `use-floor-plan-doc.ts` `isValidPlacementLocation`.
+- **`use-floor-plan-doc.ts`:** No direct diff (unchanged since `a2e5286`); placement gate fix is via `geometry-sanitize` import.
 
 ## Shipped this session (event setup checklist reorder, not deployed)
 - **`event-readiness-checklist.tsx`:** Reordered steps — Square + booth layout now precede "Event published"; quarter auction step only when `listing_type` is quarter auction (`garage_yard_sale` via `isQuarterAuctionListing`).
@@ -107,6 +139,19 @@
 - **`canvas-command-bar_qa.tsx`:** Sidebar toolbar `overflow-visible` (accordions expand page height).
 - **`globals.css`:** `.layout-planner-root-qa` + `.dashboard-app-shell--qa-global-scroll` overrides — `#site-main` and `.setup-wizard-body` are the sole vertical scroll hosts.
 - **`events/new/page.tsx` + `market-setup-wizard.tsx`:** Dropped `overflow-hidden` / `min-h-0` traps on Create New Market Step 3 path.
+
+## Shipped this session (wizard Step 1 field layout + Places sync, not deployed)
+- **`wizard-ui.tsx`:** `WizardDescriptionField` (static label + counter row below); `WizardLabeledTextarea` for optional multi-line fields; floating inputs/textareas always use `placeholder=" "` (ignore consumer placeholder); textarea uses `field-sizing-fixed`; `--filled` triggers on any non-empty value.
+- **`globals.css`:** Textarea floating-label padding increased (`pt-8 pb-3`); textarea label rest/active positions tuned; `:placeholder-shown` rule extended to textarea variant.
+- **`wizard-step-event-details.tsx`:** Description → `WizardDescriptionField`; raffle → `WizardLabeledTextarea`.
+- **`venue-places-autocomplete.tsx` + `use-google-places-autocomplete-widget.ts` (new, prod):** Google `Autocomplete` widget on both venue name and address; `place_changed` only syncs sibling field + map pin (no typing loops).
+- **`wizard-google-place-select.ts` + `wizard-place-types.ts` (new, prod):** Two-way sync — venue pick fills address + pin; address pick fills distinct venue name (via `resolveVenueNameFromAddressPick`) + pin.
+- **`wizard-step-venue.tsx`:** Replaced custom address typeahead + plain venue input with dual `VenuePlacesAutocomplete`; removed ~250 lines of duplicate prediction UI.
+- **`market-setup-wizard.tsx`:** Wired to production venue step + place-select lib (was QA imports).
+
+## Shipped this session (wizard Step 1 description layout, not deployed)
+- **`wizard-ui.tsx`:** New `WizardDescriptionField` — static `WIZARD_FIELD_LABEL` above textarea; character counter + helper copy in a flex row below the input (counter right, helper left).
+- **`wizard-step-event-details.tsx`:** Step 1 description uses `WizardDescriptionField` instead of `WizardFloatingTextarea` + nested counter `<p>` (eliminates label/text overlap and counter inside the typing area).
 
 ## Shipped this session (QA wizard description layout, not deployed)
 - **`wizard-description-field_qa.tsx`:** Replaced floating-label `WizardFloatingTextarea` with static `WIZARD_FIELD_LABEL` + `mb-2` above a fixed-layout textarea (`min-h-[150px]`, `overflow-y-auto`, `resize-y`, `field-sizing-fixed`) so typed copy no longer overlaps the DESCRIPTION label; metrics block unchanged below.
@@ -373,7 +418,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | Stage draw outside room (join) | **Deployed** — verify-asset-type-joins + sign-in |
 | Step 2 Capacity scroll | **Local** — setup-wizard-body scroll + mobile workspace center scroll; manual check on phone |
 | Mobile workspace page scroll | **Local** — side rails hidden below lg; center column scrolls |
-| Mobile wizard text fields | **Local** — Step 1 description overlap fixed (static label + scrollable textarea); re-test on phone |
+| Mobile wizard text fields | **Local** — Step 1 description/raffle static labels; venue+address Places two-way sync; re-test on phone |
 | Blank start — only add-room + size fields | **Deployed** — sign-in smoke |
 | Deploy / handoff script | **Fixed** — `update-session-handoff.ps1` ASCII punctuation (Windows PS parse error) |
 

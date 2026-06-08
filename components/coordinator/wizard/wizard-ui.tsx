@@ -13,7 +13,13 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { WIZARD_BTN_PRIMARY, WIZARD_INPUT, WIZARD_TEXTAREA } from '@/lib/wizard/wizard-panel-styles'
+import {
+  WIZARD_BTN_PRIMARY,
+  WIZARD_FIELD_LABEL,
+  WIZARD_INPUT,
+  WIZARD_TEXTAREA,
+} from '@/lib/wizard/wizard-panel-styles'
+import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
 import type { WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 
 /** Applied by `focusWizardField` on validation errors — shake + soft red glow. */
@@ -170,10 +176,11 @@ export function WizardFloatingInput({
   label,
   className,
   value,
+  placeholder: _placeholder,
   ...props
 }: React.ComponentProps<typeof Input> & { label: string }) {
   const { ref, onMouseMove } = useSpotlightHandlers()
-  const filled = Boolean(value != null && String(value).trim())
+  const filled = Boolean(value != null && String(value).length > 0)
 
   return (
     <div
@@ -195,15 +202,131 @@ export function WizardFloatingInput({
   )
 }
 
+/** Static label above textarea — avoids floating-label overlap on multi-line fields. */
+export function WizardLabeledTextarea({
+  id,
+  label,
+  className,
+  value,
+  onChange,
+  rows = 3,
+  maxLength,
+  helperText,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  rows?: number
+  maxLength?: number
+  helperText?: string
+  className?: string
+}) {
+  return (
+    <div className={cn('flex min-h-0 flex-col space-y-2', className)}>
+      <label htmlFor={id} className={cn(WIZARD_FIELD_LABEL, 'block')}>
+        {label}
+      </label>
+      <Textarea
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        maxLength={maxLength}
+        className={cn(
+          WIZARD_TEXTAREA,
+          'field-sizing-fixed min-h-[4.5rem] resize-y overflow-y-auto px-3 pt-3 pb-2.5'
+        )}
+      />
+      {maxLength != null || helperText ? (
+        <div className="flex items-start justify-between gap-3 border-t border-stone-200/60 pt-2">
+          {helperText ? (
+            <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">
+              {helperText}
+            </p>
+          ) : (
+            <span className="flex-1" aria-hidden />
+          )}
+          {maxLength != null ? (
+            <p className="shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+              {value.length}/{maxLength}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+/** Description field — static label above textarea; metrics sit below the input. */
+export function WizardDescriptionField({
+  id,
+  label,
+  value,
+  onChange,
+  maxLength = 800,
+  rows = 4,
+  className,
+}: {
+  id: string
+  label: string
+  value: string
+  onChange: (value: string) => void
+  maxLength?: number
+  rows?: number
+  className?: string
+}) {
+  const trimmedLen = value.trim().length
+  const belowMin = trimmedLen < DESCRIPTION_MIN_LENGTH
+
+  return (
+    <div className={cn('wizard-description-field flex min-h-0 flex-col space-y-2', className)}>
+      <label htmlFor={id} className={cn(WIZARD_FIELD_LABEL, 'block')}>
+        {label}
+      </label>
+      <Textarea
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        maxLength={maxLength}
+        className={cn(
+          WIZARD_TEXTAREA,
+          'field-sizing-fixed min-h-[5rem] resize-y overflow-y-auto px-3 pt-3 pb-2.5'
+        )}
+      />
+      <div
+        className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 border-t border-stone-200/60 pt-2"
+        aria-live="polite"
+      >
+        <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">
+          {belowMin
+            ? 'Mention vendor mix, neighborhood, and what makes the market worth visiting.'
+            : '\u00a0'}
+        </p>
+        <p
+          className={cn(
+            'ml-auto shrink-0 text-right text-xs tabular-nums leading-snug',
+            belowMin ? 'text-harvest-700' : 'text-muted-foreground'
+          )}
+        >
+          {trimmedLen}/{DESCRIPTION_MIN_LENGTH} min · {value.length}/{maxLength}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function WizardFloatingTextarea({
   id,
   label,
   className,
   value,
+  placeholder: _placeholder,
   ...props
 }: React.ComponentProps<typeof Textarea> & { label: string }) {
   const { ref, onMouseMove } = useSpotlightHandlers()
-  const filled = Boolean(value != null && String(value).trim())
+  const filled = Boolean(value != null && String(value).length > 0)
 
   return (
     <div
@@ -217,7 +340,7 @@ export function WizardFloatingTextarea({
         placeholder=" "
         className={cn(
           WIZARD_TEXTAREA,
-          'wizard-floating-input peer !h-auto min-h-[5rem] resize-y',
+          'wizard-floating-input peer field-sizing-fixed !h-auto min-h-[5rem] resize-y overflow-y-auto pt-6',
           className
         )}
         {...props}

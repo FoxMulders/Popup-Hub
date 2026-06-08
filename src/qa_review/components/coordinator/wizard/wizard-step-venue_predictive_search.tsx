@@ -36,23 +36,14 @@ import {
 } from '@/lib/wizard/wizard-panel-styles'
 import { cn } from '@/lib/utils'
 import {
+  formatPlaceAddress,
   isNamedEstablishmentPlace,
-  resolveVenueNameFromGeocoderResult,
+  resolveVenueNameFromMapGeocode,
 } from '@/lib/wizard/google-place-venue'
+import type { PlaceResult } from '@/src/qa_review/components/coordinator/wizard/wizard-place-types_qa'
 import type { CoordinatorSavedVenue } from '@/types/database'
 
-export interface PlaceResult {
-  address: string
-  lat: number
-  lng: number
-  name: string
-  /** Market-city ID inferred from the place's address components. */
-  cityId: string | null
-  /** Whether the picked place is a named establishment (not a bare street address). */
-  isEstablishment: boolean
-  postalCode: string | null
-  country: string | null
-}
+export type { PlaceResult }
 
 function pickAddressComponent(
   components: google.maps.GeocoderAddressComponent[] | undefined,
@@ -202,8 +193,6 @@ export function WizardStepVenue({
   const cityLabel = marketCity.label
   const prevCityRef = useRef(city)
   const geocoderRef = useRef<google.maps.Geocoder | null>(null)
-  const locationNameRef = useRef(locationName)
-  locationNameRef.current = locationName
 
   useEffect(() => {
     if (apiLoaded && window.google?.maps) {
@@ -233,8 +222,8 @@ export function WizardStepVenue({
       geocoder.geocode({ location: { lat: nextLat, lng: nextLng } }, (results, status) => {
         if (status !== window.google.maps.GeocoderStatus.OK || !results?.[0]) return
         const result = results[0]
-        const address = result.formatted_address ?? ''
-        const venueName = resolveVenueNameFromGeocoderResult(result, locationNameRef.current)
+        const address = formatPlaceAddress(result)
+        const venueName = resolveVenueNameFromMapGeocode(result) ?? ''
         const cityId = address ? inferMarketCityId(address) : null
         const isEstablishment = isNamedEstablishmentPlace(result.types)
 
@@ -242,11 +231,12 @@ export function WizardStepVenue({
           address,
           lat: nextLat,
           lng: nextLng,
-          name: venueName ?? '',
+          name: venueName,
           cityId,
           isEstablishment,
           postalCode: pickAddressComponent(result.address_components, 'postal_code'),
           country: pickAddressComponent(result.address_components, 'country'),
+          fromMapGeocode: true,
         })
       })
     },
@@ -328,7 +318,6 @@ export function WizardStepVenue({
           value={locationName}
           onChange={onLocationNameChange}
           cityId={city}
-          currentVenueName={locationName}
           onPlaceSelect={onPlaceSelect}
         />
         <VenuePlacesAutocomplete
@@ -338,7 +327,6 @@ export function WizardStepVenue({
           value={address}
           onChange={onAddressChange}
           cityId={city}
-          currentVenueName={locationName}
           onPlaceSelect={onPlaceSelect}
         />
       </div>

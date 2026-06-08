@@ -842,7 +842,7 @@
   }
 
   .wizard-floating-field--textarea .wizard-floating-input {
-    @apply min-h-[5rem] pt-7 pb-2;
+    @apply min-h-[5.5rem] pt-6 pb-3;
   }
 
   .wizard-floating-label {
@@ -850,7 +850,7 @@
   }
 
   .wizard-floating-field--textarea .wizard-floating-label {
-    @apply top-4 translate-y-0;
+    @apply top-5 translate-y-0;
   }
 
   .wizard-floating-field:focus-within .wizard-floating-label,
@@ -860,8 +860,9 @@
   }
 
   .wizard-floating-field--textarea:focus-within .wizard-floating-label,
-  .wizard-floating-field--textarea.wizard-floating-field--filled .wizard-floating-label {
-    @apply top-2;
+  .wizard-floating-field--textarea.wizard-floating-field--filled .wizard-floating-label,
+  .wizard-floating-field--textarea .wizard-floating-input:not(:placeholder-shown) + .wizard-floating-label {
+    @apply top-2.5;
   }
 
   .wizard-selection-card {

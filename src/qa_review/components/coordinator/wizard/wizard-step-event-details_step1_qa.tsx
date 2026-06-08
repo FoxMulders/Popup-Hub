@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   WizardFloatingInput,
-  WizardFloatingTextarea,
+  WizardLabeledTextarea,
   WizardSelectionCard,
   WizardSelectionGroup,
   WizardSwitchRow,
@@ -511,11 +511,11 @@ export function WizardStepEventDetailsQa(props: WizardStepEventDetailsProps) {
                 }
               />
               <FlyerFieldHighlight fieldKey="raffleDonationRequirement" autoFilledFields={autoFilled}>
-                <WizardFloatingTextarea
+                <WizardLabeledTextarea
                   id="wizard-raffle"
                   label="Raffle donation requirement"
                   value={props.raffleDonationRequirement}
-                  onChange={(e) => props.onRaffleDonationRequirementChange(e.target.value)}
+                  onChange={props.onRaffleDonationRequirementChange}
                   rows={2}
                 />
               </FlyerFieldHighlight>

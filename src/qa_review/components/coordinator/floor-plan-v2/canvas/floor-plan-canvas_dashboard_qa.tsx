@@ -132,37 +132,24 @@ function SelectionOverlayQa({
   objects,
   selectedIds,
   pxPerFt,
-  layer,
   suppressHandle,
 }: {
   objects: ReadonlyArray<PlacedObject>
   selectedIds: ReadonlySet<string>
   pxPerFt: number
-  layer?: 'outline' | 'controls'
   suppressHandle?: boolean
 }) {
-  if (layer === 'outline') {
-    const filteredIds = new Set(
-      [...selectedIds].filter((id) => {
-        const obj = objects.find((o) => o.id === id)
-        return obj?.kind !== 'stage'
-      })
-    )
-    return (
-      <SelectionOverlay
-        objects={objects}
-        selectedIds={filteredIds}
-        pxPerFt={pxPerFt}
-        layer="outline"
-      />
-    )
-  }
+  const filteredIds = new Set(
+    [...selectedIds].filter((id) => {
+      const obj = objects.find((o) => o.id === id)
+      return obj?.kind !== 'stage'
+    })
+  )
   return (
     <SelectionOverlay
       objects={objects}
-      selectedIds={selectedIds}
+      selectedIds={filteredIds}
       pxPerFt={pxPerFt}
-      layer={layer}
       suppressHandle={suppressHandle}
     />
   )
@@ -782,7 +769,11 @@ export function FloorPlanCanvasDashboardQa({
               objects={store.doc.objects}
               selectedIds={store.selectedIds}
               pxPerFt={pxPerFt}
-              layer="outline"
+              suppressHandle={
+                pointer.draftRect !== null ||
+                pointer.roomGestureActive ||
+                pointer.objectGestureActive
+              }
             />
           ) : null}
           {(toolState.tool === 'select' || toolState.tool === 'hand') &&
@@ -804,19 +795,6 @@ export function FloorPlanCanvasDashboardQa({
                 )
               })()
             : null}
-          {toolState.tool === 'select' ? (
-            <SelectionOverlayQa
-              objects={store.doc.objects}
-              selectedIds={store.selectedIds}
-              pxPerFt={pxPerFt}
-              layer="controls"
-              suppressHandle={
-                pointer.draftRect !== null ||
-                pointer.roomGestureActive ||
-                pointer.objectGestureActive
-              }
-            />
-          ) : null}
           <DraftPreview
             rect={draftPreviewRect}
             kind={pointer.draftKind}

@@ -3,7 +3,7 @@
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
-import { WIZARD_FIELD_LABEL } from '@/lib/wizard/wizard-panel-styles'
+import { WIZARD_FIELD_LABEL, WIZARD_TEXTAREA } from '@/lib/wizard/wizard-panel-styles'
 
 export interface WizardDescriptionFieldQaProps {
   id: string
@@ -31,7 +31,7 @@ export function WizardDescriptionFieldQa({
 
   return (
     <div className="wizard-description-field-qa flex min-h-0 flex-col space-y-2">
-      <label htmlFor={id} className={cn(WIZARD_FIELD_LABEL, 'mb-2 block')}>
+      <label htmlFor={id} className={cn(WIZARD_FIELD_LABEL, 'block')}>
         {label}
       </label>
       <Textarea
@@ -40,33 +40,28 @@ export function WizardDescriptionFieldQa({
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         maxLength={maxLength}
-        className="field-sizing-fixed w-full min-h-[150px] resize-y overflow-y-auto rounded-md border border-slate-300 p-3 focus:ring-2 focus:ring-blue-500"
+        className={cn(
+          WIZARD_TEXTAREA,
+          'field-sizing-fixed min-h-[5rem] resize-y overflow-y-auto px-3 pt-3 pb-2.5'
+        )}
       />
       <div
-        className="flex flex-col gap-1.5 border-t border-stone-200/60 pt-2"
+        className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 border-t border-stone-200/60 pt-2"
         aria-live="polite"
       >
+        <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">
+          {belowMin
+            ? 'Mention vendor mix, neighborhood, and what makes the market worth visiting.'
+            : '\u00a0'}
+        </p>
         <p
           className={cn(
-            'text-xs tabular-nums leading-snug',
+            'ml-auto shrink-0 text-right text-xs tabular-nums leading-snug',
             belowMin ? 'text-harvest-700' : 'text-muted-foreground'
           )}
         >
-          <span className="font-medium">
-            {trimmedLen} / {DESCRIPTION_MIN_LENGTH} min
-          </span>
-          <span className="mx-1.5 text-stone-300" aria-hidden>
-            ·
-          </span>
-          <span>
-            {value.length} / {maxLength}
-          </span>
+          {trimmedLen}/{DESCRIPTION_MIN_LENGTH} min · {value.length}/{maxLength}
         </p>
-        {belowMin ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Mention vendor mix, neighborhood, and what makes the market worth visiting.
-          </p>
-        ) : null}
       </div>
     </div>
   )

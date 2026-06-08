@@ -34,6 +34,9 @@ export function MapRecenter({
     if (coordsChanged) {
       map.panTo({ lat, lng })
       prevCoords.current = { lat, lng }
+      if (pinDropped) {
+        map.setZoom(zoom)
+      }
     }
 
     if (zoomOnPinDrop && pinDropped && !prevPinDropped.current) {

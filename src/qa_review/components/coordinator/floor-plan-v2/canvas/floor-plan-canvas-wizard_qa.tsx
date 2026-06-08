@@ -671,7 +671,11 @@ export function FloorPlanCanvasWizardQa({
               objects={store.doc.objects}
               selectedIds={store.selectedIds}
               pxPerFt={pxPerFt}
-              layer="outline"
+              suppressHandle={
+                pointer.draftRect !== null ||
+                pointer.roomGestureActive ||
+                pointer.objectGestureActive
+              }
             />
           ) : null}
           {toolState.tool === 'select' && (selectedRoomId ?? activeRoomId)
@@ -692,19 +696,6 @@ export function FloorPlanCanvasWizardQa({
                 )
               })()
             : null}
-          {toolState.tool === 'select' ? (
-            <SelectionOverlay
-              objects={store.doc.objects}
-              selectedIds={store.selectedIds}
-              pxPerFt={pxPerFt}
-              layer="controls"
-              suppressHandle={
-                pointer.draftRect !== null ||
-                pointer.roomGestureActive ||
-                pointer.objectGestureActive
-              }
-            />
-          ) : null}
           <DraftPreview
             rect={draftPreviewRect}
             kind={pointer.draftKind}

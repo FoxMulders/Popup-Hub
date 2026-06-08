@@ -1,13 +1,14 @@
+import type { Dispatch, SetStateAction } from 'react'
 import { resolveVenueNameFromAddressPick } from '@/lib/wizard/google-place-venue'
-import type { PlaceResult } from '@/src/qa_review/components/coordinator/wizard/wizard-place-types_qa'
+import type { PlaceResult } from '@/lib/wizard/wizard-place-types'
 
 export interface WizardGooglePlaceSelectSetters {
   setAddress: (v: string) => void
   setLat: (v: number) => void
   setLng: (v: number) => void
   setPinDropped: (v: boolean) => void
-  setMarketCity: (fn: (current: string) => string) => void
-  setLocationName: (fn: (current: string) => string) => void
+  setMarketCity: Dispatch<SetStateAction<string>>
+  setLocationName: Dispatch<SetStateAction<string>>
 }
 
 /** Apply a Places pick to wizard Step 1 state (venue + address + map pin). */
@@ -27,16 +28,7 @@ export function applyWizardGooglePlaceSelect(
   }
 
   if (place.preferVenueName && place.name.trim()) {
-    const nextName = place.name.trim()
-    setters.setLocationName(() => nextName)
-    return
-  }
-
-  if (place.fromMapGeocode) {
-    const nextName = place.name.trim()
-    if (nextName) {
-      setters.setLocationName(() => nextName)
-    }
+    setters.setLocationName(place.name.trim())
     return
   }
 
@@ -46,6 +38,6 @@ export function applyWizardGooglePlaceSelect(
     isEstablishment: place.isEstablishment,
   })
   if (venueFromAddress) {
-    setters.setLocationName(() => venueFromAddress)
+    setters.setLocationName(venueFromAddress)
   }
 }

@@ -1056,7 +1056,7 @@ function MergedZoneNode({
       <path
         d={pathD}
         fill={fill}
-        fillOpacity={obj.fillOpacity ?? 0.22}
+        fillOpacity={0}
         stroke={stroke}
         strokeWidth={strokeWidth}
         strokeLinejoin="miter"

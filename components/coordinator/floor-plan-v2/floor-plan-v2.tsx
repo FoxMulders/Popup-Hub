@@ -49,6 +49,15 @@ import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBarQa as CanvasCommandBar } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-command-bar_qa'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import { autoArrangeInRoom, type AutoArrangeMode } from './engine/auto-arrange'
+import {
+  applyPackedBoothsToDoc,
+  PackBooths,
+  vendorBoothsInRoom,
+} from './engine/BoothArrangementEngine'
+import {
+  CalculateOptimalPath,
+  type PathPoint,
+} from './engine/PathfindingService'
 import { legacyRoomsFromDoc } from './state/legacy-bridge'
 import { hydrateFloorPlanDoc } from './state/layout-hydration'
 import {
@@ -362,6 +371,9 @@ function FloorPlanV2Workspace({
     useState<AutoArrangeMode>('grid')
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
+  const [patronTrafficPath, setPatronTrafficPath] = useState<PathPoint[] | null>(
+    null
+  )
 
   const prevLayoutRoomCountRef = useRef(layoutRooms.length)
   useEffect(() => {
@@ -525,6 +537,11 @@ function FloorPlanV2Workspace({
     )
     focusFloorPlanCanvas()
   }, [activeRoomId, store.doc])
+
+  useEffect(() => {
+    setPatronTrafficPath(null)
+  }, [activeRoomId])
+
   // New rooms become the active room in the sidebar but did not set
   // canvas selection — without this, resize handles never appear.
   useEffect(() => {
@@ -1515,6 +1532,47 @@ function FloorPlanV2Workspace({
     vendorTableMetaByKey,
   ])
 
+  const handleAutoLayoutAndPathfind = useCallback(() => {
+    if (vendorBoothCount === 0) {
+      toast.message('Nothing to layout — draw at least one vendor booth first.')
+      return
+    }
+
+    const booths = vendorBoothsInRoom(store.doc, activeRoomId)
+    const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
+    const packResult = PackBooths(store.doc, activeRoomId, cleared)
+    const packedDoc = applyPackedBoothsToDoc(
+      store.doc,
+      activeRoomId,
+      packResult.booths
+    )
+    const pathResult = CalculateOptimalPath(packedDoc, activeRoomId)
+
+    store.replaceObjects(packedDoc.objects)
+    setPatronTrafficPath(pathResult?.path ?? null)
+
+    if (packResult.placedCount === 0) {
+      toast.error('Auto-layout could not fit any booths inside the merged zone.')
+      return
+    }
+
+    const dropped = packResult.droppedCount
+    if (dropped > 0) {
+      toast.warning(
+        `Packed ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'}; ${dropped} could not fit.`,
+        { duration: 5000 }
+      )
+    } else if (pathResult) {
+      toast.success(
+        `Auto-layout complete — patron path visits ${pathResult.visitOrder.length} booth${pathResult.visitOrder.length === 1 ? '' : 's'} (${Math.round(pathResult.totalDistanceFt)}′).`
+      )
+    } else {
+      toast.success(
+        `Packed ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'}. Add entrance/exit doors to visualize traffic flow.`
+      )
+    }
+  }, [activeRoomId, store, vendorBoothCount])
+
   const handleAddRoomWithSelectTool = useCallback(
     (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
       onAddRoom?.(options)
@@ -2155,6 +2213,7 @@ function FloorPlanV2Workspace({
               boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
               onVendorDrop={onVendorDrop}
               autoArrangeMode={vendorAutoArrangeMode}
+              patronTrafficPath={patronTrafficPath}
               onProximityViolation={(info) => {
                 toast.error(
                   `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
@@ -2226,6 +2285,8 @@ function FloorPlanV2Workspace({
                   <PropertyInspector
                     store={store}
                     eventCategoryNames={eventCategoryNames}
+                    onAutoLayoutAndPathfind={handleAutoLayoutAndPathfind}
+                    canAutoLayoutAndPathfind={vendorBoothCount > 0}
                     className="min-h-0 flex-1 overflow-y-auto pt-1"
                   />
                 </div>

@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -13,22 +14,16 @@ import { CanvasObjects } from './canvas-objects'
 import {
   DraftPreview,
   MarqueePreview,
+  PatronTrafficPathOverlay,
   SelectionOverlay,
 } from './canvas-overlays'
 import { InlineLabelEditor } from './inline-label-editor'
 import { RoomDropZones } from './room-drop-zones'
 import { RoomFrames } from './room-frames'
 import { RoomSelectionOverlay } from './room-selection-overlay'
+import { activeRoomFramingBounds } from '../state/room-canvas'
 import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
-import {
-  contentFramingBounds,
-  fitViewportToContent,
-} from './use-layout-viewport'
-import {
-  normalizeViewportZoom,
-  useCanvasViewportFraming,
-} from './use-canvas-viewport-framing'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
 import {
@@ -38,7 +33,6 @@ import {
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import {
   DEFAULT_TABLE_SIZE,
-  type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import { canvasGridSpacingForTableFt } from './canvas-grid-spacing'
@@ -122,6 +116,8 @@ export interface FloorPlanCanvasProps {
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
   autoArrangeMode?: AutoArrangeMode
+  /** Computed patron viewing path (feet) — dotted overlay when set. */
+  patronTrafficPath?: ReadonlyArray<{ x: number; y: number }> | null
   /** Command center: higher zoom floor so drags feel less jumpy when framed out. */
   commandCenterViewport?: boolean
 }
@@ -157,17 +153,13 @@ export function FloorPlanCanvas({
   boothPlacementStatusByObjectId,
   onVendorDrop,
   autoArrangeMode = 'grid',
+  patronTrafficPath = null,
   commandCenterViewport = false,
   scrollHost = true,
 }: FloorPlanCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
 
-  // Add a generous infinite-feeling pad around the venue so users can
-  // pan into negative coordinates and place objects "off the field".
-  // This pad value is also what the zoom math needs for anchoring, so
-  // we compute it once here and pass it to the viewport.
   const padFt = commandCenterViewport
     ? 8
     : Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
@@ -185,28 +177,11 @@ export function FloorPlanCanvas({
     [effectiveTableSizeFt]
   )
 
-  /**
-   * Anchor priority for "discrete" zoom (buttons, reset, programmatic):
-   *   1. If at least one object is selected, use the centroid of its
-   *      union bounding box. Multi-select uses the union, so the camera
-   *      frames the selection as a group.
-   *   2. Otherwise, fall back to the active room footprint centroid
-   *      (or open-canvas centre when no rooms exist). Using the room
-   *      centre — not the full canvas centre — keeps zoom anchored on
-   *      visible hall geometry when the workspace pad is larger than
-   *      the room.
-   *
-   * Wheel and pinch zoom override this with a screen-anchored math
-   * inside the viewport hook — the cursor / finger midpoint stays
-   * locked, which matches Figma / Miro behavior. The rule below is
-   * the *fallback* anchor for everything else.
-   */
   const getZoomMath = useCallback<() => ZoomMath>(() => {
     const objects = store.doc.objects
     const selected = store.selectedIds
-    const contentBounds = contentFramingBounds(store.doc, activeRoomId)
-    let anchorX = (contentBounds.minX + contentBounds.maxX) / 2
-    let anchorY = (contentBounds.minY + contentBounds.maxY) / 2
+    let anchorX = store.doc.canvasWidthFt / 2
+    let anchorY = store.doc.canvasLengthFt / 2
 
     if (selected.size > 0) {
       let minX = Number.POSITIVE_INFINITY
@@ -234,10 +209,10 @@ export function FloorPlanCanvas({
       anchorFt: { x: anchorX, y: anchorY },
     }
   }, [
-    activeRoomId,
     basePxPerFt,
     padFt,
-    store.doc,
+    store.doc.canvasLengthFt,
+    store.doc.canvasWidthFt,
     store.doc.objects,
     store.selectedIds,
   ])
@@ -248,21 +223,18 @@ export function FloorPlanCanvas({
     getZoomMath,
     zoomMin: commandCenterViewport ? COMMAND_CENTER_ZOOM_MIN : undefined,
     zoomStepMultiplier: commandCenterViewport ? 2 : 4,
-    // Tool ref so the viewport hook can route a single-touch drag into
-    // a pan when the Hand tool is active. (Mouse panning already uses
-    // middle-click / Shift+drag.)
     getToolMode: () => toolState.tool,
   })
 
-  // Stable ref — the hook returns a fresh API object each render; reading
-  // it from a ref keeps framing effects from re-firing on every zoom/pan.
-  const viewportRef = useRef(viewport)
-  viewportRef.current = viewport
+  useEffect(() => {
+    onViewportReady?.(viewport)
+    return () => onViewportReady?.(null)
+  }, [onViewportReady, viewport])
 
-  /**
-   * Re-frame when the active room or room *dimensions* change — not when
-   * origins move (drag), so zoom and pan are not reset on every move.
-   */
+  useEffect(() => {
+    onZoomChange?.(viewport.zoom)
+  }, [onZoomChange, viewport.zoom])
+
   const roomsFramingKey = useMemo(() => {
     const frames = store.doc.rooms ?? []
     const mergedSig = (store.doc.objects ?? [])
@@ -275,57 +247,65 @@ export function FloorPlanCanvas({
     return `${activeRoomId ?? ''}:${frames
       .map(
         (f) =>
-          `${f.id}:${f.widthFt},${f.lengthFt},${f.mergedIntoObjectId ?? ''}`
+          `${f.id}:${f.originX},${f.originY},${f.widthFt},${f.lengthFt},${f.mergedIntoObjectId ?? ''}`
       )
       .join('|')}:${mergedSig}`
   }, [activeRoomId, store.doc.objects, store.doc.rooms])
 
-  /** When no rooms exist, reframe if the open canvas dimensions change. */
-  const viewportFramingKey = useMemo(() => {
+  const frameActiveRoom = useCallback(() => {
     const frames = store.doc.rooms ?? []
     if (frames.length === 0) {
-      return `${roomsFramingKey}@canvas:${store.doc.canvasWidthFt},${store.doc.canvasLengthFt}`
+      viewport.fitToBounds(
+        {
+          minX: 0,
+          minY: 0,
+          maxX: store.doc.canvasWidthFt,
+          maxY: store.doc.canvasLengthFt,
+        },
+        { padding: commandCenterViewport ? 0.06 : 0.08 }
+      )
+      return
     }
-    return roomsFramingKey
+    const bounds = activeRoomFramingBounds(
+      frames,
+      activeRoomId,
+      store.doc.objects,
+      store.doc.objectRoom
+    )
+    viewport.fitToBounds(bounds, {
+      padding: commandCenterViewport ? 0.03 : 0.08,
+    })
   }, [
-    roomsFramingKey,
+    activeRoomId,
+    commandCenterViewport,
     store.doc.canvasLengthFt,
     store.doc.canvasWidthFt,
+    store.doc.objectRoom,
+    store.doc.objects,
     store.doc.rooms,
+    viewport,
   ])
 
-  const frameActiveRoom = useCallback(() => {
-    return fitViewportToContent(
-      viewportRef.current,
-      store.doc,
-      activeRoomId,
-      { commandCenterViewport }
-    )
-  }, [activeRoomId, commandCenterViewport, store.doc])
-
-  useCanvasViewportFraming({
-    scrollRef,
-    containerRef,
-    framingKey: viewportFramingKey,
-    onFrame: frameActiveRoom,
-    observeContainer: scrollHost,
-  })
-
-  // Lift zoom controls to the host so the toolbar (rendered outside
-  // this canvas's DOM subtree) can drive zoom in / zoom out / reset.
-  // The API object is recreated each render so we only forward it
-  // on identity change, not on each zoom tick — host re-renders for
-  // the % readout via `onZoomChange` instead.
+  const didInitialFrameRef = useRef(false)
   useEffect(() => {
-    onViewportReady?.(viewport)
-    return () => onViewportReady?.(null)
-  }, [onViewportReady, viewport])
+    if (!scrollHost) return
+    frameActiveRoom()
+    didInitialFrameRef.current = true
+  }, [frameActiveRoom, roomsFramingKey, scrollHost])
 
   useEffect(() => {
-    onZoomChange?.(
-      normalizeViewportZoom(viewport.zoom, viewport.getBaselineZoom())
-    )
-  }, [onZoomChange, viewport.getBaselineZoom, viewport.zoom])
+    if (!scrollHost) return
+    const scroll = scrollRef.current
+    if (!scroll || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      if (!didInitialFrameRef.current) return
+      if (scroll.clientWidth > 0 && scroll.clientHeight > 0) {
+        frameActiveRoom()
+      }
+    })
+    observer.observe(scroll)
+    return () => observer.disconnect()
+  }, [frameActiveRoom, scrollHost])
 
   const transform = useMemo(
     () => ({ basePxPerFt, zoom: viewport.zoom }),
@@ -410,13 +390,6 @@ export function FloorPlanCanvas({
     store.doc.snapFt,
   ])
 
-  /**
-   * Inline label editor state. A double-click on any placed object
-   * swaps the static SVG label for an HTML `<input>` rendered through
-   * `<foreignObject>` so the user can rename in place. Tracked here
-   * (rather than in the floor-plan-v2 host) because the editor is
-   * positioned in canvas-pixel space, which is local to this surface.
-   */
   const [editingObjectId, setEditingObjectId] = useState<string | null>(null)
   const editingObj = useMemo<PlacedObject | null>(() => {
     if (!editingObjectId) return null
@@ -425,8 +398,6 @@ export function FloorPlanCanvas({
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
-      // Only react to dblclick in select mode — in draw mode the user
-      // is mid-stroke and a stray dblclick shouldn't pop a renamer.
       if (toolState.tool !== 'select') return
       const target = e.target as Element | null
       const id = target
@@ -437,8 +408,6 @@ export function FloorPlanCanvas({
       if (!obj || obj.locked) return
       e.preventDefault()
       e.stopPropagation()
-      // Make sure the object is selected so cancel/blur leaves the
-      // user with the same selection state they expected.
       if (!store.selectedIds.has(id)) {
         store.setSelection([id])
       }
@@ -473,8 +442,6 @@ export function FloorPlanCanvas({
     setEditingObjectId(null)
   }, [])
 
-  // Close any active edit if the underlying object disappears (e.g.
-  // it was deleted via the toolbar while the input was focused).
   useEffect(() => {
     if (editingObjectId && !editingObj) setEditingObjectId(null)
   }, [editingObj, editingObjectId])
@@ -485,6 +452,27 @@ export function FloorPlanCanvas({
   const padPx = padFt * pxPerFt
   const totalWidthPx = docWidthPx + padPx * 2
   const totalHeightPx = docHeightPx + padPx * 2
+
+  const centeredForDimsRef = useRef<{ w: number; l: number } | null>(null)
+  useLayoutEffect(() => {
+    if (!scrollHost) return
+    const scroll = scrollRef.current
+    if (!scroll) return
+    if (scroll.clientWidth === 0 || scroll.clientHeight === 0) return
+    const w = store.doc.canvasWidthFt
+    const l = store.doc.canvasLengthFt
+    const last = centeredForDimsRef.current
+    if (last && last.w === w && last.l === l) return
+    scroll.scrollLeft = (padFt + w / 2) * pxPerFt - scroll.clientWidth / 2
+    scroll.scrollTop = (padFt + l / 2) * pxPerFt - scroll.clientHeight / 2
+    centeredForDimsRef.current = { w, l }
+  }, [
+    padFt,
+    pxPerFt,
+    scrollHost,
+    store.doc.canvasLengthFt,
+    store.doc.canvasWidthFt,
+  ])
 
   const cursor = pointer.rotating
     ? 'grabbing'
@@ -515,14 +503,6 @@ export function FloorPlanCanvas({
     [onVendorDrop]
   )
 
-  const warnOverlayCapture = useCallback((target: EventTarget | null) => {
-    if (!target || !(target instanceof Element)) return
-    const overlay = target.closest('[data-kind="merged_zone"]')
-    if (overlay) {
-      console.warn('Click captured by overlay:', target)
-    }
-  }, [])
-
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       if (!onVendorDrop) return
@@ -546,21 +526,14 @@ export function FloorPlanCanvas({
 
   return (
     <div
-      ref={containerRef}
+      id={FLOOR_PLAN_CANVAS_ID}
+      ref={scrollRef}
       className={cn(
-        'relative min-h-0 w-full',
-        scrollHost ? 'h-full flex-1' : 'h-auto',
+        'canvas-container pointer-events-auto relative w-full bg-stone-100 outline-none',
+        scrollHost ? 'h-full overflow-auto' : 'h-auto overflow-visible',
+        commandCenterViewport && 'bg-stone-100',
         className
       )}
-    >
-      <div
-        id={FLOOR_PLAN_CANVAS_ID}
-        ref={scrollRef}
-        className={cn(
-          'canvas-container pointer-events-auto relative w-full bg-stone-100 outline-none',
-          scrollHost ? 'h-full overflow-auto' : 'h-auto overflow-visible',
-          commandCenterViewport && 'bg-stone-100'
-        )}
       tabIndex={0}
       role="application"
       aria-label="Floor plan canvas viewport"
@@ -592,32 +565,18 @@ export function FloorPlanCanvas({
             background: '#fafaf9',
             boxShadow: '0 0 0 1px #e7e5e4, 0 12px 28px rgba(28,25,23,0.08)',
             cursor,
-            // touch-action:none is critical on iOS Safari — without it
-            // the OS captures the first touchmove for native scrolling
-            // and our pointermove arrives ~300ms late (or not at all).
-            // userSelect:none stops long-press from triggering iOS
-            // text selection callouts when dragging objects.
             touchAction: 'none',
             userSelect: 'none',
             WebkitUserSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          onMouseDownCapture={(e) => {
-            warnOverlayCapture(e.target)
+          onMouseDown={(e) => {
+            console.log('Canvas Interaction State:', e.target)
           }}
           onPointerDown={(e) => {
-            warnOverlayCapture(e.target)
-            const handled = pointer.onPointerDown(e)
-            if (handled) {
-              e.preventDefault()
-              if (toolState.tool === 'hand') {
-                e.stopPropagation()
-              }
-              return
-            }
-            if (toolState.tool !== 'hand') {
-              e.preventDefault()
-            }
+            if (toolState.tool === 'hand') return
+            e.preventDefault()
+            pointer.onPointerDown(e)
           }}
           onPointerMove={pointer.onPointerMove}
           onPointerUp={pointer.onPointerUp}
@@ -676,11 +635,12 @@ export function FloorPlanCanvas({
               objects={store.doc.objects}
               selectedIds={store.selectedIds}
               pxPerFt={pxPerFt}
-              layer="outline"
+              suppressHandle={
+                pointer.draftRect !== null || pointer.roomGestureActive
+              }
             />
           ) : null}
-          {(toolState.tool === 'select' || toolState.tool === 'hand') &&
-          (selectedRoomId ?? activeRoomId)
+          {toolState.tool === 'select' && (selectedRoomId ?? activeRoomId)
             ? (() => {
                 const interactionRoomId = selectedRoomId ?? activeRoomId
                 const frame = (store.doc.rooms ?? []).find(
@@ -691,26 +651,11 @@ export function FloorPlanCanvas({
                   <RoomSelectionOverlay
                     frame={frame}
                     pxPerFt={pxPerFt}
-                    suppressHandles={
-                      pointer.roomGestureActive || pointer.objectGestureActive
-                    }
+                    suppressHandles={pointer.roomGestureActive}
                   />
                 )
               })()
             : null}
-          {toolState.tool === 'select' ? (
-            <SelectionOverlay
-              objects={store.doc.objects}
-              selectedIds={store.selectedIds}
-              pxPerFt={pxPerFt}
-              layer="controls"
-              suppressHandle={
-                pointer.draftRect !== null ||
-                pointer.roomGestureActive ||
-                pointer.objectGestureActive
-              }
-            />
-          ) : null}
           <DraftPreview
             rect={draftPreviewRect}
             kind={pointer.draftKind}
@@ -718,6 +663,7 @@ export function FloorPlanCanvas({
             hasOverlap={draftOverlaps}
           />
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
+          <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />
           {editingObj ? (
             <InlineLabelEditor
               obj={editingObj}
@@ -728,7 +674,6 @@ export function FloorPlanCanvas({
           ) : null}
         </svg>
       </div>
-    </div>
     </div>
   )
 }
@@ -746,4 +691,3 @@ function cursorForTool(tool: 'hand' | 'select' | 'draw' | 'pan'): string {
       return 'default'
   }
 }
-

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Frequently asked questions about discovering markets, vending, and hosting events on Popup Hub.',
 }
 
-const LAST_UPDATED = 'May 24, 2026'
+const LAST_UPDATED = 'June 8, 2026'
 
 export default function FaqPage() {
   return (
@@ -15,7 +15,8 @@ export default function FaqPage() {
       <p>
         Quick answers about using Popup Hub as a patron, vendor, or market coordinator. For legal
         policies, see our{' '}
-        <a href="/legal/privacy">Privacy Policy</a> and <a href="/legal/terms">Terms of Service</a>.
+        <a href="/legal/about">About Us</a>, <a href="/legal/privacy">Privacy Policy</a>, and{' '}
+        <a href="/legal/terms">Terms of Service</a>.
       </p>
 
       <dl className="not-prose mt-8 space-y-6">
