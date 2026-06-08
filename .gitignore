@@ -53,3 +53,9 @@ next-env.d.ts
 .vercel
 
 certificates
+
+# Capacitor / Xcode (synced web assets are regenerated)
+/ios/App/App/public/
+ios/DerivedData/
+*.xcuserstate
+**/xcuserdata/

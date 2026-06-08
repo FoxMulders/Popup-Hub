@@ -15,7 +15,20 @@
 
 
 ## Goal
-**UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout shipped to prod (build 163).
+**Native mobile apps (iOS first, Android later)** — wrap the existing Next.js product for App Store distribution, then Play Store. Apple Developer Program account is enrolled (2026-06-08); Android follows after iOS TestFlight / App Store path is proven.
+
+**Web (ongoing):** UX + QA dashboard wiring — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout shipped to prod (build 163).
+
+### Native mobile — current baseline
+- **Web stack:** Next.js App Router on Vercel (`https://popuphub.ca`); PWA already ships (`public/manifest.json`, service worker, `use-install-prompt` iOS/Android coaches).
+- **Apple:** Developer account active — can create App ID, certificates, provisioning profiles, and App Store Connect listing.
+- **Android:** Not started; defer until iOS shell + review flow validated.
+- **Approach (TBD — pick before scaffolding):**
+  1. **Capacitor** — native shell loads prod (or bundled static export); fastest path; reuse 100% of UI; needs auth/deep-link + App Store review notes for web-wrapper apps.
+  2. **Expo / React Native** — full rewrite; only if native-only APIs or offline-first justify the cost.
+  3. **PWA-only on iOS** — already supported via Add to Home Screen; does not satisfy App Store listing goal.
+
+**Recommended first spike:** Capacitor iOS project in-repo (`apps/ios/` or `mobile/`), load `https://popuphub.ca`, TestFlight internal build, then iterate on splash, status bar, safe areas, and push/deep links.
 
 ## Shipped this session (prod build 163, `6222d13`)
 - **Login QA Nedry lockout playback fix (`Login_qa.tsx`):** Always-mounted portal video preloads `/assets/nedry_magic_word.mp4`; Sign-in click primes audio before async auth; lockout triggers unmuted `play()` (+ muted retry); GIF+audio fallback at `/assets/nedry.gif` when video codec fails.
@@ -102,7 +115,16 @@
 - **`Merge_qa.ts` + `destructive-merge_qa.ts`:** Merge (2) 2D union bounds re-export; `npx tsx scripts/verify-merge-qa.ts` — 7/7 pass.
 - **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` wiring for `CanvasCommandBarQa`.
 
-## Next actions
+## Next actions — native mobile (iOS)
+1. **Choose shell strategy** — Capacitor vs alternatives; confirm App Store accepts web-wrapper for coordinator + vendor workflows (no in-app purchase bypass of web checkout unless required).
+2. **Apple Developer setup** — App ID (`ca.popuphub.app` or similar), enable Push Notifications / Associated Domains if needed; create Distribution cert + App Store provisioning profile.
+3. **Scaffold iOS project** — Capacitor init, bundle id, app icons (reuse `npm run assets:logo` outputs + App Store sizes), launch URL → `https://popuphub.ca/discover`.
+4. **Native polish pass** — Safe-area insets, splash screen (brand loader parity), disable overscroll bounce where needed, `apple-app-site-association` for universal links.
+5. **TestFlight** — internal testers, sign-in (Supabase OAuth redirect / custom URL scheme), coordinator floor-plan smoke on iPhone + iPad.
+6. **App Store Connect** — metadata, screenshots (6.7" / 6.1" / iPad), privacy nutrition labels, review notes explaining web-backed coordinator tool.
+7. **Android (later)** — same Capacitor shell → Play Console; TWA optional if staying single codebase.
+
+## Next actions — web / QA
 1. **Step 3 Add room smoke-test** — `/coordinator/events/new` Step 3 with zero rooms: Width/Length inputs + Add room button visible (not clipped); page scrolls if toolbar exceeds viewport
 2. **Global scroll smoke-test** — `/coordinator/events/new` Step 3 + `/coordinator/dashboard`: only one browser scrollbar (right edge); no nested canvas/map scroll track; Ctrl+wheel still zooms canvas
 2. **Canvas wheel smoke-test** — `/coordinator/dashboard`: scroll wheel over canvas scrolls page (not inner trap); Ctrl+wheel still zooms
@@ -324,11 +346,16 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - Vendor / shopper / auction flows unless asked
 
 ## Blockers
+- **iOS:** Mac with Xcode required for builds/signing (Capacitor or native); no in-repo mobile shell yet
+- **iOS App Store:** Wrapper-app review policy + OAuth redirect / universal-link config not yet implemented
 - Interactive coordinator smoke-test requires user credentials
 - Markets with **only** `venue_elements` and no cells open **blank** by design
 - ~~Deploy blocked by TS build failure~~ — fixed locally (pointer return type + verify script)
+- ~~Apple Developer account~~ — enrolled 2026-06-08
 
 ## Decisions
+- **Mobile strategy:** Ship **iOS App Store app first**, **Android Play Store second**; reuse existing Next.js product rather than rewrite unless native APIs force it
+- **Apple Developer Program:** Enrolled — use for App Store + TestFlight (not PWA-only distribution)
 - **Drawable geometry = booth `cells` only**
 - **Zero rooms by default** until user adds a room or saved booth cells exist
 - **Room interiors are blank** — perimeter walls + labels only
@@ -355,5 +382,5 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 ```
 @PM/session-handoff.md
 
-Task: [e.g. coordinator smoke-test Step 3 on Spring market]
+Task: [e.g. scaffold Capacitor iOS shell + TestFlight | coordinator smoke-test Step 3 on Spring market]
 ```

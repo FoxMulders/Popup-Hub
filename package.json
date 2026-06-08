@@ -37,10 +37,20 @@
         "test:e2e:shopper-floorplan": "playwright test tests/e2e/shopper-floorplan.spec.ts",
         "test:e2e:public-discovery": "playwright test tests/e2e/public-discovery.spec.ts",
         "test:e2e:ui": "playwright test --ui",
-        "seo:sitemap": "npx tsx scripts/generate-sitemap.ts"
+        "seo:sitemap": "npx tsx scripts/generate-sitemap.ts",
+        "mobile:assets": "node scripts/mobile/generate-ios-resources.mjs",
+        "mobile:sync": "powershell -ExecutionPolicy Bypass -File ./scripts/mobile/sync-ios.ps1",
+        "mobile:ios:open": "npx cap open ios",
+        "mobile:ios:add": "npx cap add ios"
     },
     "dependencies": {
         "@base-ui/react": "^1.5.0",
+        "@capacitor/app": "7.1.2",
+        "@capacitor/cli": "7.6.6",
+        "@capacitor/core": "7.6.6",
+        "@capacitor/ios": "7.6.6",
+        "@capacitor/splash-screen": "7.0.5",
+        "@capacitor/status-bar": "7.0.6",
         "@dagrejs/dagre": "^3.0.0",
         "@hookform/resolvers": "^5.2.2",
         "@square/web-payments-sdk-types": "^1.83.6",

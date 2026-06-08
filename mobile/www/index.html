@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#2d5a27" />
+    <title>Popup Hub</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --cream: #faf8f5;
+        --forest: #2d5a27;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--cream);
+        color: var(--forest);
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      main {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      img {
+        width: min(220px, 60vw);
+        height: auto;
+        margin-bottom: 1rem;
+      }
+
+      p {
+        margin: 0.5rem 0 0;
+        max-width: 28rem;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="./popup-hub-brand.png" alt="Popup Hub" width="220" height="220" />
+      <p>Loading Popup Hub…</p>
+    </main>
+    <script>
+      ;(function () {
+        var target = 'https://popuphub.ca/discover'
+        if (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:') {
+          window.location.replace(target)
+        }
+      })()
+    </script>
+  </body>
+</html>
