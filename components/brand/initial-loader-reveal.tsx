@@ -7,13 +7,97 @@ import {
   type InitialLoaderFrame,
 } from '@/lib/brand/initial-loader-controller'
 
-/** Full lockup (storefront + wordmark) — matches nav/footer brand asset. */
-const LOGO_SRC = '/popup-hub-brand.png'
-const LOGO_ASPECT = 1024 / 994
-const LOGO_DISPLAY_WIDTH = 220
-const LOGO_DISPLAY_HEIGHT = LOGO_DISPLAY_WIDTH * LOGO_ASPECT
-/** Icon band is ~56% of lockup height from the top (see process-logo.mjs). */
-const LOGO_ICON_CENTER_Y = LOGO_DISPLAY_HEIGHT * 0.28
+/** Square storefront icon — fits inside the perimeter ring without overlapping stalls. */
+const LOGO_SRC = '/popup-hub-icon.png'
+
+type BoothRect = { x: number; y: number; w: number; h: number; delay: number }
+
+type PerimeterRing = {
+  booths: BoothRect[]
+  inner: { left: number; right: number; top: number; bottom: number; cx: number; cy: number }
+}
+
+/** Place stalls on four sides with corner gaps so adjacent sides never overlap. */
+function buildPerimeterRing(): PerimeterRing {
+  const BOOTH_W = 48
+  const BOOTH_H = 36
+  const MARGIN = 44
+  const GAP = 12
+  const RING_BOTTOM = 368
+
+  const leftX = MARGIN
+  const rightX = 480 - MARGIN - BOOTH_W
+  const topY = MARGIN
+  const bottomY = RING_BOTTOM - BOOTH_H
+
+  const topStartX = leftX + BOOTH_W + GAP
+  const topMaxX = rightX - GAP - BOOTH_W
+  const topUsable = topMaxX - topStartX
+  const topCount = Math.max(
+    1,
+    Math.floor((topUsable + GAP) / (BOOTH_W + GAP)),
+  )
+  const topSpan = topCount * BOOTH_W + (topCount - 1) * GAP
+  const topRowX = topStartX + (topUsable - topSpan) / 2
+
+  const sideStartY = topY + BOOTH_H + GAP
+  const sideEndY = bottomY - GAP - BOOTH_H
+  const sideUsable = sideEndY - sideStartY
+  const sideCount = Math.max(
+    1,
+    Math.floor((sideUsable + GAP) / (BOOTH_H + GAP)),
+  )
+
+  const booths: BoothRect[] = []
+  let delayStep = 0
+
+  for (let i = 0; i < topCount; i++) {
+    booths.push({
+      x: topRowX + i * (BOOTH_W + GAP),
+      y: topY,
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+  }
+  for (let i = 0; i < sideCount; i++) {
+    const y = sideStartY + i * (BOOTH_H + GAP)
+    booths.push({
+      x: leftX,
+      y,
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+    booths.push({
+      x: rightX,
+      y,
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+  }
+  for (let i = 0; i < topCount; i++) {
+    booths.push({
+      x: topRowX + i * (BOOTH_W + GAP),
+      y: bottomY,
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+    })
+  }
+
+  const inner = {
+    left: leftX + BOOTH_W,
+    right: rightX,
+    top: topY + BOOTH_H,
+    bottom: bottomY,
+    cx: (leftX + BOOTH_W + rightX) / 2,
+    cy: (topY + BOOTH_H + bottomY) / 2,
+  }
+
+  return { booths, inner }
+}
 
 const BRAND = {
   sage: '#2d5a27',
@@ -40,7 +124,8 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const breathe = 1 + Math.sin(globalFrame * 0.06) * 0.012
 
   const boothT = drawProgress(progress, 0.1, 0.55)
-  const logoT = drawProgress(progress, 0.4, 0.82)
+  /** Logo waits until the perimeter ring has finished appearing. */
+  const logoT = drawProgress(progress, 0.58, 0.86)
   const tagT = drawProgress(progress, 0.72, 0.96)
   const barT = drawProgress(progress, 0.85, 1)
 
@@ -51,66 +136,16 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const masterOpacity = 1 - outroFade * 0.35
   const masterScale = 1 - outroFade * 0.04
 
-  /** Uniform perimeter tables — market ring around the center logo (no grid lines). */
-  const BOOTH_W = 48
-  const BOOTH_H = 36
-  const MARGIN = 44
-  const GAP = 12
-  const innerW = 480 - MARGIN * 2
-  const innerH = 340 - MARGIN
-  const topCount = Math.max(3, Math.floor((innerW + GAP) / (BOOTH_W + GAP)))
-  const sideCount = Math.max(2, Math.floor((innerH + GAP) / (BOOTH_H + GAP)))
-  const topSpan = topCount * BOOTH_W + (topCount - 1) * GAP
-  const sideSpan = sideCount * BOOTH_H + (sideCount - 1) * GAP
-  const startX = (480 - topSpan) / 2
-  const startY = MARGIN
-  const leftX = MARGIN
-  const rightX = 480 - MARGIN - BOOTH_W
-  const bottomY = startY + sideSpan + GAP
-  const booths: Array<{ x: number; y: number; w: number; h: number; delay: number }> = []
-  let delayStep = 0
-  for (let i = 0; i < topCount; i++) {
-    booths.push({
-      x: startX + i * (BOOTH_W + GAP),
-      y: startY,
-      w: BOOTH_W,
-      h: BOOTH_H,
-      delay: delayStep++ * 0.05,
-    })
-  }
-  for (let i = 0; i < sideCount; i++) {
-    booths.push({
-      x: leftX,
-      y: startY + BOOTH_H + GAP + i * (BOOTH_H + GAP),
-      w: BOOTH_W,
-      h: BOOTH_H,
-      delay: delayStep++ * 0.05,
-    })
-    booths.push({
-      x: rightX,
-      y: startY + BOOTH_H + GAP + i * (BOOTH_H + GAP),
-      w: BOOTH_W,
-      h: BOOTH_H,
-      delay: delayStep++ * 0.05,
-    })
-  }
-  for (let i = 0; i < topCount; i++) {
-    booths.push({
-      x: startX + i * (BOOTH_W + GAP),
-      y: bottomY,
-      w: BOOTH_W,
-      h: BOOTH_H,
-      delay: delayStep++ * 0.05,
-    })
-  }
+  const { booths, inner } = buildPerimeterRing()
+  const innerPad = 16
+  const innerW = inner.right - inner.left - innerPad * 2
+  const innerH = inner.bottom - inner.top - innerPad * 2
+  const logoSize = Math.min(innerW, innerH) * 0.88
+  const glowRadius = Math.min(innerW, innerH) * 0.42
 
-  /** Geometric center of the perimeter ring interior — logo fades in here. */
-  const ringCenterX = (leftX + rightX + BOOTH_W) / 2
-  const ringCenterY = (startY + bottomY + BOOTH_H) / 2
-
-  const logoScale = (0.72 + logoT * 0.28) * breathe
+  const logoScale = (0.78 + logoT * 0.22) * breathe
   const logoOpacity = logoT
-  const ringScale = 0.85 + logoT * 0.35 + Math.sin(globalFrame * 0.08) * 0.02
+  const ringScale = 0.9 + logoT * 0.1 + Math.sin(globalFrame * 0.08) * 0.015
   const ringOpacity = logoT * 0.45 * (phase === 'hold' ? 1.15 : 1)
 
   return (
@@ -132,6 +167,15 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         style={{ transform: `scale(${masterScale})` }}
       >
         <defs>
+          <clipPath id="il-inner-clip">
+            <rect
+              x={inner.left + innerPad}
+              y={inner.top + innerPad}
+              width={innerW}
+              height={innerH}
+              rx="10"
+            />
+          </clipPath>
           <radialGradient id="il-logo-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={BRAND.sageLight} stopOpacity="0.55" />
             <stop offset="55%" stopColor={BRAND.sage} stopOpacity="0.18" />
@@ -171,21 +215,23 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           )
         })}
 
-        <g transform={`translate(${ringCenterX}, ${ringCenterY})`}>
-          <circle
-            r={78 * ringScale}
-            fill="url(#il-logo-glow)"
-            opacity={ringOpacity}
-          />
-          <g opacity={logoOpacity} transform={`scale(${logoScale})`}>
-            <image
-              href={LOGO_SRC}
-              x={-LOGO_DISPLAY_WIDTH / 2}
-              y={-LOGO_ICON_CENTER_Y}
-              width={LOGO_DISPLAY_WIDTH}
-              height={LOGO_DISPLAY_HEIGHT}
-              preserveAspectRatio="xMidYMid meet"
+        <g clipPath="url(#il-inner-clip)">
+          <g transform={`translate(${inner.cx}, ${inner.cy})`}>
+            <circle
+              r={glowRadius * ringScale}
+              fill="url(#il-logo-glow)"
+              opacity={ringOpacity}
             />
+            <g opacity={logoOpacity} transform={`scale(${logoScale})`}>
+              <image
+                href={LOGO_SRC}
+                x={-logoSize / 2}
+                y={-logoSize / 2}
+                width={logoSize}
+                height={logoSize}
+                preserveAspectRatio="xMidYMid meet"
+              />
+            </g>
           </g>
         </g>
 

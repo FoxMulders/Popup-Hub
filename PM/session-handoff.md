@@ -10,6 +10,15 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (discover page copy + flyer upload removal, not deployed)
+- **`components/shopper/discover-screen.tsx`:** Removed "Have a flyer?" upload section; page title changed from "Discover Community Markets" to "Popup Hub Community Markets".
+- **Removed:** `components/shopper/discover-flyer-upload.tsx`, `lib/shopper/parse-flyer-image.ts` (shopper-only flyer heuristic; coordinator flyer OCR unchanged).
+- **Verify:** Open `/discover` — no flyer upload card; heading reads "Popup Hub Community Markets".
+
+## Shipped this session (initial loader perimeter + logo overlap fix, not deployed)
+- **`components/brand/initial-loader-reveal.tsx`:** Perimeter stalls now skip corners (top/bottom rows inset between side columns; side count capped so sides do not overlap bottom row). Logo uses square `/popup-hub-icon.png`, sizes to inner ring bounds, clips to inner rect, and fades in only after stalls finish (progress 0.58+).
+- **Verify:** Hard refresh `/` or login — stalls form a clean ring with no corner overlap; logo glow and icon stay inside the ring during fade-in.
+
 ## Shipped this session (multi-instance Stage tool on layout designer, not deployed)
 - **`lib/floor-plan/stage-placement.ts` (new):** Default 12×8′ tap footprint and `nextStageLabel()` — auto labels "Stage 1", "Stage 2", … from existing `objects[]` count.
 - **`use-canvas-pointer.ts` (+ wizard QA mirror):** Stage draw uses centered default footprint on click (like food trucks); each commit appends a new stage with incrementing label — no replace/move of prior stages.

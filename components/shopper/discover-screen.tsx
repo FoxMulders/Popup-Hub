@@ -6,7 +6,6 @@ import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { EventMap } from '@/components/map/event-map'
 import { DiscoverEventCards } from '@/components/shopper/discover-event-cards'
-import { DiscoverFlyerUpload } from '@/components/shopper/discover-flyer-upload'
 import { DiscoverDateFilter } from '@/components/markets/discover-date-filter'
 import { MarketAreaFilter } from '@/components/markets/market-area-filter'
 import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
@@ -92,22 +91,6 @@ export function DiscoverScreen({
     [replaceParams]
   )
 
-  const applyFlyerFilters = useCallback(
-    (updates: { date?: Date; quarterAuctions?: boolean }) => {
-      const params: Record<string, string | null> = {}
-      if (updates.date) {
-        const whenDate = discoverDateSearchParams('custom', updates.date)
-        params.when = whenDate.when
-        params.date = whenDate.date
-      }
-      if (updates.quarterAuctions) {
-        params.live = 'auctions'
-      }
-      replaceParams(params)
-    },
-    [replaceParams]
-  )
-
   const filtered = useMemo(() => {
     const scoped = filterEventsByListingType(events, 'community_market')
     const byDate =
@@ -137,7 +120,7 @@ export function DiscoverScreen({
     <div className="mx-auto w-full max-w-full overflow-x-hidden px-4 py-6 sm:max-w-7xl sm:py-8">
       <div>
         <h1 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
-          {liveAuctionsOnly ? 'Quarter Auctions (QAs)' : 'Discover Community Markets'}
+          {liveAuctionsOnly ? 'Quarter Auctions (QAs)' : 'Popup Hub Community Markets'}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {liveAuctionsOnly
@@ -145,12 +128,6 @@ export function DiscoverScreen({
             : 'Find popup markets near you — discover vendors before you go'}
         </p>
       </div>
-
-      <DiscoverFlyerUpload
-        events={events}
-        quarterAuctionsOnly={liveAuctionsOnly}
-        onApplyFilters={applyFlyerFilters}
-      />
 
       <div className="mt-4 space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
