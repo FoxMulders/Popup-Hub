@@ -3,12 +3,18 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `c9d327a` (pushed to `origin/master`)
-- Last deploy commit: `c9d327a` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 13** | commit `ecd5628` (handoff updated 2026-06-08 15:50)
+- Branch: `master` @ `55e5929` (pushed to `origin/master`)
+- Last deploy commit: `55e5929` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 14** | commit `3904c76` (handoff updated 2026-06-08 16:11)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
+
+## Shipped this session (sign-out redirect fix, not deployed)
+- **`lib/auth/sign-out.ts` (new):** Shared `signOutAndRedirectToLogin()` — sets intentional-signout flag, calls `supabase.auth.signOut()`, then `window.location.replace('/login')` for a clean login page without `redirectTo`.
+- **`components/nav/app-nav.tsx` + `components/shopper/shopper-top-bar.tsx`:** Sign out menu actions use the shared helper instead of soft `router.push`.
+- **`components/auth/auth-session-guard.tsx`:** Skips `redirectTo` query on intentional sign-out; falls back to plain `/login`.
+- **Verify:** Sign in, open app menu → Sign out — lands on `/login` with no query params; no stuck protected-route error state.
 
 ## Shipped this session (flyer auto-detect quarter auction listing type, not deployed)
 - **`lib/flyer/listing-type.ts` (new):** Maps AI `listing_type: "quarter_auction"` → wizard `garage_yard_sale`; text fallback for "Quarter Auction" / "Live Auction".
@@ -159,7 +165,7 @@
 
 
 ## Last deploy
-- 2026-06-08 15:50 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (c9d327a)
+- 2026-06-08 16:11 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (55e5929)
 
 
 ## Goal
