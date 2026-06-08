@@ -27,8 +27,8 @@ export function LegalDocument({ title, lastUpdated, children }: LegalDocumentPro
         <footer className="not-prose mt-12 border-t border-stone-200 pt-6 text-sm text-muted-foreground">
           <p>
             Questions about these policies? Contact{' '}
-            <a href="mailto:legal@popuphub.app" className="font-medium text-sage-700 hover:underline">
-              legal@popuphub.app
+            <a href="mailto:thetipsyfoxyeg@gmail.com" className="font-medium text-sage-700 hover:underline">
+              thetipsyfoxyeg@gmail.com
             </a>
             .
           </p>

@@ -113,7 +113,7 @@ export function DistanceRadiusPicker({ value, onChange, className }: DistanceRad
         aria-pressed={showingEverywhere}
       >
         <Globe2 className="h-3.5 w-3.5" />
-        {showingEverywhere ? 'Showing markets everywhere' : 'Show markets everywhere'}
+        {showingEverywhere ? 'Showing Popup Hub markets everywhere' : 'Show markets everywhere'}
       </button>
     </div>
   )

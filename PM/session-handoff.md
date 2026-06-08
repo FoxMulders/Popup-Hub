@@ -10,6 +10,10 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (discover page scroll fix, not deployed)
+- **`components/shopper/shopper-shell.tsx`:** Removed viewport-locked nested scroll (`min-h-[100dvh]` + `main` `overflow-y-auto` / `min-h-0` / `flex-1`). Browse routes (`/discover`, `/favorites`, etc.) now use `min-h-screen` and natural document scroll so footer and expanded flyer content are reachable.
+
+
 ## Shipped this session (layout merge engine — polygon union, not deployed)
 - **`src/utils/layoutMergeEngine.ts` (new):** `polygon-clipping` boolean union for room + stage; `unionLayoutParticipants`, `computeRoomStageUnion`, `resolvePerimeterUnionRingForRoom`, `runPatronPerimeterLayout` / `runVendorPerimeterLayout` (zero API tokens).
 - **`room-union-merge.ts` + `geometry-sanitize.ts`:** Destructive merge stores multi-vertex `perimeterRing` (L-shapes preserved, not AABB-only).
@@ -43,6 +47,19 @@
 - **Repo layout:** `mobile/www/` fallback shell, `ios/` Xcode project (generated), `scripts/mobile/` asset + sync helpers, `PM/ios-testflight.md` internal TestFlight checklist.
 - **npm scripts:** `mobile:assets`, `mobile:sync`, `mobile:ios:open`, `mobile:ios:add`.
 - **OAuth URL scheme:** `ca.popuphub.app://auth/callback` patched into `ios/App/App/Info.plist` — add same redirect in Supabase Auth before TestFlight sign-in smoke.
+
+## Shipped this session (discover map scope copy, not deployed)
+- **`components/markets/distance-radius-picker.tsx`:** Active “everywhere” banner now reads `Showing Popup Hub markets everywhere` (clarifies platform-registered markets only).
+
+## Shipped this session (major version bump, not deployed)
+- **`package.json` / `build-number.json` / `package-lock.json`:** Major version `0.1.0` → `1.0.0`; build counter reset to `1` (footer display: `v1.0.1 · build 1`).
+- **`PM/ios-testflight.md`:** Version table updated to `1.0.0`.
+
+## Shipped this session (footer copyright removed, not deployed)
+- **`components/brand/build-version-footer.tsx`:** Removed `© {year}` from global footer; line now reads `Popup Hub · v{version} · build {n} · {commit}` (version/build/commit unchanged).
+
+## Shipped this session (legal contact email update, not deployed)
+- Replaced `legal@popuphub.app` with `thetipsyfoxyeg@gmail.com` in `components/legal/legal-document.tsx` (About + all legal page footers), `app/legal/terms/page.tsx`, and `lib/legal/faq-content.tsx`.
 
 ## Shipped this session (About Us + FAQ fee transparency, not deployed)
 - **`app/legal/about/page.tsx` (new):** Full Popup Hub story — founders, fee breakdown (patrons/vendors/coordinators), trust/honesty policy, discovery vision.

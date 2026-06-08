@@ -52,7 +52,7 @@ In Xcode (**App** target):
 |---------|-------|
 | Display Name | Popup Hub |
 | Bundle Identifier | `ca.popuphub.app` |
-| Version | `0.1.0` (match `package.json` until release process) |
+| Version | `1.0.0` (match `package.json` until release process) |
 | Build | increment each upload (e.g. `165` to match web build or independent iOS counter) |
 | Signing | Automatic + correct Team |
 | Deployment Target | iOS 15+ (Capacitor 7 default) |

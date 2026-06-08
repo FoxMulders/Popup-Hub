@@ -107,7 +107,7 @@ export default function TermsOfServicePage() {
       <h2>10. Contact</h2>
       <p>
         For contractual notices or legal inquiries, contact{' '}
-        <a href="mailto:legal@popuphub.app">legal@popuphub.app</a>.
+        <a href="mailto:thetipsyfoxyeg@gmail.com">thetipsyfoxyeg@gmail.com</a>.
       </p>
     </LegalDocument>
   )

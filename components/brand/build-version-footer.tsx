@@ -10,7 +10,6 @@ interface BuildVersionFooterProps {
 
 export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
   const build = getBuildInfo()
-  const year = new Date().getFullYear()
   const tooltip = build.label
   const buildLine = `v${build.version} · build ${build.buildNumber} · ${build.commit}`
 
@@ -49,7 +48,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
           className="m-0 flex shrink-0 flex-row flex-wrap items-center justify-center gap-x-1.5 text-xs leading-snug text-muted-foreground sm:justify-end sm:text-sm"
           title={tooltip}
         >
-          <span>© {year} Popup Hub</span>
+          <span>Popup Hub</span>
           <span className="text-stone-300" aria-hidden>
             ·
           </span>

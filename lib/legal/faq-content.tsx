@@ -53,6 +53,6 @@ export const PLATFORM_FAQ: FaqItem[] = [
   {
     question: 'How do I contact support?',
     answer:
-      'For policy or legal questions, email legal@popuphub.app. For product help, include your account email and a short description of the issue when contacting us.',
+      'For policy or legal questions, email thetipsyfoxyeg@gmail.com. For product help, include your account email and a short description of the issue when contacting us.',
   },
 ]
