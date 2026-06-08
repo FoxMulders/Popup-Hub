@@ -20,9 +20,12 @@ import { InlineLabelEditor } from './inline-label-editor'
 import { RoomDropZones } from './room-drop-zones'
 import { RoomFrames } from './room-frames'
 import { RoomSelectionOverlay } from './room-selection-overlay'
-import { activeRoomFramingBounds } from '../state/room-canvas'
 import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
+import {
+  contentFramingBounds,
+  fitViewportToContent,
+} from './use-layout-viewport'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
 import {
@@ -177,9 +180,11 @@ export function FloorPlanCanvas({
    *   1. If at least one object is selected, use the centroid of its
    *      union bounding box. Multi-select uses the union, so the camera
    *      frames the selection as a group.
-   *   2. Otherwise, fall back to the absolute room center
-   *      (canvasWidthFt / 2, canvasLengthFt / 2). This keeps an empty
-   *      hall locked at the middle of the viewport during zoom.
+   *   2. Otherwise, fall back to the active room footprint centroid
+   *      (or open-canvas centre when no rooms exist). Using the room
+   *      centre — not the full canvas centre — keeps zoom anchored on
+   *      visible hall geometry when the workspace pad is larger than
+   *      the room.
    *
    * Wheel and pinch zoom override this with a screen-anchored math
    * inside the viewport hook — the cursor / finger midpoint stays
@@ -189,8 +194,9 @@ export function FloorPlanCanvas({
   const getZoomMath = useCallback<() => ZoomMath>(() => {
     const objects = store.doc.objects
     const selected = store.selectedIds
-    let anchorX = store.doc.canvasWidthFt / 2
-    let anchorY = store.doc.canvasLengthFt / 2
+    const contentBounds = contentFramingBounds(store.doc, activeRoomId)
+    let anchorX = (contentBounds.minX + contentBounds.maxX) / 2
+    let anchorY = (contentBounds.minY + contentBounds.maxY) / 2
 
     if (selected.size > 0) {
       let minX = Number.POSITIVE_INFINITY
@@ -218,10 +224,10 @@ export function FloorPlanCanvas({
       anchorFt: { x: anchorX, y: anchorY },
     }
   }, [
+    activeRoomId,
     basePxPerFt,
     padFt,
-    store.doc.canvasLengthFt,
-    store.doc.canvasWidthFt,
+    store.doc,
     store.doc.objects,
     store.selectedIds,
   ])
@@ -293,44 +299,16 @@ export function FloorPlanCanvas({
   ])
 
   const frameActiveRoom = useCallback(() => {
-    const api = viewportRef.current
-    const frames = store.doc.rooms ?? []
-    if (frames.length === 0) {
-      api.fitToBounds(
-        {
-          minX: 0,
-          minY: 0,
-          maxX: store.doc.canvasWidthFt,
-          maxY: store.doc.canvasLengthFt,
-        },
-        { padding: commandCenterViewport ? 0.06 : 0.08 }
-      )
-      return
-    }
-    const bounds = activeRoomFramingBounds(
-      frames,
-      activeRoomId,
-      store.doc.objects,
-      store.doc.objectRoom
-    )
-    api.fitToBounds(bounds, {
-      padding: commandCenterViewport ? 0.03 : 0.08,
+    fitViewportToContent(viewportRef.current, store.doc, activeRoomId, {
+      commandCenterViewport,
     })
-  }, [
-    activeRoomId,
-    commandCenterViewport,
-    store.doc.canvasLengthFt,
-    store.doc.canvasWidthFt,
-    store.doc.objectRoom,
-    store.doc.objects,
-    store.doc.rooms,
-  ])
+  }, [activeRoomId, commandCenterViewport, store.doc])
 
   const frameActiveRoomRef = useRef(frameActiveRoom)
   frameActiveRoomRef.current = frameActiveRoom
 
   const didInitialFrameRef = useRef(false)
-  useEffect(() => {
+  useLayoutEffect(() => {
     frameActiveRoomRef.current()
     didInitialFrameRef.current = true
   }, [viewportFramingKey])
@@ -514,36 +492,6 @@ export function FloorPlanCanvas({
   const padPx = padFt * pxPerFt
   const totalWidthPx = docWidthPx + padPx * 2
   const totalHeightPx = docHeightPx + padPx * 2
-
-  /**
-   * Initial centering: when the canvas first renders (or the document
-   * dimensions change because the active room was switched / the user
-   * resized the venue in the inspector), park the scroll container so
-   * the room midpoint sits at the viewport center. This is the same
-   * anchor the zoom buttons use when nothing is selected, so the
-   * default frame and the zoom-target stay consistent.
-   *
-   * Tracked by a ref keyed on (width, length) so we don't fight the
-   * user every time they manually pan or scroll.
-   */
-  const centeredForDimsRef = useRef<{ w: number; l: number } | null>(null)
-  useLayoutEffect(() => {
-    const scroll = scrollRef.current
-    if (!scroll) return
-    if (scroll.clientWidth === 0 || scroll.clientHeight === 0) return
-    const w = store.doc.canvasWidthFt
-    const l = store.doc.canvasLengthFt
-    const last = centeredForDimsRef.current
-    if (last && last.w === w && last.l === l) return
-    scroll.scrollLeft = (padFt + w / 2) * pxPerFt - scroll.clientWidth / 2
-    scroll.scrollTop = (padFt + l / 2) * pxPerFt - scroll.clientHeight / 2
-    centeredForDimsRef.current = { w, l }
-  }, [
-    padFt,
-    pxPerFt,
-    store.doc.canvasLengthFt,
-    store.doc.canvasWidthFt,
-  ])
 
   const cursor = pointer.rotating
     ? 'grabbing'

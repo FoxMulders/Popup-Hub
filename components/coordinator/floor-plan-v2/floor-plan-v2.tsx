@@ -34,10 +34,11 @@ import { cn } from '@/lib/utils'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridSpacingForTableFt } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
-import {
-  unionActiveRoomBounds,
-} from './canvas/canvas-engine'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
+import {
+  fitViewportToContent,
+  VIEWPORT_FIT_PADDING,
+} from './canvas/use-layout-viewport'
 import { DiagnosticSidebar } from './debug/diagnostic-sidebar'
 import { PlacesApiStatusProvider } from './debug/places-api-status-context'
 import { FullscreenLayout } from './canvas/fullscreen-layout'
@@ -517,9 +518,13 @@ function FloorPlanV2Workspace({
   }, [])
 
   const resetCanvasViewport = useCallback(() => {
-    viewportApiRef.current?.resetViewport()
+    fitViewportToContent(
+      viewportApiRef.current,
+      store.doc,
+      activeRoomId
+    )
     focusFloorPlanCanvas()
-  }, [])
+  }, [activeRoomId, store.doc])
   // New rooms become the active room in the sidebar but did not set
   // canvas selection — without this, resize handles never appear.
   useEffect(() => {
@@ -1377,18 +1382,13 @@ function FloorPlanV2Workspace({
           maxX: objectBbox.x + objectBbox.width,
           maxY: objectBbox.y + objectBbox.height,
         },
-        { padding: 0.1 }
+        { padding: VIEWPORT_FIT_PADDING }
       )
     } else {
-      const roomBounds = unionActiveRoomBounds(store.doc)
-      if (roomBounds) {
-        api.fitToBounds(roomBounds, { padding: 0.12 })
-      } else {
-        api.resetViewport()
-      }
+      fitViewportToContent(api, store.doc, activeRoomId)
     }
     recoverCanvasFocus()
-  }, [addLog, recoverCanvasFocus, store.doc])
+  }, [activeRoomId, addLog, recoverCanvasFocus, store.doc])
 
 
   /**

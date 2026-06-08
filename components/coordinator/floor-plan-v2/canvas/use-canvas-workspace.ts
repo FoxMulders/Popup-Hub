@@ -10,6 +10,10 @@ import {
   type ViewportMatrix,
 } from './canvas-engine'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
+import {
+  fitViewportToContent,
+  VIEWPORT_FIT_PADDING,
+} from './use-layout-viewport'
 
 export interface UseCanvasWorkspaceOptions {
   store: FloorPlanDocStore
@@ -39,23 +43,23 @@ export function useCanvasWorkspace({ store }: UseCanvasWorkspaceOptions) {
     }
   }, [])
 
-  /** Center camera on active room union; zoom 100%; pan reset. */
+  /** Fit camera to the union of all active rooms (~75% of viewport). */
   const centerOnActiveRooms = useCallback(() => {
     const api = viewportApiRef.current
     if (!api) return
     const bounds = unionActiveRoomBounds(store.doc)
     if (bounds) {
-      api.fitToBounds(bounds, { padding: 0.12 })
+      api.fitToBounds(bounds, { padding: VIEWPORT_FIT_PADDING })
     } else {
-      api.resetViewport()
+      fitViewportToContent(api, store.doc)
     }
     recoverFocus()
   }, [recoverFocus, store.doc])
 
   const resetViewportToOrigin = useCallback(() => {
-    viewportApiRef.current?.resetViewport()
+    fitViewportToContent(viewportApiRef.current, store.doc)
     recoverFocus()
-  }, [recoverFocus])
+  }, [recoverFocus, store.doc])
 
   const ensurePlaceableDocument = useCallback(() => {
     const next = ensureCanvasHasPlaceableRoom(store.doc)
@@ -68,10 +72,10 @@ export function useCanvasWorkspace({ store }: UseCanvasWorkspaceOptions) {
         },
         { pushHistory: true }
       )
-      resetViewportToOrigin()
+      centerOnActiveRooms()
     }
     return next
-  }, [resetViewportToOrigin, store])
+  }, [centerOnActiveRooms, store])
 
   const afterToolbarAction = useCallback(() => {
     recoverFocus()
