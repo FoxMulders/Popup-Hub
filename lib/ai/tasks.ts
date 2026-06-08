@@ -24,6 +24,11 @@ export const AI_TASKS = {
     model: 'anthropic/claude-3.5-sonnet',
     fallbackModel: 'openai/gpt-4o',
   },
+  /** Floor-plan auto-arrange — vendor visibility, walkways, traffic flow. */
+  auto_arrange_layout: {
+    model: 'google/gemini-2.5-pro',
+    fallbackModel: 'anthropic/claude-3.5-sonnet',
+  },
   /** Long-form creative generation (themes, puzzles, council copy). */
   creative_generation: {
     model: 'anthropic/claude-sonnet-4',

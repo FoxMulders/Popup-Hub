@@ -11,12 +11,14 @@ import {
   DEFAULT_STATIC_ROW_ORDER,
   getStaticRowSegmentVisibility,
   getStaticRowSegments,
+  getVisibleSidebarSectionsQa,
   loadStaticRowCollapsed,
   loadStaticRowOrder,
   saveStaticRowCollapsed,
   saveStaticRowOrder,
   STATIC_ROW_QA_HEADERS,
   type CanvasToolbarStaticRowId,
+  type SidebarSectionDef,
   type StaticRowCollapsedState,
 } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
 import type { StaticToolbarLayoutContext } from '@/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static'
@@ -77,6 +79,35 @@ function BlockCluster({
         </div>
       ))}
     </>
+  )
+}
+
+function SidebarToolbarSection({
+  section,
+  renderBlock,
+  compact,
+}: {
+  section: SidebarSectionDef
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  compact?: boolean
+}) {
+  return (
+    <div
+      className="flex w-full min-w-0 flex-col rounded-md border border-stone-200/90 bg-white shadow-sm"
+      data-toolbar-section={section.id}
+    >
+      <div className="border-b border-stone-100/90 px-2 py-1.5">
+        <QaAccordionHeader>{section.header}</QaAccordionHeader>
+      </div>
+      <div className="flex w-full min-w-0 flex-col gap-1.5 px-2 py-2">
+        <BlockCluster
+          blockIds={section.blocks}
+          renderBlock={renderBlock}
+          compact={compact}
+          bare
+        />
+      </div>
+    </div>
   )
 }
 
@@ -376,10 +407,47 @@ export function CanvasToolbarStaticQa({
     showVendor: true,
   }
 
+  const sidebarSections = useMemo(
+    () => (sidebarLayout ? getVisibleSidebarSectionsQa(segmentCtx) : []),
+    [sidebarLayout, segmentCtx]
+  )
+
+  if (sidebarLayout) {
+    if (sidebarSections.length === 0) return null
+
+    return (
+      <div className="flex w-full min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 items-center justify-end">
+          <TooltipWrapperQa text={QA_TIP_RESET_LAYOUT}>
+            <button
+              type="button"
+              onClick={resetLayout}
+              aria-label="Reset toolbar layout"
+              className={cn(
+                'inline-flex shrink-0 items-center justify-center rounded-md border border-stone-200 text-stone-600 hover:bg-stone-50',
+                compact ? 'h-6 w-6' : 'h-7 w-7'
+              )}
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </TooltipWrapperQa>
+        </div>
+        {sidebarSections.map((section) => (
+          <SidebarToolbarSection
+            key={section.id}
+            section={section}
+            renderBlock={renderBlock}
+            compact={compact}
+          />
+        ))}
+      </div>
+    )
+  }
+
   if (displayOrder.length === 0) return null
 
   return (
-    <div className={cn('flex min-w-0 flex-col', sidebarLayout ? 'gap-1.5' : 'gap-1')}>
+    <div className={cn('flex min-w-0 flex-col', 'gap-1')}>
       <div className="flex min-w-0 items-center justify-end">
         <TooltipWrapperQa text={QA_TIP_RESET_LAYOUT}>
           <button

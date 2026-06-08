@@ -21,12 +21,14 @@ function isFullCommandCenterRoute(pathname: string): boolean {
   return pathname === '/coordinator/dashboard'
 }
 
-/** Event layout editor and setup wizard — own the full viewport below nav. */
+/** Event layout editor, setup wizard, and other full-viewport coordinator tools. */
 function isCoordinatorImmersiveRoute(pathname: string): boolean {
   return (
     /\/coordinator\/events\/[^/]+\/layout\/?$/.test(pathname) ||
     /\/coordinator\/events\/[^/]+\/setup\/?$/.test(pathname) ||
-    pathname === '/coordinator/events/new'
+    pathname === '/coordinator/events/new' ||
+    pathname === '/coordinator/experience-designer' ||
+    pathname.startsWith('/coordinator/experience-designer/')
   )
 }
 
@@ -60,7 +62,11 @@ function useWorkspaceMode(pathname: string, portal: WorkspacePortal): boolean {
       pathname === '/vendor/applications' ||
       pathname.startsWith('/vendor/applications/') ||
       pathname === '/vendor/supplies' ||
-      pathname.startsWith('/vendor/supplies/')
+      pathname.startsWith('/vendor/supplies/') ||
+      pathname === '/vendor/events' ||
+      pathname.startsWith('/vendor/events/') ||
+      pathname === '/vendor/passport' ||
+      pathname.startsWith('/vendor/passport/')
     )
   }
 
@@ -121,15 +127,9 @@ export function PortalWorkspaceLayout({
   )
 }
 
-/** True when the route should fill the viewport below global nav. */
+/** True when the route should fill the viewport below global nav (CAD, wizards, immersive tools). */
 export function routeUsesViewportFill(pathname: string): boolean {
   if (bypassWorkspace(pathname)) return false
-  return (
-    isFullCommandCenterRoute(pathname) ||
-    pathname.startsWith('/coordinator') ||
-    pathname === '/vendor/dashboard' ||
-    pathname.startsWith('/vendor/dashboard/') ||
-    pathname === '/vendor/applications' ||
-    pathname.startsWith('/vendor/applications/')
-  )
+
+  return isFullCommandCenterRoute(pathname) || isCoordinatorImmersiveRoute(pathname)
 }

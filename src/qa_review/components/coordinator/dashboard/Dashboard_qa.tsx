@@ -90,7 +90,7 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
         ariaBusy={ariaBusy}
         leftLabel="Layout tools"
         className="dashboard-app-shell--qa-global-scroll"
-        leftClassName="w-80 flex flex-col justify-start border-r border-gray-200 bg-white"
+        leftClassName="flex w-[300px] min-w-[300px] flex-shrink-0 flex-col justify-start border-r border-gray-200 bg-white"
         left={<DashboardLeftPanelQa />}
         center={
           <div className={QA_CANVAS_VIEWPORT_CLASS}>

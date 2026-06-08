@@ -102,6 +102,84 @@ export function getStaticRowSegments(
   return sidebarLayout ? SIDEBAR_STATIC_ROW_SEGMENTS[rowId] : STATIC_ROW_SEGMENTS[rowId]
 }
 
+export type SidebarSectionId =
+  | 'room-controls'
+  | 'designer-tools'
+  | 'patron-layout'
+  | 'vendor-booths'
+
+export interface SidebarSectionDef {
+  id: SidebarSectionId
+  header: string
+  blocks: readonly CanvasToolbarBlockId[]
+}
+
+/** Full-width sidebar blocks — stacked top-to-bottom (no split columns). */
+export function getVisibleSidebarSections(ctx: {
+  needsRoomFirst: boolean
+  showRoom: boolean
+  showPatron: boolean
+  showVendor: boolean
+}): SidebarSectionDef[] {
+  const sections: SidebarSectionDef[] = []
+
+  if (ctx.showRoom) {
+    sections.push({
+      id: 'room-controls',
+      header: STATIC_ROW_HEADERS['room-tools'].left,
+      blocks: SIDEBAR_STATIC_ROW_SEGMENTS['room-tools'].left,
+    })
+  }
+
+  if (ctx.needsRoomFirst) {
+    return sections
+  }
+
+  sections.push({
+    id: 'designer-tools',
+    header: STATIC_ROW_HEADERS['room-tools'].right,
+    blocks: SIDEBAR_STATIC_ROW_SEGMENTS['room-tools'].right,
+  })
+
+  if (ctx.showPatron) {
+    sections.push({
+      id: 'patron-layout',
+      header: STATIC_ROW_HEADERS.placement.left,
+      blocks: SIDEBAR_STATIC_ROW_SEGMENTS.placement.left,
+    })
+  }
+
+  if (ctx.showVendor) {
+    sections.push({
+      id: 'vendor-booths',
+      header: STATIC_ROW_HEADERS.placement.right,
+      blocks: SIDEBAR_STATIC_ROW_SEGMENTS.placement.right,
+    })
+  }
+
+  return sections
+}
+
+/** QA dashboard — uppercase section titles for the left rail. */
+export function getVisibleSidebarSectionsQa(ctx: {
+  needsRoomFirst: boolean
+  showRoom: boolean
+  showPatron: boolean
+  showVendor: boolean
+}): SidebarSectionDef[] {
+  return getVisibleSidebarSections(ctx).map((section) => {
+    const headers =
+      section.id === 'room-controls' || section.id === 'designer-tools'
+        ? STATIC_ROW_QA_HEADERS['room-tools']
+        : STATIC_ROW_QA_HEADERS.placement
+    const header =
+      section.id === 'room-controls' || section.id === 'patron-layout'
+        ? headers.left
+        : headers.right
+    return { ...section, header }
+  })
+}
+
 const ORDER_STORAGE_KEY = 'popup-hub:floor-plan-v2:toolbar-static-order'
 const COLLAPSED_STORAGE_KEY = 'popup-hub:floor-plan-v2:toolbar-static-collapsed'
 

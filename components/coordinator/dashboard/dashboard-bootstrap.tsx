@@ -57,7 +57,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
         immersive={immersive}
         ariaBusy={ariaBusy}
         leftLabel="Layout tools"
-        leftClassName="w-80 flex flex-col justify-start overflow-hidden border-r border-gray-200 bg-white lg:h-[calc(100vh-64px)]"
+        leftClassName="flex w-[300px] min-w-[300px] flex-shrink-0 flex-col justify-start overflow-hidden border-r border-gray-200 bg-white lg:h-[calc(100vh-64px)]"
         left={<DashboardLeftPanel />}
         center={
           <DashboardCanvasColumn

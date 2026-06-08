@@ -1945,13 +1945,12 @@ function FloorPlanV2Workspace({
 
   const portalToolbarToSidebar =
     isDashboard &&
-    !dashboardImmersive &&
     Boolean(toolbarPortal?.sidebarActive && toolbarPortal.target)
 
   const dashboardCommandBar = isDashboard ? (
     <CanvasCommandBar
       staticLayout
-      sidebarLayout={portalToolbarToSidebar}
+      sidebarLayout
       className={portalToolbarToSidebar ? 'min-h-0 flex-1 overflow-hidden' : 'shrink-0'}
       toolState={{ tool, drawShape }}
       onToolChange={handleToolChange}

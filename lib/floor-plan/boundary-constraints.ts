@@ -1,0 +1,141 @@
+/**
+ * Strict room perimeter bounds for booth/table placement and auto-arrange clipping.
+ */
+
+import { rotatedAabb, type Rect } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
+import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
+import type { BoothObject, FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
+import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan-v2/state/placement-surface'
+import { BOOTH_SAFETY_BUFFER_FT } from '@/lib/booth-planner/layout-clearance-constants'
+
+/** Minimum inset from room walls for vendor/patron footprints (ft). */
+export const ROOM_PLACEMENT_CLEARANCE_FT = BOOTH_SAFETY_BUFFER_FT * 2
+
+export interface RoomPlacementBounds {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+}
+
+export function resolveRoomPlacementBounds(
+  doc: FloorPlanDoc,
+  roomId: string
+): RoomPlacementBounds | null {
+  const surface = resolveRoomPlacementSurface(doc, roomId)
+  if (surface) {
+    return {
+      minX: surface.minX,
+      minY: surface.minY,
+      maxX: surface.maxX,
+      maxY: surface.maxY,
+    }
+  }
+  const frame = (doc.rooms ?? []).find((r) => r.id === roomId)
+  if (!frame) return null
+  return {
+    minX: frame.originX,
+    minY: frame.originY,
+    maxX: frame.originX + frame.widthFt,
+    maxY: frame.originY + frame.lengthFt,
+  }
+}
+
+/** Inset rectangle leaving `clearanceFt` safety margin on every side. */
+export function insetBounds(
+  bounds: RoomPlacementBounds,
+  clearanceFt: number
+): Rect {
+  return {
+    x: bounds.minX + clearanceFt,
+    y: bounds.minY + clearanceFt,
+    width: Math.max(0, bounds.maxX - bounds.minX - clearanceFt * 2),
+    height: Math.max(0, bounds.maxY - bounds.minY - clearanceFt * 2),
+  }
+}
+
+/**
+ * True when the object's rotated footprint sits fully inside `bounds`
+ * with optional clearance inset.
+ */
+export function footprintWithinBounds(
+  obj: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>,
+  bounds: RoomPlacementBounds,
+  clearanceFt = ROOM_PLACEMENT_CLEARANCE_FT
+): boolean {
+  const inner = insetBounds(bounds, clearanceFt)
+  if (inner.width <= 0 || inner.height <= 0) return false
+  const aabb = objectFootprintAabb(obj as PlacedObject)
+  const eps = 1e-6
+  return (
+    aabb.x >= inner.x - eps &&
+    aabb.y >= inner.y - eps &&
+    aabb.x + aabb.width <= inner.x + inner.width + eps &&
+    aabb.y + aabb.height <= inner.y + inner.height + eps
+  )
+}
+
+/** Booth/table kinds that must stay strictly inside the room perimeter. */
+export function isStrictBoundaryPlacementKind(kind: PlacedObject['kind']): boolean {
+  return kind === 'booth'
+}
+
+/**
+ * Compute translation that pulls `obj`'s rotated AABB inside `inner` rect.
+ * Returns `{ dx: 0, dy: 0 }` when already contained.
+ */
+export function clampDeltaToRect(
+  obj: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>,
+  inner: Rect
+): { dx: number; dy: number } {
+  const aabb = rotatedAabb(obj as PlacedObject)
+  let dx = 0
+  let dy = 0
+  if (aabb.width <= inner.width) {
+    if (aabb.x < inner.x) dx = inner.x - aabb.x
+    else if (aabb.x + aabb.width > inner.x + inner.width) {
+      dx = inner.x + inner.width - (aabb.x + aabb.width)
+    }
+  } else {
+    dx = inner.x - aabb.x
+  }
+  if (aabb.height <= inner.height) {
+    if (aabb.y < inner.y) dy = inner.y - aabb.y
+    else if (aabb.y + aabb.height > inner.y + inner.height) {
+      dy = inner.y + inner.height - (aabb.y + aabb.height)
+    }
+  } else {
+    dy = inner.y - aabb.y
+  }
+  return { dx, dy }
+}
+
+/**
+ * Clip booth coordinates so the rotated footprint stays inside room bounds.
+ * Used after AI auto-arrange when the model returns out-of-bounds slots.
+ */
+export function clipBoothToRoomBounds(
+  booth: BoothObject,
+  bounds: RoomPlacementBounds,
+  clearanceFt = ROOM_PLACEMENT_CLEARANCE_FT
+): BoothObject {
+  const inner = insetBounds(bounds, clearanceFt)
+  if (inner.width <= 0 || inner.height <= 0) return booth
+  const { dx, dy } = clampDeltaToRect(booth, inner)
+  if (dx === 0 && dy === 0) return booth
+  return { ...booth, x: booth.x + dx, y: booth.y + dy }
+}
+
+/** Clip booth in room-local coordinates `[0, roomW] × [0, roomH]`. */
+export function clipBoothToLocalRoom(
+  booth: BoothObject,
+  roomW: number,
+  roomH: number,
+  clearanceFt = ROOM_PLACEMENT_CLEARANCE_FT
+): BoothObject {
+  return clipBoothToRoomBounds(
+    booth,
+    { minX: 0, minY: 0, maxX: roomW, maxY: roomH },
+    clearanceFt
+  )
+}
