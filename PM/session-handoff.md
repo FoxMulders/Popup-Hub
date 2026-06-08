@@ -16,7 +16,7 @@
 - **`lib/ai/generate-json-vision.ts`:** Vision JSON now routes exclusively through OpenRouter (no direct Gemini/Groq API calls).
 - **`lib/ai/env.ts`:** `OPENROUTER_API_KEY` is the primary gateway; legacy `GEMINI_*` / `GROQ_*` keys deprecated.
 - **`lib/flyer/parse-flyer-vision.ts`:** Flyer OCR uses task `flyer_vision`; `meta.source` is `openrouter` (or `heuristic` when key missing).
-- **`lib/build-info.ts`:** `/version` payload adds `openRouterConfigured`; `geminiConfigured` now reflects any AI key (`isAiConfigured`).
+- **`lib/build-info.ts`:** `/version` payload adds `openRouterConfigured`; `geminiConfigured` now reflects any AI key. Env checks inlined (no `@/lib/ai/env` import — `next.config.ts` loads this file before path aliases resolve).
 - **Verify:** `npx tsx scripts/verify-ai-provider-fallback.ts` — 22/22 pass. Set `OPENROUTER_API_KEY` on Vercel before deploy.
 - **Not migrated:** Experience Designer still proxies to external Master Generator backend — wire via `creative_generation` task when that service moves in-app.
 

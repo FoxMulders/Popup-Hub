@@ -1,20 +1,20 @@
+import { resolveOpenRouterApiKey } from '@/lib/ai/env'
 import {
-  resolveGeminiApiKey,
-  resolveGeminiModelId,
-  resolveFlyerGeminiModelId,
-  resolveGroqApiKey,
-  resolveGroqModelId,
-} from '@/lib/ai/env'
-import { isProviderLimitError } from '@/lib/ai/provider-limit-error'
+  OpenRouterConfigError,
+  OpenRouterRequestError,
+  openRouterChatForTask,
+} from '@/lib/ai/openrouter'
+import type { AiTask } from '@/lib/ai/tasks'
 
-export type VisionJsonProvider = 'gemini' | 'groq'
+export type VisionJsonProvider = 'openrouter'
 
 export class VisionJsonProviderError extends Error {
   constructor(
     message: string,
     readonly provider: VisionJsonProvider,
     readonly status: number,
-    readonly detail: string
+    readonly detail: string,
+    readonly model?: string
   ) {
     super(message)
     this.name = 'VisionJsonProviderError'
@@ -28,98 +28,28 @@ export class VisionJsonUnavailableError extends Error {
   }
 }
 
-async function callGeminiJsonVision(input: {
+/**
+ * JSON extraction from an image via OpenRouter.
+ * Model is chosen from the task registry (flyer_vision vs generic vision_json).
+ */
+export async function generateJsonFromVision(input: {
   systemPrompt: string
   userPrompt: string
   dataUrl: string
   mimeType: string
-  modelId?: string
-}): Promise<string> {
-  const apiKey = resolveGeminiApiKey()
-  if (!apiKey) {
-    throw new VisionJsonUnavailableError('Gemini API key is not configured')
+  /** Defaults to vision_json; flyer parse should pass flyer_vision. */
+  task?: AiTask
+}): Promise<{ content: string; provider: VisionJsonProvider; model: string }> {
+  if (!resolveOpenRouterApiKey()) {
+    throw new VisionJsonUnavailableError('OPENROUTER_API_KEY is not configured')
   }
 
-  const model = input.modelId ?? resolveGeminiModelId()
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`
+  const task = input.task ?? 'vision_json'
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: input.systemPrompt }],
-      },
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: input.userPrompt },
-            {
-              inline_data: {
-                mime_type: input.mimeType,
-                data: input.dataUrl.replace(/^data:[^;]+;base64,/, ''),
-              },
-            },
-          ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: 'application/json',
-      },
-    }),
-  })
-
-  const detail = await response.text()
-  if (!response.ok) {
-    throw new VisionJsonProviderError(
-      'Gemini vision request failed',
-      'gemini',
-      response.status,
-      detail
-    )
-  }
-
-  const json = JSON.parse(detail) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> }
-    }>
-  }
-  const text = json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('')
-  if (!text?.trim()) {
-    throw new VisionJsonProviderError(
-      'Gemini returned an empty vision response',
-      'gemini',
-      502,
-      detail
-    )
-  }
-
-  return text
-}
-
-async function callGroqJsonVision(input: {
-  systemPrompt: string
-  userPrompt: string
-  dataUrl: string
-}): Promise<string> {
-  const apiKey = resolveGroqApiKey()
-  if (!apiKey) {
-    throw new VisionJsonUnavailableError('Groq API key is not configured')
-  }
-
-  const model = resolveGroqModelId()
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.1,
-      response_format: { type: 'json_object' },
+  try {
+    const result = await openRouterChatForTask({
+      task,
+      jsonMode: true,
       messages: [
         { role: 'system', content: input.systemPrompt },
         {
@@ -130,78 +60,22 @@ async function callGroqJsonVision(input: {
           ],
         },
       ],
-    }),
-  })
+    })
 
-  const detail = await response.text()
-  if (!response.ok) {
-    throw new VisionJsonProviderError(
-      'Groq vision request failed',
-      'groq',
-      response.status,
-      detail
-    )
-  }
-
-  const json = JSON.parse(detail) as {
-    choices?: Array<{ message?: { content?: string } }>
-  }
-  const content = json.choices?.[0]?.message?.content
-  if (!content?.trim()) {
-    throw new VisionJsonProviderError(
-      'Groq returned an empty vision response',
-      'groq',
-      502,
-      detail
-    )
-  }
-
-  return content
-}
-
-/**
- * Gemini-first JSON extraction from an image. Falls back to Groq when Gemini is
- * unavailable, out of quota, or overloaded.
- */
-export async function generateJsonFromVision(input: {
-  systemPrompt: string
-  userPrompt: string
-  dataUrl: string
-  mimeType: string
-  /** Override Gemini model (e.g. flyer parse uses gemini-2.5-flash). */
-  geminiModelId?: string
-}): Promise<{ content: string; provider: VisionJsonProvider }> {
-  const geminiKey = resolveGeminiApiKey()
-  const groqKey = resolveGroqApiKey()
-
-  if (!geminiKey && !groqKey) {
-    throw new VisionJsonUnavailableError('No Gemini or Groq API key is configured')
-  }
-
-  if (geminiKey) {
-    try {
-      const content = await callGeminiJsonVision({
-        ...input,
-        modelId: input.geminiModelId,
-      })
-      return { content, provider: 'gemini' }
-    } catch (err) {
-      const shouldFallback =
-        err instanceof VisionJsonProviderError &&
-        isProviderLimitError(err.status, err.detail)
-
-      if (!shouldFallback || !groqKey) {
-        throw err
-      }
-
-      console.warn(
-        '[ai] Gemini limit reached — falling back to Groq',
+    return { content: result.content, provider: 'openrouter', model: result.model }
+  } catch (err) {
+    if (err instanceof OpenRouterConfigError) {
+      throw new VisionJsonUnavailableError(err.message)
+    }
+    if (err instanceof OpenRouterRequestError) {
+      throw new VisionJsonProviderError(
+        err.message,
+        'openrouter',
         err.status,
-        err.detail.slice(0, 240)
+        err.detail,
+        err.model
       )
     }
+    throw err
   }
-
-  const content = await callGroqJsonVision(input)
-  return { content, provider: 'groq' }
 }

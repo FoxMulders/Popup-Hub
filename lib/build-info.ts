@@ -18,16 +18,19 @@ export interface SiteVersionPayload {
   version: string
   build: string
   geminiConfigured: boolean
+  /** True when OPENROUTER_API_KEY is set (preferred AI gateway). */
+  openRouterConfigured: boolean
 }
 
-const GEMINI_ENV_KEYS = [
-  'GEMINI_API_KEY',
-  'GOOGLE_GENERATIVE_AI_API_KEY',
-  'GOOGLE_GEMINI_API_KEY',
-] as const
+function isOpenRouterConfigured(): boolean {
+  return Boolean(process.env.OPENROUTER_API_KEY?.trim())
+}
 
-export function isGeminiConfigured(): boolean {
-  return GEMINI_ENV_KEYS.some((key) => Boolean(process.env[key]?.trim()))
+function isAiConfigured(): boolean {
+  if (isOpenRouterConfigured()) return true
+  return ['GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GOOGLE_GEMINI_API_KEY', 'GROQ_API_KEY', 'POPUPHUB_API_KEY'].some(
+    (key) => Boolean(process.env[key]?.trim())
+  )
 }
 
 /** Display version: major.minor.buildNumber (e.g. 1.0.154). */
@@ -141,6 +144,7 @@ export function getSiteVersionPayload(): SiteVersionPayload {
   return {
     version: build.version,
     build: build.commit,
-    geminiConfigured: isGeminiConfigured(),
+    geminiConfigured: isAiConfigured(),
+    openRouterConfigured: isOpenRouterConfigured(),
   }
 }

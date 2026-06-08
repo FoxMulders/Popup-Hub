@@ -1,13 +1,9 @@
 import { generateJsonFromVision } from '@/lib/ai/generate-json-vision'
-import {
-  resolveFlyerGeminiModelId,
-  resolveGeminiApiKey,
-  resolveGroqApiKey,
-} from '@/lib/ai/env'
+import { isOpenRouterConfigured } from '@/lib/ai/env'
 import { parsedFlyerSchema, type ParsedFlyerResponse } from '@/lib/flyer/types'
 import { normalizeFlyerDate, normalizeFlyerTime } from '@/lib/flyer/normalize'
 
-export type FlyerVisionSource = 'gemini' | 'groq' | 'heuristic'
+export type FlyerVisionSource = 'openrouter' | 'heuristic'
 
 const FLYER_VISION_SYSTEM_PROMPT =
   'You extract event-listing data from market posters. Output strict JSON only — never prose, never markdown, never wrap in code fences.'
@@ -124,7 +120,7 @@ export async function parseFlyerWithVision(input: {
   mimeType: string
   fileName: string
 }): Promise<{ data: ParsedFlyerResponse; source: FlyerVisionSource }> {
-  if (!resolveGeminiApiKey() && !resolveGroqApiKey()) {
+  if (!isOpenRouterConfigured()) {
     return { data: heuristicFromFilename(input.fileName), source: 'heuristic' }
   }
 
@@ -135,7 +131,7 @@ export async function parseFlyerWithVision(input: {
     userPrompt: FLYER_PARSE_PROMPT,
     dataUrl,
     mimeType: input.mimeType,
-    geminiModelId: resolveFlyerGeminiModelId(),
+    task: 'flyer_vision',
   })
 
   const raw = JSON.parse(extractJsonPayload(content)) as unknown
