@@ -105,6 +105,20 @@ export function vertexCountForMergedZone(obj: MergedZoneObject): number {
 
 export function sanitizeRoomFrame(frame: RoomFrame): RoomFrame {
   const b = roomFrameBounds(frame)
+  const preserveUnion =
+    frame.perimeterRing &&
+    frame.perimeterRing.length >= 3 &&
+    openRingVertices(frame.perimeterRing).length > 4
+  if (preserveUnion) {
+    return {
+      ...frame,
+      originX: b.minX,
+      originY: b.minY,
+      widthFt: Math.max(1, b.maxX - b.minX),
+      lengthFt: Math.max(1, b.maxY - b.minY),
+      perimeterRing: frame.perimeterRing,
+    }
+  }
   const ring = clockwiseRectRing(b.minX, b.minY, b.maxX, b.maxY)
   return {
     ...frame,
@@ -144,7 +158,9 @@ export function sanitizeMergedZone(obj: MergedZoneObject): MergedZoneObject {
 export function docNeedsGeometrySanitize(doc: FloorPlanDoc): boolean {
   for (const frame of doc.rooms ?? []) {
     if (frame.mergedIntoObjectId) continue
-    if (vertexCountForRoom(frame) > 4) return true
+    const verts = vertexCountForRoom(frame)
+    if (verts > 4) continue
+    if (verts < 4) return true
     const ringLen = frame.perimeterRing?.length ?? 0
     if (ringLen > 0 && ringLen !== 5) return true
   }

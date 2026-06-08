@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
@@ -12,7 +12,6 @@ import { DashboardToolbarPortalTarget } from '@/components/coordinator/dashboard
 import { InitialRoomModal } from '@/components/coordinator/dashboard/initial-room-modal'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import { QA_CANVAS_VIEWPORT_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
-import { AiGenerationGuardrailsQa } from '@/src/qa_review/components/coordinator/dashboard/ai-generation-guardrails_qa'
 
 /** Hide scrollbar tracks while preserving smooth scroll on short viewports. */
 export const QA_PANEL_SCROLL_CLASSES =
@@ -30,7 +29,7 @@ export const QA_ACCORDION_HEADERS = {
   tools: 'DESIGNER TOOLS',
 } as const
 
-export function QaAccordionHeader({ children }: { children: string }) {
+export function QaAccordionHeader({ children }: { children: ReactNode }) {
   return (
     <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">
       {children}
@@ -49,7 +48,6 @@ export interface DashboardBootstrapQaProps {
 export function DashboardLeftPanelQa() {
   return (
     <div className="relative flex w-full flex-col justify-start bg-white">
-      <AiGenerationGuardrailsQa />
       <DashboardToolbarPortalTarget
         className="flex-1 overflow-x-hidden border-b-0 px-1 py-1"
       />
@@ -63,11 +61,7 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
   const [liveMessage, setLiveMessage] = useState('Booth layout designer loading.')
-  const [hasInitialRoom, setHasInitialRoom] = useState(() => layoutRooms.length > 0)
-
-  useEffect(() => {
-    setHasInitialRoom(layoutRooms.length > 0)
-  }, [selectedEventId, layoutRooms.length])
+  const hasInitialRoom = layoutRooms.length > 0
 
   const handleInitialRoomConfirm = useCallback(
     (widthFt: number, lengthFt: number, tableLengthFt?: LayoutBaselineTableLengthFt) => {
@@ -77,7 +71,6 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
         ...(tableLengthFt != null ? { baselineTableLengthFt: tableLengthFt } : {}),
       })
       setLayoutRooms(rooms, activeRoomId)
-      setHasInitialRoom(true)
       setLiveMessage('Room created — booth designer canvas is loading.')
     },
     [layoutRooms, setLayoutRooms]
@@ -122,3 +115,9 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
 }
 
 export { InitialRoomModal as InitialRoomModalQa } from '@/components/coordinator/dashboard/initial-room-modal'
+
+/** PATRON LAYOUT — Perimeter mode marches along the local room ∪ stage union ring. */
+export { runPatronPerimeterLayout } from '@/src/utils/layoutMergeEngine'
+
+/** VENDOR BOOTHS — Perimeter mode uses the same boolean union path (zero API tokens). */
+export { runVendorPerimeterLayout } from '@/src/utils/layoutMergeEngine'

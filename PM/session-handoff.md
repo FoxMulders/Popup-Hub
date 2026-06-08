@@ -10,6 +10,22 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (layout merge engine — polygon union, not deployed)
+- **`src/utils/layoutMergeEngine.ts` (new):** `polygon-clipping` boolean union for room + stage; `unionLayoutParticipants`, `computeRoomStageUnion`, `resolvePerimeterUnionRingForRoom`, `runPatronPerimeterLayout` / `runVendorPerimeterLayout` (zero API tokens).
+- **`room-union-merge.ts` + `geometry-sanitize.ts`:** Destructive merge stores multi-vertex `perimeterRing` (L-shapes preserved, not AABB-only).
+- **`placement-surface.ts`:** Auto-unions touching stages into placement outer ring for perimeter auto-arrange.
+- **`room-frames.tsx` + `canvas-objects.tsx` + `Canvas_qa.tsx`:** Unified perimeter path rendering; inner connecting wall suppressed on dissolved stages.
+- **`floor-plan-v2.tsx`:** Dashboard perimeter auto-arrange routes through `layoutMergeEngine`.
+- **`Dashboard_qa.tsx`:** Re-exports patron/vendor perimeter layout helpers.
+- **Verify:** `npx tsx scripts/verify-layout-merge-engine.ts` — 6/6 pass.
+
+
+## Shipped this session (AI Theme Wizard removed, not deployed)
+- **Removed:** AI Theme Wizard UI (`ai-generation-guardrails_qa.tsx`), OpenRouter proxy (`lib/ai/openrouter.ts`, `app/api/coordinator/ai-theme-layout/route.ts`), spatial codec (`spatialCompressor.ts`, `aiTokenGuard.ts`), verify script, and `js-tiktoken` dependency.
+- **`Dashboard_qa.tsx`:** Left rail is toolbar portal only; `QaAccordionHeader` kept for canvas toolbar QA typography.
+- **Kept:** `layoutMergeLocal.ts` + `floor-plan-v2.tsx` local merge validation (RBush, no AI).
+
+
 ## Last deploy
 - 2026-06-08 11:32 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (fb0d850)
 
@@ -17,7 +33,7 @@
 ## Goal
 **Native mobile apps (iOS first, Android later)** — wrap the existing Next.js product for App Store distribution, then Play Store. Apple Developer Program account is enrolled (2026-06-08); Android follows after iOS TestFlight / App Store path is proven.
 
-**Web (ongoing):** UX + QA dashboard wiring — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout shipped to prod (build 163).
+**Web (ongoing):** UX + QA dashboard wiring — layout animation, mobile polish, booth pricing inputs, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout shipped to prod (build 163).
 
 ### Native mobile — current baseline
 - **Web stack:** Next.js App Router on Vercel (`https://popuphub.ca`); PWA already ships (`public/manifest.json`, service worker, `use-install-prompt` iOS/Android coaches).
@@ -108,7 +124,7 @@
 - **Login QA logo scale (`Login_qa.tsx`):** Popup Hub wordmark `<img>` clamped to `w-44 h-auto object-contain mx-auto mb-4` (`/popup-hub-logo.png`).
 - **Login QA lockout helpers (`login-lockout_qa.ts`):** Trimmed credentials + client validation; local-only password visibility toggle; strike/cooldown math. Legacy pixel CSS (`login-lockout_qa.css`) unused after video overlay — safe to delete on promotion cleanup.
 - **QA dashboard wired:** `market-dashboard-client.tsx` → `DashboardBootstrapQa`; `floor-plan-v2.tsx` → `CanvasCommandBarQa`.
-- **AI guardrails (`ai-generation-guardrails_qa.tsx`):** `countdown` + `isGenerating` lock; 30s cooldown; **5 runs/hour** cap; credits HUD `48 / 50`; depletion toast before generative loop.
+- **AI Theme Wizard (removed):** Former `ai-generation-guardrails_qa.tsx` + OpenRouter path deleted; local merge (`layoutMergeLocal.ts`) retained.
 - **Initial loader:** Computed uniform perimeter tables; removed dashed ring; logo fades into geometric ring center (`ringCenterX` / `ringCenterY` in `initial-loader-reveal.tsx`).
 - **Branding:** `PopupHubIcon` deprecated → full `popup-hub-brand.png`; sidewalk dash line removed from replay loader.
 - **Mobile footer/nav:** `globals.css` scales `.popup-hub-chrome-footer` to **67%** on ≤767px; `shopper-bottom-nav` + main padding `2rem`; install prompt bottom offset aligned.

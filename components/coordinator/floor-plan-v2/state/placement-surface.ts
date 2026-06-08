@@ -14,6 +14,9 @@ import {
 } from '@/lib/floor-plan/placement-ring-orientation'
 import { findRoomIdForPlacementPointBBox } from './geometry-sanitize'
 import { buildJoinedZone } from './room-joins'
+import {
+  computeRoomStageUnion,
+} from '@/src/utils/layoutMergeEngine'
 import { stripMacroPerimeterWallsFromDoc } from '../interactions/room-perimeter-sync'
 import { rotateObjectInRoom } from './rotate-room-frame'
 import { reconcileCanvasExtents } from './room-canvas'
@@ -188,6 +191,23 @@ export function resolveRoomPlacementSurface(
 
   if (frame.perimeterRing && frame.perimeterRing.length >= 3) {
     const outerRings = [frame.perimeterRing as PlacementRing]
+    const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
+    const surface: PlacementSurface = {
+      roomId,
+      outerRings,
+      centroid,
+      minX,
+      minY,
+      maxX,
+      maxY,
+    }
+    cache.set(roomId, surface)
+    return surface
+  }
+
+  const roomStageUnion = computeRoomStageUnion(doc, roomId)
+  if (roomStageUnion && roomStageUnion.outerRings.length > 0) {
+    const outerRings = roomStageUnion.outerRings as PlacementRing[]
     const { minX, minY, maxX, maxY, centroid } = ringsBounds(outerRings)
     const surface: PlacementSurface = {
       roomId,

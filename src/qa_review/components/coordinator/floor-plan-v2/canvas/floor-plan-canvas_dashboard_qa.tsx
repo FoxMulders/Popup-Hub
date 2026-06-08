@@ -50,6 +50,7 @@ import type { ToolState } from '@/components/coordinator/floor-plan-v2/tools/typ
 import { cn } from '@/lib/utils'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
+import { dissolvedStageIdsForDoc } from '@/src/utils/layoutMergeEngine'
 
 export interface FloorPlanCanvasProps {
   store: FloorPlanDocStore
@@ -429,6 +430,11 @@ export function FloorPlanCanvasDashboardQa({
     [mergeOverlapCtx, store.doc.objects]
   )
 
+  const dissolvedStageIds = useMemo(
+    () => dissolvedStageIdsForDoc(store.doc),
+    [store.doc]
+  )
+
   const draftOverlaps = useMemo(() => {
     const rawRect = pointer.draftRect
     const kind = pointer.draftKind
@@ -733,6 +739,7 @@ export function FloorPlanCanvasDashboardQa({
           <CanvasObjects
             objects={store.doc.objects}
             rooms={store.doc.rooms}
+            dissolvedStageIds={dissolvedStageIds}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
             showLabels={showLabels}
@@ -755,6 +762,7 @@ export function FloorPlanCanvasDashboardQa({
           <CanvasObjects
             objects={store.doc.objects}
             rooms={store.doc.rooms}
+            dissolvedStageIds={dissolvedStageIds}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
             showLabels={showLabels}

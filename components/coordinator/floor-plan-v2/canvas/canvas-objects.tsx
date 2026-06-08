@@ -55,6 +55,8 @@ interface CanvasObjectsProps {
   eventCategoryNames?: ReadonlyArray<string>
   /** Room frames — used to detect dissolved perimeter join groups. */
   rooms?: ReadonlyArray<{ joinGroupId?: string }>
+  /** Stage ids whose inner wall is dissolved into a room union perimeter. */
+  dissolvedStageIds?: ReadonlySet<string>
   /**
    * Split render pass — `merged_zone` is painted under room frames and
    * furniture when the host mounts two instances.
@@ -435,6 +437,7 @@ function CanvasObjectsBase({
   editingObjectId,
   eventCategoryNames,
   rooms,
+  dissolvedStageIds,
   renderLayer = 'all',
 }: CanvasObjectsProps) {
   const dissolvedJoinGroupIds = useMemo(() => {
@@ -531,7 +534,8 @@ function CanvasObjectsBase({
         // the unified outer wall. Suppress the per-object stroke
         // so the two boundaries don't double up.
         const isJoined = Boolean(
-          obj.joinGroupId && dissolvedJoinGroupIds.has(obj.joinGroupId)
+          (obj.joinGroupId && dissolvedJoinGroupIds.has(obj.joinGroupId)) ||
+            (obj.kind === 'stage' && dissolvedStageIds?.has(obj.id))
         )
         const hideJoinedFixtureBody = isJoined && isJoinableObject(obj)
         const displayFill = hideJoinedFixtureBody ? 'transparent' : patternFill ?? fill

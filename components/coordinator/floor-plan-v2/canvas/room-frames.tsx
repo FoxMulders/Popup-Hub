@@ -5,7 +5,8 @@ import {
   computeRoomWallSegments,
   detectMergedRoomPairs,
 } from '../interactions/geometry'
-import { buildJoinedZone, isJoinableObject } from '../state/room-joins'
+import { buildJoinedZone, isJoinableObject, objectFrameOverlapsOrTouches } from '../state/room-joins'
+import { unionLayoutParticipants } from '@/src/utils/layoutMergeEngine'
 import { EXTERIOR_LABEL_OFFSET_PX } from '../interactions/geometry'
 import type { PlacedObject, RoomFrame } from '../state/types'
 
@@ -226,6 +227,59 @@ function RoomFramesBase({
     // pxPerFt is captured in the path; recompute when anything changes.
   }, [groupMembers, groupObjects, pxPerFt])
 
+  /** Room + touching stage unions (no explicit join group required). */
+  const implicitUnionZones = useMemo(() => {
+    const result: Array<{
+      roomId: string
+      pathData: string
+      perimeterLines: Array<{ x1: number; y1: number; x2: number; y2: number }>
+      stageIds: string[]
+    }> = []
+    if (!objects?.length) return result
+    const joinedRoomIds = new Set<string>()
+    for (const groupId of groupMembers.keys()) {
+      for (const m of groupMembers.get(groupId) ?? []) joinedRoomIds.add(m.id)
+    }
+    for (const frame of frames) {
+      if (frame.mergedIntoObjectId || joinedRoomIds.has(frame.id)) continue
+      if (frame.joinGroupId) continue
+      if (frame.perimeterRing && frame.perimeterRing.length > 5) continue
+      const touchingStages = objects.filter(
+        (o) => o.kind === 'stage' && objectFrameOverlapsOrTouches(o, frame)
+      )
+      if (touchingStages.length === 0) continue
+      const union = unionLayoutParticipants([frame], touchingStages)
+      if (!union) continue
+      const segments: string[] = []
+      for (const ring of union.outerRings) {
+        if (ring.length === 0) continue
+        const [first, ...rest] = ring
+        segments.push(`M ${first![0] * pxPerFt} ${first![1] * pxPerFt}`)
+        for (const [px, py] of rest) {
+          segments.push(`L ${px * pxPerFt} ${py * pxPerFt}`)
+        }
+        segments.push('Z')
+      }
+      result.push({
+        roomId: frame.id,
+        pathData: segments.join(' '),
+        perimeterLines: union.perimeterWalls.map(([a, b]) => ({
+          x1: a[0] * pxPerFt,
+          y1: a[1] * pxPerFt,
+          x2: b[0] * pxPerFt,
+          y2: b[1] * pxPerFt,
+        })),
+        stageIds: touchingStages.map((s) => s.id),
+      })
+    }
+    return result
+  }, [frames, groupMembers, objects, pxPerFt])
+
+  const implicitUnionRoomIds = useMemo(
+    () => new Set(implicitUnionZones.map((z) => z.roomId)),
+    [implicitUnionZones]
+  )
+
   if (frames.length === 0) return null
 
   // Visible wall segments per room (with merged sections subtracted).
@@ -258,9 +312,6 @@ function RoomFramesBase({
 
   return (
     <g aria-hidden>
-      {/* Dissolved (joined) zones: one outer ring per group, painted
-          underneath the per-frame chrome so individual room labels
-          still float on top. */}
       {joinedZones.map((zone) => (
         <g key={`joined-${zone.groupId}`} data-joined-group={zone.groupId}>
           {zone.pathData ? (
@@ -348,6 +399,24 @@ function RoomFramesBase({
         </g>
       ))}
 
+      {implicitUnionZones.map((zone) => (
+        <g key={`implicit-union-${zone.roomId}`} data-implicit-union={zone.roomId}>
+          {zone.pathData ? (
+            <path
+              d={zone.pathData}
+              fill="none"
+              stroke={JOINED_ZONE_STROKE}
+              strokeWidth={PERIMETER_WIDTH_JOINED}
+              shapeRendering="geometricPrecision"
+              pointerEvents="stroke"
+              data-room-stroke="true"
+              data-room-id={zone.roomId}
+              style={{ cursor: 'grab' }}
+            />
+          ) : null}
+        </g>
+      ))}
+
       {frames.map((frame) => {
         if (frame.mergedIntoObjectId) return null
         const x = frame.originX * pxPerFt
@@ -357,8 +426,9 @@ function RoomFramesBase({
         const isActive = activeRoomId === frame.id
         const isSelected = selectedRoomId === frame.id
         const isJoined = joinedFrameIds.has(frame.id)
+        const isImplicitUnion = implicitUnionRoomIds.has(frame.id)
         const isMerged =
-          !isJoined && (joinedNeighbors.get(frame.id)?.size ?? 0) > 0
+          !isJoined && !isImplicitUnion && (joinedNeighbors.get(frame.id)?.size ?? 0) > 0
         const stroke = isSelected
           ? PERIMETER_STROKE_SELECTED
           : isMerged
@@ -383,7 +453,7 @@ function RoomFramesBase({
 
         return (
           <g key={`frame-${frame.id}`} data-room-id={frame.id}>
-            {!isJoined && unionPath ? (
+            {!isJoined && !isImplicitUnion && unionPath ? (
               <path
                 d={unionPath}
                 fill="none"
@@ -401,7 +471,7 @@ function RoomFramesBase({
                 single combined interior pathway. Suppressed entirely
                 for members of an explicit join group: their wall is
                 the dissolved zone's outer polygon, painted above. */}
-            {!isJoined && !unionPath
+            {!isJoined && !isImplicitUnion && !unionPath
               ? segments.map((seg, idx) => {
                   const isHorizontal = seg.axis === 'horizontal'
                   const x1 = (isHorizontal ? seg.from : seg.coord) * pxPerFt

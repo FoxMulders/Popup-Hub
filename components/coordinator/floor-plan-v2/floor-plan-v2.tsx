@@ -47,6 +47,11 @@ import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBarQa as CanvasCommandBar } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-command-bar_qa'
+import { analyzeMergeIntersections } from '@/src/utils/layoutMergeLocal'
+import {
+  runPatronPerimeterLayout,
+  runVendorPerimeterLayout,
+} from '@/src/utils/layoutMergeEngine'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import { autoArrangeInRoom, type AutoArrangeMode } from './engine/auto-arrange'
 import {
@@ -1445,8 +1450,8 @@ function FloorPlanV2Workspace({
       toast.message('Nothing to arrange — draw at least one vendor booth first.')
       return
     }
-    const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      scope: 'vendor',
+    const arrangeOptions = {
+      scope: 'vendor' as const,
       mode: vendorAutoArrangeMode,
       eventCategoryNames,
       baselineTableLengthFt: safeTableSizeFt,
@@ -1454,7 +1459,11 @@ function FloorPlanV2Workspace({
       ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
         ? { maxBooths: layoutCapacity }
         : {}),
-    })
+    }
+    const result =
+      vendorAutoArrangeMode === 'perimeter-only'
+        ? runVendorPerimeterLayout(store.doc, activeRoomId, arrangeOptions)
+        : autoArrangeInRoom(store.doc, activeRoomId, arrangeOptions)
     if (!result) return
     if (result.perimeterCapacityError) {
       toast.error(result.perimeterCapacityError, { duration: 6000 })
@@ -1497,12 +1506,16 @@ function FloorPlanV2Workspace({
       toast.message('Nothing to arrange — draw at least one patron table first.')
       return
     }
-    const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      scope: 'patron',
+    const patronOptions = {
+      scope: 'patron' as const,
       mode: patronAutoArrangeMode,
       baselineTableLengthFt: safeTableSizeFt,
       vendorTableMetaByKey,
-    })
+    }
+    const result =
+      patronAutoArrangeMode === 'perimeter-only'
+        ? runPatronPerimeterLayout(store.doc, activeRoomId, patronOptions)
+        : autoArrangeInRoom(store.doc, activeRoomId, patronOptions)
     if (!result) return
     if (result.patronArrangeAborted) {
       toast.warning(result.patronArrangeAborted, { duration: 5000 })
@@ -1841,6 +1854,17 @@ function FloorPlanV2Workspace({
       `Merge input roomIds=${JSON.stringify(destructiveMergePlan.joinRoomIds)} objectIds=${JSON.stringify(destructiveMergePlan.joinObjectIds)}`
     )
     addLog(`doc.rooms before merge: ${serializeRooms(store.doc)}`)
+    const spatialCheck = analyzeMergeIntersections(store.doc, {
+      roomIds: destructiveMergePlan.joinRoomIds,
+      objectIds: destructiveMergePlan.joinObjectIds,
+    })
+    if (!spatialCheck.valid) {
+      if (spatialCheck.reason) {
+        addLog(`Merge blocked (local spatial): ${spatialCheck.reason}`)
+        toast.message(spatialCheck.reason, { duration: 2200 })
+      }
+      return
+    }
     const result = store.destructiveMerge({
       roomIds: destructiveMergePlan.joinRoomIds,
       objectIds: destructiveMergePlan.joinObjectIds,

@@ -1,13 +1,12 @@
 /**
- * Destructive room merge — axis-aligned bounding union → single `RoomFrame` (4 vertices).
+ * Destructive room merge — boolean polygon union → single `RoomFrame` with multi-sided perimeter when needed.
  */
 
 import {
-  clockwiseRectRing,
   sanitizeRoomFrame,
-  unionParticipantBounds,
   type SimpleBounds,
 } from './geometry-sanitize'
+import { unionMergeSelection } from '@/src/utils/layoutMergeEngine'
 import type { FloorPlanDoc, PlacedObject, RoomFrame } from './types'
 
 /** Prefer the participant anchored at the union min corner so origin shifts are minimal. */
@@ -59,12 +58,15 @@ export function mergeRoomsToUnion(
     }
   }
 
-  const union = unionParticipantBounds(frames, objects)
+  const { union, reason: unionReason } = unionMergeSelection(doc, {
+    roomIds: selection.roomIds,
+    objectIds: selection.objectIds,
+  })
   if (!union) {
     return {
       doc,
       primaryRoomId: frames[0]?.id ?? '',
-      reason: 'Could not compute union perimeter — overlap shapes first',
+      reason: unionReason ?? 'Could not compute union perimeter — overlap shapes first',
     }
   }
 
@@ -76,28 +78,23 @@ export function mergeRoomsToUnion(
     }
   }
 
-  const primaryRoomId = pickPrimaryRoomFrame(frames, union).id
+  const primaryRoomId = pickPrimaryRoomFrame(frames, union.aabb).id
   const removedRoomIds = new Set(frames.map((f) => f.id))
   removedRoomIds.delete(primaryRoomId)
 
   const primaryName =
     frames.map((f) => f.name).filter(Boolean).join(' + ') || 'Merged hall'
 
-  const perimeterRing = clockwiseRectRing(
-    union.minX,
-    union.minY,
-    union.maxX,
-    union.maxY
-  )
+  const { minX, minY, maxX, maxY } = union.aabb
 
   const primaryFrame: RoomFrame = sanitizeRoomFrame({
     id: primaryRoomId,
     name: primaryName,
-    originX: union.minX,
-    originY: union.minY,
-    widthFt: Math.max(doc.snapFt || 1, union.maxX - union.minX),
-    lengthFt: Math.max(doc.snapFt || 1, union.maxY - union.minY),
-    perimeterRing,
+    originX: minX,
+    originY: minY,
+    widthFt: Math.max(doc.snapFt || 1, maxX - minX),
+    lengthFt: Math.max(doc.snapFt || 1, maxY - minY),
+    perimeterRing: union.outerRing,
   })
 
   const removeObjectIds = new Set(objects.map((o) => o.id))
