@@ -10,6 +10,28 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (layout designer 1′ grid calibration, not deployed)
+- **`canvas-grid-spacing.ts`:** Layout designer canvas always uses 1′ minor cells + major line every 5′ (`CANVAS_GRID_MAJOR_EVERY`); removed table-size-based 2′ mesh that made 50′ rooms span only 5 major (10′) blocks.
+- **`floor-plan-v2.tsx`:** `canvasGridDocPatch()` keeps `gridSpacingFt` / `snapFt` at 1′ on load and table-size changes so pointer snap matches the visual grid.
+- **`floor-plan-canvas.tsx`:** Grid layer reads calibrated spacing (unchanged API; now always 1′/5′).
+- **Verify:** inline `canvasGridSpacingForTableFt(5..20)` → `minorFt === 1`; smoke `/coordinator/dashboard` — 50′ × 50′ Main Hall spans 50 minor subdivisions per edge; booth drop/snap unchanged at 1′.
+
+## Shipped this session (deploy script streaming fix, not deployed)
+- **`scripts/git-sync.ps1`:** `Invoke-NativeCommand` streams stdout/stderr line-by-line instead of buffering until process exit — `vercel deploy` no longer appears hung for 3-6 minutes with no output.
+- **`Invoke-VercelProdDeploy`:** Sets `CI=1`, disables telemetry, passes `--non-interactive` for Explorer/bat launches.
+- **`deploy-popuphub.ps1` / `ship.ps1`:** Use helper + hint that remote build takes several minutes.
+
+## Shipped this session (patron table dimension lock + layout rows, not deployed)
+- **`floor-plan-v2.tsx`:** Left-panel table size controls update the next-draw template only (`defaultPlacementSpec`); they no longer patch selected/placed booths when the pill changes after a draw auto-selects the new object.
+- **`use-canvas-pointer.ts` (+ wizard QA):** `commitDraft` snapshots booth footprint via `boothPatchForTableSize` at drop time (`width`, `height`, `tableLengthFt`, shape/purpose, vendor clusters).
+- **`table-size-pill.tsx` + `canvas-command-bar-blocks.tsx` (+ QA):** New `PatronTableSizeRows` — circle row and rectangle row (`flex-col` / `flex-nowrap`) with 5′/6′/8′ size pills; toolbar block wrappers use full width.
+- **Verify:** `npx tsx scripts/verify-canvas-state-smoke.ts` — 23/23 pass.
+
+## Shipped this session (initial room modal — table size removed, not deployed)
+- **`initial-room-modal.tsx`:** Removed vendor table size selector (`Vendor table size` label, `TABLE SIZE` grid, caption) from **Create your first room**; modal now only collects Width/Length (ft) + **Open layout designer**.
+- **`dashboard-bootstrap.tsx` + `Dashboard_qa.tsx`:** `onConfirm(widthFt, lengthFt)` passes footprint only; `appendLayoutRoom` defaults `baseline_table_length_ft` to 6′ (`DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT`).
+- **Verify:** `npx tsx scripts/verify-table-size-default.ts` — 19/19 pass; `tsc --noEmit` clean. Smoke: `/coordinator/dashboard` on event with no saved rooms — modal shows dimensions only; canvas opens with 6′ baseline; table size changeable from designer toolbar.
+
 ## Shipped this session (tooltip height stretch fix, not deployed)
 - **`components/coordinator/tooltip-wrapper.tsx`:** Anchor uses `relative inline-flex h-auto w-fit self-start` so flex toolbars no longer stretch the positioning box to full row height; bubble gets explicit `h-auto w-max`. Optional `className` prop (e.g. `w-full` for catalog rows).
 - **`components/ui/tooltip.tsx`:** `TooltipTrigger` and `TooltipContent`/`Positioner` constrained with `h-auto w-fit self-start` — HelpCircle triggers no longer inherit flex cross-axis stretch.
@@ -17,7 +39,7 @@
 
 ## Shipped this session (vendor table size selector — modular presets, not deployed)
 - **`lib/booth-planner/layout-table-size.ts`:** Replaced single-dimension sizes (7′/9′ removed) with modular vendor presets: 5/6/8′ singles plus 10/12/15/16/18/20′ combined footprints (`VENDOR_TABLE_SIZE_OPTIONS`).
-- **`components/coordinator/table-size-selector.tsx`:** 3×3 grid with modular sub-labels `(5′×2)` etc.; used by **Create your first room** modal (`initial-room-modal.tsx`).
+- **`components/coordinator/table-size-selector.tsx`:** 3×3 grid with modular sub-labels `(5′×2)` etc.; used by wizard capacity step and booth planner (not initial room modal).
 - **`table-cluster-layout.ts` + `table-booth-consolidation.ts` + `use-canvas-pointer.ts`:** Contiguous multi-table clusters on draw/resize; geometry uses total length × 2′ depth.
 - **`canvas-objects.tsx`:** Vertical dividers between sub-tables in clustered vendor booths.
 - **Verify:** `npx tsx scripts/verify-table-size-default.ts` — 19/19 pass; `tsc --noEmit` clean.
@@ -256,7 +278,7 @@
 2. **Step 3 Add room smoke-test** — `/coordinator/events/new` Step 3 with zero rooms: Width/Length inputs + Add room button visible (not clipped); page scrolls if toolbar exceeds viewport
 2. **Global scroll smoke-test** — `/coordinator/events/new` Step 3 + `/coordinator/dashboard`: only one browser scrollbar (right edge); no nested canvas/map scroll track; Ctrl+wheel still zooms canvas
 2. **Canvas wheel smoke-test** — `/coordinator/dashboard`: scroll wheel over canvas scrolls page (not inner trap); Ctrl+wheel still zooms
-2. **Mobile smoke-test** — `/discover` scroll + reduced footer; `/coordinator/dashboard`: initial room modal first, table size selectable
+2. **Mobile smoke-test** — `/discover` scroll + reduced footer; `/coordinator/dashboard`: initial room modal (dimensions only), then table size from designer menu
 2. **Loader smoke-test** — hard refresh: perimeter booths, centered full logo, no grid/dash lines
 3. **Wizard smoke-test** — Step 2 booth fee / discount backspace; category price placeholders
 4. **Instant book** — re-run `npx tsx scripts/verify-instant-book-category-limits.ts` after any apply-route edits (currently 4/4)

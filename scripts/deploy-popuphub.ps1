@@ -103,7 +103,8 @@ try {
     $deployUrl = 'https://popuphub.ca'
     if (-not $SkipDeploy) {
         Write-Step 'Deploying to Vercel (production)'
-        $deployResult = Invoke-NativeCommand -FilePath 'npx' -ArgumentList @('vercel', 'deploy', '--prod', '--yes') -CaptureLines
+        Write-Host 'Remote build usually takes 3-6 minutes; upload/build logs stream below.' -ForegroundColor DarkGray
+        $deployResult = Invoke-VercelProdDeploy -CaptureLines
         if ($deployResult.ExitCode -ne 0) { throw 'Vercel deploy failed' }
         $urlMatch = ($deployResult.Lines | Select-String -Pattern 'https://[^\s]+\.vercel\.app' -AllMatches | Select-Object -Last 1)
         if ($urlMatch) {

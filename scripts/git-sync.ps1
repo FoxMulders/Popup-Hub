@@ -12,6 +12,8 @@ function Get-NativeCommandLineText {
 
 # Run a native exe without stderr tripping $ErrorActionPreference = 'Stop'.
 # With -CaptureLines, returns @{ ExitCode; Lines } instead of an exit code alone.
+# Output is streamed line-by-line (assigning 2>&1 to a variable buffers until exit and
+# makes long commands such as `vercel deploy` look hung).
 function Invoke-NativeCommand {
     param(
         [Parameter(Mandatory = $true)]
@@ -24,19 +26,22 @@ function Invoke-NativeCommand {
     $ErrorActionPreference = 'Continue'
     $captured = [System.Collections.Generic.List[string]]::new()
     try {
-        $raw = if ($ArgumentList.Count -gt 0) {
-            & $FilePath @ArgumentList 2>&1
-        } else {
-            & $FilePath 2>&1
-        }
-        foreach ($line in @($raw)) {
-            $text = Get-NativeCommandLineText $line
-            if (-not $text) { continue }
+        $emitLine = {
+            param($Line)
+            $text = Get-NativeCommandLineText $Line
+            if (-not $text) { return }
             Write-Host $text
             if ($CaptureLines) {
                 [void]$captured.Add($text)
             }
         }
+
+        if ($ArgumentList.Count -gt 0) {
+            & $FilePath @ArgumentList 2>&1 | ForEach-Object { & $emitLine $_ }
+        } else {
+            & $FilePath 2>&1 | ForEach-Object { & $emitLine $_ }
+        }
+
         $exitCode = 0
         if ($null -ne $LASTEXITCODE) {
             $exitCode = [int]$LASTEXITCODE
@@ -47,6 +52,26 @@ function Invoke-NativeCommand {
         return $exitCode
     } finally {
         $ErrorActionPreference = $prevEa
+    }
+}
+
+# Vercel deploy can run several minutes; force non-interactive CI mode for Explorer launches.
+function Invoke-VercelProdDeploy {
+    param([switch]$CaptureLines)
+
+    $prevCi = $env:CI
+    $prevTelemetry = $env:VERCEL_TELEMETRY_DISABLED
+    try {
+        $env:CI = '1'
+        $env:VERCEL_TELEMETRY_DISABLED = '1'
+        $args = @('vercel', 'deploy', '--prod', '--yes', '--non-interactive')
+        if ($CaptureLines) {
+            return Invoke-NativeCommand -FilePath 'npx' -ArgumentList $args -CaptureLines
+        }
+        return Invoke-NativeCommand -FilePath 'npx' -ArgumentList $args
+    } finally {
+        if ($null -eq $prevCi) { Remove-Item Env:CI -ErrorAction SilentlyContinue } else { $env:CI = $prevCi }
+        if ($null -eq $prevTelemetry) { Remove-Item Env:VERCEL_TELEMETRY_DISABLED -ErrorAction SilentlyContinue } else { $env:VERCEL_TELEMETRY_DISABLED = $prevTelemetry }
     }
 }
 

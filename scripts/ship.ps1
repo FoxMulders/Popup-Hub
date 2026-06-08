@@ -62,7 +62,8 @@ try {
 
     if (-not $SkipDeploy) {
         Write-Step "Deploying to Vercel (production)"
-        if ((Invoke-NativeCommand -FilePath 'npx' -ArgumentList @('vercel', 'deploy', '--prod', '--yes')) -ne 0) { throw "Deploy failed" }
+        Write-Host "Remote build usually takes 3-6 minutes; upload/build logs stream below." -ForegroundColor DarkGray
+        if ((Invoke-VercelProdDeploy) -ne 0) { throw "Deploy failed" }
     }
 
     Write-Step "Updating session handoff"

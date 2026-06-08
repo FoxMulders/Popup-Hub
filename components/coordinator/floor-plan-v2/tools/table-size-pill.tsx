@@ -1,5 +1,6 @@
 'use client'
 
+import { Circle, RectangleHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   TABLE_SIZES,
@@ -14,7 +15,7 @@ import {
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
 
-export type TableSizePillSections = 'all' | 'vendor' | 'patron'
+export type TableSizePillSections = 'all' | 'vendor' | 'patron' | 'patron-rows'
 
 interface TableSizePillProps {
   value: TableSizeSpec
@@ -26,11 +27,144 @@ interface TableSizePillProps {
   compact?: boolean
 }
 
+export interface PatronTableSizeRowsProps {
+  value: TableSizeSpec
+  onSelectSize: (selection: TableSizeSpec) => void
+  onRoundToolClick?: () => void
+  onRectToolClick?: () => void
+  roundToolActive?: boolean
+  rectToolActive?: boolean
+  disabled?: boolean
+  compact?: boolean
+  className?: string
+}
+
 function sizeButtonClass(active: boolean, disabled: boolean): string {
   return cn(
     'inline-flex h-full min-w-[1.85rem] shrink-0 items-center justify-center px-1.5 text-[10px] font-semibold tabular-nums border-r border-stone-200 last:border-r-0 transition-colors sm:min-w-[2rem] sm:px-2 sm:text-[11px]',
     active ? 'bg-sky-600 text-white' : 'text-stone-700 hover:bg-stone-100',
     disabled && 'pointer-events-none'
+  )
+}
+
+function patronToolIconClass(active: boolean, compact: boolean): string {
+  return cn(
+    'inline-flex shrink-0 items-center justify-center rounded-md border transition-colors',
+    compact ? 'h-[1.8rem] w-[1.8rem]' : 'h-8 w-8',
+    active
+      ? 'border-violet-300 bg-violet-200 text-violet-950'
+      : 'border-stone-200 bg-violet-50/80 text-violet-900 hover:bg-violet-100'
+  )
+}
+
+function GuestTableSizeButtons({
+  shape,
+  value,
+  onChange,
+  disabled = false,
+  compact = false,
+}: {
+  shape: 'round' | 'rectangular'
+  value: TableSizeSpec
+  onChange: (selection: TableSizeSpec) => void
+  disabled?: boolean
+  compact?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'inline-flex min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-stone-200 bg-white text-[11px] font-semibold text-stone-700',
+        compact ? 'h-[1.8rem]' : 'h-8',
+        disabled && 'opacity-60'
+      )}
+      role="group"
+      aria-label={shape === 'round' ? 'Round table sizes' : 'Rectangle table sizes'}
+    >
+      {GUEST_TABLE_LENGTHS_FT.map((ft) => {
+        const selection =
+          shape === 'round' ? guestRoundTableSpec(ft) : guestRectTableSpec(ft)
+        const active = tableSizeSpecsEqual(value, selection)
+        return (
+          <button
+            key={`${shape}-${ft}`}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(selection)}
+            aria-pressed={active}
+            title={
+              shape === 'round'
+                ? `Set guest round table diameter to ${ft} ft`
+                : `Set patron banquet table length to ${ft} ft`
+            }
+            className={sizeButtonClass(active, disabled)}
+          >
+            {ft}′
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Patron layout sidebar — circle row and rectangle row, never wrapped together. */
+export function PatronTableSizeRows({
+  value,
+  onSelectSize,
+  onRoundToolClick,
+  onRectToolClick,
+  roundToolActive = false,
+  rectToolActive = false,
+  disabled = false,
+  compact = false,
+  className,
+}: PatronTableSizeRowsProps) {
+  return (
+    <div
+      className={cn('flex w-full min-w-0 flex-col gap-0.5', className)}
+      role="group"
+      aria-label="Patron table sizes"
+    >
+      <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-0.5">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onRoundToolClick}
+          aria-pressed={roundToolActive}
+          title="Draw patron round table"
+          aria-label="Circle tables"
+          className={patronToolIconClass(roundToolActive, compact)}
+        >
+          <Circle className="h-3.5 w-3.5" aria-hidden />
+        </button>
+        <GuestTableSizeButtons
+          shape="round"
+          value={value}
+          onChange={onSelectSize}
+          disabled={disabled}
+          compact={compact}
+        />
+      </div>
+      <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-0.5">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onRectToolClick}
+          aria-pressed={rectToolActive}
+          title="Draw patron banquet table"
+          aria-label="Rectangle tables"
+          className={patronToolIconClass(rectToolActive, compact)}
+        >
+          <RectangleHorizontal className="h-3.5 w-3.5" aria-hidden />
+        </button>
+        <GuestTableSizeButtons
+          shape="rectangular"
+          value={value}
+          onChange={onSelectSize}
+          disabled={disabled}
+          compact={compact}
+        />
+      </div>
+    </div>
   )
 }
 
@@ -47,6 +181,18 @@ export function TableSizePill({
   className,
   compact = false,
 }: TableSizePillProps) {
+  if (sections === 'patron-rows') {
+    return (
+      <PatronTableSizeRows
+        value={value}
+        onSelectSize={onChange}
+        disabled={disabled}
+        compact={compact}
+        className={className}
+      />
+    )
+  }
+
   const showVendor = sections === 'all' || sections === 'vendor'
   const showPatron = sections === 'all' || sections === 'patron'
   const ariaLabel =

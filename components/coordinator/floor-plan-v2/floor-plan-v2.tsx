@@ -23,7 +23,6 @@ import {
 import {
   isGuestTableBooth,
   normalizeTableSizeSpec,
-  tableSizeSpecFromBooth,
   vendorTableSpec,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
@@ -32,7 +31,7 @@ import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
-import { canvasGridSpacingForTableFt } from './canvas/canvas-grid-spacing'
+import { canvasGridDocPatch } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
 import {
@@ -651,11 +650,8 @@ function FloorPlanV2Workspace({
         onBaselineTableLengthChange?.(
           nextDefaultPlacement.ft as LayoutBaselineTableLengthFt
         )
-        const grid = canvasGridSpacingForTableFt(nextDefaultPlacement.ft)
-        store.patchDoc(
-          { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
-          { pushHistory: false }
-        )
+        const grid = canvasGridDocPatch()
+        store.patchDoc(grid, { pushHistory: false })
       }
     },
     [onBaselineTableLengthChange, store, syncPlacementTemplate]
@@ -670,46 +666,21 @@ function FloorPlanV2Workspace({
       defaultPlacementSpecRef.current = next
       return next
     })
-    const grid = canvasGridSpacingForTableFt(safeTableSizeFt)
-    store.patchDoc(
-      { gridSpacingFt: grid.minorFt, snapFt: grid.minorFt },
-      { pushHistory: false }
-    )
+    store.patchDoc(canvasGridDocPatch(), { pushHistory: false })
   }, [safeTableSizeFt, store.patchDoc])
 
-  const tableSizePillValue = useMemo<TableSizeSpec>(() => {
-    const selected = Array.from(store.selectedIds)
-    if (selected.length !== 1) return defaultPlacementSpec
-    const obj = store.doc.objects.find((o) => o.id === selected[0])
-    if (obj?.kind !== 'booth') return defaultPlacementSpec
-    const booth = obj as BoothObject
-    return (
-      tableSizeSpecFromBooth(booth) ??
-      normalizeTableSizeSpec(defaultPlacementSpec, safeTableSizeFt)
-    )
-  }, [store.selectedIds, store.doc.objects, defaultPlacementSpec, safeTableSizeFt])
+  /** Toolbar pill reflects the next-placement template — not the selection. */
+  const tableSizePillValue = defaultPlacementSpec
 
   const handleTableSizeChange = useCallback(
     (selection: TableSizeSpec) => {
       const normalized = normalizeTableSizeSpec(selection, safeTableSizeFt)
-      const { objectPatches, nextDefaultPlacement } = planTableSizeChange({
-        objects: store.doc.objects,
-        selectedIds: store.selectedIds,
-        selection: normalized,
-      })
-      if (objectPatches.length > 0) {
-        store.updateObjects(objectPatches)
-        // Keep the next-draw template aligned with the pill (e.g. Round 8′ on a
-        // selected patron table) so a follow-up draw does not fall back to vendor.
-        syncPlacementTemplate(normalized)
-        return
-      }
-      if (nextDefaultPlacement != null) {
-        applyDefaultPlacementSpec(nextDefaultPlacement)
-        store.setSelection([])
-      }
+      // Left-panel size controls only update the draw template; placed objects
+      // keep the dimensions copied at drop time.
+      applyDefaultPlacementSpec(normalized)
+      store.setSelection([])
     },
-    [store, safeTableSizeFt, applyDefaultPlacementSpec, syncPlacementTemplate]
+    [store, safeTableSizeFt, applyDefaultPlacementSpec]
   )
 
   const handlePrepareTableDraw = useCallback(

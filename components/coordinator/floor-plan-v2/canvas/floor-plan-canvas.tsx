@@ -35,7 +35,10 @@ import {
   DEFAULT_TABLE_SIZE,
 } from '@/lib/booth-planner/layout-table-size'
 import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
-import { canvasGridSpacingForTableFt } from './canvas-grid-spacing'
+import {
+  CANVAS_GRID_MAJOR_EVERY,
+  canvasGridSpacingForTableFt,
+} from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { ToolState } from '../tools/types'
@@ -594,7 +597,7 @@ export function FloorPlanCanvas({
             widthFt={store.doc.canvasWidthFt}
             lengthFt={store.doc.canvasLengthFt}
             spacingFt={gridSpacing.minorFt}
-            majorEvery={gridSpacing.majorEvery}
+            majorEvery={gridSpacing.majorEvery ?? CANVAS_GRID_MAJOR_EVERY}
             pxPerFt={pxPerFt}
           />
           <RoomDropZones

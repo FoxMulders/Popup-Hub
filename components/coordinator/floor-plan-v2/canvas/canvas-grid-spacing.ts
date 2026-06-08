@@ -1,4 +1,8 @@
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
+import {
+  DEFAULT_GRID_SPACING_FT,
+  DEFAULT_SNAP_FT,
+} from '../state/types'
 
 export interface CanvasGridSpacingConfig {
   /** Minor grid line spacing in feet (matches snap increment). */
@@ -7,19 +11,30 @@ export interface CanvasGridSpacingConfig {
   majorEvery: number
 }
 
+/** Layout designer canvas: 1′ minor cells, major line every 5′ (25′ accent rhythm). */
+export const CANVAS_GRID_MAJOR_EVERY = 5
+
 /**
- * Visual + snap grid tuned to the active TABLE SIZE pill.
- * 6′–8′ tables → 1′ cells; larger halls → 2′ cells so the mesh stays readable.
+ * Visual + snap grid for the v2 layout designer canvas.
+ * Always 1′ per cell so room footprints (e.g. 50′ × 50′) align with grid subdivisions
+ * regardless of vendor table size preset.
  */
 export function canvasGridSpacingForTableFt(
-  tableLengthFt: LayoutBaselineTableLengthFt | number
+  _tableLengthFt?: LayoutBaselineTableLengthFt | number
 ): CanvasGridSpacingConfig {
-  const ft = tableLengthFt
-  if (ft <= 8) {
-    return { minorFt: 1, majorEvery: 5 }
+  return {
+    minorFt: DEFAULT_GRID_SPACING_FT,
+    majorEvery: CANVAS_GRID_MAJOR_EVERY,
   }
-  if (ft <= 12) {
-    return { minorFt: 2, majorEvery: 5 }
+}
+
+/** Document fields to keep grid rendering and pointer snap in sync. */
+export function canvasGridDocPatch(): {
+  gridSpacingFt: number
+  snapFt: number
+} {
+  return {
+    gridSpacingFt: DEFAULT_GRID_SPACING_FT,
+    snapFt: DEFAULT_SNAP_FT,
   }
-  return { minorFt: 2, majorEvery: 6 }
 }

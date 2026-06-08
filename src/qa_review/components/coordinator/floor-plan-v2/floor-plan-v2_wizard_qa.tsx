@@ -22,7 +22,6 @@ import {
 import {
   isGuestTableBooth,
   normalizeTableSizeSpec,
-  tableSizeSpecFromBooth,
   vendorTableSpec,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
@@ -636,37 +635,16 @@ function FloorPlanV2Workspace({
     )
   }, [safeTableSizeFt, store.patchDoc])
 
-  const tableSizePillValue = useMemo<TableSizeSpec>(() => {
-    const selected = Array.from(store.selectedIds)
-    if (selected.length !== 1) return defaultPlacementSpec
-    const obj = store.doc.objects.find((o) => o.id === selected[0])
-    if (obj?.kind !== 'booth') return defaultPlacementSpec
-    const booth = obj as BoothObject
-    return (
-      tableSizeSpecFromBooth(booth) ??
-      normalizeTableSizeSpec(defaultPlacementSpec, safeTableSizeFt)
-    )
-  }, [store.selectedIds, store.doc.objects, defaultPlacementSpec, safeTableSizeFt])
+  /** Toolbar pill reflects the next-placement template — not the selection. */
+  const tableSizePillValue = defaultPlacementSpec
 
   const handleTableSizeChange = useCallback(
     (selection: TableSizeSpec) => {
       const normalized = normalizeTableSizeSpec(selection, safeTableSizeFt)
-      const { objectPatches, nextDefaultPlacement } = planTableSizeChange({
-        objects: store.doc.objects,
-        selectedIds: store.selectedIds,
-        selection: normalized,
-      })
-      if (objectPatches.length > 0) {
-        store.updateObjects(objectPatches)
-        syncPlacementTemplate(normalized)
-        return
-      }
-      if (nextDefaultPlacement != null) {
-        applyDefaultPlacementSpec(nextDefaultPlacement)
-        store.setSelection([])
-      }
+      applyDefaultPlacementSpec(normalized)
+      store.setSelection([])
     },
-    [store, safeTableSizeFt, applyDefaultPlacementSpec, syncPlacementTemplate]
+    [store, safeTableSizeFt, applyDefaultPlacementSpec]
   )
 
   const handlePrepareTableDraw = useCallback(

@@ -55,6 +55,7 @@ import {
   resolvePlacementRoomIdForObject,
 } from '@/components/coordinator/floor-plan-v2/geometry/is-point-in-room'
 import { resolveDrawCommitRect } from '@/components/coordinator/floor-plan-v2/interactions/use-canvas-pointer'
+import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
 import {
   objectResizeFromHandle,
   patchForObjectResize,
@@ -1537,17 +1538,15 @@ function commitDraft(
       const seedCategory = isGuestTable
         ? null
         : pickLeastUsedCategory(store, eventCategoryNames)
+      const sizeSnapshot =
+        defaultBoothTableSpec != null
+          ? boothPatchForTableSize(base, defaultBoothTableSpec)
+          : null
       obj = {
         ...base,
         kind: 'booth',
         accentColor: null,
-        ...(defaultBoothTableSpec != null
-          ? {
-              tableLengthFt: defaultBoothTableSpec.ft,
-              tableShape: defaultBoothTableSpec.shape,
-              tablePurpose: defaultBoothTableSpec.purpose,
-            }
-          : {}),
+        ...(sizeSnapshot ?? {}),
         ...(seedCategory ? { categoryName: seedCategory } : {}),
       }
       break

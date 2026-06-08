@@ -258,7 +258,7 @@ export function CanvasToolbarStaticQa({
               <div
                 key={blockId}
                 className={cn(
-                  'inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
+                  'flex w-full min-w-0 max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
                   compact ? 'py-0.5' : 'py-0.5'
                 )}
               >

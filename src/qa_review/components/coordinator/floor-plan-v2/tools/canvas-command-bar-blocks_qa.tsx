@@ -29,7 +29,6 @@ import {
   Truck,
   Undo2,
   RectangleHorizontal,
-  Circle,
   Eye,
   EyeOff,
 } from 'lucide-react'
@@ -86,7 +85,7 @@ import {
   toolbarDividerClass,
   toolbarIconButtonSize,
 } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/command-button_qa'
-import { TableSizePill } from '@/components/coordinator/floor-plan-v2/tools/table-size-pill'
+import { TableSizePill, PatronTableSizeRows } from '@/components/coordinator/floor-plan-v2/tools/table-size-pill'
 import type { CanvasToolbarBlockId } from '@/components/coordinator/floor-plan-v2/tools/toolbar-order'
 import {
   guestRectTableSpec,
@@ -100,26 +99,6 @@ import { TooltipWrapperQa } from '@/src/qa_review/components/coordinator/dashboa
 import { QA_ADD_ROOM_FORM_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
-
-const PATRON_PLACEMENT_TOOLS: Array<{
-  mode: Exclude<TablePlacementMode, 'vendor'>
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-}> = [
-  {
-    mode: 'guest-round',
-    label: 'Round',
-    icon: Circle,
-    title: QA_TIP_ROUND_TABLE,
-  },
-  {
-    mode: 'guest-rect',
-    label: 'Rectangle',
-    icon: RectangleHorizontal,
-    title: QA_TIP_BANQUET_TABLE,
-  },
-]
 
 function AutoArrangeGroup({
   label,
@@ -336,7 +315,10 @@ export function renderCanvasCommandBarBlock(
   }
 
   function activateTablePlacement(mode: TablePlacementMode) {
-    const spec = tableSpecForPlacementMode(mode)
+    activateTableSize(tableSpecForPlacementMode(mode))
+  }
+
+  function activateTableSize(spec: TableSizeSpec) {
     if (ctx.onPrepareTableDraw) {
       ctx.onPrepareTableDraw(spec)
       return
@@ -541,50 +523,36 @@ export function renderCanvasCommandBarBlock(
     case 'patron':
       return (
         <>
-          <div
-            className="inline-flex items-center gap-0.5"
-            role="group"
-            aria-label="Patron table tools"
-          >
-            {PATRON_PLACEMENT_TOOLS.map((tool) => {
-              const active = isTablePlacementActive(tool.mode)
-              return (
-                <CommandButton
-                  key={tool.mode}
-                  onClick={() => activateTablePlacement(tool.mode)}
-                  title={tool.title}
-                  active={active}
-                  className={
-                    active
-                      ? 'bg-violet-200 text-violet-950 hover:bg-violet-200'
-                      : 'bg-violet-50/80 text-violet-900 hover:bg-violet-100'
-                  }
-                >
-                  <tool.icon className="h-3.5 w-3.5" />
-                </CommandButton>
-              )
-            })}
-          </div>
           {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
-            <>
-              <div className={toolbarDividerClass(compact)} aria-hidden />
-              <TableSizePill
-                value={ctx.tableSizeFt}
-                onChange={ctx.onTableSizeChange}
-                sections="patron"
-                compact={compact}
-                className="shrink-0"
-              />
-              {ctx.highlightedSelectionMetrics &&
-              ctx.tableSizeFt.purpose === 'guest' ? (
-                <span
-                  className="hidden shrink-0 rounded-md border border-violet-200/90 bg-violet-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-violet-900 sm:inline"
-                  aria-live="polite"
-                >
-                  {ctx.highlightedSelectionMetrics}
-                </span>
-              ) : null}
-            </>
+            <PatronTableSizeRows
+              value={ctx.tableSizeFt}
+              onSelectSize={activateTableSize}
+              onRoundToolClick={() =>
+                activateTableSize(
+                  guestRoundTableSpec(resolveGuestTableFt(ctx.tableSizeFt, 'round'))
+                )
+              }
+              onRectToolClick={() =>
+                activateTableSize(
+                  guestRectTableSpec(
+                    resolveGuestTableFt(ctx.tableSizeFt, 'rectangular')
+                  )
+                )
+              }
+              roundToolActive={isTablePlacementActive('guest-round')}
+              rectToolActive={isTablePlacementActive('guest-rect')}
+              compact={compact}
+              className="w-full min-w-0 shrink-0"
+            />
+          ) : null}
+          {ctx.highlightedSelectionMetrics &&
+          ctx.tableSizeFt?.purpose === 'guest' ? (
+            <span
+              className="hidden shrink-0 rounded-md border border-violet-200/90 bg-violet-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-violet-900 sm:inline"
+              aria-live="polite"
+            >
+              {ctx.highlightedSelectionMetrics}
+            </span>
           ) : null}
           {ctx.onPatronAutoArrange ? (
             <>

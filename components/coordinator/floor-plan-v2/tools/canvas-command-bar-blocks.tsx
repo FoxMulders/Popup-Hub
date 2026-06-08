@@ -29,7 +29,6 @@ import {
   Truck,
   Undo2,
   RectangleHorizontal,
-  Circle,
   Eye,
   EyeOff,
 } from 'lucide-react'
@@ -49,7 +48,7 @@ import {
   toolbarDividerClass,
   toolbarIconButtonSize,
 } from './command-button'
-import { TableSizePill } from './table-size-pill'
+import { TableSizePill, PatronTableSizeRows } from './table-size-pill'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
   guestRectTableSpec,
@@ -61,26 +60,6 @@ import {
 } from '@/lib/booth-planner/table-shape'
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
-
-const PATRON_PLACEMENT_TOOLS: Array<{
-  mode: Exclude<TablePlacementMode, 'vendor'>
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-}> = [
-  {
-    mode: 'guest-round',
-    label: 'Round',
-    icon: Circle,
-    title: 'Draw patron round table — size from Round column',
-  },
-  {
-    mode: 'guest-rect',
-    label: 'Rectangle',
-    icon: RectangleHorizontal,
-    title: 'Draw patron banquet table — size from Rectangle column',
-  },
-]
 
 function AutoArrangeGroup({
   label,
@@ -298,7 +277,10 @@ export function renderCanvasCommandBarBlock(
   }
 
   function activateTablePlacement(mode: TablePlacementMode) {
-    const spec = tableSpecForPlacementMode(mode)
+    activateTableSize(tableSpecForPlacementMode(mode))
+  }
+
+  function activateTableSize(spec: TableSizeSpec) {
     if (ctx.onPrepareTableDraw) {
       ctx.onPrepareTableDraw(spec)
       return
@@ -503,50 +485,36 @@ export function renderCanvasCommandBarBlock(
     case 'patron':
       return (
         <>
-          <div
-            className="inline-flex items-center gap-0.5"
-            role="group"
-            aria-label="Patron table tools"
-          >
-            {PATRON_PLACEMENT_TOOLS.map((tool) => {
-              const active = isTablePlacementActive(tool.mode)
-              return (
-                <CommandButton
-                  key={tool.mode}
-                  onClick={() => activateTablePlacement(tool.mode)}
-                  title={tool.title}
-                  active={active}
-                  className={
-                    active
-                      ? 'bg-violet-200 text-violet-950 hover:bg-violet-200'
-                      : 'bg-violet-50/80 text-violet-900 hover:bg-violet-100'
-                  }
-                >
-                  <tool.icon className="h-3.5 w-3.5" />
-                </CommandButton>
-              )
-            })}
-          </div>
           {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
-            <>
-              <div className={toolbarDividerClass(compact)} aria-hidden />
-              <TableSizePill
-                value={ctx.tableSizeFt}
-                onChange={ctx.onTableSizeChange}
-                sections="patron"
-                compact={compact}
-                className="shrink-0"
-              />
-              {ctx.highlightedSelectionMetrics &&
-              ctx.tableSizeFt.purpose === 'guest' ? (
-                <span
-                  className="hidden shrink-0 rounded-md border border-violet-200/90 bg-violet-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-violet-900 sm:inline"
-                  aria-live="polite"
-                >
-                  {ctx.highlightedSelectionMetrics}
-                </span>
-              ) : null}
-            </>
+            <PatronTableSizeRows
+              value={ctx.tableSizeFt}
+              onSelectSize={activateTableSize}
+              onRoundToolClick={() =>
+                activateTableSize(
+                  guestRoundTableSpec(resolveGuestTableFt(ctx.tableSizeFt, 'round'))
+                )
+              }
+              onRectToolClick={() =>
+                activateTableSize(
+                  guestRectTableSpec(
+                    resolveGuestTableFt(ctx.tableSizeFt, 'rectangular')
+                  )
+                )
+              }
+              roundToolActive={isTablePlacementActive('guest-round')}
+              rectToolActive={isTablePlacementActive('guest-rect')}
+              compact={compact}
+              className="w-full min-w-0 shrink-0"
+            />
+          ) : null}
+          {ctx.highlightedSelectionMetrics &&
+          ctx.tableSizeFt?.purpose === 'guest' ? (
+            <span
+              className="hidden shrink-0 rounded-md border border-violet-200/90 bg-violet-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-violet-900 sm:inline"
+              aria-live="polite"
+            >
+              {ctx.highlightedSelectionMetrics}
+            </span>
           ) : null}
           {ctx.onPatronAutoArrange ? (
             <>

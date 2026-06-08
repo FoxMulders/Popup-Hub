@@ -12,9 +12,8 @@ import {
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import {
   boothDimensionsForTableSpec,
-  vendorBoothClusterExtrasForBaseline,
+  boothPatchForTableSize,
 } from '@/lib/booth-planner/table-booth-consolidation'
-import { isLayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { useDebugLog } from '../debug/debug-log-context'
@@ -1585,24 +1584,15 @@ function commitDraft(
       const seedCategory = isGuestTable
         ? null
         : pickLeastUsedCategory(store, eventCategoryNames)
-      const vendorClusterExtras =
-        !isGuestTable &&
-        defaultBoothTableSpec?.purpose === 'vendor' &&
-        isLayoutBaselineTableLengthFt(defaultBoothTableSpec.ft)
-          ? vendorBoothClusterExtrasForBaseline(defaultBoothTableSpec.ft)
+      const sizeSnapshot =
+        defaultBoothTableSpec != null
+          ? boothPatchForTableSize(base, defaultBoothTableSpec)
           : null
       obj = {
         ...base,
         kind: 'booth',
         accentColor: null,
-        ...(defaultBoothTableSpec != null
-          ? {
-              tableLengthFt: defaultBoothTableSpec.ft,
-              tableShape: defaultBoothTableSpec.shape,
-              tablePurpose: defaultBoothTableSpec.purpose,
-            }
-          : {}),
-        ...(vendorClusterExtras ?? {}),
+        ...(sizeSnapshot ?? {}),
         ...(seedCategory ? { categoryName: seedCategory } : {}),
       }
       break
