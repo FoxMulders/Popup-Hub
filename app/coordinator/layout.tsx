@@ -7,6 +7,8 @@ import {
   ACTIVE_PORTAL_COOKIE,
   getAvailablePortals,
   getDefaultDashboard,
+  parseActivePortal,
+  portalFromAccessiblePath,
 } from '@/lib/portals/active-portal'
 
 export default async function CoordinatorLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +31,19 @@ export default async function CoordinatorLayout({ children }: { children: React.
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
   const availablePortals = getAvailablePortals(profile.role)
+
+  const requiredPortal = portalFromAccessiblePath('/coordinator', profile.role)
+  if (requiredPortal !== 'coordinator') {
+    redirect(getDefaultDashboard(profile.role, 0))
+  }
+
+  if (parseActivePortal(portalCookie) !== 'coordinator') {
+    cookieStore.set(ACTIVE_PORTAL_COOKIE, 'coordinator', {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+    })
+  }
 
   return (
     <PortalSiteChrome

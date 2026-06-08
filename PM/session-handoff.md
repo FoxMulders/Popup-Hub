@@ -28,6 +28,13 @@
 - **npm scripts:** `mobile:assets`, `mobile:sync`, `mobile:ios:open`, `mobile:ios:add`.
 - **OAuth URL scheme:** `ca.popuphub.app://auth/callback` patched into `ios/App/App/Info.plist` — add same redirect in Supabase Auth before TestFlight sign-in smoke.
 
+## Shipped this session (portal route sync, not deployed)
+- **Active portal resolution (`lib/portals/active-portal.ts`):** Portal-prefixed routes (`/coordinator/*`, `/vendor/*`) now override the `active_portal` cookie in `resolveActivePortal` so top nav tabs match the URL (Option A sync).
+- **Middleware (`lib/supabase/middleware.ts`):** Auto-sets `active_portal` cookie when visiting coordinator or vendor routes the account may access.
+- **Coordinator + vendor layouts:** Server-side cookie sync on portal route entry as a belt-and-suspenders guard.
+- **Workspace chrome (`portal-workspace-layout.tsx`):** MARKET OPS sidebar / telemetry panels only render when route prefix matches the workspace portal prop.
+- **QA:** `lib/portals/qa-active-portal.ts` — 5 assertions for route/cookie precedence.
+
 ## Shipped this session (Capacitor iOS shell, not deployed)
 - **Capacitor 7 deps:** `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/app`, `@capacitor/splash-screen`, `@capacitor/status-bar`.
 - **`capacitor.config.ts`:** App id `ca.popuphub.app`, prod URL `https://popuphub.ca`, `allowNavigation` for Supabase/OAuth/Stripe/Square domains, splash + status bar brand colors (`#faf8f5` / `#2d5a27`).

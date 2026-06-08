@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { detectPortalFromPath } from '@/lib/portals/active-portal'
 import { CommandCenterShell } from './command-center-shell'
 import { CoordinatorWorkspaceRail } from './coordinator-workspace-rail'
 import { CoordinatorContextPanel } from './coordinator-context-panel'
@@ -37,7 +38,13 @@ function bypassWorkspace(pathname: string): boolean {
   )
 }
 
+function portalMatchesRoute(pathname: string, portal: WorkspacePortal): boolean {
+  const routePortal = detectPortalFromPath(pathname)
+  return routePortal !== 'patron' && routePortal === portal
+}
+
 function useWorkspaceMode(pathname: string, portal: WorkspacePortal): boolean {
+  if (!portalMatchesRoute(pathname, portal)) return false
   if (bypassWorkspace(pathname)) return false
   if (isFullCommandCenterRoute(pathname)) return false
   if (isCoordinatorImmersiveRoute(pathname)) return false

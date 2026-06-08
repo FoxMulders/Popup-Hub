@@ -1,6 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import { getDefaultDashboard, parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
+import {
+  ACTIVE_PORTAL_COOKIE,
+  canAccessPortal,
+  detectPortalFromPath,
+  getDefaultDashboard,
+  parseActivePortal,
+} from '@/lib/portals/active-portal'
 import {
   DEV_MOCK_ROLE_PARAM,
   devMockLoginPath,
@@ -109,6 +115,21 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = getDefaultDashboard(role, 0, activePortal)
     return NextResponse.redirect(url)
+  }
+
+  // Option A: deep links to /coordinator/* or /vendor/* sync the active portal cookie.
+  if (user && profileRole) {
+    const pathPortal = detectPortalFromPath(pathname)
+    if (pathPortal !== 'patron' && canAccessPortal(profileRole, pathPortal)) {
+      const cookiePortal = parseActivePortal(request.cookies.get(ACTIVE_PORTAL_COOKIE)?.value)
+      if (cookiePortal !== pathPortal) {
+        supabaseResponse.cookies.set(ACTIVE_PORTAL_COOKIE, pathPortal, {
+          path: '/',
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: 'lax',
+        })
+      }
+    }
   }
 
   return supabaseResponse

@@ -55,6 +55,17 @@ export function detectPortalFromPath(pathname: string): ActivePortal {
   return 'patron'
 }
 
+/** Portal implied by a route prefix when the signed-in account may access it. */
+export function portalFromAccessiblePath(
+  pathname: string,
+  role: Role | string | null | undefined
+): ActivePortal | null {
+  const fromPath = detectPortalFromPath(pathname)
+  if (fromPath === 'patron') return null
+  if (canAccessPortal(role, fromPath)) return fromPath
+  return null
+}
+
 export function resolveActivePortal(
   cookieValue: string | undefined,
   profile: Profile | null,
@@ -63,6 +74,12 @@ export function resolveActivePortal(
   const role = profile?.role ?? 'shopper'
   const available = getAvailablePortals(role)
   const parsed = parseActivePortal(cookieValue)
+
+  // Portal-prefixed routes win over the cookie so nav chrome matches the URL.
+  if (pathname) {
+    const fromAccessiblePath = portalFromAccessiblePath(pathname, role)
+    if (fromAccessiblePath) return fromAccessiblePath
+  }
 
   if (parsed && available.includes(parsed)) {
     return parsed
