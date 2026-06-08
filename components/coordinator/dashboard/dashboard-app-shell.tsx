@@ -19,6 +19,8 @@ export interface DashboardAppShellProps {
   ariaBusy?: boolean
   /** Optional class overrides for the left utility rail */
   leftClassName?: string
+  /** Narrow tablet dock (md–lg) — icon rail + sliding drawer for layout tools. */
+  tabletLeft?: ReactNode
 }
 
 /**
@@ -38,6 +40,7 @@ export function DashboardAppShell({
   id = 'coordinator-dashboard-root',
   ariaBusy,
   leftClassName,
+  tabletLeft,
 }: DashboardAppShellProps) {
   return (
     <div
@@ -65,10 +68,26 @@ export function DashboardAppShell({
           immersive
             ? 'grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)]'
             : right
-              ? 'grid-cols-1 lg:grid-cols-[var(--command-center-left,300px)_minmax(0,1fr)_var(--command-center-right,360px)]'
-              : 'grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)]'
+              ? cn(
+                  'grid-cols-1',
+                  tabletLeft && 'md:grid-cols-[3rem_minmax(0,1fr)]',
+                  'lg:grid-cols-[var(--command-center-left,300px)_minmax(0,1fr)_var(--command-center-right,360px)]'
+                )
+              : cn(
+                  'grid-cols-1',
+                  tabletLeft && 'md:grid-cols-[3rem_minmax(0,1fr)]',
+                  'lg:grid-cols-[300px_minmax(0,1fr)]'
+                )
         )}
       >
+        {tabletLeft ? (
+          <aside
+            className="dashboard-app-shell__tablet-left hidden min-h-0 w-12 min-w-12 flex-col overflow-hidden border-b border-stone-200/70 md:flex lg:hidden md:border-b-0 md:border-r"
+            aria-label="Layout tools dock"
+          >
+            {tabletLeft}
+          </aside>
+        ) : null}
         <aside
           className={cn(
             'ecosystem-panel dashboard-app-shell__left hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r',

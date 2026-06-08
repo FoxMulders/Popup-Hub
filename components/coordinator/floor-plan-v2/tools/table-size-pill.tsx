@@ -2,6 +2,7 @@
 
 import { Circle, RectangleHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import {
   TABLE_SIZES,
   formatVendorTableSizeButtonLabel,
@@ -41,10 +42,18 @@ export interface PatronTableSizeRowsProps {
 
 type SizeButtonTone = 'default' | 'patron' | 'vendor'
 
+const TABLET_BOOTH_TOUCH_SIZES_FT = new Set([5, 6, 8])
+
+function boothTabletTouchClass(isTablet: boolean, ft: number): string {
+  if (!isTablet || !TABLET_BOOTH_TOUCH_SIZES_FT.has(ft)) return ''
+  return 'min-h-11 min-w-11 px-2.5 py-2 touch-manipulation'
+}
+
 function sizeButtonClass(
   active: boolean,
   disabled: boolean,
-  tone: SizeButtonTone = 'default'
+  tone: SizeButtonTone = 'default',
+  tabletTouchClass = ''
 ): string {
   const activeClass =
     tone === 'vendor'
@@ -55,7 +64,8 @@ function sizeButtonClass(
   return cn(
     'inline-flex h-full min-w-[1.85rem] shrink-0 items-center justify-center px-1.5 text-[10px] font-semibold tabular-nums border-r border-stone-200 last:border-r-0 transition-colors sm:min-w-[2rem] sm:px-2 sm:text-[11px]',
     active ? activeClass : 'text-stone-700 hover:bg-stone-100',
-    disabled && 'pointer-events-none'
+    disabled && 'pointer-events-none',
+    tabletTouchClass
   )
 }
 
@@ -190,6 +200,8 @@ export function VendorSidebarSizeGrid({
   compact?: boolean
   className?: string
 }) {
+  const { isTablet } = useFloorPlanViewportLayout()
+
   return (
     <div
       className={cn(

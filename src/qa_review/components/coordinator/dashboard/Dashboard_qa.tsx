@@ -6,11 +6,19 @@ import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
 import { DashboardAppShell } from '@/components/coordinator/dashboard/dashboard-app-shell'
 import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashboard-canvas-column'
+import { DashboardTabletToolsDock } from '@/components/coordinator/dashboard/dashboard-tablet-tools-dock'
 import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 import { DashboardToolbarPortalTarget } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 import { InitialRoomModal } from '@/components/coordinator/dashboard/initial-room-modal'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  TabletLandscapeAdvisoryBanner,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { QA_CANVAS_VIEWPORT_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
+import { cn } from '@/lib/utils'
 
 /** Hide scrollbar tracks while preserving smooth scroll on short viewports. */
 export const QA_PANEL_SCROLL_CLASSES =
@@ -53,6 +61,17 @@ export function DashboardLeftPanelQa() {
 }
 
 export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay />
+      <TabletLandscapeAdvisoryBanner />
+      <DashboardBootstrapQaInner header={header} />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
+  const { showDesktopRequired, showLandscapeAdvisory } = useFloorPlanViewportLayout()
   const { fullscreen: immersive } = useCommandCenterFullscreen()
   const { selectedEventId, layoutRooms, setLayoutRooms } = useMarketManagement()
   const reducedMotion = useReducedMotion()
@@ -78,6 +97,7 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
   }, [])
 
   const showBlueprint = false
+  const mountCanvas = Boolean(selectedEventId && hasInitialRoom && !showDesktopRequired)
 
   return (
     <DashboardToolbarPortalProvider>
@@ -91,15 +111,28 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
         leftLabel="Layout tools"
         className="dashboard-app-shell--qa-global-scroll"
         leftClassName="flex w-[300px] min-w-[300px] flex-shrink-0 flex-col justify-start border-r border-gray-200 bg-white"
+        tabletLeft={<DashboardTabletToolsDock />}
         left={<DashboardLeftPanelQa />}
         center={
-          <div className={QA_CANVAS_VIEWPORT_CLASS}>
-            <DashboardCanvasColumn
-              showBlueprint={showBlueprint}
-              mountCanvas={Boolean(selectedEventId && hasInitialRoom)}
-              reducedMotion={reducedMotion}
-              onCanvasInteractive={handleCanvasInteractive}
-            />
+          <div
+            className={cn(
+              QA_CANVAS_VIEWPORT_CLASS,
+              showLandscapeAdvisory && 'pt-11'
+            )}
+          >
+            {showDesktopRequired ? (
+              <div
+                className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
+                aria-hidden
+              />
+            ) : (
+              <DashboardCanvasColumn
+                showBlueprint={showBlueprint}
+                mountCanvas={mountCanvas}
+                reducedMotion={reducedMotion}
+                onCanvasInteractive={handleCanvasInteractive}
+              />
+            )}
           </div>
         }
       />

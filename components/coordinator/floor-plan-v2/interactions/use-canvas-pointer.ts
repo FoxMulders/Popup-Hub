@@ -29,6 +29,7 @@ import {
 import {
   isValidObjectPlacement,
   resolvePlacementRoomIdForObject,
+  type PlacementProbe,
 } from '../geometry/is-point-in-room'
 import { resolveRoomPlacementSurface } from '../state/placement-surface'
 import type { ToolState } from '../tools/types'
@@ -75,6 +76,17 @@ import {
   snapBoothToRoomPerimeter,
   snapBoothToUnionPerimeter,
 } from './perimeter-booth-orientation'
+import {
+  isStructuralWallSnapKind,
+  snapStructuralAssetForDoc,
+  snapStructuralAssetToLocalPerimeter,
+  snapStructuralAssetToRoomFrame,
+} from './structural-wall-snap'
+import {
+  boothClampDeltaForRoom,
+  footprintWithinBounds,
+  resolveRoomPlacementBounds,
+} from '@/lib/floor-plan/boundary-constraints'
 
 interface UseCanvasPointerOptions {
   store: FloorPlanDocStore
@@ -1100,8 +1112,7 @@ export function useCanvasPointer(
           patch: Partial<PlacedObject>
         }> = []
         const snap = store.doc.snapFt
-        const cw = store.doc.canvasWidthFt
-        const cl = store.doc.canvasLengthFt
+        const objectRoom = store.doc.objectRoom ?? {}
         const objById = new Map(store.doc.objects.map((o) => [o.id, o]))
         for (const id of drag.ids) {
           const orig = drag.originals.get(id)
@@ -1110,11 +1121,9 @@ export function useCanvasPointer(
           if (!obj) continue
           const proposedX = snapToGrid(orig.x + dx, snap)
           const proposedY = snapToGrid(orig.y + dy, snap)
-          // Hard boundary clamp: the rotated AABB is forced inside
-          // [0, canvasWidth] × [0, canvasLength]. Drags hitting the
-          // edge slide along it instead of pushing through.
           const probe: PlacedObject = { ...obj, x: proposedX, y: proposedY }
-          const clampDelta = canvasClampDelta(probe, cw, cl)
+          const roomId = objectRoom[id] ?? activeRoomIdRef.current ?? null
+          const clampDelta = boothClampDeltaForRoom(probe, store.doc, roomId)
           patches.push({
             id,
             patch: {
@@ -1366,7 +1375,7 @@ export function useCanvasPointer(
         // booth footprint (table-length pill), but a click has zero
         // freehand extent. Anchor at the snapped pointer so
         // resolveDrawCommitRect can center the real object there.
-        const rect = resolveDrawCommitRect(
+        let rect = resolveDrawCommitRect(
           activeDraft.kind,
           hasDragExtent
             ? rawRect
@@ -1379,17 +1388,12 @@ export function useCanvasPointer(
           store.doc.snapFt,
           readDefaultBoothTableSpec()
         )
-        // Multi-room association: the new object inherits the room
-        // whose perimeter contains its centroid (or, failing that,
-        // the active room set by the host). This lets a coordinator
-        // draw inside any room frame on the unified canvas without
-        // first having to flip the active selection.
-        const placementProbe = {
+        let placementProbe: PlacementProbe = {
           x: rect.x,
           y: rect.y,
           width: rect.width,
           height: rect.height,
-          rotation: 0 as const,
+          rotation: 0,
           kind: activeDraft.kind,
         }
         const drawRoomId = resolvePlacementRoomIdForObject(
@@ -1397,6 +1401,33 @@ export function useCanvasPointer(
           placementProbe,
           activeRoomIdRef.current
         )
+        if (isStructuralWallSnapKind(activeDraft.kind) && drawRoomId) {
+          const frame = store.doc.rooms?.find((r) => r.id === drawRoomId)
+          if (frame) {
+            const local = snapStructuralAssetToLocalPerimeter(
+              placementProbe,
+              frame.widthFt,
+              frame.lengthFt
+            )
+            rect = {
+              x: frame.originX + local.x!,
+              y: frame.originY + local.y!,
+              width: rect.width,
+              height: rect.height,
+            }
+            placementProbe = {
+              ...placementProbe,
+              x: rect.x,
+              y: rect.y,
+              rotation: local.rotation ?? 0,
+            }
+          }
+        }
+        // Multi-room association: the new object inherits the room
+        // whose perimeter contains its centroid (or, failing that,
+        // the active room set by the host). This lets a coordinator
+        // draw inside any room frame on the unified canvas without
+        // first having to flip the active selection.
         const canvasOpenDraw = isCanvasOpenPlacementKind(activeDraft.kind)
         if (
           (!canvasOpenDraw && !drawRoomId) ||
@@ -1509,18 +1540,36 @@ export function useCanvasPointer(
             }> = []
             for (const obj of store.doc.objects) {
               if (!drag.ids.includes(obj.id)) continue
+              let patch: Partial<PlacedObject> = { x: obj.x, y: obj.y }
               if (obj.kind === 'booth' && autoArrangeMode === 'perimeter-only') {
                 const snap = perimeterSnapPatch(obj as BoothObject, store.doc)
-                finalPatches.push({
-                  id: obj.id,
-                  patch: snap ?? { x: obj.x, y: obj.y },
-                })
-              } else {
-                finalPatches.push({
-                  id: obj.id,
-                  patch: { x: obj.x, y: obj.y },
-                })
+                patch = snap ?? patch
+              } else if (isStructuralWallSnapKind(obj.kind)) {
+                const roomId =
+                  store.doc.objectRoom?.[obj.id] ?? activeRoomIdRef.current
+                const frame = roomId
+                  ? store.doc.rooms?.find((r) => r.id === roomId)
+                  : null
+                if (frame) {
+                  patch = snapStructuralAssetToRoomFrame(obj, frame)
+                } else {
+                  const snap = snapStructuralAssetForDoc(obj, store.doc)
+                  if (snap) patch = snap
+                }
               }
+              const roomId =
+                store.doc.objectRoom?.[obj.id] ?? activeRoomIdRef.current
+              if (obj.kind === 'booth' && roomId) {
+                const bounds = resolveRoomPlacementBounds(store.doc, roomId)
+                if (bounds && !footprintWithinBounds({ ...obj, ...patch }, bounds)) {
+                  const orig = drag.originals.get(obj.id)
+                  if (orig) patch = { x: orig.x, y: orig.y }
+                }
+              }
+              finalPatches.push({
+                id: obj.id,
+                patch,
+              })
             }
             store.updateObjects(finalPatches, { pushHistory: true })
           }
@@ -1736,6 +1785,14 @@ function commitDraft(
   const placementRoomId =
     roomId ??
     resolvePlacementRoomIdForObject(store.doc, obj, null)
+  if (isStructuralWallSnapKind(obj.kind)) {
+    const frame = placementRoomId
+      ? store.doc.rooms?.find((r) => r.id === placementRoomId)
+      : null
+    if (frame) {
+      obj = { ...obj, ...snapStructuralAssetToRoomFrame(obj, frame) } as PlacedObject
+    }
+  }
   const canvasOpen = isCanvasOpenPlacementKind(obj.kind)
   if (
     (!canvasOpen && !placementRoomId) ||

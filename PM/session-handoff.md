@@ -10,6 +10,16 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (Gemini auto-arrange + boundary physics + label clipping, not deployed)
+- **`lib/ai/tasks.ts`:** New `auto_arrange_layout` task → `google/gemini-2.5-pro` (fallback Claude 3.5 Sonnet).
+- **`lib/floor-plan/ai-auto-arrange.ts` + `app/api/coordinator/auto-arrange/route.ts`:** OpenRouter optimization prompt (visibility, walkways, traffic flow); JSON placements returned to client.
+- **`lib/floor-plan/request-ai-auto-arrange.ts`:** `runAutoArrangeWithAi` — Grid/Staggered/Perimeter all route through Gemini first; deterministic engine fallback when API unavailable.
+- **`lib/floor-plan/boundary-constraints.ts`:** Strict booth footprint validation + post-AI coordinate clipping inside room clearances.
+- **`structural-wall-snap.ts` + `use-canvas-pointer.ts`:** Doors/exits snap flush to nearest perimeter wall with wall-aligned rotation on draw/drag.
+- **`canvas-label-text.ts` + `canvas-objects.tsx`:** Dynamic font shrink + ellipsis for long labels ("Unassigned Vendor", "Patron", status pills).
+- **`floor-plan-v2.tsx` + wizard QA mirror:** Async auto-arrange handlers with loading toast.
+- **Verify:** `npx tsx scripts/verify-auto-arrange.ts` (31/31); `npx tsx scripts/verify-ai-provider-fallback.ts` (26/26). Coordinator dashboard: vendor/patron Auto-Arrange with `OPENROUTER_API_KEY` → success toast cites Gemini model; without key → deterministic fallback. Draw door on room edge → snaps flat to wall; drag booth past perimeter → rejected.
+
 ## Shipped this session (dashboard floor-plan sidebar vertical stack, not deployed)
 - **`toolbar-static-layout.ts`:** `getVisibleSidebarSections` / `getVisibleSidebarSectionsQa` — four full-width blocks (Room Controls, Designer Tools, Patron Layout, Vendor Booths).
 - **`canvas-toolbar-static.tsx` + `_qa`:** `sidebarLayout` renders stacked `SidebarToolbarSection` cards (no `grid-cols-2` split rows).

@@ -54,6 +54,16 @@ assert(
   resolveModelForTask('chat_json').includes('gpt-4o-mini')
 )
 
+assert(
+  'auto_arrange_layout uses gemini 2.5 pro',
+  resolveModelForTask('auto_arrange_layout').includes('gemini-2.5-pro')
+)
+assert(
+  'auto_arrange_layout fallback differs from primary',
+  resolveModelForTask('auto_arrange_layout') !==
+    resolveFallbackModelForTask('auto_arrange_layout')
+)
+
 for (const task of Object.keys(AI_TASKS) as AiTask[]) {
   assert(`${task} has primary model`, resolveModelForTask(task).length > 0)
   assert(`${task} has fallback model`, Boolean(resolveFallbackModelForTask(task)))

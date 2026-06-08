@@ -13,6 +13,11 @@ import {
   isValidCanvasOpenPlacement,
 } from '@/lib/floor-plan/canvas-open-placement'
 import {
+  footprintWithinBounds,
+  isStrictBoundaryPlacementKind,
+  resolveRoomPlacementBounds,
+} from '@/lib/floor-plan/boundary-constraints'
+import {
   isJoinableObject,
   objectFrameOverlapsOrTouches,
 } from '../state/room-joins'
@@ -208,6 +213,12 @@ export function isValidObjectPlacement(
   const resolved =
     roomId ?? resolvePlacementRoomIdForObject(doc, obj, null)
   if (!resolved) return false
+
+  if (isStrictBoundaryPlacementKind(obj.kind)) {
+    const bounds = resolveRoomPlacementBounds(doc, resolved)
+    if (!bounds) return false
+    if (!footprintWithinBounds(obj, bounds)) return false
+  }
 
   if (isPointInRoomForObject(doc, obj, resolved)) return true
 

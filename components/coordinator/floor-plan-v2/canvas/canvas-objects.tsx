@@ -29,6 +29,7 @@ import {
 } from '@/lib/coordinator/booth-placement-status'
 import { isJoinableObject } from '../state/room-joins'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
+import { fitTextInContainer } from './canvas-label-text'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
@@ -716,17 +717,29 @@ function CanvasObjectsBase({
               />
             )}
             {obj.kind === 'booth' && placementStatus && !isEditing ? (
-              <text
-                x={x + w / 2}
-                y={y + h - Math.min(10, h * 0.15)}
-                textAnchor="middle"
-                fontSize={Math.min(9, Math.max(6, w * 0.12))}
-                fontWeight={700}
-                fill={BOOTH_STATUS_THEME[placementStatus].stroke}
-                pointerEvents="none"
-              >
-                {truncate(boothStatusLabel(obj, boothPlacementStatusByObjectId) ?? '', 18)}
-              </text>
+              (() => {
+                const statusLabel =
+                  boothStatusLabel(obj, boothPlacementStatusByObjectId) ?? ''
+                const fitted = fitTextInContainer(statusLabel, w, Math.min(h * 0.35, 14), {
+                  baseFontSize: Math.min(9, Math.max(6, w * 0.12)),
+                  minFontSize: 5,
+                  padX: 2,
+                  padY: 1,
+                })
+                return (
+                  <text
+                    x={x + w / 2}
+                    y={y + h - Math.min(10, h * 0.15)}
+                    textAnchor="middle"
+                    fontSize={fitted.fontSize}
+                    fontWeight={700}
+                    fill={BOOTH_STATUS_THEME[placementStatus].stroke}
+                    pointerEvents="none"
+                  >
+                    {fitted.text}
+                  </text>
+                )
+              })()
             ) : null}
             {/* Walls fully consumed by door/exit overlaps still need
                 a transparent hit target so the wall stays selectable
@@ -898,15 +911,20 @@ function renderObjectLabel(
   geom: { x: number; y: number; w: number; h: number; labelText: string }
 ) {
   const { x, y, w, h, labelText } = geom
-  const truncated = truncate(labelText, 18)
   if (EXTERIOR_LABEL_KINDS.has(obj.kind)) {
     const isLandscape = w >= h
-    const fontSize = 11
+    const baseFontSize = 11
     const padX = 6
     const padY = 3
-    const approxCharW = fontSize * 0.6
-    const tagW = approxCharW * truncated.length + padX * 2
-    const tagH = fontSize + padY * 2
+    const fitted = fitTextInContainer(labelText, w, h, {
+      baseFontSize,
+      minFontSize: 7,
+      padX,
+      padY,
+    })
+    const approxCharW = fitted.fontSize * 0.58
+    const tagW = Math.min(w, approxCharW * fitted.text.length + padX * 2)
+    const tagH = fitted.fontSize + padY * 2
     const gap = EXTERIOR_LABEL_OFFSET_PX
     let tagX: number
     let tagY: number
@@ -936,27 +954,33 @@ function renderObjectLabel(
         <text
           x={tagX + padX}
           y={tagY + tagH - padY - 1}
-          fontSize={fontSize}
+          fontSize={fitted.fontSize}
           fontWeight={700}
           fill={pillTextFill}
         >
-          {truncated}
+          {fitted.text}
         </text>
       </g>
     )
   }
-  // Non-structural objects keep the inline center label.
+  const baseFontSize = Math.min(14, Math.max(8, w * 0.18))
+  const fitted = fitTextInContainer(labelText, w, h, {
+    baseFontSize,
+    minFontSize: 6,
+    padX: 4,
+    padY: 2,
+  })
   return (
     <text
       x={x + w / 2}
-      y={y + h / 2 + 4}
+      y={y + h / 2 + fitted.fontSize * 0.35}
       textAnchor="middle"
-      fontSize={Math.min(14, Math.max(8, w * 0.18))}
+      fontSize={fitted.fontSize}
       fontWeight={700}
       fill={textFillForObject(obj)}
       pointerEvents="none"
     >
-      {truncated}
+      {fitted.text}
     </text>
   )
 }

@@ -47,7 +47,8 @@ import {
 import { PropertyInspector } from '@/components/coordinator/floor-plan-v2/inspector/property-inspector'
 import { CanvasCommandBar } from '@/components/coordinator/floor-plan-v2/tools/canvas-command-bar'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from '@/components/coordinator/floor-plan-v2/tools/types'
-import { autoArrangeInRoom, type AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
+import type { AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
+import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
 import { legacyRoomsFromDoc } from '@/components/coordinator/floor-plan-v2/state/legacy-bridge'
 import { hydrateFloorPlanDocForWizardQa, layoutHasPlacedGeometry } from '@/src/qa_review/lib/floor-plan/layout-hydration-wizard_qa'
 import { reconcileCanvasExtents } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
@@ -1363,46 +1364,55 @@ function FloorPlanV2Workspace({
     return vendorTableMetaFromApplications(applications, safeTableSizeFt)
   }, [applications, safeTableSizeFt])
 
-  const handleVendorAutoArrange = useCallback(() => {
+  const handleVendorAutoArrange = useCallback(async () => {
     if (vendorBoothCount === 0) {
       toast.message('Nothing to arrange — draw at least one vendor booth first.')
       return
     }
-    const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      scope: 'vendor',
-      mode: vendorAutoArrangeMode,
-      eventCategoryNames,
-      baselineTableLengthFt: safeTableSizeFt,
-      vendorTableMetaByKey,
-      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
-        ? { maxBooths: layoutCapacity }
-        : {}),
-    })
-    if (!result) return
-    if (result.perimeterCapacityError) {
-      toast.error(result.perimeterCapacityError, { duration: 6000 })
-      return
-    }
-    if (result.placedCount === 0) {
-      toast.error('Vendor auto-arrange could not fit any booths inside the room.')
-      return
-    }
-    store.replaceObjects(result.doc.objects)
-    const spaceOverflow = result.overflowCount + result.droppedCount
-    if (spaceOverflow > 0) {
-      toast.warning(
-        `Could not place ${spaceOverflow} vendor booth${spaceOverflow === 1 ? '' : 's'} due to space restrictions.`,
-        { duration: 5000 }
-      )
-    } else if (result.unsatisfiedCategoryCount > 0) {
-      toast.warning(
-        `Vendor auto-arrange complete. ${result.unsatisfiedCategoryCount} booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
-        { duration: 4500 }
-      )
-    } else {
-      toast.success(
-        `Auto-arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} with clearance.`
-      )
+    const loading = toast.loading('Optimizing vendor layout…')
+    try {
+      const result = await runAutoArrangeWithAi(store.doc, activeRoomId, {
+        scope: 'vendor',
+        mode: vendorAutoArrangeMode,
+        eventCategoryNames,
+        baselineTableLengthFt: safeTableSizeFt,
+        vendorTableMetaByKey,
+        ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
+          ? { maxBooths: layoutCapacity }
+          : {}),
+      })
+      if (!result) return
+      if (result.perimeterCapacityError) {
+        toast.error(result.perimeterCapacityError, { duration: 6000 })
+        return
+      }
+      if (result.placedCount === 0) {
+        toast.error('Vendor auto-arrange could not fit any booths inside the room.')
+        return
+      }
+      store.replaceObjects(result.doc.objects)
+      const spaceOverflow = result.overflowCount + result.droppedCount
+      if (spaceOverflow > 0) {
+        toast.warning(
+          `Could not place ${spaceOverflow} vendor booth${spaceOverflow === 1 ? '' : 's'} due to space restrictions.`,
+          { duration: 5000 }
+        )
+      } else if (result.unsatisfiedCategoryCount > 0) {
+        toast.warning(
+          `Vendor auto-arrange complete. ${result.unsatisfiedCategoryCount} booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
+          { duration: 4500 }
+        )
+      } else if (result.aiOptimized) {
+        toast.success(
+          `AI arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'}.`
+        )
+      } else {
+        toast.success(
+          `Auto-arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} with clearance.`
+        )
+      }
+    } finally {
+      toast.dismiss(loading)
     }
   }, [
     activeRoomId,
@@ -1415,36 +1425,45 @@ function FloorPlanV2Workspace({
     vendorTableMetaByKey,
   ])
 
-  const handlePatronAutoArrange = useCallback(() => {
+  const handlePatronAutoArrange = useCallback(async () => {
     if (patronTableCount === 0) {
       toast.message('Nothing to arrange — draw at least one patron table first.')
       return
     }
-    const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      scope: 'patron',
-      mode: patronAutoArrangeMode,
-      baselineTableLengthFt: safeTableSizeFt,
-      vendorTableMetaByKey,
-    })
-    if (!result) return
-    if (result.patronArrangeAborted) {
-      toast.warning(result.patronArrangeAborted, { duration: 5000 })
-      return
-    }
-    if (result.placedCount === 0) {
-      toast.error('Patron auto-arrange could not fit any tables inside the room.')
-      return
-    }
-    store.replaceObjects(result.doc.objects)
-    if (result.droppedCount > 0) {
-      toast.warning(
-        `Could not place ${result.droppedCount} patron table${result.droppedCount === 1 ? '' : 's'} due to space restrictions.`,
-        { duration: 5000 }
-      )
-    } else {
-      toast.success(
-        `Auto-arranged ${result.placedCount} patron table${result.placedCount === 1 ? '' : 's'}.`
-      )
+    const loading = toast.loading('Optimizing patron layout…')
+    try {
+      const result = await runAutoArrangeWithAi(store.doc, activeRoomId, {
+        scope: 'patron',
+        mode: patronAutoArrangeMode,
+        baselineTableLengthFt: safeTableSizeFt,
+        vendorTableMetaByKey,
+      })
+      if (!result) return
+      if (result.patronArrangeAborted) {
+        toast.warning(result.patronArrangeAborted, { duration: 5000 })
+        return
+      }
+      if (result.placedCount === 0) {
+        toast.error('Patron auto-arrange could not fit any tables inside the room.')
+        return
+      }
+      store.replaceObjects(result.doc.objects)
+      if (result.droppedCount > 0) {
+        toast.warning(
+          `Could not place ${result.droppedCount} patron table${result.droppedCount === 1 ? '' : 's'} due to space restrictions.`,
+          { duration: 5000 }
+        )
+      } else if (result.aiOptimized) {
+        toast.success(
+          `AI arranged ${result.placedCount} patron table${result.placedCount === 1 ? '' : 's'}.`
+        )
+      } else {
+        toast.success(
+          `Auto-arranged ${result.placedCount} patron table${result.placedCount === 1 ? '' : 's'}.`
+        )
+      }
+    } finally {
+      toast.dismiss(loading)
     }
   }, [
     activeRoomId,

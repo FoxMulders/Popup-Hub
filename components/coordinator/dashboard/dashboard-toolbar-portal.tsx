@@ -24,6 +24,8 @@ const DashboardToolbarPortalContext =
   createContext<DashboardToolbarPortalContextValue | null>(null)
 
 const LG_MIN_QUERY = '(min-width: 1024px)'
+const TABLET_MIN_QUERY = '(min-width: 768px)'
+const TABLET_MAX_QUERY = '(max-width: 1023px)'
 
 export function DashboardToolbarPortalProvider({ children }: { children: ReactNode }) {
   const [target, setTargetState] = useState<HTMLElement | null>(null)
@@ -34,11 +36,23 @@ export function DashboardToolbarPortalProvider({ children }: { children: ReactNo
   }, [])
 
   useEffect(() => {
-    const mq = window.matchMedia(LG_MIN_QUERY)
-    const sync = () => setSidebarActive(mq.matches)
+    const mqDesktop = window.matchMedia(LG_MIN_QUERY)
+    const mqTabletMin = window.matchMedia(TABLET_MIN_QUERY)
+    const mqTabletMax = window.matchMedia(TABLET_MAX_QUERY)
+    const sync = () => {
+      const isTablet =
+        mqTabletMin.matches && mqTabletMax.matches
+      setSidebarActive(mqDesktop.matches || isTablet)
+    }
     sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
+    mqDesktop.addEventListener('change', sync)
+    mqTabletMin.addEventListener('change', sync)
+    mqTabletMax.addEventListener('change', sync)
+    return () => {
+      mqDesktop.removeEventListener('change', sync)
+      mqTabletMin.removeEventListener('change', sync)
+      mqTabletMax.removeEventListener('change', sync)
+    }
   }, [])
 
   const value = useMemo(

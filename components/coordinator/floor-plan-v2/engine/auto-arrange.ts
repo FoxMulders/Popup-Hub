@@ -71,6 +71,7 @@ export {
   DEFAULT_AISLE_WIDTH_FT,
 } from '@/lib/floor-plan/deterministic-market-layout'
 import { PERIMETER_WALL_THICKNESS_FT } from '../interactions/perimeter-walls'
+import { clipBoothToLocalRoom } from '@/lib/floor-plan/boundary-constraints'
 import {
   orientBoothForPerimeterSlot,
   perimeterSlotsAlongRing,
@@ -1561,7 +1562,11 @@ export function autoArrangeInRoom(
   }
 
   const result = autoArrange(localDoc, arrangeOptions)
-  const reglobal = result.doc.objects.map(
+  const clippedObjects = result.doc.objects.map((o) => {
+    if (o.kind !== 'booth') return o
+    return clipBoothToLocalRoom(o as BoothObject, localW, localL, WALL_BUFFER_FT)
+  })
+  const reglobal = clippedObjects.map(
     (o) =>
       ({
         ...o,
@@ -1573,9 +1578,14 @@ export function autoArrangeInRoom(
   for (const obj of reglobal) {
     if (obj.kind !== 'booth') continue
     if (!boothWithinRoomFrame(obj, frame, doc)) {
-      throw new Error(
-        `auto-arrange placed booth ${obj.id} outside room ${roomId} bounds`
+      const clipped = clipBoothToLocalRoom(
+        { ...(obj as BoothObject), x: obj.x - originX, y: obj.y - originY },
+        localW,
+        localL,
+        WALL_BUFFER_FT
       )
+      obj.x = clipped.x + originX
+      obj.y = clipped.y + originY
     }
   }
 

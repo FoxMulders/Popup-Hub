@@ -2,7 +2,7 @@
  * Strict room perimeter bounds for booth/table placement and auto-arrange clipping.
  */
 
-import { rotatedAabb, type Rect } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
+import { rotatedAabb, canvasClampDelta, type Rect } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan-v2/state/placement-surface'
@@ -138,4 +138,20 @@ export function clipBoothToLocalRoom(
     { minX: 0, minY: 0, maxX: roomW, maxY: roomH },
     clearanceFt
   )
+}
+
+/** Room-scoped drag clamp for booths; falls back to canvas bounds. */
+export function boothClampDeltaForRoom(
+  obj: PlacedObject,
+  doc: FloorPlanDoc,
+  roomId: string | null | undefined
+): { dx: number; dy: number } {
+  if (!roomId || !isStrictBoundaryPlacementKind(obj.kind)) {
+    return canvasClampDelta(obj, doc.canvasWidthFt, doc.canvasLengthFt)
+  }
+  const bounds = resolveRoomPlacementBounds(doc, roomId)
+  if (!bounds) {
+    return canvasClampDelta(obj, doc.canvasWidthFt, doc.canvasLengthFt)
+  }
+  return clampDeltaToRect(obj, insetBounds(bounds, ROOM_PLACEMENT_CLEARANCE_FT))
 }
