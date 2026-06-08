@@ -3,16 +3,22 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `55e5929` (pushed to `origin/master`)
-- Last deploy commit: `55e5929` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 14** | commit `3904c76` (handoff updated 2026-06-08 16:11)
+- Branch: `master` @ `541077f` (pushed to `origin/master`)
+- Last deploy commit: `541077f` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 15** | commit `083b796` (handoff updated 2026-06-08 16:21)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (simplify populate caps UX, not deployed)
+- **`smart-populate-booth-caps.tsx`:** Renamed panel to "Suggested category caps"; plain-language description; compact preview (max booths, usable floor, suggested split); technical breakdown collapsed under "How we calculated this"; button "Apply suggested caps"; hide venue dimension inputs when `venueReadOnly`.
+- **`booth-planner.tsx`:** Canvas action renamed "Auto-arrange booths" (was "Smart Populate Layout"); simplified tooltip; max-booths copy in Step 2.
+- **`wizard-step-capacity.tsx`, `spatial-layout-toolbar.tsx`, `layout-planner-stats.tsx`, `floor-plan-stats-panel.tsx`, `floor-plan-inventory-panel.tsx`:** Replaced C_max jargon with "Max booths" / plain language.
+- **Verify:** Market setup wizard Step 2 — apply suggested caps fills category editor; booth planner Step 3 — "Auto-arrange booths" distinct from cap panel; event form still shows editable venue dims.
+
 ## Shipped this session (wizard venue map auto-pin on address, not deployed)
-- **`components/coordinator/wizard/wizard-step-venue.tsx`:** Address side-effect — debounced + immediate geocode when a complete address is set (template, flyer OCR, manual entry); updates lat/lng, drops pin, and pans map without requiring a map click. Wrapped `onPlaceSelect` tracks last geocoded address to avoid duplicate lookups.
-- **`components/map/map-recenter.tsx`:** Pan + zoom when pin is first dropped even if coordinates were already set externally (venue template load).
+- **`components/coordinator/wizard/wizard-step-venue.tsx`:** Address side-effect listeners — debounced geocode (400ms) plus immediate geocode on bulk fills (template, flyer OCR, paste); bootstrap geocode when Maps API loads with a pre-filled address; sync `lastGeocodedAddressRef` when parent drops pin (template/saved venue) to avoid duplicate lookups.
+- **`components/map/map-recenter.tsx`:** After external coordinate/pin updates, trigger `resize` + `idle` refresh so Advanced Markers paint without requiring a map click; pan + zoom on first pin drop even when coords were set externally.
 - **Verify:** `/coordinator/events/new` — pick Edmonton venue template or upload flyer with address → red pin appears and map pans immediately; type a full address manually → pin updates after brief debounce.
 
 ## Shipped this session (sign-out redirect fix, not deployed)
@@ -170,7 +176,7 @@
 
 
 ## Last deploy
-- 2026-06-08 16:11 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (55e5929)
+- 2026-06-08 16:21 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (541077f)
 
 
 ## Goal
