@@ -2099,173 +2099,251 @@ function FloorPlanV2Workspace({
         fullscreenToolbar={fullscreenExitToolbar}
         className="min-h-0 min-w-0 flex-1"
       >
-        <div className={cn('flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden', isDashboard ? 'gap-0' : 'gap-1')}>
-        {dashboardCommandBar && !portalToolbarToSidebar ? dashboardCommandBar : null}
-        {dashboardCommandBar && portalToolbarToSidebar && toolbarPortal?.target
-          ? createPortal(dashboardCommandBar, toolbarPortal.target)
-          : null}
-        {!isDashboard ? (
-          <CanvasCommandBar
-            toolState={{ tool, drawShape }}
-            onToolChange={handleToolChange}
-            onDrawShapeChange={handleDrawShapeChange}
-            canUndo={store.canUndo}
-            canRedo={store.canRedo}
-            onUndo={store.undo}
-            onRedo={store.redo}
-            onClearAll={handleClearAll}
-            selectedCount={selectedCount}
-            onDeleteSelected={handleDeleteSelected}
-            onCopy={handleCopy}
-            onPaste={handlePaste}
-            clipboardHasContents={clipboardHasContents}
-            onRotateLeft={handleRotateLeft}
-            onRotateRight={handleRotateRight}
-            onRotateRoomLeft={handleRotateRoomLeft}
-            onRotateRoomRight={handleRotateRoomRight}
-            selectedRoomId={selectedRoomId}
-            onAlignVertical={handleAlignVertical}
-            onAlignHorizontal={handleAlignHorizontal}
-            onDistributeVertical={handleDistributeVertical}
-            onDistributeHorizontal={handleDistributeHorizontal}
-            zoom={currentZoom}
-            onZoomIn={handleZoomIn}
-            onZoomOut={handleZoomOut}
-            onZoomReset={handleZoomReset}
-            onCenterView={handleCenterView}
-            onVendorAutoArrange={handleVendorAutoArrange}
-            canVendorAutoArrange={vendorBoothCount > 0}
-            vendorAutoArrangeMode={vendorAutoArrangeMode}
-            onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
-            onPatronAutoArrange={handlePatronAutoArrange}
-            canPatronAutoArrange={patronTableCount > 0}
-            patronAutoArrangeMode={patronAutoArrangeMode}
-            onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
-            onJoinRooms={handleMerge}
-            canJoinRooms={canMerge}
-            joinCandidateCount={
-              destructiveMergePlan.canMerge
-                ? destructiveMergePlan.count
-                : shapeMergePlan.canMergeShapes
-                  ? shapeMergePlan.count
-                  : undefined
-            }
-            joinBlockedReason={mergeBlockedReason}
-            mergePrefersShapes={shapeMergePlan.canMergeShapes}
-            onUnjoinRoom={handleUnjoinRoom}
-            canUnjoinRoom={canSplitMerge}
-            tableSizeFt={tableSizePillValue}
-            onTableSizeChange={handleTableSizeChange}
-            onPrepareTableDraw={handlePrepareTableDraw}
-            rooms={showToolbarRoomControls ? layoutRooms : undefined}
-            activeRoomId={selectedRoomId ?? activeRoomId}
-            onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
-            onAddRoom={showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined}
-            onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
-            onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
-            highlightedRoomMetrics={highlightedRoomMetrics}
-            highlightedSelectionMetrics={highlightedSelectionMetrics}
-            showLabels={showLabels}
-            onShowLabelsChange={setShowLabels}
-            canvasFullscreen={isDashboard ? dashboardImmersive : layoutNativeFullscreen}
-            onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
-            onSaveMarket={onSaveMarket}
-            saveMarketDisabled={saveMarketDisabled}
-            saveMarketLoading={saveMarketLoading}
-          />
-        ) : null}
-
-        <div
-          className={cn(
-            'flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden',
-            !isDashboard && 'gap-2'
-          )}
-        >
+        <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
+        {isDashboard ? (
+          <>
+            {dashboardCommandBar && !portalToolbarToSidebar
+              ? dashboardCommandBar
+              : null}
+            {dashboardCommandBar && portalToolbarToSidebar && toolbarPortal?.target
+              ? createPortal(dashboardCommandBar, toolbarPortal.target)
+              : null}
+            <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">
+              <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-0 bg-stone-100">
+                <CanvasRootErrorBoundary
+                  onReset={() => {
+                    logState('Canvas error boundary: reset triggered')
+                    store.resetState()
+                  }}
+                  onError={(error) => {
+                    logState(`Canvas error: ${error.message}`)
+                  }}
+                >
+                  <LayoutCanvas
+                    className="absolute inset-0 min-h-0"
+                    scrollHost={!isEmbedded}
+                    commandCenterViewport
+                    store={store}
+                    toolState={{ tool, drawShape }}
+                    defaultBoothTableSpec={defaultPlacementSpec}
+                    defaultBoothTableSpecRef={defaultPlacementSpecRef}
+                    tableSizeFt={tableSizePillValue}
+                    activeRoomId={activeRoomId}
+                    selectedRoomId={selectedRoomId}
+                    onRoomFrameClick={handleRoomFrameClick}
+                    onRoomGeometryCommit={handleRoomGeometryCommit}
+                    onViewportReady={handleViewportReady}
+                    onZoomChange={setCurrentZoom}
+                    eventCategoryNames={eventCategoryNames}
+                    boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+                    onVendorDrop={onVendorDrop}
+                    autoArrangeMode={vendorAutoArrangeMode}
+                    patronTrafficPath={patronTrafficPath}
+                    onProximityViolation={(info) => {
+                      toast.error(
+                        `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
+                        { duration: 2400 }
+                      )
+                    }}
+                    onOverlapViolation={() => {
+                      const placeableRooms = (store.doc.rooms ?? []).filter(
+                        (r) => !r.mergedIntoObjectId
+                      )
+                      if (placeableRooms.length === 0) {
+                        toast.message(
+                          'Add a room first — use Add room in the toolbar, then draw booths inside it.',
+                          { duration: 3200 }
+                        )
+                        return
+                      }
+                      if (
+                        layoutActiveRoomId &&
+                        !placeableRooms.some((r) => r.id === layoutActiveRoomId)
+                      ) {
+                        toast.message(
+                          'Room is still loading on the canvas — try drawing again in a moment.',
+                          { duration: 2800 }
+                        )
+                        return
+                      }
+                      toast.error(
+                        'Draw inside the room interior — booths cannot overlap fixtures or sit outside the walls.',
+                        { duration: 2800 }
+                      )
+                    }}
+                    onRoomCanvasLimitBlocked={() => {
+                      toast.message(
+                        'Canvas limit reached — drag the primary (largest) room smaller or move annex rooms closer.',
+                        { duration: 2200 }
+                      )
+                    }}
+                    onAfterDrawCommit={handleAfterDrawCommit}
+                    stickyDrawPlacement
+                    showLabels={showLabels}
+                  />
+                </CanvasRootErrorBoundary>
+                <CanvasLegend />
+              </div>
+            </div>
+          </>
+        ) : (
           <div
             className={cn(
-              'floor-plan-canvas-host relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-stone-100',
-              isDashboard
-                ? 'h-full border-0'
-                : 'h-full rounded-lg border border-stone-200'
+              'flex w-full flex-row items-stretch overflow-hidden min-h-0 flex-1',
+              isEmbedded ? 'h-full' : 'h-[calc(100vh-64px)]'
             )}
           >
-            <CanvasRootErrorBoundary
-              onReset={() => {
-                logState('Canvas error boundary: reset triggered')
-                store.resetState()
-              }}
-              onError={(error) => {
-                logState(`Canvas error: ${error.message}`)
-              }}
-            >
-            <LayoutCanvas
-              className="absolute inset-0 min-h-0"
-              scrollHost={!isEmbedded}
-              commandCenterViewport={isDashboard}
-              store={store}
-              toolState={{ tool, drawShape }}
-              defaultBoothTableSpec={defaultPlacementSpec}
-              defaultBoothTableSpecRef={defaultPlacementSpecRef}
-              tableSizeFt={tableSizePillValue}
-              activeRoomId={activeRoomId}
-              selectedRoomId={selectedRoomId}
-              onRoomFrameClick={handleRoomFrameClick}
-              onRoomGeometryCommit={handleRoomGeometryCommit}
-              onViewportReady={handleViewportReady}
-              onZoomChange={setCurrentZoom}
-              eventCategoryNames={eventCategoryNames}
-              boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
-              onVendorDrop={onVendorDrop}
-              autoArrangeMode={vendorAutoArrangeMode}
-              patronTrafficPath={patronTrafficPath}
-              onProximityViolation={(info) => {
-                toast.error(
-                  `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
-                  { duration: 2400 }
-                )
-              }}
-              onOverlapViolation={() => {
-                const placeableRooms = (store.doc.rooms ?? []).filter(
-                  (r) => !r.mergedIntoObjectId
-                )
-                if (placeableRooms.length === 0) {
-                  toast.message(
-                    'Add a room first — use Add room in the toolbar, then draw booths inside it.',
-                    { duration: 3200 }
-                  )
-                  return
+            <div className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
+              <CanvasCommandBar
+                className="shrink-0"
+                toolState={{ tool, drawShape }}
+                onToolChange={handleToolChange}
+                onDrawShapeChange={handleDrawShapeChange}
+                canUndo={store.canUndo}
+                canRedo={store.canRedo}
+                onUndo={store.undo}
+                onRedo={store.redo}
+                onClearAll={handleClearAll}
+                selectedCount={selectedCount}
+                onDeleteSelected={handleDeleteSelected}
+                onCopy={handleCopy}
+                onPaste={handlePaste}
+                clipboardHasContents={clipboardHasContents}
+                onRotateLeft={handleRotateLeft}
+                onRotateRight={handleRotateRight}
+                onRotateRoomLeft={handleRotateRoomLeft}
+                onRotateRoomRight={handleRotateRoomRight}
+                selectedRoomId={selectedRoomId}
+                onAlignVertical={handleAlignVertical}
+                onAlignHorizontal={handleAlignHorizontal}
+                onDistributeVertical={handleDistributeVertical}
+                onDistributeHorizontal={handleDistributeHorizontal}
+                zoom={currentZoom}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onZoomReset={handleZoomReset}
+                onCenterView={handleCenterView}
+                onVendorAutoArrange={handleVendorAutoArrange}
+                canVendorAutoArrange={vendorBoothCount > 0}
+                vendorAutoArrangeMode={vendorAutoArrangeMode}
+                onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
+                onPatronAutoArrange={handlePatronAutoArrange}
+                canPatronAutoArrange={patronTableCount > 0}
+                patronAutoArrangeMode={patronAutoArrangeMode}
+                onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
+                onJoinRooms={handleMerge}
+                canJoinRooms={canMerge}
+                joinCandidateCount={
+                  destructiveMergePlan.canMerge
+                    ? destructiveMergePlan.count
+                    : shapeMergePlan.canMergeShapes
+                      ? shapeMergePlan.count
+                      : undefined
                 }
-                if (
-                  layoutActiveRoomId &&
-                  !placeableRooms.some((r) => r.id === layoutActiveRoomId)
-                ) {
-                  toast.message(
-                    'Room is still loading on the canvas — try drawing again in a moment.',
-                    { duration: 2800 }
-                  )
-                  return
-                }
-                toast.error(
-                  'Draw inside the room interior — booths cannot overlap fixtures or sit outside the walls.',
-                  { duration: 2800 }
-                )
-              }}
-              onRoomCanvasLimitBlocked={() => {
-                toast.message(
-                  'Canvas limit reached — drag the primary (largest) room smaller or move annex rooms closer.',
-                  { duration: 2200 }
-                )
-              }}
-              onAfterDrawCommit={handleAfterDrawCommit}
-              stickyDrawPlacement={isDashboard}
-              showLabels={showLabels}
-            />
-            </CanvasRootErrorBoundary>
-            <CanvasLegend />
-          </div>
+                joinBlockedReason={mergeBlockedReason}
+                mergePrefersShapes={shapeMergePlan.canMergeShapes}
+                onUnjoinRoom={handleUnjoinRoom}
+                canUnjoinRoom={canSplitMerge}
+                tableSizeFt={tableSizePillValue}
+                onTableSizeChange={handleTableSizeChange}
+                onPrepareTableDraw={handlePrepareTableDraw}
+                rooms={showToolbarRoomControls ? layoutRooms : undefined}
+                activeRoomId={selectedRoomId ?? activeRoomId}
+                onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
+                onAddRoom={showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined}
+                onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
+                onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
+                highlightedRoomMetrics={highlightedRoomMetrics}
+                highlightedSelectionMetrics={highlightedSelectionMetrics}
+                showLabels={showLabels}
+                onShowLabelsChange={setShowLabels}
+                canvasFullscreen={layoutNativeFullscreen}
+                onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+                onSaveMarket={onSaveMarket}
+                saveMarketDisabled={saveMarketDisabled}
+                saveMarketLoading={saveMarketLoading}
+              />
+              <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-lg border border-stone-200 bg-stone-100">
+                <CanvasRootErrorBoundary
+                  onReset={() => {
+                    logState('Canvas error boundary: reset triggered')
+                    store.resetState()
+                  }}
+                  onError={(error) => {
+                    logState(`Canvas error: ${error.message}`)
+                  }}
+                >
+                  <LayoutCanvas
+                    className="absolute inset-0 min-h-0 max-w-full"
+                    scrollHost={!isEmbedded}
+                    store={store}
+                    toolState={{ tool, drawShape }}
+                    defaultBoothTableSpec={defaultPlacementSpec}
+                    defaultBoothTableSpecRef={defaultPlacementSpecRef}
+                    tableSizeFt={tableSizePillValue}
+                    activeRoomId={activeRoomId}
+                    selectedRoomId={selectedRoomId}
+                    onRoomFrameClick={handleRoomFrameClick}
+                    onRoomGeometryCommit={handleRoomGeometryCommit}
+                    onViewportReady={handleViewportReady}
+                    onZoomChange={setCurrentZoom}
+                    eventCategoryNames={eventCategoryNames}
+                    boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+                    onVendorDrop={onVendorDrop}
+                    autoArrangeMode={vendorAutoArrangeMode}
+                    patronTrafficPath={patronTrafficPath}
+                    onProximityViolation={(info) => {
+                      toast.error(
+                        `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
+                        { duration: 2400 }
+                      )
+                    }}
+                    onOverlapViolation={() => {
+                      const placeableRooms = (store.doc.rooms ?? []).filter(
+                        (r) => !r.mergedIntoObjectId
+                      )
+                      if (placeableRooms.length === 0) {
+                        toast.message(
+                          'Add a room first — use Add room in the toolbar, then draw booths inside it.',
+                          { duration: 3200 }
+                        )
+                        return
+                      }
+                      if (
+                        layoutActiveRoomId &&
+                        !placeableRooms.some((r) => r.id === layoutActiveRoomId)
+                      ) {
+                        toast.message(
+                          'Room is still loading on the canvas — try drawing again in a moment.',
+                          { duration: 2800 }
+                        )
+                        return
+                      }
+                      toast.error(
+                        'Draw inside the room interior — booths cannot overlap fixtures or sit outside the walls.',
+                        { duration: 2800 }
+                      )
+                    }}
+                    onRoomCanvasLimitBlocked={() => {
+                      toast.message(
+                        'Canvas limit reached — drag the primary (largest) room smaller or move annex rooms closer.',
+                        { duration: 2200 }
+                      )
+                    }}
+                    onAfterDrawCommit={handleAfterDrawCommit}
+                    showLabels={showLabels}
+                  />
+                </CanvasRootErrorBoundary>
+                <CanvasLegend />
+              </div>
+            </div>
 
-          {!isDashboard ? (
-            <div className="relative z-20 flex h-full min-h-0 shrink-0 self-stretch">
+            <div
+              className={cn(
+                'relative z-20 flex h-full min-h-0 shrink-0 self-stretch',
+                rightInspectorOpen && 'w-[320px] min-w-[320px]'
+              )}
+            >
               {!rightInspectorOpen ? (
                 <button
                   type="button"
@@ -2277,7 +2355,7 @@ function FloorPlanV2Workspace({
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               ) : (
-                <div className="relative flex h-full min-h-0 w-[min(100%,260px)] max-w-[min(42vw,260px)] shrink-0 flex-col overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+                <div className="relative flex h-full min-h-0 w-[320px] min-w-[320px] shrink-0 flex-col overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
                   <button
                     type="button"
                     onClick={() => setRightInspectorOpen(false)}
@@ -2297,8 +2375,8 @@ function FloorPlanV2Workspace({
                 </div>
               )}
             </div>
-          ) : null}
-        </div>
+          </div>
+        )}
         </div>
       </FullscreenLayout>
     </div>

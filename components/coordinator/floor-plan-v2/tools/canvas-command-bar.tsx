@@ -318,6 +318,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       className={cn(
         'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
         staticLayout ? 'py-0.5' : 'py-1',
+        !staticLayout && !sidebarLayout && 'flex min-w-0 flex-wrap items-center gap-2',
         staticLayout &&
           !sidebarLayout &&
           'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',

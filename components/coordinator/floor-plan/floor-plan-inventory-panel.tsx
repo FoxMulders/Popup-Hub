@@ -42,7 +42,7 @@ export function FloorPlanInventoryPanel({
     return (
       <div className="market-panel p-3">
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Add test vendors or run Smart Populate to build your booth inventory.
+          Add test vendors or auto-arrange booths to build your booth inventory.
         </p>
       </div>
     )

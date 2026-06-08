@@ -244,7 +244,7 @@ export function PatronTableSizeRows({
       role="group"
       aria-label="Patron table sizes"
     >
-      <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-0.5">
+      <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2">
         <button
           type="button"
           disabled={disabled}
@@ -264,7 +264,7 @@ export function PatronTableSizeRows({
           compact={compact}
         />
       </div>
-      <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-0.5">
+      <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2">
         <button
           type="button"
           disabled={disabled}

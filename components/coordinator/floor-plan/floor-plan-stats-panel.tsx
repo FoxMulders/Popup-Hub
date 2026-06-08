@@ -77,7 +77,7 @@ export function FloorPlanStatsPanel({
           <p className={atCapacity ? WIZARD_SUMMARY_VALUE_WARN : WIZARD_SUMMARY_VALUE}>
             Max booths: {maxBoothCapacity}
             <span className="block text-xs mt-0.5 text-muted-foreground">
-              ~{layoutCapacity} fit with 8′ aisles · {baselineTableLengthFt}′ baseline table
+              ~{layoutCapacity} max with 8′ aisles · {baselineTableLengthFt}′ baseline table
             </span>
             {capacityClampedByLayout ? (
               <span className="mt-1 block rounded border border-harvest-300 bg-harvest-50 px-1.5 py-1 text-[10px] font-semibold text-harvest-900">

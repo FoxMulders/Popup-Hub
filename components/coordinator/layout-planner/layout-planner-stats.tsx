@@ -27,7 +27,7 @@ export function LayoutPlannerStats({
         </p>
         {layoutCapacity != null ? (
           <p className="mt-0.5 tabular-nums text-muted-foreground">
-            C<sub className="text-[10px]">max</sub>{' '}
+            Max booths{' '}
             <span className="font-medium text-foreground">{layoutCapacity}</span>
           </p>
         ) : null}

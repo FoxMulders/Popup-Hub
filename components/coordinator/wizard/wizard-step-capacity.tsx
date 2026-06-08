@@ -79,7 +79,7 @@ export function WizardStepCapacity({
           <WizardZone
             id="wizard-zone-capacity-floor"
             title="Floor capacity"
-            subtitle="Table size and C_max from your venue — use smart populate to draft category caps."
+            subtitle="Pick table size, then apply suggested caps from your floor dimensions."
           >
             <div className="wizard-step2-section1 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
               <span className="wizard-glass-inset rounded-md px-2.5 py-1 tabular-nums">
@@ -89,7 +89,7 @@ export function WizardStepCapacity({
                 className="wizard-glass-inset rounded-md border-sage-200/80 px-2.5 py-1 tabular-nums"
                 title="Accounts for walking aisles and emergency fire paths."
               >
-                C<sub>max</sub> <strong className="text-foreground">{layoutCapacity}</strong>
+                Max booths <strong className="text-foreground">{layoutCapacity}</strong>
               </span>
               <span className="wizard-glass-inset col-span-2 rounded-md border-harvest-200/80 px-2.5 py-1 tabular-nums sm:col-span-1">
                 Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
@@ -193,7 +193,7 @@ export function WizardStepCapacity({
       <WizardZone
         id="wizard-zone-capacity-categories"
         title="Category limits"
-        subtitle="How many booths each vendor type can hold — totals should stay at or below C_max when using a floor plan."
+        subtitle="How many booths each vendor type can hold — totals should stay at or below max booths when using a floor plan."
         variant="wide"
       >
         <div className="space-y-4">
@@ -230,8 +230,8 @@ export function WizardStepCapacity({
         >
           <Calculator className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
           <span>
-            Total caps ({totalCaps}) exceed structural C<sub>max</sub> ({layoutCapacity}). You can
-            still proceed — the floor plan step will warn if placement runs out of room.
+            Total caps ({totalCaps}) exceed the max booths your floor can hold ({layoutCapacity}). You
+            can still proceed — the floor plan step will warn if placement runs out of room.
           </span>
         </p>
       ) : null}

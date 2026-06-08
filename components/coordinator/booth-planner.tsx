@@ -2191,7 +2191,7 @@ export function BoothPlanner({
         allCreated = [...allCreated, ...batch]
         setFakeVendors(allCreated)
         setLastFillSummary(
-          `${allCreated.length} random vendors registered — Smart Populate running…`
+          `${allCreated.length} random vendors registered — Auto-arrange running…`
         )
 
         const planInputs = buildAutoPlanVendorQueueFromFake(allCreated)
@@ -3628,7 +3628,7 @@ export function BoothPlanner({
               />
             )}
             <p className="text-xs text-muted-foreground rounded-lg border border-stone-200 bg-canvas px-3 py-2">
-              Optimized capacity (C<sub>max</sub>): up to{' '}
+              Max booths on this floor: up to{' '}
               <span className="font-semibold text-foreground">{layoutCapacity}</span> vendor units fit with
               mandatory aisles and entrance/exit reserved on a {gridCols} × {gridRows} grid.
             </p>
@@ -3859,7 +3859,7 @@ export function BoothPlanner({
                         onStripPresetPaint={handleStripPresetPaint}
                         bareGridActive={unmanagedMode}
                       />
-                      <TooltipWrapper text="Auto-place roster vendors using Modified Loop (IKEA) — 15′ entrance buffer, serpentine path, category scattering, premium right-hand bias">
+                      <TooltipWrapper text="Place approved vendors on the floor using your layout rules and aisle spacing.">
                         <Button
                           type="button"
                           onClick={() => void handleAutoPlan()}
@@ -3868,7 +3868,7 @@ export function BoothPlanner({
                           className="gap-1 h-8 px-2 text-xs font-semibold"
                         >
                           <Wand2 className="h-3.5 w-3.5" />
-                          {autoPlanRunning ? 'Planning…' : 'Smart Populate Layout'}
+                          {autoPlanRunning ? 'Planning…' : 'Auto-arrange booths'}
                         </Button>
                       </TooltipWrapper>
                       <TooltipWrapper text="Remove all placed vendors from the grid — fixtures stay">
@@ -3931,7 +3931,7 @@ export function BoothPlanner({
                     role="toolbar"
                     aria-label="Floor plan actions"
                   >
-                    <TooltipWrapper text="Auto-place roster vendors with mandatory aisles and entrance/exit reserved">
+                    <TooltipWrapper text="Place approved vendors on the floor using your layout rules and aisle spacing.">
                       <Button
                         type="button"
                         onClick={() => void handleAutoPlan()}
@@ -3940,7 +3940,7 @@ export function BoothPlanner({
                         className="gap-1 h-8 px-2 text-xs font-semibold"
                       >
                         <Wand2 className="h-3.5 w-3.5" />
-                        {autoPlanRunning ? 'Planning…' : 'Smart Populate Layout'}
+                        {autoPlanRunning ? 'Planning…' : 'Auto-arrange booths'}
                       </Button>
                     </TooltipWrapper>
                     <TooltipWrapper text="Remove all placed vendors from the grid — fixtures stay">

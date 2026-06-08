@@ -61,11 +61,7 @@ export function SpatialLayoutToolbar({
 
       <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums text-muted-foreground">
         <span className="rounded-md border border-stone-200 bg-white px-2.5 py-1 font-medium text-foreground">
-          {placedCount} placed
-          <span className="mx-1 text-stone-300" aria-hidden>
-            ·
-          </span>
-          cap {layoutCapacity}
+          {placedCount} of {layoutCapacity} max
         </span>
         {hasOverlap ? (
           <span

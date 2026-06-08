@@ -10,6 +10,13 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (Step 3 floor-plan layout — sidebar + toolbar wrap, not deployed)
+- **`floor-plan-v2.tsx` + `floor-plan-v2_wizard_qa.tsx`:** Wizard layout uses a viewport row (`flex-row`, `overflow-hidden`, `h-full` embedded / `h-[calc(100vh-64px)]` standalone) — middle column holds wrapping command bar + scrollable canvas (`flex-1 max-w-full`); right properties panel fixed at `w-[320px] min-w-[320px] shrink-0 h-full`.
+- **`canvas-command-bar.tsx` + `_qa`:** Non-static ribbon container uses `flex flex-wrap gap-2` so tool groups wrap instead of forcing one line.
+- **`table-size-pill.tsx`:** Size chip rows use `flex-wrap gap-2` (was `flex-nowrap`).
+- **`floor-plan-canvas.tsx`:** Canvas scroll host adds `min-w-0 max-w-full` so flex middle column can shrink without crushing the inspector.
+- **Verify:** `/coordinator/events/[id]/setup?step=3` — properties sidebar stays 320px readable; toolbar wraps on narrow widths; canvas pans/zooms in middle column only.
+
 ## Shipped this session (simplify populate caps UX, not deployed)
 - **`smart-populate-booth-caps.tsx`:** Renamed panel to "Suggested category caps"; plain-language description; compact preview (max booths, usable floor, suggested split); technical breakdown collapsed under "How we calculated this"; button "Apply suggested caps"; hide venue dimension inputs when `venueReadOnly`.
 - **`booth-planner.tsx`:** Canvas action renamed "Auto-arrange booths" (was "Smart Populate Layout"); simplified tooltip; max-booths copy in Step 2.
