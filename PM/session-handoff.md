@@ -10,6 +10,14 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (layout designer sidebar — merged control rows, not deployed)
+- **`toolbar-static-layout.ts`:** Four accordion rows collapsed to two merged rows — `room-tools` (Room Controls + Designer Tools) and `placement` (Patron Layout + Vendor Booths); legacy localStorage row ids migrate on load.
+- **`canvas-toolbar-static.tsx` + `canvas-toolbar-static_qa.tsx`:** Split-row flex layout — `lg:flex-row lg:justify-between` with vertical divider; left/right segments per row; wraps on medium viewports.
+- **`canvas-command-bar.tsx` + QA mirror:** Passes `layoutCtx` for segment visibility (tools hidden until first room exists).
+- **`canvas-command-bar-blocks.tsx` (+ QA):** Patron/vendor blocks use inline flex-wrap for side-by-side segment content.
+- **Verify:** `tsc --noEmit` clean; smoke `/coordinator/dashboard` — sidebar shows 2 rows (room+tools, patron+vendor) on lg; canvas gains ~2 accordion header heights.
+
+
 ## Shipped this session (layout designer 1′ grid calibration, not deployed)
 - **`canvas-grid-spacing.ts`:** Layout designer canvas always uses 1′ minor cells + major line every 5′ (`CANVAS_GRID_MAJOR_EVERY`); removed table-size-based 2′ mesh that made 50′ rooms span only 5 major (10′) blocks.
 - **`floor-plan-v2.tsx`:** `canvasGridDocPatch()` keeps `gridSpacingFt` / `snapFt` at 1′ on load and table-size changes so pointer snap matches the visual grid.

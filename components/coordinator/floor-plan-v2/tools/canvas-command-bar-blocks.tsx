@@ -430,7 +430,7 @@ export function renderCanvasCommandBarBlock(
 
     case 'vendor':
       return (
-        <>
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-0.5">
           <CommandButton
             onClick={() => activateTablePlacement('vendor')}
             title="Draw vendor — size from Vendor column"
@@ -479,12 +479,12 @@ export function renderCanvasCommandBarBlock(
               />
             </>
           ) : null}
-        </>
+        </div>
       )
 
     case 'patron':
       return (
-        <>
+        <div className="flex min-w-0 flex-wrap items-center gap-0.5">
           {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
             <PatronTableSizeRows
               value={ctx.tableSizeFt}
@@ -504,7 +504,7 @@ export function renderCanvasCommandBarBlock(
               roundToolActive={isTablePlacementActive('guest-round')}
               rectToolActive={isTablePlacementActive('guest-rect')}
               compact={compact}
-              className="w-full min-w-0 shrink-0"
+              className="min-w-0 shrink-0"
             />
           ) : null}
           {ctx.highlightedSelectionMetrics &&
@@ -531,7 +531,7 @@ export function renderCanvasCommandBarBlock(
               />
             </>
           ) : null}
-        </>
+        </div>
       )
 
     case 'room':
@@ -795,7 +795,7 @@ export function getVisibleToolbarBlockIds(ctx: {
   return ids
 }
 
-/** Row groups for the fixed dashboard ribbon (room → patron/vendor → tools). */
+/** Row groups for the fixed dashboard ribbon (room+tools → patron+vendor). */
 export function getStaticToolbarRowGroups(ctx: {
   needsRoomFirst: boolean
   showVendor: boolean
@@ -808,18 +808,17 @@ export function getStaticToolbarRowGroups(ctx: {
 
   const rows: CanvasToolbarBlockId[][] = []
 
-  if (ctx.showRoom) {
-    rows.push(['room'])
+  const roomToolsRow: CanvasToolbarBlockId[] = []
+  if (ctx.showRoom) roomToolsRow.push('room')
+  if (!ctx.needsRoomFirst) {
+    roomToolsRow.push('primitives', 'history-clipboard', 'view-align', 'utilities')
   }
+  if (roomToolsRow.length > 0) rows.push(roomToolsRow)
 
   const placementRow: CanvasToolbarBlockId[] = []
   if (ctx.showPatron) placementRow.push('patron')
   if (ctx.showVendor) placementRow.push('vendor')
-  if (placementRow.length > 0) {
-    rows.push(placementRow)
-  }
-
-  rows.push(['primitives', 'history-clipboard', 'view-align', 'utilities'])
+  if (placementRow.length > 0) rows.push(placementRow)
 
   return rows
 }

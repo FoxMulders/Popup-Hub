@@ -8,7 +8,6 @@ import {
   LayoutGrid,
   MousePointer2,
   RotateCcw,
-  Square,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
@@ -17,12 +16,13 @@ import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
   clearSavedStaticToolbarLayout,
   DEFAULT_STATIC_ROW_ORDER,
+  getStaticRowSegmentVisibility,
   loadStaticRowCollapsed,
   loadStaticRowOrder,
   saveStaticRowCollapsed,
   saveStaticRowOrder,
-  STATIC_ROW_BLOCKS,
   STATIC_ROW_LABELS,
+  STATIC_ROW_SEGMENTS,
   type CanvasToolbarStaticRowId,
   type StaticRowCollapsedState,
 } from './toolbar-static-layout'
@@ -31,28 +31,65 @@ const STATIC_ROW_ICONS: Record<
   CanvasToolbarStaticRowId,
   React.ComponentType<{ className?: string }>
 > = {
-  room: LayoutGrid,
-  patron: Circle,
-  vendor: Square,
-  tools: MousePointer2,
+  'room-tools': LayoutGrid,
+  placement: Circle,
+}
+
+export interface StaticToolbarLayoutContext {
+  needsRoomFirst: boolean
+  showRoom: boolean
+  showPatron: boolean
+  showVendor: boolean
 }
 
 export interface CanvasToolbarStaticProps {
   visibleRowIds: readonly CanvasToolbarStaticRowId[]
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
+  layoutCtx?: StaticToolbarLayoutContext
 }
 
-function StaticToolbarRow({
+function BlockCluster({
+  blockIds,
+  renderBlock,
+  compact,
+  className,
+}: {
+  blockIds: readonly CanvasToolbarBlockId[]
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  compact?: boolean
+  className?: string
+}) {
+  return (
+    <>
+      {blockIds.map((blockId) => (
+        <div
+          key={blockId}
+          className={cn(
+            'flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
+            compact ? 'py-0.5' : 'py-0.5',
+            className
+          )}
+        >
+          {renderBlock(blockId)}
+        </div>
+      ))}
+    </>
+  )
+}
+
+function MergedToolbarRow({
   rowId,
   label,
   index,
   total,
   expanded,
   compact,
+  showLeft,
+  showRight,
   onToggle,
   onMove,
-  children,
+  renderBlock,
 }: {
   rowId: CanvasToolbarStaticRowId
   label: string
@@ -60,10 +97,15 @@ function StaticToolbarRow({
   total: number
   expanded: boolean
   compact?: boolean
+  showLeft: boolean
+  showRight: boolean
   onToggle: (rowId: CanvasToolbarStaticRowId) => void
   onMove: (rowId: CanvasToolbarStaticRowId, direction: -1 | 1) => void
-  children: React.ReactNode
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
 }) {
+  const segments = STATIC_ROW_SEGMENTS[rowId]
+  const singleSegment = showLeft !== showRight
+
   return (
     <div
       className={cn(
@@ -110,6 +152,19 @@ function StaticToolbarRow({
             })()}
           </span>
         </TooltipWrapper>
+        {rowId === 'room-tools' && showRight ? (
+          <TooltipWrapper text="Designer tools">
+            <span
+              className={cn(
+                'inline-flex shrink-0 items-center justify-center rounded-sm border border-stone-200 bg-stone-50 text-stone-600',
+                compact ? 'h-6 w-6' : 'h-7 w-7'
+              )}
+              aria-hidden
+            >
+              <MousePointer2 className="h-3.5 w-3.5" />
+            </span>
+          </TooltipWrapper>
+        ) : null}
         <span className="min-w-0 flex-1" aria-hidden />
         <button
           type="button"
@@ -141,22 +196,58 @@ function StaticToolbarRow({
       {expanded ? (
         <div
           className={cn(
-            'flex min-w-0 flex-wrap items-center gap-0.5',
+            'flex min-w-0 flex-col flex-wrap gap-1 md:gap-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:w-full',
             compact ? 'px-0.5 py-0.5' : 'px-1 py-0.5'
           )}
         >
-          {children}
+          {showLeft ? (
+            <div
+              className={cn(
+                'flex min-w-0 flex-wrap items-center gap-0.5',
+                singleSegment ? 'w-full' : 'flex-1 lg:min-w-0 lg:max-w-[58%]'
+              )}
+            >
+              <BlockCluster
+                blockIds={segments.left}
+                renderBlock={renderBlock}
+                compact={compact}
+              />
+            </div>
+          ) : null}
+          {showLeft && showRight ? (
+            <div
+              className="hidden shrink-0 self-stretch bg-stone-200/80 lg:block lg:w-px"
+              aria-hidden
+            />
+          ) : null}
+          {showRight ? (
+            <div
+              className={cn(
+                'flex min-w-0 flex-wrap items-center gap-0.5',
+                singleSegment
+                  ? 'w-full lg:justify-end'
+                  : 'flex-1 lg:min-w-0 lg:justify-end'
+              )}
+            >
+              <BlockCluster
+                blockIds={segments.right}
+                renderBlock={renderBlock}
+                compact={compact}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
   )
 }
 
-/** Stacked dashboard ribbon — collapsible rows with move up/down and persisted layout. */
+/** Stacked dashboard ribbon — two merged rows, collapsible with persisted layout. */
 export function CanvasToolbarStatic({
   visibleRowIds,
   renderBlock,
   compact,
+  layoutCtx,
 }: CanvasToolbarStaticProps) {
   const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
 
@@ -233,12 +324,17 @@ export function CanvasToolbarStatic({
     clearSavedStaticToolbarLayout()
     setOrder([...DEFAULT_STATIC_ROW_ORDER])
     setCollapsed({
-      room: false,
-      patron: false,
-      vendor: false,
-      tools: false,
+      'room-tools': false,
+      placement: false,
     })
   }, [])
+
+  const segmentCtx = layoutCtx ?? {
+    needsRoomFirst: false,
+    showRoom: true,
+    showPatron: true,
+    showVendor: true,
+  }
 
   if (displayOrder.length === 0) return null
 
@@ -260,10 +356,13 @@ export function CanvasToolbarStatic({
         </TooltipWrapper>
       </div>
       {displayOrder.map((rowId, index) => {
-        const blockIds = STATIC_ROW_BLOCKS[rowId]
         const expanded = !collapsed[rowId]
+        const { left: showLeft, right: showRight } = getStaticRowSegmentVisibility(
+          rowId,
+          segmentCtx
+        )
         return (
-          <StaticToolbarRow
+          <MergedToolbarRow
             key={rowId}
             rowId={rowId}
             label={STATIC_ROW_LABELS[rowId]}
@@ -271,21 +370,12 @@ export function CanvasToolbarStatic({
             total={displayOrder.length}
             expanded={expanded}
             compact={compact}
+            showLeft={showLeft}
+            showRight={showRight}
             onToggle={handleToggle}
             onMove={handleMove}
-          >
-            {blockIds.map((blockId) => (
-              <div
-                key={blockId}
-                className={cn(
-                  'flex w-full min-w-0 max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
-                  compact ? 'py-0.5' : 'py-0.5'
-                )}
-              >
-                {renderBlock(blockId)}
-              </div>
-            ))}
-          </StaticToolbarRow>
+            renderBlock={renderBlock}
+          />
         )
       })}
     </div>

@@ -20,12 +20,10 @@ export const QA_PANEL_SCROLL_CLASSES =
 export const QA_PLACEMENT_TIP_VALID = 'Valid space'
 export const QA_PLACEMENT_TIP_VIOLATION = 'Rule conflict'
 
-/** Uppercase accordion section titles — no standalone row icons. */
+/** Uppercase accordion section titles — merged rows use left/right pair via STATIC_ROW_QA_HEADERS. */
 export const QA_ACCORDION_HEADERS = {
-  room: 'ROOM CONTROLS',
-  patron: 'PATRON LAYOUT',
-  vendor: 'VENDOR BOOTHS',
-  tools: 'DESIGNER TOOLS',
+  'room-tools': { left: 'ROOM CONTROLS', right: 'DESIGNER TOOLS' },
+  placement: { left: 'PATRON LAYOUT', right: 'VENDOR BOOTHS' },
 } as const
 
 export function QaAccordionHeader({ children }: { children: ReactNode }) {

@@ -300,6 +300,16 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     [needsRoomFirst, showVendor, showPatron, showRoom]
   )
 
+  const staticLayoutCtx = useMemo(
+    () => ({
+      needsRoomFirst,
+      showRoom,
+      showPatron,
+      showVendor,
+    }),
+    [needsRoomFirst, showRoom, showPatron, showVendor]
+  )
+
   return (
     <ToolbarCompactProvider compact={staticLayout}>
       <div
@@ -320,6 +330,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
           <CanvasToolbarStatic
             visibleRowIds={visibleStaticRowIds}
             compact
+            layoutCtx={staticLayoutCtx}
             renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
           />
         ) : (

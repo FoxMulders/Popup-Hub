@@ -1,40 +1,74 @@
 /**
  * Dashboard (staticLayout) toolbar rows — order and collapsed state.
+ * Two merged rows maximize canvas height: room+tools, patron+vendor.
  */
 
 import type { CanvasToolbarBlockId } from './toolbar-order'
 
-export type CanvasToolbarStaticRowId = 'room' | 'patron' | 'vendor' | 'tools'
+export type CanvasToolbarStaticRowId = 'room-tools' | 'placement'
+
+/** @deprecated Legacy row ids — migrated on load from localStorage. */
+export type LegacyCanvasToolbarStaticRowId =
+  | 'room'
+  | 'patron'
+  | 'vendor'
+  | 'tools'
 
 export const CANVAS_TOOLBAR_STATIC_ROW_IDS: readonly CanvasToolbarStaticRowId[] = [
-  'room',
-  'patron',
-  'vendor',
-  'tools',
+  'room-tools',
+  'placement',
 ] as const
 
+export interface StaticRowSegments {
+  left: readonly CanvasToolbarBlockId[]
+  right: readonly CanvasToolbarBlockId[]
+}
+
+export const STATIC_ROW_SEGMENTS: Record<
+  CanvasToolbarStaticRowId,
+  StaticRowSegments
+> = {
+  'room-tools': {
+    left: ['room'],
+    right: ['primitives', 'history-clipboard', 'view-align', 'utilities'],
+  },
+  placement: {
+    left: ['patron'],
+    right: ['vendor'],
+  },
+}
+
+/** @deprecated Use STATIC_ROW_SEGMENTS — kept for callers that flatten blocks. */
 export const STATIC_ROW_BLOCKS: Record<
   CanvasToolbarStaticRowId,
   readonly CanvasToolbarBlockId[]
 > = {
-  room: ['room'],
-  patron: ['patron'],
-  vendor: ['vendor'],
-  tools: ['primitives', 'history-clipboard', 'view-align', 'utilities'],
+  'room-tools': [
+    ...STATIC_ROW_SEGMENTS['room-tools'].left,
+    ...STATIC_ROW_SEGMENTS['room-tools'].right,
+  ],
+  placement: [
+    ...STATIC_ROW_SEGMENTS.placement.left,
+    ...STATIC_ROW_SEGMENTS.placement.right,
+  ],
 }
 
 export const DEFAULT_STATIC_ROW_ORDER: CanvasToolbarStaticRowId[] = [
-  'room',
-  'patron',
-  'vendor',
-  'tools',
+  'room-tools',
+  'placement',
 ]
 
 export const STATIC_ROW_LABELS: Record<CanvasToolbarStaticRowId, string> = {
-  room: 'Room',
-  patron: 'Patron',
-  vendor: 'Vendor',
-  tools: 'Canvas tools',
+  'room-tools': 'Room & tools',
+  placement: 'Patron & vendor',
+}
+
+export const STATIC_ROW_QA_HEADERS: Record<
+  CanvasToolbarStaticRowId,
+  { left: string; right: string }
+> = {
+  'room-tools': { left: 'ROOM CONTROLS', right: 'DESIGNER TOOLS' },
+  placement: { left: 'PATRON LAYOUT', right: 'VENDOR BOOTHS' },
 }
 
 const ORDER_STORAGE_KEY = 'popup-hub:floor-plan-v2:toolbar-static-order'
@@ -48,6 +82,36 @@ export function isCanvasToolbarStaticRowId(
   return ROW_SET.has(id)
 }
 
+function migrateLegacyRowId(raw: string): CanvasToolbarStaticRowId | null {
+  if (isCanvasToolbarStaticRowId(raw)) return raw
+  if (raw === 'room' || raw === 'tools') return 'room-tools'
+  if (raw === 'patron' || raw === 'vendor') return 'placement'
+  return null
+}
+
+export function getStaticRowSegmentVisibility(
+  rowId: CanvasToolbarStaticRowId,
+  ctx: {
+    needsRoomFirst: boolean
+    showRoom: boolean
+    showPatron: boolean
+    showVendor: boolean
+  }
+): { left: boolean; right: boolean } {
+  switch (rowId) {
+    case 'room-tools':
+      return {
+        left: ctx.showRoom,
+        right: !ctx.needsRoomFirst,
+      }
+    case 'placement':
+      return {
+        left: ctx.showPatron && !ctx.needsRoomFirst,
+        right: ctx.showVendor && !ctx.needsRoomFirst,
+      }
+  }
+}
+
 export function getVisibleStaticToolbarRows(ctx: {
   needsRoomFirst: boolean
   showVendor: boolean
@@ -55,14 +119,13 @@ export function getVisibleStaticToolbarRows(ctx: {
   showRoom: boolean
 }): CanvasToolbarStaticRowId[] {
   if (ctx.needsRoomFirst && ctx.showRoom) {
-    return ['room']
+    return ['room-tools']
   }
 
-  const ids: CanvasToolbarStaticRowId[] = []
-  if (ctx.showRoom) ids.push('room')
-  if (ctx.showPatron) ids.push('patron')
-  if (ctx.showVendor) ids.push('vendor')
-  ids.push('tools')
+  const ids: CanvasToolbarStaticRowId[] = ['room-tools']
+  if (ctx.showPatron || ctx.showVendor) {
+    ids.push('placement')
+  }
   return ids
 }
 
@@ -76,10 +139,10 @@ export function normalizeStaticRowOrder(
 
   if (saved?.length) {
     for (const raw of saved) {
-      if (!isCanvasToolbarStaticRowId(raw)) continue
-      if (!visibleSet.has(raw) || seen.has(raw)) continue
-      seen.add(raw)
-      out.push(raw)
+      const id = migrateLegacyRowId(raw)
+      if (!id || !visibleSet.has(id) || seen.has(id)) continue
+      seen.add(id)
+      out.push(id)
     }
   }
 
@@ -133,11 +196,40 @@ export type StaticRowCollapsedState = Record<CanvasToolbarStaticRowId, boolean>
 
 export function defaultStaticRowCollapsed(): StaticRowCollapsedState {
   return {
-    room: false,
-    patron: false,
-    vendor: false,
-    tools: false,
+    'room-tools': false,
+    placement: false,
   }
+}
+
+function migrateLegacyCollapsed(
+  record: Record<string, unknown>
+): StaticRowCollapsedState {
+  const defaults = defaultStaticRowCollapsed()
+  const out = { ...defaults }
+
+  if (typeof record['room-tools'] === 'boolean') {
+    out['room-tools'] = record['room-tools']
+  } else if (
+    typeof record.room === 'boolean' ||
+    typeof record.tools === 'boolean'
+  ) {
+    const room = typeof record.room === 'boolean' ? record.room : false
+    const tools = typeof record.tools === 'boolean' ? record.tools : false
+    out['room-tools'] = room && tools
+  }
+
+  if (typeof record.placement === 'boolean') {
+    out.placement = record.placement
+  } else if (
+    typeof record.patron === 'boolean' ||
+    typeof record.vendor === 'boolean'
+  ) {
+    const patron = typeof record.patron === 'boolean' ? record.patron : false
+    const vendor = typeof record.vendor === 'boolean' ? record.vendor : false
+    out.placement = patron && vendor
+  }
+
+  return out
 }
 
 export function loadStaticRowCollapsed(): StaticRowCollapsedState {
@@ -148,14 +240,7 @@ export function loadStaticRowCollapsed(): StaticRowCollapsedState {
     if (!raw) return defaults
     const parsed = JSON.parse(raw) as unknown
     if (!parsed || typeof parsed !== 'object') return defaults
-    const record = parsed as Record<string, unknown>
-    const out = { ...defaults }
-    for (const id of CANVAS_TOOLBAR_STATIC_ROW_IDS) {
-      if (typeof record[id] === 'boolean') {
-        out[id] = record[id]
-      }
-    }
-    return out
+    return migrateLegacyCollapsed(parsed as Record<string, unknown>)
   } catch {
     return defaults
   }

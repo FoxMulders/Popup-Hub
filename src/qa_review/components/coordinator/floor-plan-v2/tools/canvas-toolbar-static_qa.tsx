@@ -3,23 +3,23 @@
 import { ChevronDown, ChevronRight, ChevronUp, RotateCcw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TooltipWrapperQa } from '@/src/qa_review/components/coordinator/dashboard/tooltip-wrapper_qa'
-import {
-  QA_ACCORDION_HEADERS,
-  QaAccordionHeader,
-} from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
+import { QaAccordionHeader } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { cn } from '@/lib/utils'
 import type { CanvasToolbarBlockId } from '@/components/coordinator/floor-plan-v2/tools/toolbar-order'
 import {
   clearSavedStaticToolbarLayout,
   DEFAULT_STATIC_ROW_ORDER,
+  getStaticRowSegmentVisibility,
   loadStaticRowCollapsed,
   loadStaticRowOrder,
   saveStaticRowCollapsed,
   saveStaticRowOrder,
-  STATIC_ROW_BLOCKS,
+  STATIC_ROW_QA_HEADERS,
+  STATIC_ROW_SEGMENTS,
   type CanvasToolbarStaticRowId,
   type StaticRowCollapsedState,
 } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
+import type { StaticToolbarLayoutContext } from '@/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static'
 
 import {
   QA_TIP_COLLAPSE,
@@ -33,29 +33,68 @@ export interface CanvasToolbarStaticQaProps {
   visibleRowIds: readonly CanvasToolbarStaticRowId[]
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
+  layoutCtx?: StaticToolbarLayoutContext
 }
 
-function StaticToolbarRow({
+function BlockCluster({
+  blockIds,
+  renderBlock,
+  compact,
+  className,
+}: {
+  blockIds: readonly CanvasToolbarBlockId[]
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  compact?: boolean
+  className?: string
+}) {
+  return (
+    <>
+      {blockIds.map((blockId) => (
+        <div
+          key={blockId}
+          className={cn(
+            'flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
+            compact ? 'py-0.5' : 'py-0.5',
+            className
+          )}
+        >
+          {renderBlock(blockId)}
+        </div>
+      ))}
+    </>
+  )
+}
+
+function MergedToolbarRow({
   rowId,
-  header,
+  leftHeader,
+  rightHeader,
   index,
   total,
   expanded,
   compact,
+  showLeft,
+  showRight,
   onToggle,
   onMove,
-  children,
+  renderBlock,
 }: {
   rowId: CanvasToolbarStaticRowId
-  header: string
+  leftHeader: string
+  rightHeader: string
   index: number
   total: number
   expanded: boolean
   compact?: boolean
+  showLeft: boolean
+  showRight: boolean
   onToggle: (rowId: CanvasToolbarStaticRowId) => void
   onMove: (rowId: CanvasToolbarStaticRowId, direction: -1 | 1) => void
-  children: React.ReactNode
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
 }) {
+  const segments = STATIC_ROW_SEGMENTS[rowId]
+  const singleSegment = showLeft !== showRight
+
   return (
     <div
       className={cn(
@@ -75,7 +114,11 @@ function StaticToolbarRow({
           type="button"
           onClick={() => onToggle(rowId)}
           title={expanded ? QA_TIP_COLLAPSE : QA_TIP_EXPAND}
-          aria-label={expanded ? `${QA_TIP_COLLAPSE} ${header}` : `${QA_TIP_EXPAND} ${header}`}
+          aria-label={
+            expanded
+              ? `${QA_TIP_COLLAPSE} ${leftHeader}`
+              : `${QA_TIP_EXPAND} ${leftHeader}`
+          }
           aria-expanded={expanded}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 hover:text-stone-700',
@@ -88,15 +131,40 @@ function StaticToolbarRow({
             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
           )}
         </button>
-        <div className="min-w-0 flex-1 truncate">
-          <QaAccordionHeader>{header}</QaAccordionHeader>
+        <div
+          className={cn(
+            'flex min-w-0 flex-1 items-center gap-2 truncate',
+            showLeft && showRight && 'lg:justify-between'
+          )}
+        >
+          {showLeft ? (
+            <div className="min-w-0 truncate">
+              <QaAccordionHeader>{leftHeader}</QaAccordionHeader>
+            </div>
+          ) : null}
+          {showLeft && showRight ? (
+            <div
+              className="hidden shrink-0 self-stretch bg-stone-200/80 lg:block lg:w-px"
+              aria-hidden
+            />
+          ) : null}
+          {showRight ? (
+            <div
+              className={cn(
+                'min-w-0 truncate',
+                showLeft && showRight && 'lg:text-right'
+              )}
+            >
+              <QaAccordionHeader>{rightHeader}</QaAccordionHeader>
+            </div>
+          ) : null}
         </div>
         <button
           type="button"
           disabled={index === 0}
           onClick={() => onMove(rowId, -1)}
           title={QA_TIP_MOVE_UP}
-          aria-label={`${QA_TIP_MOVE_UP} ${header}`}
+          aria-label={`${QA_TIP_MOVE_UP} ${leftHeader}`}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
             compact ? 'h-6 w-6' : 'h-7 w-7'
@@ -109,7 +177,7 @@ function StaticToolbarRow({
           disabled={index >= total - 1}
           onClick={() => onMove(rowId, 1)}
           title={QA_TIP_MOVE_DOWN}
-          aria-label={`${QA_TIP_MOVE_DOWN} ${header}`}
+          aria-label={`${QA_TIP_MOVE_DOWN} ${leftHeader}`}
           className={cn(
             'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
             compact ? 'h-6 w-6' : 'h-7 w-7'
@@ -121,22 +189,58 @@ function StaticToolbarRow({
       {expanded ? (
         <div
           className={cn(
-            'flex min-w-0 flex-wrap items-center gap-0.5',
+            'flex min-w-0 flex-col flex-wrap gap-1 md:gap-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:w-full',
             compact ? 'px-0.5 py-0.5' : 'px-1 py-0.5'
           )}
         >
-          {children}
+          {showLeft ? (
+            <div
+              className={cn(
+                'flex min-w-0 flex-wrap items-center gap-0.5',
+                singleSegment ? 'w-full' : 'flex-1 lg:min-w-0 lg:max-w-[58%]'
+              )}
+            >
+              <BlockCluster
+                blockIds={segments.left}
+                renderBlock={renderBlock}
+                compact={compact}
+              />
+            </div>
+          ) : null}
+          {showLeft && showRight ? (
+            <div
+              className="hidden shrink-0 self-stretch bg-stone-200/80 lg:block lg:w-px"
+              aria-hidden
+            />
+          ) : null}
+          {showRight ? (
+            <div
+              className={cn(
+                'flex min-w-0 flex-wrap items-center gap-0.5',
+                singleSegment
+                  ? 'w-full lg:justify-end'
+                  : 'flex-1 lg:min-w-0 lg:justify-end'
+              )}
+            >
+              <BlockCluster
+                blockIds={segments.right}
+                renderBlock={renderBlock}
+                compact={compact}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
   )
 }
 
-/** QA stacked dashboard ribbon — text section headers, portal tooltips. */
+/** QA stacked dashboard ribbon — merged rows with uppercase split section headers. */
 export function CanvasToolbarStaticQa({
   visibleRowIds,
   renderBlock,
   compact,
+  layoutCtx,
 }: CanvasToolbarStaticQaProps) {
   const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
 
@@ -213,12 +317,17 @@ export function CanvasToolbarStaticQa({
     clearSavedStaticToolbarLayout()
     setOrder([...DEFAULT_STATIC_ROW_ORDER])
     setCollapsed({
-      room: false,
-      patron: false,
-      vendor: false,
-      tools: false,
+      'room-tools': false,
+      placement: false,
     })
   }, [])
+
+  const segmentCtx = layoutCtx ?? {
+    needsRoomFirst: false,
+    showRoom: true,
+    showPatron: true,
+    showVendor: true,
+  }
 
   if (displayOrder.length === 0) return null
 
@@ -240,32 +349,28 @@ export function CanvasToolbarStaticQa({
         </TooltipWrapperQa>
       </div>
       {displayOrder.map((rowId, index) => {
-        const blockIds = STATIC_ROW_BLOCKS[rowId]
+        const headers = STATIC_ROW_QA_HEADERS[rowId]
         const expanded = !collapsed[rowId]
+        const { left: showLeft, right: showRight } = getStaticRowSegmentVisibility(
+          rowId,
+          segmentCtx
+        )
         return (
-          <StaticToolbarRow
+          <MergedToolbarRow
             key={rowId}
             rowId={rowId}
-            header={QA_ACCORDION_HEADERS[rowId]}
+            leftHeader={headers.left}
+            rightHeader={headers.right}
             index={index}
             total={displayOrder.length}
             expanded={expanded}
             compact={compact}
+            showLeft={showLeft}
+            showRight={showRight}
             onToggle={handleToggle}
             onMove={handleMove}
-          >
-            {blockIds.map((blockId) => (
-              <div
-                key={blockId}
-                className={cn(
-                  'flex w-full min-w-0 max-w-full flex-wrap items-center gap-0.5 rounded-md border border-stone-200/90 bg-white px-0.5 shadow-sm',
-                  compact ? 'py-0.5' : 'py-0.5'
-                )}
-              >
-                {renderBlock(blockId)}
-              </div>
-            ))}
-          </StaticToolbarRow>
+            renderBlock={renderBlock}
+          />
         )
       })}
     </div>
