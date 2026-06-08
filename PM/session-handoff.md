@@ -3,14 +3,24 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `db70985` (pushed to `origin/master`)
-- Last deploy commit: `db70985` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 7** | commit `9f5963e` (handoff updated 2026-06-08 14:56)
+- Branch: `master` @ `458db41` (pushed to `origin/master`)
+- Last deploy commit: `458db41` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 8** | commit `b0e0eea` (handoff updated 2026-06-08 15:15)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
-## Shipped this session (flyer AI parse → Gemini 2.5 Flash, not deployed)
+## Shipped this session (OpenRouter AI gateway + task-based models, not deployed)
+- **`lib/ai/tasks.ts` (new):** Central registry maps workloads → OpenRouter models — `flyer_vision` / `vision_json` → Gemini 2.5 Flash; `chat_json` → GPT-4o mini; `creative_layout` → Claude 3.5 Sonnet; `creative_generation` → Claude Sonnet 4. Per-task env overrides: `OPENROUTER_MODEL_<TASK>` / `OPENROUTER_MODEL_<TASK>_FALLBACK`.
+- **`lib/ai/openrouter.ts` (new):** Server-side OpenRouter chat client (`openRouterChatForTask`) with quota/rate-limit fallback to each task's secondary model.
+- **`lib/ai/generate-json-vision.ts`:** Vision JSON now routes exclusively through OpenRouter (no direct Gemini/Groq API calls).
+- **`lib/ai/env.ts`:** `OPENROUTER_API_KEY` is the primary gateway; legacy `GEMINI_*` / `GROQ_*` keys deprecated.
+- **`lib/flyer/parse-flyer-vision.ts`:** Flyer OCR uses task `flyer_vision`; `meta.source` is `openrouter` (or `heuristic` when key missing).
+- **`lib/build-info.ts`:** `/version` payload adds `openRouterConfigured`; `geminiConfigured` now reflects any AI key (`isAiConfigured`).
+- **Verify:** `npx tsx scripts/verify-ai-provider-fallback.ts` — 22/22 pass. Set `OPENROUTER_API_KEY` on Vercel before deploy.
+- **Not migrated:** Experience Designer still proxies to external Master Generator backend — wire via `creative_generation` task when that service moves in-app.
+
+## Shipped this session (flyer AI parse → Gemini 2.5 Flash, superseded by OpenRouter task routing, not deployed)
 - **`lib/ai/env.ts`:** Flyer vision always uses `google/gemini-2.5-flash` (override via `FLYER_GEMINI_MODEL_ID` only); global `GEMINI_MODEL_ID` default bumped to 2.5 Flash for other callers.
 - **`lib/ai/generate-json-vision.ts`:** Optional `geminiModelId` per call so flyer parse can pin a model without affecting other vision callers.
 - **`lib/flyer/parse-flyer-vision.ts`:** Uses `resolveFlyerGeminiModelId()`; strips markdown JSON fences before `JSON.parse`.
@@ -90,7 +100,7 @@
 
 
 ## Last deploy
-- 2026-06-08 14:56 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (db70985)
+- 2026-06-08 15:15 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (458db41)
 
 
 ## Goal
@@ -307,7 +317,7 @@
 2. **Loader smoke-test** — hard refresh: perimeter booths, centered full logo, no grid/dash lines
 3. **Wizard smoke-test** — Step 2 booth fee / discount backspace; category price placeholders
 4. **Instant book** — re-run `npx tsx scripts/verify-instant-book-category-limits.ts` after any apply-route edits (currently 4/4)
-5. **OpenRouter (deferred)** — user spec §5 truncated; no OpenRouter spatial-AI wiring in this pass
+5. **OpenRouter smoke-test** — set `OPENROUTER_API_KEY` on Vercel; upload flyer on wizard Step 1 → fields populate; API `meta.source` is `openrouter`
 6. **Login QA smoke-test** — `/login`: 3 wrong passwords → fullscreen Nedry video (magic-word audio) + 30s lock; confirm `/assets/nedry_magic_word.mp4` loads on prod after deploy; verify trim + toggle do not leak globally
 7. **Commit + deploy** when ready (`PM/Deploy-popuphub.bat` or `ship.ps1`); promote `_qa` modules after sign-off
 
@@ -538,7 +548,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Room interiors are blank** — perimeter walls + labels only
 - **Vendor vs patron auto-arrange are independent** — each pass moves only its placement type; neither pass may reposition the other category
 - **Shared mode vocabulary** — both vendor and patron auto-arrange expose **Grid**, **Staggered**, and **Perimeter** (same semantics as `AutoArrangeMode` / `deterministic-market-layout.ts`)
-- **Handoff:** always update `PM/session-handoff.md` when finishing a task; run `update-session-handoff.ps1` or deploy/ship scripts to refresh baseline automatically
+- **AI gateway:** All in-app LLM calls route through **OpenRouter** with task-based model selection in `lib/ai/tasks.ts` (direct Gemini/Groq deprecated)
 
 ## Next actions
 1. **Dashboard toolbar-in-sidebar smoke-test** — `/coordinator/dashboard`: layout tools (Room / Patron / Vendor / Canvas) appear in left panel above curation queue; canvas fills full column height; **Full canvas** still shows toolbar strip; mobile shows toolbar above canvas
