@@ -149,11 +149,11 @@ export function VendorSuppliesSection() {
             No suggestions match your filter. Try another category or search Amazon directly above.
           </p>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="list">
+          <ul className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3" role="list">
             {suggestions.map((item) => (
               <li key={item.id}>
-                <Card className="h-full overflow-hidden transition hover:border-harvest-200 hover:shadow-md">
-                  <CardContent className="flex h-full flex-col p-4">
+                <Card className="overflow-hidden transition hover:border-harvest-200 hover:shadow-md">
+                  <CardContent className="flex flex-col p-4">
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <p className="font-semibold text-foreground">{item.name}</p>
                       <Badge variant="outline" className="shrink-0 text-[10px]">

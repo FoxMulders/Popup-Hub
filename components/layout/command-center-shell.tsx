@@ -10,6 +10,8 @@ export interface CommandCenterShellProps {
   center: ReactNode
   right: ReactNode
   className?: string
+  /** When true, the shell grows with content and the window handles scroll. */
+  documentScroll?: boolean
   /** Accessible name for the left column landmark */
   leftLabel?: string
   /** Accessible name for the center column landmark */
@@ -28,6 +30,7 @@ export function CommandCenterShell({
   center,
   right,
   className,
+  documentScroll = false,
   leftLabel = 'Curation and navigation',
   centerLabel = 'Primary workspace',
   rightLabel = 'Telemetry and sync desk',
@@ -35,7 +38,8 @@ export function CommandCenterShell({
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 flex-col overflow-hidden bg-canvas',
+        'flex flex-col bg-canvas',
+        documentScroll ? 'w-full' : 'h-full min-h-0 overflow-hidden',
         className
       )}
     >
@@ -46,26 +50,38 @@ export function CommandCenterShell({
       ) : null}
       <motion.div
         layout
-        className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[var(--command-center-left,320px)_minmax(0,1fr)_var(--command-center-right,360px)]"
+        className={cn(
+          'grid grid-cols-1 lg:grid-cols-[var(--command-center-left,320px)_minmax(0,1fr)_var(--command-center-right,360px)]',
+          documentScroll ? 'w-full' : 'min-h-0 flex-1 overflow-hidden'
+        )}
         transition={{ type: 'spring', stiffness: 380, damping: 32 }}
       >
         <aside
-          className="ecosystem-panel hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r"
+          className={cn(
+            'ecosystem-panel hidden flex-col border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r',
+            documentScroll ? '' : 'min-h-0 overflow-hidden'
+          )}
           aria-label={leftLabel}
         >
-          <div className="flex h-full min-h-0 flex-col">{left}</div>
+          <div className={cn('flex flex-col', documentScroll ? '' : 'h-full min-h-0')}>{left}</div>
         </aside>
         <section
-          className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:border-r lg:border-stone-200/70"
+          className={cn(
+            'relative flex min-w-0 flex-1 flex-col lg:border-r lg:border-stone-200/70',
+            documentScroll ? '' : 'min-h-0 overflow-hidden'
+          )}
           aria-label={centerLabel}
         >
           {center}
         </section>
         <aside
-          className="ecosystem-panel hidden min-h-0 flex-col overflow-hidden lg:flex"
+          className={cn(
+            'ecosystem-panel hidden flex-col lg:flex',
+            documentScroll ? '' : 'min-h-0 overflow-hidden'
+          )}
           aria-label={rightLabel}
         >
-          <div className="flex h-full min-h-0 flex-col">{right}</div>
+          <div className={cn('flex flex-col', documentScroll ? '' : 'h-full min-h-0')}>{right}</div>
         </aside>
       </motion.div>
     </div>

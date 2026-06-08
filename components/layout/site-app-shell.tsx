@@ -45,7 +45,7 @@ export function SiteAppShell({
         className={
           viewportFill
             ? 'min-h-0 flex-1 overflow-hidden'
-            : 'min-h-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]'
+            : 'w-full max-w-full flex-1 overflow-x-hidden'
         }
       >
         {children}

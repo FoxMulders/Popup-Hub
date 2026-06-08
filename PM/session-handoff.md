@@ -3,12 +3,29 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `541077f` (pushed to `origin/master`)
-- Last deploy commit: `541077f` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 15** | commit `083b796` (handoff updated 2026-06-08 16:21)
+- Branch: `master` @ `2054e6a` (pushed to `origin/master`)
+- Last deploy commit: `2054e6a` - 2054e6a feat: floor-plan layout fixes
+- Production: https://popuphub.ca - **build 18** | commit `2054e6a` (handoff updated 2026-06-08 16:35)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
+
+## Shipped this session (vendor supplies scroll fix, not deployed)
+- **`site-app-shell.tsx`:** Non-viewport-fill routes use document scroll on `#site-main` (removed nested `overflow-y-auto`).
+- **`portal-workspace-layout.tsx` + `command-center-shell.tsx`:** `/vendor/supplies` in vendor workspace grid; supplies uses `documentScroll` mode (no inner `overflow-y-auto` on center column).
+- **`app/vendor/supplies/page.tsx`:** `min-h-screen w-full` page shell with horizontal padding.
+- **`vendor-supplies-section.tsx`:** Grid/cards no longer use `h-full` height locks.
+- **Verify:** `/vendor/supplies` — scroll wheel works over header, search, filters, and side rails; not limited to the card grid.
+
+## Shipped this session (vendor supplies setup-order sort, not deployed)
+- **`lib/vendor/supplies-catalog.ts`:** Each curated item has a `setupOrder` integer (phases 1–5: shelter → power → merchandising → POS → takeaway). `filterVendorSupplies` sorts filtered results by `setupOrder` so the **All** tab follows chronological booth setup; category tabs still filter exclusively and inherit the same within-group order.
+- **`scripts/verify-vendor-supplies.ts`:** Asserts All-view id sequence and booth-tab order.
+- **Verify:** `/vendor/supplies` — **All** shows tent → weights → table → tablecloth → extension cord → lights → display → signage → tools → packaging; **Packaging** tab shows only kraft bags + tissue paper.
+
+## Shipped this session (nav role switcher tab deck, not deployed)
+- **`components/nav/portal-tabs.tsx`:** Patron / Vendor / Coordinator switcher styled as a rounded segmented track (`rounded-full`, muted stone track, inset shadow); active tab elevated white pill with forest text + market shadow; inactive tabs muted with hover lift.
+- **`components/nav/app-nav.tsx`:** Role switcher grouped with vertical divider + gap before contextual nav links (Dashboard, My Passport, etc.) on `md+`.
+- **Verify:** Sign in as vendor or coordinator — header shows pronounced tab deck; active role pops above track; divider separates role block from page links on desktop.
 
 ## Shipped this session (Step 3 floor-plan layout — sidebar + toolbar wrap, not deployed)
 - **`floor-plan-v2.tsx` + `floor-plan-v2_wizard_qa.tsx`:** Wizard layout uses a viewport row (`flex-row`, `overflow-hidden`, `h-full` embedded / `h-[calc(100vh-64px)]` standalone) — middle column holds wrapping command bar + scrollable canvas (`flex-1 max-w-full`); right properties panel fixed at `w-[320px] min-w-[320px] shrink-0 h-full`.
@@ -183,7 +200,7 @@
 
 
 ## Last deploy
-- 2026-06-08 16:21 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (541077f)
+- 2026-06-08 16:35 - Deploy recovery after reported failure - `2054e6a feat: floor-plan layout fixes` (2054e6a)
 
 
 ## Goal

@@ -43,6 +43,18 @@ assert(
 const boothOnly = filterVendorSupplies(VENDOR_SUPPLY_SUGGESTIONS, { category: 'booth' })
 assert(boothOnly.length > 0, 'Booth category filter returns items')
 assert(boothOnly.every((item) => item.category === 'booth'), 'Booth filter is exclusive')
+assert(
+  boothOnly.map((item) => item.id).join(',') ===
+    'canopy-tent,canopy-weights,folding-table,tablecloth,led-string-lights',
+  'Booth category sorted by setup order'
+)
+
+const allView = filterVendorSupplies(VENDOR_SUPPLY_SUGGESTIONS, { category: 'all' })
+assert(
+  allView.map((item) => item.id).join(',') ===
+    'canopy-tent,canopy-weights,folding-table,tablecloth,extension-cord,led-string-lights,gridwall-panel,acrylic-risers,jewelry-stand,chalkboard-sign,price-tags,card-reader-stand,cash-box,product-bags,tissue-paper',
+  'All view follows booth setup phase order'
+)
 
 const filtered = filterVendorSupplies(VENDOR_SUPPLY_SUGGESTIONS, { query: 'canopy' })
 assert(filtered.some((item) => item.id === 'canopy-tent'), 'Text filter matches name/query')

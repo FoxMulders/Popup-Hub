@@ -58,7 +58,9 @@ function useWorkspaceMode(pathname: string, portal: WorkspacePortal): boolean {
       pathname === '/vendor/dashboard' ||
       pathname.startsWith('/vendor/dashboard/') ||
       pathname === '/vendor/applications' ||
-      pathname.startsWith('/vendor/applications/')
+      pathname.startsWith('/vendor/applications/') ||
+      pathname === '/vendor/supplies' ||
+      pathname.startsWith('/vendor/supplies/')
     )
   }
 
@@ -75,6 +77,7 @@ export function PortalWorkspaceLayout({
 }: PortalWorkspaceLayoutProps) {
   const pathname = usePathname() ?? ''
   const workspace = useWorkspaceMode(pathname, portal)
+  const viewportLocked = routeUsesViewportFill(pathname)
 
   if (!workspace) {
     return <>{children}</>
@@ -95,11 +98,16 @@ export function PortalWorkspaceLayout({
 
   return (
     <CommandCenterShell
+      documentScroll={!viewportLocked}
       left={left}
       center={
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-canvas p-4 [-webkit-overflow-scrolling:touch] lg:p-6">
-          {children}
-        </div>
+        viewportLocked ? (
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-canvas p-4 [-webkit-overflow-scrolling:touch] lg:p-6">
+            {children}
+          </div>
+        ) : (
+          <div className="w-full bg-canvas p-4 lg:p-6">{children}</div>
+        )
       }
       right={right}
       leftLabel={portal === 'coordinator' ? 'Coordinator curation queue' : 'Vendor navigation'}

@@ -93,15 +93,22 @@ export function AppNav({
             <BrandLogoLockup className="shrink-0" href={homeHref} />
 
             {availablePortals.length > 1 ? (
-              <PortalTabs
-                availablePortals={availablePortals}
-                activePortal={activePortal}
-                className="hidden sm:inline-flex"
-              />
+              <div className="hidden shrink-0 items-center gap-4 sm:flex">
+                <PortalTabs
+                  availablePortals={availablePortals}
+                  activePortal={activePortal}
+                />
+                {links.length > 0 ? (
+                  <div
+                    className="hidden h-7 w-px shrink-0 bg-stone-300/80 md:block"
+                    aria-hidden
+                  />
+                ) : null}
+              </div>
             ) : null}
 
             {links.length > 0 ? (
-              <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex">
+              <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex md:pl-1">
                 {links.map(({ href, label }) => {
                   const active =
                     href === '/coordinator/dashboard'

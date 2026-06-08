@@ -15,7 +15,7 @@ export default async function VendorSuppliesPage() {
   if (!user) redirect('/login?redirectTo=/vendor/supplies')
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="vendor-supplies-page mx-auto min-h-screen w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Vendor Supplies</h1>
         <p className="mt-1 max-w-2xl text-muted-foreground">

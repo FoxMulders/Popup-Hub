@@ -68,8 +68,8 @@ export function PortalTabs({
       role="tablist"
       aria-label="Switch portal"
       className={cn(
-        'inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-lg bg-muted p-1',
-        compact && 'gap-0.5',
+        'inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-stone-200/80 bg-stone-200/45 p-1 shadow-[inset_0_1px_2px_rgb(62_45_28_/_0.06)]',
+        compact && 'w-full',
         className
       )}
     >
@@ -84,11 +84,13 @@ export function PortalTabs({
             disabled={pending}
             onClick={() => void switchPortal(portal)}
             className={cn(
-              'shrink-0 rounded-md px-2.5 py-2 text-xs font-medium transition-colors touch-manipulation min-h-11 sm:px-3 sm:text-sm',
+              'shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all touch-manipulation min-h-11 sm:px-4 sm:text-sm',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/35 focus-visible:ring-offset-2',
+              compact && 'flex-1 text-center',
               selected
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-              pending && !selected && 'opacity-60'
+                ? 'bg-white text-forest shadow-[var(--shadow-market-md)] ring-1 ring-stone-200/70'
+                : 'text-muted-foreground/60 hover:bg-white/35 hover:text-foreground',
+              pending && !selected && 'pointer-events-none opacity-45'
             )}
           >
             {PORTAL_LABELS[portal]}
