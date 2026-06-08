@@ -124,11 +124,41 @@ export interface FloorPlanCanvasProps {
   patronTrafficPath?: ReadonlyArray<{ x: number; y: number }> | null
   /** Command center: higher zoom floor so drags feel less jumpy when framed out. */
   commandCenterViewport?: boolean
+  /** Keep draw tool armed between placements; show hover ghost preview. */
+  stickyDrawPlacement?: boolean
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
 /** Minimum zoom on coordinator dashboard — avoids hypersensitive room drags when framed out. */
 const COMMAND_CENTER_ZOOM_MIN = 0.72
+
+/** Stages draw their own perimeter — skip duplicate dashed outline on selection. */
+function SelectionOverlayForCanvas({
+  objects,
+  selectedIds,
+  pxPerFt,
+  suppressHandle,
+}: {
+  objects: ReadonlyArray<PlacedObject>
+  selectedIds: ReadonlySet<string>
+  pxPerFt: number
+  suppressHandle?: boolean
+}) {
+  const filteredIds = new Set(
+    [...selectedIds].filter((id) => {
+      const obj = objects.find((o) => o.id === id)
+      return obj?.kind !== 'stage'
+    })
+  )
+  return (
+    <SelectionOverlay
+      objects={objects}
+      selectedIds={filteredIds}
+      pxPerFt={pxPerFt}
+      suppressHandle={suppressHandle}
+    />
+  )
+}
 
 export function LayoutCanvas(props: FloorPlanCanvasProps) {
   return <FloorPlanCanvas {...props} />
@@ -160,6 +190,7 @@ export function FloorPlanCanvas({
   patronTrafficPath = null,
   commandCenterViewport = false,
   scrollHost = true,
+  stickyDrawPlacement = false,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -353,9 +384,12 @@ export function FloorPlanCanvas({
     [store.doc]
   )
 
+  const previewSourceRect = pointer.draftRect ?? pointer.placementHoverRect
+  const previewSourceKind = pointer.draftKind ?? pointer.placementHoverKind
+
   const draftOverlaps = useMemo(() => {
-    const rawRect = pointer.draftRect
-    const kind = pointer.draftKind
+    const rawRect = previewSourceRect
+    const kind = previewSourceKind
     if (!rawRect || !kind) return false
     const rect = resolveDrawCommitRect(
       kind,
@@ -376,15 +410,15 @@ export function FloorPlanCanvas({
   }, [
     defaultBoothTableSpec,
     mergeOverlapCtx,
-    pointer.draftKind,
-    pointer.draftRect,
+    previewSourceKind,
+    previewSourceRect,
     store.doc.objects,
     store.doc.snapFt,
   ])
 
   const draftPreviewRect = useMemo(() => {
-    const rawRect = pointer.draftRect
-    const kind = pointer.draftKind
+    const rawRect = previewSourceRect
+    const kind = previewSourceKind
     if (!rawRect || !kind) return null
     return resolveDrawCommitRect(
       kind,
@@ -394,8 +428,8 @@ export function FloorPlanCanvas({
     )
   }, [
     defaultBoothTableSpec,
-    pointer.draftKind,
-    pointer.draftRect,
+    previewSourceKind,
+    previewSourceRect,
     store.doc.snapFt,
   ])
 
@@ -642,7 +676,7 @@ export function FloorPlanCanvas({
             renderLayer="placable"
           />
           {toolState.tool === 'select' ? (
-            <SelectionOverlay
+            <SelectionOverlayForCanvas
               objects={store.doc.objects}
               selectedIds={store.selectedIds}
               pxPerFt={pxPerFt}
@@ -669,7 +703,7 @@ export function FloorPlanCanvas({
             : null}
           <DraftPreview
             rect={draftPreviewRect}
-            kind={pointer.draftKind}
+            kind={previewSourceKind}
             pxPerFt={pxPerFt}
             hasOverlap={draftOverlaps}
           />

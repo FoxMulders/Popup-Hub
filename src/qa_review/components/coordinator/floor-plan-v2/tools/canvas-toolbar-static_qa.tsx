@@ -10,12 +10,12 @@ import {
   clearSavedStaticToolbarLayout,
   DEFAULT_STATIC_ROW_ORDER,
   getStaticRowSegmentVisibility,
+  getStaticRowSegments,
   loadStaticRowCollapsed,
   loadStaticRowOrder,
   saveStaticRowCollapsed,
   saveStaticRowOrder,
   STATIC_ROW_QA_HEADERS,
-  STATIC_ROW_SEGMENTS,
   type CanvasToolbarStaticRowId,
   type StaticRowCollapsedState,
 } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
@@ -34,6 +34,7 @@ export interface CanvasToolbarStaticQaProps {
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
   layoutCtx?: StaticToolbarLayoutContext
+  sidebarLayout?: boolean
 }
 
 function BlockCluster({
@@ -41,12 +42,26 @@ function BlockCluster({
   renderBlock,
   compact,
   className,
+  bare,
 }: {
   blockIds: readonly CanvasToolbarBlockId[]
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
   className?: string
+  bare?: boolean
 }) {
+  if (bare) {
+    return (
+      <div className={cn('flex min-w-0 flex-col gap-1.5', className)}>
+        {blockIds.map((blockId) => (
+          <div key={blockId} className="min-w-0">
+            {renderBlock(blockId)}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <>
       {blockIds.map((blockId) => (
@@ -73,6 +88,7 @@ function MergedToolbarRow({
   total,
   expanded,
   compact,
+  sidebarLayout,
   showLeft,
   showRight,
   onToggle,
@@ -86,14 +102,16 @@ function MergedToolbarRow({
   total: number
   expanded: boolean
   compact?: boolean
+  sidebarLayout?: boolean
   showLeft: boolean
   showRight: boolean
   onToggle: (rowId: CanvasToolbarStaticRowId) => void
   onMove: (rowId: CanvasToolbarStaticRowId, direction: -1 | 1) => void
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
 }) {
-  const segments = STATIC_ROW_SEGMENTS[rowId]
+  const segments = getStaticRowSegments(rowId, Boolean(sidebarLayout))
   const singleSegment = showLeft !== showRight
+  const splitHeader = sidebarLayout && showLeft && showRight
 
   return (
     <div
@@ -131,34 +149,41 @@ function MergedToolbarRow({
             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
           )}
         </button>
-        <div
-          className={cn(
-            'flex min-w-0 flex-1 items-center gap-2 truncate',
-            showLeft && showRight && 'lg:justify-between'
-          )}
-        >
-          {showLeft ? (
-            <div className="min-w-0 truncate">
-              <QaAccordionHeader>{leftHeader}</QaAccordionHeader>
-            </div>
-          ) : null}
-          {showLeft && showRight ? (
-            <div
-              className="hidden shrink-0 self-stretch bg-stone-200/80 lg:block lg:w-px"
-              aria-hidden
-            />
-          ) : null}
-          {showRight ? (
-            <div
-              className={cn(
-                'min-w-0 truncate',
-                showLeft && showRight && 'lg:text-right'
-              )}
-            >
-              <QaAccordionHeader>{rightHeader}</QaAccordionHeader>
-            </div>
-          ) : null}
-        </div>
+        {splitHeader ? (
+          <div className="grid min-w-0 flex-1 grid-cols-2 items-center gap-2 px-0.5">
+            <QaAccordionHeader>{leftHeader}</QaAccordionHeader>
+            <QaAccordionHeader>{rightHeader}</QaAccordionHeader>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              'flex min-w-0 flex-1 items-center gap-2 truncate',
+              showLeft && showRight && 'lg:justify-between'
+            )}
+          >
+            {showLeft ? (
+              <div className="min-w-0 truncate">
+                <QaAccordionHeader>{leftHeader}</QaAccordionHeader>
+              </div>
+            ) : null}
+            {showLeft && showRight ? (
+              <div
+                className="hidden shrink-0 self-stretch bg-stone-200/80 lg:block lg:w-px"
+                aria-hidden
+              />
+            ) : null}
+            {showRight ? (
+              <div
+                className={cn(
+                  'min-w-0 truncate',
+                  showLeft && showRight && 'lg:text-right'
+                )}
+              >
+                <QaAccordionHeader>{rightHeader}</QaAccordionHeader>
+              </div>
+            ) : null}
+          </div>
+        )}
         <button
           type="button"
           disabled={index === 0}
@@ -187,49 +212,70 @@ function MergedToolbarRow({
         </button>
       </div>
       {expanded ? (
-        <div
-          className={cn(
-            'flex min-w-0 flex-col flex-wrap gap-1 md:gap-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:w-full',
-            compact ? 'px-0.5 py-0.5' : 'px-1 py-0.5'
-          )}
-        >
-          {showLeft ? (
-            <div
-              className={cn(
-                'flex min-w-0 flex-wrap items-center gap-0.5',
-                singleSegment ? 'w-full' : 'flex-1 lg:min-w-0 lg:max-w-[58%]'
-              )}
-            >
+        sidebarLayout && showLeft && showRight ? (
+          <div className="grid min-w-0 grid-cols-2 gap-0">
+            <div className="flex min-w-0 flex-col gap-1.5 border-r border-stone-200/90 px-1.5 py-1.5">
               <BlockCluster
                 blockIds={segments.left}
                 renderBlock={renderBlock}
                 compact={compact}
+                bare
               />
             </div>
-          ) : null}
-          {showLeft && showRight ? (
-            <div
-              className="hidden shrink-0 self-stretch bg-stone-200/80 lg:block lg:w-px"
-              aria-hidden
-            />
-          ) : null}
-          {showRight ? (
-            <div
-              className={cn(
-                'flex min-w-0 flex-wrap items-center gap-0.5',
-                singleSegment
-                  ? 'w-full lg:justify-end'
-                  : 'flex-1 lg:min-w-0 lg:justify-end'
-              )}
-            >
+            <div className="flex min-w-0 flex-col gap-1.5 px-1.5 py-1.5">
               <BlockCluster
                 blockIds={segments.right}
                 renderBlock={renderBlock}
                 compact={compact}
+                bare
               />
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <div
+            className={cn(
+              'flex min-w-0 flex-col flex-wrap gap-1 md:gap-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:w-full',
+              compact ? 'px-0.5 py-0.5' : 'px-1 py-0.5'
+            )}
+          >
+            {showLeft ? (
+              <div
+                className={cn(
+                  'flex min-w-0 flex-wrap items-center gap-0.5',
+                  singleSegment ? 'w-full' : 'flex-1 lg:min-w-0 lg:max-w-[58%]'
+                )}
+              >
+                <BlockCluster
+                  blockIds={segments.left}
+                  renderBlock={renderBlock}
+                  compact={compact}
+                />
+              </div>
+            ) : null}
+            {showLeft && showRight ? (
+              <div
+                className="hidden shrink-0 self-stretch bg-stone-200/80 lg:block lg:w-px"
+                aria-hidden
+              />
+            ) : null}
+            {showRight ? (
+              <div
+                className={cn(
+                  'flex min-w-0 flex-wrap items-center gap-0.5',
+                  singleSegment
+                    ? 'w-full lg:justify-end'
+                    : 'flex-1 lg:min-w-0 lg:justify-end'
+                )}
+              >
+                <BlockCluster
+                  blockIds={segments.right}
+                  renderBlock={renderBlock}
+                  compact={compact}
+                />
+              </div>
+            ) : null}
+          </div>
+        )
       ) : null}
     </div>
   )
@@ -241,6 +287,7 @@ export function CanvasToolbarStaticQa({
   renderBlock,
   compact,
   layoutCtx,
+  sidebarLayout = false,
 }: CanvasToolbarStaticQaProps) {
   const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
 
@@ -332,7 +379,7 @@ export function CanvasToolbarStaticQa({
   if (displayOrder.length === 0) return null
 
   return (
-    <div className="flex min-w-0 flex-col gap-1">
+    <div className={cn('flex min-w-0 flex-col', sidebarLayout ? 'gap-1.5' : 'gap-1')}>
       <div className="flex min-w-0 items-center justify-end">
         <TooltipWrapperQa text={QA_TIP_RESET_LAYOUT}>
           <button
@@ -365,6 +412,7 @@ export function CanvasToolbarStaticQa({
             total={displayOrder.length}
             expanded={expanded}
             compact={compact}
+            sidebarLayout={sidebarLayout}
             showLeft={showLeft}
             showRight={showRight}
             onToggle={handleToggle}

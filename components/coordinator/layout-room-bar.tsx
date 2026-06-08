@@ -51,6 +51,8 @@ interface LayoutRoomBarProps {
    * inside the primary CanvasCommandBar row (no secondary ribbon).
    */
   embedded?: boolean
+  /** Left-rail sidebar — stack room picker, dimensions, and add room vertically. */
+  sidebar?: boolean
 }
 
 const DEFAULT_FIRST_ROOM_WIDTH_FT = 50
@@ -142,6 +144,7 @@ export function LayoutRoomBar({
   highlightedRoomMetrics = null,
   slim = false,
   embedded = false,
+  sidebar = false,
 }: LayoutRoomBarProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
@@ -209,9 +212,11 @@ export function LayoutRoomBar({
   return (
     <div
       className={cn(
-        embedded
-          ? 'flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-1'
-          : slim
+        embedded && sidebar
+          ? 'flex min-w-0 w-full flex-col gap-1.5'
+          : embedded
+            ? 'flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-1'
+            : slim
             ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
             : 'market-panel p-3 space-y-2'
       )}
@@ -318,7 +323,7 @@ export function LayoutRoomBar({
       </div>
       ) : (
         <>
-          {highlightedRoomMetrics ? (
+          {!sidebar && highlightedRoomMetrics ? (
             <span
               className="shrink-0 rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-[11px] font-semibold tabular-nums text-stone-700"
               title="Physical dimensions of the highlighted room"
@@ -328,6 +333,7 @@ export function LayoutRoomBar({
               {Math.round(highlightedRoomMetrics.lengthFt)}'
             </span>
           ) : null}
+          {!sidebar ? (
           <div className="relative shrink-0" ref={presetMenuRef}>
           <div className="flex items-stretch overflow-hidden rounded-md border border-stone-200">
             <TooltipWrapper text="Add room">
@@ -386,17 +392,25 @@ export function LayoutRoomBar({
             </div>
           ) : null}
         </div>
+          ) : null}
         </>
       )}
       <div
         className={cn(
           'flex gap-2 -mx-1 px-1',
-          embedded ? 'min-w-0 flex-1 items-center overflow-x-auto pb-0' : slim ? 'min-w-0 flex-1 items-center pb-0' : 'pb-1',
-          compact
-            ? 'flex-col items-stretch'
-            : slim || embedded
-              ? 'overflow-x-auto'
-              : 'scroll-touch-x items-center'
+          sidebar
+            ? 'w-full flex-col items-stretch gap-1 pb-0'
+            : embedded
+              ? 'min-w-0 flex-1 items-center overflow-x-auto pb-0'
+              : slim
+                ? 'min-w-0 flex-1 items-center pb-0'
+                : 'pb-1',
+          !sidebar &&
+            (compact
+              ? 'flex-col items-stretch'
+              : slim || embedded
+                ? 'overflow-x-auto'
+                : 'scroll-touch-x items-center')
         )}
       >
         {rooms.map((room) => {
@@ -446,7 +460,7 @@ export function LayoutRoomBar({
               className={cn(
                 'flex items-center overflow-hidden transition-all duration-200',
                 inlineToolbar ? 'rounded-md border' : 'rounded-xl border-2',
-                compact ? 'w-full shrink-0' : 'shrink-0',
+                sidebar || compact ? 'w-full shrink-0' : 'shrink-0',
                 isActive
                   ? inlineToolbar
                     ? 'border-harvest-500'
@@ -503,6 +517,75 @@ export function LayoutRoomBar({
           )
         })}
       </div>
+      {sidebar && embedded ? (
+        <>
+          {highlightedRoomMetrics ? (
+            <span
+              className="w-full rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-center text-[11px] font-semibold tabular-nums text-stone-700"
+              title="Physical dimensions of the highlighted room"
+            >
+              {Math.round(highlightedRoomMetrics.widthFt)}′ ×{' '}
+              {Math.round(highlightedRoomMetrics.lengthFt)}′
+            </span>
+          ) : null}
+          <div className="relative w-full" ref={presetMenuRef}>
+            <div className="flex w-full items-stretch overflow-hidden rounded-md border border-stone-200">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 min-h-0 flex-1 gap-1 rounded-none border-0 px-2 text-xs"
+                onClick={() => onAddRoom({ presetId: 'blank' })}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add room
+              </Button>
+              <button
+                type="button"
+                aria-label="Choose room preset"
+                aria-expanded={presetMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setPresetMenuOpen((v) => !v)}
+                className="flex h-7 min-h-0 w-8 items-center justify-center border-l border-stone-200 text-stone-600 hover:bg-canvas"
+              >
+                <ChevronDown
+                  className={cn(
+                    'h-3.5 w-3.5 transition-transform',
+                    presetMenuOpen ? 'rotate-180' : ''
+                  )}
+                />
+              </button>
+            </div>
+            {presetMenuOpen ? (
+              <div
+                role="menu"
+                aria-label="Add room from preset"
+                className="absolute left-0 z-20 mt-1 w-full rounded-lg border border-stone-200 bg-card p-1 shadow-[var(--shadow-market)]"
+              >
+                {LAYOUT_ROOM_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setPresetMenuOpen(false)
+                      onAddRoom({ presetId: preset.id })
+                    }}
+                    className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
+                  >
+                    <span className="text-sm font-semibold text-foreground">
+                      {preset.name}
+                    </span>
+                    <span className="text-[11px] leading-tight text-muted-foreground">
+                      {preset.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }

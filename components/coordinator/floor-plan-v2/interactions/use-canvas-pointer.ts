@@ -23,6 +23,10 @@ import {
   defaultFoodTruckFootprintFt,
 } from '@/lib/floor-plan/canvas-open-placement'
 import {
+  defaultStageFootprintFt,
+  nextStageLabel,
+} from '@/lib/floor-plan/stage-placement'
+import {
   isValidObjectPlacement,
   resolvePlacementRoomIdForObject,
 } from '../geometry/is-point-in-room'
@@ -86,10 +90,15 @@ interface UseCanvasPointerOptions {
    */
   panActive: boolean
   /**
-   * Called whenever a draw gesture commits a new object. Lets the host
-   * snap the active tool back to Select after a single placement.
+   * Called whenever a draw gesture commits a new object. The host owns
+   * tool-switching policy (sticky placement vs revert to Select).
    */
   onAfterDrawCommit?: () => void
+  /**
+   * Dashboard command center — keep draw tool armed after commit and
+   * show a hover ghost preview between placements.
+   */
+  stickyDrawPlacement?: boolean
   /**
    * Sorted list of category names defined on this event. Used by the
    * draw-commit flow to assign each new booth to the *least*-used
@@ -282,6 +291,17 @@ export function resolveDrawCommitRect(
       height,
     }
   }
+  if (kind === 'stage') {
+    const { width, height } = defaultStageFootprintFt()
+    const cx = rect.x + rect.width / 2
+    const cy = rect.y + rect.height / 2
+    return {
+      x: snapToGrid(cx - width / 2, snapFt),
+      y: snapToGrid(cy - height / 2, snapFt),
+      width,
+      height,
+    }
+  }
   if (kind !== 'booth' || defaultBoothTableSpec == null) {
     return {
       x: rect.x,
@@ -371,6 +391,9 @@ function perimeterSnapPatch(
 export interface CanvasPointerApi {
   draftRect: Rect | null
   draftKind: PlacedObject['kind'] | null
+  /** Sticky draw mode — ghost footprint at cursor between placements. */
+  placementHoverRect: Rect | null
+  placementHoverKind: PlacedObject['kind'] | null
   marqueeRect: Rect | null
   /** True while the user is actively dragging an on-canvas rotate handle. */
   rotating: boolean
@@ -395,6 +418,11 @@ export function useCanvasPointer(
     addLogRef.current = addLog
   }, [addLog])
   const onAfterDrawCommit = options.onAfterDrawCommit
+  const stickyDrawPlacement = options.stickyDrawPlacement ?? false
+  const stickyDrawPlacementRef = useRef(stickyDrawPlacement)
+  useEffect(() => {
+    stickyDrawPlacementRef.current = stickyDrawPlacement
+  }, [stickyDrawPlacement])
   const eventCategoryNames = options.eventCategoryNames
   const autoArrangeMode = options.autoArrangeMode ?? 'grid'
   const commandCenterViewport = options.commandCenterViewport ?? false
@@ -437,6 +465,21 @@ export function useCanvasPointer(
     draftRef.current = next
     setDraftState(next)
   }, [])
+  const [placementHover, setPlacementHoverState] = useState<{
+    rect: Rect
+    kind: PlacedObject['kind']
+  } | null>(null)
+  const setPlacementHover = useCallback(
+    (next: { rect: Rect; kind: PlacedObject['kind'] } | null) => {
+      setPlacementHoverState(next)
+    },
+    []
+  )
+  useEffect(() => {
+    if (toolState.tool !== 'draw') {
+      setPlacementHover(null)
+    }
+  }, [toolState.tool, setPlacementHover])
   const dragRef = useRef<DragState>(null)
   const [marquee, setMarquee] = useState<MarqueeState>(null)
   const rotateRef = useRef<RotateState>(null)
@@ -1093,12 +1136,42 @@ export function useCanvasPointer(
         void metaKey
         void ctrlKey
         setMarquee({ ...marqueeNow, current: ft })
+        return
+      }
+
+      if (stickyDrawPlacementRef.current) {
+        const activeTool = toolStateRef.current
+        const gestureActive =
+          draftRef.current ||
+          dragRef.current ||
+          rotateRef.current ||
+          roomDragRef.current ||
+          roomResizeRef.current ||
+          objectResizeRef.current ||
+          marqueeNow
+        if (
+          activeTool.tool === 'draw' &&
+          !gestureActive
+        ) {
+          const snapped = snapPoint(ft, store.doc.snapFt)
+          const rect = resolveDrawCommitRect(
+            activeTool.drawShape,
+            { x: snapped.x, y: snapped.y, width: 0, height: 0 },
+            store.doc.snapFt,
+            readDefaultBoothTableSpec()
+          )
+          setPlacementHover({ rect, kind: activeTool.drawShape })
+          return
+        }
+        setPlacementHover(null)
       }
     },
     [
       commandCenterViewport,
       marquee,
+      readDefaultBoothTableSpec,
       setDraft,
+      setPlacementHover,
       store,
       transform.zoom,
     ]
@@ -1499,6 +1572,8 @@ export function useCanvasPointer(
   return {
     draftRect: draft ? normalizeRect(draft.anchor, draft.current) : null,
     draftKind: draft ? draft.kind : null,
+    placementHoverRect: placementHover?.rect ?? null,
+    placementHoverKind: placementHover?.kind ?? null,
     marqueeRect: marquee
       ? normalizeRect(marquee.anchor, marquee.current)
       : null,
@@ -1608,7 +1683,11 @@ function commitDraft(
       obj = { ...base, kind: 'open_wall', counterDepthFt: 1.5 }
       break
     case 'stage':
-      obj = { ...base, kind: 'stage' }
+      obj = {
+        ...base,
+        kind: 'stage',
+        label: nextStageLabel(store.doc.objects),
+      }
       break
     case 'food_truck':
       obj = { ...base, kind: 'food_truck', label: 'Food truck' }

@@ -214,6 +214,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       saveMarketDisabled,
       saveMarketLoading,
       compact: true,
+      sidebarLayout,
     }),
     [
       toolState,
@@ -275,6 +276,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
+      sidebarLayout,
     ]
   )
 
@@ -320,7 +322,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
           !sidebarLayout &&
           'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
         sidebarLayout &&
-          'min-h-0 flex-1 overflow-hidden border-0 bg-transparent px-0 shadow-none',
+          'min-h-0 flex-1 overflow-visible border-0 bg-transparent px-0 shadow-none',
         className
       )}
         role="toolbar"
@@ -331,6 +333,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
             visibleRowIds={visibleStaticRowIds}
             compact
             layoutCtx={staticLayoutCtx}
+            sidebarLayout={sidebarLayout}
             renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
           />
         ) : (

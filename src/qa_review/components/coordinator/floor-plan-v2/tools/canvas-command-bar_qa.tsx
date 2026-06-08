@@ -226,6 +226,7 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
       saveMarketDisabled,
       saveMarketLoading,
       compact: true,
+      sidebarLayout,
     }),
     [
       toolState,
@@ -288,6 +289,7 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
+      sidebarLayout,
     ]
   )
 
@@ -344,6 +346,7 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
             visibleRowIds={visibleStaticRowIds}
             compact
             layoutCtx={staticLayoutCtx}
+            sidebarLayout={sidebarLayout}
             renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
           />
         ) : (

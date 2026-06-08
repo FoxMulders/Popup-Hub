@@ -24,6 +24,7 @@ export function DraftPreview({
   const w = Math.max(1, rect.width * pxPerFt)
   const h = Math.max(1, rect.height * pxPerFt)
   const isBoothPlacement = kind === 'booth'
+  const isStagePlacement = kind === 'stage'
   const stroke = hasOverlap
     ? PLACEMENT_VIOLATION.stroke
     : isBoothPlacement
@@ -46,7 +47,9 @@ export function DraftPreview({
           ? PLACEMENT_VIOLATION.fillOpacity
           : isBoothPlacement
             ? PLACEMENT_AVAILABLE.fillOpacity
-            : 0.35
+            : isStagePlacement
+              ? 0
+              : 0.35
       }
       stroke={stroke}
       strokeWidth={2}

@@ -48,7 +48,12 @@ import {
   toolbarDividerClass,
   toolbarIconButtonSize,
 } from './command-button'
-import { TableSizePill, PatronTableSizeRows } from './table-size-pill'
+import {
+  TableSizePill,
+  PatronTableSizeRows,
+  PatronSidebarControls,
+  VendorSidebarSizeGrid,
+} from './table-size-pill'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
   guestRectTableSpec,
@@ -207,6 +212,8 @@ export interface CanvasCommandBarBlockContext {
   saveMarketLoading?: boolean
   /** Static dashboard ribbon — tighter control heights (~10% shorter). */
   compact?: boolean
+  /** Left-rail layout designer sidebar — stacked columns and split headers. */
+  sidebarLayout?: boolean
 }
 
 export function renderCanvasCommandBarBlock(
@@ -217,6 +224,7 @@ export function renderCanvasCommandBarBlock(
   const canAlign = ctx.selectedCount >= 2
   const canDistribute = ctx.selectedCount >= 3
   const compact = ctx.compact ?? false
+  const sidebarLayout = ctx.sidebarLayout ?? false
   const rotateRoomId = ctx.selectedRoomId ?? ctx.activeRoomId ?? null
   const canRotateRoom = Boolean(rotateRoomId) && Boolean(ctx.onRotateRoomLeft)
   const rotateRoomHint = rotateRoomId
@@ -291,6 +299,64 @@ export function renderCanvasCommandBarBlock(
 
   switch (id) {
     case 'primitives':
+      if (sidebarLayout) {
+        return (
+          <div
+            className="flex w-full min-w-0 flex-wrap content-start gap-0.5"
+            role="group"
+            aria-label="Designer tools"
+          >
+            <CommandButton
+              onClick={() => ctx.onToolChange('select')}
+              title="Select (V)"
+              active={ctx.toolState.tool === 'select'}
+            >
+              <MousePointer2 className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={() => ctx.onToolChange('hand')}
+              title="Hand (H)"
+              active={ctx.toolState.tool === 'hand'}
+            >
+              <Hand className="h-3.5 w-3.5" />
+            </CommandButton>
+            {CREATION_SHAPES.map((shape) => (
+              <CommandButton
+                key={shape.id}
+                onClick={() => activateDrawShape(shape.id)}
+                title={shape.label}
+                active={
+                  ctx.toolState.tool === 'draw' &&
+                  ctx.toolState.drawShape === shape.id
+                }
+                className={
+                  shape.variant === 'floor'
+                    ? ctx.toolState.tool === 'draw' &&
+                      ctx.toolState.drawShape === shape.id
+                      ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
+                      : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
+                    : shape.variant === 'arch'
+                      ? ctx.toolState.tool === 'draw' &&
+                        ctx.toolState.drawShape === shape.id
+                        ? 'bg-sky-200 text-sky-950 hover:bg-sky-200'
+                        : 'text-stone-700 hover:bg-sky-50'
+                      : undefined
+                }
+              >
+                <shape.icon className="h-3.5 w-3.5" />
+              </CommandButton>
+            ))}
+            <CommandButton
+              onClick={ctx.onDeleteSelected}
+              disabled={!hasSelection}
+              title={`Delete ${ctx.selectedCount} selected`}
+              className="text-rose-700 hover:bg-rose-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </CommandButton>
+          </div>
+        )
+      }
       return (
         <>
           <div
@@ -368,6 +434,30 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'history-clipboard':
+      if (sidebarLayout) {
+        return (
+          <div
+            className="flex items-center gap-0.5"
+            role="group"
+            aria-label="History"
+          >
+            <CommandButton
+              onClick={ctx.onUndo}
+              disabled={!ctx.canUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={ctx.onRedo}
+              disabled={!ctx.canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+          </div>
+        )
+      }
       return (
         <>
           <div
@@ -429,6 +519,44 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'vendor':
+      if (sidebarLayout) {
+        return (
+          <div className="flex w-full min-w-0 flex-col gap-1.5">
+            <CommandButton
+              onClick={() => activateTablePlacement('vendor')}
+              title="Draw vendor — size from Vendor column"
+              active={isTablePlacementActive('vendor')}
+              className={cn(
+                'self-start',
+                isTablePlacementActive('vendor')
+                  ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
+                  : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
+              )}
+            >
+              <Square className="h-3.5 w-3.5" />
+            </CommandButton>
+            {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
+              <VendorSidebarSizeGrid
+                value={ctx.tableSizeFt}
+                onChange={activateTableSize}
+                compact={compact}
+              />
+            ) : null}
+            {ctx.onVendorAutoArrange ? (
+              <AutoArrangeGroup
+                label="Vendor auto-arrange"
+                mode={ctx.vendorAutoArrangeMode ?? 'grid'}
+                onModeChange={ctx.onVendorAutoArrangeModeChange}
+                onRun={ctx.onVendorAutoArrange}
+                canRun={ctx.canVendorAutoArrange}
+                runTitle="Auto-arrange vendor in the active room"
+                tone="amber"
+                compact={compact}
+              />
+            ) : null}
+          </div>
+        )
+      }
       return (
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-0.5">
           <CommandButton
@@ -483,6 +611,45 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'patron':
+      if (sidebarLayout) {
+        return (
+          <div className="flex w-full min-w-0 flex-col gap-1.5">
+            {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
+              <PatronSidebarControls
+                value={ctx.tableSizeFt}
+                onSelectSize={activateTableSize}
+                onRoundToolClick={() =>
+                  activateTableSize(
+                    guestRoundTableSpec(resolveGuestTableFt(ctx.tableSizeFt, 'round'))
+                  )
+                }
+                onRectToolClick={() =>
+                  activateTableSize(
+                    guestRectTableSpec(
+                      resolveGuestTableFt(ctx.tableSizeFt, 'rectangular')
+                    )
+                  )
+                }
+                roundToolActive={isTablePlacementActive('guest-round')}
+                rectToolActive={isTablePlacementActive('guest-rect')}
+                compact={compact}
+              />
+            ) : null}
+            {ctx.onPatronAutoArrange ? (
+              <AutoArrangeGroup
+                label="Patron auto-arrange"
+                mode={ctx.patronAutoArrangeMode ?? 'grid'}
+                onModeChange={ctx.onPatronAutoArrangeModeChange}
+                onRun={ctx.onPatronAutoArrange}
+                canRun={ctx.canPatronAutoArrange}
+                runTitle="Auto-arrange patron in the active room (vendor stays put)"
+                tone="violet"
+                compact={compact}
+              />
+            ) : null}
+          </div>
+        )
+      }
       return (
         <div className="flex min-w-0 flex-wrap items-center gap-0.5">
           {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
@@ -550,6 +717,7 @@ export function renderCanvasCommandBarBlock(
               onDeleteRoom={ctx.onDeleteRoom}
               highlightedRoomMetrics={ctx.highlightedRoomMetrics}
               embedded
+              sidebar={sidebarLayout}
             />
           ) : null}
           {ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
@@ -665,6 +833,44 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'utilities':
+      if (sidebarLayout) {
+        return (
+          <div
+            className={cn(
+              'inline-flex w-full items-center overflow-hidden rounded-md border border-stone-200',
+              toolbarControlHeight(compact)
+            )}
+          >
+            <button
+              type="button"
+              onClick={ctx.onZoomOut}
+              title="Zoom out"
+              aria-label="Zoom out"
+              className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={ctx.onZoomReset}
+              title="Reset zoom to 100%"
+              aria-label="Reset zoom"
+              className="inline-flex h-full min-w-[3rem] flex-1 items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
+            >
+              {Math.round(ctx.zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={ctx.onZoomIn}
+              title="Zoom in"
+              aria-label="Zoom in"
+              className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )
+      }
       return (
         <>
           {ctx.onShowLabelsChange ? (

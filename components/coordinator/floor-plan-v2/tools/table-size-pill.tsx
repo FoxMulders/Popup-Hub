@@ -39,10 +39,22 @@ export interface PatronTableSizeRowsProps {
   className?: string
 }
 
-function sizeButtonClass(active: boolean, disabled: boolean): string {
+type SizeButtonTone = 'default' | 'patron' | 'vendor'
+
+function sizeButtonClass(
+  active: boolean,
+  disabled: boolean,
+  tone: SizeButtonTone = 'default'
+): string {
+  const activeClass =
+    tone === 'vendor'
+      ? 'bg-forest text-primary-foreground'
+      : tone === 'patron'
+        ? 'bg-violet-600 text-white'
+        : 'bg-sky-600 text-white'
   return cn(
     'inline-flex h-full min-w-[1.85rem] shrink-0 items-center justify-center px-1.5 text-[10px] font-semibold tabular-nums border-r border-stone-200 last:border-r-0 transition-colors sm:min-w-[2rem] sm:px-2 sm:text-[11px]',
-    active ? 'bg-sky-600 text-white' : 'text-stone-700 hover:bg-stone-100',
+    active ? activeClass : 'text-stone-700 hover:bg-stone-100',
     disabled && 'pointer-events-none'
   )
 }
@@ -96,7 +108,115 @@ function GuestTableSizeButtons({
                 ? `Set guest round table diameter to ${ft} ft`
                 : `Set patron banquet table length to ${ft} ft`
             }
-            className={sizeButtonClass(active, disabled)}
+            className={sizeButtonClass(active, disabled, 'patron')}
+          >
+            {ft}′
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Patron sidebar — shape toggles on top, active shape sizes beneath. */
+export function PatronSidebarControls({
+  value,
+  onSelectSize,
+  onRoundToolClick,
+  onRectToolClick,
+  roundToolActive = false,
+  rectToolActive = false,
+  disabled = false,
+  compact = false,
+  className,
+}: PatronTableSizeRowsProps) {
+  const activeShape =
+    rectToolActive || (value.purpose === 'guest' && value.shape === 'rectangular')
+      ? 'rectangular'
+      : 'round'
+
+  return (
+    <div
+      className={cn('flex w-full min-w-0 flex-col gap-1', className)}
+      role="group"
+      aria-label="Patron table sizes"
+    >
+      <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onRoundToolClick}
+          aria-pressed={roundToolActive}
+          title="Draw patron round table"
+          aria-label="Circle tables"
+          className={patronToolIconClass(roundToolActive, compact)}
+        >
+          <Circle className="h-3.5 w-3.5" aria-hidden />
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onRectToolClick}
+          aria-pressed={rectToolActive}
+          title="Draw patron banquet table"
+          aria-label="Rectangle tables"
+          className={patronToolIconClass(rectToolActive, compact)}
+        >
+          <RectangleHorizontal className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </div>
+      <GuestTableSizeButtons
+        shape={activeShape}
+        value={value}
+        onChange={onSelectSize}
+        disabled={disabled}
+        compact={compact}
+      />
+    </div>
+  )
+}
+
+/** Vendor sidebar — wrapping size grid with brand highlight on selection. */
+export function VendorSidebarSizeGrid({
+  value,
+  onChange,
+  disabled = false,
+  compact = false,
+  className,
+}: {
+  value: TableSizeSpec
+  onChange: (selection: TableSizeSpec) => void
+  disabled?: boolean
+  compact?: boolean
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'grid w-full grid-cols-4 gap-0.5 rounded-md border border-stone-200 bg-white p-0.5',
+        compact ? 'text-[10px]' : 'text-[11px]',
+        disabled && 'opacity-60',
+        className
+      )}
+      role="group"
+      aria-label="Vendor booth sizes"
+    >
+      {TABLE_SIZES.map((ft) => {
+        const selection = vendorTableSpec(ft)
+        const active = tableSizeSpecsEqual(value, selection)
+        return (
+          <button
+            key={`booth-sidebar-${ft}`}
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(selection)}
+            aria-pressed={active}
+            title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
+            className={cn(
+              'inline-flex min-h-[1.8rem] items-center justify-center rounded-sm px-1 font-semibold tabular-nums transition-colors',
+              sizeButtonClass(active, disabled, 'vendor'),
+              'min-w-0 border-0 last:border-0'
+            )}
           >
             {ft}′
           </button>
@@ -240,7 +360,7 @@ export function TableSizePill({
                   onClick={() => onChange(selection)}
                   aria-pressed={active}
                   title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
-                  className={sizeButtonClass(active, disabled)}
+                  className={sizeButtonClass(active, disabled, 'vendor')}
                 >
                   {ft}′
                 </button>
@@ -261,7 +381,7 @@ export function TableSizePill({
                   onClick={() => onChange(selection)}
                   aria-pressed={active}
                   title={`Set guest round table diameter to ${ft} ft`}
-                  className={sizeButtonClass(active, disabled)}
+                  className={sizeButtonClass(active, disabled, 'patron')}
                 >
                   {ft}′
                 </button>
@@ -278,7 +398,7 @@ export function TableSizePill({
                   onClick={() => onChange(selection)}
                   aria-pressed={active}
                   title={`Set patron banquet table length to ${ft} ft`}
-                  className={sizeButtonClass(active, disabled)}
+                  className={sizeButtonClass(active, disabled, 'patron')}
                 >
                   {ft}′
                 </button>

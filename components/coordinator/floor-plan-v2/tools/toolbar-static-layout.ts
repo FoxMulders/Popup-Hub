@@ -63,12 +63,43 @@ export const STATIC_ROW_LABELS: Record<CanvasToolbarStaticRowId, string> = {
   placement: 'Patron & vendor',
 }
 
+/** Split section titles for merged toolbar rows (sidebar + QA). */
+export const STATIC_ROW_HEADERS: Record<
+  CanvasToolbarStaticRowId,
+  { left: string; right: string }
+> = {
+  'room-tools': { left: 'Room Controls', right: 'Designer Tools' },
+  placement: { left: 'Patron Layout', right: 'Vendor Booths' },
+}
+
 export const STATIC_ROW_QA_HEADERS: Record<
   CanvasToolbarStaticRowId,
   { left: string; right: string }
 > = {
   'room-tools': { left: 'ROOM CONTROLS', right: 'DESIGNER TOOLS' },
   placement: { left: 'PATRON LAYOUT', right: 'VENDOR BOOTHS' },
+}
+
+/** Left-rail sidebar — undo/redo with room; tools + zoom on the right. */
+export const SIDEBAR_STATIC_ROW_SEGMENTS: Record<
+  CanvasToolbarStaticRowId,
+  StaticRowSegments
+> = {
+  'room-tools': {
+    left: ['room', 'history-clipboard'],
+    right: ['primitives', 'utilities'],
+  },
+  placement: {
+    left: ['patron'],
+    right: ['vendor'],
+  },
+}
+
+export function getStaticRowSegments(
+  rowId: CanvasToolbarStaticRowId,
+  sidebarLayout: boolean
+): StaticRowSegments {
+  return sidebarLayout ? SIDEBAR_STATIC_ROW_SEGMENTS[rowId] : STATIC_ROW_SEGMENTS[rowId]
 }
 
 const ORDER_STORAGE_KEY = 'popup-hub:floor-plan-v2:toolbar-static-order'

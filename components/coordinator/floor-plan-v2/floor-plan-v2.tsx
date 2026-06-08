@@ -724,6 +724,15 @@ function FloorPlanV2Workspace({
     setTool(next)
   }, [])
 
+  /** Dashboard: stay armed for rapid stamping; wizard: revert to Select. */
+  const handleAfterDrawCommit = useCallback(() => {
+    if (isDashboard) {
+      store.clearSelection()
+      return
+    }
+    setTool('select')
+  }, [isDashboard, store])
+
   const handleDrawShapeChange = useCallback((next: DrawShape) => {
     setDrawShape(next)
   }, [])
@@ -2247,7 +2256,8 @@ function FloorPlanV2Workspace({
                   { duration: 2200 }
                 )
               }}
-              onAfterDrawCommit={() => setTool('select')}
+              onAfterDrawCommit={handleAfterDrawCommit}
+              stickyDrawPlacement={isDashboard}
               showLabels={showLabels}
             />
             </CanvasRootErrorBoundary>

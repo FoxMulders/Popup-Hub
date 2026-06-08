@@ -21,7 +21,13 @@ import type {
   BoothObject,
   FloorPlanDoc,
   PlacedObject,
+  StageObject,
 } from '../components/coordinator/floor-plan-v2/state/types'
+import { resolveDrawCommitRect } from '../components/coordinator/floor-plan-v2/interactions/use-canvas-pointer'
+import {
+  defaultStageFootprintFt,
+  nextStageLabel,
+} from '../lib/floor-plan/stage-placement'
 
 let pass = 0
 let fail = 0
@@ -245,6 +251,37 @@ assert(
   planToolbarVendor.objectPatches.length === 0,
   'draw-toolbar mode switch never patches selection'
 )
+
+console.log('--- Stage placement: multi-instance labels + default footprint ---')
+const stageFootprint = defaultStageFootprintFt()
+const tapRect = resolveDrawCommitRect('stage', { x: 10, y: 12, width: 0, height: 0 }, 1)
+assert(
+  tapRect.width === stageFootprint.width && tapRect.height === stageFootprint.height,
+  'tap-to-place stage uses default 12×8 ft footprint'
+)
+assert(
+  tapRect.x === 10 - stageFootprint.width / 2 &&
+    tapRect.y === 12 - stageFootprint.height / 2,
+  'tap-to-place stage centers footprint on click'
+)
+assert(nextStageLabel([]) === 'Stage 1', 'first stage label is Stage 1')
+const oneStageDoc: FloorPlanDoc = {
+  ...baseDoc,
+  objects: [
+    ...baseDoc.objects,
+    {
+      id: 'stage-a',
+      kind: 'stage',
+      x: 0,
+      y: 0,
+      width: 12,
+      height: 8,
+      rotation: 0,
+      label: 'Stage 1',
+    } satisfies StageObject,
+  ],
+}
+assert(nextStageLabel(oneStageDoc.objects) === 'Stage 2', 'second stage label increments')
 
 console.log('--- Immutability: source array not mutated ---')
 const frozen = baseDoc.objects

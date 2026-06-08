@@ -3,12 +3,35 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `2dde90e` (pushed to `origin/master`)
+- Branch: `master` @ `e91ee19` (local — not pushed)
 - Last deploy commit: `2dde90e` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
 - Production: https://popuphub.ca - **build 11** | commit `8e7055e` (handoff updated 2026-06-08 15:28)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
+
+## Shipped this session (multi-instance Stage tool on layout designer, not deployed)
+- **`lib/floor-plan/stage-placement.ts` (new):** Default 12×8′ tap footprint and `nextStageLabel()` — auto labels "Stage 1", "Stage 2", … from existing `objects[]` count.
+- **`use-canvas-pointer.ts` (+ wizard QA mirror):** Stage draw uses centered default footprint on click (like food trucks); each commit appends a new stage with incrementing label — no replace/move of prior stages.
+- **`canvas-objects.tsx`:** Stage outline-only rect (`fill="none"`), `cursor: move`, stroke stays visible when joined to a room perimeter.
+- **`floor-plan-canvas.tsx` + `canvas-overlays.tsx`:** Selection overlay skips duplicate dashed box on stages; draft preview shows outline-only for stage placement.
+- **Verify:** `npx tsx scripts/verify-canvas-state-smoke.ts` — 27/27 pass. Smoke `/coordinator/dashboard` — arm Stage in Designer Tools, click canvas repeatedly → multiple labeled stages; select + drag + trash each independently.
+
+## Shipped this session (sticky placement tools on dashboard canvas, not deployed)
+- **`floor-plan-v2.tsx`:** `handleAfterDrawCommit` — dashboard keeps draw tool armed after placement (clears selection only); wizard still reverts to Select. `stickyDrawPlacement={isDashboard}` on canvas.
+- **`use-canvas-pointer.ts`:** `stickyDrawPlacement` option + hover ghost preview (`placementHoverRect` / `placementHoverKind`) between stamp clicks.
+- **`floor-plan-canvas.tsx`:** Merges draft + hover preview for `DraftPreview`; crosshair cursor unchanged while draw tool armed.
+- **Deactivation unchanged:** pointer/hand toolbar icons, different size/tool selection, `Escape` → Select.
+- **Verify:** `tsc --noEmit` clean; smoke `/coordinator/dashboard` — arm vendor `6′`, click canvas repeatedly without re-selecting tool; ghost outline follows cursor between clicks.
+
+## Shipped this session (layout designer sidebar row layout refactor, not deployed)
+- **`toolbar-static-layout.ts`:** `STATIC_ROW_HEADERS`, `SIDEBAR_STATIC_ROW_SEGMENTS`, `getStaticRowSegments()` — sidebar moves undo/redo left with room controls; tools + zoom right.
+- **`canvas-toolbar-static.tsx` (+ QA):** Split headers ("Room Controls" | "Designer Tools", "Patron Layout" | "Vendor Booths"); `sidebarLayout` two-column grid with vertical divider; bare block clusters (no per-block border crush).
+- **`canvas-command-bar.tsx` (+ QA):** Passes `sidebarLayout` into block context and static toolbar.
+- **`canvas-command-bar-blocks.tsx` (+ QA):** Sidebar branches — patron toggles-on-top + Grid dropdown; vendor 4-col size grid + Perimeter dropdown; primitives flex-wrap tool grid; zoom-only utilities.
+- **`table-size-pill.tsx`:** `PatronSidebarControls`, `VendorSidebarSizeGrid`; vendor active sizes use `bg-forest`; patron sizes use violet.
+- **`layout-room-bar.tsx`:** `sidebar` prop — vertical stack: room picker, dimensions (`40′ × 40′`), add room, undo/redo sibling block.
+- **Verify:** `tsc --noEmit` clean; smoke `/coordinator/dashboard` at lg+ — left rail shows split headers, room column vs tool grid, patron/vendor divider with stacked controls.
 
 ## Shipped this session (OpenRouter AI gateway + task-based models, not deployed)
 - **`lib/ai/tasks.ts` (new):** Central registry maps workloads → OpenRouter models — `flyer_vision` / `vision_json` → Gemini 2.5 Flash; `chat_json` → GPT-4o mini; `creative_layout` → Claude 3.5 Sonnet; `creative_generation` → Claude Sonnet 4. Per-task env overrides: `OPENROUTER_MODEL_<TASK>` / `OPENROUTER_MODEL_<TASK>_FALLBACK`.

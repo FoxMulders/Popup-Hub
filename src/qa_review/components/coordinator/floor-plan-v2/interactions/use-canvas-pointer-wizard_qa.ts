@@ -55,6 +55,7 @@ import {
   resolvePlacementRoomIdForObject,
 } from '@/components/coordinator/floor-plan-v2/geometry/is-point-in-room'
 import { resolveDrawCommitRect } from '@/components/coordinator/floor-plan-v2/interactions/use-canvas-pointer'
+import { nextStageLabel } from '@/lib/floor-plan/stage-placement'
 import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
 import {
   objectResizeFromHandle,
@@ -1562,7 +1563,11 @@ function commitDraft(
       obj = { ...base, kind: 'open_wall', counterDepthFt: 1.5 }
       break
     case 'stage':
-      obj = { ...base, kind: 'stage' }
+      obj = {
+        ...base,
+        kind: 'stage',
+        label: nextStageLabel(store.doc.objects),
+      }
       break
     case 'food_truck':
       obj = { ...base, kind: 'food_truck', label: 'Food truck' }

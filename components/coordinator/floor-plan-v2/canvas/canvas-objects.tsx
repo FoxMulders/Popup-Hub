@@ -537,13 +537,15 @@ function CanvasObjectsBase({
           (obj.joinGroupId && dissolvedJoinGroupIds.has(obj.joinGroupId)) ||
             (obj.kind === 'stage' && dissolvedStageIds?.has(obj.id))
         )
-        const hideJoinedFixtureBody = isJoined && isJoinableObject(obj)
+        const hideJoinedFixtureBody =
+          isJoined && isJoinableObject(obj) && obj.kind !== 'stage'
         const displayFill = hideJoinedFixtureBody ? 'transparent' : patternFill ?? fill
         const displayFillOpacity =
           hideJoinedFixtureBody || obj.kind === 'stage' ? 0 : 0.85
-        const stroke = isJoined && !isSelected && !isOverlapping
-          ? 'transparent'
-          : strokeForObject(
+        const stroke =
+          isJoined && !isSelected && !isOverlapping && obj.kind !== 'stage'
+            ? 'transparent'
+            : strokeForObject(
               obj,
               isSelected,
               eventCategoryNames,
@@ -677,6 +679,20 @@ function CanvasObjectsBase({
                 stroke={stroke}
                 strokeWidth={strokeWidth}
                 pointerEvents="all"
+              />
+            ) : obj.kind === 'stage' ? (
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                fill="none"
+                fillOpacity={0}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                pointerEvents="all"
+                style={{ cursor: 'move' }}
+                shapeRendering="crispEdges"
               />
             ) : (
               <rect
