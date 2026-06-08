@@ -398,6 +398,81 @@
     flex: 1 1 auto;
   }
 
+  /* QA staging — single global page scroll (Create New Market + dashboard QA) */
+  #site-main:has(.layout-planner-root-qa),
+  #site-main:has(.dashboard-app-shell--qa-global-scroll) {
+    overflow: visible;
+    overflow-y: auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  .layout-planner-root-qa {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .coordinator-setup-page:has(.layout-planner-root-qa) {
+    overflow: visible;
+    height: auto;
+  }
+
+  .coordinator-setup-page:has(.layout-planner-root-qa) .setup-wizard-body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* QA Step 3 — unlock FullscreenLayout + canvas host so Add room inputs stay visible */
+  .layout-planner-root-qa #floor-plan-workspace .canvas-editor-root,
+  .layout-planner-root-qa #floor-plan-workspace .canvas-editor-root > .canvas-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .layout-planner-root-qa #floor-plan-workspace .floor-plan-canvas-host {
+    flex: 1 1 auto;
+    flex-grow: 1;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .layout-planner-root-qa #floor-plan-workspace .floor-plan-canvas-host > [role='application'] {
+    position: relative;
+    inset: unset;
+    height: auto;
+    min-height: 0;
+    flex-grow: 1;
+    overflow: visible;
+  }
+
+  .dashboard-app-shell--qa-global-scroll {
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-app-shell--qa-global-scroll .dashboard-app-shell__grid,
+  .dashboard-app-shell--qa-global-scroll .dashboard-app-shell__center {
+    overflow: visible;
+    min-height: 0;
+  }
+
+  .dashboard-app-shell--qa-global-scroll .dashboard-app-shell__left {
+    overflow: visible;
+    height: auto;
+  }
+
+  .dashboard-app-shell--qa-global-scroll .dashboard-canvas-column,
+  .dashboard-app-shell--qa-global-scroll .dashboard-canvas-column > div {
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+  }
+
   #floor-plan-workspace {
     min-height: 0;
     flex: 1 1 auto;
@@ -1004,11 +1079,13 @@
     display: none;
   }
 
-  .scrollbar-none {
+  .scrollbar-none,
+  .scrollbar-hide {
     scrollbar-width: none;
   }
 
-  .scrollbar-none::-webkit-scrollbar {
+  .scrollbar-none::-webkit-scrollbar,
+  .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
 

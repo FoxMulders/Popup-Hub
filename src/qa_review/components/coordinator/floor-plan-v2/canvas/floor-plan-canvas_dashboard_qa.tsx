@@ -14,10 +14,11 @@ import {
   type MutableRefObject,
 } from 'react'
 import { CanvasGrid } from '@/components/coordinator/floor-plan-v2/canvas/canvas-grid'
+import { CanvasObjectsQa as CanvasObjects } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 import {
-  CanvasObjectsQa as CanvasObjects,
-  QA_CANVAS_VIEWPORT_CLASS,
-} from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
+  QA_CANVAS_CONTAINER_CLASS,
+  QA_GLOBAL_PAGE_SCROLL,
+} from '@/src/qa_review/lib/qa-scroll-layout_qa'
 import {
   DraftPreview,
   MarqueePreview,
@@ -651,22 +652,27 @@ export function FloorPlanCanvasDashboardQa({
   const { onWheel: onViewportWheel, ...viewportPointerHandlers } =
     viewport.scrollHandlers
 
+  const handleWheelCapture = useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      if (QA_GLOBAL_PAGE_SCROLL && !e.ctrlKey && !e.metaKey) {
+        return
+      }
+      onViewportWheel(e)
+    },
+    [onViewportWheel]
+  )
+
   return (
-    <div className={cn(QA_CANVAS_VIEWPORT_CLASS, 'min-h-0 min-w-0')}>
-      <div
-        id={FLOOR_PLAN_CANVAS_ID}
-        ref={scrollRef}
-        className={cn(
-          'canvas-container pointer-events-auto relative h-full w-full overflow-hidden bg-stone-100 outline-none',
-          commandCenterViewport && 'bg-stone-100',
-          className
-        )}
+    <div
+      id={FLOOR_PLAN_CANVAS_ID}
+      ref={scrollRef}
+      className={cn(QA_CANVAS_CONTAINER_CLASS, commandCenterViewport && 'bg-stone-100', className)}
       tabIndex={0}
       role="application"
       aria-label="Floor plan canvas viewport"
       style={{ touchAction: 'none', cursor }}
       {...viewportPointerHandlers}
-      onWheelCapture={onViewportWheel}
+      onWheelCapture={handleWheelCapture}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
@@ -827,7 +833,6 @@ export function FloorPlanCanvasDashboardQa({
             />
           ) : null}
         </svg>
-      </div>
       </div>
     </div>
   )

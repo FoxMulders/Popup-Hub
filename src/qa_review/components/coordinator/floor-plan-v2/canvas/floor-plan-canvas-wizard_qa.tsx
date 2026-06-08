@@ -37,6 +37,10 @@ import { canvasGridSpacingForTableFt } from '@/components/coordinator/floor-plan
 import type { LabelObject, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import type { ToolState } from '@/components/coordinator/floor-plan-v2/tools/types'
+import {
+  QA_CANVAS_CONTAINER_CLASS,
+  QA_GLOBAL_PAGE_SCROLL,
+} from '@/src/qa_review/lib/qa-scroll-layout_qa'
 import { cn } from '@/lib/utils'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
@@ -568,21 +572,27 @@ export function FloorPlanCanvasWizardQa({
   const { onWheel: onViewportWheel, ...viewportPointerHandlers } =
     viewport.scrollHandlers
 
+  const handleWheelCapture = useCallback(
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      if (QA_GLOBAL_PAGE_SCROLL && !e.ctrlKey && !e.metaKey) {
+        return
+      }
+      onViewportWheel(e)
+    },
+    [onViewportWheel]
+  )
+
   return (
     <div
       id={FLOOR_PLAN_CANVAS_ID}
       ref={scrollRef}
-      className={cn(
-        'canvas-container pointer-events-auto relative h-full w-full overflow-auto bg-stone-100 outline-none',
-        commandCenterViewport && 'bg-stone-100',
-        className
-      )}
+      className={cn(QA_CANVAS_CONTAINER_CLASS, commandCenterViewport && 'bg-stone-100', className)}
       tabIndex={0}
       role="application"
       aria-label="Floor plan canvas viewport"
       style={{ touchAction: 'none', cursor }}
       {...viewportPointerHandlers}
-      onWheelCapture={onViewportWheel}
+      onWheelCapture={handleWheelCapture}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >

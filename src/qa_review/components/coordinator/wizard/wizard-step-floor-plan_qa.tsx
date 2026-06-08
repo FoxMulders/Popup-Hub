@@ -7,7 +7,7 @@ import {
 } from '@/src/qa_review/components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import { LayoutPlannerHeader } from '@/components/coordinator/layout-planner/layout-planner-header'
-import { LayoutPlannerShell } from '@/components/coordinator/layout-planner/layout-planner-shell'
+import { LayoutPlannerShellQa } from '@/src/qa_review/components/coordinator/layout-planner/layout-planner-shell_qa'
 import { LayoutPlannerStats } from '@/components/coordinator/layout-planner/layout-planner-stats'
 import { WizardNav } from '@/components/coordinator/wizard/wizard-nav'
 import type { SummaryVenueSelection } from '@/components/coordinator/wizard/wizard-summary-rail'
@@ -63,9 +63,9 @@ export function WizardStepFloorPlan({
     ) : null
 
   return (
-    <LayoutPlannerShell
+    <LayoutPlannerShellQa
       mode={mode}
-      className="min-h-0 flex-1"
+      className="w-full flex-1"
       header={
         <LayoutPlannerHeader
           mode="wizard"
@@ -107,8 +107,8 @@ export function WizardStepFloorPlan({
         layoutCapacity={layoutCapacity}
         onPlacedCountChange={setPlacedCount}
         chrome="embedded"
-        className="h-full min-h-0"
+        className="w-full flex-1"
       />
-    </LayoutPlannerShell>
+    </LayoutPlannerShellQa>
   )
 }

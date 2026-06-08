@@ -323,7 +323,7 @@ export function CanvasCommandBarQa(props: CanvasCommandBarProps) {
           !sidebarLayout &&
           'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
         sidebarLayout &&
-          'min-h-0 flex-1 overflow-hidden border-0 bg-transparent px-0 shadow-none',
+          'min-h-0 flex-1 overflow-visible border-0 bg-transparent px-0 shadow-none',
         className
       )}
         role="toolbar"

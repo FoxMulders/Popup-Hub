@@ -30,6 +30,7 @@ import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
+import { QA_STEP3_CONTENT_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 import { LayoutCanvasWizardQa } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/floor-plan-canvas-wizard_qa'
 import { canvasGridSpacingForTableFt } from '@/components/coordinator/floor-plan-v2/canvas/canvas-grid-spacing'
 import { CanvasLegend } from '@/components/coordinator/floor-plan-v2/canvas/canvas-legend'
@@ -1896,7 +1897,7 @@ function FloorPlanV2Workspace({
     <div
       id="floor-plan-workspace"
       className={cn(
-        'floor-plan-editor-root relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+        'floor-plan-editor-root relative flex min-w-0 w-full flex-1 flex-col',
         debugGeometry && 'pr-[300px]',
         className
       )}
@@ -1909,9 +1910,9 @@ function FloorPlanV2Workspace({
         onActiveChange={(next) => setCanvasFullscreen(next)}
         header={layoutHeader}
         fullscreenToolbar={fullscreenExitToolbar}
-        className="min-h-0 min-w-0 flex-1"
+        className="min-w-0 w-full flex-1"
       >
-        <div className="flex min-h-0 flex-1 basis-0 flex-col gap-1 overflow-hidden">
+        <div className={cn(QA_STEP3_CONTENT_CLASS, 'w-full min-w-0 flex-1 gap-1')}>
         {isDashboard ? (
           <CanvasCommandBar
             staticLayout
@@ -2057,16 +2058,16 @@ function FloorPlanV2Workspace({
 
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-1 basis-0 items-stretch',
+            'flex min-w-0 w-full flex-1 items-stretch',
             !isDashboard && 'gap-2'
           )}
         >
           <div
             className={cn(
-              'floor-plan-canvas-host relative min-h-0 min-w-0 flex-1 basis-0 overflow-hidden bg-stone-100',
+              'floor-plan-canvas-host relative min-w-0 w-full flex-grow bg-stone-100',
               isDashboard
-                ? 'h-full min-h-0 border-0'
-                : 'min-h-[200px] h-full rounded-lg border border-stone-200'
+                ? 'border-0'
+                : 'rounded-lg border border-stone-200'
             )}
           >
             <CanvasRootErrorBoundary
@@ -2079,7 +2080,7 @@ function FloorPlanV2Workspace({
               }}
             >
             <LayoutCanvasWizardQa
-              className="absolute inset-0"
+              className="relative w-full flex-grow"
               commandCenterViewport={isDashboard}
               store={store}
               toolState={{ tool, drawShape }}
@@ -2121,7 +2122,7 @@ function FloorPlanV2Workspace({
           </div>
 
           {!isDashboard ? (
-            <div className="relative z-20 flex h-full min-h-0 shrink-0 self-stretch">
+            <div className="relative z-20 flex shrink-0 self-stretch">
               {!rightInspectorOpen ? (
                 <button
                   type="button"
@@ -2133,7 +2134,7 @@ function FloorPlanV2Workspace({
                   <ChevronLeft className="h-4 w-4" />
                 </button>
               ) : (
-                <div className="relative flex h-full min-h-0 w-[min(100%,260px)] max-w-[min(42vw,260px)] shrink-0 flex-col overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+                <div className="relative flex w-[min(100%,260px)] max-w-[min(42vw,260px)] shrink-0 flex-col rounded-lg border border-stone-200 bg-white shadow-sm">
                   <button
                     type="button"
                     onClick={() => setRightInspectorOpen(false)}
@@ -2146,7 +2147,7 @@ function FloorPlanV2Workspace({
                   <PropertyInspector
                     store={store}
                     eventCategoryNames={eventCategoryNames}
-                    className="min-h-0 flex-1 overflow-y-auto pt-1"
+                    className="flex-1 pt-1"
                   />
                 </div>
               )}

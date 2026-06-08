@@ -97,6 +97,7 @@ import {
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
 import { TooltipWrapperQa } from '@/src/qa_review/components/coordinator/dashboard/tooltip-wrapper_qa'
+import { QA_ADD_ROOM_FORM_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
@@ -610,16 +611,18 @@ export function renderCanvasCommandBarBlock(
           ctx.onAddRoom &&
           ctx.onRenameRoom &&
           ctx.onDeleteRoom ? (
-            <LayoutRoomBar
-              rooms={ctx.rooms ?? []}
-              activeRoomId={ctx.activeRoomId ?? ctx.rooms?.[0]?.id ?? ''}
-              onSelectRoom={ctx.onSelectRoom}
-              onAddRoom={ctx.onAddRoom}
-              onRenameRoom={ctx.onRenameRoom}
-              onDeleteRoom={ctx.onDeleteRoom}
-              highlightedRoomMetrics={ctx.highlightedRoomMetrics}
-              embedded
-            />
+            <div className={QA_ADD_ROOM_FORM_CLASS}>
+              <LayoutRoomBar
+                rooms={ctx.rooms ?? []}
+                activeRoomId={ctx.activeRoomId ?? ctx.rooms?.[0]?.id ?? ''}
+                onSelectRoom={ctx.onSelectRoom}
+                onAddRoom={ctx.onAddRoom}
+                onRenameRoom={ctx.onRenameRoom}
+                onDeleteRoom={ctx.onDeleteRoom}
+                highlightedRoomMetrics={ctx.highlightedRoomMetrics}
+                embedded
+              />
+            </div>
           ) : null}
           {ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
             <>

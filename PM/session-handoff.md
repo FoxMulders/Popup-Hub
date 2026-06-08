@@ -5,7 +5,7 @@
 ## Baseline
 - Branch: `master` @ `6222d13` (pushed to `origin/master`)
 - Last deploy commit: `6222d13` - fix: Nedry login lockout playback, trap, and public assets
-- Production: https://popuphub.ca - **build 163** | commit `3f308af` (handoff updated 2026-06-07 18:25)
+- Production: https://popuphub.ca - **build 163** | commit `6222d13` (handoff updated 2026-06-07 18:25)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -15,11 +15,12 @@
 
 
 ## Goal
-**UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout complete. Not deployed yet.
+**UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout shipped to prod (build 163).
 
-## Shipped this session (not deployed)
+## Shipped this session (prod build 163, `6222d13`)
 - **Login QA Nedry lockout playback fix (`Login_qa.tsx`):** Always-mounted portal video preloads `/assets/nedry_magic_word.mp4`; Sign-in click primes audio before async auth; lockout triggers unmuted `play()` (+ muted retry); GIF+audio fallback at `/assets/nedry.gif` when video codec fails.
 - **Login QA Nedry lockout trap (`Login_qa.tsx` + `login-lockout_qa.ts`):** Login form hidden until countdown reaches `0:00`; lockout persisted in `sessionStorage` across refresh/return to `/login`; browser back + `beforeunload` blocked during lockout; countdown shown as `M:SS`.
+- **Deploy script (`deploy-popuphub.ps1`):** Clears stale `.next/lock` before build — fixes `Another next build process is already running` when dev server left a lock behind.
 - **`Deploy-popuphub.bat` version tracking:** Header comment block documents floor-plan release track (object resize, measurements, viewport lock, layout fixes), prod baseline (build 155 / 7db76c6), `BUMP_BUILD_NUMBER=1` init, 5-step pipeline, optional `verify-canvas-state-smoke` / `verify-multi-room-canvas` / `verify-align-and-center` pre-flight.
 - **Login QA wired to `/login`:** `app/(auth)/login/login-form.tsx` re-exports `LoginQa` — lockout + logo scale now live on `/login` and embedded signup login panel.
 - **Login QA Jurassic Park lockout (`Login_qa.tsx`):** Portal to `document.body` at `z-[9999]`; fullscreen takeover on 3rd Supabase auth failure; `public/assets/nedry_magic_word.mp4` (video+audio, loop) with `public/assets/nedry.gif` fallback; always-mounted preload video primes audio on Sign-in click, then `play()` on lockout (unmuted with muted retry); **build fix:** Turbopack cannot `import` `.mp4` — serve from `/assets/` not module import.
@@ -41,9 +42,34 @@
 - **`patron-centric-layout.ts`:** Local edge clearance synced to 2′ per side.
 - **Verify:** `npx tsx scripts/verify-auto-arrange.ts` — 31/31 pass.
 
+## Shipped this session (QA Step 3 Add room clipping fix, not deployed)
+- **`qa-scroll-layout_qa.ts` + `Canvas_qa.tsx`:** Added `QA_STEP3_CONTENT_CLASS` (`flex flex-col h-full overflow-y-auto`), `QA_ADD_ROOM_FORM_CLASS` (`relative z-10`); canvas constants use `flex-grow` instead of fixed viewport height.
+- **`floor-plan-v2_wizard_qa.tsx`:** Step 3 inner column uses `QA_STEP3_CONTENT_CLASS`; canvas host drops `min-h-[min(480px,50vh)]` trap; `LayoutCanvasWizardQa` gets `flex-grow`.
+- **`canvas-command-bar-blocks_qa.tsx`:** Embedded `LayoutRoomBar` (Add room width/length inputs) wrapped in `QA_ADD_ROOM_FORM_CLASS` so it stacks above canvas overlay.
+- **`globals.css`:** `.layout-planner-root-qa` overrides unlock `FullscreenLayout` + `.floor-plan-canvas-host` — `overflow-y-auto` on editor shell, `flex-grow` + `overflow: visible` on canvas host (replaces prod `overflow-hidden` / `height: 100%` trap for Step 3).
+
+## Shipped this session (QA global scroll unification, not deployed)
+- **`layout-planner-shell_qa.tsx`:** QA wizard Step 3 shell — no `useLayoutCanvasViewportLock`, no nested `overflow-hidden`; content flows at natural height.
+- **`qa-scroll-layout_qa.ts`:** Shared `QA_GLOBAL_PAGE_SCROLL`, `QA_CANVAS_VIEWPORT_CLASS`, `QA_CANVAS_CONTAINER_CLASS` — content-sized canvas, no fixed viewport height.
+- **`wizard-step-floor-plan_qa.tsx`:** Uses `LayoutPlannerShellQa`; floor plan column is `w-full flex-1` (no `h-full min-h-0` trap).
+- **`floor-plan-v2_wizard_qa.tsx`:** Removed nested overflow / `basis-0` / `h-full` on canvas host; wizard canvas is `relative w-full`; inspector panel no longer scrolls internally.
+- **`floor-plan-canvas-wizard_qa.tsx` + `floor-plan-canvas_dashboard_qa.tsx`:** Canvas host `overflow-visible h-auto`; wheel without Ctrl passes through to page scroll; Ctrl+wheel zoom unchanged.
+- **`Dashboard_qa.tsx`:** Left rail + canvas column no longer fixed to `100vh-64px` or `overflow-y-auto`; shell uses `dashboard-app-shell--qa-global-scroll`.
+- **`canvas-command-bar_qa.tsx`:** Sidebar toolbar `overflow-visible` (accordions expand page height).
+- **`globals.css`:** `.layout-planner-root-qa` + `.dashboard-app-shell--qa-global-scroll` overrides — `#site-main` and `.setup-wizard-body` are the sole vertical scroll hosts.
+- **`events/new/page.tsx` + `market-setup-wizard.tsx`:** Dropped `overflow-hidden` / `min-h-0` traps on Create New Market Step 3 path.
+
+## Shipped this session (QA wizard description layout, not deployed)
+- **`wizard-description-field_qa.tsx`:** Replaced floating-label `WizardFloatingTextarea` with static `WIZARD_FIELD_LABEL` + `mb-2` above a fixed-layout textarea (`min-h-[150px]`, `overflow-y-auto`, `resize-y`, `field-sizing-fixed`) so typed copy no longer overlaps the DESCRIPTION label; metrics block unchanged below.
+
+## Shipped this session (QA canvas scroll fix, not deployed)
+- **`Canvas_qa.tsx`:** `QA_CANVAS_VIEWPORT_CLASS` updated — `overflow-hidden` → `overflow-y-auto scrollbar-hide` so the main hall viewport accepts wheel scroll while hiding the track.
+- **`globals.css`:** Added `.scrollbar-hide` utility (alias of `.scrollbar-none` for WebKit + Firefox).
+- **`floor-plan-canvas_dashboard_qa.tsx`:** Inner `[role="application"]` scroll host restored to `overflow-auto` (matches prod `floor-plan-canvas.tsx`); outer wrapper uses updated `QA_CANVAS_VIEWPORT_CLASS` — no `onWheel`/`onScroll` on parent (wheel handled on inner via `use-viewport`).
+
 ## Shipped this session (QA absolute overrides, not deployed)
-- **`Canvas_qa.tsx`:** Exported `QA_CANVAS_VIEWPORT_CLASS` (`flex-1 h-[calc(100vh-64px)] overflow-hidden relative bg-slate-50`) — structural lock for main hall viewport.
-- **`floor-plan-canvas_dashboard_qa.tsx`:** Canvas container `overflow-auto` → `overflow-hidden`; outer wrapper uses `QA_CANVAS_VIEWPORT_CLASS` (no right-edge scrollbar; pan/zoom handlers unchanged).
+- **`Canvas_qa.tsx`:** Exported `QA_CANVAS_VIEWPORT_CLASS` (`flex-1 h-[calc(100vh-64px)] overflow-hidden relative bg-slate-50`) — structural lock for main hall viewport (superseded by scroll fix above).
+- **`floor-plan-canvas_dashboard_qa.tsx`:** Canvas container `overflow-auto` → `overflow-hidden`; outer wrapper uses `QA_CANVAS_VIEWPORT_CLASS` (no right-edge scrollbar; pan/zoom handlers unchanged) — **reverted** inner to `overflow-auto` in scroll fix above.
 - **`Dashboard_qa.tsx`:** Center column wrapped in `QA_CANVAS_VIEWPORT_CLASS`; exported `QA_PLACEMENT_TIP_VALID` / `QA_PLACEMENT_TIP_VIOLATION` (`Valid space` / `Rule conflict`); `QA_ACCORDION_HEADERS` + `QaAccordionHeader` h3 typography.
 - **`canvas-toolbar-static_qa.tsx`:** Accordion triggers use `QaAccordionHeader` + `QA_ACCORDION_HEADERS` from `Dashboard_qa` (no row icon badges).
 - **`canvas-legend_qa.tsx`:** Placement HUD microcopy wired to Dashboard QA tip constants.
@@ -77,7 +103,10 @@
 - **Docs:** `dashboard-layout-patch_qa.md` + `MANIFEST.md` wiring for `CanvasCommandBarQa`.
 
 ## Next actions
-1. **Mobile smoke-test** — `/discover` scroll + reduced footer; `/coordinator/dashboard`: initial room modal first, table size selectable
+1. **Step 3 Add room smoke-test** — `/coordinator/events/new` Step 3 with zero rooms: Width/Length inputs + Add room button visible (not clipped); page scrolls if toolbar exceeds viewport
+2. **Global scroll smoke-test** — `/coordinator/events/new` Step 3 + `/coordinator/dashboard`: only one browser scrollbar (right edge); no nested canvas/map scroll track; Ctrl+wheel still zooms canvas
+2. **Canvas wheel smoke-test** — `/coordinator/dashboard`: scroll wheel over canvas scrolls page (not inner trap); Ctrl+wheel still zooms
+2. **Mobile smoke-test** — `/discover` scroll + reduced footer; `/coordinator/dashboard`: initial room modal first, table size selectable
 2. **Loader smoke-test** — hard refresh: perimeter booths, centered full logo, no grid/dash lines
 3. **Wizard smoke-test** — Step 2 booth fee / discount backspace; category price placeholders
 4. **Instant book** — re-run `npx tsx scripts/verify-instant-book-category-limits.ts` after any apply-route edits (currently 4/4)
@@ -284,7 +313,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | Stage draw outside room (join) | **Deployed** — verify-asset-type-joins + sign-in |
 | Step 2 Capacity scroll | **Local** — setup-wizard-body scroll + mobile workspace center scroll; manual check on phone |
 | Mobile workspace page scroll | **Local** — side rails hidden below lg; center column scrolls |
-| Mobile wizard text fields | **Local** — floating label/input overlap fixed |
+| Mobile wizard text fields | **Local** — Step 1 description overlap fixed (static label + scrollable textarea); re-test on phone |
 | Blank start — only add-room + size fields | **Deployed** — sign-in smoke |
 | Deploy / handoff script | **Fixed** — `update-session-handoff.ps1` ASCII punctuation (Windows PS parse error) |
 
@@ -295,7 +324,6 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - Vendor / shopper / auction flows unless asked
 
 ## Blockers
-- **Nedry assets uncommitted** — `public/assets/nedry_magic_word.mp4` + `public/assets/nedry.gif` must ship with next deploy or lockout shows empty media on prod
 - Interactive coordinator smoke-test requires user credentials
 - Markets with **only** `venue_elements` and no cells open **blank** by design
 - ~~Deploy blocked by TS build failure~~ — fixed locally (pointer return type + verify script)

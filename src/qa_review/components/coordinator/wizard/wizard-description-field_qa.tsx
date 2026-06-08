@@ -1,8 +1,9 @@
 'use client'
 
+import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
-import { WizardFloatingTextarea } from '@/components/coordinator/wizard/wizard-ui'
+import { WIZARD_FIELD_LABEL } from '@/lib/wizard/wizard-panel-styles'
 
 export interface WizardDescriptionFieldQaProps {
   id: string
@@ -14,8 +15,8 @@ export interface WizardDescriptionFieldQaProps {
 }
 
 /**
- * Description field with metrics and helper copy in a separate block below the
- * floating textarea so labels and counts never overlap the input.
+ * Description field with a static label above the textarea and metrics in a
+ * separate block below so labels and counts never overlap the input.
  */
 export function WizardDescriptionFieldQa({
   id,
@@ -29,15 +30,17 @@ export function WizardDescriptionFieldQa({
   const belowMin = trimmedLen < DESCRIPTION_MIN_LENGTH
 
   return (
-    <div className="wizard-description-field-qa space-y-2">
-      <WizardFloatingTextarea
+    <div className="wizard-description-field-qa flex min-h-0 flex-col space-y-2">
+      <label htmlFor={id} className={cn(WIZARD_FIELD_LABEL, 'mb-2 block')}>
+        {label}
+      </label>
+      <Textarea
         id={id}
-        label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
         maxLength={maxLength}
-        className="min-h-[6.5rem] pb-2"
+        className="field-sizing-fixed w-full min-h-[150px] resize-y overflow-y-auto rounded-md border border-slate-300 p-3 focus:ring-2 focus:ring-blue-500"
       />
       <div
         className="flex flex-col gap-1.5 border-t border-stone-200/60 pt-2"

@@ -13,7 +13,6 @@ import { InitialRoomModal } from '@/components/coordinator/dashboard/initial-roo
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import { QA_CANVAS_VIEWPORT_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
 import { AiGenerationGuardrailsQa } from '@/src/qa_review/components/coordinator/dashboard/ai-generation-guardrails_qa'
-import { cn } from '@/lib/utils'
 
 /** Hide scrollbar tracks while preserving smooth scroll on short viewports. */
 export const QA_PANEL_SCROLL_CLASSES =
@@ -49,13 +48,10 @@ export interface DashboardBootstrapQaProps {
  */
 export function DashboardLeftPanelQa() {
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col justify-start overflow-hidden bg-white">
+    <div className="relative flex w-full flex-col justify-start bg-white">
       <AiGenerationGuardrailsQa />
       <DashboardToolbarPortalTarget
-        className={cn(
-          'min-h-0 flex-1 overflow-x-hidden overflow-y-auto border-b-0 px-1 py-1',
-          QA_PANEL_SCROLL_CLASSES
-        )}
+        className="flex-1 overflow-x-hidden border-b-0 px-1 py-1"
       />
     </div>
   )
@@ -104,7 +100,8 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
         immersive={immersive}
         ariaBusy={ariaBusy}
         leftLabel="Layout tools"
-        leftClassName="w-80 flex flex-col justify-start overflow-hidden border-r border-gray-200 bg-white lg:h-[calc(100vh-64px)]"
+        className="dashboard-app-shell--qa-global-scroll"
+        leftClassName="w-80 flex flex-col justify-start border-r border-gray-200 bg-white"
         left={<DashboardLeftPanelQa />}
         center={
           <div className={QA_CANVAS_VIEWPORT_CLASS}>

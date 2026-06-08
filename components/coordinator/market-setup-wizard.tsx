@@ -1009,7 +1009,7 @@ export function MarketSetupWizard({
       step={currentStep}
       className={cn(
         isFloorPlanStep
-          ? 'min-h-0 flex-1 flex-col gap-2 overflow-hidden'
+          ? 'flex flex-1 flex-col gap-2'
           : 'space-y-6'
       )}
     >
@@ -1049,7 +1049,7 @@ export function MarketSetupWizard({
           // Always stack vertically so every panel below the wizard timeline
           // spans the same horizontal width as the timeline component itself.
           'flex-col',
-          isFloorPlanStep ? 'flex-1 min-h-0 gap-2' : null
+          isFloorPlanStep ? 'flex flex-1 flex-col gap-2' : null
         )}
       >
         {isWorkspaceStep && !isFloorPlanStep ? (
@@ -1071,7 +1071,7 @@ export function MarketSetupWizard({
             // width — always w-full now that the rail is stacked beneath.
             'w-full min-w-0',
               isFloorPlanStep
-                ? 'flex flex-1 min-h-0 flex-col gap-2'
+                ? 'flex flex-1 flex-col gap-2'
                 : cn(
                     WIZARD_PANEL,
                     'space-y-3',

@@ -4,9 +4,12 @@
  * QA canvas object layer — stage single perimeter, draggable, visible after merge join.
  */
 
-/** Structural lock for main hall canvas viewport — pan/zoom via handlers, no scrollbar. */
-export const QA_CANVAS_VIEWPORT_CLASS =
-  'flex-1 h-[calc(100vh-64px)] overflow-hidden relative bg-slate-50'
+export {
+  QA_ADD_ROOM_FORM_CLASS,
+  QA_CANVAS_CONTAINER_CLASS,
+  QA_CANVAS_VIEWPORT_CLASS,
+  QA_STEP3_CONTENT_CLASS,
+} from '@/src/qa_review/lib/qa-scroll-layout_qa'
 
 import { memo, useMemo } from 'react'
 import type {
