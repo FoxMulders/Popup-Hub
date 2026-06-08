@@ -3,15 +3,15 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `6222d13` (pushed to `origin/master`)
-- Last deploy commit: `6222d13` - fix: Nedry login lockout playback, trap, and public assets
-- Production: https://popuphub.ca - **build 163** | commit `6222d13` (handoff updated 2026-06-07 18:25)
+- Branch: `master` @ `911a7c3` (pushed to `origin/master`)
+- Last deploy commit: `911a7c3` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 165** | commit `7feab4d` (handoff updated 2026-06-08 08:33)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
 ## Last deploy
-- 2026-06-07 18:25 - Deploy via deploy-popuphub.ps1 - `fix: Nedry login lockout playback, trap, and public assets` (6222d13)
+- 2026-06-08 08:33 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (911a7c3)
 
 
 ## Goal
