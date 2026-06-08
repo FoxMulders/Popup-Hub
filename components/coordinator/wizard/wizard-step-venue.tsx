@@ -685,7 +685,7 @@ export function WizardStepVenueWithMapsProvider(props: WizardStepVenueProps) {
     )
   }
   return (
-    <APIProvider apiKey={apiKey}>
+    <APIProvider apiKey={apiKey} libraries={['places']}>
       <WizardStepVenue {...props} />
     </APIProvider>
   )

@@ -67,6 +67,8 @@ export interface ViewportApi extends ViewportState {
   zoomIn: () => void
   zoomOut: () => void
   resetZoom: () => void
+  /** Zoom multiplier that represents 100% in the toolbar readout. */
+  getBaselineZoom: () => number
   /** Reset zoom to 100% and re-center the scroll viewport on the doc anchor. */
   resetViewport: () => void
   /**
@@ -96,8 +98,8 @@ export interface ViewportApi extends ViewportState {
    */
   fitToBounds: (
     bounds: { minX: number; minY: number; maxX: number; maxY: number },
-    options?: { padding?: number }
-  ) => void
+    options?: { padding?: number; paddingPx?: number }
+  ) => number | undefined
   /**
    * Like `fitToBounds`, but picks zoom by stepping down from `zoomMax`
    * (default 1.0) in multiplicative `stepFactor` decrements (default
@@ -217,6 +219,8 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
   const panRef = useRef<PanInternal | null>(null)
   const pinchRef = useRef<PinchInternal | null>(null)
   const spaceHeldRef = useRef(false)
+  /** Zoom level that maps to 100% in the toolbar after fit-to-content. */
+  const baselineZoomRef = useRef(initialZoom)
 
   /**
    * Pending scroll, applied in a layout effect after `zoom` updates.
@@ -391,23 +395,32 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
    */
   const fitToBounds = useCallback<ViewportApi['fitToBounds']>(
     (bounds, options) => {
-      const padding = options?.padding ?? 0.1
+      const padding = options?.padding
+      const paddingPx = options?.paddingPx
       const scroll = scrollRef.current
       const widthFt = bounds.maxX - bounds.minX
       const heightFt = bounds.maxY - bounds.minY
-      if (widthFt <= 0 || heightFt <= 0) return
-      if (!scroll) return
+      if (widthFt <= 0 || heightFt <= 0) return undefined
+      if (!scroll) return undefined
 
       const math = getZoomMathRef.current()
       const viewportPxW = scroll.clientWidth
       const viewportPxH = scroll.clientHeight
-      if (viewportPxW <= 0 || viewportPxH <= 0) return
+      if (viewportPxW <= 0 || viewportPxH <= 0) return undefined
 
-      // Reserve `padding` of viewport on each side, but never less
-      // than a few px on tiny / dimensionless viewports — otherwise
-      // the resulting zoom would explode toward infinity.
-      const usableW = Math.max(40, viewportPxW * (1 - padding * 2))
-      const usableH = Math.max(40, viewportPxH * (1 - padding * 2))
+      let usableW: number
+      let usableH: number
+      if (paddingPx != null) {
+        usableW = Math.max(1, viewportPxW - paddingPx * 2)
+        usableH = Math.max(1, viewportPxH - paddingPx * 2)
+      } else {
+        const pad = padding ?? 0.1
+        // Reserve `pad` of viewport on each side, but never less
+        // than a few px on tiny / dimensionless viewports — otherwise
+        // the resulting zoom would explode toward infinity.
+        usableW = Math.max(40, viewportPxW * (1 - pad * 2))
+        usableH = Math.max(40, viewportPxH * (1 - pad * 2))
+      }
 
       const zoomForWidth = usableW / (widthFt * math.basePxPerFt)
       const zoomForHeight = usableH / (heightFt * math.basePxPerFt)
@@ -432,6 +445,8 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         scroll.scrollLeft = target.left
         scroll.scrollTop = target.top
       }
+      baselineZoomRef.current = targetZoom
+      return targetZoom
     },
     [scrollRef, clamp]
   )
@@ -718,6 +733,11 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     }
   }, [scrollRef, zoom])
 
+  const getBaselineZoom = useCallback(() => {
+    const baseline = baselineZoomRef.current
+    return baseline > 0 ? baseline : 1
+  }, [])
+
   return {
     zoom,
     isPanning,
@@ -726,6 +746,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     zoomIn,
     zoomOut,
     resetZoom,
+    getBaselineZoom,
     resetViewport,
     centerView,
     fitToBounds,

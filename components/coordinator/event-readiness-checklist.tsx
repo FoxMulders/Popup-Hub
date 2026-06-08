@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { publicAppUrl } from '@/lib/url/public-app-url'
 import { marketTheme } from '@/lib/theme/market'
 import { toast } from 'sonner'
+import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import type { Event, EventCategoryLimit } from '@/types/database'
 
 interface EventReadinessChecklistProps {
@@ -45,6 +46,7 @@ export function EventReadinessChecklist({
   hasAuction = false,
 }: EventReadinessChecklistProps) {
   const requiresSquare = (event.category_limits ?? []).some((cl) => cl.price_per_booth > 0)
+  const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
   const vendorListingUrl = publicAppUrl(`/events/${eventId}`)
 
   const items: ChecklistItem[] = [
@@ -54,24 +56,28 @@ export function EventReadinessChecklist({
       label: 'Categories & booth caps set',
       done: (event.category_limits?.length ?? 0) > 0,
     },
-    { key: 'published', label: 'Event published', done: event.status !== 'draft' },
     {
       key: 'square',
       label: requiresSquare ? 'Square connected (paid booths)' : 'Square connected (optional)',
       done: !requiresSquare || event.square_merchant_id != null || hasSquare,
       skippable: !requiresSquare,
     },
-    { key: 'applied', label: 'Vendors applied', done: applicationCount > 0 },
-    { key: 'approved', label: 'Vendors approved', done: approvedCount > 0 },
     ...(event.skip_venue_layout
       ? []
       : [{ key: 'layout', label: 'Booth layout saved', done: hasLayout } satisfies ChecklistItem]),
-    {
-      key: 'auction',
-      label: 'Quarter auction configured',
-      done: hasAuction,
-      skippable: true,
-    },
+    { key: 'published', label: 'Event published', done: event.status !== 'draft' },
+    { key: 'applied', label: 'Vendors applied', done: applicationCount > 0 },
+    { key: 'approved', label: 'Vendors approved', done: approvedCount > 0 },
+    ...(isQuarterAuction
+      ? [
+          {
+            key: 'auction',
+            label: 'Quarter auction configured',
+            done: hasAuction,
+            skippable: true,
+          } satisfies ChecklistItem,
+        ]
+      : []),
   ]
 
   const completedCount = items.filter((i) => i.done).length

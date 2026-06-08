@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -26,6 +25,10 @@ import {
   contentFramingBounds,
   fitViewportToContent,
 } from './use-layout-viewport'
+import {
+  normalizeViewportZoom,
+  useCanvasViewportFraming,
+} from './use-canvas-viewport-framing'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
 import {
@@ -80,6 +83,11 @@ export interface FloorPlanCanvasProps {
   onViewportReady?: (api: ViewportApi | null) => void
   /** Mirrors viewport.zoom upward so the toolbar can render the % readout. */
   onZoomChange?: (zoom: number) => void
+  /**
+   * When true (default), the canvas fills its host and owns pan/zoom scroll.
+   * When false, the canvas grows with content for page-level scroll (wizard QA).
+   */
+  scrollHost?: boolean
   /**
    * Sorted list of category names for this event (Step 2). Forwarded
    * to the pointer hook so newly drawn booths auto-allocate to the
@@ -150,7 +158,9 @@ export function FloorPlanCanvas({
   onVendorDrop,
   autoArrangeMode = 'grid',
   commandCenterViewport = false,
+  scrollHost = true,
 }: FloorPlanCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
 
@@ -249,20 +259,6 @@ export function FloorPlanCanvas({
   const viewportRef = useRef(viewport)
   viewportRef.current = viewport
 
-  // Lift zoom controls to the host so the toolbar (rendered outside
-  // this canvas's DOM subtree) can drive zoom in / zoom out / reset.
-  // The API object is recreated each render so we only forward it
-  // on identity change, not on each zoom tick — host re-renders for
-  // the % readout via `onZoomChange` instead.
-  useEffect(() => {
-    onViewportReady?.(viewport)
-    return () => onViewportReady?.(null)
-  }, [onViewportReady, viewport])
-
-  useEffect(() => {
-    onZoomChange?.(viewport.zoom)
-  }, [onZoomChange, viewport.zoom])
-
   /**
    * Re-frame when the active room or room *dimensions* change — not when
    * origins move (drag), so zoom and pan are not reset on every move.
@@ -299,40 +295,37 @@ export function FloorPlanCanvas({
   ])
 
   const frameActiveRoom = useCallback(() => {
-    fitViewportToContent(viewportRef.current, store.doc, activeRoomId, {
-      commandCenterViewport,
-    })
+    return fitViewportToContent(
+      viewportRef.current,
+      store.doc,
+      activeRoomId,
+      { commandCenterViewport }
+    )
   }, [activeRoomId, commandCenterViewport, store.doc])
 
-  const frameActiveRoomRef = useRef(frameActiveRoom)
-  frameActiveRoomRef.current = frameActiveRoom
+  useCanvasViewportFraming({
+    scrollRef,
+    containerRef,
+    framingKey: viewportFramingKey,
+    onFrame: frameActiveRoom,
+    observeContainer: scrollHost,
+  })
 
-  const didInitialFrameRef = useRef(false)
-  useLayoutEffect(() => {
-    frameActiveRoomRef.current()
-    didInitialFrameRef.current = true
-  }, [viewportFramingKey])
-
-  const observedViewportSizeRef = useRef({ w: 0, h: 0 })
+  // Lift zoom controls to the host so the toolbar (rendered outside
+  // this canvas's DOM subtree) can drive zoom in / zoom out / reset.
+  // The API object is recreated each render so we only forward it
+  // on identity change, not on each zoom tick — host re-renders for
+  // the % readout via `onZoomChange` instead.
   useEffect(() => {
-    const scroll = scrollRef.current
-    if (!scroll || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => {
-      if (!didInitialFrameRef.current) return
-      const w = scroll.clientWidth
-      const h = scroll.clientHeight
-      if (w <= 0 || h <= 0) return
-      const last = observedViewportSizeRef.current
-      // Reframe once when the viewport first becomes measurable (flex
-      // layout after mount). Skip later resizes — scrollbar toggles and
-      // window resizes were resetting pan/zoom and locking the room center.
-      if (last.w > 0 && last.h > 0) return
-      observedViewportSizeRef.current = { w, h }
-      frameActiveRoomRef.current()
-    })
-    observer.observe(scroll)
-    return () => observer.disconnect()
-  }, [])
+    onViewportReady?.(viewport)
+    return () => onViewportReady?.(null)
+  }, [onViewportReady, viewport])
+
+  useEffect(() => {
+    onZoomChange?.(
+      normalizeViewportZoom(viewport.zoom, viewport.getBaselineZoom())
+    )
+  }, [onZoomChange, viewport.getBaselineZoom, viewport.zoom])
 
   const transform = useMemo(
     () => ({ basePxPerFt, zoom: viewport.zoom }),
@@ -553,13 +546,21 @@ export function FloorPlanCanvas({
 
   return (
     <div
-      id={FLOOR_PLAN_CANVAS_ID}
-      ref={scrollRef}
+      ref={containerRef}
       className={cn(
-        'canvas-container pointer-events-auto relative h-full w-full overflow-auto bg-stone-100 outline-none',
-        commandCenterViewport && 'bg-stone-100',
+        'relative min-h-0 w-full',
+        scrollHost ? 'h-full flex-1' : 'h-auto',
         className
       )}
+    >
+      <div
+        id={FLOOR_PLAN_CANVAS_ID}
+        ref={scrollRef}
+        className={cn(
+          'canvas-container pointer-events-auto relative w-full bg-stone-100 outline-none',
+          scrollHost ? 'h-full overflow-auto' : 'h-auto overflow-visible',
+          commandCenterViewport && 'bg-stone-100'
+        )}
       tabIndex={0}
       role="application"
       aria-label="Floor plan canvas viewport"
@@ -727,6 +728,7 @@ export function FloorPlanCanvas({
           ) : null}
         </svg>
       </div>
+    </div>
     </div>
   )
 }

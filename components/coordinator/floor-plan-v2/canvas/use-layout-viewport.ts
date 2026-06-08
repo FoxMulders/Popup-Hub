@@ -14,6 +14,12 @@ import type { FloorPlanDoc } from '../state/types'
 import type { ViewportApi } from './use-viewport'
 
 /**
+ * Fixed safe-zone on every side when framing content at the baseline
+ * (100%) zoom level. Preferred over percentage padding for layout load.
+ */
+export const VIEWPORT_FIT_PADDING_PX = 40
+
+/**
  * Side margin for fit-to-viewport framing. With padding `p`, content
  * occupies `(1 - 2p)` of the viewport — 0.125 → ~75% (within 70–80%).
  */
@@ -65,27 +71,35 @@ export function contentFramingBounds(
 
 export interface FitViewportToContentOptions {
   padding?: number
+  paddingPx?: number
   commandCenterViewport?: boolean
 }
 
 /**
- * Dynamically zoom and pan so `bounds` fill ~70–80% of the visible
- * editor viewport. Replaces hard-coded zoom-1 / canvas-centre resets.
+ * Dynamically zoom and pan so advisory canvas bounds fit inside the
+ * visible editor viewport. Baseline (100%) uses a 40px safe-zone on
+ * every side unless overridden.
  */
 export function fitViewportToContent(
   viewportApi: ViewportApi | null,
   doc: FloorPlanDoc,
   activeRoomId?: string | null,
   options?: FitViewportToContentOptions
-): void {
-  if (!viewportApi) return
+): number | undefined {
+  if (!viewportApi) return undefined
+  const paddingPx =
+    options?.paddingPx ??
+    (options?.commandCenterViewport ? undefined : VIEWPORT_FIT_PADDING_PX)
   const padding =
     options?.padding ??
     (options?.commandCenterViewport
       ? COMMAND_CENTER_FIT_PADDING
-      : VIEWPORT_FIT_PADDING)
-  viewportApi.fitToBounds(contentFramingBounds(doc, activeRoomId), {
+      : paddingPx
+        ? undefined
+        : VIEWPORT_FIT_PADDING)
+  return viewportApi.fitToBounds(contentFramingBounds(doc, activeRoomId), {
     padding,
+    paddingPx,
   })
 }
 

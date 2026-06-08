@@ -42,6 +42,10 @@ import { FullscreenLayout } from '@/components/coordinator/floor-plan-v2/canvas/
 import { DebugLogProvider, useDebugLog } from '@/components/coordinator/floor-plan-v2/debug/debug-log-context'
 import { serializeRooms } from '@/components/coordinator/floor-plan-v2/debug/format-geometry-log'
 import type { ViewportApi } from '@/components/coordinator/floor-plan-v2/canvas/use-viewport'
+import {
+  fitViewportToContent,
+  VIEWPORT_FIT_PADDING,
+} from '@/components/coordinator/floor-plan-v2/canvas/use-layout-viewport'
 import { PropertyInspector } from '@/components/coordinator/floor-plan-v2/inspector/property-inspector'
 import { CanvasCommandBar } from '@/components/coordinator/floor-plan-v2/tools/canvas-command-bar'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from '@/components/coordinator/floor-plan-v2/tools/types'
@@ -498,9 +502,9 @@ function FloorPlanV2Workspace({
   }, [])
 
   const resetCanvasViewport = useCallback(() => {
-    viewportApiRef.current?.resetViewport()
+    fitViewportToContent(viewportApiRef.current, store.doc, activeRoomId)
     focusFloorPlanCanvas()
-  }, [])
+  }, [activeRoomId, store.doc])
   // New rooms become the active room in the sidebar but did not set
   // canvas selection — without this, resize handles never appear.
   useEffect(() => {
@@ -1309,9 +1313,9 @@ function FloorPlanV2Workspace({
     viewportApiRef.current?.zoomOut()
   }, [])
   const handleZoomReset = useCallback(() => {
-    viewportApiRef.current?.resetZoom()
+    fitViewportToContent(viewportApiRef.current, store.doc, activeRoomId)
     recoverCanvasFocus()
-  }, [recoverCanvasFocus])
+  }, [activeRoomId, recoverCanvasFocus, store.doc])
   /**
    * "Center View" — the toolbar button that recovers framing.
    *
@@ -1341,18 +1345,13 @@ function FloorPlanV2Workspace({
           maxX: objectBbox.x + objectBbox.width,
           maxY: objectBbox.y + objectBbox.height,
         },
-        { padding: 0.1 }
+        { padding: VIEWPORT_FIT_PADDING }
       )
     } else {
-      const roomBounds = unionActiveRoomBounds(store.doc)
-      if (roomBounds) {
-        api.fitToBounds(roomBounds, { padding: 0.12 })
-      } else {
-        api.resetViewport()
-      }
+      fitViewportToContent(api, store.doc, activeRoomId)
     }
     recoverCanvasFocus()
-  }, [addLog, recoverCanvasFocus, store.doc])
+  }, [activeRoomId, addLog, recoverCanvasFocus, store.doc])
 
 
   /**
@@ -2064,7 +2063,7 @@ function FloorPlanV2Workspace({
         >
           <div
             className={cn(
-              'floor-plan-canvas-host relative min-w-0 w-full flex-grow bg-stone-100',
+              'floor-plan-canvas-host relative min-h-0 w-full flex-1 flex flex-col bg-stone-100',
               isDashboard
                 ? 'border-0'
                 : 'rounded-lg border border-stone-200'
@@ -2080,7 +2079,12 @@ function FloorPlanV2Workspace({
               }}
             >
             <LayoutCanvasWizardQa
-              className="relative w-full flex-grow"
+              className={
+                isEmbedded
+                  ? 'relative min-h-0 w-full flex-1'
+                  : 'absolute inset-0 min-h-0'
+              }
+              scrollHost={!isEmbedded}
               commandCenterViewport={isDashboard}
               store={store}
               toolState={{ tool, drawShape }}

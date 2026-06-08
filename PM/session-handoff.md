@@ -28,7 +28,23 @@
 - **npm scripts:** `mobile:assets`, `mobile:sync`, `mobile:ios:open`, `mobile:ios:add`.
 - **OAuth URL scheme:** `ca.popuphub.app://auth/callback` patched into `ios/App/App/Info.plist` — add same redirect in Supabase Auth before TestFlight sign-in smoke.
 
-## Shipped this session (canvas viewport fit-to-content, not deployed)
+## Shipped this session (Google Places venue/address autocomplete fix, not deployed)
+- **`venue-places-autocomplete_qa.tsx`:** Removed `placesReady` from input `key` — remounting after Places loaded detached Google Autocomplete from the live input (predictions never appeared).
+- **`wizard-step-venue.tsx`:** `APIProvider` now passes `libraries={['places']}` (parity with event form + QA provider).
+
+## Shipped this session (event setup checklist reorder, not deployed)
+- **`event-readiness-checklist.tsx`:** Reordered steps — Square + booth layout now precede "Event published"; quarter auction step only when `listing_type` is quarter auction (`garage_yard_sale` via `isQuarterAuctionListing`).
+- **`app/coordinator/events/[id]/page.tsx`:** Quarter Auctions panel and header Auctions link hidden for standard community markets.
+
+## Shipped this session (layout canvas viewport init + 100% zoom, not deployed)
+- **`use-layout-viewport.ts`:** `VIEWPORT_FIT_PADDING_PX` (40px safe-zone); `fitViewportToContent` returns target zoom and prefers pixel padding for baseline framing.
+- **`use-viewport.ts`:** `fitToBounds` accepts `paddingPx`; tracks `baselineZoom` (100% toolbar readout); `getBaselineZoom()` exposed on `ViewportApi`.
+- **`use-canvas-viewport-framing.ts` (new):** `ResizeObserver` on the layout background host; initial fit in `useLayoutEffect`; re-fit on container resize (toolbar/window/inspector).
+- **`floor-plan-canvas.tsx`:** Container + scroll-host split (`scrollHost` prop); removed one-shot-only resize skip; normalized zoom readout via baseline; production host uses `absolute inset-0`.
+- **`floor-plan-canvas-wizard_qa.tsx`:** Synced with production fit math; removed conflicting canvas-centre scroll effect; spatial layout uses `scrollHost` + `h-full overflow-auto` (wizard embedded keeps page-scroll QA classes).
+- **`floor-plan-v2.tsx` / `floor-plan-v2_wizard_qa.tsx`:** Zoom reset + viewport reset call `fitViewportToContent` (100% = fit with 40px pad); canvas host `flex flex-col min-h-0 h-full`.
+
+## Shipped this session (canvas viewport fit-to-content, superseded by padding/resize pass above, not deployed)
 - **`use-layout-viewport.ts`:** `contentFramingBounds`, `fitViewportToContent`, `VIEWPORT_FIT_PADDING` (0.125 → ~75% viewport fill). Replaces hard-coded zoom-1 / canvas-centre resets.
 - **`floor-plan-canvas.tsx`:** Framing runs in `useLayoutEffect` before paint; zoom anchor uses active room centroid (not full canvas centre); removed conflicting canvas-dimension scroll centering that fought `fitToBounds`.
 - **`use-canvas-workspace.ts` / `floor-plan-v2.tsx`:** `resetCanvasViewport`, `ensurePlaceableDocument`, and Center View fallbacks call `fitViewportToContent` instead of `resetViewport()`.
@@ -146,7 +162,8 @@
 8. **Android (later)** — `npx cap add android` after iOS path proven.
 
 ## Next actions — web / QA
-1. **Step 3 Add room smoke-test** — `/coordinator/events/new` Step 3 with zero rooms: Width/Length inputs + Add room button visible (not clipped); page scrolls if toolbar exceeds viewport
+1. **Layout canvas init smoke-test** — `/coordinator/events/[id]/layout`: room bounds visible at **100%** on first load (no manual zoom-out); resize window / toggle inspector → canvas re-fits with 40px margin
+2. **Step 3 Add room smoke-test** — `/coordinator/events/new` Step 3 with zero rooms: Width/Length inputs + Add room button visible (not clipped); page scrolls if toolbar exceeds viewport
 2. **Global scroll smoke-test** — `/coordinator/events/new` Step 3 + `/coordinator/dashboard`: only one browser scrollbar (right edge); no nested canvas/map scroll track; Ctrl+wheel still zooms canvas
 2. **Canvas wheel smoke-test** — `/coordinator/dashboard`: scroll wheel over canvas scrolls page (not inner trap); Ctrl+wheel still zooms
 2. **Mobile smoke-test** — `/discover` scroll + reduced footer; `/coordinator/dashboard`: initial room modal first, table size selectable

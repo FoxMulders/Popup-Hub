@@ -19,6 +19,7 @@ import { LayoutDashboard, ClipboardCheck, Printer, Gauge, Gavel } from 'lucide-r
 import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
 import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
+import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import type { BoothApplication, Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
 
 interface Props {
@@ -95,6 +96,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   const isCancelled = event.status === 'cancelled'
   const isDraft = event.status === 'draft'
+  const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
 
   const eventRevenueCents =
     revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
@@ -169,13 +171,15 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
                   <Gauge className="h-4 w-4" />
                   Market Day Dashboard
                 </Link>
-                <Link
-                  href={`/coordinator/events/${id}/auctions`}
-                  className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
-                >
-                  <Gavel className="h-4 w-4" />
-                  Auctions
-                </Link>
+                {isQuarterAuction ? (
+                  <Link
+                    href={`/coordinator/events/${id}/auctions`}
+                    className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
+                  >
+                    <Gavel className="h-4 w-4" />
+                    Auctions
+                  </Link>
+                ) : null}
               </>
             )}
           </div>
@@ -267,7 +271,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         />
       )}
 
-      {!isCancelled && (
+      {!isCancelled && isQuarterAuction && (
         <div className="market-panel p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>

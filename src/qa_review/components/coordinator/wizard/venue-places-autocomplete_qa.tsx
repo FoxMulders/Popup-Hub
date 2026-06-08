@@ -149,7 +149,7 @@ export function VenuePlacesAutocomplete({
         ref={inputRef}
         id={id}
         type="text"
-        key={`${id}-${cityId}-${placesReady ? 'ready' : 'pending'}`}
+        key={`${id}-${cityId}`}
         defaultValue={value}
         onInput={(e) => onChange(e.currentTarget.value)}
         placeholder={placeholder}

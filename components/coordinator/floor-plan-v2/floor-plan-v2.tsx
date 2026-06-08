@@ -1350,9 +1350,9 @@ function FloorPlanV2Workspace({
     viewportApiRef.current?.zoomOut()
   }, [])
   const handleZoomReset = useCallback(() => {
-    viewportApiRef.current?.resetZoom()
+    fitViewportToContent(viewportApiRef.current, store.doc, activeRoomId)
     recoverCanvasFocus()
-  }, [recoverCanvasFocus])
+  }, [activeRoomId, recoverCanvasFocus, store.doc])
   /**
    * "Center View" — the toolbar button that recovers framing.
    *
@@ -2121,10 +2121,10 @@ function FloorPlanV2Workspace({
         >
           <div
             className={cn(
-              'floor-plan-canvas-host relative min-h-0 min-w-0 flex-1 basis-0 overflow-hidden bg-stone-100',
+              'floor-plan-canvas-host relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-stone-100',
               isDashboard
-                ? 'h-full min-h-0 flex-grow border-0'
-                : 'min-h-[200px] h-full rounded-lg border border-stone-200'
+                ? 'h-full border-0'
+                : 'h-full rounded-lg border border-stone-200'
             )}
           >
             <CanvasRootErrorBoundary
@@ -2137,7 +2137,8 @@ function FloorPlanV2Workspace({
               }}
             >
             <LayoutCanvas
-              className="absolute inset-0"
+              className="absolute inset-0 min-h-0"
+              scrollHost={!isEmbedded}
               commandCenterViewport={isDashboard}
               store={store}
               toolState={{ tool, drawShape }}
