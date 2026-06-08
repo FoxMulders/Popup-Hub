@@ -3,12 +3,16 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Baseline
-- Branch: `master` @ `361248f` (pushed to `origin/master`)
-- Last deploy commit: `361248f` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 4** | commit `ac839a2` (handoff updated 2026-06-08 14:35)
+- Branch: `master` @ `19bebb5` (pushed to `origin/master`)
+- Last deploy commit: `19bebb5` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 5** | commit `5c297e3` (handoff updated 2026-06-08 14:41)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
+
+## Shipped this session (vendor booth size → auto-arm draw tool, not deployed)
+- **`canvas-command-bar-blocks.tsx` (+ QA):** Vendor booth size pills (`5′`, `6′`, `8′`, …) now call `activateTableSize` instead of `onTableSizeChange` only — sets size and arms the square/booth draw tool in one click; square icon highlights via existing `isTablePlacementActive('vendor')`.
+- **Verify:** Smoke `/coordinator/dashboard` — click a vendor size in VENDOR BOOTHS; square icon turns amber-active and cursor places booths at that size without a second click on the square tool.
 
 ## Shipped this session (layout designer sidebar — merged control rows, not deployed)
 - **`toolbar-static-layout.ts`:** Four accordion rows collapsed to two merged rows — `room-tools` (Room Controls + Designer Tools) and `placement` (Patron Layout + Vendor Booths); legacy localStorage row ids migrate on load.
@@ -73,7 +77,7 @@
 
 
 ## Last deploy
-- 2026-06-08 14:35 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (361248f)
+- 2026-06-08 14:41 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (19bebb5)
 
 
 ## Goal
