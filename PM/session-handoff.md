@@ -18,11 +18,13 @@
 **UX + QA dashboard wiring** — layout animation, mobile polish, booth pricing inputs, AI guardrails hourly cap, QA dashboard live on `/coordinator/dashboard`. Login QA Jurassic Park lockout complete. Not deployed yet.
 
 ## Shipped this session (not deployed)
+- **Login QA Nedry lockout playback fix (`Login_qa.tsx`):** Always-mounted portal video preloads `/assets/nedry_magic_word.mp4`; Sign-in click primes audio before async auth; lockout triggers unmuted `play()` (+ muted retry); GIF+audio fallback at `/assets/nedry.gif` when video codec fails.
+- **Login QA Nedry lockout trap (`Login_qa.tsx` + `login-lockout_qa.ts`):** Login form hidden until countdown reaches `0:00`; lockout persisted in `sessionStorage` across refresh/return to `/login`; browser back + `beforeunload` blocked during lockout; countdown shown as `M:SS`.
 - **`Deploy-popuphub.bat` version tracking:** Header comment block documents floor-plan release track (object resize, measurements, viewport lock, layout fixes), prod baseline (build 155 / 7db76c6), `BUMP_BUILD_NUMBER=1` init, 5-step pipeline, optional `verify-canvas-state-smoke` / `verify-multi-room-canvas` / `verify-align-and-center` pre-flight.
 - **Login QA wired to `/login`:** `app/(auth)/login/login-form.tsx` re-exports `LoginQa` — lockout + logo scale now live on `/login` and embedded signup login panel.
-- **Login QA Jurassic Park lockout (`Login_qa.tsx`):** Portal to `document.body` at `z-[9999]`; fullscreen takeover on 3rd Supabase auth failure (valid email + wrong password); Nedry GIF + countdown; body scroll locked during lockout; exponential backoff 30s / 120s / 480s.
-- **Login QA logo scale (`Login_qa.tsx`):** `BrandLogoMark` auth header halved — `h-20 sm:h-24 max-w-[100px]` (was `h-40 sm:h-48` / `w-48 max-w-[200px]`).
-- **Login QA lockout helpers (`login-lockout_qa.ts`):** Trimmed credentials + client validation; local-only password visibility toggle; strike/cooldown math. Legacy pixel CSS (`login-lockout_qa.css`) unused after GIF overlay — safe to delete on promotion cleanup.
+- **Login QA Jurassic Park lockout (`Login_qa.tsx`):** Portal to `document.body` at `z-[9999]`; fullscreen takeover on 3rd Supabase auth failure; `public/assets/nedry_magic_word.mp4` (video+audio, loop) with `public/assets/nedry.gif` fallback; always-mounted preload video primes audio on Sign-in click, then `play()` on lockout (unmuted with muted retry); **build fix:** Turbopack cannot `import` `.mp4` — serve from `/assets/` not module import.
+- **Login QA logo scale (`Login_qa.tsx`):** Popup Hub wordmark `<img>` clamped to `w-44 h-auto object-contain mx-auto mb-4` (`/popup-hub-logo.png`).
+- **Login QA lockout helpers (`login-lockout_qa.ts`):** Trimmed credentials + client validation; local-only password visibility toggle; strike/cooldown math. Legacy pixel CSS (`login-lockout_qa.css`) unused after video overlay — safe to delete on promotion cleanup.
 - **QA dashboard wired:** `market-dashboard-client.tsx` → `DashboardBootstrapQa`; `floor-plan-v2.tsx` → `CanvasCommandBarQa`.
 - **AI guardrails (`ai-generation-guardrails_qa.tsx`):** `countdown` + `isGenerating` lock; 30s cooldown; **5 runs/hour** cap; credits HUD `48 / 50`; depletion toast before generative loop.
 - **Initial loader:** Computed uniform perimeter tables; removed dashed ring; logo fades into geometric ring center (`ringCenterX` / `ringCenterY` in `initial-loader-reveal.tsx`).
@@ -80,7 +82,7 @@
 3. **Wizard smoke-test** — Step 2 booth fee / discount backspace; category price placeholders
 4. **Instant book** — re-run `npx tsx scripts/verify-instant-book-category-limits.ts` after any apply-route edits (currently 4/4)
 5. **OpenRouter (deferred)** — user spec §5 truncated; no OpenRouter spatial-AI wiring in this pass
-6. **Login QA smoke-test** — import `LoginQa` on a staging route; 3 wrong passwords → fullscreen Nedry GIF overlay + 30s lock; verify trim + toggle do not leak globally
+6. **Login QA smoke-test** — `/login`: 3 wrong passwords → fullscreen Nedry video (magic-word audio) + 30s lock; confirm `/assets/nedry_magic_word.mp4` loads on prod after deploy; verify trim + toggle do not leak globally
 7. **Commit + deploy** when ready (`PM/Deploy-popuphub.bat` or `ship.ps1`); promote `_qa` modules after sign-off
 
 ## Goal (prior)
@@ -293,6 +295,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - Vendor / shopper / auction flows unless asked
 
 ## Blockers
+- **Nedry assets uncommitted** — `public/assets/nedry_magic_word.mp4` + `public/assets/nedry.gif` must ship with next deploy or lockout shows empty media on prod
 - Interactive coordinator smoke-test requires user credentials
 - Markets with **only** `venue_elements` and no cells open **blank** by design
 - ~~Deploy blocked by TS build failure~~ — fixed locally (pointer return type + verify script)

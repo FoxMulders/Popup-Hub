@@ -65,6 +65,12 @@ try {
     }
 
     if (-not $SkipBuild) {
+        $nextBuildLock = Join-Path $ProjectRoot '.next\lock'
+        if (Test-Path -LiteralPath $nextBuildLock) {
+            Remove-Item -LiteralPath $nextBuildLock -Force
+            Write-Host "Removed stale Next.js build lock: $nextBuildLock" -ForegroundColor Yellow
+        }
+
         Write-Step 'Building (next build)'
         $env:BUMP_BUILD_NUMBER = '1'
         if ((Invoke-NativeCommand -FilePath 'npm' -ArgumentList @('run', 'build')) -ne 0) { throw 'Build failed' }

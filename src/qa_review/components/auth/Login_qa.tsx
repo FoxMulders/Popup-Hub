@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -17,16 +17,21 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import {
+  clearNedryLockoutState,
+  formatLockoutCountdown,
   lockoutSecondsForStrike,
   normalizeLoginCredential,
+  readNedryLockoutState,
+  remainingLockoutSeconds,
   validateLoginCredentials,
+  writeNedryLockoutState,
 } from '@/src/qa_review/lib/auth/login-lockout_qa'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
-const NEDRY_LOCKOUT_GIF = 'https://media.giphy.com/media/uOAXDA7ZeJJIs/giphy.gif'
+const MAGIC_WORD_VIDEO = '/assets/nedry_magic_word.mp4'
+const MAGIC_WORD_GIF = '/assets/nedry.gif'
 
 /**
  * QA staging login — trimmed credential handling, local-only password visibility,
@@ -50,12 +55,73 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0)
   const [passwordVisible, setPasswordVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [useGifFallback, setUseGifFallback] = useState(false)
+  const nedryVideoRef = useRef<HTMLVideoElement>(null)
+  const nedryAudioRef = useRef<HTMLAudioElement>(null)
 
   const isLockedOut = cooldownRemaining > 0
   const showLockoutOverlay = strikes >= 3 && cooldownRemaining > 0
 
+  const primeNedryMedia = useCallback(
+    (media: HTMLMediaElement | null) => {
+      if (!media) return
+      media.muted = true
+      void media.play().then(() => {
+        media.pause()
+        media.currentTime = 0
+        media.muted = false
+      })
+    },
+    []
+  )
+
+  /** Prime playback during the submit click so lockout audio can start after async auth. */
+  const primeNedryPlayback = useCallback(() => {
+    if (useGifFallback) {
+      primeNedryMedia(nedryAudioRef.current)
+      return
+    }
+    primeNedryMedia(nedryVideoRef.current)
+  }, [primeNedryMedia, useGifFallback])
+
+  const playNedryLockout = useCallback(() => {
+    const media = useGifFallback ? nedryAudioRef.current : nedryVideoRef.current
+    if (!media) return
+
+    media.currentTime = 0
+    media.muted = false
+    media.loop = true
+
+    const attempt = () => {
+      void media.play().catch(() => {
+        media.muted = true
+        void media.play()
+      })
+    }
+
+    if (media.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      attempt()
+      return
+    }
+
+    media.addEventListener('canplay', attempt, { once: true })
+    media.load()
+  }, [useGifFallback])
+
   useEffect(() => {
     setMounted(true)
+
+    const stored = readNedryLockoutState()
+    if (!stored) return
+
+    const remaining = remainingLockoutSeconds(stored.expiresAt)
+    if (remaining > 0) {
+      setStrikes(stored.strikes)
+      setCooldownRemaining(remaining)
+      return
+    }
+
+    clearNedryLockoutState()
   }, [])
 
   useEffect(() => {
@@ -135,6 +201,8 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
       const nextStrikes = prev + 1
       const lockoutSeconds = lockoutSecondsForStrike(nextStrikes)
       if (lockoutSeconds > 0) {
+        const expiresAt = Date.now() + lockoutSeconds * 1000
+        writeNedryLockoutState({ strikes: nextStrikes, expiresAt })
         setCooldownRemaining(lockoutSeconds)
         setPasswordVisible(false)
       }
@@ -151,9 +219,48 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     }
   }, [showLockoutOverlay])
 
+  useEffect(() => {
+    if (!showLockoutOverlay) return
+    playNedryLockout()
+  }, [showLockoutOverlay, playNedryLockout])
+
+  useEffect(() => {
+    if (cooldownRemaining > 0 || strikes < 3) return
+    clearNedryLockoutState()
+  }, [cooldownRemaining, strikes])
+
+  useEffect(() => {
+    if (!showLockoutOverlay) return
+
+    const trapHistory = () => {
+      window.history.pushState({ nedryLockout: true }, '', window.location.href)
+    }
+
+    trapHistory()
+
+    const onPopState = () => {
+      trapHistory()
+    }
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('popstate', onPopState)
+    window.addEventListener('beforeunload', onBeforeUnload)
+
+    return () => {
+      window.removeEventListener('popstate', onPopState)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [showLockoutOverlay])
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     if (isLockedOut) return
+
+    primeNedryPlayback()
 
     setLoading(true)
     setError(null)
@@ -182,6 +289,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
 
     setStrikes(0)
     setCooldownRemaining(0)
+    clearNedryLockoutState()
 
     const {
       data: { user },
@@ -225,12 +333,11 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     <>
       {!embedded ? (
         <div className="text-center">
-          <div className="mb-6 flex justify-center">
-            <BrandLogoMark
-              size="auth"
-              className="h-20 w-auto max-w-[100px] shrink-0 object-contain sm:h-24"
-            />
-          </div>
+          <img
+            src="/popup-hub-logo.png"
+            alt="Popup Hub"
+            className="w-44 h-auto object-contain mx-auto mb-4"
+          />
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground">
             Welcome back
           </h1>
@@ -358,49 +465,108 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     </>
   )
 
-  const lockoutOverlay = showLockoutOverlay ? (
-    <div
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black p-6 font-mono select-none"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="nedry-lockout-title"
-      aria-describedby="nedry-lockout-countdown"
-    >
-      <div className="max-w-sm rounded-md border-4 border-red-600 bg-zinc-950 p-6 text-center shadow-[0_0_30px_rgba(220,38,38,0.5)]">
-        <h1
-          id="nedry-lockout-title"
-          className="mb-4 animate-pulse text-xl font-black tracking-widest text-red-500"
-        >
-          ⚠️ SECURITY ALERT ⚠️
-        </h1>
+  const nedryMedia = useGifFallback ? (
+    <>
+      <img
+        src={MAGIC_WORD_GIF}
+        alt="Dennis Nedry security denial animation"
+        className="w-full h-auto border-4 border-red-600 rounded shadow-2xl"
+      />
+      <audio
+        ref={nedryAudioRef}
+        src={MAGIC_WORD_VIDEO}
+        preload="auto"
+        loop
+        className="sr-only"
+        aria-hidden
+      />
+    </>
+  ) : (
+    <video
+      ref={nedryVideoRef}
+      src={MAGIC_WORD_VIDEO}
+      autoPlay={showLockoutOverlay}
+      loop
+      playsInline
+      preload="auto"
+      muted={!showLockoutOverlay}
+      className="w-full h-auto border-4 border-red-600 rounded shadow-2xl"
+      onError={() => setUseGifFallback(true)}
+    />
+  )
 
-        <img
-          src={NEDRY_LOCKOUT_GIF}
-          alt="Ah ah ah! You didn't say the magic word!"
-          className="mb-4 h-auto w-full rounded border-2 border-red-900"
-        />
-
-        <p className="mb-4 text-sm font-bold uppercase tracking-wide text-red-500">
-          &quot;YOU DIDN&apos;T SAY THE MAGIC WORD!&quot;
-        </p>
-
+  const nedryPortal =
+    mounted &&
+    createPortal(
+      <div
+        className={
+          showLockoutOverlay
+            ? 'fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black p-6 font-mono select-none'
+            : 'sr-only'
+        }
+        role={showLockoutOverlay ? 'alertdialog' : undefined}
+        aria-modal={showLockoutOverlay ? true : undefined}
+        aria-labelledby={showLockoutOverlay ? 'nedry-lockout-title' : undefined}
+        aria-describedby={showLockoutOverlay ? 'nedry-lockout-countdown' : undefined}
+        aria-hidden={showLockoutOverlay ? undefined : true}
+        tabIndex={showLockoutOverlay ? -1 : undefined}
+        onKeyDown={
+          showLockoutOverlay
+            ? (event) => {
+                event.preventDefault()
+                event.stopPropagation()
+              }
+            : undefined
+        }
+      >
         <div
-          id="nedry-lockout-countdown"
-          className="rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-400"
+          className={
+            showLockoutOverlay
+              ? 'max-w-sm rounded-md border-4 border-red-600 bg-zinc-950 p-6 text-center shadow-[0_0_30px_rgba(220,38,38,0.5)]'
+              : undefined
+          }
         >
-          ACCESS DENIED. LOCKOUT EXPIRY:{' '}
-          <span className="text-sm font-bold text-white">{cooldownRemaining}s</span>
-        </div>
-      </div>
-    </div>
-  ) : null
+          {showLockoutOverlay ? (
+            <h1
+              id="nedry-lockout-title"
+              className="mb-4 animate-pulse text-xl font-black tracking-widest text-red-500"
+            >
+              ⚠️ SECURITY ALERT ⚠️
+            </h1>
+          ) : null}
 
-  const lockoutPortal = mounted && lockoutOverlay ? createPortal(lockoutOverlay, document.body) : null
+          {nedryMedia}
+
+          {showLockoutOverlay ? (
+            <>
+              <p className="mb-4 text-sm font-bold uppercase tracking-wide text-red-500">
+                &quot;YOU DIDN&apos;T SAY THE MAGIC WORD!&quot;
+              </p>
+
+              <div
+                id="nedry-lockout-countdown"
+                className="rounded border border-zinc-800 bg-zinc-900 p-2 text-xs text-zinc-400"
+              >
+                ACCESS DENIED. LOCKOUT EXPIRY:{' '}
+                <span className="text-sm font-bold text-white tabular-nums">
+                  {formatLockoutCountdown(cooldownRemaining)}
+                </span>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>,
+      document.body
+    )
+
+  if (showLockoutOverlay) {
+    return <>{nedryPortal}</>
+  }
 
   if (embedded) {
     return (
       <>
-        {lockoutPortal}
+        {nedryPortal}
         {formBody}
       </>
     )
@@ -408,7 +574,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <>
-      {lockoutPortal}
+      {nedryPortal}
       <div className="w-full max-w-md space-y-6">{formBody}</div>
     </>
   )
