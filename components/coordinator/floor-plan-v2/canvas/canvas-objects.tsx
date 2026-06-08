@@ -14,8 +14,7 @@ import type {
 } from '../state/types'
 import { ringsToSvgPathD } from '@/lib/floor-plan/shape-union'
 import {
-  paletteForCategory,
-  DEFAULT_BOOTH_PALETTE,
+  VENDOR_BOOTH_PALETTE,
   PATRON_TABLE_PALETTE,
 } from './category-palette'
 import { EXTERIOR_LABEL_OFFSET_PX, objectCenter } from '../interactions/geometry'
@@ -76,13 +75,9 @@ function fillForObject(
     case 'booth': {
       const booth = obj as BoothObject
       const isPatron = isGuestTableBooth(booth)
-      const status = isPatron
-        ? undefined
-        : boothPlacementStatusByObjectId?.get(obj.id)
-      if (status) return BOOTH_STATUS_THEME[status].fill
-      if (booth.accentColor) return booth.accentColor
+      if (booth.accentColor && !isPatron) return booth.accentColor
       if (isPatron) return PATRON_TABLE_PALETTE.fill
-      return paletteForCategory(booth.categoryName, eventCategoryNames).fill
+      return VENDOR_BOOTH_PALETTE.fill
     }
     case 'wall':
       return '#1c1917'
@@ -120,15 +115,8 @@ function strokeForObject(
     case 'booth': {
       const booth = obj as BoothObject
       const isPatron = isGuestTableBooth(booth)
-      const status = isPatron
-        ? undefined
-        : boothPlacementStatusByObjectId?.get(obj.id)
-      if (status) return BOOTH_STATUS_THEME[status].stroke
-      if (booth.accentColor) {
-        return isPatron ? PATRON_TABLE_PALETTE.stroke : DEFAULT_BOOTH_PALETTE.stroke
-      }
       if (isPatron) return PATRON_TABLE_PALETTE.stroke
-      return paletteForCategory(booth.categoryName, eventCategoryNames).stroke
+      return VENDOR_BOOTH_PALETTE.stroke
     }
     case 'wall':
       return '#1c1917'
@@ -395,29 +383,6 @@ function renderGlobalPerimeterLabel(
   )
 }
 
-function BoothStatusPatterns() {
-  return (
-    <defs>
-      <pattern id="booth-pattern-unassigned" width="8" height="8" patternUnits="userSpaceOnUse">
-        <rect width="8" height="8" fill="#e7e5e4" />
-        <path d="M0 8 L8 0" stroke="#a8a29e" strokeWidth="1" />
-      </pattern>
-      <pattern id="booth-pattern-assigned" width="6" height="6" patternUnits="userSpaceOnUse">
-        <rect width="6" height="6" fill="#d6d3d1" />
-        <circle cx="3" cy="3" r="0.75" fill="#78716c" />
-      </pattern>
-      <pattern id="booth-pattern-paid" width="10" height="10" patternUnits="userSpaceOnUse">
-        <rect width="10" height="10" fill="#bbf7d0" />
-        <path d="M0 10 L10 0 M-2 2 L2 -2 M8 12 L12 8" stroke="#15803d" strokeWidth="1.5" />
-      </pattern>
-      <pattern id="booth-pattern-vip" width="8" height="8" patternUnits="userSpaceOnUse">
-        <rect width="8" height="8" fill="#e9d5ff" />
-        <circle cx="2" cy="2" r="1" fill="#7e22ce" />
-        <circle cx="6" cy="6" r="1" fill="#7e22ce" />
-      </pattern>
-    </defs>
-  )
-}
 
 function boothStatusLabel(
   obj: PlacedObject,
@@ -486,9 +451,6 @@ function CanvasObjectsBase({
 
   return (
     <g>
-      {showPlacableLayer && boothPlacementStatusByObjectId ? (
-        <BoothStatusPatterns />
-      ) : null}
       {showMergedLayer ? (
         <g
           className="canvas-merged-zone-layer canvas-overlay-layer"
@@ -525,10 +487,7 @@ function CanvasObjectsBase({
           isOverlapping,
           boothPlacementStatusByObjectId
         )
-        const patternFill =
-          placementStatus && !isOverlapping
-            ? `url(#${BOOTH_STATUS_THEME[placementStatus].patternId})`
-            : null
+        // Vendor booths use solid yellow — payment status is shown via label text.
         // When the object is part of an explicit join group its
         // perimeter is no longer "owned" by the object — the
         // dissolved zone polygon (rendered in <RoomFrames>) draws
@@ -540,7 +499,7 @@ function CanvasObjectsBase({
         )
         const hideJoinedFixtureBody =
           isJoined && isJoinableObject(obj) && obj.kind !== 'stage'
-        const displayFill = hideJoinedFixtureBody ? 'transparent' : patternFill ?? fill
+        const displayFill = hideJoinedFixtureBody ? 'transparent' : fill
         const displayFillOpacity =
           hideJoinedFixtureBody || obj.kind === 'stage' ? 0 : 0.85
         const stroke =
@@ -733,7 +692,7 @@ function CanvasObjectsBase({
                     textAnchor="middle"
                     fontSize={fitted.fontSize}
                     fontWeight={700}
-                    fill={BOOTH_STATUS_THEME[placementStatus].stroke}
+                    fill={VENDOR_BOOTH_PALETTE.stroke}
                     pointerEvents="none"
                   >
                     {fitted.text}

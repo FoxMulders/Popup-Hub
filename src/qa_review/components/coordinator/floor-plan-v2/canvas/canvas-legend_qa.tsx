@@ -10,6 +10,7 @@ import {
 import {
   PLACEMENT_AVAILABLE,
   PLACEMENT_VIOLATION,
+  VENDOR_BOOTH_LEGEND,
 } from '@/components/coordinator/floor-plan-v2/canvas/placement-theme'
 
 const STORAGE_KEY = 'popup-hub:floor-plan-v2:legend-collapsed'
@@ -22,7 +23,12 @@ interface LegendItem {
 
 const ITEMS: LegendItem[] = [
   {
-    swatchClass: 'bg-emerald-500 ring-1 ring-emerald-700/30',
+    swatchClass: VENDOR_BOOTH_LEGEND.tailwindSwatch,
+    label: 'Vendor',
+    detail: 'Vendor booth footprint on the layout canvas.',
+  },
+  {
+    swatchClass: PLACEMENT_AVAILABLE.tailwindSwatch,
     label: 'Available',
     detail: QA_PLACEMENT_TIP_VALID,
   },
@@ -70,6 +76,12 @@ export function CanvasLegendQa({ className }: { className?: string }) {
         )}
       >
         <span className="flex items-center gap-0.5">
+          <span
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm',
+              VENDOR_BOOTH_LEGEND.tailwindSwatch
+            )}
+          />
           <span
             className={cn(
               'inline-block h-2.5 w-2.5 rounded-sm',

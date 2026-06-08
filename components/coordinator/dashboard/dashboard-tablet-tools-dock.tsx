@@ -31,10 +31,7 @@ export function DashboardTabletToolsDock() {
 
   return (
     <>
-      <div
-        className="flex h-full w-12 min-w-12 flex-col items-center gap-2 border-r border-stone-200/80 bg-card/80 py-2"
-        aria-label="Layout tools dock"
-      >
+      <div className="flex h-full w-full flex-col items-center gap-2 py-2">
         <button
           type="button"
           onClick={() => setDrawerOpen((open) => !open)}

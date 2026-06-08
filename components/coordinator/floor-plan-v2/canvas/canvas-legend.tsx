@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   PLACEMENT_AVAILABLE,
   PLACEMENT_VIOLATION,
+  VENDOR_BOOTH_LEGEND,
 } from './placement-theme'
 
 /**
@@ -33,7 +34,12 @@ interface LegendItem {
 
 const ITEMS: LegendItem[] = [
   {
-    swatchClass: 'bg-emerald-500 ring-1 ring-emerald-700/30',
+    swatchClass: VENDOR_BOOTH_LEGEND.tailwindSwatch,
+    label: 'Vendor',
+    detail: 'Vendor booth footprint — assigned, unassigned, and open slots.',
+  },
+  {
+    swatchClass: PLACEMENT_AVAILABLE.tailwindSwatch,
     label: 'Available',
     detail:
       'Valid space — meets clearance and category-proximity rules. Safe to drop a booth here.',
@@ -82,6 +88,12 @@ export function CanvasLegend({ className }: { className?: string }) {
         )}
       >
         <span className="flex items-center gap-0.5">
+          <span
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm',
+              VENDOR_BOOTH_LEGEND.tailwindSwatch
+            )}
+          />
           <span
             className={cn(
               'inline-block h-2.5 w-2.5 rounded-sm',

@@ -226,7 +226,12 @@ export function VendorSidebarSizeGrid({
             title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
             className={cn(
               'inline-flex min-h-[1.8rem] items-center justify-center rounded-sm px-1 font-semibold tabular-nums transition-colors',
-              sizeButtonClass(active, disabled, 'vendor'),
+              sizeButtonClass(
+                active,
+                disabled,
+                'vendor',
+                boothTabletTouchClass(isTablet, ft)
+              ),
               'min-w-0 border-0 last:border-0'
             )}
           >
@@ -313,6 +318,8 @@ export function TableSizePill({
   className,
   compact = false,
 }: TableSizePillProps) {
+  const { isTablet } = useFloorPlanViewportLayout()
+
   if (sections === 'patron-rows') {
     return (
       <PatronTableSizeRows
@@ -372,7 +379,12 @@ export function TableSizePill({
                   onClick={() => onChange(selection)}
                   aria-pressed={active}
                   title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
-                  className={sizeButtonClass(active, disabled, 'vendor')}
+                  className={sizeButtonClass(
+                    active,
+                    disabled,
+                    'vendor',
+                    boothTabletTouchClass(isTablet, ft)
+                  )}
                 >
                   {ft}′
                 </button>

@@ -21,11 +21,14 @@ export interface PaletteEntry {
   stroke: string
 }
 
-/** Default vendor booth color when no category and no override (amber / yellow). */
-export const DEFAULT_BOOTH_PALETTE: PaletteEntry = {
-  fill: '#fde68a',
-  stroke: '#92400e',
+/** Canonical vendor booth colors on the layout canvas (Tailwind yellow-200 / yellow-500). */
+export const VENDOR_BOOTH_PALETTE: PaletteEntry = {
+  fill: '#FEF08A',
+  stroke: '#EAB308',
 }
+
+/** @deprecated Alias — use {@link VENDOR_BOOTH_PALETTE}. */
+export const DEFAULT_BOOTH_PALETTE: PaletteEntry = VENDOR_BOOTH_PALETTE
 
 /** Patron / guest seating tables — always purple on the layout canvas. */
 export const PATRON_TABLE_PALETTE: PaletteEntry = {

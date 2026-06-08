@@ -18,3 +18,11 @@ export const PLACEMENT_VIOLATION = {
   stroke: '#ef4444',
   fillOpacity: 0.55,
 } as const
+
+/** Legend + canvas vendor booth swatch (matches {@link VENDOR_BOOTH_PALETTE}). */
+export const VENDOR_BOOTH_LEGEND = {
+  tailwindSwatch: 'bg-yellow-200 ring-1 ring-yellow-500',
+  fill: '#FEF08A',
+  stroke: '#EAB308',
+  fillOpacity: 0.85,
+} as const
