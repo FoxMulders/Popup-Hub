@@ -3,8 +3,8 @@
 import { cn } from '@/lib/utils'
 import {
   TABLE_SIZES,
+  formatVendorTableSizeSubLabel,
   type LayoutBaselineTableLengthFt,
-  layoutBaselineGridSpans,
 } from '@/lib/booth-planner/layout-table-size'
 import {
   GUEST_TABLE_LENGTHS_FT,
@@ -47,13 +47,13 @@ export function TableSizeSelector({
       'font-heading font-semibold transition-all duration-200 disabled:opacity-50',
       variant === 'inline'
         ? cn(
-            'min-h-9 px-1 py-1.5 text-[11px] active:translate-y-px',
+            'min-h-[2.75rem] px-1.5 py-1.5 text-[10px] leading-tight active:translate-y-px',
             active
               ? 'bg-[#2D5A27] text-[#F5F2EB]'
               : 'bg-stone-100 text-stone-800 hover:bg-stone-50'
           )
         : cn(
-            'flex-1 min-h-11 border-r border-stone-200 px-2 py-2 text-xs last:border-r-0 active:translate-y-0.5',
+            'flex-1 min-h-12 border-r border-stone-200 px-2 py-2 text-xs last:border-r-0 active:translate-y-0.5',
             active
               ? 'bg-[#2D5A27] text-[#F5F2EB]'
               : 'bg-stone-100 text-stone-800 hover:bg-stone-50'
@@ -73,16 +73,16 @@ export function TableSizeSelector({
         className={cn(
           'overflow-hidden rounded-lg border-2 border-stone-200 bg-card',
           variant === 'inline'
-            ? 'grid grid-cols-3 gap-px bg-stone-200 sm:grid-cols-5 lg:grid-cols-9'
-            : 'flex rounded-xl'
+            ? 'grid grid-cols-3 gap-px bg-stone-200 sm:grid-cols-3'
+            : 'grid grid-cols-3 gap-px rounded-xl bg-stone-200 sm:grid-cols-3'
         )}
         role="group"
         aria-label="Vendor booth table length"
       >
         {TABLE_SIZES.map((ft) => {
-          const { colSpan, rowSpan } = layoutBaselineGridSpans(ft)
           const option = vendorTableSpec(ft)
           const active = tableSizeSpecsEqual(selection, option)
+          const modularSubLabel = formatVendorTableSizeSubLabel(ft)
           return (
             <button
               key={ft}
@@ -90,12 +90,17 @@ export function TableSizeSelector({
               disabled={disabled}
               onClick={() => onChange(ft)}
               aria-pressed={active}
+              title={
+                modularSubLabel
+                  ? `${ft}′ total — ${modularSubLabel.replace('×', ' tables × ')} modules`
+                  : `${ft}′ single table`
+              }
               className={buttonClass(active)}
             >
-              <span className="block">{ft}′</span>
-              <span className={subLabelClass(active)}>
-                {colSpan}×{rowSpan}
-              </span>
+              <span className="block whitespace-nowrap">{ft}′</span>
+              {modularSubLabel ? (
+                <span className={subLabelClass(active)}>({modularSubLabel})</span>
+              ) : null}
             </button>
           )
         })}
@@ -189,7 +194,7 @@ export function TableSizeSelector({
           <p className="text-[10px] leading-snug text-muted-foreground">
             {showGuestOptions
               ? `Hall baseline — ${summaryLabel}. Booth sizes set venue capacity.`
-              : `One size for this hall — ${selection.ft}′ equipment core + 8′ co-aisle on new placements.`}
+              : `One size for this hall — ${selection.ft}′ × 2′ equipment core + 8′ co-aisle on new placements.`}
           </p>
         </div>
       </div>

@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react'
 import { createPortal } from 'react-dom'
+import { cn } from '@/lib/utils'
 
 /** Mandatory hover delay before canvas/toolbar tooltips render. */
 export const TOOLTIP_HOVER_DELAY_MS = 400
@@ -21,6 +22,7 @@ export const QA_SIDEBAR_WIDTH_PX = 320
 interface TooltipWrapperProps {
   text: string
   children: ReactNode
+  className?: string
 }
 
 type TooltipListener = (activeId: string | null) => void
@@ -108,7 +110,7 @@ function computePortalPosition(
 }
 
 /** Portal tooltip — escapes sidebar overflow; flips right when past `w-80`. */
-export function TooltipWrapperQa({ text, children }: TooltipWrapperProps) {
+export function TooltipWrapperQa({ text, children, className }: TooltipWrapperProps) {
   const id = useId()
   const anchorRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -178,7 +180,7 @@ export function TooltipWrapperQa({ text, children }: TooltipWrapperProps) {
       ? createPortal(
           <div
             role="tooltip"
-            className="pointer-events-none fixed z-50 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white shadow-sm"
+            className="pointer-events-none fixed z-50 h-auto w-max max-w-xs whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white shadow-sm"
             style={position}
           >
             {text}
@@ -191,7 +193,10 @@ export function TooltipWrapperQa({ text, children }: TooltipWrapperProps) {
     <>
       <div
         ref={anchorRef}
-        className="relative inline-block"
+        className={cn(
+          'relative inline-flex h-auto w-fit max-w-full shrink-0 self-start',
+          className
+        )}
         onMouseEnter={scheduleShow}
         onMouseLeave={hide}
         onFocus={scheduleShow}

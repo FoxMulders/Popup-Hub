@@ -1,7 +1,10 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { TABLE_SIZES } from '@/lib/booth-planner/layout-table-size'
+import {
+  TABLE_SIZES,
+  formatVendorTableSizeButtonLabel,
+} from '@/lib/booth-planner/layout-table-size'
 import {
   GUEST_TABLE_LENGTHS_FT,
   guestRectTableSpec,
@@ -90,7 +93,7 @@ export function TableSizePill({
                   disabled={disabled}
                   onClick={() => onChange(selection)}
                   aria-pressed={active}
-                  title={`Set vendor table length to ${ft} ft`}
+                  title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
                   className={sizeButtonClass(active, disabled)}
                 >
                   {ft}′

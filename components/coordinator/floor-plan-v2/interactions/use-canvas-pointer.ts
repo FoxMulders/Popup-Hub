@@ -12,7 +12,9 @@ import {
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import {
   boothDimensionsForTableSpec,
+  vendorBoothClusterExtrasForBaseline,
 } from '@/lib/booth-planner/table-booth-consolidation'
+import { isLayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { useDebugLog } from '../debug/debug-log-context'
@@ -1583,6 +1585,12 @@ function commitDraft(
       const seedCategory = isGuestTable
         ? null
         : pickLeastUsedCategory(store, eventCategoryNames)
+      const vendorClusterExtras =
+        !isGuestTable &&
+        defaultBoothTableSpec?.purpose === 'vendor' &&
+        isLayoutBaselineTableLengthFt(defaultBoothTableSpec.ft)
+          ? vendorBoothClusterExtrasForBaseline(defaultBoothTableSpec.ft)
+          : null
       obj = {
         ...base,
         kind: 'booth',
@@ -1594,6 +1602,7 @@ function commitDraft(
               tablePurpose: defaultBoothTableSpec.purpose,
             }
           : {}),
+        ...(vendorClusterExtras ?? {}),
         ...(seedCategory ? { categoryName: seedCategory } : {}),
       }
       break

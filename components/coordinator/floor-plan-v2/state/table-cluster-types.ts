@@ -16,8 +16,13 @@ export interface BoothSubTable {
   rotationOffsetDeg: number
 }
 
+/** `spaced` = legacy consolidation gap; `contiguous` = end-to-end modular baseline. */
+export type TableClusterLayoutMode = 'spaced' | 'contiguous'
+
 export interface BoothTableCluster {
   presetId: TableClusterPresetId
+  /** Per-module table length (ft). Parent booth width = sum of modules. */
   tableLengthFt: LayoutBaselineTableLengthFt
   subTables: BoothSubTable[]
+  layout?: TableClusterLayoutMode
 }

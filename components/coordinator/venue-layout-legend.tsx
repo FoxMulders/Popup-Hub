@@ -65,7 +65,7 @@ export function VenueFixturesCatalog({ activeTool, onToolChange }: VenueFixtures
           const showKbd = meta?.shortcut && !MERGED_SHORTCUT_TOOLS.has(tool)
 
           return (
-            <TooltipWrapper key={tool} text={tip}>
+            <TooltipWrapper key={tool} text={tip} className="w-full">
               <button
                 type="button"
                 aria-pressed={active}

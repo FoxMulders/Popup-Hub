@@ -70,6 +70,38 @@ export function inferClusterPreset(
   return null
 }
 
+/** End-to-end modular row (no gap) for baseline vendor table sizes. */
+export function defaultContiguousSubTables(
+  moduleLengthFt: number,
+  moduleCount: number
+): BoothSubTable[] {
+  const totalSpan = moduleLengthFt * moduleCount
+  const subTables: BoothSubTable[] = []
+  for (let i = 0; i < moduleCount; i++) {
+    subTables.push({
+      id: `t${i}`,
+      localCenterX: -totalSpan / 2 + moduleLengthFt / 2 + i * moduleLengthFt,
+      localCenterY: 0,
+      tableLengthFt: moduleLengthFt,
+      rotationOffsetDeg: 0,
+    })
+  }
+  return subTables
+}
+
+export function createContiguousTableCluster(
+  moduleLengthFt: number,
+  moduleCount: number
+): BoothTableCluster {
+  const tableLengthFt = moduleLengthFt as LayoutBaselineTableLengthFt
+  return {
+    presetId: '2x5',
+    tableLengthFt,
+    layout: 'contiguous',
+    subTables: defaultContiguousSubTables(moduleLengthFt, moduleCount),
+  }
+}
+
 /** Default linear row layout in cluster-local coordinates (pivot at centroid). */
 export function defaultSubTablesForPreset(
   presetId: TableClusterPresetId
@@ -98,6 +130,7 @@ export function createTableCluster(
   return {
     presetId,
     tableLengthFt,
+    layout: 'spaced',
     subTables: defaultSubTablesForPreset(presetId),
   }
 }
@@ -309,7 +342,11 @@ export function applyBoothObjectPatch(
   booth: BoothObject,
   patch: Partial<BoothObject>
 ): BoothObject {
-  const merged = { ...booth, ...patch } as BoothObject
+  let merged = { ...booth, ...patch } as BoothObject
+  if ('tableCluster' in patch && patch.tableCluster === undefined) {
+    const { tableCluster: _removed, ...withoutCluster } = merged
+    merged = withoutCluster as BoothObject
+  }
   if (!merged.tableCluster) return merged
   if (patch.rotation === undefined) return merged
 

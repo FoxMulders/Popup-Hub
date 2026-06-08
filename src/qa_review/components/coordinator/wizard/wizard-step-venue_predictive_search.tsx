@@ -104,7 +104,7 @@ function VenueMapPin({
 
   return (
     <div
-      className="relative flex flex-col items-center"
+      className="relative inline-flex h-auto w-fit flex-col items-center self-start"
       title={nativeTitle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

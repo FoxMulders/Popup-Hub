@@ -1150,6 +1150,23 @@ function TableClusterShapes({
             </g>
           )
         })}
+        {cluster.subTables.length > 1
+          ? cluster.subTables.slice(0, -1).map((sub) => {
+              const boundaryX = (sub.localCenterX + sub.tableLengthFt / 2) * pxPerFt
+              return (
+                <line
+                  key={`${booth.id}-divider-${sub.id}`}
+                  x1={boundaryX}
+                  y1={-depthPx / 2}
+                  x2={boundaryX}
+                  y2={depthPx / 2}
+                  stroke={stroke}
+                  strokeWidth={Math.max(1, strokeWidth)}
+                  pointerEvents="none"
+                />
+              )
+            })
+          : null}
       </g>
       {isSelected ? (
         <rect

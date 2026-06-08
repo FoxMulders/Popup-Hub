@@ -1,11 +1,13 @@
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
+  createContiguousTableCluster,
   createTableCluster,
   inferClusterPreset,
   syncBoothCompoundBounds,
 } from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
 import {
   isLayoutBaselineTableLengthFt,
+  vendorTableSizeOption,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import {
@@ -51,11 +53,34 @@ export function boothDimensionsForTableSpec(
   })
 }
 
+function vendorModularClusterPatch(
+  totalFt: LayoutBaselineTableLengthFt
+): Pick<BoothObject, 'tableCount' | 'tableCluster'> | null {
+  const option = vendorTableSizeOption(totalFt)
+  if (!option || option.moduleCount <= 1) return null
+  return {
+    tableCount: option.moduleCount,
+    tableCluster: createContiguousTableCluster(
+      option.moduleLengthFt,
+      option.moduleCount
+    ),
+  }
+}
+
 /** Patch a booth so its footprint matches the table size spec. */
 export function boothPatchForTableSize(
   booth: Pick<BoothObject, 'width' | 'height'>,
   spec: TableSizeSpec
-): Pick<BoothObject, 'width' | 'height' | 'tableLengthFt' | 'tableShape' | 'tablePurpose'> {
+): Pick<
+  BoothObject,
+  | 'width'
+  | 'height'
+  | 'tableLengthFt'
+  | 'tableShape'
+  | 'tablePurpose'
+  | 'tableCount'
+  | 'tableCluster'
+> {
   const { width: tableW, height: tableH } = boothDimensionsForTableSpec(spec)
 
   if (spec.purpose === 'guest') {
@@ -65,8 +90,15 @@ export function boothPatchForTableSize(
       tableLengthFt: spec.ft,
       tableShape: spec.shape,
       tablePurpose: 'guest',
+      tableCount: 1,
+      tableCluster: undefined,
     }
   }
+
+  const modular =
+    isLayoutBaselineTableLengthFt(spec.ft)
+      ? vendorModularClusterPatch(spec.ft)
+      : null
 
   if (booth.width >= booth.height) {
     return {
@@ -75,6 +107,8 @@ export function boothPatchForTableSize(
       tableLengthFt: spec.ft,
       tableShape: 'rectangular',
       tablePurpose: 'vendor',
+      tableCount: modular?.tableCount ?? 1,
+      tableCluster: modular?.tableCluster,
     }
   }
   return {
@@ -83,7 +117,16 @@ export function boothPatchForTableSize(
     tableLengthFt: spec.ft,
     tableShape: 'rectangular',
     tablePurpose: 'vendor',
+    tableCount: modular?.tableCount ?? 1,
+    tableCluster: modular?.tableCluster,
   }
+}
+
+/** Modular vendor cluster fields for a newly placed baseline booth. */
+export function vendorBoothClusterExtrasForBaseline(
+  totalFt: LayoutBaselineTableLengthFt
+): Pick<BoothObject, 'tableCount' | 'tableCluster'> | null {
+  return vendorModularClusterPatch(totalFt)
 }
 
 /** @deprecated Use {@link boothPatchForTableSize}. */
@@ -149,6 +192,28 @@ export function consolidateBoothsForAutoArrange(
 
     if (megaFt != null && tableCount > 1) {
       const lead = members[0]!
+      const baselineOption = vendorTableSizeOption(megaFt)
+      if (baselineOption && baselineOption.moduleCount > 1) {
+        consolidated.push(
+          syncBoothCompoundBounds({
+            ...lead,
+            width: megaFt,
+            height: boothDimensionsForTableLength(megaFt).height,
+            tableCluster: createContiguousTableCluster(
+              baselineOption.moduleLengthFt,
+              baselineOption.moduleCount
+            ),
+            tableLengthFt: megaFt,
+            tableCount: baselineOption.moduleCount,
+            tablePurpose: 'vendor',
+            tableShape: 'rectangular',
+            label:
+              lead.label ??
+              `${megaFt}′ (${baselineOption.moduleLengthFt}′×${baselineOption.moduleCount})`,
+          })
+        )
+        continue
+      }
       const preset = inferClusterPreset(tableCount, baseFt)
       if (preset) {
         consolidated.push(

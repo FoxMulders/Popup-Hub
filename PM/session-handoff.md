@@ -10,6 +10,18 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (tooltip height stretch fix, not deployed)
+- **`components/coordinator/tooltip-wrapper.tsx`:** Anchor uses `relative inline-flex h-auto w-fit self-start` so flex toolbars no longer stretch the positioning box to full row height; bubble gets explicit `h-auto w-max`. Optional `className` prop (e.g. `w-full` for catalog rows).
+- **`components/ui/tooltip.tsx`:** `TooltipTrigger` and `TooltipContent`/`Positioner` constrained with `h-auto w-fit self-start` — HelpCircle triggers no longer inherit flex cross-axis stretch.
+- **`wizard-filter-tooltip.tsx`**, **`tooltip-wrapper_qa.tsx`**, map pin tooltips (`wizard-step-venue*.tsx`): same anchor/bubble sizing guards.
+
+## Shipped this session (vendor table size selector — modular presets, not deployed)
+- **`lib/booth-planner/layout-table-size.ts`:** Replaced single-dimension sizes (7′/9′ removed) with modular vendor presets: 5/6/8′ singles plus 10/12/15/16/18/20′ combined footprints (`VENDOR_TABLE_SIZE_OPTIONS`).
+- **`components/coordinator/table-size-selector.tsx`:** 3×3 grid with modular sub-labels `(5′×2)` etc.; used by **Create your first room** modal (`initial-room-modal.tsx`).
+- **`table-cluster-layout.ts` + `table-booth-consolidation.ts` + `use-canvas-pointer.ts`:** Contiguous multi-table clusters on draw/resize; geometry uses total length × 2′ depth.
+- **`canvas-objects.tsx`:** Vertical dividers between sub-tables in clustered vendor booths.
+- **Verify:** `npx tsx scripts/verify-table-size-default.ts` — 19/19 pass; `tsc --noEmit` clean.
+
 ## Shipped this session (discover page scroll fix, not deployed)
 - **`components/shopper/shopper-shell.tsx`:** Removed viewport-locked nested scroll (`min-h-[100dvh]` + `main` `overflow-y-auto` / `min-h-0` / `flex-1`). Browse routes (`/discover`, `/favorites`, etc.) now use `min-h-screen` and natural document scroll so footer and expanded flyer content are reachable.
 

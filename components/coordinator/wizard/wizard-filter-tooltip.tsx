@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
 const TOOLTIP_CLASS =
-  'absolute z-50 bottom-full left-0 mb-2 w-[min(16rem,calc(100vw-2rem))] rounded border-2 border-black bg-black text-white text-xs p-2 shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] pointer-events-none whitespace-normal break-words leading-snug'
+  'absolute z-50 bottom-full left-0 mb-2 h-auto w-[min(16rem,calc(100vw-2rem))] rounded border-2 border-black bg-black text-white text-xs p-2 shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] pointer-events-none whitespace-normal break-words leading-snug'
 
 interface WizardFilterTooltipProps {
   label: string
@@ -25,7 +25,7 @@ export function WizardFilterTooltip({
 
   return (
     <div
-      className={cn('relative space-y-1 min-w-0', className)}
+      className={cn('relative h-auto w-full min-w-0 space-y-1 self-start', className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocus={() => setHovered(true)}

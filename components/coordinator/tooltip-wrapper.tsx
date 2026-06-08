@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 /** Mandatory hover delay before canvas/toolbar tooltips render. */
 export const TOOLTIP_HOVER_DELAY_MS = 400
@@ -8,6 +9,8 @@ export const TOOLTIP_HOVER_DELAY_MS = 400
 interface TooltipWrapperProps {
   text: string
   children: ReactNode
+  /** Optional anchor sizing — use `w-full` when the trigger should span a flex column. */
+  className?: string
 }
 
 type TooltipListener = (activeId: string | null) => void
@@ -28,7 +31,7 @@ export function dismissActiveTooltip() {
 }
 
 /** Neobrutalist high-contrast tooltip — 400ms debounce, one alive at a time. */
-export function TooltipWrapper({ text, children }: TooltipWrapperProps) {
+export function TooltipWrapper({ text, children, className }: TooltipWrapperProps) {
   const id = useId()
   const [visible, setVisible] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -71,7 +74,10 @@ export function TooltipWrapper({ text, children }: TooltipWrapperProps) {
 
   return (
     <div
-      className="relative inline-block"
+      className={cn(
+        'relative inline-flex h-auto w-fit max-w-full shrink-0 self-start',
+        className
+      )}
       onMouseEnter={scheduleShow}
       onMouseLeave={hide}
       onFocus={scheduleShow}
@@ -81,7 +87,7 @@ export function TooltipWrapper({ text, children }: TooltipWrapperProps) {
       {visible ? (
         <div
           role="tooltip"
-          className="pointer-events-none absolute bottom-full left-1/2 z-[99999] mb-2 -translate-x-1/2 rounded-none border-2 border-black bg-zinc-900 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider text-white whitespace-nowrap shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+          className="pointer-events-none absolute bottom-full left-1/2 z-[99999] mb-2 h-auto w-max max-w-xs -translate-x-1/2 rounded-none border-2 border-black bg-zinc-900 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wider text-white whitespace-nowrap shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
         >
           {text}
         </div>

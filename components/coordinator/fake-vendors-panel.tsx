@@ -179,7 +179,10 @@ export function FakeVendorsPanel({
           <Sparkles className="h-4 w-4 shrink-0" />
           Auto-fill to capacity (~{layoutCapacity})
         </Button>
-        <TooltipWrapper text="Curated artisan mix (6′ tables, power vendors, multi-unit pairs) up to venue ceiling — then auto-plans.">
+        <TooltipWrapper
+          text="Curated artisan mix (6′ tables, power vendors, multi-unit pairs) up to venue ceiling — then auto-plans."
+          className={compact ? 'w-full' : undefined}
+        >
           <Button
             type="button"
             size="sm"
@@ -202,7 +205,10 @@ export function FakeVendorsPanel({
               : `Seed diverse applications to max (${maxBoothCapacity})`}
           </Button>
         </TooltipWrapper>
-        <TooltipWrapper text="Random 6′ table vendors matching maximum venue capacity.">
+        <TooltipWrapper
+          text="Random 6′ table vendors matching maximum venue capacity."
+          className={compact ? 'w-full' : undefined}
+        >
           <Button
             type="button"
             size="sm"
