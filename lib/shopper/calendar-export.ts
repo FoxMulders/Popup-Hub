@@ -1,4 +1,6 @@
 import { format } from 'date-fns'
+import type { Event } from '@/types/database'
+import { publicAppUrl } from '@/lib/url/public-app-url'
 
 function escapeIcs(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n')
@@ -69,6 +71,43 @@ export function downloadIcsFile(payload: CalendarEventPayload, filename = 'marke
   anchor.download = filename
   anchor.click()
   URL.revokeObjectURL(url)
+}
+
+function dateAtTime(date: Date, time: string): Date {
+  const [h, m] = time.split(':').map(Number)
+  const next = new Date(date)
+  next.setHours(h, m ?? 0, 0, 0)
+  return next
+}
+
+export function buildEventCalendarPayload(event: Event, selectedDate?: Date): CalendarEventPayload {
+  const eventUrl = publicAppUrl(`/events/${event.id}`)
+  const description = [event.description?.trim(), eventUrl].filter(Boolean).join('\n\n')
+  const location = [event.location_name, event.address].filter(Boolean).join(', ')
+
+  if (selectedDate && event.is_multi_day && event.event_days?.length) {
+    const dayStr = format(selectedDate, 'yyyy-MM-dd')
+    const match = event.event_days.find((ed) => ed.date.startsWith(dayStr))
+    if (match) {
+      return {
+        title: event.name,
+        description,
+        location,
+        startsAt: dateAtTime(selectedDate, match.start_time),
+        endsAt: dateAtTime(selectedDate, match.end_time),
+        uid: `event-${event.id}@popuphub.ca`,
+      }
+    }
+  }
+
+  return {
+    title: event.name,
+    description,
+    location,
+    startsAt: new Date(event.start_at),
+    endsAt: new Date(event.end_at),
+    uid: `event-${event.id}@popuphub.ca`,
+  }
 }
 
 export function openScheduleInCalendar(payload: CalendarEventPayload): void {

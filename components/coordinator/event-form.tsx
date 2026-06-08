@@ -238,6 +238,8 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     await scanFlyer(file, {
       setEventName: setName,
       setDescription,
+      setScheduleType,
+      setDayRows,
       setStartDate,
       setEndDate,
       setStartTime,

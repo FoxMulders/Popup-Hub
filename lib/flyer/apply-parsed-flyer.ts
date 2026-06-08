@@ -1,8 +1,13 @@
 import type { FlyerFieldKey, FlyerFormHandlers, ParsedFlyerResponse } from '@/lib/flyer/types'
-import { normalizeFlyerDate, normalizeFlyerTime, splitFlyerLocation } from '@/lib/flyer/normalize'
+import { buildDayRowsForDateRange } from '@/lib/events/event-day-rows'
+import { resolveFlyerListingType } from '@/lib/flyer/listing-type'
+import { normalizeFlyerTime, splitFlyerLocation } from '@/lib/flyer/normalize'
 
-const QUARTER_AUCTION_RE =
-  /\b(quarter\s*auction|quarter\s*sale|garage\s*sale|yard\s*sale)\b/i
+function mapScheduleType(scheduleType: ParsedFlyerResponse['scheduleType']): 'single' | 'multi' | null {
+  if (scheduleType === 'multi_day') return 'multi'
+  if (scheduleType === 'single_day') return 'single'
+  return null
+}
 
 /** Map API flyer fields onto wizard / event form state. Returns keys that were auto-filled. */
 export function applyParsedFlyer(
@@ -21,16 +26,25 @@ export function applyParsedFlyer(
     filled.add('description')
   }
 
-  const date = normalizeFlyerDate(parsed.date ?? null)
-  if (date) {
-    if (handlers.setStartDate) {
-      handlers.setStartDate(date)
-      filled.add('startDate')
-    }
-    if (handlers.setEndDate) {
-      handlers.setEndDate(date)
-      filled.add('endDate')
-    }
+  const combinedText = [
+    parsed.eventName,
+    parsed.description,
+    parsed.location,
+    parsed.venueName,
+    parsed.address,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const resolvedListingType = resolveFlyerListingType({
+    listingType: parsed.listingType,
+    combinedText,
+  })
+  const isQuarterAuction = resolvedListingType === 'garage_yard_sale'
+
+  if (resolvedListingType && handlers.setListingType) {
+    handlers.setListingType(resolvedListingType)
+    filled.add('listingType')
   }
 
   const startTime = normalizeFlyerTime(parsed.startTime ?? null)
@@ -43,6 +57,33 @@ export function applyParsedFlyer(
   if (endTime && handlers.setEndTime) {
     handlers.setEndTime(endTime)
     filled.add('endTime')
+  }
+
+  const startDate = parsed.startDate?.trim() || parsed.date?.trim() || null
+  const endDate = parsed.endDate?.trim() || startDate
+  const mappedSchedule = mapScheduleType(parsed.scheduleType)
+
+  if (!isQuarterAuction && mappedSchedule === 'multi' && startDate && endDate) {
+    handlers.setScheduleType?.('multi')
+    const dayStartTime = startTime ?? '08:00'
+    const dayEndTime = endTime ?? '15:00'
+    if (handlers.setDayRows) {
+      handlers.setDayRows(
+        buildDayRowsForDateRange(startDate, endDate, dayStartTime, dayEndTime)
+      )
+    }
+    handlers.setStartDate?.(startDate)
+    handlers.setEndDate?.(endDate)
+    filled.add('startDate')
+    filled.add('endDate')
+  } else if (startDate) {
+    if (mappedSchedule === 'single' || isQuarterAuction) {
+      handlers.setScheduleType?.('single')
+    }
+    handlers.setStartDate?.(startDate)
+    filled.add('startDate')
+    handlers.setEndDate?.(isQuarterAuction ? startDate : (endDate ?? startDate))
+    filled.add('endDate')
   }
 
   // Prefer the dedicated `venueName` + `address` keys returned by the
@@ -74,19 +115,6 @@ export function applyParsedFlyer(
       `Admission / ticket price: ${parsed.ticketPrice.trim()}`
     )
     filled.add('raffleDonationRequirement')
-  }
-
-  const combinedText = [
-    parsed.eventName,
-    parsed.description,
-    parsed.location,
-    parsed.venueName,
-    parsed.address,
-  ]
-    .filter(Boolean)
-    .join(' ')
-  if (handlers.setListingType && QUARTER_AUCTION_RE.test(combinedText)) {
-    handlers.setListingType('garage_yard_sale')
   }
 
   return filled

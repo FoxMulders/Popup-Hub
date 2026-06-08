@@ -7,8 +7,35 @@ import {
   type InitialLoaderFrame,
 } from '@/lib/brand/initial-loader-controller'
 
-/** Square storefront icon — fits inside the perimeter ring without overlapping stalls. */
-const LOGO_SRC = '/popup-hub-icon.png'
+/** Full lockup (storefront + wordmark) — transparent PNG from process-logo.mjs. */
+const LOGO_SRC = '/popup-hub-brand.png'
+const LOGO_ASPECT = 994 / 1024
+/** Storefront pin sits ~28% from the top of the lockup (see process-logo.mjs). */
+const LOGO_ICON_ANCHOR_Y = 0.28
+const LOGO_MAX_SCALE = 1.012
+
+function fitLogoInRing(
+  inner: PerimeterRing['inner'],
+  padding: number,
+): { width: number; height: number; anchorY: number } {
+  const innerW = inner.right - inner.left - padding * 2
+  const maxHeightFromTop =
+    (inner.cy - inner.top - padding) / (LOGO_ICON_ANCHOR_Y * LOGO_MAX_SCALE)
+  const maxHeightFromBottom =
+    (inner.bottom - padding - inner.cy) /
+    ((1 - LOGO_ICON_ANCHOR_Y) * LOGO_MAX_SCALE)
+  const maxHeight = Math.min(maxHeightFromTop, maxHeightFromBottom) * 0.94
+  const maxWidth = (innerW / LOGO_MAX_SCALE) * 0.94
+
+  let height = maxHeight
+  let width = height * LOGO_ASPECT
+  if (width > maxWidth) {
+    width = maxWidth
+    height = width / LOGO_ASPECT
+  }
+
+  return { width, height, anchorY: height * LOGO_ICON_ANCHOR_Y }
+}
 
 type BoothRect = { x: number; y: number; w: number; h: number; delay: number }
 
@@ -137,11 +164,11 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const masterScale = 1 - outroFade * 0.04
 
   const { booths, inner } = buildPerimeterRing()
-  const innerPad = 16
-  const innerW = inner.right - inner.left - innerPad * 2
-  const innerH = inner.bottom - inner.top - innerPad * 2
-  const logoSize = Math.min(innerW, innerH) * 0.88
-  const glowRadius = Math.min(innerW, innerH) * 0.42
+  const logoPad = 12
+  const logoDims = fitLogoInRing(inner, logoPad)
+  const innerW = inner.right - inner.left - logoPad * 2
+  const innerH = inner.bottom - inner.top - logoPad * 2
+  const glowRadius = Math.min(innerW, innerH) * 0.4
 
   const logoScale = (0.78 + logoT * 0.22) * breathe
   const logoOpacity = logoT
@@ -167,15 +194,6 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         style={{ transform: `scale(${masterScale})` }}
       >
         <defs>
-          <clipPath id="il-inner-clip">
-            <rect
-              x={inner.left + innerPad}
-              y={inner.top + innerPad}
-              width={innerW}
-              height={innerH}
-              rx="10"
-            />
-          </clipPath>
           <radialGradient id="il-logo-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={BRAND.sageLight} stopOpacity="0.55" />
             <stop offset="55%" stopColor={BRAND.sage} stopOpacity="0.18" />
@@ -215,23 +233,21 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           )
         })}
 
-        <g clipPath="url(#il-inner-clip)">
-          <g transform={`translate(${inner.cx}, ${inner.cy})`}>
-            <circle
-              r={glowRadius * ringScale}
-              fill="url(#il-logo-glow)"
-              opacity={ringOpacity}
+        <g transform={`translate(${inner.cx}, ${inner.cy})`}>
+          <circle
+            r={glowRadius * ringScale}
+            fill="url(#il-logo-glow)"
+            opacity={ringOpacity}
+          />
+          <g opacity={logoOpacity} transform={`scale(${logoScale})`}>
+            <image
+              href={LOGO_SRC}
+              x={-logoDims.width / 2}
+              y={-logoDims.anchorY}
+              width={logoDims.width}
+              height={logoDims.height}
+              preserveAspectRatio="xMidYMid meet"
             />
-            <g opacity={logoOpacity} transform={`scale(${logoScale})`}>
-              <image
-                href={LOGO_SRC}
-                x={-logoSize / 2}
-                y={-logoSize / 2}
-                width={logoSize}
-                height={logoSize}
-                preserveAspectRatio="xMidYMid meet"
-              />
-            </g>
           </g>
         </g>
 

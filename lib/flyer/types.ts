@@ -1,8 +1,19 @@
 import { z } from 'zod'
+import { parsedFlyerListingTypeSchema } from '@/lib/flyer/listing-type'
+
+export { parsedFlyerListingTypeSchema }
+export type { ParsedFlyerListingType } from '@/lib/flyer/listing-type'
+
+export const parsedFlyerScheduleTypeSchema = z.enum(['single_day', 'multi_day'])
 
 export const parsedFlyerSchema = z.object({
   eventName: z.string().nullable().optional(),
+  /** Legacy single-day date string; prefer startDate/endDate + scheduleType. */
   date: z.string().nullable().optional(),
+  listingType: parsedFlyerListingTypeSchema.nullable().optional(),
+  scheduleType: parsedFlyerScheduleTypeSchema.nullable().optional(),
+  startDate: z.string().nullable().optional(),
+  endDate: z.string().nullable().optional(),
   startTime: z.string().nullable().optional(),
   endTime: z.string().nullable().optional(),
   /**
@@ -20,10 +31,12 @@ export const parsedFlyerSchema = z.object({
 })
 
 export type ParsedFlyerResponse = z.infer<typeof parsedFlyerSchema>
+export type ParsedFlyerScheduleType = z.infer<typeof parsedFlyerScheduleTypeSchema>
 
 export type FlyerFieldKey =
   | 'name'
   | 'description'
+  | 'listingType'
   | 'startDate'
   | 'endDate'
   | 'startTime'
@@ -37,10 +50,14 @@ export interface FlyerFormHandlers {
   getDescription?: () => string
   setEventName?: (value: string) => void
   setDescription?: (value: string) => void
+  setScheduleType?: (value: 'single' | 'multi') => void
   setStartDate?: (value: string) => void
   setEndDate?: (value: string) => void
   setStartTime?: (value: string) => void
   setEndTime?: (value: string) => void
+  setDayRows?: (
+    rows: Array<{ date: string; start_time: string; end_time: string }>
+  ) => void
   setLocationName?: (value: string) => void
   setAddress?: (value: string) => void
   setRaffleDonationRequirement?: (value: string) => void

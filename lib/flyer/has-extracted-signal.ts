@@ -7,6 +7,9 @@ export function flyerHasExtractedSignal(data: ParsedFlyerResponse): boolean {
       data.venueName?.trim() ||
       data.address?.trim() ||
       data.location?.trim() ||
+      data.listingType?.trim() ||
+      data.startDate?.trim() ||
+      data.endDate?.trim() ||
       data.date?.trim() ||
       data.startTime?.trim() ||
       data.endTime?.trim() ||

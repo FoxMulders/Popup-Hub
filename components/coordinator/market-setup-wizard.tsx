@@ -749,6 +749,8 @@ export function MarketSetupWizard({
     await scanFlyer(file, {
       setEventName: setName,
       setDescription: setDescription,
+      setScheduleType: handleScheduleTypeChange,
+      setDayRows,
       setStartDate,
       setEndDate,
       setStartTime,
@@ -756,11 +758,7 @@ export function MarketSetupWizard({
       setLocationName,
       setAddress,
       setRaffleDonationRequirement,
-      setListingType: (value) => {
-        if (value === 'garage_yard_sale') {
-          handleListingTypeChange('garage_yard_sale')
-        }
-      },
+      setListingType: handleListingTypeChange,
     })
   }
 

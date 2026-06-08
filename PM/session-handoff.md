@@ -10,10 +10,37 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (flyer auto-detect quarter auction listing type, not deployed)
+- **`lib/flyer/listing-type.ts` (new):** Maps AI `listing_type: "quarter_auction"` → wizard `garage_yard_sale`; text fallback for "Quarter Auction" / "Live Auction".
+- **`lib/flyer/parse-flyer-vision.ts`:** OpenRouter prompt adds `listing_type` with auction visual/text cues; quarter auctions forced to `single_day`.
+- **`lib/flyer/apply-parsed-flyer.ts` + `market-setup-wizard.tsx`:** Flyer scan calls `handleListingTypeChange` so LISTING TYPE toggles to Quarter auction immediately.
+- **Verify:** `/coordinator/events/new` — upload quarter/live auction flyer → Quarter auction segment selected; community market flyer unchanged.
+
+## Shipped this session (flyer date extraction — next occurrence + multi-day, not deployed)
+- **`lib/flyer/normalize.ts`:** `resolveNextOccurrenceDate`, `parseMultiDayDateSpan`, and upgraded `normalizeFlyerDate` — month/day without year rolls to next calendar year when already passed; stale/wrong years (e.g. 2006) re-resolve to current/next occurrence; parses "Oct 5-6" spans.
+- **`lib/flyer/parse-flyer-vision.ts`:** OpenRouter/Gemini prompt now requests `schedule_type`, `start_date`, `end_date`; explicit multi-day span rules; dynamic current-year guidance; snake_case coercion + schedule normalization.
+- **`lib/flyer/apply-parsed-flyer.ts` + types + `/api/parse-flyer`:** Multi-day flyer results set wizard `multi` schedule, populate `dayRows` via `buildDayRowsForDateRange`, and assign independent start/end dates.
+- **`scripts/verify-flyer-date-normalize.ts`:** 7/7 pass.
+- **Verify:** `/coordinator/events/new` — upload flyer with "Oct 5-6" → Multi-Day selected, 2026-10-05 / 2026-10-06; month-only date after today uses 2026, before today uses 2027.
+
+## Shipped this session (discover date filters + Add to Calendar, not deployed)
+- **`lib/shopper/discover-date.ts`:** New presets `this_week` and `this_month` for URL `when=` param.
+- **`lib/shopper/events.ts`:** `getThisWeekEndDate`, `getThisMonthEndDate`, `filterEventsByDateRange` — week runs today through upcoming Sunday; month runs today through end of calendar month.
+- **`components/shopper/discover-screen.tsx` + `discover-date-filter.tsx`:** "This Week" and "This Month" buttons in WHEN row; date summary shows range labels.
+- **`lib/shopper/calendar-export.ts`:** `buildEventCalendarPayload` — event name, times, venue address, description with popuphub event URL.
+- **`components/shopper/add-to-calendar-button.tsx` (new):** Touch-friendly button downloads `market-event.ics` via blob.
+- **`discover-event-cards.tsx`:** Directions + Add to Calendar side-by-side on each card.
+- **`event-action-bar.tsx`:** Event detail sticky bar uses ICS download (labeled on mobile, icon on desktop).
+- **Verify:** `/discover` — tap This Week / This Month; market cards show Add to Calendar; open `/events/[id]` on mobile — calendar button downloads `.ics`.
+
 ## Shipped this session (discover page copy + flyer upload removal, not deployed)
 - **`components/shopper/discover-screen.tsx`:** Removed "Have a flyer?" upload section; page title changed from "Discover Community Markets" to "Popup Hub Community Markets".
 - **Removed:** `components/shopper/discover-flyer-upload.tsx`, `lib/shopper/parse-flyer-image.ts` (shopper-only flyer heuristic; coordinator flyer OCR unchanged).
 - **Verify:** Open `/discover` — no flyer upload card; heading reads "Popup Hub Community Markets".
+
+## Shipped this session (initial loader logo clip + transparency fix, not deployed)
+- **`components/brand/initial-loader-reveal.tsx`:** Restored full transparent `/popup-hub-brand.png` lockup (icon + wordmark); removed inner clip path that was cropping the logo during scale; `fitLogoInRing()` sizes by aspect ratio so the full mark fits inside the stall ring without overlap.
+- **Verify:** Hard refresh — full "Popup Hub" wordmark visible, no checkerboard/solid box behind logo, nothing clipped at bottom during fade-in.
 
 ## Shipped this session (initial loader perimeter + logo overlap fix, not deployed)
 - **`components/brand/initial-loader-reveal.tsx`:** Perimeter stalls now skip corners (top/bottom rows inset between side columns; side count capped so sides do not overlap bottom row). Logo uses square `/popup-hub-icon.png`, sizes to inner ring bounds, clips to inner rect, and fades in only after stalls finish (progress 0.58+).

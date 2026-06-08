@@ -1,4 +1,4 @@
-import { addDays, format, parseISO } from 'date-fns'
+import { addDays, eachDayOfInterval, format, isValid, parseISO } from 'date-fns'
 
 export type EventDayRowInput = {
   date: string
@@ -30,4 +30,26 @@ export function buildNextEventDayRow(existingRows: EventDayRowInput[]): EventDay
   }
 
   return { date, start_time, end_time }
+}
+
+/** One row per calendar day between start and end (inclusive). */
+export function buildDayRowsForDateRange(
+  startDate: string,
+  endDate: string,
+  start_time = DEFAULT_START,
+  end_time = DEFAULT_END
+): EventDayRowInput[] {
+  const start = parseISO(startDate.slice(0, 10))
+  const end = parseISO(endDate.slice(0, 10))
+  if (!isValid(start) || !isValid(end)) {
+    return [{ date: startDate, start_time, end_time }]
+  }
+  if (end < start) {
+    return [{ date: startDate, start_time, end_time }]
+  }
+  return eachDayOfInterval({ start, end }).map((day) => ({
+    date: format(day, 'yyyy-MM-dd'),
+    start_time,
+    end_time,
+  }))
 }

@@ -1,6 +1,7 @@
 import {
   addDays,
   endOfDay,
+  endOfMonth,
   format,
   isSameDay,
   isWithinInterval,
@@ -82,6 +83,36 @@ export function filterEventsByDate(events: Event[], date: Date): Event[] {
 export function filterEventsByWeekend(events: Event[], weekendAnchor: Date): Event[] {
   const days = getWeekendDates(weekendAnchor)
   return events.filter((e) => days.some((day) => eventOccursOnDate(e, day)))
+}
+
+/** Last calendar day of the current week (Sunday on or after `start`). */
+export function getThisWeekEndDate(start: Date): Date {
+  const day = startOfDay(start)
+  const weekday = day.getDay()
+  if (weekday === 0) return day
+  return startOfDay(addDays(day, 7 - weekday))
+}
+
+export function eventOccursInDateRange(event: Event, rangeStart: Date, rangeEnd: Date): boolean {
+  let current = startOfDay(rangeStart)
+  const end = startOfDay(rangeEnd)
+  while (current <= end) {
+    if (eventOccursOnDate(event, current)) return true
+    current = addDays(current, 1)
+  }
+  return false
+}
+
+export function filterEventsByDateRange(
+  events: Event[],
+  rangeStart: Date,
+  rangeEnd: Date
+): Event[] {
+  return events.filter((e) => eventOccursInDateRange(e, rangeStart, rangeEnd))
+}
+
+export function getThisMonthEndDate(start: Date): Date {
+  return startOfDay(endOfMonth(start))
 }
 
 export function filterEventsByListingType(

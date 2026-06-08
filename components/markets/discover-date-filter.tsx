@@ -61,6 +61,24 @@ export function DiscoverDateFilter({
         >
           Next Weekend
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={datePreset === 'this_week' ? 'default' : 'outline'}
+          className="min-h-11 touch-manipulation"
+          onClick={() => onPresetChange('this_week')}
+        >
+          This Week
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={datePreset === 'this_month' ? 'default' : 'outline'}
+          className="min-h-11 touch-manipulation"
+          onClick={() => onPresetChange('this_month')}
+        >
+          This Month
+        </Button>
         <label
           className={cn(
             'inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg border px-3 text-sm',

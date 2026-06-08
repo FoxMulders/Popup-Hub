@@ -3,6 +3,7 @@
 import { formatDistance, openDirections } from '@/lib/shopper/geo'
 import { getEventHoursForDate, type EventWithMeta } from '@/lib/shopper/events'
 import { EventCard } from '@/components/events/event-card'
+import { AddToCalendarButton } from '@/components/shopper/add-to-calendar-button'
 import { FavoriteButton } from '@/components/shopper/favorite-button'
 import { Button } from '@/components/ui/button'
 import { Navigation } from 'lucide-react'
@@ -44,18 +45,25 @@ export function DiscoverEventCards({
             vendorCount={event.vendor_count}
             liveAuctionId={activeAuctionByEventId[event.id]}
             actions={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3 h-10 w-full gap-1.5 touch-manipulation"
-                onClick={() =>
-                  openDirections(event.latitude, event.longitude, event.address ?? event.location_name)
-                }
-              >
-                <Navigation className="h-3.5 w-3.5" />
-                Directions
-              </Button>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10 min-h-11 flex-1 gap-1.5 touch-manipulation"
+                  onClick={() =>
+                    openDirections(event.latitude, event.longitude, event.address ?? event.location_name)
+                  }
+                >
+                  <Navigation className="h-3.5 w-3.5" />
+                  Directions
+                </Button>
+                <AddToCalendarButton
+                  event={event}
+                  selectedDate={selectedDate}
+                  className="h-10 min-h-11 flex-1"
+                />
+              </div>
             }
           />
         </div>

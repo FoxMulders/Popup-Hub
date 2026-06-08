@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Navigation, Share2, CalendarPlus, Bell, Copy } from 'lucide-react'
+import { Navigation, Share2, Bell, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { openDirections } from '@/lib/shopper/geo'
-import { buildCalendarLinks } from '@/lib/shopper/events'
+import { AddToCalendarButton } from '@/components/shopper/add-to-calendar-button'
 import { FavoriteButton } from '@/components/shopper/favorite-button'
 import { ReminderPicker } from '@/components/shopper/reminder-picker'
 import { toast } from 'sonner'
@@ -24,7 +24,6 @@ export function EventActionBar({
   existingReminderOffsets,
 }: EventActionBarProps) {
   const [reminderOpen, setReminderOpen] = useState(false)
-  const calendar = buildCalendarLinks(event)
 
   async function shareEvent() {
     const url = `${window.location.origin}/events/${event.id}`
@@ -72,14 +71,7 @@ export function EventActionBar({
           <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={shareEvent}>
             <Share2 className="h-4 w-4" />
           </Button>
-          <a
-            href={calendar.google}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg border-2 border-stone-200 bg-card px-3 shadow-[var(--shadow-market)] hover:bg-canvas"
-          >
-            <CalendarPlus className="h-4 w-4" />
-          </a>
+          <AddToCalendarButton event={event} className="min-h-11" labelVisibility="mobile" />
           <Button
             type="button"
             variant="outline"

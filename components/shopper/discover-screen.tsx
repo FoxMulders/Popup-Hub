@@ -6,7 +6,6 @@ import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { EventMap } from '@/components/map/event-map'
 import { DiscoverEventCards } from '@/components/shopper/discover-event-cards'
-import { DiscoverDateFilter } from '@/components/markets/discover-date-filter'
 import { MarketAreaFilter } from '@/components/markets/market-area-filter'
 import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
 import {
@@ -16,10 +15,13 @@ import {
 } from '@/lib/shopper/discover-date'
 import {
   filterEventsByDate,
+  filterEventsByDateRange,
   filterEventsByListingType,
   filterEventsByRadius,
   filterEventsByWeekend,
   formatDateParam,
+  getThisMonthEndDate,
+  getThisWeekEndDate,
   getWeekendDates,
   parseDateParam,
   sortEventsByDistance,
@@ -96,7 +98,11 @@ export function DiscoverScreen({
     const byDate =
       datePreset === 'weekend' || datePreset === 'next_weekend'
         ? filterEventsByWeekend(scoped, filterDate)
-        : filterEventsByDate(scoped, filterDate)
+        : datePreset === 'this_week'
+          ? filterEventsByDateRange(scoped, filterDate, getThisWeekEndDate(filterDate))
+          : datePreset === 'this_month'
+            ? filterEventsByDateRange(scoped, filterDate, getThisMonthEndDate(filterDate))
+            : filterEventsByDate(scoped, filterDate)
     const withMeta: EventWithMeta[] = byDate.map((e) => ({
       ...e,
       vendor_count: vendorCounts[e.id] ?? 0,
@@ -112,6 +118,14 @@ export function DiscoverScreen({
       const [sat, sun] = getWeekendDates(filterDate)
       const prefix = datePreset === 'next_weekend' ? 'Next weekend' : 'This weekend'
       return `${prefix}: ${format(sat, 'EEEE, MMMM d')} – ${format(sun, 'MMMM d, yyyy')}`
+    }
+    if (datePreset === 'this_week') {
+      const end = getThisWeekEndDate(filterDate)
+      return `This week: ${format(filterDate, 'EEEE, MMMM d')} – ${format(end, 'MMMM d, yyyy')}`
+    }
+    if (datePreset === 'this_month') {
+      const end = getThisMonthEndDate(filterDate)
+      return `This month: ${format(filterDate, 'MMMM d')} – ${format(end, 'MMMM d, yyyy')}`
     }
     return format(filterDate, 'EEEE, MMMM d, yyyy')
   }, [datePreset, filterDate])
@@ -169,6 +183,24 @@ export function DiscoverScreen({
             onClick={() => setDatePreset('next_weekend')}
           >
             Next Weekend
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={datePreset === 'this_week' ? 'default' : 'outline'}
+            className="min-h-11 touch-manipulation"
+            onClick={() => setDatePreset('this_week')}
+          >
+            This Week
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={datePreset === 'this_month' ? 'default' : 'outline'}
+            className="min-h-11 touch-manipulation"
+            onClick={() => setDatePreset('this_month')}
+          >
+            This Month
           </Button>
           <label
             className={cn(
