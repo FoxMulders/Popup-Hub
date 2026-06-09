@@ -52,7 +52,7 @@
 - **Migration `092_venue_verification_and_vendor_invites.sql`:** `events` venue verification columns; `event_booth_slots` + `vendor_priority_invites`; `vendor_access_equality_until`; `priority_booth_invite` notification type.
 - **Venue verification:** `lib/venues/verify-venue-coordinates.ts` + `POST /api/coordinator/venues/verify`; gates on wizard publish, event form, status toggle, spatial layout deploy, vendor apply, Square/Stripe booth payment.
 - **Vendor Matches (no distance cap):** `lib/vendors/category-vendor-matches.ts` + dashboard sidebar **Vendor Matches** panel (`vendor-matches-panel.tsx`) with **Send Priority Invites**; `GET/POST /api/coordinator/events/[eventId]/priority-invites`.
-- **Access phases:** 24h `priority_exclusive` window → hourly cron `vendor-priority-window-expiry` → `public_release` + 90-day equal queue (`shouldDisableRankingPriorityForEvent` in FCFS queue).
+- **Access phases:** 24h `priority_exclusive` window → daily cron `vendor-priority-window-expiry` (7:00 UTC; Hobby plan limit) + lazy expiry on booth-access reads → `public_release` + 90-day equal queue (`shouldDisableRankingPriorityForEvent` in FCFS queue).
 - **Vendor UX:** `GET /api/vendor/events/[eventId]/booth-access`; apply-button badges (priority invite / opens to all / new-vendor-friendly).
 - **Verify:** `npx tsx scripts/verify-venue-coordinates.ts`; `npx tsx scripts/verify-category-vendor-matches.ts`; `npx tsx scripts/verify-priority-window-expiry.ts`.
 

@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/vendor-priority-window-expiry",
-      "schedule": "0 * * * *"
+      "schedule": "0 7 * * *"
     }
   ]
 }

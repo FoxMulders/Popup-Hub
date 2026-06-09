@@ -49,7 +49,16 @@ export async function loadOpenSlotsForCategory(
     .is('claimed_by_application_id', null)
 
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map((slot) => {
+    if (
+      slot.access_phase === 'priority_exclusive' &&
+      slot.priority_window_ends_at &&
+      new Date(slot.priority_window_ends_at).getTime() <= Date.now()
+    ) {
+      return { ...slot, access_phase: 'public_release' as const }
+    }
+    return slot
+  })
 }
 
 export async function vendorHasActivePriorityInvite(

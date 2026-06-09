@@ -40,11 +40,26 @@ export async function GET(_request: Request, context: RouteContext) {
   ])
 
   const hasPriorityInvite = (invites?.length ?? 0) > 0
-  const hasPriorityExclusive = (slots ?? []).some((s) => s.access_phase === 'priority_exclusive')
-  const hasPublicRelease = (slots ?? []).some((s) => s.access_phase === 'public_release')
+  const nowMs = Date.now()
+  const isActivePrioritySlot = (s: {
+    access_phase: string
+    priority_window_ends_at: string | null
+  }) =>
+    s.access_phase === 'priority_exclusive' &&
+    (!s.priority_window_ends_at ||
+      new Date(s.priority_window_ends_at).getTime() > nowMs)
+  const hasPriorityExclusive = (slots ?? []).some(isActivePrioritySlot)
+  const hasPublicRelease =
+    (slots ?? []).some((s) => s.access_phase === 'public_release') ||
+    (slots ?? []).some(
+      (s) =>
+        s.access_phase === 'priority_exclusive' &&
+        s.priority_window_ends_at &&
+        new Date(s.priority_window_ends_at).getTime() <= nowMs
+    )
   const priorityWindowEndsAt =
     slots
-      ?.filter((s) => s.access_phase === 'priority_exclusive' && s.priority_window_ends_at)
+      ?.filter(isActivePrioritySlot)
       .map((s) => s.priority_window_ends_at as string)
       .sort()[0] ?? null
 
