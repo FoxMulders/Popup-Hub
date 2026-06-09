@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (AI layout recommendation panel, not deployed)
+## Shipped this session (AI layout recommendation panel, deployed 2026-06-09)
 - **`app/api/layout/recommend/route.ts`:** Coordinator-gated POST; OpenRouter Claude 3.5 Sonnet (`layout_recommend` task) evaluates active-room layout for safety/traffic flow; returns `recommendedObjects`, `changelog`, `rationale`.
 - **`lib/floor-plan/ai-layout-recommend.ts` + `request-layout-recommend.ts`:** Server prompt/parse/clip; client payload build (room-local coords), fetch, merge back to global `FloorPlanDoc`.
 - **UI:** Left-rail **💡 Ask AI for Layout Feedback** (`canvas-command-bar-blocks` utilities); right inspector **AI Spatial Assessment** card with changelog bullets + **Apply AI Layout Changes** (`ai-spatial-assessment-panel.tsx`); wired in `floor-plan-v2_wizard_qa.tsx` for `/coordinator/events/[id]/layout` only (`!isDashboard`).
@@ -115,9 +115,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `465d167` (pushed to `origin/master`)
-- Last deploy commit: `465d167` - feat: ship 7 session updates (spatial layout editor — save draft, auto-arrange, patron path; spatial layout — vendor-only capacity counting; vendor table wall orientation fix; layout designer — left sidebar, portal tooltips, auto-arrange fix; +3 more)
-- Production: https://popuphub.ca - **build 54** | commit `4996202` (handoff updated 2026-06-09 13:05)
+- Branch: `master` @ `a968ba6` (pushed to `origin/master`)
+- Last deploy commit: `a968ba6` - feat: A
+- Production: https://popuphub.ca - **build 55** | commit `d1dcb89` (handoff updated 2026-06-09 13:11)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -494,7 +494,7 @@
 
 
 ## Last deploy
-- 2026-06-09 13:05 - Deploy via deploy-popuphub.ps1 - `feat: ship 7 session updates (spatial layout editor — save draft, auto-arrange, patron path; spatial layout — vendor-only capacity counting; vendor table wall orientation fix; layout designer — left sidebar, portal tooltips, auto-arrange fix; +3 more)` (465d167)
+- 2026-06-09 13:11 - Deploy via deploy-popuphub.ps1 - `feat: A` (a968ba6)
 
 
 ## Goal
