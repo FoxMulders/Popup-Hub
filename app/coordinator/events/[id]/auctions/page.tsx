@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { MarketDayShell } from '@/components/coordinator/market-day-shell'
 import { CoordinatorQuarterAuction } from '@/components/quarter-auction/coordinator-dashboard'
 import { AuctionList } from '@/components/auction/auction-control-panel'
@@ -21,12 +22,13 @@ export default async function CoordinatorEventAuctionsPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, name, coordinator_id, status, start_at')
-    .eq('id', id)
-    .eq('coordinator_id', user.id)
-    .single()
+  const scope = await getCoordinatorScope(supabase, user.id)
+
+  const { data: event } = await applyCoordinatorEventScope(
+    supabase.from('events').select('id, name, coordinator_id, status, start_at').eq('id', id),
+    user.id,
+    scope.isAdmin
+  ).single()
 
   if (!event) notFound()
   if (event.status === 'cancelled') {

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PortalSiteChrome } from '@/components/layout/portal-site-chrome'
-import { hasAccess } from '@/lib/auth/rbac'
+import { hasAccessForProfile } from '@/lib/auth/rbac'
 import {
   ACTIVE_PORTAL_COOKIE,
   getAvailablePortals,
@@ -24,15 +24,17 @@ export default async function CoordinatorLayout({ children }: { children: React.
     .single()
 
   if (!profile) redirect('/login')
-  if (!hasAccess(profile.role, 'coordinator')) {
-    redirect(getDefaultDashboard(profile.role, 0))
+  if (!hasAccessForProfile(profile, 'coordinator')) {
+    redirect(getDefaultDashboard(profile.role, 0, undefined, { isAdmin: profile.is_admin }))
   }
 
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
   const availablePortals = getAvailablePortals(profile.role)
 
-  const requiredPortal = portalFromAccessiblePath('/coordinator', profile.role)
+  const requiredPortal = portalFromAccessiblePath('/coordinator', profile.role, {
+    isAdmin: profile.is_admin,
+  })
   if (requiredPortal !== 'coordinator') {
     redirect(getDefaultDashboard(profile.role, 0))
   }

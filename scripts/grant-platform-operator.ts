@@ -1,6 +1,12 @@
 /**
  * Grant platform operator admin access to bradmulders@gmail.com.
- * Does not promote to coordinator — platform fees settle via Stripe/Square env accounts.
+ * Does not promote to coordinator — booth payouts stay on coordinator Connect profiles.
+ *
+ * Platform fee settlement (this operator):
+ * - Square (appFeeMoney) → thetipsyfoxyeg@gmail.com (The Tipsy Fox Square application) — active rail
+ * - Stripe fee paths exist in code but are unused (no platform Stripe settlement to bradmulders@gmail.com)
+ *
+ * platform_fee_email in platform_settings = admin contact only.
  *
  * Usage: npx tsx scripts/grant-platform-operator.ts
  */
@@ -8,7 +14,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
-import { PLATFORM_OPERATOR_EMAIL } from '../lib/platform/operator'
+import { PLATFORM_OPERATOR_EMAIL, PLATFORM_SQUARE_OPERATOR_EMAIL } from '../lib/platform/operator'
 
 function loadEnvLocal() {
   const envPath = join(process.cwd(), '.env.local')
@@ -106,6 +112,7 @@ async function main() {
       id: 1,
       platform_operator_id: userId,
       platform_fee_email: PLATFORM_OPERATOR_EMAIL,
+      platform_square_email: PLATFORM_SQUARE_OPERATOR_EMAIL,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' }
@@ -120,7 +127,10 @@ async function main() {
   console.log(`Platform operator admin configured: ${PLATFORM_OPERATOR_EMAIL}`)
   console.log(profile)
   console.log(
-    '\nPlatform fees (3% + $1) settle to Popup Hub Stripe/Square accounts — link those dashboards to this email for payouts.'
+    `\nPlatform fees (3% + $1):\n` +
+      `  Square → ${PLATFORM_SQUARE_OPERATOR_EMAIL} (Popup Hub Square application) — active\n` +
+      `  Admin contact: ${PLATFORM_OPERATOR_EMAIL} (is_admin only; not a Stripe settlement account)\n` +
+      `Coordinator booth splits still go to each coordinator's connected Square/Stripe.`
   )
 }
 

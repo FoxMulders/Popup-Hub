@@ -4,6 +4,7 @@ import {
   type SpatialLayoutEditorProps,
 } from '@/src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa'
 import { createClient } from '@/lib/supabase/server'
+import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import type { BoothLayout, Event } from '@/types/database'
 
 interface Props {
@@ -18,18 +19,22 @@ export default async function EventLayoutPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const scope = await getCoordinatorScope(supabase, user.id)
+
   const [{ data: event }, { data: layoutData }] = await Promise.all([
-    supabase
-      .from('events')
-      .select(
-        `
+    applyCoordinatorEventScope(
+      supabase
+        .from('events')
+        .select(
+          `
         *,
         category_limits:event_category_limits(*, category:categories(name))
       `
-      )
-      .eq('id', id)
-      .eq('coordinator_id', user.id)
-      .single(),
+        )
+        .eq('id', id),
+      user.id,
+      scope.isAdmin
+    ).single(),
     supabase.from('booth_layouts').select('*').eq('event_id', id).maybeSingle(),
   ])
 

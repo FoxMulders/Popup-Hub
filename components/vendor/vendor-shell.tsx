@@ -14,7 +14,7 @@ interface VendorShellProps {
 export async function VendorShell({ profile, children }: VendorShellProps) {
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
-  const availablePortals = getAvailablePortals(profile.role)
+  const availablePortals = getAvailablePortals(profile.role, { isAdmin: profile.is_admin })
 
   return (
     <PortalSiteChrome

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { isDevMockAuthEnabled } from '@/lib/auth/dev-mock-session'
 import { isSquareProductionEnvironment } from '@/lib/square/connect-url'
@@ -33,11 +34,11 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') return redirectWithResult('forbidden')
+  if (!canActAsCoordinator(profile)) return redirectWithResult('forbidden')
 
   try {
     await connectCoordinatorSandboxFromEnv(supabase, user.id)

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import {
   readCoordinatorPaymentInstructions,
@@ -22,7 +23,7 @@ export async function GET() {
     supabase
       .from('profiles')
       .select(
-        'role, etransfer_payment_email, offline_payment_instructions, payment_instructions, stripe_connected_id, stripe_onboarding_complete, platform_wallet_blocked, platform_wallet_grace_until, payout_account_id, square_access_token, payout_onboarding_status'
+        'role, is_admin, etransfer_payment_email, offline_payment_instructions, payment_instructions, stripe_connected_id, stripe_onboarding_complete, platform_wallet_blocked, platform_wallet_grace_until, payout_account_id, square_access_token, payout_onboarding_status'
       )
       .eq('id', user.id)
       .single(),
@@ -30,7 +31,7 @@ export async function GET() {
     getCoordinatorBalanceOwed(supabase, user.id),
   ])
 
-  if (profile?.role !== 'coordinator') {
+  if (!profile || !canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Coordinator account required' }, { status: 403 })
   }
 
@@ -83,11 +84,11 @@ export async function PATCH(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!profile || !canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Coordinator account required' }, { status: 403 })
   }
 

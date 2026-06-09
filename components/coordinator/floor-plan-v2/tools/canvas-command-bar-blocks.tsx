@@ -696,6 +696,19 @@ export function renderCanvasCommandBarBlock(
         </div>
       )
 
+    case 'optimize':
+      return (
+        <FloorPlanOptimizeControl
+          mode={ctx.autoArrangeMode ?? 'grid'}
+          onModeChange={ctx.onAutoArrangeModeChange}
+          onRun={ctx.onAutoArrangeFloorPlan}
+          canRun={ctx.canAutoArrangeFloorPlan}
+          disabledReason={ctx.autoArrangeDisabledReason}
+          compact={compact}
+          sidebarLayout={sidebarLayout}
+        />
+      )
+
     case 'room':
       if (sidebarLayout) {
         return (

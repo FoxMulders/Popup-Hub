@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { VendorShell } from '@/components/vendor/vendor-shell'
-import { hasAccess } from '@/lib/auth/rbac'
+import { hasAccessForProfile } from '@/lib/auth/rbac'
 import {
   ACTIVE_PORTAL_COOKIE,
   parseActivePortal,
@@ -20,7 +20,7 @@ export default async function VendorLayout({ children }: { children: React.React
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile) redirect('/login')
 
-  if (!hasAccess(profile.role, 'vendor')) {
+  if (!hasAccessForProfile(profile, 'vendor')) {
     return <div className="min-h-screen bg-cream">{children}</div>
   }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
@@ -13,11 +14,11 @@ export async function GET(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

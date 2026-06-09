@@ -8,6 +8,7 @@ import {
   getAvailablePortals,
   resolveActivePortal,
 } from '@/lib/portals/active-portal'
+import { canActAsCoordinator, canActAsVendor } from '@/lib/auth/rbac'
 import type { Profile } from '@/types/database'
 
 interface PortalAwareShellProps {
@@ -31,8 +32,8 @@ export async function PortalAwareShell({ children }: PortalAwareShellProps) {
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
   const portal = resolveActivePortal(portalCookie, profile)
 
-  if (profile && portal === 'coordinator' && profile.role === 'coordinator') {
-    const availablePortals = getAvailablePortals(profile.role)
+  if (profile && portal === 'coordinator' && canActAsCoordinator(profile)) {
+    const availablePortals = getAvailablePortals(profile.role, { isAdmin: profile.is_admin })
     return (
       <PortalSiteChrome
         portal="coordinator"
@@ -45,7 +46,7 @@ export async function PortalAwareShell({ children }: PortalAwareShellProps) {
     )
   }
 
-  if (profile && portal === 'vendor' && (profile.role === 'vendor' || profile.role === 'coordinator')) {
+  if (profile && portal === 'vendor' && canActAsVendor(profile)) {
     return <VendorShell profile={profile}>{children}</VendorShell>
   }
 

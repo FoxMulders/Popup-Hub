@@ -254,7 +254,6 @@ export function VendorSidebarSizeGrid({
   value,
   onChange,
   disabled = false,
-  compact = false,
   className,
 }: {
   value: TableSizeSpec

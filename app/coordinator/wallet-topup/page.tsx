@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { DoorWalletTopUp } from '@/components/coordinator/door-wallet-topup'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
@@ -19,11 +20,11 @@ export default async function CoordinatorWalletTopUpPage({ searchParams }: Props
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!canActAsCoordinator(profile)) {
     redirect('/discover')
   }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { cancelEventWithRefunds } from '@/lib/events/cancel-event'
 
@@ -21,11 +22,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

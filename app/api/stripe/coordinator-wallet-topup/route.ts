@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getStripeClient, isStripeConfigured } from '@/lib/stripe/client'
 
@@ -20,11 +21,11 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, email')
+    .select('role, is_admin, email')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!profile || !canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Coordinator account required' }, { status: 403 })
   }
 

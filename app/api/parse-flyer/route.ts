@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { flyerHasExtractedSignal } from '@/lib/flyer/has-extracted-signal'
 import { parseFlyerWithVision } from '@/lib/flyer/parse-flyer-vision'
@@ -19,11 +20,11 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

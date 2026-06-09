@@ -10,6 +10,13 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (build + lint fixes, not deployed)
+- **Lint:** `auto-arrange.ts` `prefer-const` (`let placed` → `const placed`).
+- **Compile:** Removed self-import in `lib/auth/rbac.ts` (`canActAsCoordinator` defined twice).
+- **Types:** Wallet-topup null guard + `is_admin` select; `AccessProfile` loosened; `applyCoordinatorEventScope` simplified to avoid deep Supabase instantiation; dashboard revenue query inlined.
+- **Toolbar:** Restored missing `case 'optimize'` for Auto-Arrange Floor Plan button.
+- **Verify:** `npm run lint` (0 errors) and `npm run build` pass locally.
+
 ## Shipped this session (floor-plan canvas UX optimization, not deployed)
 - **Room controls:** Sidebar **ROOM CONTROLS** — undo, redo, rotate, delete, and copy icons in one horizontal row (`flex flex-row items-center gap-2 mt-2`) directly under the room picker; room rotate/join on a compact second row.
 - **Placement preview:** Booth draw tool shows a semi-transparent cursor ghost (`opacity-40`) with predictive 2′ wall snap + auto-rotation via `table-placement-preview.ts` and `PLACEMENT_PREVIEW_WALL_SNAP_FT`.
@@ -28,11 +35,12 @@
 - **Route `/admin/feedback`:** Layout gates on `profiles.is_admin` or `ADMIN_SESSION_TOKEN` cookie/header (`admin_session`); non-admins redirect to `/coordinator/dashboard`.
 - **UI:** Master-detail dashboard — metrics (Pending / Critical / Under Review), role + urgency badges, problem/solution preview, screenshot fullscreen dialog, status dropdown + developer notes, optimistic PATCH save.
 - **API:** `PATCH /api/feedback/update` (admin-only).
-- **Access:** `bradmulders@gmail.com` is sole platform **admin** (`is_admin` only — not a market host). Optional `ADMIN_SESSION_TOKEN` for headless API.
-- **Platform fees (3% + $1):** Card path → Stripe `application_fee_amount` / Square `appFeeMoney` on Popup Hub merchant accounts (`STRIPE_SECRET_KEY`, Square app). Offline path → coordinators accrue `account_balances` and pay via Stripe Checkout to the same platform Stripe account. **Not** routed through coordinator Connect profiles.
-- **Migrations `095` + `096`:** `platform_settings.platform_operator_id` + `platform_fee_email`; reverted mistaken coordinator promotion for operator login. Profile `a8356170-ac3b-4fd4-b59c-0efb39a00346`.
+- **Access:** `bradmulders@gmail.com` is sole platform **admin** (`is_admin` only — not a market host, not a payment settlement account). Optional `ADMIN_SESSION_TOKEN` for headless API.
+- **Platform fees (3% + $1):** **Square-only** for this operator — card path → Square `appFeeMoney` on the Popup Hub Square application (`thetipsyfoxyeg@gmail.com` / The Tipsy Fox). Offline path → coordinators accrue `account_balances` (Stripe Checkout invoicing code exists but is unused/inactive for this operator). **Not** routed through coordinator Connect profiles; coordinator booth splits still go to each host's connected Square/Stripe.
+- **Migrations `095`–`097`:** `platform_settings.platform_operator_id`, `platform_fee_email` (admin contact), `platform_square_email` (Square app owner); reverted mistaken coordinator promotion for operator login. Profile `a8356170-ac3b-4fd4-b59c-0efb39a00346`.
 - **Script:** `npx tsx scripts/grant-platform-operator.ts` — admin grant only.
-- **Verify:** Submit a feature request as vendor/coordinator/patron → open `/admin/feedback` as admin → triage status and notes without page refresh.
+- **Admin superuser (`is_admin`):** Bypasses role gates in middleware, portal switcher (Patron · Vendor · Coordinator), coordinator/vendor layouts, `canActAsCoordinator` APIs, and `assertEventCoordinator` / `applyCoordinatorEventScope` (view any market). Profile stays **vendor** — not a market host. Nav menu → **Feature requests** → `/admin/feedback`.
+- **Verify:** Sign in as `bradmulders@gmail.com` → portal tabs show all three portals → `/coordinator/dashboard` lists every market → open another coordinator's event setup/ops → `/admin/feedback` triage works without page refresh.
 
 ## Shipped this session (global feature-request module, not deployed)
 - **`POST /api/feedback/submit`:** Multipart pipeline for title, role, target component, problem/dream copy, impact level, optional PNG/JPG screenshot (stored under `vendor-assets/{userId}/feature-requests/`).

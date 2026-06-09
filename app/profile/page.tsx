@@ -105,6 +105,7 @@ export default async function ProfilePage() {
             <AccountAccessPanel
               email={profile.email}
               role={profile.role}
+              isAdmin={profile.is_admin}
               ownedEventCount={ownedEventCount ?? 0}
             />
 

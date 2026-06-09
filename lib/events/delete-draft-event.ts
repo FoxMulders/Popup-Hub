@@ -6,14 +6,18 @@ export type DeleteDraftEventResult =
 
 export async function deleteDraftEvent(
   supabase: SupabaseClient,
-  input: { eventId: string; coordinatorId: string }
+  input: { eventId: string; coordinatorId: string; isAdmin?: boolean }
 ): Promise<DeleteDraftEventResult> {
-  const { data: event, error: fetchError } = await supabase
+  let fetchQuery = supabase
     .from('events')
     .select('id, status, coordinator_id, cover_image_url')
     .eq('id', input.eventId)
-    .eq('coordinator_id', input.coordinatorId)
-    .maybeSingle()
+
+  if (!input.isAdmin) {
+    fetchQuery = fetchQuery.eq('coordinator_id', input.coordinatorId)
+  }
+
+  const { data: event, error: fetchError } = await fetchQuery.maybeSingle()
 
   if (fetchError) {
     return { ok: false, error: fetchError.message, status: 500 }
@@ -59,12 +63,13 @@ export async function deleteDraftEvent(
     }
   }
 
-  const { error: deleteError } = await supabase
-    .from('events')
-    .delete()
-    .eq('id', input.eventId)
-    .eq('coordinator_id', input.coordinatorId)
-    .eq('status', 'draft')
+  let deleteQuery = supabase.from('events').delete().eq('id', input.eventId).eq('status', 'draft')
+
+  if (!input.isAdmin) {
+    deleteQuery = deleteQuery.eq('coordinator_id', input.coordinatorId)
+  }
+
+  const { error: deleteError } = await deleteQuery
 
   if (deleteError) {
     return { ok: false, error: deleteError.message, status: 500 }

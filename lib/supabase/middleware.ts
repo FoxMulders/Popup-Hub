@@ -91,17 +91,19 @@ export async function updateSession(request: NextRequest) {
   }
 
   let profileRole: Role | null = null
+  let profileIsAdmin = false
 
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_admin')
       .eq('id', user.id)
       .single()
 
     profileRole = (profile?.role as Role | undefined) ?? 'shopper'
+    profileIsAdmin = profile?.is_admin === true
 
-    if (!isPathAccessAllowed(pathname, profileRole)) {
+    if (!isPathAccessAllowed(pathname, profileRole, profileIsAdmin)) {
       const url = request.nextUrl.clone()
       url.pathname = accessDeniedRedirect(profileRole)
       url.search = ''
@@ -120,7 +122,7 @@ export async function updateSession(request: NextRequest) {
   // Option A: deep links to /coordinator/* or /vendor/* sync the active portal cookie.
   if (user && profileRole) {
     const pathPortal = detectPortalFromPath(pathname)
-    if (pathPortal !== 'patron' && canAccessPortal(profileRole, pathPortal)) {
+    if (pathPortal !== 'patron' && canAccessPortal(profileRole, pathPortal, { isAdmin: profileIsAdmin })) {
       const cookiePortal = parseActivePortal(request.cookies.get(ACTIVE_PORTAL_COOKIE)?.value)
       if (cookiePortal !== pathPortal) {
         supabaseResponse.cookies.set(ACTIVE_PORTAL_COOKIE, pathPortal, {

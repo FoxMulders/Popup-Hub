@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { redirect } from 'next/navigation'
 import { partitionEventsByPhase, sortEventsByStartAsc } from '@/lib/queries/events'
 import type { Event } from '@/types/database'
@@ -34,13 +35,26 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: eventRows } = await supabase
+  const scope = await getCoordinatorScope(supabase, user.id)
+
+  const eventsQuery = supabase
     .from('events')
     .select('id, name, start_at, end_at, status, listing_type, booth_price_cents, multi_table_discount_percent')
-    .eq('coordinator_id', user.id)
     .order('start_at', { ascending: false })
 
+  const { data: eventRows } = scope.isAdmin
+    ? await eventsQuery
+    : await eventsQuery.eq('coordinator_id', user.id)
+
   const coordinatorEventIds = (eventRows ?? []).map((e) => e.id)
+
+  const revenueBaseQuery = supabase
+    .from('platform_transactions')
+    .select('organizer_payout_amount')
+    .eq('status', 'completed')
+  const revenueQuery = scope.isAdmin
+    ? revenueBaseQuery
+    : revenueBaseQuery.eq('coordinator_id', user.id)
 
   const [
     { data: profile },
@@ -53,11 +67,7 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
       .select('payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete')
       .eq('id', user.id)
       .single(),
-    supabase
-      .from('platform_transactions')
-      .select('organizer_payout_amount')
-      .eq('coordinator_id', user.id)
-      .eq('status', 'completed'),
+    revenueQuery,
     coordinatorEventIds.length > 0
       ? supabase.from('booth_layouts').select('*').in('event_id', coordinatorEventIds)
       : Promise.resolve({ data: [] as import('@/types/database').BoothLayout[] }),

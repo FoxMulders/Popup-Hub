@@ -22,7 +22,9 @@ export default async function ShopperLayout({ children }: { children: React.Reac
 
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
-  const availablePortals = profile ? getAvailablePortals(profile.role) : []
+  const availablePortals = profile
+    ? getAvailablePortals(profile.role, { isAdmin: profile.is_admin })
+    : []
 
   if (profile) {
     return (

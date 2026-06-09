@@ -19,7 +19,7 @@ export default async function SharedLayout({ children }: { children: React.React
 
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
-  const availablePortals = getAvailablePortals(profile.role)
+  const availablePortals = getAvailablePortals(profile.role, { isAdmin: profile.is_admin })
 
   return (
     <SharedLayoutChrome

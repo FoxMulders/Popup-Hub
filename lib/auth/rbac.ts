@@ -1,4 +1,14 @@
-import type { Role } from '@/types/database'
+import type { Profile, Role } from '@/types/database'
+
+export type AccessProfile =
+  | { role?: Profile['role'] | null; is_admin?: boolean | null }
+  | null
+  | undefined
+
+/** Platform operator — bypasses role gates for testing and ops. */
+export function isPlatformAdmin(profile: AccessProfile): boolean {
+  return profile?.is_admin === true
+}
 
 /** Hierarchical permission levels (higher includes lower). */
 export const ROLE_LEVEL = {
@@ -48,6 +58,20 @@ export function hasAccess(
   return roleLevel(userRole) >= ROLE_LEVEL[requiredRole]
 }
 
+/** Role-tier check with platform-admin override. */
+export function hasAccessForProfile(profile: AccessProfile, requiredRole: Role): boolean {
+  if (isPlatformAdmin(profile)) return true
+  return hasAccess(profile?.role, requiredRole)
+}
+
+export function canActAsCoordinator(profile: AccessProfile): boolean {
+  return isPlatformAdmin(profile) || profile?.role === 'coordinator'
+}
+
+export function canActAsVendor(profile: AccessProfile): boolean {
+  return isPlatformAdmin(profile) || hasAccess(profile?.role, 'vendor')
+}
+
 export function isVendorRole(role: string | null | undefined): role is 'vendor' {
   return role === 'vendor'
 }
@@ -78,8 +102,10 @@ export function minimumRoleForPath(pathname: string): Role | null {
 
 export function isPathAccessAllowed(
   pathname: string,
-  userRole: string | null | undefined
+  userRole: string | null | undefined,
+  isAdmin = false
 ): boolean {
+  if (isAdmin) return true
   const requiredRole = minimumRoleForPath(pathname)
   if (!requiredRole) return true
   return hasAccess(userRole, requiredRole)

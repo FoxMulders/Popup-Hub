@@ -28,12 +28,12 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
   const role = (profile?.role as Role | undefined) ?? 'shopper'
-  if (!canAccessPortal(role, portal)) {
+  if (!canAccessPortal(role, portal, { isAdmin: profile?.is_admin === true })) {
     return NextResponse.json({ error: 'Portal not available for this account' }, { status: 403 })
   }
 

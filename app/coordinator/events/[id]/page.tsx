@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { ApplicationBoard } from '@/components/coordinator/application-board'
 import { EventInlineEditor } from '@/components/coordinator/event-inline-editor'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
@@ -32,12 +33,16 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('*, category_limits:event_category_limits(*, category:categories(name))')
-    .eq('id', id)
-    .eq('coordinator_id', user.id)
-    .single()
+  const scope = await getCoordinatorScope(supabase, user.id)
+
+  const { data: event } = await applyCoordinatorEventScope(
+    supabase
+      .from('events')
+      .select('*, category_limits:event_category_limits(*, category:categories(name))')
+      .eq('id', id),
+    user.id,
+    scope.isAdmin
+  ).single()
 
   if (!event) notFound()
 
@@ -59,7 +64,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
     supabase
       .from('events')
       .select('id')
-      .eq('coordinator_id', user.id)
+      .eq('coordinator_id', event.coordinator_id)
       .not('square_merchant_id', 'is', null)
       .limit(1)
       .maybeSingle(),

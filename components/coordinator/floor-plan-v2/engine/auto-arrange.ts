@@ -442,7 +442,7 @@ function placeBoothsAtSlots(
     }
     const finalCategory =
       categoryCount > 0 ? category : src.categoryName ?? null
-    let placed: BoothObject = {
+    const placed: BoothObject = {
       ...probeBooth,
       categoryName: finalCategory,
     }

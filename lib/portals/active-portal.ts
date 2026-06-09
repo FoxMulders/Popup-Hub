@@ -22,7 +22,14 @@ export function getPortalHome(portal: ActivePortal): string {
 }
 
 /** Portals a user may switch between. Shoppers get none (no switcher). */
-export function getAvailablePortals(role: Role | string | null | undefined): ActivePortal[] {
+export function getAvailablePortals(
+  role: Role | string | null | undefined,
+  options?: { isAdmin?: boolean }
+): ActivePortal[] {
+  if (options?.isAdmin) {
+    return ['patron', 'vendor', 'coordinator']
+  }
+
   const normalized = (role ?? 'shopper') as Role
   if (normalized === 'coordinator') {
     return ['patron', 'vendor', 'coordinator']
@@ -35,9 +42,10 @@ export function getAvailablePortals(role: Role | string | null | undefined): Act
 
 export function canAccessPortal(
   role: Role | string | null | undefined,
-  portal: ActivePortal
+  portal: ActivePortal,
+  options?: { isAdmin?: boolean }
 ): boolean {
-  return getAvailablePortals(role).includes(portal)
+  return getAvailablePortals(role, options).includes(portal)
 }
 
 export function parseActivePortal(value: string | undefined): ActivePortal | null {
@@ -58,11 +66,12 @@ export function detectPortalFromPath(pathname: string): ActivePortal {
 /** Portal implied by a route prefix when the signed-in account may access it. */
 export function portalFromAccessiblePath(
   pathname: string,
-  role: Role | string | null | undefined
+  role: Role | string | null | undefined,
+  options?: { isAdmin?: boolean }
 ): ActivePortal | null {
   const fromPath = detectPortalFromPath(pathname)
   if (fromPath === 'patron') return null
-  if (canAccessPortal(role, fromPath)) return fromPath
+  if (canAccessPortal(role, fromPath, options)) return fromPath
   return null
 }
 
@@ -72,12 +81,13 @@ export function resolveActivePortal(
   pathname?: string
 ): ActivePortal {
   const role = profile?.role ?? 'shopper'
-  const available = getAvailablePortals(role)
+  const portalOptions = { isAdmin: profile?.is_admin === true }
+  const available = getAvailablePortals(role, portalOptions)
   const parsed = parseActivePortal(cookieValue)
 
   // Portal-prefixed routes win over the cookie so nav chrome matches the URL.
   if (pathname) {
-    const fromAccessiblePath = portalFromAccessiblePath(pathname, role)
+    const fromAccessiblePath = portalFromAccessiblePath(pathname, role, portalOptions)
     if (fromAccessiblePath) return fromAccessiblePath
   }
 
@@ -98,13 +108,14 @@ export function resolveActivePortal(
 export function getDefaultDashboard(
   role: string,
   _approvalCount: number,
-  activePortal?: ActivePortal | null
+  activePortal?: ActivePortal | null,
+  options?: { isAdmin?: boolean }
 ): string {
   const normalized = (role ?? 'shopper') as Role
 
   // Everyone lands on the patron discover page unless they have an explicit
   // active-portal cookie from a prior session switch.
-  if (activePortal && canAccessPortal(normalized, activePortal)) {
+  if (activePortal && canAccessPortal(normalized, activePortal, options)) {
     return getPortalHome(activePortal)
   }
 

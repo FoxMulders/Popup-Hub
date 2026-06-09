@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { deleteDraftEvent } from '@/lib/events/delete-draft-event'
 import { revalidatePath } from 'next/cache'
@@ -25,17 +26,18 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const result = await deleteDraftEvent(supabase, {
     eventId,
     coordinatorId: user.id,
+    isAdmin: profile?.is_admin === true,
   })
 
   if (!result.ok) {

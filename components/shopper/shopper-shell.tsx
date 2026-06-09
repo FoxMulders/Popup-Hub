@@ -27,7 +27,9 @@ export async function ShopperShell({ children, hideBottomNav, profile: profilePr
 
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
-  const availablePortals = profile ? getAvailablePortals(profile.role) : []
+  const availablePortals = profile
+    ? getAvailablePortals(profile.role, { isAdmin: profile.is_admin })
+    : []
 
   return (
     <ShopperShellClient

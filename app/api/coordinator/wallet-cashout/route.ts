@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
 import { debitWalletWithdrawal } from '@/lib/wallet/debit-withdrawal'
@@ -17,11 +18,11 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'coordinator') {
+  if (!canActAsCoordinator(profile)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

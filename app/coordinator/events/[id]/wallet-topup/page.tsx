@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { MarketDayShell } from '@/components/coordinator/market-day-shell'
 import { DoorWalletTopUp } from '@/components/coordinator/door-wallet-topup'
 import { parseWalletTopUpQrPayload } from '@/lib/wallet/wallet-qr'
@@ -20,12 +21,13 @@ export default async function EventWalletTopUpPage({ params, searchParams }: Pro
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, name, coordinator_id, status')
-    .eq('id', id)
-    .eq('coordinator_id', user.id)
-    .single()
+  const scope = await getCoordinatorScope(supabase, user.id)
+
+  const { data: event } = await applyCoordinatorEventScope(
+    supabase.from('events').select('id, name, coordinator_id, status').eq('id', id),
+    user.id,
+    scope.isAdmin
+  ).single()
 
   if (!event) notFound()
 

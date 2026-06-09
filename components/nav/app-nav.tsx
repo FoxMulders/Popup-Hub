@@ -81,7 +81,10 @@ export function AppNav({
     avatar_url: profile.avatar_url,
   }
 
-  const menuExtraLinks = [{ href: '/profile', label: 'Profile settings' }]
+  const menuExtraLinks = [
+    { href: '/profile', label: 'Profile settings' },
+    ...(profile.is_admin ? [{ href: '/admin/feedback', label: 'Feature requests' }] : []),
+  ]
 
   return (
     <nav

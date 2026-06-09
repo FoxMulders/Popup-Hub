@@ -22,16 +22,23 @@ import { toast } from 'sonner'
 interface AccountAccessPanelProps {
   email: string
   role: Role
+  isAdmin?: boolean
   ownedEventCount?: number
 }
 
-export function AccountAccessPanel({ email, role, ownedEventCount = 0 }: AccountAccessPanelProps) {
+export function AccountAccessPanel({
+  email,
+  role,
+  isAdmin = false,
+  ownedEventCount = 0,
+}: AccountAccessPanelProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [localRole, setLocalRole] = useState(role)
 
-  const capabilities = resolveCapabilityAccess(localRole)
-  const portals = availablePortalLabels(localRole)
+  const accessProfile = { role: localRole, is_admin: isAdmin }
+  const capabilities = resolveCapabilityAccess(accessProfile)
+  const portals = availablePortalLabels(accessProfile)
   const canEnableCoordinator = canSelfEnableCoordinator(localRole)
   const canEnableVendor = canSelfEnableVendor(localRole)
 

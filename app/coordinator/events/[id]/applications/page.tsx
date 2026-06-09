@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { redirect, notFound } from 'next/navigation'
 import { ApplicationBoard } from '@/components/coordinator/application-board'
 import { Badge } from '@/components/ui/badge'
@@ -21,13 +22,17 @@ export default async function ApplicationsPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  const scope = await getCoordinatorScope(supabase, user.id)
+
   const [{ data: event }, { data: allCategories }] = await Promise.all([
-    supabase
-      .from('events')
-      .select('*, category_limits:event_category_limits(*, category:categories(name))')
-      .eq('id', id)
-      .eq('coordinator_id', user.id)
-      .single(),
+    applyCoordinatorEventScope(
+      supabase
+        .from('events')
+        .select('*, category_limits:event_category_limits(*, category:categories(name))')
+        .eq('id', id),
+      user.id,
+      scope.isAdmin
+    ).single(),
     supabase.from('categories').select('id, name'),
   ])
 

@@ -9,7 +9,7 @@ ALTER TABLE platform_settings
 COMMENT ON COLUMN platform_settings.platform_operator_id IS
   'Popup Hub platform admin profile (feature triage, ops). Does not host markets.';
 COMMENT ON COLUMN platform_settings.platform_fee_email IS
-  'Owner contact for platform fee settlement (Stripe/Square dashboard accounts).';
+  'Platform admin contact email (is_admin ops). Not a payment settlement account for this operator.';
 
 UPDATE platform_settings ps
 SET

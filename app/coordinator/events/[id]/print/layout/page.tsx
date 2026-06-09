@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { PrintTrigger } from '../print-trigger'
 import { PrintFloorplan } from '@/components/coordinator/print-floorplan'
 import { getActiveRoom, roomsFromBoothLayout } from '@/lib/booth-planner/layout-rooms'
@@ -17,12 +18,13 @@ export default async function PrintLayoutPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, name, coordinator_id')
-    .eq('id', id)
-    .eq('coordinator_id', user.id)
-    .single()
+  const scope = await getCoordinatorScope(supabase, user.id)
+
+  const { data: event } = await applyCoordinatorEventScope(
+    supabase.from('events').select('id, name, coordinator_id').eq('id', id),
+    user.id,
+    scope.isAdmin
+  ).single()
 
   if (!event) notFound()
 

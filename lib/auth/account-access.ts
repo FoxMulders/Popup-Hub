@@ -1,6 +1,6 @@
 import type { Role } from '@/types/database'
 import { getAvailablePortals, PORTAL_LABELS, type ActivePortal } from '@/lib/portals/active-portal'
-import { hasAccess, normalizeRole } from '@/lib/auth/rbac'
+import { hasAccess, isPlatformAdmin, normalizeRole, type AccessProfile } from '@/lib/auth/rbac'
 
 export interface AccountCapability {
   id: string
@@ -95,16 +95,37 @@ export function roleSummary(role: Role): string {
   }
 }
 
-export function resolveCapabilityAccess(role: string | null | undefined) {
-  const normalized = normalizeRole(role)
+export function resolveCapabilityAccess(profile: AccessProfile | string | null | undefined) {
+  if (typeof profile === 'string' || profile == null) {
+    const normalized = normalizeRole(profile)
+    return ACCOUNT_CAPABILITIES.map((capability) => ({
+      capability,
+      enabled: hasAccess(normalized, capability.requiredRole),
+    }))
+  }
+
+  if (isPlatformAdmin(profile)) {
+    return ACCOUNT_CAPABILITIES.map((capability) => ({
+      capability,
+      enabled: true,
+    }))
+  }
+
+  const normalized = normalizeRole(profile.role)
   return ACCOUNT_CAPABILITIES.map((capability) => ({
     capability,
     enabled: hasAccess(normalized, capability.requiredRole),
   }))
 }
 
-export function availablePortalLabels(role: string | null | undefined): ActivePortal[] {
-  return getAvailablePortals(normalizeRole(role))
+export function availablePortalLabels(
+  profile: AccessProfile | string | null | undefined
+): ActivePortal[] {
+  if (typeof profile === 'string' || profile == null) {
+    return getAvailablePortals(normalizeRole(profile))
+  }
+
+  return getAvailablePortals(profile.role, { isAdmin: profile.is_admin === true })
 }
 
 export function portalLabelsText(portals: ActivePortal[]): string {

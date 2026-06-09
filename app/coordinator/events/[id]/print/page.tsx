@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { PrintTrigger } from './print-trigger'
 import { extractNestedPassport } from '@/lib/applications/extract-nested-passport'
 
@@ -13,12 +14,16 @@ export default async function PrintRosterPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, name, location_name, address, start_at, end_at, coordinator_id')
-    .eq('id', id)
-    .eq('coordinator_id', user.id)
-    .single()
+  const scope = await getCoordinatorScope(supabase, user.id)
+
+  const { data: event } = await applyCoordinatorEventScope(
+    supabase
+      .from('events')
+      .select('id, name, location_name, address, start_at, end_at, coordinator_id')
+      .eq('id', id),
+    user.id,
+    scope.isAdmin
+  ).single()
 
   if (!event) notFound()
 
