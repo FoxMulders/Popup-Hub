@@ -8,6 +8,7 @@ export type CanvasToolbarBlockId =
   | 'history-clipboard'
   | 'view-align'
   | 'vendor'
+  | 'vendor-sizes'
   | 'patron'
   | 'room'
   | 'utilities'
@@ -18,6 +19,7 @@ export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
   'history-clipboard',
   'view-align',
   'vendor',
+  'vendor-sizes',
   'patron',
   'room',
   'utilities',

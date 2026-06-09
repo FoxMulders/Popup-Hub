@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Sparkles, Calculator, ChevronDown } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Sparkles, Calculator, HelpCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Category } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
@@ -11,6 +12,7 @@ import {
   type TableLengthOptionFt,
   buildSmartPopulateLimits,
   DEFAULT_TABLE_LENGTH_FT,
+  type SmartPopulateBreakdown,
 } from '@/lib/booth-planner/smart-populate-booth-caps'
 import { TABLE_SIZES } from '@/lib/booth-planner/layout-table-size'
 
@@ -37,6 +39,56 @@ interface SmartPopulateBoothCapsProps {
   actionsBlocked?: boolean
   blockReason?: string
   globalMlmCap?: number
+}
+
+function FloorCalculationBreakdown({ breakdown }: { breakdown: SmartPopulateBreakdown }) {
+  const { floor, footprint } = breakdown
+
+  return (
+    <div className="space-y-1.5 text-left text-xs">
+      <p className="font-semibold text-foreground">How we calculated usable floor</p>
+      <div className="flex justify-between gap-4">
+        <span>Gross floor</span>
+        <span className="font-medium tabular-nums">{floor.grossSqFt.toLocaleString()} sq ft</span>
+      </div>
+      <div className="flex justify-between gap-4 text-muted-foreground">
+        <span>− Fixed fixtures</span>
+        <span className="tabular-nums">−{floor.structuralDeductionSqFt.toLocaleString()} sq ft</span>
+      </div>
+      <div className="flex justify-between gap-4 text-muted-foreground">
+        <span>− Entrances &amp; exits</span>
+        <span className="tabular-nums">−{floor.doorDeductionSqFt.toLocaleString()} sq ft</span>
+      </div>
+      <div className="flex justify-between gap-4 text-muted-foreground">
+        <span>− Main aisle ({floor.centralAisleWidthFt}′)</span>
+        <span className="tabular-nums">−{floor.centralAisleDeductionSqFt.toLocaleString()} sq ft</span>
+      </div>
+      <div className="flex justify-between gap-4 text-muted-foreground">
+        <span>− Walking aisles &amp; fire paths ({Math.round(floor.walkwayReserveRatio * 100)}%)</span>
+        <span className="tabular-nums">−{floor.walkwayReserveSqFt.toLocaleString()} sq ft</span>
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        Perimeter walls ({floor.perimeterWallSqFt.toLocaleString()} sq ft) — vendor seating, not an
+        extra buffer
+      </p>
+      <div className="flex justify-between gap-4 border-t border-border pt-1.5 font-semibold">
+        <span>Net usable</span>
+        <span className="tabular-nums">{floor.netUsableSqFt.toLocaleString()} sq ft</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span>Unit footprint</span>
+        <span className="font-medium">{footprint.label}</span>
+      </div>
+      <ul className="grid grid-cols-1 gap-0.5 pt-1 text-[10px] text-muted-foreground">
+        {breakdown.buckets.map((b) => (
+          <li key={b.key}>
+            {b.label}: <strong className="text-foreground">{b.targetSlots}</strong>
+            {b.categoryCount > 0 ? ` (${b.categoryCount} cat.)` : ' — no categories'}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 export function SmartPopulateBoothCaps({
@@ -197,92 +249,35 @@ export function SmartPopulateBoothCaps({
               <span className="font-semibold text-sage-900">Max booths</span>
               <span className="font-bold text-harvest-700 tabular-nums">{preview.breakdown.cMax}</span>
             </div>
-            <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5">
-              <span>Usable floor</span>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-0.5">
+              <span className="inline-flex items-center gap-1">
+                Usable floor
+                <Tooltip>
+                  <TooltipTrigger
+                    type="button"
+                    className="inline-flex rounded-sm text-sage-700 hover:text-sage-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
+                    aria-label="How we calculated usable floor"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5 shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="start" className="max-w-sm p-3">
+                    <FloorCalculationBreakdown breakdown={preview.breakdown} />
+                  </TooltipContent>
+                </Tooltip>
+              </span>
               <span className="font-medium tabular-nums">
                 {preview.breakdown.floor.netUsableSqFt.toLocaleString()} sq ft
-                <span className="font-normal text-sage-700"> (after aisles &amp; fixtures)</span>
               </span>
             </div>
             <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5">
               <span>Suggested split</span>
               <span className="font-medium tabular-nums">
-                {preview.breakdown.totalAllocated} cap{preview.breakdown.totalAllocated === 1 ? '' : 's'}{' '}
-                across {preview.limits.length} categor{preview.limits.length === 1 ? 'y' : 'ies'}
+                {preview.breakdown.totalAllocated} cap
+                {preview.breakdown.totalAllocated === 1 ? '' : 's'} across {preview.limits.length}{' '}
+                categor{preview.limits.length === 1 ? 'y' : 'ies'}
               </span>
             </div>
           </div>
-
-          <details className="group mt-2 border-t border-sage-100 pt-2">
-            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-medium text-sage-800 marker:content-none hover:text-sage-900 [&::-webkit-details-marker]:hidden">
-              <ChevronDown
-                className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180"
-                aria-hidden
-              />
-              How we calculated this
-            </summary>
-            <div className="mt-2 space-y-1.5 text-sage-800">
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5">
-                <span>Gross floor</span>
-                <span className="font-medium tabular-nums">
-                  {preview.breakdown.floor.grossSqFt.toLocaleString()} sq ft
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-sage-700">
-                <span>− Fixed fixtures</span>
-                <span className="tabular-nums">
-                  −{preview.breakdown.floor.structuralDeductionSqFt.toLocaleString()} sq ft
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-sage-700">
-                <span>− Entrances &amp; exits</span>
-                <span className="tabular-nums">
-                  −{preview.breakdown.floor.doorDeductionSqFt.toLocaleString()} sq ft
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-sage-700">
-                <span>− Main aisle ({preview.breakdown.floor.centralAisleWidthFt}′)</span>
-                <span className="tabular-nums">
-                  −{preview.breakdown.floor.centralAisleDeductionSqFt.toLocaleString()} sq ft
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-sage-700">
-                <span
-                  title="Reserves cross aisles for two-way patron flow plus code-compliant emergency egress."
-                >
-                  − Walking aisles &amp; fire paths (
-                  {Math.round(preview.breakdown.floor.walkwayReserveRatio * 100)}%)
-                </span>
-                <span className="tabular-nums">
-                  −{preview.breakdown.floor.walkwayReserveSqFt.toLocaleString()} sq ft
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-[10px] text-sage-600">
-                <span className="whitespace-normal break-words">
-                  Perimeter walls ({preview.breakdown.floor.perimeterWallSqFt.toLocaleString()} sq ft) —
-                  vendor seating, not an extra buffer
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 border-t border-sage-100 pt-1.5">
-                <span className="font-semibold">Net usable</span>
-                <span className="font-semibold tabular-nums">
-                  {preview.breakdown.floor.netUsableSqFt.toLocaleString()} sq ft
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5">
-                <span>Unit footprint</span>
-                <span className="font-medium">{preview.breakdown.footprint.label}</span>
-              </div>
-              <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 pt-1 text-[10px] text-sage-800 sm:grid-cols-3">
-                {preview.breakdown.buckets.map((b) => (
-                  <li key={b.key}>
-                    {b.label}: <strong>{b.targetSlots}</strong>
-                    {b.categoryCount > 0 ? ` (${b.categoryCount} cat.)` : ' — no categories'}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </details>
         </div>
       )}
 

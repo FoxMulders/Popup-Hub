@@ -7,8 +7,8 @@ import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardAppShell } from './dashboard-app-shell'
 import { DashboardLeftPanel } from './dashboard-left-panel'
 import { DashboardCanvasColumn } from './dashboard-canvas-column'
+import { DashboardNoRoomEmptyState } from './dashboard-no-room-empty-state'
 import { DashboardToolbarPortalProvider } from './dashboard-toolbar-portal'
-import { InitialRoomModal } from './initial-room-modal'
 import { useMarketManagement } from './market-management-context'
 
 export interface DashboardBootstrapProps {
@@ -21,11 +21,15 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
   const [liveMessage, setLiveMessage] = useState('Booth layout designer loading.')
-  const [hasInitialRoom, setHasInitialRoom] = useState(() => layoutRooms.length > 0)
+  const hasInitialRoom = layoutRooms.length > 0
+  const showNoRoomEmpty = Boolean(selectedEventId && !hasInitialRoom)
 
   useEffect(() => {
-    setHasInitialRoom(layoutRooms.length > 0)
-  }, [selectedEventId, layoutRooms.length])
+    if (showNoRoomEmpty) {
+      setAriaBusy(false)
+      setLiveMessage('Add a room to open the booth layout designer.')
+    }
+  }, [showNoRoomEmpty])
 
   const handleInitialRoomConfirm = useCallback(
     (widthFt: number, lengthFt: number) => {
@@ -34,7 +38,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
         lengthFt,
       })
       setLayoutRooms(rooms, activeRoomId)
-      setHasInitialRoom(true)
+      setAriaBusy(true)
       setLiveMessage('Room created — booth designer canvas is loading.')
     },
     [layoutRooms, setLayoutRooms]
@@ -60,17 +64,18 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
         leftClassName="flex w-[300px] min-w-[300px] flex-shrink-0 flex-col justify-start overflow-hidden border-r border-gray-200 bg-white lg:h-[calc(100vh-64px)]"
         left={<DashboardLeftPanel />}
         center={
-          <DashboardCanvasColumn
-            showBlueprint={showBlueprint}
-            mountCanvas={Boolean(selectedEventId && hasInitialRoom)}
-            reducedMotion={reducedMotion}
-            onCanvasInteractive={handleCanvasInteractive}
-          />
+          showNoRoomEmpty ? (
+            <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
+          ) : (
+            <DashboardCanvasColumn
+              showBlueprint={showBlueprint}
+              mountCanvas={Boolean(selectedEventId && hasInitialRoom)}
+              reducedMotion={reducedMotion}
+              onCanvasInteractive={handleCanvasInteractive}
+            />
+          )
         }
       />
-      {selectedEventId && !hasInitialRoom ? (
-        <InitialRoomModal onConfirm={handleInitialRoomConfirm} />
-      ) : null}
     </DashboardToolbarPortalProvider>
   )
 }

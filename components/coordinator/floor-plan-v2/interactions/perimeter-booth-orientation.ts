@@ -1,4 +1,5 @@
-import { rotatedAabb } from './geometry'
+import { objectCenter, rotatedAabb } from './geometry'
+import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
 import { PERIMETER_WALL_THICKNESS_FT } from './perimeter-walls'
 import type { BoothObject, RoomFrame } from '../state/types'
 
@@ -29,10 +30,47 @@ export function rotationForPerimeterEdge(edge: RoomEdgeSide): number {
   return INWARD_ROTATION[edge]
 }
 
-function boothSpanAndDepth(width: number, height: number): { span: number; depth: number } {
+/** Long edge (table length) and short edge (equipment depth) for wall orientation. */
+export function boothSpanAndDepth(
+  width: number,
+  height: number,
+  tableLengthFt?: number | null
+): { span: number; depth: number } {
+  if (tableLengthFt != null && tableLengthFt > 0) {
+    return {
+      span: Math.max(1, Math.round(tableLengthFt)),
+      depth: Math.max(BOOTH_EQUIPMENT_DEPTH_FT, Math.min(width, height)),
+    }
+  }
   return width >= height
     ? { span: width, depth: height }
     : { span: height, depth: width }
+}
+
+/**
+ * Rotate a booth so its long back edge faces the nearest wall; keeps the
+ * footprint center fixed (position snap is handled separately).
+ */
+export function orientBoothToNearestWallEdge(
+  booth: BoothObject,
+  frame: RoomFrame
+): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> {
+  const { edge } = nearestRoomEdge(booth, frame)
+  const { span, depth } = boothSpanAndDepth(
+    booth.width,
+    booth.height,
+    booth.tableLengthFt
+  )
+  const center = objectCenter(booth)
+  const width = span
+  const height = depth
+  return {
+    x: center.x - width / 2,
+    y: center.y - height / 2,
+    width,
+    height,
+    rotation: rotationForPerimeterEdge(edge),
+  }
 }
 
 /**
@@ -90,7 +128,7 @@ export function orientBoothForPerimeterSlot(
   boothH: number,
   frame: RoomFrame
 ): BoothObject {
-  const { span, depth } = boothSpanAndDepth(boothW, boothH)
+  const { span, depth } = boothSpanAndDepth(boothW, boothH, booth.tableLengthFt)
   const along =
     slot.edge === 'top' || slot.edge === 'bottom' ? slot.x : slot.y
   return {
@@ -157,7 +195,11 @@ export function snapBoothToUnionPerimeter(
   if (pts.length < 3) return null
   const centroid = ringCentroid(pts)
   const aabb = rotatedAabb(booth)
-  const { span, depth } = boothSpanAndDepth(booth.width, booth.height)
+  const { span, depth } = boothSpanAndDepth(
+    booth.width,
+    booth.height,
+    booth.tableLengthFt
+  )
   const cx = aabb.x + aabb.width / 2
   const cy = aabb.y + aabb.height / 2
 
@@ -212,7 +254,11 @@ export function snapBoothToRoomPerimeter(
   const { edge, distanceFt } = nearestRoomEdge(booth, frame)
   if (distanceFt > tolFt) return null
 
-  const { span, depth } = boothSpanAndDepth(booth.width, booth.height)
+  const { span, depth } = boothSpanAndDepth(
+    booth.width,
+    booth.height,
+    booth.tableLengthFt
+  )
   const aabb = rotatedAabb(booth)
   const edges = frameEdges(frame)
 

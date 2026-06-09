@@ -45,10 +45,11 @@ import { DebugLogProvider, useDebugLog } from './debug/debug-log-context'
 import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
-import { CanvasCommandBarQa as CanvasCommandBar } from '@/src/qa_review/components/coordinator/floor-plan-v2/tools/canvas-command-bar_qa'
+import { CanvasCommandBar } from './tools/canvas-command-bar'
 import { analyzeMergeIntersections } from '@/src/utils/layoutMergeLocal'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import type { AutoArrangeMode } from './engine/auto-arrange'
+import { autoArrangeInRoom } from './engine/auto-arrange'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
 import {
   AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
@@ -224,6 +225,13 @@ export interface FloorPlanV2Props {
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  /** Persist layout JSON without publishing the market. */
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  saveDraftLoading?: boolean
+  /** Toggle patron traffic path overlay on the canvas. */
+  patronPathEnabled?: boolean
+  onPatronPathToggle?: () => void
   /** Dashboard embed — compact chrome, telemetry-driven booth fills. */
   variant?: 'wizard' | 'dashboard'
   /**
@@ -298,6 +306,9 @@ function FloorPlanV2Workspace({
   onSaveMarket,
   saveMarketDisabled,
   saveMarketLoading,
+  onSaveDraft,
+  saveDraftDisabled,
+  saveDraftLoading,
   variant = 'wizard',
   chrome = 'default',
   onPlacedCountChange,
@@ -1289,7 +1300,6 @@ function FloorPlanV2Workspace({
       // Server is now the source of truth — drop the unified
       // crash-recovery draft so a future refresh loads from Supabase.
       clearMultiRoomDraft(eventId)
-      toast.success('Floor plan saved')
       return true
     }
     return () => {
@@ -1304,7 +1314,13 @@ function FloorPlanV2Workspace({
     store.doc,
   ])
 
-  const placedCount = store.doc.objects.length
+  /** Vendor booths in the active room — excludes walls, doors, exits, and patron tables. */
+  const vendorBoothCount = useMemo(
+    () => vendorBoothsInRoom(store.doc, activeRoomId).length,
+    [activeRoomId, store.doc]
+  )
+
+  const placedCount = vendorBoothCount
   const selectedCount = store.selectedIds.size
 
   useEffect(() => {
@@ -1422,16 +1438,6 @@ function FloorPlanV2Workspace({
    * doc), then translate the result back to global coords and merge
    * into the unified doc with a single history step.
    */
-  const vendorBoothCount = useMemo(() => {
-    const objectRoom = store.doc.objectRoom ?? {}
-    return store.doc.objects.filter(
-      (o) =>
-        o.kind === 'booth' &&
-        objectRoom[o.id] === activeRoomId &&
-        !isGuestTableBooth(o)
-    ).length
-  }, [activeRoomId, store.doc.objects, store.doc.objectRoom])
-
   const patronTableCount = useMemo(() => {
     const objectRoom = store.doc.objectRoom ?? {}
     return store.doc.objects.filter(
@@ -1453,28 +1459,87 @@ function FloorPlanV2Workspace({
   )
 
   const autoArrangeDisabledReason = useMemo(() => {
-    if (!trafficFlowPrerequisites.satisfied) {
-      return AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP
-    }
     if (vendorBoothCount === 0 && patronTableCount === 0) {
       return 'Draw at least one vendor booth or patron table to auto-arrange.'
     }
+    if (
+      autoArrangeMode !== 'grid' &&
+      !trafficFlowPrerequisites.satisfied
+    ) {
+      return AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP
+    }
     return null
-  }, [patronTableCount, trafficFlowPrerequisites.satisfied, vendorBoothCount])
+  }, [
+    autoArrangeMode,
+    patronTableCount,
+    trafficFlowPrerequisites.satisfied,
+    vendorBoothCount,
+  ])
 
   const canAutoArrangeFloorPlan =
-    trafficFlowPrerequisites.satisfied &&
-    (vendorBoothCount > 0 || patronTableCount > 0)
+    vendorBoothCount > 0 ||
+    patronTableCount > 0
 
   const handleAutoArrangeFloorPlan = useCallback(async () => {
-    if (!trafficFlowPrerequisites.satisfied) {
-      toast.message(AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP, { duration: 4500 })
-      return
-    }
     if (vendorBoothCount === 0 && patronTableCount === 0) {
       toast.message('Nothing to arrange — draw at least one vendor booth or patron table first.')
       return
     }
+    if (
+      autoArrangeMode !== 'grid' &&
+      !trafficFlowPrerequisites.satisfied
+    ) {
+      toast.message(AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP, { duration: 4500 })
+      return
+    }
+
+    const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
+    if (!frame) {
+      toast.error('Select a room on the canvas before auto-arranging.')
+      return
+    }
+
+    if (autoArrangeMode === 'grid') {
+      const result = autoArrangeInRoom(store.doc, activeRoomId, {
+        scope: 'all',
+        mode: autoArrangeMode,
+        eventCategoryNames,
+        baselineTableLengthFt: safeTableSizeFt,
+        vendorTableMetaByKey,
+        ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
+          ? { maxBooths: layoutCapacity }
+          : {}),
+      })
+      if (!result) {
+        toast.error('Auto-arrange failed — room dimensions could not be read.')
+        return
+      }
+      if (result.placedCount === 0) {
+        toast.error(
+          `Auto-arrange could not fit any objects inside ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′).`
+        )
+        return
+      }
+      store.replaceObjects(result.doc.objects)
+      const overflow = result.overflowCount + result.droppedCount
+      if (overflow > 0) {
+        toast.warning(
+          `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'}; ${overflow} could not fit in the room.`,
+          { duration: 4500 }
+        )
+      } else if (result.unsatisfiedCategoryCount > 0) {
+        toast.warning(
+          `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'}. ${result.unsatisfiedCategoryCount} could not meet category spacing rules.`,
+          { duration: 4500 }
+        )
+      } else {
+        toast.success(
+          `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'} in ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′).`
+        )
+      }
+      return
+    }
+
     const arrangeOptions = {
       scope: 'all' as const,
       mode: autoArrangeMode,
@@ -1589,34 +1654,68 @@ function FloorPlanV2Workspace({
       return
     }
 
-    const booths = vendorBoothsInRoom(store.doc, activeRoomId)
-    const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
-    const packResult = PackBooths(store.doc, activeRoomId, cleared)
-    const packedDoc = applyPackedBoothsToDoc(
-      store.doc,
-      activeRoomId,
-      packResult.booths
-    )
-
-    store.replaceObjects(packedDoc.objects)
-
-    if (packResult.placedCount === 0) {
-      toast.error('Auto-arrange could not fit any booths inside the merged zone.')
+    const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
+    if (!frame) {
+      toast.error('Select a room on the canvas before auto-arranging.')
       return
     }
 
-    const dropped = packResult.droppedCount
+    const result = autoArrangeInRoom(store.doc, activeRoomId, {
+      scope: 'vendor',
+      mode: autoArrangeMode,
+      eventCategoryNames,
+      baselineTableLengthFt: safeTableSizeFt,
+      vendorTableMetaByKey,
+      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
+        ? { maxBooths: layoutCapacity }
+        : {}),
+    })
+    if (!result) {
+      toast.error('Auto-arrange failed — room dimensions could not be read.')
+      return
+    }
+    if (result.placedCount === 0) {
+      toast.error(
+        `Auto-arrange could not fit any vendor booths inside ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′).`
+      )
+      return
+    }
+
+    store.replaceObjects(result.doc.objects)
+
+    const dropped = result.overflowCount + result.droppedCount
     if (dropped > 0) {
       toast.warning(
-        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'}; ${dropped} could not fit and ${dropped === 1 ? 'was' : 'were'} left unplaced.`,
+        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'}; ${dropped} could not fit and ${dropped === 1 ? 'was' : 'were'} left unplaced.`,
         { duration: 5000 }
       )
     } else {
       toast.success(
-        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'} inside the merged zone.`
+        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} in ${frame.name} with ${autoArrangeMode} spacing.`
       )
     }
-  }, [activeRoomId, store, vendorBoothCount])
+  }, [
+    activeRoomId,
+    autoArrangeMode,
+    eventCategoryNames,
+    layoutCapacity,
+    safeTableSizeFt,
+    store,
+    vendorBoothCount,
+    vendorTableMetaByKey,
+  ])
+
+  const handlePatronPathToggle = useCallback(() => {
+    setPatronPathEnabled((enabled) => {
+      const next = !enabled
+      if (next) {
+        toast.message('Patron path overlay on — add entry/exit doors for traffic routing.', {
+          duration: 2800,
+        })
+      }
+      return next
+    })
+  }, [])
 
   const handleAddRoomWithSelectTool = useCallback(
     (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
@@ -2067,6 +2166,11 @@ function FloorPlanV2Workspace({
       onSaveMarket={onSaveMarket}
       saveMarketDisabled={saveMarketDisabled}
       saveMarketLoading={saveMarketLoading}
+      onSaveDraft={onSaveDraft}
+      saveDraftDisabled={saveDraftDisabled}
+      saveDraftLoading={saveDraftLoading}
+      patronPathEnabled={patronPathEnabled}
+      onPatronPathToggle={handlePatronPathToggle}
       eventId={eventId}
     />
   ) : null
@@ -2111,7 +2215,7 @@ function FloorPlanV2Workspace({
             </span>
           ) : null}
           <div className="rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-semibold text-stone-700">
-            {placedCount} object{placedCount === 1 ? '' : 's'} placed
+            {placedCount} vendor booth{placedCount === 1 ? '' : 's'} placed
             {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
           </div>
         </div>
@@ -2308,6 +2412,11 @@ function FloorPlanV2Workspace({
                 onSaveMarket={onSaveMarket}
                 saveMarketDisabled={saveMarketDisabled}
                 saveMarketLoading={saveMarketLoading}
+                onSaveDraft={onSaveDraft}
+                saveDraftDisabled={saveDraftDisabled}
+                saveDraftLoading={saveDraftLoading}
+                patronPathEnabled={patronPathEnabled}
+                onPatronPathToggle={handlePatronPathToggle}
               />
               <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-lg border border-stone-200 bg-stone-100">
                 <CanvasRootErrorBoundary

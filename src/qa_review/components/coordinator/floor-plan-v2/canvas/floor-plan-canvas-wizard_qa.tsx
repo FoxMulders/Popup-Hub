@@ -13,6 +13,7 @@ import { CanvasObjects } from '@/components/coordinator/floor-plan-v2/canvas/can
 import {
   DraftPreview,
   MarqueePreview,
+  PatronTrafficPathOverlay,
   SelectionOverlay,
 } from '@/components/coordinator/floor-plan-v2/canvas/canvas-overlays'
 import { InlineLabelEditor } from '@/components/coordinator/floor-plan-v2/canvas/inline-label-editor'
@@ -123,6 +124,8 @@ export interface FloorPlanCanvasProps {
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
   autoArrangeMode?: AutoArrangeMode
+  /** Computed patron viewing path (feet) — dotted overlay when set. */
+  patronTrafficPath?: ReadonlyArray<{ x: number; y: number }> | null
   /** Command center: higher zoom floor so drags feel less jumpy when framed out. */
   commandCenterViewport?: boolean
 }
@@ -158,6 +161,7 @@ export function FloorPlanCanvasWizardQa({
   boothPlacementStatusByObjectId,
   onVendorDrop,
   autoArrangeMode = 'grid',
+  patronTrafficPath = null,
   commandCenterViewport = false,
   scrollHost = true,
 }: FloorPlanCanvasProps) {
@@ -703,6 +707,7 @@ export function FloorPlanCanvasWizardQa({
             hasOverlap={draftOverlaps}
           />
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
+          <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />
           {editingObj ? (
             <InlineLabelEditor
               obj={editingObj}

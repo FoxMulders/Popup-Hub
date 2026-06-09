@@ -10,6 +10,8 @@ export interface MarketBoothPricingFieldsProps {
   onBoothPriceCentsChange: (cents: number) => void
   multiTableDiscountPercent?: number
   onMultiTableDiscountPercentChange?: (percent: number) => void
+  /** Omit section heading when parent already labels the block. */
+  compact?: boolean
 }
 
 function formatDollarsInput(cents: number): string {
@@ -25,6 +27,7 @@ export function MarketBoothPricingFields({
   onBoothPriceCentsChange,
   multiTableDiscountPercent = 0,
   onMultiTableDiscountPercentChange,
+  compact = false,
 }: MarketBoothPricingFieldsProps) {
   const [boothDollarsInput, setBoothDollarsInput] = useState(() =>
     formatDollarsInput(boothPriceCents)
@@ -74,15 +77,25 @@ export function MarketBoothPricingFields({
   }
 
   return (
-    <div className="wizard-glass-inset space-y-4 rounded-xl p-4">
-      <div>
-        <h3 className="text-sm font-heading font-semibold text-forest">Booth fee</h3>
-        <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
-          One price per table for every vendor at this market. Use $0 for free booths.
-        </p>
-      </div>
+    <div className={compact ? 'space-y-3' : 'wizard-glass-inset space-y-4 rounded-xl p-4'}>
+      {!compact ? (
+        <div>
+          <h3 className="text-sm font-heading font-semibold text-forest">Booth fee</h3>
+          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
+            One price per table for every vendor at this market. Use $0 for free booths.
+          </p>
+        </div>
+      ) : null}
 
-      <div className={showMultiTable ? 'grid gap-4 sm:grid-cols-2' : 'max-w-xs'}>
+      <div
+        className={
+          showMultiTable
+            ? 'grid gap-3 sm:grid-cols-2 sm:items-start'
+            : compact
+              ? 'max-w-xs'
+              : 'max-w-xs'
+        }
+      >
         <div className="space-y-1.5">
           <Label htmlFor="market-booth-price">Booth / table price (CAD)</Label>
           <Input

@@ -23,7 +23,7 @@ export function LayoutPlannerStats({
           Canvas
         </p>
         <p className="mt-1 tabular-nums font-semibold text-foreground">
-          {placedCount} object{placedCount === 1 ? '' : 's'} placed
+          {placedCount} vendor booth{placedCount === 1 ? '' : 's'} placed
         </p>
         {layoutCapacity != null ? (
           <p className="mt-0.5 tabular-nums text-muted-foreground">

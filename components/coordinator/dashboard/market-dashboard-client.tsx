@@ -50,7 +50,7 @@ export function MarketDashboardClient({
           className={cn(buttonVariants(), 'mt-6 gap-1.5')}
         >
           <Plus className="h-4 w-4" aria-hidden />
-          New Event
+          Create New Market
         </Link>
       </div>
     )

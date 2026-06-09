@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
+import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 import type {
   BoothObject,
   DoorObject,
@@ -148,6 +149,17 @@ export function PropertyInspector({
   }
 
   if (selected.length > 1) {
+    const vendorSelected = selected.filter(isVendorBoothObject)
+    const nonVendorCount = selected.length - vendorSelected.length
+    const title =
+      vendorSelected.length > 0
+        ? `${vendorSelected.length} Vendor${vendorSelected.length === 1 ? '' : 's'} Selected`
+        : `${selected.length} selected`
+    const subtitle =
+      vendorSelected.length > 0 && nonVendorCount > 0
+        ? `${nonVendorCount} structural or non-vendor element${nonVendorCount === 1 ? '' : 's'} also selected — shared fields apply to vendors only.`
+        : 'Multi-select editing for shared fields only.'
+
     return (
       <aside
         className={cn(INSPECTOR_ASIDE_CLASS, className)}
@@ -155,10 +167,10 @@ export function PropertyInspector({
       >
         <header>
           <h2 className="text-[0.6875rem] font-bold uppercase tracking-wide text-stone-700">
-            {selected.length} selected
+            {title}
           </h2>
           <p className="mt-0.5 text-[0.625rem] text-stone-500 sm:text-xs">
-            Multi-select editing for shared fields only.
+            {subtitle}
           </p>
         </header>
         <section aria-label="Bulk actions">

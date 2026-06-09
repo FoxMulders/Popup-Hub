@@ -18,7 +18,7 @@ export function MlmTierGuard({ globalMlmCap, onGlobalMlmCapChange }: MlmTierGuar
         limits how many MLM applicants you can approve at this market; remaining brands queue as a
         first-come waitlist.
       </p>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-3 sm:grid-cols-[minmax(0,1fr)_5rem_minmax(0,1fr)]">
         <label htmlFor="global-mlm-cap" className="text-xs font-semibold uppercase tracking-wide">
           Max MLMs to approve
         </label>
@@ -29,9 +29,9 @@ export function MlmTierGuard({ globalMlmCap, onGlobalMlmCapChange }: MlmTierGuar
           max={50}
           value={globalMlmCap}
           onChange={(e) => onGlobalMlmCapChange(Math.max(0, Number(e.target.value) || 0))}
-          className="h-9 w-20 rounded-lg border-2 border-stone-200 bg-card px-2 text-center text-sm font-semibold tabular-nums focus:border-harvest-500 focus:outline-none"
+          className="h-9 w-full rounded-lg border-2 border-stone-200 bg-card px-2 text-center text-sm font-semibold tabular-nums focus:border-harvest-500 focus:outline-none"
         />
-        <span className="text-xs text-muted-foreground">
+        <span className="col-span-2 text-xs text-muted-foreground sm:col-span-1">
           enforced at approval — applicants beyond this stay pending until a slot opens.
         </span>
       </div>

@@ -5,12 +5,11 @@
 import { BOOTH_SAFETY_BUFFER_FT } from '@/lib/booth-planner/layout-clearance-constants'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import {
+  isBoothSnappedToRoomPerimeter,
+  orientBoothToNearestWallEdge,
+  PERIMETER_BOOTH_SNAP_FT,
   snapBoothToRoomPerimeter,
   snapBoothToUnionPerimeter,
-} from './perimeter-booth-orientation'
-import {
-  isBoothSnappedToRoomPerimeter,
-  PERIMETER_BOOTH_SNAP_FT,
 } from './perimeter-booth-orientation'
 import { resolveRoomPlacementBounds } from '@/lib/floor-plan/boundary-constraints'
 import { resolveRoomPlacementSurface } from '../state/placement-surface'
@@ -243,6 +242,23 @@ function snapFrameForRoom(
   }
 }
 
+/** Orient long back edge toward nearest wall without changing snap position. */
+export function orientVendorBoothToNearestWall(
+  booth: BoothObject,
+  doc: Pick<FloorPlanDoc, 'rooms' | 'objectRoom' | 'objects' | 'canvasWidthFt' | 'canvasLengthFt' | 'gridSpacingFt' | 'snapFt'>
+): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> | null {
+  const frame = roomFrameForBooth(
+    booth,
+    doc.rooms ?? [],
+    doc.objectRoom ?? {}
+  )
+  if (!frame) return null
+
+  const roomId = doc.objectRoom?.[booth.id] ?? frame.id
+  const snapFrame = snapFrameForRoom(doc, roomId, frame)
+  return orientBoothToNearestWallEdge(booth, snapFrame)
+}
+
 /**
  * Snap a vendor booth to the nearest wall when within
  * {@link VENDOR_WALL_SNAP_THRESHOLD_FT}, orienting inward (0/90/180/270°).
@@ -289,10 +305,13 @@ export function snapVendorBoothToPerimeter(
   }
 }
 
-/** Apply perimeter snap patch for vendor booths during draw / drag commit. */
+/** Apply perimeter snap or wall-facing orientation for vendor booths. */
 export function vendorBoothPerimeterSnapPatch(
   booth: BoothObject,
   doc: Pick<FloorPlanDoc, 'rooms' | 'objectRoom' | 'objects' | 'canvasWidthFt' | 'canvasLengthFt' | 'gridSpacingFt' | 'snapFt'>
 ): Partial<BoothObject> | null {
-  return snapVendorBoothToPerimeter(booth, doc)
+  return (
+    snapVendorBoothToPerimeter(booth, doc) ??
+    orientVendorBoothToNearestWall(booth, doc)
+  )
 }

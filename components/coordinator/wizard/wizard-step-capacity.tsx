@@ -4,7 +4,6 @@ import { Calculator, Tags } from 'lucide-react'
 import { CategoryLimitEditor, type CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import { MlmTierGuard } from '@/components/coordinator/mlm-tier-guard'
 import { SmartPopulateBoothCaps } from '@/components/coordinator/smart-populate-booth-caps'
-import { TableSizeSelector } from '@/components/coordinator/table-size-selector'
 import { WizardZone } from '@/components/coordinator/wizard/wizard-ui'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
@@ -75,41 +74,66 @@ export function WizardStepCapacity({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        {!skipVenueLayout ? (
-          <WizardZone
-            id="wizard-zone-capacity-floor"
-            title="Floor capacity"
-            subtitle="Pick table size, then apply suggested caps from your floor dimensions."
-          >
-            <div className="wizard-step2-section1 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-              <span className="wizard-glass-inset rounded-md px-2.5 py-1 tabular-nums">
-                Floor <strong className="text-foreground">{venueWidth}×{venueLength} ft</strong>
-              </span>
-              <span
-                className="wizard-glass-inset rounded-md border-sage-200/80 px-2.5 py-1 tabular-nums"
-                title="Accounts for walking aisles and emergency fire paths."
-              >
-                Max booths <strong className="text-foreground">{layoutCapacity}</strong>
-              </span>
-              <span className="wizard-glass-inset col-span-2 rounded-md border-harvest-200/80 px-2.5 py-1 tabular-nums sm:col-span-1">
-                Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
-              </span>
-            </div>
-            <section
-              aria-label="Section 2: venue table standard"
-              className="wizard-step2-section2-wrap wizard-glass-inset rounded-xl border-stone-200/80 bg-white/50 p-2.5"
-            >
-              <TableSizeSelector
-                variant="inline"
-                value={baselineTableLengthFt}
-                onChange={(selection) => {
-                  if (typeof selection === 'number') {
-                    onBaselineTableLengthChange(selection)
-                  }
-                }}
-                labelTitle="Venue standard size or vendor-permitted footprint."
+        <WizardZone
+          id="wizard-zone-capacity-floor"
+          title="Physical &amp; pricing setup"
+          subtitle="Floor dimensions, booth capacity, and market-wide table pricing."
+        >
+          {!skipVenueLayout ? (
+            <>
+              <div className="wizard-step2-section1 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                <span className="wizard-glass-inset rounded-md px-2.5 py-1 tabular-nums">
+                  Floor <strong className="text-foreground">{venueWidth}×{venueLength} ft</strong>
+                </span>
+                <span
+                  className="wizard-glass-inset rounded-md border-sage-200/80 px-2.5 py-1 tabular-nums"
+                  title="Accounts for walking aisles and emergency fire paths."
+                >
+                  Max booths <strong className="text-foreground">{layoutCapacity}</strong>
+                </span>
+                <span className="wizard-glass-inset col-span-2 rounded-md border-harvest-200/80 px-2.5 py-1 tabular-nums sm:col-span-1">
+                  Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className="wizard-glass-inset px-3 py-2 text-xs text-muted-foreground">
+              No CAD layout for this market. Caps you set here control how many vendors can apply per
+              category.
+            </p>
+          )}
+
+          <div id="wizard-zone-capacity-pricing" className="scroll-mt-24">
+            {onBoothPriceCentsChange ? (
+              <MarketBoothPricingFields
+                compact
+                boothPriceCents={boothPriceCents}
+                onBoothPriceCentsChange={onBoothPriceCentsChange}
+                {...(showMarketPricing && onMultiTableDiscountPercentChange
+                  ? {
+                      multiTableDiscountPercent,
+                      onMultiTableDiscountPercentChange,
+                    }
+                  : {})}
               />
-            </section>
+            ) : (
+              <div className="wizard-glass-inset rounded-xl px-3 py-2.5">
+                <h4 className="text-sm font-heading font-semibold text-forest">Quarter auction</h4>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Booth fees are set per vendor during the live auction — no market-wide table price.
+                  Configure category caps on the right.
+                </p>
+              </div>
+            )}
+          </div>
+        </WizardZone>
+
+        <WizardZone
+          id="wizard-zone-capacity-categories"
+          title="Inventory &amp; category limits"
+          subtitle="Apply suggested caps from your floor, then assign booth limits by vendor type."
+        >
+          {!skipVenueLayout ? (
             <SmartPopulateBoothCaps
               compact
               categories={categories}
@@ -128,100 +152,40 @@ export function WizardStepCapacity({
               onTableLengthChange={onBaselineTableLengthChange}
               hideTableSizeSelector
             />
-          </WizardZone>
-        ) : (
-          <WizardZone
-            id="wizard-zone-capacity-floor"
-            title="Vendor caps"
-            subtitle="Floor plan is off — set table size and category limits manually."
-          >
-            <p className="wizard-glass-inset px-3 py-2 text-xs text-muted-foreground">
-              No CAD layout for this market. Caps you set here control how many vendors can apply per
-              category.
-            </p>
-            <section
-              aria-label="Venue table standard"
-              className="wizard-glass-inset rounded-xl border-stone-200/80 bg-white/50 p-2.5"
-            >
-              <TableSizeSelector
-                variant="inline"
-                value={baselineTableLengthFt}
-                onChange={(selection) => {
-                  if (typeof selection === 'number') {
-                    onBaselineTableLengthChange(selection)
-                  }
-                }}
-                labelTitle="Standard vendor table length for this market."
-              />
-            </section>
+          ) : (
             <span className="wizard-glass-inset inline-flex rounded-md border-harvest-200/80 px-2.5 py-1 text-xs tabular-nums">
               Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
             </span>
-          </WizardZone>
-        )}
+          )}
 
-        {onBoothPriceCentsChange ? (
-          <WizardZone
-            id="wizard-zone-capacity-pricing"
-            title="Booth fee"
-            subtitle="One price per table for every vendor — $0 is allowed for free markets."
-          >
-            <MarketBoothPricingFields
-              boothPriceCents={boothPriceCents}
-              onBoothPriceCentsChange={onBoothPriceCentsChange}
-              {...(showMarketPricing && onMultiTableDiscountPercentChange
-                ? {
-                    multiTableDiscountPercent,
-                    onMultiTableDiscountPercentChange,
-                  }
-                : {})}
-            />
-          </WizardZone>
-        ) : (
-          <WizardZone
-            id="wizard-zone-capacity-pricing"
-            title="Quarter auction"
-            subtitle="Booth fees are set per vendor during the live auction — no market-wide table price."
-          >
-            <p className="wizard-glass-inset px-3 py-2 text-xs text-muted-foreground">
-              Skip booth pricing here and configure category caps for participating vendors.
-            </p>
-          </WizardZone>
-        )}
-      </div>
-
-      <WizardZone
-        id="wizard-zone-capacity-categories"
-        title="Category limits"
-        subtitle="How many booths each vendor type can hold — totals should stay at or below max booths when using a floor plan."
-        variant="wide"
-      >
-        <div className="space-y-4">
-          {allowMlm ? (
-            <MlmTierGuard
-              globalMlmCap={globalMlmCap}
-              onGlobalMlmCapChange={onGlobalMlmCapChange}
-            />
-          ) : null}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Tags className="h-3.5 w-3.5 shrink-0 text-forest" aria-hidden />
-            <span>
-              {categoryLimits.length} categor{categoryLimits.length === 1 ? 'y' : 'ies'} configured
-              {totalCaps > 0 ? ` · ${totalCaps} total booth cap${totalCaps === 1 ? '' : 's'}` : ''}
-            </span>
+          <div className="space-y-3 border-t border-stone-200/80 pt-4">
+            {allowMlm ? (
+              <MlmTierGuard
+                globalMlmCap={globalMlmCap}
+                onGlobalMlmCapChange={onGlobalMlmCapChange}
+              />
+            ) : null}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Tags className="h-3.5 w-3.5 shrink-0 text-forest" aria-hidden />
+              <span>
+                {categoryLimits.length} categor{categoryLimits.length === 1 ? 'y' : 'ies'} configured
+                {totalCaps > 0 ? ` · ${totalCaps} total booth cap${totalCaps === 1 ? '' : 's'}` : ''}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <CategoryLimitEditor
+                categories={categories}
+                value={categoryLimits}
+                onChange={onCategoryLimitsChange}
+                allowMlm={allowMlm}
+                globalMlmCap={globalMlmCap}
+                unifiedBoothFeeCents={onBoothPriceCentsChange ? boothPriceCents : undefined}
+                grouped
+              />
+            </div>
           </div>
-        </div>
-        <div className="min-w-0">
-          <CategoryLimitEditor
-            categories={categories}
-            value={categoryLimits}
-            onChange={onCategoryLimitsChange}
-            allowMlm={allowMlm}
-            globalMlmCap={globalMlmCap}
-            unifiedBoothFeeCents={onBoothPriceCentsChange ? boothPriceCents : undefined}
-          />
-        </div>
-      </WizardZone>
+        </WizardZone>
+      </div>
 
       {!skipVenueLayout && totalCaps > layoutCapacity && layoutCapacity > 0 ? (
         <p

@@ -50,6 +50,11 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  saveDraftLoading?: boolean
+  patronPathEnabled?: boolean
+  onPatronPathToggle?: () => void
   eventId?: string | null
 }
 
@@ -128,6 +133,11 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onSaveMarket,
     saveMarketDisabled,
     saveMarketLoading,
+    onSaveDraft,
+    saveDraftDisabled,
+    saveDraftLoading,
+    patronPathEnabled,
+    onPatronPathToggle,
     eventId,
   } = props
 
@@ -232,6 +242,11 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
+      onSaveDraft,
+      saveDraftDisabled,
+      saveDraftLoading,
+      patronPathEnabled,
+      onPatronPathToggle,
       compact: true,
       sidebarLayout,
     }),
@@ -300,6 +315,11 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
+      onSaveDraft,
+      saveDraftDisabled,
+      saveDraftLoading,
+      patronPathEnabled,
+      onPatronPathToggle,
       sidebarLayout,
     ]
   )
@@ -340,35 +360,35 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
   return (
     <ToolbarCompactProvider compact={staticLayout}>
       <div
-      className={cn(
-        'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
-        staticLayout ? 'py-0.5' : 'py-1',
-        !staticLayout && !sidebarLayout && 'flex min-w-0 flex-wrap items-center gap-2',
-        staticLayout &&
-          !sidebarLayout &&
-          'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
-        sidebarLayout &&
-          'min-h-0 w-full flex-1 overflow-y-auto border-0 bg-transparent px-0 shadow-none',
-        className
-      )}
-        role="toolbar"
-        aria-label="Canvas command ribbon"
-      >
-        {staticLayout ? (
-          <CanvasToolbarStatic
-            visibleRowIds={visibleStaticRowIds}
-            compact
-            layoutCtx={staticLayoutCtx}
-            sidebarLayout={sidebarLayout}
-            eventId={eventId}
-            renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
-          />
-        ) : (
-          <CanvasToolbarReorder
-            visibleBlockIds={visibleBlockIds}
-            renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
-          />
+        className={cn(
+          'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
+          staticLayout ? 'py-0.5' : 'py-1',
+          !staticLayout && !sidebarLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
+          staticLayout &&
+            !sidebarLayout &&
+            'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
+          sidebarLayout &&
+            'min-h-0 w-full shrink-0 overflow-y-auto overflow-x-hidden border-0 bg-transparent px-0 shadow-none',
+          className
         )}
+          role="toolbar"
+          aria-label="Canvas command ribbon"
+        >
+          {staticLayout ? (
+            <CanvasToolbarStatic
+              visibleRowIds={visibleStaticRowIds}
+              compact
+              layoutCtx={staticLayoutCtx}
+              sidebarLayout={sidebarLayout}
+              eventId={eventId}
+              renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
+            />
+          ) : (
+            <CanvasToolbarReorder
+              visibleBlockIds={visibleBlockIds}
+              renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
+            />
+          )}
       </div>
     </ToolbarCompactProvider>
   )

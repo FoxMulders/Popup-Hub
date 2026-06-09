@@ -2,6 +2,57 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (spatial layout editor — save draft, auto-arrange, patron path, not deployed)
+- **Save draft:** `SpatialLayoutToolbar` + canvas utilities row — **Save draft** persists `booth_layouts` via `persistLayoutDraft` without publishing the event; **Save & deploy** unchanged. Loading states + success toasts on both paths.
+- **Auto-arrange grid:** `floor-plan-v2.tsx` grid mode uses `autoArrangeInRoom` (reads active room bounds e.g. Main Hall 50′×50′, distributes vendor booths with aisle gaps). Traffic-flow door prereqs only gate staggered/perimeter/AI modes — grid works immediately with booths placed.
+- **Patron path tool:** Route icon in shape selector toggles `PatronTrafficPathOverlay` (dashed sky-blue walk path via `usePathfinding`). Wired in production `floor-plan-v2` + `floor-plan-v2_wizard_qa` canvas.
+- **Toolbar UX:** Command ribbon uses `flex-nowrap overflow-x-auto` instead of chaotic double-row wrap; tooltips remain portaled to `document.body` via `TooltipWrapper`.
+- **Verify:** `/coordinator/events/[id]/layout` → Save draft (no deploy) → reload confirms layout; Auto-Arrange Floor Plan (grid) spreads overlapping vendor booths; Patron Path toggle shows/hides walk overlay.
+
+## Shipped this session (spatial layout — vendor-only capacity counting, not deployed)
+- **Root cause:** `placedCount` used `store.doc.objects.length`, so walls, doors, exits, and other structural fixtures inflated the "X of Y max" badge and canvas object counter.
+- **`floor-plan-v2.tsx`:** `placedCount` / `onPlacedCountChange` now use `vendorBoothsInRoom(store.doc, activeRoomId).length` — vendor booths only, scoped to the active room (matches Step 2 `layoutCapacity`). Canvas status badge label → "vendor booths placed".
+- **`property-inspector.tsx`:** Multi-select header shows "N Vendors Selected" when vendor booths are in the selection; structural/non-vendor picks are called out in the subtitle instead of inflating the vendor tally.
+- **`layout-planner-stats.tsx`:** Wizard left-rail counter label aligned to "vendor booths placed".
+- **Note:** Structural assets already use distinct `kind` values (`wall`, `door`, `emergency_exit`, etc.) — no schema change required.
+- **Verify:** `/coordinator/events/[id]/layout` → place vendor booths + walls/doors → toolbar badge counts vendors only; multi-select 39 booths + 1 wall → "39 Vendors Selected".
+
+## Shipped this session (vendor table wall orientation fix, not deployed)
+- **Root cause:** Wall orientation only updated `rotation` without normalizing footprint (`width`/`height`), so a table stored as 2×6 could present its short edge to the wall. Auto-pack and placement preview also skipped orientation when outside the 3′ snap threshold.
+- **`perimeter-booth-orientation.ts`:** Exported `boothSpanAndDepth()` (uses `tableLengthFt` when set) and `orientBoothToNearestWallEdge()` — long back edge toward nearest wall, center preserved.
+- **`vendor-booth-placement.ts`:** Added `orientVendorBoothToNearestWall()`; `vendorBoothPerimeterSnapPatch()` now snap-or-orients on every draw/drag commit.
+- **`BoothArrangementEngine.ts`:** Pack post-step uses full wall orientation (not rotation-only).
+- **`table-placement-preview.ts`:** Ghost preview orients toward nearest wall even beyond 2′ snap.
+- **`auto-arrange.ts`:** Direct perimeter slots normalize span×depth before rotation.
+- **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts` — place/drag vendor table near any wall → long edge flush, opening inward; interior placement still auto-rotates toward closest wall.
+
+## Shipped this session (layout designer — left sidebar, portal tooltips, auto-arrange fix, not deployed)
+- **`tooltip-wrapper.tsx`:** Tooltips portaled to `document.body` (escapes `overflow: hidden` on layout tools rail).
+- **`floor-plan-v2_wizard_qa.tsx`:** Left sidebar `bg-white` + `border-r`; wired `handleAutoArrangeFloorPlan` via `autoArrangeInRoom` (reads active room e.g. Main Hall 50′×50′, grid-packs placed objects).
+- **Verify:** `/coordinator/events/[id]/layout` → tools in left column; hover tooltips not clipped; Auto-Arrange Floor Plan moves booths when objects exist.
+
+## Shipped this session (spatial layout editor — left panel section headers + rigid toolbar, not deployed)
+- **`toolbar-static-layout.ts`:** Left-rail sidebar regrouped into **ROOM & CANVAS**, **SHAPES & BOOTHS**, and **ALIGNMENT & SPACING** (new `vendor-sizes` block for 5′–20′ grid chips).
+- **`canvas-toolbar-static.tsx` + `canvas-toolbar-static_qa.tsx`:** Section headers (`text-xs font-semibold text-muted-foreground`), `border-t` dividers, `shrink-0` section shells.
+- **`canvas-command-bar-blocks.tsx` + `_qa.tsx`:** Icon rows `flex-nowrap`; zoom % fixed width; selection metrics in absolute badge; labels toggle in alignment section.
+- **`floor-plan-v2_wizard_qa.tsx`:** `/coordinator/events/[id]/layout` uses a fixed 300px left **Layout tools** rail (`staticLayout` + `sidebarLayout`); status badges use fixed-height slots so counts do not shift tool rows.
+- **Verify:** Open event layout editor → left panel shows three labeled sections; place/select objects → toolbar icon rows do not wrap or jump.
+
+## Shipped this session (Step 2 Capacity & Pricing layout refactor, not deployed)
+- **`wizard-step-capacity.tsx`:** Two-column desktop layout — left **Physical & pricing setup** (floor stats + booth fee), right **Inventory & category limits** (suggested caps, MLM guard, accordion category editor). Removed `TableSizeSelector` from Step 2 (table size still driven via wizard context / floor plan).
+- **`smart-populate-booth-caps.tsx`:** Floor math breakdown (gross floor, aisle subtractions, etc.) moved into a hover tooltip on **Usable floor** via `FloorCalculationBreakdown`.
+- **`category-limit-editor.tsx`:** Flat 40-row table replaced with collapsible accordions grouped by broad type (Makers & Crafts, Art & Prints, Food & Beverage, Apparel, Commercial / MLMs); CSS grid aligns max-slot and fee inputs; Quick Start top, Add Category Slot bottom.
+- **`market-booth-pricing-fields.tsx`:** Added `compact` prop for nested left-column layout.
+- **`mlm-tier-guard.tsx`:** Grid alignment for Max MLMs input.
+- **Verify:** Market wizard Step 2 → two columns on `lg+`; category sections collapse/expand with slot totals in headers; usable-floor (?) shows calculation tooltip; no table-size picker on this step.
+
+## Shipped this session (coordinator dashboard — no forced initial room modal, not deployed)
+- **Root cause:** `dashboard-bootstrap.tsx` and `Dashboard_qa.tsx` auto-mounted `InitialRoomModal` (full-screen overlay + body scroll lock) whenever a selected market had zero saved rooms — intercepting login before the dashboard shell was usable.
+- **`dashboard-no-room-empty-state.tsx`:** Inline empty state in the canvas column (room dimensions form + "Open layout designer") — no portal, no scroll hijack.
+- **`dashboard-bootstrap.tsx` + `Dashboard_qa.tsx`:** Removed mandatory `InitialRoomModal`; dashboard header + left rail render immediately; canvas shows inline empty state until first room is added.
+- **`market-dashboard-client.tsx`:** Zero-events path button label → **Create New Market** (unchanged route `/coordinator/events/new`).
+- **Verify:** Coordinator with a market but no rooms → lands on dashboard shell (header, left panel) with inline "Set up your floor plan" — not a blocking modal. Coordinator with zero markets → centered empty state + Create New Market.
+
 ## Shipped this session (Square OAuth blank-page hardening, deployed 2026-06-09)
 - **`lib/square/app-credentials.ts`:** `resolveSquareApplicationId()` now reads `NEXT_PUBLIC_SQUARE_CLIENT_ID` and `SQUARE_SANDBOX_CLIENT_ID` (sandbox) in addition to existing keys; rejects literal `"undefined"` / `"null"` strings.
 - **`lib/square/connect-url.ts`:** `buildSquareOAuthAuthorizeUrl` validates `client_id`, `redirect_uri`, and `state` before building; `tryBuildSquareOAuthAuthorizeUrl` catches/logs failures instead of crashing the page.

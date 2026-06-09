@@ -31,6 +31,7 @@ import {
   RectangleHorizontal,
   Eye,
   EyeOff,
+  Route,
 } from 'lucide-react'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
@@ -280,6 +281,11 @@ export interface CanvasCommandBarBlockContext {
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  saveDraftLoading?: boolean
+  patronPathEnabled?: boolean
+  onPatronPathToggle?: () => void
   /** Static dashboard ribbon — tighter control heights (~10% shorter). */
   compact?: boolean
   /** Left-rail layout designer sidebar — stacked columns and split headers. */
@@ -372,7 +378,7 @@ export function renderCanvasCommandBarBlock(
       if (sidebarLayout) {
         return (
           <div
-            className="flex w-full min-w-0 flex-wrap content-start gap-0.5"
+            className="flex w-full min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-x-auto"
             role="group"
             aria-label="Designer tools"
           >
@@ -416,6 +422,24 @@ export function renderCanvasCommandBarBlock(
                 <shape.icon className="h-3.5 w-3.5" />
               </CommandButton>
             ))}
+            {ctx.onPatronPathToggle ? (
+              <CommandButton
+                onClick={ctx.onPatronPathToggle}
+                title={
+                  ctx.patronPathEnabled
+                    ? 'Hide patron walk path overlay'
+                    : 'Show patron walk path overlay'
+                }
+                active={ctx.patronPathEnabled}
+                className={
+                  ctx.patronPathEnabled
+                    ? 'bg-sky-200 text-sky-950 hover:bg-sky-200'
+                    : 'text-sky-800 hover:bg-sky-50'
+                }
+              >
+                <Route className="h-3.5 w-3.5" />
+              </CommandButton>
+            ) : null}
             <CommandButton
               onClick={ctx.onDeleteSelected}
               disabled={!hasSelection}
@@ -454,7 +478,7 @@ export function renderCanvasCommandBarBlock(
             aria-hidden
           />
           <div
-            className="flex flex-wrap items-center gap-0.5"
+            className="flex flex-nowrap items-center gap-0.5 overflow-x-auto"
             role="group"
             aria-label="Creation tools"
           >
@@ -484,6 +508,24 @@ export function renderCanvasCommandBarBlock(
                 <shape.icon className="h-3.5 w-3.5" />
               </CommandButton>
             ))}
+            {ctx.onPatronPathToggle ? (
+              <CommandButton
+                onClick={ctx.onPatronPathToggle}
+                title={
+                  ctx.patronPathEnabled
+                    ? 'Hide patron walk path overlay'
+                    : 'Show patron walk path overlay'
+                }
+                active={ctx.patronPathEnabled}
+                className={
+                  ctx.patronPathEnabled
+                    ? 'bg-sky-200 text-sky-950 hover:bg-sky-200'
+                    : 'text-sky-800 hover:bg-sky-50'
+                }
+              >
+                <Route className="h-3.5 w-3.5" />
+              </CommandButton>
+            ) : null}
             <CommandButton
               onClick={ctx.onDeleteSelected}
               disabled={!hasSelection}
@@ -505,12 +547,35 @@ export function renderCanvasCommandBarBlock(
 
     case 'history-clipboard':
       if (sidebarLayout) {
-        return null
+        return (
+          <div
+            className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-hidden"
+            role="group"
+            aria-label="History"
+          >
+            <CommandButton
+              onClick={ctx.onUndo}
+              disabled={!ctx.canUndo}
+              title="Undo (Ctrl+Z)"
+              className="shrink-0"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={ctx.onRedo}
+              disabled={!ctx.canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+              className="shrink-0"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+          </div>
+        )
       }
       return (
         <>
           <div
-            className="flex items-center gap-0.5"
+            className="flex flex-row flex-nowrap items-center gap-0.5 overflow-hidden"
             role="group"
             aria-label="History"
           >
@@ -567,15 +632,40 @@ export function renderCanvasCommandBarBlock(
         </>
       )
 
+    case 'vendor-sizes':
+      if (!sidebarLayout || !ctx.onTableSizeChange || ctx.tableSizeFt == null) {
+        return null
+      }
+      return (
+        <div className="relative w-full min-w-0 shrink-0">
+          <VendorSidebarSizeGrid
+            value={ctx.tableSizeFt}
+            onChange={activateTableSize}
+            compact={compact}
+            className="min-w-0"
+          />
+          {ctx.highlightedSelectionMetrics &&
+          ctx.tableSizeFt.purpose !== 'guest' ? (
+            <span
+              className="pointer-events-none absolute right-0 top-full z-10 mt-1 w-[10.5rem] truncate rounded-md border border-amber-200/90 bg-amber-50/95 px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums text-amber-900"
+              aria-live="polite"
+            >
+              {ctx.highlightedSelectionMetrics}
+            </span>
+          ) : null}
+        </div>
+      )
+
     case 'vendor':
       if (sidebarLayout) {
         return (
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-1">
+          <div className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-hidden">
             <CommandButton
               onClick={() => activateTablePlacement('vendor')}
               title="Draw vendor — size from Vendor column"
               active={isTablePlacementActive('vendor')}
               className={cn(
+                'shrink-0',
                 isTablePlacementActive('vendor')
                   ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
                   : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
@@ -583,14 +673,6 @@ export function renderCanvasCommandBarBlock(
             >
               <Square className="h-3.5 w-3.5" />
             </CommandButton>
-            {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
-              <VendorSidebarSizeGrid
-                value={ctx.tableSizeFt}
-                onChange={activateTableSize}
-                compact={compact}
-                className="min-w-0 flex-1"
-              />
-            ) : null}
           </div>
         )
       }
@@ -904,6 +986,79 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'view-align':
+      if (sidebarLayout) {
+        return (
+          <div className="flex w-full min-w-0 flex-col gap-2">
+            <div className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-x-auto">
+              <CommandButton
+                onClick={ctx.onCenterView}
+                title="Center view on all placed objects"
+                className="shrink-0"
+              >
+                <Locate className="h-3.5 w-3.5" />
+              </CommandButton>
+              {ctx.onShowLabelsChange ? (
+                <CommandButton
+                  onClick={() => ctx.onShowLabelsChange!(!ctx.showLabels)}
+                  title={
+                    ctx.showLabels
+                      ? 'Hide architectural labels'
+                      : 'Show architectural labels'
+                  }
+                  className={cn(
+                    'shrink-0',
+                    ctx.showLabels ? 'bg-sky-50 text-sky-900 hover:bg-sky-100' : undefined
+                  )}
+                >
+                  {ctx.showLabels ? (
+                    <Eye className="h-3.5 w-3.5" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  )}
+                </CommandButton>
+              ) : null}
+            </div>
+            <div
+              className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-x-auto"
+              role="group"
+              aria-label="Alignment and spacing"
+            >
+              <CommandButton
+                onClick={ctx.onAlignVertical}
+                disabled={!canAlign}
+                title="Align vertical centers (Shift+V)"
+                className="shrink-0"
+              >
+                <AlignCenterVertical className="h-3.5 w-3.5" />
+              </CommandButton>
+              <CommandButton
+                onClick={ctx.onAlignHorizontal}
+                disabled={!canAlign}
+                title="Align horizontal centers (Shift+H)"
+                className="shrink-0"
+              >
+                <AlignCenterHorizontal className="h-3.5 w-3.5" />
+              </CommandButton>
+              <CommandButton
+                onClick={ctx.onDistributeHorizontal}
+                disabled={!canDistribute}
+                title="Distribute equal horizontal spacing (3+ objects)"
+                className="shrink-0"
+              >
+                <AlignHorizontalDistributeCenter className="h-3.5 w-3.5" />
+              </CommandButton>
+              <CommandButton
+                onClick={ctx.onDistributeVertical}
+                disabled={!canDistribute}
+                title="Distribute equal vertical spacing (3+ objects)"
+                className="shrink-0"
+              >
+                <AlignVerticalDistributeCenter className="h-3.5 w-3.5" />
+              </CommandButton>
+            </div>
+          </div>
+        )
+      }
       return (
         <>
           <CommandButton
@@ -914,7 +1069,7 @@ export function renderCanvasCommandBarBlock(
           </CommandButton>
           <div className={toolbarDividerClass(compact)} aria-hidden />
           <div
-            className="flex items-center gap-0.5"
+            className="flex flex-row flex-nowrap items-center gap-0.5 overflow-hidden"
             role="group"
             aria-label="Alignment and spacing"
           >
@@ -954,39 +1109,143 @@ export function renderCanvasCommandBarBlock(
     case 'utilities':
       if (sidebarLayout) {
         return (
-          <div
-            className={cn(
-              'inline-flex w-full items-center overflow-hidden rounded-md border border-stone-200',
-              toolbarControlHeight(compact)
-            )}
-          >
-            <button
-              type="button"
-              onClick={ctx.onZoomOut}
-              title="Zoom out"
-              aria-label="Zoom out"
-              className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+          <div className="flex w-full min-w-0 flex-col gap-1.5">
+            <div
+              className="flex min-w-0 flex-row flex-wrap items-center gap-0.5"
+              role="group"
+              aria-label="Canvas view options"
             >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={ctx.onZoomReset}
-              title="Reset zoom to 100%"
-              aria-label="Reset zoom"
-              className="inline-flex h-full min-w-[3rem] flex-1 items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
+              {ctx.onShowLabelsChange ? (
+                <CommandButton
+                  onClick={() => ctx.onShowLabelsChange!(!ctx.showLabels)}
+                  title={
+                    ctx.showLabels
+                      ? 'Hide architectural labels'
+                      : 'Show architectural labels'
+                  }
+                  className={
+                    ctx.showLabels
+                      ? 'bg-sky-50 text-sky-900 hover:bg-sky-100'
+                      : undefined
+                  }
+                >
+                  {ctx.showLabels ? (
+                    <Eye className="h-3.5 w-3.5" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  )}
+                </CommandButton>
+              ) : null}
+              {ctx.onToggleCanvasFullscreen ? (
+                <CommandButton
+                  onClick={() => {
+                    ctx.onToggleCanvasFullscreen?.()
+                  }}
+                  title={
+                    ctx.canvasFullscreen
+                      ? 'Exit full screen (Esc)'
+                      : 'Full screen editor'
+                  }
+                  className={
+                    ctx.canvasFullscreen
+                      ? 'bg-stone-800 text-white hover:bg-stone-700'
+                      : undefined
+                  }
+                >
+                  {ctx.canvasFullscreen ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Expand className="h-3.5 w-3.5" />
+                  )}
+                </CommandButton>
+              ) : null}
+              {ctx.onSaveDraft ? (
+                <TooltipWrapper
+                  text={
+                    ctx.saveDraftLoading
+                      ? 'Saving layout draft…'
+                      : 'Save layout draft without deploying'
+                  }
+                >
+                  <button
+                    type="button"
+                    onClick={ctx.onSaveDraft}
+                    disabled={ctx.saveDraftDisabled || ctx.saveDraftLoading}
+                    aria-label={
+                      ctx.saveDraftLoading
+                        ? 'Saving layout draft'
+                        : 'Save layout draft'
+                    }
+                    className={cn(
+                      'inline-flex shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white p-0 text-stone-800 hover:bg-stone-50 disabled:opacity-40',
+                      toolbarIconButtonSize(compact)
+                    )}
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipWrapper>
+              ) : null}
+              {ctx.onSaveMarket ? (
+                <TooltipWrapper
+                  text={
+                    ctx.saveMarketLoading
+                      ? 'Saving market…'
+                      : 'Save market and deploy'
+                  }
+                >
+                  <button
+                    type="button"
+                    onClick={ctx.onSaveMarket}
+                    disabled={ctx.saveMarketDisabled || ctx.saveMarketLoading}
+                    aria-label={
+                      ctx.saveMarketLoading
+                        ? 'Saving market'
+                        : 'Save market and deploy'
+                    }
+                    className={cn(
+                      'inline-flex shrink-0 items-center justify-center rounded-md bg-stone-900 p-0 text-white hover:bg-stone-800 disabled:opacity-40',
+                      toolbarIconButtonSize(compact)
+                    )}
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipWrapper>
+              ) : null}
+            </div>
+            <div
+              className={cn(
+                'inline-flex w-full items-center overflow-hidden rounded-md border border-stone-200',
+                toolbarControlHeight(compact)
+              )}
             >
-              {Math.round(ctx.zoom * 100)}%
-            </button>
-            <button
-              type="button"
-              onClick={ctx.onZoomIn}
-              title="Zoom in"
-              aria-label="Zoom in"
-              className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomOut}
+                title="Zoom out"
+                aria-label="Zoom out"
+                className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomReset}
+                title="Reset zoom to 100%"
+                aria-label="Reset zoom"
+                className="inline-flex h-full flex-1 min-w-[3.25rem] items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
+              >
+                {Math.round(ctx.zoom * 100)}%
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomIn}
+                title="Zoom in"
+                aria-label="Zoom in"
+                className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         )
       }
@@ -1068,6 +1327,30 @@ export function renderCanvasCommandBarBlock(
               <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
+          {ctx.onSaveDraft ? (
+            <TooltipWrapper
+              text={
+                ctx.saveDraftLoading
+                  ? 'Saving layout draft…'
+                  : 'Save layout draft without deploying'
+              }
+            >
+              <button
+                type="button"
+                onClick={ctx.onSaveDraft}
+                disabled={ctx.saveDraftDisabled || ctx.saveDraftLoading}
+                aria-label={
+                  ctx.saveDraftLoading ? 'Saving layout draft' : 'Save layout draft'
+                }
+                className={cn(
+                  'inline-flex shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white p-0 text-stone-800 hover:bg-stone-50 disabled:opacity-40',
+                  toolbarIconButtonSize(compact)
+                )}
+              >
+                <Save className="h-3.5 w-3.5" />
+              </button>
+            </TooltipWrapper>
+          ) : null}
           {ctx.onSaveMarket ? (
             <TooltipWrapper
               text={

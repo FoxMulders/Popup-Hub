@@ -11,6 +11,7 @@ import {
   VENDOR_WALL_INSET_FT,
 } from '../lib/floor-plan/boundary-constraints'
 import {
+  orientVendorBoothToNearestWall,
   snapVendorBoothToPerimeter,
   VENDOR_WALL_SNAP_THRESHOLD_FT,
 } from '../components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
@@ -92,6 +93,43 @@ assert(
 assert(
   VENDOR_WALL_SNAP_THRESHOLD_FT === 3,
   'Snap threshold must remain 3′'
+)
+
+// Swapped dimensions (2×6 storage) must still orient long edge toward nearest wall.
+doc.objectRoom = { 'vb-swapped': roomId }
+const swapped = vendorBooth(11, 20, 0)
+swapped.id = 'vb-swapped'
+swapped.width = 2
+swapped.height = 6
+swapped.tableLengthFt = 6
+const orientedSwapped = orientVendorBoothToNearestWall(swapped, doc)
+assert(orientedSwapped !== null, 'Expected orientation toward nearest wall')
+assert(
+  orientedSwapped!.width === 6 && orientedSwapped!.height === 2,
+  `Swapped booth should normalize to 6×2, got ${orientedSwapped!.width}×${orientedSwapped!.height}`
+)
+assert(
+  orientedSwapped!.rotation === 270,
+  `Left-biased booth should face left wall (270°), got ${orientedSwapped!.rotation}`
+)
+
+// Beyond snap threshold, orientation-only still applies (no position snap).
+const interior = vendorBooth(25, 18, 0)
+interior.id = 'vb-interior'
+doc.objectRoom = { 'vb-interior': roomId }
+assert(
+  snapVendorBoothToPerimeter(interior, doc) === null,
+  'Should not position-snap when >3′ from wall'
+)
+const orientedInterior = orientVendorBoothToNearestWall(interior, doc)
+assert(orientedInterior !== null, 'Expected wall-facing rotation beyond snap threshold')
+assert(
+  orientedInterior!.rotation === 0,
+  `Top-nearest interior booth should rotate toward top wall (0°), got ${orientedInterior!.rotation}`
+)
+assert(
+  orientedInterior!.width === 6 && orientedInterior!.height === 4,
+  'Interior booth keeps long edge in width after orient'
 )
 
 console.log('verify-vendor-wall-snap: all checks passed')

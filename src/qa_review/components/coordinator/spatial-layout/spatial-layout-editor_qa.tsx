@@ -36,6 +36,7 @@ export function SpatialLayoutEditor({
   const [hasOverlap, setHasOverlap] = useState(false)
   const [placedCount, setPlacedCount] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
   const {
     rooms,
     activeRoomId,
@@ -48,6 +49,27 @@ export function SpatialLayoutEditor({
     handleDeleteRoom,
     handleBaselineTableLengthChange,
   } = useSpatialLayoutState({ event, existingLayout })
+
+  const handleSaveDraft = useCallback(async () => {
+    if (hasOverlap) {
+      toast.error('Resolve layout overlaps before saving')
+      return
+    }
+    setSavingDraft(true)
+    try {
+      const saveFn = saveLayoutRef.current
+      if (!saveFn) {
+        toast.error('Layout editor is still loading — try again in a moment.')
+        return
+      }
+      const saved = await saveFn()
+      if (saved) {
+        toast.success('Layout draft saved')
+      }
+    } finally {
+      setSavingDraft(false)
+    }
+  }, [hasOverlap])
 
   const handleSave = useCallback(async () => {
     if (hasOverlap) {
@@ -97,7 +119,9 @@ export function SpatialLayoutEditor({
           hasOverlap={hasOverlap}
           isDraft={isDraft}
           saving={saving}
+          savingDraft={savingDraft}
           onSave={handleSave}
+          onSaveDraft={handleSaveDraft}
           saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
         />
       }
@@ -120,8 +144,11 @@ export function SpatialLayoutEditor({
         onOverlapChange={setHasOverlap}
         onPlacedCountChange={setPlacedCount}
         onSaveMarket={handleSave}
-        saveMarketDisabled={hasOverlap || saving}
+        onSaveDraft={handleSaveDraft}
+        saveMarketDisabled={hasOverlap || saving || savingDraft}
         saveMarketLoading={saving}
+        saveDraftDisabled={hasOverlap || saving || savingDraft}
+        saveDraftLoading={savingDraft}
         chrome="default"
         preferServerLayout
         debugGeometry={false}

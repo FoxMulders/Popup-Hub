@@ -1,6 +1,10 @@
 import type { Category, VenueElement } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import {
+  type CategoryBucketKey,
+  classifyCategoryBucket,
+} from '@/lib/categories/category-buckets'
+import {
   applyMlmLimitRules,
   clampMlmMaxSlots,
   isMlmCategory,
@@ -227,7 +231,10 @@ export function calculateMaxBoothCapacity(
   return Math.max(0, Math.floor(netUsableSqFt / unitSqFt))
 }
 
-export type DistributionBucketKey = 'makers' | 'art' | 'food' | 'apparel' | 'commercial'
+export type DistributionBucketKey = CategoryBucketKey
+
+/** @deprecated Use classifyCategoryBucket from `@/lib/categories/category-buckets`. */
+export const classifyCategory = classifyCategoryBucket
 
 export interface CategoryDistributionBucket {
   key: DistributionBucketKey
@@ -243,47 +250,6 @@ export const CATEGORY_DISTRIBUTION_BUCKETS: CategoryDistributionBucket[] = [
   { key: 'apparel', label: 'Apparel', share: 0.1 },
   { key: 'commercial', label: 'Commercial / MLMs', share: 0.1 },
 ]
-
-const FOOD_MATCHERS = [
-  'food & beverage',
-  'baking',
-  'fresh produce',
-  'honey',
-  'preserves',
-]
-
-const APPAREL_MATCHERS = ['clothing', 'apparel']
-
-const ART_MATCHERS = [
-  'books & art',
-  'photography',
-  'printmaking',
-  'stationery',
-  'chimes',
-  'wind art',
-  'glass',
-  'stained glass',
-]
-
-function normalize(name: string): string {
-  return name.trim().toLowerCase()
-}
-
-function matchesAny(name: string, patterns: string[]): boolean {
-  const n = normalize(name)
-  return patterns.some((p) => n.includes(p))
-}
-
-export function classifyCategory(
-  category: Pick<Category, 'name' | 'is_mlm'>,
-  allowMlm: boolean
-): DistributionBucketKey {
-  if (allowMlm && category.is_mlm) return 'commercial'
-  if (matchesAny(category.name, FOOD_MATCHERS)) return 'food'
-  if (matchesAny(category.name, APPAREL_MATCHERS)) return 'apparel'
-  if (matchesAny(category.name, ART_MATCHERS)) return 'art'
-  return 'makers'
-}
 
 export interface BucketSlotAllocation {
   key: DistributionBucketKey
@@ -383,7 +349,7 @@ export function buildSmartPopulateLimits(
     byBucket.set(key, [])
   }
   for (const cat of eligible) {
-    const bucket = classifyCategory(cat, input.allowMlm)
+    const bucket = classifyCategoryBucket(cat, input.allowMlm)
     byBucket.get(bucket)!.push(cat)
   }
 

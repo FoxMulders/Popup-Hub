@@ -103,12 +103,25 @@ export function getStaticRowSegments(
 }
 
 export type SidebarSectionId =
+  | 'room-canvas'
+  | 'shapes-booths'
+  | 'alignment-spacing'
   | 'floor-plan-optimize'
   | 'room-controls'
   | 'designer-tools'
   | 'patron-layout'
   | 'vendor-booths'
   | 'vendor-matches'
+
+/** Left-rail layout editor — three scannable tool groups. */
+export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
+  'room-canvas' | 'shapes-booths' | 'alignment-spacing',
+  string
+> = {
+  'room-canvas': 'ROOM & CANVAS',
+  'shapes-booths': 'SHAPES & BOOTHS',
+  'alignment-spacing': 'ALIGNMENT & SPACING',
+}
 
 export interface SidebarSectionDef {
   id: SidebarSectionId
@@ -127,15 +140,39 @@ export function getVisibleSidebarSections(ctx: {
 
   if (ctx.showRoom) {
     sections.push({
-      id: 'room-controls',
-      header: STATIC_ROW_HEADERS['room-tools'].left,
-      blocks: SIDEBAR_STATIC_ROW_SEGMENTS['room-tools'].left,
+      id: 'room-canvas',
+      header: LAYOUT_EDITOR_SIDEBAR_HEADERS['room-canvas'],
+      blocks: ['room', 'utilities'],
     })
   }
 
   if (ctx.needsRoomFirst) {
     return sections
   }
+
+  const shapesBlocks: CanvasToolbarBlockId[] = [
+    'primitives',
+    'history-clipboard',
+    'vendor',
+  ]
+  if (ctx.showPatron) {
+    shapesBlocks.push('patron')
+  }
+  sections.push({
+    id: 'shapes-booths',
+    header: LAYOUT_EDITOR_SIDEBAR_HEADERS['shapes-booths'],
+    blocks: shapesBlocks,
+  })
+
+  const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align']
+  if (ctx.showVendor) {
+    alignmentBlocks.push('vendor-sizes')
+  }
+  sections.push({
+    id: 'alignment-spacing',
+    header: LAYOUT_EDITOR_SIDEBAR_HEADERS['alignment-spacing'],
+    blocks: alignmentBlocks,
+  })
 
   if (ctx.showPatron || ctx.showVendor) {
     sections.push({
@@ -145,26 +182,7 @@ export function getVisibleSidebarSections(ctx: {
     })
   }
 
-  sections.push({
-    id: 'designer-tools',
-    header: STATIC_ROW_HEADERS['room-tools'].right,
-    blocks: SIDEBAR_STATIC_ROW_SEGMENTS['room-tools'].right,
-  })
-
-  if (ctx.showPatron) {
-    sections.push({
-      id: 'patron-layout',
-      header: STATIC_ROW_HEADERS.placement.left,
-      blocks: SIDEBAR_STATIC_ROW_SEGMENTS.placement.left,
-    })
-  }
-
   if (ctx.showVendor) {
-    sections.push({
-      id: 'vendor-booths',
-      header: STATIC_ROW_HEADERS.placement.right,
-      blocks: SIDEBAR_STATIC_ROW_SEGMENTS.placement.right,
-    })
     sections.push({
       id: 'vendor-matches',
       header: 'Vendor Matches',
@@ -183,21 +201,13 @@ export function getVisibleSidebarSectionsQa(ctx: {
   showVendor: boolean
 }): SidebarSectionDef[] {
   return getVisibleSidebarSections(ctx).map((section) => {
-    if (section.id === 'floor-plan-optimize' || section.id === 'vendor-matches') {
-      return {
-        ...section,
-        header: section.id === 'vendor-matches' ? 'VENDOR MATCHES' : 'FLOOR PLAN',
-      }
+    if (section.id === 'floor-plan-optimize') {
+      return { ...section, header: 'FLOOR PLAN' }
     }
-    const headers =
-      section.id === 'room-controls' || section.id === 'designer-tools'
-        ? STATIC_ROW_QA_HEADERS['room-tools']
-        : STATIC_ROW_QA_HEADERS.placement
-    const header =
-      section.id === 'room-controls' || section.id === 'patron-layout'
-        ? headers.left
-        : headers.right
-    return { ...section, header }
+    if (section.id === 'vendor-matches') {
+      return { ...section, header: 'VENDOR MATCHES' }
+    }
+    return section
   })
 }
 

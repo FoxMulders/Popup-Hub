@@ -89,21 +89,26 @@ function SidebarToolbarSection({
   renderBlock,
   compact,
   eventId,
+  isFirst,
 }: {
   section: SidebarSectionDef
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
   eventId?: string | null
+  isFirst?: boolean
 }) {
   return (
-    <div
-      className="flex w-full min-w-0 flex-col rounded-md border border-stone-200/90 bg-white shadow-sm"
+    <section
+      className={cn(
+        'flex w-full min-w-0 shrink-0 flex-col',
+        !isFirst && 'border-t border-stone-200/80 pt-4'
+      )}
       data-toolbar-section={section.id}
     >
-      <div className="border-b border-stone-100/90 px-2 py-1.5">
-        <QaAccordionHeader>{section.header}</QaAccordionHeader>
-      </div>
-      <div className="flex w-full min-w-0 flex-col gap-1.5 px-2 py-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {section.header}
+      </h3>
+      <div className="mt-2 flex w-full min-w-0 flex-col gap-2">
         {section.id === 'vendor-matches' ? (
           <VendorMatchesPanel eventId={eventId} compact={compact} />
         ) : (
@@ -115,7 +120,7 @@ function SidebarToolbarSection({
           />
         )}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -425,8 +430,8 @@ export function CanvasToolbarStaticQa({
     if (sidebarSections.length === 0) return null
 
     return (
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        <div className="flex min-w-0 items-center justify-end">
+      <div className="flex w-full min-w-0 shrink-0 flex-col">
+        <div className="mb-3 flex min-w-0 shrink-0 items-center justify-end">
           <TooltipWrapperQa text={QA_TIP_RESET_LAYOUT}>
             <button
               type="button"
@@ -441,13 +446,14 @@ export function CanvasToolbarStaticQa({
             </button>
           </TooltipWrapperQa>
         </div>
-        {sidebarSections.map((section) => (
+        {sidebarSections.map((section, index) => (
           <SidebarToolbarSection
             key={section.id}
             section={section}
             renderBlock={renderBlock}
             compact={compact}
             eventId={eventId}
+            isFirst={index === 0}
           />
         ))}
       </div>

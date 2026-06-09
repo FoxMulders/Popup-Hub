@@ -4,6 +4,7 @@ import type { BoothObject, FloorPlanDoc, PlacedObject } from '../state/types'
 import type { Rect } from './geometry'
 import {
   PLACEMENT_PREVIEW_WALL_SNAP_FT,
+  orientVendorBoothToNearestWall,
   snapVendorBoothToPerimeter,
 } from './vendor-booth-placement'
 
@@ -79,6 +80,17 @@ export function resolveTablePlacementPreview(
       width: snap.width,
       height: snap.height,
       rotation: snap.rotation ?? 0,
+    }
+  }
+
+  const oriented = orientVendorBoothToNearestWall(probe, snapDoc)
+  if (oriented) {
+    return {
+      x: oriented.x,
+      y: oriented.y,
+      width: oriented.width,
+      height: oriented.height,
+      rotation: oriented.rotation ?? 0,
     }
   }
 

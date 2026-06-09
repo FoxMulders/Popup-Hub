@@ -47,8 +47,12 @@ import {
 import { PropertyInspector } from '@/components/coordinator/floor-plan-v2/inspector/property-inspector'
 import { CanvasCommandBar } from '@/components/coordinator/floor-plan-v2/tools/canvas-command-bar'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from '@/components/coordinator/floor-plan-v2/tools/types'
-import type { AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
+import {
+  autoArrangeInRoom,
+  type AutoArrangeMode,
+} from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
+import { usePathfinding } from '@/components/coordinator/floor-plan-v2/hooks/use-pathfinding'
 import { legacyRoomsFromDoc } from '@/components/coordinator/floor-plan-v2/state/legacy-bridge'
 import { hydrateFloorPlanDocForWizardQa, layoutHasPlacedGeometry } from '@/src/qa_review/lib/floor-plan/layout-hydration-wizard_qa'
 import { reconcileCanvasExtents } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
@@ -207,6 +211,9 @@ export interface FloorPlanV2Props {
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  saveDraftLoading?: boolean
   /** Dashboard embed — compact chrome, telemetry-driven booth fills. */
   variant?: 'wizard' | 'dashboard'
   /**
@@ -287,6 +294,9 @@ function FloorPlanV2Workspace({
   onSaveMarket,
   saveMarketDisabled,
   saveMarketLoading,
+  onSaveDraft,
+  saveDraftDisabled,
+  saveDraftLoading,
   variant = 'wizard',
   chrome = 'default',
   onPlacedCountChange,
@@ -368,8 +378,10 @@ function FloorPlanV2Workspace({
     useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
   const [patronAutoArrangeMode, setPatronAutoArrangeMode] =
     useState<AutoArrangeMode>('grid')
+  const [autoArrangeMode, setAutoArrangeMode] = useState<AutoArrangeMode>('grid')
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
+  const [patronPathEnabled, setPatronPathEnabled] = useState(false)
 
   const prevLayoutRoomCountRef = useRef(layoutRooms.length)
   useEffect(() => {
@@ -473,6 +485,10 @@ function FloorPlanV2Workspace({
   // a frame as the canvas selection while the user is interacting
   // with it.
   const activeRoomId = layoutActiveRoomId
+  const patronTrafficPath = usePathfinding(store.doc, activeRoomId, {
+    enabled: patronPathEnabled,
+    cellFt: store.doc.snapFt,
+  })
   const [rawSelectedRoomId, setSelectedRoomId] = useState<string | null>(null)
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(
     () => new Set()
@@ -504,6 +520,11 @@ function FloorPlanV2Workspace({
     fitViewportToContent(viewportApiRef.current, store.doc, activeRoomId)
     focusFloorPlanCanvas()
   }, [activeRoomId, store.doc])
+
+  useEffect(() => {
+    setPatronPathEnabled(false)
+  }, [activeRoomId])
+
   // New rooms become the active room in the sidebar but did not set
   // canvas selection — without this, resize handles never appear.
   useEffect(() => {
@@ -1213,7 +1234,6 @@ function FloorPlanV2Workspace({
       // Server is now the source of truth — drop the unified
       // crash-recovery draft so a future refresh loads from Supabase.
       clearMultiRoomDraft(eventId)
-      toast.success('Floor plan saved')
       return true
     }
     return () => {
@@ -1424,6 +1444,86 @@ function FloorPlanV2Workspace({
     store,
     vendorTableMetaByKey,
   ])
+
+  const canAutoArrangeFloorPlan = vendorBoothCount > 0 || patronTableCount > 0
+
+  const autoArrangeDisabledReason = useMemo(() => {
+    if (vendorBoothCount === 0 && patronTableCount === 0) {
+      return 'Draw at least one vendor booth or patron table to auto-arrange.'
+    }
+    return null
+  }, [patronTableCount, vendorBoothCount])
+
+  const handleAutoArrangeFloorPlan = useCallback(() => {
+    if (vendorBoothCount === 0 && patronTableCount === 0) {
+      toast.message('Nothing to arrange — draw at least one booth or table first.')
+      return
+    }
+    const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
+    if (!frame) {
+      toast.error('Select a room on the canvas before auto-arranging.')
+      return
+    }
+    const result = autoArrangeInRoom(store.doc, activeRoomId, {
+      scope: 'all',
+      mode: autoArrangeMode,
+      eventCategoryNames,
+      baselineTableLengthFt: safeTableSizeFt,
+      vendorTableMetaByKey,
+      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
+        ? { maxBooths: layoutCapacity }
+        : {}),
+    })
+    if (!result) {
+      toast.error('Auto-arrange failed — room dimensions could not be read.')
+      return
+    }
+    if (result.placedCount === 0) {
+      toast.error(
+        `Auto-arrange could not fit any objects inside ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′).`
+      )
+      return
+    }
+    store.replaceObjects(result.doc.objects)
+    const overflow = result.overflowCount + result.droppedCount
+    if (overflow > 0) {
+      toast.warning(
+        `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'}; ${overflow} could not fit in the room.`,
+        { duration: 4500 }
+      )
+    } else if (result.unsatisfiedCategoryCount > 0) {
+      toast.warning(
+        `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'}. ${result.unsatisfiedCategoryCount} could not meet category spacing rules.`,
+        { duration: 4500 }
+      )
+    } else {
+      toast.success(
+        `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'} in ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′).`
+      )
+    }
+  }, [
+    activeRoomId,
+    autoArrangeMode,
+    eventCategoryNames,
+    layoutCapacity,
+    patronTableCount,
+    safeTableSizeFt,
+    store,
+    vendorBoothCount,
+    vendorTableMetaByKey,
+  ])
+
+  const handlePatronPathToggle = useCallback(() => {
+    setPatronPathEnabled((enabled) => {
+      const next = !enabled
+      if (next) {
+        toast.message('Patron path overlay on — add entry/exit doors for traffic routing.', {
+          duration: 2800,
+        })
+      }
+      return next
+    })
+  }, [])
 
   const handlePatronAutoArrange = useCallback(async () => {
     if (patronTableCount === 0) {
@@ -1830,9 +1930,9 @@ function FloorPlanV2Workspace({
     })
   }, [joinPlan.unjoinGroupId, selectedMergedZoneId, store])
 
-  const layoutHeader =
+  const layoutToolsPanelHeader =
     !isDashboard && !isEmbedded ? (
-      <header className="flex flex-wrap items-center gap-3 rounded-lg border-b border-stone-200/80 bg-card/60 px-2 py-2">
+      <header className="flex shrink-0 flex-col gap-2 border-b border-stone-200/80 px-2 py-2">
         <div className="min-w-0">
           <h2 className="font-heading text-base font-bold tracking-tight text-forest sm:text-lg">
             Layout tools
@@ -1860,22 +1960,29 @@ function FloorPlanV2Workspace({
             undo
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="flex shrink-0 flex-col gap-1.5">
           {joinedZoneCount > 0 ? (
             <span
-              className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-900"
+              className="h-7 w-full truncate rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-center text-[11px] font-semibold leading-5 text-emerald-900"
               title="Number of dissolved (joined) zones on this canvas"
             >
               {joinedZoneCount} joined zone{joinedZoneCount === 1 ? '' : 's'}
             </span>
           ) : null}
-          <div className="rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-semibold text-stone-700">
-            {placedCount} object{placedCount === 1 ? '' : 's'} placed
-            {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
+          <div
+            className="h-7 w-full rounded-md border border-stone-200 bg-white px-2 py-1 text-center text-[11px] font-semibold leading-5 tabular-nums text-stone-700"
+            aria-live="polite"
+          >
+            <span className="block truncate">
+              {placedCount} object{placedCount === 1 ? '' : 's'} placed
+              {selectedCount > 0 ? ` · ${selectedCount} sel.` : ''}
+            </span>
           </div>
         </div>
       </header>
     ) : null
+
+  const layoutHeader = null
 
   const fullscreenExitToolbar = (
     <button
@@ -1978,6 +2085,11 @@ function FloorPlanV2Workspace({
             onSaveMarket={onSaveMarket}
             saveMarketDisabled={saveMarketDisabled}
             saveMarketLoading={saveMarketLoading}
+            onSaveDraft={onSaveDraft}
+            saveDraftDisabled={saveDraftDisabled}
+            saveDraftLoading={saveDraftLoading}
+            patronPathEnabled={patronPathEnabled}
+            onPatronPathToggle={handlePatronPathToggle}
           />
         ) : null}
 
@@ -2016,6 +2128,7 @@ function FloorPlanV2Workspace({
                   boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
                   onVendorDrop={onVendorDrop}
                   autoArrangeMode={vendorAutoArrangeMode}
+                  patronTrafficPath={patronTrafficPath}
                   onProximityViolation={(info) => {
                     toast.error(
                       `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
@@ -2047,7 +2160,100 @@ function FloorPlanV2Workspace({
               isEmbedded ? 'h-full' : 'h-[calc(100vh-64px)]'
             )}
           >
+            {!isEmbedded ? (
+              <aside
+                className="layout-tools-sidebar flex h-full min-h-0 w-[300px] min-w-[300px] shrink-0 flex-col overflow-hidden border-r border-stone-300 bg-white shadow-[inset_-1px_0_0_0_rgba(0,0,0,0.04)]"
+                aria-label="Layout tools"
+              >
+                {layoutToolsPanelHeader}
+                <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+                  <CanvasCommandBar
+                    staticLayout
+                    sidebarLayout
+                    className="shrink-0"
+                    eventId={eventId}
+                    toolState={{ tool, drawShape }}
+                    onToolChange={handleToolChange}
+                    onDrawShapeChange={handleDrawShapeChange}
+                    canUndo={store.canUndo}
+                    canRedo={store.canRedo}
+                    onUndo={store.undo}
+                    onRedo={store.redo}
+                    onClearAll={handleClearAll}
+                    selectedCount={selectedCount}
+                    onDeleteSelected={handleDeleteSelected}
+                    onCopy={handleCopy}
+                    onPaste={handlePaste}
+                    clipboardHasContents={clipboardHasContents}
+                    onRotateLeft={handleRotateLeft}
+                    onRotateRight={handleRotateRight}
+                    onRotateRoomLeft={handleRotateRoomLeft}
+                    onRotateRoomRight={handleRotateRoomRight}
+                    selectedRoomId={selectedRoomId}
+                    onAlignVertical={handleAlignVertical}
+                    onAlignHorizontal={handleAlignHorizontal}
+                    onDistributeVertical={handleDistributeVertical}
+                    onDistributeHorizontal={handleDistributeHorizontal}
+                    zoom={currentZoom}
+                    onZoomIn={handleZoomIn}
+                    onZoomOut={handleZoomOut}
+                    onZoomReset={handleZoomReset}
+                    onCenterView={handleCenterView}
+                    onAutoArrangeFloorPlan={handleAutoArrangeFloorPlan}
+                    canAutoArrangeFloorPlan={canAutoArrangeFloorPlan}
+                    autoArrangeDisabledReason={autoArrangeDisabledReason}
+                    autoArrangeMode={autoArrangeMode}
+                    onAutoArrangeModeChange={setAutoArrangeMode}
+                    onVendorAutoArrange={handleVendorAutoArrange}
+                    canVendorAutoArrange={vendorBoothCount > 0}
+                    vendorAutoArrangeMode={vendorAutoArrangeMode}
+                    onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
+                    onPatronAutoArrange={handlePatronAutoArrange}
+                    canPatronAutoArrange={patronTableCount > 0}
+                    patronAutoArrangeMode={patronAutoArrangeMode}
+                    onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
+                    onJoinRooms={handleMerge}
+                    canJoinRooms={canMerge}
+                    joinCandidateCount={
+                      destructiveMergePlan.canMerge
+                        ? destructiveMergePlan.count
+                        : shapeMergePlan.canMergeShapes
+                          ? shapeMergePlan.count
+                          : undefined
+                    }
+                    joinBlockedReason={mergeBlockedReason}
+                    mergePrefersShapes={shapeMergePlan.canMergeShapes}
+                    onUnjoinRoom={handleUnjoinRoom}
+                    canUnjoinRoom={canSplitMerge}
+                    tableSizeFt={tableSizePillValue}
+                    onTableSizeChange={handleTableSizeChange}
+                    onPrepareTableDraw={handlePrepareTableDraw}
+                    rooms={showToolbarRoomControls ? layoutRooms : undefined}
+                    activeRoomId={selectedRoomId ?? activeRoomId}
+                    onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
+                    onAddRoom={showToolbarRoomControls ? onAddRoom : undefined}
+                    onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
+                    onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
+                    highlightedRoomMetrics={highlightedRoomMetrics}
+                    highlightedSelectionMetrics={highlightedSelectionMetrics}
+                    showLabels={showLabels}
+                    onShowLabelsChange={setShowLabels}
+                    canvasFullscreen={canvasFullscreen}
+                    onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+                    onSaveMarket={onSaveMarket}
+                    saveMarketDisabled={saveMarketDisabled}
+                    saveMarketLoading={saveMarketLoading}
+                    onSaveDraft={onSaveDraft}
+                    saveDraftDisabled={saveDraftDisabled}
+                    saveDraftLoading={saveDraftLoading}
+                    patronPathEnabled={patronPathEnabled}
+                    onPatronPathToggle={handlePatronPathToggle}
+                  />
+                </div>
+              </aside>
+            ) : null}
             <div className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
+              {isEmbedded ? (
               <CanvasCommandBar
                 className="shrink-0"
                 toolState={{ tool, drawShape }}
@@ -2116,7 +2322,13 @@ function FloorPlanV2Workspace({
                 onSaveMarket={onSaveMarket}
                 saveMarketDisabled={saveMarketDisabled}
                 saveMarketLoading={saveMarketLoading}
+                onSaveDraft={onSaveDraft}
+                saveDraftDisabled={saveDraftDisabled}
+                saveDraftLoading={saveDraftLoading}
+                patronPathEnabled={patronPathEnabled}
+                onPatronPathToggle={handlePatronPathToggle}
               />
+              ) : null}
               <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-lg border border-stone-200 bg-stone-100">
                 <CanvasRootErrorBoundary
                   onReset={() => {
@@ -2149,6 +2361,7 @@ function FloorPlanV2Workspace({
                     boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={vendorAutoArrangeMode}
+                    patronTrafficPath={patronTrafficPath}
                     onProximityViolation={(info) => {
                       toast.error(
                         `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,

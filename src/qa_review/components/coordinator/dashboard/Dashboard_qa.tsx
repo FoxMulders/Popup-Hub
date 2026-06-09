@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
@@ -9,7 +9,7 @@ import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashbo
 import { DashboardTabletToolsDock } from '@/components/coordinator/dashboard/dashboard-tablet-tools-dock'
 import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 import { DashboardToolbarPortalTarget } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
-import { InitialRoomModal } from '@/components/coordinator/dashboard/initial-room-modal'
+import { DashboardNoRoomEmptyState } from '@/components/coordinator/dashboard/dashboard-no-room-empty-state'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
   DesktopScreenRequiredOverlay,
@@ -45,7 +45,7 @@ export interface DashboardBootstrapQaProps {
 }
 
 /**
- * QA dashboard bootstrap — fixed left rail, mandatory initial room modal,
+ * QA dashboard bootstrap — fixed left rail, inline first-room empty state,
  * portal-friendly toolbar mount (no curation queue).
  */
 export function DashboardLeftPanelQa() {
@@ -75,6 +75,16 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
   const [ariaBusy, setAriaBusy] = useState(true)
   const [liveMessage, setLiveMessage] = useState('Booth layout designer loading.')
   const hasInitialRoom = layoutRooms.length > 0
+  const showNoRoomEmpty = Boolean(
+    selectedEventId && !hasInitialRoom && !showDesktopRequired
+  )
+
+  useEffect(() => {
+    if (showNoRoomEmpty) {
+      setAriaBusy(false)
+      setLiveMessage('Add a room to open the booth layout designer.')
+    }
+  }, [showNoRoomEmpty])
 
   const handleInitialRoomConfirm = useCallback(
     (widthFt: number, lengthFt: number) => {
@@ -83,6 +93,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
         lengthFt,
       })
       setLayoutRooms(rooms, activeRoomId)
+      setAriaBusy(true)
       setLiveMessage('Room created — booth designer canvas is loading.')
     },
     [layoutRooms, setLayoutRooms]
@@ -117,6 +128,8 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
                 className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
                 aria-hidden
               />
+            ) : showNoRoomEmpty ? (
+              <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
             ) : (
               <DashboardCanvasColumn
                 showBlueprint={showBlueprint}
@@ -128,9 +141,6 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
           </div>
         }
       />
-      {selectedEventId && !hasInitialRoom && !showDesktopRequired ? (
-        <InitialRoomModal onConfirm={handleInitialRoomConfirm} />
-      ) : null}
     </DashboardToolbarPortalProvider>
   )
 }

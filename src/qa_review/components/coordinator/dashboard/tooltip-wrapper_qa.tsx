@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils'
 /** Mandatory hover delay before canvas/toolbar tooltips render. */
 export const TOOLTIP_HOVER_DELAY_MS = 400
 
-/** Dashboard left rail width — tooltips flip right when they would clip past this edge. */
-export const QA_SIDEBAR_WIDTH_PX = 320
+/** Dashboard / layout-tools left rail — tooltips flip right past this edge. */
+export const QA_SIDEBAR_WIDTH_PX = 300
 
 interface TooltipWrapperProps {
   text: string

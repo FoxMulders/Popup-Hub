@@ -58,9 +58,9 @@ export interface CanvasToolbarStaticProps {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-[10px] font-heading font-semibold uppercase tracking-wide text-muted-foreground">
+    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
       {children}
-    </span>
+    </h3>
   )
 }
 
@@ -112,21 +112,24 @@ function SidebarToolbarSection({
   renderBlock,
   compact,
   eventId,
+  isFirst,
 }: {
   section: SidebarSectionDef
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
   eventId?: string | null
+  isFirst?: boolean
 }) {
   return (
-    <div
-      className="flex w-full min-w-0 flex-col rounded-md border border-stone-200/90 bg-white shadow-sm"
+    <section
+      className={cn(
+        'flex w-full min-w-0 shrink-0 flex-col',
+        !isFirst && 'border-t border-stone-200/80 pt-4'
+      )}
       data-toolbar-section={section.id}
     >
-      <div className="border-b border-stone-100/90 px-2 py-1.5">
-        <SectionHeader>{section.header}</SectionHeader>
-      </div>
-      <div className="flex w-full min-w-0 flex-col gap-1 px-2 py-1.5">
+      <SectionHeader>{section.header}</SectionHeader>
+      <div className="mt-2 flex w-full min-w-0 flex-col gap-2">
         {section.id === 'vendor-matches' ? (
           <VendorMatchesPanel eventId={eventId} compact={compact} />
         ) : (
@@ -138,7 +141,7 @@ function SidebarToolbarSection({
           />
         )}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -296,7 +299,7 @@ function MergedToolbarRow({
         ) : (
           <div
             className={cn(
-              'flex min-w-0 flex-col flex-wrap gap-1 md:gap-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:w-full',
+              'flex min-w-0 flex-col flex-wrap gap-1 md:gap-1.5 lg:flex-nowrap lg:items-center lg:justify-between lg:gap-2 lg:w-full lg:overflow-x-auto',
               compact ? 'px-0.5 py-0.5' : 'px-1 py-0.5'
             )}
           >
@@ -448,8 +451,8 @@ export function CanvasToolbarStatic({
     if (sidebarSections.length === 0) return null
 
     return (
-      <div className="flex w-full min-w-0 flex-col gap-4">
-        <div className="flex min-w-0 items-center justify-end">
+      <div className="flex w-full min-w-0 shrink-0 flex-col">
+        <div className="mb-3 flex min-w-0 shrink-0 items-center justify-end">
           <TooltipWrapper text="Reset toolbar to default layout">
             <button
               type="button"
@@ -464,13 +467,14 @@ export function CanvasToolbarStatic({
             </button>
           </TooltipWrapper>
         </div>
-        {sidebarSections.map((section) => (
+        {sidebarSections.map((section, index) => (
           <SidebarToolbarSection
             key={section.id}
             section={section}
             renderBlock={renderBlock}
             compact={compact}
             eventId={eventId}
+            isFirst={index === 0}
           />
         ))}
       </div>

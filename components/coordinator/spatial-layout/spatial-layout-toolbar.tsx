@@ -14,7 +14,9 @@ export interface SpatialLayoutToolbarProps {
   hasOverlap: boolean
   isDraft: boolean
   saving: boolean
+  savingDraft?: boolean
   onSave: () => void
+  onSaveDraft?: () => void
   saveLabel: string
   onReloadFromServer?: () => void
 }
@@ -27,7 +29,9 @@ export function SpatialLayoutToolbar({
   hasOverlap,
   isDraft,
   saving,
+  savingDraft = false,
   onSave,
+  onSaveDraft,
   saveLabel,
   onReloadFromServer,
 }: SpatialLayoutToolbarProps) {
@@ -88,11 +92,23 @@ export function SpatialLayoutToolbar({
             Reload saved layout
           </Button>
         ) : null}
+        {onSaveDraft ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0"
+            disabled={hasOverlap || saving || savingDraft}
+            onClick={onSaveDraft}
+          >
+            {savingDraft ? 'Saving draft…' : 'Save draft'}
+          </Button>
+        ) : null}
         <Button
           type="button"
           size="sm"
           className="h-8 shrink-0"
-          disabled={hasOverlap || saving}
+          disabled={hasOverlap || saving || savingDraft}
           onClick={onSave}
         >
           {saving ? 'Saving…' : saveLabel}

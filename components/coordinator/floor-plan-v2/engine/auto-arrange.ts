@@ -74,6 +74,7 @@ export {
 import { PERIMETER_WALL_THICKNESS_FT } from '../interactions/perimeter-walls'
 import { clipBoothToLocalRoom } from '@/lib/floor-plan/boundary-constraints'
 import {
+  boothSpanAndDepth,
   orientBoothForPerimeterSlot,
   perimeterSlotsAlongRing,
   rotationForPerimeterEdge,
@@ -413,10 +414,13 @@ function placeBoothsAtSlots(
       rotation: 0,
     }
     if (slot.perimeter?.direct) {
+      const { span, depth } = boothSpanAndDepth(w, h, src.tableLengthFt)
       probeBooth = {
         ...probeBooth,
         x: slot.perimeter.x,
         y: slot.perimeter.y,
+        width: span,
+        height: depth,
         rotation: rotationForPerimeterEdge(slot.perimeter.edge),
       }
     } else if (slot.perimeter && perimeterOrientFrame) {
