@@ -2,13 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (portal tab sync with patron routes, not deployed)
+## Shipped this session (portal tab sync with patron routes, deployed 2026-06-09)
 - **`lib/portals/active-portal.ts`:** Added `isPatronPortalPath()` for browse routes (`/discover`, `/favorites`, `/supplies`, `/events/*`, `/auctions/*`); `resolveActivePortal()` now prefers the current URL over the `active_portal` cookie on those paths so the Patron pill highlights correctly on `/discover` even when the cookie still says Coordinator/Vendor. Shared routes like `/wallet` still honor the cookie.
 - **`lib/supabase/middleware.ts`:** Patron browse deep links sync the `active_portal` cookie to `patron` (same pattern as vendor/coordinator prefixed routes).
 - **`lib/portals/qa-active-portal.ts`:** Updated assertions for discover + wallet behavior.
 - **Verify:** Sign in as coordinator → visit `/discover` directly → Patron tab is active; switch to Coordinator → lands on `/coordinator/dashboard`; `/wallet` keeps prior portal tab.
 
-## Shipped this session (initial loader tagline — Markets Made Easy, not deployed)
+## Shipped this session (initial loader tagline — Markets Made Easy, deployed 2026-06-09)
 - **`components/brand/initial-loader-reveal.tsx`:** Tagline changed from "Plan · Host · Grow" to "Markets Made Easy"; extended SVG viewBox bottom padding, widened progress bar, reduced letter-spacing, and removed uppercase transform so the full phrase renders without clipping during the reveal animation.
 
 ## Shipped this session (Market Setup Wizard flyer upload fallback + toast, deployed 2026-06-09)
@@ -42,9 +42,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `30e6794` (pushed to `origin/master`)
-- Last deploy commit: `30e6794` - feat: ship 9 session updates (Market Setup Wizard flyer upload fallback + toast; auto commit message in Deploy-popuphub.bat; vendor clearance; Shipped earlier this session (not deployed); +5 more)
-- Production: https://popuphub.ca - **build 49** | commit `1f1eb9c` (handoff updated 2026-06-09 09:17)
+- Branch: `master` @ `384f571` (pushed to `origin/master`)
+- Last deploy commit: `384f571` - feat: i
+- Production: https://popuphub.ca - **build 50** | commit `0de1074` (handoff updated 2026-06-09 09:30)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -421,7 +421,7 @@
 
 
 ## Last deploy
-- 2026-06-09 09:17 - Deploy via deploy-popuphub.ps1 - `feat: ship 9 session updates (Market Setup Wizard flyer upload fallback + toast; auto commit message in Deploy-popuphub.bat; vendor clearance; Shipped earlier this session (not deployed); +5 more)` (30e6794)
+- 2026-06-09 09:30 - Deploy via deploy-popuphub.ps1 - `feat: i` (384f571)
 
 
 ## Goal
