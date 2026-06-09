@@ -1,4 +1,4 @@
-import { resolvePublicAppOrigin } from '@/lib/url/public-app-url'
+import { getURL } from '@/lib/url/public-app-url'
 
 /** Build the Supabase OAuth return URL (must be allow-listed in Supabase Auth settings). */
 export function buildOAuthCallbackUrl(
@@ -16,17 +16,11 @@ export function buildOAuthCallbackUrl(
   return query ? `${base}/api/auth/callback?${query}` : `${base}/api/auth/callback`
 }
 
-/** Client-side origin for OAuth — prefer live browser origin on the deployed domain. */
+/** Client-side origin for OAuth — prefer the live browser origin on any deployed domain. */
 export function getOAuthOrigin(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
-    const { origin, hostname } = window.location
-    if (hostname === 'popup-hub.vercel.app' || hostname.endsWith('.vercel.app')) {
-      return origin
-    }
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return origin
-    }
+    return window.location.origin
   }
 
-  return resolvePublicAppOrigin()
+  return getURL()
 }

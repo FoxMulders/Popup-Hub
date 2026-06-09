@@ -116,7 +116,7 @@ function SignupForm() {
             ? { share_contact_with_vendors: shareContactWithVendors }
             : {}),
         },
-        emailRedirectTo: `${window.location.origin}/api/auth/callback?role=${role}`,
+        emailRedirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), { role }),
       },
     })
     if (error) {

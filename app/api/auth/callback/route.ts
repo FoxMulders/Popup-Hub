@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { getDefaultDashboard, parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
 
-function safeRedirectPath(value: string | null, fallback = '/'): string {
+function safeRedirectPath(value: string | null, fallback = '/discover'): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {
     return fallback
   }
@@ -23,40 +23,42 @@ function loginErrorRedirect(
   return NextResponse.redirect(url)
 }
 
-function resolveRedirectOrigin(request: Request, fallbackOrigin: string): string {
+/** Prefer the live request host (custom domain, preview, or localhost) over configured env URLs. */
+function resolveRedirectOrigin(request: Request): string {
+  const requestUrl = new URL(request.url)
+
   const forwardedHost = request.headers.get('x-forwarded-host')
-  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+  const hostHeader = request.headers.get('host')
+  const host = (forwardedHost ?? hostHeader)?.split(',')[0]?.trim()
 
-  if (process.env.NODE_ENV === 'development') {
-    return fallbackOrigin
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const proto = (forwardedProto ?? requestUrl.protocol.replace(':', '')).replace(/:$/, '')
+
+  if (host) {
+    return `${proto}://${host}`
   }
 
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`
-  }
-
-  return fallbackOrigin
+  return requestUrl.origin
 }
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
-  const redirectOrigin = resolveRedirectOrigin(request, origin)
+  const requestUrl = new URL(request.url)
+  const origin = resolveRedirectOrigin(request)
+  const code = requestUrl.searchParams.get('code')
+  const next = safeRedirectPath(requestUrl.searchParams.get('next'))
+  const roleParam = requestUrl.searchParams.get('role')
 
-  const oauthError = searchParams.get('error')
+  const oauthError = requestUrl.searchParams.get('error')
   if (oauthError) {
     if (oauthError === 'access_denied') {
-      return loginErrorRedirect(redirectOrigin, 'oauth_cancelled')
+      return loginErrorRedirect(origin, 'oauth_cancelled')
     }
-    const description = searchParams.get('error_description') ?? oauthError
-    return loginErrorRedirect(redirectOrigin, 'oauth_failed', description)
+    const description = requestUrl.searchParams.get('error_description') ?? oauthError
+    return loginErrorRedirect(origin, 'oauth_failed', description)
   }
 
-  const code = searchParams.get('code')
-  const next = safeRedirectPath(searchParams.get('next'))
-  const roleParam = searchParams.get('role')
-
   if (!code) {
-    return loginErrorRedirect(redirectOrigin, 'auth_callback_missing_code')
+    return loginErrorRedirect(origin, 'auth_callback_missing_code')
   }
 
   const cookieStore = await cookies()
@@ -80,7 +82,7 @@ export async function GET(request: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
-    return loginErrorRedirect(redirectOrigin, 'auth_callback_failed', error.message)
+    return loginErrorRedirect(origin, 'auth_callback_failed', error.message)
   }
 
   const {
@@ -89,7 +91,7 @@ export async function GET(request: Request) {
 
   if (!user) {
     return loginErrorRedirect(
-      redirectOrigin,
+      origin,
       'auth_callback_failed',
       'No user returned after sign-in.'
     )
@@ -121,8 +123,8 @@ export async function GET(request: Request) {
   if (profile) {
     const activePortal = parseActivePortal(cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value)
     const dashboard = getDefaultDashboard(profile.role, 0, activePortal)
-    return NextResponse.redirect(`${redirectOrigin}${dashboard}`)
+    return NextResponse.redirect(`${origin}${dashboard}`)
   }
 
-  return NextResponse.redirect(`${redirectOrigin}${next}`)
+  return NextResponse.redirect(`${origin}${next}`)
 }

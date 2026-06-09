@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import {
   isValidImpactLevel,
   isValidSubmitterRole,
   isValidTargetComponent,
 } from '@/lib/feedback/feature-request-config'
+import { notifyAdminsOfFeatureRequest } from '@/lib/feedback/notify-admins-feature-request'
 import { uploadFeatureScreenshot } from '@/lib/feedback/upload-feature-screenshot'
 
 /**
@@ -88,6 +89,22 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  const { data: reporter } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const adminDb = createAdminClient()
+  await notifyAdminsOfFeatureRequest(adminDb, {
+    featureRequestId: row.id,
+    title,
+    submitterRole,
+    impactLevel,
+    reporterId: user.id,
+    reporterName: reporter?.full_name ?? null,
+  })
 
   return NextResponse.json({ ok: true, id: row.id })
 }

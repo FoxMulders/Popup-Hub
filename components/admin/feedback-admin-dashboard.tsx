@@ -44,12 +44,23 @@ function impactLabel(level: FeatureRequest['impact_level']): string {
   return FEATURE_IMPACT_LEVELS.find((option) => option.value === level)?.label ?? level
 }
 
+function isActiveTriageRequest(request: FeatureRequest): boolean {
+  return request.status !== 'completed'
+}
+
 export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboardProps) {
   const [requests, setRequests] = useState(initialRequests)
-  const [selectedId, setSelectedId] = useState<string | null>(initialRequests[0]?.id ?? null)
+  const [selectedId, setSelectedId] = useState<string | null>(
+    () => initialRequests.find(isActiveTriageRequest)?.id ?? null
+  )
   const [draftStatus, setDraftStatus] = useState<FeatureRequestStatus | null>(null)
   const [draftNotes, setDraftNotes] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  const activeRequests = useMemo(
+    () => requests.filter(isActiveTriageRequest),
+    [requests]
+  )
 
   const selected = useMemo(
     () => requests.find((request) => request.id === selectedId) ?? null,
@@ -59,8 +70,11 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
   const metrics = useMemo(
     () => ({
       pending: requests.filter((request) => request.status === 'pending').length,
-      critical: requests.filter((request) => request.impact_level === 'critical').length,
+      critical: requests.filter(
+        (request) => request.impact_level === 'critical' && request.status !== 'completed'
+      ).length,
       underReview: requests.filter((request) => request.status === 'under_review').length,
+      completed: requests.filter((request) => request.status === 'completed').length,
     }),
     [requests]
   )
@@ -100,9 +114,13 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
         }
 
         if (data.request) {
-          setRequests((list) =>
-            list.map((item) => (item.id === data.request!.id ? data.request! : item))
-          )
+          setRequests((list) => {
+            const next = list.map((item) => (item.id === data.request!.id ? data.request! : item))
+            if (data.request!.status === 'completed' && data.request!.id === selected.id) {
+              setSelectedId(next.find(isActiveTriageRequest)?.id ?? null)
+            }
+            return next
+          })
           setDraftStatus(null)
           setDraftNotes(null)
         }
@@ -124,13 +142,16 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
               Triage platform-wide suggestions from coordinators, vendors, and patrons.
             </p>
           </div>
-          <p className="text-xs text-muted-foreground tabular-nums">{requests.length} total</p>
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {activeRequests.length} in queue · {requests.length} total
+          </p>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard label="Total Pending" value={metrics.pending} tone="neutral" />
           <MetricCard label="Critical Urgency" value={metrics.critical} tone="critical" />
           <MetricCard label="Under Review" value={metrics.underReview} tone="review" />
+          <MetricCard label="Total Completed" value={metrics.completed} tone="completed" />
         </div>
       </div>
 
@@ -145,11 +166,15 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            {requests.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground">No feature requests yet.</p>
+            {activeRequests.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                {requests.length === 0
+                  ? 'No feature requests yet.'
+                  : 'No active requests in the triage queue — all items are completed.'}
+              </p>
             ) : (
               <ul className="space-y-2">
-                {requests.map((request) => {
+                {activeRequests.map((request) => {
                   const isSelected = request.id === selectedId
                   return (
                     <li key={request.id}>
@@ -324,14 +349,16 @@ function MetricCard({
 }: {
   label: string
   value: number
-  tone: 'neutral' | 'critical' | 'review'
+  tone: 'neutral' | 'critical' | 'review' | 'completed'
 }) {
   const toneClass =
     tone === 'critical'
       ? 'border-terracotta-200 bg-terracotta-50 text-terracotta-900 dark:border-terracotta-800 dark:bg-terracotta-950 dark:text-terracotta-200'
       : tone === 'review'
         ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200'
-        : 'border-border bg-card text-foreground'
+        : tone === 'completed'
+          ? 'border-sage-200 bg-sage-50 text-sage-900 dark:border-sage-800 dark:bg-sage-950 dark:text-sage-200'
+          : 'border-border bg-card text-foreground'
 
   return (
     <div className={cn('rounded-xl border px-4 py-3', toneClass)}>

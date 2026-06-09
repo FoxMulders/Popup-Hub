@@ -1,6 +1,9 @@
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Notification, NotificationType } from '@/types/database'
 
+/** Platform-admin alerts — shown in every portal feed (only admins receive these rows). */
+const PLATFORM_ADMIN_TYPES = new Set<NotificationType>(['feature_request_submitted'])
+
 /** Notification types surfaced in the Patron portal feed. */
 const PATRON_TYPES = new Set<NotificationType>([
   'waitlist_triggered',
@@ -11,6 +14,7 @@ const PATRON_TYPES = new Set<NotificationType>([
   'vendor_sold_out',
   'auction_won',
   'auction_starting',
+  ...PLATFORM_ADMIN_TYPES,
 ])
 
 /** Notification types surfaced in the Vendor portal feed. */
@@ -23,6 +27,7 @@ const VENDOR_TYPES = new Set<NotificationType>([
   'vendor_access_rejected',
   'payment_received',
   'coordinator_announcement',
+  ...PLATFORM_ADMIN_TYPES,
 ])
 
 /** Notification types surfaced in the Coordinator portal feed. */
@@ -33,6 +38,7 @@ const COORDINATOR_TYPES = new Set<NotificationType>([
   'coordinator_announcement',
   'event_cancelled',
   'payment_received',
+  ...PLATFORM_ADMIN_TYPES,
 ])
 
 export function notificationMatchesPortal(

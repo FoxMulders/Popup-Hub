@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
+import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
@@ -75,7 +76,7 @@ export function ShopperTopBar({
                   pathname={pathname}
                   profileName={profile.full_name}
                   onSignOut={signOut}
-                  extraLinks={[{ href: '/profile', label: 'Profile settings' }]}
+                  extraLinks={buildAppMenuExtraLinks(profile)}
                   onSuggestImprovement={onSuggestImprovement}
                 />
                 <Link

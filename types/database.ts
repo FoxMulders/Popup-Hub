@@ -49,6 +49,7 @@ export type NotificationType =
   | 'payment_failed'
   | 'market_feedback'
   | 'feedback_addressed'
+  | 'feature_request_submitted'
   | 'priority_booth_invite'
 
 export type VendorAccessRequestStatus = 'pending' | 'approved' | 'rejected'

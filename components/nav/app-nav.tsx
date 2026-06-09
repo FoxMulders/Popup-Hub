@@ -7,6 +7,7 @@ import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { UserAvatar } from '@/components/profile/user-avatar'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
+import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
 import { getPortalHome, resolveActivePortal } from '@/lib/portals/active-portal'
 import { coordinatorNavBackHref } from '@/lib/coordinator/coordinator-event-route'
@@ -80,10 +81,7 @@ export function AppNav({
     avatar_url: profile.avatar_url,
   }
 
-  const menuExtraLinks = [
-    { href: '/profile', label: 'Profile settings' },
-    ...(profile.is_admin ? [{ href: '/admin/feedback', label: 'Feature requests' }] : []),
-  ]
+  const menuExtraLinks = buildAppMenuExtraLinks(profile)
 
   return (
     <nav

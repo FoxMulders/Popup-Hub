@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { Notification } from '@/types/database'
 import { format } from 'date-fns'
-import { Bell, CheckCheck, Trophy, Store, Calendar, AlertCircle, Info, MessageSquare } from 'lucide-react'
+import { Bell, CheckCheck, Trophy, Store, Calendar, AlertCircle, Info, MessageSquare, Lightbulb } from 'lucide-react'
 import { dispatchNotificationsChanged } from '@/lib/notifications/sync'
 import { filterNotificationsForPortal } from '@/lib/notifications/portal-filter'
 import type { ActivePortal } from '@/lib/portals/active-portal'
@@ -65,6 +65,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   vendor_access_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   vendor_access_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-600 bg-red-50' },
   market_feedback: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-violet-600 bg-violet-50' },
+  feature_request_submitted: { icon: <Lightbulb className="h-4 w-4" />, color: 'text-amber-700 bg-amber-50' },
   feedback_addressed: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   application_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-500 bg-sage-50' },
   application_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-500 bg-red-50' },
@@ -212,6 +213,11 @@ export function NotificationList({
         metadata && typeof metadata.event_id === 'string'
           ? metadata.event_id
           : null
+      if (notification.type === 'feature_request_submitted') {
+        router.push('/admin/feedback')
+        return
+      }
+
       if (notification.type === 'application_follow_up' && eventId) {
         router.push(
           activePortal === 'coordinator'

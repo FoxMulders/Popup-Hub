@@ -3,6 +3,7 @@ import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { formatAppVersion } from './lib/build-info'
+import { getURL } from './lib/url/public-app-url'
 
 function readPackageVersion(): string {
   try {
@@ -44,21 +45,7 @@ const baseVersion = readPackageVersion()
 const appVersion = formatAppVersion(baseVersion, buildNumber)
 
 function resolvePublicAppUrlEnv(): string {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim()
-  if (configured) return configured.replace(/\/$/, '')
-
-  const vercelHost =
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
-    process.env.VERCEL_URL
-  if (vercelHost) {
-    return vercelHost.startsWith('http')
-      ? vercelHost.replace(/\/$/, '')
-      : `https://${vercelHost.replace(/\/$/, '')}`
-  }
-
-  return process.env.NODE_ENV === 'production'
-    ? 'https://popup-hub.vercel.app'
-    : 'http://localhost:3000'
+  return getURL()
 }
 
 const nextConfig: NextConfig = {

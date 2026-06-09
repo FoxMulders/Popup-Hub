@@ -10,6 +10,14 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (dynamic auth redirect base URL, not deployed)
+- **`lib/url/public-app-url.ts`:** Added `getURL()` — resolves origin from `NEXT_PUBLIC_SITE_URL` → `NEXT_PUBLIC_APP_URL` → `NEXT_PUBLIC_VERCEL_URL` / Vercel host envs → browser origin → `http://localhost:3000`; normalizes scheme and strips trailing slashes. Removed hardcoded `popup-hub.vercel.app` production fallback.
+- **OAuth:** `getOAuthOrigin()` now uses live `window.location.origin` on any domain (including `popuphub.ca`); login/signup `signInWithOAuth` + signup `emailRedirectTo` use `buildOAuthCallbackUrl(getOAuthOrigin(), …)`.
+- **API:** `app/api/auth/callback/route.ts` resolves redirect origin from `x-forwarded-host` / `host` + `x-forwarded-proto` (or `request.url` origin) — never env-based Vercel default; success redirect `${origin}${next}` default `/discover`.
+- **`next.config.ts`:** Injected `NEXT_PUBLIC_APP_URL` via `getURL()` instead of hardcoded Vercel domain.
+- **Manual (Supabase dashboard):** Set Site URL to `https://popuphub.ca`; add redirect wildcards `https://popup-hub.vercel.app/**`, `http://localhost:3000/**`.
+- **Verify:** Set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca` in Vercel production → Google OAuth from popuphub.ca returns to `/api/auth/callback` on same origin.
+
 ## Shipped this session (vendor passport TikTok field, not deployed)
 - **Migration `098_vendor_passport_tiktok.sql`:** `vendor_passports.tiktok_url` optional text column alongside `instagram_url` / `facebook_url`.
 - **Forms:** TikTok input in Online presence (`/vendor/passport` wizard + `PassportSocialFields`); `normalizeTikTokUrl` coerces `@handle` / bare handle → `https://tiktok.com/@handle` on save.
@@ -20,6 +28,20 @@
 - **`passport-story-uploader.tsx`:** Replaced `PendingItem` with `StoryDraft` (`id`, `file`, `previewUrl`, `captionText`); vendors get per-story caption inputs in the upload queue with live preview overlay; publish sends each draft's `captionText` to `POST /api/passport/stories`.
 - **Coordinator market promos:** Unchanged — shared caption + hashtag rules still apply to the whole batch.
 - **Verify:** `/vendor/dashboard` → Passport stories → queue 2+ files → add different captions → publish → published list shows each caption.
+
+## Shipped this session (admin console menu link, not deployed)
+- **`buildAppMenuExtraLinks`:** Slide-out menu shows **Feature requests** + **🛠️ Admin Console** (`/admin/feedback`) when `profile.is_admin`; wired in `AppNav` and `ShopperTopBar`.
+- **Verify:** Sign in as admin → open hamburger menu → both links visible beneath Profile settings; non-admin sees neither.
+
+## Shipped this session (admin feedback triage filters, not deployed)
+- **`FeedbackAdminDashboard`:** Fourth metric card **Total Completed**; **Critical Urgency** excludes `status = completed`; incoming list hides completed rows; marking completed clears selection to next active item.
+- **Verify:** Complete a ticket → leaves triage list, completed count increments, critical count drops if applicable.
+
+## Shipped this session (admin notified on feature request submit, not deployed)
+- **Migration `099_feature_request_admin_notification.sql`:** `feature_request_submitted` notification type.
+- **`notifyAdminsOfFeatureRequest`:** After `POST /api/feedback/submit`, inserts in-app notifications for every `profiles.is_admin` user; message includes role + urgency prefix (Critical / Blocked-workflow / New).
+- **UI:** Notification feed icon (lightbulb), visible in all portal tabs; tap opens `/admin/feedback`.
+- **Verify:** Migration `099` applied to remote Supabase (with `098`); deploy app code — submit suggestion → admin sees unread badge + notification; click → `/admin/feedback`.
 
 ## Shipped this session (admin feedback route hardening + theme polish, not deployed)
 - **Middleware:** `/admin/*` blocked unless `profiles.is_admin` or valid `ADMIN_SESSION_TOKEN` (`admin_session` cookie / Bearer header); non-admins redirect to role-appropriate dashboard via `accessDeniedRedirect`.

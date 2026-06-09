@@ -84,7 +84,7 @@ export function AppMenuSheet({
             ))}
 
             {extraLinks.map(({ href, label }) => (
-              <Link key={href} href={href} onClick={() => setOpen(false)}>
+              <Link key={`${href}-${label}`} href={href} onClick={() => setOpen(false)}>
                 <Button variant="ghost" className="w-full justify-start min-h-11" size="sm">
                   {label}
                 </Button>
