@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (layout editor — auto-arrange refactor, patron flow overlay, OpenRouter fix, not deployed)
+## Shipped this session (layout editor — auto-arrange refactor, patron flow overlay, OpenRouter fix, deployed 2026-06-09)
 - **Auto-arrange grid (`auto-arrange.ts` + `deterministic-market-layout.ts`):** Back-to-back double-row blocks with mandatory **6′ patron aisles** (`PATRON_AISLE_MIN_FT`); strict collision via `placedObjectsOverlap` + expanded obstacle probes; removed greedy fallback packer that caused overlaps; unplaced booths stage to open slots or are omitted with `removedOverlapCount` + toast: *"Could only fit X booths safely. Removed Y overlapping items."*
 - **Patron flow overlay:** `lib/floor-plan/patron-aisle-overlay.ts` + `PatronAisleOverlay` (green dashed 6′ corridor bands); **Toggle Patron Flow** (Route icon) in ROOM & CANVAS utilities sidebar; combines with existing `PatronTrafficPathOverlay` when doors exist.
 - **OpenRouter:** `lib/ai/openrouter.ts` uses `getURL()` for `HTTP-Referer`; dev console hints when `OPENROUTER_API_KEY` missing; `/api/layout/recommend` + client handle `AI_UNAVAILABLE` without breaking the inspector panel.
@@ -122,10 +122,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `a968ba6` (pushed to `origin/master`)
-- Last deploy commit: `a968ba6` - feat: A
-- Production: https://popuphub.ca - **build 55** | commit `d1dcb89` (handoff updated 2026-06-09 13:11)
-- **Env:** `GOOGLE_MAPS_API_KEY` configured on Vercel production (2026-06-09)
+- Branch: `master` @ `80e99a2` (pushed to `origin/master`)
+- Last deploy commit: `80e99a2` - feat: l
+- Production: https://popuphub.ca - **build 56** | commit `c185d13` (handoff updated 2026-06-09 16:11)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -502,7 +501,7 @@
 
 
 ## Last deploy
-- 2026-06-09 13:11 - Deploy via deploy-popuphub.ps1 - `feat: A` (a968ba6)
+- 2026-06-09 16:11 - Deploy via deploy-popuphub.ps1 - `feat: l` (80e99a2)
 
 
 ## Goal
