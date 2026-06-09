@@ -64,6 +64,75 @@ export function descriptionForPersist(raw: string | null | undefined): string {
   return DESCRIPTION_PERSIST_FALLBACK
 }
 
+/** RLS on `events` requires auth.uid() = coordinator_id — always use the live session user. */
+export async function resolveCoordinatorIdForPersist(
+  supabase: SupabaseClient,
+  fallbackCoordinatorId?: string | null
+): Promise<{ coordinatorId: string } | { error: Error }> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError) {
+    return { error: errorFromSupabase(authError) }
+  }
+
+  if (!user?.id) {
+    return {
+      error: new Error('Not authenticated — sign in again to save this market.'),
+    }
+  }
+
+  if (fallbackCoordinatorId && fallbackCoordinatorId !== user.id) {
+    console.warn(
+      '[persistEventDraft] coordinatorId prop does not match authenticated user; using session user id for RLS'
+    )
+  }
+
+  return { coordinatorId: user.id }
+}
+
+export type EventDraftPayloadInput = Omit<EventDraftPayload, 'coordinatorId'>
+
+export async function persistEventDraftViaApi(
+  eventId: string | null,
+  draft: EventDraftPayloadInput,
+  categoryLimits: CategoryLimit[],
+  dayRows: DayRowPayload[],
+  scheduleType: 'single' | 'multi'
+): Promise<{ eventId: string; error: Error | null }> {
+  const response = await fetch('/api/coordinator/events/draft', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ eventId, draft, categoryLimits, dayRows, scheduleType }),
+  })
+
+  let payload: { eventId?: string; error?: string } = {}
+  try {
+    payload = (await response.json()) as typeof payload
+  } catch {
+    payload = {}
+  }
+
+  if (!response.ok) {
+    return {
+      eventId: eventId ?? '',
+      error: new Error(payload.error ?? 'Could not save market draft'),
+    }
+  }
+
+  if (!payload.eventId) {
+    return {
+      eventId: eventId ?? '',
+      error: new Error('Could not save market draft'),
+    }
+  }
+
+  return { eventId: payload.eventId, error: null }
+}
+
 export async function persistEventVenueFields(
   supabase: SupabaseClient,
   eventId: string,
@@ -86,21 +155,40 @@ export async function persistEventVenueFields(
   return { error: error ? errorFromSupabase(error) : null }
 }
 
+export type PersistEventDraftOptions = {
+  /** Server-verified coordinator id — skips session lookup (use with service/admin client). */
+  coordinatorId?: string
+}
+
 export async function persistEventDraft(
   supabase: SupabaseClient,
   eventId: string | null,
   draft: EventDraftPayload,
   categoryLimits: CategoryLimit[],
   dayRows: DayRowPayload[],
-  scheduleType: 'single' | 'multi'
+  scheduleType: 'single' | 'multi',
+  options?: PersistEventDraftOptions
 ): Promise<{ eventId: string; error: Error | null }> {
+  let coordinatorId = options?.coordinatorId
+
+  if (!coordinatorId) {
+    const coordinatorResult = await resolveCoordinatorIdForPersist(
+      supabase,
+      draft.coordinatorId
+    )
+    if ('error' in coordinatorResult) {
+      return { eventId: eventId ?? '', error: coordinatorResult.error }
+    }
+    coordinatorId = coordinatorResult.coordinatorId
+  }
+
   const effectiveScheduleType = effectiveScheduleTypeForListing(
     draft.listingType,
     scheduleType
   )
 
   const sanitizedPayload = {
-    coordinator_id: draft.coordinatorId,
+    coordinator_id: coordinatorId,
     name: safeTrim(draft.name),
     description: descriptionForPersist(draft.description),
     location_name: safeTrim(draft.locationName),

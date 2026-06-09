@@ -5,14 +5,17 @@ import {
 
 /** Resolve Square OAuth application id (authorize URL + token exchange must use the same value). */
 export function resolveSquareApplicationId(): string | null {
+  const isProduction = process.env.SQUARE_ENVIRONMENT === 'production'
   const candidates = [
     process.env.NEXT_PUBLIC_SQUARE_APP_ID,
+    process.env.NEXT_PUBLIC_SQUARE_CLIENT_ID,
+    ...(isProduction ? [] : [process.env.SQUARE_SANDBOX_CLIENT_ID]),
     process.env.SQUARE_CLIENT_ID,
     process.env.SQUARE_APPLICATION_ID,
   ]
   for (const raw of candidates) {
     const trimmed = raw?.trim()
-    if (trimmed) return trimmed
+    if (trimmed && trimmed !== 'undefined' && trimmed !== 'null') return trimmed
   }
   return null
 }

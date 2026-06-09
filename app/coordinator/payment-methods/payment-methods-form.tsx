@@ -24,12 +24,8 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { formatCents } from '@/lib/square/client'
 import { ConnectSquareButton } from '@/app/coordinator/square-connect/connect-button'
-import {
-  buildSquareOAuthAuthorizeUrl,
-  getSquareAppId,
-  getSquareOAuthRedirectUri,
-  isSquareProductionEnvironment,
-} from '@/lib/square/connect-url'
+import { DevSandboxConnectPanel } from '@/app/coordinator/square-connect/dev-sandbox-connect-panel'
+import { SandboxSquareOAuthNotice } from '@/app/coordinator/square-connect/sandbox-oauth-notice'
 
 interface PaymentSettingsState {
   walletBalanceCents: number
@@ -52,18 +48,18 @@ interface PaymentSettingsState {
 interface PaymentMethodsFormProps {
   userId: string
   squareOauthUrl: string | null
+  squareOauthBuildError: string | null
   squareEnvironmentLabel: string
   squareRedirectUri: string | null
-  squareAppId: string | null
   showDevSandboxBypass: boolean
 }
 
 export function PaymentMethodsForm({
   userId,
   squareOauthUrl,
+  squareOauthBuildError,
   squareEnvironmentLabel,
   squareRedirectUri,
-  squareAppId,
   showDevSandboxBypass,
 }: PaymentMethodsFormProps) {
   const router = useRouter()
@@ -236,6 +232,7 @@ export function PaymentMethodsForm({
             </div>
           ) : squareOauthUrl ? (
             <>
+              {squareEnvironmentLabel === 'Sandbox' ? <SandboxSquareOAuthNotice /> : null}
               <p className="text-xs text-muted-foreground">
                 Square environment: {squareEnvironmentLabel}
               </p>
@@ -245,11 +242,23 @@ export function PaymentMethodsForm({
                 </p>
               ) : null}
               <ConnectSquareButton oauthUrl={squareOauthUrl} />
+              {showDevSandboxBypass ? <DevSandboxConnectPanel /> : null}
             </>
           ) : (
             <p className="text-sm text-harvest-800">
-              Configure <code>NEXT_PUBLIC_SQUARE_APP_ID</code> and{' '}
-              <code>NEXT_PUBLIC_APP_URL</code> to enable Square OAuth.
+              {squareOauthBuildError ? (
+                <>
+                  Square OAuth could not be initialized. Check server logs and verify{' '}
+                  <code>NEXT_PUBLIC_SQUARE_APP_ID</code> (or{' '}
+                  <code>NEXT_PUBLIC_SQUARE_CLIENT_ID</code> / <code>SQUARE_SANDBOX_CLIENT_ID</code>)
+                  and <code>NEXT_PUBLIC_APP_URL</code>.
+                </>
+              ) : (
+                <>
+                  Configure <code>NEXT_PUBLIC_SQUARE_APP_ID</code> and{' '}
+                  <code>NEXT_PUBLIC_APP_URL</code> to enable Square OAuth.
+                </>
+              )}
             </p>
           )}
           <div className="flex items-center justify-between rounded-lg border px-3 py-2">
@@ -369,12 +378,8 @@ export function PaymentMethodsForm({
         </Link>
       </div>
 
-      {showDevSandboxBypass ? (
-        <p className="text-xs text-muted-foreground">Dev sandbox Square bypass available on legacy Square page.</p>
-      ) : null}
 
       <input type="hidden" value={userId} readOnly aria-hidden />
-      {!squareAppId ? null : null}
     </div>
   )
 }

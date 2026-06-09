@@ -9,7 +9,7 @@ const ERROR_COPY: Record<string, string> = {
   invalid_client_id:
     'Square could not find that Application ID. Use the Sandbox Application ID when SQUARE_ENVIRONMENT is not production, and ensure NEXT_PUBLIC_SQUARE_APP_ID (or SQUARE_CLIENT_ID) matches the Square Developer Dashboard.',
   missing_app_id:
-    'Square Application ID is not configured. Set NEXT_PUBLIC_SQUARE_APP_ID in your environment and restart the server.',
+    'Square Application ID is not configured. Set NEXT_PUBLIC_SQUARE_APP_ID (or NEXT_PUBLIC_SQUARE_CLIENT_ID / SQUARE_SANDBOX_CLIENT_ID / SQUARE_CLIENT_ID) in your environment and restart the server.',
   missing_app_secret:
     'Square application secret is missing. Set SQUARE_APPLICATION_SECRET (or SQUARE_CLIENT_SECRET) for OAuth token exchange.',
   oauth_failed: 'Square authorization failed. Try connecting again or check your Square app credentials.',

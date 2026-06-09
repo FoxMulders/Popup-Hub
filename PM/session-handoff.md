@@ -2,6 +2,21 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (Square OAuth blank-page hardening, not deployed)
+- **`lib/square/app-credentials.ts`:** `resolveSquareApplicationId()` now reads `NEXT_PUBLIC_SQUARE_CLIENT_ID` and `SQUARE_SANDBOX_CLIENT_ID` (sandbox) in addition to existing keys; rejects literal `"undefined"` / `"null"` strings.
+- **`lib/square/connect-url.ts`:** `buildSquareOAuthAuthorizeUrl` validates `client_id`, `redirect_uri`, and `state` before building; `tryBuildSquareOAuthAuthorizeUrl` catches/logs failures instead of crashing the page.
+- **`app/api/square/oauth/callback/route.ts`:** Top-level try/catch; safe redirect base from `NEXT_PUBLIC_APP_URL` or request origin (fixes `Invalid URL` crash when env unset); JSON 500 fallback when redirect impossible.
+- **`app/coordinator/payment-methods/`:** Server uses `tryBuildSquareOAuthAuthorizeUrl`; wired `SquareConnectAlerts`, `SandboxSquareOAuthNotice`, and dev sandbox bypass panel.
+- **`connect-button.tsx`:** Client-side authorize URL validation blocks navigation when `client_id`/`state` missing; logs to console.
+- **Verify:** Coordinator → Payment Methods → with valid env, Connect button href includes non-empty `client_id`; with missing app id, inline config message (not blank page); OAuth callback errors redirect to `/coordinator/payment-methods?error=…`.
+
+## Shipped this session (market wizard draft save RLS fix, not deployed)
+- **Root cause:** Production wizard called `persistEventDraft` from the browser Supabase client. `coordinator_id` came from a server-rendered prop, but RLS requires `auth.uid() = coordinator_id` on the JWT attached to the insert — a mismatch (or missing client session) triggers Postgres `42501`.
+- **`lib/wizard/wizard-autosave.ts`:** `resolveCoordinatorIdForPersist()` reads the live session via `auth.getUser()` for direct client saves. Added `persistEventDraftViaApi()` so browser autosave posts to a server route. `persistEventDraft()` accepts `{ coordinatorId }` for server-verified writes with the admin client.
+- **`app/api/coordinator/events/draft/route.ts`:** POST handler authenticates via cookie-backed `createClient()`, verifies coordinator role, checks draft ownership on update, then persists with `createAdminClient()` and explicit `coordinator_id: user.id`.
+- **`components/coordinator/market-setup-wizard.tsx`:** Autosave / "Proceed to Capacity Settings" now calls `persistEventDraftViaApi` instead of a direct client-side `events` insert.
+- **Verify:** Sign in as coordinator → `/coordinator/events/new` → complete Step 1 → Continue → Network shows `POST /api/coordinator/events/draft` 200 with `eventId`; no 42501 in response.
+
 ## Shipped this session (portal tab sync with patron routes, deployed 2026-06-09)
 - **`lib/portals/active-portal.ts`:** Added `isPatronPortalPath()` for browse routes (`/discover`, `/favorites`, `/supplies`, `/events/*`, `/auctions/*`); `resolveActivePortal()` now prefers the current URL over the `active_portal` cookie on those paths so the Patron pill highlights correctly on `/discover` even when the cookie still says Coordinator/Vendor. Shared routes like `/wallet` still honor the cookie.
 - **`lib/supabase/middleware.ts`:** Patron browse deep links sync the `active_portal` cookie to `patron` (same pattern as vendor/coordinator prefixed routes).

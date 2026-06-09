@@ -31,7 +31,7 @@ import {
 } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { sortCategoriesByName } from '@/lib/categories'
-import { persistEventDraft, persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
+import { persistEventDraftViaApi, persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { EVENTS_SCHEMA_MIGRATION_MESSAGE } from '@/lib/supabase/postgrest-errors'
 import {
   applyMlmLimitRules,
@@ -537,11 +537,9 @@ export function MarketSetupWizard({
           setCoverFile(null)
         }
 
-        const draftResult = await persistEventDraft(
-          supabase,
+        const draftResult = await persistEventDraftViaApi(
           eventId,
           {
-            coordinatorId,
             name,
             description,
             locationName,
@@ -635,7 +633,6 @@ export function MarketSetupWizard({
       boothPriceCents,
       categoryLimits,
       multiTableDiscountPercent,
-      coordinatorId,
       coverFile,
       coverImageUrl,
       currentStep,

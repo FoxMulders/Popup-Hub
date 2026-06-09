@@ -35,22 +35,63 @@ export function normalizeAppOrigin(raw?: string): string | null {
   return trimmed.replace(/\/+$/, '')
 }
 
+function assertOAuthParam(name: string, value: string | undefined | null): string {
+  const trimmed = value?.trim()
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') {
+    throw new Error(
+      `[square/oauth] Missing or invalid ${name} for Square OAuth authorize URL`
+    )
+  }
+  return trimmed
+}
+
 export function buildSquareOAuthAuthorizeUrl(params: {
   clientId: string
   redirectUri: string
   state: string
   scope?: string
 }): string {
-  const url = new URL(`${getSquareConnectBaseUrl()}/oauth2/authorize`)
-  url.searchParams.set('client_id', params.clientId)
-  url.searchParams.set('scope', formatSquareOAuthScopeParam(params.scope))
-  url.searchParams.set('redirect_uri', params.redirectUri)
-  url.searchParams.set('state', params.state)
-  url.searchParams.set('response_type', 'code')
-  if (isSquareProductionEnvironment()) {
-    url.searchParams.set('session', 'false')
+  const clientId = assertOAuthParam(
+    'client_id (set NEXT_PUBLIC_SQUARE_APP_ID, NEXT_PUBLIC_SQUARE_CLIENT_ID, SQUARE_SANDBOX_CLIENT_ID, or SQUARE_CLIENT_ID)',
+    params.clientId
+  )
+  const redirectUri = assertOAuthParam(
+    'redirect_uri (set NEXT_PUBLIC_APP_URL)',
+    params.redirectUri
+  )
+  const state = assertOAuthParam('state (OAuth CSRF token)', params.state)
+
+  try {
+    const url = new URL(`${getSquareConnectBaseUrl()}/oauth2/authorize`)
+    url.searchParams.set('client_id', clientId)
+    url.searchParams.set('scope', formatSquareOAuthScopeParam(params.scope))
+    url.searchParams.set('redirect_uri', redirectUri)
+    url.searchParams.set('state', state)
+    url.searchParams.set('response_type', 'code')
+    if (isSquareProductionEnvironment()) {
+      url.searchParams.set('session', 'false')
+    }
+    return url.toString()
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[square/oauth] Failed to build authorize URL:', message)
+    throw err instanceof Error ? err : new Error(message)
   }
-  return url.toString()
+}
+
+export function tryBuildSquareOAuthAuthorizeUrl(params: {
+  clientId: string
+  redirectUri: string
+  state: string
+  scope?: string
+}): { url: string } | { error: string } {
+  try {
+    return { url: buildSquareOAuthAuthorizeUrl(params) }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error building Square OAuth URL'
+    console.error('[square/oauth]', message)
+    return { error: message }
+  }
 }
 
 export function getSquareOAuthRedirectUri(): string | null {
