@@ -9,6 +9,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot 'get-deploy-commit-message.ps1')
 
 function Get-SessionHandoffPaths {
     param([string]$Root)
@@ -53,7 +54,9 @@ try {
     }
 
     $date = Get-Date -Format 'yyyy-MM-dd HH:mm'
+    $deployDate = Get-Date -Format 'yyyy-MM-dd'
     $content = Get-Content $HandoffPath -Raw
+    $content = Mark-ShippedSectionsDeployed -Content $content -DeployedOn $deployDate
 
     $commitLine = if ($CommitMessage) {
         "- Last deploy commit: ``$commit`` - $CommitMessage"
@@ -91,6 +94,13 @@ try {
 
     Set-Content -Path $HandoffPath -Value ($content.TrimEnd() + "`r`n") -NoNewline
     Write-Host "Updated $HandoffPath (baseline @ $commit)" -ForegroundColor Green
+
+    $nextMessage = Sync-DeployCommitMessageArtifacts -ProjectRoot $ProjectRoot
+    if ($nextMessage) {
+        Write-Host "Next deploy commit message: $nextMessage" -ForegroundColor DarkGray
+    } else {
+        Write-Host 'Next deploy commit message: (none — add Shipped this session sections)' -ForegroundColor DarkGray
+    }
 } finally {
     Pop-Location
 }

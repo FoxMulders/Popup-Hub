@@ -108,20 +108,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
   const autoFilled = props.autoFilledFields ?? new Set<FlyerFieldKey>()
 
   return (
-    <div className="wizard-step1-deck relative space-y-4">
-      {props.parsingFlyer ? (
-        <div
-          className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-cream/75 backdrop-blur-[2px]"
-          aria-hidden
-        >
-          <div className="mx-4 max-w-sm rounded-xl border border-harvest-200 bg-white px-5 py-4 text-center shadow-lg">
-            <p className="text-sm font-semibold text-harvest-800">✨ AI is reading your poster details…</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              We&apos;ll fill in matching fields when ready. You can edit everything afterward.
-            </p>
-          </div>
-        </div>
-      ) : null}
+    <div className="wizard-step1-deck space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 px-0.5">
         <div>
           <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">

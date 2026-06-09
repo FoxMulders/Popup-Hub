@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { showFlyerParseErrorToast } from '@/components/coordinator/flyer-parse-error-toast'
 import { applyParsedFlyer } from '@/lib/flyer/apply-parsed-flyer'
 import type { FlyerFieldKey, FlyerFormHandlers, ParsedFlyerResponse } from '@/lib/flyer/types'
 
@@ -46,18 +47,38 @@ export function useFlyerScan() {
           body: formData,
         })
 
-        const json = (await res.json()) as ParseFlyerApiResponse
+        let json: ParseFlyerApiResponse
+        try {
+          json = (await res.json()) as ParseFlyerApiResponse
+        } catch (parseErr) {
+          console.warn('[flyer-scan] Could not parse flyer API response', parseErr)
+          showFlyerParseErrorToast(FLYER_PARSE_FALLBACK)
+          return false
+        }
 
         if (generation !== scanGeneration.current) return false
 
         if (!res.ok || json.error) {
-          toast.error(flyerParseErrorMessage(json.error, false))
+          console.warn('[flyer-scan] Flyer parse API returned an error', {
+            status: res.status,
+            error: json.error,
+          })
+          showFlyerParseErrorToast(flyerParseErrorMessage(json.error, false))
           return false
         }
 
-        const filled = applyParsedFlyer(json, handlers)
+        let filled: Set<FlyerFieldKey>
+        try {
+          filled = applyParsedFlyer(json, handlers)
+        } catch (applyErr) {
+          console.warn('[flyer-scan] Failed to apply parsed flyer fields to the form', applyErr)
+          showFlyerParseErrorToast(FLYER_PARSE_FALLBACK)
+          return false
+        }
+
         if (filled.size === 0) {
-          toast.error(flyerParseErrorMessage(undefined, true))
+          console.warn('[flyer-scan] Flyer parsed but no form fields could be mapped')
+          showFlyerParseErrorToast(flyerParseErrorMessage(undefined, true))
           return false
         }
 
@@ -72,9 +93,10 @@ export function useFlyerScan() {
         }, 12_000)
 
         return true
-      } catch {
+      } catch (err) {
         if (generation === scanGeneration.current) {
-          toast.error(FLYER_PARSE_FALLBACK)
+          console.warn('[flyer-scan] Flyer scan failed unexpectedly', err)
+          showFlyerParseErrorToast(FLYER_PARSE_FALLBACK)
         }
         return false
       } finally {

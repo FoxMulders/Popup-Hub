@@ -3,8 +3,8 @@
 # Usage:
 #   .\scripts\deploy-popuphub.ps1
 #   .\scripts\deploy-popuphub.ps1 -Message "fix: footer version row"
-#   PM\Deploy-popuphub.bat [commit message]
-# Default commit message matches current WIP - override via -Message or bat arg 1.
+#   PM\Deploy-popuphub.bat
+# Commit message is always derived from PM/session-handoff.md (override rarely via -Message).
 
 param(
     [string]$Message = '',
@@ -23,6 +23,7 @@ if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction Sile
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'init-shell-env.ps1')
 . (Join-Path $PSScriptRoot 'git-sync.ps1')
+. (Join-Path $PSScriptRoot 'get-deploy-commit-message.ps1')
 
 Initialize-ProjectShellEnv
 
@@ -34,9 +35,18 @@ function Write-Step($text) {
 if ($MessageArgs -and $MessageArgs.Count -gt 0) {
     $Message = $MessageArgs -join ' '
 }
+
+$handoffMessage = Sync-DeployCommitMessageArtifacts -ProjectRoot $ProjectRoot
 if (-not $Message) {
-    $Message = 'feat: floor-plan object resize, measurements, viewport lock, and layout fixes'
+    $Message = $handoffMessage
 }
+if (-not $Message) {
+    Write-Host 'No undeployed sections in PM/session-handoff.md — nothing to ship.' -ForegroundColor Red
+    Write-Host 'Add ## Shipped this session (... , not deployed) blocks, then run deploy again.' -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "Deploy commit message (auto): $Message" -ForegroundColor DarkGray
 
 function Test-CommandAvailable($name) {
     $cmd = Get-Command $name -ErrorAction SilentlyContinue
@@ -87,7 +97,7 @@ try {
         $status = git status --porcelain
         if ($status) {
             Write-Step "Commit: $Message"
-            git commit -m $Message
+            git commit -m "$Message"
             if ($LASTEXITCODE -ne 0) { throw 'Commit failed' }
         } else {
             Write-Host 'Nothing to commit.' -ForegroundColor Yellow
@@ -118,10 +128,14 @@ try {
         $handoffProdUrl = 'https://popuphub.ca'
         & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -DeployUrl $handoffProdUrl -Note 'Deploy via deploy-popuphub.ps1' -CommitMessage $Message
 
-        $handoffGit = 'PM/session-handoff.md'
-        $handoffStatus = git status --porcelain -- $handoffGit
+        $handoffPaths = @(
+            'PM/session-handoff.md',
+            'PM/Deploy-popuphub.bat',
+            'PM/deploy-commit-message.txt'
+        )
+        $handoffStatus = git status --porcelain -- @handoffPaths
         if ($handoffStatus) {
-            git add -- $handoffGit
+            git add -- @handoffPaths
             git commit -m "docs: session handoff after deploy ($short)"
             if ($LASTEXITCODE -ne 0) { throw 'Handoff commit failed' }
             Push-GitOriginHead

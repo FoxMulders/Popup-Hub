@@ -7,8 +7,7 @@
 #   npm run ship -- "feat: my change"
 
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$Message,
+    [string]$Message = '',
     [switch]$SkipCommit,
     [switch]$SkipDeploy,
     [switch]$SkipPush
@@ -21,9 +20,16 @@ if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction Sile
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'init-shell-env.ps1')
 . (Join-Path $PSScriptRoot 'git-sync.ps1')
+. (Join-Path $PSScriptRoot 'get-deploy-commit-message.ps1')
 
 Initialize-ProjectShellEnv
 Push-Location $ProjectRoot
+
+$handoffMessage = Sync-DeployCommitMessageArtifacts -ProjectRoot $ProjectRoot
+if (-not $Message) { $Message = $handoffMessage }
+if (-not $Message) { throw 'No deploy commit message — add Shipped this session sections to PM/session-handoff.md' }
+
+Write-Host "Ship commit message (auto): $Message" -ForegroundColor DarkGray
 
 function Write-Step($text) {
     Write-Host ""

@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (Market Setup Wizard flyer upload fallback + toast, not deployed)
+- **`hooks/use-flyer-scan.ts`:** Flyer parse failures log `console.warn` instead of throwing; JSON parse and `applyParsedFlyer` wrapped so the wizard stays interactive for manual entry.
+- **`components/coordinator/flyer-parse-error-toast.tsx`:** Rose-themed top-right toast (`flex flex-row … max-w-sm`) with ✕ dismiss and 5s auto-close via Sonner `toast.custom`.
+- **`wizard-step-event-details.tsx`:** Removed full-step parsing overlay so Event name, Description, and Start date/time stay focusable while AI runs in the background (`FlyerCoverUpload` inline status only).
+
+## Shipped this session (auto commit message in Deploy-popuphub.bat, not deployed)
+- **`Sync-DeployCommitMessageArtifacts`:** Refreshes `REM Next commit (auto):` in `PM/Deploy-popuphub.bat` and `PM/deploy-commit-message.txt` whenever handoff updates or deploy runs — no manual message editing.
+- **`Deploy-popuphub.bat`:** Removed commit-message arg; double-click ships with auto-derived message from undeployed handoff sections.
+
 ## Shipped this session (deploy pipeline — duplicate Vercel builds + commit message, deployed 2026-06-09)
 - **`vercel.json`:** `git.deploymentEnabled.master/main: false` — git push no longer triggers a production build; CLI `vercel deploy --prod` is the sole prod deploy path (fixes two builds per commit).
 - **`scripts/get-deploy-commit-message.ps1`:** `Get-DeployCommitMessageFromHandoff` aggregates all `## Shipped this session (... , not deployed)` titles into the deploy commit message; `Mark-ShippedSectionsDeployed` flips them to `deployed yyyy-MM-dd` after handoff update.
@@ -27,7 +36,7 @@
 - Branch: `master` @ `8119e2a` (pushed to `origin/master`)
 - Last deploy commit: `8119e2a` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
 - Production: https://popuphub.ca - **build 48** | commit `13efbf0` (handoff updated 2026-06-09 09:02)
-- **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
+- **Deploy script:** `PM/Deploy-popuphub.bat` (no args) -> auto commit message from handoff; build, commit, sync push, CLI Vercel prod, handoff
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
