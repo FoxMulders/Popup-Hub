@@ -24,8 +24,18 @@ assert(
 )
 
 assert(
-  'patron route keeps vendor cookie on discover',
-  resolveActivePortal('vendor', coordinatorProfile, '/discover') === 'vendor'
+  'patron route overrides coordinator cookie on discover',
+  resolveActivePortal('coordinator', coordinatorProfile, '/discover') === 'patron'
+)
+
+assert(
+  'patron route overrides vendor cookie on discover',
+  resolveActivePortal('vendor', coordinatorProfile, '/discover') === 'patron'
+)
+
+assert(
+  'shared wallet route keeps coordinator cookie',
+  resolveActivePortal('coordinator', coordinatorProfile, '/wallet') === 'coordinator'
 )
 
 assert(

@@ -63,6 +63,23 @@ export function detectPortalFromPath(pathname: string): ActivePortal {
   return 'patron'
 }
 
+/** Browse/shopper routes where nav chrome should reflect Patron regardless of cookie. */
+const PATRON_PORTAL_PATH_PREFIXES = [
+  '/discover',
+  '/favorites',
+  '/supplies',
+  '/events/',
+  '/auctions/',
+] as const
+
+export function isPatronPortalPath(pathname: string): boolean {
+  return PATRON_PORTAL_PATH_PREFIXES.some((prefix) =>
+    prefix.endsWith('/')
+      ? pathname.startsWith(prefix)
+      : pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+}
+
 /** Portal implied by a route prefix when the signed-in account may access it. */
 export function portalFromAccessiblePath(
   pathname: string,
@@ -85,21 +102,25 @@ export function resolveActivePortal(
   const available = getAvailablePortals(role, portalOptions)
   const parsed = parseActivePortal(cookieValue)
 
-  // Portal-prefixed routes win over the cookie so nav chrome matches the URL.
+  // Route wins over cookie so nav chrome matches the URL.
   if (pathname) {
     const fromAccessiblePath = portalFromAccessiblePath(pathname, role, portalOptions)
     if (fromAccessiblePath) return fromAccessiblePath
+
+    if (isPatronPortalPath(pathname)) {
+      if (available.includes('patron') || available.length === 0) {
+        return 'patron'
+      }
+    }
+
+    const fromPath = detectPortalFromPath(pathname)
+    if (fromPath !== 'patron' && available.includes(fromPath)) {
+      return fromPath
+    }
   }
 
   if (parsed && available.includes(parsed)) {
     return parsed
-  }
-
-  if (pathname) {
-    const fromPath = detectPortalFromPath(pathname)
-    if (fromPath === 'patron' || available.includes(fromPath)) {
-      return fromPath
-    }
   }
 
   return 'patron'

@@ -5,6 +5,7 @@ import {
   canAccessPortal,
   detectPortalFromPath,
   getDefaultDashboard,
+  isPatronPortalPath,
   parseActivePortal,
 } from '@/lib/portals/active-portal'
 import {
@@ -139,10 +140,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Option A: deep links to /coordinator/* or /vendor/* sync the active portal cookie.
+  // Deep links sync the active portal cookie with the route the user landed on.
   if (user && profileRole) {
-    const pathPortal = detectPortalFromPath(pathname)
-    if (pathPortal !== 'patron' && canAccessPortal(profileRole, pathPortal, { isAdmin: profileIsAdmin })) {
+    const patronBrowsePath = isPatronPortalPath(pathname)
+    const pathPortal = patronBrowsePath ? 'patron' : detectPortalFromPath(pathname)
+    const shouldSync =
+      patronBrowsePath ||
+      (pathPortal !== 'patron' &&
+        canAccessPortal(profileRole, pathPortal, { isAdmin: profileIsAdmin }))
+
+    if (shouldSync) {
       const cookiePortal = parseActivePortal(request.cookies.get(ACTIVE_PORTAL_COOKIE)?.value)
       if (cookiePortal !== pathPortal) {
         supabaseResponse.cookies.set(ACTIVE_PORTAL_COOKIE, pathPortal, {

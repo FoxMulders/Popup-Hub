@@ -136,6 +136,15 @@ const BRAND = {
   cream: '#fffdf9',
 } as const
 
+/** Extended below the booth ring so the tagline + progress bar are never clipped. */
+const SVG_WIDTH = 480
+const SVG_HEIGHT = 448
+const TAGLINE = 'Markets Made Easy'
+const TAGLINE_Y = 392
+const PROGRESS_Y = 410
+const PROGRESS_X = 90
+const PROGRESS_W = 300
+
 function drawProgress(value: number, start: number, end: number) {
   if (value <= start) return 0
   if (value >= end) return 1
@@ -186,11 +195,12 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         aria-hidden
       />
       <svg
-        viewBox="0 0 480 420"
-        className="initial-loader-reveal__svg"
+        viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
+        className="initial-loader-reveal__svg overflow-visible"
         role="img"
         aria-label="Popup Hub loading"
         preserveAspectRatio="xMidYMid meet"
+        overflow="visible"
         style={{ transform: `scale(${masterScale})` }}
       >
         <defs>
@@ -205,7 +215,7 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           </linearGradient>
         </defs>
 
-        <rect width="480" height="420" fill={BRAND.cream} />
+        <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill={BRAND.cream} />
 
         {booths.map((booth, index) => {
           const t = clamp01((boothT - booth.delay) / (1 - booth.delay))
@@ -252,36 +262,35 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         </g>
 
         <text
-          x="240"
-          y="378"
+          x={SVG_WIDTH / 2}
+          y={TAGLINE_Y}
           textAnchor="middle"
-          fontSize="13"
+          fontSize="12"
           fontWeight="500"
           fill={BRAND.ink}
           opacity={tagT * 0.55}
           style={{
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
+            letterSpacing: '0.14em',
             fontFamily:
               'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
           }}
         >
-          Plan · Host · Grow
+          {TAGLINE}
         </text>
 
         <rect
-          x="140"
-          y="396"
-          width="200"
+          x={PROGRESS_X}
+          y={PROGRESS_Y}
+          width={PROGRESS_W}
           height="3"
           rx="1.5"
           fill={BRAND.sage}
           opacity={0.12}
         />
         <rect
-          x="140"
-          y="396"
-          width={200 * barT}
+          x={PROGRESS_X}
+          y={PROGRESS_Y}
+          width={PROGRESS_W * barT}
           height="3"
           rx="1.5"
           fill="url(#il-bar)"

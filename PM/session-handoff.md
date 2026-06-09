@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (portal tab sync with patron routes, not deployed)
+- **`lib/portals/active-portal.ts`:** Added `isPatronPortalPath()` for browse routes (`/discover`, `/favorites`, `/supplies`, `/events/*`, `/auctions/*`); `resolveActivePortal()` now prefers the current URL over the `active_portal` cookie on those paths so the Patron pill highlights correctly on `/discover` even when the cookie still says Coordinator/Vendor. Shared routes like `/wallet` still honor the cookie.
+- **`lib/supabase/middleware.ts`:** Patron browse deep links sync the `active_portal` cookie to `patron` (same pattern as vendor/coordinator prefixed routes).
+- **`lib/portals/qa-active-portal.ts`:** Updated assertions for discover + wallet behavior.
+- **Verify:** Sign in as coordinator → visit `/discover` directly → Patron tab is active; switch to Coordinator → lands on `/coordinator/dashboard`; `/wallet` keeps prior portal tab.
+
+## Shipped this session (initial loader tagline — Markets Made Easy, not deployed)
+- **`components/brand/initial-loader-reveal.tsx`:** Tagline changed from "Plan · Host · Grow" to "Markets Made Easy"; extended SVG viewBox bottom padding, widened progress bar, reduced letter-spacing, and removed uppercase transform so the full phrase renders without clipping during the reveal animation.
+
 ## Shipped this session (Market Setup Wizard flyer upload fallback + toast, deployed 2026-06-09)
 - **`hooks/use-flyer-scan.ts`:** Flyer parse failures log `console.warn` instead of throwing; JSON parse and `applyParsedFlyer` wrapped so the wizard stays interactive for manual entry.
 - **`components/coordinator/flyer-parse-error-toast.tsx`:** Rose-themed top-right toast (`flex flex-row … max-w-sm`) with ✕ dismiss and 5s auto-close via Sonner `toast.custom`.
