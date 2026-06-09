@@ -2,6 +2,21 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (Turf.js AutoArrangeEngine + canvas editor, not deployed)
+- **`engine/AutoArrangeEngine.ts`:** `packBooths(roomPolygon, boothList)` — shelf scan inside merged_zone; largest-first sort; **5′ aisle** buffer; Turf `booleanPointInPolygon`, `booleanWithin`, `booleanOverlap` for room containment and collision with booths/stages/walls; unplaced booths → off-canvas sentinel (`x/y = -999`).
+- **`engine/BoothArrangementEngine.ts`:** `PackBooths()` now delegates to AutoArrangeEngine; perimeter wall orientation preserved post-pack.
+- **`canvas/canvas-editor.tsx`:** **Auto-Arrange** button (inspector canvas panel when nothing selected).
+- **`floor-plan-v2.tsx`:** `handleAutoArrange` → `replaceObjects`; fixed `usePathfinding` hook order (TS2454).
+- **Dependency:** `@turf/turf` added.
+- **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — 4/4 booths placed + path visits all.
+
+## Shipped this session (floor-plan A* pathfinding, not deployed)
+- **`PathfindingService.ts`:** Navigation grid from merged_zone / room boundary polygons (`buildNavigationGrid`); walkable cells inside boundary rings; booth/stage/wall impassable; A* with Euclidean heuristic f(n)=g(n)+h(n); nearest-neighbor TSP booth order; entrance/exit optional.
+- **`hooks/use-pathfinding.ts`:** `usePathfinding(doc, roomId, { booths, roomBoundary, cellFt, enabled })` returns optimal path coordinates.
+- **`canvas-overlays.tsx`:** Patron path rendered as dashed SVG `<polyline>` (`strokeWidth={2}`, `pointerEvents="none"`).
+- **`floor-plan-v2.tsx`:** Wired hook after auto-layout; path stays in sync with doc edits while enabled.
+- **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
+
 ## Baseline
 - Branch: `master` @ `a625173` (pushed to `origin/master`)
 - Last deploy commit: `a625173` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes

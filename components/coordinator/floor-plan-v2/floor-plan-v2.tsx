@@ -59,10 +59,8 @@ import {
   PackBooths,
   vendorBoothsInRoom,
 } from './engine/BoothArrangementEngine'
-import {
-  CalculateOptimalPath,
-  type PathPoint,
-} from './engine/PathfindingService'
+import { CalculateOptimalPath } from './engine/PathfindingService'
+import { usePathfinding } from './hooks/use-pathfinding'
 import { legacyRoomsFromDoc } from './state/legacy-bridge'
 import { hydrateFloorPlanDoc } from './state/layout-hydration'
 import {
@@ -376,9 +374,7 @@ function FloorPlanV2Workspace({
     useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
-  const [patronTrafficPath, setPatronTrafficPath] = useState<PathPoint[] | null>(
-    null
-  )
+  const [patronPathEnabled, setPatronPathEnabled] = useState(false)
 
   const prevLayoutRoomCountRef = useRef(layoutRooms.length)
   useEffect(() => {
@@ -507,6 +503,10 @@ function FloorPlanV2Workspace({
   // a frame as the canvas selection while the user is interacting
   // with it.
   const activeRoomId = layoutActiveRoomId
+  const patronTrafficPath = usePathfinding(store.doc, activeRoomId, {
+    enabled: patronPathEnabled,
+    cellFt: store.doc.snapFt,
+  })
   const [rawSelectedRoomId, setSelectedRoomId] = useState<string | null>(null)
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(
     () => new Set()
@@ -544,7 +544,7 @@ function FloorPlanV2Workspace({
   }, [activeRoomId, store.doc])
 
   useEffect(() => {
-    setPatronTrafficPath(null)
+    setPatronPathEnabled(false)
   }, [activeRoomId])
 
   // New rooms become the active room in the sidebar but did not set
@@ -1559,7 +1559,7 @@ function FloorPlanV2Workspace({
     const pathResult = CalculateOptimalPath(packedDoc, activeRoomId)
 
     store.replaceObjects(packedDoc.objects)
-    setPatronTrafficPath(pathResult?.path ?? null)
+    setPatronPathEnabled((pathResult?.path.length ?? 0) >= 2)
 
     if (packResult.placedCount === 0) {
       toast.error('Auto-layout could not fit any booths inside the merged zone.')
@@ -1579,6 +1579,41 @@ function FloorPlanV2Workspace({
     } else {
       toast.success(
         `Packed ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'}. Add entrance/exit doors to visualize traffic flow.`
+      )
+    }
+  }, [activeRoomId, store, vendorBoothCount])
+
+  const handleAutoArrange = useCallback(() => {
+    if (vendorBoothCount === 0) {
+      toast.message('Nothing to arrange — draw at least one vendor booth first.')
+      return
+    }
+
+    const booths = vendorBoothsInRoom(store.doc, activeRoomId)
+    const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
+    const packResult = PackBooths(store.doc, activeRoomId, cleared)
+    const packedDoc = applyPackedBoothsToDoc(
+      store.doc,
+      activeRoomId,
+      packResult.booths
+    )
+
+    store.replaceObjects(packedDoc.objects)
+
+    if (packResult.placedCount === 0) {
+      toast.error('Auto-arrange could not fit any booths inside the merged zone.')
+      return
+    }
+
+    const dropped = packResult.droppedCount
+    if (dropped > 0) {
+      toast.warning(
+        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'}; ${dropped} could not fit and ${dropped === 1 ? 'was' : 'were'} left unplaced.`,
+        { duration: 5000 }
+      )
+    } else {
+      toast.success(
+        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'} inside the merged zone.`
       )
     }
   }, [activeRoomId, store, vendorBoothCount])
@@ -2379,6 +2414,8 @@ function FloorPlanV2Workspace({
                   <PropertyInspector
                     store={store}
                     eventCategoryNames={eventCategoryNames}
+                    onAutoArrange={handleAutoArrange}
+                    canAutoArrange={vendorBoothCount > 0}
                     onAutoLayoutAndPathfind={handleAutoLayoutAndPathfind}
                     canAutoLayoutAndPathfind={vendorBoothCount > 0}
                     className="min-h-0 flex-1 overflow-y-auto pt-1"

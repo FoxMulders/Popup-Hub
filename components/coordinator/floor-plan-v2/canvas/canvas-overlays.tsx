@@ -295,27 +295,22 @@ interface PatronTrafficPathProps {
   pxPerFt: number
 }
 
-/** Semi-transparent dotted polyline for computed patron traffic flow. */
+/** Dashed polyline for computed patron traffic flow (non-interactive). */
 export function PatronTrafficPathOverlay({
   path,
   pxPerFt,
 }: PatronTrafficPathProps) {
   if (!path || path.length < 2) return null
-  const d = path
-    .map((p, i) => {
-      const x = p.x * pxPerFt
-      const y = p.y * pxPerFt
-      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
-    })
+  const points = path
+    .map((p) => `${p.x * pxPerFt},${p.y * pxPerFt}`)
     .join(' ')
   return (
-    <path
-      d={d}
+    <polyline
+      points={points}
       fill="none"
       stroke="#0284c7"
-      strokeWidth={2.5}
-      strokeOpacity={0.55}
-      strokeDasharray="6 5"
+      strokeWidth={2}
+      strokeDasharray="6 4"
       strokeLinecap="round"
       strokeLinejoin="round"
       pointerEvents="none"

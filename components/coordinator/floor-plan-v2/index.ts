@@ -21,6 +21,26 @@ export type {
 } from './state/types'
 export type { ToolId, DrawShape, ToolState } from './tools/types'
 export {
+  packBooths,
+  packBoothsForRoom,
+  AISLE_WIDTH_FT,
+} from './engine/AutoArrangeEngine'
+export type {
+  BoothPackInput,
+  BoothPlacement,
+  PackBoothsResult as TurfPackBoothsResult,
+} from './engine/AutoArrangeEngine'
+export { CanvasEditor } from './canvas/canvas-editor'
+export {
+  CalculateOptimalPath,
+  buildNavigationGrid,
+  astarGrid,
+  type PathPoint,
+  type OptimalPathResult,
+  type NavigationGrid,
+} from './engine/PathfindingService'
+export { usePathfinding } from './hooks/use-pathfinding'
+export {
   activeRoomFrames,
   ensureCanvasHasPlaceableRoom,
   isValidPlacementLocation,

@@ -18,6 +18,7 @@ import {
   inspectorLegendClass,
 } from './inspector-field-styles'
 import { TableClusterFields } from './table-cluster-fields'
+import { CanvasEditor } from '../canvas/canvas-editor'
 
 const INSPECTOR_ASIDE_CLASS =
   '@container flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-3 text-xs'
@@ -32,6 +33,10 @@ interface PropertyInspectorProps {
    * events that don't yet have a category list.
    */
   eventCategoryNames?: string[]
+  /** Turf-validated shelf pack for vendor booths in the active room. */
+  onAutoArrange?: () => void
+  canAutoArrange?: boolean
+  autoArrangeDisabledReason?: string | null
   /** Run intelligent bin-pack + patron pathfind for the active room. */
   onAutoLayoutAndPathfind?: () => void
   canAutoLayoutAndPathfind?: boolean
@@ -50,6 +55,9 @@ interface PropertyInspectorProps {
 export function PropertyInspector({
   store,
   eventCategoryNames,
+  onAutoArrange,
+  canAutoArrange = false,
+  autoArrangeDisabledReason,
   onAutoLayoutAndPathfind,
   canAutoLayoutAndPathfind = false,
   className,
@@ -73,6 +81,13 @@ export function PropertyInspector({
             tweak the advisory canvas settings below.
           </p>
         </header>
+        {onAutoArrange ? (
+          <CanvasEditor
+            onAutoArrange={onAutoArrange}
+            canAutoArrange={canAutoArrange}
+            disabledReason={autoArrangeDisabledReason}
+          />
+        ) : null}
         {onAutoLayoutAndPathfind ? (
           <section aria-label="Layout automation">
             <button
