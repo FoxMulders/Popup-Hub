@@ -2,12 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (Market Setup Wizard flyer upload fallback + toast, not deployed)
+## Shipped this session (Market Setup Wizard flyer upload fallback + toast, deployed 2026-06-09)
 - **`hooks/use-flyer-scan.ts`:** Flyer parse failures log `console.warn` instead of throwing; JSON parse and `applyParsedFlyer` wrapped so the wizard stays interactive for manual entry.
 - **`components/coordinator/flyer-parse-error-toast.tsx`:** Rose-themed top-right toast (`flex flex-row … max-w-sm`) with ✕ dismiss and 5s auto-close via Sonner `toast.custom`.
 - **`wizard-step-event-details.tsx`:** Removed full-step parsing overlay so Event name, Description, and Start date/time stay focusable while AI runs in the background (`FlyerCoverUpload` inline status only).
 
-## Shipped this session (auto commit message in Deploy-popuphub.bat, not deployed)
+## Shipped this session (auto commit message in Deploy-popuphub.bat, deployed 2026-06-09)
 - **`Sync-DeployCommitMessageArtifacts`:** Refreshes `REM Next commit (auto):` in `PM/Deploy-popuphub.bat` and `PM/deploy-commit-message.txt` whenever handoff updates or deploy runs — no manual message editing.
 - **`Deploy-popuphub.bat`:** Removed commit-message arg; double-click ships with auto-derived message from undeployed handoff sections.
 
@@ -33,10 +33,10 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8119e2a` (pushed to `origin/master`)
-- Last deploy commit: `8119e2a` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 48** | commit `13efbf0` (handoff updated 2026-06-09 09:02)
-- **Deploy script:** `PM/Deploy-popuphub.bat` (no args) -> auto commit message from handoff; build, commit, sync push, CLI Vercel prod, handoff
+- Branch: `master` @ `30e6794` (pushed to `origin/master`)
+- Last deploy commit: `30e6794` - feat: ship 9 session updates (Market Setup Wizard flyer upload fallback + toast; auto commit message in Deploy-popuphub.bat; vendor clearance; Shipped earlier this session (not deployed); +5 more)
+- Production: https://popuphub.ca - **build 49** | commit `1f1eb9c` (handoff updated 2026-06-09 09:17)
+- **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
@@ -412,7 +412,7 @@
 
 
 ## Last deploy
-- 2026-06-09 09:02 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (8119e2a)
+- 2026-06-09 09:17 - Deploy via deploy-popuphub.ps1 - `feat: ship 9 session updates (Market Setup Wizard flyer upload fallback + toast; auto commit message in Deploy-popuphub.bat; vendor clearance; Shipped earlier this session (not deployed); +5 more)` (30e6794)
 
 
 ## Goal
@@ -531,7 +531,7 @@
 - **Canvas draw/select (wizard QA):** `use-canvas-pointer-wizard_qa.ts` — draw-tool hits select/drag existing objects instead of stacking.
 - **Patron-first / supplies / instant book:** Already in tree — `/discover` default, `/supplies` Market Supplies, `verify-instant-book-category-limits.ts` 4/4.
 
-## Shipped earlier (vendor clearance, not deployed)
+## Shipped this session (vendor clearance, deployed 2026-06-09)
 - **Vendor auto-arrange spacing:** `BOOTH_PLACEMENT_GAP_FT` restored to **4′** edge-to-edge (2′ safety buffer per side via `BOOTH_SAFETY_BUFFER_FT` / `BOOTH_CORE_SEPARATION_CELLS` in `layout-clearance-constants.ts`). Grid column pitch, row-pack fallback, and deterministic layout `tableEdgeGapFt` all honor the 4′ gap; adjacent vendor tables no longer pack flush.
 - **`validateClearances`:** Pair-aware minimum gaps — vendor↔vendor 4′, patron↔patron 2′, vendor↔patron 4′.
 - **`patron-centric-layout.ts`:** Local edge clearance synced to 2′ per side.
@@ -582,10 +582,10 @@
 - **`canvas-toolbar-static_qa.tsx`:** Accordion triggers use `QaAccordionHeader` + `QA_ACCORDION_HEADERS` from `Dashboard_qa` (no row icon badges).
 - **`canvas-legend_qa.tsx`:** Placement HUD microcopy wired to Dashboard QA tip constants.
 
-## Shipped earlier this session (not deployed)
+## Shipped earlier this session (deployed 2026-06-09)
 - **Vendor Supplies:** New `/vendor/supplies` page with Amazon.ca search (associate tag `thetipsyfox08-20`), 15 curated booth/display/packaging picks (all affiliate links), category + local filters, mandatory disclosure. Nav: **Vendor Supplies** in app nav + vendor workspace rail. Shared `lib/affiliate/amazon.ts` (material checklist re-exports). Verify: `npx tsx scripts/verify-vendor-supplies.ts`.
 
-## Shipped earlier this session (QA staging, not deployed)
+## Shipped this session (QA staging, deployed 2026-06-09)
 - **`Dashboard_qa.tsx`:** `QA_PANEL_SCROLL_CLASSES` (`scrollbar-none` + WebKit/MS/Firefox hide); `DashboardLeftPanelQa` portal target is the sole scroll host (`overflow-x-hidden overflow-y-auto`, no visible tracks).
 - **`canvas-command-bar_qa.tsx`:** Sidebar layout uses `overflow-hidden` so accordions scroll via portal target only (no nested scrollbars).
 - **`tooltip-wrapper_qa.tsx`:** Left-rail anchors always pop right (`translateY(-50%)`, `anchor.right + 8px`); viewport edge clamp; scroll/resize listeners keep portal position in sync.
@@ -594,13 +594,13 @@
 - **`toolbar-tooltip-copy_qa.ts` + command-bar blocks:** Micro-tooltip copy wired across toolbar/object brushes.
 - **Build:** Local `npm run build` passes — **build 142** (uncommitted; `build-number.json` bumped by prebuild).
 
-## Shipped earlier this session (QA staging, not deployed)
+## Shipped this session (QA staging, deployed 2026-06-09)
 - **`toolbar-tooltip-copy_qa.ts`:** Centralized micro-tooltip strings (e.g. `Clear all`, `Auto-arrange`, `Merge rooms`, `Space H`) — replaces long descriptive sentences across command-bar blocks.
 - **`tooltip-wrapper_qa.tsx`:** Compact bubble styling (`text-xs px-2 py-1 bg-slate-800 text-white rounded shadow-sm`); narrower width estimate cap (160px).
 - **`canvas-toolbar-static_qa.tsx`:** Accordion headers → **ROOM CONTROLS**, **PATRON LAYOUT**, **VENDOR BOOTHS**, **DESIGNER TOOLS** with `text-xs font-bold tracking-wider text-slate-700 uppercase`; chrome tooltips shortened.
 - **`canvas-command-bar-blocks_qa.tsx` + `canvas-command-bar_qa.tsx`:** All toolbar/object-brush tooltips wired to micro-copy constants; merge/join hints shortened.
 
-## Shipped earlier (QA staging, not deployed)
+## Shipped this session (QA staging, deployed 2026-06-09)
 - **QA mirror modules written to disk** under `src/qa_review/` (previously documented only).
 - **`tooltip-wrapper_qa.tsx`:** Portal tooltips (`fixed z-50` on `document.body`) with sidebar bounds check — flips to the right when hint would clip past `w-80` (320px).
 - **`canvas-toolbar-static_qa.tsx` + `canvas-command-bar_qa.tsx` + `command-button_qa.tsx` + `canvas-command-bar-blocks_qa.tsx`:** Uppercase text accordion headers (**ROOM LAYOUT**, **PATRON PLACEMENTS**, **VENDOR PLACEMENTS**, **CANVAS SETTINGS**); all command-bar tooltips use portal wrapper.
@@ -636,7 +636,7 @@
 ## Goal (prior)
 **QA folder staging — dashboard layout optimization & stage merge** — all layout/merge/canvas changes mirrored in `src/qa_review/` for manual testing before production promotion.
 
-## Shipped earlier (QA staging, not deployed)
+## Shipped this session (QA staging, deployed 2026-06-09)
 - **`Dashboard_qa.tsx`:** `DashboardBootstrapQa` — curation queue / Market Intake / Available Pool removed from left rail; `h-[calc(100vh-64px)] overflow-hidden` on aside; mandatory `InitialRoomModalQa` gates canvas mount until first room dimensions confirmed.
 - **`Canvas_qa.tsx`:** Stage placable rects render with `fill="none"` / `fillOpacity={0}` (rose stroke retained) so grid shows through after merge.
 - **`Merge_qa.ts` + `destructive-merge_qa.ts`:** Merge (2) union uses full 2D stage bounding box (`mergeParticipantBounds2d`) — not a width-only horizontal line projection.
@@ -670,7 +670,7 @@
 ## Goal (prior)
 **UI polish — modern scrollbar styles** — slim 8px rounded slate scrollbars on dashboard layout panes, canvas viewport, and overflow dropdowns via global CSS pipeline.
 
-## Shipped earlier this session (local, not deployed)
+## Shipped this session (local, deployed 2026-06-09)
 - **Modern panel scrollbars:** `app/globals.css` — CSS vars (`--scrollbar-size`, `--scrollbar-thumb`, hover state), reusable `.scrollbar-modern` utility, and scoped rules for `.dashboard-app-shell` overflow panels (curation queue / Available pool shelf), `#floor-plan-workspace` canvas viewport, `.layout-planner-root`, and `[data-slot='select-content']` / `[data-slot='dropdown-menu-content']`. WebKit 8px rounded thumbs + Firefox `scrollbar-width: thin`; dark mode thumb tokens.
 - **Mobile-first Experience Designer:** `workspace-shell.tsx` stacks wizard / canvas / inspector on phones with a bottom tab bar; step header scrolls horizontally with 48px touch targets; wizard CTAs use `touch-target` + `min-h-12`. Shared `hooks/use-mobile-viewport.ts`; floor-plan workspace reuses it.
 - **Dashboard touch targets:** `CommandButton` enforces `min-h-12 min-w-12` below `md`, compact icon sizes on desktop. Global `.touch-target` utility in `globals.css` (48×48px minimum).
