@@ -2,7 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (Turf.js AutoArrangeEngine + canvas editor, not deployed)
+## Shipped this session (deploy pipeline — duplicate Vercel builds + commit message, deployed 2026-06-09)
+- **`vercel.json`:** `git.deploymentEnabled.master/main: false` — git push no longer triggers a production build; CLI `vercel deploy --prod` is the sole prod deploy path (fixes two builds per commit).
+- **`scripts/get-deploy-commit-message.ps1`:** `Get-DeployCommitMessageFromHandoff` aggregates all `## Shipped this session (... , not deployed)` titles into the deploy commit message; `Mark-ShippedSectionsDeployed` flips them to `deployed yyyy-MM-dd` after handoff update.
+- **`PM/Deploy-popuphub.bat`:** Removed stale hardcoded default message; omits `-Message` when arg 1 not passed so PowerShell derives message from session handoff.
+- **`scripts/deploy-popuphub.ps1`:** Resolves commit message from handoff when `-Message` omitted; logs chosen message before commit.
+
+## Shipped this session (Turf.js AutoArrangeEngine + canvas editor, deployed 2026-06-09)
 - **`engine/AutoArrangeEngine.ts`:** `packBooths(roomPolygon, boothList)` — shelf scan inside merged_zone; largest-first sort; **5′ aisle** buffer; Turf `booleanPointInPolygon`, `booleanWithin`, `booleanOverlap` for room containment and collision with booths/stages/walls; unplaced booths → off-canvas sentinel (`x/y = -999`).
 - **`engine/BoothArrangementEngine.ts`:** `PackBooths()` now delegates to AutoArrangeEngine; perimeter wall orientation preserved post-pack.
 - **`canvas/canvas-editor.tsx`:** **Auto-Arrange** button (inspector canvas panel when nothing selected).
@@ -10,7 +16,7 @@
 - **Dependency:** `@turf/turf` added.
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — 4/4 booths placed + path visits all.
 
-## Shipped this session (floor-plan A* pathfinding, not deployed)
+## Shipped this session (floor-plan A* pathfinding, deployed 2026-06-09)
 - **`PathfindingService.ts`:** Navigation grid from merged_zone / room boundary polygons (`buildNavigationGrid`); walkable cells inside boundary rings; booth/stage/wall impassable; A* with Euclidean heuristic f(n)=g(n)+h(n); nearest-neighbor TSP booth order; entrance/exit optional.
 - **`hooks/use-pathfinding.ts`:** `usePathfinding(doc, roomId, { booths, roomBoundary, cellFt, enabled })` returns optimal path coordinates.
 - **`canvas-overlays.tsx`:** Patron path rendered as dashed SVG `<polyline>` (`strokeWidth={2}`, `pointerEvents="none"`).
@@ -18,14 +24,14 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `a625173` (pushed to `origin/master`)
-- Last deploy commit: `a625173` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
-- Production: https://popuphub.ca - **build 45** | commit `cb8c3de` (handoff updated 2026-06-09 06:55)
+- Branch: `master` @ `8119e2a` (pushed to `origin/master`)
+- Last deploy commit: `8119e2a` - feat: floor-plan object resize, measurements, viewport lock, and layout fixes
+- Production: https://popuphub.ca - **build 48** | commit `13efbf0` (handoff updated 2026-06-09 09:02)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
-## Shipped this session (dynamic auth redirect base URL, not deployed)
+## Shipped this session (dynamic auth redirect base URL, deployed 2026-06-09)
 - **`lib/url/public-app-url.ts`:** Added `getURL()` — resolves origin from `NEXT_PUBLIC_SITE_URL` → `NEXT_PUBLIC_APP_URL` → `NEXT_PUBLIC_VERCEL_URL` / Vercel host envs → browser origin → `http://localhost:3000`; normalizes scheme and strips trailing slashes. Removed hardcoded `popup-hub.vercel.app` production fallback.
 - **OAuth:** `getOAuthOrigin()` now uses live `window.location.origin` on any domain (including `popuphub.ca`); login/signup `signInWithOAuth` + signup `emailRedirectTo` use `buildOAuthCallbackUrl(getOAuthOrigin(), …)`.
 - **API:** `app/api/auth/callback/route.ts` resolves redirect origin from `x-forwarded-host` / `host` + `x-forwarded-proto` (or `request.url` origin) — never env-based Vercel default; success redirect `${origin}${next}` default `/discover`.
@@ -33,69 +39,69 @@
 - **Manual (Supabase dashboard):** Set Site URL to `https://popuphub.ca`; add redirect wildcards `https://popup-hub.vercel.app/**`, `http://localhost:3000/**`.
 - **Verify:** Set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca` in Vercel production → Google OAuth from popuphub.ca returns to `/api/auth/callback` on same origin.
 
-## Shipped this session (vendor passport TikTok field, not deployed)
+## Shipped this session (vendor passport TikTok field, deployed 2026-06-09)
 - **Migration `098_vendor_passport_tiktok.sql`:** `vendor_passports.tiktok_url` optional text column alongside `instagram_url` / `facebook_url`.
 - **Forms:** TikTok input in Online presence (`/vendor/passport` wizard + `PassportSocialFields`); `normalizeTikTokUrl` coerces `@handle` / bare handle → `https://tiktok.com/@handle` on save.
 - **Public display:** `TikTokIcon` + `getPassportSocialLinks` renders TikTok on `PassportPublicCard` (and vendor link surfaces using shared social helpers).
 - **Verify:** `/vendor/passport` → enter `@mybrand` in TikTok → save → public passport card shows TikTok icon linking to `https://tiktok.com/@mybrand` in a new tab.
 
-## Shipped this session (vendor passport story per-file captions, not deployed)
+## Shipped this session (vendor passport story per-file captions, deployed 2026-06-09)
 - **`passport-story-uploader.tsx`:** Replaced `PendingItem` with `StoryDraft` (`id`, `file`, `previewUrl`, `captionText`); vendors get per-story caption inputs in the upload queue with live preview overlay; publish sends each draft's `captionText` to `POST /api/passport/stories`.
 - **Coordinator market promos:** Unchanged — shared caption + hashtag rules still apply to the whole batch.
 - **Verify:** `/vendor/dashboard` → Passport stories → queue 2+ files → add different captions → publish → published list shows each caption.
 
-## Shipped this session (admin console menu link, not deployed)
+## Shipped this session (admin console menu link, deployed 2026-06-09)
 - **`buildAppMenuExtraLinks`:** Slide-out menu shows **Feature requests** + **🛠️ Admin Console** (`/admin/feedback`) when `profile.is_admin`; wired in `AppNav` and `ShopperTopBar`.
 - **Verify:** Sign in as admin → open hamburger menu → both links visible beneath Profile settings; non-admin sees neither.
 
-## Shipped this session (admin feedback triage filters, not deployed)
+## Shipped this session (admin feedback triage filters, deployed 2026-06-09)
 - **`FeedbackAdminDashboard`:** Fourth metric card **Total Completed**; **Critical Urgency** excludes `status = completed`; incoming list hides completed rows; marking completed clears selection to next active item.
 - **Verify:** Complete a ticket → leaves triage list, completed count increments, critical count drops if applicable.
 
-## Shipped this session (admin notified on feature request submit, not deployed)
+## Shipped this session (admin notified on feature request submit, deployed 2026-06-09)
 - **Migration `099_feature_request_admin_notification.sql`:** `feature_request_submitted` notification type.
 - **`notifyAdminsOfFeatureRequest`:** After `POST /api/feedback/submit`, inserts in-app notifications for every `profiles.is_admin` user; message includes role + urgency prefix (Critical / Blocked-workflow / New).
 - **UI:** Notification feed icon (lightbulb), visible in all portal tabs; tap opens `/admin/feedback`.
 - **Verify:** Migration `099` applied to remote Supabase (with `098`); deploy app code — submit suggestion → admin sees unread badge + notification; click → `/admin/feedback`.
 
-## Shipped this session (admin feedback route hardening + theme polish, not deployed)
+## Shipped this session (admin feedback route hardening + theme polish, deployed 2026-06-09)
 - **Middleware:** `/admin/*` blocked unless `profiles.is_admin` or valid `ADMIN_SESSION_TOKEN` (`admin_session` cookie / Bearer header); non-admins redirect to role-appropriate dashboard via `accessDeniedRedirect`.
 - **Layout + page:** Same gate with redirect (no blank page); header/back link use semantic `border-border`, `bg-card`, `bg-muted` tokens.
 - **Dashboard:** Master-detail UI uses design tokens for dark/light (list cards, metric tiles, problem/solution blocks, role badges).
 - **API:** `PATCH /api/feedback/update` unchanged — saves `status` + `developer_notes` without page refresh.
 - **Verify:** Non-admin → `/admin/feedback` redirects to their portal home; admin (`is_admin`) → triage console loads; PATCH save updates list + detail in place.
 
-## Shipped this session (notification count portal filter fix, not deployed)
+## Shipped this session (notification count portal filter fix, deployed 2026-06-09)
 - **Root cause:** `useNotificationCount` counted all unread notifications for the user, while `NotificationList` filters by active portal (`filterNotificationsForPortal`). A user in Patron portal with an unread Vendor notification saw header "1 unread notification" but an empty feed.
 - **Fix:** `notificationTypesForPortal()` in `lib/notifications/portal-filter.ts`; `useNotificationCount(userId, activePortal)` applies `.in('type', portalTypes)`; `AppNav` and `NotificationPageHeader` pass resolved `activePortal`.
 - **Verify:** `npx tsc --noEmit` passes. Manual: switch portal tabs with cross-portal unread rows — badge/subtitle should match visible list (or "You're all caught up" when filtered list is empty).
 
-## Shipped this session (build + lint fixes, not deployed)
+## Shipped this session (build + lint fixes, deployed 2026-06-09)
 - **Lint:** `auto-arrange.ts` `prefer-const` (`let placed` → `const placed`).
 - **Compile:** Removed self-import in `lib/auth/rbac.ts` (`canActAsCoordinator` defined twice).
 - **Types:** Wallet-topup null guard + `is_admin` select; `AccessProfile` loosened; `applyCoordinatorEventScope` simplified to avoid deep Supabase instantiation; dashboard revenue query inlined.
 - **Toolbar:** Restored missing `case 'optimize'` for Auto-Arrange Floor Plan button.
 - **Verify:** `npm run lint` (0 errors) and `npm run build` pass locally.
 
-## Shipped this session (floor-plan canvas UX optimization, not deployed)
+## Shipped this session (floor-plan canvas UX optimization, deployed 2026-06-09)
 - **Room controls:** Sidebar **ROOM CONTROLS** — undo, redo, rotate, delete, and copy icons in one horizontal row (`flex flex-row items-center gap-2 mt-2`) directly under the room picker; room rotate/join on a compact second row.
 - **Placement preview:** Booth draw tool shows a semi-transparent cursor ghost (`opacity-40`) with predictive 2′ wall snap + auto-rotation via `table-placement-preview.ts` and `PLACEMENT_PREVIEW_WALL_SNAP_FT`.
 - **Toolbar compaction:** Patron/vendor size selectors use utility chip grids; auto-arrange **Pattern** row uses inline Grid / Staggered / Perimeter chips; sidebar section padding tightened.
 - **Verify:** `/coordinator/dashboard` — select vendor or patron table tool → ghost follows cursor, snaps/flips near walls; room action icons stay on one line.
 
-## Shipped this session (build verification — local only, not deployed)
+## Shipped this session (build verification — local only, deployed 2026-06-09)
 - **`npm run build`** passes on `master` @ `7c1654b` (TypeScript + static generation, build **46**).
 - Prior Vercel prod failure (`51a871d`) was `b.category` on `BoothObject` in `request-ai-auto-arrange.ts` — fixed on master as `b.categoryName`.
 - Preview deploy `cursor/dev-environment-setup-4447` @ `8de61c8` also builds locally; Vercel log truncated after cache restore (likely stale cache / infra — redeploy if still failing).
 
-## Shipped this session (build fix — local only, not deployed)
+## Shipped this session (build fix — local only, deployed 2026-06-09)
 - **`geometry.ts`:** `placedObjectsOverlap` passes `ctx?.doc` (not whole `MergeOverlapContext`) to `collisionProbeForObject` — fixes TS build failure.
 - **`booth-access.ts`:** `EventAccessFields` uses `Pick<Event, …>` so `venue_verification_status` matches `VenueGateEvent`.
 - **`feature-request-modal.tsx`:** Select `onValueChange` guards against `null` before `setTargetComponent`.
 - **`verify-vendor-wall-snap.ts`:** Added required `RoomFrame.name` field.
 - **Verify:** `npm run build` succeeds (build **29**).
 
-## Shipped this session (admin feature-request triage console, not deployed)
+## Shipped this session (admin feature-request triage console, deployed 2026-06-09)
 - **Migration `094_admin_feature_request_management.sql`:** `profiles.is_admin`; `feature_requests.status`, `developer_notes`, `updated_at`; admin RLS read/update policies.
 - **Route `/admin/feedback`:** Layout + middleware gate on `profiles.is_admin` or `ADMIN_SESSION_TOKEN` cookie/header (`admin_session`); non-admins redirect to role-appropriate dashboard.
 - **UI:** Master-detail dashboard — metrics (Pending / Critical / Under Review), role + urgency badges, problem/solution preview, screenshot fullscreen dialog, status dropdown + developer notes, optimistic PATCH save.
@@ -107,7 +113,7 @@
 - **Admin superuser (`is_admin`):** Bypasses role gates in middleware, portal switcher (Patron · Vendor · Coordinator), coordinator/vendor layouts, `canActAsCoordinator` APIs, and `assertEventCoordinator` / `applyCoordinatorEventScope` (view any market). Profile stays **vendor** — not a market host. Nav menu → **Feature requests** → `/admin/feedback`.
 - **Verify:** Sign in as `bradmulders@gmail.com` → portal tabs show all three portals → `/coordinator/dashboard` lists every market → open another coordinator's event setup/ops → `/admin/feedback` triage works without page refresh.
 
-## Shipped this session (global feature-request module, not deployed)
+## Shipped this session (global feature-request module, deployed 2026-06-09)
 - **`POST /api/feedback/submit`:** Multipart pipeline for title, role, target component, problem/dream copy, impact level, optional PNG/JPG screenshot (stored under `vendor-assets/{userId}/feature-requests/`).
 - **`093_feature_requests.sql` + `094_admin_feature_request_management.sql`:** `feature_requests` table, user RLS, admin triage columns (`status`, `developer_notes`), `/admin/feedback` console.
 - **Global entry points:** Navbar link + mobile menu item **Suggest an Improvement**; floating action button on patron/coordinator/vendor chrome (hidden on immersive viewport-fill routes like floor-plan canvas).
@@ -121,26 +127,26 @@
 - **Vendor UX:** `GET /api/vendor/events/[eventId]/booth-access`; apply-button badges (priority invite / opens to all / new-vendor-friendly).
 - **Verify:** `npx tsx scripts/verify-venue-coordinates.ts`; `npx tsx scripts/verify-category-vendor-matches.ts`; `npx tsx scripts/verify-priority-window-expiry.ts`.
 
-## Shipped this session (unified auto-arrange floor plan + traffic-flow prerequisites, not deployed)
+## Shipped this session (unified auto-arrange floor plan + traffic-flow prerequisites, deployed 2026-06-09)
 - **`traffic-flow-prerequisites.ts`:** Validates perimeter-snapped Entry (`door`/`entrance`) + Exit (`emergency_exit` or `door`/`exit`) before optimization; exports door snapshots with coordinates, rotation, and wall edge.
 - **`floor-plan-v2.tsx`:** Single `handleAutoArrangeFloorPlan` with `scope: 'all'` — vendor + patron arranged in one pass; disabled until entry/exit prerequisites met.
 - **`canvas-command-bar-blocks.tsx` + QA mirror:** New **`optimize`** toolbar block — prominent **Auto-Arrange Floor Plan** button at top of sidebar **Floor Plan** section; separate vendor/patron auto-arrange controls removed.
 - **`lib/floor-plan/ai-auto-arrange.ts` + `request-ai-auto-arrange.ts`:** Gemini 2.5 Pro payload includes entry/exit fixture geometry + `trafficFlow` loop hint (vendors face primary path, patron zones in low-velocity areas); deterministic fallback uses `autoArrangeInRoom` for `scope: 'all'`.
 - **Verify:** Dashboard with no doors → button disabled, hover tooltip: *Please place at least one Entry and one Exit door on your perimeter walls to optimize traffic flow.* Snap Door + Exit on walls, add booths/tables → button enables → one toast optimizes both asset types together.
 
-## Shipped this session (floor-plan iron-dome + cyber-arcade fallback UI, not deployed)
+## Shipped this session (floor-plan iron-dome + cyber-arcade fallback UI, deployed 2026-06-09)
 - **`use-floor-plan-viewport-tier.ts`:** Iron dome — `isPocketSizedViewport` when `width < 1024` **or** `height < 550` (blocks landscape phones, tablets, and short windows).
 - **`floor-plan-viewport-advisory.tsx`:** Full-screen blueprint/cyber-arcade fallback (`bg-slate-950` grid, amber neon card, Ant-Man copy, pro-tip box); **Abort Mission & Go Back 🚀** uses `router.push` to event hub or `/coordinator/dashboard`.
 - **Canvas:** Still fully unmounted when pocket-sized; tablet advisory banner removed (subsumed by iron dome).
 - **Verify:** Phone portrait/landscape, iPad, and narrow windows → fallback only; ≥1024×550 desktop → canvas loads.
 
-## Shipped this session (mobile floor-plan gate exit + landscape phone block, not deployed)
+## Shipped this session (mobile floor-plan gate exit + landscape phone block, deployed 2026-06-09)
 - **`use-floor-plan-viewport-tier.ts`:** Tier detection uses width **and** height — landscape phones (`height < 550`, short axis `< 600`) stay on the mobile block even when width exceeds 768px.
 - **`floor-plan-viewport-advisory.tsx`:** Portal-mounted overlay at `z-[10001]` with working **Go back** `Link` (event hub when a market is selected, else `/coordinator/dashboard`); body scroll locked while blocked.
 - **`Dashboard_qa.tsx`:** Skips initial-room modal while the mobile gate is active (was stacking above the overlay at `z-9999`).
 - **`dashboard-toolbar-portal.tsx`:** Sidebar/tablet portal routing uses the same tier helper so landscape phones do not mount the tablet drawer layout.
 
-## Shipped this session (dashboard floor-plan viewport tiers: mobile block + tablet layout, not deployed)
+## Shipped this session (dashboard floor-plan viewport tiers: mobile block + tablet layout, deployed 2026-06-09)
 - **`hooks/use-floor-plan-viewport-tier.ts`:** Three-tier breakpoints — mobile `<768`, tablet `768–1023`, desktop `≥1024`; portrait detection for tablet advisory.
 - **`floor-plan-viewport-advisory.tsx`:** `FloorPlanViewportLayoutProvider`, full-screen **Desktop Screen Required** overlay on phones, fixed portrait **Landscape Mode Recommended** banner on tablets.
 - **`dashboard-tablet-tools-dock.tsx` + `dashboard-app-shell.tsx`:** Tablet rail — 48px icon dock + sliding drawer for layout tools; grid `md:grid-cols-[3rem_1fr]` until `lg`.
@@ -149,14 +155,14 @@
 - **`table-size-pill.tsx` + `command-button.tsx`:** Tablet touch padding on `5′`/`6′`/`8′` booth buttons; toolbar icons keep 48px targets through `lg`.
 - **Verify:** `/coordinator/dashboard` — phone shows desktop-required modal (no canvas); iPad portrait shows landscape banner + dock hamburger; iPad landscape / desktop unchanged full rail.
 
-## Shipped this session (vendor 360° collision buffer, not deployed)
+## Shipped this session (vendor 360° collision buffer, deployed 2026-06-09)
 - **`vendor-booth-placement.ts`:** Vendor booths use 2′ clearance on all four sides (6′×4′ → 10′×8′ collision probe). Wall-snapped booths omit the rear buffer against the perimeter; left/right/front buffers remain.
 - **`geometry.ts` / `checkCollision()`:** Expanded probes flow through `placedObjectsOverlap` with doc context for wall exception.
 - **`auto-arrange.ts`:** Slot placement + obstacle rects use vendor collision probes; validation passes overlap context.
 - **Canvas / pointer:** `mergeOverlapCtx` includes full doc slice for asymmetric wall probes.
 - **Verify:** `npx tsx scripts/verify-vendor-booth-clearance.ts`
 
-## Shipped this session (table rotation handle fix, not deployed)
+## Shipped this session (table rotation handle fix, deployed 2026-06-09)
 - **Root cause:** Rotate handles lived under a `pointerEvents="none"` SVG group (clicks fell through to the grid/booth), and live vendor wall-snap during drag overwrote manual rotation whenever the booth stayed within 3′ of a wall.
 - **`canvas-overlays.tsx`:** Split `SelectionChrome` (non-interactive) + `SelectionRotateHandles` (interactive top layer with explicit `pointerEvents="auto"`).
 - **`floor-plan-canvas.tsx`:** Render rotate handles **after** room selection overlay; removed debug `console.log`.
@@ -164,26 +170,26 @@
 - **`use-canvas-pointer.ts`:** Rotate/drag gestures mutually exclusive; rotate halt uses `rotatedAabb`; live vendor snap preserves non-cardinal manual rotation during drag (full orient snap still on pointer-up).
 - **Verify:** Select vendor/patron table → rotate handle visible above selection → drag handle to rotate; manual angle persists when dragged away from walls.
 
-## Shipped this session (vendor wall snap fix — drag clamp + live snap, not deployed)
+## Shipped this session (vendor wall snap fix — drag clamp + live snap, deployed 2026-06-09)
 - **Root cause:** `boothClampDeltaForRoom` used 4′ wall inset, preventing booths from entering the 3′ snap zone; snapped positions then failed `footprintWithinBounds` (also 4′) and reverted on drop.
 - **`boundary-constraints.ts`:** Vendor booths use 1′ wall inset (`VENDOR_WALL_INSET_FT`); patron tables keep 4′ clearance.
 - **`use-canvas-pointer.ts`:** Live perimeter snap + rotation during drag (not only on pointer-up).
 - **`vendor-booth-placement.ts`:** Snap distance measured against placement-surface bounds (union/merged rooms), not raw room frame only.
 - **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts` — drag vendor within 3′ of wall → rear flush, faces inward; >3′ → no snap.
 
-## Shipped this session (vendor wall snap + lateral clearance, not deployed)
+## Shipped this session (vendor wall snap + lateral clearance, deployed 2026-06-09)
 - **`vendor-booth-placement.ts`:** 3′ wall snap threshold with inward rotation (0/90/180/270°); lateral collision probe adds 2′ per side (6′×4′ → 10′×4′ effective).
 - **`geometry.ts`:** `checkCollision()` / `placedObjectsOverlap` use lateral-expanded vendor probes.
 - **`use-canvas-pointer.ts`:** Vendor snap on draw + drag commit (before overlap test); overlap blocks drop with red preview.
 - **Verify:** Drag vendor booth within 3′ of wall → snaps flush, faces inward; place two booths <4′ apart laterally → blocked with violation styling.
 
-## Shipped this session (vendor booth yellow canvas styling, not deployed)
+## Shipped this session (vendor booth yellow canvas styling, deployed 2026-06-09)
 - **`category-palette.ts`:** `VENDOR_BOOTH_PALETTE` — fill `#FEF08A`, stroke `#EAB308`.
 - **`canvas-objects.tsx` + QA mirror:** All vendor booths render solid yellow (status patterns retired; payment state via label text).
 - **`placement-theme.ts` + `canvas-legend.tsx`:** Legend adds yellow **Vendor** swatch (`bg-yellow-200 ring-yellow-500`) synced with canvas.
 - **Verify:** `/coordinator/dashboard` — draw vendor booths → yellow fill + amber border; legend top-right shows yellow **Vendor** chip.
 
-## Shipped this session (Gemini auto-arrange + boundary physics + label clipping, not deployed)
+## Shipped this session (Gemini auto-arrange + boundary physics + label clipping, deployed 2026-06-09)
 - **`lib/ai/tasks.ts`:** New `auto_arrange_layout` task → `google/gemini-2.5-pro` (fallback Claude 3.5 Sonnet).
 - **`lib/floor-plan/ai-auto-arrange.ts` + `app/api/coordinator/auto-arrange/route.ts`:** OpenRouter optimization prompt (visibility, walkways, traffic flow); JSON placements returned to client.
 - **`lib/floor-plan/request-ai-auto-arrange.ts`:** `runAutoArrangeWithAi` — Grid/Staggered/Perimeter all route through Gemini first; deterministic engine fallback when API unavailable.
@@ -193,7 +199,7 @@
 - **`floor-plan-v2.tsx` + wizard QA mirror:** Async auto-arrange handlers with loading toast.
 - **Verify:** `npx tsx scripts/verify-auto-arrange.ts` (31/31); `npx tsx scripts/verify-ai-provider-fallback.ts` (26/26). Coordinator dashboard: vendor/patron Auto-Arrange with `OPENROUTER_API_KEY` → success toast cites Gemini model; without key → deterministic fallback. Draw door on room edge → snaps flat to wall; drag booth past perimeter → rejected.
 
-## Shipped this session (dashboard floor-plan sidebar vertical stack, not deployed)
+## Shipped this session (dashboard floor-plan sidebar vertical stack, deployed 2026-06-09)
 - **`toolbar-static-layout.ts`:** `getVisibleSidebarSections` / `getVisibleSidebarSectionsQa` — four full-width blocks (Room Controls, Designer Tools, Patron Layout, Vendor Booths).
 - **`canvas-toolbar-static.tsx` + `_qa`:** `sidebarLayout` renders stacked `SidebarToolbarSection` cards (no `grid-cols-2` split rows).
 - **`dashboard-toolbar-portal.tsx`:** Portal host `flex flex-col gap-4 overflow-y-auto w-[300px] min-w-[300px] flex-shrink-0`.
@@ -201,67 +207,67 @@
 - **`floor-plan-v2.tsx`:** Dashboard always passes `sidebarLayout`; toolbar portals to left rail on desktop even in full canvas.
 - **Verify:** `/coordinator/dashboard` — four labeled sections stack vertically at 300px; toggle **Full canvas** — left panel stays 300px with same section headers (no horizontal crush).
 
-## Shipped this session (document scroll across portal pages, not deployed)
+## Shipped this session (document scroll across portal pages, deployed 2026-06-09)
 - **`portal-workspace-layout.tsx`:** `routeUsesViewportFill` is now an allowlist (command center, setup/layout wizards, experience designer) — removed blanket `/coordinator/*` and vendor dashboard/applications locks that trapped scroll in the center column.
 - **Vendor workspace:** `/vendor/events` and `/vendor/passport` included in the 3-column grid with `documentScroll` mode (same as supplies).
 - **`scripts/verify-document-scroll-routes.ts`:** Smoke test for viewport-locked vs document-scroll routes.
 - **Verify:** Scroll wheel works anywhere on vendor dashboard/applications/events/passport and coordinator payment-methods, event overview, applications board — not only over list/card regions. Immersive routes (dashboard CAD, setup wizard, layout planner) still viewport-locked.
 
-## Shipped this session (vendor supplies scroll fix, not deployed)
+## Shipped this session (vendor supplies scroll fix, deployed 2026-06-09)
 - **`site-app-shell.tsx`:** Non-viewport-fill routes use document scroll on `#site-main` (removed nested `overflow-y-auto`).
 - **`portal-workspace-layout.tsx` + `command-center-shell.tsx`:** `/vendor/supplies` in vendor workspace grid; supplies uses `documentScroll` mode (no inner `overflow-y-auto` on center column).
 - **`app/vendor/supplies/page.tsx`:** `min-h-screen w-full` page shell with horizontal padding.
 - **`vendor-supplies-section.tsx`:** Grid/cards no longer use `h-full` height locks.
 - **Verify:** `/vendor/supplies` — scroll wheel works over header, search, filters, and side rails; not limited to the card grid.
 
-## Shipped this session (vendor supplies setup-order sort, not deployed)
+## Shipped this session (vendor supplies setup-order sort, deployed 2026-06-09)
 - **`lib/vendor/supplies-catalog.ts`:** Each curated item has a `setupOrder` integer (phases 1–5: shelter → power → merchandising → POS → takeaway). `filterVendorSupplies` sorts filtered results by `setupOrder` so the **All** tab follows chronological booth setup; category tabs still filter exclusively and inherit the same within-group order.
 - **`scripts/verify-vendor-supplies.ts`:** Asserts All-view id sequence and booth-tab order.
 - **Verify:** `/vendor/supplies` — **All** shows tent → weights → table → tablecloth → extension cord → lights → display → signage → tools → packaging; **Packaging** tab shows only kraft bags + tissue paper.
 
-## Shipped this session (nav role switcher tab deck, not deployed)
+## Shipped this session (nav role switcher tab deck, deployed 2026-06-09)
 - **`components/nav/portal-tabs.tsx`:** Patron / Vendor / Coordinator switcher styled as a rounded segmented track (`rounded-full`, muted stone track, inset shadow); active tab elevated white pill with forest text + market shadow; inactive tabs muted with hover lift.
 - **`components/nav/app-nav.tsx`:** Role switcher grouped with vertical divider + gap before contextual nav links (Dashboard, My Passport, etc.) on `md+`.
 - **Verify:** Sign in as vendor or coordinator — header shows pronounced tab deck; active role pops above track; divider separates role block from page links on desktop.
 
-## Shipped this session (Step 3 floor-plan layout — sidebar + toolbar wrap, not deployed)
+## Shipped this session (Step 3 floor-plan layout — sidebar + toolbar wrap, deployed 2026-06-09)
 - **`floor-plan-v2.tsx` + `floor-plan-v2_wizard_qa.tsx`:** Wizard layout uses a viewport row (`flex-row`, `overflow-hidden`, `h-full` embedded / `h-[calc(100vh-64px)]` standalone) — middle column holds wrapping command bar + scrollable canvas (`flex-1 max-w-full`); right properties panel fixed at `w-[320px] min-w-[320px] shrink-0 h-full`.
 - **`canvas-command-bar.tsx` + `_qa`:** Non-static ribbon container uses `flex flex-wrap gap-2` so tool groups wrap instead of forcing one line.
 - **`table-size-pill.tsx`:** Size chip rows use `flex-wrap gap-2` (was `flex-nowrap`).
 - **`floor-plan-canvas.tsx`:** Canvas scroll host adds `min-w-0 max-w-full` so flex middle column can shrink without crushing the inspector.
 - **Verify:** `/coordinator/events/[id]/setup?step=3` — properties sidebar stays 320px readable; toolbar wraps on narrow widths; canvas pans/zooms in middle column only.
 
-## Shipped this session (simplify populate caps UX, not deployed)
+## Shipped this session (simplify populate caps UX, deployed 2026-06-09)
 - **`smart-populate-booth-caps.tsx`:** Renamed panel to "Suggested category caps"; plain-language description; compact preview (max booths, usable floor, suggested split); technical breakdown collapsed under "How we calculated this"; button "Apply suggested caps"; hide venue dimension inputs when `venueReadOnly`.
 - **`booth-planner.tsx`:** Canvas action renamed "Auto-arrange booths" (was "Smart Populate Layout"); simplified tooltip; max-booths copy in Step 2.
 - **`wizard-step-capacity.tsx`, `spatial-layout-toolbar.tsx`, `layout-planner-stats.tsx`, `floor-plan-stats-panel.tsx`, `floor-plan-inventory-panel.tsx`:** Replaced C_max jargon with "Max booths" / plain language.
 - **Verify:** Market setup wizard Step 2 — apply suggested caps fills category editor; booth planner Step 3 — "Auto-arrange booths" distinct from cap panel; event form still shows editable venue dims.
 
-## Shipped this session (wizard venue map auto-pin on address, not deployed)
+## Shipped this session (wizard venue map auto-pin on address, deployed 2026-06-09)
 - **`components/coordinator/wizard/wizard-step-venue.tsx`:** Address side-effect listeners — debounced geocode (400ms) plus immediate geocode on bulk fills (template, flyer OCR, paste); bootstrap geocode when Maps API loads with a pre-filled address; sync `lastGeocodedAddressRef` when parent drops pin (template/saved venue) to avoid duplicate lookups.
 - **`components/map/map-recenter.tsx`:** After external coordinate/pin updates, trigger `resize` + `idle` refresh so Advanced Markers paint without requiring a map click; pan + zoom on first pin drop even when coords were set externally.
 - **Verify:** `/coordinator/events/new` — pick Edmonton venue template or upload flyer with address → red pin appears and map pans immediately; type a full address manually → pin updates after brief debounce.
 
-## Shipped this session (sign-out redirect fix, not deployed)
+## Shipped this session (sign-out redirect fix, deployed 2026-06-09)
 - **`lib/auth/sign-out.ts` (new):** Shared `signOutAndRedirectToLogin()` — sets intentional-signout flag, calls `supabase.auth.signOut()`, then `window.location.replace('/login')` for a clean login page without `redirectTo`.
 - **`components/nav/app-nav.tsx` + `components/shopper/shopper-top-bar.tsx`:** Sign out menu actions use the shared helper instead of soft `router.push`.
 - **`components/auth/auth-session-guard.tsx`:** Skips `redirectTo` query on intentional sign-out; falls back to plain `/login`.
 - **Verify:** Sign in, open app menu → Sign out — lands on `/login` with no query params; no stuck protected-route error state.
 
-## Shipped this session (flyer auto-detect quarter auction listing type, not deployed)
+## Shipped this session (flyer auto-detect quarter auction listing type, deployed 2026-06-09)
 - **`lib/flyer/listing-type.ts` (new):** Maps AI `listing_type: "quarter_auction"` → wizard `garage_yard_sale`; text fallback for "Quarter Auction" / "Live Auction".
 - **`lib/flyer/parse-flyer-vision.ts`:** OpenRouter prompt adds `listing_type` with auction visual/text cues; quarter auctions forced to `single_day`.
 - **`lib/flyer/apply-parsed-flyer.ts` + `market-setup-wizard.tsx`:** Flyer scan calls `handleListingTypeChange` so LISTING TYPE toggles to Quarter auction immediately.
 - **Verify:** `/coordinator/events/new` — upload quarter/live auction flyer → Quarter auction segment selected; community market flyer unchanged.
 
-## Shipped this session (flyer date extraction — next occurrence + multi-day, not deployed)
+## Shipped this session (flyer date extraction — next occurrence + multi-day, deployed 2026-06-09)
 - **`lib/flyer/normalize.ts`:** `resolveNextOccurrenceDate`, `parseMultiDayDateSpan`, and upgraded `normalizeFlyerDate` — month/day without year rolls to next calendar year when already passed; stale/wrong years (e.g. 2006) re-resolve to current/next occurrence; parses "Oct 5-6" spans.
 - **`lib/flyer/parse-flyer-vision.ts`:** OpenRouter/Gemini prompt now requests `schedule_type`, `start_date`, `end_date`; explicit multi-day span rules; dynamic current-year guidance; snake_case coercion + schedule normalization.
 - **`lib/flyer/apply-parsed-flyer.ts` + types + `/api/parse-flyer`:** Multi-day flyer results set wizard `multi` schedule, populate `dayRows` via `buildDayRowsForDateRange`, and assign independent start/end dates.
 - **`scripts/verify-flyer-date-normalize.ts`:** 7/7 pass.
 - **Verify:** `/coordinator/events/new` — upload flyer with "Oct 5-6" → Multi-Day selected, 2026-10-05 / 2026-10-06; month-only date after today uses 2026, before today uses 2027.
 
-## Shipped this session (discover date filters + Add to Calendar, not deployed)
+## Shipped this session (discover date filters + Add to Calendar, deployed 2026-06-09)
 - **`lib/shopper/discover-date.ts`:** New presets `this_week` and `this_month` for URL `when=` param.
 - **`lib/shopper/events.ts`:** `getThisWeekEndDate`, `getThisMonthEndDate`, `filterEventsByDateRange` — week runs today through upcoming Sunday; month runs today through end of calendar month.
 - **`components/shopper/discover-screen.tsx` + `discover-date-filter.tsx`:** "This Week" and "This Month" buttons in WHEN row; date summary shows range labels.
@@ -271,34 +277,34 @@
 - **`event-action-bar.tsx`:** Event detail sticky bar uses ICS download (labeled on mobile, icon on desktop).
 - **Verify:** `/discover` — tap This Week / This Month; market cards show Add to Calendar; open `/events/[id]` on mobile — calendar button downloads `.ics`.
 
-## Shipped this session (discover page copy + flyer upload removal, not deployed)
+## Shipped this session (discover page copy + flyer upload removal, deployed 2026-06-09)
 - **`components/shopper/discover-screen.tsx`:** Removed "Have a flyer?" upload section; page title changed from "Discover Community Markets" to "Popup Hub Community Markets".
 - **Removed:** `components/shopper/discover-flyer-upload.tsx`, `lib/shopper/parse-flyer-image.ts` (shopper-only flyer heuristic; coordinator flyer OCR unchanged).
 - **Verify:** Open `/discover` — no flyer upload card; heading reads "Popup Hub Community Markets".
 
-## Shipped this session (initial loader logo clip + transparency fix, not deployed)
+## Shipped this session (initial loader logo clip + transparency fix, deployed 2026-06-09)
 - **`components/brand/initial-loader-reveal.tsx`:** Restored full transparent `/popup-hub-brand.png` lockup (icon + wordmark); removed inner clip path that was cropping the logo during scale; `fitLogoInRing()` sizes by aspect ratio so the full mark fits inside the stall ring without overlap.
 - **Verify:** Hard refresh — full "Popup Hub" wordmark visible, no checkerboard/solid box behind logo, nothing clipped at bottom during fade-in.
 
-## Shipped this session (initial loader perimeter + logo overlap fix, not deployed)
+## Shipped this session (initial loader perimeter + logo overlap fix, deployed 2026-06-09)
 - **`components/brand/initial-loader-reveal.tsx`:** Perimeter stalls now skip corners (top/bottom rows inset between side columns; side count capped so sides do not overlap bottom row). Logo uses square `/popup-hub-icon.png`, sizes to inner ring bounds, clips to inner rect, and fades in only after stalls finish (progress 0.58+).
 - **Verify:** Hard refresh `/` or login — stalls form a clean ring with no corner overlap; logo glow and icon stay inside the ring during fade-in.
 
-## Shipped this session (multi-instance Stage tool on layout designer, not deployed)
+## Shipped this session (multi-instance Stage tool on layout designer, deployed 2026-06-09)
 - **`lib/floor-plan/stage-placement.ts` (new):** Default 12×8′ tap footprint and `nextStageLabel()` — auto labels "Stage 1", "Stage 2", … from existing `objects[]` count.
 - **`use-canvas-pointer.ts` (+ wizard QA mirror):** Stage draw uses centered default footprint on click (like food trucks); each commit appends a new stage with incrementing label — no replace/move of prior stages.
 - **`canvas-objects.tsx`:** Stage outline-only rect (`fill="none"`), `cursor: move`, stroke stays visible when joined to a room perimeter.
 - **`floor-plan-canvas.tsx` + `canvas-overlays.tsx`:** Selection overlay skips duplicate dashed box on stages; draft preview shows outline-only for stage placement.
 - **Verify:** `npx tsx scripts/verify-canvas-state-smoke.ts` — 27/27 pass. Smoke `/coordinator/dashboard` — arm Stage in Designer Tools, click canvas repeatedly → multiple labeled stages; select + drag + trash each independently.
 
-## Shipped this session (sticky placement tools on dashboard canvas, not deployed)
+## Shipped this session (sticky placement tools on dashboard canvas, deployed 2026-06-09)
 - **`floor-plan-v2.tsx`:** `handleAfterDrawCommit` — dashboard keeps draw tool armed after placement (clears selection only); wizard still reverts to Select. `stickyDrawPlacement={isDashboard}` on canvas.
 - **`use-canvas-pointer.ts`:** `stickyDrawPlacement` option + hover ghost preview (`placementHoverRect` / `placementHoverKind`) between stamp clicks.
 - **`floor-plan-canvas.tsx`:** Merges draft + hover preview for `DraftPreview`; crosshair cursor unchanged while draw tool armed.
 - **Deactivation unchanged:** pointer/hand toolbar icons, different size/tool selection, `Escape` → Select.
 - **Verify:** `tsc --noEmit` clean; smoke `/coordinator/dashboard` — arm vendor `6′`, click canvas repeatedly without re-selecting tool; ghost outline follows cursor between clicks.
 
-## Shipped this session (layout designer sidebar row layout refactor, not deployed)
+## Shipped this session (layout designer sidebar row layout refactor, deployed 2026-06-09)
 - **`toolbar-static-layout.ts`:** `STATIC_ROW_HEADERS`, `SIDEBAR_STATIC_ROW_SEGMENTS`, `getStaticRowSegments()` — sidebar moves undo/redo left with room controls; tools + zoom right.
 - **`canvas-toolbar-static.tsx` (+ QA):** Split headers ("Room Controls" | "Designer Tools", "Patron Layout" | "Vendor Booths"); `sidebarLayout` two-column grid with vertical divider; bare block clusters (no per-block border crush).
 - **`canvas-command-bar.tsx` (+ QA):** Passes `sidebarLayout` into block context and static toolbar.
@@ -307,7 +313,7 @@
 - **`layout-room-bar.tsx`:** `sidebar` prop — vertical stack: room picker, dimensions (`40′ × 40′`), add room, undo/redo sibling block.
 - **Verify:** `tsc --noEmit` clean; smoke `/coordinator/dashboard` at lg+ — left rail shows split headers, room column vs tool grid, patron/vendor divider with stacked controls.
 
-## Shipped this session (OpenRouter AI gateway + task-based models, not deployed)
+## Shipped this session (OpenRouter AI gateway + task-based models, deployed 2026-06-09)
 - **`lib/ai/tasks.ts` (new):** Central registry maps workloads → OpenRouter models — `flyer_vision` / `vision_json` → Gemini 2.5 Flash; `chat_json` → GPT-4o mini; `creative_layout` → Claude 3.5 Sonnet; `creative_generation` → Claude Sonnet 4. Per-task env overrides: `OPENROUTER_MODEL_<TASK>` / `OPENROUTER_MODEL_<TASK>_FALLBACK`.
 - **`lib/ai/openrouter.ts` (new):** Server-side OpenRouter chat client (`openRouterChatForTask`) with quota/rate-limit fallback to each task's secondary model.
 - **`lib/ai/generate-json-vision.ts`:** Vision JSON now routes exclusively through OpenRouter (no direct Gemini/Groq API calls).
@@ -317,24 +323,24 @@
 - **Verify:** `npx tsx scripts/verify-ai-provider-fallback.ts` — 22/22 pass. Set `OPENROUTER_API_KEY` on Vercel before deploy.
 - **Not migrated:** Experience Designer still proxies to external Master Generator backend — wire via `creative_generation` task when that service moves in-app.
 
-## Shipped this session (flyer AI parse → Gemini 2.5 Flash, superseded by OpenRouter task routing, not deployed)
+## Shipped this session (flyer AI parse → Gemini 2.5 Flash, superseded by OpenRouter task routing, deployed 2026-06-09)
 - **`lib/ai/env.ts`:** Flyer vision always uses `google/gemini-2.5-flash` (override via `FLYER_GEMINI_MODEL_ID` only); global `GEMINI_MODEL_ID` default bumped to 2.5 Flash for other callers.
 - **`lib/ai/generate-json-vision.ts`:** Optional `geminiModelId` per call so flyer parse can pin a model without affecting other vision callers.
 - **`lib/flyer/parse-flyer-vision.ts`:** Uses `resolveFlyerGeminiModelId()`; strips markdown JSON fences before `JSON.parse`.
 - **Verify:** Upload a flyer on market setup wizard Step 1 — fields populate; API `meta.source` is `gemini`; check Vercel logs if `GEMINI_API_KEY` missing (falls back to Groq or filename heuristic).
 
-## Shipped this session (wizard event name + description limits, not deployed)
+## Shipped this session (wizard event name + description limits, deployed 2026-06-09)
 - **`copy-audit.ts`:** `DESCRIPTION_MAX_LENGTH = 2000` (was 800 in UI defaults).
 - **`wizard-ui.tsx`:** New `WizardLabeledInput` — static label above field; Step 1 event name uses it instead of floating label inside the box. `WizardDescriptionField` default max 2000.
 - **`wizard-step-event-details.tsx` (+ QA step1):** Event name * label sits above the input, matching description field layout.
 - **`event-form.tsx`:** Description `maxLength` 2000.
 - **Verify:** Market setup wizard Step 1 — event name label outside input; description accepts up to 2000 chars with counter `…/2000`.
 
-## Shipped this session (vendor booth size → auto-arm draw tool, not deployed)
+## Shipped this session (vendor booth size → auto-arm draw tool, deployed 2026-06-09)
 - **`canvas-command-bar-blocks.tsx` (+ QA):** Vendor booth size pills (`5′`, `6′`, `8′`, …) now call `activateTableSize` instead of `onTableSizeChange` only — sets size and arms the square/booth draw tool in one click; square icon highlights via existing `isTablePlacementActive('vendor')`.
 - **Verify:** Smoke `/coordinator/dashboard` — click a vendor size in VENDOR BOOTHS; square icon turns amber-active and cursor places booths at that size without a second click on the square tool.
 
-## Shipped this session (layout designer sidebar — merged control rows, not deployed)
+## Shipped this session (layout designer sidebar — merged control rows, deployed 2026-06-09)
 - **`toolbar-static-layout.ts`:** Four accordion rows collapsed to two merged rows — `room-tools` (Room Controls + Designer Tools) and `placement` (Patron Layout + Vendor Booths); legacy localStorage row ids migrate on load.
 - **`canvas-toolbar-static.tsx` + `canvas-toolbar-static_qa.tsx`:** Split-row flex layout — `lg:flex-row lg:justify-between` with vertical divider; left/right segments per row; wraps on medium viewports.
 - **`canvas-command-bar.tsx` + QA mirror:** Passes `layoutCtx` for segment visibility (tools hidden until first room exists).
@@ -342,45 +348,45 @@
 - **Verify:** `tsc --noEmit` clean; smoke `/coordinator/dashboard` — sidebar shows 2 rows (room+tools, patron+vendor) on lg; canvas gains ~2 accordion header heights.
 
 
-## Shipped this session (layout designer 1′ grid calibration, not deployed)
+## Shipped this session (layout designer 1′ grid calibration, deployed 2026-06-09)
 - **`canvas-grid-spacing.ts`:** Layout designer canvas always uses 1′ minor cells + major line every 5′ (`CANVAS_GRID_MAJOR_EVERY`); removed table-size-based 2′ mesh that made 50′ rooms span only 5 major (10′) blocks.
 - **`floor-plan-v2.tsx`:** `canvasGridDocPatch()` keeps `gridSpacingFt` / `snapFt` at 1′ on load and table-size changes so pointer snap matches the visual grid.
 - **`floor-plan-canvas.tsx`:** Grid layer reads calibrated spacing (unchanged API; now always 1′/5′).
 - **Verify:** inline `canvasGridSpacingForTableFt(5..20)` → `minorFt === 1`; smoke `/coordinator/dashboard` — 50′ × 50′ Main Hall spans 50 minor subdivisions per edge; booth drop/snap unchanged at 1′.
 
-## Shipped this session (deploy script streaming fix, not deployed)
+## Shipped this session (deploy script streaming fix, deployed 2026-06-09)
 - **`scripts/git-sync.ps1`:** `Invoke-NativeCommand` streams stdout/stderr line-by-line instead of buffering until process exit — `vercel deploy` no longer appears hung for 3-6 minutes with no output.
 - **`Invoke-VercelProdDeploy`:** Sets `CI=1`, disables telemetry, passes `--non-interactive` for Explorer/bat launches.
 - **`deploy-popuphub.ps1` / `ship.ps1`:** Use helper + hint that remote build takes several minutes.
 
-## Shipped this session (patron table dimension lock + layout rows, not deployed)
+## Shipped this session (patron table dimension lock + layout rows, deployed 2026-06-09)
 - **`floor-plan-v2.tsx`:** Left-panel table size controls update the next-draw template only (`defaultPlacementSpec`); they no longer patch selected/placed booths when the pill changes after a draw auto-selects the new object.
 - **`use-canvas-pointer.ts` (+ wizard QA):** `commitDraft` snapshots booth footprint via `boothPatchForTableSize` at drop time (`width`, `height`, `tableLengthFt`, shape/purpose, vendor clusters).
 - **`table-size-pill.tsx` + `canvas-command-bar-blocks.tsx` (+ QA):** New `PatronTableSizeRows` — circle row and rectangle row (`flex-col` / `flex-nowrap`) with 5′/6′/8′ size pills; toolbar block wrappers use full width.
 - **Verify:** `npx tsx scripts/verify-canvas-state-smoke.ts` — 23/23 pass.
 
-## Shipped this session (initial room modal — table size removed, not deployed)
+## Shipped this session (initial room modal — table size removed, deployed 2026-06-09)
 - **`initial-room-modal.tsx`:** Removed vendor table size selector (`Vendor table size` label, `TABLE SIZE` grid, caption) from **Create your first room**; modal now only collects Width/Length (ft) + **Open layout designer**.
 - **`dashboard-bootstrap.tsx` + `Dashboard_qa.tsx`:** `onConfirm(widthFt, lengthFt)` passes footprint only; `appendLayoutRoom` defaults `baseline_table_length_ft` to 6′ (`DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT`).
 - **Verify:** `npx tsx scripts/verify-table-size-default.ts` — 19/19 pass; `tsc --noEmit` clean. Smoke: `/coordinator/dashboard` on event with no saved rooms — modal shows dimensions only; canvas opens with 6′ baseline; table size changeable from designer toolbar.
 
-## Shipped this session (tooltip height stretch fix, not deployed)
+## Shipped this session (tooltip height stretch fix, deployed 2026-06-09)
 - **`components/coordinator/tooltip-wrapper.tsx`:** Anchor uses `relative inline-flex h-auto w-fit self-start` so flex toolbars no longer stretch the positioning box to full row height; bubble gets explicit `h-auto w-max`. Optional `className` prop (e.g. `w-full` for catalog rows).
 - **`components/ui/tooltip.tsx`:** `TooltipTrigger` and `TooltipContent`/`Positioner` constrained with `h-auto w-fit self-start` — HelpCircle triggers no longer inherit flex cross-axis stretch.
 - **`wizard-filter-tooltip.tsx`**, **`tooltip-wrapper_qa.tsx`**, map pin tooltips (`wizard-step-venue*.tsx`): same anchor/bubble sizing guards.
 
-## Shipped this session (vendor table size selector — modular presets, not deployed)
+## Shipped this session (vendor table size selector — modular presets, deployed 2026-06-09)
 - **`lib/booth-planner/layout-table-size.ts`:** Replaced single-dimension sizes (7′/9′ removed) with modular vendor presets: 5/6/8′ singles plus 10/12/15/16/18/20′ combined footprints (`VENDOR_TABLE_SIZE_OPTIONS`).
 - **`components/coordinator/table-size-selector.tsx`:** 3×3 grid with modular sub-labels `(5′×2)` etc.; used by wizard capacity step and booth planner (not initial room modal).
 - **`table-cluster-layout.ts` + `table-booth-consolidation.ts` + `use-canvas-pointer.ts`:** Contiguous multi-table clusters on draw/resize; geometry uses total length × 2′ depth.
 - **`canvas-objects.tsx`:** Vertical dividers between sub-tables in clustered vendor booths.
 - **Verify:** `npx tsx scripts/verify-table-size-default.ts` — 19/19 pass; `tsc --noEmit` clean.
 
-## Shipped this session (discover page scroll fix, not deployed)
+## Shipped this session (discover page scroll fix, deployed 2026-06-09)
 - **`components/shopper/shopper-shell.tsx`:** Removed viewport-locked nested scroll (`min-h-[100dvh]` + `main` `overflow-y-auto` / `min-h-0` / `flex-1`). Browse routes (`/discover`, `/favorites`, etc.) now use `min-h-screen` and natural document scroll so footer and expanded flyer content are reachable.
 
 
-## Shipped this session (layout merge engine — polygon union, not deployed)
+## Shipped this session (layout merge engine — polygon union, deployed 2026-06-09)
 - **`src/utils/layoutMergeEngine.ts` (new):** `polygon-clipping` boolean union for room + stage; `unionLayoutParticipants`, `computeRoomStageUnion`, `resolvePerimeterUnionRingForRoom`, `runPatronPerimeterLayout` / `runVendorPerimeterLayout` (zero API tokens).
 - **`room-union-merge.ts` + `geometry-sanitize.ts`:** Destructive merge stores multi-vertex `perimeterRing` (L-shapes preserved, not AABB-only).
 - **`placement-surface.ts`:** Auto-unions touching stages into placement outer ring for perimeter auto-arrange.
@@ -390,14 +396,14 @@
 - **Verify:** `npx tsx scripts/verify-layout-merge-engine.ts` — 6/6 pass.
 
 
-## Shipped this session (AI Theme Wizard removed, not deployed)
+## Shipped this session (AI Theme Wizard removed, deployed 2026-06-09)
 - **Removed:** AI Theme Wizard UI (`ai-generation-guardrails_qa.tsx`), OpenRouter proxy (`lib/ai/openrouter.ts`, `app/api/coordinator/ai-theme-layout/route.ts`), spatial codec (`spatialCompressor.ts`, `aiTokenGuard.ts`), verify script, and `js-tiktoken` dependency.
 - **`Dashboard_qa.tsx`:** Left rail is toolbar portal only; `QaAccordionHeader` kept for canvas toolbar QA typography.
 - **Kept:** `layoutMergeLocal.ts` + `floor-plan-v2.tsx` local merge validation (RBush, no AI).
 
 
 ## Last deploy
-- 2026-06-09 06:55 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (a625173)
+- 2026-06-09 09:02 - Deploy via deploy-popuphub.ps1 - `feat: floor-plan object resize, measurements, viewport lock, and layout fixes` (8119e2a)
 
 
 ## Goal
@@ -414,20 +420,20 @@
 - **npm scripts:** `mobile:assets`, `mobile:sync`, `mobile:ios:open`, `mobile:ios:add`.
 - **OAuth URL scheme:** `ca.popuphub.app://auth/callback` patched into `ios/App/App/Info.plist` — add same redirect in Supabase Auth before TestFlight sign-in smoke.
 
-## Shipped this session (discover map scope copy, not deployed)
+## Shipped this session (discover map scope copy, deployed 2026-06-09)
 - **`components/markets/distance-radius-picker.tsx`:** Active “everywhere” banner now reads `Showing Popup Hub markets everywhere` (clarifies platform-registered markets only).
 
-## Shipped this session (major version bump, not deployed)
+## Shipped this session (major version bump, deployed 2026-06-09)
 - **`package.json` / `build-number.json` / `package-lock.json`:** Major version `0.1.0` → `1.0.0`; build counter reset to `1` (footer display: `v1.0.1 · build 1`).
 - **`PM/ios-testflight.md`:** Version table updated to `1.0.0`.
 
-## Shipped this session (footer copyright removed, not deployed)
+## Shipped this session (footer copyright removed, deployed 2026-06-09)
 - **`components/brand/build-version-footer.tsx`:** Removed `© {year}` from global footer; line now reads `Popup Hub · v{version} · build {n} · {commit}` (version/build/commit unchanged).
 
-## Shipped this session (legal contact email update, not deployed)
+## Shipped this session (legal contact email update, deployed 2026-06-09)
 - Replaced `legal@popuphub.app` with `thetipsyfoxyeg@gmail.com` in `components/legal/legal-document.tsx` (About + all legal page footers), `app/legal/terms/page.tsx`, and `lib/legal/faq-content.tsx`.
 
-## Shipped this session (About Us + FAQ fee transparency, not deployed)
+## Shipped this session (About Us + FAQ fee transparency, deployed 2026-06-09)
 - **`app/legal/about/page.tsx` (new):** Full Popup Hub story — founders, fee breakdown (patrons/vendors/coordinators), trust/honesty policy, discovery vision.
 - **`lib/legal/about-content.ts` (new):** Section copy for the About page.
 - **`lib/legal/faq-content.tsx`:** Converted from `.ts` to support React answers; added middle-positioned **How much does Popup Hub cost…** (pricing + bypass rules) and **Why does Popup Hub charge fees?** (summary linking to `/legal/about`).
@@ -435,7 +441,7 @@
 - **`app/legal/faq/page.tsx`:** Updated last-modified date; intro links to About Us.
 - **Build fix:** QA floor-plan canvases (`floor-plan-canvas-wizard_qa.tsx`, `floor-plan-canvas_dashboard_qa.tsx`) synced to unified `SelectionOverlay` (removed obsolete `layer="outline"|"controls"` props). `npm run build` passes (build 177).
 
-## Shipped this session (wizard Step 1 layout + venue/map reactivity, not deployed)
+## Shipped this session (wizard Step 1 layout + venue/map reactivity, deployed 2026-06-09)
 - **`wizard-ui.tsx` / `globals.css`:** Floating textareas `pt-6`; description + labeled textareas use static labels with counters in a flex row below the field (never inside the input).
 - **`venue-places-autocomplete_qa.tsx`:** Wizard floating-label inputs (`placeholder=" "`) with bidirectional `place_changed` sync + `useEffect` DOM mirror for sibling/map updates.
 - **`wizard-google-place-select_qa.ts`:** `fromMapGeocode` flag — map click reverse-geocode fills venue name + address + pin without preserving stale typed venue draft.
@@ -443,7 +449,7 @@
 - **`map-recenter.tsx`:** Re-pans and re-zooms when pin moves (autocomplete, template, or map click).
 - **`google-place-venue.ts`:** `resolveVenueNameFromMapGeocode` helper.
 
-## Shipped this session (auto-layout & patron pathfind, not deployed)
+## Shipped this session (auto-layout & patron pathfind, deployed 2026-06-09)
 - **`engine/BoothArrangementEngine.ts` (new):** `PackBooths()` — greedy MaxRects guillotine bin-packing inside merged_zone / placement surfaces with **5′ aisle** constraint; orients booths toward nearest perimeter wall via `rotationForPerimeterEdge`.
 - **`engine/PathfindingService.ts` (new):** `CalculateOptimalPath()` — custom lightweight A* on a walkability grid (booths + stages impassable); nearest-neighbor booth order; entrance → all vendor booths → exit.
 - **`floor-plan-v2.tsx`:** Inspector action **Auto-Layout & Pathfind** — clears vendor booth coords, packs, pathfinds, `replaceObjects`, stores path for overlay.
@@ -451,11 +457,11 @@
 - **`property-inspector.tsx`:** Sidebar button when no selection is active.
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — 3/3 pass.
 
-## Shipped this session (Google Places venue/address autocomplete fix, not deployed)
+## Shipped this session (Google Places venue/address autocomplete fix, deployed 2026-06-09)
 - **`venue-places-autocomplete_qa.tsx`:** Removed `placesReady` from input `key` — remounting after Places loaded detached Google Autocomplete from the live input (predictions never appeared).
 - **`wizard-step-venue.tsx`:** `APIProvider` now passes `libraries={['places']}` (parity with event form + QA provider).
 
-## Shipped this session (canvas geometry revert — pointer capture / blue mask, not deployed)
+## Shipped this session (canvas geometry revert — pointer capture / blue mask, deployed 2026-06-09)
 - **`floor-plan-canvas.tsx` (`LayoutCanvas`):** Reverted viewport-lock framing (`useCanvasViewportFraming`, `fitViewportToContent`, `contentFramingBounds`); restored pre-resize `frameActiveRoom` + scroll-container ResizeObserver; simplified `onPointerDown` (no capture swallow); added temp `console.log('Canvas Interaction State:', e.target)` on `onMouseDown`; single `SelectionOverlay` pass (no split outline/controls layer).
 - **`canvas-overlays.tsx`:** Reverted object resize handles + dimension labels (removed `pointerEvents="all"` resize hit targets).
 - **`canvas-objects.tsx`:** `merged_zone` render — `fillOpacity={0}` (decorative mask no longer tints rooms blue/teal); layer stays `pointerEvents="none"`.
@@ -463,11 +469,11 @@
 - **`geometry-sanitize.ts`:** Reverted stricter `isValidPlacementLocationBBox` (centroid-only gate) — restores placement behavior consumed by `use-floor-plan-doc.ts` `isValidPlacementLocation`.
 - **`use-floor-plan-doc.ts`:** No direct diff (unchanged since `a2e5286`); placement gate fix is via `geometry-sanitize` import.
 
-## Shipped this session (event setup checklist reorder, not deployed)
+## Shipped this session (event setup checklist reorder, deployed 2026-06-09)
 - **`event-readiness-checklist.tsx`:** Reordered steps — Square + booth layout now precede "Event published"; quarter auction step only when `listing_type` is quarter auction (`garage_yard_sale` via `isQuarterAuctionListing`).
 - **`app/coordinator/events/[id]/page.tsx`:** Quarter Auctions panel and header Auctions link hidden for standard community markets.
 
-## Shipped this session (layout canvas viewport init + 100% zoom, not deployed)
+## Shipped this session (layout canvas viewport init + 100% zoom, deployed 2026-06-09)
 - **`use-layout-viewport.ts`:** `VIEWPORT_FIT_PADDING_PX` (40px safe-zone); `fitViewportToContent` returns target zoom and prefers pixel padding for baseline framing.
 - **`use-viewport.ts`:** `fitToBounds` accepts `paddingPx`; tracks `baselineZoom` (100% toolbar readout); `getBaselineZoom()` exposed on `ViewportApi`.
 - **`use-canvas-viewport-framing.ts` (new):** `ResizeObserver` on the layout background host; initial fit in `useLayoutEffect`; re-fit on container resize (toolbar/window/inspector).
@@ -475,19 +481,19 @@
 - **`floor-plan-canvas-wizard_qa.tsx`:** Synced with production fit math; removed conflicting canvas-centre scroll effect; spatial layout uses `scrollHost` + `h-full overflow-auto` (wizard embedded keeps page-scroll QA classes).
 - **`floor-plan-v2.tsx` / `floor-plan-v2_wizard_qa.tsx`:** Zoom reset + viewport reset call `fitViewportToContent` (100% = fit with 40px pad); canvas host `flex flex-col min-h-0 h-full`.
 
-## Shipped this session (canvas viewport fit-to-content, superseded by padding/resize pass above, not deployed)
+## Shipped this session (canvas viewport fit-to-content, superseded by padding/resize pass above, deployed 2026-06-09)
 - **`use-layout-viewport.ts`:** `contentFramingBounds`, `fitViewportToContent`, `VIEWPORT_FIT_PADDING` (0.125 → ~75% viewport fill). Replaces hard-coded zoom-1 / canvas-centre resets.
 - **`floor-plan-canvas.tsx`:** Framing runs in `useLayoutEffect` before paint; zoom anchor uses active room centroid (not full canvas centre); removed conflicting canvas-dimension scroll centering that fought `fitToBounds`.
 - **`use-canvas-workspace.ts` / `floor-plan-v2.tsx`:** `resetCanvasViewport`, `ensurePlaceableDocument`, and Center View fallbacks call `fitViewportToContent` instead of `resetViewport()`.
 
-## Shipped this session (portal route sync, not deployed)
+## Shipped this session (portal route sync, deployed 2026-06-09)
 - **Active portal resolution (`lib/portals/active-portal.ts`):** Portal-prefixed routes (`/coordinator/*`, `/vendor/*`) now override the `active_portal` cookie in `resolveActivePortal` so top nav tabs match the URL (Option A sync).
 - **Middleware (`lib/supabase/middleware.ts`):** Auto-sets `active_portal` cookie when visiting coordinator or vendor routes the account may access.
 - **Coordinator + vendor layouts:** Server-side cookie sync on portal route entry as a belt-and-suspenders guard.
 - **Workspace chrome (`portal-workspace-layout.tsx`):** MARKET OPS sidebar / telemetry panels only render when route prefix matches the workspace portal prop.
 - **QA:** `lib/portals/qa-active-portal.ts` — 5 assertions for route/cookie precedence.
 
-## Shipped this session (Capacitor iOS shell, not deployed)
+## Shipped this session (Capacitor iOS shell, deployed 2026-06-09)
 - **Capacitor 7 deps:** `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/app`, `@capacitor/splash-screen`, `@capacitor/status-bar`.
 - **`capacitor.config.ts`:** App id `ca.popuphub.app`, prod URL `https://popuphub.ca`, `allowNavigation` for Supabase/OAuth/Stripe/Square domains, splash + status bar brand colors (`#faf8f5` / `#2d5a27`).
 - **`mobile/www/index.html`:** Offline fallback + brand PNG; redirects to `/discover` when loaded from `capacitor:` scheme.
@@ -522,13 +528,13 @@
 - **`patron-centric-layout.ts`:** Local edge clearance synced to 2′ per side.
 - **Verify:** `npx tsx scripts/verify-auto-arrange.ts` — 31/31 pass.
 
-## Shipped this session (QA Step 3 Add room clipping fix, not deployed)
+## Shipped this session (QA Step 3 Add room clipping fix, deployed 2026-06-09)
 - **`qa-scroll-layout_qa.ts` + `Canvas_qa.tsx`:** Added `QA_STEP3_CONTENT_CLASS` (`flex flex-col h-full overflow-y-auto`), `QA_ADD_ROOM_FORM_CLASS` (`relative z-10`); canvas constants use `flex-grow` instead of fixed viewport height.
 - **`floor-plan-v2_wizard_qa.tsx`:** Step 3 inner column uses `QA_STEP3_CONTENT_CLASS`; canvas host drops `min-h-[min(480px,50vh)]` trap; `LayoutCanvasWizardQa` gets `flex-grow`.
 - **`canvas-command-bar-blocks_qa.tsx`:** Embedded `LayoutRoomBar` (Add room width/length inputs) wrapped in `QA_ADD_ROOM_FORM_CLASS` so it stacks above canvas overlay.
 - **`globals.css`:** `.layout-planner-root-qa` overrides unlock `FullscreenLayout` + `.floor-plan-canvas-host` — `overflow-y-auto` on editor shell, `flex-grow` + `overflow: visible` on canvas host (replaces prod `overflow-hidden` / `height: 100%` trap for Step 3).
 
-## Shipped this session (QA global scroll unification, not deployed)
+## Shipped this session (QA global scroll unification, deployed 2026-06-09)
 - **`layout-planner-shell_qa.tsx`:** QA wizard Step 3 shell — no `useLayoutCanvasViewportLock`, no nested `overflow-hidden`; content flows at natural height.
 - **`qa-scroll-layout_qa.ts`:** Shared `QA_GLOBAL_PAGE_SCROLL`, `QA_CANVAS_VIEWPORT_CLASS`, `QA_CANVAS_CONTAINER_CLASS` — content-sized canvas, no fixed viewport height.
 - **`wizard-step-floor-plan_qa.tsx`:** Uses `LayoutPlannerShellQa`; floor plan column is `w-full flex-1` (no `h-full min-h-0` trap).
@@ -539,7 +545,7 @@
 - **`globals.css`:** `.layout-planner-root-qa` + `.dashboard-app-shell--qa-global-scroll` overrides — `#site-main` and `.setup-wizard-body` are the sole vertical scroll hosts.
 - **`events/new/page.tsx` + `market-setup-wizard.tsx`:** Dropped `overflow-hidden` / `min-h-0` traps on Create New Market Step 3 path.
 
-## Shipped this session (wizard Step 1 field layout + Places sync, not deployed)
+## Shipped this session (wizard Step 1 field layout + Places sync, deployed 2026-06-09)
 - **`wizard-ui.tsx`:** `WizardDescriptionField` (static label + counter row below); `WizardLabeledTextarea` for optional multi-line fields; floating inputs/textareas always use `placeholder=" "` (ignore consumer placeholder); textarea uses `field-sizing-fixed`; `--filled` triggers on any non-empty value.
 - **`globals.css`:** Textarea floating-label padding increased (`pt-8 pb-3`); textarea label rest/active positions tuned; `:placeholder-shown` rule extended to textarea variant.
 - **`wizard-step-event-details.tsx`:** Description → `WizardDescriptionField`; raffle → `WizardLabeledTextarea`.
@@ -548,19 +554,19 @@
 - **`wizard-step-venue.tsx`:** Replaced custom address typeahead + plain venue input with dual `VenuePlacesAutocomplete`; removed ~250 lines of duplicate prediction UI.
 - **`market-setup-wizard.tsx`:** Wired to production venue step + place-select lib (was QA imports).
 
-## Shipped this session (wizard Step 1 description layout, not deployed)
+## Shipped this session (wizard Step 1 description layout, deployed 2026-06-09)
 - **`wizard-ui.tsx`:** New `WizardDescriptionField` — static `WIZARD_FIELD_LABEL` above textarea; character counter + helper copy in a flex row below the input (counter right, helper left).
 - **`wizard-step-event-details.tsx`:** Step 1 description uses `WizardDescriptionField` instead of `WizardFloatingTextarea` + nested counter `<p>` (eliminates label/text overlap and counter inside the typing area).
 
-## Shipped this session (QA wizard description layout, not deployed)
+## Shipped this session (QA wizard description layout, deployed 2026-06-09)
 - **`wizard-description-field_qa.tsx`:** Replaced floating-label `WizardFloatingTextarea` with static `WIZARD_FIELD_LABEL` + `mb-2` above a fixed-layout textarea (`min-h-[150px]`, `overflow-y-auto`, `resize-y`, `field-sizing-fixed`) so typed copy no longer overlaps the DESCRIPTION label; metrics block unchanged below.
 
-## Shipped this session (QA canvas scroll fix, not deployed)
+## Shipped this session (QA canvas scroll fix, deployed 2026-06-09)
 - **`Canvas_qa.tsx`:** `QA_CANVAS_VIEWPORT_CLASS` updated — `overflow-hidden` → `overflow-y-auto scrollbar-hide` so the main hall viewport accepts wheel scroll while hiding the track.
 - **`globals.css`:** Added `.scrollbar-hide` utility (alias of `.scrollbar-none` for WebKit + Firefox).
 - **`floor-plan-canvas_dashboard_qa.tsx`:** Inner `[role="application"]` scroll host restored to `overflow-auto` (matches prod `floor-plan-canvas.tsx`); outer wrapper uses updated `QA_CANVAS_VIEWPORT_CLASS` — no `onWheel`/`onScroll` on parent (wheel handled on inner via `use-viewport`).
 
-## Shipped this session (QA absolute overrides, not deployed)
+## Shipped this session (QA absolute overrides, deployed 2026-06-09)
 - **`Canvas_qa.tsx`:** Exported `QA_CANVAS_VIEWPORT_CLASS` (`flex-1 h-[calc(100vh-64px)] overflow-hidden relative bg-slate-50`) — structural lock for main hall viewport (superseded by scroll fix above).
 - **`floor-plan-canvas_dashboard_qa.tsx`:** Canvas container `overflow-auto` → `overflow-hidden`; outer wrapper uses `QA_CANVAS_VIEWPORT_CLASS` (no right-edge scrollbar; pan/zoom handlers unchanged) — **reverted** inner to `overflow-auto` in scroll fix above.
 - **`Dashboard_qa.tsx`:** Center column wrapped in `QA_CANVAS_VIEWPORT_CLASS`; exported `QA_PLACEMENT_TIP_VALID` / `QA_PLACEMENT_TIP_VIOLATION` (`Valid space` / `Rule conflict`); `QA_ACCORDION_HEADERS` + `QaAccordionHeader` h3 typography.
@@ -638,7 +644,7 @@
 ## Goal (prior)
 **UI architecture — maximize canvas space & initial room modal** — purge curation queue from dashboard left rail, mandatory first-room modal before canvas mount, zero inner scrollbars on utility panel, floating Placement HUD.
 
-## Shipped this session (local, not deployed)
+## Shipped this session (local, deployed 2026-06-09)
 - **Curation queue removed from dashboard:** `dashboard-left-panel.tsx` replaces `DashboardCurationColumn` — left rail is layout-tool accordions only (Room / Patron / Vendor / Object Brushes via toolbar portal). Curation column files retained but unused in bootstrap.
 - **Left panel sizing:** `dashboard-app-shell.tsx` + bootstrap pass `w-80`, `h-[calc(100vh-64px)]`, `overflow-hidden` on left aside; grid column `20rem | 1fr`. `canvas-command-bar.tsx` drops sidebar `max-h` / `overflow-y-auto`; portal target uses `flex-1 overflow-hidden`.
 - **Mandatory initial room modal:** `initial-room-modal.tsx` + `hasInitialRoom` in `dashboard-bootstrap.tsx` — events with no saved rooms show blurred overlay + 50×50 ft dimension form; canvas mounts only after confirm (`addLayoutRoomToList`). Existing layouts skip modal.
@@ -717,7 +723,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | **Shipped** | Dedicated patron toolbar block; `scope: 'patron'` keeps vendor fixed while `arrangeGuestTables` runs (`isGuestTableBooth` in `lib/booth-planner/table-shape.ts`) |
 | **Verify** | Guest-table + isolated-scope blocks in `scripts/verify-auto-arrange.ts` (10/10 pass in those sections) |
 
-## Shipped this session (local, not deployed)
+## Shipped this session (local, deployed 2026-06-09)
 - **Dashboard layout tools in left panel:** Removed **Event overview** back links from command-center header and curation column. Floor-plan `CanvasCommandBar` (static layout) portals into the left rail via `dashboard-toolbar-portal.tsx` on desktop — canvas column is toolbar-free for more layout space. Mobile and **Full canvas** immersive mode keep the ribbon above the canvas. `sidebarLayout` on `canvas-command-bar.tsx` drops the 36vh height cap for vertical scrolling in the rail.
 - **Condensed canvas toolbars:** Floor-plan command ribbon, static dashboard rows, venue layout palette, and canvas utility bar are icon-only with `TooltipWrapper` labels. `CommandButton` is square (~1.65rem compact); removed Vendor/Patron/Room section badges and table-size column headers; embedded room bar uses icon **Add room**; reset/reorder chrome tightened. Files: `command-button.tsx`, `canvas-command-bar-blocks.tsx`, `canvas-toolbar-static.tsx`, `canvas-toolbar-reorder.tsx`, `layout-room-bar.tsx`, `table-size-pill.tsx`, `venue-layout-toolbar.tsx`, `canvas-utility-toolbar.tsx`.
 - **Gemini → Groq AI fallback:** Flyer vision parse (`lib/flyer/parse-flyer-vision.ts`) tries Gemini first (`GEMINI_API_KEY`, model `google/gemini-2.5-flash` via `FLYER_GEMINI_MODEL_ID` / `GEMINI_MODEL_ID`), then Groq when quota/rate-limit/overload errors occur. Groq key reads `GROQ_API_KEY` or Vercel alias `POPUPHUB_API_KEY`; model defaults to `llama-3.2-90b-vision-preview` (`GROQ_MODEL_ID` optional). Shared helpers in `lib/ai/`. Verify: `npx tsx scripts/verify-ai-provider-fallback.ts`. **Note:** Experience Designer planning sessions still proxy to the external Master Generator backend — that service needs its own Gemini→Groq fallback if theme generation should use this pattern.
