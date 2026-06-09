@@ -281,6 +281,9 @@ export interface CanvasCommandBarBlockContext {
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  onSaveDraft?: () => void
+  saveDraftDisabled?: boolean
+  saveDraftLoading?: boolean
   /** Static dashboard ribbon — tighter control heights (~10% shorter). */
   compact?: boolean
   /** Left-rail layout designer sidebar — stacked columns and split headers. */

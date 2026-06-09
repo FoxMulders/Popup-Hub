@@ -7,6 +7,7 @@
 - **Auto-arrange grid:** `floor-plan-v2.tsx` grid mode uses `autoArrangeInRoom` (reads active room bounds e.g. Main Hall 50′×50′, distributes vendor booths with aisle gaps). Traffic-flow door prereqs only gate staggered/perimeter/AI modes — grid works immediately with booths placed.
 - **Patron path tool:** Route icon in shape selector toggles `PatronTrafficPathOverlay` (dashed sky-blue walk path via `usePathfinding`). Wired in production `floor-plan-v2` + `floor-plan-v2_wizard_qa` canvas.
 - **Toolbar UX:** Command ribbon uses `flex-nowrap overflow-x-auto` instead of chaotic double-row wrap; tooltips remain portaled to `document.body` via `TooltipWrapper`.
+- **Sidebar utilities fix:** Left-rail `utilities` block restored fullscreen (Expand icon), labels toggle, save draft, and save deploy — previously only zoom was rendered in `sidebarLayout` mode.
 - **Verify:** `/coordinator/events/[id]/layout` → Save draft (no deploy) → reload confirms layout; Auto-Arrange Floor Plan (grid) spreads overlapping vendor booths; Patron Path toggle shows/hides walk overlay.
 
 ## Shipped this session (spatial layout — vendor-only capacity counting, not deployed)
