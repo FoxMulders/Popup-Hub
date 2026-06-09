@@ -63,6 +63,15 @@ assert(
   resolveModelForTask('auto_arrange_layout') !==
     resolveFallbackModelForTask('auto_arrange_layout')
 )
+assert(
+  'layout_recommend uses claude 3.5 sonnet',
+  resolveModelForTask('layout_recommend').includes('claude-3.5-sonnet')
+)
+assert(
+  'layout_recommend fallback differs from primary',
+  resolveModelForTask('layout_recommend') !==
+    resolveFallbackModelForTask('layout_recommend')
+)
 
 for (const task of Object.keys(AI_TASKS) as AiTask[]) {
   assert(`${task} has primary model`, resolveModelForTask(task).length > 0)

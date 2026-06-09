@@ -29,6 +29,11 @@ export const AI_TASKS = {
     model: 'google/gemini-2.5-pro',
     fallbackModel: 'anthropic/claude-3.5-sonnet',
   },
+  /** Layout safety + traffic-flow recommendations (active room assessment). */
+  layout_recommend: {
+    model: 'anthropic/claude-3.5-sonnet',
+    fallbackModel: 'openai/gpt-4o',
+  },
   /** Long-form creative generation (themes, puzzles, council copy). */
   creative_generation: {
     model: 'anthropic/claude-sonnet-4',

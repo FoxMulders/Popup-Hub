@@ -286,6 +286,9 @@ export interface CanvasCommandBarBlockContext {
   saveDraftLoading?: boolean
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
+  onRequestAiLayoutFeedback?: () => void
+  canRequestAiLayoutFeedback?: boolean
+  aiLayoutFeedbackLoading?: boolean
   /** Static dashboard ribbon — tighter control heights (~10% shorter). */
   compact?: boolean
   /** Left-rail layout designer sidebar — stacked columns and split headers. */
@@ -1110,6 +1113,23 @@ export function renderCanvasCommandBarBlock(
       if (sidebarLayout) {
         return (
           <div className="flex w-full min-w-0 flex-col gap-1.5">
+            {ctx.onRequestAiLayoutFeedback ? (
+              <button
+                type="button"
+                onClick={ctx.onRequestAiLayoutFeedback}
+                disabled={
+                  !ctx.canRequestAiLayoutFeedback || ctx.aiLayoutFeedbackLoading
+                }
+                className={cn(
+                  'w-full rounded-md border border-violet-300 bg-violet-50 px-2 py-2 text-left text-[11px] font-semibold leading-snug text-violet-900 hover:bg-violet-100 disabled:opacity-50',
+                  toolbarControlHeight(compact)
+                )}
+              >
+                {ctx.aiLayoutFeedbackLoading
+                  ? 'Analyzing layout…'
+                  : '💡 Ask AI for Layout Feedback'}
+              </button>
+            ) : null}
             <div
               className="flex min-w-0 flex-row flex-wrap items-center gap-0.5"
               role="group"

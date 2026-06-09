@@ -44,6 +44,7 @@ import {
   fitViewportToContent,
   VIEWPORT_FIT_PADDING,
 } from '@/components/coordinator/floor-plan-v2/canvas/use-layout-viewport'
+import { AiSpatialAssessmentPanel } from '@/components/coordinator/floor-plan-v2/inspector/ai-spatial-assessment-panel'
 import { PropertyInspector } from '@/components/coordinator/floor-plan-v2/inspector/property-inspector'
 import { CanvasCommandBar } from '@/components/coordinator/floor-plan-v2/tools/canvas-command-bar'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from '@/components/coordinator/floor-plan-v2/tools/types'
@@ -52,6 +53,12 @@ import {
   type AutoArrangeMode,
 } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
+import type { LayoutRecommendResponse } from '@/lib/floor-plan/ai-layout-recommend'
+import {
+  buildLayoutRecommendPayload,
+  mergeRecommendedIntoDoc,
+  requestLayoutRecommend,
+} from '@/lib/floor-plan/request-layout-recommend'
 import { usePathfinding } from '@/components/coordinator/floor-plan-v2/hooks/use-pathfinding'
 import { legacyRoomsFromDoc } from '@/components/coordinator/floor-plan-v2/state/legacy-bridge'
 import { hydrateFloorPlanDocForWizardQa, layoutHasPlacedGeometry } from '@/src/qa_review/lib/floor-plan/layout-hydration-wizard_qa'
@@ -382,6 +389,12 @@ function FloorPlanV2Workspace({
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
   const [patronPathEnabled, setPatronPathEnabled] = useState(false)
+  const [aiAssessment, setAiAssessment] = useState<LayoutRecommendResponse | null>(
+    null
+  )
+  const [aiAssessmentLoading, setAiAssessmentLoading] = useState(false)
+  const [aiAssessmentError, setAiAssessmentError] = useState<string | null>(null)
+  const [aiAssessmentRoomId, setAiAssessmentRoomId] = useState<string | null>(null)
 
   const prevLayoutRoomCountRef = useRef(layoutRooms.length)
   useEffect(() => {
@@ -1454,6 +1467,67 @@ function FloorPlanV2Workspace({
     return null
   }, [patronTableCount, vendorBoothCount])
 
+  const activeRoomPlaceableCount = useMemo(() => {
+    const payload = buildLayoutRecommendPayload(store.doc, activeRoomId)
+    return payload?.objects.length ?? 0
+  }, [activeRoomId, store.doc])
+
+  const canRequestAiLayoutFeedback =
+    !isDashboard && activeRoomPlaceableCount > 0
+
+  const handleDismissAiAssessment = useCallback(() => {
+    setAiAssessment(null)
+    setAiAssessmentError(null)
+    setAiAssessmentRoomId(null)
+  }, [])
+
+  const handleRequestAiLayoutFeedback = useCallback(async () => {
+    if (!canRequestAiLayoutFeedback) {
+      toast.message('Place at least one booth or fixture in the active room first.')
+      return
+    }
+    setAiAssessmentLoading(true)
+    setAiAssessmentError(null)
+    setAiAssessment(null)
+    setRightInspectorOpen(true)
+    try {
+      const result = await requestLayoutRecommend(store.doc, activeRoomId)
+      setAiAssessment(result)
+      setAiAssessmentRoomId(activeRoomId)
+      toast.success('AI layout assessment ready')
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Layout recommendation failed'
+      if (message.includes('OpenRouter') || message.includes('not configured')) {
+        setAiAssessmentError('AI is not configured — contact your administrator.')
+      } else {
+        setAiAssessmentError(message)
+      }
+      toast.error(message)
+    } finally {
+      setAiAssessmentLoading(false)
+    }
+  }, [activeRoomId, canRequestAiLayoutFeedback, store.doc])
+
+  const handleApplyAiLayout = useCallback(() => {
+    if (!aiAssessment?.recommendedObjects.length) return
+    const roomId = aiAssessmentRoomId ?? activeRoomId
+    const merged = mergeRecommendedIntoDoc(
+      store.doc,
+      roomId,
+      aiAssessment.recommendedObjects
+    )
+    store.replaceObjects(merged.objects)
+    toast.success('AI layout changes applied')
+    handleDismissAiAssessment()
+  }, [
+    aiAssessment,
+    aiAssessmentRoomId,
+    activeRoomId,
+    handleDismissAiAssessment,
+    store,
+  ])
+
   const handleAutoArrangeFloorPlan = useCallback(() => {
     if (vendorBoothCount === 0 && patronTableCount === 0) {
       toast.message('Nothing to arrange — draw at least one booth or table first.')
@@ -2248,6 +2322,11 @@ function FloorPlanV2Workspace({
                     saveDraftLoading={saveDraftLoading}
                     patronPathEnabled={patronPathEnabled}
                     onPatronPathToggle={handlePatronPathToggle}
+                    onRequestAiLayoutFeedback={
+                      !isDashboard ? handleRequestAiLayoutFeedback : undefined
+                    }
+                    canRequestAiLayoutFeedback={canRequestAiLayoutFeedback}
+                    aiLayoutFeedbackLoading={aiAssessmentLoading}
                   />
                 </div>
               </aside>
@@ -2414,11 +2493,27 @@ function FloorPlanV2Workspace({
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
-                  <PropertyInspector
-                    store={store}
-                    eventCategoryNames={eventCategoryNames}
-                    className="min-h-0 flex-1 overflow-y-auto pt-1"
-                  />
+                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2 pt-1">
+                    {!isDashboard &&
+                    (aiAssessmentLoading ||
+                      aiAssessmentError ||
+                      aiAssessment) ? (
+                      <AiSpatialAssessmentPanel
+                        loading={aiAssessmentLoading}
+                        error={aiAssessmentError}
+                        assessment={aiAssessment}
+                        onApply={
+                          aiAssessment ? handleApplyAiLayout : undefined
+                        }
+                        onDismiss={handleDismissAiAssessment}
+                      />
+                    ) : null}
+                    <PropertyInspector
+                      store={store}
+                      eventCategoryNames={eventCategoryNames}
+                      className="min-h-0 flex-1 overflow-y-auto"
+                    />
+                  </div>
                 </div>
               )}
             </div>

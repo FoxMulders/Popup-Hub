@@ -56,6 +56,9 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
   eventId?: string | null
+  onRequestAiLayoutFeedback?: () => void
+  canRequestAiLayoutFeedback?: boolean
+  aiLayoutFeedbackLoading?: boolean
 }
 
 /**
@@ -139,6 +142,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     patronPathEnabled,
     onPatronPathToggle,
     eventId,
+    onRequestAiLayoutFeedback,
+    canRequestAiLayoutFeedback,
+    aiLayoutFeedbackLoading,
   } = props
 
   const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
@@ -247,6 +253,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       saveDraftLoading,
       patronPathEnabled,
       onPatronPathToggle,
+      onRequestAiLayoutFeedback,
+      canRequestAiLayoutFeedback,
+      aiLayoutFeedbackLoading,
       compact: true,
       sidebarLayout,
     }),
@@ -320,6 +329,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       saveDraftLoading,
       patronPathEnabled,
       onPatronPathToggle,
+      onRequestAiLayoutFeedback,
+      canRequestAiLayoutFeedback,
+      aiLayoutFeedbackLoading,
       sidebarLayout,
     ]
   )

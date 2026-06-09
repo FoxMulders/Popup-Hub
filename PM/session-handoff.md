@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (AI layout recommendation panel, not deployed)
+- **`app/api/layout/recommend/route.ts`:** Coordinator-gated POST; OpenRouter Claude 3.5 Sonnet (`layout_recommend` task) evaluates active-room layout for safety/traffic flow; returns `recommendedObjects`, `changelog`, `rationale`.
+- **`lib/floor-plan/ai-layout-recommend.ts` + `request-layout-recommend.ts`:** Server prompt/parse/clip; client payload build (room-local coords), fetch, merge back to global `FloorPlanDoc`.
+- **UI:** Left-rail **💡 Ask AI for Layout Feedback** (`canvas-command-bar-blocks` utilities); right inspector **AI Spatial Assessment** card with changelog bullets + **Apply AI Layout Changes** (`ai-spatial-assessment-panel.tsx`); wired in `floor-plan-v2_wizard_qa.tsx` for `/coordinator/events/[id]/layout` only (`!isDashboard`).
+- **Verify:** `npx tsx scripts/verify-ai-provider-fallback.ts` (layout_recommend → claude-3.5-sonnet); layout route with `OPENROUTER_API_KEY` → Ask AI → panel shows rationale/changelog → Apply moves objects (undo works).
+
 ## Shipped this session (spatial layout editor — save draft, auto-arrange, patron path, deployed 2026-06-09)
 - **Save draft:** `SpatialLayoutToolbar` + canvas utilities row — **Save draft** persists `booth_layouts` via `persistLayoutDraft` without publishing the event; **Save & deploy** unchanged. Loading states + success toasts on both paths.
 - **Auto-arrange grid:** `floor-plan-v2.tsx` grid mode uses `autoArrangeInRoom` (reads active room bounds e.g. Main Hall 50′×50′, distributes vendor booths with aisle gaps). Traffic-flow door prereqs only gate staggered/perimeter/AI modes — grid works immediately with booths placed.
