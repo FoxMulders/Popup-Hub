@@ -39,7 +39,7 @@ function CanvasGridBase({
   }
 
   return (
-    <g aria-hidden className="canvas-grid-layer" pointerEvents="auto">
+    <g aria-hidden className="canvas-grid-layer" pointerEvents="none">
       <defs>
         <pattern
           id={ids.minor}

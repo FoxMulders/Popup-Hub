@@ -86,7 +86,7 @@ export const SIDEBAR_STATIC_ROW_SEGMENTS: Record<
   StaticRowSegments
 > = {
   'room-tools': {
-    left: ['room', 'history-clipboard'],
+    left: ['room'],
     right: ['primitives', 'utilities'],
   },
   placement: {
@@ -103,10 +103,12 @@ export function getStaticRowSegments(
 }
 
 export type SidebarSectionId =
+  | 'floor-plan-optimize'
   | 'room-controls'
   | 'designer-tools'
   | 'patron-layout'
   | 'vendor-booths'
+  | 'vendor-matches'
 
 export interface SidebarSectionDef {
   id: SidebarSectionId
@@ -135,6 +137,14 @@ export function getVisibleSidebarSections(ctx: {
     return sections
   }
 
+  if (ctx.showPatron || ctx.showVendor) {
+    sections.push({
+      id: 'floor-plan-optimize',
+      header: 'Floor Plan',
+      blocks: ['optimize'],
+    })
+  }
+
   sections.push({
     id: 'designer-tools',
     header: STATIC_ROW_HEADERS['room-tools'].right,
@@ -155,6 +165,11 @@ export function getVisibleSidebarSections(ctx: {
       header: STATIC_ROW_HEADERS.placement.right,
       blocks: SIDEBAR_STATIC_ROW_SEGMENTS.placement.right,
     })
+    sections.push({
+      id: 'vendor-matches',
+      header: 'Vendor Matches',
+      blocks: [],
+    })
   }
 
   return sections
@@ -168,6 +183,12 @@ export function getVisibleSidebarSectionsQa(ctx: {
   showVendor: boolean
 }): SidebarSectionDef[] {
   return getVisibleSidebarSections(ctx).map((section) => {
+    if (section.id === 'floor-plan-optimize' || section.id === 'vendor-matches') {
+      return {
+        ...section,
+        header: section.id === 'vendor-matches' ? 'VENDOR MATCHES' : 'FLOOR PLAN',
+      }
+    }
     const headers =
       section.id === 'room-controls' || section.id === 'designer-tools'
         ? STATIC_ROW_QA_HEADERS['room-tools']

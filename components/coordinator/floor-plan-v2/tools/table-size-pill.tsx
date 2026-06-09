@@ -49,6 +49,24 @@ function boothTabletTouchClass(isTablet: boolean, ft: number): string {
   return 'min-h-11 min-w-11 px-2.5 py-2 touch-manipulation'
 }
 
+function utilityChipClass(
+  active: boolean,
+  disabled: boolean,
+  tone: SizeButtonTone = 'default'
+): string {
+  const activeClass =
+    tone === 'vendor'
+      ? 'border-forest/40 bg-forest text-primary-foreground hover:bg-forest'
+      : tone === 'patron'
+        ? 'border-violet-300 bg-violet-600 text-white hover:bg-violet-600'
+        : 'border-sky-300 bg-sky-600 text-white hover:bg-sky-600'
+  return cn(
+    'inline-flex shrink-0 items-center justify-center rounded border border-slate-200 px-2.5 py-1 text-xs font-semibold tabular-nums transition-colors hover:bg-slate-50',
+    active ? activeClass : 'bg-white text-slate-700',
+    disabled && 'pointer-events-none opacity-60'
+  )
+}
+
 function sizeButtonClass(
   active: boolean,
   disabled: boolean,
@@ -85,13 +103,51 @@ function GuestTableSizeButtons({
   onChange,
   disabled = false,
   compact = false,
+  chipGrid = false,
 }: {
   shape: 'round' | 'rectangular'
   value: TableSizeSpec
   onChange: (selection: TableSizeSpec) => void
   disabled?: boolean
   compact?: boolean
+  chipGrid?: boolean
 }) {
+  if (chipGrid) {
+    return (
+      <div
+        className={cn(
+          'flex min-w-0 flex-wrap gap-1',
+          disabled && 'opacity-60'
+        )}
+        role="group"
+        aria-label={shape === 'round' ? 'Round table sizes' : 'Rectangle table sizes'}
+      >
+        {GUEST_TABLE_LENGTHS_FT.map((ft) => {
+          const selection =
+            shape === 'round' ? guestRoundTableSpec(ft) : guestRectTableSpec(ft)
+          const active = tableSizeSpecsEqual(value, selection)
+          return (
+            <button
+              key={`${shape}-${ft}`}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(selection)}
+              aria-pressed={active}
+              title={
+                shape === 'round'
+                  ? `Set guest round table diameter to ${ft} ft`
+                  : `Set patron banquet table length to ${ft} ft`
+              }
+              className={utilityChipClass(active, disabled, 'patron')}
+            >
+              {ft}′
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(
@@ -151,7 +207,7 @@ export function PatronSidebarControls({
       role="group"
       aria-label="Patron table sizes"
     >
-      <div className="flex items-center gap-0.5">
+      <div className="flex min-w-0 flex-wrap items-center gap-1">
         <button
           type="button"
           disabled={disabled}
@@ -159,7 +215,10 @@ export function PatronSidebarControls({
           aria-pressed={roundToolActive}
           title="Draw patron round table"
           aria-label="Circle tables"
-          className={patronToolIconClass(roundToolActive, compact)}
+          className={cn(
+            patronToolIconClass(roundToolActive, compact),
+            compact ? 'h-7 w-7' : 'h-7 w-7'
+          )}
         >
           <Circle className="h-3.5 w-3.5" aria-hidden />
         </button>
@@ -170,18 +229,22 @@ export function PatronSidebarControls({
           aria-pressed={rectToolActive}
           title="Draw patron banquet table"
           aria-label="Rectangle tables"
-          className={patronToolIconClass(rectToolActive, compact)}
+          className={cn(
+            patronToolIconClass(rectToolActive, compact),
+            compact ? 'h-7 w-7' : 'h-7 w-7'
+          )}
         >
           <RectangleHorizontal className="h-3.5 w-3.5" aria-hidden />
         </button>
+        <GuestTableSizeButtons
+          shape={activeShape}
+          value={value}
+          onChange={onSelectSize}
+          disabled={disabled}
+          compact={compact}
+          chipGrid
+        />
       </div>
-      <GuestTableSizeButtons
-        shape={activeShape}
-        value={value}
-        onChange={onSelectSize}
-        disabled={disabled}
-        compact={compact}
-      />
     </div>
   )
 }
@@ -205,8 +268,7 @@ export function VendorSidebarSizeGrid({
   return (
     <div
       className={cn(
-        'grid w-full grid-cols-4 gap-0.5 rounded-md border border-stone-200 bg-white p-0.5',
-        compact ? 'text-[10px]' : 'text-[11px]',
+        'flex min-w-0 flex-wrap gap-1',
         disabled && 'opacity-60',
         className
       )}
@@ -225,14 +287,8 @@ export function VendorSidebarSizeGrid({
             aria-pressed={active}
             title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
             className={cn(
-              'inline-flex min-h-[1.8rem] items-center justify-center rounded-sm px-1 font-semibold tabular-nums transition-colors',
-              sizeButtonClass(
-                active,
-                disabled,
-                'vendor',
-                boothTabletTouchClass(isTablet, ft)
-              ),
-              'min-w-0 border-0 last:border-0'
+              utilityChipClass(active, disabled, 'vendor'),
+              boothTabletTouchClass(isTablet, ft)
             )}
           >
             {ft}′

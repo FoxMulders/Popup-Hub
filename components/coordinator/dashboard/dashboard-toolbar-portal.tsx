@@ -12,6 +12,10 @@ import {
   type ReactNode,
 } from 'react'
 import { cn } from '@/lib/utils'
+import {
+  isPocketSizedViewport,
+  FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX,
+} from '@/hooks/use-floor-plan-viewport-tier'
 
 interface DashboardToolbarPortalContextValue {
   target: HTMLElement | null
@@ -23,9 +27,7 @@ interface DashboardToolbarPortalContextValue {
 const DashboardToolbarPortalContext =
   createContext<DashboardToolbarPortalContextValue | null>(null)
 
-const LG_MIN_QUERY = '(min-width: 1024px)'
-const TABLET_MIN_QUERY = '(min-width: 768px)'
-const TABLET_MAX_QUERY = '(max-width: 1023px)'
+const LG_MIN_QUERY = `(min-width: ${FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX}px)`
 
 export function DashboardToolbarPortalProvider({ children }: { children: ReactNode }) {
   const [target, setTargetState] = useState<HTMLElement | null>(null)
@@ -36,22 +38,22 @@ export function DashboardToolbarPortalProvider({ children }: { children: ReactNo
   }, [])
 
   useEffect(() => {
-    const mqDesktop = window.matchMedia(LG_MIN_QUERY)
-    const mqTabletMin = window.matchMedia(TABLET_MIN_QUERY)
-    const mqTabletMax = window.matchMedia(TABLET_MAX_QUERY)
+    const mqDesktop = window.matchMedia(`(min-width: ${FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX}px)`)
     const sync = () => {
-      const isTablet =
-        mqTabletMin.matches && mqTabletMax.matches
-      setSidebarActive(mqDesktop.matches || isTablet)
+      const pocketSized = isPocketSizedViewport(
+        window.innerWidth,
+        window.innerHeight
+      )
+      setSidebarActive(!pocketSized && mqDesktop.matches)
     }
     sync()
     mqDesktop.addEventListener('change', sync)
-    mqTabletMin.addEventListener('change', sync)
-    mqTabletMax.addEventListener('change', sync)
+    window.addEventListener('resize', sync)
+    window.addEventListener('orientationchange', sync)
     return () => {
       mqDesktop.removeEventListener('change', sync)
-      mqTabletMin.removeEventListener('change', sync)
-      mqTabletMax.removeEventListener('change', sync)
+      window.removeEventListener('resize', sync)
+      window.removeEventListener('orientationchange', sync)
     }
   }, [])
 

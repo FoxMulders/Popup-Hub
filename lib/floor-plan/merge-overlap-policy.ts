@@ -3,7 +3,7 @@
  * Merge-eligible overlaps are not placement violations.
  */
 
-import type { PlacedObject, RoomFrame } from '@/components/coordinator/floor-plan-v2/state/types'
+import type { FloorPlanDoc, PlacedObject, RoomFrame } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
   isJoinableObject,
   objectFrameOverlapsOrTouches,
@@ -13,6 +13,18 @@ import { isMergeUnionEligible } from '@/components/coordinator/floor-plan-v2/sta
 
 export interface MergeOverlapContext {
   rooms?: ReadonlyArray<RoomFrame>
+  objectRoom?: FloorPlanDoc['objectRoom']
+  /** Doc slice for vendor 360° collision probes + wall back-buffer exception. */
+  doc?: Pick<
+    FloorPlanDoc,
+    | 'canvasWidthFt'
+    | 'canvasLengthFt'
+    | 'gridSpacingFt'
+    | 'snapFt'
+    | 'objects'
+    | 'rooms'
+    | 'objectRoom'
+  >
 }
 
 /** Joinable fixture (stage) overlapping/touching a room frame — valid pre-merge. */

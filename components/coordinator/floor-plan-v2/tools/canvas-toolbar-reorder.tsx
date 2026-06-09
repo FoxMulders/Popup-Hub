@@ -105,6 +105,7 @@ function ToolbarReorderItem({
 }
 
 const BLOCK_LABELS: Record<CanvasToolbarBlockId, string> = {
+  optimize: 'Auto-arrange floor plan',
   primitives: 'Canvas tools',
   'history-clipboard': 'History and clipboard',
   'view-align': 'View and alignment',

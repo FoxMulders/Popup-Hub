@@ -13,6 +13,7 @@ import { coordinatorNavBackHref } from '@/lib/coordinator/coordinator-event-rout
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
+import { useFeatureRequest } from '@/components/feedback/feature-request-context'
 import { cn } from '@/lib/utils'
 
 interface AppNavProps {
@@ -54,6 +55,7 @@ export function AppNav({
   const pathname = usePathname()
   const supabase = createClient()
   const unreadCount = useNotificationCount(profile.id)
+  const { open: openFeatureRequest } = useFeatureRequest()
 
   const activePortal = resolveActivePortal(portalCookie, profile, pathname)
   const navRole =
@@ -136,6 +138,15 @@ export function AppNav({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openFeatureRequest}
+              className="hidden rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:inline-flex lg:items-center lg:gap-1.5"
+            >
+              <span aria-hidden>💡</span>
+              <span>Suggest an Improvement</span>
+            </button>
+
             <AppMenuSheet
               links={links}
               pathname={pathname}
@@ -143,6 +154,7 @@ export function AppNav({
               unreadCount={unreadCount}
               onSignOut={handleSignOut}
               extraLinks={menuExtraLinks}
+              onSuggestImprovement={openFeatureRequest}
             />
 
             <Link

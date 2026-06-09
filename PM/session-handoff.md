@@ -10,6 +10,63 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (floor-plan canvas UX optimization, not deployed)
+- **Room controls:** Sidebar **ROOM CONTROLS** — undo, redo, rotate, delete, and copy icons in one horizontal row (`flex flex-row items-center gap-2 mt-2`) directly under the room picker; room rotate/join on a compact second row.
+- **Placement preview:** Booth draw tool shows a semi-transparent cursor ghost (`opacity-40`) with predictive 2′ wall snap + auto-rotation via `table-placement-preview.ts` and `PLACEMENT_PREVIEW_WALL_SNAP_FT`.
+- **Toolbar compaction:** Patron/vendor size selectors use utility chip grids; auto-arrange **Pattern** row uses inline Grid / Staggered / Perimeter chips; sidebar section padding tightened.
+- **Verify:** `/coordinator/dashboard` — select vendor or patron table tool → ghost follows cursor, snaps/flips near walls; room action icons stay on one line.
+
+## Shipped this session (build fix — local only, not deployed)
+- **`geometry.ts`:** `placedObjectsOverlap` passes `ctx?.doc` (not whole `MergeOverlapContext`) to `collisionProbeForObject` — fixes TS build failure.
+- **`booth-access.ts`:** `EventAccessFields` uses `Pick<Event, …>` so `venue_verification_status` matches `VenueGateEvent`.
+- **`feature-request-modal.tsx`:** Select `onValueChange` guards against `null` before `setTargetComponent`.
+- **`verify-vendor-wall-snap.ts`:** Added required `RoomFrame.name` field.
+- **Verify:** `npm run build` succeeds (build **29**).
+
+## Shipped this session (admin feature-request triage console, not deployed)
+- **Migration `094_admin_feature_request_management.sql`:** `profiles.is_admin`; `feature_requests.status`, `developer_notes`, `updated_at`; admin RLS read/update policies.
+- **Route `/admin/feedback`:** Layout gates on `profiles.is_admin` or `ADMIN_SESSION_TOKEN` cookie/header (`admin_session`); non-admins redirect to `/coordinator/dashboard`.
+- **UI:** Master-detail dashboard — metrics (Pending / Critical / Under Review), role + urgency badges, problem/solution preview, screenshot fullscreen dialog, status dropdown + developer notes, optimistic PATCH save.
+- **API:** `PATCH /api/feedback/update` (admin-only).
+- **Access:** `bradmulders@gmail.com` is sole platform **admin** (`is_admin` only — not a market host). Optional `ADMIN_SESSION_TOKEN` for headless API.
+- **Platform fees (3% + $1):** Card path → Stripe `application_fee_amount` / Square `appFeeMoney` on Popup Hub merchant accounts (`STRIPE_SECRET_KEY`, Square app). Offline path → coordinators accrue `account_balances` and pay via Stripe Checkout to the same platform Stripe account. **Not** routed through coordinator Connect profiles.
+- **Migrations `095` + `096`:** `platform_settings.platform_operator_id` + `platform_fee_email`; reverted mistaken coordinator promotion for operator login. Profile `a8356170-ac3b-4fd4-b59c-0efb39a00346`.
+- **Script:** `npx tsx scripts/grant-platform-operator.ts` — admin grant only.
+- **Verify:** Submit a feature request as vendor/coordinator/patron → open `/admin/feedback` as admin → triage status and notes without page refresh.
+
+## Shipped this session (global feature-request module, not deployed)
+- **`POST /api/feedback/submit`:** Multipart pipeline for title, role, target component, problem/dream copy, impact level, optional PNG/JPG screenshot (stored under `vendor-assets/{userId}/feature-requests/`).
+- **`093_feature_requests.sql` + `094_admin_feature_request_management.sql`:** `feature_requests` table, user RLS, admin triage columns (`status`, `developer_notes`), `/admin/feedback` console.
+- **Global entry points:** Navbar link + mobile menu item **Suggest an Improvement**; floating action button on patron/coordinator/vendor chrome (hidden on immersive viewport-fill routes like floor-plan canvas).
+- **Modal UX:** Role-aware target dropdowns, required-field gating, drag-and-drop screenshot, success state **🚀 Idea Captured!**
+- **Verify:** Sign in as coordinator/vendor/patron → open suggestion modal from nav link or FAB → submit → row appears in `/admin/feedback` (admin profile).
+
+- **Migration `092_venue_verification_and_vendor_invites.sql`:** `events` venue verification columns; `event_booth_slots` + `vendor_priority_invites`; `vendor_access_equality_until`; `priority_booth_invite` notification type.
+- **Venue verification:** `lib/venues/verify-venue-coordinates.ts` + `POST /api/coordinator/venues/verify`; gates on wizard publish, event form, status toggle, spatial layout deploy, vendor apply, Square/Stripe booth payment.
+- **Vendor Matches (no distance cap):** `lib/vendors/category-vendor-matches.ts` + dashboard sidebar **Vendor Matches** panel (`vendor-matches-panel.tsx`) with **Send Priority Invites**; `GET/POST /api/coordinator/events/[eventId]/priority-invites`.
+- **Access phases:** 24h `priority_exclusive` window → hourly cron `vendor-priority-window-expiry` → `public_release` + 90-day equal queue (`shouldDisableRankingPriorityForEvent` in FCFS queue).
+- **Vendor UX:** `GET /api/vendor/events/[eventId]/booth-access`; apply-button badges (priority invite / opens to all / new-vendor-friendly).
+- **Verify:** `npx tsx scripts/verify-venue-coordinates.ts`; `npx tsx scripts/verify-category-vendor-matches.ts`; `npx tsx scripts/verify-priority-window-expiry.ts`.
+
+## Shipped this session (unified auto-arrange floor plan + traffic-flow prerequisites, not deployed)
+- **`traffic-flow-prerequisites.ts`:** Validates perimeter-snapped Entry (`door`/`entrance`) + Exit (`emergency_exit` or `door`/`exit`) before optimization; exports door snapshots with coordinates, rotation, and wall edge.
+- **`floor-plan-v2.tsx`:** Single `handleAutoArrangeFloorPlan` with `scope: 'all'` — vendor + patron arranged in one pass; disabled until entry/exit prerequisites met.
+- **`canvas-command-bar-blocks.tsx` + QA mirror:** New **`optimize`** toolbar block — prominent **Auto-Arrange Floor Plan** button at top of sidebar **Floor Plan** section; separate vendor/patron auto-arrange controls removed.
+- **`lib/floor-plan/ai-auto-arrange.ts` + `request-ai-auto-arrange.ts`:** Gemini 2.5 Pro payload includes entry/exit fixture geometry + `trafficFlow` loop hint (vendors face primary path, patron zones in low-velocity areas); deterministic fallback uses `autoArrangeInRoom` for `scope: 'all'`.
+- **Verify:** Dashboard with no doors → button disabled, hover tooltip: *Please place at least one Entry and one Exit door on your perimeter walls to optimize traffic flow.* Snap Door + Exit on walls, add booths/tables → button enables → one toast optimizes both asset types together.
+
+## Shipped this session (floor-plan iron-dome + cyber-arcade fallback UI, not deployed)
+- **`use-floor-plan-viewport-tier.ts`:** Iron dome — `isPocketSizedViewport` when `width < 1024` **or** `height < 550` (blocks landscape phones, tablets, and short windows).
+- **`floor-plan-viewport-advisory.tsx`:** Full-screen blueprint/cyber-arcade fallback (`bg-slate-950` grid, amber neon card, Ant-Man copy, pro-tip box); **Abort Mission & Go Back 🚀** uses `router.push` to event hub or `/coordinator/dashboard`.
+- **Canvas:** Still fully unmounted when pocket-sized; tablet advisory banner removed (subsumed by iron dome).
+- **Verify:** Phone portrait/landscape, iPad, and narrow windows → fallback only; ≥1024×550 desktop → canvas loads.
+
+## Shipped this session (mobile floor-plan gate exit + landscape phone block, not deployed)
+- **`use-floor-plan-viewport-tier.ts`:** Tier detection uses width **and** height — landscape phones (`height < 550`, short axis `< 600`) stay on the mobile block even when width exceeds 768px.
+- **`floor-plan-viewport-advisory.tsx`:** Portal-mounted overlay at `z-[10001]` with working **Go back** `Link` (event hub when a market is selected, else `/coordinator/dashboard`); body scroll locked while blocked.
+- **`Dashboard_qa.tsx`:** Skips initial-room modal while the mobile gate is active (was stacking above the overlay at `z-9999`).
+- **`dashboard-toolbar-portal.tsx`:** Sidebar/tablet portal routing uses the same tier helper so landscape phones do not mount the tablet drawer layout.
+
 ## Shipped this session (dashboard floor-plan viewport tiers: mobile block + tablet layout, not deployed)
 - **`hooks/use-floor-plan-viewport-tier.ts`:** Three-tier breakpoints — mobile `<768`, tablet `768–1023`, desktop `≥1024`; portrait detection for tablet advisory.
 - **`floor-plan-viewport-advisory.tsx`:** `FloorPlanViewportLayoutProvider`, full-screen **Desktop Screen Required** overlay on phones, fixed portrait **Landscape Mode Recommended** banner on tablets.
@@ -18,6 +75,34 @@
 - **`Dashboard_qa.tsx`:** Canvas unmounted on mobile; portrait banner offset (`pt-11`) on canvas column.
 - **`table-size-pill.tsx` + `command-button.tsx`:** Tablet touch padding on `5′`/`6′`/`8′` booth buttons; toolbar icons keep 48px targets through `lg`.
 - **Verify:** `/coordinator/dashboard` — phone shows desktop-required modal (no canvas); iPad portrait shows landscape banner + dock hamburger; iPad landscape / desktop unchanged full rail.
+
+## Shipped this session (vendor 360° collision buffer, not deployed)
+- **`vendor-booth-placement.ts`:** Vendor booths use 2′ clearance on all four sides (6′×4′ → 10′×8′ collision probe). Wall-snapped booths omit the rear buffer against the perimeter; left/right/front buffers remain.
+- **`geometry.ts` / `checkCollision()`:** Expanded probes flow through `placedObjectsOverlap` with doc context for wall exception.
+- **`auto-arrange.ts`:** Slot placement + obstacle rects use vendor collision probes; validation passes overlap context.
+- **Canvas / pointer:** `mergeOverlapCtx` includes full doc slice for asymmetric wall probes.
+- **Verify:** `npx tsx scripts/verify-vendor-booth-clearance.ts`
+
+## Shipped this session (table rotation handle fix, not deployed)
+- **Root cause:** Rotate handles lived under a `pointerEvents="none"` SVG group (clicks fell through to the grid/booth), and live vendor wall-snap during drag overwrote manual rotation whenever the booth stayed within 3′ of a wall.
+- **`canvas-overlays.tsx`:** Split `SelectionChrome` (non-interactive) + `SelectionRotateHandles` (interactive top layer with explicit `pointerEvents="auto"`).
+- **`floor-plan-canvas.tsx`:** Render rotate handles **after** room selection overlay; removed debug `console.log`.
+- **`canvas-grid.tsx`:** Grid layer `pointerEvents="none"` so it never intercepts transform handles.
+- **`use-canvas-pointer.ts`:** Rotate/drag gestures mutually exclusive; rotate halt uses `rotatedAabb`; live vendor snap preserves non-cardinal manual rotation during drag (full orient snap still on pointer-up).
+- **Verify:** Select vendor/patron table → rotate handle visible above selection → drag handle to rotate; manual angle persists when dragged away from walls.
+
+## Shipped this session (vendor wall snap fix — drag clamp + live snap, not deployed)
+- **Root cause:** `boothClampDeltaForRoom` used 4′ wall inset, preventing booths from entering the 3′ snap zone; snapped positions then failed `footprintWithinBounds` (also 4′) and reverted on drop.
+- **`boundary-constraints.ts`:** Vendor booths use 1′ wall inset (`VENDOR_WALL_INSET_FT`); patron tables keep 4′ clearance.
+- **`use-canvas-pointer.ts`:** Live perimeter snap + rotation during drag (not only on pointer-up).
+- **`vendor-booth-placement.ts`:** Snap distance measured against placement-surface bounds (union/merged rooms), not raw room frame only.
+- **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts` — drag vendor within 3′ of wall → rear flush, faces inward; >3′ → no snap.
+
+## Shipped this session (vendor wall snap + lateral clearance, not deployed)
+- **`vendor-booth-placement.ts`:** 3′ wall snap threshold with inward rotation (0/90/180/270°); lateral collision probe adds 2′ per side (6′×4′ → 10′×4′ effective).
+- **`geometry.ts`:** `checkCollision()` / `placedObjectsOverlap` use lateral-expanded vendor probes.
+- **`use-canvas-pointer.ts`:** Vendor snap on draw + drag commit (before overlap test); overlap blocks drop with red preview.
+- **Verify:** Drag vendor booth within 3′ of wall → snaps flush, faces inward; place two booths <4′ apart laterally → blocked with violation styling.
 
 ## Shipped this session (vendor booth yellow canvas styling, not deployed)
 - **`category-palette.ts`:** `VENDOR_BOOTH_PALETTE` — fill `#FEF08A`, stroke `#EAB308`.

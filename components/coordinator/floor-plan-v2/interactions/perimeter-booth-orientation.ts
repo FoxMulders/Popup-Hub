@@ -15,7 +15,7 @@ export interface PerimeterSlot {
   direct?: boolean
 }
 
-/** Distance (ft) from a room edge to treat a booth as perimeter-snapped. */
+/** Distance (ft) from a room edge for auto-arrange perimeter snap (manual placement uses {@link VENDOR_WALL_SNAP_THRESHOLD_FT}). */
 export const PERIMETER_BOOTH_SNAP_FT = 1.25
 
 const INWARD_ROTATION: Record<RoomEdgeSide, number> = {

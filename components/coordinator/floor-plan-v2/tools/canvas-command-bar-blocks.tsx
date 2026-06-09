@@ -39,6 +39,9 @@ import {
   isLayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
+import {
+  AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
+} from '../engine/traffic-flow-prerequisites'
 import type { DrawShape, ToolState } from './types'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
@@ -66,57 +69,119 @@ import {
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
-function AutoArrangeGroup({
-  label,
+function FloorPlanOptimizeControl({
   mode,
   onModeChange,
   onRun,
   canRun,
-  runTitle,
-  tone,
+  disabledReason,
   compact,
+  sidebarLayout,
 }: {
-  label: string
   mode: AutoArrangeMode
   onModeChange?: (mode: AutoArrangeMode) => void
   onRun?: () => void
   canRun?: boolean
-  runTitle: string
-  tone: 'amber' | 'violet'
+  disabledReason?: string | null
   compact?: boolean
+  sidebarLayout?: boolean
 }) {
   if (!onRun) return null
-  const activeClass =
-    tone === 'amber'
-      ? 'bg-amber-50 text-amber-900 hover:bg-amber-100'
-      : 'bg-violet-50 text-violet-900 hover:bg-violet-100'
-  return (
-    <div className="inline-flex items-center gap-1" role="group" aria-label={label}>
+  const tooltip =
+    canRun
+      ? 'Optimize vendor booths and patron seating together in one pass'
+      : (disabledReason ?? AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP)
+
+  const content = (
+    <div
+      className={cn(
+        'flex min-w-0 gap-1',
+        sidebarLayout ? 'w-full flex-col gap-1.5' : 'inline-flex items-center'
+      )}
+      role="group"
+      aria-label="Auto-arrange floor plan"
+    >
       {onModeChange ? (
-        <select
-          value={mode}
-          onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
-          title={`${label} placement mode`}
-          aria-label={`${label} mode`}
-          className={cn(
-            'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700',
-            toolbarControlHeight(compact ?? false)
-          )}
-        >
-          <option value="grid">Grid</option>
-          <option value="staggered">Staggered</option>
-          <option value="perimeter-only">Perimeter</option>
-        </select>
+        sidebarLayout ? (
+          <div className="flex items-center justify-between gap-1 text-xs text-slate-500">
+            <span className="shrink-0 font-medium">Pattern:</span>
+            <div className="flex min-w-0 flex-wrap justify-end gap-1">
+              {(
+                [
+                  { id: 'grid' as const, label: 'Grid' },
+                  { id: 'staggered' as const, label: 'Staggered' },
+                  { id: 'perimeter-only' as const, label: 'Perimeter' },
+                ] as const
+              ).map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={!canRun}
+                  onClick={() => onModeChange(id)}
+                  aria-pressed={mode === id}
+                  className={cn(
+                    'rounded px-2 py-0.5 text-[11px] font-semibold transition-colors disabled:opacity-50',
+                    mode === id
+                      ? 'bg-slate-200 text-slate-900'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <select
+            value={mode}
+            onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
+            title="Floor plan placement mode"
+            aria-label="Floor plan placement mode"
+            disabled={!canRun}
+            className={cn(
+              'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700 disabled:opacity-50',
+              toolbarControlHeight(compact ?? false)
+            )}
+          >
+            <option value="grid">Grid</option>
+            <option value="staggered">Staggered</option>
+            <option value="perimeter-only">Perimeter</option>
+          </select>
+        )
       ) : null}
       <CommandButton
         onClick={onRun}
         disabled={!canRun}
-        title={`Auto-arrange — ${runTitle}`}
-        className={activeClass}
+        title={tooltip}
+        className={cn(
+          'gap-1.5 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 disabled:opacity-50',
+          sidebarLayout && 'w-full justify-center px-3'
+        )}
       >
-        <LayoutGrid className="h-3.5 w-3.5" />
+        <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
+        {sidebarLayout ? (
+          <span className="text-[11px] font-semibold">Auto-Arrange Floor Plan</span>
+        ) : (
+          <span className="hidden text-[11px] font-semibold lg:inline">
+            Auto-Arrange Floor Plan
+          </span>
+        )}
       </CommandButton>
     </div>
+  )
+
+  if (sidebarLayout) {
+    return (
+      <TooltipWrapper text={tooltip} className="w-full">
+        {content}
+      </TooltipWrapper>
+    )
+  }
+
+  return (
+    <TooltipWrapper text={tooltip}>
+      {content}
+    </TooltipWrapper>
   )
 }
 
@@ -166,6 +231,11 @@ export interface CanvasCommandBarBlockContext {
   onRotateRoomLeft?: () => void
   onRotateRoomRight?: () => void
   selectedRoomId?: string | null
+  onAutoArrangeFloorPlan?: () => void
+  canAutoArrangeFloorPlan?: boolean
+  autoArrangeDisabledReason?: string | null
+  autoArrangeMode?: AutoArrangeMode
+  onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   onVendorAutoArrange?: () => void
   canVendorAutoArrange?: boolean
   vendorAutoArrangeMode?: AutoArrangeMode
@@ -435,28 +505,7 @@ export function renderCanvasCommandBarBlock(
 
     case 'history-clipboard':
       if (sidebarLayout) {
-        return (
-          <div
-            className="flex items-center gap-0.5"
-            role="group"
-            aria-label="History"
-          >
-            <CommandButton
-              onClick={ctx.onUndo}
-              disabled={!ctx.canUndo}
-              title="Undo (Ctrl+Z)"
-            >
-              <Undo2 className="h-3.5 w-3.5" />
-            </CommandButton>
-            <CommandButton
-              onClick={ctx.onRedo}
-              disabled={!ctx.canRedo}
-              title="Redo (Ctrl+Shift+Z)"
-            >
-              <Redo2 className="h-3.5 w-3.5" />
-            </CommandButton>
-          </div>
-        )
+        return null
       }
       return (
         <>
@@ -521,13 +570,12 @@ export function renderCanvasCommandBarBlock(
     case 'vendor':
       if (sidebarLayout) {
         return (
-          <div className="flex w-full min-w-0 flex-col gap-1.5">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-1">
             <CommandButton
               onClick={() => activateTablePlacement('vendor')}
               title="Draw vendor — size from Vendor column"
               active={isTablePlacementActive('vendor')}
               className={cn(
-                'self-start',
                 isTablePlacementActive('vendor')
                   ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
                   : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
@@ -540,18 +588,7 @@ export function renderCanvasCommandBarBlock(
                 value={ctx.tableSizeFt}
                 onChange={activateTableSize}
                 compact={compact}
-              />
-            ) : null}
-            {ctx.onVendorAutoArrange ? (
-              <AutoArrangeGroup
-                label="Vendor auto-arrange"
-                mode={ctx.vendorAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onVendorAutoArrangeModeChange}
-                onRun={ctx.onVendorAutoArrange}
-                canRun={ctx.canVendorAutoArrange}
-                runTitle="Auto-arrange vendor in the active room"
-                tone="amber"
-                compact={compact}
+                className="min-w-0 flex-1"
               />
             ) : null}
           </div>
@@ -592,28 +629,13 @@ export function renderCanvasCommandBarBlock(
               ) : null}
             </>
           ) : null}
-          {ctx.onVendorAutoArrange ? (
-            <>
-              <div className={toolbarDividerClass(compact)} aria-hidden />
-              <AutoArrangeGroup
-                label="Vendor auto-arrange"
-                mode={ctx.vendorAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onVendorAutoArrangeModeChange}
-                onRun={ctx.onVendorAutoArrange}
-                canRun={ctx.canVendorAutoArrange}
-                runTitle="Auto-arrange vendor in the active room"
-                tone="amber"
-                compact={compact}
-              />
-            </>
-          ) : null}
         </div>
       )
 
     case 'patron':
       if (sidebarLayout) {
         return (
-          <div className="flex w-full min-w-0 flex-col gap-1.5">
+          <div className="w-full min-w-0">
             {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
               <PatronSidebarControls
                 value={ctx.tableSizeFt}
@@ -632,18 +654,6 @@ export function renderCanvasCommandBarBlock(
                 }
                 roundToolActive={isTablePlacementActive('guest-round')}
                 rectToolActive={isTablePlacementActive('guest-rect')}
-                compact={compact}
-              />
-            ) : null}
-            {ctx.onPatronAutoArrange ? (
-              <AutoArrangeGroup
-                label="Patron auto-arrange"
-                mode={ctx.patronAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onPatronAutoArrangeModeChange}
-                onRun={ctx.onPatronAutoArrange}
-                canRun={ctx.canPatronAutoArrange}
-                runTitle="Auto-arrange patron in the active room (vendor stays put)"
-                tone="violet"
                 compact={compact}
               />
             ) : null}
@@ -683,25 +693,121 @@ export function renderCanvasCommandBarBlock(
               {ctx.highlightedSelectionMetrics}
             </span>
           ) : null}
-          {ctx.onPatronAutoArrange ? (
-            <>
-              <div className={toolbarDividerClass(compact)} aria-hidden />
-              <AutoArrangeGroup
-                label="Patron auto-arrange"
-                mode={ctx.patronAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onPatronAutoArrangeModeChange}
-                onRun={ctx.onPatronAutoArrange}
-                canRun={ctx.canPatronAutoArrange}
-                runTitle="Auto-arrange patron in the active room (vendor stays put)"
-                tone="violet"
-                compact={compact}
-              />
-            </>
-          ) : null}
         </div>
       )
 
     case 'room':
+      if (sidebarLayout) {
+        return (
+          <>
+            {ctx.onSelectRoom &&
+            ctx.onAddRoom &&
+            ctx.onRenameRoom &&
+            ctx.onDeleteRoom ? (
+              <LayoutRoomBar
+                rooms={ctx.rooms ?? []}
+                activeRoomId={ctx.activeRoomId ?? ctx.rooms?.[0]?.id ?? ''}
+                onSelectRoom={ctx.onSelectRoom}
+                onAddRoom={ctx.onAddRoom}
+                onRenameRoom={ctx.onRenameRoom}
+                onDeleteRoom={ctx.onDeleteRoom}
+                highlightedRoomMetrics={ctx.highlightedRoomMetrics}
+                embedded
+                sidebar
+              />
+            ) : null}
+            <div
+              className="mt-2 flex flex-row items-center gap-2"
+              role="group"
+              aria-label="Room actions"
+            >
+              <CommandButton
+                onClick={ctx.onUndo}
+                disabled={!ctx.canUndo}
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 className="h-3.5 w-3.5" />
+              </CommandButton>
+              <CommandButton
+                onClick={ctx.onRedo}
+                disabled={!ctx.canRedo}
+                title="Redo (Ctrl+Shift+Z)"
+              >
+                <Redo2 className="h-3.5 w-3.5" />
+              </CommandButton>
+              <CommandButton
+                onClick={ctx.onRotateLeft}
+                disabled={!hasSelection}
+                title="Rotate -15°"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </CommandButton>
+              <CommandButton
+                onClick={ctx.onDeleteSelected}
+                disabled={!hasSelection}
+                title={`Delete ${ctx.selectedCount} selected`}
+                className="text-rose-700 hover:bg-rose-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </CommandButton>
+              <CommandButton
+                onClick={ctx.onCopy}
+                disabled={!hasSelection}
+                title="Copy selection (Ctrl+C)"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </CommandButton>
+            </div>
+            {ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
+              <div
+                className="mt-1.5 flex flex-row items-center gap-2"
+                role="group"
+                aria-label="Rotate room"
+              >
+                <CommandButton
+                  onClick={ctx.onRotateRoomLeft}
+                  disabled={!canRotateRoom}
+                  title={
+                    canRotateRoom ? `${rotateRoomHint} (left)` : rotateRoomHint
+                  }
+                  className="text-teal-900 hover:bg-teal-100"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </CommandButton>
+                <CommandButton
+                  onClick={ctx.onRotateRoomRight}
+                  disabled={!canRotateRoom}
+                  title={
+                    canRotateRoom ? `${rotateRoomHint} (right)` : rotateRoomHint
+                  }
+                  className="text-teal-900 hover:bg-teal-100"
+                >
+                  <RotateCw className="h-3.5 w-3.5" />
+                </CommandButton>
+                {ctx.onJoinRooms ? (
+                  <CommandButton
+                    onClick={ctx.onJoinRooms}
+                    disabled={!ctx.canJoinRooms}
+                    title={`${ctx.joinLabel} — ${ctx.joinTitle}`}
+                    className="bg-sky-50 text-sky-900 hover:bg-sky-100"
+                  >
+                    <Combine className="h-3.5 w-3.5" />
+                  </CommandButton>
+                ) : null}
+                {ctx.onUnjoinRoom ? (
+                  <CommandButton
+                    onClick={ctx.onUnjoinRoom}
+                    disabled={!ctx.canUnjoinRoom}
+                    title="Unjoin — split the active room out of its joined zone"
+                  >
+                    <Split className="h-3.5 w-3.5" />
+                  </CommandButton>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        )
+      }
       return (
         <>
           {ctx.onSelectRoom &&
@@ -988,12 +1094,14 @@ export function getVisibleToolbarBlockIds(ctx: {
   showVendor: boolean
   showPatron: boolean
   showRoom: boolean
+  showOptimize?: boolean
 }): CanvasToolbarBlockId[] {
   if (ctx.needsRoomFirst && ctx.showRoom) {
     return ['room']
   }
   const ids: CanvasToolbarBlockId[] = []
   if (ctx.showRoom) ids.push('room')
+  if ((ctx.showPatron || ctx.showVendor) && ctx.showOptimize) ids.push('optimize')
   if (ctx.showPatron) ids.push('patron')
   if (ctx.showVendor) ids.push('vendor')
   ids.push('utilities')
@@ -1022,6 +1130,7 @@ export function getStaticToolbarRowGroups(ctx: {
   if (roomToolsRow.length > 0) rows.push(roomToolsRow)
 
   const placementRow: CanvasToolbarBlockId[] = []
+  if (ctx.showPatron || ctx.showVendor) placementRow.push('optimize')
   if (ctx.showPatron) placementRow.push('patron')
   if (ctx.showVendor) placementRow.push('vendor')
   if (placementRow.length > 0) rows.push(placementRow)

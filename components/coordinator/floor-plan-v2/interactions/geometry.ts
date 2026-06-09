@@ -15,6 +15,22 @@ import {
   placementProbesForObject,
 } from '../state/table-cluster-layout'
 import type { BoothObject } from '../state/types'
+import { collisionProbeForObject } from './vendor-booth-placement'
+
+export {
+  collisionProbeForObject,
+  isVendorBoothObject,
+  isVendorBoothWallSnappedForCollision,
+  snapVendorBoothToPerimeter,
+  vendorBoothCollisionProbe,
+  vendorBoothLateralCollisionProbe,
+  vendorBoothPerimeterSnapPatch,
+  vendorBoothUniformCollisionProbe,
+  VENDOR_BOOTH_CLEARANCE_FT,
+  VENDOR_LATERAL_CLEARANCE_FT,
+  VENDOR_WALL_SNAP_THRESHOLD_FT,
+  type VendorCollisionContext,
+} from './vendor-booth-placement'
 
 /**
  * Geometry helpers — pure math, no React, no DOM.
@@ -406,8 +422,13 @@ export function placedObjectsOverlap(
 ): boolean {
   if (shouldSkipOverlapPair(a, b)) return false
   if (ctx && isMergeOverlapExempt(a, b, ctx)) return false
-  const probesA = placementProbesForObject(a)
-  const probesB = placementProbesForObject(b)
+  const vendorCtx = ctx?.doc
+  const probesA = placementProbesForObject(
+    collisionProbeForObject(a, vendorCtx)
+  )
+  const probesB = placementProbesForObject(
+    collisionProbeForObject(b, vendorCtx)
+  )
   for (const pa of probesA) {
     for (const pb of probesB) {
       if (rectsOverlapPositiveArea(rotatedAabb(pa), rotatedAabb(pb))) {
@@ -455,10 +476,15 @@ export function placedObjectOverlapsAny(
   return false
 }
 
-/**
- * True when any moved object overlaps another moved object or any
- * object outside the move set. Used to block drag/drop commits.
- */
+/** Bounding-box collision with vendor 360° clearance expansion. */
+export function checkCollision(
+  a: PlacedObject,
+  b: PlacedObject,
+  ctx?: MergeOverlapContext
+): boolean {
+  return placedObjectsOverlap(a, b, ctx)
+}
+
 export function findOverlapInMove(
   moved: ReadonlyArray<PlacedObject>,
   others: ReadonlyArray<PlacedObject>,

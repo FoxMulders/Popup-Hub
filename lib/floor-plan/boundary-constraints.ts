@@ -7,9 +7,22 @@ import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/stat
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan-v2/state/placement-surface'
 import { BOOTH_SAFETY_BUFFER_FT } from '@/lib/booth-planner/layout-clearance-constants'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
+import { PERIMETER_WALL_THICKNESS_FT } from '@/components/coordinator/floor-plan-v2/interactions/perimeter-walls'
 
-/** Minimum inset from room walls for vendor/patron footprints (ft). */
+/** Minimum inset from room walls for patron tables (ft). */
 export const ROOM_PLACEMENT_CLEARANCE_FT = BOOTH_SAFETY_BUFFER_FT * 2
+
+/** Perimeter wall inset — vendor booths may sit flush against the inner wall face. */
+export const VENDOR_WALL_INSET_FT = PERIMETER_WALL_THICKNESS_FT
+
+/** Wall inset used for drag clamp + boundary validation. */
+export function wallInsetClearanceFt(obj: PlacedObject): number {
+  if (obj.kind === 'booth' && !isGuestTableBooth(obj as BoothObject)) {
+    return VENDOR_WALL_INSET_FT
+  }
+  return ROOM_PLACEMENT_CLEARANCE_FT
+}
 
 export interface RoomPlacementBounds {
   minX: number
@@ -59,11 +72,14 @@ export function insetBounds(
  * with optional clearance inset.
  */
 export function footprintWithinBounds(
-  obj: Pick<PlacedObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>,
+  obj: PlacedObject,
   bounds: RoomPlacementBounds,
-  clearanceFt = ROOM_PLACEMENT_CLEARANCE_FT
+  clearanceFt?: number
 ): boolean {
-  const inner = insetBounds(bounds, clearanceFt)
+  const inset =
+    clearanceFt ??
+    wallInsetClearanceFt(obj)
+  const inner = insetBounds(bounds, inset)
   if (inner.width <= 0 || inner.height <= 0) return false
   const aabb = objectFootprintAabb(obj as PlacedObject)
   const eps = 1e-6
@@ -131,12 +147,12 @@ export function clipBoothToLocalRoom(
   booth: BoothObject,
   roomW: number,
   roomH: number,
-  clearanceFt = ROOM_PLACEMENT_CLEARANCE_FT
+  clearanceFt?: number
 ): BoothObject {
   return clipBoothToRoomBounds(
     booth,
     { minX: 0, minY: 0, maxX: roomW, maxY: roomH },
-    clearanceFt
+    clearanceFt ?? wallInsetClearanceFt(booth)
   )
 }
 
@@ -153,5 +169,5 @@ export function boothClampDeltaForRoom(
   if (!bounds) {
     return canvasClampDelta(obj, doc.canvasWidthFt, doc.canvasLengthFt)
   }
-  return clampDeltaToRect(obj, insetBounds(bounds, ROOM_PLACEMENT_CLEARANCE_FT))
+  return clampDeltaToRect(obj, insetBounds(bounds, wallInsetClearanceFt(obj)))
 }

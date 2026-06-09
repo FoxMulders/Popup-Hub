@@ -39,6 +39,9 @@ import {
   isLayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import type { AutoArrangeMode } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
+import {
+  AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
+} from '@/components/coordinator/floor-plan-v2/engine/traffic-flow-prerequisites'
 import type { DrawShape, ToolState } from '@/components/coordinator/floor-plan-v2/tools/types'
 import {
   QA_TIP_ALIGN_H,
@@ -105,41 +108,48 @@ import { QA_ADD_ROOM_FORM_CLASS } from '@/src/qa_review/components/coordinator/f
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
-function AutoArrangeGroup({
-  label,
+function FloorPlanOptimizeControl({
   mode,
   onModeChange,
   onRun,
   canRun,
-  runTitle,
-  tone,
+  disabledReason,
   compact,
+  sidebarLayout,
 }: {
-  label: string
   mode: AutoArrangeMode
   onModeChange?: (mode: AutoArrangeMode) => void
   onRun?: () => void
   canRun?: boolean
-  runTitle: string
-  tone: 'amber' | 'violet'
+  disabledReason?: string | null
   compact?: boolean
+  sidebarLayout?: boolean
 }) {
   if (!onRun) return null
-  const activeClass =
-    tone === 'amber'
-      ? 'bg-amber-50 text-amber-900 hover:bg-amber-100'
-      : 'bg-violet-50 text-violet-900 hover:bg-violet-100'
-  return (
-    <div className="inline-flex items-center gap-1" role="group" aria-label={label}>
+  const tooltip = canRun
+    ? 'Optimize vendor booths and patron seating together in one pass'
+    : (disabledReason ?? AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP)
+
+  const content = (
+    <div
+      className={cn(
+        'flex min-w-0 gap-1',
+        sidebarLayout ? 'w-full flex-col' : 'inline-flex items-center'
+      )}
+      role="group"
+      aria-label="Auto-arrange floor plan"
+    >
       {onModeChange ? (
         <select
           value={mode}
           onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
           title={QA_TIP_ARRANGE_MODE}
-          aria-label={`${label} mode`}
+          aria-label="Floor plan placement mode"
+          disabled={!canRun}
           className={cn(
-            'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700',
-            toolbarControlHeight(compact ?? false)
+            'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700 disabled:opacity-50',
+            toolbarControlHeight(compact ?? false),
+            sidebarLayout && 'w-full'
           )}
         >
           <option value="grid">Grid</option>
@@ -150,12 +160,28 @@ function AutoArrangeGroup({
       <CommandButton
         onClick={onRun}
         disabled={!canRun}
-        title={QA_TIP_AUTO_ARRANGE}
-        className={activeClass}
+        title={tooltip}
+        className={cn(
+          'gap-1.5 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 disabled:opacity-50',
+          sidebarLayout && 'w-full justify-center px-3'
+        )}
       >
-        <LayoutGrid className="h-3.5 w-3.5" />
+        <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
+        {sidebarLayout ? (
+          <span className="text-[11px] font-semibold">Auto-Arrange Floor Plan</span>
+        ) : (
+          <span className="hidden text-[11px] font-semibold lg:inline">
+            Auto-Arrange Floor Plan
+          </span>
+        )}
       </CommandButton>
     </div>
+  )
+
+  return (
+    <TooltipWrapperQa text={tooltip} className={sidebarLayout ? 'w-full' : undefined}>
+      {content}
+    </TooltipWrapperQa>
   )
 }
 
@@ -205,6 +231,11 @@ export interface CanvasCommandBarBlockContext {
   onRotateRoomLeft?: () => void
   onRotateRoomRight?: () => void
   selectedRoomId?: string | null
+  onAutoArrangeFloorPlan?: () => void
+  canAutoArrangeFloorPlan?: boolean
+  autoArrangeDisabledReason?: string | null
+  autoArrangeMode?: AutoArrangeMode
+  onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   onVendorAutoArrange?: () => void
   canVendorAutoArrange?: boolean
   vendorAutoArrangeMode?: AutoArrangeMode
@@ -556,6 +587,19 @@ export function renderCanvasCommandBarBlock(
         </>
       )
 
+    case 'optimize':
+      return (
+        <FloorPlanOptimizeControl
+          mode={ctx.autoArrangeMode ?? 'grid'}
+          onModeChange={ctx.onAutoArrangeModeChange}
+          onRun={ctx.onAutoArrangeFloorPlan}
+          canRun={ctx.canAutoArrangeFloorPlan}
+          disabledReason={ctx.autoArrangeDisabledReason}
+          compact={compact}
+          sidebarLayout={sidebarLayout}
+        />
+      )
+
     case 'vendor':
       if (sidebarLayout) {
         return (
@@ -577,18 +621,6 @@ export function renderCanvasCommandBarBlock(
               <VendorSidebarSizeGrid
                 value={ctx.tableSizeFt}
                 onChange={activateTableSize}
-                compact={compact}
-              />
-            ) : null}
-            {ctx.onVendorAutoArrange ? (
-              <AutoArrangeGroup
-                label="Vendor auto-arrange"
-                mode={ctx.vendorAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onVendorAutoArrangeModeChange}
-                onRun={ctx.onVendorAutoArrange}
-                canRun={ctx.canVendorAutoArrange}
-                runTitle="Auto-arrange vendor in the active room"
-                tone="amber"
                 compact={compact}
               />
             ) : null}
@@ -630,21 +662,6 @@ export function renderCanvasCommandBarBlock(
               ) : null}
             </>
           ) : null}
-          {ctx.onVendorAutoArrange ? (
-            <>
-              <div className={toolbarDividerClass(compact)} aria-hidden />
-              <AutoArrangeGroup
-                label="Vendor auto-arrange"
-                mode={ctx.vendorAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onVendorAutoArrangeModeChange}
-                onRun={ctx.onVendorAutoArrange}
-                canRun={ctx.canVendorAutoArrange}
-                runTitle="Auto-arrange vendor in the active room"
-                tone="amber"
-                compact={compact}
-              />
-            </>
-          ) : null}
         </div>
       )
 
@@ -670,18 +687,6 @@ export function renderCanvasCommandBarBlock(
                 }
                 roundToolActive={isTablePlacementActive('guest-round')}
                 rectToolActive={isTablePlacementActive('guest-rect')}
-                compact={compact}
-              />
-            ) : null}
-            {ctx.onPatronAutoArrange ? (
-              <AutoArrangeGroup
-                label="Patron auto-arrange"
-                mode={ctx.patronAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onPatronAutoArrangeModeChange}
-                onRun={ctx.onPatronAutoArrange}
-                canRun={ctx.canPatronAutoArrange}
-                runTitle="Auto-arrange patron in the active room (vendor stays put)"
-                tone="violet"
                 compact={compact}
               />
             ) : null}
@@ -720,21 +725,6 @@ export function renderCanvasCommandBarBlock(
             >
               {ctx.highlightedSelectionMetrics}
             </span>
-          ) : null}
-          {ctx.onPatronAutoArrange ? (
-            <>
-              <div className={toolbarDividerClass(compact)} aria-hidden />
-              <AutoArrangeGroup
-                label="Patron auto-arrange"
-                mode={ctx.patronAutoArrangeMode ?? 'grid'}
-                onModeChange={ctx.onPatronAutoArrangeModeChange}
-                onRun={ctx.onPatronAutoArrange}
-                canRun={ctx.canPatronAutoArrange}
-                runTitle="Auto-arrange patron in the active room (vendor stays put)"
-                tone="violet"
-                compact={compact}
-              />
-            </>
           ) : null}
         </div>
       )
@@ -1022,12 +1012,14 @@ export function getVisibleToolbarBlockIds(ctx: {
   showVendor: boolean
   showPatron: boolean
   showRoom: boolean
+  showOptimize?: boolean
 }): CanvasToolbarBlockId[] {
   if (ctx.needsRoomFirst && ctx.showRoom) {
     return ['room']
   }
   const ids: CanvasToolbarBlockId[] = []
   if (ctx.showRoom) ids.push('room')
+  if ((ctx.showPatron || ctx.showVendor) && ctx.showOptimize) ids.push('optimize')
   if (ctx.showPatron) ids.push('patron')
   if (ctx.showVendor) ids.push('vendor')
   ids.push('utilities')
@@ -1057,6 +1049,7 @@ export function getStaticToolbarRowGroups(ctx: {
   if (roomToolsRow.length > 0) rows.push(roomToolsRow)
 
   const placementRow: CanvasToolbarBlockId[] = []
+  if (ctx.showPatron || ctx.showVendor) placementRow.push('optimize')
   if (ctx.showPatron) placementRow.push('patron')
   if (ctx.showVendor) placementRow.push('vendor')
   if (placementRow.length > 0) rows.push(placementRow)

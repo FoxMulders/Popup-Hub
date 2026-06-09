@@ -65,6 +65,14 @@ export function EventReadinessChecklist({
     ...(event.skip_venue_layout
       ? []
       : [{ key: 'layout', label: 'Booth layout saved', done: hasLayout } satisfies ChecklistItem]),
+    {
+      key: 'venue',
+      label: 'Venue verified',
+      done:
+        event.venue_verified === true ||
+        event.venue_verification_status === 'verified' ||
+        event.venue_verification_status === 'manual_override',
+    },
     { key: 'published', label: 'Event published', done: event.status !== 'draft' },
     { key: 'applied', label: 'Vendors applied', done: applicationCount > 0 },
     { key: 'approved', label: 'Vendors approved', done: approvedCount > 0 },
@@ -86,6 +94,11 @@ export function EventReadinessChecklist({
 
   const stepActions = useMemo((): Record<string, StepAction> => {
     return {
+      venue: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/edit#venue`,
+        label: 'Verify venue on map',
+      },
       published: {
         type: 'scroll',
         targetId: 'event-status',

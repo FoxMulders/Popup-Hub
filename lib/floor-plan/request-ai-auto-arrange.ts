@@ -18,9 +18,15 @@ import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/stat
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import {
   applyAiPlacementsToBooths,
+  type AiAutoArrangeFixture,
   type AiAutoArrangeRequest,
   type AiAutoArrangeResponse,
+  type AiTrafficFlowLoop,
 } from '@/lib/floor-plan/ai-auto-arrange'
+import {
+  evaluateTrafficFlowPrerequisites,
+  type TrafficFlowDoorSnapshot,
+} from '@/components/coordinator/floor-plan-v2/engine/traffic-flow-prerequisites'
 import {
   runPatronPerimeterLayout,
   runVendorPerimeterLayout,
@@ -80,16 +86,73 @@ function buildAiPayload(
       }
     })
 
-  const fixtures = localObjects
-    .filter((o) => o.kind === 'door' || o.kind === 'emergency_exit')
-    .map((o) => ({
-      x: o.x,
-      y: o.y,
-      width: o.width,
-      height: o.height,
-      kind: o.kind as 'door' | 'emergency_exit',
-      ...(o.kind === 'door' ? { doorType: o.doorType } : {}),
-    }))
+  const traffic = evaluateTrafficFlowPrerequisites(doc, roomId)
+  const localEntryIds = new Set(traffic.entryDoors.map((d) => d.id))
+  const localExitIds = new Set(traffic.exitDoors.map((d) => d.id))
+
+  const toFixture = (snap: TrafficFlowDoorSnapshot): AiAutoArrangeFixture => ({
+    id: snap.id,
+    role: snap.role,
+    x: snap.x,
+    y: snap.y,
+    width: snap.width,
+    height: snap.height,
+    rotation: snap.rotation,
+    centerX: snap.centerX,
+    centerY: snap.centerY,
+    wallEdge: snap.wallEdge,
+    kind: snap.kind,
+    ...(snap.kind === 'door'
+      ? { doorType: snap.role === 'entry' ? 'entrance' : 'exit' }
+      : {}),
+  })
+
+  const fixtures: AiAutoArrangeFixture[] = [
+    ...traffic.entryDoors.map(toFixture),
+    ...traffic.exitDoors.map(toFixture),
+  ]
+
+  const otherFixtures = localObjects
+    .filter(
+      (o) =>
+        (o.kind === 'door' || o.kind === 'emergency_exit') &&
+        !localEntryIds.has(o.id) &&
+        !localExitIds.has(o.id)
+    )
+    .map((o) => {
+      const aabb = objectFootprintAabb(o)
+      return {
+        x: o.x,
+        y: o.y,
+        width: o.width,
+        height: o.height,
+        rotation: o.rotation ?? 0,
+        centerX: aabb.x + aabb.width / 2,
+        centerY: aabb.y + aabb.height / 2,
+        kind: o.kind as 'door' | 'emergency_exit',
+        ...(o.kind === 'door' ? { doorType: o.doorType } : {}),
+      } satisfies AiAutoArrangeFixture
+    })
+
+  fixtures.push(...otherFixtures)
+
+  let trafficFlow: AiTrafficFlowLoop | undefined
+  if (traffic.satisfied) {
+    trafficFlow = {
+      entryPoints: traffic.entryDoors.map((d) => ({
+        x: d.centerX,
+        y: d.centerY,
+        wallEdge: d.wallEdge,
+      })),
+      exitPoints: traffic.exitDoors.map((d) => ({
+        x: d.centerX,
+        y: d.centerY,
+        wallEdge: d.wallEdge,
+      })),
+      primaryPathHint:
+        'Continuous loop: patrons enter at Entry fixture(s), circulate through vendor aisles facing booth fronts, then exit at Exit fixture(s) without crossing patron seating clusters.',
+    }
+  }
 
   return {
     roomName: frame.name ?? 'Main Hall',
@@ -101,6 +164,7 @@ function buildAiPayload(
     items,
     obstacles,
     fixtures,
+    trafficFlow,
   }
 }
 
@@ -151,7 +215,7 @@ function deterministicFallback(
 ): AutoArrangeInRoomResult | null {
   const mode = options.mode ?? 'grid'
   const scope = options.scope ?? 'vendor'
-  if (mode === 'perimeter-only') {
+  if (mode === 'perimeter-only' && scope !== 'all') {
     return scope === 'patron'
       ? runPatronPerimeterLayout(doc, roomId, options)
       : runVendorPerimeterLayout(doc, roomId, options)

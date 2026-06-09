@@ -43,6 +43,8 @@ import {
   normalizeTableCount,
 } from '@/lib/monetization/booth-pricing'
 import type { Role } from '@/types/database'
+import { assertVendorCanApplyToCategory, claimBoothSlotForApplication } from '@/lib/engagement/booth-access'
+import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
 
 async function nextWaitlistPosition(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -159,7 +161,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, venue_verified, venue_verification_status, venue_verification_reason, vendor_access_equality_until, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -209,6 +211,11 @@ export async function POST(request: Request) {
 
   if (!isEventOpenForApplications(event)) {
     return NextResponse.json({ error: 'Applications are closed for this market' }, { status: 400 })
+  }
+
+  const venueGate = requireVenueVerified(event)
+  if (!venueGate.ok) {
+    return NextResponse.json({ error: venueGate.reason }, { status: 403 })
   }
 
   if (existing) {
@@ -269,6 +276,16 @@ export async function POST(request: Request) {
 
   if (!categoryId) {
     return NextResponse.json({ error: 'Could not resolve an application category.' }, { status: 400 })
+  }
+
+  const serviceSupabase = await createServiceClient()
+  const boothAccess = await assertVendorCanApplyToCategory(serviceSupabase, {
+    event,
+    vendorId,
+    categoryId,
+  })
+  if (!boothAccess.ok) {
+    return NextResponse.json({ error: boothAccess.reason }, { status: 403 })
   }
 
   const { data: categoryLimit } = await supabase
@@ -340,7 +357,6 @@ export async function POST(request: Request) {
   let paymentMethod = resolvePreferredDigitalPaymentMethod(['SQUARE'])
 
   if (requiresPayment) {
-    const serviceSupabase = await createServiceClient()
     const credentials = await getCoordinatorAccessToken(
       serviceSupabase,
       event.coordinator_id as string
@@ -533,6 +549,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  if (inserted?.id && boothAccess.phase !== 'none') {
+    await claimBoothSlotForApplication(serviceSupabase, {
+      eventId,
+      categoryId,
+      applicationId: inserted.id,
+      vendorId,
+    })
+  }
+
   try {
     await sendMarketApplicationReceivedEmail(
       buildMarketApplicationEmailFromEvent({
@@ -557,7 +582,6 @@ export async function POST(request: Request) {
   }
 
   if (offlinePending && paymentMethod === 'ETRANSFER' && inserted?.id && requiresPayment) {
-    const serviceSupabase = await createServiceClient()
     dispatchEtransferInstructions(serviceSupabase, {
       applicationId: inserted.id,
       eventId,

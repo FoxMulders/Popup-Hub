@@ -10,6 +10,9 @@ interface DraftPreviewProps {
   pxPerFt: number
   /** When true, preview uses overlap warning styling. */
   hasOverlap?: boolean
+  rotation?: number
+  /** Semi-transparent cursor ghost before click. */
+  ghost?: boolean
 }
 
 export function DraftPreview({
@@ -17,12 +20,16 @@ export function DraftPreview({
   kind,
   pxPerFt,
   hasOverlap = false,
+  rotation = 0,
+  ghost = false,
 }: DraftPreviewProps) {
   if (!rect || !kind) return null
   const x = rect.x * pxPerFt
   const y = rect.y * pxPerFt
   const w = Math.max(1, rect.width * pxPerFt)
   const h = Math.max(1, rect.height * pxPerFt)
+  const cx = x + w / 2
+  const cy = y + h / 2
   const isBoothPlacement = kind === 'booth'
   const isStagePlacement = kind === 'stage'
   const stroke = hasOverlap
@@ -35,27 +42,34 @@ export function DraftPreview({
     : isBoothPlacement
       ? PLACEMENT_AVAILABLE.fill
       : previewFill(kind)
-  return (
+  const fillOpacity = ghost
+    ? 0.4
+    : hasOverlap
+      ? PLACEMENT_VIOLATION.fillOpacity
+      : isBoothPlacement
+        ? PLACEMENT_AVAILABLE.fillOpacity
+        : isStagePlacement
+          ? 0
+          : 0.35
+  const shape = (
     <rect
       x={x}
       y={y}
       width={w}
       height={h}
       fill={fill}
-      fillOpacity={
-        hasOverlap
-          ? PLACEMENT_VIOLATION.fillOpacity
-          : isBoothPlacement
-            ? PLACEMENT_AVAILABLE.fillOpacity
-            : isStagePlacement
-              ? 0
-              : 0.35
-      }
+      fillOpacity={fillOpacity}
       stroke={stroke}
       strokeWidth={2}
-      strokeDasharray="6 3"
+      strokeDasharray={ghost ? '4 3' : '6 3'}
       pointerEvents="none"
     />
+  )
+  if (!rotation) return shape
+  return (
+    <g transform={`rotate(${rotation} ${cx} ${cy})`} pointerEvents="none">
+      {shape}
+    </g>
   )
 }
 
@@ -153,6 +167,123 @@ const ROTATE_HANDLE_OFFSET_PX = 30
 const ROTATE_HANDLE_RADIUS_PX = 7
 const ROTATE_HANDLE_HIT_RADIUS_PX = 22
 
+function selectionItems(
+  objects: ReadonlyArray<PlacedObject>,
+  selectedIds: ReadonlySet<string>
+): PlacedObject[] {
+  if (selectedIds.size === 0) return []
+  return objects.filter((o) => selectedIds.has(o.id))
+}
+
+/** Dashed AABB outline — non-interactive. */
+export function SelectionChrome({
+  objects,
+  selectedIds,
+  pxPerFt,
+}: Omit<SelectionOverlayProps, 'suppressHandle'>) {
+  const items = selectionItems(objects, selectedIds)
+  if (items.length === 0) return null
+
+  return (
+    <g aria-hidden="true" className="canvas-selection-chrome" pointerEvents="none">
+      {items.map((obj) => {
+        const aabb = rotatedAabb(obj)
+        const left = aabb.x * pxPerFt
+        const top = aabb.y * pxPerFt
+        const width = aabb.width * pxPerFt
+        const height = aabb.height * pxPerFt
+        return (
+          <rect
+            key={`sel-chrome-${obj.id}`}
+            x={left}
+            y={top}
+            width={width}
+            height={height}
+            fill="none"
+            stroke="#0f766e"
+            strokeWidth={1}
+            strokeOpacity={0.55}
+            strokeDasharray="4 3"
+            pointerEvents="none"
+            shapeRendering="crispEdges"
+          />
+        )
+      })}
+    </g>
+  )
+}
+
+/**
+ * Topmost interactive layer — rotate handles must sit above room chrome
+ * and use an explicit `pointerEvents="auto"` root so clicks are not
+ * swallowed by the grid or non-interactive overlay parents.
+ */
+export function SelectionRotateHandles({
+  objects,
+  selectedIds,
+  pxPerFt,
+  suppressHandle = false,
+}: SelectionOverlayProps) {
+  if (suppressHandle) return null
+  const items = selectionItems(objects, selectedIds)
+  if (items.length === 0) return null
+
+  return (
+    <g
+      aria-hidden="true"
+      className="canvas-rotate-handles"
+      pointerEvents="auto"
+      style={{ touchAction: 'none' }}
+    >
+      {items.map((obj) => {
+        if (obj.locked) return null
+        const aabb = rotatedAabb(obj)
+        const left = aabb.x * pxPerFt
+        const top = aabb.y * pxPerFt
+        const width = aabb.width * pxPerFt
+        const handleX = left + width / 2
+        const handleY = top - ROTATE_HANDLE_OFFSET_PX
+        return (
+          <g key={`sel-rotate-${obj.id}`} pointerEvents="auto">
+            <line
+              x1={handleX}
+              y1={top}
+              x2={handleX}
+              y2={handleY}
+              stroke="#0f766e"
+              strokeWidth={1.25}
+              strokeDasharray="3 2"
+              pointerEvents="none"
+            />
+            <circle
+              cx={handleX}
+              cy={handleY}
+              r={ROTATE_HANDLE_HIT_RADIUS_PX}
+              fill="transparent"
+              pointerEvents="all"
+              data-rotate-handle="true"
+              data-object-id={obj.id}
+              style={{ cursor: 'grab', touchAction: 'none' }}
+            />
+            <circle
+              cx={handleX}
+              cy={handleY}
+              r={ROTATE_HANDLE_RADIUS_PX}
+              fill="#ffffff"
+              stroke="#0f766e"
+              strokeWidth={2}
+              pointerEvents="all"
+              data-rotate-handle="true"
+              data-object-id={obj.id}
+              style={{ cursor: 'grab', touchAction: 'none' }}
+            />
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
 /**
  * Renders selection chrome for every selected object: a faint dotted
  * outline around the rotated AABB plus a single rotate handle on top
@@ -200,80 +331,19 @@ export function SelectionOverlay({
   pxPerFt,
   suppressHandle = false,
 }: SelectionOverlayProps) {
-  if (selectedIds.size === 0) return null
-  const items = objects.filter((o) => selectedIds.has(o.id))
-  if (items.length === 0) return null
-
   return (
-    <g aria-hidden="true" className="canvas-overlay-layer" pointerEvents="none">
-      {items.map((obj) => {
-        const aabb = rotatedAabb(obj)
-        const left = aabb.x * pxPerFt
-        const top = aabb.y * pxPerFt
-        const width = aabb.width * pxPerFt
-        const height = aabb.height * pxPerFt
-        const handleX = left + width / 2
-        const handleY = top - ROTATE_HANDLE_OFFSET_PX
-        const locked = !!obj.locked
-        return (
-          <g key={`sel-${obj.id}`}>
-            {/* Bounding-box ghost — keeps users oriented when the
-                object is rotated and its native rect would no longer
-                hug the visible chrome. */}
-            <rect
-              x={left}
-              y={top}
-              width={width}
-              height={height}
-              fill="none"
-              stroke="#0f766e"
-              strokeWidth={1}
-              strokeOpacity={0.55}
-              strokeDasharray="4 3"
-              pointerEvents="none"
-              shapeRendering="crispEdges"
-            />
-            {locked || suppressHandle ? null : (
-              <g>
-                <line
-                  x1={handleX}
-                  y1={top}
-                  x2={handleX}
-                  y2={handleY}
-                  stroke="#0f766e"
-                  strokeWidth={1.25}
-                  strokeDasharray="3 2"
-                  pointerEvents="none"
-                />
-                {/* Invisible 44px-diameter hit target — Apple HIG
-                    touch-target minimum. Pointer-events explicit so
-                    the transparent fill still receives taps. */}
-                <circle
-                  cx={handleX}
-                  cy={handleY}
-                  r={ROTATE_HANDLE_HIT_RADIUS_PX}
-                  fill="transparent"
-                  pointerEvents="all"
-                  data-rotate-handle="true"
-                  data-object-id={obj.id}
-                  style={{ cursor: 'grab', touchAction: 'none' }}
-                />
-                <circle
-                  cx={handleX}
-                  cy={handleY}
-                  r={ROTATE_HANDLE_RADIUS_PX}
-                  fill="#ffffff"
-                  stroke="#0f766e"
-                  strokeWidth={2}
-                  data-rotate-handle="true"
-                  data-object-id={obj.id}
-                  style={{ cursor: 'grab' }}
-                />
-              </g>
-            )}
-          </g>
-        )
-      })}
-    </g>
+    <>
+      <SelectionChrome
+        objects={objects}
+        selectedIds={selectedIds}
+        pxPerFt={pxPerFt}
+      />
+      <SelectionRotateHandles
+        objects={objects}
+        selectedIds={selectedIds}
+        pxPerFt={pxPerFt}
+        suppressHandle={suppressHandle}
+      />
+    </>
   )
 }

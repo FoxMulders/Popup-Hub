@@ -4,6 +4,8 @@ import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pric
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { getStripeClient, isStripeConfigured } from '@/lib/stripe/client'
+import { assertVendorCanPayForApplication } from '@/lib/engagement/booth-access'
+import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
 
 export async function POST(request: Request) {
   if (!isStripeConfigured()) {
@@ -56,6 +58,10 @@ export async function POST(request: Request) {
         platform_fee_mode,
         platform_fee_flat_cents,
         platform_fee_bps,
+        venue_verified,
+        venue_verification_status,
+        venue_verification_reason,
+        vendor_access_equality_until,
         coordinator:profiles!events_coordinator_id_fkey(stripe_connected_id, stripe_onboarding_complete)
       )
     `)
@@ -74,6 +80,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Payment is only available after approval' }, { status: 400 })
   }
 
+  const eventRow = Array.isArray(application.event)
+    ? application.event[0]
+    : application.event
+  if (eventRow) {
+    const venueGate = requireVenueVerified(eventRow)
+    if (!venueGate.ok) {
+      return NextResponse.json({ error: venueGate.reason }, { status: 403 })
+    }
+    const payGate = await assertVendorCanPayForApplication(supabase, {
+      event: { id: application.event_id, ...eventRow },
+      vendorId: user.id,
+      categoryId: application.category_id,
+    })
+    if (!payGate.ok) {
+      return NextResponse.json({ error: payGate.reason }, { status: 403 })
+    }
+  }
+
   if (application.payment_method !== 'STRIPE') {
     return NextResponse.json({ error: 'This application does not use Stripe checkout' }, { status: 400 })
   }
@@ -82,7 +106,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This booth is already paid' }, { status: 400 })
   }
 
-  const eventRow = Array.isArray(application.event) ? application.event[0] : application.event
   if (!eventRow?.accepts_stripe) {
     return NextResponse.json({ error: 'Stripe payments are not enabled for this market' }, { status: 422 })
   }

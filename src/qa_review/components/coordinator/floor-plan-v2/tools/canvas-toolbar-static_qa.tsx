@@ -22,6 +22,7 @@ import {
   type StaticRowCollapsedState,
 } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
 import type { StaticToolbarLayoutContext } from '@/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static'
+import { VendorMatchesPanel } from '@/components/coordinator/floor-plan-v2/tools/vendor-matches-panel'
 
 import {
   QA_TIP_COLLAPSE,
@@ -37,6 +38,7 @@ export interface CanvasToolbarStaticQaProps {
   compact?: boolean
   layoutCtx?: StaticToolbarLayoutContext
   sidebarLayout?: boolean
+  eventId?: string | null
 }
 
 function BlockCluster({
@@ -86,10 +88,12 @@ function SidebarToolbarSection({
   section,
   renderBlock,
   compact,
+  eventId,
 }: {
   section: SidebarSectionDef
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
+  eventId?: string | null
 }) {
   return (
     <div
@@ -100,12 +104,16 @@ function SidebarToolbarSection({
         <QaAccordionHeader>{section.header}</QaAccordionHeader>
       </div>
       <div className="flex w-full min-w-0 flex-col gap-1.5 px-2 py-2">
-        <BlockCluster
-          blockIds={section.blocks}
-          renderBlock={renderBlock}
-          compact={compact}
-          bare
-        />
+        {section.id === 'vendor-matches' ? (
+          <VendorMatchesPanel eventId={eventId} compact={compact} />
+        ) : (
+          <BlockCluster
+            blockIds={section.blocks}
+            renderBlock={renderBlock}
+            compact={compact}
+            bare
+          />
+        )}
       </div>
     </div>
   )
@@ -319,6 +327,7 @@ export function CanvasToolbarStaticQa({
   compact,
   layoutCtx,
   sidebarLayout = false,
+  eventId,
 }: CanvasToolbarStaticQaProps) {
   const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
 
@@ -438,6 +447,7 @@ export function CanvasToolbarStaticQa({
             section={section}
             renderBlock={renderBlock}
             compact={compact}
+            eventId={eventId}
           />
         ))}
       </div>

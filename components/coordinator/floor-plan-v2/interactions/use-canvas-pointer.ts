@@ -31,7 +31,6 @@ import {
   resolvePlacementRoomIdForObject,
   type PlacementProbe,
 } from '../geometry/is-point-in-room'
-import { resolveRoomPlacementSurface } from '../state/placement-surface'
 import type { ToolState } from '../tools/types'
 import {
   aabbFitsCanvas,
@@ -73,15 +72,17 @@ import {
 } from '../state/room-canvas'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import {
-  snapBoothToRoomPerimeter,
-  snapBoothToUnionPerimeter,
-} from './perimeter-booth-orientation'
+  isVendorBoothObject,
+  isCardinalRotation,
+  vendorBoothPerimeterSnapPatch,
+} from './vendor-booth-placement'
 import {
   isStructuralWallSnapKind,
   snapStructuralAssetForDoc,
   snapStructuralAssetToLocalPerimeter,
   snapStructuralAssetToRoomFrame,
 } from './structural-wall-snap'
+import { resolveTablePlacementPreview } from './table-placement-preview'
 import {
   boothClampDeltaForRoom,
   footprintWithinBounds,
@@ -333,71 +334,68 @@ export function resolveDrawCommitRect(
   }
 }
 
-function roomFrameForBooth(
+function applyVendorBoothSnapIfNearWall(
   booth: BoothObject,
-  rooms: ReadonlyArray<RoomFrame>,
-  objectRoom: Record<string, string>
-): RoomFrame | null {
-  const ownerId = objectRoom[booth.id]
-  if (ownerId) {
-    return rooms.find((r) => r.id === ownerId) ?? null
+  doc: Parameters<typeof vendorBoothPerimeterSnapPatch>[1],
+  options?: { snapRotation?: boolean }
+): BoothObject {
+  const snap = vendorBoothPerimeterSnapPatch(booth, doc)
+  if (!snap) return booth
+  const snapRotation = options?.snapRotation ?? true
+  if (!snapRotation || !isCardinalRotation(booth.rotation ?? 0)) {
+    const { rotation: _ignored, ...positionPatch } = snap
+    return { ...booth, ...positionPatch } as BoothObject
   }
-  const cx = booth.x + booth.width / 2
-  const cy = booth.y + booth.height / 2
-  for (const frame of rooms) {
-    if (
-      cx >= frame.originX &&
-      cx <= frame.originX + frame.widthFt &&
-      cy >= frame.originY &&
-      cy <= frame.originY + frame.lengthFt
-    ) {
-      return frame
-    }
-  }
-  return null
+  return { ...booth, ...snap } as BoothObject
 }
 
-function perimeterSnapPatch(
-  booth: BoothObject,
-  doc: {
-    rooms?: RoomFrame[]
-    objectRoom?: Record<string, string>
-    objects?: PlacedObject[]
+function dragCommitPatchForObject(
+  obj: PlacedObject,
+  drag: { originals: Map<string, { x: number; y: number }> },
+  doc: FloorPlanDocStore['doc'],
+  activeRoomId: string | null | undefined
+): Partial<PlacedObject> {
+  let patch: Partial<PlacedObject> = { x: obj.x, y: obj.y }
+  if (isVendorBoothObject(obj)) {
+    const snapped = applyVendorBoothSnapIfNearWall(obj as BoothObject, doc)
+    patch = {
+      x: snapped.x,
+      y: snapped.y,
+      width: snapped.width,
+      height: snapped.height,
+      rotation: snapped.rotation,
+    }
+  } else if (isStructuralWallSnapKind(obj.kind)) {
+    const roomId = doc.objectRoom?.[obj.id] ?? activeRoomId
+    const frame = roomId ? doc.rooms?.find((r) => r.id === roomId) : null
+    if (frame) {
+      patch = snapStructuralAssetToRoomFrame(obj, frame)
+    } else {
+      const snap = snapStructuralAssetForDoc(obj, doc)
+      if (snap) patch = snap
+    }
   }
-): Partial<BoothObject> | null {
-  const frame = roomFrameForBooth(
-    booth,
-    doc.rooms ?? [],
-    doc.objectRoom ?? {}
-  )
-  if (!frame) return null
+  const roomId = doc.objectRoom?.[obj.id] ?? activeRoomId
+  if (obj.kind === 'booth' && roomId) {
+    const bounds = resolveRoomPlacementBounds(doc, roomId)
+    if (bounds && !footprintWithinBounds(objectWithPatch(obj, patch), bounds)) {
+      const orig = drag.originals.get(obj.id)
+      if (orig) {
+        patch = {
+          x: orig.x,
+          y: orig.y,
+        }
+      }
+    }
+  }
+  return patch
+}
 
-  const roomId = doc.objectRoom?.[booth.id] ?? frame.id
-  const surface = resolveRoomPlacementSurface(
-    {
-      canvasWidthFt: 0,
-      canvasLengthFt: 0,
-      gridSpacingFt: 1,
-      snapFt: 1,
-      objects: doc.objects ?? [],
-      rooms: doc.rooms ?? [],
-      objectRoom: doc.objectRoom,
-    },
-    roomId
-  )
-  const unionRing = surface?.outerRings[0]
-  const snapped = unionRing
-    ? snapBoothToUnionPerimeter(booth, unionRing) ??
-      snapBoothToRoomPerimeter(booth, frame)
-    : snapBoothToRoomPerimeter(booth, frame)
-  if (!snapped) return null
-  return {
-    x: snapped.x,
-    y: snapped.y,
-    width: snapped.width,
-    height: snapped.height,
-    rotation: snapped.rotation,
-  }
+function objectWithPatch(
+  obj: PlacedObject,
+  patch: Partial<PlacedObject>
+): PlacedObject {
+  return { ...obj, ...patch } as PlacedObject
 }
 
 export interface CanvasPointerApi {
@@ -406,6 +404,7 @@ export interface CanvasPointerApi {
   /** Sticky draw mode — ghost footprint at cursor between placements. */
   placementHoverRect: Rect | null
   placementHoverKind: PlacedObject['kind'] | null
+  placementHoverRotation: number
   marqueeRect: Rect | null
   /** True while the user is actively dragging an on-canvas rotate handle. */
   rotating: boolean
@@ -436,7 +435,6 @@ export function useCanvasPointer(
     stickyDrawPlacementRef.current = stickyDrawPlacement
   }, [stickyDrawPlacement])
   const eventCategoryNames = options.eventCategoryNames
-  const autoArrangeMode = options.autoArrangeMode ?? 'grid'
   const commandCenterViewport = options.commandCenterViewport ?? false
   const onProximityViolation = options.onProximityViolation
   const onProximityViolationRef = useRef(onProximityViolation)
@@ -480,9 +478,16 @@ export function useCanvasPointer(
   const [placementHover, setPlacementHoverState] = useState<{
     rect: Rect
     kind: PlacedObject['kind']
+    rotation: number
   } | null>(null)
   const setPlacementHover = useCallback(
-    (next: { rect: Rect; kind: PlacedObject['kind'] } | null) => {
+    (
+      next: {
+        rect: Rect
+        kind: PlacedObject['kind']
+        rotation: number
+      } | null
+    ) => {
       setPlacementHoverState(next)
     },
     []
@@ -586,6 +591,7 @@ export function useCanvasPointer(
         moved: false,
         originals,
       }
+      rotateRef.current = null
     },
     [store.doc.objects]
   )
@@ -710,7 +716,11 @@ export function useCanvasPointer(
       // `data-object-id` so we can pick up the right object without
       // walking the doc.
       const rotateHandle = target?.closest('[data-rotate-handle="true"]')
-      if (rotateHandle && allowObjectGestures) {
+      if (rotateHandle) {
+        if (!allowObjectGestures) {
+          capturePointer(e.currentTarget, e.pointerId)
+          return true
+        }
         const handleObjectId = rotateHandle.getAttribute('data-object-id')
         const anchorObj =
           handleObjectId &&
@@ -739,7 +749,8 @@ export function useCanvasPointer(
             }))
           // If the only candidate (the anchor itself) is locked we
           // bail entirely — nothing to rotate.
-          if (affected.length === 0) return false
+          if (affected.length === 0) return true
+          dragRef.current = null
           rotateRef.current = {
             pointerId: e.pointerId,
             anchorId: anchorObj.id,
@@ -750,6 +761,8 @@ export function useCanvasPointer(
           setRotating(true)
           return true
         }
+        capturePointer(e.currentTarget, e.pointerId)
+        return true
       }
 
       // Placed objects win over empty room interior — otherwise every
@@ -1075,7 +1088,7 @@ export function useCanvasPointer(
         // and rotation resumes when the angle returns to a fitting
         // range.
         for (const entry of entries) {
-          const aabb = objectFootprintAabb(entry.finalProbe)
+          const aabb = rotatedAabb(entry.finalProbe)
           if (!aabbFitsCanvas(aabb, cw, cl)) {
             return
           }
@@ -1124,12 +1137,27 @@ export function useCanvasPointer(
           const probe: PlacedObject = { ...obj, x: proposedX, y: proposedY }
           const roomId = objectRoom[id] ?? activeRoomIdRef.current ?? null
           const clampDelta = boothClampDeltaForRoom(probe, store.doc, roomId)
+          let patch: Partial<PlacedObject> = {
+            x: proposedX + clampDelta.dx,
+            y: proposedY + clampDelta.dy,
+          }
+          if (isVendorBoothObject(obj)) {
+            const snapped = applyVendorBoothSnapIfNearWall(
+              { ...obj, ...patch } as BoothObject,
+              store.doc,
+              { snapRotation: isCardinalRotation(obj.rotation ?? 0) }
+            )
+            patch = {
+              x: snapped.x,
+              y: snapped.y,
+              width: snapped.width,
+              height: snapped.height,
+              rotation: snapped.rotation,
+            }
+          }
           patches.push({
             id,
-            patch: {
-              x: proposedX + clampDelta.dx,
-              y: proposedY + clampDelta.dy,
-            },
+            patch,
           })
         }
         // Don't push a history entry on every frame. We'll push one at
@@ -1148,8 +1176,10 @@ export function useCanvasPointer(
         return
       }
 
-      if (stickyDrawPlacementRef.current) {
-        const activeTool = toolStateRef.current
+      const activeTool = toolStateRef.current
+      const isTableDrawPreview =
+        activeTool.tool === 'draw' && activeTool.drawShape === 'booth'
+      if (stickyDrawPlacementRef.current || isTableDrawPreview) {
         const gestureActive =
           draftRef.current ||
           dragRef.current ||
@@ -1158,18 +1188,41 @@ export function useCanvasPointer(
           roomResizeRef.current ||
           objectResizeRef.current ||
           marqueeNow
-        if (
-          activeTool.tool === 'draw' &&
-          !gestureActive
-        ) {
+        if (activeTool.tool === 'draw' && !gestureActive) {
           const snapped = snapPoint(ft, store.doc.snapFt)
+          const rawRect = {
+            x: snapped.x,
+            y: snapped.y,
+            width: 0,
+            height: 0,
+          }
           const rect = resolveDrawCommitRect(
             activeTool.drawShape,
-            { x: snapped.x, y: snapped.y, width: 0, height: 0 },
+            rawRect,
             store.doc.snapFt,
             readDefaultBoothTableSpec()
           )
-          setPlacementHover({ rect, kind: activeTool.drawShape })
+          const preview = resolveTablePlacementPreview(
+            activeTool.drawShape,
+            rect,
+            readDefaultBoothTableSpec(),
+            store.doc,
+            activeRoomIdRef.current
+          )
+          if (preview) {
+            setPlacementHover({
+              rect: {
+                x: preview.x,
+                y: preview.y,
+                width: preview.width,
+                height: preview.height,
+              },
+              kind: activeTool.drawShape,
+              rotation: preview.rotation,
+            })
+            return
+          }
+          setPlacementHover({ rect, kind: activeTool.drawShape, rotation: 0 })
           return
         }
         setPlacementHover(null)
@@ -1245,6 +1298,8 @@ export function useCanvasPointer(
             if (
               findOverlapInMove([obj], others, {
                 rooms: store.doc.rooms ?? [],
+                objectRoom: store.doc.objectRoom,
+                doc: store.doc,
               })
             ) {
               store.updateObject(
@@ -1467,9 +1522,21 @@ export function useCanvasPointer(
           // "others" set so a coordinator dragging a same-category
           // pair as a unit isn't blocked by their own neighbour.
           const movedIdSet = new Set(drag.ids)
+          const movedResolved = store.doc.objects
+            .filter((o) => movedIdSet.has(o.id))
+            .map((o) =>
+              objectWithPatch(
+                o,
+                dragCommitPatchForObject(
+                  o,
+                  drag,
+                  store.doc,
+                  activeRoomIdRef.current
+                )
+              )
+            )
           const movedBooths: BoothObject[] = []
-          for (const obj of store.doc.objects) {
-            if (!movedIdSet.has(obj.id)) continue
+          for (const obj of movedResolved) {
             if (obj.kind === 'booth') movedBooths.push(obj as BoothObject)
           }
           const others = store.doc.objects.filter(
@@ -1508,11 +1575,11 @@ export function useCanvasPointer(
               dyRows: violation.dyRows,
             })
           } else if (
-            findOverlapInMove(
-              store.doc.objects.filter((o) => movedIdSet.has(o.id)),
-              store.doc.objects.filter((o) => !movedIdSet.has(o.id)),
-              { rooms: store.doc.rooms ?? [] }
-            )
+            findOverlapInMove(movedResolved, others, {
+              rooms: store.doc.rooms ?? [],
+              objectRoom: store.doc.objectRoom,
+              doc: store.doc,
+            })
           ) {
             const revertPatches: Array<{
               id: string
@@ -1538,37 +1605,16 @@ export function useCanvasPointer(
               id: string
               patch: Partial<PlacedObject>
             }> = []
-            for (const obj of store.doc.objects) {
-              if (!drag.ids.includes(obj.id)) continue
-              let patch: Partial<PlacedObject> = { x: obj.x, y: obj.y }
-              if (obj.kind === 'booth' && autoArrangeMode === 'perimeter-only') {
-                const snap = perimeterSnapPatch(obj as BoothObject, store.doc)
-                patch = snap ?? patch
-              } else if (isStructuralWallSnapKind(obj.kind)) {
-                const roomId =
-                  store.doc.objectRoom?.[obj.id] ?? activeRoomIdRef.current
-                const frame = roomId
-                  ? store.doc.rooms?.find((r) => r.id === roomId)
-                  : null
-                if (frame) {
-                  patch = snapStructuralAssetToRoomFrame(obj, frame)
-                } else {
-                  const snap = snapStructuralAssetForDoc(obj, store.doc)
-                  if (snap) patch = snap
-                }
-              }
-              const roomId =
-                store.doc.objectRoom?.[obj.id] ?? activeRoomIdRef.current
-              if (obj.kind === 'booth' && roomId) {
-                const bounds = resolveRoomPlacementBounds(store.doc, roomId)
-                if (bounds && !footprintWithinBounds({ ...obj, ...patch }, bounds)) {
-                  const orig = drag.originals.get(obj.id)
-                  if (orig) patch = { x: orig.x, y: orig.y }
-                }
-              }
+            for (const resolved of movedResolved) {
               finalPatches.push({
-                id: obj.id,
-                patch,
+                id: resolved.id,
+                patch: {
+                  x: resolved.x,
+                  y: resolved.y,
+                  width: resolved.width,
+                  height: resolved.height,
+                  rotation: resolved.rotation,
+                },
               })
             }
             store.updateObjects(finalPatches, { pushHistory: true })
@@ -1595,7 +1641,7 @@ export function useCanvasPointer(
         setMarquee(null)
       }
     },
-    [autoArrangeMode, flushMove, marquee, onAfterDrawCommit, setDraft, store]
+    [flushMove, marquee, onAfterDrawCommit, setDraft, store]
   )
 
   // Cancel any in-flight rAF on unmount so we don't fire flushMove
@@ -1623,6 +1669,7 @@ export function useCanvasPointer(
     draftKind: draft ? draft.kind : null,
     placementHoverRect: placementHover?.rect ?? null,
     placementHoverKind: placementHover?.kind ?? null,
+    placementHoverRotation: placementHover?.rotation ?? 0,
     marqueeRect: marquee
       ? normalizeRect(marquee.anchor, marquee.current)
       : null,
@@ -1753,6 +1800,10 @@ function commitDraft(
     default:
       return
   }
+  // Wall-orientation snap for vendor booths near perimeter walls.
+  if (isVendorBoothObject(obj)) {
+    obj = applyVendorBoothSnapIfNearWall(obj as BoothObject, store.doc) as PlacedObject
+  }
   // Same-category proximity gate for newly-drawn vendor booths.
   if (obj.kind === 'booth' && (obj as BoothObject).tablePurpose !== 'guest') {
     const gridSpacingFt = store.doc.gridSpacingFt || 1
@@ -1776,6 +1827,8 @@ function commitDraft(
   if (
     placedObjectOverlapsAny(obj, store.doc.objects, undefined, {
       rooms: store.doc.rooms ?? [],
+      objectRoom: store.doc.objectRoom,
+      doc: store.doc,
     })
   ) {
     log(`Placement rejected (${obj.kind}): overlaps existing object`)

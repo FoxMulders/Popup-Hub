@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Bell, LogOut, Menu } from 'lucide-react'
+import { Bell, Lightbulb, LogOut, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
@@ -22,6 +22,7 @@ interface AppMenuSheetProps {
   onSignOut?: () => void | Promise<void>
   extraLinks?: AppMenuLink[]
   footer?: React.ReactNode
+  onSuggestImprovement?: () => void
   className?: string
 }
 
@@ -33,6 +34,7 @@ export function AppMenuSheet({
   onSignOut,
   extraLinks = [],
   footer,
+  onSuggestImprovement,
   className,
 }: AppMenuSheetProps) {
   const [open, setOpen] = useState(false)
@@ -88,6 +90,21 @@ export function AppMenuSheet({
                 </Button>
               </Link>
             ))}
+
+            {onSuggestImprovement ? (
+              <Button
+                variant="ghost"
+                className="w-full justify-start min-h-11 gap-2"
+                size="sm"
+                onClick={() => {
+                  setOpen(false)
+                  onSuggestImprovement()
+                }}
+              >
+                <Lightbulb className="h-4 w-4" />
+                Suggest an Improvement
+              </Button>
+            ) : null}
 
             <Button
               variant="ghost"

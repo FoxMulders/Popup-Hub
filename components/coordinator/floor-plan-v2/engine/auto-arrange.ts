@@ -20,6 +20,7 @@ import type {
   RoomFrame,
 } from '../state/types'
 import {
+  collisionProbeForObject,
   placedObjectsOverlap,
   rotatedAabb,
 } from '../interactions/geometry'
@@ -249,14 +250,29 @@ function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
   return out
 }
 
-/** Fixed booth footprints (patron or vendor) treated as no-go zones with edge clearance. */
+/** Fixed booth footprints (patron or vendor) as no-go zones with edge clearance. */
 function boothFootprintObstacleRects(
   booths: BoothObject[],
+  doc?: FloorPlanDoc,
   clearanceFt = BOOTH_OBSTACLE_CLEARANCE_FT
 ): Rect[] {
-  return booths.map((b) =>
-    expandRectForClearance(objectFootprintAabb(b), clearanceFt)
-  )
+  const ctx = doc
+    ? {
+        canvasWidthFt: doc.canvasWidthFt,
+        canvasLengthFt: doc.canvasLengthFt,
+        gridSpacingFt: doc.gridSpacingFt,
+        snapFt: doc.snapFt,
+        objects: doc.objects,
+        rooms: doc.rooms ?? [],
+        objectRoom: doc.objectRoom,
+      }
+    : undefined
+  return booths.map((b) => {
+    if (!isGuestTableBooth(b)) {
+      return rotatedAabb(collisionProbeForObject(b, ctx))
+    }
+    return expandRectForClearance(objectFootprintAabb(b), clearanceFt)
+  })
 }
 
 type Slot = { x: number; y: number; dist?: number; perimeter?: PerimeterSlot }
@@ -272,6 +288,7 @@ interface PlacementContext {
   gridSpacingFt: number
   /** When set, perimeter slots orient booths against this frame. */
   perimeterOrientFrame?: RoomFrame
+  overlapDoc?: FloorPlanDoc
 }
 
 function placeBoothsAtSlots(
@@ -292,7 +309,19 @@ function placeBoothsAtSlots(
     eventCategoryNames,
     gridSpacingFt,
     perimeterOrientFrame,
+    overlapDoc,
   } = ctx
+  const overlapCtx = overlapDoc
+    ? {
+        canvasWidthFt: overlapDoc.canvasWidthFt,
+        canvasLengthFt: overlapDoc.canvasLengthFt,
+        gridSpacingFt: overlapDoc.gridSpacingFt,
+        snapFt: overlapDoc.snapFt,
+        objects: overlapDoc.objects,
+        rooms: overlapDoc.rooms ?? [],
+        objectRoom: overlapDoc.objectRoom,
+      }
+    : undefined
   const placedRects: Rect[] = []
   const newBooths: BoothObject[] = []
   let nextSourceIdx = 0
@@ -350,7 +379,7 @@ function placeBoothsAtSlots(
     return { category: null, advanceBy: 1 }
   }
 
-  function candidateFits(candidate: Rect): boolean {
+  function candidateFits(candidate: Rect, probeBooth: BoothObject): boolean {
     if (candidate.x + candidate.width > cw || candidate.y + candidate.height > cl) {
       return false
     }
@@ -358,12 +387,8 @@ function placeBoothsAtSlots(
       return false
     }
     if (obstacles.some((r) => aabbOverlap(candidate, r))) return false
-    if (
-      placedRects.some((r) =>
-        boothsCloserThan(candidate, r, BOOTH_PLACEMENT_GAP_FT)
-      )
-    ) {
-      return false
+    for (const placed of newBooths) {
+      if (placedObjectsOverlap(probeBooth, placed, overlapCtx)) return false
     }
     return true
   }
@@ -379,7 +404,31 @@ function placeBoothsAtSlots(
       width: w,
       height: h,
     }
-    if (!candidateFits(candidate)) return false
+    let probeBooth: BoothObject = {
+      ...src,
+      x: candidate.x,
+      y: candidate.y,
+      width: w,
+      height: h,
+      rotation: 0,
+    }
+    if (slot.perimeter?.direct) {
+      probeBooth = {
+        ...probeBooth,
+        x: slot.perimeter.x,
+        y: slot.perimeter.y,
+        rotation: rotationForPerimeterEdge(slot.perimeter.edge),
+      }
+    } else if (slot.perimeter && perimeterOrientFrame) {
+      probeBooth = orientBoothForPerimeterSlot(
+        probeBooth,
+        slot.perimeter,
+        w,
+        h,
+        perimeterOrientFrame
+      )
+    }
+    if (!candidateFits(candidate, probeBooth)) return false
 
     nextSourceIdx++
     const { category, advanceBy } = pickCategoryForSlot(candidate)
@@ -394,31 +443,8 @@ function placeBoothsAtSlots(
     const finalCategory =
       categoryCount > 0 ? category : src.categoryName ?? null
     let placed: BoothObject = {
-      ...src,
-      x: candidate.x,
-      y: candidate.y,
-      width: w,
-      height: h,
-      rotation: 0,
+      ...probeBooth,
       categoryName: finalCategory,
-    }
-    if (slot.perimeter?.direct) {
-      placed = {
-        ...placed,
-        x: slot.perimeter.x,
-        y: slot.perimeter.y,
-        width: w,
-        height: h,
-        rotation: rotationForPerimeterEdge(slot.perimeter.edge),
-      }
-    } else if (slot.perimeter && perimeterOrientFrame) {
-      placed = orientBoothForPerimeterSlot(
-        placed,
-        slot.perimeter,
-        w,
-        h,
-        perimeterOrientFrame
-      )
     }
     const placedRect = rotatedAabb(placed)
     newBooths.push(placed)
@@ -1199,6 +1225,7 @@ function autoArrangeVendorBooths(
         eventCategoryNames,
         gridSpacingFt,
         perimeterOrientFrame,
+        overlapDoc: doc,
       }
     )
     const { merged, unmovedCount } = retainUnplacedVendorBooths(
@@ -1286,6 +1313,7 @@ function autoArrangeVendorBooths(
     gridSpacingFt,
     perimeterOrientFrame:
       layoutMode === 'perimeter' ? perimeterOrientFrame : undefined,
+    overlapDoc: doc,
   })
 
   const { merged, unmovedCount } = retainUnplacedVendorBooths(
@@ -1371,7 +1399,7 @@ export function autoArrange(
   const otherObjects = doc.objects.filter((o) => o.kind !== 'booth')
   const structuralObstacles = obstacleRectsFor({ ...doc, objects: otherObjects })
   const patronFixedObstacles =
-    scope === 'patron' ? [] : boothFootprintObstacleRects(guestBooths)
+    scope === 'patron' ? [] : boothFootprintObstacleRects(guestBooths, doc)
   const vendorObstacles = [...structuralObstacles, ...patronFixedObstacles]
 
   const hasVendor = allVendorBooths.length > 0
@@ -1659,6 +1687,15 @@ export function validateClearances(
   const booths = doc.objects.filter(
     (o): o is BoothObject => o.kind === 'booth'
   )
+  const overlapCtx = {
+    canvasWidthFt: doc.canvasWidthFt,
+    canvasLengthFt: doc.canvasLengthFt,
+    gridSpacingFt: doc.gridSpacingFt,
+    snapFt: doc.snapFt,
+    objects: doc.objects,
+    rooms: doc.rooms ?? [],
+    objectRoom: doc.objectRoom,
+  }
 
   for (const booth of booths) {
     const aabb = objectFootprintAabb(booth)
@@ -1688,8 +1725,10 @@ export function validateClearances(
     for (let j = i + 1; j < booths.length; j++) {
       const a = booths[i]!
       const b = booths[j]!
-      if (placedObjectsOverlap(a, b)) {
+      if (placedObjectsOverlap(a, b, overlapCtx)) {
         errors.push(`booths ${a.id} and ${b.id} overlap`)
+      } else if (!isGuestTableBooth(a) && !isGuestTableBooth(b)) {
+        // Vendor 360° probes are authoritative — skip redundant gap check.
       } else {
         const minGap = minBoothEdgeGapFt(a, b)
         if (

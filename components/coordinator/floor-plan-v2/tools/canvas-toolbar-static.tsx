@@ -29,6 +29,7 @@ import {
   type SidebarSectionDef,
   type StaticRowCollapsedState,
 } from './toolbar-static-layout'
+import { VendorMatchesPanel } from './vendor-matches-panel'
 
 const STATIC_ROW_ICONS: Record<
   CanvasToolbarStaticRowId,
@@ -52,6 +53,7 @@ export interface CanvasToolbarStaticProps {
   layoutCtx?: StaticToolbarLayoutContext
   /** Left-rail layout designer — split headers and two-column row bodies. */
   sidebarLayout?: boolean
+  eventId?: string | null
 }
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
@@ -109,10 +111,12 @@ function SidebarToolbarSection({
   section,
   renderBlock,
   compact,
+  eventId,
 }: {
   section: SidebarSectionDef
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
+  eventId?: string | null
 }) {
   return (
     <div
@@ -122,13 +126,17 @@ function SidebarToolbarSection({
       <div className="border-b border-stone-100/90 px-2 py-1.5">
         <SectionHeader>{section.header}</SectionHeader>
       </div>
-      <div className="flex w-full min-w-0 flex-col gap-1.5 px-2 py-2">
-        <BlockCluster
-          blockIds={section.blocks}
-          renderBlock={renderBlock}
-          compact={compact}
-          bare
-        />
+      <div className="flex w-full min-w-0 flex-col gap-1 px-2 py-1.5">
+        {section.id === 'vendor-matches' ? (
+          <VendorMatchesPanel eventId={eventId} compact={compact} />
+        ) : (
+          <BlockCluster
+            blockIds={section.blocks}
+            renderBlock={renderBlock}
+            compact={compact}
+            bare
+          />
+        )}
       </div>
     </div>
   )
@@ -342,6 +350,7 @@ export function CanvasToolbarStatic({
   compact,
   layoutCtx,
   sidebarLayout = false,
+  eventId,
 }: CanvasToolbarStaticProps) {
   const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
 
@@ -461,6 +470,7 @@ export function CanvasToolbarStatic({
             section={section}
             renderBlock={renderBlock}
             compact={compact}
+            eventId={eventId}
           />
         ))}
       </div>

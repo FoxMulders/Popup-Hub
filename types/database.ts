@@ -49,8 +49,13 @@ export type NotificationType =
   | 'payment_failed'
   | 'market_feedback'
   | 'feedback_addressed'
+  | 'priority_booth_invite'
 
 export type VendorAccessRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export type VenueVerificationStatus = 'pending' | 'verified' | 'rejected' | 'manual_override'
+
+export type BoothSlotAccessPhase = 'coordinator_only' | 'priority_exclusive' | 'public_release'
 
 export type PetPolicy = 'pet_friendly' | 'service_animals_only' | 'no_pets'
 export type ReminderOffset = 'morning_of' | 'one_day_before' | 'three_days_before' | 'one_week_before'
@@ -90,6 +95,7 @@ export interface Profile {
   phone: string | null
   avatar_url: string | null
   is_beta_tester: boolean
+  is_admin: boolean
   created_at: string
   reliability_score: number
   total_markets: number
@@ -239,9 +245,40 @@ export interface Event {
   parking_notes: string | null
   wheelchair_access_notes: string | null
   pet_policy?: PetPolicy
+  venue_verified?: boolean
+  venue_verification_status?: VenueVerificationStatus
+  venue_verification_reason?: string | null
+  venue_verified_at?: string | null
+  venue_place_types?: string[]
+  vendor_access_equality_until?: string | null
   coordinator?: Profile
   category_limits?: EventCategoryLimit[]
   event_days?: EventDay[]
+}
+
+export interface EventBoothSlot {
+  id: string
+  event_id: string
+  layout_object_id: string
+  category_id: string
+  access_phase: BoothSlotAccessPhase
+  priority_invite_batch_id: string | null
+  priority_window_ends_at: string | null
+  public_released_at: string | null
+  claimed_by_application_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface VendorPriorityInvite {
+  id: string
+  event_id: string
+  vendor_id: string
+  booth_slot_id: string
+  batch_id: string
+  sent_at: string
+  expires_at: string
+  claimed_at: string | null
 }
 
 export interface EventCategoryLimit {
@@ -809,6 +846,35 @@ export interface MarketFeedback {
   context_id: string | null
   created_at: string
   reporter?: Pick<Profile, 'full_name' | 'email' | 'role'>
+}
+
+export type FeatureSubmitterRole = 'coordinator' | 'vendor' | 'patron'
+
+export type FeatureImpactLevel = 'nice_to_have' | 'workflow_blocked' | 'critical'
+
+export type FeatureRequestStatus =
+  | 'pending'
+  | 'under_review'
+  | 'planned'
+  | 'completed'
+  | 'declined'
+
+export interface FeatureRequest {
+  id: string
+  user_id: string
+  session_role: FeatureSubmitterRole
+  submitter_role: FeatureSubmitterRole
+  title: string
+  target_component: string
+  problem: string
+  dream_solution: string | null
+  impact_level: FeatureImpactLevel
+  screenshot_url: string | null
+  page_path: string | null
+  status: FeatureRequestStatus
+  developer_notes: string | null
+  created_at: string
+  updated_at: string
 }
 
 export type MarketFeedMediaType = 'image' | 'video'

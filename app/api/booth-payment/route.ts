@@ -10,6 +10,8 @@ import {
 } from '@/lib/square/payments'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
+import { assertVendorCanPayForApplication } from '@/lib/engagement/booth-access'
+import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
 
 const COMPLETED_PAYMENT_STATUSES = new Set(['COMPLETED', 'APPROVED'])
 
@@ -97,7 +99,11 @@ export async function POST(request: Request) {
         multi_table_discount_percent,
         platform_fee_mode,
         platform_fee_flat_cents,
-        platform_fee_bps
+        platform_fee_bps,
+        venue_verified,
+        venue_verification_status,
+        venue_verification_reason,
+        vendor_access_equality_until
       )
     `)
     .eq('id', applicationId)
@@ -118,6 +124,24 @@ export async function POST(request: Request) {
     )
   }
 
+  const eventRow = Array.isArray(application.event)
+    ? application.event[0]
+    : application.event
+  if (eventRow) {
+    const venueGate = requireVenueVerified(eventRow)
+    if (!venueGate.ok) {
+      return NextResponse.json({ error: venueGate.reason }, { status: 403 })
+    }
+    const payGate = await assertVendorCanPayForApplication(supabase, {
+      event: { id: application.event_id, ...eventRow },
+      vendorId: user.id,
+      categoryId: application.category_id,
+    })
+    if (!payGate.ok) {
+      return NextResponse.json({ error: payGate.reason }, { status: 403 })
+    }
+  }
+
   if (application.payment_method === 'ETRANSFER' || application.payment_method === 'CASH') {
     return NextResponse.json(
       { error: 'This application uses offline payment. The coordinator will confirm payment manually.' },
@@ -135,10 +159,6 @@ export async function POST(request: Request) {
   if (application.payment_status === 'paid') {
     return NextResponse.json({ error: 'This booth is already paid' }, { status: 400 })
   }
-
-  const eventRow = Array.isArray(application.event)
-    ? application.event[0]
-    : application.event
 
   const { data: limit } = await supabase
     .from('event_category_limits')

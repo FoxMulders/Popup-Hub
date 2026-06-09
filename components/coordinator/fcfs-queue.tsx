@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Wand2, Users } from 'lucide-react'
 import { compareFcfsApplicationOrder } from '@/lib/applications/fcfs-sort'
 import { hasPriorityQueueAccess } from '@/lib/profile/premium-access'
+import { shouldDisableRankingPriorityForEvent } from '@/lib/engagement/booth-access'
 import { findNeighborPairKeys, isNeighborPair } from '@/lib/booth-planner/neighbor-matches'
 import type { BoothApplication, BoothCell } from '@/types/database'
 
@@ -26,6 +27,7 @@ interface FCFSQueueProps {
   applications: FCFSApplication[]
   boothCells: BoothCell[]
   onAssign?: (applicationId: string, boothCellId: string) => void
+  vendorAccessEqualityUntil?: string | null
 }
 
 const BOOTH_TYPE_COLORS: Record<string, string> = {
@@ -45,12 +47,19 @@ function boothTypeBadge(type: string | null | undefined) {
   )
 }
 
-export function FCFSQueue({ applications, boothCells, onAssign }: FCFSQueueProps) {
+export function FCFSQueue({
+  applications,
+  boothCells,
+  onAssign,
+  vendorAccessEqualityUntil,
+}: FCFSQueueProps) {
   const supabase = createClient()
   const [localApps, setLocalApps] = useState<FCFSApplication[]>(applications)
   const [busy, setBusy] = useState(false)
 
   // Sort by applied_at (FCFS order)
+  const disableRanking = shouldDisableRankingPriorityForEvent(vendorAccessEqualityUntil)
+
   const queue = useMemo(
     () =>
       [...localApps].sort((a, b) =>
@@ -58,16 +67,20 @@ export function FCFSQueue({ applications, boothCells, onAssign }: FCFSQueueProps
           {
             id: a.id,
             appliedAt: a.applied_at,
-            priorityBoost: hasPriorityQueueAccess({ is_beta_tester: !!a.vendor.is_beta_tester }),
+            priorityBoost: disableRanking
+              ? false
+              : hasPriorityQueueAccess({ is_beta_tester: !!a.vendor.is_beta_tester }),
           },
           {
             id: b.id,
             appliedAt: b.applied_at,
-            priorityBoost: hasPriorityQueueAccess({ is_beta_tester: !!b.vendor.is_beta_tester }),
+            priorityBoost: disableRanking
+              ? false
+              : hasPriorityQueueAccess({ is_beta_tester: !!b.vendor.is_beta_tester }),
           }
         )
       ),
-    [localApps]
+    [disableRanking, localApps]
   )
 
   // Cells already assigned (by booth_number) among our apps

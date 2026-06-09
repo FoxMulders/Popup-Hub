@@ -292,6 +292,35 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
     }
 
     const hasPaidBooths = boothPriceCents > 0
+    if (publishStatus === 'published') {
+      try {
+        const verifyRes = await fetch('/api/coordinator/venues/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: existing?.id,
+            latitude: lat,
+            longitude: lng,
+            address,
+            locationName,
+            pinDropped,
+            persist: Boolean(existing?.id),
+          }),
+        })
+        const verifyData = await verifyRes.json()
+        if (!verifyRes.ok || !verifyData.verified) {
+          toast.error(
+            verifyData.reason ??
+              'Venue must be verified at a valid commercial property, park, or public space before publishing.'
+          )
+          return
+        }
+      } catch {
+        toast.error('Could not verify venue location before publishing.')
+        return
+      }
+    }
+
     if (publishStatus === 'published' && hasPaidBooths) {
       const { data: profile } = await supabase
         .from('profiles')

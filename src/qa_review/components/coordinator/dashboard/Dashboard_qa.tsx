@@ -14,11 +14,9 @@ import { useMarketManagement } from '@/components/coordinator/dashboard/market-m
 import {
   DesktopScreenRequiredOverlay,
   FloorPlanViewportLayoutProvider,
-  TabletLandscapeAdvisoryBanner,
   useFloorPlanViewportLayout,
 } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { QA_CANVAS_VIEWPORT_CLASS } from '@/src/qa_review/components/coordinator/floor-plan-v2/canvas/Canvas_qa'
-import { cn } from '@/lib/utils'
 
 /** Hide scrollbar tracks while preserving smooth scroll on short viewports. */
 export const QA_PANEL_SCROLL_CLASSES =
@@ -64,14 +62,13 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
   return (
     <FloorPlanViewportLayoutProvider>
       <DesktopScreenRequiredOverlay />
-      <TabletLandscapeAdvisoryBanner />
       <DashboardBootstrapQaInner header={header} />
     </FloorPlanViewportLayoutProvider>
   )
 }
 
 function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
-  const { showDesktopRequired, showLandscapeAdvisory } = useFloorPlanViewportLayout()
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const { fullscreen: immersive } = useCommandCenterFullscreen()
   const { selectedEventId, layoutRooms, setLayoutRooms } = useMarketManagement()
   const reducedMotion = useReducedMotion()
@@ -114,12 +111,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
         tabletLeft={<DashboardTabletToolsDock />}
         left={<DashboardLeftPanelQa />}
         center={
-          <div
-            className={cn(
-              QA_CANVAS_VIEWPORT_CLASS,
-              showLandscapeAdvisory && 'pt-11'
-            )}
-          >
+          <div className={QA_CANVAS_VIEWPORT_CLASS}>
             {showDesktopRequired ? (
               <div
                 className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
@@ -136,7 +128,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
           </div>
         }
       />
-      {selectedEventId && !hasInitialRoom ? (
+      {selectedEventId && !hasInitialRoom && !showDesktopRequired ? (
         <InitialRoomModal onConfirm={handleInitialRoomConfirm} />
       ) : null}
     </DashboardToolbarPortalProvider>

@@ -1,12 +1,24 @@
 'use client'
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import { Monitor } from 'lucide-react'
 import {
-  useFloorPlanViewportTier,
-  useViewportPortrait,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
+import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
+import { Button } from '@/components/ui/button'
+import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import {
+  isPocketSizedViewport,
+  useFloorPlanViewportDimensions,
   type FloorPlanViewportTier,
 } from '@/hooks/use-floor-plan-viewport-tier'
+import { cn } from '@/lib/utils'
 
 export interface FloorPlanViewportLayoutContextValue {
   tier: FloorPlanViewportTier
@@ -31,30 +43,26 @@ const FALLBACK_LAYOUT: FloorPlanViewportLayoutContextValue = {
   showLandscapeAdvisory: false,
 }
 
-/** Viewport tier + orientation flags for the coordinator floor-plan canvas. */
+/** Viewport tier + iron-dome flags for the coordinator floor-plan canvas. */
 export function useFloorPlanViewportLayout(): FloorPlanViewportLayoutContextValue {
   return useContext(FloorPlanViewportLayoutContext) ?? FALLBACK_LAYOUT
 }
 
 export function FloorPlanViewportLayoutProvider({ children }: { children: ReactNode }) {
-  const tier = useFloorPlanViewportTier()
-  const portrait = useViewportPortrait()
+  const { width, height } = useFloorPlanViewportDimensions()
+  const pocketSized = isPocketSizedViewport(width, height)
 
   const value = useMemo<FloorPlanViewportLayoutContextValue>(() => {
-    const isMobile = tier === 'mobile'
-    const isTablet = tier === 'tablet'
-    const isDesktop = tier === 'desktop'
-    const isTabletPortrait = isTablet && portrait
     return {
-      tier,
-      isMobile,
-      isTablet,
-      isDesktop,
-      isTabletPortrait,
-      showDesktopRequired: isMobile,
-      showLandscapeAdvisory: isTabletPortrait,
+      tier: pocketSized ? 'mobile' : 'desktop',
+      isMobile: pocketSized,
+      isTablet: false,
+      isDesktop: !pocketSized,
+      isTabletPortrait: false,
+      showDesktopRequired: pocketSized,
+      showLandscapeAdvisory: false,
     }
-  }, [portrait, tier])
+  }, [pocketSized])
 
   return (
     <FloorPlanViewportLayoutContext.Provider value={value}>
@@ -63,49 +71,112 @@ export function FloorPlanViewportLayoutProvider({ children }: { children: ReactN
   )
 }
 
-/** Full-screen gate for phones — canvas stays unmounted behind this overlay. */
+const BLUEPRINT_GRID_CLASS =
+  'bg-slate-950 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]'
+
+/** Full-screen iron-dome gate — canvas unmounted; cyber-arcade fallback UI. */
 export function DesktopScreenRequiredOverlay() {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
-  if (!showDesktopRequired) return null
+  const { selectedEventId } = useMarketManagement()
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
 
-  return (
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!showDesktopRequired) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [showDesktopRequired])
+
+  const handleAbortMission = useCallback(() => {
+    router.push(
+      selectedEventId
+        ? `/coordinator/events/${selectedEventId}`
+        : '/coordinator/dashboard'
+    )
+  }, [router, selectedEventId])
+
+  if (!showDesktopRequired || !mounted) return null
+
+  const overlay = (
     <div
-      className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-canvas/95 p-6 text-center backdrop-blur-sm"
+      className={cn(
+        'fixed inset-0 z-[10001] flex items-center justify-center overflow-y-auto p-4 sm:p-6 pointer-events-auto',
+        BLUEPRINT_GRID_CLASS
+      )}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="desktop-required-title"
+      aria-labelledby="pocket-viewport-title"
       data-testid="floor-plan-desktop-required"
     >
-      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-forest/10 text-forest">
-        <Monitor className="h-7 w-7" aria-hidden />
-      </span>
-      <h2
-        id="desktop-required-title"
-        className="font-heading text-xl font-semibold text-foreground sm:text-2xl"
+      <div
+        className={cn(
+          'relative w-full max-w-lg rounded-2xl border border-amber-500/35 bg-slate-900/95 p-6 text-left shadow-[0_0_20px_rgba(234,179,8,0.15)] backdrop-blur-sm sm:p-8',
+          'animate-in fade-in zoom-in-95 duration-300'
+        )}
       >
-        Desktop Screen Required
-      </h2>
-      <p className="mt-2 max-w-md text-sm text-muted-foreground">
-        The booth layout canvas needs a wider screen. Open this page on a tablet in landscape
-        mode or on a desktop computer to design your floor plan.
-      </p>
+        <p
+          className="mb-4 inline-flex gap-2 text-3xl motion-safe:animate-[spin_8s_linear_infinite]"
+          aria-hidden
+        >
+          <span className="inline-block motion-safe:animate-bounce">📐</span>
+          <span className="inline-block motion-safe:animate-pulse">🤖</span>
+          <span className="inline-block motion-safe:animate-bounce [animation-delay:150ms]">
+            🚧
+          </span>
+        </p>
+
+        <h2
+          id="pocket-viewport-title"
+          className="font-heading text-xl font-bold tracking-tight text-amber-50 sm:text-2xl"
+        >
+          Whoa there, Ant-Man! 🐜
+        </h2>
+
+        <p className="mt-2 text-sm font-semibold text-amber-200/90 sm:text-base">
+          This layout canvas is way too massive for a pocket-sized screen.
+        </p>
+
+        <p className="mt-4 text-sm leading-relaxed text-slate-300">
+          You are trying to orchestrate an entire physical marketplace on a screen meant for
+          checking text messages. To snap doors flat, give those yellow vendor tables their
+          mandatory 360-degree, 2-foot breathing rooms, and summon our Gemini-powered traffic
+          flow wizard, you are going to need a bigger boat. Or, you know... a regular desktop
+          monitor.
+        </p>
+
+        <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/50 p-4 text-sm leading-relaxed text-slate-300">
+          💡 Pro-Tip: Go find a laptop, grab a coffee, and orchestrate the ultimate floor plan
+          layout like the real operational mastermind you are.
+        </div>
+
+        <Button
+          type="button"
+          size="lg"
+          onClick={handleAbortMission}
+          className={cn(
+            'touch-target mt-6 min-h-12 w-full touch-manipulation',
+            'bg-amber-500 font-semibold text-slate-950 hover:bg-amber-400',
+            'shadow-[0_0_16px_rgba(234,179,8,0.35)]'
+          )}
+          data-testid="floor-plan-desktop-required-exit"
+        >
+          Abort Mission &amp; Go Back 🚀
+        </Button>
+      </div>
     </div>
   )
+
+  return createPortal(overlay, document.body)
 }
 
-/** Fixed advisory while a tablet is held in portrait orientation. */
+/** @deprecated Iron dome blocks all sub-desktop viewports — banner is no longer shown. */
 export function TabletLandscapeAdvisoryBanner() {
-  const { showLandscapeAdvisory } = useFloorPlanViewportLayout()
-  if (!showLandscapeAdvisory) return null
-
-  return (
-    <div
-      className="fixed inset-x-0 top-0 z-[9990] border-b border-amber-300/80 bg-amber-50 px-3 py-2.5 text-center text-xs font-medium leading-snug text-amber-950 sm:text-sm"
-      role="status"
-      data-testid="floor-plan-tablet-landscape-advisory"
-    >
-      🔄 Landscape Mode Recommended: Please rotate your tablet for a wider view of the layout
-      canvas.
-    </div>
-  )
+  return null
 }

@@ -7,6 +7,7 @@ const PATRON_TYPES = new Set<NotificationType>([
   'waitlist_promoted',
   'market_reminder',
   'vendor_flash_sale',
+  'priority_booth_invite',
   'vendor_sold_out',
   'auction_won',
   'auction_starting',

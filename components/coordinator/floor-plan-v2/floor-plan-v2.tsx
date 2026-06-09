@@ -51,6 +51,10 @@ import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import type { AutoArrangeMode } from './engine/auto-arrange'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
 import {
+  AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
+  evaluateTrafficFlowPrerequisites,
+} from './engine/traffic-flow-prerequisites'
+import {
   applyPackedBoothsToDoc,
   PackBooths,
   vendorBoothsInRoom,
@@ -356,8 +360,10 @@ function FloorPlanV2Workspace({
     () =>
       detectPlacedObjectOverlaps(store.doc.objects, {
         rooms: store.doc.rooms ?? [],
+        objectRoom: store.doc.objectRoom,
+        doc: store.doc,
       }),
-    [store.doc.objects, store.doc.rooms]
+    [store.doc]
   )
   useEffect(() => {
     onOverlapChange?.(layoutOverlaps.size > 0)
@@ -366,10 +372,8 @@ function FloorPlanV2Workspace({
   const [drawShape, setDrawShape] = useState<DrawShape>(
     DEFAULT_TOOL_STATE.drawShape
   )
-  const [vendorAutoArrangeMode, setVendorAutoArrangeMode] =
+  const [autoArrangeMode, setAutoArrangeMode] =
     useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
-  const [patronAutoArrangeMode, setPatronAutoArrangeMode] =
-    useState<AutoArrangeMode>('grid')
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
   const [patronTrafficPath, setPatronTrafficPath] = useState<PathPoint[] | null>(
@@ -1261,6 +1265,27 @@ function FloorPlanV2Workspace({
         toast.error(`Save failed — ${error.message}`)
         return false
       }
+
+      try {
+        const { data: limits } = await supabase
+          .from('event_category_limits')
+          .select('category_id, category:categories(name)')
+          .eq('event_id', eventId)
+        const categoryNameToId: Record<string, string> = {}
+        for (const row of limits ?? []) {
+          const category = Array.isArray(row.category) ? row.category[0] : row.category
+          const name = (category as { name?: string } | null)?.name?.trim()
+          if (name) categoryNameToId[name] = row.category_id as string
+        }
+        const booths = store.doc.objects.filter(
+          (o): o is import('./state/types').BoothObject =>
+            o.kind === 'booth' && (o.tablePurpose ?? 'vendor') === 'vendor'
+        )
+        const { syncEventBoothSlots } = await import('@/lib/floor-plan/sync-booth-slots')
+        await syncEventBoothSlots(supabase, { eventId, booths, categoryNameToId })
+      } catch {
+        // Booth slot sync is best-effort after layout save
+      }
       // Server is now the source of truth — drop the unified
       // crash-recovery draft so a future refresh loads from Supabase.
       clearMultiRoomDraft(eventId)
@@ -1422,14 +1447,37 @@ function FloorPlanV2Workspace({
     return vendorTableMetaFromApplications(applications, safeTableSizeFt)
   }, [applications, safeTableSizeFt])
 
-  const handleVendorAutoArrange = useCallback(async () => {
-    if (vendorBoothCount === 0) {
-      toast.message('Nothing to arrange — draw at least one vendor booth first.')
+  const trafficFlowPrerequisites = useMemo(
+    () => evaluateTrafficFlowPrerequisites(store.doc, activeRoomId),
+    [activeRoomId, store.doc]
+  )
+
+  const autoArrangeDisabledReason = useMemo(() => {
+    if (!trafficFlowPrerequisites.satisfied) {
+      return AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP
+    }
+    if (vendorBoothCount === 0 && patronTableCount === 0) {
+      return 'Draw at least one vendor booth or patron table to auto-arrange.'
+    }
+    return null
+  }, [patronTableCount, trafficFlowPrerequisites.satisfied, vendorBoothCount])
+
+  const canAutoArrangeFloorPlan =
+    trafficFlowPrerequisites.satisfied &&
+    (vendorBoothCount > 0 || patronTableCount > 0)
+
+  const handleAutoArrangeFloorPlan = useCallback(async () => {
+    if (!trafficFlowPrerequisites.satisfied) {
+      toast.message(AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP, { duration: 4500 })
+      return
+    }
+    if (vendorBoothCount === 0 && patronTableCount === 0) {
+      toast.message('Nothing to arrange — draw at least one vendor booth or patron table first.')
       return
     }
     const arrangeOptions = {
-      scope: 'vendor' as const,
-      mode: vendorAutoArrangeMode,
+      scope: 'all' as const,
+      mode: autoArrangeMode,
       eventCategoryNames,
       baselineTableLengthFt: safeTableSizeFt,
       vendorTableMetaByKey,
@@ -1437,7 +1485,7 @@ function FloorPlanV2Workspace({
         ? { maxBooths: layoutCapacity }
         : {}),
     }
-    const loading = toast.loading('Optimizing vendor layout…')
+    const loading = toast.loading('Optimizing floor plan…')
     try {
       const result = await runAutoArrangeWithAi(
         store.doc,
@@ -1449,29 +1497,33 @@ function FloorPlanV2Workspace({
         toast.error(result.perimeterCapacityError, { duration: 6000 })
         return
       }
+      if (result.patronArrangeAborted) {
+        toast.warning(result.patronArrangeAborted, { duration: 5000 })
+        return
+      }
       if (result.placedCount === 0) {
-        toast.error('Vendor auto-arrange could not fit any booths inside the room.')
+        toast.error('Auto-arrange could not fit any booths or tables inside the room.')
         return
       }
       store.replaceObjects(result.doc.objects)
       const spaceOverflow = result.overflowCount + result.droppedCount
       if (spaceOverflow > 0) {
         toast.warning(
-          `Could not reposition ${spaceOverflow} vendor booth${spaceOverflow === 1 ? '' : 's'} due to space restrictions (left in place).`,
+          `Could not reposition ${spaceOverflow} asset${spaceOverflow === 1 ? '' : 's'} due to space restrictions (left in place).`,
           { duration: 5000 }
         )
       } else if (result.unsatisfiedCategoryCount > 0) {
         toast.warning(
-          `Vendor auto-arrange complete. ${result.unsatisfiedCategoryCount} booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
+          `Auto-arrange complete. ${result.unsatisfiedCategoryCount} vendor booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
           { duration: 4500 }
         )
       } else if (result.aiOptimized) {
         toast.success(
-          `AI arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} (${result.aiModel ?? 'Gemini'}).`
+          `AI arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} (${result.aiModel ?? 'Gemini'}).`
         )
       } else {
         toast.success(
-          `Auto-arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} with clearance.`
+          `Auto-arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} with traffic-flow clearance.`
         )
       }
     } finally {
@@ -1479,66 +1531,14 @@ function FloorPlanV2Workspace({
     }
   }, [
     activeRoomId,
-    vendorAutoArrangeMode,
-    vendorBoothCount,
+    autoArrangeMode,
     eventCategoryNames,
     layoutCapacity,
-    safeTableSizeFt,
-    store,
-    vendorTableMetaByKey,
-  ])
-
-  const handlePatronAutoArrange = useCallback(async () => {
-    if (patronTableCount === 0) {
-      toast.message('Nothing to arrange — draw at least one patron table first.')
-      return
-    }
-    const patronOptions = {
-      scope: 'patron' as const,
-      mode: patronAutoArrangeMode,
-      baselineTableLengthFt: safeTableSizeFt,
-      vendorTableMetaByKey,
-    }
-    const loading = toast.loading('Optimizing patron layout…')
-    try {
-      const result = await runAutoArrangeWithAi(
-        store.doc,
-        activeRoomId,
-        patronOptions
-      )
-      if (!result) return
-      if (result.patronArrangeAborted) {
-        toast.warning(result.patronArrangeAborted, { duration: 5000 })
-        return
-      }
-      if (result.placedCount === 0) {
-        toast.error('Patron auto-arrange could not fit any tables inside the room.')
-        return
-      }
-      store.replaceObjects(result.doc.objects)
-      if (result.droppedCount > 0) {
-        toast.warning(
-          `Could not place ${result.droppedCount} patron table${result.droppedCount === 1 ? '' : 's'} due to space restrictions.`,
-          { duration: 5000 }
-        )
-      } else if (result.aiOptimized) {
-        toast.success(
-          `AI arranged ${result.placedCount} patron table${result.placedCount === 1 ? '' : 's'} (${result.aiModel ?? 'Gemini'}).`
-        )
-      } else {
-        toast.success(
-          `Auto-arranged ${result.placedCount} patron table${result.placedCount === 1 ? '' : 's'}.`
-        )
-      }
-    } finally {
-      toast.dismiss(loading)
-    }
-  }, [
-    activeRoomId,
-    patronAutoArrangeMode,
     patronTableCount,
     safeTableSizeFt,
     store,
+    trafficFlowPrerequisites.satisfied,
+    vendorBoothCount,
     vendorTableMetaByKey,
   ])
 
@@ -1996,14 +1996,11 @@ function FloorPlanV2Workspace({
       onZoomOut={handleZoomOut}
       onZoomReset={handleZoomReset}
       onCenterView={handleCenterView}
-      onVendorAutoArrange={handleVendorAutoArrange}
-      canVendorAutoArrange={vendorBoothCount > 0}
-      vendorAutoArrangeMode={vendorAutoArrangeMode}
-      onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
-      onPatronAutoArrange={handlePatronAutoArrange}
-      canPatronAutoArrange={patronTableCount > 0}
-      patronAutoArrangeMode={patronAutoArrangeMode}
-      onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
+      onAutoArrangeFloorPlan={handleAutoArrangeFloorPlan}
+      canAutoArrangeFloorPlan={canAutoArrangeFloorPlan}
+      autoArrangeDisabledReason={autoArrangeDisabledReason}
+      autoArrangeMode={autoArrangeMode}
+      onAutoArrangeModeChange={setAutoArrangeMode}
       onJoinRooms={handleMerge}
       canJoinRooms={canMerge}
       joinCandidateCount={
@@ -2035,6 +2032,7 @@ function FloorPlanV2Workspace({
       onSaveMarket={onSaveMarket}
       saveMarketDisabled={saveMarketDisabled}
       saveMarketLoading={saveMarketLoading}
+      eventId={eventId}
     />
   ) : null
 
@@ -2153,7 +2151,7 @@ function FloorPlanV2Workspace({
                     eventCategoryNames={eventCategoryNames}
                     boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
                     onVendorDrop={onVendorDrop}
-                    autoArrangeMode={vendorAutoArrangeMode}
+                    autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
                     onProximityViolation={(info) => {
                       toast.error(
@@ -2239,14 +2237,11 @@ function FloorPlanV2Workspace({
                 onZoomOut={handleZoomOut}
                 onZoomReset={handleZoomReset}
                 onCenterView={handleCenterView}
-                onVendorAutoArrange={handleVendorAutoArrange}
-                canVendorAutoArrange={vendorBoothCount > 0}
-                vendorAutoArrangeMode={vendorAutoArrangeMode}
-                onVendorAutoArrangeModeChange={setVendorAutoArrangeMode}
-                onPatronAutoArrange={handlePatronAutoArrange}
-                canPatronAutoArrange={patronTableCount > 0}
-                patronAutoArrangeMode={patronAutoArrangeMode}
-                onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
+                onAutoArrangeFloorPlan={handleAutoArrangeFloorPlan}
+                canAutoArrangeFloorPlan={canAutoArrangeFloorPlan}
+                autoArrangeDisabledReason={autoArrangeDisabledReason}
+                autoArrangeMode={autoArrangeMode}
+                onAutoArrangeModeChange={setAutoArrangeMode}
                 onJoinRooms={handleMerge}
                 canJoinRooms={canMerge}
                 joinCandidateCount={
@@ -2306,7 +2301,7 @@ function FloorPlanV2Workspace({
                     eventCategoryNames={eventCategoryNames}
                     boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
                     onVendorDrop={onVendorDrop}
-                    autoArrangeMode={vendorAutoArrangeMode}
+                    autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
                     onProximityViolation={(info) => {
                       toast.error(

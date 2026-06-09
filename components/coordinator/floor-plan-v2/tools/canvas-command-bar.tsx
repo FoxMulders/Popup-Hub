@@ -42,9 +42,15 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onVendorAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   patronAutoArrangeMode?: AutoArrangeMode
   onPatronAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  onAutoArrangeFloorPlan?: () => void
+  canAutoArrangeFloorPlan?: boolean
+  autoArrangeDisabledReason?: string | null
+  autoArrangeMode?: AutoArrangeMode
+  onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
+  eventId?: string | null
 }
 
 /**
@@ -82,6 +88,11 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     canVendorAutoArrange,
     onPatronAutoArrange,
     canPatronAutoArrange,
+    onAutoArrangeFloorPlan,
+    canAutoArrangeFloorPlan,
+    autoArrangeDisabledReason,
+    autoArrangeMode,
+    onAutoArrangeModeChange,
     onJoinRooms,
     canJoinRooms,
     joinCandidateCount,
@@ -117,6 +128,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onSaveMarket,
     saveMarketDisabled,
     saveMarketLoading,
+    eventId,
   } = props
 
   const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
@@ -128,6 +140,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     Boolean(onDeleteRoom)
   const needsRoomFirst = showRooms && (rooms?.length ?? 0) === 0
   const showRoomTransform = Boolean(onRotateRoomLeft) && Boolean(onRotateRoomRight)
+  const showOptimize = Boolean(onAutoArrangeFloorPlan)
   const showVendor =
     showTableSize ||
     Boolean(onVendorAutoArrange) ||
@@ -183,6 +196,12 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       canPatronAutoArrange,
       patronAutoArrangeMode,
       onPatronAutoArrangeModeChange,
+      onAutoArrangeFloorPlan,
+      canAutoArrangeFloorPlan,
+      autoArrangeDisabledReason,
+      autoArrangeMode: autoArrangeMode ?? vendorAutoArrangeMode,
+      onAutoArrangeModeChange:
+        onAutoArrangeModeChange ?? onVendorAutoArrangeModeChange,
       onJoinRooms,
       canJoinRooms,
       joinLabel,
@@ -246,6 +265,11 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       canPatronAutoArrange,
       patronAutoArrangeMode,
       onPatronAutoArrangeModeChange,
+      onAutoArrangeFloorPlan,
+      canAutoArrangeFloorPlan,
+      autoArrangeDisabledReason,
+      autoArrangeMode,
+      onAutoArrangeModeChange,
       onJoinRooms,
       canJoinRooms,
       joinLabel,
@@ -287,8 +311,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
         showVendor,
         showPatron,
         showRoom,
+        showOptimize,
       }),
-    [needsRoomFirst, showVendor, showPatron, showRoom]
+    [needsRoomFirst, showVendor, showPatron, showRoom, showOptimize]
   )
 
   const visibleStaticRowIds = useMemo(
@@ -335,6 +360,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
             compact
             layoutCtx={staticLayoutCtx}
             sidebarLayout={sidebarLayout}
+            eventId={eventId}
             renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
           />
         ) : (

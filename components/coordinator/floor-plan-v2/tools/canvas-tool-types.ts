@@ -1,4 +1,5 @@
 import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
+import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { DrawShape, ToolId, ToolState } from './types'
 
 export interface CanvasToolHostProps {
@@ -30,6 +31,12 @@ export interface CanvasToolHostProps {
   onZoomIn: () => void
   onZoomReset: () => void
   onCenterView: () => void
+  onAutoArrangeFloorPlan?: () => void
+  canAutoArrangeFloorPlan?: boolean
+  autoArrangeDisabledReason?: string | null
+  autoArrangeMode?: AutoArrangeMode
+  onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  /** @deprecated Use unified floor-plan auto-arrange props */
   onVendorAutoArrange?: () => void
   canVendorAutoArrange?: boolean
   onPatronAutoArrange?: () => void

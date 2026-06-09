@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { AppNav } from '@/components/nav/app-nav'
+import { SharedLayoutChrome } from '@/components/layout/shared-layout-chrome'
+import { ACTIVE_PORTAL_COOKIE, getAvailablePortals } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 
 export default async function SharedLayout({ children }: { children: React.ReactNode }) {
@@ -15,10 +17,17 @@ export default async function SharedLayout({ children }: { children: React.React
     .single()
   if (!profile) redirect('/login')
 
+  const cookieStore = await cookies()
+  const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
+  const availablePortals = getAvailablePortals(profile.role)
+
   return (
-    <div className="market-page min-h-screen">
-      <AppNav profile={profile as Profile} />
-      <main>{children}</main>
-    </div>
+    <SharedLayoutChrome
+      profile={profile as Profile}
+      availablePortals={availablePortals}
+      portalCookie={portalCookie}
+    >
+      {children}
+    </SharedLayoutChrome>
   )
 }

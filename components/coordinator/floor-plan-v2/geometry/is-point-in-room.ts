@@ -217,7 +217,7 @@ export function isValidObjectPlacement(
   if (isStrictBoundaryPlacementKind(obj.kind)) {
     const bounds = resolveRoomPlacementBounds(doc, resolved)
     if (!bounds) return false
-    if (!footprintWithinBounds(obj, bounds)) return false
+    if (!footprintWithinBounds(joinablePlacementProbe(obj), bounds)) return false
   }
 
   if (isPointInRoomForObject(doc, obj, resolved)) return true

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { AppNav } from '@/components/nav/app-nav'
 import { GuestNav } from '@/components/nav/guest-nav'
+import { ShopperLayoutChrome } from '@/components/layout/shopper-layout-chrome'
 import {
   ACTIVE_PORTAL_COOKIE,
   getAvailablePortals,
@@ -24,17 +24,21 @@ export default async function ShopperLayout({ children }: { children: React.Reac
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
   const availablePortals = profile ? getAvailablePortals(profile.role) : []
 
+  if (profile) {
+    return (
+      <ShopperLayoutChrome
+        profile={profile}
+        availablePortals={availablePortals}
+        portalCookie={portalCookie}
+      >
+        {children}
+      </ShopperLayoutChrome>
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-cream">
-      {profile ? (
-        <AppNav
-          profile={profile}
-          availablePortals={availablePortals}
-          portalCookie={portalCookie}
-        />
-      ) : (
-        <GuestNav />
-      )}
+      <GuestNav />
       <main className="flex flex-1 flex-col">{children}</main>
     </div>
   )

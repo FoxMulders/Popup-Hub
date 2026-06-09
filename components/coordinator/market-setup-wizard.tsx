@@ -98,6 +98,7 @@ type AutosaveResult =
   | { ok: true; eventId: string | null }
   | { ok: false; reason: 'schedule'; scheduleReason: ScheduleBoundsFailureReason }
   | { ok: false; reason: 'fees' }
+  | { ok: false; reason: 'venue' }
   | { ok: false; reason: 'error'; message: string }
 
 function autosaveFailureMessage(result: Extract<AutosaveResult, { ok: false }>, fallback?: string): string {
@@ -506,6 +507,10 @@ export function MarketSetupWizard({
        * just refuse missing/invalid values and empty category lists.
        */
       if (opts?.publish) {
+        if (!pinDropped) {
+          toast.error('Drop a map pin on the venue before publishing.')
+          return { ok: false as const, reason: 'venue' as const }
+        }
         if (categoryLimits.length === 0) {
           toast.error(
             'Add at least one booth category and state its fee before publishing.'
@@ -573,6 +578,31 @@ export function MarketSetupWizard({
         }
 
         const resolvedId = draftResult.eventId || eventId
+
+        if (opts?.publish && resolvedId) {
+          const verifyRes = await fetch('/api/coordinator/venues/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId: resolvedId,
+              latitude: lat,
+              longitude: lng,
+              address,
+              locationName,
+              pinDropped,
+              persist: true,
+            }),
+          })
+          const verifyData = await verifyRes.json()
+          if (!verifyRes.ok || !verifyData.verified) {
+            toast.error(
+              verifyData.reason ??
+                'Venue must be verified at a valid commercial property, park, or public space before publishing.'
+            )
+            return { ok: false as const, reason: 'venue' as const }
+          }
+        }
+
         // Step 1 already captures venue dimensions (combined Event & Venue
         // step), so the layout payload is meaningful from the very first
         // autosave onward as long as the coordinator hasn't opted out.

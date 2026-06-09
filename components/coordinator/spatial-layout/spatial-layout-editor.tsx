@@ -72,6 +72,28 @@ export function SpatialLayoutEditor({
       }
 
       if (event.status === 'draft') {
+        const verifyRes = await fetch('/api/coordinator/venues/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId,
+            latitude: event.latitude,
+            longitude: event.longitude,
+            address: event.address,
+            locationName: event.location_name,
+            pinDropped: true,
+            persist: true,
+          }),
+        })
+        const verifyData = await verifyRes.json()
+        if (!verifyRes.ok || !verifyData.verified) {
+          toast.error(
+            verifyData.reason ??
+              'Venue must be verified before deploying the market.'
+          )
+          return
+        }
+
         const { error } = await supabase
           .from('events')
           .update({ status: 'published' })

@@ -15,7 +15,8 @@ import {
   DraftPreview,
   MarqueePreview,
   PatronTrafficPathOverlay,
-  SelectionOverlay,
+  SelectionChrome,
+  SelectionRotateHandles,
 } from './canvas-overlays'
 import { InlineLabelEditor } from './inline-label-editor'
 import { RoomDropZones } from './room-drop-zones'
@@ -26,6 +27,7 @@ import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
+import { resolveTablePlacementPreview } from '../interactions/table-placement-preview'
 import {
   detectPlacedObjectOverlaps,
   placedObjectOverlapsAny,
@@ -133,30 +135,15 @@ const DEFAULT_BASE_PX_PER_FT = 12
 const COMMAND_CENTER_ZOOM_MIN = 0.72
 
 /** Stages draw their own perimeter — skip duplicate dashed outline on selection. */
-function SelectionOverlayForCanvas({
-  objects,
-  selectedIds,
-  pxPerFt,
-  suppressHandle,
-}: {
-  objects: ReadonlyArray<PlacedObject>
+function filteredSelectionIds(
+  objects: ReadonlyArray<PlacedObject>,
   selectedIds: ReadonlySet<string>
-  pxPerFt: number
-  suppressHandle?: boolean
-}) {
-  const filteredIds = new Set(
+): ReadonlySet<string> {
+  return new Set(
     [...selectedIds].filter((id) => {
       const obj = objects.find((o) => o.id === id)
       return obj?.kind !== 'stage'
     })
-  )
-  return (
-    <SelectionOverlay
-      objects={objects}
-      selectedIds={filteredIds}
-      pxPerFt={pxPerFt}
-      suppressHandle={suppressHandle}
-    />
   )
 }
 
@@ -367,11 +354,16 @@ export function FloorPlanCanvas({
     defaultBoothTableSpecRef,
     autoArrangeMode,
     commandCenterViewport,
+    stickyDrawPlacement,
   })
 
   const mergeOverlapCtx = useMemo(
-    () => ({ rooms: store.doc.rooms ?? [] }),
-    [store.doc.rooms]
+    () => ({
+      rooms: store.doc.rooms ?? [],
+      objectRoom: store.doc.objectRoom,
+      doc: store.doc,
+    }),
+    [store.doc]
   )
 
   const overlappingIds = useMemo(
@@ -386,6 +378,8 @@ export function FloorPlanCanvas({
 
   const previewSourceRect = pointer.draftRect ?? pointer.placementHoverRect
   const previewSourceKind = pointer.draftKind ?? pointer.placementHoverKind
+  const isGhostPreview =
+    pointer.draftRect == null && pointer.placementHoverRect != null
 
   const draftOverlaps = useMemo(() => {
     const rawRect = previewSourceRect
@@ -397,21 +391,36 @@ export function FloorPlanCanvas({
       store.doc.snapFt,
       defaultBoothTableSpec
     )
+    const preview = resolveTablePlacementPreview(
+      kind,
+      rect,
+      defaultBoothTableSpec,
+      store.doc,
+      activeRoomId ?? null
+    )
+    const rotation =
+      pointer.draftRect != null
+        ? 0
+        : pointer.placementHoverRotation
     const probe = {
       id: '__draft__',
       kind,
-      x: rect.x,
-      y: rect.y,
-      width: rect.width,
-      height: rect.height,
-      rotation: 0,
+      x: preview?.x ?? rect.x,
+      y: preview?.y ?? rect.y,
+      width: preview?.width ?? rect.width,
+      height: preview?.height ?? rect.height,
+      rotation: preview?.rotation ?? rotation,
     } as PlacedObject
     return placedObjectOverlapsAny(probe, store.doc.objects, undefined, mergeOverlapCtx)
   }, [
+    activeRoomId,
     defaultBoothTableSpec,
     mergeOverlapCtx,
+    pointer.draftRect,
+    pointer.placementHoverRotation,
     previewSourceKind,
     previewSourceRect,
+    store.doc,
     store.doc.objects,
     store.doc.snapFt,
   ])
@@ -420,18 +429,39 @@ export function FloorPlanCanvas({
     const rawRect = previewSourceRect
     const kind = previewSourceKind
     if (!rawRect || !kind) return null
-    return resolveDrawCommitRect(
+    const rect = resolveDrawCommitRect(
       kind,
       rawRect,
       store.doc.snapFt,
       defaultBoothTableSpec
     )
+    const preview = resolveTablePlacementPreview(
+      kind,
+      rect,
+      defaultBoothTableSpec,
+      store.doc,
+      activeRoomId ?? null
+    )
+    if (!preview) return rect
+    return {
+      x: preview.x,
+      y: preview.y,
+      width: preview.width,
+      height: preview.height,
+    }
   }, [
+    activeRoomId,
     defaultBoothTableSpec,
     previewSourceKind,
     previewSourceRect,
+    store.doc,
     store.doc.snapFt,
   ])
+
+  const draftPreviewRotation = useMemo(() => {
+    if (pointer.draftRect != null) return 0
+    return pointer.placementHoverRotation
+  }, [pointer.draftRect, pointer.placementHoverRotation])
 
   const [editingObjectId, setEditingObjectId] = useState<string | null>(null)
   const editingObj = useMemo<PlacedObject | null>(() => {
@@ -613,9 +643,6 @@ export function FloorPlanCanvas({
             WebkitUserSelect: 'none',
             WebkitTouchCallout: 'none',
           }}
-          onMouseDown={(e) => {
-            console.log('Canvas Interaction State:', e.target)
-          }}
           onPointerDown={(e) => {
             if (toolState.tool === 'hand') return
             e.preventDefault()
@@ -676,13 +703,13 @@ export function FloorPlanCanvas({
             renderLayer="placable"
           />
           {toolState.tool === 'select' ? (
-            <SelectionOverlayForCanvas
+            <SelectionChrome
               objects={store.doc.objects}
-              selectedIds={store.selectedIds}
+              selectedIds={filteredSelectionIds(
+                store.doc.objects,
+                store.selectedIds
+              )}
               pxPerFt={pxPerFt}
-              suppressHandle={
-                pointer.draftRect !== null || pointer.roomGestureActive
-              }
             />
           ) : null}
           {toolState.tool === 'select' && (selectedRoomId ?? activeRoomId)
@@ -701,11 +728,26 @@ export function FloorPlanCanvas({
                 )
               })()
             : null}
+          {toolState.tool === 'select' ? (
+            <SelectionRotateHandles
+              objects={store.doc.objects}
+              selectedIds={filteredSelectionIds(
+                store.doc.objects,
+                store.selectedIds
+              )}
+              pxPerFt={pxPerFt}
+              suppressHandle={
+                pointer.draftRect !== null || pointer.roomGestureActive
+              }
+            />
+          ) : null}
           <DraftPreview
             rect={draftPreviewRect}
             kind={previewSourceKind}
             pxPerFt={pxPerFt}
             hasOverlap={draftOverlaps}
+            rotation={draftPreviewRotation}
+            ghost={isGhostPreview}
           />
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
           <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />

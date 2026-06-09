@@ -68,6 +68,42 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
      * can have empty/half-set categories from the wizard.
      */
     if (newStatus === 'published') {
+      const { data: eventRow, error: venueLoadError } = await supabase
+        .from('events')
+        .select(
+          'latitude, longitude, address, venue_verified, venue_verification_status, venue_verification_reason'
+        )
+        .eq('id', event.id)
+        .single()
+
+      if (venueLoadError) {
+        toast.error('Could not verify venue before publishing.')
+        return
+      }
+
+      if (!eventRow?.venue_verified && eventRow?.venue_verification_status !== 'manual_override') {
+        const verifyRes = await fetch('/api/coordinator/venues/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: event.id,
+            latitude: eventRow.latitude,
+            longitude: eventRow.longitude,
+            address: eventRow.address,
+            pinDropped: true,
+            persist: true,
+          }),
+        })
+        const verifyData = await verifyRes.json()
+        if (!verifyRes.ok || !verifyData.verified) {
+          toast.error(
+            verifyData.reason ??
+              'Venue must be verified at a valid commercial property, park, or public space before publishing.'
+          )
+          return
+        }
+      }
+
       const { data: limits, error: feeError } = await supabase
         .from('event_category_limits')
         .select('price_per_booth, category:categories(name)')

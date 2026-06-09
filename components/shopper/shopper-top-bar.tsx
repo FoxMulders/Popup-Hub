@@ -17,12 +17,14 @@ interface ShopperTopBarProps {
   profile: Profile | null
   availablePortals?: ActivePortal[]
   portalCookie?: string
+  onSuggestImprovement?: () => void
 }
 
 export function ShopperTopBar({
   profile,
   availablePortals = [],
   portalCookie,
+  onSuggestImprovement,
 }: ShopperTopBarProps) {
   const pathname = usePathname()
   const supabase = createClient()
@@ -74,6 +76,7 @@ export function ShopperTopBar({
                   profileName={profile.full_name}
                   onSignOut={signOut}
                   extraLinks={[{ href: '/profile', label: 'Profile settings' }]}
+                  onSuggestImprovement={onSuggestImprovement}
                 />
                 <Link
                   href="/profile"

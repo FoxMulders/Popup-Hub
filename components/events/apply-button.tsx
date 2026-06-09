@@ -141,6 +141,13 @@ export function ApplyButton({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('SQUARE')
   const [permitFile, setPermitFile] = useState<File | null>(null)
   const [tableCount, setTableCount] = useState(1)
+  const [boothAccess, setBoothAccess] = useState<{
+    hasPriorityInvite: boolean
+    hasPriorityExclusive: boolean
+    hasPublicRelease: boolean
+    priorityWindowEndsAt: string | null
+    equalityWindowActive: boolean
+  } | null>(null)
   const showTableCount = isCommunityMarketListing(event.listing_type)
 
   const requireFullAttendance = event.require_full_attendance ?? true
@@ -149,6 +156,16 @@ export function ApplyButton({
   useEffect(() => {
     setLocalApplicationStatus(applicationStatus)
   }, [applicationStatus])
+
+  useEffect(() => {
+    if (!userId || !event.id) return
+    fetch(`/api/vendor/events/${event.id}/booth-access`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setBoothAccess(data)
+      })
+      .catch(() => undefined)
+  }, [event.id, userId])
 
   useEffect(() => {
     if (existingApplication && needsDigitalCheckout(existingApplication)) {
@@ -730,6 +747,20 @@ export function ApplyButton({
 
   return (
     <>
+      {boothAccess?.hasPriorityInvite ? (
+        <Badge className="mb-2 w-full justify-center bg-amber-100 text-amber-950 py-1">
+          Priority invite — 24h exclusive access
+        </Badge>
+      ) : boothAccess?.hasPriorityExclusive ? (
+        <Badge className="mb-2 w-full justify-center bg-stone-100 text-stone-700 py-1">
+          <Clock className="mr-1 h-3 w-3" />
+          Opens to all vendors after priority window
+        </Badge>
+      ) : boothAccess?.equalityWindowActive ? (
+        <Badge className="mb-2 w-full justify-center bg-sage-100 text-sage-900 py-1">
+          New vendor friendly — equal access window
+        </Badge>
+      ) : null}
       <Button
         size="sm"
         className="w-full"

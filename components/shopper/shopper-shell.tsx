@@ -1,7 +1,6 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { ShopperTopBar } from '@/components/shopper/shopper-top-bar'
-import { ShopperBottomNav } from '@/components/shopper/shopper-bottom-nav'
+import { ShopperShellClient } from '@/components/shopper/shopper-shell-client'
 import {
   ACTIVE_PORTAL_COOKIE,
   getAvailablePortals,
@@ -31,19 +30,13 @@ export async function ShopperShell({ children, hideBottomNav, profile: profilePr
   const availablePortals = profile ? getAvailablePortals(profile.role) : []
 
   return (
-    <div className="site-app-shell market-page flex min-h-screen flex-col bg-cream max-w-full overflow-x-hidden">
-      <ShopperTopBar
-        profile={profile}
-        availablePortals={availablePortals}
-        portalCookie={portalCookie}
-      />
-      <main
-        id="site-main"
-        className="w-full max-w-full overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-0"
-      >
-        {children}
-      </main>
-      <ShopperBottomNav hide={hideBottomNav} />
-    </div>
+    <ShopperShellClient
+      hideBottomNav={hideBottomNav}
+      profile={profile}
+      availablePortals={availablePortals}
+      portalCookie={portalCookie}
+    >
+      {children}
+    </ShopperShellClient>
   )
 }

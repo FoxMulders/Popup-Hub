@@ -32,7 +32,7 @@ function obj(
   const base = { id, kind, x, y, width: w, height: h, rotation }
   switch (kind) {
     case 'booth':
-      return { ...base, kind: 'booth', accentColor: null }
+      return { ...base, kind: 'booth', accentColor: null, tablePurpose: 'guest' }
     case 'wall':
       return { ...base, kind: 'wall' }
     case 'door':
