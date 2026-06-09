@@ -203,6 +203,14 @@ export async function requestLayoutRecommend(
   }
 
   if (!res.ok) {
+    if (json.code === 'AI_UNAVAILABLE') {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          '[layout/recommend] OpenRouter is not configured — set OPENROUTER_API_KEY in .env.local'
+        )
+      }
+      throw new Error('AI is not configured — contact your administrator.')
+    }
     throw new Error(json.error ?? 'Layout recommendation request failed')
   }
 

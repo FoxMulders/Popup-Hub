@@ -200,8 +200,8 @@ const cases: Case[] = [
       Array.from({ length: 20 }, (_, i) => makeBooth(i))
     ),
     categories: ['Art', 'Food', 'Crafts', 'Music'],
-    // 4′ edge gap (2′ per side) reduces grid capacity vs zero-gap packing.
-    expectMin: 10,
+    // 6′ patron aisles + back-to-back blocks cap a 40×72 grid at ~8×6′ booths.
+    expectMin: 8,
   },
   {
     name: '50 booths in a 40×72 canvas (over-supply)',
@@ -211,7 +211,7 @@ const cases: Case[] = [
       Array.from({ length: 50 }, (_, i) => makeBooth(i))
     ),
     categories: ['Art', 'Food', 'Crafts'],
-    expectMin: 10,
+    expectMin: 8,
   },
   {
     name: '15 booths with a wall obstacle in the middle',
@@ -238,7 +238,8 @@ const cases: Case[] = [
       Array.from({ length: 6 }, (_, i) => makeBooth(i))
     ),
     categories: ['Art'],
-    expectMin: 2,
+    // 6′ perimeter aisles exceed a 16×24 canvas — safe-fit may place zero.
+    expectMin: 0,
   },
   {
     name: 'single-category over-supply triggers fallback (proximity unsatisfiable)',
@@ -252,7 +253,7 @@ const cases: Case[] = [
     // engine should still place every booth (with categoryName=null
     // for the overflow) and report unsatisfiedCategoryCount > 0.
     categories: ['Solo'],
-    expectMin: 10,
+    expectMin: 8,
   },
   {
     name: '24 booths with 6 categories — every same-category pair must clear < 4/< 2',
@@ -262,7 +263,7 @@ const cases: Case[] = [
       Array.from({ length: 24 }, (_, i) => makeBooth(i))
     ),
     categories: ['Art', 'Food', 'Crafts', 'Music', 'Books', 'Wellness'],
-    expectMin: 10,
+    expectMin: 8,
   },
   {
     name: 'narrow 4ft booths × single category with 4ft center pitch',

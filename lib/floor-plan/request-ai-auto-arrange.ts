@@ -301,6 +301,7 @@ export async function runAutoArrangeWithAi(
     droppedCount: Math.max(0, sourceBooths.length - placed.length),
     unsatisfiedCategoryCount: 0,
     overflowCount: 0,
+    removedOverlapCount: 0,
     roomId,
     aiOptimized: true,
     aiRationale: aiResult.rationale,

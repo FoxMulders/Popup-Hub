@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (layout editor — auto-arrange refactor, patron flow overlay, OpenRouter fix, not deployed)
+- **Auto-arrange grid (`auto-arrange.ts` + `deterministic-market-layout.ts`):** Back-to-back double-row blocks with mandatory **6′ patron aisles** (`PATRON_AISLE_MIN_FT`); strict collision via `placedObjectsOverlap` + expanded obstacle probes; removed greedy fallback packer that caused overlaps; unplaced booths stage to open slots or are omitted with `removedOverlapCount` + toast: *"Could only fit X booths safely. Removed Y overlapping items."*
+- **Patron flow overlay:** `lib/floor-plan/patron-aisle-overlay.ts` + `PatronAisleOverlay` (green dashed 6′ corridor bands); **Toggle Patron Flow** (Route icon) in ROOM & CANVAS utilities sidebar; combines with existing `PatronTrafficPathOverlay` when doors exist.
+- **OpenRouter:** `lib/ai/openrouter.ts` uses `getURL()` for `HTTP-Referer`; dev console hints when `OPENROUTER_API_KEY` missing; `/api/layout/recommend` + client handle `AI_UNAVAILABLE` without breaking the inspector panel.
+- **Env:** `GOOGLE_MAPS_API_KEY` added on Vercel production (2026-06-09). Client reads `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`; redeploy picks up maps/Places after key sync.
+- **Verify:** `npx tsx scripts/verify-auto-arrange.ts` (31 pass); layout editor → Auto-Arrange (grid) no overlapping booths; Toggle Patron Flow shows green aisles; Ask AI shows panel error cleanly when key unset (set `OPENROUTER_API_KEY` in `.env.local` for live feedback); `/coordinator/events/new` Step 1 Places autocomplete + `/discover` map pins after prod redeploy.
+
 ## Shipped this session (AI layout recommendation panel, deployed 2026-06-09)
 - **`app/api/layout/recommend/route.ts`:** Coordinator-gated POST; OpenRouter Claude 3.5 Sonnet (`layout_recommend` task) evaluates active-room layout for safety/traffic flow; returns `recommendedObjects`, `changelog`, `rationale`.
 - **`lib/floor-plan/ai-layout-recommend.ts` + `request-layout-recommend.ts`:** Server prompt/parse/clip; client payload build (room-local coords), fetch, merge back to global `FloorPlanDoc`.
@@ -118,6 +125,7 @@
 - Branch: `master` @ `a968ba6` (pushed to `origin/master`)
 - Last deploy commit: `a968ba6` - feat: A
 - Production: https://popuphub.ca - **build 55** | commit `d1dcb89` (handoff updated 2026-06-09 13:11)
+- **Env:** `GOOGLE_MAPS_API_KEY` configured on Vercel production (2026-06-09)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -925,6 +933,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - Vendor / shopper / auction flows unless asked
 
 ## Blockers
+- ~~**Google Maps API key missing on Vercel**~~ — `GOOGLE_MAPS_API_KEY` added (2026-06-09); smoke-test Places + discover map after redeploy.
 - **iOS build/sign:** Mac + Xcode required to archive and upload TestFlight build (shell scaffolded on Windows; `npm run mobile:sync` OK cross-platform).
 - **Supabase redirect:** `ca.popuphub.app://auth/callback` not yet registered in Supabase Auth dashboard.
 - **Universal links:** `apple-app-site-association` not on `popuphub.ca` yet.
@@ -945,20 +954,21 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **AI gateway:** All in-app LLM calls route through **OpenRouter** with task-based model selection in `lib/ai/tasks.ts` (direct Gemini/Groq deprecated)
 
 ## Next actions
-1. **Notification count smoke-test** — Sign in as user with vendor-only unread → Patron portal: nav badge + `/notifications` subtitle should show caught-up/0; switch to Vendor portal → count and list should agree
-2. **Dashboard toolbar-in-sidebar smoke-test** — `/coordinator/dashboard`: layout tools (Room / Patron / Vendor / Canvas) appear in left panel above curation queue; canvas fills full column height; **Full canvas** still shows toolbar strip; mobile shows toolbar above canvas
-2. **Room merge smoke-test** — Add two touching rooms, Shift+select both (or park flush), **Merge (2)** → single hall in sidebar, booths stay put, grid shows through stage outline
-3. **Room move/resize smoke-test** — Add room → confirm Select tool active, eight dots on perimeter, drag room interior/wall to move, drag corner/edge dot to resize; toolbar W×L readout updates
-4. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal
-5. **Commit + deploy** room merge + stage fill + prior local fixes when ready
-6. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
-7. **Passport smoke-test (public)** — bio + Instagram/Facebook/Website on public `/coordinators/[id]` and `/patrons/[id]`; stories strip still opens story viewer
-8. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
-9. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
-10. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
-11. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
-12. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
-13. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
+1. **Google Maps / Places smoke-test** — After prod redeploy with `GOOGLE_MAPS_API_KEY`: `/coordinator/events/new` Step 1 venue+address autocomplete shows predictions + map pin; `/discover` map renders event pins
+2. **Notification count smoke-test** — Sign in as user with vendor-only unread → Patron portal: nav badge + `/notifications` subtitle should show caught-up/0; switch to Vendor portal → count and list should agree
+3. **Dashboard toolbar-in-sidebar smoke-test** — `/coordinator/dashboard`: layout tools (Room / Patron / Vendor / Canvas) appear in left panel above curation queue; canvas fills full column height; **Full canvas** still shows toolbar strip; mobile shows toolbar above canvas
+4. **Room merge smoke-test** — Add two touching rooms, Shift+select both (or park flush), **Merge (2)** → single hall in sidebar, booths stay put, grid shows through stage outline
+5. **Room move/resize smoke-test** — Add room → confirm Select tool active, eight dots on perimeter, drag room interior/wall to move, drag corner/edge dot to resize; toolbar W×L readout updates
+6. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal
+7. **Commit + deploy** room merge + stage fill + prior local fixes when ready
+8. **Profile smoke-test** — `/profile`: legal name + private phone save to `profiles` only; notification toggles persist; Change Password modal; no org/website fields on profile
+9. **Passport smoke-test (public)** — bio + Instagram/Facebook/Website on public `/coordinators/[id]` and `/patrons/[id]`; stories strip still opens story viewer
+10. **Coordinator smoke-test** after deploy: manually place patron cluster near vendors → Patron Auto-Arrange should stay inside cluster box or show density toast without wiping tables; vendor auto-arrange should leave patrons fixed
+11. **Verify Clear all** on dashboard + wizard Step 3 after sign-in
+12. **Food truck draw** after deploy: parking-lot placement outside Main Hall; vendor auto-arrange should treat truck as obstacle
+13. **Mobile smoke-test** — coordinator event detail, payment methods, events/new wizard on phone
+14. If placement rejected, watch for toast (“Draw inside the room interior”) — click closer to room center after **Add room**
+15. **Pop stash** for brand loader: `git stash list` → apply on `feature/step-2-fix` or new branch
 
 ## How to start the next chat
 ```

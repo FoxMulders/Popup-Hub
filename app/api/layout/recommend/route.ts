@@ -28,6 +28,11 @@ export async function POST(request: Request) {
   }
 
   if (!isOpenRouterConfigured()) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[layout/recommend] OPENROUTER_API_KEY missing — AI layout feedback disabled'
+      )
+    }
     return NextResponse.json(
       { error: 'OpenRouter is not configured', code: 'AI_UNAVAILABLE' },
       { status: 503 }

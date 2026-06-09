@@ -320,6 +320,40 @@ export function PatronTrafficPathOverlay({
   )
 }
 
+interface PatronAisleOverlayProps {
+  corridors: ReadonlyArray<{
+    x: number
+    y: number
+    width: number
+    height: number
+  }> | null | undefined
+  pxPerFt: number
+}
+
+/** Semi-transparent 6′ patron aisle bands — grid circulation overlay. */
+export function PatronAisleOverlay({ corridors, pxPerFt }: PatronAisleOverlayProps) {
+  if (!corridors?.length) return null
+  return (
+    <g aria-label="Patron flow aisles" pointerEvents="none" className="patron-aisle-overlay">
+      {corridors.map((rect, i) => (
+        <rect
+          key={`patron-aisle-${i}`}
+          x={rect.x * pxPerFt}
+          y={rect.y * pxPerFt}
+          width={rect.width * pxPerFt}
+          height={rect.height * pxPerFt}
+          fill="#86efac"
+          fillOpacity={0.28}
+          stroke="#16a34a"
+          strokeWidth={1}
+          strokeDasharray="8 5"
+          rx={2}
+        />
+      ))}
+    </g>
+  )
+}
+
 export function SelectionOverlay({
   objects,
   selectedIds,

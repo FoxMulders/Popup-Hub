@@ -47,6 +47,7 @@ import {
 import {
   BOOTH_CORE_SEPARATION_CELLS,
   BOOTH_SAFETY_BUFFER_FT,
+  PATRON_AISLE_MIN_FT,
 } from '@/lib/booth-planner/layout-clearance-constants'
 
 export {
@@ -90,10 +91,12 @@ import {
 export const CHAIR_LENGTH_FT = 1.75
 /** Two patrons walking shoulder-to-shoulder ≈ 5 ft. */
 export const PATRON_PAIR_WIDTH_FT = 5
-/** Wall to back of vendor booth (2 chairs). */
-export const WALL_BUFFER_FT = CHAIR_LENGTH_FT * 2
+/** Wall to back of vendor booth — patron aisle minimum at perimeter. */
+export const GRID_WALL_INSET_FT = PATRON_AISLE_MIN_FT
 /** Back-to-back island gap (2 chairs back-to-back + 1 walking buffer). */
 export const BACK_TO_BACK_GAP_FT = CHAIR_LENGTH_FT * 3
+/** Wall to back of vendor booth (2 chairs) — non-grid modes. */
+export const WALL_BUFFER_FT = CHAIR_LENGTH_FT * 2
 /** Front-of-booth clearance — uses the patron-pair width. */
 export const FRONT_CLEARANCE_FT = PATRON_PAIR_WIDTH_FT
 /**
@@ -186,6 +189,11 @@ export interface AutoArrangeResult {
    * "wanted to place but the canvas had no room".
    */
   overflowCount: number
+  /**
+   * Booths that could not be placed without overlapping and were omitted
+   * from the canvas (safe-fit overflow).
+   */
+  removedOverlapCount: number
   /** Set when perimeter-only mode cannot fit all booths on the boundary. */
   perimeterCapacityError?: string
   /** Human-readable summary of the deterministic layout pass. */
@@ -287,6 +295,9 @@ interface PlacementContext {
   sourceBooths: BoothObject[]
   eventCategoryNames?: ReadonlyArray<string>
   gridSpacingFt: number
+  wallInsetFt: number
+  /** When true, booths may sit flush on perimeter edges (perimeter-only mode). */
+  allowPerimeterEdgeFlush?: boolean
   /** When set, perimeter slots orient booths against this frame. */
   perimeterOrientFrame?: RoomFrame
   overlapDoc?: FloorPlanDoc
@@ -309,6 +320,8 @@ function placeBoothsAtSlots(
     sourceBooths,
     eventCategoryNames,
     gridSpacingFt,
+    wallInsetFt,
+    allowPerimeterEdgeFlush = false,
     perimeterOrientFrame,
     overlapDoc,
   } = ctx
@@ -381,13 +394,25 @@ function placeBoothsAtSlots(
   }
 
   function candidateFits(candidate: Rect, probeBooth: BoothObject): boolean {
-    if (candidate.x + candidate.width > cw || candidate.y + candidate.height > cl) {
+    const placedRect = rotatedAabb(probeBooth)
+    if (placedRect.x + placedRect.width > cw + 1e-6 || placedRect.y + placedRect.height > cl + 1e-6) {
       return false
     }
-    if (candidate.x < WALL_BUFFER_FT - 1e-6 || candidate.y < WALL_BUFFER_FT - 1e-6) {
+    if (placedRect.x < -1e-6 || placedRect.y < -1e-6) {
       return false
     }
-    if (obstacles.some((r) => aabbOverlap(candidate, r))) return false
+    if (!allowPerimeterEdgeFlush) {
+      if (
+        placedRect.x < wallInsetFt - 1e-6 ||
+        placedRect.y < wallInsetFt - 1e-6 ||
+        placedRect.x + placedRect.width > cw - wallInsetFt + 1e-6 ||
+        placedRect.y + placedRect.height > cl - wallInsetFt + 1e-6
+      ) {
+        return false
+      }
+    }
+    const obstacleProbe = expandRectForClearance(placedRect, BOOTH_OBSTACLE_CLEARANCE_FT)
+    if (obstacles.some((r) => aabbOverlap(obstacleProbe, r))) return false
     for (const placed of newBooths) {
       if (placedObjectsOverlap(probeBooth, placed, overlapCtx)) return false
     }
@@ -461,28 +486,6 @@ function placeBoothsAtSlots(
     placeAtSlot(slot)
   }
 
-  if (nextSourceIdx < sourceBooths.length) {
-    const inset = WALL_BUFFER_FT
-    const remaining = sourceBooths.slice(nextSourceIdx)
-    const maxW = Math.max(boothW, ...remaining.map((b) => b.width))
-    const maxH = Math.max(boothH, ...remaining.map((b) => b.height))
-    const colPitch = maxW + BOOTH_PLACEMENT_GAP_FT
-    const rowPitch = maxH + BOOTH_PLACEMENT_GAP_FT
-    for (
-      let y = inset;
-      y + maxH <= cl - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
-      y += rowPitch
-    ) {
-      for (
-        let x = inset;
-        x + maxW <= cw - inset + 1e-6 && nextSourceIdx < sourceBooths.length;
-        x += colPitch
-      ) {
-        placeAtSlot({ x: roundHalf(x), y: roundHalf(y) })
-      }
-    }
-  }
-
   return { newBooths, placedRects, unsatisfiedCategoryCount }
 }
 
@@ -508,18 +511,100 @@ function boothOriginalPositionUsable(
   booth: BoothObject,
   cw: number,
   cl: number,
-  obstacles: Rect[]
+  obstacles: Rect[],
+  wallInsetFt = WALL_BUFFER_FT
 ): boolean {
   const rect = objectFootprintAabb(booth)
   if (
-    rect.x < WALL_BUFFER_FT - 1e-6 ||
-    rect.y < WALL_BUFFER_FT - 1e-6 ||
-    rect.x + rect.width > cw - WALL_BUFFER_FT + 1e-6 ||
-    rect.y + rect.height > cl - WALL_BUFFER_FT + 1e-6
+    rect.x < wallInsetFt - 1e-6 ||
+    rect.y < wallInsetFt - 1e-6 ||
+    rect.x + rect.width > cw - wallInsetFt + 1e-6 ||
+    rect.y + rect.height > cl - wallInsetFt + 1e-6
   ) {
     return false
   }
   return !obstacles.some((o) => aabbOverlap(rect, o))
+}
+
+function boothOverlapsPlaced(
+  booth: BoothObject,
+  placed: BoothObject[],
+  overlapDoc?: FloorPlanDoc
+): boolean {
+  if (placed.length === 0) return false
+  const overlapCtx = overlapDoc
+    ? {
+        canvasWidthFt: overlapDoc.canvasWidthFt,
+        canvasLengthFt: overlapDoc.canvasLengthFt,
+        gridSpacingFt: overlapDoc.gridSpacingFt,
+        snapFt: overlapDoc.snapFt,
+        objects: overlapDoc.objects,
+        rooms: overlapDoc.rooms ?? [],
+        objectRoom: overlapDoc.objectRoom,
+      }
+    : undefined
+  return placed.some((p) => placedObjectsOverlap(booth, p, overlapCtx))
+}
+
+function findStagingPosition(
+  booth: BoothObject,
+  placedRects: Rect[],
+  placedBooths: BoothObject[],
+  cw: number,
+  cl: number,
+  wallInsetFt: number,
+  obstacles: Rect[],
+  overlapDoc?: FloorPlanDoc
+): { x: number; y: number } | null {
+  const w = booth.width
+  const h = booth.height
+  const pitchX = w + BOOTH_PLACEMENT_GAP_FT
+  const pitchY = h + BOOTH_PLACEMENT_GAP_FT
+  const overlapCtx = overlapDoc
+    ? {
+        canvasWidthFt: overlapDoc.canvasWidthFt,
+        canvasLengthFt: overlapDoc.canvasLengthFt,
+        gridSpacingFt: overlapDoc.gridSpacingFt,
+        snapFt: overlapDoc.snapFt,
+        objects: overlapDoc.objects,
+        rooms: overlapDoc.rooms ?? [],
+        objectRoom: overlapDoc.objectRoom,
+      }
+    : undefined
+
+  function slotIsFree(x: number, y: number): boolean {
+    const rect: Rect = { x: roundHalf(x), y: roundHalf(y), width: w, height: h }
+    if (
+      rect.x < wallInsetFt - 1e-6 ||
+      rect.y < wallInsetFt - 1e-6 ||
+      rect.x + rect.width > cw - wallInsetFt + 1e-6 ||
+      rect.y + rect.height > cl - wallInsetFt + 1e-6
+    ) {
+      return false
+    }
+    if (obstacles.some((o) => aabbOverlap(rect, o))) return false
+    if (placedRects.some((r) => aabbOverlap(rect, r))) return false
+    const probe: BoothObject = { ...booth, x: rect.x, y: rect.y, rotation: 0 }
+    if (placedBooths.some((p) => placedObjectsOverlap(probe, p, overlapCtx))) {
+      return false
+    }
+    return true
+  }
+
+  for (
+    let y = wallInsetFt;
+    y + h <= cl - wallInsetFt + 1e-6;
+    y += pitchY
+  ) {
+    for (
+      let x = wallInsetFt;
+      x + w <= cw - wallInsetFt + 1e-6;
+      x += pitchX
+    ) {
+      if (slotIsFree(x, y)) return { x: roundHalf(x), y: roundHalf(y) }
+    }
+  }
+  return null
 }
 
 function retainUnplacedVendorBooths(
@@ -527,17 +612,56 @@ function retainUnplacedVendorBooths(
   placed: BoothObject[],
   cw: number,
   cl: number,
-  obstacles: Rect[]
-): { merged: BoothObject[]; unmovedCount: number } {
+  obstacles: Rect[],
+  wallInsetFt: number,
+  overlapDoc?: FloorPlanDoc
+): { merged: BoothObject[]; unmovedCount: number; removedCount: number } {
   const placedIds = new Set(placed.map((b) => b.id))
-  const retained = sourceBooths.filter(
-    (b) =>
-      !placedIds.has(b.id) &&
-      boothOriginalPositionUsable(b, cw, cl, obstacles)
-  )
+  const placedRects = placed.map((b) => rotatedAabb(b))
+  const retained: BoothObject[] = []
+  let removedCount = 0
+
+  for (const booth of sourceBooths) {
+    if (placedIds.has(booth.id)) continue
+
+    const overlapsPlaced = boothOverlapsPlaced(booth, placed, overlapDoc)
+    if (
+      !overlapsPlaced &&
+      boothOriginalPositionUsable(booth, cw, cl, obstacles, wallInsetFt)
+    ) {
+      retained.push(booth)
+      placedRects.push(rotatedAabb(booth))
+      continue
+    }
+
+    const staged = findStagingPosition(
+      booth,
+      placedRects,
+      [...placed, ...retained],
+      cw,
+      cl,
+      wallInsetFt,
+      obstacles,
+      overlapDoc
+    )
+    if (staged) {
+      const stagedBooth: BoothObject = {
+        ...booth,
+        x: staged.x,
+        y: staged.y,
+        rotation: 0,
+      }
+      retained.push(stagedBooth)
+      placedRects.push(rotatedAabb(stagedBooth))
+    } else {
+      removedCount++
+    }
+  }
+
   return {
     merged: [...placed, ...retained],
     unmovedCount: sourceBooths.length - placed.length,
+    removedCount,
   }
 }
 
@@ -556,6 +680,7 @@ interface VendorAutoArrangePassResult {
   vendorDroppedCount: number
   unsatisfiedCategoryCount: number
   overflowCount: number
+  removedOverlapCount: number
   perimeterCapacityError?: string
   layoutExplanation?: string
 }
@@ -1173,6 +1298,7 @@ function autoArrangeVendorBooths(
       vendorDroppedCount: 0,
       unsatisfiedCategoryCount: 0,
       overflowCount,
+      removedOverlapCount: 0,
     }
   }
 
@@ -1180,11 +1306,36 @@ function autoArrangeVendorBooths(
   const cl = doc.canvasLengthFt
   const gridSpacingFt = doc.gridSpacingFt > 0 ? doc.gridSpacingFt : 1
   const snapFt = doc.snapFt > 0 ? doc.snapFt : 0.5
+  const wallInsetFt =
+    mode === 'grid' || mode === 'staggered'
+      ? GRID_WALL_INSET_FT
+      : WALL_BUFFER_FT
+
+  const placementCtx = {
+    cw,
+    cl,
+    boothW: roundHalf(
+      [...sourceBooths.map((b) => b.width)].sort((a, b) => a - b)[
+        Math.floor(sourceBooths.length / 2)
+      ] ?? 6
+    ),
+    boothH: roundHalf(
+      [...sourceBooths.map((b) => b.height)].sort((a, b) => a - b)[
+        Math.floor(sourceBooths.length / 2)
+      ] ?? 5
+    ),
+    obstacles,
+    sourceBooths,
+    eventCategoryNames,
+    gridSpacingFt,
+    wallInsetFt,
+    overlapDoc: doc,
+  }
 
   const widths = [...sourceBooths.map((b) => b.width)].sort((a, b) => a - b)
   const heights = [...sourceBooths.map((b) => b.height)].sort((a, b) => a - b)
-  const boothW = roundHalf(widths[Math.floor(widths.length / 2)] ?? 6)
-  const boothH = roundHalf(heights[Math.floor(heights.length / 2)] ?? 5)
+  const boothW = placementCtx.boothW
+  const boothH = placementCtx.boothH
 
   const doors = otherObjects.filter((o) => o.kind === 'door')
   const entranceDoor =
@@ -1215,35 +1366,32 @@ function autoArrangeVendorBooths(
         vendorDroppedCount: sourceBooths.length,
         unsatisfiedCategoryCount: 0,
         overflowCount,
+        removedOverlapCount: 0,
       }
     }
     const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(
       perimeterSlots,
       {
-        cw,
-        cl,
-        boothW,
-        boothH,
-        obstacles,
-        sourceBooths,
-        eventCategoryNames,
-        gridSpacingFt,
+        ...placementCtx,
+        allowPerimeterEdgeFlush: true,
         perimeterOrientFrame,
-        overlapDoc: doc,
       }
     )
-    const { merged, unmovedCount } = retainUnplacedVendorBooths(
+    const { merged, unmovedCount, removedCount } = retainUnplacedVendorBooths(
       sourceBooths,
       newBooths,
       cw,
       cl,
-      obstacles
+      obstacles,
+      wallInsetFt,
+      doc
     )
     return {
       newVendorBooths: merged,
       vendorDroppedCount: unmovedCount,
       unsatisfiedCategoryCount,
       overflowCount,
+      removedOverlapCount: removedCount,
     }
   }
 
@@ -1258,7 +1406,7 @@ function autoArrangeVendorBooths(
     layoutMode,
     aisleWidthFt,
     tableEdgeGapFt: BOOTH_PLACEMENT_GAP_FT,
-    wallInsetFt: WALL_BUFFER_FT,
+    wallInsetFt,
     snapFt,
     entrance,
     restrictedZones: restrictedZonesFromObstacles(obstacles),
@@ -1270,6 +1418,7 @@ function autoArrangeVendorBooths(
       vendorDroppedCount: sourceBooths.length,
       unsatisfiedCategoryCount: 0,
       overflowCount,
+      removedOverlapCount: 0,
       perimeterCapacityError: deterministic.error,
     }
   }
@@ -1307,31 +1456,27 @@ function autoArrangeVendorBooths(
   })
 
   const { newBooths, unsatisfiedCategoryCount } = placeBoothsAtSlots(slots, {
-    cw,
-    cl,
-    boothW,
-    boothH,
-    obstacles,
-    sourceBooths,
-    eventCategoryNames,
-    gridSpacingFt,
+    ...placementCtx,
+    allowPerimeterEdgeFlush: layoutMode === 'perimeter',
     perimeterOrientFrame:
       layoutMode === 'perimeter' ? perimeterOrientFrame : undefined,
-    overlapDoc: doc,
   })
 
-  const { merged, unmovedCount } = retainUnplacedVendorBooths(
+  const { merged, unmovedCount, removedCount } = retainUnplacedVendorBooths(
     sourceBooths,
     newBooths,
     cw,
     cl,
-    obstacles
+    obstacles,
+    wallInsetFt,
+    doc
   )
   return {
     newVendorBooths: merged,
     vendorDroppedCount: unmovedCount,
     unsatisfiedCategoryCount,
     overflowCount,
+    removedOverlapCount: removedCount,
     layoutExplanation: deterministic.explanation,
   }
 }
@@ -1362,6 +1507,7 @@ function mergeAutoArrangeResult(
       : vendorPass.vendorDroppedCount + guestPass.dropped.length,
     unsatisfiedCategoryCount: vendorPass.unsatisfiedCategoryCount,
     overflowCount: vendorPass.overflowCount,
+    removedOverlapCount: vendorPass.removedOverlapCount,
     perimeterCapacityError: vendorPass.perimeterCapacityError,
     layoutExplanation: vendorPass.layoutExplanation,
     patronArrangeAborted: guestPass.aborted
@@ -1419,6 +1565,7 @@ export function autoArrange(
       droppedCount: 0,
       unsatisfiedCategoryCount: 0,
       overflowCount: 0,
+      removedOverlapCount: 0,
     }
   }
 
@@ -1443,6 +1590,7 @@ export function autoArrange(
           vendorDroppedCount: 0,
           unsatisfiedCategoryCount: 0,
           overflowCount: 0,
+          removedOverlapCount: 0,
         }
       : autoArrangeVendorBooths(doc, sourceBooths, {
           mode,
@@ -1555,6 +1703,7 @@ export function autoArrangeInRoom(
       droppedCount: 0,
       unsatisfiedCategoryCount: 0,
       overflowCount: 0,
+      removedOverlapCount: 0,
       roomId,
     }
   }

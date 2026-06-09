@@ -15,6 +15,7 @@ import {
   DraftPreview,
   MarqueePreview,
   PatronTrafficPathOverlay,
+  PatronAisleOverlay,
   SelectionChrome,
   SelectionRotateHandles,
 } from './canvas-overlays'
@@ -124,6 +125,13 @@ export interface FloorPlanCanvasProps {
   autoArrangeMode?: AutoArrangeMode
   /** Computed patron viewing path (feet) — dotted overlay when set. */
   patronTrafficPath?: ReadonlyArray<{ x: number; y: number }> | null
+  /** 6′ patron aisle corridor rects (feet) — green overlay when set. */
+  patronAisleCorridors?: ReadonlyArray<{
+    x: number
+    y: number
+    width: number
+    height: number
+  }> | null
   /** Command center: higher zoom floor so drags feel less jumpy when framed out. */
   commandCenterViewport?: boolean
   /** Keep draw tool armed between placements; show hover ghost preview. */
@@ -175,6 +183,7 @@ export function FloorPlanCanvas({
   onVendorDrop,
   autoArrangeMode = 'grid',
   patronTrafficPath = null,
+  patronAisleCorridors = null,
   commandCenterViewport = false,
   scrollHost = true,
   stickyDrawPlacement = false,
@@ -750,6 +759,7 @@ export function FloorPlanCanvas({
             ghost={isGhostPreview}
           />
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
+          <PatronAisleOverlay corridors={patronAisleCorridors} pxPerFt={pxPerFt} />
           <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />
           {editingObj ? (
             <InlineLabelEditor

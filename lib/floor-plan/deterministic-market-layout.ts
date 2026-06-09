@@ -1,3 +1,5 @@
+import { PATRON_AISLE_MIN_FT } from '@/lib/booth-planner/layout-clearance-constants'
+
 /**
  * Deterministic Computational Geometry & Market Layout Engine — PopupHub.ca
  *
@@ -117,8 +119,8 @@ export type DeterministicMarketLayoutResult =
   | DeterministicMarketLayoutSuccess
   | DeterministicMarketLayoutFailure
 
-export const DEFAULT_AISLE_WIDTH_FT = 8
-export const DEFAULT_WALL_INSET_FT = 3.5
+export const DEFAULT_AISLE_WIDTH_FT = PATRON_AISLE_MIN_FT
+export const DEFAULT_WALL_INSET_FT = PATRON_AISLE_MIN_FT
 /** Default edge-to-edge gap between table footprints in grid/staggered columns (ft). */
 export const TABLE_EDGE_GAP_FT = 2
 
@@ -276,6 +278,109 @@ function staggerOffsetX(rowIndex0: number, tw: number): number {
   return rowNumber % 2 === 0 ? tw / 2 : 0
 }
 
+/** Edge-to-edge gap between booth backs in a double-row block (ft). */
+const BACK_TO_BACK_ROW_GAP_FT = 0
+
+function blockRowY(
+  entrance: MarketLayoutPoint | undefined,
+  ch: number,
+  inset: number,
+  blockHeight: number,
+  blockIndex0: number,
+  blockStep: number
+): number {
+  const entranceOnTop = entrance == null ? true : entrance.y <= ch / 2
+  if (entranceOnTop) {
+    return inset + blockIndex0 * blockStep
+  }
+  return ch - inset - blockHeight - blockIndex0 * blockStep
+}
+
+/**
+ * Grid mode — double-row back-to-back blocks with straight patron aisles
+ * between blocks and a wall inset for perimeter circulation.
+ */
+function buildGridBackToBackSlots(
+  cw: number,
+  ch: number,
+  tw: number,
+  th: number,
+  aisleFt: number,
+  inset: number,
+  entrance: MarketLayoutPoint | undefined,
+  restrictedZones: ReadonlyArray<MarketLayoutRect>,
+  tableEdgeGapFt: number
+): SlotCandidate[] {
+  const blockHeight = th * 2 + BACK_TO_BACK_ROW_GAP_FT
+  const blockStep = blockHeight + aisleFt
+  const colStep = tw + tableEdgeGapFt
+  const minX = inset
+  const slots: SlotCandidate[] = []
+  let blockIndex0 = 0
+
+  while (blockIndex0 < 5000) {
+    const blockY = snapToTableGrid(
+      blockRowY(entrance, ch, inset, blockHeight, blockIndex0, blockStep),
+      th,
+      inset
+    )
+    const y0 = blockY
+    const y1 = blockY + th + BACK_TO_BACK_ROW_GAP_FT
+
+    if (y1 + th > ch - inset + 1e-6 || y0 < inset - 1e-6) {
+      if (blockIndex0 === 0) break
+      const entranceOnTop = entrance == null ? true : entrance.y <= ch / 2
+      if (entranceOnTop && y1 + th > ch - inset + 1e-6) break
+      if (!entranceOnTop && y0 < inset - 1e-6) break
+      if (blockIndex0 > 0) break
+    }
+
+    let colIndex0 = 0
+    while (minX + colIndex0 * colStep + tw <= cw - inset + 1e-6) {
+      const x = snapToTableGrid(minX + colIndex0 * colStep, tw, minX)
+      for (const [y, rowInBlock] of [
+        [y0, 0],
+        [y1, 1],
+      ] as const) {
+        const rect = tableRect(x, y, tw, th, 0)
+        if (
+          fitsBounds(rect, cw, ch, inset) &&
+          !hitsRestricted(rect, restrictedZones)
+        ) {
+          slots.push({
+            x,
+            y,
+            row: blockIndex0 * 2 + rowInBlock,
+            column: colIndex0,
+            rotation: 0,
+          })
+        }
+      }
+      colIndex0++
+    }
+
+    blockIndex0++
+    const nextBlockY = blockRowY(
+      entrance,
+      ch,
+      inset,
+      blockHeight,
+      blockIndex0,
+      blockStep
+    )
+    if (entrance == null || entrance.y <= ch / 2) {
+      if (nextBlockY + blockHeight > ch - inset + 1e-6) break
+    } else if (nextBlockY < inset - 1e-6) {
+      break
+    }
+  }
+
+  return slots.sort((a, b) => {
+    if (a.row !== b.row) return a.row - b.row
+    return a.column - b.column
+  })
+}
+
 function buildInteriorSlots(
   cw: number,
   ch: number,
@@ -288,6 +393,20 @@ function buildInteriorSlots(
   restrictedZones: ReadonlyArray<MarketLayoutRect>,
   tableEdgeGapFt: number
 ): SlotCandidate[] {
+  if (mode === 'grid') {
+    return buildGridBackToBackSlots(
+      cw,
+      ch,
+      tw,
+      th,
+      aisleFt,
+      inset,
+      entrance,
+      restrictedZones,
+      tableEdgeGapFt
+    )
+  }
+
   const rowStep = th + aisleFt
   const colStep = tw + tableEdgeGapFt
   const minX = inset
@@ -313,9 +432,9 @@ function buildInteriorSlots(
 
     while (minX + xOffset + colIndex0 * colStep + tw <= cw - inset + 1e-6) {
       const x =
-        mode === 'grid'
-          ? snapToTableGrid(minX + colIndex0 * colStep, tw, minX)
-          : minX + xOffset + colIndex0 * colStep
+        mode === 'staggered'
+          ? minX + xOffset + colIndex0 * colStep
+          : snapToTableGrid(minX + colIndex0 * colStep, tw, minX)
       const rect = tableRect(x, y, tw, th, 0)
       if (
         fitsBounds(rect, cw, ch, inset) &&
@@ -573,8 +692,10 @@ function buildExplanation(
     )
   }
   if (layoutMode === 'grid') {
+    const blockHeight = th * 2 + BACK_TO_BACK_ROW_GAP_FT
+    const blockStep = blockHeight + aisleFt
     parts.push(
-      `Rows front→back along Y; columns left→right along X; row pitch ${rowStep} ft.`
+      `Back-to-back double-row blocks; block pitch ${blockStep} ft (${aisleFt} ft patron aisles between blocks).`
     )
   } else if (layoutMode === 'staggered') {
     parts.push(

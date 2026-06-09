@@ -60,6 +60,7 @@ import {
   requestLayoutRecommend,
 } from '@/lib/floor-plan/request-layout-recommend'
 import { usePathfinding } from '@/components/coordinator/floor-plan-v2/hooks/use-pathfinding'
+import { computePatronAisleOverlayForRoom } from '@/lib/floor-plan/patron-aisle-overlay'
 import { legacyRoomsFromDoc } from '@/components/coordinator/floor-plan-v2/state/legacy-bridge'
 import { hydrateFloorPlanDocForWizardQa, layoutHasPlacedGeometry } from '@/src/qa_review/lib/floor-plan/layout-hydration-wizard_qa'
 import { reconcileCanvasExtents } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
@@ -502,6 +503,10 @@ function FloorPlanV2Workspace({
     enabled: patronPathEnabled,
     cellFt: store.doc.snapFt,
   })
+  const patronAisleCorridors = useMemo(() => {
+    if (!patronPathEnabled || !activeRoomId) return null
+    return computePatronAisleOverlayForRoom(store.doc, activeRoomId)
+  }, [activeRoomId, patronPathEnabled, store.doc])
   const [rawSelectedRoomId, setSelectedRoomId] = useState<string | null>(null)
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(
     () => new Set()
@@ -1498,12 +1503,17 @@ function FloorPlanV2Workspace({
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Layout recommendation failed'
-      if (message.includes('OpenRouter') || message.includes('not configured')) {
+      if (message.includes('not configured')) {
         setAiAssessmentError('AI is not configured — contact your administrator.')
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            '[layout/recommend] Set OPENROUTER_API_KEY in .env.local to enable AI layout feedback'
+          )
+        }
       } else {
         setAiAssessmentError(message)
+        toast.error(message)
       }
-      toast.error(message)
     } finally {
       setAiAssessmentLoading(false)
     }
@@ -1559,8 +1569,14 @@ function FloorPlanV2Workspace({
       return
     }
     store.replaceObjects(result.doc.objects)
+    const removed = result.removedOverlapCount
     const overflow = result.overflowCount + result.droppedCount
-    if (overflow > 0) {
+    if (removed > 0) {
+      toast.warning(
+        `Could only fit ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} safely. Removed ${removed} overlapping item${removed === 1 ? '' : 's'}.`,
+        { duration: 5500 }
+      )
+    } else if (overflow > 0) {
       toast.warning(
         `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'}; ${overflow} could not fit in the room.`,
         { duration: 4500 }
@@ -1591,8 +1607,8 @@ function FloorPlanV2Workspace({
     setPatronPathEnabled((enabled) => {
       const next = !enabled
       if (next) {
-        toast.message('Patron path overlay on — add entry/exit doors for traffic routing.', {
-          duration: 2800,
+        toast.message('Patron flow overlay on — green bands show 6′ walking aisles.', {
+          duration: 3200,
         })
       }
       return next
@@ -2203,6 +2219,7 @@ function FloorPlanV2Workspace({
                   onVendorDrop={onVendorDrop}
                   autoArrangeMode={vendorAutoArrangeMode}
                   patronTrafficPath={patronTrafficPath}
+                  patronAisleCorridors={patronAisleCorridors}
                   onProximityViolation={(info) => {
                     toast.error(
                       `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
@@ -2441,6 +2458,7 @@ function FloorPlanV2Workspace({
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={vendorAutoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
+                    patronAisleCorridors={patronAisleCorridors}
                     onProximityViolation={(info) => {
                       toast.error(
                         `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,

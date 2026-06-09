@@ -1,4 +1,5 @@
 import { resolveOpenRouterApiKey } from '@/lib/ai/env'
+import { getURL } from '@/lib/url/public-app-url'
 import { isProviderLimitError } from '@/lib/ai/provider-limit-error'
 import {
   resolveFallbackModelForTask,
@@ -7,8 +8,11 @@ import {
 } from '@/lib/ai/tasks'
 
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const OPENROUTER_SITE_URL = 'https://popuphub.ca'
 const OPENROUTER_APP_NAME = 'Popup Hub'
+
+function openRouterRefererUrl(): string {
+  return getURL()
+}
 
 export type OpenRouterMessageContent =
   | string
@@ -45,7 +49,7 @@ function openRouterHeaders(apiKey: string): HeadersInit {
   return {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
-    'HTTP-Referer': OPENROUTER_SITE_URL,
+    'HTTP-Referer': openRouterRefererUrl(),
     'X-Title': OPENROUTER_APP_NAME,
   }
 }
@@ -58,6 +62,11 @@ async function callOpenRouterChat(input: {
 }): Promise<string> {
   const apiKey = resolveOpenRouterApiKey()
   if (!apiKey) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[openrouter] OPENROUTER_API_KEY is not set — add it to .env.local to enable AI features'
+      )
+    }
     throw new OpenRouterConfigError('OPENROUTER_API_KEY is not configured')
   }
 

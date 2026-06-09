@@ -1135,6 +1135,24 @@ export function renderCanvasCommandBarBlock(
               role="group"
               aria-label="Canvas view options"
             >
+              {ctx.onPatronPathToggle ? (
+                <CommandButton
+                  onClick={ctx.onPatronPathToggle}
+                  title={
+                    ctx.patronPathEnabled
+                      ? 'Hide patron flow aisles (6′ paths)'
+                      : 'Toggle patron flow — show 6′ walking aisles'
+                  }
+                  active={ctx.patronPathEnabled}
+                  className={
+                    ctx.patronPathEnabled
+                      ? 'bg-emerald-200 text-emerald-950 hover:bg-emerald-200'
+                      : 'text-emerald-800 hover:bg-emerald-50'
+                  }
+                >
+                  <Route className="h-3.5 w-3.5" />
+                </CommandButton>
+              ) : null}
               {ctx.onShowLabelsChange ? (
                 <CommandButton
                   onClick={() => ctx.onShowLabelsChange!(!ctx.showLabels)}
