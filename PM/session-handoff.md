@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (Square OAuth blank-page hardening, not deployed)
+## Shipped this session (Square OAuth blank-page hardening, deployed 2026-06-09)
 - **`lib/square/app-credentials.ts`:** `resolveSquareApplicationId()` now reads `NEXT_PUBLIC_SQUARE_CLIENT_ID` and `SQUARE_SANDBOX_CLIENT_ID` (sandbox) in addition to existing keys; rejects literal `"undefined"` / `"null"` strings.
 - **`lib/square/connect-url.ts`:** `buildSquareOAuthAuthorizeUrl` validates `client_id`, `redirect_uri`, and `state` before building; `tryBuildSquareOAuthAuthorizeUrl` catches/logs failures instead of crashing the page.
 - **`app/api/square/oauth/callback/route.ts`:** Top-level try/catch; safe redirect base from `NEXT_PUBLIC_APP_URL` or request origin (fixes `Invalid URL` crash when env unset); JSON 500 fallback when redirect impossible.
@@ -10,7 +10,7 @@
 - **`connect-button.tsx`:** Client-side authorize URL validation blocks navigation when `client_id`/`state` missing; logs to console.
 - **Verify:** Coordinator → Payment Methods → with valid env, Connect button href includes non-empty `client_id`; with missing app id, inline config message (not blank page); OAuth callback errors redirect to `/coordinator/payment-methods?error=…`.
 
-## Shipped this session (market wizard draft save RLS fix, not deployed)
+## Shipped this session (market wizard draft save RLS fix, deployed 2026-06-09)
 - **Root cause:** Production wizard called `persistEventDraft` from the browser Supabase client. `coordinator_id` came from a server-rendered prop, but RLS requires `auth.uid() = coordinator_id` on the JWT attached to the insert — a mismatch (or missing client session) triggers Postgres `42501`.
 - **`lib/wizard/wizard-autosave.ts`:** `resolveCoordinatorIdForPersist()` reads the live session via `auth.getUser()` for direct client saves. Added `persistEventDraftViaApi()` so browser autosave posts to a server route. `persistEventDraft()` accepts `{ coordinatorId }` for server-verified writes with the admin client.
 - **`app/api/coordinator/events/draft/route.ts`:** POST handler authenticates via cookie-backed `createClient()`, verifies coordinator role, checks draft ownership on update, then persists with `createAdminClient()` and explicit `coordinator_id: user.id`.
@@ -57,9 +57,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `384f571` (pushed to `origin/master`)
-- Last deploy commit: `384f571` - feat: i
-- Production: https://popuphub.ca - **build 50** | commit `0de1074` (handoff updated 2026-06-09 09:30)
+- Branch: `master` @ `4e5935c` (pushed to `origin/master`)
+- Last deploy commit: `4e5935c` - feat: ship 2 session updates (Square OAuth blank-page hardening; market wizard draft save RLS fix)
+- Production: https://popuphub.ca - **build 51** | commit `4a1b416` (handoff updated 2026-06-09 09:49)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -436,7 +436,7 @@
 
 
 ## Last deploy
-- 2026-06-09 09:30 - Deploy via deploy-popuphub.ps1 - `feat: i` (384f571)
+- 2026-06-09 09:49 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (Square OAuth blank-page hardening; market wizard draft save RLS fix)` (4e5935c)
 
 
 ## Goal
