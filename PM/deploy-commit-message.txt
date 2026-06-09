@@ -1,1 +1,0 @@
-feat: ship 7 session updates (spatial layout editor â€” save draft, auto-arrange, patron path; spatial layout â€” vendor-only capacity counting; vendor table wall orientation fix; layout designer â€” left sidebar, portal tooltips, auto-arrange fix; +3 more)

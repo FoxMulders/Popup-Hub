@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (spatial layout editor — save draft, auto-arrange, patron path, not deployed)
+## Shipped this session (spatial layout editor — save draft, auto-arrange, patron path, deployed 2026-06-09)
 - **Save draft:** `SpatialLayoutToolbar` + canvas utilities row — **Save draft** persists `booth_layouts` via `persistLayoutDraft` without publishing the event; **Save & deploy** unchanged. Loading states + success toasts on both paths.
 - **Auto-arrange grid:** `floor-plan-v2.tsx` grid mode uses `autoArrangeInRoom` (reads active room bounds e.g. Main Hall 50′×50′, distributes vendor booths with aisle gaps). Traffic-flow door prereqs only gate staggered/perimeter/AI modes — grid works immediately with booths placed.
 - **Patron path tool:** Route icon in shape selector toggles `PatronTrafficPathOverlay` (dashed sky-blue walk path via `usePathfinding`). Wired in production `floor-plan-v2` + `floor-plan-v2_wizard_qa` canvas.
@@ -10,7 +10,7 @@
 - **Sidebar utilities fix:** Left-rail `utilities` block restored fullscreen (Expand icon), labels toggle, save draft, and save deploy — previously only zoom was rendered in `sidebarLayout` mode.
 - **Verify:** `/coordinator/events/[id]/layout` → Save draft (no deploy) → reload confirms layout; Auto-Arrange Floor Plan (grid) spreads overlapping vendor booths; Patron Path toggle shows/hides walk overlay.
 
-## Shipped this session (spatial layout — vendor-only capacity counting, not deployed)
+## Shipped this session (spatial layout — vendor-only capacity counting, deployed 2026-06-09)
 - **Root cause:** `placedCount` used `store.doc.objects.length`, so walls, doors, exits, and other structural fixtures inflated the "X of Y max" badge and canvas object counter.
 - **`floor-plan-v2.tsx`:** `placedCount` / `onPlacedCountChange` now use `vendorBoothsInRoom(store.doc, activeRoomId).length` — vendor booths only, scoped to the active room (matches Step 2 `layoutCapacity`). Canvas status badge label → "vendor booths placed".
 - **`property-inspector.tsx`:** Multi-select header shows "N Vendors Selected" when vendor booths are in the selection; structural/non-vendor picks are called out in the subtitle instead of inflating the vendor tally.
@@ -18,7 +18,7 @@
 - **Note:** Structural assets already use distinct `kind` values (`wall`, `door`, `emergency_exit`, etc.) — no schema change required.
 - **Verify:** `/coordinator/events/[id]/layout` → place vendor booths + walls/doors → toolbar badge counts vendors only; multi-select 39 booths + 1 wall → "39 Vendors Selected".
 
-## Shipped this session (vendor table wall orientation fix, not deployed)
+## Shipped this session (vendor table wall orientation fix, deployed 2026-06-09)
 - **Root cause:** Wall orientation only updated `rotation` without normalizing footprint (`width`/`height`), so a table stored as 2×6 could present its short edge to the wall. Auto-pack and placement preview also skipped orientation when outside the 3′ snap threshold.
 - **`perimeter-booth-orientation.ts`:** Exported `boothSpanAndDepth()` (uses `tableLengthFt` when set) and `orientBoothToNearestWallEdge()` — long back edge toward nearest wall, center preserved.
 - **`vendor-booth-placement.ts`:** Added `orientVendorBoothToNearestWall()`; `vendorBoothPerimeterSnapPatch()` now snap-or-orients on every draw/drag commit.
@@ -27,19 +27,19 @@
 - **`auto-arrange.ts`:** Direct perimeter slots normalize span×depth before rotation.
 - **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts` — place/drag vendor table near any wall → long edge flush, opening inward; interior placement still auto-rotates toward closest wall.
 
-## Shipped this session (layout designer — left sidebar, portal tooltips, auto-arrange fix, not deployed)
+## Shipped this session (layout designer — left sidebar, portal tooltips, auto-arrange fix, deployed 2026-06-09)
 - **`tooltip-wrapper.tsx`:** Tooltips portaled to `document.body` (escapes `overflow: hidden` on layout tools rail).
 - **`floor-plan-v2_wizard_qa.tsx`:** Left sidebar `bg-white` + `border-r`; wired `handleAutoArrangeFloorPlan` via `autoArrangeInRoom` (reads active room e.g. Main Hall 50′×50′, grid-packs placed objects).
 - **Verify:** `/coordinator/events/[id]/layout` → tools in left column; hover tooltips not clipped; Auto-Arrange Floor Plan moves booths when objects exist.
 
-## Shipped this session (spatial layout editor — left panel section headers + rigid toolbar, not deployed)
+## Shipped this session (spatial layout editor — left panel section headers + rigid toolbar, deployed 2026-06-09)
 - **`toolbar-static-layout.ts`:** Left-rail sidebar regrouped into **ROOM & CANVAS**, **SHAPES & BOOTHS**, and **ALIGNMENT & SPACING** (new `vendor-sizes` block for 5′–20′ grid chips).
 - **`canvas-toolbar-static.tsx` + `canvas-toolbar-static_qa.tsx`:** Section headers (`text-xs font-semibold text-muted-foreground`), `border-t` dividers, `shrink-0` section shells.
 - **`canvas-command-bar-blocks.tsx` + `_qa.tsx`:** Icon rows `flex-nowrap`; zoom % fixed width; selection metrics in absolute badge; labels toggle in alignment section.
 - **`floor-plan-v2_wizard_qa.tsx`:** `/coordinator/events/[id]/layout` uses a fixed 300px left **Layout tools** rail (`staticLayout` + `sidebarLayout`); status badges use fixed-height slots so counts do not shift tool rows.
 - **Verify:** Open event layout editor → left panel shows three labeled sections; place/select objects → toolbar icon rows do not wrap or jump.
 
-## Shipped this session (Step 2 Capacity & Pricing layout refactor, not deployed)
+## Shipped this session (Step 2 Capacity & Pricing layout refactor, deployed 2026-06-09)
 - **`wizard-step-capacity.tsx`:** Two-column desktop layout — left **Physical & pricing setup** (floor stats + booth fee), right **Inventory & category limits** (suggested caps, MLM guard, accordion category editor). Removed `TableSizeSelector` from Step 2 (table size still driven via wizard context / floor plan).
 - **`smart-populate-booth-caps.tsx`:** Floor math breakdown (gross floor, aisle subtractions, etc.) moved into a hover tooltip on **Usable floor** via `FloorCalculationBreakdown`.
 - **`category-limit-editor.tsx`:** Flat 40-row table replaced with collapsible accordions grouped by broad type (Makers & Crafts, Art & Prints, Food & Beverage, Apparel, Commercial / MLMs); CSS grid aligns max-slot and fee inputs; Quick Start top, Add Category Slot bottom.
@@ -47,7 +47,7 @@
 - **`mlm-tier-guard.tsx`:** Grid alignment for Max MLMs input.
 - **Verify:** Market wizard Step 2 → two columns on `lg+`; category sections collapse/expand with slot totals in headers; usable-floor (?) shows calculation tooltip; no table-size picker on this step.
 
-## Shipped this session (coordinator dashboard — no forced initial room modal, not deployed)
+## Shipped this session (coordinator dashboard — no forced initial room modal, deployed 2026-06-09)
 - **Root cause:** `dashboard-bootstrap.tsx` and `Dashboard_qa.tsx` auto-mounted `InitialRoomModal` (full-screen overlay + body scroll lock) whenever a selected market had zero saved rooms — intercepting login before the dashboard shell was usable.
 - **`dashboard-no-room-empty-state.tsx`:** Inline empty state in the canvas column (room dimensions form + "Open layout designer") — no portal, no scroll hijack.
 - **`dashboard-bootstrap.tsx` + `Dashboard_qa.tsx`:** Removed mandatory `InitialRoomModal`; dashboard header + left rail render immediately; canvas shows inline empty state until first room is added.
@@ -109,9 +109,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `4e5935c` (pushed to `origin/master`)
-- Last deploy commit: `4e5935c` - feat: ship 2 session updates (Square OAuth blank-page hardening; market wizard draft save RLS fix)
-- Production: https://popuphub.ca - **build 51** | commit `4a1b416` (handoff updated 2026-06-09 09:49)
+- Branch: `master` @ `465d167` (pushed to `origin/master`)
+- Last deploy commit: `465d167` - feat: ship 7 session updates (spatial layout editor — save draft, auto-arrange, patron path; spatial layout — vendor-only capacity counting; vendor table wall orientation fix; layout designer — left sidebar, portal tooltips, auto-arrange fix; +3 more)
+- Production: https://popuphub.ca - **build 54** | commit `4996202` (handoff updated 2026-06-09 13:05)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -488,7 +488,7 @@
 
 
 ## Last deploy
-- 2026-06-09 09:49 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (Square OAuth blank-page hardening; market wizard draft save RLS fix)` (4e5935c)
+- 2026-06-09 13:05 - Deploy via deploy-popuphub.ps1 - `feat: ship 7 session updates (spatial layout editor — save draft, auto-arrange, patron path; spatial layout — vendor-only capacity counting; vendor table wall orientation fix; layout designer — left sidebar, portal tooltips, auto-arrange fix; +3 more)` (465d167)
 
 
 ## Goal
