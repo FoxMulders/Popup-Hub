@@ -68,6 +68,11 @@
 - **Toolbar compaction:** Patron/vendor size selectors use utility chip grids; auto-arrange **Pattern** row uses inline Grid / Staggered / Perimeter chips; sidebar section padding tightened.
 - **Verify:** `/coordinator/dashboard` — select vendor or patron table tool → ghost follows cursor, snaps/flips near walls; room action icons stay on one line.
 
+## Shipped this session (build verification — local only, not deployed)
+- **`npm run build`** passes on `master` @ `7c1654b` (TypeScript + static generation, build **46**).
+- Prior Vercel prod failure (`51a871d`) was `b.category` on `BoothObject` in `request-ai-auto-arrange.ts` — fixed on master as `b.categoryName`.
+- Preview deploy `cursor/dev-environment-setup-4447` @ `8de61c8` also builds locally; Vercel log truncated after cache restore (likely stale cache / infra — redeploy if still failing).
+
 ## Shipped this session (build fix — local only, not deployed)
 - **`geometry.ts`:** `placedObjectsOverlap` passes `ctx?.doc` (not whole `MergeOverlapContext`) to `collisionProbeForObject` — fixes TS build failure.
 - **`booth-access.ts`:** `EventAccessFields` uses `Pick<Event, …>` so `venue_verification_status` matches `VenueGateEvent`.
