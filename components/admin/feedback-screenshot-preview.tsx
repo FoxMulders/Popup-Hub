@@ -24,7 +24,7 @@ export function FeedbackScreenshotPreview({ url, title }: FeedbackScreenshotPrev
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="group relative w-full overflow-hidden rounded-xl border border-stone-200 bg-white text-left transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
+        className="group relative w-full overflow-hidden rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest"
       >
         <div className="relative aspect-video w-full">
           <Image
@@ -32,7 +32,7 @@ export function FeedbackScreenshotPreview({ url, title }: FeedbackScreenshotPrev
             alt={`Screenshot for ${title}`}
             fill
             unoptimized
-            className="object-contain bg-stone-50"
+            className="bg-muted/40 object-contain"
           />
           <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10">
             <span className="inline-flex items-center gap-1 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">

@@ -26,6 +26,7 @@ export function PassportPublicCard({
       ? {
           website_url: passport.websiteUrl,
           instagram_url: passport.instagramUrl,
+          tiktok_url: passport.tiktokUrl,
           facebook_url: passport.facebookUrl,
         }
       : null

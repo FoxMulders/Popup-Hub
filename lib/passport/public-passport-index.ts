@@ -10,6 +10,7 @@ export type PublicPassportIndex = {
   websiteUrl: string | null
   instagramUrl: string | null
   facebookUrl: string | null
+  tiktokUrl: string | null
   shopUrl: string | null
   primaryCategoryId: string | null
   primaryCategoryName: string | null
@@ -24,6 +25,7 @@ const PUBLIC_PASSPORT_SELECT = `
   website_url,
   instagram_url,
   facebook_url,
+  tiktok_url,
   shop_url,
   primary_category_id,
   requires_electricity,
@@ -50,6 +52,7 @@ export async function loadPublicPassportIndex(
     website_url: string | null
     instagram_url: string | null
     facebook_url: string | null
+    tiktok_url: string | null
     shop_url: string | null
     primary_category_id: string | null
     requires_electricity: boolean
@@ -66,6 +69,7 @@ export async function loadPublicPassportIndex(
     websiteUrl: row.website_url,
     instagramUrl: row.instagram_url,
     facebookUrl: row.facebook_url,
+    tiktokUrl: row.tiktok_url,
     shopUrl: row.shop_url,
     primaryCategoryId: row.primary_category_id,
     primaryCategoryName: category?.name ?? null,

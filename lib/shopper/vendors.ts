@@ -72,6 +72,7 @@ export function getVendorLinks(passport: {
   website_url?: string | null
   shop_url?: string | null
   instagram_url?: string | null
+  tiktok_url?: string | null
   facebook_url?: string | null
 } | null | undefined): VendorLink[] {
   return getPassportSocialLinks(passport, { includeShop: true }).map(

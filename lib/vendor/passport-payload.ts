@@ -38,6 +38,7 @@ export type PassportSaveInput = {
   shopUrl: string | null
   instagramUrl: string | null
   facebookUrl?: string | null
+  tiktokUrl?: string | null
   requiresElectricity?: boolean
   businessNumber?: string | null
   socialHandle?: string | null
@@ -58,6 +59,7 @@ export type PassportSavePayload = {
   shop_url: string | null
   instagram_url: string | null
   facebook_url: string | null
+  tiktok_url: string | null
   requires_electricity: boolean
   business_number: string | null
   social_handle: string | null
@@ -94,6 +96,7 @@ export function buildPassportSavePayload(input: PassportSaveInput): PassportSave
     shop_url: input.shopUrl,
     instagram_url: input.instagramUrl,
     facebook_url: input.facebookUrl ?? null,
+    tiktok_url: input.tiktokUrl ?? null,
     requires_electricity: input.requiresElectricity ?? false,
     business_number: input.businessNumber ?? null,
     social_handle: input.socialHandle ?? null,

@@ -23,11 +23,11 @@ export function featureRequestStatusLabel(status: FeatureRequestStatus): string 
 export function submitterRoleBadgeClass(role: FeatureSubmitterRole): string {
   switch (role) {
     case 'coordinator':
-      return 'bg-sky-100 text-sky-900 border-sky-200'
+      return 'bg-sky-100 text-sky-900 border-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-800'
     case 'vendor':
-      return 'bg-harvest-100 text-harvest-900 border-harvest-200'
+      return 'bg-harvest-100 text-harvest-900 border-harvest-200 dark:bg-harvest-950 dark:text-harvest-200 dark:border-harvest-800'
     case 'patron':
-      return 'bg-sage-100 text-sage-900 border-sage-200'
+      return 'bg-sage-100 text-sage-900 border-sage-200 dark:bg-sage-950 dark:text-sage-200 dark:border-sage-800'
   }
 }
 

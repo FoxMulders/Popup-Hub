@@ -12,6 +12,7 @@ import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Globe, ShoppingBag, Camera, MapPin } from 'lucide-react'
 import { FacebookIcon } from '@/components/icons/facebook-icon'
+import { TikTokIcon } from '@/components/icons/tiktok-icon'
 import type { VendorLineupEntry } from '@/lib/shopper/vendors'
 import { getVendorLinks } from '@/lib/shopper/vendors'
 import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
@@ -31,6 +32,7 @@ const LINK_ICONS = {
   website_url: Globe,
   shop_url: ShoppingBag,
   instagram_url: Camera,
+  tiktok_url: TikTokIcon,
   facebook_url: FacebookIcon,
 } as const
 

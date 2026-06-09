@@ -2,9 +2,16 @@
 
 import { Bell } from 'lucide-react'
 import { useNotificationCount } from '@/hooks/use-notification-count'
+import type { ActivePortal } from '@/lib/portals/active-portal'
 
-export function NotificationPageHeader({ userId }: { userId: string }) {
-  const unreadCount = useNotificationCount(userId)
+export function NotificationPageHeader({
+  userId,
+  activePortal = 'patron',
+}: {
+  userId: string
+  activePortal?: ActivePortal
+}) {
+  const unreadCount = useNotificationCount(userId, activePortal)
 
   return (
     <div className="mb-10">

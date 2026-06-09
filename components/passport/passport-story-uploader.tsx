@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -51,12 +52,17 @@ interface PassportStoryUploaderProps {
   className?: string
 }
 
-interface PendingItem {
+interface StoryDraft {
   /** Local-only id so we can remove a single queued file before publish. */
   id: string
   file: File
   previewUrl: string
-  type: 'image' | 'video'
+  /** The user's custom words/headline for this story. */
+  captionText: string
+}
+
+function storyDraftMediaType(draft: StoryDraft): 'image' | 'video' {
+  return draft.file.type.startsWith('video/') ? 'video' : 'image'
 }
 
 interface CoordinatorMarketRow {
@@ -91,7 +97,7 @@ export function PassportStoryUploader({
   // Multi-file queue. Each entry is one in-flight upload candidate; the
   // coordinator can stage many at once and the publish flow loops through
   // them, creating one passport story per file.
-  const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
+  const [pendingItems, setPendingItems] = useState<StoryDraft[]>([])
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [detailStory, setDetailStory] = useState<PassportStoryView | null>(null)
 
@@ -106,6 +112,7 @@ export function PassportStoryUploader({
   const queueFull = queuedCount >= remainingSlots
   const hasPending = queuedCount > 0
   const isCoordinatorPromo = role === 'coordinator' && storyKind === 'market_promo'
+  const usesPerStoryCaptions = role === 'vendor' || !isCoordinatorPromo
 
   useEffect(() => {
     if (role !== 'coordinator') return
@@ -170,11 +177,11 @@ export function PassportStoryUploader({
             `Only added ${accepted.length} of ${arr.length} files — story limit is ${PASSPORT_STORY_MAX_COUNT}.`
           )
         }
-        const next = accepted.map<PendingItem>((file) => ({
+        const next = accepted.map<StoryDraft>((file) => ({
           id: makePendingId(),
           file,
           previewUrl: URL.createObjectURL(file),
-          type: file.type.startsWith('video/') ? 'video' : 'image',
+          captionText: '',
         }))
         return [...prev, ...next]
       })
@@ -190,10 +197,18 @@ export function PassportStoryUploader({
     })
   }, [])
 
+  const updateDraftCaption = useCallback((id: string, captionText: string) => {
+    setPendingItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, captionText } : item))
+    )
+  }, [])
+
   async function handlePublish() {
     if (pendingItems.length === 0 || uploading) return
 
-    let captionToPersist = caption.trim() || null
+    let sharedCaptionToPersist: string | null = usesPerStoryCaptions
+      ? null
+      : caption.trim() || null
     let promoToastMessage: string | null = null
 
     if (isCoordinatorPromo) {
@@ -212,12 +227,12 @@ export function PassportStoryUploader({
         address: market.address,
         city: market.city,
       }
-      const result = enforceMarketPromoRules(captionToPersist, ctx)
+      const result = enforceMarketPromoRules(sharedCaptionToPersist, ctx)
       if (result.missingLocation) {
         toast.error(missingLocationHint(ctx))
         return
       }
-      captionToPersist = result.caption
+      sharedCaptionToPersist = result.caption
       if (result.hashtagAppended) {
         promoToastMessage = `Added ${result.hashtag} so patrons can find ${market.name}.`
         // Reflect the auto-appended hashtag in the caption box too so the
@@ -234,6 +249,9 @@ export function PassportStoryUploader({
     try {
       for (let i = 0; i < pendingItems.length; i++) {
         const item = pendingItems[i]!
+        const captionToPersist = usesPerStoryCaptions
+          ? item.captionText.trim() || null
+          : sharedCaptionToPersist
         try {
           const uploaded = await uploadPassportStoryMedia(supabase, {
             ownerId,
@@ -281,7 +299,7 @@ export function PassportStoryUploader({
       // re-selecting from disk. If everything succeeded we also clear the
       // caption so the form returns to a fresh state.
       setPendingItems((prev) => {
-        const remaining: PendingItem[] = []
+        const remaining: StoryDraft[] = []
         prev.forEach((item, idx) => {
           if (succeededIndices.has(idx)) {
             URL.revokeObjectURL(item.previewUrl)
@@ -330,7 +348,8 @@ export function PassportStoryUploader({
         <h3 className="font-semibold text-foreground">Passport stories</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Upload up to 30-second clips or photos — patrons see them on your public passport like
-          Instagram stories. You can pick several files at once.
+          Instagram stories. You can pick several files at once
+          {role === 'vendor' ? ' and add a caption to each before publishing' : ''}.
         </p>
       </div>
 
@@ -397,42 +416,72 @@ export function PassportStoryUploader({
 
           <ul
             className="grid gap-3"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}
+            style={{
+              gridTemplateColumns: usesPerStoryCaptions
+                ? 'repeat(auto-fill, minmax(180px, 1fr))'
+                : 'repeat(auto-fill, minmax(140px, 1fr))',
+            }}
           >
-            {pendingItems.map((item) => (
-              <li
-                key={item.id}
-                className="relative overflow-hidden rounded-lg border bg-stone-950 shadow-sm"
-              >
-                {item.type === 'video' ? (
-                  <video
-                    src={item.previewUrl}
-                    muted
-                    playsInline
-                    className="h-32 w-full object-cover"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.previewUrl}
-                    alt=""
-                    className="h-32 w-full object-cover"
-                  />
-                )}
-                <button
-                  type="button"
-                  disabled={uploading}
-                  onClick={() => removePending(item.id)}
-                  className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-stone-900/80 text-white hover:bg-stone-900"
-                  aria-label={`Remove ${item.file.name}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-                <p className="break-words whitespace-pre-wrap w-full bg-stone-900/85 px-2 py-1 text-[11px] text-white">
-                  {item.file.name}
-                </p>
-              </li>
-            ))}
+            {pendingItems.map((item) => {
+              const mediaType = storyDraftMediaType(item)
+              const captionPreview = item.captionText.trim()
+
+              return (
+                <li key={item.id} className="space-y-2">
+                  <div className="relative overflow-hidden rounded-lg border bg-stone-950 shadow-sm">
+                    {mediaType === 'video' ? (
+                      <video
+                        src={item.previewUrl}
+                        muted
+                        playsInline
+                        className="h-32 w-full object-cover"
+                      />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.previewUrl}
+                        alt=""
+                        className="h-32 w-full object-cover"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      onClick={() => removePending(item.id)}
+                      className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-stone-900/80 text-white hover:bg-stone-900"
+                      aria-label={`Remove ${item.file.name}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    {captionPreview ? (
+                      <p className="absolute inset-x-0 bottom-0 bg-stone-900/85 px-2 py-1.5 text-[11px] font-medium leading-snug text-white line-clamp-2">
+                        {captionPreview}
+                      </p>
+                    ) : (
+                      <p className="break-words whitespace-pre-wrap w-full bg-stone-900/85 px-2 py-1 text-[11px] text-white/80">
+                        {item.file.name}
+                      </p>
+                    )}
+                  </div>
+                  {usesPerStoryCaptions ? (
+                    <div className="space-y-1">
+                      <Label htmlFor={`story-caption-${item.id}`} className="text-xs">
+                        Caption (optional)
+                      </Label>
+                      <Input
+                        id={`story-caption-${item.id}`}
+                        value={item.captionText}
+                        onChange={(e) => updateDraftCaption(item.id, e.target.value)}
+                        maxLength={200}
+                        disabled={uploading}
+                        placeholder="Add words or a headline"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
           </ul>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -482,28 +531,30 @@ export function PassportStoryUploader({
               </div>
             ) : null}
 
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="story-caption">
-                Caption{isCoordinatorPromo ? ' (must mention the venue or city)' : ' (optional)'}
-              </Label>
-              <Textarea
-                id="story-caption"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                rows={2}
-                maxLength={200}
-                placeholder={
-                  isCoordinatorPromo
-                    ? 'Where, when, who. We auto-add #MarketName if you forget.'
-                    : 'What should patrons know?'
-                }
-              />
-              {isCoordinatorPromo ? (
-                <p className="text-[11px] text-muted-foreground">
-                  Same caption applies to every queued file.
-                </p>
-              ) : null}
-            </div>
+            {!usesPerStoryCaptions ? (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="story-caption">
+                  Caption{isCoordinatorPromo ? ' (must mention the venue or city)' : ' (optional)'}
+                </Label>
+                <Textarea
+                  id="story-caption"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  rows={2}
+                  maxLength={200}
+                  placeholder={
+                    isCoordinatorPromo
+                      ? 'Where, when, who. We auto-add #MarketName if you forget.'
+                      : 'What should patrons know?'
+                  }
+                />
+                {isCoordinatorPromo ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Same caption applies to every queued file.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">

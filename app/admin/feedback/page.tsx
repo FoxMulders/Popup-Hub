@@ -1,5 +1,8 @@
+import { redirect } from 'next/navigation'
 import { resolveAdminDb } from '@/lib/auth/require-admin'
+import { accessDeniedRedirect } from '@/lib/auth/rbac'
 import { FeedbackAdminDashboard } from '@/components/admin/feedback-admin-dashboard'
+import { createClient } from '@/lib/supabase/server'
 import type { FeatureRequest } from '@/types/database'
 
 export const metadata = {
@@ -9,7 +12,14 @@ export const metadata = {
 export default async function AdminFeedbackPage() {
   const adminContext = await resolveAdminDb()
   if (!adminContext.ok) {
-    return null
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const { data: profile } = user
+      ? await supabase.from('profiles').select('role').eq('id', user.id).single()
+      : { data: null }
+    redirect(accessDeniedRedirect(profile?.role))
   }
 
   const { data, error } = await adminContext.db

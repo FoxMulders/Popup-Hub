@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Camera, ExternalLink, Globe, MapPin, ShoppingBag, Store } from 'lucide-react'
 import { FacebookIcon } from '@/components/icons/facebook-icon'
+import { TikTokIcon } from '@/components/icons/tiktok-icon'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
@@ -14,6 +15,7 @@ const LINK_ICONS = {
   website_url: Globe,
   shop_url: ShoppingBag,
   instagram_url: Camera,
+  tiktok_url: TikTokIcon,
   facebook_url: FacebookIcon,
 } as const
 

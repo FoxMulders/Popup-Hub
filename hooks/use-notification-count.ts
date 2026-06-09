@@ -3,8 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NOTIFICATIONS_CHANGED } from '@/lib/notifications/sync'
+import { notificationTypesForPortal } from '@/lib/notifications/portal-filter'
+import type { ActivePortal } from '@/lib/portals/active-portal'
 
-export function useNotificationCount(userId: string): number {
+export function useNotificationCount(
+  userId: string,
+  activePortal: ActivePortal = 'patron'
+): number {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
@@ -21,6 +26,8 @@ export function useNotificationCount(userId: string): number {
       return
     }
 
+    const portalTypes = notificationTypesForPortal(activePortal)
+
     async function fetchCount() {
       try {
         const { count: c, error } = await supabase
@@ -28,6 +35,7 @@ export function useNotificationCount(userId: string): number {
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
           .eq('is_read', false)
+          .in('type', portalTypes)
         if (error) {
           console.error('[notification-count] fetch failed', error)
           return
@@ -69,7 +77,7 @@ export function useNotificationCount(userId: string): number {
         // Cleanup is best-effort.
       }
     }
-  }, [userId])
+  }, [userId, activePortal])
 
   return count
 }

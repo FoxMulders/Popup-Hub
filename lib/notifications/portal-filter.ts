@@ -50,6 +50,18 @@ export function notificationMatchesPortal(
   }
 }
 
+export function notificationTypesForPortal(portal: ActivePortal): NotificationType[] {
+  switch (portal) {
+    case 'vendor':
+      return [...VENDOR_TYPES]
+    case 'coordinator':
+      return [...COORDINATOR_TYPES]
+    case 'patron':
+    default:
+      return [...PATRON_TYPES]
+  }
+}
+
 export function filterNotificationsForPortal(
   notifications: ReadonlyArray<Notification>,
   portal: ActivePortal

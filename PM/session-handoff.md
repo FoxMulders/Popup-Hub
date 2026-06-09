@@ -10,6 +10,29 @@
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
 
+## Shipped this session (vendor passport TikTok field, not deployed)
+- **Migration `098_vendor_passport_tiktok.sql`:** `vendor_passports.tiktok_url` optional text column alongside `instagram_url` / `facebook_url`.
+- **Forms:** TikTok input in Online presence (`/vendor/passport` wizard + `PassportSocialFields`); `normalizeTikTokUrl` coerces `@handle` / bare handle → `https://tiktok.com/@handle` on save.
+- **Public display:** `TikTokIcon` + `getPassportSocialLinks` renders TikTok on `PassportPublicCard` (and vendor link surfaces using shared social helpers).
+- **Verify:** `/vendor/passport` → enter `@mybrand` in TikTok → save → public passport card shows TikTok icon linking to `https://tiktok.com/@mybrand` in a new tab.
+
+## Shipped this session (vendor passport story per-file captions, not deployed)
+- **`passport-story-uploader.tsx`:** Replaced `PendingItem` with `StoryDraft` (`id`, `file`, `previewUrl`, `captionText`); vendors get per-story caption inputs in the upload queue with live preview overlay; publish sends each draft's `captionText` to `POST /api/passport/stories`.
+- **Coordinator market promos:** Unchanged — shared caption + hashtag rules still apply to the whole batch.
+- **Verify:** `/vendor/dashboard` → Passport stories → queue 2+ files → add different captions → publish → published list shows each caption.
+
+## Shipped this session (admin feedback route hardening + theme polish, not deployed)
+- **Middleware:** `/admin/*` blocked unless `profiles.is_admin` or valid `ADMIN_SESSION_TOKEN` (`admin_session` cookie / Bearer header); non-admins redirect to role-appropriate dashboard via `accessDeniedRedirect`.
+- **Layout + page:** Same gate with redirect (no blank page); header/back link use semantic `border-border`, `bg-card`, `bg-muted` tokens.
+- **Dashboard:** Master-detail UI uses design tokens for dark/light (list cards, metric tiles, problem/solution blocks, role badges).
+- **API:** `PATCH /api/feedback/update` unchanged — saves `status` + `developer_notes` without page refresh.
+- **Verify:** Non-admin → `/admin/feedback` redirects to their portal home; admin (`is_admin`) → triage console loads; PATCH save updates list + detail in place.
+
+## Shipped this session (notification count portal filter fix, not deployed)
+- **Root cause:** `useNotificationCount` counted all unread notifications for the user, while `NotificationList` filters by active portal (`filterNotificationsForPortal`). A user in Patron portal with an unread Vendor notification saw header "1 unread notification" but an empty feed.
+- **Fix:** `notificationTypesForPortal()` in `lib/notifications/portal-filter.ts`; `useNotificationCount(userId, activePortal)` applies `.in('type', portalTypes)`; `AppNav` and `NotificationPageHeader` pass resolved `activePortal`.
+- **Verify:** `npx tsc --noEmit` passes. Manual: switch portal tabs with cross-portal unread rows — badge/subtitle should match visible list (or "You're all caught up" when filtered list is empty).
+
 ## Shipped this session (build + lint fixes, not deployed)
 - **Lint:** `auto-arrange.ts` `prefer-const` (`let placed` → `const placed`).
 - **Compile:** Removed self-import in `lib/auth/rbac.ts` (`canActAsCoordinator` defined twice).
@@ -32,7 +55,7 @@
 
 ## Shipped this session (admin feature-request triage console, not deployed)
 - **Migration `094_admin_feature_request_management.sql`:** `profiles.is_admin`; `feature_requests.status`, `developer_notes`, `updated_at`; admin RLS read/update policies.
-- **Route `/admin/feedback`:** Layout gates on `profiles.is_admin` or `ADMIN_SESSION_TOKEN` cookie/header (`admin_session`); non-admins redirect to `/coordinator/dashboard`.
+- **Route `/admin/feedback`:** Layout + middleware gate on `profiles.is_admin` or `ADMIN_SESSION_TOKEN` cookie/header (`admin_session`); non-admins redirect to role-appropriate dashboard.
 - **UI:** Master-detail dashboard — metrics (Pending / Critical / Under Review), role + urgency badges, problem/solution preview, screenshot fullscreen dialog, status dropdown + developer notes, optimistic PATCH save.
 - **API:** `PATCH /api/feedback/update` (admin-only).
 - **Access:** `bradmulders@gmail.com` is sole platform **admin** (`is_admin` only — not a market host, not a payment settlement account). Optional `ADMIN_SESSION_TOKEN` for headless API.
@@ -783,7 +806,8 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **AI gateway:** All in-app LLM calls route through **OpenRouter** with task-based model selection in `lib/ai/tasks.ts` (direct Gemini/Groq deprecated)
 
 ## Next actions
-1. **Dashboard toolbar-in-sidebar smoke-test** — `/coordinator/dashboard`: layout tools (Room / Patron / Vendor / Canvas) appear in left panel above curation queue; canvas fills full column height; **Full canvas** still shows toolbar strip; mobile shows toolbar above canvas
+1. **Notification count smoke-test** — Sign in as user with vendor-only unread → Patron portal: nav badge + `/notifications` subtitle should show caught-up/0; switch to Vendor portal → count and list should agree
+2. **Dashboard toolbar-in-sidebar smoke-test** — `/coordinator/dashboard`: layout tools (Room / Patron / Vendor / Canvas) appear in left panel above curation queue; canvas fills full column height; **Full canvas** still shows toolbar strip; mobile shows toolbar above canvas
 2. **Room merge smoke-test** — Add two touching rooms, Shift+select both (or park flush), **Merge (2)** → single hall in sidebar, booths stay put, grid shows through stage outline
 3. **Room move/resize smoke-test** — Add room → confirm Select tool active, eight dots on perimeter, drag room interior/wall to move, drag corner/edge dot to resize; toolbar W×L readout updates
 4. **Passport smoke-test** — `/profile/passport`: image stories without backdrop show brand logo on dark wrapper; video stories show logo poster while loading and in list/carousel thumbnails; click card opens Full Details modal; delete still works without opening modal

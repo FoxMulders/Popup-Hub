@@ -17,6 +17,11 @@ import {
   accessDeniedRedirect,
   isPathAccessAllowed,
 } from '@/lib/auth/rbac'
+import {
+  ADMIN_SESSION_COOKIE,
+  isAdminSessionTokenValid,
+  readAdminSessionToken,
+} from '@/lib/auth/require-admin'
 import { isPublicPath } from '@/lib/auth/public-paths'
 import type { Role } from '@/types/database'
 
@@ -102,6 +107,21 @@ export async function updateSession(request: NextRequest) {
 
     profileRole = (profile?.role as Role | undefined) ?? 'shopper'
     profileIsAdmin = profile?.is_admin === true
+
+    if (pathname.startsWith('/admin')) {
+      const sessionToken = readAdminSessionToken(
+        request,
+        request.cookies.get(ADMIN_SESSION_COOKIE)?.value
+      )
+      const hasAdminAccess =
+        profileIsAdmin || isAdminSessionTokenValid(sessionToken)
+      if (!hasAdminAccess) {
+        const url = request.nextUrl.clone()
+        url.pathname = accessDeniedRedirect(profileRole)
+        url.search = ''
+        return NextResponse.redirect(url)
+      }
+    }
 
     if (!isPathAccessAllowed(pathname, profileRole, profileIsAdmin)) {
       const url = request.nextUrl.clone()

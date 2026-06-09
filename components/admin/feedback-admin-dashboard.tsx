@@ -139,7 +139,7 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
           className="market-panel flex min-h-[420px] flex-col overflow-hidden lg:min-h-0"
           aria-label="Feature request list"
         >
-          <div className="market-panel-header border-b border-stone-200/70 px-4 py-3">
+          <div className="market-panel-header border-b border-border px-4 py-3">
             <h3 className="text-sm font-semibold">Incoming requests</h3>
             <p className="text-xs text-muted-foreground">Newest first</p>
           </div>
@@ -160,7 +160,7 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
                           'w-full rounded-xl border p-3 text-left transition-colors',
                           isSelected
                             ? 'border-forest bg-forest/5 ring-1 ring-forest/30'
-                            : 'border-stone-200/80 bg-white hover:border-stone-300 hover:bg-stone-50/80'
+                            : 'border-border bg-card hover:border-border hover:bg-muted/50'
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -202,7 +202,7 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
         >
           {selected ? (
             <>
-              <div className="market-panel-header border-b border-stone-200/70 px-4 py-3">
+              <div className="market-panel-header border-b border-border px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 space-y-1">
                     <h3 className="text-base font-semibold leading-snug">{selected.title}</h3>
@@ -232,7 +232,7 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
                   <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                     Problem statement
                   </h4>
-                  <div className="rounded-xl border border-stone-200/80 bg-stone-50/60 p-3 text-sm leading-relaxed whitespace-pre-wrap">
+                  <div className="rounded-xl border border-border bg-muted/40 p-3 text-sm leading-relaxed whitespace-pre-wrap">
                     {selected.problem}
                   </div>
                 </div>
@@ -241,7 +241,7 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
                   <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                     Proposed solution
                   </h4>
-                  <div className="rounded-xl border border-stone-200/80 bg-stone-50/60 p-3 text-sm leading-relaxed whitespace-pre-wrap">
+                  <div className="rounded-xl border border-border bg-muted/40 p-3 text-sm leading-relaxed whitespace-pre-wrap">
                     {selected.dream_solution?.trim() || (
                       <span className="text-muted-foreground italic">No proposed solution provided.</span>
                     )}
@@ -257,7 +257,7 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
                   </div>
                 ) : null}
 
-                <div className="grid gap-4 border-t border-stone-200/70 pt-4 sm:grid-cols-2">
+                <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="feedback-status">Status</Label>
                     <Select
@@ -294,7 +294,7 @@ export function FeedbackAdminDashboard({ initialRequests }: FeedbackAdminDashboa
                 </div>
               </div>
 
-              <div className="border-t border-stone-200/70 p-4">
+              <div className="border-t border-border p-4">
                 <Button
                   type="button"
                   className="min-h-10 w-full sm:w-auto"
@@ -328,10 +328,10 @@ function MetricCard({
 }) {
   const toneClass =
     tone === 'critical'
-      ? 'border-terracotta-200 bg-terracotta-50 text-terracotta-900'
+      ? 'border-terracotta-200 bg-terracotta-50 text-terracotta-900 dark:border-terracotta-800 dark:bg-terracotta-950 dark:text-terracotta-200'
       : tone === 'review'
-        ? 'border-sky-200 bg-sky-50 text-sky-900'
-        : 'border-stone-200 bg-white text-foreground'
+        ? 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-200'
+        : 'border-border bg-card text-foreground'
 
   return (
     <div className={cn('rounded-xl border px-4 py-3', toneClass)}>

@@ -14,7 +14,7 @@ import { Loader2, Upload, ArrowRight, ArrowLeft, CheckCircle, HelpCircle } from 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Category, VendorPassport } from '@/types/database'
 import { sortCategoriesByName } from '@/lib/categories'
-import { normalizeUrl } from '@/lib/vendor/normalize-url'
+import { normalizeUrl, normalizeTikTokUrl } from '@/lib/vendor/normalize-url'
 import { resolvePassportCategoryIds, toggleCategoryId } from '@/lib/vendor/passport-categories'
 import { buildPassportSavePayload, formatSupabaseError } from '@/lib/vendor/passport-payload'
 import { evaluateAndScoreVendorPassport } from '@/lib/vendor/verification'
@@ -77,6 +77,7 @@ export function PassportWizard({
   const [websiteUrl, setWebsiteUrl] = useState(existing?.website_url ?? '')
   const [shopUrl, setShopUrl] = useState(existing?.shop_url ?? '')
   const [instagramUrl, setInstagramUrl] = useState(existing?.instagram_url ?? '')
+  const [tiktokUrl, setTikTokUrl] = useState(existing?.tiktok_url ?? '')
   const [facebookUrl, setFacebookUrl] = useState(existing?.facebook_url ?? '')
   const [requiresElectricity, setRequiresElectricity] = useState(
     existing?.requires_electricity ?? false
@@ -141,6 +142,7 @@ export function PassportWizard({
         websiteUrl: normalizeUrl(websiteUrl),
         shopUrl: normalizeUrl(shopUrl),
         instagramUrl: normalizeUrl(instagramUrl),
+        tiktokUrl: normalizeTikTokUrl(tiktokUrl),
         facebookUrl: normalizeUrl(facebookUrl),
         requiresElectricity,
         businessNumber: verification.business_number,
@@ -302,6 +304,15 @@ export function PassportWizard({
                     placeholder="https://instagram.com/yourbrand"
                     value={instagramUrl}
                     onChange={(e) => setInstagramUrl(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="tiktok">TikTok</Label>
+                  <Input
+                    id="tiktok"
+                    placeholder="https://tiktok.com/@yourbrand"
+                    value={tiktokUrl}
+                    onChange={(e) => setTikTokUrl(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">

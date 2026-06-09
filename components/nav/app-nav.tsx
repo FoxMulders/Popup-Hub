@@ -54,10 +54,9 @@ export function AppNav({
 }: AppNavProps) {
   const pathname = usePathname()
   const supabase = createClient()
-  const unreadCount = useNotificationCount(profile.id)
-  const { open: openFeatureRequest } = useFeatureRequest()
-
   const activePortal = resolveActivePortal(portalCookie, profile, pathname)
+  const unreadCount = useNotificationCount(profile.id, activePortal)
+  const { open: openFeatureRequest } = useFeatureRequest()
   const navRole =
     activePortal === 'coordinator'
       ? 'coordinator'

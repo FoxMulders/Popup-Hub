@@ -36,6 +36,17 @@ export function PassportSocialFields({
           />
         </div>
         <div className="space-y-1">
+          <Label htmlFor={`${idPrefix}-tiktok`}>TikTok</Label>
+          <Input
+            id={`${idPrefix}-tiktok`}
+            type="url"
+            inputMode="url"
+            placeholder="https://tiktok.com/@yourbrand"
+            value={value.tiktok}
+            onChange={(e) => onChange('tiktok', e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-facebook`}>Facebook</Label>
           <Input
             id={`${idPrefix}-facebook`}

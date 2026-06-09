@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import type { Role, VendorPassport } from '@/types/database'
-import { normalizeUrl } from '@/lib/vendor/normalize-url'
+import { normalizeUrl, normalizeTikTokUrl } from '@/lib/vendor/normalize-url'
 import {
   buildMinimalPassportSavePayload,
   buildPassportSavePayload,
@@ -14,6 +14,7 @@ import {
 export type PassportSocialState = {
   website: string
   instagram: string
+  tiktok: string
   facebook: string
 }
 
@@ -29,6 +30,7 @@ function initialSocial(existing: VendorPassport | null): PassportSocialState {
   return {
     website: existing?.website_url ?? '',
     instagram: existing?.instagram_url ?? '',
+    tiktok: existing?.tiktok_url ?? '',
     facebook: existing?.facebook_url ?? '',
   }
 }
@@ -86,6 +88,7 @@ export function usePassportProfile(
         }),
         website_url: normalizeUrl(state.social.website),
         instagram_url: normalizeUrl(state.social.instagram),
+        tiktok_url: normalizeTikTokUrl(state.social.tiktok),
         facebook_url: normalizeUrl(state.social.facebook),
       }
 
@@ -131,6 +134,7 @@ export function usePassportProfile(
           websiteUrl: normalizeUrl(state.social.website),
           shopUrl: existing?.shop_url ?? null,
           instagramUrl: normalizeUrl(state.social.instagram),
+          tiktokUrl: normalizeTikTokUrl(state.social.tiktok),
           businessNumber: existing?.business_number ?? null,
           socialHandle: existing?.social_handle ?? null,
           verificationStatus: existing?.verification_status,

@@ -56,11 +56,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FacebookIcon } from '@/components/icons/facebook-icon'
+import { TikTokIcon } from '@/components/icons/tiktok-icon'
 
 const LINK_ICONS = {
   website_url: Globe,
   shop_url: ShoppingBag,
   instagram_url: Camera,
+  tiktok_url: TikTokIcon,
   facebook_url: FacebookIcon,
 } as const
 
