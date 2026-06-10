@@ -1,1 +1,0 @@
-feat: ship 2 session updates (coordinator event hub side-panel navigation fix; coordinator pre-flight review & publish page)

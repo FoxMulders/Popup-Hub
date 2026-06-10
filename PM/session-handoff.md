@@ -4,12 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (coordinator event hub side-panel navigation fix, not deployed)
+## Shipped this session (coordinator event hub side-panel navigation fix, deployed 2026-06-10)
 - **`lib/coordinator/coordinator-event-route.ts`:** `isCoordinatorEventHubPath()` — detects primary event overview (`/coordinator/events/[id]`) vs sub-routes.
 - **`coordinator-workspace-rail.tsx` / `coordinator-context-panel.tsx`:** On event hub, hide self-referencing “Event overview” buttons; top exit links to command center (`/coordinator/dashboard`). On sub-routes (layout, check-in, review, applications, etc.), “Event overview” uses `router.push` to `/coordinator/events/{eventId}`.
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/events/{id}` — no dead “Event overview” in left/right panels; “Command center” exit works. Sub-route `/coordinator/events/{id}/applications` — “Event overview” returns to hub.
 
-## Shipped this session (coordinator pre-flight review & publish page, not deployed)
+## Shipped this session (coordinator pre-flight review & publish page, deployed 2026-06-10)
 - **Route:** `/coordinator/events/[id]/review` — Pre-Flight Review & Publish for draft markets after floor plan work.
 - **Layout snapshot:** `lib/coordinator/layout-telemetry-summary.ts` — vendor booth totals, category breakdown, patron seating/amenities from saved layout; link back to Blueprint Studio (`/coordinator/dashboard?event=`).
 - **Review cards:** Inline save for event logistics, shopper details (parking, wheelchair toggle + notes, pet policy), pricing & category waitlist caps (`CategoryLimitEditor` + unified booth fee).
@@ -366,9 +366,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `1dfd9e8` (pushed to `origin/master`)
-- Last deploy commit: `1dfd9e8` - feat: platform FAQ copy refresh
-- Production: https://popuphub.ca - **v1.0.0 build 85** | commit `60fc094` (handoff updated 2026-06-10 17:08)
+- Branch: `master` @ `8562012` (pushed to `origin/master`)
+- Last deploy commit: `8562012` - feat: ship 2 session updates (coordinator event hub side-panel navigation fix; coordinator pre-flight review & publish page)
+- Production: https://popuphub.ca - **v1.0.0 build 86** | commit `a6b0c09` (handoff updated 2026-06-10 17:24)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -745,7 +745,7 @@
 
 
 ## Last deploy
-- 2026-06-10 17:08 - Deploy via deploy-popuphub.ps1 - `feat: platform FAQ copy refresh` (1dfd9e8)
+- 2026-06-10 17:24 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (coordinator event hub side-panel navigation fix; coordinator pre-flight review & publish page)` (8562012)
 
 
 ## Goal
