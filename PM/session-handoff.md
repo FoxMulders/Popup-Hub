@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (deploy script already-shipped guidance, not deployed)
+## Shipped this session (deploy script already-shipped guidance, deployed 2026-06-10)
 - **`deploy-popuphub.ps1`:** When no `not deployed` handoff sections exist, print baseline branch/commit and how to add a section or run `-SkipCommit`; exit 2 (noop) if tree is clean, exit 1 only when uncommitted work lacks a handoff section.
 - **`Deploy-popuphub.bat`:** Exit code 2 shows "Nothing to deploy" instead of "Deploy failed"; PowerShell invoke uses safe `if defined DEPLOY_PS_ARGS` branch (no `PS_ARGS` parse error).
 - **Handoff:** Deploy gate note at top of this file.
@@ -196,9 +196,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `43b753f` (pushed to `origin/master`)
-- Last deploy commit: `43b753f` - feat: ship 2 session updates (mobile UX, nav/footer overhaul, auth flows; Vercel Analytics)
-- Production: https://popuphub.ca - **build 62** | commit `52234bd` (handoff updated 2026-06-10 08:42)
+- Branch: `master` @ `6bb5499` (pushed to `origin/master`)
+- Last deploy commit: `6bb5499` - feat: deploy script already-shipped guidance
+- Production: https://popuphub.ca - **build 63** | commit `4fdc5ed` (handoff updated 2026-06-10 08:50)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -575,7 +575,7 @@
 
 
 ## Last deploy
-- 2026-06-10 08:42 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (mobile UX, nav/footer overhaul, auth flows; Vercel Analytics)` (43b753f)
+- 2026-06-10 08:50 - Deploy via deploy-popuphub.ps1 - `feat: deploy script already-shipped guidance` (6bb5499)
 
 
 ## Goal
