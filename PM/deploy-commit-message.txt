@@ -1,1 +1,0 @@
-feat: ship 3 session updates (app menu density â€” semantic sections; side menu / sidebar scroll; header nav â€” logo left, hamburger restored, profile first)

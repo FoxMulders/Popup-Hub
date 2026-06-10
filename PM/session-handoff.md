@@ -4,17 +4,17 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (app menu density — semantic sections, not deployed)
+## Shipped this session (app menu density — semantic sections, deployed 2026-06-10)
 - **`app-menu-sheet.tsx`:** Rebuilt slide-out menu with semantic `<nav>` / `<section>` / `<ul>` lists; tighter padding, `min-h-10` row targets, grouped Navigate / Account / Actions sections; 2-column grid for 4+ primary links; dropped duplicate Profile settings when profile header is shown; removed heavy Button wrappers.
 
-## Shipped this session (side menu / sidebar scroll, not deployed)
+## Shipped this session (side menu / sidebar scroll, deployed 2026-06-10)
 - **`dashboard-toolbar-portal.tsx`:** Replaced `flex-shrink-0` with `min-h-0 flex-1` so the command-center left rail scrolls when layout tools exceed viewport height.
 - **`dashboard-app-shell.tsx`**, **`dashboard-tablet-tools-dock.tsx`:** Constrain drawer/aside overflow so the portaled toolbar scrolls inside the panel.
 - **`app-menu-sheet.tsx`:** Fixed mobile hamburger drawer flex chain (`max-h-[100dvh]`, `overflow-hidden` shell, scrollable nav region).
 - **`command-center-shell.tsx`:** Left/right workspace rails scroll independently on desktop when content exceeds viewport.
 - **Verify:** Command center — expand all layout-tool accordions; bottom sections reachable via sidebar scroll. Phone — open hamburger menu with admin/extra links; scroll to Sign out.
 
-## Shipped this session (header nav — logo left, hamburger restored, profile first, not deployed)
+## Shipped this session (header nav — logo left, hamburger restored, profile first, deployed 2026-06-10)
 - **`centered-header-row.tsx`:** Restored three-zone flex layout — logo flush left (`mr-auto`), middle fills with portal tabs + inline nav links, actions right.
 - **`app-nav.tsx`**, **`guest-nav.tsx`**, **`shopper-top-bar.tsx`:** Replaced profile-only `UserProfileMenu` dropdown with hamburger (`Menu` + `AppMenuSheet` on `md:hidden`); profile avatar/link is the **first** right-rail action (guests get user icon → login); logo in `left` slot; coordinator Dashboard / New Event / Wallet inline with role tabs on `md+`.
 - **Suggest:** Remains in `AppMenuSheet` only (no desktop nav button).
@@ -215,9 +215,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `c38cd24` (pushed to `origin/master`)
-- Last deploy commit: `c38cd24` - feat: deploy noop exit code fix
-- Production: https://popuphub.ca - **build 64** | commit `6d91aa2` (handoff updated 2026-06-10 09:10)
+- Branch: `master` @ `ec68ecf` (pushed to `origin/master`)
+- Last deploy commit: `ec68ecf` - feat: ship 3 session updates (app menu density — semantic sections; side menu / sidebar scroll; header nav — logo left, hamburger restored, profile first)
+- Production: https://popuphub.ca - **build 65** | commit `aaeeaa0` (handoff updated 2026-06-10 09:31)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -594,7 +594,7 @@
 
 
 ## Last deploy
-- 2026-06-10 09:10 - Deploy via deploy-popuphub.ps1 - `feat: deploy noop exit code fix` (c38cd24)
+- 2026-06-10 09:31 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (app menu density — semantic sections; side menu / sidebar scroll; header nav — logo left, hamburger restored, profile first)` (ec68ecf)
 
 
 ## Goal
