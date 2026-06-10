@@ -2,7 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (CanvasEditor Auto-Arrange → Turf packBooths, not deployed)
+## Shipped this session (mobile UX, auth flows, maps/address AI — not deployed)
+- **Mobile shell:** `safe-top` on admin Operations Console, market-day ops header, guest nav; root `min-h-screen` flex column + `flex-1` main in shopper/shared shells so `BuildVersionFooter` pins to viewport bottom; `CenteredHeaderRow` centers logo in `app-nav`, `shopper-top-bar`, `guest-nav`.
+- **Navigation:** Removed hamburger triggers — mobile profile/user icon opens `AppMenuSheet`; desktop profile still links to `/profile`; Suggest FAB hidden below `md` (menu + nav bar retain entry).
+- **Patron auth:** Landing hero → prominent **Browse Markets** + **Sign In** only; `/discover` and browse routes remain public (favorites/wallet still gate on save actions).
+- **Coordinator mobile login:** `resolvePostLoginPath` + `CoordinatorMobileOverview` — phones land on `/coordinator/dashboard?overview=mobile` (event list, no canvas mount); login form + OAuth callback use shared helper.
+- **Maps:** `GoogleMapsProvider` + `GoogleMapsApiFallback` (Maps JS / Places / Geocoding key guidance); `lib/addresses/parse-address-ai.ts` + `POST /api/parse-address` normalizes unstructured addresses before geocode in venue wizard.
+- **Verify:** Phone PWA safe-area on `/admin`, `/coordinator/events/.../operations`; guest `/` → Browse Markets without login; coordinator login on phone → overview list not layout canvas; venue wizard paste messy address → AI normalize + pin; break Maps key → fallback alert.
+
+## Shipped this session (CanvasEditor Auto-Arrange → Turf packBooths, deployed 2026-06-09)
 - **`floor-plan-v2.tsx`:** Inspector **Auto-Arrange** button (`CanvasEditor`) now calls `PackBooths` / `AutoArrangeEngine.packBooths` (Turf-validated shelf scan inside `merged_zone`) instead of legacy `autoArrangeInRoom`; clears booth positions, packs with 5′ aisles, `store.replaceObjects`; unplaced booths stay off-canvas (`x/y = -999`).
 - **`scripts/verify-auto-arrange-engine.ts`:** Smoke test for merged_zone polygon + stage obstacle — Turf overlap/containment.
 - **Verify:** `npx tsx scripts/verify-auto-arrange-engine.ts`; `npx tsx scripts/verify-layout-pathfind.ts`; layout editor → deselect all → **Auto-Arrange** packs vendor booths into merged zone.
@@ -127,9 +135,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `80e99a2` (pushed to `origin/master`)
-- Last deploy commit: `80e99a2` - feat: l
-- Production: https://popuphub.ca - **build 56** | commit `c185d13` (handoff updated 2026-06-09 16:11)
+- Branch: `master` @ `da3a645` (pushed to `origin/master`)
+- Last deploy commit: `da3a645` - feat: C
+- Production: https://popuphub.ca - **build 57** | commit `b9b4dd4` (handoff updated 2026-06-09 20:24)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -506,7 +514,7 @@
 
 
 ## Last deploy
-- 2026-06-09 16:11 - Deploy via deploy-popuphub.ps1 - `feat: l` (80e99a2)
+- 2026-06-09 20:24 - Deploy via deploy-popuphub.ps1 - `feat: C` (da3a645)
 
 
 ## Goal
