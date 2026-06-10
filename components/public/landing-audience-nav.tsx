@@ -43,31 +43,25 @@ export function LandingHeroActions() {
   }
 
   return (
-    <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+    <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
       <button
         type="button"
         onClick={() => void goWithLocation('/discover')}
         disabled={loadingHref !== null}
-        className="btn-tactile inline-flex min-h-11 items-center gap-2 rounded-lg bg-forest px-6 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-market-lift)] hover:bg-forest-deep disabled:opacity-70 touch-manipulation"
+        className="btn-tactile inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-forest px-8 py-3 text-base font-semibold text-white shadow-[var(--shadow-market-lift)] hover:bg-forest-deep disabled:opacity-70 touch-manipulation sm:w-auto"
       >
         {loadingHref === '/discover' ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
           <MapPin className="h-4 w-4" />
         )}
-        Discover markets
+        Browse Markets
       </button>
       <Link
         href="/login"
-        className="inline-flex min-h-11 items-center rounded-lg border-2 border-stone-200 bg-white px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-canvas touch-manipulation"
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border-2 border-stone-200 bg-white px-8 py-3 text-base font-semibold text-foreground hover:bg-canvas touch-manipulation sm:w-auto"
       >
-        Sign in
-      </Link>
-      <Link
-        href="/signup"
-        className="inline-flex min-h-11 items-center rounded-lg border-2 border-stone-200 bg-white px-6 py-2.5 text-sm font-semibold text-foreground hover:bg-canvas touch-manipulation sm:border-harvest-300 sm:bg-harvest-50"
-      >
-        Create free account
+        Sign In
       </Link>
     </div>
   )

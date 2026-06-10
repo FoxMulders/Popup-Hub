@@ -1671,50 +1671,36 @@ function FloorPlanV2Workspace({
       return
     }
 
-    const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      scope: 'vendor',
-      mode: autoArrangeMode,
-      eventCategoryNames,
-      baselineTableLengthFt: safeTableSizeFt,
-      vendorTableMetaByKey,
-      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
-        ? { maxBooths: layoutCapacity }
-        : {}),
-    })
-    if (!result) {
-      toast.error('Auto-arrange failed — room dimensions could not be read.')
-      return
-    }
-    if (result.placedCount === 0) {
+    const booths = vendorBoothsInRoom(store.doc, activeRoomId)
+    const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
+    const packResult = PackBooths(store.doc, activeRoomId, cleared)
+    const packedDoc = applyPackedBoothsToDoc(
+      store.doc,
+      activeRoomId,
+      packResult.booths
+    )
+
+    store.replaceObjects(packedDoc.objects)
+
+    if (packResult.placedCount === 0) {
       toast.error(
-        `Auto-arrange could not fit any vendor booths inside ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′).`
+        `Auto-arrange could not fit any vendor booths inside ${frame.name}. Check that a merged zone or room boundary exists.`
       )
       return
     }
 
-    store.replaceObjects(result.doc.objects)
-
-    const dropped = result.overflowCount + result.droppedCount
+    const dropped = packResult.droppedCount
     if (dropped > 0) {
       toast.warning(
-        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'}; ${dropped} could not fit and ${dropped === 1 ? 'was' : 'were'} left unplaced.`,
+        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'} inside the merged zone; ${dropped} could not fit and ${dropped === 1 ? 'was' : 'were'} left unplaced.`,
         { duration: 5000 }
       )
     } else {
       toast.success(
-        `Auto-arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} in ${frame.name} with ${autoArrangeMode} spacing.`
+        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'} in ${frame.name} with 5′ aisles.`
       )
     }
-  }, [
-    activeRoomId,
-    autoArrangeMode,
-    eventCategoryNames,
-    layoutCapacity,
-    safeTableSizeFt,
-    store,
-    vendorBoothCount,
-    vendorTableMetaByKey,
-  ])
+  }, [activeRoomId, store, vendorBoothCount])
 
   const handlePatronPathToggle = useCallback(() => {
     setPatronPathEnabled((enabled) => {

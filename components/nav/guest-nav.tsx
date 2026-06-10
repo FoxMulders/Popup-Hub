@@ -2,8 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import { User } from 'lucide-react'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
-import { MobileNavSheet } from '@/components/nav/mobile-nav-sheet'
+import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
+import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
 import { Button } from '@/components/ui/button'
 
 const NAV_LINKS = [
@@ -14,55 +17,74 @@ const NAV_LINKS = [
 
 export function GuestNav() {
   const pathname = usePathname()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const footer = (
+    <>
+      <Link href="/login">
+        <Button variant="outline" className="w-full min-h-11">
+          Sign in
+        </Button>
+      </Link>
+      <Link href="/signup">
+        <Button className="w-full min-h-11">Get started</Button>
+      </Link>
+    </>
+  )
 
   return (
-    <nav className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)]">
-      <div className="mx-auto flex max-w-full items-center justify-between overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
-        <BrandLogoLockup className="shrink-0" href="/discover" />
-
-        <div className="hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-canvas"
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link href="/login" className="hidden sm:block">
-            <Button variant="outline" size="sm" className="min-h-9">
-              Sign in
-            </Button>
-          </Link>
-          <Link href="/signup" className="hidden sm:block">
-            <Button size="sm" className="min-h-9">
-              Get started
-            </Button>
-          </Link>
-
-          <MobileNavSheet
-            links={NAV_LINKS}
-            pathname={pathname}
-            side="right"
-            className="md:hidden"
-            footer={
-              <>
+    <nav className="popup-hub-chrome-header sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
+      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
+        <CenteredHeaderRow
+          left={
+            <div className="hidden items-center gap-1 md:flex">
+              {NAV_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-canvas"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          }
+          center={<BrandLogoLockup className="shrink-0" href="/discover" />}
+          right={
+            <>
+              <div className="hidden items-center gap-2 md:flex">
                 <Link href="/login">
-                  <Button variant="outline" className="w-full min-h-11">
+                  <Button variant="outline" size="sm" className="min-h-9">
                     Sign in
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button className="w-full min-h-11">Get started</Button>
+                  <Button size="sm" className="min-h-9">
+                    Get started
+                  </Button>
                 </Link>
-              </>
-            }
-          />
-        </div>
+              </div>
+
+              <button
+                type="button"
+                className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                aria-label="Open navigation menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen(true)}
+              >
+                <User className="h-5 w-5 text-foreground" />
+              </button>
+
+              <AppMenuSheet
+                open={menuOpen}
+                onOpenChange={setMenuOpen}
+                links={NAV_LINKS}
+                pathname={pathname}
+                footer={footer}
+              />
+            </>
+          }
+        />
       </div>
     </nav>
   )

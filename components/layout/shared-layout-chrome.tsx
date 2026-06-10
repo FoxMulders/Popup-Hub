@@ -20,9 +20,9 @@ export function SharedLayoutChrome({
 }: SharedLayoutChromeProps) {
   return (
     <FeatureRequestProvider profile={profile} portalCookie={portalCookie}>
-      <div className="market-page min-h-screen">
+      <div className="market-page flex min-h-screen flex-col">
         <AppNav profile={profile} availablePortals={availablePortals} portalCookie={portalCookie} />
-        <main>{children}</main>
+        <main className="flex-1">{children}</main>
       </div>
     </FeatureRequestProvider>
   )

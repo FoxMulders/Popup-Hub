@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
+import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import {
   clearNedryLockoutState,
   formatLockoutCountdown,
@@ -301,12 +302,12 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
         .eq('id', user.id)
         .single()
 
-      const dashboard =
-        profile?.role === 'coordinator'
-          ? '/coordinator/dashboard'
-          : profile?.role === 'vendor'
-            ? '/vendor/dashboard'
-            : redirectTo
+      const dashboard = resolvePostLoginPath({
+        role: profile?.role,
+        redirectTo,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        isMobile: isMobileDevice(),
+      })
 
       router.push(dashboard)
     }

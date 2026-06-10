@@ -33,7 +33,7 @@ function ShopperShellInner({
       />
       <main
         id="site-main"
-        className="w-full max-w-full overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-0"
+        className="w-full max-w-full flex-1 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-0"
       >
         {children}
       </main>
@@ -59,7 +59,7 @@ export function ShopperShellClient({
         />
         <main
           id="site-main"
-          className="w-full max-w-full overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-0"
+          className="w-full max-w-full flex-1 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-0"
         >
           {children}
         </main>

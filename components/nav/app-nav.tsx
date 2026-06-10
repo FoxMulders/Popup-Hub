@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { UserAvatar } from '@/components/profile/user-avatar'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
+import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
 import { getPortalHome, resolveActivePortal } from '@/lib/portals/active-portal'
@@ -55,6 +57,7 @@ export function AppNav({
 }: AppNavProps) {
   const pathname = usePathname()
   const supabase = createClient()
+  const [menuOpen, setMenuOpen] = useState(false)
   const activePortal = resolveActivePortal(portalCookie, profile, pathname)
   const unreadCount = useNotificationCount(profile.id, activePortal)
   const { open: openFeatureRequest } = useFeatureRequest()
@@ -90,87 +93,108 @@ export function AppNav({
       style={{ minHeight: 'var(--app-nav-height, 4.5rem)' }}
     >
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 lg:gap-6">
-            <BrandLogoLockup className="shrink-0" href={homeHref} />
+        <CenteredHeaderRow
+          left={
+            <>
+              <div className="hidden w-[7rem] shrink-0 sm:block" aria-hidden />
 
-            {availablePortals.length > 1 ? (
-              <div className="hidden shrink-0 items-center gap-4 sm:flex">
-                <PortalTabs
-                  availablePortals={availablePortals}
-                  activePortal={activePortal}
-                />
-                {links.length > 0 ? (
-                  <div
-                    className="hidden h-7 w-px shrink-0 bg-stone-300/80 md:block"
-                    aria-hidden
+              {availablePortals.length > 1 ? (
+                <div className="hidden shrink-0 items-center gap-4 sm:flex">
+                  <PortalTabs
+                    availablePortals={availablePortals}
+                    activePortal={activePortal}
                   />
-                ) : null}
-              </div>
-            ) : null}
+                  {links.length > 0 ? (
+                    <div
+                      className="hidden h-7 w-px shrink-0 bg-stone-300/80 md:block"
+                      aria-hidden
+                    />
+                  ) : null}
+                </div>
+              ) : null}
 
-            {links.length > 0 ? (
-              <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex md:pl-1">
-                {links.map(({ href, label }) => {
-                  const active =
-                    href === '/coordinator/dashboard'
-                      ? pathname === href
-                      : pathname === href || pathname.startsWith(`${href}/`)
-                  return (
-                    <Link
-                      key={href}
-                      href={href}
-                      className={cn(
-                        'shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                        active
-                          ? 'bg-forest/10 text-forest'
-                          : 'text-muted-foreground hover:bg-canvas hover:text-foreground'
-                      )}
-                      aria-current={active ? 'page' : undefined}
-                    >
-                      {label}
-                    </Link>
-                  )
-                })}
-              </div>
-            ) : null}
-          </div>
+              {links.length > 0 ? (
+                <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex md:pl-1">
+                  {links.map(({ href, label }) => {
+                    const active =
+                      href === '/coordinator/dashboard'
+                        ? pathname === href
+                        : pathname === href || pathname.startsWith(`${href}/`)
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={cn(
+                          'shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                          active
+                            ? 'bg-forest/10 text-forest'
+                            : 'text-muted-foreground hover:bg-canvas hover:text-foreground'
+                        )}
+                        aria-current={active ? 'page' : undefined}
+                      >
+                        {label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </>
+          }
+          center={<BrandLogoLockup className="shrink-0" href={homeHref} />}
+          right={
+            <>
+              <button
+                type="button"
+                onClick={openFeatureRequest}
+                className="hidden rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:inline-flex md:items-center md:gap-1.5"
+              >
+                <span aria-hidden>💡</span>
+                <span className="hidden lg:inline">Suggest an Improvement</span>
+              </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={openFeatureRequest}
-              className="hidden rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:inline-flex lg:items-center lg:gap-1.5"
-            >
-              <span aria-hidden>💡</span>
-              <span>Suggest an Improvement</span>
-            </button>
+              <button
+                type="button"
+                className="app-tap-target rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                aria-label="Open navigation menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen(true)}
+              >
+                <UserAvatar
+                  userId={profile.id}
+                  profile={avatarProfile}
+                  className="h-9 w-9"
+                  fallbackClassName="text-xs"
+                />
+              </button>
 
-            <AppMenuSheet
-              links={links}
-              pathname={pathname}
-              profileName={profile.full_name}
-              unreadCount={unreadCount}
-              onSignOut={handleSignOut}
-              extraLinks={menuExtraLinks}
-              onSuggestImprovement={openFeatureRequest}
-            />
+              <Link
+                href="/profile"
+                className="app-tap-target hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline-flex"
+                aria-label="Profile settings"
+              >
+                <UserAvatar
+                  userId={profile.id}
+                  profile={avatarProfile}
+                  className="h-9 w-9"
+                  fallbackClassName="text-xs"
+                />
+              </Link>
 
-            <Link
-              href="/profile"
-              className="app-tap-target rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Profile settings"
-            >
-              <UserAvatar
-                userId={profile.id}
-                profile={avatarProfile}
-                className="h-9 w-9"
-                fallbackClassName="text-xs"
+              <AppMenuSheet
+                open={menuOpen}
+                onOpenChange={setMenuOpen}
+                links={links}
+                pathname={pathname}
+                profileName={profile.full_name}
+                unreadCount={unreadCount}
+                onSignOut={handleSignOut}
+                extraLinks={menuExtraLinks}
+                onSuggestImprovement={openFeatureRequest}
               />
-            </Link>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {availablePortals.length > 1 ? (
           <PortalTabs

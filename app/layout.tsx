@@ -86,12 +86,12 @@ export default async function RootLayout({
       lang="en"
       className={`${display.variable} ${body.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden safe-bottom">
+      <body className="flex min-h-screen flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
         <PopupLoaderProvider>
           <DocumentTitleSync initialRole={sessionRole} />
           <AuthSessionGuard />
           <ServiceWorkerRegister />
-          <div className="flex min-h-full flex-1 flex-col">
+          <div className="flex min-h-screen flex-1 flex-col">
             <TooltipProvider>
               {children}
             </TooltipProvider>

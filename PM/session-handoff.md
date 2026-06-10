@@ -2,6 +2,11 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (CanvasEditor Auto-Arrange → Turf packBooths, not deployed)
+- **`floor-plan-v2.tsx`:** Inspector **Auto-Arrange** button (`CanvasEditor`) now calls `PackBooths` / `AutoArrangeEngine.packBooths` (Turf-validated shelf scan inside `merged_zone`) instead of legacy `autoArrangeInRoom`; clears booth positions, packs with 5′ aisles, `store.replaceObjects`; unplaced booths stay off-canvas (`x/y = -999`).
+- **`scripts/verify-auto-arrange-engine.ts`:** Smoke test for merged_zone polygon + stage obstacle — Turf overlap/containment.
+- **Verify:** `npx tsx scripts/verify-auto-arrange-engine.ts`; `npx tsx scripts/verify-layout-pathfind.ts`; layout editor → deselect all → **Auto-Arrange** packs vendor booths into merged zone.
+
 ## Shipped this session (layout editor — auto-arrange refactor, patron flow overlay, OpenRouter fix, deployed 2026-06-09)
 - **Auto-arrange grid (`auto-arrange.ts` + `deterministic-market-layout.ts`):** Back-to-back double-row blocks with mandatory **6′ patron aisles** (`PATRON_AISLE_MIN_FT`); strict collision via `placedObjectsOverlap` + expanded obstacle probes; removed greedy fallback packer that caused overlaps; unplaced booths stage to open slots or are omitted with `removedOverlapCount` + toast: *"Could only fit X booths safely. Removed Y overlapping items."*
 - **Patron flow overlay:** `lib/floor-plan/patron-aisle-overlay.ts` + `PatronAisleOverlay` (green dashed 6′ corridor bands); **Toggle Patron Flow** (Route icon) in ROOM & CANVAS utilities sidebar; combines with existing `PatronTrafficPathOverlay` when doors exist.

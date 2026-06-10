@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { getDefaultDashboard, parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
+import { parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
+import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 
 function safeRedirectPath(value: string | null, fallback = '/discover'): string {
   if (!value || !value.startsWith('/') || value.startsWith('//')) {

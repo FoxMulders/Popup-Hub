@@ -31,8 +31,8 @@ export function MarketDayShell({
   const pathname = usePathname()
 
   return (
-    <div className="market-day-page min-h-screen">
-      <header className="border-b border-sage-200/80 bg-gradient-to-b from-sage-50 to-white">
+    <div className="market-day-page flex min-h-screen flex-col">
+      <header className="safe-top border-b border-sage-200/80 bg-gradient-to-b from-sage-50 to-white">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
