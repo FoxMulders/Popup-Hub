@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (booth canvas — wall snap, E/W flush placement, arrow-key nudge, not deployed)
+## Shipped this session (booth canvas — wall snap, E/W flush placement, arrow-key nudge, deployed 2026-06-09)
 - **E/W 4′ regression:** `VENDOR_WALL_INSET_FT = 0` in `boundary-constraints.ts` — vendor booths flush to west/east room bounds; guest tables keep 4′ `ROOM_PLACEMENT_CLEARANCE_FT`. Axis-dominant perimeter picking + cross-axis preservation in `perimeter-booth-orientation.ts`; snap-before-clamp in `use-canvas-pointer.ts` and `selection-keyboard-nudge.ts`.
 - **Corner flicker:** `pickPerimeterEdgeWithHysteresis` + locked wall edges during drag in `use-canvas-pointer.ts`.
 - **Arrow-key nudge:** `selection-keyboard-nudge.ts` + `useSelectionKeyboardNudge` in `floor-plan-canvas.tsx` — Arrow 1′, Shift+Arrow 5′.
@@ -149,9 +149,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `b1cb747` (pushed to `origin/master`)
-- Last deploy commit: `b1cb747` - feat: c
-- Production: https://popuphub.ca - **build 58** | commit `d335fba` (handoff updated 2026-06-09 21:02)
+- Branch: `master` @ `8aed7f7` (pushed to `origin/master`)
+- Last deploy commit: `8aed7f7` - --no-pause
+- Production: https://popuphub.ca - **build 59** | commit `452160d` (handoff updated 2026-06-09 21:14)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -528,7 +528,7 @@
 
 
 ## Last deploy
-- 2026-06-09 21:02 - Deploy via deploy-popuphub.ps1 - `feat: c` (b1cb747)
+- 2026-06-09 21:14 - Deploy via deploy-popuphub.ps1 - `--no-pause` (8aed7f7)
 
 
 ## Goal
