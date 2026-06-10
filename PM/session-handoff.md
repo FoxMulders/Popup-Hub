@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (coordinator dashboard premium refactor — clearance + workflow, not deployed)
+## Shipped this session (coordinator dashboard premium refactor — clearance + workflow, deployed 2026-06-10)
 - **Clearance physics:** `lib/coordinator/booth-clearance-visual.ts` — 3′ baseline; red ≤1′ / orange &lt;3′ / green ≥3′ booth fills during drag; `layout-clearance-constants.ts` safety buffer 3′; snap grid drift fix in `geometry.ts`.
 - **Autosave:** `dashboard-layout-save-context.tsx` — Saving… only after debounced commit; green Saved after 1s hold; `floor-plan-v2.tsx` schedules on `onLayoutCommit` (drag end) not continuous doc fingerprint.
 - **Workflow CTA:** `dashboard-next-step-cta.tsx` — static footer; Blueprint → Ledger when clearance valid; Ledger → overview when allocations complete; clearance tooltip blocks advance.
@@ -267,9 +267,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `ff1dcde` (pushed to `origin/master`)
-- Last deploy commit: `ff1dcde` - feat: virtual split-pane + native dual-screen workspace
-- Production: https://popuphub.ca - **v1.0.0 build 74** | commit `d14de6a` (handoff updated 2026-06-10 13:33)
+- Branch: `master` @ `97e2fa2` (pushed to `origin/master`)
+- Last deploy commit: `97e2fa2` - feat: coordinator dashboard premium refactor — clearance + workflow
+- Production: https://popuphub.ca - **v1.0.0 build 75** | commit `829fc5f` (handoff updated 2026-06-10 13:55)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -646,7 +646,7 @@
 
 
 ## Last deploy
-- 2026-06-10 13:33 - Deploy via deploy-popuphub.ps1 - `feat: virtual split-pane + native dual-screen workspace` (ff1dcde)
+- 2026-06-10 13:55 - Deploy via deploy-popuphub.ps1 - `feat: coordinator dashboard premium refactor — clearance + workflow` (97e2fa2)
 
 
 ## Goal
