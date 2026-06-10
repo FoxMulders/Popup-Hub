@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (event dashboard layout — top toolbar, mobile booth matrix, not deployed)
+## Shipped this session (event dashboard layout — top toolbar, mobile booth matrix, deployed 2026-06-10)
 - **Top toolbar strip:** Layout tools (Room & Canvas, Shapes, Alignment, Floor Plan) moved from left rail to horizontal bar below dashboard header via `dashboard-top-toolbar-strip.tsx` + `topBarLayout` on `CanvasCommandBar` / `CanvasToolbarStatic`; `floor-plan-v2.tsx` portals into top strip on all viewports.
 - **Dashboard shell:** `dashboard-app-shell.tsx` drops fixed left column; `Dashboard_qa.tsx` wires toolbar strip + preview mode; header compact (`py-1.5`).
 - **Command center header:** Edit / Preview toggle (`command-center-fullscreen-context` `previewMode`); live notification badge placeholder; subtitle updated.
@@ -225,9 +225,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `ec68ecf` (pushed to `origin/master`)
-- Last deploy commit: `ec68ecf` - feat: ship 3 session updates (app menu density — semantic sections; side menu / sidebar scroll; header nav — logo left, hamburger restored, profile first)
-- Production: https://popuphub.ca - **build 65** | commit `aaeeaa0` (handoff updated 2026-06-10 09:31)
+- Branch: `master` @ `9564c73` (pushed to `origin/master`)
+- Last deploy commit: `9564c73` - feat: event dashboard layout — top toolbar, mobile booth matrix
+- Production: https://popuphub.ca - **build 66** | commit `4168f8b` (handoff updated 2026-06-10 10:05)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -604,7 +604,7 @@
 
 
 ## Last deploy
-- 2026-06-10 09:31 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (app menu density — semantic sections; side menu / sidebar scroll; header nav — logo left, hamburger restored, profile first)` (ec68ecf)
+- 2026-06-10 10:05 - Deploy via deploy-popuphub.ps1 - `feat: event dashboard layout — top toolbar, mobile booth matrix` (9564c73)
 
 
 ## Goal
