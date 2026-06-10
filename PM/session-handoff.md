@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (virtual split-pane + native dual-screen workspace, not deployed)
+## Shipped this session (virtual split-pane + native dual-screen workspace, deployed 2026-06-10)
 - **Virtual split-pane:** `dashboard-split-workspace.tsx` — Blueprint Studio ~65% + Allocation Ledger ~35%; collapse toggle on ledger header (`dashboard-workspace-view-context.tsx` persisted state); wired in `Dashboard_qa.tsx`.
 - **Dual-screen engine:** `lib/coordinator/floorplan-sync.ts` + `floorplan-sync-bridge.tsx` — `BroadcastChannel('floorplan_sync')`; toolbar **Launch Dual-Screen Mode** (`canvas-command-bar-blocks.tsx`, `floor-plan-v2.tsx`); secondary window `/coordinator/dashboard/ledger` (`dashboard-ledger-window-client.tsx`).
 - **Density + layout:** `--dashboard-gutter` tightened; split-pane CSS in `globals.css`; **Full screen** labeled button (browser fullscreen via `command-center-fullscreen-context.tsx`); reactive autosave chip (yellow Saving… → green Saved to cloud).
@@ -260,9 +260,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8aea984` (pushed to `origin/master`)
-- Last deploy commit: `8aea984` - feat: coordinator dashboard density + UX polish
-- Production: https://popuphub.ca - **v1.0.0 build 69** | commit `9ab5b50` (handoff updated 2026-06-10 13:09)
+- Branch: `master` @ `ff1dcde` (pushed to `origin/master`)
+- Last deploy commit: `ff1dcde` - feat: virtual split-pane + native dual-screen workspace
+- Production: https://popuphub.ca - **v1.0.0 build 74** | commit `d14de6a` (handoff updated 2026-06-10 13:33)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -639,7 +639,7 @@
 
 
 ## Last deploy
-- 2026-06-10 13:09 - Deploy via deploy-popuphub.ps1 - `feat: coordinator dashboard density + UX polish` (8aea984)
+- 2026-06-10 13:33 - Deploy via deploy-popuphub.ps1 - `feat: virtual split-pane + native dual-screen workspace` (ff1dcde)
 
 
 ## Goal
