@@ -111,7 +111,6 @@ export type SidebarSectionId =
   | 'designer-tools'
   | 'patron-layout'
   | 'vendor-booths'
-  | 'vendor-matches'
 
 /** Left-rail layout editor — three scannable tool groups. */
 export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
@@ -174,14 +173,6 @@ export function getVisibleSidebarSections(ctx: {
     blocks: alignmentBlocks,
   })
 
-  if (ctx.showVendor) {
-    sections.push({
-      id: 'vendor-matches',
-      header: 'Vendor Matches',
-      blocks: [],
-    })
-  }
-
   return sections
 }
 
@@ -195,9 +186,6 @@ export function getVisibleSidebarSectionsQa(ctx: {
   return getVisibleSidebarSections(ctx).map((section) => {
     if (section.id === 'floor-plan-optimize') {
       return { ...section, header: 'FLOOR PLAN' }
-    }
-    if (section.id === 'vendor-matches') {
-      return { ...section, header: 'VENDOR MATCHES' }
     }
     return section
   })

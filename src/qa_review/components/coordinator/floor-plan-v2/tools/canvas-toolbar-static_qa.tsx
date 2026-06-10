@@ -22,8 +22,6 @@ import {
   type StaticRowCollapsedState,
 } from '@/components/coordinator/floor-plan-v2/tools/toolbar-static-layout'
 import type { StaticToolbarLayoutContext } from '@/components/coordinator/floor-plan-v2/tools/canvas-toolbar-static'
-import { VendorMatchesPanel } from '@/components/coordinator/floor-plan-v2/tools/vendor-matches-panel'
-
 import {
   QA_TIP_COLLAPSE,
   QA_TIP_EXPAND,
@@ -109,16 +107,12 @@ function SidebarToolbarSection({
         {section.header}
       </h3>
       <div className="mt-2 flex w-full min-w-0 flex-col gap-2">
-        {section.id === 'vendor-matches' ? (
-          <VendorMatchesPanel eventId={eventId} compact={compact} />
-        ) : (
-          <BlockCluster
-            blockIds={section.blocks}
-            renderBlock={renderBlock}
-            compact={compact}
-            bare
-          />
-        )}
+        <BlockCluster
+          blockIds={section.blocks}
+          renderBlock={renderBlock}
+          compact={compact}
+          bare
+        />
       </div>
     </section>
   )

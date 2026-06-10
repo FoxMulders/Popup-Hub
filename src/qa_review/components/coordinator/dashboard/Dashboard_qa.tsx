@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
+import { DashboardAllocationLedger } from '@/components/coordinator/dashboard/dashboard-allocation-ledger'
+import { useDashboardWorkspaceView } from '@/components/coordinator/dashboard/dashboard-workspace-view-context'
 import { DashboardAppShell } from '@/components/coordinator/dashboard/dashboard-app-shell'
 import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashboard-canvas-column'
 import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
@@ -59,6 +61,7 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
 function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const { fullscreen: immersive, previewMode } = useCommandCenterFullscreen()
+  const { isBlueprint, isLedger } = useDashboardWorkspaceView()
   const { selectedEventId, layoutRooms, setLayoutRooms } = useMarketManagement()
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
@@ -104,7 +107,9 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
       <DashboardAppShell
         header={header}
         toolbarStrip={
-          <DashboardTopToolbarStrip hidden={previewMode || immersive} />
+          <DashboardTopToolbarStrip
+            hidden={previewMode || immersive || !isBlueprint}
+          />
         }
         immersive={immersive}
         ariaBusy={ariaBusy}
@@ -119,6 +124,8 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
                 className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
                 aria-hidden
               />
+            ) : isLedger ? (
+              <DashboardAllocationLedger />
             ) : showNoRoomEmpty ? (
               <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
             ) : (

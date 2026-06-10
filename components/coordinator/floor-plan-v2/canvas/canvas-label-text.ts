@@ -50,7 +50,8 @@ export function wrapTextInContainer(
     const maxLines = Math.max(1, Math.floor(availH / lineHeight))
     const maxCharsPerLine = Math.max(1, Math.floor(availW / charW))
 
-    const words = trimmed.split(/\s+/)
+    const normalized = trimmed.replace(/\s*[—–]\s*/g, ' ')
+    const words = normalized.split(/\s+/).filter(Boolean)
     const lines: string[] = []
     let current = ''
 

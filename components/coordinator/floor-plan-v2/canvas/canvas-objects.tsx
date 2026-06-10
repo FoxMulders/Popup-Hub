@@ -708,16 +708,17 @@ function CanvasObjectsBase({
               (() => {
                 const statusLabel =
                   boothStatusLabel(obj, boothPlacementStatusByObjectId) ?? ''
-                const bandHeight = Math.min(h * 0.45, Math.max(16, h * 0.35))
+                const bandHeight = Math.min(h * 0.55, Math.max(18, h * 0.42))
                 const wrapped = wrapTextInContainer(
                   statusLabel,
                   w,
                   bandHeight,
                   {
-                    baseFontSize: Math.min(9, Math.max(6, w * 0.12)),
+                    baseFontSize: Math.min(10, Math.max(6, w * 0.14)),
                     minFontSize: 5,
                     padX: 2,
                     padY: 1,
+                    charWidthRatio: 0.52,
                   }
                 )
                 const startY =

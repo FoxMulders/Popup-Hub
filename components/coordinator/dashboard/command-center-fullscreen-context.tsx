@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useState,
@@ -11,7 +12,7 @@ import {
 } from 'react'
 import { CANVAS_FULLSCREEN_CLASS } from '@/components/coordinator/floor-plan-v2/canvas/use-native-fullscreen'
 
-const HTML_CLASS = 'command-center-canvas-fullscreen'
+const DASHBOARD_ROOT_ID = 'coordinator-dashboard-root'
 
 interface CommandCenterFullscreenContextValue {
   fullscreen: boolean
@@ -25,9 +26,12 @@ interface CommandCenterFullscreenContextValue {
 const CommandCenterFullscreenContext =
   createContext<CommandCenterFullscreenContextValue | null>(null)
 
+function dashboardFullscreenTarget(): HTMLElement | null {
+  return document.getElementById(DASHBOARD_ROOT_ID)
+}
+
 export function CommandCenterFullscreenProvider({ children }: { children: ReactNode }) {
-  /** Panels visible by default so back / New market links stay reachable. */
-  const [fullscreen, setFullscreen] = useState(false)
+  const [fullscreen, setFullscreenState] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
 
   useLayoutEffect(() => {
@@ -35,20 +39,53 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
     document.body.dataset.dashboardCommandCenter = 'true'
     return () => {
       delete document.body.dataset.dashboardCommandCenter
-      document.documentElement.classList.remove(HTML_CLASS)
       document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+      if (document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {})
+      }
     }
   }, [])
 
-  useLayoutEffect(() => {
-    const root = document.documentElement
-    root.classList.toggle(HTML_CLASS, fullscreen)
-    return () => root.classList.remove(HTML_CLASS)
-  }, [fullscreen])
+  const setFullscreen = useCallback(async (value: boolean) => {
+    const root = dashboardFullscreenTarget() ?? document.documentElement
+    if (value) {
+      document.documentElement.classList.add(CANVAS_FULLSCREEN_CLASS)
+      try {
+        if (!document.fullscreenElement) {
+          await root.requestFullscreen()
+        }
+      } catch {
+        // CSS-only fallback when Fullscreen API is blocked
+      }
+      setFullscreenState(true)
+      return
+    }
+
+    document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+      }
+    } catch {
+      // ignore
+    }
+    setFullscreenState(false)
+  }, [])
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+        setFullscreenState(false)
+      }
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange)
+  }, [])
 
   const toggleFullscreen = useCallback(() => {
-    setFullscreen((v) => !v)
-  }, [])
+    void setFullscreen(!fullscreen)
+  }, [fullscreen, setFullscreen])
 
   const togglePreviewMode = useCallback(() => {
     setPreviewMode((v) => !v)
@@ -63,7 +100,7 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
       setPreviewMode,
       togglePreviewMode,
     }),
-    [fullscreen, previewMode, toggleFullscreen, togglePreviewMode]
+    [fullscreen, setFullscreen, toggleFullscreen, previewMode, togglePreviewMode]
   )
 
   return (
@@ -73,7 +110,7 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
   )
 }
 
-/** Dashboard command-center canvas immersive mode (hides site + side chrome). */
+/** Dashboard command-center native browser fullscreen. */
 export function useCommandCenterFullscreen(): CommandCenterFullscreenContextValue {
   const ctx = useContext(CommandCenterFullscreenContext)
   if (!ctx) {

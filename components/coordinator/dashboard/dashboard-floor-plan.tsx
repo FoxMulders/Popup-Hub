@@ -20,10 +20,7 @@ import {
   resolveDesignerExitHref,
   resolveDesignerExitLabel,
 } from '@/components/coordinator/command-center-exit-link'
-import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useMarketManagement } from './market-management-context'
-import { BoothMatrixPanel } from './booth-matrix-panel'
-import { DashboardNextStepCta } from './dashboard-next-step-cta'
 
 export interface DashboardFloorPlanViewportProps {
   /** Fired when the CAD canvas store is ready for interaction */
@@ -31,7 +28,6 @@ export interface DashboardFloorPlanViewportProps {
 }
 
 export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlanViewportProps) {
-  const { previewMode } = useCommandCenterFullscreen()
   const {
     events,
     selectedEventId,
@@ -177,7 +173,6 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
   return (
     <div
       className="dashboard-floor-plan-viewport relative flex h-full min-h-0 flex-1 flex-col"
-      data-dashboard-preview={previewMode ? 'true' : undefined}
     >
       <FloorPlanV2
         key={selectedEventId}
@@ -211,13 +206,6 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         onVendorDrop={handleVendorDrop}
         className="min-h-0 flex-1"
       />
-      {!previewMode ? (
-        <BoothMatrixPanel
-          headerAction={<DashboardNextStepCta inline className="max-w-[16rem]" />}
-        />
-      ) : (
-        <BoothMatrixPanel />
-      )}
     </div>
   )
 }

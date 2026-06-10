@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import { cn } from '@/lib/utils'
+import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { useMarketManagement } from './market-management-context'
 import { useBoothMatrixRows } from './use-booth-matrix-rows'
 
@@ -21,34 +22,48 @@ const MATRIX_STORAGE_KEY = 'popup-hub:dashboard:booth-matrix-collapsed'
 
 export function BoothMatrixPanel({
   headerAction,
+  variant = 'embedded',
+  defaultOpen,
 }: {
   headerAction?: React.ReactNode
+  /** `ledger` — full-page Allocation Ledger; `embedded` — legacy dock under canvas. */
+  variant?: 'embedded' | 'ledger'
+  defaultOpen?: boolean
 }) {
   const rows = useBoothMatrixRows()
+  const { setView } = useDashboardWorkspaceView()
   const { focusBooth, selectedBoothId } = useMarketManagement()
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [panelOpen, setPanelOpen] = useState(true)
+  const isLedger = variant === 'ledger'
+
+  const handleFocusBooth = (boothId: string) => {
+    if (isLedger) setView('blueprint')
+    focusBooth(boothId)
+  }
+  const [panelOpen, setPanelOpen] = useState(defaultOpen ?? !isLedger)
   const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const captionId = useId()
 
   const selectedRow = rows.find((row) => row.id === selectedBoothId)
 
   useEffect(() => {
+    if (isLedger) return
     try {
       const raw = window.localStorage.getItem(MATRIX_STORAGE_KEY)
       if (raw === '0') setPanelOpen(false)
     } catch {
       // ignore
     }
-  }, [])
+  }, [isLedger])
 
   useEffect(() => {
+    if (isLedger) return
     try {
       window.localStorage.setItem(MATRIX_STORAGE_KEY, panelOpen ? '1' : '0')
     } catch {
       // ignore
     }
-  }, [panelOpen])
+  }, [panelOpen, isLedger])
 
   useEffect(() => {
     if (!selectedRow) return
@@ -57,11 +72,25 @@ export function BoothMatrixPanel({
     )
   }, [selectedRow])
 
-  if (rows.length === 0) return null
+  if (rows.length === 0) {
+    if (isLedger) {
+      return (
+        <div className="dashboard-allocation-ledger__empty flex flex-1 items-center justify-center p-6 text-center">
+          <p className="text-sm text-stone-600">
+            No booths on the floor plan yet. Switch to Blueprint Studio to place booths.
+          </p>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <section
-      className="dashboard-booth-matrix-panel"
+      className={cn(
+        'dashboard-booth-matrix-panel',
+        isLedger && 'dashboard-booth-matrix-panel--ledger'
+      )}
       aria-labelledby={captionId}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -82,7 +111,7 @@ export function BoothMatrixPanel({
               aria-hidden
             />
             <span className="truncate text-xs font-bold uppercase tracking-wide text-stone-800">
-              Booth matrix
+              {isLedger ? 'Booth matrix' : 'Booth matrix'}
             </span>
             <span className="rounded-full bg-stone-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-stone-700">
               {rows.length}
@@ -100,28 +129,29 @@ export function BoothMatrixPanel({
 
       {panelOpen ? (
         <div id="booth-matrix-table-region" className="mt-1 space-y-1">
-          {/* Desktop / tablet — single semantic table */}
-          <div className="dashboard-booth-matrix-panel__table-wrap hidden md:block">
+          <div
+            className={cn(
+              'dashboard-booth-matrix-panel__table-wrap hidden md:block',
+              isLedger && 'dashboard-booth-matrix-panel__table-wrap--ledger'
+            )}
+          >
             <table className="w-full table-fixed border-collapse text-left text-sm">
               <caption className="sr-only">
-                Floor plan booth assignments, categories, payment status, and coordinates
+                Floor plan booth assignments, categories, and payment status
               </caption>
               <thead>
                 <tr className="border-b border-stone-200 bg-stone-100/90">
-                  <th scope="col" className="w-[14%] px-2 font-semibold">
+                  <th scope="col" className="w-1/4 px-2 font-semibold">
                     Booth
                   </th>
-                  <th scope="col" className="w-[22%] px-2 font-semibold">
+                  <th scope="col" className="w-1/4 px-2 font-semibold">
                     Vendor
                   </th>
-                  <th scope="col" className="w-[16%] px-2 font-semibold">
+                  <th scope="col" className="w-1/4 px-2 font-semibold">
                     Category
                   </th>
-                  <th scope="col" className="w-[24%] px-2 font-semibold">
+                  <th scope="col" className="w-1/4 px-2 font-semibold">
                     Status
-                  </th>
-                  <th scope="col" className="w-[24%] px-2 font-semibold">
-                    Coordinates (ft)
                   </th>
                 </tr>
               </thead>
@@ -137,7 +167,7 @@ export function BoothMatrixPanel({
                         type="button"
                         className="rounded text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
                         aria-label={`Focus booth ${row.label} on canvas — ${row.statusLabel}`}
-                        onClick={() => focusBooth(row.id)}
+                        onClick={() => handleFocusBooth(row.id)}
                       >
                         {row.label}
                       </button>
@@ -147,16 +177,12 @@ export function BoothMatrixPanel({
                     <td className="px-2">
                       <StatusBadge status={row.status} label={row.statusLabel} />
                     </td>
-                    <td className="whitespace-nowrap px-2 tabular-nums text-stone-800">
-                      {row.x}′ × {row.y}′
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Mobile — accordion rows */}
           <div className="flex flex-col gap-1 md:hidden">
             {rows.map((row) => {
               const expanded = expandedId === row.id
@@ -191,16 +217,12 @@ export function BoothMatrixPanel({
                       <dd>
                         <StatusBadge status={row.status} label={row.statusLabel} />
                       </dd>
-                      <dt className="font-semibold text-muted-foreground">Coordinates</dt>
-                      <dd className="tabular-nums">
-                        {row.x}′ × {row.y}′
-                      </dd>
                       <dt className="sr-only">Actions</dt>
                       <dd>
                         <button
                           type="button"
                           className="font-medium text-forest underline-offset-2 hover:underline"
-                          onClick={() => focusBooth(row.id)}
+                          onClick={() => handleFocusBooth(row.id)}
                         >
                           Focus on canvas
                         </button>

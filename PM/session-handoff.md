@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (two-page floor plan workspace — Blueprint Studio + Allocation Ledger, not deployed)
+- **Page split:** `dashboard-workspace-view-context.tsx` — Blueprint Studio (canvas + toolbars) vs Allocation Ledger (`?view=ledger`); header tabs in `dashboard-command-center-header.tsx`; booth matrix removed from `dashboard-floor-plan.tsx`; full ledger in `dashboard-allocation-ledger.tsx`.
+- **Toolbar:** Removed VENDOR MATCHES section (`toolbar-static-layout.ts`, `canvas-toolbar-static.tsx`); ALIGNMENT & SPACING + Auto-Arrange visible in top bar; shared toolbar control height in `globals.css`.
+- **Canvas:** `QA_CANVAS_VIEWPORT_CLASS` flex fill fix; status label wrap for “Assigned — unpaid” (`canvas-label-text.ts`, `canvas-objects.tsx`); native browser **Full screen** via `command-center-fullscreen-context.tsx` (replaces Panels/Full canvas CSS mode).
+- **Booth matrix:** Coordinates column removed; even 25% columns; semantic badges; collapsible header; focus-from-ledger switches to Blueprint Studio; ledger full-height table styles in `globals.css`.
+- **Verify:** `/coordinator/dashboard` — Blueprint Studio = canvas only; Allocation Ledger tab = matrix only; Full screen = browser fullscreen; logo → `/`; autosave Saving… → Saved to cloud; alignment Perimeter/Grid/Staggered + Auto-Arrange visible.
+
 ## Shipped this session (coordinator dashboard density + UX polish, deployed 2026-06-10)
 - **Global chrome:** `app-nav.tsx` — Popup Hub logo links to `/`; nav pills use high-contrast `text-stone-900`; unified `--dashboard-gutter` aligns header, toolbar, and booth matrix left edges.
 - **Autosave chip:** `dashboard-layout-save-context.tsx` — debounced `scheduleAutosave` with yellow saving → green saved → idle fade; `floor-plan-v2.tsx` uses doc fingerprint (fixes stuck “Saving…”).

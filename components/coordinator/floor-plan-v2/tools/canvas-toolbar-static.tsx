@@ -29,8 +29,6 @@ import {
   type SidebarSectionDef,
   type StaticRowCollapsedState,
 } from './toolbar-static-layout'
-import { VendorMatchesPanel } from './vendor-matches-panel'
-
 const STATIC_ROW_ICONS: Record<
   CanvasToolbarStaticRowId,
   React.ComponentType<{ className?: string }>
@@ -122,26 +120,19 @@ function TopBarToolbarSection({
 }) {
   return (
     <section
-      className={cn(
-        'dashboard-toolbar-section shrink-0',
-        section.id === 'vendor-matches' ? 'min-w-[14rem]' : 'min-w-[min(100%,12rem)]'
-      )}
+      className="dashboard-toolbar-section shrink-0 min-w-[min(100%,12rem)]"
       aria-label={section.header}
     >
       <SectionHeader>{section.header}</SectionHeader>
       <div className="flex min-h-[var(--dashboard-toolbar-height)] min-w-0 flex-wrap items-center gap-1.5">
-        {section.id === 'vendor-matches' ? (
-          <VendorMatchesPanel eventId={eventId} compact={compact} />
-        ) : (
-          section.blocks.map((blockId) => (
-            <div
-              key={blockId}
-              className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
-            >
-              {renderBlock(blockId)}
-            </div>
-          ))
-        )}
+        {section.blocks.map((blockId) => (
+          <div
+            key={blockId}
+            className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
+          >
+            {renderBlock(blockId)}
+          </div>
+        ))}
       </div>
     </section>
   )
@@ -170,16 +161,12 @@ function SidebarToolbarSection({
     >
       <SectionHeader>{section.header}</SectionHeader>
       <div className="mt-2 flex w-full min-w-0 flex-col gap-2">
-        {section.id === 'vendor-matches' ? (
-          <VendorMatchesPanel eventId={eventId} compact={compact} />
-        ) : (
-          <BlockCluster
-            blockIds={section.blocks}
-            renderBlock={renderBlock}
-            compact={compact}
-            bare
-          />
-        )}
+        <BlockCluster
+          blockIds={section.blocks}
+          renderBlock={renderBlock}
+          compact={compact}
+          bare
+        />
       </div>
     </section>
   )

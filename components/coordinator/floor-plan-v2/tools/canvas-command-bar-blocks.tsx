@@ -166,9 +166,7 @@ function FloorPlanOptimizeControl({
         {sidebarLayout ? (
           <span className="text-[11px] font-semibold">Auto-Arrange Floor Plan</span>
         ) : (
-          <span className="hidden text-[11px] font-semibold lg:inline">
-            Auto-Arrange Floor Plan
-          </span>
+          <span className="text-[11px] font-semibold">Auto-Arrange</span>
         )}
       </CommandButton>
     </div>

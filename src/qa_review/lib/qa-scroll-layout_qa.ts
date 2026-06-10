@@ -4,9 +4,9 @@ export const QA_GLOBAL_PAGE_SCROLL = true
 /** Step 3 workspace column — scrollable flex column, no viewport lock. */
 export const QA_STEP3_CONTENT_CLASS = 'flex flex-col h-full overflow-y-auto'
 
-/** Outer canvas column — grows with workspace, no fixed viewport height. */
+/** Outer canvas column — fills workspace; pan/zoom owns internal scroll. */
 export const QA_CANVAS_VIEWPORT_CLASS =
-  'relative w-full min-w-0 flex-grow bg-slate-50'
+  'relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-50'
 
 /** Inner canvas host — flex-grow, pan/zoom defers to page scroll. */
 export const QA_CANVAS_CONTAINER_CLASS =

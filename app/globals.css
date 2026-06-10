@@ -363,26 +363,89 @@
     --dashboard-radius: 8px;
     --dashboard-toolbar-height: 2rem;
     --dashboard-panel-gap: 0.375rem;
-    --dashboard-gutter: 0.75rem;
+    --dashboard-gutter: 0.5rem;
   }
 
   .dashboard-app-shell__header,
   .dashboard-top-toolbar-strip,
   .dashboard-booth-matrix-panel,
+  .dashboard-allocation-ledger,
   .dashboard-toolbar-portal {
     padding-inline: var(--dashboard-gutter);
   }
 
   .dashboard-app-shell__header {
-    padding-block: 0.375rem;
-  }
-
-  .dashboard-top-toolbar-strip {
     padding-block: 0.25rem;
   }
 
+  .dashboard-top-toolbar-strip {
+    padding-block: 0.125rem;
+  }
+
   .dashboard-booth-matrix-panel {
+    padding-block: 0.25rem;
+  }
+
+  .dashboard-workspace-tabs {
+    gap: 0.25rem;
+  }
+
+  .dashboard-workspace-tab {
+    border-radius: var(--dashboard-radius);
+    border: 1px solid rgb(231 229 228);
+    background: rgb(250 250 249);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: rgb(68 64 60);
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .dashboard-workspace-tab:hover {
+    background: white;
+    color: rgb(28 25 23);
+  }
+
+  .dashboard-workspace-tab.is-active {
+    border-color: rgb(16 185 129 / 0.45);
+    background: rgb(236 253 245);
+    color: rgb(6 95 70);
+  }
+
+  .dashboard-workspace-tab:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .dashboard-allocation-ledger {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .dashboard-booth-matrix-panel--ledger {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 0;
+    background: transparent;
     padding-block: 0.375rem;
+  }
+
+  .dashboard-booth-matrix-panel--ledger #booth-matrix-table-region {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dashboard-booth-matrix-panel__table-wrap--ledger {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
   }
 
   .dashboard-panel {
@@ -409,6 +472,16 @@
     display: flex;
     min-height: var(--dashboard-toolbar-height);
     align-items: center;
+  }
+
+  .dashboard-toolbar-section button,
+  .dashboard-toolbar-section select,
+  .dashboard-toolbar-section .command-button {
+    min-height: var(--dashboard-toolbar-height);
+  }
+
+  html.popup-hub-canvas-fullscreen #site-app-nav {
+    display: none !important;
   }
 
   .dashboard-booth-matrix-panel {
