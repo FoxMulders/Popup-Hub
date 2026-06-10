@@ -68,7 +68,7 @@ export function PortalTabs({
       role="tablist"
       aria-label="Switch portal"
       className={cn(
-        'inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-stone-200/80 bg-stone-200/45 p-1 shadow-[inset_0_1px_2px_rgb(62_45_28_/_0.06)]',
+        'inline-flex max-w-full items-center gap-0.5 overflow-x-hidden rounded-full border border-stone-200/80 bg-stone-200/45 p-1 shadow-[inset_0_1px_2px_rgb(62_45_28_/_0.06)]',
         compact && 'w-full',
         className
       )}

@@ -2,9 +2,7 @@
 
 import { useEffect } from 'react'
 import {
-  boothClampDeltaForRoom,
-  footprintWithinBounds,
-  resolveRoomPlacementBounds,
+  footprintClampDeltaForRoom,
 } from '@/lib/floor-plan/boundary-constraints'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { BoothObject, PlacedObject } from '../state/types'
@@ -75,7 +73,10 @@ function applyVendorSnap(
   doc: FloorPlanDocStore['doc'],
   preferredEdge?: RoomEdgeSide | null
 ): BoothObject {
-  const snap = vendorBoothPerimeterSnapPatch(booth, doc, { preferredEdge })
+  const snap = vendorBoothPerimeterSnapPatch(booth, doc, {
+    preferredEdge,
+    positionOnly: true,
+  })
   if (!snap) return booth
   if (!isCardinalRotation(booth.rotation ?? 0)) {
     const { rotation: _ignored, ...positionPatch } = snap
@@ -130,7 +131,7 @@ function patchAfterNudge(
   }
 
   const roomId = doc.objectRoom?.[obj.id] ?? activeRoomId ?? null
-  const roomClampDelta = boothClampDeltaForRoom(
+  const roomClampDelta = footprintClampDeltaForRoom(
     objectWithPatch(obj, patch),
     doc,
     roomId
@@ -139,14 +140,6 @@ function patchAfterNudge(
     ...patch,
     x: (patch.x ?? obj.x) + roomClampDelta.dx,
     y: (patch.y ?? obj.y) + roomClampDelta.dy,
-  }
-
-  const roomIdForBounds = doc.objectRoom?.[obj.id] ?? activeRoomId
-  if (obj.kind === 'booth' && roomIdForBounds) {
-    const bounds = resolveRoomPlacementBounds(doc, roomIdForBounds)
-    if (bounds && !footprintWithinBounds(objectWithPatch(obj, patch), bounds)) {
-      return { x: obj.x, y: obj.y }
-    }
   }
 
   const probe = objectWithPatch(obj, patch)

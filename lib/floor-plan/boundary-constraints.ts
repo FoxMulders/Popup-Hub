@@ -158,8 +158,8 @@ export function clipBoothToLocalRoom(
   )
 }
 
-/** Room-scoped drag clamp for booths; falls back to canvas bounds. */
-export function boothClampDeltaForRoom(
+/** Room-scoped drag clamp — footprint AABB vs room edges (independent X/Y). */
+export function footprintClampDeltaForRoom(
   obj: PlacedObject,
   doc: FloorPlanDoc,
   roomId: string | null | undefined
@@ -171,5 +171,43 @@ export function boothClampDeltaForRoom(
   if (!bounds) {
     return canvasClampDelta(obj, doc.canvasWidthFt, doc.canvasLengthFt)
   }
-  return clampDeltaToRect(obj, insetBounds(bounds, wallInsetClearanceFt(obj)))
+
+  const clearance = wallInsetClearanceFt(obj)
+  const footprint = objectFootprintAabb(obj)
+  const roomW = bounds.maxX - bounds.minX
+  const roomH = bounds.maxY - bounds.minY
+  const innerW = Math.max(0, roomW - clearance * 2)
+  const innerH = Math.max(0, roomH - clearance * 2)
+  const minX = bounds.minX + clearance
+  const minY = bounds.minY + clearance
+  const maxX = bounds.maxX - clearance - footprint.width
+  const maxY = bounds.maxY - clearance - footprint.height
+
+  let dx = 0
+  let dy = 0
+
+  if (footprint.width > innerW) {
+    dx = minX - footprint.x
+  } else {
+    if (footprint.x < minX) dx = minX - footprint.x
+    else if (footprint.x > maxX) dx = maxX - footprint.x
+  }
+
+  if (footprint.height > innerH) {
+    dy = minY - footprint.y
+  } else {
+    if (footprint.y < minY) dy = minY - footprint.y
+    else if (footprint.y > maxY) dy = maxY - footprint.y
+  }
+
+  return { dx, dy }
+}
+
+/** @deprecated Alias — use {@link footprintClampDeltaForRoom}. */
+export function boothClampDeltaForRoom(
+  obj: PlacedObject,
+  doc: FloorPlanDoc,
+  roomId: string | null | undefined
+): { dx: number; dy: number } {
+  return footprintClampDeltaForRoom(obj, doc, roomId)
 }

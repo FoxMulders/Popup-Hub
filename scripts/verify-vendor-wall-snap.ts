@@ -80,6 +80,15 @@ assert(
   `Vendor west clamp should allow approach, got dx=${westClamp.dx} dy=${westClamp.dy}`
 )
 
+// Booth 3.5′ from top wall — inside 4′ snap band, must snap flush (not bounce to grid).
+const inSnapBand = vendorBooth(22, 5 + 3.5)
+const snapBand = snapVendorBoothToPerimeter(inSnapBand, doc)
+assert(snapBand !== null, 'Expected snap within 4′ wall band')
+assert(
+  Math.abs(snapBand!.y - (5 + VENDOR_WALL_INSET_FT)) < 0.01,
+  `Snap band y=${snapBand!.y} expected flush ${5 + VENDOR_WALL_INSET_FT}`
+)
+
 // Booth 2′ from top wall inner line — should snap flush with rotation 0 (faces inward).
 const nearTop = vendorBooth(22, 5 + 2)
 const snapTop = snapVendorBoothToPerimeter(nearTop, doc)
@@ -90,11 +99,11 @@ assert(
 )
 assert(snapTop!.rotation === 0, `Top snap rotation=${snapTop!.rotation} expected 0`)
 
-// Booth 4′ from top wall — should NOT snap (beyond 3′ threshold).
-const farTop = vendorBooth(22, 5 + 4)
+// Booth 5′ from top wall — beyond 4′ threshold; position-only snap must not fire.
+const farTop = vendorBooth(22, 5 + 5)
 assert(
   snapVendorBoothToPerimeter(farTop, doc) === null,
-  'Should not snap when >3′ from wall'
+  'Should not snap when >4′ from wall'
 )
 
 // Drag clamp must allow approaching within snap threshold (was 4′ inset — blocked snap).
@@ -115,8 +124,8 @@ assert(
 )
 
 assert(
-  VENDOR_WALL_SNAP_THRESHOLD_FT === 3,
-  'Snap threshold must remain 3′'
+  VENDOR_WALL_SNAP_THRESHOLD_FT === 4,
+  'Snap threshold must remain 4′ (wall overrides grid in dead zone)'
 )
 
 // Swapped dimensions (2×6 storage) must still orient long edge toward nearest wall.

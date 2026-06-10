@@ -20,7 +20,7 @@ import type { BoothObject, FloorPlanDoc, PlacedObject, RoomFrame } from '../stat
 export type { RoomEdgeSide } from './perimeter-booth-orientation'
 
 /** Snap vendor booths when within this distance (ft) of a room perimeter wall. */
-export const VENDOR_WALL_SNAP_THRESHOLD_FT = 3
+export const VENDOR_WALL_SNAP_THRESHOLD_FT = 4
 
 /** Tighter threshold for cursor ghost preview before click (2′). */
 export const PLACEMENT_PREVIEW_WALL_SNAP_FT = 2
@@ -332,14 +332,15 @@ export function vendorBoothPerimeterSnapEdge(
 export function vendorBoothPerimeterSnapPatch(
   booth: BoothObject,
   doc: Pick<FloorPlanDoc, 'rooms' | 'objectRoom' | 'objects' | 'canvasWidthFt' | 'canvasLengthFt' | 'gridSpacingFt' | 'snapFt'>,
-  options?: { preferredEdge?: RoomEdgeSide | null }
+  options?: { preferredEdge?: RoomEdgeSide | null; positionOnly?: boolean }
 ): Partial<BoothObject> | null {
-  return (
-    snapVendorBoothToPerimeter(
-      booth,
-      doc,
-      VENDOR_WALL_SNAP_THRESHOLD_FT,
-      options?.preferredEdge
-    ) ?? orientVendorBoothToNearestWall(booth, doc)
+  const positionSnap = snapVendorBoothToPerimeter(
+    booth,
+    doc,
+    VENDOR_WALL_SNAP_THRESHOLD_FT,
+    options?.preferredEdge
   )
+  if (positionSnap) return positionSnap
+  if (options?.positionOnly) return null
+  return orientVendorBoothToNearestWall(booth, doc)
 }

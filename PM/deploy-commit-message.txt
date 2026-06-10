@@ -1,0 +1,1 @@
+feat: ship 2 session updates (header nav layout â€” hamburger menu, profile in drawer, logo left; booth wall bounce fix â€” 0â€² flush, footprint clamp)

@@ -130,7 +130,7 @@ export default async function ProfilePage() {
                   }
                 />
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Your public rating reflects on-time vs. late cancellations. Force majeure
+                  Your public rating reflects on-time vs. late venue cancellations. Force majeure
                   cancellations do not reduce your score. Late non-emergency cancellations
                   (&lt;7 days notice) deduct more points and show a warning on your{' '}
                   <a href={`/coordinators/${profile.id}`} className="text-harvest-700 underline">

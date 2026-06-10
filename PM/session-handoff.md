@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (header nav layout — hamburger menu, profile in drawer, logo left, not deployed)
+- **`centered-header-row.tsx`:** Three-zone flex — brand `mr-auto` flush left, flexible middle (`min-w-0 overflow-x-hidden`), actions right; `justify-start` on row.
+- **`app-nav.tsx`**, **`guest-nav.tsx`**, **`shopper-top-bar.tsx`:** Mobile hamburger (`Menu` icon, `md:hidden`) toggles `AppMenuSheet`; desktop profile avatar link unchanged (`md:inline-flex`); logo in `left` slot; `overflow-x-hidden` on `<nav>`/`<header>`.
+- **`app-menu-sheet.tsx`:** `menuProfile` prop — avatar + name header inside slide-out panel (links to `/profile`); `overflow-x-hidden` on sheet + nav scroll area; guest menus keep "Menu" title.
+- **`portal-tabs.tsx`:** Role toggle pill bar `overflow-x-auto` → `overflow-x-hidden`.
+- **Verify:** Phone — logo far left, hamburger far right; drawer opens with profile header (signed-in) or Menu title (guest); no horizontal scrollbar in header chrome; desktop nav unchanged.
+
+## Shipped this session (booth wall bounce fix — 0′ flush, footprint clamp, not deployed)
+- **4′ deadzone + 5′ bounce:** Vendor drag no longer uses `snapToGrid` (grid loses to wall flush); live drag uses `positionOnly` wall snap (no per-frame `orientVendorBoothToNearestWall` fight); drag commit clamps instead of reverting to pre-drag origin.
+- **`footprintClampDeltaForRoom`:** Independent X/Y clamp via `objectFootprintAabb` — `minX/maxX/minY/maxY` with 0′ vendor inset; guest tables keep 4′ `ROOM_PLACEMENT_CLEARANCE_FT`.
+- **Wall band:** `VENDOR_WALL_SNAP_THRESHOLD_FT = 4` — within 4′ of a wall, snap flush to interior edge instead of bouncing to grid.
+- **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts`; drag vendor booth along each wall — flush at 0′, no 9′ bounce.
+
 ## Shipped this session (booth canvas — wall snap, E/W flush placement, arrow-key nudge, deployed 2026-06-09)
 - **E/W 4′ regression:** `VENDOR_WALL_INSET_FT = 0` in `boundary-constraints.ts` — vendor booths flush to west/east room bounds; guest tables keep 4′ `ROOM_PLACEMENT_CLEARANCE_FT`. Axis-dominant perimeter picking + cross-axis preservation in `perimeter-booth-orientation.ts`; snap-before-clamp in `use-canvas-pointer.ts` and `selection-keyboard-nudge.ts`.
 - **Corner flicker:** `pickPerimeterEdgeWithHysteresis` + locked wall edges during drag in `use-canvas-pointer.ts`.

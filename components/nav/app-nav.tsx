@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { UserAvatar } from '@/components/profile/user-avatar'
@@ -89,17 +90,16 @@ export function AppNav({
   return (
     <nav
       id="site-app-nav"
-      className="popup-hub-chrome-header sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
+      className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
       style={{ minHeight: 'var(--app-nav-height, 4.5rem)' }}
     >
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
-          left={
+          left={<BrandLogoLockup className="shrink-0" href={homeHref} />}
+          center={
             <>
-              <div className="hidden w-[7rem] shrink-0 sm:block" aria-hidden />
-
               {availablePortals.length > 1 ? (
-                <div className="hidden shrink-0 items-center gap-4 sm:flex">
+                <div className="hidden shrink-0 items-center gap-2 sm:flex md:gap-4">
                   <PortalTabs
                     availablePortals={availablePortals}
                     activePortal={activePortal}
@@ -114,7 +114,7 @@ export function AppNav({
               ) : null}
 
               {links.length > 0 ? (
-                <div className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto md:flex md:pl-1">
+                <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 overflow-x-hidden md:flex lg:gap-2">
                   {links.map(({ href, label }) => {
                     const active =
                       href === '/coordinator/dashboard'
@@ -125,7 +125,7 @@ export function AppNav({
                         key={href}
                         href={href}
                         className={cn(
-                          'shrink-0 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          'shrink-0 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                           active
                             ? 'bg-forest/10 text-forest'
@@ -141,7 +141,6 @@ export function AppNav({
               ) : null}
             </>
           }
-          center={<BrandLogoLockup className="shrink-0" href={homeHref} />}
           right={
             <>
               <button
@@ -155,17 +154,12 @@ export function AppNav({
 
               <button
                 type="button"
-                className="app-tap-target rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                aria-label="Open navigation menu"
+                className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                 aria-expanded={menuOpen}
-                onClick={() => setMenuOpen(true)}
+                onClick={() => setMenuOpen((open) => !open)}
               >
-                <UserAvatar
-                  userId={profile.id}
-                  profile={avatarProfile}
-                  className="h-9 w-9"
-                  fallbackClassName="text-xs"
-                />
+                <Menu className="h-5 w-5 text-foreground" />
               </button>
 
               <Link
@@ -187,6 +181,7 @@ export function AppNav({
                 links={links}
                 pathname={pathname}
                 profileName={profile.full_name}
+                menuProfile={{ userId: profile.id, profile: avatarProfile }}
                 unreadCount={unreadCount}
                 onSignOut={handleSignOut}
                 extraLinks={menuExtraLinks}

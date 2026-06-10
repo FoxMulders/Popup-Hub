@@ -87,8 +87,7 @@ import {
 import { resolveTablePlacementPreview } from './table-placement-preview'
 import {
   boothClampDeltaForRoom,
-  footprintWithinBounds,
-  resolveRoomPlacementBounds,
+  footprintClampDeltaForRoom,
 } from '@/lib/floor-plan/boundary-constraints'
 
 interface UseCanvasPointerOptions {
@@ -341,10 +340,16 @@ export function resolveDrawCommitRect(
 function applyVendorBoothSnapIfNearWall(
   booth: BoothObject,
   doc: Parameters<typeof vendorBoothPerimeterSnapPatch>[1],
-  options?: { snapRotation?: boolean; preferredEdge?: RoomEdgeSide | null }
+  options?: {
+    snapRotation?: boolean
+    preferredEdge?: RoomEdgeSide | null
+    /** Live drag — position snap only; skip orient fallback that fights clamp/grid. */
+    positionOnly?: boolean
+  }
 ): BoothObject {
   const snap = vendorBoothPerimeterSnapPatch(booth, doc, {
     preferredEdge: options?.preferredEdge,
+    positionOnly: options?.positionOnly,
   })
   if (!snap) return booth
   const snapRotation = options?.snapRotation ?? true
@@ -388,14 +393,16 @@ function dragCommitPatchForObject(
   }
   const roomId = doc.objectRoom?.[obj.id] ?? activeRoomId
   if (obj.kind === 'booth' && roomId) {
-    const bounds = resolveRoomPlacementBounds(doc, roomId)
-    if (bounds && !footprintWithinBounds(objectWithPatch(obj, patch), bounds)) {
-      const orig = drag.originals.get(obj.id)
-      if (orig) {
-        patch = {
-          x: orig.x,
-          y: orig.y,
-        }
+    const clamp = footprintClampDeltaForRoom(
+      objectWithPatch(obj, patch),
+      doc,
+      roomId
+    )
+    if (clamp.dx !== 0 || clamp.dy !== 0) {
+      patch = {
+        ...patch,
+        x: (patch.x ?? obj.x) + clamp.dx,
+        y: (patch.y ?? obj.y) + clamp.dy,
       }
     }
   }
@@ -1152,8 +1159,12 @@ export function useCanvasPointer(
           if (!orig) continue
           const obj = objById.get(id)
           if (!obj) continue
-          const proposedX = snapToGrid(orig.x + dx, snap)
-          const proposedY = snapToGrid(orig.y + dy, snap)
+          const proposedX = isVendorBoothObject(obj)
+            ? orig.x + dx
+            : snapToGrid(orig.x + dx, snap)
+          const proposedY = isVendorBoothObject(obj)
+            ? orig.y + dy
+            : snapToGrid(orig.y + dy, snap)
           let patch: Partial<PlacedObject> = {
             x: proposedX,
             y: proposedY,
@@ -1166,6 +1177,7 @@ export function useCanvasPointer(
               {
                 snapRotation: isCardinalRotation(obj.rotation ?? 0),
                 preferredEdge,
+                positionOnly: true,
               }
             )
             patch = {
@@ -1187,7 +1199,7 @@ export function useCanvasPointer(
           }
           const probe = objectWithPatch(obj, patch)
           const roomId = objectRoom[id] ?? activeRoomIdRef.current ?? null
-          const clampDelta = boothClampDeltaForRoom(probe, store.doc, roomId)
+          const clampDelta = footprintClampDeltaForRoom(probe, store.doc, roomId)
           patch = {
             ...patch,
             x: (patch.x ?? obj.x) + clampDelta.dx,

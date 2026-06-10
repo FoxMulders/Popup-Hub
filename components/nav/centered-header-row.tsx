@@ -4,24 +4,37 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface CenteredHeaderRowProps {
+  /** Logo / brand lockup — rendered flush left. */
   left: ReactNode
+  /** Portal tabs, nav links, and other middle chrome (fills remaining space). */
   center: ReactNode
+  /** Profile, menu, and utility actions — aligned right. */
   right: ReactNode
   className?: string
 }
 
 /**
- * Three-zone header row with the center slot absolutely centered so sibling
- * controls (back button, profile) do not push the logo off-center.
+ * Three-zone header row: brand on the far left, flexible middle, actions on the
+ * right. Middle zone clips overflow so the bar never grows a horizontal scrollbar.
  */
-export function CenteredHeaderRow({ left, center, right, className }: CenteredHeaderRowProps) {
+export function CenteredHeaderRow({
+  left,
+  center,
+  right,
+  className,
+}: CenteredHeaderRowProps) {
   return (
-    <div className={cn('relative flex items-center justify-between gap-3', className)}>
-      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4 lg:gap-6">{left}</div>
-      <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-        <div className="pointer-events-auto">{center}</div>
+    <div
+      className={cn(
+        'flex min-w-0 items-center justify-start gap-2 overflow-x-hidden sm:gap-3 md:gap-4',
+        className
+      )}
+    >
+      <div className="mr-auto shrink-0">{left}</div>
+      <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-x-hidden sm:gap-3 md:gap-4">
+        {center}
       </div>
-      <div className="flex flex-1 items-center justify-end gap-2">{right}</div>
+      <div className="flex shrink-0 items-center justify-end gap-2 overflow-x-hidden">{right}</div>
     </div>
   )
 }

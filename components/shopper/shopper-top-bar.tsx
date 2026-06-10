@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { User } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
@@ -70,40 +70,30 @@ export function ShopperTopBar({
   )
 
   return (
-    <header className="sticky top-0 z-50 border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
+    <header className="sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 sm:max-w-7xl sm:px-6">
         <CenteredHeaderRow
-          left={
-            <>
-              <div className="hidden w-[7rem] shrink-0 sm:block" aria-hidden />
-              {profile && availablePortals.length > 1 ? (
-                <PortalTabs
-                  availablePortals={availablePortals}
-                  activePortal={activePortal}
-                  className="hidden sm:inline-flex"
-                />
-              ) : null}
-            </>
+          left={<BrandLogoLockup className="shrink-0" href="/discover" />}
+          center={
+            profile && availablePortals.length > 1 ? (
+              <PortalTabs
+                availablePortals={availablePortals}
+                activePortal={activePortal}
+                className="hidden sm:inline-flex"
+              />
+            ) : null
           }
-          center={<BrandLogoLockup className="shrink-0" href="/discover" />}
           right={
             profile ? (
               <>
                 <button
                   type="button"
-                  className="app-tap-target rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                  aria-label="Open navigation menu"
+                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                  aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                   aria-expanded={menuOpen}
-                  onClick={() => setMenuOpen(true)}
+                  onClick={() => setMenuOpen((open) => !open)}
                 >
-                  {avatarProfile ? (
-                    <UserAvatar
-                      userId={profile.id}
-                      profile={avatarProfile}
-                      className="h-9 w-9"
-                      fallbackClassName="text-xs"
-                    />
-                  ) : null}
+                  <Menu className="h-5 w-5 text-foreground" />
                 </button>
 
                 <Link
@@ -127,6 +117,11 @@ export function ShopperTopBar({
                   links={navLinks}
                   pathname={pathname}
                   profileName={profile.full_name}
+                  menuProfile={
+                    avatarProfile
+                      ? { userId: profile.id, profile: avatarProfile }
+                      : undefined
+                  }
                   onSignOut={signOut}
                   extraLinks={buildAppMenuExtraLinks(profile)}
                   onSuggestImprovement={onSuggestImprovement}
@@ -137,11 +132,11 @@ export function ShopperTopBar({
                 <button
                   type="button"
                   className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                  aria-label="Open navigation menu"
+                  aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                   aria-expanded={menuOpen}
-                  onClick={() => setMenuOpen(true)}
+                  onClick={() => setMenuOpen((open) => !open)}
                 >
-                  <User className="h-5 w-5 text-foreground" />
+                  <Menu className="h-5 w-5 text-foreground" />
                 </button>
 
                 <div className="hidden items-center gap-2 md:flex">
