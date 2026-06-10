@@ -32,12 +32,11 @@ export function SiteAppShell({
     <FeatureRequestProvider
       profile={profile}
       portalCookie={portalCookie}
-      hideFab={viewportFill}
     >
       <div
         className={cn(
           'market-page site-app-shell flex max-w-full flex-col overflow-x-hidden',
-          viewportFill ? 'h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden' : 'min-h-screen'
+          viewportFill ? 'h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden' : 'min-h-0 flex-1'
         )}
       >
         <AppNav

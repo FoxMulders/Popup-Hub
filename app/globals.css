@@ -525,7 +525,12 @@
     }
 
     body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {
-      padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+      margin-top: auto;
+      padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    }
+
+    body[data-mobile-bottom-nav='shopper'] .site-app-shell #site-main {
+      padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
     }
   }
 
@@ -1212,11 +1217,11 @@
 
   /* PWA / mobile shell */
   .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
   }
 
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
   .safe-x {

@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { PopupHubLogo } from '@/components/brand/popup-hub-logo'
 import { getBuildInfo } from '@/lib/build-info'
 import { LEGAL_LINKS } from '@/lib/legal/links'
 import { cn } from '@/lib/utils'
@@ -16,18 +15,19 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
   return (
     <footer
       className={cn(
-        'popup-hub-chrome-footer mt-auto shrink-0 border-t border-stone-200/80 bg-cream/95 backdrop-blur-sm safe-bottom',
+        'popup-hub-chrome-footer mt-auto shrink-0 border-t border-stone-200/80 bg-cream/95 backdrop-blur-sm',
         className
       )}
       aria-label="Site footer"
     >
       <div
         className={cn(
-          'mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1',
-          'px-3 py-1 sm:justify-between sm:gap-x-4 sm:py-1.5 xl:px-10'
+          'mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-between gap-x-4 gap-y-1',
+          'px-3 py-2 sm:gap-x-4 sm:py-2 xl:px-10',
+          'pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]'
         )}
       >
-        <nav aria-label="Legal and help" className="min-w-0">
+        <nav aria-label="Legal and help" className="min-w-0 flex-1">
           <ul className="m-0 flex list-none flex-row flex-wrap items-center justify-center gap-x-3 gap-y-0 p-0 sm:justify-start sm:gap-x-4">
             {LEGAL_LINKS.map(({ href, label }) => (
               <li key={href} className="m-0">
@@ -41,8 +41,6 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
             ))}
           </ul>
         </nav>
-
-        <PopupHubLogo compact className="relative z-20 shrink-0" title="Popup Hub" />
 
         <p
           className="m-0 flex shrink-0 flex-row flex-wrap items-center justify-center gap-x-1.5 text-xs leading-snug text-muted-foreground sm:justify-end sm:text-sm"

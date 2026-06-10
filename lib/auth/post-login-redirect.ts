@@ -8,6 +8,10 @@ function safeRedirectPath(value: string | null | undefined, fallback = '/discove
   return value
 }
 
+function isCoordinatorLayoutPath(path: string): boolean {
+  return /\/coordinator\/events\/[^/]+\/layout\/?$/.test(path)
+}
+
 /**
  * Post-auth landing path — coordinators on phones skip the layout canvas
  * and land on the lightweight dashboard overview.
@@ -23,16 +27,23 @@ export function resolvePostLoginPath(input: {
   const redirectTo = safeRedirectPath(input.redirectTo)
   const mobile = isMobileUserAgent(input.userAgent)
 
+  if (mobile && isCoordinatorLayoutPath(redirectTo)) {
+    return '/coordinator/dashboard?overview=mobile'
+  }
+
   if (role === 'coordinator' && mobile) {
+    if (redirectTo.startsWith('/coordinator') && !isCoordinatorLayoutPath(redirectTo)) {
+      return redirectTo
+    }
     return '/coordinator/dashboard?overview=mobile'
   }
 
   if (role === 'coordinator') {
-    return '/coordinator/dashboard'
+    return redirectTo.startsWith('/coordinator') ? redirectTo : '/coordinator/dashboard'
   }
 
   if (role === 'vendor') {
-    return '/vendor/dashboard'
+    return redirectTo.startsWith('/vendor') ? redirectTo : '/vendor/dashboard'
   }
 
   if (input.activePortal) {

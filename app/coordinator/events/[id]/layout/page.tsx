@@ -1,4 +1,6 @@
+import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
+import { isMobileUserAgent } from '@/lib/auth/mobile-user-agent'
 import {
   SpatialLayoutEditor,
   type SpatialLayoutEditorProps,
@@ -13,6 +15,11 @@ interface Props {
 
 export default async function EventLayoutPage({ params }: Props) {
   const { id } = await params
+  const headerStore = await headers()
+  if (isMobileUserAgent(headerStore.get('user-agent'))) {
+    redirect(`/coordinator/events/${id}?layout=desktop-required`)
+  }
+
   const supabase = await createClient()
   const {
     data: { user },

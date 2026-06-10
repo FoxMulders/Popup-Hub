@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ArrowLeft, ClipboardList, LayoutDashboard, ListOrdered, CheckSquare, QrCode, Gavel, Wallet } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
+import { isMobileDevice } from '@/lib/pwa/platform'
 import { cn } from '@/lib/utils'
 
 interface MarketDayShellProps {
@@ -29,10 +30,14 @@ export function MarketDayShell({
   activeSection = 'operations',
 }: MarketDayShellProps) {
   const pathname = usePathname()
+  const mobile = isMobileDevice()
+  const visibleSections = mobile
+    ? SECTIONS.filter((section) => section.id !== 'layout')
+    : SECTIONS
 
   return (
-    <div className="market-day-page flex min-h-screen flex-col">
-      <header className="safe-top border-b border-sage-200/80 bg-gradient-to-b from-sage-50 to-white">
+    <div className="market-day-page flex min-h-dvh flex-col">
+      <header className="safe-top border-b border-sage-200/80 bg-gradient-to-b from-sage-50 to-white pt-[max(0.75rem,env(safe-area-inset-top,0px))]">
         <div className="mx-auto max-w-7xl px-4 py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
@@ -54,7 +59,7 @@ export function MarketDayShell({
               </div>
             </div>
             <nav className="flex flex-wrap gap-1 rounded-xl border border-sage-200 bg-white/90 p-1 shadow-sm">
-              {SECTIONS.map(({ id, label, href, icon: Icon }) => {
+              {visibleSections.map(({ id, label, href, icon: Icon }) => {
                 const isActive =
                   activeSection === id ||
                   (id === 'operations' && pathname?.includes('/operations')) ||

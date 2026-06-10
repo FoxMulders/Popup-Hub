@@ -24,7 +24,7 @@ function ShopperShellInner({
   const { open } = useFeatureRequest()
 
   return (
-    <div className="site-app-shell market-page flex min-h-screen flex-col bg-cream max-w-full overflow-x-hidden">
+    <div className="site-app-shell market-page flex min-h-0 flex-1 flex-col bg-cream max-w-full overflow-x-hidden">
       <ShopperTopBar
         profile={profile}
         availablePortals={availablePortals}
@@ -33,7 +33,7 @@ function ShopperShellInner({
       />
       <main
         id="site-main"
-        className="w-full max-w-full flex-1 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-0"
+        className="w-full max-w-full flex-1 overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
       >
         {children}
       </main>
@@ -51,7 +51,7 @@ export function ShopperShellClient({
 }: ShopperShellClientProps) {
   if (!profile) {
     return (
-      <div className="site-app-shell market-page flex min-h-screen flex-col bg-cream max-w-full overflow-x-hidden">
+      <div className="site-app-shell market-page flex min-h-0 flex-1 flex-col bg-cream max-w-full overflow-x-hidden">
         <ShopperTopBar
           profile={profile}
           availablePortals={availablePortals}
@@ -59,7 +59,7 @@ export function ShopperShellClient({
         />
         <main
           id="site-main"
-          className="w-full max-w-full flex-1 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))] md:pb-0"
+          className="w-full max-w-full flex-1 overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0"
         >
           {children}
         </main>

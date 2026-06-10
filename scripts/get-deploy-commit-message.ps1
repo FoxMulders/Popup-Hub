@@ -21,6 +21,10 @@ function Get-UndeployedHandoffTitles {
             [void]$titles.Add($Matches[1].Trim())
             continue
         }
+        if ($line -match '^## Shipped .+\((.+?)[\s\u2014-]+not deployed\)') {
+            [void]$titles.Add($Matches[1].Trim().TrimEnd(','))
+            continue
+        }
         if ($line -match '^## Shipped .+\(not deployed\)') {
             [void]$titles.Add(($line -replace '^##\s+', '').Trim())
         }
@@ -108,7 +112,11 @@ if not exist "%PS_EXE%" set "PS_EXE=powershell.exe"
 set "BUMP_BUILD_NUMBER=1"
 if defined DEPLOY_PS_ARGS set "DEPLOY_PS_ARGS=!DEPLOY_PS_ARGS:~1!"
 
-"%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%" !DEPLOY_PS_ARGS!
+if defined DEPLOY_PS_ARGS (
+    "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%" %DEPLOY_PS_ARGS%
+) else (
+    "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%"
+)
 set "EXITCODE=!ERRORLEVEL!"
 
 if not "!EXITCODE!"=="0" goto :fail
@@ -208,6 +216,11 @@ function Mark-ShippedSectionsDeployed {
     $content = [regex]::Replace(
         $Content,
         '(?m)^## Shipped .+\((.+?), not deployed\)',
+        "## Shipped this session (`$1, deployed $DeployedOn)"
+    )
+    $content = [regex]::Replace(
+        $content,
+        '(?m)^## Shipped .+\((.+?)[\s\u2014-]+not deployed\)',
         "## Shipped this session (`$1, deployed $DeployedOn)"
     )
     return [regex]::Replace(

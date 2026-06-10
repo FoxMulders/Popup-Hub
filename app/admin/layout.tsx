@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
-      <header className="safe-top shrink-0 border-b border-border bg-card/90 px-4 py-3 backdrop-blur-sm">
+      <header className="safe-top shrink-0 border-b border-border bg-card/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] backdrop-blur-sm">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">

@@ -14,8 +14,8 @@ interface CenteredHeaderRowProps {
 }
 
 /**
- * Three-zone header row: brand on the far left, flexible middle, actions on the
- * right. Middle zone clips overflow so the bar never grows a horizontal scrollbar.
+ * Three-zone header row with a centered middle column (logo) and balanced side
+ * rails so actions stay right-aligned without shifting the brand mark.
  */
 export function CenteredHeaderRow({
   left,
@@ -26,15 +26,19 @@ export function CenteredHeaderRow({
   return (
     <div
       className={cn(
-        'flex min-w-0 items-center justify-start gap-2 overflow-x-hidden sm:gap-3 md:gap-4',
+        'grid min-w-0 grid-cols-[1fr_auto_1fr] items-center gap-2 overflow-x-hidden sm:gap-3 md:gap-4',
         className
       )}
     >
-      <div className="mr-auto shrink-0">{left}</div>
-      <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-x-hidden sm:gap-3 md:gap-4">
+      <div className="flex min-w-0 items-center justify-start gap-2 overflow-x-hidden">
+        {left}
+      </div>
+      <div className="flex shrink-0 items-center justify-center overflow-visible px-1">
         {center}
       </div>
-      <div className="flex shrink-0 items-center justify-end gap-2 overflow-x-hidden">{right}</div>
+      <div className="flex min-w-0 items-center justify-end gap-2 overflow-x-hidden">
+        {right}
+      </div>
     </div>
   )
 }

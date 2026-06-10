@@ -4,10 +4,10 @@ import {
   ACTIVE_PORTAL_COOKIE,
   canAccessPortal,
   detectPortalFromPath,
-  getDefaultDashboard,
   isPatronPortalPath,
   parseActivePortal,
 } from '@/lib/portals/active-portal'
+import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import {
   DEV_MOCK_ROLE_PARAM,
   devMockLoginPath,
@@ -135,8 +135,16 @@ export async function updateSession(request: NextRequest) {
   if (user && (pathname === '/login' || pathname === '/signup')) {
     const role = profileRole ?? 'shopper'
     const activePortal = parseActivePortal(request.cookies.get(ACTIVE_PORTAL_COOKIE)?.value)
+    const redirectTo = request.nextUrl.searchParams.get('redirectTo')
     const url = request.nextUrl.clone()
-    url.pathname = getDefaultDashboard(role, 0, activePortal)
+    url.pathname = resolvePostLoginPath({
+      role,
+      redirectTo,
+      userAgent: request.headers.get('user-agent'),
+      activePortal,
+      isAdmin: profileIsAdmin,
+    })
+    url.search = ''
     return NextResponse.redirect(url)
   }
 

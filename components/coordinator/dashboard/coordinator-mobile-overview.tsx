@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { CalendarDays, ChevronRight, LayoutDashboard, Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
+import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
 import { cn } from '@/lib/utils'
 import type { DashboardEventSummary } from './market-management-context'
 
@@ -35,10 +36,8 @@ export function CoordinatorMobileOverview({
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          Coordinator overview
-        </p>
-        <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground">
+        <PortalRoleBadge portal="coordinator" />
+        <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground sm:text-3xl">
           Your markets
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">

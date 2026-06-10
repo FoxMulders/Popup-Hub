@@ -2,7 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (Vercel Analytics — not deployed)
+## Shipped this session (mobile UX, nav/footer overhaul, auth flows, not deployed)
+- **Navigation:** Removed hamburger menus; `UserProfileMenu` dropdown (profile/user icon) holds nav links, notifications, sign-out, and **Suggest an Improvement** on all breakpoints. Desktop inline nav links remain on `lg+` in `app-nav.tsx`.
+- **Header:** `CenteredHeaderRow` uses a 3-column grid — logo centered; mobile logo height capped (`h-14`/`h-16`) to prevent clipping; `safe-top` minimum padding increased globally.
+- **Footer:** Removed footer logo from `build-version-footer.tsx`; root layout uses `min-h-dvh` + `flex-1` shells so footer pins without extra white space; mobile shopper bottom-nav padding tuned (keyboard-safe, not fixed).
+- **Patron auth:** `/favorites` is public with guest CTA (Browse Markets / Sign In); favorite save still gates on click. Landing hero unchanged.
+- **Coordinator mobile:** Middleware login/signup redirect uses `resolvePostLoginPath` (mobile-aware); `/coordinator/events/[id]/layout` server-redirects phones to event overview; market-day shell hides Spatial Planner tab on mobile.
+- **Coordinator typography:** `PortalRoleBadge` shared label styling on mobile overview + empty dashboard state.
+- **Admin / ops safe-area:** Extra top padding on `/admin` and market-day operations headers.
+- **Suggestion control:** Removed desktop nav button + floating FAB; entry only via profile dropdown.
+- **Address cleansing:** `lib/addresses/sanitize-address.ts` — heuristic Canadian address normalizer; wired into `wizard-step-venue.tsx` before AI/geocode.
+- **Platform operator:** Migration `098_platform_operator_patron_access.sql` keeps `bradmulders@gmail.com` on shopper/vendor role with `is_admin`; favorite errors now surface Supabase message.
+- **Verify:** Phone — centered logo, profile dropdown nav, compact footer pinned; guest `/favorites` → sign-in CTA not redirect; coordinator phone login → `?overview=mobile`; layout route blocked on phone; venue wizard messy address geocodes; suggest only in profile menu.
+
+## Shipped this session (Vercel Analytics, not deployed)
 - **`@vercel/analytics`:** Installed and wired in `app/layout.tsx` via `<Analytics />` for page-view tracking on Vercel deployments.
 
 ## Shipped this session (floor plan designer exit navigation — Full canvas fail-safe, deployed 2026-06-10)

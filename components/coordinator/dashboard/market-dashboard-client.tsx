@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
+import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
 import { cn } from '@/lib/utils'
 import { isMobileDevice } from '@/lib/pwa/platform'
 import {
@@ -47,7 +48,8 @@ export function MarketDashboardClient({
   if (events.length === 0) {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center">
-        <h1 className="font-heading text-2xl font-semibold">Coordinator command center</h1>
+        <PortalRoleBadge portal="coordinator" />
+        <h1 className="mt-2 font-heading text-2xl font-semibold sm:text-3xl">Coordinator command center</h1>
         <p className="mt-2 text-muted-foreground">
           Create your first market to unlock the full-screen booth layout designer.
         </p>

@@ -18,7 +18,7 @@ export default async function RootPage() {
     const { GuestNav } = await import('@/components/nav/guest-nav')
     const { PublicLanding } = await import('@/components/public/public-landing')
     return (
-      <div className="flex min-h-screen flex-col bg-cream">
+      <div className="flex min-h-0 flex-1 flex-col bg-cream">
         <GuestNav />
         <PublicLanding />
       </div>

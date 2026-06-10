@@ -26,6 +26,7 @@ import {
   resolveVenueNameFromGeocoderResult,
 } from '@/lib/wizard/google-place-venue'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
+import { sanitizeAddressForGeocoding } from '@/lib/addresses/sanitize-address'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { EdmontonVenueTemplateBar } from '@/components/coordinator/edmonton-venue-template-bar'
@@ -259,16 +260,22 @@ export function WizardStepVenue({
       if (!trimmed || trimmed.length < MIN_ADDRESS_GEOCODE_LENGTH) return
       if (trimmed === lastGeocodedAddressRef.current) return
 
-      const looksUnstructured = !trimmed.includes(',') || trimmed.split(',').length < 2
+      const sanitized = sanitizeAddressForGeocoding(trimmed)
+      const cleansed = sanitized?.formatted ?? trimmed
+      if (cleansed !== trimmed) {
+        onAddressChange(cleansed)
+      }
+
+      const looksUnstructured = !cleansed.includes(',') || cleansed.split(',').length < 2
       if (!looksUnstructured) {
-        runGeocode(trimmed)
+        runGeocode(cleansed)
         return
       }
 
       void (async () => {
-        const normalized = await normalizeAddress(trimmed)
-        const geocodeTarget = normalized?.trim() || trimmed
-        if (normalized && normalized !== trimmed) {
+        const normalized = await normalizeAddress(cleansed)
+        const geocodeTarget = normalized?.trim() || cleansed
+        if (normalized && normalized !== cleansed) {
           onAddressChange(normalized)
         }
         runGeocode(geocodeTarget)

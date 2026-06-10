@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
+import { Analytics } from '@vercel/analytics/next'
 import { Lora, Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
@@ -86,12 +87,12 @@ export default async function RootLayout({
       lang="en"
       className={`${display.variable} ${body.variable} ${geistMono.variable} h-full`}
     >
-      <body className="flex min-h-screen flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
+      <body className="flex min-h-dvh flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
         <PopupLoaderProvider>
           <DocumentTitleSync initialRole={sessionRole} />
           <AuthSessionGuard />
           <ServiceWorkerRegister />
-          <div className="flex min-h-screen flex-1 flex-col">
+          <div className="flex min-h-dvh flex-1 flex-col">
             <TooltipProvider>
               {children}
             </TooltipProvider>
@@ -99,6 +100,7 @@ export default async function RootLayout({
           </div>
           <InstallPrompt />
           <Toaster richColors position="top-right" />
+          <Analytics />
         </PopupLoaderProvider>
       </body>
     </html>

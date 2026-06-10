@@ -49,7 +49,7 @@ export function FavoriteButton({
           .eq('user_id', user.id)
           .eq('event_id', eventId)
         if (error) {
-          toast.error('Could not remove favorite')
+          toast.error(error.message || 'Could not remove favorite')
           return
         }
         setFavorited(false)
@@ -60,7 +60,7 @@ export function FavoriteButton({
           event_id: eventId,
         })
         if (error) {
-          toast.error('Could not save favorite')
+          toast.error(error.message || 'Could not save favorite')
           return
         }
         setFavorited(true)

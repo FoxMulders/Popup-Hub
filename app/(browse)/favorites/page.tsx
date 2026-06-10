@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import { EventCard } from '@/components/events/event-card'
 import { FavoriteButton } from '@/components/shopper/favorite-button'
 import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
+import { Button } from '@/components/ui/button'
 import type { Event, Profile } from '@/types/database'
 import { Heart, Store, Sparkles } from 'lucide-react'
 
@@ -13,7 +13,28 @@ export default async function FavoritesPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login?redirectTo=/favorites')
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-16 text-center">
+        <Heart className="mx-auto h-10 w-10 text-red-400" aria-hidden />
+        <h1 className="mt-4 font-heading text-2xl font-semibold">Save markets you love</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Browse markets without an account. Sign in only when you want to save favorites or follow
+          vendors.
+        </p>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link href="/discover">
+            <Button variant="outline" className="w-full min-h-11 sm:w-auto">
+              Browse Markets
+            </Button>
+          </Link>
+          <Link href="/login?redirectTo=/favorites">
+            <Button className="w-full min-h-11 sm:w-auto">Sign In</Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   const nowIso = new Date().toISOString()
 

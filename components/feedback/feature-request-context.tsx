@@ -12,7 +12,6 @@ import { usePathname } from 'next/navigation'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { FeatureRequestModal } from '@/components/feedback/feature-request-modal'
-import { FeatureRequestFab } from '@/components/feedback/feature-request-fab'
 
 interface FeatureRequestContextValue {
   open: () => void
@@ -33,15 +32,12 @@ interface FeatureRequestProviderProps {
   profile: Profile
   portalCookie?: string
   children: ReactNode
-  /** Hide floating action button (e.g. dense canvas routes). */
-  hideFab?: boolean
 }
 
 export function FeatureRequestProvider({
   profile,
   portalCookie,
   children,
-  hideFab = false,
 }: FeatureRequestProviderProps) {
   const pathname = usePathname() ?? ''
   const [open, setOpen] = useState(false)
@@ -62,7 +58,6 @@ export function FeatureRequestProvider({
   return (
     <FeatureRequestContext.Provider value={value}>
       {children}
-      {!hideFab ? <FeatureRequestFab onClick={value.open} /> : null}
       <FeatureRequestModal
         open={open}
         onOpenChange={handleOpenChange}
