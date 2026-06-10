@@ -14,6 +14,7 @@ import {
 } from './market-management-context'
 import type { VendorApplicationSnapshot } from './booth-placement-status'
 import { CommandCenterFullscreenProvider } from './command-center-fullscreen-context'
+import { DashboardLayoutSaveProvider } from './dashboard-layout-save-context'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
 import { CoordinatorMobileOverview } from './coordinator-mobile-overview'
@@ -89,9 +90,11 @@ export function MarketDashboardClient({
       totalRevenueCents={totalRevenueCents}
     >
       <CommandCenterFullscreenProvider>
-        <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-          <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
-        </div>
+        <DashboardLayoutSaveProvider>
+          <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+            <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
+          </div>
+        </DashboardLayoutSaveProvider>
       </CommandCenterFullscreenProvider>
     </MarketManagementProvider>
     </div>

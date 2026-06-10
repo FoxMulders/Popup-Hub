@@ -48,11 +48,11 @@ export function DashboardAppShell({
   return (
     <div
       id={id}
-      className={cn(
-        'dashboard-app-shell flex h-full min-h-0 flex-col overflow-hidden bg-canvas',
-        immersive && 'dashboard-app-shell--immersive',
-        className
-      )}
+        className={cn(
+          'dashboard-app-shell flex h-full min-h-0 flex-col overflow-hidden bg-canvas',
+          immersive && 'dashboard-app-shell--immersive',
+          className
+        )}
       aria-busy={ariaBusy === true ? true : ariaBusy === false ? false : undefined}
     >
       {header ? (

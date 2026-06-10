@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   PLACEMENT_AVAILABLE,
@@ -12,17 +12,16 @@ import {
 /**
  * Persistent canvas allocation legend.
  *
- * Pinned to the bottom-left corner of the canvas viewport so it
- * stays visible while the user pans / zooms / draws / runs
- * Auto-Arrange. Explains the meaning of the sky / red status
- * colours that the canvas applies to booth and zone overlays so
- * coordinators can decode placement feedback without needing to
- * memorise the colour grammar.
+ * Pinned to the canvas viewport so it stays visible while the user
+ * pans / zooms / draws / runs Auto-Arrange. Explains the meaning of
+ * the sky / red status colours that the canvas applies to booth and
+ * zone overlays so coordinators can decode placement feedback without
+ * needing to memorise the colour grammar.
  *
  * The legend is collapsible — coordinators who already know the
- * grammar can fold it down to a single chip ("Legend ▴") to free
- * canvas real estate, and the collapsed/expanded state survives
- * across sessions via `localStorage`.
+ * grammar can fold it down to a single chip to free canvas real estate,
+ * and the collapsed/expanded state survives across sessions via
+ * `localStorage`.
  */
 const STORAGE_KEY = 'popup-hub:floor-plan-v2:legend-collapsed'
 
@@ -52,8 +51,15 @@ const ITEMS: LegendItem[] = [
   },
 ]
 
-export function CanvasLegend({ className }: { className?: string }) {
+export function CanvasLegend({
+  className,
+  variant = 'floating',
+}: {
+  className?: string
+  variant?: 'floating' | 'sidebar'
+}) {
   const [collapsed, setCollapsed] = useState(false)
+  const isSidebar = variant === 'sidebar'
 
   useEffect(() => {
     try {
@@ -74,6 +80,10 @@ export function CanvasLegend({ className }: { className?: string }) {
     }
   }, [collapsed])
 
+  const positionClass = isSidebar
+    ? 'absolute left-3 top-3 z-10'
+    : 'absolute top-4 right-4 z-10'
+
   if (collapsed) {
     return (
       <button
@@ -83,32 +93,63 @@ export function CanvasLegend({ className }: { className?: string }) {
         aria-label="Show allocation legend"
         aria-expanded={false}
         className={cn(
-          'absolute top-4 right-4 z-10 inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-lg backdrop-blur-sm hover:bg-white',
+          positionClass,
+          'inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-lg backdrop-blur-sm hover:bg-white',
+          isSidebar && 'flex-col py-2',
           className
         )}
       >
-        <span className="flex items-center gap-0.5">
-          <span
-            className={cn(
-              'inline-block h-2.5 w-2.5 rounded-sm',
-              VENDOR_BOOTH_LEGEND.tailwindSwatch
-            )}
-          />
-          <span
-            className={cn(
-              'inline-block h-2.5 w-2.5 rounded-sm',
-              PLACEMENT_AVAILABLE.tailwindSwatchCollapsed
-            )}
-          />
-          <span
-            className={cn(
-              'inline-block h-2.5 w-2.5 rounded-sm',
-              PLACEMENT_VIOLATION.tailwindSwatch
-            )}
-          />
-        </span>
-        Legend
-        <ChevronUp className="h-3 w-3" />
+        {isSidebar ? (
+          <>
+            <span className="flex flex-col items-center gap-0.5">
+              <span
+                className={cn(
+                  'inline-block h-2.5 w-2.5 rounded-sm',
+                  VENDOR_BOOTH_LEGEND.tailwindSwatch
+                )}
+              />
+              <span
+                className={cn(
+                  'inline-block h-2.5 w-2.5 rounded-sm',
+                  PLACEMENT_AVAILABLE.tailwindSwatchCollapsed
+                )}
+              />
+              <span
+                className={cn(
+                  'inline-block h-2.5 w-2.5 rounded-sm',
+                  PLACEMENT_VIOLATION.tailwindSwatch
+                )}
+              />
+            </span>
+            <span className="[writing-mode:vertical-rl] rotate-180 text-[9px]">Legend</span>
+            <ChevronRight className="h-3 w-3" />
+          </>
+        ) : (
+          <>
+            <span className="flex items-center gap-0.5">
+              <span
+                className={cn(
+                  'inline-block h-2.5 w-2.5 rounded-sm',
+                  VENDOR_BOOTH_LEGEND.tailwindSwatch
+                )}
+              />
+              <span
+                className={cn(
+                  'inline-block h-2.5 w-2.5 rounded-sm',
+                  PLACEMENT_AVAILABLE.tailwindSwatchCollapsed
+                )}
+              />
+              <span
+                className={cn(
+                  'inline-block h-2.5 w-2.5 rounded-sm',
+                  PLACEMENT_VIOLATION.tailwindSwatch
+                )}
+              />
+            </span>
+            Legend
+            <ChevronUp className="h-3 w-3" />
+          </>
+        )}
       </button>
     )
   }
@@ -116,7 +157,8 @@ export function CanvasLegend({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'absolute top-4 right-4 z-10 max-w-[220px] rounded-lg border border-stone-200/90 bg-white/95 p-2 shadow-lg backdrop-blur-sm',
+        positionClass,
+        'max-w-[200px] rounded-lg border border-stone-200/90 bg-white/95 p-2 shadow-lg backdrop-blur-sm',
         className
       )}
       role="region"
@@ -152,7 +194,7 @@ export function CanvasLegend({ className }: { className?: string }) {
             />
             <span className="min-w-0">
               <span className="font-semibold text-stone-800">{item.label}</span>
-            <span className="block text-stone-500">{item.detail}</span>
+              <span className="block text-stone-500">{item.detail}</span>
             </span>
           </li>
         ))}

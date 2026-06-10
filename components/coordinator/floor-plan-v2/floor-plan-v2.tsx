@@ -120,6 +120,7 @@ import {
 } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
 import { useDashboardToolbarPortal } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
+import { useDashboardLayoutSave } from '@/components/coordinator/dashboard/dashboard-layout-save-context'
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
 const ROTATE_STEP_DEG = 15
@@ -371,6 +372,7 @@ function FloorPlanV2Workspace({
     roomHandlersReady && (!isEmbedded || layoutRooms.length === 0)
   const commandCenterFullscreen = useCommandCenterFullscreen()
   const toolbarPortal = useDashboardToolbarPortal()
+  const layoutSave = useDashboardLayoutSave()
 
   useEffect(() => {
     onStoreReady?.(store)
@@ -745,11 +747,13 @@ function FloorPlanV2Workspace({
       clearMultiRoomDraft(eventId)
       return
     }
+    layoutSave?.markSaving()
     const id = window.setTimeout(() => {
       saveMultiRoomDraft(eventId, store.doc)
+      layoutSave?.markSaved()
     }, 250)
     return () => window.clearTimeout(id)
-  }, [eventId, layoutRooms.length, store.doc])
+  }, [eventId, layoutRooms.length, layoutSave, store.doc])
 
   const handleToolChange = useCallback((next: ToolId) => {
     setTool(next)
@@ -2394,7 +2398,7 @@ function FloorPlanV2Workspace({
                     showLabels={showLabels}
                   />
                 </CanvasRootErrorBoundary>
-                <CanvasLegend />
+                <CanvasLegend variant={isDashboard ? 'sidebar' : 'floating'} />
               </div>
             </div>
           </>
@@ -2552,7 +2556,7 @@ function FloorPlanV2Workspace({
                     showLabels={showLabels}
                   />
                 </CanvasRootErrorBoundary>
-                <CanvasLegend />
+                <CanvasLegend variant={isDashboard ? 'sidebar' : 'floating'} />
               </div>
             </div>
 

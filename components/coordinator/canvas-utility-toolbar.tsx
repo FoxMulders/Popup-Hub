@@ -18,7 +18,7 @@ interface CanvasUtilityToolbarProps {
 }
 
 const UTILITY_BTN =
-  'inline-flex h-8 w-8 items-center justify-center rounded-none border-2 border-black bg-white p-0 text-xs font-black text-black hover:bg-zinc-100 active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40'
+  'inline-flex h-8 w-8 items-center justify-center rounded-md border border-stone-200 bg-white p-0 text-stone-700 shadow-sm hover:bg-stone-50 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40'
 
 export function CanvasUtilityToolbar({
   canUndo,
@@ -32,7 +32,11 @@ export function CanvasUtilityToolbar({
   bareGridActive = false,
 }: CanvasUtilityToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Canvas utilities">
+    <div
+      className="dashboard-toolbar-section inline-flex flex-wrap items-center gap-1 rounded-lg border border-stone-200/80 bg-stone-50/80 p-0.5"
+      role="toolbar"
+      aria-label="Canvas utilities"
+    >
       <TooltipWrapper text="Lock all — lock every fixture so template and painted items cannot be erased · Ctrl+L">
         <button type="button" onClick={onLockAll} className={UTILITY_BTN} aria-label="Lock all">
           <Lock className="h-3.5 w-3.5" />
@@ -85,7 +89,7 @@ export function CanvasUtilityToolbar({
             aria-label={bareGridActive ? 'Bare grid on' : 'Bare grid'}
             className={cn(
               UTILITY_BTN,
-              bareGridActive && 'bg-harvest-200 ring-2 ring-harvest-700 ring-offset-1'
+              bareGridActive && 'border-harvest-400 bg-harvest-100 text-harvest-900'
             )}
           >
             <PaintBucket className="h-3.5 w-3.5" />

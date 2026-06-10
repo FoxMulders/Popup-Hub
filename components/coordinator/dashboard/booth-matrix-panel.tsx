@@ -1,46 +1,85 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import { cn } from '@/lib/utils'
 import { useMarketManagement } from './market-management-context'
 import { useBoothMatrixRows } from './use-booth-matrix-rows'
 
-export function BoothMatrixPanel() {
+const STATUS_PILL_CLASS: Record<
+  keyof typeof BOOTH_STATUS_THEME,
+  string
+> = {
+  unassigned: 'bg-stone-100 text-stone-800 border-stone-200',
+  assigned_unpaid: 'bg-amber-100 text-amber-900 border-amber-200',
+  paid: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  vip_hold: 'bg-violet-100 text-violet-900 border-violet-200',
+}
+
+export function BoothMatrixPanel({
+  headerAction,
+}: {
+  headerAction?: React.ReactNode
+}) {
   const rows = useBoothMatrixRows()
   const { focusBooth, selectedBoothId } = useMarketManagement()
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
+
+  const selectedRow = rows.find((row) => row.id === selectedBoothId)
+
+  useEffect(() => {
+    if (!selectedRow) return
+    setSelectionAnnouncement(
+      `Selected booth ${selectedRow.label}, ${selectedRow.statusLabel}, vendor ${selectedRow.vendor}`
+    )
+  }, [selectedRow])
 
   if (rows.length === 0) return null
 
   return (
-    <div className="dashboard-booth-matrix-panel border-t border-stone-200 bg-stone-50/90 px-3 py-2">
-      <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-        Booth matrix
-      </h3>
+    <div className="dashboard-booth-matrix-panel border-t border-stone-200 bg-stone-50/90 px-3 py-2 pb-2">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h3
+          id="booth-matrix-caption"
+          className="text-xs font-bold uppercase tracking-wide text-muted-foreground"
+        >
+          Booth matrix
+        </h3>
+        {headerAction ? (
+          <div className="shrink-0">{headerAction}</div>
+        ) : null}
+      </div>
+
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {selectionAnnouncement}
+      </p>
 
       {/* Desktop / tablet — tabular layout */}
-      <div className="hidden max-h-40 overflow-auto rounded-lg border border-stone-200 bg-white md:block">
-        <table className="w-full min-w-[480px] border-collapse text-left text-xs">
+      <div className="hidden max-h-56 overflow-auto rounded-lg border border-stone-200 bg-white md:block">
+        <table
+          className="w-full table-fixed border-collapse text-left text-sm"
+          aria-describedby="booth-matrix-caption"
+        >
           <caption className="sr-only">
             Floor plan booth assignments, categories, payment status, and coordinates
           </caption>
           <thead>
             <tr className="border-b border-stone-200 bg-stone-100/80">
-              <th scope="col" className="px-2 py-1.5 font-semibold">
+              <th scope="col" className="w-[18%] px-2 py-2 font-semibold">
                 Booth
               </th>
-              <th scope="col" className="px-2 py-1.5 font-semibold">
+              <th scope="col" className="w-[22%] px-2 py-2 font-semibold">
                 Vendor
               </th>
-              <th scope="col" className="px-2 py-1.5 font-semibold">
+              <th scope="col" className="w-[18%] px-2 py-2 font-semibold">
                 Category
               </th>
-              <th scope="col" className="px-2 py-1.5 font-semibold">
+              <th scope="col" className="w-[22%] px-2 py-2 font-semibold">
                 Status
               </th>
-              <th scope="col" className="px-2 py-1.5 font-semibold">
+              <th scope="col" className="w-[20%] px-2 py-2 font-semibold">
                 Coordinates (ft)
               </th>
             </tr>
@@ -52,7 +91,7 @@ export function BoothMatrixPanel() {
                 className="border-b border-stone-100 hover:bg-emerald-50/50 focus-within:bg-emerald-50/70"
                 aria-current={selectedBoothId === row.id ? 'true' : undefined}
               >
-                <th scope="row" className="px-2 py-1.5 font-medium">
+                <th scope="row" className="px-2 py-2 font-medium">
                   <button
                     type="button"
                     className="rounded text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
@@ -62,12 +101,12 @@ export function BoothMatrixPanel() {
                     {row.label}
                   </button>
                 </th>
-                <td className="px-2 py-1.5">{row.vendor}</td>
-                <td className="px-2 py-1.5">{row.category}</td>
-                <td className="px-2 py-1.5">
+                <td className="truncate px-2 py-2">{row.vendor}</td>
+                <td className="truncate px-2 py-2">{row.category}</td>
+                <td className="px-2 py-2">
                   <StatusBadge status={row.status} label={row.statusLabel} />
                 </td>
-                <td className="px-2 py-1.5 tabular-nums">
+                <td className="px-2 py-2 tabular-nums">
                   {row.x}′ × {row.y}′
                 </td>
               </tr>
@@ -108,7 +147,9 @@ export function BoothMatrixPanel() {
                   <dt className="font-semibold text-muted-foreground">Category</dt>
                   <dd>{row.category}</dd>
                   <dt className="font-semibold text-muted-foreground">Status</dt>
-                  <dd>{row.statusLabel}</dd>
+                  <dd>
+                    <StatusBadge status={row.status} label={row.statusLabel} />
+                  </dd>
                   <dt className="font-semibold text-muted-foreground">Coordinates</dt>
                   <dd className="tabular-nums">
                     {row.x}′ × {row.y}′
@@ -142,18 +183,15 @@ function StatusBadge({
   label: string
   compact?: boolean
 }) {
-  const theme = BOOTH_STATUS_THEME[status]
   return (
-    <span className={cn('inline-flex items-center gap-1', compact && 'shrink-0')}>
-      <span
-        className="inline-block h-2.5 w-2.5 rounded-sm border"
-        style={{
-          background: theme.fill,
-          borderColor: theme.stroke,
-        }}
-        aria-hidden
-      />
-      {!compact ? label : null}
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold leading-tight',
+        STATUS_PILL_CLASS[status],
+        compact && 'shrink-0 px-1.5'
+      )}
+    >
+      {compact ? label.split(' ')[0] : label}
     </span>
   )
 }

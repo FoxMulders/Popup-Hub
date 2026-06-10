@@ -3375,14 +3375,16 @@ export function BoothPlanner({
       ) : null}
 
       {!hideRoomBar && currentStep !== 3 && !canvasOnly ? (
-        <LayoutRoomBar
-          rooms={rooms}
-          activeRoomId={activeRoomId}
-          onSelectRoom={handleSelectRoom}
-          onAddRoom={handleAddRoom}
-          onRenameRoom={handleRenameRoom}
-          onDeleteRoom={handleDeleteRoom}
-        />
+        <div className="dashboard-panel dashboard-toolbar-section px-2 py-1.5">
+          <LayoutRoomBar
+            rooms={rooms}
+            activeRoomId={activeRoomId}
+            onSelectRoom={handleSelectRoom}
+            onAddRoom={handleAddRoom}
+            onRenameRoom={handleRenameRoom}
+            onDeleteRoom={handleDeleteRoom}
+          />
+        </div>
       ) : null}
 
       {!canvasOnly && currentStep === 1 && (
@@ -3707,15 +3709,17 @@ export function BoothPlanner({
               <>
                 <VenueFixturesCatalog activeTool={activeTool} onToolChange={handleToolChange} />
                 {!hideRoomBar ? (
-                  <LayoutRoomBar
-                    rooms={rooms}
-                    activeRoomId={activeRoomId}
-                    onSelectRoom={handleSelectRoom}
-                    onAddRoom={handleAddRoom}
-                    onRenameRoom={handleRenameRoom}
-                    onDeleteRoom={handleDeleteRoom}
-                    compact
-                  />
+                  <div className="dashboard-panel dashboard-toolbar-section px-2 py-1.5">
+                    <LayoutRoomBar
+                      rooms={rooms}
+                      activeRoomId={activeRoomId}
+                      onSelectRoom={handleSelectRoom}
+                      onAddRoom={handleAddRoom}
+                      onRenameRoom={handleRenameRoom}
+                      onDeleteRoom={handleDeleteRoom}
+                      compact
+                    />
+                  </div>
                 ) : null}
                 {activeTool === 'custom_label' ? (
                   <div className="market-panel flex flex-col gap-1.5 px-3 py-2">

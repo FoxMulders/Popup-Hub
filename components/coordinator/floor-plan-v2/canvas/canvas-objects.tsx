@@ -28,7 +28,7 @@ import {
 } from '@/lib/coordinator/booth-placement-status'
 import { isJoinableObject } from '../state/room-joins'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
-import { fitTextInContainer } from './canvas-label-text'
+import { fitTextInContainer, wrapTextInContainer } from './canvas-label-text'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
@@ -77,6 +77,11 @@ function fillForObject(
       const isPatron = isGuestTableBooth(booth)
       if (booth.accentColor && !isPatron) return booth.accentColor
       if (isPatron) return PATRON_TABLE_PALETTE.fill
+      const status = boothPlacementStatusByObjectId?.get(obj.id)
+      if (status) {
+        if (status === 'unassigned') return VENDOR_BOOTH_PALETTE.fill
+        return BOOTH_STATUS_THEME[status].fill
+      }
       return VENDOR_BOOTH_PALETTE.fill
     }
     case 'wall':
@@ -116,6 +121,11 @@ function strokeForObject(
       const booth = obj as BoothObject
       const isPatron = isGuestTableBooth(booth)
       if (isPatron) return PATRON_TABLE_PALETTE.stroke
+      const status = boothPlacementStatusByObjectId?.get(obj.id)
+      if (status) {
+        if (status === 'unassigned') return VENDOR_BOOTH_PALETTE.stroke
+        return BOOTH_STATUS_THEME[status].stroke
+      }
       return VENDOR_BOOTH_PALETTE.stroke
     }
     case 'wall':
@@ -391,6 +401,22 @@ function boothStatusLabel(
   const status = boothPlacementStatusByObjectId?.get(obj.id)
   if (!status) return null
   return BOOTH_STATUS_THEME[status].label
+}
+
+function boothFocusProps(
+  obj: PlacedObject,
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+): Record<string, string | number> {
+  if (obj.kind !== 'booth') return {}
+  const label = obj.label || objectFallbackLabel(obj)
+  const status = boothStatusLabel(obj, boothPlacementStatusByObjectId)
+  return {
+    tabIndex: 0,
+    focusable: 'true',
+    role: 'button',
+    'data-object-id': obj.id,
+    'aria-label': status ? `${label}, ${status}` : label,
+  }
 }
 
 function CanvasObjectsBase({
@@ -673,29 +699,53 @@ function CanvasObjectsBase({
                 }
                 pointerEvents="all"
                 shapeRendering="crispEdges"
+                {...(obj.kind === 'booth'
+                  ? boothFocusProps(obj, boothPlacementStatusByObjectId)
+                  : {})}
               />
             )}
             {obj.kind === 'booth' && placementStatus && !isEditing ? (
               (() => {
                 const statusLabel =
                   boothStatusLabel(obj, boothPlacementStatusByObjectId) ?? ''
-                const fitted = fitTextInContainer(statusLabel, w, Math.min(h * 0.35, 14), {
-                  baseFontSize: Math.min(9, Math.max(6, w * 0.12)),
-                  minFontSize: 5,
-                  padX: 2,
-                  padY: 1,
-                })
+                const bandHeight = Math.min(h * 0.45, Math.max(16, h * 0.35))
+                const wrapped = wrapTextInContainer(
+                  statusLabel,
+                  w,
+                  bandHeight,
+                  {
+                    baseFontSize: Math.min(9, Math.max(6, w * 0.12)),
+                    minFontSize: 5,
+                    padX: 2,
+                    padY: 1,
+                  }
+                )
+                const startY =
+                  y +
+                  h -
+                  Math.min(10, h * 0.12) -
+                  (wrapped.lines.length - 1) * wrapped.lineHeight
                 return (
                   <text
                     x={x + w / 2}
-                    y={y + h - Math.min(10, h * 0.15)}
+                    y={startY}
                     textAnchor="middle"
-                    fontSize={fitted.fontSize}
+                    fontSize={wrapped.fontSize}
                     fontWeight={700}
-                    fill={VENDOR_BOOTH_PALETTE.stroke}
+                    fill={
+                      placementStatus === 'paid'
+                        ? BOOTH_STATUS_THEME.paid.stroke
+                        : placementStatus === 'assigned_unpaid'
+                          ? BOOTH_STATUS_THEME.assigned_unpaid.stroke
+                          : VENDOR_BOOTH_PALETTE.stroke
+                    }
                     pointerEvents="none"
                   >
-                    {fitted.text}
+                    {wrapped.lines.map((line, i) => (
+                      <tspan key={i} x={x + w / 2} dy={i === 0 ? 0 : wrapped.lineHeight}>
+                        {line}
+                      </tspan>
+                    ))}
                   </text>
                 )
               })()

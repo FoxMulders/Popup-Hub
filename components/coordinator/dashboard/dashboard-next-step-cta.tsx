@@ -10,7 +10,14 @@ import { useMarketManagement } from './market-management-context'
  * Primary workflow CTA beside the floor plan canvas — routes coordinators toward
  * vendor invites or payment setup based on pending application volume.
  */
-export function DashboardNextStepCta({ className }: { className?: string }) {
+export function DashboardNextStepCta({
+  className,
+  inline = false,
+}: {
+  className?: string
+  /** When true, render inline (e.g. booth matrix header) instead of floating overlay. */
+  inline?: boolean
+}) {
   const { selectedEventId, pendingApplications, telemetry } = useMarketManagement()
   const { squareConnected, stripeConnected } = telemetry
 
@@ -40,15 +47,19 @@ export function DashboardNextStepCta({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'dashboard-next-step-cta pointer-events-auto absolute bottom-4 right-4 z-[10002] max-w-[min(100%,20rem)]',
+        'dashboard-next-step-cta pointer-events-auto max-w-[min(100%,20rem)]',
+        inline
+          ? 'relative z-auto'
+          : 'absolute bottom-4 right-4 z-[10002]',
         className
       )}
     >
       <Link
         href={href}
         className={cn(
-          buttonVariants({ size: 'lg' }),
-          'flex w-full flex-col items-start gap-0.5 rounded-xl border-2 border-forest bg-forest px-4 py-3 text-left text-white shadow-lg shadow-forest/25 hover:bg-forest/90 focus-visible:ring-offset-2'
+          buttonVariants({ size: inline ? 'sm' : 'lg' }),
+          'flex w-full flex-col items-start gap-0.5 rounded-xl border-2 border-forest bg-forest text-left text-white shadow-lg shadow-forest/25 hover:bg-forest/90 focus-visible:ring-offset-2',
+          inline && 'rounded-lg px-3 py-2'
         )}
       >
         <span className="flex w-full items-center justify-between gap-2 text-sm font-bold uppercase tracking-wide">

@@ -15,6 +15,73 @@ export interface FitTextInContainerOptions {
   charWidthRatio?: number
 }
 
+export interface WrappedCanvasLabel {
+  lines: string[]
+  fontSize: number
+  lineHeight: number
+}
+
+/**
+ * Word-aware wrap — prefers multiple lines over ellipsis when height allows.
+ */
+export function wrapTextInContainer(
+  text: string,
+  innerWidthPx: number,
+  innerHeightPx: number,
+  options: FitTextInContainerOptions = {}
+): WrappedCanvasLabel {
+  const baseFontSize = options.baseFontSize ?? 11
+  const minFontSize = options.minFontSize ?? 6
+  const padX = options.padX ?? 4
+  const padY = options.padY ?? 2
+  const charWidthRatio = options.charWidthRatio ?? 0.58
+
+  const trimmed = text.trim()
+  if (!trimmed) {
+    return { lines: [], fontSize: baseFontSize, lineHeight: baseFontSize + 2 }
+  }
+
+  const availW = Math.max(1, innerWidthPx - padX * 2)
+  const availH = Math.max(1, innerHeightPx - padY * 2)
+
+  for (let fs = baseFontSize; fs >= minFontSize; fs -= 0.5) {
+    const charW = fs * charWidthRatio
+    const lineHeight = fs + 2
+    const maxLines = Math.max(1, Math.floor(availH / lineHeight))
+    const maxCharsPerLine = Math.max(1, Math.floor(availW / charW))
+
+    const words = trimmed.split(/\s+/)
+    const lines: string[] = []
+    let current = ''
+
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word
+      if (candidate.length <= maxCharsPerLine) {
+        current = candidate
+      } else {
+        if (current) lines.push(current)
+        current = word.length > maxCharsPerLine
+          ? truncateToWidth(word, maxCharsPerLine)
+          : word
+      }
+    }
+    if (current) lines.push(current)
+
+    if (lines.length <= maxLines) {
+      return { lines, fontSize: fs, lineHeight }
+    }
+  }
+
+  const fs = minFontSize
+  const charW = fs * charWidthRatio
+  const maxChars = Math.max(1, Math.floor(availW / charW))
+  return {
+    lines: [truncateToWidth(trimmed, maxChars)],
+    fontSize: fs,
+    lineHeight: fs + 2,
+  }
+}
+
 const ELLIPSIS = '…'
 
 function truncateToWidth(

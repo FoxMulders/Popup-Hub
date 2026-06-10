@@ -28,6 +28,7 @@ import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
+import { useCanvasObjectKeyboard } from '../interactions/use-canvas-object-keyboard'
 import { useSelectionKeyboardNudge } from '../interactions/selection-keyboard-nudge'
 import { resolveTablePlacementPreview } from '../interactions/table-placement-preview'
 import {
@@ -137,11 +138,13 @@ export interface FloorPlanCanvasProps {
   commandCenterViewport?: boolean
   /** Keep draw tool armed between placements; show hover ghost preview. */
   stickyDrawPlacement?: boolean
+  /** Dock legend as left sidebar panel (dashboard). */
+  legendVariant?: 'floating' | 'sidebar'
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
 /** Minimum zoom on coordinator dashboard — avoids hypersensitive room drags when framed out. */
-const COMMAND_CENTER_ZOOM_MIN = 0.72
+const COMMAND_CENTER_ZOOM_MIN = 0.75
 
 /** Stages draw their own perimeter — skip duplicate dashed outline on selection. */
 function filteredSelectionIds(
@@ -188,6 +191,7 @@ export function FloorPlanCanvas({
   commandCenterViewport = false,
   scrollHost = true,
   stickyDrawPlacement = false,
+  legendVariant = 'floating',
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -372,6 +376,8 @@ export function FloorPlanCanvas({
     onProximityViolation,
     onOverlapViolation,
   })
+
+  useCanvasObjectKeyboard(store, { enabled: commandCenterViewport })
 
   const mergeOverlapCtx = useMemo(
     () => ({
@@ -565,7 +571,9 @@ export function FloorPlanCanvas({
 
   const cursor = pointer.rotating
     ? 'grabbing'
-    : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool)
+    : viewport.isPanning
+      ? 'grabbing'
+      : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool, commandCenterViewport)
 
   const ftAtClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -619,7 +627,8 @@ export function FloorPlanCanvas({
       ref={scrollRef}
       className={cn(
         'canvas-container pointer-events-auto relative w-full min-w-0 max-w-full bg-stone-100 outline-none',
-        scrollHost ? 'h-full overflow-auto' : 'h-auto overflow-visible',
+        scrollHost && !commandCenterViewport && 'h-full overflow-auto',
+        scrollHost && commandCenterViewport && 'h-full overflow-hidden scrollbar-none',
         commandCenterViewport && 'bg-stone-100',
         className
       )}
@@ -652,7 +661,8 @@ export function FloorPlanCanvas({
             pointerEvents: 'auto',
             zIndex: 1,
             background: '#fafaf9',
-            boxShadow: '0 0 0 1px #e7e5e4, 0 12px 28px rgba(28,25,23,0.08)',
+            boxShadow:
+              '0 0 0 1px rgb(214 211 209), 0 4px 14px rgb(28 25 23 / 0.12)',
             cursor,
             touchAction: 'none',
             userSelect: 'none',
@@ -782,7 +792,10 @@ export function FloorPlanCanvas({
   )
 }
 
-function cursorForTool(tool: 'hand' | 'select' | 'draw' | 'pan'): string {
+function cursorForTool(
+  tool: 'hand' | 'select' | 'draw' | 'pan',
+  commandCenter?: boolean
+): string {
   switch (tool) {
     case 'pan':
       return 'grabbing'
@@ -792,6 +805,6 @@ function cursorForTool(tool: 'hand' | 'select' | 'draw' | 'pan'): string {
       return 'crosshair'
     case 'select':
     default:
-      return 'default'
+      return commandCenter ? 'grab' : 'default'
   }
 }

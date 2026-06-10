@@ -131,11 +131,11 @@ export function AppNav({
                         key={href}
                         href={href}
                         className={cn(
-                          'shrink-0 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors lg:px-2.5',
+                          'shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors lg:px-3.5',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                           active
-                            ? 'bg-forest/10 text-forest'
-                            : 'text-muted-foreground hover:bg-canvas hover:text-foreground'
+                            ? 'bg-forest text-white shadow-sm'
+                            : 'text-stone-700 hover:bg-stone-100 hover:text-stone-900'
                         )}
                         aria-current={active ? 'page' : undefined}
                       >

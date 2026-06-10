@@ -28,7 +28,7 @@ export function DashboardTopToolbarStrip({
     >
       <DashboardToolbarPortalTarget
         className={cn(
-          'flex min-h-0 w-full min-w-0 flex-row flex-wrap items-stretch gap-2 overflow-x-auto px-2 py-1.5 sm:px-3',
+          'dashboard-toolbar-portal flex min-h-0 w-full min-w-0 flex-row flex-nowrap items-stretch gap-[var(--dashboard-panel-gap)] overflow-x-auto px-2 py-1.5 sm:px-3',
           'border-b-0 bg-transparent empty:hidden'
         )}
       />

@@ -7,6 +7,11 @@ import {
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import {
+  formatTableSizeDisplay,
+  TableSizeUnitsToggle,
+  useTableSizeUnits,
+} from '@/lib/booth-planner/table-size-units'
+import {
   GUEST_TABLE_LENGTHS_FT,
   guestRectTableSpec,
   guestRoundTableSpec,
@@ -41,22 +46,23 @@ export function TableSizeSelector({
   showGuestOptions = false,
 }: TableSizeSelectorProps) {
   const selection = resolveValue(value)
+  const [units, setUnits] = useTableSizeUnits()
 
   const buttonClass = (active: boolean) =>
     cn(
-      'font-heading font-semibold transition-all duration-200 disabled:opacity-50',
+      'font-heading font-semibold transition-colors duration-200 disabled:opacity-50',
       variant === 'inline'
         ? cn(
-            'min-h-[2.75rem] px-1.5 py-1.5 text-[10px] leading-tight active:translate-y-px',
+            'min-h-[var(--dashboard-toolbar-height,2rem)] shrink-0 px-2.5 py-1 text-[10px] leading-tight',
             active
-              ? 'bg-[#2D5A27] text-[#F5F2EB]'
-              : 'bg-stone-100 text-stone-800 hover:bg-stone-50'
+              ? 'bg-forest text-primary-foreground'
+              : 'bg-white text-stone-800 hover:bg-stone-50'
           )
         : cn(
-            'flex-1 min-h-12 border-r border-stone-200 px-2 py-2 text-xs last:border-r-0 active:translate-y-0.5',
+            'min-h-[var(--dashboard-toolbar-height,2rem)] shrink-0 border-r border-stone-200 px-2.5 py-1.5 text-xs last:border-r-0',
             active
-              ? 'bg-[#2D5A27] text-[#F5F2EB]'
-              : 'bg-stone-100 text-stone-800 hover:bg-stone-50'
+              ? 'bg-forest text-primary-foreground'
+              : 'bg-white text-stone-800 hover:bg-stone-50'
           )
     )
 
@@ -64,18 +70,13 @@ export function TableSizeSelector({
     cn(
       'block font-normal tabular-nums',
       variant === 'inline' ? 'text-[9px] mt-0.5' : 'text-[9px] mt-0.5',
-      active ? 'text-[#F5F2EB]/85' : 'text-stone-600'
+      active ? 'text-primary-foreground/85' : 'text-stone-600'
     )
 
-  const sizeButtons = (
-    <div className="space-y-2">
+  const vendorStrip = (
+    <div className="flex flex-wrap items-center gap-1.5">
       <div
-        className={cn(
-          'overflow-hidden rounded-lg border-2 border-stone-200 bg-card',
-          variant === 'inline'
-            ? 'grid grid-cols-3 gap-px bg-stone-200 sm:grid-cols-3'
-            : 'grid grid-cols-3 gap-px rounded-xl bg-stone-200 sm:grid-cols-3'
-        )}
+        className="inline-flex shrink-0 flex-nowrap overflow-hidden rounded-lg border border-stone-200 bg-white"
         role="group"
         aria-label="Vendor booth table length"
       >
@@ -97,7 +98,9 @@ export function TableSizeSelector({
               }
               className={buttonClass(active)}
             >
-              <span className="block whitespace-nowrap">{ft}′</span>
+              <span className="block whitespace-nowrap tabular-nums">
+                {formatTableSizeDisplay(ft, units)}
+              </span>
               {modularSubLabel ? (
                 <span className={subLabelClass(active)}>({modularSubLabel})</span>
               ) : null}
@@ -105,6 +108,13 @@ export function TableSizeSelector({
           )
         })}
       </div>
+      <TableSizeUnitsToggle units={units} onChange={setUnits} compact />
+    </div>
+  )
+
+  const sizeButtons = (
+    <div className="space-y-2">
+      {vendorStrip}
       {showGuestOptions ? (
         <>
           <div
@@ -204,7 +214,7 @@ export function TableSizeSelector({
   return (
     <div
       className={cn(
-        'market-panel shrink-0 space-y-2 p-3 min-w-[220px]',
+        'dashboard-panel dashboard-toolbar-section shrink-0 space-y-2 p-3 min-w-[220px]',
         className
       )}
     >

@@ -8,6 +8,11 @@ import {
   formatVendorTableSizeButtonLabel,
 } from '@/lib/booth-planner/layout-table-size'
 import {
+  formatTableSizeDisplay,
+  TableSizeUnitsToggle,
+  useTableSizeUnits,
+} from '@/lib/booth-planner/table-size-units'
+import {
   GUEST_TABLE_LENGTHS_FT,
   guestRectTableSpec,
   guestRoundTableSpec,
@@ -263,37 +268,42 @@ export function VendorSidebarSizeGrid({
   className?: string
 }) {
   const { isTablet } = useFloorPlanViewportLayout()
+  const [units, setUnits] = useTableSizeUnits()
 
   return (
-    <div
-      className={cn(
-        'flex min-w-0 flex-wrap gap-1',
-        disabled && 'opacity-60',
-        className
-      )}
-      role="group"
-      aria-label="Vendor booth sizes"
-    >
-      {TABLE_SIZES.map((ft) => {
-        const selection = vendorTableSpec(ft)
-        const active = tableSizeSpecsEqual(value, selection)
-        return (
-          <button
-            key={`booth-sidebar-${ft}`}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(selection)}
-            aria-pressed={active}
-            title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
-            className={cn(
-              utilityChipClass(active, disabled, 'vendor'),
-              boothTabletTouchClass(isTablet, ft)
-            )}
-          >
-            {ft}′
-          </button>
-        )
-      })}
+    <div className={cn('flex min-w-0 flex-nowrap items-stretch gap-1', className)}>
+      <div
+        className={cn(
+          'inline-flex min-w-0 flex-nowrap items-stretch overflow-hidden rounded-lg border border-stone-200 bg-white',
+          disabled && 'opacity-60'
+        )}
+        role="group"
+        aria-label="Vendor booth sizes"
+      >
+        {TABLE_SIZES.map((ft) => {
+          const selection = vendorTableSpec(ft)
+          const active = tableSizeSpecsEqual(value, selection)
+          return (
+            <button
+              key={`booth-sidebar-${ft}`}
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange(selection)}
+              aria-pressed={active}
+              title={`Set vendor table length to ${formatVendorTableSizeButtonLabel(ft)}`}
+              className={cn(
+                sizeButtonClass(active, disabled, 'vendor'),
+                boothTabletTouchClass(isTablet, ft)
+              )}
+            >
+              {formatTableSizeDisplay(ft, units)}
+            </button>
+          )
+        })}
+      </div>
+      <div className="inline-flex h-8 overflow-hidden rounded-lg border border-stone-200">
+        <TableSizeUnitsToggle units={units} onChange={setUnits} compact />
+      </div>
     </div>
   )
 }
@@ -374,6 +384,7 @@ export function TableSizePill({
   compact = false,
 }: TableSizePillProps) {
   const { isTablet } = useFloorPlanViewportLayout()
+  const [units, setUnits] = useTableSizeUnits()
 
   if (sections === 'patron-rows') {
     return (
@@ -399,8 +410,8 @@ export function TableSizePill({
   return (
     <div
       className={cn(
-        'inline-flex items-stretch overflow-hidden rounded-md border border-stone-200 bg-white text-[11px] font-semibold text-stone-700',
-        compact ? 'h-[1.8rem]' : 'h-8',
+        'inline-flex flex-nowrap items-stretch overflow-hidden rounded-lg border border-stone-200 bg-white text-[11px] font-semibold text-stone-700',
+        compact ? 'h-8' : 'h-8',
         disabled && 'opacity-60',
         className
       )}
@@ -409,18 +420,13 @@ export function TableSizePill({
     >
       {sections === 'all' ? (
         <span
-          className="hidden items-center px-2 text-[10px] font-heading uppercase tracking-wide text-stone-500 sm:inline-flex"
+          className="hidden shrink-0 items-center border-r border-stone-200 px-2 text-[10px] font-heading uppercase tracking-wide text-stone-500 sm:inline-flex"
           aria-hidden
         >
           Table size
         </span>
       ) : null}
-      <div
-        className={cn(
-          'flex h-full max-w-[min(100%,42rem)] overflow-x-auto',
-          sections === 'all' && 'sm:border-l sm:border-stone-200'
-        )}
-      >
+      <div className="flex h-full min-w-0 flex-nowrap overflow-x-auto">
         {showVendor ? (
           <>
             {TABLE_SIZES.map((ft) => {
@@ -441,7 +447,7 @@ export function TableSizePill({
                     boothTabletTouchClass(isTablet, ft)
                   )}
                 >
-                  {ft}′
+                  {formatTableSizeDisplay(ft, units)}
                 </button>
               )
             })}
@@ -462,7 +468,7 @@ export function TableSizePill({
                   title={`Set guest round table diameter to ${ft} ft`}
                   className={sizeButtonClass(active, disabled, 'patron')}
                 >
-                  {ft}′
+                  {formatTableSizeDisplay(ft, units)}
                 </button>
               )
             })}
@@ -479,12 +485,15 @@ export function TableSizePill({
                   title={`Set patron banquet table length to ${ft} ft`}
                   className={sizeButtonClass(active, disabled, 'patron')}
                 >
-                  {ft}′
+                  {formatTableSizeDisplay(ft, units)}
                 </button>
               )
             })}
           </>
         ) : null}
+      </div>
+      <div className="inline-flex shrink-0 overflow-hidden border-l border-stone-200">
+        <TableSizeUnitsToggle units={units} onChange={setUnits} compact={compact} />
       </div>
     </div>
   )

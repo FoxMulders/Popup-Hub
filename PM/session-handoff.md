@@ -4,6 +4,17 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (coordinator dashboard premium UI refactor, not deployed)
+- **Design tokens:** `globals.css` — `--dashboard-radius`, `--dashboard-toolbar-height`, `--dashboard-panel-gap`; utility classes `.dashboard-panel`, `.dashboard-toolbar-section`, `.dashboard-pill-toggle`, `.dashboard-save-chip`.
+- **Nav + header:** `app-nav.tsx` pill active tabs; `dashboard-command-center-header.tsx` — autosave chip via `DashboardLayoutSaveProvider`, full-pill Edit/Preview, deduped bell/actions; `market-dashboard-client.tsx` wires save context.
+- **Toolbars:** `toolbar-static-layout.ts` merges optimize into alignment-spacing; `vendor-sizes` renders in top bar; discrete zoom (`discrete-zoom.ts`, `use-viewport.ts`); `table-size-pill.tsx` segmented strip + imperial/metric toggle; `layout-room-bar.tsx` edit/delete divider.
+- **Canvas:** Full-bleed command-center viewport (hidden scrollbars, grab cursor); legend docked left (`canvas-legend.tsx` `variant="sidebar"`); status-driven booth colors + wrapped status labels; booth keyboard focus (`use-canvas-object-keyboard.ts`).
+- **Vendor matches:** `vendor-matches-panel.tsx` — empty state, pluralization fix, inline Send Priority Invites CTA.
+- **Booth matrix:** `booth-matrix-panel.tsx` — semantic badge pills, fixed columns, `aria-live`; removed duplicate `booth-matrix-a11y-table.tsx`; CTA inline in matrix header (`dashboard-next-step-cta.tsx` `inline`).
+- **Wizard parity:** `booth-planner.tsx`, `table-size-selector.tsx`, `canvas-utility-toolbar.tsx` share dashboard token styling.
+- **QA mirrors:** `canvas-command-bar-blocks_qa.tsx` vendor-sizes top-bar fix; `floor-plan-canvas_dashboard_qa.tsx` zoom min 0.75.
+- **Verify:** `/coordinator/dashboard` — one bell (app nav); header autosave + Edit/Preview pill; alignment section shows Auto-Arrange + table sizes; zoom 50/75/100%; legend left; tab booths; vendor matches empty state; single matrix + inline CTA; wizard Step 3 room bar + table strip match dashboard chrome.
+
 ## Shipped this session (event dashboard layout — top toolbar, mobile booth matrix, deployed 2026-06-10)
 - **Top toolbar strip:** Layout tools (Room & Canvas, Shapes, Alignment, Floor Plan) moved from left rail to horizontal bar below dashboard header via `dashboard-top-toolbar-strip.tsx` + `topBarLayout` on `CanvasCommandBar` / `CanvasToolbarStatic`; `floor-plan-v2.tsx` portals into top strip on all viewports.
 - **Dashboard shell:** `dashboard-app-shell.tsx` drops fixed left column; `Dashboard_qa.tsx` wires toolbar strip + preview mode; header compact (`py-1.5`).

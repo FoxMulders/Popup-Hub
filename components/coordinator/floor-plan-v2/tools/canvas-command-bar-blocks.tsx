@@ -48,6 +48,7 @@ import {
 import type { DrawShape, ToolState } from './types'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
+import { formatDiscreteZoomPercent } from '@/lib/floor-plan/discrete-zoom'
 import {
   CommandButton,
   toolbarControlHeight,
@@ -641,27 +642,38 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'vendor-sizes':
-      if (!sidebarLayout || !ctx.onTableSizeChange || ctx.tableSizeFt == null) {
+      if (!ctx.onTableSizeChange || ctx.tableSizeFt == null) {
         return null
       }
+      if (sidebarLayout) {
+        return (
+          <div className="relative w-full min-w-0 shrink-0">
+            <VendorSidebarSizeGrid
+              value={ctx.tableSizeFt}
+              onChange={activateTableSize}
+              compact={compact}
+              className="min-w-0"
+            />
+            {ctx.highlightedSelectionMetrics &&
+            ctx.tableSizeFt.purpose !== 'guest' ? (
+              <span
+                className="pointer-events-none absolute right-0 top-full z-10 mt-1 w-[10.5rem] truncate rounded-md border border-amber-200/90 bg-amber-50/95 px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums text-amber-900"
+                aria-live="polite"
+              >
+                {ctx.highlightedSelectionMetrics}
+              </span>
+            ) : null}
+          </div>
+        )
+      }
       return (
-        <div className="relative w-full min-w-0 shrink-0">
-          <VendorSidebarSizeGrid
-            value={ctx.tableSizeFt}
-            onChange={activateTableSize}
-            compact={compact}
-            className="min-w-0"
-          />
-          {ctx.highlightedSelectionMetrics &&
-          ctx.tableSizeFt.purpose !== 'guest' ? (
-            <span
-              className="pointer-events-none absolute right-0 top-full z-10 mt-1 w-[10.5rem] truncate rounded-md border border-amber-200/90 bg-amber-50/95 px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums text-amber-900"
-              aria-live="polite"
-            >
-              {ctx.highlightedSelectionMetrics}
-            </span>
-          ) : null}
-        </div>
+        <TableSizePill
+          value={ctx.tableSizeFt}
+          onChange={activateTableSize}
+          sections="vendor"
+          compact={compact}
+          className="shrink-0"
+        />
       )
 
     case 'vendor':
@@ -1289,7 +1301,7 @@ export function renderCanvasCommandBarBlock(
                 aria-label="Reset zoom"
                 className="inline-flex h-full flex-1 min-w-[3.25rem] items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
               >
-                {Math.round(ctx.zoom * 100)}%
+                {formatDiscreteZoomPercent(ctx.zoom, 0.25)}
               </button>
               <button
                 type="button"
@@ -1384,7 +1396,7 @@ export function renderCanvasCommandBarBlock(
               aria-label="Reset zoom"
               className="inline-flex h-full min-w-[3rem] items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
             >
-              {Math.round(ctx.zoom * 100)}%
+              {formatDiscreteZoomPercent(ctx.zoom, 0.25)}
             </button>
             <button
               type="button"

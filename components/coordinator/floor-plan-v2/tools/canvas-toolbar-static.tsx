@@ -122,11 +122,14 @@ function TopBarToolbarSection({
 }) {
   return (
     <section
-      className="flex min-w-0 shrink-0 flex-col gap-1 rounded-md border border-stone-200/90 bg-white px-2 py-1.5 shadow-sm"
+      className={cn(
+        'dashboard-toolbar-section shrink-0',
+        section.id === 'vendor-matches' ? 'min-w-[14rem]' : 'min-w-[min(100%,12rem)]'
+      )}
       aria-label={section.header}
     >
       <SectionHeader>{section.header}</SectionHeader>
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <div className="flex min-h-[var(--dashboard-toolbar-height)] min-w-0 flex-wrap items-center gap-1.5">
         {section.id === 'vendor-matches' ? (
           <VendorMatchesPanel eventId={eventId} compact={compact} />
         ) : (
@@ -489,7 +492,7 @@ export function CanvasToolbarStatic({
     if (sidebarSections.length === 0) return null
 
     return (
-      <div className="flex min-w-0 flex-wrap items-stretch gap-2 lg:flex-nowrap lg:overflow-x-auto">
+      <div className="flex min-w-0 flex-nowrap items-stretch gap-[var(--dashboard-panel-gap)] overflow-x-auto pb-0.5">
         {sidebarSections.map((section) => (
           <TopBarToolbarSection
             key={section.id}

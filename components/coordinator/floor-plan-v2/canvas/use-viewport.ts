@@ -10,6 +10,10 @@ import {
   type RefObject,
   type WheelEvent,
 } from 'react'
+import {
+  nextDiscreteZoomLevel,
+  snapZoomToDiscreteLevel,
+} from '@/lib/floor-plan/discrete-zoom'
 
 const ZOOM_MIN = 0.25
 const ZOOM_MAX = 3
@@ -321,28 +325,28 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
 
   const setZoom = useCallback(
     (next: number) => {
-      applyZoomAtDocAnchor(next)
+      applyZoomAtDocAnchor(snapZoomToDiscreteLevel(next, zoomMin))
     },
-    [applyZoomAtDocAnchor]
+    [applyZoomAtDocAnchor, zoomMin]
   )
 
   const zoomIn = useCallback(
     () =>
       applyZoomAtDocAnchor(
-        zoomRef.current + ZOOM_STEP * zoomStepMulRef.current
+        nextDiscreteZoomLevel(zoomRef.current, 'in', zoomMin)
       ),
-    [applyZoomAtDocAnchor]
+    [applyZoomAtDocAnchor, zoomMin]
   )
   const zoomOut = useCallback(
     () =>
       applyZoomAtDocAnchor(
-        zoomRef.current - ZOOM_STEP * zoomStepMulRef.current
+        nextDiscreteZoomLevel(zoomRef.current, 'out', zoomMin)
       ),
-    [applyZoomAtDocAnchor]
+    [applyZoomAtDocAnchor, zoomMin]
   )
   const resetZoom = useCallback(
-    () => applyZoomAtDocAnchor(1),
-    [applyZoomAtDocAnchor]
+    () => applyZoomAtDocAnchor(snapZoomToDiscreteLevel(1, zoomMin)),
+    [applyZoomAtDocAnchor, zoomMin]
   )
 
   /**

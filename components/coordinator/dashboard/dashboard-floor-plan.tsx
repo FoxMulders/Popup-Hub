@@ -22,7 +22,6 @@ import {
 } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useMarketManagement } from './market-management-context'
-import { BoothMatrixA11yTable } from './booth-matrix-a11y-table'
 import { BoothMatrixPanel } from './booth-matrix-panel'
 import { DashboardNextStepCta } from './dashboard-next-step-cta'
 
@@ -212,9 +211,13 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         onVendorDrop={handleVendorDrop}
         className="min-h-0 flex-1"
       />
-      {!previewMode ? <DashboardNextStepCta /> : null}
-      <BoothMatrixPanel />
-      <BoothMatrixA11yTable />
+      {!previewMode ? (
+        <BoothMatrixPanel
+          headerAction={<DashboardNextStepCta inline className="max-w-[16rem]" />}
+        />
+      ) : (
+        <BoothMatrixPanel />
+      )}
     </div>
   )
 }

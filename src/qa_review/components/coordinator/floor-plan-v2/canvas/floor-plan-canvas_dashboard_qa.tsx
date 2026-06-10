@@ -126,7 +126,7 @@ export interface FloorPlanCanvasProps {
 
 const DEFAULT_BASE_PX_PER_FT = 12
 /** Minimum zoom on coordinator dashboard — avoids hypersensitive room drags when framed out. */
-const COMMAND_CENTER_ZOOM_MIN = 0.72
+const COMMAND_CENTER_ZOOM_MIN = 0.75
 
 /** Skip duplicate dashed outline on stages — object layer already draws the perimeter. */
 function SelectionOverlayQa({

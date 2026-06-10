@@ -484,34 +484,38 @@ export function LayoutRoomBar({
                 {room.name}
               </button>
               {isActive && (
-                <>
+                <div className="flex items-center">
                   <button
                     type="button"
                     title="Rename room"
                     className={cn(
-                      'border-l-2 border-stone-200 text-muted-foreground hover:bg-canvas',
+                      'border-l border-stone-200 text-muted-foreground hover:bg-canvas',
                       inlineToolbar
-                        ? 'flex h-7 w-6 items-center justify-center border-l'
+                        ? 'flex h-7 w-7 items-center justify-center'
                         : 'touch-target'
                     )}
                     onClick={() => startRename(room)}
                   >
                     <Pencil className={inlineToolbar ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                   </button>
+                  <div
+                    className="mx-0.5 h-4 w-px shrink-0 bg-stone-300"
+                    aria-hidden
+                  />
                   <button
                     type="button"
                     title="Delete room"
                     className={cn(
-                      'border-l-2 border-stone-200 text-terracotta-600 hover:bg-terracotta-50',
+                      'rounded-r-md text-terracotta-600 hover:bg-rose-50',
                       inlineToolbar
-                        ? 'flex h-7 w-6 items-center justify-center border-l'
+                        ? 'flex h-7 w-7 items-center justify-center'
                         : 'touch-target'
                     )}
                     onClick={() => onDeleteRoom(room.id)}
                   >
                     <Trash2 className={inlineToolbar ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                   </button>
-                </>
+                </div>
               )}
             </div>
           )

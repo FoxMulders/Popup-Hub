@@ -604,27 +604,38 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'vendor-sizes':
-      if (!sidebarLayout || !ctx.onTableSizeChange || ctx.tableSizeFt == null) {
+      if (!ctx.onTableSizeChange || ctx.tableSizeFt == null) {
         return null
       }
+      if (sidebarLayout) {
+        return (
+          <div className="relative w-full min-w-0 shrink-0">
+            <VendorSidebarSizeGrid
+              value={ctx.tableSizeFt}
+              onChange={activateTableSize}
+              compact={compact}
+              className="min-w-0"
+            />
+            {ctx.highlightedSelectionMetrics &&
+            ctx.tableSizeFt.purpose !== 'guest' ? (
+              <span
+                className="pointer-events-none absolute right-0 top-full z-10 mt-1 w-[10.5rem] truncate rounded-md border border-amber-200/90 bg-amber-50/95 px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums text-amber-900"
+                aria-live="polite"
+              >
+                {ctx.highlightedSelectionMetrics}
+              </span>
+            ) : null}
+          </div>
+        )
+      }
       return (
-        <div className="relative w-full min-w-0 shrink-0">
-          <VendorSidebarSizeGrid
-            value={ctx.tableSizeFt}
-            onChange={activateTableSize}
-            compact={compact}
-            className="min-w-0"
-          />
-          {ctx.highlightedSelectionMetrics &&
-          ctx.tableSizeFt.purpose !== 'guest' ? (
-            <span
-              className="pointer-events-none absolute right-0 top-full z-10 mt-1 w-[10.5rem] truncate rounded-md border border-amber-200/90 bg-amber-50/95 px-2 py-0.5 text-center text-[10px] font-semibold tabular-nums text-amber-900"
-              aria-live="polite"
-            >
-              {ctx.highlightedSelectionMetrics}
-            </span>
-          ) : null}
-        </div>
+        <TableSizePill
+          value={ctx.tableSizeFt}
+          onChange={activateTableSize}
+          sections="vendor"
+          compact={compact}
+          className="shrink-0"
+        />
       )
 
     case 'vendor':

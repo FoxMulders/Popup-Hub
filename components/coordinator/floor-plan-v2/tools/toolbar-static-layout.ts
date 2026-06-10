@@ -164,7 +164,7 @@ export function getVisibleSidebarSections(ctx: {
     blocks: shapesBlocks,
   })
 
-  const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align']
+  const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align', 'optimize']
   if (ctx.showVendor) {
     alignmentBlocks.push('vendor-sizes')
   }
@@ -173,14 +173,6 @@ export function getVisibleSidebarSections(ctx: {
     header: LAYOUT_EDITOR_SIDEBAR_HEADERS['alignment-spacing'],
     blocks: alignmentBlocks,
   })
-
-  if (ctx.showPatron || ctx.showVendor) {
-    sections.push({
-      id: 'floor-plan-optimize',
-      header: 'Floor Plan',
-      blocks: ['optimize'],
-    })
-  }
 
   if (ctx.showVendor) {
     sections.push({
