@@ -1,1 +1,0 @@
-feat: ship 3 session updates (coordinator fraud hardening; legend left-collapsible overlay; manual drag â€” no wall magnet snap)

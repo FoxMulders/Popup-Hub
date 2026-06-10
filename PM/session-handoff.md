@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (coordinator fraud hardening, not deployed)
+## Shipped this session (coordinator fraud hardening, deployed 2026-06-10)
 - **Schema:** `100_coordinator_fraud_mitigation.sql` — `profiles` gains `coordinator_verification_status`, `coordinator_organization_name`, `coordinator_business_number`, `coordinator_risk_score`, `coordinator_account_status`; conservative backfill for Stripe/Square/venue-verified coordinators; DB trigger blocks event → published/active when organizer fails publish trust path.
 - **Lib:** `lib/coordinator/verification.ts` — BN/EIN validation reuse, risk scoring, publish/payment/apply block reasons; trust paths: admin-verified OR Stripe OR Square OR offline org+BN (publish only for pending offline).
 - **API gates:** `enable-coordinator` sets pending + message; `coordinator/events/draft` publish; `payment-settings` PATCH; `booth-payment` + `stripe/booth-payment`; `vendor/apply` blocks suspended/banned organizer; new `POST/GET /api/coordinator/verification`; new `POST /api/admin/coordinator-verification`.
@@ -12,13 +12,13 @@
 - **Verify:** `npx tsx scripts/verify-coordinator-verification.ts` — PASS; `npx tsc --noEmit` — PASS.
 - **Smoke test:** New shopper → enable organizer → dashboard banner → submit org+BN → publish blocked until submission; Stripe/Square coordinators publish without manual form; offline pending can publish but payment-settings / booth-payment blocked until verified; admin `POST /api/admin/coordinator-verification` with `{ coordinatorId, action: "approve" }` unlocks offline collection.
 
-## Shipped this session (legend left-collapsible overlay, not deployed)
+## Shipped this session (legend left-collapsible overlay, deployed 2026-06-10)
 - **Legend panel:** `canvas-legend.tsx` — docked/sidebar variants slide horizontally off the left canvas edge; collapsed state leaves a flush chevron tab (`>` expand / `<` collapse); semi-opaque white panel with right border + shadow overlays the grid without affecting drag coordinates.
 - **Canvas width:** Removed fixed `168px` legend rail from `floor-plan-v2.tsx`; legend lives inside the canvas host as an overlay so the grid uses full width when collapsed.
 - **CSS:** `globals.css` — replaced `.dashboard-canvas-legend-rail` with `.canvas-legend-panel` (hidden below `lg`, visible on dashboard canvas host).
 - **Verify:** `/coordinator/dashboard` (≥ lg) — expand legend overlays grid; collapse slides panel left leaving chevron tab; canvas grid fills full host width; pan/drag unchanged under overlay margins.
 
-## Shipped this session (manual drag — no wall magnet snap, not deployed)
+## Shipped this session (manual drag — no wall magnet snap, deployed 2026-06-10)
 - **Drag fix:** `booth-layout-engine.ts` — removed perimeter magnet snap from `boothLayoutMovePatch` / `boothLayoutCommitPatch`; manual drag uses 1′ grid (5′ with Shift) only; booths can sit at 2′, 3′, or 4′ from walls without snapping flush.
 - **Pointer cleanup:** `use-canvas-pointer.ts` — dropped locked-wall-edge hysteresis during drag; commit re-quantizes grid without wall override.
 - **Clearance colors:** unchanged live path in `canvas-objects.tsx` + `booth-clearance-visual.ts` (red ≤2′, yellow >2′ and <4′, green ≥4′).
@@ -314,9 +314,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `f0332c0` (pushed to `origin/master`)
-- Last deploy commit: `f0332c0` - feat: ship 3 session updates (manual placement free + row wall orientation; canvas layout engine — grid snap, wall clearance, booth colors; two-pane map–ledger sync + Map Labels)
-- Production: https://popuphub.ca - **v1.0.0 build 79** | commit `85fc9e2` (handoff updated 2026-06-10 15:20)
+- Branch: `master` @ `3c874ee` (pushed to `origin/master`)
+- Last deploy commit: `3c874ee` - feat: ship 3 session updates (coordinator fraud hardening; legend left-collapsible overlay; manual drag — no wall magnet snap)
+- Production: https://popuphub.ca - **v1.0.0 build 80** | commit `c4aaf59` (handoff updated 2026-06-10 15:44)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -693,7 +693,7 @@
 
 
 ## Last deploy
-- 2026-06-10 15:20 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (manual placement free + row wall orientation; canvas layout engine — grid snap, wall clearance, booth colors; two-pane map–ledger sync + Map Labels)` (f0332c0)
+- 2026-06-10 15:44 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (coordinator fraud hardening; legend left-collapsible overlay; manual drag — no wall magnet snap)` (3c874ee)
 
 
 ## Goal
