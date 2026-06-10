@@ -4,20 +4,20 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (Blueprint Studio toolbar element panel entry animation, not deployed)
+## Shipped this session (Blueprint Studio toolbar element panel entry animation, deployed 2026-06-10)
 - **Motion config:** `toolbar-element-panels-motion.ts` — shared Framer Motion variants with `x: 0` start/end so vendor and patron asset tables animate on a strict vertical center axis (`y` spring only).
 - **SHAPES & BOOTHS:** `canvas-toolbar-static.tsx` — VENDOR BOOTHS (top) and PATRON ELEMENTS (bottom) stacked in `flex flex-col items-center justify-center`; `TopBarAssetTablePanel` + staggered container entry; `useReducedMotion` bypass.
 - **CSS:** `globals.css` — `data-toolbar-section='shapes-booths'` and `.toolbar-element-panel(s)` centering rules.
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — reload Blueprint Studio toolbar; vendor booth size row and patron element row fade/slide in centered (no horizontal drift); reduced-motion shows panels instantly.
 
-## Shipped this session (dashboard toolbar layout refactor, not deployed)
+## Shipped this session (dashboard toolbar layout refactor, deployed 2026-06-10)
 - **ROOM & CANVAS:** Removed duplicate Full screen from `dashboard-command-center-header.tsx`; primary control lives in top toolbar next to ← Event setup with `Dual-Screen: Presenter` / `Dual-Screen: Wall Cast` (`launchDualScreen('presenter'|'wall-cast')` via `openDualScreenWindow` in `floorplan-sync.ts`).
 - **SHAPES & BOOTHS:** `canvas-toolbar-static.tsx` — VENDOR / PATRON sub-labels; vendor sizing (`vendor-sizes`) moved from Alignment into Shapes; patron tools forced horizontal (`PatronSidebarControls` + `flex-row`).
 - **ALIGNMENT & SPACING:** Auto-Arrange relabeled **AI Auto-Arrange** with `w-32 px-3 whitespace-nowrap` top-bar button (no text clipping).
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — Full screen only in ROOM & CANVAS strip; dual-screen buttons open separate presenter/wall-cast ledger windows; vendor/patron tool groups visually separated.
 - **Build fix:** Split pure escrow math into `escrow-policy.ts` so client `apply-button.tsx` → `booth-checkout.ts` no longer pulls `lib/supabase/server.ts` through `escrow.ts` audit imports; `npm run build` — PASS.
 
-## Shipped this session (coordinator onboarding relaxation + escrow criteria, not deployed)
+## Shipped this session (coordinator onboarding relaxation + escrow criteria, deployed 2026-06-10)
 - **Optional tax ID:** `coordinator-verification-banner.tsx` + `POST /api/coordinator/verification` — organization name required; business registration / tax ID optional; invalid BN rejected only when provided.
 - **Square/Stripe onboarding:** Payment trust path (Square OAuth complete or Stripe) satisfies publish checklist — verification banner hidden when `paymentTrustComplete`; `enable-coordinator` no longer forces `pending`; connect CTA when not linked.
 - **DB publish guard:** `104_coordinator_onboarding_relaxation.sql` — `coordinator_can_publish_event` allows org name alone (no BN required) to match TS `hasOfflineOrganizerProfile`.
@@ -27,7 +27,7 @@
 - **Verify:** `npx tsx scripts/verify-coordinator-verification.ts` + `verify-coordinator-escrow.ts` — PASS; `npx tsc --noEmit` — PASS.
 - **Apply migration:** Run `104_coordinator_onboarding_relaxation.sql` on Supabase before prod smoke-test.
 
-## Shipped this session (coordinator escrow + vendor vouch + pass-through fees, not deployed)
+## Shipped this session (coordinator escrow + vendor vouch + pass-through fees, deployed 2026-06-10)
 - **Schema:** `101_coordinator_escrow_vouch.sql` — `coordinator_is_verified`, `coordinator_successful_events_count`, `wallets.escrow_balance`, `coordinator_vouches`, `coordinator_escrow_holds`; `102_pass_fees_to_vendor.sql` — `events.pass_fees_to_vendor`, `coordinator_escrow_holds.processor_transfer_id`.
 - **Checkout math:** `lib/monetization/booth-checkout.ts` — gross-up `(base + flat) / (1 - bps)` for pass-through; combined Square/Stripe `app_fee` = platform fee + 75% escrow hold on base booth for unverified organizers.
 - **Escrow:** `lib/coordinator/escrow.ts` — 25% immediate / 75% held; Square release credits coordinator wallet via `lib/square/coordinator-escrow-release.ts`; cron releases 24h post-event when no disputes.
@@ -349,9 +349,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `3c874ee` (pushed to `origin/master`)
-- Last deploy commit: `3c874ee` - feat: ship 3 session updates (coordinator fraud hardening; legend left-collapsible overlay; manual drag — no wall magnet snap)
-- Production: https://popuphub.ca - **v1.0.0 build 80** | commit `c4aaf59` (handoff updated 2026-06-10 15:44)
+- Branch: `master` @ `aec9032` (pushed to `origin/master`)
+- Last deploy commit: `aec9032` - feat: ship 4 session updates (Blueprint Studio toolbar element panel entry animation; dashboard toolbar layout refactor; coordinator onboarding relaxation + escrow criteria; coordinator escrow + vendor vouch + pass-through fees)
+- Production: https://popuphub.ca - **v1.0.0 build 84** | commit `e9a2012` (handoff updated 2026-06-10 16:42)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -728,7 +728,7 @@
 
 
 ## Last deploy
-- 2026-06-10 15:44 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (coordinator fraud hardening; legend left-collapsible overlay; manual drag — no wall magnet snap)` (3c874ee)
+- 2026-06-10 16:42 - Deploy via deploy-popuphub.ps1 - `feat: ship 4 session updates (Blueprint Studio toolbar element panel entry animation; dashboard toolbar layout refactor; coordinator onboarding relaxation + escrow criteria; coordinator escrow + vendor vouch + pass-through fees)` (aec9032)
 
 
 ## Goal

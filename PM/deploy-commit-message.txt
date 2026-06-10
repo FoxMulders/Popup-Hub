@@ -1,1 +1,0 @@
-feat: ship 4 session updates (Blueprint Studio toolbar element panel entry animation; dashboard toolbar layout refactor; coordinator onboarding relaxation + escrow criteria; coordinator escrow + vendor vouch + pass-through fees)
