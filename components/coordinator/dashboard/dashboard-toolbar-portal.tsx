@@ -89,7 +89,7 @@ export function DashboardToolbarPortalTarget({ className }: { className?: string
     <div
       ref={hostRef}
       className={cn(
-        'dashboard-toolbar-portal flex w-[300px] min-w-[300px] flex-shrink-0 flex-col gap-4 overflow-y-auto border-b border-stone-200/80 bg-card/60 px-2 py-2 empty:hidden',
+        'dashboard-toolbar-portal flex min-h-0 w-[300px] min-w-[300px] flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain border-b border-stone-200/80 bg-card/60 px-2 py-2 empty:hidden [-webkit-overflow-scrolling:touch]',
         className
       )}
       aria-label="Layout tools"

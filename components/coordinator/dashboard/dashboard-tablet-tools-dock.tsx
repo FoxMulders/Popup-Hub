@@ -78,7 +78,7 @@ export function DashboardTabletToolsDock() {
         aria-label="Layout tools drawer"
         aria-hidden={!drawerOpen}
         className={cn(
-          'fixed bottom-0 left-0 top-0 z-[130] flex w-[min(20rem,calc(100vw-3rem))] flex-col border-r border-stone-200 bg-white shadow-xl transition-transform duration-200 ease-out md:flex lg:hidden',
+          'fixed bottom-0 left-0 top-0 z-[130] flex min-h-0 w-[min(20rem,calc(100vw-3rem))] flex-col overflow-hidden border-r border-stone-200 bg-white shadow-xl transition-transform duration-200 ease-out md:flex lg:hidden',
           showLandscapeAdvisory ? 'pt-12' : 'pt-0',
           drawerOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         )}

@@ -95,7 +95,7 @@ export function DashboardAppShell({
           )}
           aria-label={leftLabel}
         >
-          <div className="flex h-full min-h-0 flex-col">{left}</div>
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">{left}</div>
         </aside>
         <section
           className={cn(

@@ -63,7 +63,16 @@ export function CommandCenterShell({
           )}
           aria-label={leftLabel}
         >
-          <div className={cn('flex flex-col', documentScroll ? '' : 'h-full min-h-0')}>{left}</div>
+          <div
+            className={cn(
+              'flex min-h-0 flex-col',
+              documentScroll
+                ? 'lg:max-h-[calc(100dvh-var(--app-nav-height,4.5rem))] lg:overflow-y-auto lg:overscroll-y-contain lg:[-webkit-overflow-scrolling:touch]'
+                : 'h-full overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]'
+            )}
+          >
+            {left}
+          </div>
         </aside>
         <section
           className={cn(
@@ -81,7 +90,16 @@ export function CommandCenterShell({
           )}
           aria-label={rightLabel}
         >
-          <div className={cn('flex flex-col', documentScroll ? '' : 'h-full min-h-0')}>{right}</div>
+          <div
+            className={cn(
+              'flex min-h-0 flex-col',
+              documentScroll
+                ? 'lg:max-h-[calc(100dvh-var(--app-nav-height,4.5rem))] lg:overflow-y-auto lg:overscroll-y-contain lg:[-webkit-overflow-scrolling:touch]'
+                : 'h-full overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]'
+            )}
+          >
+            {right}
+          </div>
         </aside>
       </motion.div>
     </div>

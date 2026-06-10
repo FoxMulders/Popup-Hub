@@ -2,13 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import { Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
+import { UserAvatar } from '@/components/profile/user-avatar'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
+import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
-import { UserProfileMenu } from '@/components/nav/user-profile-menu'
 import { getPortalHome, resolveActivePortal } from '@/lib/portals/active-portal'
 import { coordinatorNavBackHref } from '@/lib/coordinator/coordinator-event-route'
 import type { ActivePortal } from '@/lib/portals/active-portal'
@@ -55,6 +58,7 @@ export function AppNav({
 }: AppNavProps) {
   const pathname = usePathname()
   const supabase = createClient()
+  const [menuOpen, setMenuOpen] = useState(false)
   const activePortal = resolveActivePortal(portalCookie, profile, pathname)
   const unreadCount = useNotificationCount(profile.id, activePortal)
   const { open: openFeatureRequest } = useFeatureRequest()
@@ -87,72 +91,108 @@ export function AppNav({
     <nav
       id="site-app-nav"
       className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
-      style={{ minHeight: 'var(--app-nav-height, 5rem)' }}
+      style={{ minHeight: 'var(--app-nav-height, 4.5rem)' }}
     >
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 xl:max-w-[1600px] xl:px-10">
+      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
           left={
-            availablePortals.length > 1 ? (
-              <PortalTabs
-                availablePortals={availablePortals}
-                activePortal={activePortal}
-                className="hidden lg:inline-flex"
-              />
-            ) : null
-          }
-          center={
             <BrandLogoLockup
-              className="h-14 w-auto max-h-14 sm:h-16 sm:max-h-16 md:h-18 md:max-h-none"
+              className="h-14 w-auto max-h-14 shrink-0 sm:h-16 sm:max-h-16 md:h-18 md:max-h-none"
               href={homeHref}
             />
           }
+          center={
+            <>
+              {availablePortals.length > 1 ? (
+                <div className="hidden shrink-0 items-center gap-2 sm:flex md:gap-4">
+                  <PortalTabs
+                    availablePortals={availablePortals}
+                    activePortal={activePortal}
+                  />
+                  {links.length > 0 ? (
+                    <div
+                      className="hidden h-7 w-px shrink-0 bg-stone-300/80 md:block"
+                      aria-hidden
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+
+              {links.length > 0 ? (
+                <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 overflow-x-hidden md:flex lg:gap-2">
+                  {links.map(({ href, label }) => {
+                    const active =
+                      href === '/coordinator/dashboard'
+                        ? pathname === href
+                        : pathname === href || pathname.startsWith(`${href}/`)
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={cn(
+                          'shrink-0 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                          active
+                            ? 'bg-forest/10 text-forest'
+                            : 'text-muted-foreground hover:bg-canvas hover:text-foreground'
+                        )}
+                        aria-current={active ? 'page' : undefined}
+                      >
+                        {label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </>
+          }
           right={
-            <UserProfileMenu
-              links={links}
-              pathname={pathname}
-              profileName={profile.full_name}
-              menuProfile={{ userId: profile.id, profile: avatarProfile }}
-              unreadCount={unreadCount}
-              onSignOut={handleSignOut}
-              extraLinks={menuExtraLinks}
-              onSuggestImprovement={openFeatureRequest}
-            />
+            <>
+              <Link
+                href="/profile"
+                className="app-tap-target inline-flex rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Profile settings"
+              >
+                <UserAvatar
+                  userId={profile.id}
+                  profile={avatarProfile}
+                  className="h-9 w-9"
+                  fallbackClassName="text-xs"
+                />
+              </Link>
+
+              <button
+                type="button"
+                className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <Menu className="h-5 w-5 text-foreground" />
+              </button>
+
+              <AppMenuSheet
+                open={menuOpen}
+                onOpenChange={setMenuOpen}
+                links={links}
+                pathname={pathname}
+                profileName={profile.full_name}
+                menuProfile={{ userId: profile.id, profile: avatarProfile }}
+                unreadCount={unreadCount}
+                onSignOut={handleSignOut}
+                extraLinks={menuExtraLinks}
+                onSuggestImprovement={openFeatureRequest}
+              />
+            </>
           }
         />
-
-        {links.length > 0 ? (
-          <div className="hidden min-w-0 flex-wrap items-center justify-center gap-1 overflow-x-hidden lg:flex xl:gap-2">
-            {links.map(({ href, label }) => {
-              const active =
-                href === '/coordinator/dashboard'
-                  ? pathname === href
-                  : pathname === href || pathname.startsWith(`${href}/`)
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    'shrink-0 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                    active
-                      ? 'bg-forest/10 text-forest'
-                      : 'text-muted-foreground hover:bg-canvas hover:text-foreground'
-                  )}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  {label}
-                </Link>
-              )
-            })}
-          </div>
-        ) : null}
 
         {availablePortals.length > 1 ? (
           <PortalTabs
             availablePortals={availablePortals}
             activePortal={activePortal}
             compact
-            className="w-full lg:hidden"
+            className="w-full sm:hidden"
           />
         ) : null}
       </div>

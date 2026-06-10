@@ -2,16 +2,19 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import { Menu, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
+import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
-import { UserProfileMenu } from '@/components/nav/user-profile-menu'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import { Button } from '@/components/ui/button'
+import { UserAvatar } from '@/components/profile/user-avatar'
 import type { Profile } from '@/types/database'
 
 interface ShopperTopBarProps {
@@ -29,6 +32,7 @@ export function ShopperTopBar({
 }: ShopperTopBarProps) {
   const pathname = usePathname()
   const supabase = createClient()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const activePortal = profile
     ? resolveActivePortal(portalCookie, profile, pathname)
@@ -67,9 +71,15 @@ export function ShopperTopBar({
 
   return (
     <header className="sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 sm:max-w-7xl sm:px-6">
+      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 sm:max-w-7xl sm:px-6">
         <CenteredHeaderRow
           left={
+            <BrandLogoLockup
+              className="h-14 w-auto max-h-14 shrink-0 sm:h-16 sm:max-h-16 md:h-18 md:max-h-none"
+              href="/discover"
+            />
+          }
+          center={
             profile && availablePortals.length > 1 ? (
               <PortalTabs
                 availablePortals={availablePortals}
@@ -78,15 +88,60 @@ export function ShopperTopBar({
               />
             ) : null
           }
-          center={
-            <BrandLogoLockup
-              className="h-14 w-auto max-h-14 sm:h-16 sm:max-h-16 md:h-18 md:max-h-none"
-              href="/discover"
-            />
-          }
           right={
-            <>
-              {!profile ? (
+            profile ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="app-tap-target inline-flex rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Profile settings"
+                >
+                  {avatarProfile ? (
+                    <UserAvatar
+                      userId={profile.id}
+                      profile={avatarProfile}
+                      className="h-9 w-9"
+                      fallbackClassName="text-xs"
+                    />
+                  ) : null}
+                </Link>
+
+                <button
+                  type="button"
+                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                  aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen((open) => !open)}
+                >
+                  <Menu className="h-5 w-5 text-foreground" />
+                </button>
+
+                <AppMenuSheet
+                  open={menuOpen}
+                  onOpenChange={setMenuOpen}
+                  links={navLinks}
+                  pathname={pathname}
+                  profileName={profile.full_name}
+                  menuProfile={
+                    avatarProfile
+                      ? { userId: profile.id, profile: avatarProfile }
+                      : undefined
+                  }
+                  onSignOut={signOut}
+                  extraLinks={buildAppMenuExtraLinks(profile)}
+                  onSuggestImprovement={onSuggestImprovement}
+                />
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="app-tap-target inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                  aria-label="Sign in"
+                >
+                  <User className="h-5 w-5 text-foreground" aria-hidden />
+                </Link>
+
                 <div className="hidden items-center gap-2 md:flex">
                   <Link href="/login">
                     <Button variant="outline" size="sm" className="min-h-9">
@@ -99,24 +154,26 @@ export function ShopperTopBar({
                     </Button>
                   </Link>
                 </div>
-              ) : null}
 
-              <UserProfileMenu
-                links={navLinks}
-                pathname={pathname}
-                profileName={profile?.full_name}
-                menuProfile={
-                  profile && avatarProfile
-                    ? { userId: profile.id, profile: avatarProfile }
-                    : undefined
-                }
-                onSignOut={profile ? signOut : undefined}
-                extraLinks={profile ? buildAppMenuExtraLinks(profile) : undefined}
-                onSuggestImprovement={onSuggestImprovement}
-                footer={profile ? undefined : guestFooter}
-                guest={!profile}
-              />
-            </>
+                <button
+                  type="button"
+                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                  aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen((open) => !open)}
+                >
+                  <Menu className="h-5 w-5 text-foreground" />
+                </button>
+
+                <AppMenuSheet
+                  open={menuOpen}
+                  onOpenChange={setMenuOpen}
+                  links={navLinks}
+                  pathname={pathname}
+                  footer={guestFooter}
+                />
+              </>
+            )
           }
         />
 

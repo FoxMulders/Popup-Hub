@@ -4,6 +4,22 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (app menu density — semantic sections, not deployed)
+- **`app-menu-sheet.tsx`:** Rebuilt slide-out menu with semantic `<nav>` / `<section>` / `<ul>` lists; tighter padding, `min-h-10` row targets, grouped Navigate / Account / Actions sections; 2-column grid for 4+ primary links; dropped duplicate Profile settings when profile header is shown; removed heavy Button wrappers.
+
+## Shipped this session (side menu / sidebar scroll, not deployed)
+- **`dashboard-toolbar-portal.tsx`:** Replaced `flex-shrink-0` with `min-h-0 flex-1` so the command-center left rail scrolls when layout tools exceed viewport height.
+- **`dashboard-app-shell.tsx`**, **`dashboard-tablet-tools-dock.tsx`:** Constrain drawer/aside overflow so the portaled toolbar scrolls inside the panel.
+- **`app-menu-sheet.tsx`:** Fixed mobile hamburger drawer flex chain (`max-h-[100dvh]`, `overflow-hidden` shell, scrollable nav region).
+- **`command-center-shell.tsx`:** Left/right workspace rails scroll independently on desktop when content exceeds viewport.
+- **Verify:** Command center — expand all layout-tool accordions; bottom sections reachable via sidebar scroll. Phone — open hamburger menu with admin/extra links; scroll to Sign out.
+
+## Shipped this session (header nav — logo left, hamburger restored, profile first, not deployed)
+- **`centered-header-row.tsx`:** Restored three-zone flex layout — logo flush left (`mr-auto`), middle fills with portal tabs + inline nav links, actions right.
+- **`app-nav.tsx`**, **`guest-nav.tsx`**, **`shopper-top-bar.tsx`:** Replaced profile-only `UserProfileMenu` dropdown with hamburger (`Menu` + `AppMenuSheet` on `md:hidden`); profile avatar/link is the **first** right-rail action (guests get user icon → login); logo in `left` slot; coordinator Dashboard / New Event / Wallet inline with role tabs on `md+`.
+- **Suggest:** Remains in `AppMenuSheet` only (no desktop nav button).
+- **Verify:** Phone — logo far left, profile icon then hamburger right; drawer opens with profile header first; desktop — logo + role pill + nav links aligned in one row.
+
 ## Shipped this session (deploy noop exit code fix, deployed 2026-06-10)
 - **`Deploy-popuphub.bat` / `get-deploy-commit-message.ps1`:** When deploy script returns exit 2 (nothing to ship), bat normalizes to exit 0 so double-click does not show "Deploy failed".
 
