@@ -1,1 +1,0 @@
-feat: ship 2 session updates (mobile UX, nav/footer overhaul, auth flows; Vercel Analytics)

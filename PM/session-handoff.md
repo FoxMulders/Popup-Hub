@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (mobile UX, nav/footer overhaul, auth flows, not deployed)
+## Shipped this session (mobile UX, nav/footer overhaul, auth flows, deployed 2026-06-10)
 - **Navigation:** Removed hamburger menus; `UserProfileMenu` dropdown (profile/user icon) holds nav links, notifications, sign-out, and **Suggest an Improvement** on all breakpoints. Desktop inline nav links remain on `lg+` in `app-nav.tsx`.
 - **Header:** `CenteredHeaderRow` uses a 3-column grid — logo centered; mobile logo height capped (`h-14`/`h-16`) to prevent clipping; `safe-top` minimum padding increased globally.
 - **Footer:** Removed footer logo from `build-version-footer.tsx`; root layout uses `min-h-dvh` + `flex-1` shells so footer pins without extra white space; mobile shopper bottom-nav padding tuned (keyboard-safe, not fixed).
@@ -15,7 +15,7 @@
 - **Platform operator:** Migration `098_platform_operator_patron_access.sql` keeps `bradmulders@gmail.com` on shopper/vendor role with `is_admin`; favorite errors now surface Supabase message.
 - **Verify:** Phone — centered logo, profile dropdown nav, compact footer pinned; guest `/favorites` → sign-in CTA not redirect; coordinator phone login → `?overview=mobile`; layout route blocked on phone; venue wizard messy address geocodes; suggest only in profile menu.
 
-## Shipped this session (Vercel Analytics, not deployed)
+## Shipped this session (Vercel Analytics, deployed 2026-06-10)
 - **`@vercel/analytics`:** Installed and wired in `app/layout.tsx` via `<Analytics />` for page-view tracking on Vercel deployments.
 
 ## Shipped this session (floor plan designer exit navigation — Full canvas fail-safe, deployed 2026-06-10)
@@ -189,9 +189,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `52afad0` (pushed to `origin/master`)
-- Last deploy commit: `52afad0` - feat: floor plan designer exit navigation — Full canvas fail-safe
-- Production: https://popuphub.ca - **build 61** | commit `46518bf` (handoff updated 2026-06-10 08:31)
+- Branch: `master` @ `43b753f` (pushed to `origin/master`)
+- Last deploy commit: `43b753f` - feat: ship 2 session updates (mobile UX, nav/footer overhaul, auth flows; Vercel Analytics)
+- Production: https://popuphub.ca - **build 62** | commit `52234bd` (handoff updated 2026-06-10 08:42)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -568,7 +568,7 @@
 
 
 ## Last deploy
-- 2026-06-10 08:31 - Deploy via deploy-popuphub.ps1 - `feat: floor plan designer exit navigation — Full canvas fail-safe` (52afad0)
+- 2026-06-10 08:42 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (mobile UX, nav/footer overhaul, auth flows; Vercel Analytics)` (43b753f)
 
 
 ## Goal
