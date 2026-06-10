@@ -1,0 +1,1 @@
+feat: floor plan designer exit navigation â€” Full canvas fail-safe

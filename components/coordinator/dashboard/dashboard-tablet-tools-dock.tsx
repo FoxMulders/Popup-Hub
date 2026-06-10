@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { LayoutGrid, Menu, X } from 'lucide-react'
+import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { cn } from '@/lib/utils'
+import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
+import { useMarketManagement } from './market-management-context'
 
 /**
  * Tablet command-center rail — collapsed icon dock with a sliding drawer
@@ -12,6 +15,9 @@ import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-
  */
 export function DashboardTabletToolsDock() {
   const { isTablet, showLandscapeAdvisory } = useFloorPlanViewportLayout()
+  const { selectedEventId, events } = useMarketManagement()
+  const { setFullscreen } = useCommandCenterFullscreen()
+  const selectedEvent = events.find((event) => event.id === selectedEventId)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   useEffect(() => {
@@ -77,7 +83,22 @@ export function DashboardTabletToolsDock() {
           drawerOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         )}
       >
-        <div className="flex items-center justify-between border-b border-stone-200/80 px-3 py-2">
+        <div className="flex flex-col gap-2 border-b border-stone-200/80 px-3 py-2">
+          {selectedEventId ? (
+            <CommandCenterExitLink
+              eventId={selectedEventId}
+              eventName={selectedEvent?.name}
+              eventStatus={selectedEvent?.status}
+              compact
+              prominent
+              className="w-full justify-start"
+              onBeforeNavigate={() => {
+                setFullscreen(false)
+                setDrawerOpen(false)
+              }}
+            />
+          ) : null}
+          <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Layout tools
           </p>
@@ -89,6 +110,7 @@ export function DashboardTabletToolsDock() {
           >
             <X className="h-5 w-5" aria-hidden />
           </button>
+          </div>
         </div>
         <DashboardToolbarPortalTarget className="min-h-0 w-full min-w-0 flex-1 overflow-y-auto border-b-0 px-2 py-2" />
       </aside>

@@ -16,6 +16,10 @@ import {
   deleteLayoutRoomFromList,
   renameLayoutRoomInList,
 } from '@/lib/coordinator/dashboard-layout-rooms'
+import {
+  resolveDesignerExitHref,
+  resolveDesignerExitLabel,
+} from '@/components/coordinator/command-center-exit-link'
 import { useMarketManagement } from './market-management-context'
 import { BoothMatrixA11yTable } from './booth-matrix-a11y-table'
 
@@ -26,6 +30,7 @@ export interface DashboardFloorPlanViewportProps {
 
 export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlanViewportProps) {
   const {
+    events,
     selectedEventId,
     layoutRooms,
     layoutActiveRoomId,
@@ -36,6 +41,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     setSelectedBoothId,
     approvedPool,
   } = useMarketManagement()
+  const selectedEvent = events.find((event) => event.id === selectedEventId)
 
   const storeRef = useRef<FloorPlanDocStore | null>(null)
   const [categoryNames, setCategoryNames] = useState<string[]>([])
@@ -172,6 +178,19 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         variant="dashboard"
         preferServerLayout
         eventId={selectedEventId}
+        designerExitHref={resolveDesignerExitHref(
+          selectedEventId,
+          selectedEvent?.status,
+          'auto'
+        )}
+        designerExitLabel={resolveDesignerExitLabel(
+          selectedEvent?.name,
+          selectedEvent?.status,
+          'auto',
+          true
+        )}
+        designerExitEventStatus={selectedEvent?.status}
+        designerExitEventName={selectedEvent?.name}
         layoutRooms={layoutRooms}
         layoutActiveRoomId={layoutActiveRoomId}
         onLayoutRoomsChange={handleLayoutRoomsChange}

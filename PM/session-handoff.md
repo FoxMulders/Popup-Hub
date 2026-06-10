@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (floor plan designer exit navigation — Full canvas fail-safe, not deployed)
+- **Root cause:** Command-center **Full canvas** (`command-center-canvas-fullscreen`) and native wizard fullscreen hide site nav; coordinators had no persistent route back to event setup.
+- **`command-center-exit-link.tsx`:** `resolveDesignerExitHref` / `resolveDesignerExitLabel` — draft markets → `/coordinator/events/[id]/setup?step=3`; published → event overview; `CommandCenterExitButton` for toolbar/fullscreen overlays (`z-[10001]`, `pointer-events-auto`).
+- **Dashboard:** Sticky **Back to Event Setup** in `dashboard-left-panel.tsx`, `Dashboard_qa` left rail, `dashboard-tablet-tools-dock` drawer, and immersive header (`dashboard-command-center-header.tsx`); exits fullscreen before navigate.
+- **Canvas toolbar:** Utilities row in `canvas-command-bar-blocks.tsx` — prominent exit link adjacent to Full canvas toggle; wired via `floor-plan-v2.tsx` + `dashboard-floor-plan.tsx` + `spatial-layout-editor.tsx`.
+- **Native fullscreen:** `fullscreenExitToolbar` in `floor-plan-v2.tsx` pairs **Back to Event Setup** with **Exit Fullscreen**.
+- **Verify:** `/coordinator/dashboard` → select draft market → **Full canvas** → left rail + header + utilities show green **Back to Event Setup**; click returns to setup step 3; `/coordinator/events/[id]/layout` native fullscreen shows same escape hatch.
+
 ## Shipped this session (profile copy — coordinator accountability, deployed 2026-06-09)
 - **`app/profile/page.tsx`:** Coordinator Accountability helper text now reads *"Your public rating reflects on-time vs. late venue cancellations."*
 

@@ -25,7 +25,9 @@ function Get-UndeployedHandoffTitles {
             [void]$titles.Add(($line -replace '^##\s+', '').Trim())
         }
     }
-    return @($titles)
+    # Unary comma — single title must stay a one-element array, not a scalar string
+    # (otherwise "feat: $($titles[0])" indexes the first character).
+    return ,@($titles.ToArray())
 }
 
 function Get-DeployBatFileContent {

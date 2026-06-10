@@ -3,21 +3,36 @@
 import Link from 'next/link'
 import { LayoutGrid, Plus } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
+import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useMarketManagement } from './market-management-context'
 import { cn } from '@/lib/utils'
 
 export function DashboardCommandCenterHeader() {
   const { events, selectedEventId } = useMarketManagement()
-  const { fullscreen: immersive, toggleFullscreen } = useCommandCenterFullscreen()
+  const { fullscreen: immersive, toggleFullscreen, setFullscreen } =
+    useCommandCenterFullscreen()
   const selectedEvent = events.find((e) => e.id === selectedEventId)
 
   if (immersive) {
     return (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="truncate text-sm font-medium text-foreground">
-          {selectedEvent?.name ?? 'Booth layout designer'}
-        </span>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {selectedEventId ? (
+            <CommandCenterExitLink
+              eventId={selectedEventId}
+              eventName={selectedEvent?.name}
+              eventStatus={selectedEvent?.status}
+              compact
+              prominent
+              onBeforeNavigate={() => setFullscreen(false)}
+            />
+          ) : (
+            <span className="truncate text-sm font-medium text-foreground">
+              Booth layout designer
+            </span>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
             type="button"

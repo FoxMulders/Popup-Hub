@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import {
   AlignCenterHorizontal,
   AlignCenterVertical,
@@ -278,6 +280,9 @@ export interface CanvasCommandBarBlockContext {
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
+  designerExitHref?: string | null
+  designerExitLabel?: string
+  onDesignerExit?: () => void
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
@@ -1135,6 +1140,18 @@ export function renderCanvasCommandBarBlock(
               role="group"
               aria-label="Canvas view options"
             >
+              {ctx.designerExitHref ? (
+                <Link
+                  href={ctx.designerExitHref}
+                  prefetch
+                  onClick={() => ctx.onDesignerExit?.()}
+                  className="relative z-[10001] inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-forest px-2.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-forest/90 pointer-events-auto"
+                  aria-label={ctx.designerExitLabel ?? 'Back to Event Setup'}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="truncate">{ctx.designerExitLabel ?? 'Event setup'}</span>
+                </Link>
+              ) : null}
               {ctx.onPatronPathToggle ? (
                 <CommandButton
                   onClick={ctx.onPatronPathToggle}
@@ -1307,6 +1324,20 @@ export function renderCanvasCommandBarBlock(
                 <EyeOff className="h-3.5 w-3.5" />
               )}
             </CommandButton>
+          ) : null}
+          {ctx.designerExitHref ? (
+            <Link
+              href={ctx.designerExitHref}
+              prefetch
+              onClick={() => ctx.onDesignerExit?.()}
+              className="relative z-[10001] inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-forest px-2.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-forest/90 pointer-events-auto"
+              aria-label={ctx.designerExitLabel ?? 'Back to Event Setup'}
+            >
+              <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="max-w-[9rem] truncate">
+                {ctx.designerExitLabel ?? 'Event setup'}
+              </span>
+            </Link>
           ) : null}
           {ctx.onToggleCanvasFullscreen ? (
             <CommandButton

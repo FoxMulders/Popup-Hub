@@ -38,6 +38,9 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
+  designerExitHref?: string | null
+  designerExitLabel?: string
+  onDesignerExit?: () => void
   vendorAutoArrangeMode?: AutoArrangeMode
   onVendorAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   patronAutoArrangeMode?: AutoArrangeMode
@@ -129,6 +132,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onShowLabelsChange,
     canvasFullscreen = false,
     onToggleCanvasFullscreen,
+    designerExitHref,
+    designerExitLabel,
+    onDesignerExit,
     vendorAutoArrangeMode = 'grid',
     onVendorAutoArrangeModeChange,
     patronAutoArrangeMode = 'grid',
@@ -245,6 +251,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onShowLabelsChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
+      designerExitHref,
+      designerExitLabel,
+      onDesignerExit,
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,
@@ -321,6 +330,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onShowLabelsChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
+      designerExitHref,
+      designerExitLabel,
+      onDesignerExit,
       onSaveMarket,
       saveMarketDisabled,
       saveMarketLoading,

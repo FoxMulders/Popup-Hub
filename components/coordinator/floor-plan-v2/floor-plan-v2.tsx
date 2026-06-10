@@ -113,6 +113,11 @@ import { formatObjectDimensions } from './interactions/object-resize'
 import type { LayoutRoom } from '@/types/database'
 import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
+import {
+  CommandCenterExitButton,
+  resolveDesignerExitHref,
+  resolveDesignerExitLabel,
+} from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
 import { useDashboardToolbarPortal } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 
@@ -257,6 +262,11 @@ export interface FloorPlanV2Props {
    * clear the multi-room localStorage draft (avoids stale merged_zone masks).
    */
   preferServerLayout?: boolean
+  /** Persistent escape hatch — routes out of the canvas designer. */
+  designerExitHref?: string | null
+  designerExitLabel?: string
+  designerExitEventStatus?: string | null
+  designerExitEventName?: string | null
 }
 
 /**
@@ -319,6 +329,10 @@ function FloorPlanV2Workspace({
   onVendorDrop,
   debugGeometry = false,
   preferServerLayout = false,
+  designerExitHref,
+  designerExitLabel,
+  designerExitEventStatus,
+  designerExitEventName,
 }: FloorPlanV2Props) {
   const initialDoc = useMemo<FloorPlanDoc>(
     () => hydrateFloorPlanDoc(eventId, layoutRooms, { preferServerLayout }),
@@ -2095,6 +2109,33 @@ function FloorPlanV2Workspace({
     isDashboard &&
     Boolean(toolbarPortal?.sidebarActive && toolbarPortal.target)
 
+  const resolvedDesignerExitHref =
+    designerExitHref ??
+    (eventId
+      ? resolveDesignerExitHref(eventId, designerExitEventStatus, 'auto')
+      : null)
+  const resolvedDesignerExitLabel =
+    designerExitLabel ??
+    resolveDesignerExitLabel(
+      designerExitEventName,
+      designerExitEventStatus,
+      'auto',
+      true
+    )
+  const handleDesignerExit = useCallback(() => {
+    if (layoutNativeFullscreen) {
+      setCanvasFullscreen(false)
+    }
+    if (isDashboard) {
+      commandCenterFullscreen.setFullscreen(false)
+    }
+  }, [
+    commandCenterFullscreen,
+    isDashboard,
+    layoutNativeFullscreen,
+    setCanvasFullscreen,
+  ])
+
   const dashboardCommandBar = isDashboard ? (
     <CanvasCommandBar
       staticLayout
@@ -2160,6 +2201,9 @@ function FloorPlanV2Workspace({
       onShowLabelsChange={setShowLabels}
       canvasFullscreen={dashboardImmersive}
       onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+      designerExitHref={resolvedDesignerExitHref}
+      designerExitLabel={resolvedDesignerExitLabel}
+      onDesignerExit={handleDesignerExit}
       onSaveMarket={onSaveMarket}
       saveMarketDisabled={saveMarketDisabled}
       saveMarketLoading={saveMarketLoading}
@@ -2220,14 +2264,31 @@ function FloorPlanV2Workspace({
     ) : null
 
   const fullscreenExitToolbar = (
-    <button
-      type="button"
-      onClick={() => setCanvasFullscreen(false)}
-      className="rounded-lg border border-stone-600 bg-stone-900/95 px-4 py-2 font-sans text-sm font-semibold text-white shadow-lg hover:bg-stone-800"
-      aria-label="Exit fullscreen canvas editor"
-    >
-      Exit Fullscreen
-    </button>
+    <div className="flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
+      {resolvedDesignerExitHref ? (
+        <CommandCenterExitButton
+          eventId={eventId}
+          eventName={designerExitEventName}
+          eventStatus={designerExitEventStatus}
+          compact
+          prominent
+          onBeforeNavigate={() => {
+            setCanvasFullscreen(false)
+            if (isDashboard) {
+              commandCenterFullscreen.setFullscreen(false)
+            }
+          }}
+        />
+      ) : null}
+      <button
+        type="button"
+        onClick={() => setCanvasFullscreen(false)}
+        className="relative z-[10001] rounded-lg border border-stone-600 bg-stone-900/95 px-4 py-2 font-sans text-sm font-semibold text-white shadow-lg hover:bg-stone-800 pointer-events-auto"
+        aria-label="Exit fullscreen canvas editor"
+      >
+        Exit Fullscreen
+      </button>
+    </div>
   )
 
   return (
@@ -2407,6 +2468,9 @@ function FloorPlanV2Workspace({
                 onShowLabelsChange={setShowLabels}
                 canvasFullscreen={layoutNativeFullscreen}
                 onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+                designerExitHref={resolvedDesignerExitHref}
+                designerExitLabel={resolvedDesignerExitLabel}
+                onDesignerExit={handleDesignerExit}
                 onSaveMarket={onSaveMarket}
                 saveMarketDisabled={saveMarketDisabled}
                 saveMarketLoading={saveMarketLoading}

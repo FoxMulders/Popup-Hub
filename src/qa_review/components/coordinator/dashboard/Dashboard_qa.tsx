@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
@@ -49,8 +50,25 @@ export interface DashboardBootstrapQaProps {
  * portal-friendly toolbar mount (no curation queue).
  */
 export function DashboardLeftPanelQa() {
+  const { selectedEventId, events } = useMarketManagement()
+  const { setFullscreen } = useCommandCenterFullscreen()
+  const selectedEvent = events.find((event) => event.id === selectedEventId)
+
   return (
     <div className="relative flex w-full flex-col justify-start bg-white">
+      {selectedEventId ? (
+        <div className="sticky top-0 z-[10001] shrink-0 border-b border-stone-200/80 bg-white/95 px-2 py-2 backdrop-blur-sm pointer-events-auto">
+          <CommandCenterExitLink
+            eventId={selectedEventId}
+            eventName={selectedEvent?.name}
+            eventStatus={selectedEvent?.status}
+            compact
+            prominent
+            className="w-full justify-start"
+            onBeforeNavigate={() => setFullscreen(false)}
+          />
+        </div>
+      ) : null}
       <DashboardToolbarPortalTarget
         className="flex-1 overflow-x-hidden border-b-0 px-1 py-1"
       />

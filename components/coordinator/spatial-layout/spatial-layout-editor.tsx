@@ -161,6 +161,14 @@ export function SpatialLayoutEditor({
       <FloorPlanV2
         key={layoutGeneration}
         eventId={eventId}
+        designerExitHref={
+          isDraft
+            ? `/coordinator/events/${eventId}/setup?step=3`
+            : `/coordinator/events/${eventId}`
+        }
+        designerExitLabel={isDraft ? 'Back to Event Setup' : 'Event overview'}
+        designerExitEventStatus={event.status}
+        designerExitEventName={eventName}
         layoutRooms={rooms}
         layoutActiveRoomId={activeRoomId}
         onLayoutRoomsChange={handleLayoutRoomsChange}
