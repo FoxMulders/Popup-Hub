@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
+import {
+  COORDINATOR_FRAUD_PROFILE_SELECT,
+  coordinatorPaymentCollectionBlockReason,
+} from '@/lib/coordinator/verification'
 import { createClient } from '@/lib/supabase/server'
 import {
   readCoordinatorPaymentInstructions,
@@ -84,7 +88,7 @@ export async function PATCH(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, is_admin')
+    .select(`role, is_admin, ${COORDINATOR_FRAUD_PROFILE_SELECT}`)
     .eq('id', user.id)
     .single()
 
@@ -104,6 +108,30 @@ export async function PATCH(request: Request) {
       accepts_stripe?: boolean
       accepts_offline_etransfer?: boolean
       accepts_offline_cash?: boolean
+    }
+  }
+
+  const enablingPaymentCollection =
+    body.etransferPaymentEmail !== undefined ||
+    body.offlinePaymentInstructions !== undefined ||
+    body.paymentInstructions !== undefined ||
+    body.defaultEventPaymentFlags !== undefined
+
+  if (enablingPaymentCollection) {
+    const { data: squareEvent } = await supabase
+      .from('events')
+      .select('id')
+      .eq('coordinator_id', user.id)
+      .not('square_merchant_id', 'is', null)
+      .limit(1)
+      .maybeSingle()
+
+    const paymentBlock = coordinatorPaymentCollectionBlockReason({
+      ...profile,
+      has_square_event: !!squareEvent,
+    })
+    if (paymentBlock) {
+      return NextResponse.json({ error: paymentBlock }, { status: 403 })
     }
   }
 

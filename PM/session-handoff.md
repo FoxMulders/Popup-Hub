@@ -4,6 +4,27 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (coordinator fraud hardening, not deployed)
+- **Schema:** `100_coordinator_fraud_mitigation.sql` — `profiles` gains `coordinator_verification_status`, `coordinator_organization_name`, `coordinator_business_number`, `coordinator_risk_score`, `coordinator_account_status`; conservative backfill for Stripe/Square/venue-verified coordinators; DB trigger blocks event → published/active when organizer fails publish trust path.
+- **Lib:** `lib/coordinator/verification.ts` — BN/EIN validation reuse, risk scoring, publish/payment/apply block reasons; trust paths: admin-verified OR Stripe OR Square OR offline org+BN (publish only for pending offline).
+- **API gates:** `enable-coordinator` sets pending + message; `coordinator/events/draft` publish; `payment-settings` PATCH; `booth-payment` + `stripe/booth-payment`; `vendor/apply` blocks suspended/banned organizer; new `POST/GET /api/coordinator/verification`; new `POST /api/admin/coordinator-verification`.
+- **UI:** `coordinator-verification-banner.tsx` on coordinator dashboard; client publish pre-checks in status toggle, setup wizard, spatial layout deploy.
+- **Verify:** `npx tsx scripts/verify-coordinator-verification.ts` — PASS; `npx tsc --noEmit` — PASS.
+- **Smoke test:** New shopper → enable organizer → dashboard banner → submit org+BN → publish blocked until submission; Stripe/Square coordinators publish without manual form; offline pending can publish but payment-settings / booth-payment blocked until verified; admin `POST /api/admin/coordinator-verification` with `{ coordinatorId, action: "approve" }` unlocks offline collection.
+
+## Shipped this session (legend left-collapsible overlay, not deployed)
+- **Legend panel:** `canvas-legend.tsx` — docked/sidebar variants slide horizontally off the left canvas edge; collapsed state leaves a flush chevron tab (`>` expand / `<` collapse); semi-opaque white panel with right border + shadow overlays the grid without affecting drag coordinates.
+- **Canvas width:** Removed fixed `168px` legend rail from `floor-plan-v2.tsx`; legend lives inside the canvas host as an overlay so the grid uses full width when collapsed.
+- **CSS:** `globals.css` — replaced `.dashboard-canvas-legend-rail` with `.canvas-legend-panel` (hidden below `lg`, visible on dashboard canvas host).
+- **Verify:** `/coordinator/dashboard` (≥ lg) — expand legend overlays grid; collapse slides panel left leaving chevron tab; canvas grid fills full host width; pan/drag unchanged under overlay margins.
+
+## Shipped this session (manual drag — no wall magnet snap, not deployed)
+- **Drag fix:** `booth-layout-engine.ts` — removed perimeter magnet snap from `boothLayoutMovePatch` / `boothLayoutCommitPatch`; manual drag uses 1′ grid (5′ with Shift) only; booths can sit at 2′, 3′, or 4′ from walls without snapping flush.
+- **Pointer cleanup:** `use-canvas-pointer.ts` — dropped locked-wall-edge hysteresis during drag; commit re-quantizes grid without wall override.
+- **Clearance colors:** unchanged live path in `canvas-objects.tsx` + `booth-clearance-visual.ts` (red ≤2′, yellow >2′ and <4′, green ≥4′).
+- **Verify:** `npx tsx scripts/verify-booth-manual-drag-grid.ts`, `verify-vendor-wall-snap.ts`, `verify-booth-clearance-visual.ts` — PASS.
+- **Smoke test:** `/coordinator/dashboard` — drag vendor booth toward wall at 1′ steps; hold Shift for 5′ steps; stop at 2′/3′/4′ clearance — booth stays put (no flush snap); colors update live (red/yellow/green).
+
 ## Shipped this session (manual placement free + row wall orientation, deployed 2026-06-10)
 - **Manual placement:** Removed same-category proximity and collision-buffer rejection from drag commit, draw commit, keyboard nudge, and booth resize — coordinators can place booths freely; auto-arrange engines still enforce distance rules.
 - **Row orientation snap:** `booth-layout-engine.ts` — when a vendor booth shares a row (center Y within 1′), manual drag/draw/preview inherit the row peer's wall-facing rotation; `table-placement-preview.ts` ghost matches.

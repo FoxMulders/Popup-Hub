@@ -653,18 +653,19 @@
     border-radius: var(--dashboard-radius);
   }
 
-  .dashboard-canvas-legend-rail {
-    display: flex;
-    min-height: 0;
-    flex-direction: column;
-    border-right: 1px solid rgb(231 229 228);
-    background: rgb(255 255 255 / 0.96);
+  .floor-plan-canvas-host--dashboard .canvas-legend-panel {
+    display: none;
   }
 
-  .dashboard-canvas-legend-rail .canvas-legend-docked {
+  @media (min-width: 1024px) {
+    .floor-plan-canvas-host--dashboard .canvas-legend-panel {
+      display: block;
+    }
+  }
+
+  .canvas-legend-panel .canvas-legend-docked {
     height: 100%;
     min-height: 0;
-    overflow-y: auto;
   }
 
   #floor-plan-workspace .floor-plan-canvas-host--dashboard {

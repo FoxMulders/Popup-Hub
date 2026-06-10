@@ -31,6 +31,7 @@ import {
 } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { sortCategoriesByName } from '@/lib/categories'
+import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { persistEventDraftViaApi, persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { EVENTS_SCHEMA_MIGRATION_MESSAGE } from '@/lib/supabase/postgrest-errors'
 import {
@@ -99,6 +100,7 @@ type AutosaveResult =
   | { ok: false; reason: 'schedule'; scheduleReason: ScheduleBoundsFailureReason }
   | { ok: false; reason: 'fees' }
   | { ok: false; reason: 'venue' }
+  | { ok: false; reason: 'verification' }
   | { ok: false; reason: 'error'; message: string }
 
 function autosaveFailureMessage(result: Extract<AutosaveResult, { ok: false }>, fallback?: string): string {
@@ -507,6 +509,11 @@ export function MarketSetupWizard({
        * just refuse missing/invalid values and empty category lists.
        */
       if (opts?.publish) {
+        const publishBlock = await checkCoordinatorPublishGate()
+        if (publishBlock) {
+          toast.error(publishBlock)
+          return { ok: false as const, reason: 'verification' as const }
+        }
         if (!pinDropped) {
           toast.error('Drop a map pin on the venue before publishing.')
           return { ok: false as const, reason: 'venue' as const }

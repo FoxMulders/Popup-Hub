@@ -69,7 +69,10 @@ export function AccountAccessPanel({
       }
 
       setLocalRole('coordinator')
-      toast.success('Organizer access enabled — you can now review vendor applications')
+      toast.success(
+        (data as { message?: string }).message ??
+          'Organizer access enabled — complete business verification to publish markets'
+      )
       router.refresh()
     })
   }

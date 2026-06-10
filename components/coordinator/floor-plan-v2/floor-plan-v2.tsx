@@ -2418,13 +2418,8 @@ function FloorPlanV2Workspace({
               ? createPortal(dashboardCommandBar, toolbarPortal.target)
               : null}
             <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">
-              <aside
-                className="dashboard-canvas-legend-rail hidden w-[168px] shrink-0 lg:flex"
-                aria-label="Canvas allocation legend"
-              >
-                <CanvasLegend variant="docked" className="p-2" />
-              </aside>
               <div className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-stone-100">
+                <CanvasLegend variant="docked" />
                 <CanvasRootErrorBoundary
                   onReset={() => {
                     logState('Canvas error boundary: reset triggered')

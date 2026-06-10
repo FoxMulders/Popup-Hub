@@ -12,12 +12,7 @@ import {
   rotationForPerimeterEdge,
   type RoomEdgeSide,
 } from '../interactions/perimeter-booth-orientation'
-import {
-  isCardinalRotation,
-  isVendorBoothObject,
-  vendorBoothPerimeterSnapEdge,
-  vendorBoothPerimeterSnapPatch,
-} from '../interactions/vendor-booth-placement'
+import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 
 /** Default booth drag / arrow-nudge increment (feet). */
 export const BOOTH_MOVE_SNAP_FT = 1
@@ -117,61 +112,16 @@ function objectWithPatch(
   return { ...obj, ...patch } as PlacedObject
 }
 
-function applyVendorWallSnap(
-  booth: BoothObject,
-  doc: Pick<
-    FloorPlanDoc,
-    | 'rooms'
-    | 'objectRoom'
-    | 'objects'
-    | 'canvasWidthFt'
-    | 'canvasLengthFt'
-    | 'gridSpacingFt'
-    | 'snapFt'
-  >,
-  options?: {
-    preferredEdge?: RoomEdgeSide | null
-    positionOnly?: boolean
-    snapRotation?: boolean
-  }
-): BoothObject {
-  const rowPeer = findVendorBoothRowPeer(booth, doc.objects ?? [], {
-    excludeId: booth.id,
-    gridSpacingFt: doc.gridSpacingFt,
-  })
-  let working = booth
-  let preferredEdge = options?.preferredEdge ?? null
-  if (rowPeer) {
-    working = { ...booth, ...vendorBoothOrientationFromRowPeer(booth, rowPeer) }
-    preferredEdge = wallEdgeFromRotation(rowPeer.rotation ?? 0)
-  }
-
-  const snap = vendorBoothPerimeterSnapPatch(working, doc, {
-    preferredEdge,
-    positionOnly: options?.positionOnly,
-  })
-  if (!snap) return working
-  const snapRotation = options?.snapRotation ?? true
-  if (!snapRotation || !isCardinalRotation(booth.rotation ?? 0)) {
-    const { rotation: _ignored, ...positionPatch } = snap
-    return { ...working, ...positionPatch } as BoothObject
-  }
-  return { ...working, ...snap } as BoothObject
-}
-
 export interface BoothLayoutMoveOptions {
   snapFt: number
   activeRoomId?: string | null
-  preferredEdge?: RoomEdgeSide | null
-  /** When true, perimeter snap adjusts position only (live drag). */
-  positionOnly?: boolean
-  /** When false, skip wall rotation on non-cardinal booths. */
-  snapRotation?: boolean
 }
 
 /**
- * Single-object placement loop: snap grid → optional wall snap → room clamp.
- * Used by pointer drag frames and keyboard nudge.
+ * Single-object placement loop: grid snap → room clamp.
+ * Manual drag/nudge never magnet-snaps to perimeter walls — coordinators
+ * can park booths at 2′, 3′, or 4′ clearance; live color bands reflect
+ * proximity during the gesture.
  */
 export function boothLayoutMovePatch(
   obj: PlacedObject,
@@ -185,25 +135,6 @@ export function boothLayoutMovePatch(
   let patch: Partial<PlacedObject> = {
     x: snapToGrid(origin.x + totalDx, snapFt),
     y: snapToGrid(origin.y + totalDy, snapFt),
-  }
-
-  if (isVendorBoothObject(obj)) {
-    const snapped = applyVendorWallSnap(
-      objectWithPatch(obj, patch) as BoothObject,
-      doc,
-      {
-        preferredEdge: options.preferredEdge,
-        positionOnly: options.positionOnly ?? true,
-        snapRotation: options.snapRotation,
-      }
-    )
-    patch = {
-      x: snapped.x,
-      y: snapped.y,
-      width: snapped.width,
-      height: snapped.height,
-      rotation: snapped.rotation,
-    }
   }
 
   const roomId = doc.objectRoom?.[obj.id] ?? options.activeRoomId ?? null
@@ -228,38 +159,19 @@ export function boothLayoutMovePatch(
   }
 }
 
-/** Resolve locked perimeter edge after a live drag frame (wall hysteresis). */
-export function boothLayoutLockedWallEdge(
-  booth: BoothObject,
-  doc: FloorPlanDoc
-): RoomEdgeSide | null {
-  return vendorBoothPerimeterSnapEdge(booth, doc)
-}
-
-/** Commit-time vendor snap + final grid quantize (pointer-up). */
+/** Commit-time grid quantize (pointer-up) — no perimeter magnet snap. */
 export function boothLayoutCommitPatch(
   obj: PlacedObject,
   doc: FloorPlanDoc,
   options: {
     snapFt: number
     activeRoomId?: string | null
-    preferredEdge?: RoomEdgeSide | null
   }
 ): Partial<PlacedObject> {
-  let patch: Partial<PlacedObject> = { x: obj.x, y: obj.y }
-  if (isVendorBoothObject(obj)) {
-    const snapped = applyVendorWallSnap(obj as BoothObject, doc, {
-      preferredEdge: options.preferredEdge,
-      positionOnly: false,
-    })
-    const snapFt = options.snapFt > 0 ? options.snapFt : BOOTH_MOVE_SNAP_FT
-    patch = {
-      x: snapToGrid(snapped.x, snapFt),
-      y: snapToGrid(snapped.y, snapFt),
-      width: snapped.width,
-      height: snapped.height,
-      rotation: snapped.rotation,
-    }
+  const snapFt = options.snapFt > 0 ? options.snapFt : BOOTH_MOVE_SNAP_FT
+  let patch: Partial<PlacedObject> = {
+    x: snapToGrid(obj.x, snapFt),
+    y: snapToGrid(obj.y, snapFt),
   }
 
   const roomId = doc.objectRoom?.[obj.id] ?? options.activeRoomId ?? null

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   PLACEMENT_AVAILABLE,
@@ -19,12 +19,15 @@ import { BOOTH_CLEARANCE_THEMES } from '@/lib/coordinator/booth-clearance-visual
  * zone overlays so coordinators can decode placement feedback without
  * needing to memorise the colour grammar.
  *
- * The legend is collapsible — coordinators who already know the
- * grammar can fold it down to a single chip to free canvas real estate,
- * and the collapsed/expanded state survives across sessions via
- * `localStorage`.
+ * Docked / sidebar variants slide horizontally off the left edge of
+ * the canvas — only a chevron tab remains when collapsed so the grid
+ * keeps full width and drag coordinates stay untouched. The collapsed
+ * / expanded state survives across sessions via `localStorage`.
  */
 const STORAGE_KEY = 'popup-hub:floor-plan-v2:legend-collapsed'
+
+/** Panel body width — tab sits outside this and stays visible when collapsed. */
+const LEFT_PANEL_WIDTH_PX = 200
 
 interface LegendItem {
   swatchClass: string
@@ -75,6 +78,99 @@ const ITEMS: LegendItem[] = [
   },
 ]
 
+function LegendItemsList({ docked }: { docked?: boolean }) {
+  return (
+    <ul className={cn('space-y-1.5', docked && 'min-h-0 flex-1 overflow-y-auto')}>
+      {ITEMS.map((item) => (
+        <li
+          key={item.label}
+          className="flex items-start gap-2 text-[11px] leading-snug"
+        >
+          <span
+            aria-hidden
+            className={cn(
+              'mt-0.5 inline-block h-3 w-3 shrink-0 rounded-sm',
+              item.swatchClass
+            )}
+            style={
+              item.swatchFill
+                ? {
+                    backgroundColor: item.swatchFill,
+                    border: `1px solid ${item.swatchStroke ?? item.swatchFill}`,
+                  }
+                : undefined
+            }
+          />
+          <span className="min-w-0">
+            <span className="font-semibold text-stone-800">{item.label}</span>
+            <span className="block text-stone-500">{item.detail}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function LeftCollapsibleLegendPanel({
+  collapsed,
+  onCollapsedChange,
+  docked,
+  className,
+}: {
+  collapsed: boolean
+  onCollapsedChange: (next: boolean) => void
+  docked?: boolean
+  className?: string
+}) {
+  return (
+    <div
+      className="canvas-legend-panel pointer-events-none absolute inset-y-0 left-0 z-10"
+      role="region"
+      aria-label="Allocation legend"
+    >
+      <div
+        className="flex h-full transition-transform duration-300 ease-in-out motion-reduce:transition-none"
+        style={{
+          transform: collapsed
+            ? `translateX(-${LEFT_PANEL_WIDTH_PX}px)`
+            : 'translateX(0)',
+        }}
+      >
+        <div
+          className={cn(
+            'canvas-legend-docked pointer-events-auto flex h-full shrink-0 flex-col border-r border-stone-200/90 bg-white/95 p-2 shadow-[4px_0_16px_rgb(28_25_23_/_0.08)] backdrop-blur-sm',
+            docked && 'max-w-none shadow-[4px_0_20px_rgb(28_25_23_/_0.1)]',
+            className
+          )}
+          style={{ width: LEFT_PANEL_WIDTH_PX }}
+        >
+          <div className="mb-1 shrink-0">
+            <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-stone-500">
+              Legend
+            </span>
+          </div>
+          <LegendItemsList docked={docked} />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onCollapsedChange(!collapsed)}
+          title={collapsed ? 'Show allocation legend' : 'Hide allocation legend'}
+          aria-label={collapsed ? 'Show allocation legend' : 'Hide allocation legend'}
+          aria-expanded={!collapsed}
+          className="canvas-legend-tab pointer-events-auto inline-flex h-full w-7 shrink-0 flex-col items-center justify-center gap-1 rounded-r-md border border-l-0 border-stone-200/90 bg-white/95 text-stone-500 shadow-[4px_0_12px_rgb(28_25_23_/_0.08)] backdrop-blur-sm hover:bg-white hover:text-stone-700"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function CanvasLegend({
   className,
   variant = 'floating',
@@ -85,6 +181,7 @@ export function CanvasLegend({
   const [collapsed, setCollapsed] = useState(false)
   const isDocked = variant === 'docked'
   const isSidebar = variant === 'sidebar' || isDocked
+  const isLeftPanel = isSidebar
 
   useEffect(() => {
     try {
@@ -105,11 +202,18 @@ export function CanvasLegend({
     }
   }, [collapsed])
 
-  const positionClass = isDocked
-    ? 'relative h-full w-full'
-    : isSidebar
-      ? 'absolute left-3 top-3 z-10'
-      : 'absolute top-4 right-4 z-10'
+  if (isLeftPanel) {
+    return (
+      <LeftCollapsibleLegendPanel
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
+        docked={isDocked}
+        className={className}
+      />
+    )
+  }
+
+  const positionClass = 'absolute top-4 right-4 z-10'
 
   if (collapsed) {
     return (
@@ -121,65 +225,32 @@ export function CanvasLegend({
         aria-expanded={false}
         className={cn(
           positionClass,
-          'canvas-legend-docked inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-lg backdrop-blur-sm hover:bg-white',
-          isDocked && 'h-full min-h-0 w-full flex-col justify-center py-3 shadow-none',
-          isSidebar && !isDocked && 'flex-col py-2',
+          'inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-lg backdrop-blur-sm hover:bg-white',
           className
         )}
       >
-        {isSidebar ? (
-          <>
-            <span className="flex flex-col items-center gap-0.5">
-              <span
-                className={cn(
-                  'inline-block h-2.5 w-2.5 rounded-sm',
-                  VENDOR_BOOTH_LEGEND.tailwindSwatch
-                )}
-              />
-              <span
-                className={cn(
-                  'inline-block h-2.5 w-2.5 rounded-sm',
-                  PLACEMENT_AVAILABLE.tailwindSwatchCollapsed
-                )}
-              />
-              <span
-                className={cn(
-                  'inline-block h-2.5 w-2.5 rounded-sm',
-                  PLACEMENT_VIOLATION.tailwindSwatch
-                )}
-              />
-            </span>
-            <span className={cn(isDocked ? 'text-[10px]' : '[writing-mode:vertical-rl] rotate-180 text-[9px]')}>
-              Legend
-            </span>
-            <ChevronRight className="h-3 w-3" />
-          </>
-        ) : (
-          <>
-            <span className="flex items-center gap-0.5">
-              <span
-                className={cn(
-                  'inline-block h-2.5 w-2.5 rounded-sm',
-                  VENDOR_BOOTH_LEGEND.tailwindSwatch
-                )}
-              />
-              <span
-                className={cn(
-                  'inline-block h-2.5 w-2.5 rounded-sm',
-                  PLACEMENT_AVAILABLE.tailwindSwatchCollapsed
-                )}
-              />
-              <span
-                className={cn(
-                  'inline-block h-2.5 w-2.5 rounded-sm',
-                  PLACEMENT_VIOLATION.tailwindSwatch
-                )}
-              />
-            </span>
-            Legend
-            <ChevronDown className="h-3 w-3 rotate-180" />
-          </>
-        )}
+        <span className="flex items-center gap-0.5">
+          <span
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm',
+              VENDOR_BOOTH_LEGEND.tailwindSwatch
+            )}
+          />
+          <span
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm',
+              PLACEMENT_AVAILABLE.tailwindSwatchCollapsed
+            )}
+          />
+          <span
+            className={cn(
+              'inline-block h-2.5 w-2.5 rounded-sm',
+              PLACEMENT_VIOLATION.tailwindSwatch
+            )}
+          />
+        </span>
+        Legend
+        <ChevronDown className="h-3 w-3 rotate-180" />
       </button>
     )
   }
@@ -188,8 +259,7 @@ export function CanvasLegend({
     <div
       className={cn(
         positionClass,
-        'canvas-legend-docked max-w-[200px] rounded-lg border border-stone-200/90 bg-white/95 p-2 shadow-lg backdrop-blur-sm',
-        isDocked && 'flex h-full max-w-none flex-col shadow-none',
+        'max-w-[200px] rounded-lg border border-stone-200/90 bg-white/95 p-2 shadow-lg backdrop-blur-sm',
         className
       )}
       role="region"
@@ -197,7 +267,7 @@ export function CanvasLegend({
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-stone-500">
-          {isDocked ? 'Legend' : 'Placement HUD'}
+          Placement HUD
         </span>
         <button
           type="button"
@@ -210,34 +280,7 @@ export function CanvasLegend({
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
-      <ul className={cn('space-y-1.5', isDocked && 'min-h-0 flex-1 overflow-y-auto')}>
-        {ITEMS.map((item) => (
-          <li
-            key={item.label}
-            className="flex items-start gap-2 text-[11px] leading-snug"
-          >
-            <span
-              aria-hidden
-              className={cn(
-                'mt-0.5 inline-block h-3 w-3 shrink-0 rounded-sm',
-                item.swatchClass
-              )}
-              style={
-                item.swatchFill
-                  ? {
-                      backgroundColor: item.swatchFill,
-                      border: `1px solid ${item.swatchStroke ?? item.swatchFill}`,
-                    }
-                  : undefined
-              }
-            />
-            <span className="min-w-0">
-              <span className="font-semibold text-stone-800">{item.label}</span>
-              <span className="block text-stone-500">{item.detail}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      <LegendItemsList />
     </div>
   )
 }

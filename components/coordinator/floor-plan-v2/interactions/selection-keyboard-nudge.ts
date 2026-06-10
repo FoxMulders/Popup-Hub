@@ -83,7 +83,6 @@ function patchAfterNudge(
     return boothLayoutMovePatch(obj, { x: obj.x, y: obj.y }, dx, dy, doc, {
       snapFt,
       activeRoomId,
-      positionOnly: true,
     })
   }
 

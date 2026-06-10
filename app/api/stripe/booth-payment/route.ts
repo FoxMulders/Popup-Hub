@@ -5,6 +5,7 @@ import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { getStripeClient, isStripeConfigured } from '@/lib/stripe/client'
 import { assertVendorCanPayForApplication } from '@/lib/engagement/booth-access'
+import { coordinatorPaymentCollectionBlockReason } from '@/lib/coordinator/verification'
 import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
 
 export async function POST(request: Request) {
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
         venue_verification_status,
         venue_verification_reason,
         vendor_access_equality_until,
-        coordinator:profiles!events_coordinator_id_fkey(stripe_connected_id, stripe_onboarding_complete)
+        coordinator:profiles!events_coordinator_id_fkey(stripe_connected_id, stripe_onboarding_complete, coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status, square_access_token, payout_onboarding_status)
       )
     `)
     .eq('id', applicationId)
@@ -113,6 +114,14 @@ export async function POST(request: Request) {
   const coordinator = Array.isArray(eventRow.coordinator)
     ? eventRow.coordinator[0]
     : eventRow.coordinator
+
+  const paymentBlock = coordinatorPaymentCollectionBlockReason({
+    ...coordinator,
+    has_square_event: false,
+  })
+  if (paymentBlock) {
+    return NextResponse.json({ error: paymentBlock }, { status: 403 })
+  }
 
   if (!coordinator?.stripe_connected_id || !coordinator?.stripe_onboarding_complete) {
     return NextResponse.json(

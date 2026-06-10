@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2/floor-plan-v2'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
+import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
 import type { BoothLayout, Event } from '@/types/database'
 import { SpatialLayoutShell } from './spatial-layout-shell'
@@ -94,6 +95,12 @@ export function SpatialLayoutEditor({
       }
 
       if (event.status === 'draft') {
+        const publishBlock = await checkCoordinatorPublishGate()
+        if (publishBlock) {
+          toast.error(publishBlock)
+          return
+        }
+
         const verifyRes = await fetch('/api/coordinator/venues/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

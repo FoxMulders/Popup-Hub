@@ -11,6 +11,10 @@ import {
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { assertVendorCanPayForApplication } from '@/lib/engagement/booth-access'
+import {
+  COORDINATOR_FRAUD_PROFILE_SELECT,
+  coordinatorPaymentCollectionBlockReason,
+} from '@/lib/coordinator/verification'
 import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
 
 const COMPLETED_PAYMENT_STATUSES = new Set(['COMPLETED', 'APPROVED'])
@@ -190,6 +194,20 @@ export async function POST(request: Request) {
   const feeConfig = resolveEventFeeConfig(eventRow)
   const platformFeeCents = computePlatformFeeCents(amountCents, feeConfig)
   const coordinatorId = eventRow?.coordinator_id as string
+
+  const { data: coordinatorProfile } = await supabase
+    .from('profiles')
+    .select(COORDINATOR_FRAUD_PROFILE_SELECT)
+    .eq('id', coordinatorId)
+    .single()
+
+  const paymentBlock = coordinatorPaymentCollectionBlockReason({
+    ...coordinatorProfile,
+    has_square_event: !!eventRow?.square_merchant_id,
+  })
+  if (paymentBlock) {
+    return NextResponse.json({ error: paymentBlock }, { status: 403 })
+  }
 
   const credentials = await getCoordinatorAccessToken(supabase, coordinatorId)
   if (!credentials?.accessToken) {

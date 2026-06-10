@@ -121,6 +121,11 @@ export interface Profile {
   payment_instructions?: string | null
   platform_wallet_grace_until?: string | null
   platform_wallet_blocked?: boolean
+  coordinator_verification_status?: CoordinatorVerificationStatus
+  coordinator_organization_name?: string | null
+  coordinator_business_number?: string | null
+  coordinator_risk_score?: number
+  coordinator_account_status?: CoordinatorAccountStatus
   updated_at: string
 }
 
@@ -146,6 +151,14 @@ export type VendorVerificationStatus =
   | 'rejected'
 
 export type VendorAccountStatus = 'active' | 'suspended' | 'banned'
+
+export type CoordinatorVerificationStatus =
+  | 'unverified'
+  | 'pending'
+  | 'verified'
+  | 'rejected'
+
+export type CoordinatorAccountStatus = 'active' | 'suspended' | 'banned'
 
 export interface VendorPassport {
   id: string

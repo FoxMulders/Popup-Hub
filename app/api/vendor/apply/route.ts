@@ -36,6 +36,7 @@ import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-inst
 import { isCategoryCapacityError } from '@/lib/applications/booth-payment-processing'
 import { resolvePostApprovalStatus, isReservedBoothStatus } from '@/lib/applications/resolve-approval-status'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
+import { coordinatorVendorApplyBlockReason } from '@/lib/coordinator/verification'
 import { vendorApplyBlockReason } from '@/lib/vendor/verification'
 import {
   computeApplicationBoothPriceCents,
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, venue_verified, venue_verification_status, venue_verification_reason, vendor_access_equality_until, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, venue_verified, venue_verification_status, venue_verification_reason, vendor_access_equality_until, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete, coordinator_verification_status, coordinator_account_status, coordinator_risk_score)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -216,6 +217,14 @@ export async function POST(request: Request) {
   const venueGate = requireVenueVerified(event)
   if (!venueGate.ok) {
     return NextResponse.json({ error: venueGate.reason }, { status: 403 })
+  }
+
+  const coordinatorProfile = Array.isArray(event.coordinator)
+    ? event.coordinator[0]
+    : event.coordinator
+  const coordinatorBlock = coordinatorVendorApplyBlockReason(coordinatorProfile)
+  if (coordinatorBlock) {
+    return NextResponse.json({ error: coordinatorBlock }, { status: 403 })
   }
 
   if (existing) {

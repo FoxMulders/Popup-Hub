@@ -6,6 +6,10 @@ import { partitionEventsByPhase, sortEventsByStartAsc } from '@/lib/queries/even
 import type { Event } from '@/types/database'
 import { roomsFromBoothLayoutForEditor } from '@/lib/booth-planner/layout-rooms'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
+import {
+  coordinatorPaymentCollectionBlockReason,
+  coordinatorPublishBlockReason,
+} from '@/lib/coordinator/verification'
 import { MarketDashboardClient } from '@/components/coordinator/dashboard/market-dashboard-client'
 import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
 import type { DashboardEventSummary } from '@/components/coordinator/dashboard/market-management-context'
@@ -65,7 +69,9 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
   ] = await Promise.all([
     supabase
       .from('profiles')
-      .select('payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete')
+      .select(
+        'payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete, square_access_token, coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status'
+      )
       .eq('id', user.id)
       .single(),
     revenueQuery,
@@ -187,6 +193,19 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
   const totalRevenueCents =
     revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
 
+  const { data: squareEvent } = await supabase
+    .from('events')
+    .select('id')
+    .eq('coordinator_id', user.id)
+    .not('square_merchant_id', 'is', null)
+    .limit(1)
+    .maybeSingle()
+
+  const fraudGate = {
+    ...profile,
+    has_square_event: !!squareEvent,
+  }
+
   const squareConnected =
     profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
   const stripeConnected =
@@ -209,6 +228,10 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
         squareConnected={squareConnected}
         stripeConnected={stripeConnected}
         totalRevenueCents={totalRevenueCents}
+        verificationStatus={profile?.coordinator_verification_status ?? 'unverified'}
+        organizationName={profile?.coordinator_organization_name ?? null}
+        publishBlockReason={coordinatorPublishBlockReason(fraudGate)}
+        paymentCollectionBlockReason={coordinatorPaymentCollectionBlockReason(fraudGate)}
       />
     </Suspense>
   )

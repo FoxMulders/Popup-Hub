@@ -68,11 +68,7 @@ import {
   type RoomResizeHandle,
 } from '../state/room-canvas'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
-import {
-  isVendorBoothObject,
-  isCardinalRotation,
-  type RoomEdgeSide,
-} from './vendor-booth-placement'
+import { isVendorBoothObject } from './vendor-booth-placement'
 import {
   isStructuralWallSnapKind,
   snapStructuralAssetForDoc,
@@ -85,7 +81,6 @@ import {
 } from '@/lib/floor-plan/boundary-constraints'
 import {
   boothLayoutCommitPatch,
-  boothLayoutLockedWallEdge,
   boothLayoutMovePatch,
   resolveBoothMoveSnapFt,
 } from '../engine/booth-layout-engine'
@@ -183,8 +178,6 @@ type DragState =
       moved: boolean
       /** Original object positions keyed by id, for absolute deltas. */
       originals: Map<string, { x: number; y: number }>
-      /** Locked perimeter wall per vendor booth — prevents corner flicker. */
-      lockedWallEdges: Map<string, RoomEdgeSide>
     }
 
 type MarqueeState =
@@ -341,10 +334,6 @@ export function resolveDrawCommitRect(
 
 function dragCommitPatchForObject(
   obj: PlacedObject,
-  drag: {
-    originals: Map<string, { x: number; y: number }>
-    lockedWallEdges: Map<string, RoomEdgeSide>
-  },
   doc: FloorPlanDocStore['doc'],
   activeRoomId: string | null | undefined,
   snapFt: number
@@ -355,7 +344,6 @@ function dragCommitPatchForObject(
       return boothLayoutCommitPatch(booth, doc, {
         snapFt,
         activeRoomId,
-        preferredEdge: drag.lockedWallEdges.get(booth.id) ?? null,
       })
     }
     const roomId = doc.objectRoom?.[booth.id] ?? activeRoomId
@@ -601,14 +589,9 @@ export function useCanvasPointer(
   const beginDrag = useCallback(
     (pointerId: number, originFt: Point, ids: string[]) => {
       const originals = new Map<string, { x: number; y: number }>()
-      const lockedWallEdges = new Map<string, RoomEdgeSide>()
       for (const obj of store.doc.objects) {
         if (ids.includes(obj.id)) {
           originals.set(obj.id, { x: obj.x, y: obj.y })
-          if (isVendorBoothObject(obj)) {
-            const edge = boothLayoutLockedWallEdge(obj as BoothObject, store.doc)
-            if (edge) lockedWallEdges.set(obj.id, edge)
-          }
         }
       }
       dragRef.current = {
@@ -618,7 +601,6 @@ export function useCanvasPointer(
         lastFt: originFt,
         moved: false,
         originals,
-        lockedWallEdges,
       }
       rotateRef.current = null
     },
@@ -1169,19 +1151,7 @@ export function useCanvasPointer(
           const patch = boothLayoutMovePatch(obj, orig, dx, dy, store.doc, {
             snapFt,
             activeRoomId: objectRoom[id] ?? activeRoomIdRef.current ?? null,
-            preferredEdge: drag.lockedWallEdges.get(id) ?? null,
-            positionOnly: true,
-            snapRotation: isCardinalRotation(obj.rotation ?? 0),
           })
-          if (isVendorBoothObject(obj)) {
-            const snapped = { ...obj, ...patch } as BoothObject
-            const lockedEdge = boothLayoutLockedWallEdge(snapped, store.doc)
-            if (lockedEdge) {
-              drag.lockedWallEdges.set(id, lockedEdge)
-            } else {
-              drag.lockedWallEdges.delete(id)
-            }
-          }
           patches.push({
             id,
             patch,
@@ -1533,7 +1503,6 @@ export function useCanvasPointer(
                 o,
                 dragCommitPatchForObject(
                   o,
-                  drag,
                   store.doc,
                   activeRoomIdRef.current,
                   commitSnapFt

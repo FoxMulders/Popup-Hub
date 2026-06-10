@@ -19,7 +19,7 @@ import type { BoothObject, FloorPlanDoc, PlacedObject, RoomFrame } from '../stat
 
 export type { RoomEdgeSide } from './perimeter-booth-orientation'
 
-/** Snap vendor booths when within this distance (ft) of a room perimeter wall. */
+/** Perimeter snap tolerance for draw preview / auto-arrange (manual drag skips this). */
 export const VENDOR_WALL_SNAP_THRESHOLD_FT = 4
 
 /** Tighter threshold for cursor ghost preview before click (2′). */

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { CancelEventDialog } from '@/components/coordinator/cancel-event-dialog'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
+import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { toast } from 'sonner'
 import { ChevronDown, Eye, Globe, Zap, CheckCircle, XCircle } from 'lucide-react'
 import type { Event, EventStatus } from '@/types/database'
@@ -67,6 +68,14 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
      * registration card need to see a price line, and a Draft event
      * can have empty/half-set categories from the wizard.
      */
+    if (newStatus === 'published' || newStatus === 'active') {
+      const publishBlock = await checkCoordinatorPublishGate()
+      if (publishBlock) {
+        toast.error(publishBlock)
+        return
+      }
+    }
+
     if (newStatus === 'published') {
       const { data: eventRow, error: venueLoadError } = await supabase
         .from('events')

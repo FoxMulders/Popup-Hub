@@ -20,6 +20,8 @@ import { FloorplanSyncBridge } from './floorplan-sync-bridge'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
 import { CoordinatorMobileOverview } from './coordinator-mobile-overview'
+import { CoordinatorVerificationBanner } from '@/components/coordinator/coordinator-verification-banner'
+import type { CoordinatorVerificationStatus } from '@/types/database'
 
 export interface MarketDashboardClientProps {
   events: DashboardEventSummary[]
@@ -31,6 +33,10 @@ export interface MarketDashboardClientProps {
   squareConnected: boolean
   stripeConnected: boolean
   totalRevenueCents: number
+  verificationStatus?: CoordinatorVerificationStatus
+  organizationName?: string | null
+  publishBlockReason?: string | null
+  paymentCollectionBlockReason?: string | null
 }
 
 export function MarketDashboardClient({
@@ -43,6 +49,10 @@ export function MarketDashboardClient({
   squareConnected,
   stripeConnected,
   totalRevenueCents,
+  verificationStatus = 'unverified',
+  organizationName = null,
+  publishBlockReason = null,
+  paymentCollectionBlockReason = null,
 }: MarketDashboardClientProps) {
   const searchParams = useSearchParams()
   const forceMobileOverview = searchParams.get('overview') === 'mobile'
@@ -96,6 +106,16 @@ export function MarketDashboardClient({
           <DashboardWorkspaceViewProvider>
             <FloorplanSyncBridge />
             <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+              {(publishBlockReason || paymentCollectionBlockReason || verificationStatus !== 'verified') && (
+                <div className="shrink-0 px-[var(--dashboard-gutter,1rem)] pt-3">
+                  <CoordinatorVerificationBanner
+                    verificationStatus={verificationStatus}
+                    organizationName={organizationName}
+                    publishBlockReason={publishBlockReason}
+                    paymentCollectionBlockReason={paymentCollectionBlockReason}
+                  />
+                </div>
+              )}
               <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
             </div>
           </DashboardWorkspaceViewProvider>

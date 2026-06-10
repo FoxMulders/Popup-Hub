@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
+import {
+  COORDINATOR_FRAUD_PROFILE_SELECT,
+  coordinatorPublishBlockReason,
+} from '@/lib/coordinator/verification'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import {
   persistEventDraft,
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
 
   const { data: profile } = await authSupabase
     .from('profiles')
-    .select('role, is_admin')
+    .select(`role, is_admin, ${COORDINATOR_FRAUD_PROFILE_SELECT}`)
     .eq('id', user.id)
     .single()
 
@@ -62,6 +66,26 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient()
   const eventId = body.eventId ?? null
+
+  const publishing = body.draft?.status === 'published'
+
+  if (publishing) {
+    const { data: squareEvent } = await authSupabase
+      .from('events')
+      .select('id')
+      .eq('coordinator_id', user.id)
+      .not('square_merchant_id', 'is', null)
+      .limit(1)
+      .maybeSingle()
+
+    const publishBlock = coordinatorPublishBlockReason({
+      ...profile,
+      has_square_event: !!squareEvent,
+    })
+    if (publishBlock) {
+      return NextResponse.json({ error: publishBlock }, { status: 403 })
+    }
+  }
 
   if (eventId) {
     const { data: existing, error: existingError } = await admin

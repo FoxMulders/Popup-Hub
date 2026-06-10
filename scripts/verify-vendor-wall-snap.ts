@@ -1,5 +1,6 @@
 /**
- * Vendor booth wall snap — within 3′ threshold, rear flush + inward rotation.
+ * Vendor booth perimeter snap — used by draw preview / auto-arrange helpers,
+ * not manual drag (see verify-booth-manual-drag-grid.ts).
  *
  * Run: npx tsx scripts/verify-vendor-wall-snap.ts
  */
@@ -134,7 +135,7 @@ assert(
 
 assert(
   VENDOR_WALL_SNAP_THRESHOLD_FT === 4,
-  'Snap threshold must remain 4′ (wall overrides grid in dead zone)'
+  'Preview/auto snap threshold remains 4′ (manual drag bypasses this path)'
 )
 
 // Swapped dimensions (2×6 storage) must still orient long edge toward nearest wall.
