@@ -53,6 +53,8 @@ export interface CanvasToolbarStaticProps {
   layoutCtx?: StaticToolbarLayoutContext
   /** Left-rail layout designer — split headers and two-column row bodies. */
   sidebarLayout?: boolean
+  /** Dashboard top strip — horizontal tool groups with compact gaps. */
+  topBarLayout?: boolean
   eventId?: string | null
 }
 
@@ -104,6 +106,41 @@ function BlockCluster({
         </div>
       ))}
     </>
+  )
+}
+
+function TopBarToolbarSection({
+  section,
+  renderBlock,
+  compact,
+  eventId,
+}: {
+  section: SidebarSectionDef
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  compact?: boolean
+  eventId?: string | null
+}) {
+  return (
+    <section
+      className="flex min-w-0 shrink-0 flex-col gap-1 rounded-md border border-stone-200/90 bg-white px-2 py-1.5 shadow-sm"
+      aria-label={section.header}
+    >
+      <SectionHeader>{section.header}</SectionHeader>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        {section.id === 'vendor-matches' ? (
+          <VendorMatchesPanel eventId={eventId} compact={compact} />
+        ) : (
+          section.blocks.map((blockId) => (
+            <div
+              key={blockId}
+              className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
+            >
+              {renderBlock(blockId)}
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -353,6 +390,7 @@ export function CanvasToolbarStatic({
   compact,
   layoutCtx,
   sidebarLayout = false,
+  topBarLayout = false,
   eventId,
 }: CanvasToolbarStaticProps) {
   const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
@@ -443,9 +481,27 @@ export function CanvasToolbarStatic({
   }
 
   const sidebarSections = useMemo(
-    () => (sidebarLayout ? getVisibleSidebarSections(segmentCtx) : []),
-    [sidebarLayout, segmentCtx]
+    () => (sidebarLayout || topBarLayout ? getVisibleSidebarSections(segmentCtx) : []),
+    [sidebarLayout, topBarLayout, segmentCtx]
   )
+
+  if (topBarLayout) {
+    if (sidebarSections.length === 0) return null
+
+    return (
+      <div className="flex min-w-0 flex-wrap items-stretch gap-2 lg:flex-nowrap lg:overflow-x-auto">
+        {sidebarSections.map((section) => (
+          <TopBarToolbarSection
+            key={section.id}
+            section={section}
+            renderBlock={renderBlock}
+            compact={compact}
+            eventId={eventId}
+          />
+        ))}
+      </div>
+    )
+  }
 
   if (sidebarLayout) {
     if (sidebarSections.length === 0) return null

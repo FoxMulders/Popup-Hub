@@ -3,7 +3,9 @@ import { cn } from '@/lib/utils'
 
 export interface DashboardAppShellProps {
   header?: ReactNode
-  left: ReactNode
+  /** Horizontal layout-tools strip below the header (Room, Shapes, Alignment, etc.). */
+  toolbarStrip?: ReactNode
+  left?: ReactNode | null
   center: ReactNode
   /** Omitted on booth designer — payment telemetry lives under Payments. */
   right?: ReactNode | null
@@ -29,6 +31,7 @@ export interface DashboardAppShellProps {
  */
 export function DashboardAppShell({
   header,
+  toolbarStrip,
   left,
   center,
   right,
@@ -55,48 +58,40 @@ export function DashboardAppShell({
       {header ? (
         <header
           className={cn(
-            'dashboard-app-shell__header shrink-0 border-b border-stone-200/80 bg-card/90 px-4 backdrop-blur-sm',
-            immersive ? 'py-2' : 'py-2'
+            'dashboard-app-shell__header shrink-0 border-b border-stone-200/80 bg-card/90 px-3 backdrop-blur-sm sm:px-4',
+            immersive ? 'py-1.5' : 'py-1.5'
           )}
         >
           {header}
         </header>
       ) : null}
+      {toolbarStrip ? (
+        <div className="dashboard-app-shell__toolbar shrink-0">{toolbarStrip}</div>
+      ) : null}
       <div
         className={cn(
           'dashboard-app-shell__grid grid min-h-0 flex-1 overflow-hidden',
           immersive
-            ? 'grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)]'
+            ? 'grid-cols-1'
             : right
               ? cn(
                   'grid-cols-1',
-                  tabletLeft && 'md:grid-cols-[3rem_minmax(0,1fr)]',
-                  'lg:grid-cols-[var(--command-center-left,300px)_minmax(0,1fr)_var(--command-center-right,360px)]'
+                  'lg:grid-cols-[minmax(0,1fr)_var(--command-center-right,360px)]'
                 )
-              : cn(
-                  'grid-cols-1',
-                  tabletLeft && 'md:grid-cols-[3rem_minmax(0,1fr)]',
-                  'lg:grid-cols-[300px_minmax(0,1fr)]'
-                )
+              : 'grid-cols-1'
         )}
       >
-        {tabletLeft ? (
+        {left ? (
           <aside
-            className="dashboard-app-shell__tablet-left hidden min-h-0 w-12 min-w-12 flex-col overflow-hidden border-b border-stone-200/70 md:flex lg:hidden md:border-b-0 md:border-r"
-            aria-label="Layout tools dock"
+            className={cn(
+              'ecosystem-panel dashboard-app-shell__left hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r',
+              leftClassName
+            )}
+            aria-label={leftLabel}
           >
-            {tabletLeft}
+            <div className="flex h-full min-h-0 flex-col overflow-hidden">{left}</div>
           </aside>
         ) : null}
-        <aside
-          className={cn(
-            'ecosystem-panel dashboard-app-shell__left hidden min-h-0 flex-col overflow-hidden border-b border-stone-200/70 lg:flex lg:border-b-0 lg:border-r',
-            leftClassName
-          )}
-          aria-label={leftLabel}
-        >
-          <div className="flex h-full min-h-0 flex-col overflow-hidden">{left}</div>
-        </aside>
         <section
           className={cn(
             'dashboard-app-shell__center relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',

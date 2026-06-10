@@ -1,15 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
 import { DashboardAppShell } from '@/components/coordinator/dashboard/dashboard-app-shell'
 import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashboard-canvas-column'
-import { DashboardTabletToolsDock } from '@/components/coordinator/dashboard/dashboard-tablet-tools-dock'
 import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
-import { DashboardToolbarPortalTarget } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
+import { DashboardTopToolbarStrip } from '@/components/coordinator/dashboard/dashboard-top-toolbar-strip'
 import { DashboardNoRoomEmptyState } from '@/components/coordinator/dashboard/dashboard-no-room-empty-state'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
@@ -46,36 +44,9 @@ export interface DashboardBootstrapQaProps {
 }
 
 /**
- * QA dashboard bootstrap — fixed left rail, inline first-room empty state,
- * portal-friendly toolbar mount (no curation queue).
+ * QA dashboard bootstrap — top toolbar strip, inline first-room empty state,
+ * portal-friendly toolbar mount (no left curation column).
  */
-export function DashboardLeftPanelQa() {
-  const { selectedEventId, events } = useMarketManagement()
-  const { setFullscreen } = useCommandCenterFullscreen()
-  const selectedEvent = events.find((event) => event.id === selectedEventId)
-
-  return (
-    <div className="relative flex w-full flex-col justify-start bg-white">
-      {selectedEventId ? (
-        <div className="sticky top-0 z-[10001] shrink-0 border-b border-stone-200/80 bg-white/95 px-2 py-2 backdrop-blur-sm pointer-events-auto">
-          <CommandCenterExitLink
-            eventId={selectedEventId}
-            eventName={selectedEvent?.name}
-            eventStatus={selectedEvent?.status}
-            compact
-            prominent
-            className="w-full justify-start"
-            onBeforeNavigate={() => setFullscreen(false)}
-          />
-        </div>
-      ) : null}
-      <DashboardToolbarPortalTarget
-        className="flex-1 overflow-x-hidden border-b-0 px-1 py-1"
-      />
-    </div>
-  )
-}
-
 export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
   return (
     <FloorPlanViewportLayoutProvider>
@@ -87,7 +58,7 @@ export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
 
 function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
-  const { fullscreen: immersive } = useCommandCenterFullscreen()
+  const { fullscreen: immersive, previewMode } = useCommandCenterFullscreen()
   const { selectedEventId, layoutRooms, setLayoutRooms } = useMarketManagement()
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
@@ -132,15 +103,17 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
       </span>
       <DashboardAppShell
         header={header}
+        toolbarStrip={
+          <DashboardTopToolbarStrip hidden={previewMode || immersive} />
+        }
         immersive={immersive}
         ariaBusy={ariaBusy}
-        leftLabel="Layout tools"
         className="dashboard-app-shell--qa-global-scroll"
-        leftClassName="flex w-[300px] min-w-[300px] flex-shrink-0 flex-col justify-start border-r border-gray-200 bg-white"
-        tabletLeft={<DashboardTabletToolsDock />}
-        left={<DashboardLeftPanelQa />}
         center={
-          <div className={QA_CANVAS_VIEWPORT_CLASS}>
+          <div
+            className={QA_CANVAS_VIEWPORT_CLASS}
+            data-dashboard-preview={previewMode ? 'true' : undefined}
+          >
             {showDesktopRequired ? (
               <div
                 className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"

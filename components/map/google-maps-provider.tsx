@@ -1,5 +1,14 @@
 'use client'
 
+/**
+ * Loads the Google Maps JavaScript API via @vis.gl/react-google-maps.
+ *
+ * Authorization / restriction errors (RefererNotAllowedMapError, ApiNotActivatedMapError,
+ * "This API key is not authorized…") usually mean the Cloud Console key is missing one of:
+ * Maps JavaScript API, Places API, or Geocoding API — or HTTP referrer restrictions block this origin.
+ * {@link GoogleMapsApiFallback} renders a friendly admin warning when load fails.
+ */
+
 import { useEffect, useState, type ReactNode } from 'react'
 import { APIProvider, useApiIsLoaded, type APIProviderProps } from '@vis.gl/react-google-maps'
 import { GoogleMapsApiFallback } from '@/components/map/google-maps-api-fallback'

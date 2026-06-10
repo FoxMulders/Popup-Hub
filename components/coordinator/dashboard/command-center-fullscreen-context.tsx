@@ -17,6 +17,9 @@ interface CommandCenterFullscreenContextValue {
   fullscreen: boolean
   setFullscreen: (value: boolean) => void
   toggleFullscreen: () => void
+  previewMode: boolean
+  setPreviewMode: (value: boolean) => void
+  togglePreviewMode: () => void
 }
 
 const CommandCenterFullscreenContext =
@@ -25,6 +28,7 @@ const CommandCenterFullscreenContext =
 export function CommandCenterFullscreenProvider({ children }: { children: ReactNode }) {
   /** Panels visible by default so back / New market links stay reachable. */
   const [fullscreen, setFullscreen] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
 
   useLayoutEffect(() => {
     document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
@@ -46,9 +50,20 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
     setFullscreen((v) => !v)
   }, [])
 
+  const togglePreviewMode = useCallback(() => {
+    setPreviewMode((v) => !v)
+  }, [])
+
   const value = useMemo(
-    () => ({ fullscreen, setFullscreen, toggleFullscreen }),
-    [fullscreen, toggleFullscreen]
+    () => ({
+      fullscreen,
+      setFullscreen,
+      toggleFullscreen,
+      previewMode,
+      setPreviewMode,
+      togglePreviewMode,
+    }),
+    [fullscreen, previewMode, toggleFullscreen, togglePreviewMode]
   )
 
   return (
@@ -66,6 +81,9 @@ export function useCommandCenterFullscreen(): CommandCenterFullscreenContextValu
       fullscreen: false,
       setFullscreen: () => {},
       toggleFullscreen: () => {},
+      previewMode: false,
+      setPreviewMode: () => {},
+      togglePreviewMode: () => {},
     }
   }
   return ctx

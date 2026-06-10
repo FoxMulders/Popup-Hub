@@ -140,7 +140,7 @@
   --sidebar-border: #e3ddd2;
   --sidebar-ring: #8fb892;
 
-  --app-nav-height: 4.5rem;
+  --app-nav-height: 3.15rem;
   --build-strip-height: 1.17rem;
   --command-center-left: 320px;
   --command-center-right: 360px;
@@ -355,6 +355,23 @@
     flex: 1 1 auto;
     height: 100%;
     min-height: 0;
+  }
+
+  .dashboard-top-toolbar-strip {
+    scrollbar-width: thin;
+  }
+
+  .dashboard-top-toolbar-strip .dashboard-toolbar-portal {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .dashboard-floor-plan-viewport[data-dashboard-preview='true'] .floor-plan-canvas-host,
+  [data-dashboard-preview='true'] .floor-plan-canvas-host {
+    pointer-events: none;
+    opacity: 0.92;
   }
 
   /* Spatial layout planner — fill viewport below site nav, no page scroll */

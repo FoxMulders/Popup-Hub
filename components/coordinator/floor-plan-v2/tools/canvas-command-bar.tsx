@@ -21,6 +21,8 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   staticLayout?: boolean
   /** Left-rail placement — vertical stack without canvas height cap. */
   sidebarLayout?: boolean
+  /** Dashboard top strip — horizontal tool groups below the header. */
+  topBarLayout?: boolean
   className?: string
   rooms?: LayoutRoom[]
   activeRoomId?: string
@@ -73,6 +75,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
   const {
     staticLayout = false,
     sidebarLayout = false,
+    topBarLayout = false,
     className,
     toolState,
     onToolChange,
@@ -267,6 +270,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       aiLayoutFeedbackLoading,
       compact: true,
       sidebarLayout,
+      topBarLayout,
     }),
     [
       toolState,
@@ -345,6 +349,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       canRequestAiLayoutFeedback,
       aiLayoutFeedbackLoading,
       sidebarLayout,
+      topBarLayout,
     ]
   )
 
@@ -387,12 +392,15 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
         className={cn(
           'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
           staticLayout ? 'py-0.5' : 'py-1',
-          !staticLayout && !sidebarLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
+          !staticLayout && !sidebarLayout && !topBarLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
           staticLayout &&
             !sidebarLayout &&
+            !topBarLayout &&
             'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
           sidebarLayout &&
             'min-h-0 w-full shrink-0 overflow-y-auto overflow-x-hidden border-0 bg-transparent px-0 shadow-none',
+          topBarLayout &&
+            'w-full min-w-0 shrink-0 overflow-x-auto overflow-y-hidden border-0 bg-transparent px-0 shadow-none',
           className
         )}
           role="toolbar"
@@ -404,6 +412,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
               compact
               layoutCtx={staticLayoutCtx}
               sidebarLayout={sidebarLayout}
+              topBarLayout={topBarLayout}
               eventId={eventId}
               renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
             />

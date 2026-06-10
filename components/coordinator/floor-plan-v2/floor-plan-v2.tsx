@@ -2105,9 +2105,9 @@ function FloorPlanV2Workspace({
     })
   }, [joinPlan.unjoinGroupId, selectedMergedZoneId, store])
 
-  const portalToolbarToSidebar =
+  const portalToolbarToTop =
     isDashboard &&
-    Boolean(toolbarPortal?.sidebarActive && toolbarPortal.target)
+    Boolean(toolbarPortal?.topBarActive && toolbarPortal.target)
 
   const resolvedDesignerExitHref =
     designerExitHref ??
@@ -2139,8 +2139,8 @@ function FloorPlanV2Workspace({
   const dashboardCommandBar = isDashboard ? (
     <CanvasCommandBar
       staticLayout
-      sidebarLayout
-      className={portalToolbarToSidebar ? 'min-h-0 flex-1 overflow-hidden' : 'shrink-0'}
+      topBarLayout
+      className={portalToolbarToTop ? 'min-h-0 w-full' : 'shrink-0'}
       toolState={{ tool, drawShape }}
       onToolChange={handleToolChange}
       onDrawShapeChange={handleDrawShapeChange}
@@ -2313,10 +2313,10 @@ function FloorPlanV2Workspace({
         <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
         {isDashboard ? (
           <>
-            {dashboardCommandBar && !portalToolbarToSidebar
+            {dashboardCommandBar && !portalToolbarToTop
               ? dashboardCommandBar
               : null}
-            {dashboardCommandBar && portalToolbarToSidebar && toolbarPortal?.target
+            {dashboardCommandBar && portalToolbarToTop && toolbarPortal?.target
               ? createPortal(dashboardCommandBar, toolbarPortal.target)
               : null}
             <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">

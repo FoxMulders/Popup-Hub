@@ -4,6 +4,16 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (event dashboard layout — top toolbar, mobile booth matrix, not deployed)
+- **Top toolbar strip:** Layout tools (Room & Canvas, Shapes, Alignment, Floor Plan) moved from left rail to horizontal bar below dashboard header via `dashboard-top-toolbar-strip.tsx` + `topBarLayout` on `CanvasCommandBar` / `CanvasToolbarStatic`; `floor-plan-v2.tsx` portals into top strip on all viewports.
+- **Dashboard shell:** `dashboard-app-shell.tsx` drops fixed left column; `Dashboard_qa.tsx` wires toolbar strip + preview mode; header compact (`py-1.5`).
+- **Command center header:** Edit / Preview toggle (`command-center-fullscreen-context` `previewMode`); live notification badge placeholder; subtitle updated.
+- **Site nav:** `--app-nav-height` 4.5rem → 3.15rem (~30% reduction); `CenteredHeaderRow` grid centers inline links; hamburger on all breakpoints; Bell notification slot in header; `app-menu-sheet` Profile settings first in nav list.
+- **Booth matrix:** `booth-matrix-panel.tsx` — desktop table, mobile accordion; shared `use-booth-matrix-rows.ts`.
+- **Workflow CTA:** `dashboard-next-step-cta.tsx` — high-contrast **Next step** button over canvas (invites / payments / overview).
+- **Google Maps:** `google-maps-provider.tsx` documents Maps JS / Places / Geocoding API restriction errors → `GoogleMapsApiFallback`.
+- **Verify:** `/coordinator/dashboard` — tools in top bar (not left); phone — booth matrix accordion; Edit/Preview hides toolbar + dims canvas; **Next step** routes to applications or payments; break Maps key → amber fallback on wizard/discover.
+
 ## Shipped this session (app menu density — semantic sections, deployed 2026-06-10)
 - **`app-menu-sheet.tsx`:** Rebuilt slide-out menu with semantic `<nav>` / `<section>` / `<ul>` lists; tighter padding, `min-h-10` row targets, grouped Navigate / Account / Actions sections; 2-column grid for 4+ primary links; dropped duplicate Profile settings when profile header is shown; removed heavy Button wrappers.
 

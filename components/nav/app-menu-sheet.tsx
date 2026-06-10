@@ -171,7 +171,7 @@ export function AppMenuSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-full max-h-[100dvh] w-[min(100vw-2rem,17.5rem)] min-h-0 flex-col gap-0 overflow-hidden p-0 safe-bottom safe-top"
+        className="flex h-full max-h-[100dvh] w-[min(100vw-1rem,20rem)] min-h-0 flex-col gap-0 overflow-hidden p-0 safe-bottom safe-top"
       >
         {menuProfile ? (
           <div className="shrink-0 border-b border-stone-200 px-3 py-2.5 pr-11">
@@ -207,10 +207,29 @@ export function AppMenuSheet({
         <nav
           className={cn(
             'flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 [-webkit-overflow-scrolling:touch]',
-            menuProfile ? 'pt-2' : 'pt-1.5'
+            'pt-2'
           )}
           aria-label="App menu"
         >
+          {menuProfile ? (
+            <MenuSection title="Account">
+              <MenuLinkItem
+                href="/profile"
+                label="Profile settings"
+                pathname={pathname}
+                onNavigate={close}
+                icon={
+                  <UserAvatar
+                    userId={menuProfile.userId}
+                    profile={menuProfile.profile}
+                    className="h-6 w-6 shrink-0"
+                    fallbackClassName="text-[10px]"
+                  />
+                }
+              />
+            </MenuSection>
+          ) : null}
+
           {links.length > 0 ? (
             <MenuSection
               title={links.length > 1 ? 'Navigate' : undefined}
@@ -237,7 +256,7 @@ export function AppMenuSheet({
           ) : null}
 
           {supplementalLinks.length > 0 ? (
-            <MenuSection title="Account">
+            <MenuSection title="More">
               {supplementalLinks.map(({ href, label }) => (
                 <MenuLinkItem
                   key={`${href}-${label}`}

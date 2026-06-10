@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Menu } from 'lucide-react'
+import { Bell, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { UserAvatar } from '@/components/profile/user-avatar'
@@ -18,6 +18,7 @@ import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
 import { useFeatureRequest } from '@/components/feedback/feature-request-context'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 interface AppNavProps {
@@ -91,27 +92,27 @@ export function AppNav({
     <nav
       id="site-app-nav"
       className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
-      style={{ minHeight: 'var(--app-nav-height, 4.5rem)' }}
+      style={{ minHeight: 'var(--app-nav-height, 3.15rem)' }}
     >
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
+      <div className="mx-auto flex max-w-full flex-col gap-1 overflow-x-hidden px-3 py-2 sm:px-4 xl:max-w-[1600px] xl:px-8">
         <CenteredHeaderRow
           left={
             <BrandLogoLockup
-              className="h-14 w-auto max-h-14 shrink-0 sm:h-16 sm:max-h-16 md:h-18 md:max-h-none"
+              className="h-9 w-auto max-h-9 shrink-0 sm:h-10 sm:max-h-10"
               href={homeHref}
             />
           }
           center={
             <>
               {availablePortals.length > 1 ? (
-                <div className="hidden shrink-0 items-center gap-2 sm:flex md:gap-4">
+                <div className="hidden shrink-0 items-center gap-2 sm:flex md:gap-3">
                   <PortalTabs
                     availablePortals={availablePortals}
                     activePortal={activePortal}
                   />
                   {links.length > 0 ? (
                     <div
-                      className="hidden h-7 w-px shrink-0 bg-stone-300/80 md:block"
+                      className="hidden h-6 w-px shrink-0 bg-stone-300/80 md:block"
                       aria-hidden
                     />
                   ) : null}
@@ -119,7 +120,7 @@ export function AppNav({
               ) : null}
 
               {links.length > 0 ? (
-                <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 overflow-x-hidden md:flex lg:gap-2">
+                <div className="hidden min-w-0 flex-wrap items-center justify-center gap-0.5 overflow-x-hidden md:flex lg:gap-1">
                   {links.map(({ href, label }) => {
                     const active =
                       href === '/coordinator/dashboard'
@@ -130,7 +131,7 @@ export function AppNav({
                         key={href}
                         href={href}
                         className={cn(
-                          'shrink-0 rounded-lg px-2 py-2 text-sm font-medium transition-colors lg:px-3',
+                          'shrink-0 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors lg:px-2.5',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                           active
                             ? 'bg-forest/10 text-forest'
@@ -149,6 +150,29 @@ export function AppNav({
           right={
             <>
               <Link
+                href="/notifications"
+                className="relative app-tap-target inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-stone-200 bg-white text-muted-foreground hover:bg-canvas hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={
+                  unreadCount > 0
+                    ? `${unreadCount} unread notifications`
+                    : 'Notifications'
+                }
+              >
+                <Bell className="h-4 w-4" aria-hidden />
+                {unreadCount > 0 ? (
+                  <Badge className="absolute -right-1 -top-1 h-4 min-w-4 px-1 text-[10px] leading-none">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                ) : (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-white"
+                    aria-hidden
+                    title="Live notification slot"
+                  />
+                )}
+              </Link>
+
+              <Link
                 href="/profile"
                 className="app-tap-target inline-flex rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Profile settings"
@@ -156,14 +180,14 @@ export function AppNav({
                 <UserAvatar
                   userId={profile.id}
                   profile={avatarProfile}
-                  className="h-9 w-9"
+                  className="h-8 w-8 sm:h-9 sm:w-9"
                   fallbackClassName="text-xs"
                 />
               </Link>
 
               <button
                 type="button"
-                className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                className="app-tap-target flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((open) => !open)}
