@@ -35,8 +35,14 @@ export function isSquareConnectedCoordinator(profile: CoordinatorFraudGate | nul
 export function hasOfflineOrganizerProfile(profile: CoordinatorFraudGate | null | undefined): boolean {
   if (!profile) return false
   const org = profile.coordinator_organization_name?.trim() ?? ''
-  const bn = validateBusinessNumber(profile.coordinator_business_number)
-  return org.length >= 2 && bn.ok
+  return org.length >= 2
+}
+
+/** Admin-verified status plus a valid business registration / tax ID. */
+export function hasVerifiedBusinessTaxId(profile: CoordinatorFraudGate | null | undefined): boolean {
+  if (!profile) return false
+  if (profile.coordinator_verification_status !== 'verified') return false
+  return validateBusinessNumber(profile.coordinator_business_number).ok
 }
 
 export function coordinatorIsAdminVerified(profile: CoordinatorFraudGate | null | undefined): boolean {
@@ -86,7 +92,7 @@ export function coordinatorPublishBlockReason(
   if (coordinatorHasPublishTrustPath(profile)) {
     return null
   }
-  return 'Complete organizer verification (business name and registration number) or connect Stripe/Square before publishing.'
+  return 'Connect Stripe or Square, or submit your organization name before publishing.'
 }
 
 export function coordinatorPaymentCollectionBlockReason(
@@ -127,10 +133,11 @@ export function computeCoordinatorRiskScore(input: CoordinatorVerificationInput)
   let score = 0
 
   const org = input.coordinator_organization_name?.trim() ?? ''
-  const bn = validateBusinessNumber(input.coordinator_business_number)
+  const bnInput = input.coordinator_business_number?.trim() ?? ''
+  const bn = bnInput ? validateBusinessNumber(bnInput) : { ok: true, normalized: null as string | null }
 
   if (org.length < 2) score += 25
-  if (!bn.ok) score += 35
+  if (bnInput && !bn.ok) score += 35
 
   if (input.coordinator_verification_status === 'rejected') score += 50
   if (input.coordinator_verification_status === 'verified') {
@@ -149,7 +156,8 @@ export async function evaluateCoordinatorVerification(input: CoordinatorVerifica
   coordinator_business_number: string | null
 }> {
   const org = input.coordinator_organization_name?.trim() ?? ''
-  const bn = validateBusinessNumber(input.coordinator_business_number)
+  const bnInput = input.coordinator_business_number?.trim() ?? ''
+  const bn = bnInput ? validateBusinessNumber(bnInput) : { ok: true, normalized: null as string | null }
 
   const risk = computeCoordinatorRiskScore({
     ...input,
@@ -162,9 +170,11 @@ export async function evaluateCoordinatorVerification(input: CoordinatorVerifica
 
   if (input.coordinator_verification_status === 'verified') {
     coordinator_verification_status = 'verified'
-  } else if (org.length >= 2 && bn.ok) {
+  } else if (org.length >= 2 && bnInput && bn.ok) {
     coordinator_verification_status =
       risk <= AUTO_VERIFY_RISK_THRESHOLD ? 'verified' : 'pending'
+  } else if (org.length >= 2) {
+    coordinator_verification_status = 'pending'
   }
 
   return {

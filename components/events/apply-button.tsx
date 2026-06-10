@@ -60,7 +60,7 @@ import type {
 } from '@/types/database'
 import { VendorPaymentMethodSelector } from '@/components/vendor/vendor-payment-method-selector'
 import { formatCents } from '@/lib/square/client'
-import { computePlatformFeeCents } from '@/lib/monetization/fees'
+import { computeBoothCheckoutBreakdown } from '@/lib/monetization/booth-checkout'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import {
   formatApplicationPaymentLabel,
@@ -82,6 +82,7 @@ import {
   isCommunityMarketListing,
   resolveBoothUnitPriceCents,
 } from '@/lib/monetization/booth-pricing'
+import { VendorCoordinatorVouchButton } from '@/components/coordinator/coordinator-community-trust'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
 
 interface ExistingApplication {
@@ -122,6 +123,7 @@ export function ApplyButton({
   const [standBeside, setStandBeside] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [squareConnected, setSquareConnected] = useState(true)
+  const [coordinatorEscrowExempt, setCoordinatorEscrowExempt] = useState(false)
   const [stripeConnected, setStripeConnected] = useState(false)
   const [enabledPaymentMethods, setEnabledPaymentMethods] = useState<PaymentMethod[]>(['SQUARE', 'ETRANSFER'])
   const [coordinatorEtransferEmail, setCoordinatorEtransferEmail] = useState<string | null>(null)
@@ -224,6 +226,34 @@ export function ApplyButton({
         )
       : 0
   const requiresPayment = checkoutBoothPriceCents > 0 && !allCategoriesFull
+  const passFeesToVendor = event.pass_fees_to_vendor === true
+  const eventFeeConfig = resolveEventFeeConfig(event)
+
+  const applyCheckoutBreakdown = useMemo(() => {
+    if (checkoutBoothPriceCents <= 0) return null
+    return computeBoothCheckoutBreakdown({
+      baseBoothCents: checkoutBoothPriceCents,
+      feeConfig: eventFeeConfig,
+      passFeesToVendor,
+      coordinatorIsVerified: coordinatorEscrowExempt,
+    })
+  }, [checkoutBoothPriceCents, eventFeeConfig, passFeesToVendor, coordinatorEscrowExempt])
+
+  const paymentCheckoutBreakdown = useMemo(() => {
+    const base = pendingBoothPrice > 0 ? pendingBoothPrice : boothPriceCents
+    if (base <= 0) return null
+    return computeBoothCheckoutBreakdown({
+      baseBoothCents: base,
+      feeConfig: eventFeeConfig,
+      passFeesToVendor,
+      coordinatorIsVerified: coordinatorEscrowExempt,
+    })
+  }, [pendingBoothPrice, boothPriceCents, eventFeeConfig, passFeesToVendor, coordinatorEscrowExempt])
+
+  const vendorCheckoutTotalCents =
+    paymentCheckoutBreakdown?.totalChargedCents ??
+    applyCheckoutBreakdown?.totalChargedCents ??
+    checkoutBoothPriceCents
   const isInstant = event.booking_mode === 'instant'
   const partialDaySelectionReady =
     requireFullAttendance || selectedDayKeys.size > 0
@@ -309,6 +339,7 @@ export function ApplyButton({
         (data: {
           squareConnected?: boolean
           stripeConnected?: boolean
+          coordinatorEscrowExempt?: boolean
           enabledPaymentMethods?: PaymentMethod[]
           vendorCheckoutMethods?: VendorCheckoutMethod[]
           coordinatorEtransferEmail?: string | null
@@ -317,6 +348,7 @@ export function ApplyButton({
         }) => {
           setSquareConnected(!!data.squareConnected)
           setStripeConnected(!!data.stripeConnected)
+          setCoordinatorEscrowExempt(data.coordinatorEscrowExempt === true)
           const methods =
             data.enabledPaymentMethods ??
             resolveEnabledPaymentMethods(event, {
@@ -667,8 +699,13 @@ export function ApplyButton({
              */}
             <div className="flex justify-between border-t border-harvest-100 pt-1 font-medium">
               <span>Total due</span>
-              <span>{formatCents(boothPriceCents)}</span>
+              <span>{formatCents(vendorCheckoutTotalCents)}</span>
             </div>
+            {event.pass_fees_to_vendor ? (
+              <p className="text-[11px] text-muted-foreground">
+                Includes card &amp; platform processing (3% + $1).
+              </p>
+            ) : null}
           </div>
           <Button
             size="sm"
@@ -688,6 +725,7 @@ export function ApplyButton({
               eventId={event.id}
               eventName={event.name}
               boothPriceCents={pendingBoothPrice}
+              totalChargedCents={vendorCheckoutTotalCents}
               onSuccess={() => router.refresh()}
             />
           ) : null}
@@ -720,6 +758,10 @@ export function ApplyButton({
             {formatApplicationPaymentLabel(paymentApp)}
           </p>
         ) : null}
+        <VendorCoordinatorVouchButton
+          coordinatorId={event.coordinator_id}
+          coordinatorName={event.coordinator?.full_name}
+        />
       </div>
     )
   }
@@ -740,10 +782,8 @@ export function ApplyButton({
     )
   }
 
-  const feePreview =
-    applySlot && requiresPayment
-      ? computePlatformFeeCents(checkoutBoothPriceCents, resolveEventFeeConfig(event))
-      : 0
+  const applyDialogTotalCents =
+    applyCheckoutBreakdown?.totalChargedCents ?? checkoutBoothPriceCents
 
   return (
     <>
@@ -945,7 +985,7 @@ export function ApplyButton({
                 value={paymentMethod}
                 onChange={setPaymentMethod}
                 boothPriceCents={checkoutBoothPriceCents}
-                platformFeeCents={feePreview}
+                platformFeeCents={Math.max(0, applyDialogTotalCents - checkoutBoothPriceCents)}
                 coordinatorEtransferEmail={coordinatorEtransferEmail}
                 paymentInstructions={offlinePaymentInstructions}
                 offlinePaymentInstructions={offlinePaymentInstructions}

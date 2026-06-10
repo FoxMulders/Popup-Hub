@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { resolveAdminDb } from '@/lib/auth/require-admin'
 import type { CoordinatorAccountStatus, CoordinatorVerificationStatus } from '@/types/database'
+import { markCoordinatorCommunityVerified } from '@/lib/coordinator/escrow'
 
 type AdminAction = 'approve' | 'reject' | 'suspend' | 'reinstate' | 'ban'
 
@@ -64,6 +65,10 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (action === 'approve') {
+    await markCoordinatorCommunityVerified(adminCtx.db, coordinatorId, 'admin')
   }
 
   return NextResponse.json({

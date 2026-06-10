@@ -208,11 +208,11 @@ export function PatronSidebarControls({
 
   return (
     <div
-      className={cn('flex w-full min-w-0 flex-col gap-1', className)}
+      className={cn('flex w-full min-w-0 gap-1', className)}
       role="group"
       aria-label="Patron table sizes"
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-1">
+      <div className="flex min-w-0 flex-row flex-nowrap items-center gap-1">
         <button
           type="button"
           disabled={disabled}

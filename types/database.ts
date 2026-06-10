@@ -126,6 +126,8 @@ export interface Profile {
   coordinator_business_number?: string | null
   coordinator_risk_score?: number
   coordinator_account_status?: CoordinatorAccountStatus
+  coordinator_is_verified?: boolean
+  coordinator_successful_events_count?: number
   updated_at: string
 }
 
@@ -266,6 +268,7 @@ export interface Event {
   venue_verified_at?: string | null
   venue_place_types?: string[]
   vendor_access_equality_until?: string | null
+  pass_fees_to_vendor?: boolean
   coordinator?: Profile
   category_limits?: EventCategoryLimit[]
   event_days?: EventDay[]
@@ -366,6 +369,9 @@ export type SecurityAuditActionType =
   | 'VENDOR_DISPUTE_SUSPENSION'
   | 'VENDOR_BOOTH_EVICTION'
   | 'PASSPORT_QR_BLOCKED'
+  | 'COORDINATOR_COMMUNITY_VERIFIED'
+  | 'COORDINATOR_ESCROW_RELEASE'
+  | 'COORDINATOR_VENDOR_VOUCH'
 
 export interface AuditSecurityLog {
   id: string
@@ -383,8 +389,35 @@ export interface Wallet {
   id: string
   user_id: string
   balance: number
+  escrow_balance: number
   paddle_id: string | null
   square_customer_id: string | null
+  created_at: string
+}
+
+export interface CoordinatorVouch {
+  id: string
+  coordinator_id: string
+  vendor_id: string
+  created_at: string
+}
+
+export type CoordinatorEscrowSettlementMode = 'wallet' | 'external_processor'
+export type CoordinatorEscrowHoldStatus = 'held' | 'released' | 'blocked'
+
+export interface CoordinatorEscrowHold {
+  id: string
+  platform_transaction_id: string
+  coordinator_id: string
+  event_id: string
+  organizer_payout_cents: number
+  immediate_release_cents: number
+  held_cents: number
+  settlement_mode: CoordinatorEscrowSettlementMode
+  status: CoordinatorEscrowHoldStatus
+  eligible_release_at: string
+  released_at: string | null
+  processor_transfer_id?: string | null
   created_at: string
 }
 

@@ -203,6 +203,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   const [multiTableDiscountPercent, setMultiTableDiscountPercent] = useState(
     existing?.multi_table_discount_percent ?? 0
   )
+  const [passFeesToVendor, setPassFeesToVendor] = useState(existing?.pass_fees_to_vendor ?? false)
 
   function handleBoothPriceCentsChange(cents: number) {
     setBoothPriceCents(cents)
@@ -405,6 +406,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
           100,
           Math.max(0, Math.round(multiTableDiscountPercent))
         ),
+        pass_fees_to_vendor: passFeesToVendor,
       }
 
       let eventId = existing?.id
@@ -841,6 +843,8 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
               onBoothPriceCentsChange={handleBoothPriceCentsChange}
               multiTableDiscountPercent={multiTableDiscountPercent}
               onMultiTableDiscountPercentChange={setMultiTableDiscountPercent}
+              passFeesToVendor={passFeesToVendor}
+              onPassFeesToVendorChange={setPassFeesToVendor}
             />
             <SmartPopulateBoothCaps
               categories={sortedCategories}

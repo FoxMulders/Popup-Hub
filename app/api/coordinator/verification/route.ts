@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
-import { createClient } from '@/lib/supabase/server'
+import { markCoordinatorCommunityVerified } from '@/lib/coordinator/escrow'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
+  coordinatorHasPaymentTrustPath,
   coordinatorPaymentCollectionBlockReason,
   coordinatorPublishBlockReason,
   evaluateCoordinatorVerification,
+  hasVerifiedBusinessTaxId,
+  isSquareConnectedCoordinator,
 } from '@/lib/coordinator/verification'
+import { validateBusinessNumber } from '@/lib/vendor/verification'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET() {
   const supabase = await createClient()
@@ -53,6 +58,10 @@ export async function GET() {
     paymentCollectionBlockReason: coordinatorPaymentCollectionBlockReason(gate),
     canPublish: coordinatorPublishBlockReason(gate) === null,
     canCollectPayments: coordinatorPaymentCollectionBlockReason(gate) === null,
+    squareConnected: isSquareConnectedCoordinator(gate),
+    stripeConnected: profile?.stripe_onboarding_complete === true,
+    paymentTrustComplete: coordinatorHasPaymentTrustPath(gate),
+    hasVerifiedBusinessTaxId: hasVerifiedBusinessTaxId(gate),
   })
 }
 
@@ -84,16 +93,23 @@ export async function POST(request: Request) {
   const organizationName = body.organizationName?.trim()
   const businessNumber = body.businessNumber?.trim()
 
-  if (!organizationName || !businessNumber) {
-    return NextResponse.json(
-      { error: 'Organization name and business registration number are required.' },
-      { status: 400 }
-    )
+  if (!organizationName) {
+    return NextResponse.json({ error: 'Organization name is required.' }, { status: 400 })
+  }
+
+  if (businessNumber) {
+    const bnCheck = validateBusinessNumber(businessNumber)
+    if (!bnCheck.ok) {
+      return NextResponse.json(
+        { error: 'Enter a valid business registration or tax ID, or leave the field blank.' },
+        { status: 400 }
+      )
+    }
   }
 
   const evaluated = await evaluateCoordinatorVerification({
     coordinator_organization_name: organizationName,
-    coordinator_business_number: businessNumber,
+    coordinator_business_number: businessNumber ?? null,
     coordinator_verification_status: profile.coordinator_verification_status,
   })
 
@@ -111,10 +127,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  if (
+    hasVerifiedBusinessTaxId({
+      coordinator_verification_status: evaluated.coordinator_verification_status,
+      coordinator_business_number: evaluated.coordinator_business_number,
+    })
+  ) {
+    const service = await createServiceClient()
+    await markCoordinatorCommunityVerified(service, user.id, 'tax_verified')
+  }
+
   const message =
     evaluated.coordinator_verification_status === 'verified'
-      ? 'Organizer verification complete — you can publish markets and collect offline payments.'
-      : 'Verification submitted — an admin will review your business details. You can publish draft markets; offline payment collection unlocks after approval.'
+      ? 'Organizer verification complete — verified business tax ID unlocks full payouts and offline payment collection.'
+      : businessNumber
+        ? 'Verification submitted — an admin will review your business details. You can publish draft markets; offline payment collection unlocks after approval.'
+        : 'Organization details saved. Connect Square or Stripe to publish and collect card payments, or add a business tax ID later to unlock full payouts early.'
 
   return NextResponse.json({
     ok: true,

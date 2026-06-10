@@ -26,6 +26,8 @@ const STATUS_PILL_CLASS: Record<
 export function DashboardLedgerWindowClient() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
+  const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
+  const isWallCast = screenMode === 'wall-cast'
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
@@ -65,11 +67,15 @@ export function DashboardLedgerWindowClient() {
     <div className="dashboard-ledger-window flex h-full min-h-0 flex-col bg-stone-50">
       <header className="shrink-0 border-b border-stone-200 bg-white px-3 py-2">
         <h1 className="font-heading text-base font-semibold text-stone-900">
-          Booth Matrix — Dual-Screen Mode
+          {isWallCast
+            ? 'Booth Matrix — Wall Cast'
+            : 'Booth Matrix — Presenter'}
         </h1>
         <p className="text-xs text-stone-600">
           {connected
-            ? 'Synced with Blueprint Studio canvas'
+            ? isWallCast
+              ? 'Live wall display synced with Blueprint Studio'
+              : 'Synced with Blueprint Studio canvas'
             : 'Waiting for canvas window…'}
         </p>
       </header>

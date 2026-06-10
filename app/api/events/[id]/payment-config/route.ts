@@ -6,6 +6,7 @@ import {
 } from '@/lib/applications/payment-fields'
 import { readCoordinatorPaymentInstructions } from '@/lib/payments/event-payment-flags'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
+import { loadCoordinatorEscrowContext } from '@/lib/coordinator/escrow'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import { resolveCoordinatorEtransferEmail } from '@/lib/coordinator/etransfer-email'
 
@@ -34,6 +35,7 @@ export async function GET(
       platform_fee_mode,
       platform_fee_flat_cents,
       platform_fee_bps,
+      pass_fees_to_vendor,
       coordinator:profiles!events_coordinator_id_fkey(
         email,
         etransfer_payment_email,
@@ -70,6 +72,10 @@ export async function GET(
   const feeConfig = resolveEventFeeConfig(event)
   const coordinatorEtransferEmail = resolveCoordinatorEtransferEmail(coordinator)
   const connection = { squareConnected, stripeConnected }
+  const { escrowExempt: coordinatorEscrowExempt } = await loadCoordinatorEscrowContext(
+    serviceSupabase,
+    event.coordinator_id
+  )
   const enabledPaymentMethods = resolveEnabledPaymentMethods(event, connection)
   const vendorCheckoutMethods = resolveVendorCheckoutMethods(event, connection)
   const paymentInstructions = readCoordinatorPaymentInstructions(coordinator ?? {})
@@ -84,6 +90,8 @@ export async function GET(
     enabledPaymentMethods,
     vendorCheckoutMethods,
     feeConfig,
+    passFeesToVendor: event.pass_fees_to_vendor === true,
+    coordinatorEscrowExempt,
     coordinatorEtransferEmail,
     paymentInstructions,
     offlinePaymentInstructions: paymentInstructions,

@@ -36,11 +36,6 @@ export async function POST() {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  await supabase
-    .from('profiles')
-    .update({ coordinator_verification_status: 'pending' })
-    .eq('id', user.id)
-
   const { data: updated } = await supabase
     .from('profiles')
     .select('role, coordinator_verification_status')
@@ -54,8 +49,8 @@ export async function POST() {
   return NextResponse.json({
     ok: true,
     role: updated.role,
-    verificationStatus: updated.coordinator_verification_status ?? 'pending',
+    verificationStatus: updated.coordinator_verification_status ?? 'unverified',
     message:
-      'Organizer access enabled. Submit your business name and registration number to publish markets and collect vendor payments.',
+      'Organizer access enabled. Connect Square or Stripe to publish and collect card payments, or add your organization name for offline markets. Business tax ID is optional.',
   })
 }

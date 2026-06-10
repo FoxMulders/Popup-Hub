@@ -4,6 +4,41 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (Blueprint Studio toolbar element panel entry animation, not deployed)
+- **Motion config:** `toolbar-element-panels-motion.ts` — shared Framer Motion variants with `x: 0` start/end so vendor and patron asset tables animate on a strict vertical center axis (`y` spring only).
+- **SHAPES & BOOTHS:** `canvas-toolbar-static.tsx` — VENDOR BOOTHS (top) and PATRON ELEMENTS (bottom) stacked in `flex flex-col items-center justify-center`; `TopBarAssetTablePanel` + staggered container entry; `useReducedMotion` bypass.
+- **CSS:** `globals.css` — `data-toolbar-section='shapes-booths'` and `.toolbar-element-panel(s)` centering rules.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — reload Blueprint Studio toolbar; vendor booth size row and patron element row fade/slide in centered (no horizontal drift); reduced-motion shows panels instantly.
+
+## Shipped this session (dashboard toolbar layout refactor, not deployed)
+- **ROOM & CANVAS:** Removed duplicate Full screen from `dashboard-command-center-header.tsx`; primary control lives in top toolbar next to ← Event setup with `Dual-Screen: Presenter` / `Dual-Screen: Wall Cast` (`launchDualScreen('presenter'|'wall-cast')` via `openDualScreenWindow` in `floorplan-sync.ts`).
+- **SHAPES & BOOTHS:** `canvas-toolbar-static.tsx` — VENDOR / PATRON sub-labels; vendor sizing (`vendor-sizes`) moved from Alignment into Shapes; patron tools forced horizontal (`PatronSidebarControls` + `flex-row`).
+- **ALIGNMENT & SPACING:** Auto-Arrange relabeled **AI Auto-Arrange** with `w-32 px-3 whitespace-nowrap` top-bar button (no text clipping).
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — Full screen only in ROOM & CANVAS strip; dual-screen buttons open separate presenter/wall-cast ledger windows; vendor/patron tool groups visually separated.
+- **Build fix:** Split pure escrow math into `escrow-policy.ts` so client `apply-button.tsx` → `booth-checkout.ts` no longer pulls `lib/supabase/server.ts` through `escrow.ts` audit imports; `npm run build` — PASS.
+
+## Shipped this session (coordinator onboarding relaxation + escrow criteria, not deployed)
+- **Optional tax ID:** `coordinator-verification-banner.tsx` + `POST /api/coordinator/verification` — organization name required; business registration / tax ID optional; invalid BN rejected only when provided.
+- **Square/Stripe onboarding:** Payment trust path (Square OAuth complete or Stripe) satisfies publish checklist — verification banner hidden when `paymentTrustComplete`; `enable-coordinator` no longer forces `pending`; connect CTA when not linked.
+- **DB publish guard:** `104_coordinator_onboarding_relaxation.sql` — `coordinator_can_publish_event` allows org name alone (no BN required) to match TS `hasOfflineOrganizerProfile`.
+- **Escrow rules:** `coordinatorEscrowExempt` / `coordinatorRequiresEscrowHold` in `lib/coordinator/escrow.ts` — 75% hold applies when organizer lacks **both** verified business tax ID (`hasVerifiedBusinessTaxId`) **and** 3 vendor vouches; Square-connected organizers still subject to escrow until tax ID or vouches.
+- **Checkout/payout:** `resolve-booth-checkout.ts` + `distributeCoordinatorBoothPayout` use escrow exemption; `GET /api/events/[id]/payment-config` returns `coordinatorEscrowExempt`; vendor `apply-button.tsx` checkout preview reflects 75% hold for unverified organizers.
+- **UI:** `market-dashboard-client.tsx` — trust banner + verification banner wired with correct props; Square-connected coordinators skip corporate-doc banner.
+- **Verify:** `npx tsx scripts/verify-coordinator-verification.ts` + `verify-coordinator-escrow.ts` — PASS; `npx tsc --noEmit` — PASS.
+- **Apply migration:** Run `104_coordinator_onboarding_relaxation.sql` on Supabase before prod smoke-test.
+
+## Shipped this session (coordinator escrow + vendor vouch + pass-through fees, not deployed)
+- **Schema:** `101_coordinator_escrow_vouch.sql` — `coordinator_is_verified`, `coordinator_successful_events_count`, `wallets.escrow_balance`, `coordinator_vouches`, `coordinator_escrow_holds`; `102_pass_fees_to_vendor.sql` — `events.pass_fees_to_vendor`, `coordinator_escrow_holds.processor_transfer_id`.
+- **Checkout math:** `lib/monetization/booth-checkout.ts` — gross-up `(base + flat) / (1 - bps)` for pass-through; combined Square/Stripe `app_fee` = platform fee + 75% escrow hold on base booth for unverified organizers.
+- **Escrow:** `lib/coordinator/escrow.ts` — 25% immediate / 75% held; Square release credits coordinator wallet via `lib/square/coordinator-escrow-release.ts`; cron releases 24h post-event when no disputes.
+- **Payments:** Square `createBoothPayment` uses dynamic `appFeeCents` + CAD; Stripe booth-payment/webhook parity; `record-transaction` splits escrow on `baseBoothCents`.
+- **Pass-through toggle:** `MarketBoothPricingFields` + `event-form.tsx` checkbox; vendor checkout preview in `apply-button.tsx` + `pay-booth-modal.tsx`.
+- **Vouch fast-track:** `POST /api/coordinator/vouch` (existing) + `VendorCoordinatorVouchButton` after approved application; `CoordinatorCommunityTrustBanner` on coordinator dashboard.
+- **Auto-verify:** 3 vendor vouches or verified business tax ID (or admin approve) → full payouts; 2 successful events increments counter only (per-event cron still releases held funds).
+- **Cron:** `/api/cron/coordinator-escrow-release` daily 08:00 UTC in `vercel.json`.
+- **Verify:** `npx tsx scripts/verify-coordinator-escrow.ts` — PASS; `npx tsc --noEmit` — PASS.
+- **Apply migrations:** Migrations `100`–`103` applied to Supabase (`ensbggtbgabogvynqsqt`) via `npx supabase db push --yes` on 2026-06-10. Renamed duplicate `098_vendor_passport_tiktok.sql` → `103_vendor_passport_tiktok.sql` to resolve version conflict with `098_platform_operator_patron_access.sql`.
+
 ## Shipped this session (coordinator fraud hardening, deployed 2026-06-10)
 - **Schema:** `100_coordinator_fraud_mitigation.sql` — `profiles` gains `coordinator_verification_status`, `coordinator_organization_name`, `coordinator_business_number`, `coordinator_risk_score`, `coordinator_account_status`; conservative backfill for Stripe/Square/venue-verified coordinators; DB trigger blocks event → published/active when organizer fails publish trust path.
 - **Lib:** `lib/coordinator/verification.ts` — BN/EIN validation reuse, risk scoring, publish/payment/apply block reasons; trust paths: admin-verified OR Stripe OR Square OR offline org+BN (publish only for pending offline).

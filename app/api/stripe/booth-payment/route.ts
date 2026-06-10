@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
-import { computePlatformFeeCents } from '@/lib/monetization/fees'
+import { computeStripeApplicationFeeCents } from '@/lib/monetization/booth-checkout'
+import { resolveBoothCheckoutFromApplication } from '@/lib/monetization/resolve-booth-checkout'
 import { getStripeClient, isStripeConfigured } from '@/lib/stripe/client'
 import { assertVendorCanPayForApplication } from '@/lib/engagement/booth-access'
 import { coordinatorPaymentCollectionBlockReason } from '@/lib/coordinator/verification'
@@ -63,7 +63,9 @@ export async function POST(request: Request) {
         venue_verification_status,
         venue_verification_reason,
         vendor_access_equality_until,
-        coordinator:profiles!events_coordinator_id_fkey(stripe_connected_id, stripe_onboarding_complete, coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status, square_access_token, payout_onboarding_status)
+        pass_fees_to_vendor,
+        end_at,
+        coordinator:profiles!events_coordinator_id_fkey(stripe_connected_id, stripe_onboarding_complete, coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status, square_access_token, payout_onboarding_status, coordinator_is_verified)
       )
     `)
     .eq('id', applicationId)
@@ -137,17 +139,14 @@ export async function POST(request: Request) {
     .eq('category_id', application.category_id)
     .single()
 
-  const amountCents = computeApplicationBoothPriceCents(
-    limit?.price_per_booth,
-    {
-      listing_type: eventRow.listing_type,
-      booth_price_cents: eventRow.booth_price_cents,
-      multi_table_discount_percent: eventRow.multi_table_discount_percent,
-    },
-    application.table_count ?? 1
-  )
+  const checkout = await resolveBoothCheckoutFromApplication(serviceSupabase, {
+    pricePerBooth: limit?.price_per_booth,
+    tableCount: application.table_count ?? 1,
+    eventRow,
+    coordinatorId: eventRow.coordinator_id,
+  })
 
-  if (amountCents <= 0) {
+  if (checkout.baseBoothCents <= 0) {
     await serviceSupabase
       .from('booth_applications')
       .update({ payment_status: 'paid' })
@@ -156,26 +155,34 @@ export async function POST(request: Request) {
   }
 
   const feeConfig = resolveEventFeeConfig(eventRow)
-  const platformFeeCents = computePlatformFeeCents(amountCents, feeConfig)
   const stripe = getStripeClient()
+  const applicationFeeCents = computeStripeApplicationFeeCents(checkout)
+
+  const paymentIntentParams: Parameters<typeof stripe.paymentIntents.create>[0] = {
+    amount: checkout.totalChargedCents,
+    currency: 'cad',
+    application_fee_amount: applicationFeeCents,
+    metadata: {
+      application_id: applicationId,
+      event_id: application.event_id,
+      vendor_id: application.vendor_id,
+      coordinator_id: eventRow.coordinator_id,
+      base_booth_cents: String(checkout.baseBoothCents),
+      escrow_settlement: checkout.coordinatorIsVerified ? 'direct' : 'platform_wallet',
+      pass_fees_to_vendor: checkout.passFeesToVendor ? 'true' : 'false',
+    },
+    automatic_payment_methods: { enabled: true },
+  }
+
+  if (checkout.coordinatorIsVerified) {
+    paymentIntentParams.transfer_data = {
+      destination: coordinator.stripe_connected_id,
+    }
+  }
 
   const paymentIntent = await stripe.paymentIntents.create(
-    {
-      amount: amountCents,
-      currency: 'cad',
-      application_fee_amount: platformFeeCents,
-      transfer_data: {
-        destination: coordinator.stripe_connected_id,
-      },
-      metadata: {
-        application_id: applicationId,
-        event_id: application.event_id,
-        vendor_id: application.vendor_id,
-        coordinator_id: eventRow.coordinator_id,
-      },
-      automatic_payment_methods: { enabled: true },
-    },
-    { idempotencyKey: `booth-${applicationId}-${amountCents}` }
+    paymentIntentParams,
+    { idempotencyKey: `booth-${applicationId}-${checkout.totalChargedCents}` }
   )
 
   await serviceSupabase
@@ -190,7 +197,9 @@ export async function POST(request: Request) {
   return NextResponse.json({
     clientSecret: paymentIntent.client_secret,
     paymentIntentId: paymentIntent.id,
-    boothPriceCents: amountCents,
-    platformFeeCents,
+    boothPriceCents: checkout.baseBoothCents,
+    totalChargedCents: checkout.totalChargedCents,
+    platformFeeCents: checkout.platformFeeCents,
+    passFeesToVendor: checkout.passFeesToVendor,
   })
 }

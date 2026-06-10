@@ -47,6 +47,7 @@ interface PayBoothModalProps {
   eventId: string
   eventName: string
   boothPriceCents: number
+  totalChargedCents?: number
   onSuccess?: () => void
 }
 
@@ -68,8 +69,10 @@ export function PayBoothModal({
   eventId,
   eventName,
   boothPriceCents,
+  totalChargedCents,
   onSuccess,
 }: PayBoothModalProps) {
+  const chargeTotalCents = totalChargedCents ?? boothPriceCents
   const [config, setConfig] = useState<PaymentConfig | null>(null)
   const [configLoading, setConfigLoading] = useState(false)
   const [squareLoaded, setSquareLoaded] = useState(false)
@@ -232,8 +235,13 @@ export function PayBoothModal({
                 </div>
                 <div className="border-t pt-1.5 flex justify-between font-medium">
                   <span>You pay</span>
-                  <span>{formatCents(boothPriceCents)}</span>
+                  <span>{formatCents(chargeTotalCents)}</span>
                 </div>
+                {chargeTotalCents > boothPriceCents ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Includes card &amp; platform processing fees.
+                  </p>
+                ) : null}
               </div>
 
               {!config?.squareConnected ? (

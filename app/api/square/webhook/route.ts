@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { validateSquareWebhook } from '@/lib/square/webhook'
 import { createServiceClient } from '@/lib/supabase/server'
-import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
+import { resolveBoothCheckoutFromApplication } from '@/lib/monetization/resolve-booth-checkout'
 import { applyWalletDepositCredit, isDepositBalanceApplied } from '@/lib/wallet/adjust-balance'
 import { suspendVendorForPaymentDispute } from '@/lib/vendor/fraud-actions'
 
@@ -69,11 +69,17 @@ export async function POST(request: Request) {
           vendor_id,
           category_id,
           payment_status,
+          table_count,
           event:events(
             coordinator_id,
+            listing_type,
+            booth_price_cents,
+            multi_table_discount_percent,
             platform_fee_mode,
             platform_fee_flat_cents,
-            platform_fee_bps
+            platform_fee_bps,
+            pass_fees_to_vendor,
+            end_at
           )
         `)
         .eq('square_payment_id', squarePaymentId)
@@ -89,8 +95,21 @@ export async function POST(request: Request) {
           ? application.event[0]
           : application.event
 
+        const { data: limit } = await supabase
+          .from('event_category_limits')
+          .select('price_per_booth')
+          .eq('event_id', application.event_id)
+          .eq('category_id', application.category_id)
+          .maybeSingle()
+
+        const checkout = await resolveBoothCheckoutFromApplication(supabase, {
+          pricePerBooth: limit?.price_per_booth,
+          tableCount: application.table_count ?? 1,
+          eventRow,
+          coordinatorId: eventRow?.coordinator_id ?? '',
+        })
+
         const feeConfig = resolveEventFeeConfig(eventRow)
-        const platformFeeCents = computePlatformFeeCents(amountCents || 0, feeConfig)
 
         const { error: txError } = await recordPlatformTransaction(supabase, {
           boothApplicationId: application.id,
@@ -98,11 +117,15 @@ export async function POST(request: Request) {
           vendorId: application.vendor_id,
           coordinatorId: eventRow?.coordinator_id ?? '',
           categoryId: application.category_id,
-          totalAmountCents: amountCents,
-          platformFeeCents,
+          totalAmountCents: checkout.totalChargedCents,
+          platformFeeCents: checkout.platformFeeCents,
+          baseBoothCents: checkout.baseBoothCents,
           feeModeUsed: feeConfig.mode,
           processorChargeId: squarePaymentId,
           status: 'completed',
+          processor: 'square',
+          externalProcessorPayout: true,
+          eventEndAt: eventRow?.end_at ?? null,
         })
 
         if (txError) {

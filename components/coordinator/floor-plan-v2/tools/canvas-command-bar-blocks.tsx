@@ -63,6 +63,7 @@ import {
   PatronSidebarControls,
   VendorSidebarSizeGrid,
 } from './table-size-pill'
+import type { DualScreenMode } from '@/lib/coordinator/floorplan-sync'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
   guestRectTableSpec,
@@ -83,6 +84,7 @@ function FloorPlanOptimizeControl({
   disabledReason,
   compact,
   sidebarLayout,
+  topBarLayout,
 }: {
   mode: AutoArrangeMode
   onModeChange?: (mode: AutoArrangeMode) => void
@@ -91,6 +93,7 @@ function FloorPlanOptimizeControl({
   disabledReason?: string | null
   compact?: boolean
   sidebarLayout?: boolean
+  topBarLayout?: boolean
 }) {
   if (!onRun) return null
   const tooltip =
@@ -155,22 +158,40 @@ function FloorPlanOptimizeControl({
           </select>
         )
       ) : null}
-      <CommandButton
-        onClick={onRun}
-        disabled={!canRun}
-        title={tooltip}
-        className={cn(
-          'gap-1.5 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 disabled:opacity-50',
-          sidebarLayout && 'w-full justify-center px-3'
-        )}
-      >
-        <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
-        {sidebarLayout ? (
-          <span className="text-[11px] font-semibold">Auto-Arrange Floor Plan</span>
-        ) : (
-          <span className="text-[11px] font-semibold">Auto-Arrange</span>
-        )}
-      </CommandButton>
+      {topBarLayout ? (
+        <TooltipWrapper text={tooltip}>
+          <button
+            type="button"
+            onClick={onRun}
+            disabled={!canRun}
+            title={tooltip}
+            className={cn(
+              'inline-flex w-32 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-600 bg-emerald-700 px-3 text-[11px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-50',
+              toolbarControlHeight(compact ?? false)
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            AI Auto-Arrange
+          </button>
+        </TooltipWrapper>
+      ) : (
+        <CommandButton
+          onClick={onRun}
+          disabled={!canRun}
+          title={tooltip}
+          className={cn(
+            'gap-1.5 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 disabled:opacity-50',
+            sidebarLayout && 'w-full justify-center px-3'
+          )}
+        >
+          <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
+          {sidebarLayout ? (
+            <span className="text-[11px] font-semibold">Auto-Arrange Floor Plan</span>
+          ) : (
+            <span className="text-[11px] font-semibold">Auto-Arrange</span>
+          )}
+        </CommandButton>
+      )}
     </div>
   )
 
@@ -285,7 +306,7 @@ export interface CanvasCommandBarBlockContext {
   ) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
-  onLaunchDualScreen?: () => void
+  onLaunchDualScreen?: (mode: DualScreenMode) => void
   dualScreenActive?: boolean
   designerExitHref?: string | null
   designerExitLabel?: string
@@ -305,6 +326,8 @@ export interface CanvasCommandBarBlockContext {
   compact?: boolean
   /** Left-rail layout designer sidebar — stacked columns and split headers. */
   sidebarLayout?: boolean
+  /** Dashboard top strip — horizontal tool groups below the header. */
+  topBarLayout?: boolean
 }
 
 export function renderCanvasCommandBarBlock(
@@ -316,6 +339,7 @@ export function renderCanvasCommandBarBlock(
   const canDistribute = ctx.selectedCount >= 3
   const compact = ctx.compact ?? false
   const sidebarLayout = ctx.sidebarLayout ?? false
+  const topBarLayout = ctx.topBarLayout ?? false
   const rotateRoomId = ctx.selectedRoomId ?? ctx.activeRoomId ?? null
   const canRotateRoom = Boolean(rotateRoomId) && Boolean(ctx.onRotateRoomLeft)
   const rotateRoomHint = rotateRoomId
@@ -683,7 +707,7 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'vendor':
-      if (sidebarLayout) {
+      if (sidebarLayout || topBarLayout) {
         return (
           <div className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-hidden">
             <CommandButton
@@ -741,7 +765,7 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'patron':
-      if (sidebarLayout) {
+      if (sidebarLayout || topBarLayout) {
         return (
           <div className="w-full min-w-0">
             {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
@@ -763,6 +787,7 @@ export function renderCanvasCommandBarBlock(
                 roundToolActive={isTablePlacementActive('guest-round')}
                 rectToolActive={isTablePlacementActive('guest-rect')}
                 compact={compact}
+                className={topBarLayout ? 'flex-row items-center' : undefined}
               />
             ) : null}
           </div>
@@ -814,6 +839,7 @@ export function renderCanvasCommandBarBlock(
           disabledReason={ctx.autoArrangeDisabledReason}
           compact={compact}
           sidebarLayout={sidebarLayout}
+          topBarLayout={topBarLayout}
         />
       )
 
@@ -1133,6 +1159,221 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'utilities':
+      if (topBarLayout) {
+        const topBarDivider = (
+          <div className="h-4 w-[1px] shrink-0 bg-gray-300" aria-hidden />
+        )
+        return (
+          <>
+            <div
+              className="flex items-center space-x-2"
+              role="group"
+              aria-label="Canvas navigation"
+            >
+              {ctx.designerExitHref ? (
+                <Link
+                  href={ctx.designerExitHref}
+                  prefetch
+                  onClick={() => ctx.onDesignerExit?.()}
+                  className="relative z-[10001] inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-emerald-700 px-2.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-800 pointer-events-auto"
+                  aria-label={ctx.designerExitLabel ?? 'Back to Event Setup'}
+                >
+                  <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span className="whitespace-nowrap">
+                    {ctx.designerExitLabel ?? 'Event setup'}
+                  </span>
+                </Link>
+              ) : null}
+              {ctx.onToggleCanvasFullscreen ? (
+                <>
+                  {ctx.designerExitHref ? topBarDivider : null}
+                  <button
+                    type="button"
+                    onClick={() => ctx.onToggleCanvasFullscreen?.()}
+                    title={
+                      ctx.canvasFullscreen
+                        ? 'Exit full screen (Esc)'
+                        : 'Expand canvas to fill the monitor'
+                    }
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-stone-300 bg-white px-2 text-[11px] font-semibold text-stone-800 hover:bg-stone-50',
+                      ctx.canvasFullscreen &&
+                        'border-stone-700 bg-stone-800 text-white hover:bg-stone-700',
+                      toolbarControlHeight(compact)
+                    )}
+                  >
+                    {ctx.canvasFullscreen ? (
+                      <Minimize2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    ) : (
+                      <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    )}
+                    {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+                  </button>
+                </>
+              ) : null}
+              {ctx.onLaunchDualScreen ? (
+                <>
+                  {ctx.designerExitHref || ctx.onToggleCanvasFullscreen
+                    ? topBarDivider
+                    : null}
+                  <button
+                    type="button"
+                    onClick={() => ctx.onLaunchDualScreen!('presenter')}
+                    title="Open interactive booth matrix for presenter view"
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-600 bg-emerald-700 px-2 text-[11px] font-semibold text-white hover:bg-emerald-800',
+                      toolbarControlHeight(compact)
+                    )}
+                  >
+                    <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Dual-Screen: Presenter
+                  </button>
+                  {topBarDivider}
+                  <button
+                    type="button"
+                    onClick={() => ctx.onLaunchDualScreen!('wall-cast')}
+                    title="Open read-only booth matrix for wall display"
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-600 bg-emerald-700 px-2 text-[11px] font-semibold text-white hover:bg-emerald-800',
+                      toolbarControlHeight(compact)
+                    )}
+                  >
+                    <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Dual-Screen: Wall Cast
+                  </button>
+                </>
+              ) : null}
+            </div>
+            {topBarDivider}
+            {ctx.onBoothMapLabelModeChange ? (
+              <label
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1 rounded-lg border border-stone-200 bg-white px-1.5 text-[10px] font-semibold text-stone-700',
+                  toolbarControlHeight(compact)
+                )}
+              >
+                <span className="hidden sm:inline">Map labels</span>
+                <select
+                  className="max-w-[7.5rem] min-w-0 rounded-lg border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  aria-label="Map labels — booth text overlay"
+                  value={ctx.boothMapLabelMode ?? 'vendor'}
+                  onChange={(e) =>
+                    ctx.onBoothMapLabelModeChange!(
+                      e.target.value as import('@/lib/coordinator/booth-map-label').BoothMapLabelMode
+                    )
+                  }
+                >
+                  {BOOTH_MAP_LABEL_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {ctx.onPatronPathToggle ? (
+              <CommandButton
+                onClick={ctx.onPatronPathToggle}
+                title={
+                  ctx.patronPathEnabled
+                    ? 'Hide patron flow aisles (6′ paths)'
+                    : 'Toggle patron flow — show 6′ walking aisles'
+                }
+                active={ctx.patronPathEnabled}
+                className={
+                  ctx.patronPathEnabled
+                    ? 'bg-emerald-200 text-emerald-950 hover:bg-emerald-200'
+                    : 'text-emerald-800 hover:bg-emerald-50'
+                }
+              >
+                <Route className="h-3.5 w-3.5" />
+              </CommandButton>
+            ) : null}
+            <div
+              className={cn(
+                'inline-flex items-center overflow-hidden rounded-md border border-stone-200',
+                toolbarControlHeight(compact)
+              )}
+            >
+              <button
+                type="button"
+                onClick={ctx.onZoomOut}
+                title="Zoom out"
+                aria-label="Zoom out"
+                className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomReset}
+                title="Reset zoom to 100%"
+                aria-label="Reset zoom"
+                className="inline-flex h-full min-w-[3rem] items-center justify-center border-x border-stone-200 px-1.5 text-[11px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
+              >
+                {formatDiscreteZoomPercent(ctx.zoom, 0.25)}
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomIn}
+                title="Zoom in"
+                aria-label="Zoom in"
+                className="inline-flex h-full w-7 items-center justify-center text-stone-600 hover:bg-stone-100"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {ctx.onSaveDraft ? (
+              <TooltipWrapper
+                text={
+                  ctx.saveDraftLoading
+                    ? 'Saving layout draft…'
+                    : 'Save layout draft without deploying'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={ctx.onSaveDraft}
+                  disabled={ctx.saveDraftDisabled || ctx.saveDraftLoading}
+                  aria-label={
+                    ctx.saveDraftLoading ? 'Saving layout draft' : 'Save layout draft'
+                  }
+                  className={cn(
+                    'inline-flex shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white p-0 text-stone-800 hover:bg-stone-50 disabled:opacity-40',
+                    toolbarIconButtonSize(compact)
+                  )}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </button>
+              </TooltipWrapper>
+            ) : null}
+            {ctx.onSaveMarket ? (
+              <TooltipWrapper
+                text={
+                  ctx.saveMarketLoading
+                    ? 'Saving market…'
+                    : 'Save market and deploy'
+                }
+              >
+                <button
+                  type="button"
+                  onClick={ctx.onSaveMarket}
+                  disabled={ctx.saveMarketDisabled || ctx.saveMarketLoading}
+                  aria-label={
+                    ctx.saveMarketLoading ? 'Saving market' : 'Save market and deploy'
+                  }
+                  className={cn(
+                    'inline-flex shrink-0 items-center justify-center rounded-md bg-stone-900 p-0 text-white hover:bg-stone-800 disabled:opacity-40',
+                    toolbarIconButtonSize(compact)
+                  )}
+                >
+                  <Save className="h-3.5 w-3.5" />
+                </button>
+              </TooltipWrapper>
+            ) : null}
+          </>
+        )
+      }
       if (sidebarLayout) {
         return (
           <div className="flex w-full min-w-0 flex-col gap-1.5">
@@ -1238,7 +1479,7 @@ export function renderCanvasCommandBarBlock(
               {ctx.onLaunchDualScreen ? (
                 <button
                   type="button"
-                  onClick={ctx.onLaunchDualScreen}
+                  onClick={() => ctx.onLaunchDualScreen!('presenter')}
                   title="Open booth matrix in a second window"
                   className={cn(
                     'inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
@@ -1400,7 +1641,7 @@ export function renderCanvasCommandBarBlock(
           {ctx.onLaunchDualScreen ? (
             <button
               type="button"
-              onClick={ctx.onLaunchDualScreen}
+              onClick={() => ctx.onLaunchDualScreen!('presenter')}
               title="Open booth matrix in a second window"
               className={cn(
                 'inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',

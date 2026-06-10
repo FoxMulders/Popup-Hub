@@ -13,6 +13,7 @@ import {
 } from './canvas-command-bar-blocks'
 import { CanvasToolbarReorder } from './canvas-toolbar-reorder'
 import { CanvasToolbarStatic } from './canvas-toolbar-static'
+import type { DualScreenMode } from '@/lib/coordinator/floorplan-sync'
 import { getVisibleStaticToolbarRows } from './toolbar-static-layout'
 import { ToolbarCompactProvider } from './command-button'
 
@@ -44,7 +45,7 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   ) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
-  onLaunchDualScreen?: () => void
+  onLaunchDualScreen?: (mode: DualScreenMode) => void
   dualScreenActive?: boolean
   designerExitHref?: string | null
   designerExitLabel?: string

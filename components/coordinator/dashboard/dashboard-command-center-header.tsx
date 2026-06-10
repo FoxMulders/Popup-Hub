@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Check, Cloud, Maximize2, Minimize2, Plus } from 'lucide-react'
+import { Check, Cloud, Plus } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
@@ -70,13 +70,8 @@ function WorkspaceTabs() {
 
 export function DashboardCommandCenterHeader() {
   const { events, selectedEventId } = useMarketManagement()
-  const {
-    fullscreen,
-    toggleFullscreen,
-    setFullscreen,
-    previewMode,
-    setPreviewMode,
-  } = useCommandCenterFullscreen()
+  const { fullscreen, setFullscreen, previewMode, setPreviewMode } =
+    useCommandCenterFullscreen()
   const { isBlueprint } = useDashboardWorkspaceView()
   const selectedEvent = events.find((e) => e.id === selectedEventId)
 
@@ -108,20 +103,6 @@ export function DashboardCommandCenterHeader() {
         </button>
       ) : null}
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-1.5 rounded-lg"
-        onClick={toggleFullscreen}
-      >
-        {fullscreen ? (
-          <Minimize2 className="h-4 w-4" aria-hidden />
-        ) : (
-          <Maximize2 className="h-4 w-4" aria-hidden />
-        )}
-        {fullscreen ? 'Exit full screen' : 'Full screen'}
-      </Button>
       {!fullscreen ? (
         <Link
           href="/coordinator/events/new"

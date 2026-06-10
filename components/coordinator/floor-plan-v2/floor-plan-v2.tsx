@@ -30,7 +30,7 @@ import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
-import { openDualScreenLedgerWindow } from '@/lib/coordinator/floorplan-sync'
+import { openDualScreenWindow, type DualScreenMode } from '@/lib/coordinator/floorplan-sync'
 import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridDocPatch } from './canvas/canvas-grid-spacing'
@@ -1166,33 +1166,43 @@ function FloorPlanV2Workspace({
   )
 
   const [wizardCanvasFullscreen, setWizardCanvasFullscreen] = useState(false)
-  const dualScreenWindowRef = useRef<Window | null>(null)
+  const dualScreenWindowRefs = useRef<Partial<Record<DualScreenMode, Window | null>>>({})
   const [dualScreenActive, setDualScreenActive] = useState(false)
 
-  const handleLaunchDualScreen = useCallback(() => {
-    if (!isDashboard) return
-    const existing = dualScreenWindowRef.current
-    if (existing && !existing.closed) {
-      existing.focus()
-      setDualScreenActive(true)
-      return
-    }
-    const opened = openDualScreenLedgerWindow(eventId ?? null)
-    dualScreenWindowRef.current = opened
-    setDualScreenActive(Boolean(opened))
-    if (!opened) {
-      toast.error('Pop-up blocked — allow pop-ups for this site to use dual-screen mode.')
-    }
-  }, [eventId, isDashboard])
+  const handleLaunchDualScreen = useCallback(
+    (mode: DualScreenMode) => {
+      if (!isDashboard) return
+      const existing = dualScreenWindowRefs.current[mode]
+      if (existing && !existing.closed) {
+        existing.focus()
+        setDualScreenActive(true)
+        return
+      }
+      const opened = openDualScreenWindow(eventId ?? null, mode)
+      dualScreenWindowRefs.current[mode] = opened
+      setDualScreenActive(Boolean(opened))
+      if (!opened) {
+        toast.error(
+          'Pop-up blocked — allow pop-ups for this site to use dual-screen mode.'
+        )
+      }
+    },
+    [eventId, isDashboard]
+  )
 
   useEffect(() => {
     if (!isDashboard) return
     const timer = window.setInterval(() => {
-      const win = dualScreenWindowRef.current
-      if (win && win.closed) {
-        dualScreenWindowRef.current = null
-        setDualScreenActive(false)
+      let anyOpen = false
+      for (const mode of ['presenter', 'wall-cast'] as const) {
+        const win = dualScreenWindowRefs.current[mode]
+        if (win && win.closed) {
+          dualScreenWindowRefs.current[mode] = null
+        } else if (win && !win.closed) {
+          anyOpen = true
+        }
       }
+      setDualScreenActive(anyOpen)
     }, 1500)
     return () => window.clearInterval(timer)
   }, [isDashboard])

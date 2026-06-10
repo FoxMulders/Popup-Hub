@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
-import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
+import { resolveBoothCheckoutFromApplication } from '@/lib/monetization/resolve-booth-checkout'
 import { getStripeClient, getStripeWebhookSecret, isStripeConfigured } from '@/lib/stripe/client'
 import { refreshStripeConnectStatus } from '@/lib/stripe/connect'
 import { finalizeCoordinatorPlatformInvoicePayment } from '@/lib/cron/coordinator-platform-invoice'
@@ -33,7 +32,9 @@ async function finalizeStripeBoothPayment(
         multi_table_discount_percent,
         platform_fee_mode,
         platform_fee_flat_cents,
-        platform_fee_bps
+        platform_fee_bps,
+        pass_fees_to_vendor,
+        end_at
       )
     `)
     .eq('id', applicationId)
@@ -51,18 +52,15 @@ async function finalizeStripeBoothPayment(
     .eq('category_id', application.category_id)
     .maybeSingle()
 
-  const amountCents = computeApplicationBoothPriceCents(
-    limit?.price_per_booth,
-    {
-      listing_type: eventRow.listing_type,
-      booth_price_cents: eventRow.booth_price_cents,
-      multi_table_discount_percent: eventRow.multi_table_discount_percent,
-    },
-    application.table_count ?? 1
-  )
+  const checkout = await resolveBoothCheckoutFromApplication(supabase, {
+    pricePerBooth: limit?.price_per_booth,
+    tableCount: application.table_count ?? 1,
+    eventRow,
+    coordinatorId: eventRow.coordinator_id,
+  })
 
   const feeConfig = resolveEventFeeConfig(eventRow)
-  const platformFeeCents = computePlatformFeeCents(amountCents, feeConfig)
+  const externalProcessorPayout = !!paymentIntent.transfer_data?.destination
 
   await recordPlatformTransaction(supabase, {
     boothApplicationId: application.id,
@@ -70,8 +68,9 @@ async function finalizeStripeBoothPayment(
     vendorId: application.vendor_id,
     coordinatorId: eventRow.coordinator_id,
     categoryId: application.category_id,
-    totalAmountCents: amountCents,
-    platformFeeCents,
+    totalAmountCents: checkout.totalChargedCents,
+    platformFeeCents: checkout.platformFeeCents,
+    baseBoothCents: checkout.baseBoothCents,
     feeModeUsed: feeConfig.mode,
     processorChargeId: paymentIntent.id,
     processorTransferId:
@@ -80,6 +79,8 @@ async function finalizeStripeBoothPayment(
         : null,
     status: 'completed',
     processor: 'stripe',
+    externalProcessorPayout,
+    eventEndAt: eventRow.end_at ?? null,
   })
 }
 

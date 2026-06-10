@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { reclaimStalePaymentProcessing } from '@/lib/applications/booth-payment-processing'
-import { computePlatformFeeCents } from '@/lib/monetization/fees'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { recordPlatformTransaction } from '@/lib/monetization/record-transaction'
+import type { BoothCheckoutBreakdown } from '@/lib/monetization/booth-checkout'
+import { resolveBoothCheckoutFromApplication } from '@/lib/monetization/resolve-booth-checkout'
 import {
   createBoothPayment,
   getBoothPayment,
 } from '@/lib/square/payments'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
-import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { assertVendorCanPayForApplication } from '@/lib/engagement/booth-access'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
@@ -28,9 +28,9 @@ async function finalizePaidApplication(
     vendorId: string
     coordinatorId: string
     categoryId: string
-    amountCents: number
-    platformFeeCents: number
+    checkout: BoothCheckoutBreakdown
     feeMode: ReturnType<typeof resolveEventFeeConfig>['mode']
+    eventEndAt?: string | null
   }
 ) {
   await recordPlatformTransaction(supabase, {
@@ -39,18 +39,23 @@ async function finalizePaidApplication(
     vendorId: params.vendorId,
     coordinatorId: params.coordinatorId,
     categoryId: params.categoryId,
-    totalAmountCents: params.amountCents,
-    platformFeeCents: params.platformFeeCents,
+    totalAmountCents: params.checkout.totalChargedCents,
+    platformFeeCents: params.checkout.platformFeeCents,
+    baseBoothCents: params.checkout.baseBoothCents,
     feeModeUsed: params.feeMode,
     processorChargeId: params.paymentId,
     status: 'completed',
+    externalProcessorPayout: true,
+    eventEndAt: params.eventEndAt ?? null,
   })
 
   return {
     paymentId: params.paymentId,
-    boothPriceCents: params.amountCents,
-    platformFeeCents: params.platformFeeCents,
-    coordinatorPayoutCents: params.amountCents - params.platformFeeCents,
+    boothPriceCents: params.checkout.baseBoothCents,
+    totalChargedCents: params.checkout.totalChargedCents,
+    platformFeeCents: params.checkout.platformFeeCents,
+    coordinatorPayoutCents: params.checkout.organizerPayoutCents,
+    passFeesToVendor: params.checkout.passFeesToVendor,
   }
 }
 
@@ -107,7 +112,9 @@ export async function POST(request: Request) {
         venue_verified,
         venue_verification_status,
         venue_verification_reason,
-        vendor_access_equality_until
+        vendor_access_equality_until,
+        pass_fees_to_vendor,
+        end_at
       )
     `)
     .eq('id', applicationId)
@@ -164,6 +171,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'This booth is already paid' }, { status: 400 })
   }
 
+  const coordinatorId = eventRow?.coordinator_id as string
+
   const { data: limit } = await supabase
     .from('event_category_limits')
     .select('price_per_booth')
@@ -171,18 +180,14 @@ export async function POST(request: Request) {
     .eq('category_id', application.category_id)
     .single()
 
-  const amountCents = computeApplicationBoothPriceCents(
-    limit?.price_per_booth as number | undefined,
-    {
-      listing_type: eventRow?.listing_type,
-      booth_price_cents: eventRow?.booth_price_cents as number | undefined,
-      multi_table_discount_percent: eventRow?.multi_table_discount_percent as
-        | number
-        | undefined,
-    },
-    (application.table_count as number) ?? 1
-  )
-  if (amountCents <= 0) {
+  const checkout = await resolveBoothCheckoutFromApplication(supabase, {
+    pricePerBooth: limit?.price_per_booth as number | undefined,
+    tableCount: (application.table_count as number) ?? 1,
+    eventRow,
+    coordinatorId,
+  })
+
+  if (checkout.baseBoothCents <= 0) {
     await supabase
       .from('booth_applications')
       .update({ payment_status: 'paid', payment_processing_at: null })
@@ -192,8 +197,6 @@ export async function POST(request: Request) {
   }
 
   const feeConfig = resolveEventFeeConfig(eventRow)
-  const platformFeeCents = computePlatformFeeCents(amountCents, feeConfig)
-  const coordinatorId = eventRow?.coordinator_id as string
 
   const { data: coordinatorProfile } = await supabase
     .from('profiles')
@@ -245,9 +248,9 @@ export async function POST(request: Request) {
           vendorId: application.vendor_id,
           coordinatorId,
           categoryId: application.category_id,
-          amountCents,
-          platformFeeCents,
+          checkout,
           feeMode: feeConfig.mode,
+          eventEndAt: eventRow?.end_at as string | undefined,
         })
         return NextResponse.json(result)
       }
@@ -293,11 +296,11 @@ export async function POST(request: Request) {
 
   const { paymentId, error } = await createBoothPayment({
     sourceId,
-    amountCents,
+    amountCents: checkout.totalChargedCents,
+    appFeeCents: checkout.squareAppFeeCents,
     eventId: application.event_id,
     applicationId,
     coordinatorAccessToken: credentials.accessToken,
-    platformFeeCents,
   })
 
   if (error || !paymentId) {
@@ -325,9 +328,9 @@ export async function POST(request: Request) {
     vendorId: application.vendor_id,
     coordinatorId,
     categoryId: application.category_id,
-    amountCents,
-    platformFeeCents,
+    checkout,
     feeMode: feeConfig.mode,
+    eventEndAt: eventRow?.end_at as string | undefined,
   })
 
   return NextResponse.json(result)

@@ -9,9 +9,15 @@ import {
   MousePointer2,
   RotateCcw,
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
+import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { cn } from '@/lib/utils'
+import {
+  toolbarElementPanel,
+  toolbarElementPanelsContainer,
+} from './toolbar-element-panels-motion'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
   clearSavedStaticToolbarLayout,
@@ -107,17 +113,158 @@ function BlockCluster({
   )
 }
 
+function SubsectionLabel({
+  children,
+  tone = 'neutral',
+}: {
+  children: React.ReactNode
+  tone?: 'vendor' | 'patron' | 'neutral'
+}) {
+  return (
+    <span
+      className={cn(
+        'text-[9px] font-bold uppercase tracking-wide',
+        tone === 'vendor' && 'text-emerald-800',
+        tone === 'patron' && 'text-violet-800',
+        tone === 'neutral' && 'text-stone-600'
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function TopBarAssetTablePanel({
+  label,
+  tone,
+  blockIds,
+  renderBlock,
+  reducedMotion,
+  patronRow = false,
+}: {
+  label: string
+  tone: 'vendor' | 'patron'
+  blockIds: readonly CanvasToolbarBlockId[]
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  reducedMotion: boolean
+  patronRow?: boolean
+}) {
+  if (blockIds.length === 0) return null
+
+  return (
+    <motion.div
+      className="toolbar-element-panel flex w-full min-w-0 flex-col items-center justify-center gap-0.5"
+      variants={reducedMotion ? undefined : toolbarElementPanel}
+      initial={reducedMotion ? false : 'hidden'}
+      animate={reducedMotion ? undefined : 'visible'}
+    >
+      <SubsectionLabel tone={tone}>{label}</SubsectionLabel>
+      <div
+        className={cn(
+          'flex min-w-0 flex-wrap items-center justify-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5',
+          patronRow && 'flex-row space-x-1'
+        )}
+      >
+        {blockIds.map((blockId) => (
+          <div key={blockId} className="min-w-0">
+            {renderBlock(blockId)}
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  )
+}
+
+function TopBarShapesBoothsSection({
+  section,
+  renderBlock,
+  reducedMotion,
+}: {
+  section: SidebarSectionDef
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+  reducedMotion: boolean
+}) {
+  const generalBlocks = section.blocks.filter(
+    (id) => id === 'primitives' || id === 'history-clipboard'
+  )
+  const vendorBlocks = section.blocks.filter(
+    (id) => id === 'vendor' || id === 'vendor-sizes'
+  )
+  const patronBlocks = section.blocks.filter((id) => id === 'patron')
+  const hasAssetTables = vendorBlocks.length > 0 || patronBlocks.length > 0
+
+  return (
+    <section
+      className="dashboard-toolbar-section shrink-0"
+      data-toolbar-section={section.id}
+      aria-label={section.header}
+    >
+      <SectionHeader>{section.header}</SectionHeader>
+      <div className="flex min-h-[var(--dashboard-toolbar-height)] min-w-0 flex-col items-center justify-center gap-2">
+        {generalBlocks.length > 0 ? (
+          <div className="flex min-w-0 flex-wrap items-center justify-center gap-1.5">
+            {generalBlocks.map((blockId) => (
+              <div
+                key={blockId}
+                className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
+              >
+                {renderBlock(blockId)}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {hasAssetTables ? (
+          <motion.div
+            className="toolbar-element-panels flex w-full min-w-0 flex-col items-center justify-center gap-1.5"
+            variants={reducedMotion ? undefined : toolbarElementPanelsContainer}
+            initial={reducedMotion ? false : 'hidden'}
+            animate={reducedMotion ? undefined : 'visible'}
+          >
+            <TopBarAssetTablePanel
+              label="Vendor Booths"
+              tone="vendor"
+              blockIds={vendorBlocks}
+              renderBlock={renderBlock}
+              reducedMotion={reducedMotion}
+            />
+            <TopBarAssetTablePanel
+              label="Patron Elements"
+              tone="patron"
+              blockIds={patronBlocks}
+              renderBlock={renderBlock}
+              reducedMotion={reducedMotion}
+              patronRow
+            />
+          </motion.div>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
 function TopBarToolbarSection({
   section,
   renderBlock,
   compact,
   eventId,
+  reducedMotion,
 }: {
   section: SidebarSectionDef
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
   compact?: boolean
   eventId?: string | null
+  reducedMotion: boolean
 }) {
+  if (section.id === 'shapes-booths') {
+    return (
+      <TopBarShapesBoothsSection
+        section={section}
+        renderBlock={renderBlock}
+        reducedMotion={reducedMotion}
+      />
+    )
+  }
+
   return (
     <section
       className="dashboard-toolbar-section shrink-0"
@@ -475,6 +622,7 @@ export function CanvasToolbarStatic({
     () => (sidebarLayout || topBarLayout ? getVisibleSidebarSections(segmentCtx) : []),
     [sidebarLayout, topBarLayout, segmentCtx]
   )
+  const reducedMotion = useReducedMotion()
 
   if (topBarLayout) {
     if (sidebarSections.length === 0) return null
@@ -488,6 +636,7 @@ export function CanvasToolbarStatic({
             renderBlock={renderBlock}
             compact={compact}
             eventId={eventId}
+            reducedMotion={reducedMotion}
           />
         ))}
       </div>

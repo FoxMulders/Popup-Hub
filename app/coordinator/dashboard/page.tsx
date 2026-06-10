@@ -7,9 +7,12 @@ import type { Event } from '@/types/database'
 import { roomsFromBoothLayoutForEditor } from '@/lib/booth-planner/layout-rooms'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import {
+  coordinatorHasPaymentTrustPath,
   coordinatorPaymentCollectionBlockReason,
   coordinatorPublishBlockReason,
+  hasVerifiedBusinessTaxId,
 } from '@/lib/coordinator/verification'
+import { coordinatorEscrowExempt } from '@/lib/coordinator/escrow'
 import { MarketDashboardClient } from '@/components/coordinator/dashboard/market-dashboard-client'
 import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
 import type { DashboardEventSummary } from '@/components/coordinator/dashboard/market-management-context'
@@ -64,17 +67,22 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
   const [
     { data: profile },
     { data: revenueRows },
+    { count: vouchCount },
     { data: layouts },
     { data: applications },
   ] = await Promise.all([
     supabase
       .from('profiles')
       .select(
-        'payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete, square_access_token, coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status'
+        'payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete, square_access_token, coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status, coordinator_is_verified, coordinator_successful_events_count'
       )
       .eq('id', user.id)
       .single(),
     revenueQuery,
+    supabase
+      .from('coordinator_vouches')
+      .select('id', { count: 'exact', head: true })
+      .eq('coordinator_id', user.id),
     coordinatorEventIds.length > 0
       ? supabase.from('booth_layouts').select('*').in('event_id', coordinatorEventIds)
       : Promise.resolve({ data: [] as import('@/types/database').BoothLayout[] }),
@@ -210,6 +218,9 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
     profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
   const stripeConnected =
     !!profile?.stripe_connected_id && profile?.stripe_onboarding_complete === true
+  const paymentTrustComplete = coordinatorHasPaymentTrustPath(fraudGate)
+  const verifiedBusinessTaxId = hasVerifiedBusinessTaxId(fraudGate)
+  const escrowExempt = coordinatorEscrowExempt(fraudGate, vouchCount ?? 0)
 
   const initialEventId =
     eventQuery && events.some((e) => e.id === eventQuery)
@@ -232,6 +243,10 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
         organizationName={profile?.coordinator_organization_name ?? null}
         publishBlockReason={coordinatorPublishBlockReason(fraudGate)}
         paymentCollectionBlockReason={coordinatorPaymentCollectionBlockReason(fraudGate)}
+        paymentTrustComplete={paymentTrustComplete}
+        escrowExempt={escrowExempt}
+        hasVerifiedBusinessTaxId={verifiedBusinessTaxId}
+        coordinatorVouchCount={vouchCount ?? 0}
       />
     </Suspense>
   )

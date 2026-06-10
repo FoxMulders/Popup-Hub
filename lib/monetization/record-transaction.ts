@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PlatformFeeMode } from '@/types/database'
+import {
+  distributeCoordinatorBoothPayout,
+  type EscrowSettlementMode,
+} from '@/lib/coordinator/escrow'
 
 export type PaymentProcessorKind = 'square' | 'stripe' | 'offline'
 
@@ -16,6 +20,11 @@ export interface RecordPlatformTransactionParams {
   processorTransferId?: string | null
   status?: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded'
   processor?: PaymentProcessorKind
+  /** When false, organizer payout settles on platform wallet (escrow split for unverified). */
+  externalProcessorPayout?: boolean
+  eventEndAt?: string | null
+  /** Coordinator asking booth price — escrow splits on this, not grossed-up charge. */
+  baseBoothCents?: number
 }
 
 /**
@@ -45,7 +54,9 @@ export async function recordPlatformTransaction(
     }
   }
 
-  const organizerPayout = params.totalAmountCents - params.platformFeeCents
+  const baseBoothCents =
+    params.baseBoothCents ?? params.totalAmountCents - params.platformFeeCents
+  const organizerPayout = baseBoothCents
 
   const { data: tx, error: txError } = await supabase
     .from('platform_transactions')
@@ -96,6 +107,8 @@ export async function recordPlatformTransaction(
       .eq('id', params.boothApplicationId)
   }
 
+  await applyCoordinatorEscrowForTransaction(supabase, params, tx.id)
+
   return { transactionId: tx.id, error: null, duplicate: false as const }
 }
 
@@ -117,4 +130,38 @@ function buildApplicationPaymentUpdate(
   }
 
   return update
+}
+
+async function resolveEventEndAt(
+  supabase: SupabaseClient,
+  eventId: string,
+  explicitEndAt?: string | null
+): Promise<string> {
+  if (explicitEndAt) return explicitEndAt
+
+  const { data: event } = await supabase.from('events').select('end_at').eq('id', eventId).maybeSingle()
+  return event?.end_at ?? new Date().toISOString()
+}
+
+async function applyCoordinatorEscrowForTransaction(
+  supabase: SupabaseClient,
+  params: RecordPlatformTransactionParams,
+  platformTransactionId: string
+): Promise<void> {
+  if ((params.status ?? 'completed') !== 'completed') return
+
+  const baseBoothCents =
+    params.baseBoothCents ?? params.totalAmountCents - params.platformFeeCents
+  const settlementMode: EscrowSettlementMode =
+    params.externalProcessorPayout === false ? 'wallet' : 'external_processor'
+  const eventEndAt = await resolveEventEndAt(supabase, params.eventId, params.eventEndAt)
+
+  await distributeCoordinatorBoothPayout(supabase, {
+    platformTransactionId,
+    coordinatorId: params.coordinatorId,
+    eventId: params.eventId,
+    organizerPayoutCents: baseBoothCents,
+    eventEndAt,
+    settlementMode,
+  })
 }

@@ -75,14 +75,30 @@ export function subscribeFloorplanSync(
   }
 }
 
+export type DualScreenMode = 'presenter' | 'wall-cast'
+
+const DUAL_SCREEN_WINDOW_NAMES: Record<DualScreenMode, string> = {
+  presenter: 'popuphub_dual_presenter',
+  'wall-cast': 'popuphub_dual_wall_cast',
+}
+
+/** @deprecated Use `openDualScreenWindow` with an explicit mode. */
 export function openDualScreenLedgerWindow(eventId: string | null): Window | null {
+  return openDualScreenWindow(eventId, 'presenter')
+}
+
+export function openDualScreenWindow(
+  eventId: string | null,
+  mode: DualScreenMode
+): Window | null {
   if (typeof window === 'undefined') return null
   const params = new URLSearchParams()
   if (eventId) params.set('event', eventId)
-  const url = `/coordinator/dashboard/ledger${params.toString() ? `?${params}` : ''}`
-  return window.open(
-    url,
-    'popuphub_floorplan_ledger',
-    'noopener,noreferrer,width=1024,height=900,menubar=no,toolbar=no,location=no,status=no'
-  )
+  params.set('screen', mode)
+  const url = `/coordinator/dashboard/ledger?${params}`
+  const features =
+    mode === 'wall-cast'
+      ? 'noopener,noreferrer,width=1280,height=720,menubar=no,toolbar=no,location=no,status=no'
+      : 'noopener,noreferrer,width=1024,height=900,menubar=no,toolbar=no,location=no,status=no'
+  return window.open(url, DUAL_SCREEN_WINDOW_NAMES[mode], features)
 }

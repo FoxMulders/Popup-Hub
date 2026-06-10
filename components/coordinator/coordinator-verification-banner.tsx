@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ShieldAlert, ShieldCheck } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
 interface CoordinatorVerificationBannerProps {
@@ -13,6 +15,9 @@ interface CoordinatorVerificationBannerProps {
   organizationName?: string | null
   publishBlockReason?: string | null
   paymentCollectionBlockReason?: string | null
+  squareConnected?: boolean
+  stripeConnected?: boolean
+  paymentTrustComplete?: boolean
 }
 
 export function CoordinatorVerificationBanner({
@@ -20,27 +25,44 @@ export function CoordinatorVerificationBanner({
   organizationName,
   publishBlockReason,
   paymentCollectionBlockReason,
+  squareConnected = false,
+  stripeConnected = false,
+  paymentTrustComplete = false,
 }: CoordinatorVerificationBannerProps) {
   const [pending, startTransition] = useTransition()
   const [expanded, setExpanded] = useState(verificationStatus === 'unverified')
   const [orgName, setOrgName] = useState(organizationName ?? '')
   const [businessNumber, setBusinessNumber] = useState('')
 
-  if (verificationStatus === 'verified' && !publishBlockReason && !paymentCollectionBlockReason) {
+  if (
+    verificationStatus === 'verified' &&
+    !publishBlockReason &&
+    !paymentCollectionBlockReason
+  ) {
+    return null
+  }
+
+  if (!publishBlockReason && !paymentCollectionBlockReason && paymentTrustComplete) {
     return null
   }
 
   const isPending = verificationStatus === 'pending'
   const isRejected = verificationStatus === 'rejected'
+  const paymentConnected = squareConnected || stripeConnected
 
   function submitVerification() {
+    if (!orgName.trim()) {
+      toast.error('Organization name is required.')
+      return
+    }
+
     startTransition(async () => {
       const res = await fetch('/api/coordinator/verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizationName: orgName,
-          businessNumber,
+          businessNumber: businessNumber.trim() || undefined,
         }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
@@ -78,16 +100,27 @@ export function CoordinatorVerificationBanner({
                 ? 'Organizer verification rejected'
                 : isPending
                   ? 'Organizer verification pending review'
-                  : 'Complete organizer verification'}
+                  : 'Complete organizer onboarding'}
             </p>
             <p className="text-sm text-muted-foreground">
               {publishBlockReason ??
                 paymentCollectionBlockReason ??
                 (isPending
-                  ? 'You can edit draft markets while we review your business details. Offline payment collection unlocks after approval.'
-                  : 'Submit your organization name and business registration number, or connect Stripe/Square. Draft editing is always available.')}
+                  ? 'You can edit draft markets while we review your details. Offline payment collection unlocks after approval.'
+                  : paymentConnected
+                    ? 'Payment account connected — you can publish and collect card payments. Optionally add a verified business tax ID to unlock full payouts early.'
+                    : 'Connect Square or Stripe to publish and collect card payments, or submit your organization name for offline markets. Business tax ID is optional.')}
             </p>
           </div>
+
+          {!paymentConnected && !publishBlockReason ? (
+            <Link
+              href="/coordinator/payment-methods"
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+            >
+              Connect Square or Stripe
+            </Link>
+          ) : null}
 
           {(verificationStatus === 'unverified' ||
             verificationStatus === 'rejected' ||
@@ -104,7 +137,10 @@ export function CoordinatorVerificationBanner({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="coordinator-bn">Business registration / tax ID</Label>
+                <Label htmlFor="coordinator-bn">
+                  Business registration / tax ID{' '}
+                  <span className="font-normal text-muted-foreground">(optional)</span>
+                </Label>
                 <Input
                   id="coordinator-bn"
                   value={businessNumber}
@@ -114,7 +150,7 @@ export function CoordinatorVerificationBanner({
               </div>
               <div className="sm:col-span-2 flex flex-wrap gap-2">
                 <Button type="button" onClick={submitVerification} disabled={pending}>
-                  {pending ? 'Submitting…' : 'Submit for verification'}
+                  {pending ? 'Submitting…' : 'Save organization details'}
                 </Button>
                 {isPending ? (
                   <Button type="button" variant="outline" onClick={() => setExpanded(false)}>
@@ -123,9 +159,9 @@ export function CoordinatorVerificationBanner({
                 ) : null}
               </div>
             </div>
-          ) : verificationStatus !== 'verified' ? (
+          ) : verificationStatus !== 'verified' || publishBlockReason ? (
             <Button type="button" variant="outline" size="sm" onClick={() => setExpanded(true)}>
-              {isPending ? 'Update business details' : 'Start verification'}
+              {isPending ? 'Update organization details' : 'Add organization details'}
             </Button>
           ) : null}
         </div>

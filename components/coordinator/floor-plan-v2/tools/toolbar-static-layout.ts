@@ -154,6 +154,9 @@ export function getVisibleSidebarSections(ctx: {
     'history-clipboard',
     'vendor',
   ]
+  if (ctx.showVendor) {
+    shapesBlocks.push('vendor-sizes')
+  }
   if (ctx.showPatron) {
     shapesBlocks.push('patron')
   }
@@ -164,9 +167,6 @@ export function getVisibleSidebarSections(ctx: {
   })
 
   const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align', 'optimize']
-  if (ctx.showVendor) {
-    alignmentBlocks.push('vendor-sizes')
-  }
   sections.push({
     id: 'alignment-spacing',
     header: LAYOUT_EDITOR_SIDEBAR_HEADERS['alignment-spacing'],

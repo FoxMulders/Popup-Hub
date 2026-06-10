@@ -5,10 +5,10 @@ import { paymentsApi } from './client'
 interface CreateBoothPaymentParams {
   sourceId: string
   amountCents: number
+  appFeeCents: number
   eventId: string
   applicationId: string
   coordinatorAccessToken: string
-  platformFeeCents: number
 }
 
 export function boothPaymentIdempotencyKey(applicationId: string): string {
@@ -32,23 +32,23 @@ export async function createBoothPayment(params: CreateBoothPaymentParams) {
   const {
     sourceId,
     amountCents,
+    appFeeCents,
     eventId,
     applicationId,
     coordinatorAccessToken,
-    platformFeeCents,
   } = params
 
   const sellerClient = createSellerSquareClient(coordinatorAccessToken)
-  const appFeeAmount = Math.min(Math.max(platformFeeCents, 0), amountCents)
+  const appFeeAmount = Math.min(Math.max(appFeeCents, 0), amountCents)
 
   try {
     const response = await sellerClient.payments.create({
       sourceId,
       idempotencyKey: boothPaymentIdempotencyKey(applicationId),
-      amountMoney: { amount: BigInt(amountCents), currency: 'USD' },
+      amountMoney: { amount: BigInt(amountCents), currency: 'CAD' },
       appFeeMoney:
         appFeeAmount > 0
-          ? { amount: BigInt(appFeeAmount), currency: 'USD' }
+          ? { amount: BigInt(appFeeAmount), currency: 'CAD' }
           : undefined,
       note: `Popup Hub booth booking — event ${eventId}`,
       referenceId: applicationId.slice(0, 40),

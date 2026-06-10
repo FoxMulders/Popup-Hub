@@ -10,6 +10,8 @@ export interface MarketBoothPricingFieldsProps {
   onBoothPriceCentsChange: (cents: number) => void
   multiTableDiscountPercent?: number
   onMultiTableDiscountPercentChange?: (percent: number) => void
+  passFeesToVendor?: boolean
+  onPassFeesToVendorChange?: (value: boolean) => void
   /** Omit section heading when parent already labels the block. */
   compact?: boolean
 }
@@ -27,6 +29,8 @@ export function MarketBoothPricingFields({
   onBoothPriceCentsChange,
   multiTableDiscountPercent = 0,
   onMultiTableDiscountPercentChange,
+  passFeesToVendor = false,
+  onPassFeesToVendorChange,
   compact = false,
 }: MarketBoothPricingFieldsProps) {
   const [boothDollarsInput, setBoothDollarsInput] = useState(() =>
@@ -146,6 +150,26 @@ export function MarketBoothPricingFields({
           </div>
         ) : null}
       </div>
+
+      {onPassFeesToVendorChange && boothPriceCents > 0 ? (
+        <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-stone-300 text-harvest-600 focus:ring-harvest-500"
+            checked={passFeesToVendor}
+            onChange={(e) => onPassFeesToVendorChange(e.target.checked)}
+          />
+          <span className="space-y-1">
+            <span className="block text-sm font-medium text-forest">
+              Pass credit card &amp; platform fees to vendors
+            </span>
+            <span className="block text-[11px] text-muted-foreground">
+              When enabled, checkout is grossed up (3% + $1) so you keep your listed booth price.
+              When off, Popup Hub fees are deducted from your payout.
+            </span>
+          </span>
+        </label>
+      ) : null}
     </div>
   )
 }

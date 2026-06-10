@@ -588,6 +588,21 @@
     min-width: min(100%, 14rem);
   }
 
+  .dashboard-toolbar-section[data-toolbar-section='shapes-booths'] > div:last-child {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .dashboard-toolbar-section .toolbar-element-panels,
+  .dashboard-toolbar-section .toolbar-element-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
   .dashboard-toolbar-section > div:last-child {
     display: flex;
     min-height: var(--dashboard-toolbar-height);
