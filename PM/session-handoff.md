@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (traffic-aware auto-arrange engine + spring animation, not deployed)
+## Shipped this session (traffic-aware auto-arrange engine + spring animation, deployed 2026-06-10)
 - **Layout engine:** Replaced generic Turf shelf-scan in `AutoArrangeEngine.ts` with traffic-aware path optimization — maps entrance/exit flow terminals (`traffic-flow-prerequisites.ts`), builds serpentine patron pathway (`buildPatronPathway`), treats corridor as no-fly zone (`buildTrafficNoFlyRects`), packs booths along path margins via `calculatePatronCentricLayout`, shifts occluded booths for path frontage, enforces 3′ clearance (`VENDOR_BOOTH_AISLE_FT`), Turf-validates merged zones.
 - **Spring animation:** `hooks/use-layout-spring.ts` — damped spring rAF; `canvas-objects.tsx` + `floor-plan-canvas.tsx` accept `layoutSpringPoses`; `floor-plan-v2.tsx` `commitVendorPackWithSpring` animates booths from pre-arrange positions on Auto-Arrange / Auto-Layout.
 - **Verify:** `npx tsx scripts/verify-auto-arrange-engine.ts` and `npx tsx scripts/verify-layout-pathfind.ts` — both PASS.
@@ -273,9 +273,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `97e2fa2` (pushed to `origin/master`)
-- Last deploy commit: `97e2fa2` - feat: coordinator dashboard premium refactor — clearance + workflow
-- Production: https://popuphub.ca - **v1.0.0 build 75** | commit `829fc5f` (handoff updated 2026-06-10 13:55)
+- Branch: `master` @ `6aecb28` (pushed to `origin/master`)
+- Last deploy commit: `6aecb28` - feat: traffic-aware auto-arrange engine + spring animation
+- Production: https://popuphub.ca - **v1.0.0 build 76** | commit `92530a8` (handoff updated 2026-06-10 14:28)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -652,7 +652,7 @@
 
 
 ## Last deploy
-- 2026-06-10 13:55 - Deploy via deploy-popuphub.ps1 - `feat: coordinator dashboard premium refactor — clearance + workflow` (97e2fa2)
+- 2026-06-10 14:28 - Deploy via deploy-popuphub.ps1 - `feat: traffic-aware auto-arrange engine + spring animation` (6aecb28)
 
 
 ## Goal
