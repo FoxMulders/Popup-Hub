@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  APIProvider,
   Map,
   AdvancedMarker,
   type MapMouseEvent,
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
+import { GoogleMapsProvider } from '@/components/map/google-maps-provider'
+import { GoogleMapsApiFallback } from '@/components/map/google-maps-api-fallback'
+import { useNormalizeAddressAi } from '@/hooks/use-normalize-address-ai'
 import { MapRecenter } from '@/components/map/map-recenter'
 import { MapPin } from 'lucide-react'
 import {
@@ -167,6 +169,7 @@ export function WizardStepVenue({
   onPlaceSelect,
 }: WizardStepVenueProps) {
   const apiLoaded = useApiIsLoaded()
+  const { normalizeAddress } = useNormalizeAddressAi()
   const marketCity = getMarketCityById(city)
   const cityLabel = marketCity.label
   const prevCityRef = useRef(city)
@@ -197,12 +200,8 @@ export function WizardStepVenue({
     [onPlaceSelect]
   )
 
-  const geocodeAddressToPin = useCallback(
-    (addressText: string) => {
-      const trimmed = addressText.trim()
-      if (!trimmed || trimmed.length < MIN_ADDRESS_GEOCODE_LENGTH) return
-      if (trimmed === lastGeocodedAddressRef.current) return
-
+  const runGeocode = useCallback(
+    (trimmed: string) => {
       const geocoder = geocoderRef.current
       if (!geocoder || !window.google?.maps) return
 
@@ -252,6 +251,30 @@ export function WizardStepVenue({
       )
     },
     [handlePlaceSelect, onCoordinatesChange, onPinDroppedChange]
+  )
+
+  const geocodeAddressToPin = useCallback(
+    (addressText: string) => {
+      const trimmed = addressText.trim()
+      if (!trimmed || trimmed.length < MIN_ADDRESS_GEOCODE_LENGTH) return
+      if (trimmed === lastGeocodedAddressRef.current) return
+
+      const looksUnstructured = !trimmed.includes(',') || trimmed.split(',').length < 2
+      if (!looksUnstructured) {
+        runGeocode(trimmed)
+        return
+      }
+
+      void (async () => {
+        const normalized = await normalizeAddress(trimmed)
+        const geocodeTarget = normalized?.trim() || trimmed
+        if (normalized && normalized !== trimmed) {
+          onAddressChange(normalized)
+        }
+        runGeocode(geocodeTarget)
+      })()
+    },
+    [normalizeAddress, onAddressChange, runGeocode]
   )
 
   useEffect(() => {
@@ -539,8 +562,12 @@ export function WizardStepVenueWithMapsProvider(props: WizardStepVenueProps) {
     )
   }
   return (
-    <APIProvider apiKey={apiKey} libraries={['places']}>
+    <GoogleMapsProvider
+      apiKey={apiKey}
+      libraries={['places']}
+      fallback={<GoogleMapsApiFallback className="rounded-xl border border-amber-200 bg-amber-50/80 p-6" />}
+    >
       <WizardStepVenue {...props} />
-    </APIProvider>
+    </GoogleMapsProvider>
   )
 }

@@ -123,7 +123,12 @@ export async function GET(request: Request) {
 
   if (profile) {
     const activePortal = parseActivePortal(cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value)
-    const dashboard = getDefaultDashboard(profile.role, 0, activePortal)
+    const dashboard = resolvePostLoginPath({
+      role: profile.role,
+      redirectTo: next,
+      userAgent: request.headers.get('user-agent'),
+      activePortal,
+    })
     return NextResponse.redirect(`${origin}${dashboard}`)
   }
 

@@ -4,12 +4,13 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
-  APIProvider,
   Map,
   AdvancedMarker,
   type MapMouseEvent,
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
+import { GoogleMapsProvider } from '@/components/map/google-maps-provider'
+import { GoogleMapsApiFallback } from '@/components/map/google-maps-api-fallback'
 import { MapRecenter } from '@/components/map/map-recenter'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -490,9 +491,10 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   })()
 
   return (
-    <APIProvider
+    <GoogleMapsProvider
       apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
       libraries={['places']}
+      fallback={<GoogleMapsApiFallback />}
     >
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-8 items-start">
       {/* Left column */}
@@ -1006,7 +1008,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         </Card>
       </div>
     </div>
-    </APIProvider>
+    </GoogleMapsProvider>
   )
 }
 

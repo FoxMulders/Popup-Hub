@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import {
-  APIProvider,
   Map,
   AdvancedMarker,
   Pin,
   InfoWindow,
-  useApiIsLoaded,
   useMap,
 } from '@vis.gl/react-google-maps'
+import { GoogleMapsProvider } from '@/components/map/google-maps-provider'
 import type { Event } from '@/types/database'
 import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Badge } from '@/components/ui/badge'
@@ -154,21 +153,6 @@ function GoogleEventMap({
   radiusKm?: DistanceRadiusKm
 }) {
   const [selected, setSelected] = useState<Event | null>(null)
-  const apiLoaded = useApiIsLoaded()
-  const [loadFailed, setLoadFailed] = useState(false)
-
-  useEffect(() => {
-    if (apiLoaded) {
-      setLoadFailed(false)
-      return
-    }
-    const timer = window.setTimeout(() => setLoadFailed(true), 10000)
-    return () => window.clearTimeout(timer)
-  }, [apiLoaded])
-
-  if (loadFailed && !apiLoaded) {
-    return <EventMapFallback events={events} />
-  }
 
   // Initial zoom seeds the radius framing — `MapRadiusFraming` keeps it
   // in sync as the user drags the slider afterwards.
@@ -281,9 +265,12 @@ export function EventMap({ events, center: centerProp, radiusKm }: EventMapProps
       {!apiKey ? (
         <EventMapFallback events={events} />
       ) : (
-        <APIProvider apiKey={apiKey}>
+        <GoogleMapsProvider
+          apiKey={apiKey}
+          fallback={<EventMapFallback events={events} />}
+        >
           <GoogleEventMap events={events} center={center} radiusKm={radiusKm} />
-        </APIProvider>
+        </GoogleMapsProvider>
       )}
     </div>
   )

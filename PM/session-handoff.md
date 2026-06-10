@@ -2,7 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (mobile UX, auth flows, maps/address AI — not deployed)
+## Shipped this session (coordinator mobile dashboard, maps provider, address AI geocode, not deployed)
+- **Coordinator mobile dashboard:** `MarketDashboardClient` routes phones to `CoordinatorMobileOverview` (`isMobileDevice()` or `?overview=mobile`); dashboard page wraps client in `Suspense` for `useSearchParams`.
+- **Post-login redirect:** OAuth callback uses `resolvePostLoginPath` (user-agent aware) instead of `getDefaultDashboard`; `Login_qa` passes `userAgent` only.
+- **Google Maps provider:** `event-form`, `wizard-step-venue`, and `event-map` use shared `GoogleMapsProvider` + `GoogleMapsApiFallback` instead of raw `APIProvider`.
+- **Venue wizard:** `venue-places-autocomplete` shows manual input fallback on Places `API_ERROR`; `wizard-step-venue` runs unstructured addresses through `useNormalizeAddressAi` before geocoding.
+- **Layout:** `market-day-shell` main column `flex-1` so footer pins on short pages.
+- **Verify:** Coordinator login on phone → mobile overview list (no canvas); OAuth callback lands on mobile overview; wizard venue step geocodes messy pasted address; break Maps key → fallback UI on map + Places fields; `/discover` map still renders with fallback list.
+
+## Shipped this session (mobile UX, auth flows, maps/address AI, deployed 2026-06-09)
 - **Mobile shell:** `safe-top` on admin Operations Console, market-day ops header, guest nav; root `min-h-screen` flex column + `flex-1` main in shopper/shared shells so `BuildVersionFooter` pins to viewport bottom; `CenteredHeaderRow` centers logo in `app-nav`, `shopper-top-bar`, `guest-nav`.
 - **Navigation:** Removed hamburger triggers — mobile profile/user icon opens `AppMenuSheet`; desktop profile still links to `/profile`; Suggest FAB hidden below `md` (menu + nav bar retain entry).
 - **Patron auth:** Landing hero → prominent **Browse Markets** + **Sign In** only; `/discover` and browse routes remain public (favorites/wallet still gate on save actions).

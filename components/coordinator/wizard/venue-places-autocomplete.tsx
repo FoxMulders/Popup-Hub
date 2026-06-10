@@ -14,6 +14,7 @@ import { WIZARD_FIELD_LABEL, WIZARD_INPUT } from '@/lib/wizard/wizard-panel-styl
 import type { PlaceResult, WizardPlacesAutocompleteMode } from '@/lib/wizard/wizard-place-types'
 import { cn } from '@/lib/utils'
 import { useGooglePlacesAutocompleteWidget } from '@/hooks/use-google-places-autocomplete-widget'
+import { GoogleMapsApiFallback } from '@/components/map/google-maps-api-fallback'
 import {
   MARKET_CITIES,
   inferMarketCityId,
@@ -73,7 +74,7 @@ export function VenuePlacesAutocomplete({
   cityId,
   onPlaceSelect,
 }: VenuePlacesAutocompleteProps) {
-  const { reportPlacesApi } = usePlacesApiStatus()
+  const { status: placesApiStatus, reportPlacesApi } = usePlacesApiStatus()
   const city = getMarketCityById(cityId)
 
   const handlePlaceChanged = useCallback(
@@ -135,6 +136,25 @@ export function VenuePlacesAutocomplete({
       : mode === 'venue'
         ? `Search venues near ${city.label}…`
         : `Search address near ${city.label}…`
+
+  if (placesApiStatus === 'API_ERROR') {
+    return (
+      <div className="space-y-2">
+        <Label htmlFor={id} className={WIZARD_FIELD_LABEL}>
+          {label}
+        </Label>
+        <GoogleMapsApiFallback title="Places autocomplete unavailable" />
+        <input
+          id={id}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={`Enter ${mode === 'venue' ? 'venue name' : 'address'} manually…`}
+          className={cn(WIZARD_INPUT, 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm')}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="relative space-y-1">

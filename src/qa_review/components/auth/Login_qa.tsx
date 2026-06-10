@@ -306,7 +306,6 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
         role: profile?.role,
         redirectTo,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-        isMobile: isMobileDevice(),
       })
 
       router.push(dashboard)

@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { LayoutRoom } from '@/types/database'
+import { isMobileDevice } from '@/lib/pwa/platform'
 import {
   MarketManagementProvider,
   type DashboardEventSummary,
@@ -14,6 +15,7 @@ import type { VendorApplicationSnapshot } from './booth-placement-status'
 import { CommandCenterFullscreenProvider } from './command-center-fullscreen-context'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
+import { CoordinatorMobileOverview } from './coordinator-mobile-overview'
 
 export interface MarketDashboardClientProps {
   events: DashboardEventSummary[]
@@ -38,6 +40,10 @@ export function MarketDashboardClient({
   stripeConnected,
   totalRevenueCents,
 }: MarketDashboardClientProps) {
+  const searchParams = useSearchParams()
+  const forceMobileOverview = searchParams.get('overview') === 'mobile'
+  const useMobileOverview = forceMobileOverview || isMobileDevice()
+
   if (events.length === 0) {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center">
@@ -53,6 +59,17 @@ export function MarketDashboardClient({
           Create New Market
         </Link>
       </div>
+    )
+  }
+
+  if (useMobileOverview) {
+    return (
+      <CoordinatorMobileOverview
+        events={events}
+        totalRevenueCents={totalRevenueCents}
+        squareConnected={squareConnected}
+        stripeConnected={stripeConnected}
+      />
     )
   }
 

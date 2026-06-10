@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { redirect } from 'next/navigation'
@@ -197,16 +198,18 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
       : events[0]?.id ?? null
 
   return (
-    <MarketDashboardClient
-      events={events}
-      initialEventId={initialEventId}
-      layoutsByEventId={layoutsByEventId}
-      approvedByEventId={approvedByEventId}
-      pendingByEventId={pendingByEventId}
-      boothPriceByEventAndApplicationId={boothPriceByEventAndApplicationId}
-      squareConnected={squareConnected}
-      stripeConnected={stripeConnected}
-      totalRevenueCents={totalRevenueCents}
-    />
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading dashboard…</div>}>
+      <MarketDashboardClient
+        events={events}
+        initialEventId={initialEventId}
+        layoutsByEventId={layoutsByEventId}
+        approvedByEventId={approvedByEventId}
+        pendingByEventId={pendingByEventId}
+        boothPriceByEventAndApplicationId={boothPriceByEventAndApplicationId}
+        squareConnected={squareConnected}
+        stripeConnected={stripeConnected}
+        totalRevenueCents={totalRevenueCents}
+      />
+    </Suspense>
   )
 }
