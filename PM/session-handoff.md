@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (coordinator dashboard density + UX polish, not deployed)
+## Shipped this session (coordinator dashboard density + UX polish, deployed 2026-06-10)
 - **Global chrome:** `app-nav.tsx` — Popup Hub logo links to `/`; nav pills use high-contrast `text-stone-900`; unified `--dashboard-gutter` aligns header, toolbar, and booth matrix left edges.
 - **Autosave chip:** `dashboard-layout-save-context.tsx` — debounced `scheduleAutosave` with yellow saving → green saved → idle fade; `floor-plan-v2.tsx` uses doc fingerprint (fixes stuck “Saving…”).
 - **Edit/Preview:** `dashboard-command-center-header.tsx` — full-width pill toggle with custom track/thumb (single click target).
@@ -251,9 +251,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `20a5d17` (pushed to `origin/master`)
-- Last deploy commit: `20a5d17` - feat: coordinator dashboard premium UI refactor
-- Production: https://popuphub.ca - **v1.0.0 build 68** | commit `20a5d17` (handoff updated 2026-06-10 11:59)
+- Branch: `master` @ `8aea984` (pushed to `origin/master`)
+- Last deploy commit: `8aea984` - feat: coordinator dashboard density + UX polish
+- Production: https://popuphub.ca - **v1.0.0 build 69** | commit `9ab5b50` (handoff updated 2026-06-10 13:09)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -630,7 +630,7 @@
 
 
 ## Last deploy
-- 2026-06-10 11:59 - Deploy via deploy-popuphub.ps1 - `feat: coordinator dashboard premium UI refactor` (20a5d17)
+- 2026-06-10 13:09 - Deploy via deploy-popuphub.ps1 - `feat: coordinator dashboard density + UX polish` (8aea984)
 
 
 ## Goal
