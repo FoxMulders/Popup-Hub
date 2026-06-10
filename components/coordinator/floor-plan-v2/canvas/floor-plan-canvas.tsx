@@ -143,8 +143,8 @@ export interface FloorPlanCanvasProps {
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
-/** Minimum zoom on coordinator dashboard — avoids hypersensitive room drags when framed out. */
-const COMMAND_CENTER_ZOOM_MIN = 0.75
+/** Minimum zoom on coordinator dashboard — allow 50% steps via discrete zoom. */
+const COMMAND_CENTER_ZOOM_MIN = 0.25
 
 /** Stages draw their own perimeter — skip duplicate dashed outline on selection. */
 function filteredSelectionIds(
@@ -195,6 +195,7 @@ export function FloorPlanCanvas({
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
+  const zoomForAnchorRef = useRef(1)
 
   const padFt = commandCenterViewport
     ? 8
@@ -219,7 +220,16 @@ export function FloorPlanCanvas({
     let anchorX = store.doc.canvasWidthFt / 2
     let anchorY = store.doc.canvasLengthFt / 2
 
-    if (selected.size > 0) {
+    if (commandCenterViewport) {
+      const scroll = scrollRef.current
+      const ratio = basePxPerFt * zoomForAnchorRef.current
+      if (scroll && ratio > 0) {
+        anchorX =
+          (scroll.scrollLeft + scroll.clientWidth / 2) / ratio - padFt
+        anchorY =
+          (scroll.scrollTop + scroll.clientHeight / 2) / ratio - padFt
+      }
+    } else if (selected.size > 0) {
       let minX = Number.POSITIVE_INFINITY
       let minY = Number.POSITIVE_INFINITY
       let maxX = Number.NEGATIVE_INFINITY
@@ -246,6 +256,7 @@ export function FloorPlanCanvas({
     }
   }, [
     basePxPerFt,
+    commandCenterViewport,
     padFt,
     store.doc.canvasLengthFt,
     store.doc.canvasWidthFt,
@@ -261,6 +272,8 @@ export function FloorPlanCanvas({
     zoomStepMultiplier: commandCenterViewport ? 2 : 4,
     getToolMode: () => toolState.tool,
   })
+
+  zoomForAnchorRef.current = viewport.zoom
 
   useEffect(() => {
     onViewportReady?.(viewport)

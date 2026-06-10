@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Send, Users, Clock, Sparkles } from 'lucide-react'
+import { Send, Sparkles, Users, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -30,11 +30,15 @@ function formatCountdown(endsAt: string | null): string | null {
 }
 
 function openBoothLabel(count: number): string {
-  return `${count} open yellow booth${count === 1 ? '' : 's'}`
+  return count === 1 ? '1 open yellow booth' : `${count} open yellow booths`
 }
 
 function matchingVendorLabel(count: number): string {
-  return `${count} matching vendor${count === 1 ? '' : 's'}`
+  return count === 1 ? '1 matching vendor' : `${count} matching vendors`
+}
+
+function categoryCountLabel(count: number): string {
+  return count === 1 ? '1 category' : `${count} categories`
 }
 
 export function VendorMatchesPanel({ eventId, compact }: VendorMatchesPanelProps) {
@@ -82,8 +86,11 @@ export function VendorMatchesPanel({ eventId, compact }: VendorMatchesPanelProps
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to send invites')
+      const inviteCount = Number(data.inviteCount) || 0
       toast.success(
-        `Priority invites sent to ${data.inviteCount} vendor${data.inviteCount === 1 ? '' : 's'}`
+        inviteCount === 1
+          ? 'Priority invite sent to 1 vendor'
+          : `Priority invites sent to ${inviteCount} vendors`
       )
       setConfirmOpen(false)
       await loadMatches()
@@ -98,7 +105,7 @@ export function VendorMatchesPanel({ eventId, compact }: VendorMatchesPanelProps
     <Button
       type="button"
       size="sm"
-      className={cn('gap-1.5 shrink-0', compact && 'h-8 text-[11px]')}
+      className={cn('shrink-0 gap-1.5', compact && 'h-8 text-[11px]')}
       disabled={!canSendInvites}
       onClick={() => setConfirmOpen(true)}
     >
@@ -147,18 +154,22 @@ export function VendorMatchesPanel({ eventId, compact }: VendorMatchesPanelProps
           Loading matches…
         </div>
       ) : matches.length === 0 ? (
-        <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-4">
-          <div className="flex flex-col items-center gap-2 text-center md:flex-row md:items-center md:justify-between md:gap-3 md:text-left">
-            <div className="flex flex-col items-center gap-1.5 md:flex-row md:items-start md:gap-2">
-              <Sparkles className="h-5 w-5 shrink-0 text-amber-500" aria-hidden />
-              <div>
-                <p className="text-[11px] font-semibold text-stone-800">No matches yet</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Draw vendor booths with categories to see platform matches.
-                </p>
-              </div>
+        <div className="overflow-hidden rounded-lg border border-dashed border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-white to-stone-50 px-3 py-3">
+          <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-center sm:text-left">
+            <div
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-200/80 bg-white shadow-sm"
+              aria-hidden
+            >
+              <Sparkles className="h-6 w-6 text-amber-500" />
             </div>
-            <div className="w-full md:w-auto">{inviteButton}</div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-[11px] font-semibold text-stone-900">No vendor matches yet</p>
+              <p className="text-[10px] leading-snug text-stone-600">
+                Draw vendor booths with categories on the canvas — platform matches appear here, then
+                send 24-hour priority invites in one step.
+              </p>
+            </div>
+            <div className="w-full shrink-0 sm:w-auto">{inviteButton}</div>
           </div>
         </div>
       ) : (
@@ -171,8 +182,8 @@ export function VendorMatchesPanel({ eventId, compact }: VendorMatchesPanelProps
               <p className="font-semibold text-stone-800">
                 {row.categoryName}{' '}
                 <span className="font-normal text-muted-foreground">
-                  ({row.openBoothCount} open · {row.vendors.length}{' '}
-                  {row.vendors.length === 1 ? 'vendor' : 'vendors'})
+                  ({row.openBoothCount === 1 ? '1 open' : `${row.openBoothCount} open`} ·{' '}
+                  {row.vendors.length === 1 ? '1 vendor' : `${row.vendors.length} vendors`})
                 </span>
               </p>
               {row.vendors.slice(0, 4).map((v) => (
@@ -203,8 +214,8 @@ export function VendorMatchesPanel({ eventId, compact }: VendorMatchesPanelProps
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {matchingVendorLabel(totalVendors)} across {matches.length} categor
-            {matches.length === 1 ? 'y' : 'ies'} · {openBoothLabel(openBoothCount)}
+            {matchingVendorLabel(totalVendors)} across {categoryCountLabel(matches.length)} ·{' '}
+            {openBoothLabel(openBoothCount)}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>

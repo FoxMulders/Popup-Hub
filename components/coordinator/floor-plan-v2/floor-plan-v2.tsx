@@ -736,6 +736,11 @@ function FloorPlanV2Workspace({
     [store, safeTableSizeFt, applyDefaultPlacementSpec]
   )
 
+  const docAutosaveFingerprint = useMemo(
+    () => JSON.stringify(store.doc),
+    [store.doc]
+  )
+
   // Crash-recovery autosave: every doc commit lands a serialized
   // snapshot of the unified multi-room doc in localStorage. Debounced
   // to 250ms so a continuous gesture doesn't hammer storage; cleared
@@ -747,13 +752,10 @@ function FloorPlanV2Workspace({
       clearMultiRoomDraft(eventId)
       return
     }
-    layoutSave?.markSaving()
-    const id = window.setTimeout(() => {
+    layoutSave?.scheduleAutosave(() => {
       saveMultiRoomDraft(eventId, store.doc)
-      layoutSave?.markSaved()
-    }, 250)
-    return () => window.clearTimeout(id)
-  }, [eventId, layoutRooms.length, layoutSave, store.doc])
+    })
+  }, [eventId, layoutRooms.length, layoutSave, docAutosaveFingerprint, store.doc])
 
   const handleToolChange = useCallback((next: ToolId) => {
     setTool(next)
@@ -2324,7 +2326,13 @@ function FloorPlanV2Workspace({
               ? createPortal(dashboardCommandBar, toolbarPortal.target)
               : null}
             <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">
-              <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-0 bg-stone-100">
+              <aside
+                className="dashboard-canvas-legend-rail hidden w-[168px] shrink-0 lg:flex"
+                aria-label="Canvas allocation legend"
+              >
+                <CanvasLegend variant="docked" className="p-2" />
+              </aside>
+              <div className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-stone-100">
                 <CanvasRootErrorBoundary
                   onReset={() => {
                     logState('Canvas error boundary: reset triggered')
@@ -2398,7 +2406,6 @@ function FloorPlanV2Workspace({
                     showLabels={showLabels}
                   />
                 </CanvasRootErrorBoundary>
-                <CanvasLegend variant={isDashboard ? 'sidebar' : 'floating'} />
               </div>
             </div>
           </>

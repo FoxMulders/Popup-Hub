@@ -33,13 +33,45 @@ function isAiConfigured(): boolean {
   )
 }
 
-/** Display version: major.minor.buildNumber (e.g. 1.0.154). */
-export function formatAppVersion(baseVersion: string, buildNumber: number): string {
-  const match = baseVersion.match(/^(\d+)\.(\d+)/)
-  if (match) {
-    return `${match[1]}.${match[2]}.${buildNumber}`
+/** Parsed semver components from `major.minor.patch`. */
+export interface SemverParts {
+  major: number
+  minor: number
+  patch: number
+}
+
+export function parseSemver(version: string): SemverParts | null {
+  const match = version.trim().match(/^(\d+)\.(\d+)\.(\d+)/)
+  if (!match) return null
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
   }
-  return buildNumber > 0 ? `${baseVersion}.${buildNumber}` : baseVersion
+}
+
+/** Display version: `major.minor.patch` from package.json (build counter is shown separately). */
+export function formatAppVersion(baseVersion: string): string {
+  const parts = parseSemver(baseVersion)
+  if (parts) {
+    return `${parts.major}.${parts.minor}.${parts.patch}`
+  }
+  return baseVersion
+}
+
+/** True when major, minor, or patch changed between two semver strings. */
+export function semverComponentsChanged(
+  previous: string,
+  current: string
+): boolean {
+  const prev = parseSemver(previous)
+  const next = parseSemver(current)
+  if (!prev || !next) return previous !== current
+  return (
+    prev.major !== next.major ||
+    prev.minor !== next.minor ||
+    prev.patch !== next.patch
+  )
 }
 
 function readPackageVersion(): string {
@@ -110,7 +142,7 @@ export function getBuildInfo(): BuildInfo {
   const buildNumber = readBuildNumber()
   const version =
     process.env.NEXT_PUBLIC_APP_VERSION?.trim() ||
-    formatAppVersion(baseVersion, buildNumber)
+    formatAppVersion(baseVersion)
   const builtAt =
     process.env.NEXT_PUBLIC_BUILD_TIME?.trim() || new Date().toISOString()
   const environment = resolveEnvironment()
@@ -138,7 +170,7 @@ export function getBuildInfo(): BuildInfo {
   }
 }
 
-/** `GET /version` — `version` is major.minor.buildNumber; `build` is the git hash. */
+/** `GET /version` — `version` is major.minor.patch; `build` is the git hash. */
 export function getSiteVersionPayload(): SiteVersionPayload {
   const build = getBuildInfo()
   return {

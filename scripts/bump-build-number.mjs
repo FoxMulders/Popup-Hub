@@ -14,6 +14,31 @@ function readPackageVersion() {
   }
 }
 
+function parseSemver(version) {
+  const match = String(version).trim().match(/^(\d+)\.(\d+)\.(\d+)/)
+  if (!match) return null
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+  }
+}
+
+function semverLabel(parts) {
+  return `${parts.major}.${parts.minor}.${parts.patch}`
+}
+
+function semverChanged(previous, current) {
+  const prev = parseSemver(previous)
+  const next = parseSemver(current)
+  if (!prev || !next) return previous !== current
+  return (
+    prev.major !== next.major ||
+    prev.minor !== next.minor ||
+    prev.patch !== next.patch
+  )
+}
+
 function readGitCommit() {
   if (process.env.VERCEL_GIT_COMMIT_SHA) {
     return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7)
@@ -31,25 +56,40 @@ function readBuildState() {
   try {
     const raw = readFileSync(buildFile, 'utf8')
     const data = JSON.parse(raw)
+    const version =
+      typeof data.version === 'string' ? data.version : readPackageVersion()
+    const semver = parseSemver(version) ?? parseSemver(readPackageVersion())
     return {
-      version: typeof data.version === 'string' ? data.version : readPackageVersion(),
+      version,
+      major: Number.isFinite(data.major) ? data.major : semver?.major ?? 0,
+      minor: Number.isFinite(data.minor) ? data.minor : semver?.minor ?? 0,
+      patch: Number.isFinite(data.patch) ? data.patch : semver?.patch ?? 0,
       build: Number.isFinite(data.build) ? data.build : 0,
       commit: typeof data.commit === 'string' ? data.commit : '',
     }
   } catch {
-    return { version: readPackageVersion(), build: 0, commit: '' }
+    const version = readPackageVersion()
+    const semver = parseSemver(version)
+    return {
+      version,
+      major: semver?.major ?? 0,
+      minor: semver?.minor ?? 0,
+      patch: semver?.patch ?? 0,
+      build: 0,
+      commit: '',
+    }
   }
 }
 
 const packageVersion = readPackageVersion()
+const packageSemver = parseSemver(packageVersion)
 const commit = readGitCommit()
 const state = readBuildState()
 
-// prebuild runs before every `npm run build`; always bump the monotonic counter.
+// prebuild runs before every `npm run build`; bump the counter within the current semver.
 let nextBuild = state.build
-let nextCommit = commit
 
-if (state.version !== packageVersion) {
+if (semverChanged(state.version, packageVersion)) {
   nextBuild = 1
 } else {
   nextBuild = state.build + 1
@@ -57,10 +97,16 @@ if (state.version !== packageVersion) {
 
 const nextState = {
   version: packageVersion,
+  major: packageSemver?.major ?? state.major,
+  minor: packageSemver?.minor ?? state.minor,
+  patch: packageSemver?.patch ?? state.patch,
   build: nextBuild,
-  commit: nextCommit,
+  commit,
 }
 
 writeFileSync(buildFile, `${JSON.stringify(nextState, null, 2)}\n`)
 
-console.log(`Build number: ${state.build} → ${nextBuild} (v${packageVersion}, ${commit})`)
+const versionLabel = packageSemver ? semverLabel(packageSemver) : packageVersion
+console.log(
+  `Build number: ${state.build} → ${nextBuild} (v${versionLabel}, ${commit})`
+)

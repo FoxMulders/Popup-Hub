@@ -58,8 +58,8 @@ export function DashboardAppShell({
       {header ? (
         <header
           className={cn(
-            'dashboard-app-shell__header shrink-0 border-b border-stone-200/80 bg-card/90 px-3 backdrop-blur-sm sm:px-4',
-            immersive ? 'py-1.5' : 'py-1.5'
+            'dashboard-app-shell__header shrink-0 border-b border-stone-200/80 bg-card/90 backdrop-blur-sm',
+            immersive ? 'py-1' : 'py-1'
           )}
         >
           {header}

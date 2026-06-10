@@ -42,7 +42,7 @@ const buildTime = new Date().toISOString()
 const buildCommit = readGitCommit()
 const buildNumber = readBuildNumber()
 const baseVersion = readPackageVersion()
-const appVersion = formatAppVersion(baseVersion, buildNumber)
+const appVersion = formatAppVersion(baseVersion)
 
 function resolvePublicAppUrlEnv(): string {
   return getURL()

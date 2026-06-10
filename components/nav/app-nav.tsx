@@ -12,8 +12,7 @@ import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
-import { getPortalHome, resolveActivePortal } from '@/lib/portals/active-portal'
-import { coordinatorNavBackHref } from '@/lib/coordinator/coordinator-event-route'
+import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
@@ -70,11 +69,7 @@ export function AppNav({
         ? 'vendor'
         : 'patron'
   const links = NAV_LINKS[navRole] ?? []
-  const pathnameSafe = pathname ?? ''
-  const homeHref =
-    activePortal === 'coordinator'
-      ? coordinatorNavBackHref(pathnameSafe)
-      : getPortalHome(activePortal)
+  const homeHref = '/'
 
   async function handleSignOut() {
     await signOutAndRedirectToLogin(supabase)
@@ -135,7 +130,7 @@ export function AppNav({
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                           active
                             ? 'bg-forest text-white shadow-sm'
-                            : 'text-stone-700 hover:bg-stone-100 hover:text-stone-900'
+                            : 'text-stone-900 hover:bg-stone-100 hover:text-forest'
                         )}
                         aria-current={active ? 'page' : undefined}
                       >

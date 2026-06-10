@@ -60,7 +60,7 @@ export interface CanvasToolbarStaticProps {
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <h3 className="text-[10px] font-bold uppercase tracking-wide text-stone-800">
       {children}
     </h3>
   )

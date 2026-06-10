@@ -1,9 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { Cloud, LayoutGrid, Plus } from 'lucide-react'
+import { Check, Cloud, LayoutGrid, Plus } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useDashboardLayoutSave } from './dashboard-layout-save-context'
@@ -14,16 +13,21 @@ function LayoutSaveChip() {
   const save = useDashboardLayoutSave()
   if (!save || save.status === 'idle') return null
 
-  const label = save.status === 'saving' ? 'Saving…' : 'Saved to cloud'
+  const saving = save.status === 'saving'
 
   return (
     <span
       className="dashboard-save-chip"
       data-status={save.status}
       aria-live="polite"
+      aria-atomic="true"
     >
-      <Cloud className="h-3 w-3 shrink-0" aria-hidden />
-      {label}
+      {saving ? (
+        <Cloud className="h-3 w-3 shrink-0 animate-pulse" aria-hidden />
+      ) : (
+        <Check className="h-3 w-3 shrink-0" aria-hidden />
+      )}
+      {saving ? 'Saving…' : 'Saved to cloud'}
     </span>
   )
 }
@@ -49,25 +53,19 @@ export function DashboardCommandCenterHeader() {
         aria-label={previewMode ? 'Switch to edit mode' : 'Switch to preview mode'}
         onClick={() => setPreviewMode(!previewMode)}
       >
-        <span
-          className={cn(
-            !previewMode ? 'text-forest' : 'text-stone-500'
-          )}
-        >
+        <span className={cn('dashboard-pill-toggle__label', !previewMode && 'is-active')}>
           Edit
         </span>
-        <Switch
-          size="sm"
-          checked={previewMode}
-          tabIndex={-1}
-          aria-hidden
-          className="pointer-events-none"
-        />
         <span
           className={cn(
-            previewMode ? 'text-forest' : 'text-stone-500'
+            'dashboard-pill-toggle__track',
+            previewMode && 'is-preview'
           )}
+          aria-hidden
         >
+          <span className="dashboard-pill-toggle__thumb" />
+        </span>
+        <span className={cn('dashboard-pill-toggle__label', previewMode && 'is-active')}>
           Preview
         </span>
       </button>

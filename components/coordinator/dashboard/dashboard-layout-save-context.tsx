@@ -4,7 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -13,27 +15,60 @@ type LayoutSaveStatus = 'idle' | 'saving' | 'saved'
 
 interface DashboardLayoutSaveContextValue {
   status: LayoutSaveStatus
-  markSaving: () => void
-  markSaved: () => void
+  /** Debounced autosave — shows saving immediately, saved after delay. */
+  scheduleAutosave: (save: () => void, delayMs?: number) => void
 }
 
 const DashboardLayoutSaveContext =
   createContext<DashboardLayoutSaveContextValue | null>(null)
 
+const SAVED_DISPLAY_MS = 3500
+
 export function DashboardLayoutSaveProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<LayoutSaveStatus>('idle')
+  const saveTimerRef = useRef<number | null>(null)
+  const fadeTimerRef = useRef<number | null>(null)
 
-  const markSaving = useCallback(() => {
-    setStatus('saving')
+  const clearTimers = useCallback(() => {
+    if (saveTimerRef.current != null) {
+      window.clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
   }, [])
 
-  const markSaved = useCallback(() => {
-    setStatus('saved')
-  }, [])
+  const scheduleAutosave = useCallback(
+    (save: () => void, delayMs = 250) => {
+      clearTimers()
+      if (fadeTimerRef.current != null) {
+        window.clearTimeout(fadeTimerRef.current)
+        fadeTimerRef.current = null
+      }
+      setStatus('saving')
+      saveTimerRef.current = window.setTimeout(() => {
+        saveTimerRef.current = null
+        save()
+        setStatus('saved')
+        fadeTimerRef.current = window.setTimeout(() => {
+          fadeTimerRef.current = null
+          setStatus('idle')
+        }, SAVED_DISPLAY_MS)
+      }, delayMs)
+    },
+    [clearTimers]
+  )
+
+  useEffect(() => {
+    return () => {
+      clearTimers()
+      if (fadeTimerRef.current != null) {
+        window.clearTimeout(fadeTimerRef.current)
+      }
+    }
+  }, [clearTimers])
 
   const value = useMemo(
-    () => ({ status, markSaving, markSaved }),
-    [markSaving, markSaved, status]
+    () => ({ status, scheduleAutosave }),
+    [scheduleAutosave, status]
   )
 
   return (

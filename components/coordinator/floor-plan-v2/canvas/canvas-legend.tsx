@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   PLACEMENT_AVAILABLE,
@@ -56,10 +56,11 @@ export function CanvasLegend({
   variant = 'floating',
 }: {
   className?: string
-  variant?: 'floating' | 'sidebar'
+  variant?: 'floating' | 'sidebar' | 'docked'
 }) {
   const [collapsed, setCollapsed] = useState(false)
-  const isSidebar = variant === 'sidebar'
+  const isDocked = variant === 'docked'
+  const isSidebar = variant === 'sidebar' || isDocked
 
   useEffect(() => {
     try {
@@ -80,9 +81,11 @@ export function CanvasLegend({
     }
   }, [collapsed])
 
-  const positionClass = isSidebar
-    ? 'absolute left-3 top-3 z-10'
-    : 'absolute top-4 right-4 z-10'
+  const positionClass = isDocked
+    ? 'relative h-full w-full'
+    : isSidebar
+      ? 'absolute left-3 top-3 z-10'
+      : 'absolute top-4 right-4 z-10'
 
   if (collapsed) {
     return (
@@ -94,8 +97,9 @@ export function CanvasLegend({
         aria-expanded={false}
         className={cn(
           positionClass,
-          'inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-lg backdrop-blur-sm hover:bg-white',
-          isSidebar && 'flex-col py-2',
+          'canvas-legend-docked inline-flex items-center gap-1.5 rounded-lg border border-stone-200/90 bg-white/95 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-stone-600 shadow-lg backdrop-blur-sm hover:bg-white',
+          isDocked && 'h-full min-h-0 w-full flex-col justify-center py-3 shadow-none',
+          isSidebar && !isDocked && 'flex-col py-2',
           className
         )}
       >
@@ -121,7 +125,9 @@ export function CanvasLegend({
                 )}
               />
             </span>
-            <span className="[writing-mode:vertical-rl] rotate-180 text-[9px]">Legend</span>
+            <span className={cn(isDocked ? 'text-[10px]' : '[writing-mode:vertical-rl] rotate-180 text-[9px]')}>
+              Legend
+            </span>
             <ChevronRight className="h-3 w-3" />
           </>
         ) : (
@@ -147,7 +153,7 @@ export function CanvasLegend({
               />
             </span>
             Legend
-            <ChevronUp className="h-3 w-3" />
+            <ChevronDown className="h-3 w-3 rotate-180" />
           </>
         )}
       </button>
@@ -158,7 +164,8 @@ export function CanvasLegend({
     <div
       className={cn(
         positionClass,
-        'max-w-[200px] rounded-lg border border-stone-200/90 bg-white/95 p-2 shadow-lg backdrop-blur-sm',
+        'canvas-legend-docked max-w-[200px] rounded-lg border border-stone-200/90 bg-white/95 p-2 shadow-lg backdrop-blur-sm',
+        isDocked && 'flex h-full max-w-none flex-col shadow-none',
         className
       )}
       role="region"
@@ -166,7 +173,7 @@ export function CanvasLegend({
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-stone-500">
-          Placement HUD
+          {isDocked ? 'Legend' : 'Placement HUD'}
         </span>
         <button
           type="button"
@@ -179,7 +186,7 @@ export function CanvasLegend({
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
-      <ul className="space-y-1.5">
+      <ul className={cn('space-y-1.5', isDocked && 'min-h-0 flex-1 overflow-y-auto')}>
         {ITEMS.map((item) => (
           <li
             key={item.label}

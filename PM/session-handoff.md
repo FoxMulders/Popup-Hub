@@ -4,6 +4,15 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (coordinator dashboard density + UX polish, not deployed)
+- **Global chrome:** `app-nav.tsx` — Popup Hub logo links to `/`; nav pills use high-contrast `text-stone-900`; unified `--dashboard-gutter` aligns header, toolbar, and booth matrix left edges.
+- **Autosave chip:** `dashboard-layout-save-context.tsx` — debounced `scheduleAutosave` with yellow saving → green saved → idle fade; `floor-plan-v2.tsx` uses doc fingerprint (fixes stuck “Saving…”).
+- **Edit/Preview:** `dashboard-command-center-header.tsx` — full-width pill toggle with custom track/thumb (single click target).
+- **Canvas:** Legend moved to persistent left rail (`canvas-legend.tsx` `variant="docked"`); dashboard viewport fill restored over QA scroll class; zoom min 25% with viewport-center anchor; booth name/status text no longer overlap (`canvas-objects.tsx`).
+- **Vendor matches:** `vendor-matches-panel.tsx` — illustration empty state, inline invite CTA, fixed plural strings (`1 booth` not `booth s`).
+- **Booth matrix:** `booth-matrix-panel.tsx` — collapsible accordion header, denser rows, wider coordinates column, semantic badges; single accessible table (no duplicate SR table).
+- **Verify:** `/coordinator/dashboard` — logo → `/`; edit canvas → Saving… then Saved to cloud; zoom 50/75/100% from viewport center; legend rail; collapse booth matrix; vendor matches empty state + invite button inline.
+
 ## Shipped this session (semver build versioning, deployed 2026-06-10)
 - **`lib/build-info.ts`:** `formatAppVersion` now returns `major.minor.patch` from `package.json`; build counter stays separate in footer (`v1.0.0 · build 68`). Added `parseSemver` / `semverComponentsChanged`.
 - **`scripts/bump-build-number.mjs`:** Resets build to `1` when major, minor, or patch changes; stores semver components in `build-number.json`.

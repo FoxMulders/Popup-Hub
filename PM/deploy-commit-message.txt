@@ -1,0 +1,1 @@
+feat: coordinator dashboard density + UX polish

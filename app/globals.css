@@ -362,7 +362,27 @@
   .dashboard-app-shell {
     --dashboard-radius: 8px;
     --dashboard-toolbar-height: 2rem;
-    --dashboard-panel-gap: 0.5rem;
+    --dashboard-panel-gap: 0.375rem;
+    --dashboard-gutter: 0.75rem;
+  }
+
+  .dashboard-app-shell__header,
+  .dashboard-top-toolbar-strip,
+  .dashboard-booth-matrix-panel,
+  .dashboard-toolbar-portal {
+    padding-inline: var(--dashboard-gutter);
+  }
+
+  .dashboard-app-shell__header {
+    padding-block: 0.375rem;
+  }
+
+  .dashboard-top-toolbar-strip {
+    padding-block: 0.25rem;
+  }
+
+  .dashboard-booth-matrix-panel {
+    padding-block: 0.375rem;
   }
 
   .dashboard-panel {
@@ -377,25 +397,138 @@
     min-width: 0;
     flex-shrink: 0;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.125rem;
     border-radius: var(--dashboard-radius);
     border: 1px solid rgb(231 229 228 / 0.9);
     background: white;
-    padding: 0.375rem 0.5rem;
+    padding: 0.25rem 0.375rem;
     box-shadow: 0 1px 2px rgb(28 25 23 / 0.04);
+  }
+
+  .dashboard-toolbar-section > div:last-child {
+    display: flex;
+    min-height: var(--dashboard-toolbar-height);
+    align-items: center;
+  }
+
+  .dashboard-booth-matrix-panel {
+    flex-shrink: 0;
+    border-top: 1px solid rgb(231 229 228);
+    background: rgb(250 250 249 / 0.95);
+  }
+
+  .dashboard-booth-matrix-panel__trigger {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: var(--dashboard-radius);
+    padding: 0.25rem 0.375rem;
+    text-align: left;
+    transition: background-color 0.15s;
+  }
+
+  .dashboard-booth-matrix-panel__trigger:hover {
+    background: rgb(245 245 244);
+  }
+
+  .dashboard-booth-matrix-panel__trigger:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  .dashboard-booth-matrix-panel__table-wrap {
+    max-height: 11rem;
+    overflow: auto;
+    border-radius: var(--dashboard-radius);
+    border: 1px solid rgb(231 229 228);
+    background: white;
+  }
+
+  .dashboard-booth-matrix-panel__table-wrap table tbody tr {
+    line-height: 1.2;
+  }
+
+  .dashboard-booth-matrix-panel__table-wrap table th,
+  .dashboard-booth-matrix-panel__table-wrap table td {
+    padding-block: 0.3125rem;
+  }
+
+  .dashboard-canvas-legend-rail {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    border-right: 1px solid rgb(231 229 228);
+    background: rgb(255 255 255 / 0.96);
+  }
+
+  .dashboard-canvas-legend-rail .canvas-legend-docked {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  #floor-plan-workspace .floor-plan-canvas-host--dashboard {
+    border-radius: var(--dashboard-radius);
+    border: 1px solid rgb(214 211 209);
+    box-shadow:
+      0 0 0 1px rgb(231 229 228 / 0.6),
+      0 8px 24px rgb(28 25 23 / 0.08);
   }
 
   .dashboard-pill-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.5rem;
     border-radius: 9999px;
     border: 1px solid rgb(231 229 228);
     background: white;
-    padding: 0.25rem 0.625rem;
+    padding: 0.2rem 0.625rem;
     font-size: 0.75rem;
     font-weight: 600;
-    transition: background-color 0.15s, border-color 0.15s;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .dashboard-pill-toggle__label {
+    color: rgb(120 113 108);
+    transition: color 0.15s;
+  }
+
+  .dashboard-pill-toggle__label.is-active {
+    color: rgb(6 78 59);
+  }
+
+  .dashboard-pill-toggle__track {
+    position: relative;
+    display: inline-flex;
+    height: 1.125rem;
+    width: 2rem;
+    shrink: 0;
+    align-items: center;
+    border-radius: 9999px;
+    background: rgb(231 229 228);
+    transition: background-color 0.2s;
+  }
+
+  .dashboard-pill-toggle__track.is-preview {
+    background: rgb(6 95 70);
+  }
+
+  .dashboard-pill-toggle__thumb {
+    position: absolute;
+    left: 0.125rem;
+    height: 0.875rem;
+    width: 0.875rem;
+    border-radius: 9999px;
+    background: white;
+    box-shadow: 0 1px 2px rgb(28 25 23 / 0.15);
+    transition: transform 0.2s ease-out;
+  }
+
+  .dashboard-pill-toggle__track.is-preview .dashboard-pill-toggle__thumb {
+    transform: translateX(0.875rem);
   }
 
   .dashboard-pill-toggle:hover {
@@ -412,16 +545,25 @@
     align-items: center;
     gap: 0.25rem;
     border-radius: 9999px;
-    background: rgb(236 253 245);
     padding: 0.125rem 0.5rem;
     font-size: 0.6875rem;
     font-weight: 600;
-    color: rgb(6 95 70);
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease,
+      box-shadow 0.25s ease;
   }
 
   .dashboard-save-chip[data-status='saving'] {
     background: rgb(254 249 195);
     color: rgb(133 77 14);
+    box-shadow: inset 0 0 0 1px rgb(250 204 21 / 0.35);
+  }
+
+  .dashboard-save-chip[data-status='saved'] {
+    background: rgb(236 253 245);
+    color: rgb(6 95 70);
+    box-shadow: inset 0 0 0 1px rgb(16 185 129 / 0.25);
   }
 
   .dashboard-top-toolbar-strip {
@@ -533,6 +675,27 @@
     min-height: 0;
     flex-grow: 1;
     overflow: visible;
+  }
+
+  /* Coordinator dashboard keeps viewport fill even when QA bootstrap class is present */
+  body:has(.coordinator-dashboard-workspace) #site-main:has(.dashboard-app-shell--qa-global-scroll) {
+    overflow: hidden;
+    height: 100%;
+  }
+
+  body:has(.coordinator-dashboard-workspace) .dashboard-app-shell--qa-global-scroll {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  body:has(.coordinator-dashboard-workspace) .dashboard-app-shell--qa-global-scroll .dashboard-app-shell__grid,
+  body:has(.coordinator-dashboard-workspace) .dashboard-app-shell--qa-global-scroll .dashboard-app-shell__center,
+  body:has(.coordinator-dashboard-workspace) .dashboard-app-shell--qa-global-scroll .dashboard-canvas-column,
+  body:has(.coordinator-dashboard-workspace) .dashboard-app-shell--qa-global-scroll .dashboard-canvas-column > div {
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
   }
 
   .dashboard-app-shell--qa-global-scroll {

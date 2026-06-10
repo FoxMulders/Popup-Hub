@@ -50,7 +50,8 @@ try {
     $buildJson = Join-Path $ProjectRoot 'build-number.json'
     if (Test-Path $buildJson) {
         $bn = Get-Content $buildJson -Raw | ConvertFrom-Json
-        $buildLine = "**build $($bn.build)** | commit ``$($bn.commit)``"
+        $semver = if ($bn.version) { "v$($bn.version)" } else { 'v?' }
+        $buildLine = "**$semver build $($bn.build)** | commit ``$($bn.commit)``"
     }
 
     $date = Get-Date -Format 'yyyy-MM-dd HH:mm'

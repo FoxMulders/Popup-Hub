@@ -855,7 +855,17 @@ function CanvasObjectsBase({
             labelText &&
             !isEditing &&
             !(obj.kind === 'wall' && suppressedPerimeterIds.has(obj.id))
-              ? renderObjectLabel(obj, { x, y, w, h, labelText })
+              ? renderObjectLabel(obj, {
+                  x,
+                  y,
+                  w,
+                  h,
+                  labelText,
+                  reserveBottomPx:
+                    obj.kind === 'booth' && placementStatus
+                      ? Math.min(h * 0.45, Math.max(16, h * 0.35))
+                      : 0,
+                })
               : null}
           </g>
         )
@@ -917,9 +927,16 @@ const EXTERIOR_LABEL_KINDS: ReadonlySet<PlacedObject['kind']> = new Set<
  */
 function renderObjectLabel(
   obj: PlacedObject,
-  geom: { x: number; y: number; w: number; h: number; labelText: string }
+  geom: {
+    x: number
+    y: number
+    w: number
+    h: number
+    labelText: string
+    reserveBottomPx?: number
+  }
 ) {
-  const { x, y, w, h, labelText } = geom
+  const { x, y, w, h, labelText, reserveBottomPx = 0 } = geom
   if (EXTERIOR_LABEL_KINDS.has(obj.kind)) {
     const isLandscape = w >= h
     const baseFontSize = 11
@@ -973,23 +990,31 @@ function renderObjectLabel(
     )
   }
   const baseFontSize = Math.min(14, Math.max(8, w * 0.18))
-  const fitted = fitTextInContainer(labelText, w, h, {
+  const labelHeight = Math.max(8, h - reserveBottomPx)
+  const wrapped = wrapTextInContainer(labelText, w, labelHeight, {
     baseFontSize,
     minFontSize: 6,
     padX: 4,
     padY: 2,
   })
+  const labelBlockHeight = wrapped.lines.length * wrapped.lineHeight
+  const startY =
+    y + (labelHeight - labelBlockHeight) / 2 + wrapped.fontSize * 0.35
   return (
     <text
       x={x + w / 2}
-      y={y + h / 2 + fitted.fontSize * 0.35}
+      y={startY}
       textAnchor="middle"
-      fontSize={fitted.fontSize}
+      fontSize={wrapped.fontSize}
       fontWeight={700}
       fill={textFillForObject(obj)}
       pointerEvents="none"
     >
-      {fitted.text}
+      {wrapped.lines.map((line, i) => (
+        <tspan key={i} x={x + w / 2} dy={i === 0 ? 0 : wrapped.lineHeight}>
+          {line}
+        </tspan>
+      ))}
     </text>
   )
 }
