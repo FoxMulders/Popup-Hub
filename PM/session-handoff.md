@@ -2,7 +2,10 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (floor plan designer exit navigation — Full canvas fail-safe, not deployed)
+## Shipped this session (Vercel Analytics — not deployed)
+- **`@vercel/analytics`:** Installed and wired in `app/layout.tsx` via `<Analytics />` for page-view tracking on Vercel deployments.
+
+## Shipped this session (floor plan designer exit navigation — Full canvas fail-safe, deployed 2026-06-10)
 - **Root cause:** Command-center **Full canvas** (`command-center-canvas-fullscreen`) and native wizard fullscreen hide site nav; coordinators had no persistent route back to event setup.
 - **`command-center-exit-link.tsx`:** `resolveDesignerExitHref` / `resolveDesignerExitLabel` — draft markets → `/coordinator/events/[id]/setup?step=3`; published → event overview; `CommandCenterExitButton` for toolbar/fullscreen overlays (`z-[10001]`, `pointer-events-auto`).
 - **Dashboard:** Sticky **Back to Event Setup** in `dashboard-left-panel.tsx`, `Dashboard_qa` left rail, `dashboard-tablet-tools-dock` drawer, and immersive header (`dashboard-command-center-header.tsx`); exits fullscreen before navigate.
@@ -173,9 +176,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `e8be8ed` (pushed to `origin/master`)
-- Last deploy commit: `e8be8ed` - feat: ship 2 session updates (header nav layout — hamburger menu, profile in drawer, logo left; booth wall bounce fix — 0′ flush, footprint clamp)
-- Production: https://popuphub.ca - **build 60** | commit `b1f6781` (handoff updated 2026-06-09 21:28)
+- Branch: `master` @ `52afad0` (pushed to `origin/master`)
+- Last deploy commit: `52afad0` - feat: floor plan designer exit navigation — Full canvas fail-safe
+- Production: https://popuphub.ca - **build 61** | commit `46518bf` (handoff updated 2026-06-10 08:31)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -552,7 +555,7 @@
 
 
 ## Last deploy
-- 2026-06-09 21:28 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (header nav layout — hamburger menu, profile in drawer, logo left; booth wall bounce fix — 0′ flush, footprint clamp)` (e8be8ed)
+- 2026-06-10 08:31 - Deploy via deploy-popuphub.ps1 - `feat: floor plan designer exit navigation — Full canvas fail-safe` (52afad0)
 
 
 ## Goal
