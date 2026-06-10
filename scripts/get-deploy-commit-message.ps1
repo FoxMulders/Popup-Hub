@@ -56,7 +56,8 @@ REM Pipeline: build -> commit (auto message) -> push -> vercel deploy --prod -> 
 REM
 REM Usage:
 REM   PM\Deploy-popuphub.bat [--no-pause]
-REM   PM\Deploy-popuphub.bat -SkipBuild -SkipCommit   (deploy-only)
+REM   PM\Deploy-popuphub.bat -SkipCommit              (redeploy prod, no new commit)
+REM   PM\Deploy-popuphub.bat -SkipBuild -SkipCommit   (fast redeploy)
 REM
 REM Bat-only flags: --no-pause / -NoPause
 REM PowerShell passthrough: -SkipBuild -SkipCommit -SkipDeploy -SkipHandoff
@@ -118,6 +119,12 @@ if defined DEPLOY_PS_ARGS (
     "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%"
 )
 set "EXITCODE=!ERRORLEVEL!"
+
+if "!EXITCODE!"=="2" (
+    echo.
+    echo Nothing to deploy. See messages above.
+    goto :done
+)
 
 if not "!EXITCODE!"=="0" goto :fail
 

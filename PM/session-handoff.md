@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+**Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
+
+## Shipped this session (deploy script already-shipped guidance, not deployed)
+- **`deploy-popuphub.ps1`:** When no `not deployed` handoff sections exist, print baseline branch/commit and how to add a section or run `-SkipCommit`; exit 2 (noop) if tree is clean, exit 1 only when uncommitted work lacks a handoff section.
+- **`Deploy-popuphub.bat`:** Exit code 2 shows "Nothing to deploy" instead of "Deploy failed"; PowerShell invoke uses safe `if defined DEPLOY_PS_ARGS` branch (no `PS_ARGS` parse error).
+- **Handoff:** Deploy gate note at top of this file.
+
 ## Shipped this session (mobile UX, nav/footer overhaul, auth flows, deployed 2026-06-10)
 - **Navigation:** Removed hamburger menus; `UserProfileMenu` dropdown (profile/user icon) holds nav links, notifications, sign-out, and **Suggest an Improvement** on all breakpoints. Desktop inline nav links remain on `lg+` in `app-nav.tsx`.
 - **Header:** `CenteredHeaderRow` uses a 3-column grid — logo centered; mobile logo height capped (`h-14`/`h-16`) to prevent clipping; `safe-top` minimum padding increased globally.

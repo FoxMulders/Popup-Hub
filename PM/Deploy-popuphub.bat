@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 REM PopUp Hub - build, commit, sync push, Vercel prod, session handoff (single instance).
 REM Works when: double-clicked in Explorer, run from cmd/PowerShell, any current directory.
-REM Next commit (auto): (none - add ## Shipped this session (... , not deployed) to PM/session-handoff.md)
+REM Next commit (auto): feat: deploy script already-shipped guidance
 REM
 REM Commit message is always auto-generated from PM/session-handoff.md undeployed
 REM Shipped sections. Update handoff after each scoped task; double-click to ship.
@@ -16,7 +16,8 @@ REM Pipeline: build -> commit (auto message) -> push -> vercel deploy --prod -> 
 REM
 REM Usage:
 REM   PM\Deploy-popuphub.bat [--no-pause]
-REM   PM\Deploy-popuphub.bat -SkipBuild -SkipCommit   (deploy-only)
+REM   PM\Deploy-popuphub.bat -SkipCommit              (redeploy prod, no new commit)
+REM   PM\Deploy-popuphub.bat -SkipBuild -SkipCommit   (fast redeploy)
 REM
 REM Bat-only flags: --no-pause / -NoPause
 REM PowerShell passthrough: -SkipBuild -SkipCommit -SkipDeploy -SkipHandoff
@@ -78,6 +79,12 @@ if defined DEPLOY_PS_ARGS (
     "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%"
 )
 set "EXITCODE=!ERRORLEVEL!"
+
+if "!EXITCODE!"=="2" (
+    echo.
+    echo Nothing to deploy. See messages above.
+    goto :done
+)
 
 if not "!EXITCODE!"=="0" goto :fail
 

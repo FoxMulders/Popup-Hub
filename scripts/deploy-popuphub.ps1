@@ -32,6 +32,33 @@ function Write-Step($text) {
     Write-Host "==> $text" -ForegroundColor Cyan
 }
 
+function Write-NothingToShipGuidance {
+    param(
+        [string]$Branch,
+        [string]$Commit,
+        [bool]$HasLocalChanges
+    )
+
+    Write-Host ''
+    Write-Host 'Nothing new to ship.' -ForegroundColor Yellow
+    Write-Host '  All ## Shipped this session sections in PM/session-handoff.md are already marked deployed.' -ForegroundColor Gray
+    Write-Host "  Branch: $Branch @ $Commit" -ForegroundColor Gray
+    if ($HasLocalChanges) {
+        Write-Host '  Working tree: uncommitted changes (add a handoff section before deploy).' -ForegroundColor Yellow
+    } else {
+        Write-Host '  Working tree: clean — production matches your last deploy.' -ForegroundColor Gray
+    }
+    Write-Host '  Production: https://popuphub.ca' -ForegroundColor Gray
+    Write-Host ''
+    Write-Host 'To ship new work, add to PM/session-handoff.md:' -ForegroundColor Cyan
+    Write-Host '  ## Shipped this session (short title, not deployed)' -ForegroundColor White
+    Write-Host '  - summary bullets' -ForegroundColor White
+    Write-Host ''
+    Write-Host 'To redeploy production without a new commit:' -ForegroundColor Cyan
+    Write-Host '  PM\Deploy-popuphub.bat -SkipCommit' -ForegroundColor White
+    Write-Host ''
+}
+
 if ($MessageArgs -and $MessageArgs.Count -gt 0) {
     $Message = $MessageArgs -join ' '
 }
@@ -41,12 +68,30 @@ if (-not $Message) {
     $Message = $handoffMessage
 }
 if (-not $Message) {
-    Write-Host 'No undeployed sections in PM/session-handoff.md — nothing to ship.' -ForegroundColor Red
-    Write-Host 'Add ## Shipped this session (... , not deployed) blocks, then run deploy again.' -ForegroundColor Yellow
-    exit 1
+    Push-Location $ProjectRoot
+    try {
+        $branch = git rev-parse --abbrev-ref HEAD 2>$null
+        $commit = git rev-parse --short HEAD 2>$null
+        $hasLocalChanges = [bool](git status --porcelain)
+
+        if ($SkipCommit) {
+            Write-Host 'Redeploy mode (-SkipCommit): continuing without a new handoff section.' -ForegroundColor DarkGray
+        } else {
+            Write-NothingToShipGuidance -Branch $branch -Commit $commit -HasLocalChanges:$hasLocalChanges
+            if (-not $hasLocalChanges) {
+                Write-Host '==> No deploy performed (already up to date).' -ForegroundColor Green
+                exit 2
+            }
+            exit 1
+        }
+    } finally {
+        Pop-Location
+    }
 }
 
-Write-Host "Deploy commit message (auto): $Message" -ForegroundColor DarkGray
+if ($Message) {
+    Write-Host "Deploy commit message (auto): $Message" -ForegroundColor DarkGray
+}
 
 function Test-CommandAvailable($name) {
     $cmd = Get-Command $name -ErrorAction SilentlyContinue
