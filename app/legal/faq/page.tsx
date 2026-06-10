@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Frequently asked questions about discovering markets, vending, and hosting events on Popup Hub.',
 }
 
-const LAST_UPDATED = 'June 8, 2026'
+const LAST_UPDATED = 'June 10, 2026'
 
 export default function FaqPage() {
   return (

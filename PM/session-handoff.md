@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (platform FAQ copy refresh, not deployed)
+- **`lib/legal/faq-content.tsx`:** Added coordinator value-prop FAQ (vs. DMs/spreadsheets); expanded pricing answer (vendor pass-through, coordinator fee toggle, offline-payment trust note); expanded fee rationale with mobile-app funding paragraph.
+- **`app/legal/faq/page.tsx`:** Updated last-modified date to June 10, 2026.
+- **Verify:** `/legal/faq` — new “Why should I choose Popup Hub…” entry visible; pricing and fee answers show structured multi-paragraph copy.
+
 ## Shipped this session (Blueprint Studio toolbar element panel entry animation, deployed 2026-06-10)
 - **Motion config:** `toolbar-element-panels-motion.ts` — shared Framer Motion variants with `x: 0` start/end so vendor and patron asset tables animate on a strict vertical center axis (`y` spring only).
 - **SHAPES & BOOTHS:** `canvas-toolbar-static.tsx` — VENDOR BOOTHS (top) and PATRON ELEMENTS (bottom) stacked in `flex flex-col items-center justify-center`; `TopBarAssetTablePanel` + staggered container entry; `useReducedMotion` bypass.
