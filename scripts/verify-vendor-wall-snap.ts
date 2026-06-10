@@ -99,6 +99,15 @@ assert(
 )
 assert(snapTop!.rotation === 0, `Top snap rotation=${snapTop!.rotation} expected 0`)
 
+// Booth exactly 4′ from top wall — at clearance target; must NOT snap flush.
+const atFourFt = vendorBooth(22, 5 + 4)
+atFourFt.id = 'vb-four-ft'
+doc.objectRoom = { 'vb-four-ft': roomId }
+assert(
+  snapVendorBoothToPerimeter(atFourFt, doc) === null,
+  'Should not snap when exactly 4′ from wall (clean clearance target)'
+)
+
 // Booth 5′ from top wall — beyond 4′ threshold; position-only snap must not fire.
 const farTop = vendorBooth(22, 5 + 5)
 assert(

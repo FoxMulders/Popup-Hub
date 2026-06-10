@@ -3,7 +3,6 @@ import {
   rotatedAabb,
   type Rect,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-import { VENDOR_BOOTH_AISLE_FT } from '@/lib/booth-planner/layout-clearance-constants'
 import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
 import type {
   BoothObject,
@@ -12,11 +11,17 @@ import type {
   RoomFrame,
 } from '@/components/coordinator/floor-plan-v2/state/types'
 
-/** Preferred minimum edge-to-edge aisle (ft) — shared between two booths. */
-export const BOOTH_CLEARANCE_TARGET_FT = VENDOR_BOOTH_AISLE_FT
+/** Minimum edge-to-edge aisle for published layouts (ft). */
+export const BOOTH_CLEARANCE_TARGET_FT = 4
 
-/** Edge-to-edge clearance at or below this reads as critically tight (ft). */
-export const BOOTH_CLEARANCE_CRITICAL_FT = 1
+/** Red band — critical violation (ft). */
+export const BOOTH_CLEARANCE_CRITICAL_FT = 2
+
+/** Yellow band upper bound — tight clearance (ft). */
+export const BOOTH_CLEARANCE_TIGHT_FT = 3
+
+/** Green band — clean clearance at or above this (ft). */
+export const BOOTH_CLEARANCE_GOOD_FT = 4
 
 export type BoothClearanceBand = 'critical' | 'tight' | 'good'
 
@@ -30,19 +35,29 @@ export const BOOTH_CLEARANCE_THEMES: Record<BoothClearanceBand, BoothClearanceTh
   critical: {
     fill: '#fecaca',
     stroke: '#dc2626',
-    fillOpacity: 0.72,
+    fillOpacity: 0.78,
   },
   tight: {
-    fill: '#fed7aa',
-    stroke: '#ea580c',
-    fillOpacity: 0.68,
+    fill: '#fef08a',
+    stroke: '#ca8a04',
+    fillOpacity: 0.74,
   },
   good: {
     fill: '#bbf7d0',
     stroke: '#16a34a',
-    fillOpacity: 0.55,
+    fillOpacity: 0.85,
   },
 }
+
+/** Structural fixtures that count as walls for clearance coloring. */
+const CLEARANCE_OBSTACLE_KINDS: ReadonlySet<PlacedObject['kind']> = new Set([
+  'wall',
+  'open_wall',
+  'stage',
+  'food_truck',
+  'door',
+  'emergency_exit',
+])
 
 /** Minimum positive edge-to-edge gap between two axis-aligned rects (ft). */
 export function edgeClearanceBetweenRects(a: Rect, b: Rect): number {
@@ -98,14 +113,24 @@ export function clearanceToRoomWallsFt(
 }
 
 export function clearanceBand(clearanceFt: number): BoothClearanceBand {
+  if (!Number.isFinite(clearanceFt) || clearanceFt >= BOOTH_CLEARANCE_GOOD_FT) {
+    return 'good'
+  }
   if (clearanceFt <= BOOTH_CLEARANCE_CRITICAL_FT) return 'critical'
-  if (clearanceFt < BOOTH_CLEARANCE_TARGET_FT) return 'tight' // (1′, 3′)
-  return 'good' // ≥3′ edge-to-edge
+  return 'tight'
 }
 
 /** Drawable booth footprint — edge-to-edge aisle, not collision probe padding. */
 function boothPlacementRect(booth: BoothObject): Rect {
   return rotatedAabb(booth)
+}
+
+function obstacleClearanceFt(
+  boothAabb: Rect,
+  other: PlacedObject
+): number | null {
+  if (!CLEARANCE_OBSTACLE_KINDS.has(other.kind)) return null
+  return edgeClearanceBetweenRects(boothAabb, rotatedAabb(other))
 }
 
 export function minVendorBoothClearanceFt(
@@ -118,13 +143,18 @@ export function minVendorBoothClearanceFt(
   let minGap = Number.POSITIVE_INFINITY
 
   for (const other of objects) {
-    if (other.id === booth.id || other.kind !== 'booth') continue
-    if (!isVendorBoothObject(other)) continue
-    const gap = edgeClearanceBetweenRects(
-      boothAabb,
-      boothPlacementRect(other as BoothObject)
-    )
-    if (gap < minGap) minGap = gap
+    if (other.id === booth.id) continue
+    if (other.kind === 'booth') {
+      if (!isVendorBoothObject(other)) continue
+      const gap = edgeClearanceBetweenRects(
+        boothAabb,
+        boothPlacementRect(other as BoothObject)
+      )
+      if (gap < minGap) minGap = gap
+      continue
+    }
+    const obstacleGap = obstacleClearanceFt(boothAabb, other)
+    if (obstacleGap != null && obstacleGap < minGap) minGap = obstacleGap
   }
 
   const roomId = objectRoom?.[booth.id]
@@ -134,7 +164,7 @@ export function minVendorBoothClearanceFt(
     if (wallGap < minGap) minGap = wallGap
   }
 
-  if (!Number.isFinite(minGap)) return BOOTH_CLEARANCE_TARGET_FT
+  if (!Number.isFinite(minGap)) return BOOTH_CLEARANCE_GOOD_FT
   return Math.max(0, minGap)
 }
 

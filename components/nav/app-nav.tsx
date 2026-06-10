@@ -69,8 +69,7 @@ export function AppNav({
         ? 'vendor'
         : 'patron'
   const links = NAV_LINKS[navRole] ?? []
-  const homeHref =
-    activePortal === 'coordinator' ? '/coordinator/dashboard' : '/'
+  const homeHref = '/'
 
   async function handleSignOut() {
     await signOutAndRedirectToLogin(supabase)

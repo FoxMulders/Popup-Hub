@@ -38,6 +38,10 @@ import {
 import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 import type { FloorPlanDoc } from '../state/types'
 import type { LayoutSpringPose } from '../hooks/use-layout-spring'
+import {
+  resolveBoothMapLabelText,
+  type BoothMapLabelMode,
+} from '@/lib/coordinator/booth-map-label'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
@@ -49,6 +53,9 @@ interface CanvasObjectsProps {
   showLabels?: boolean
   /** Dashboard booth fill overrides (unassigned / paid / VIP). */
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+  /** Vendor booth inline label mode (vendor name, category, or booth id). */
+  boothMapLabelMode?: BoothMapLabelMode
+  boothMapLabelByObjectId?: ReadonlyMap<string, { vendorName: string; category: string }>
   /** Object ids currently overlapping another placed object. */
   overlappingIds?: ReadonlySet<string>
   /**
@@ -449,6 +456,8 @@ function CanvasObjectsBase({
   pxPerFt,
   showLabels = true,
   boothPlacementStatusByObjectId,
+  boothMapLabelMode = 'vendor',
+  boothMapLabelByObjectId,
   overlappingIds,
   editingObjectId,
   eventCategoryNames,
@@ -558,10 +567,7 @@ function CanvasObjectsBase({
           const theme = BOOTH_CLEARANCE_THEMES[band]
           fill = theme.fill
           clearanceStroke = theme.stroke
-          clearanceFillOpacity =
-            band === 'good' && !emphasizeClearance
-              ? 0.85
-              : theme.fillOpacity
+          clearanceFillOpacity = theme.fillOpacity
         }
         // Vendor booths use solid yellow — payment status is shown via label text.
         // When the object is part of an explicit join group its
@@ -608,10 +614,21 @@ function CanvasObjectsBase({
           !isTableClusterBooth && obj.rotation && obj.rotation !== 0
             ? `rotate(${obj.rotation} ${x + w / 2} ${y + h / 2})`
             : undefined
+        const vendorBoothLabelMeta =
+          obj.kind === 'booth' && isVendorBoothObject(obj)
+            ? boothMapLabelByObjectId?.get(obj.id)
+            : undefined
         const labelText =
           obj.kind === 'label'
             ? (obj as LabelObject).text || obj.label || ''
-            : obj.label || objectFallbackLabel(obj)
+            : vendorBoothLabelMeta
+              ? resolveBoothMapLabelText(
+                  boothMapLabelMode,
+                  obj.label || objectFallbackLabel(obj),
+                  vendorBoothLabelMeta.vendorName,
+                  vendorBoothLabelMeta.category
+                )
+              : obj.label || objectFallbackLabel(obj)
         const isEditing = editingObjectId === obj.id
 
         // Wall carving: when a door / emergency exit overlaps a
@@ -757,7 +774,10 @@ function CanvasObjectsBase({
                   : {})}
               />
             )}
-            {obj.kind === 'booth' && placementStatus && !isEditing ? (
+            {obj.kind === 'booth' &&
+            placementStatus &&
+            !isEditing &&
+            !vendorBoothLabelMeta ? (
               (() => {
                 const statusLabel =
                   boothStatusLabel(obj, boothPlacementStatusByObjectId) ?? ''
@@ -916,7 +936,9 @@ function CanvasObjectsBase({
                   h,
                   labelText,
                   reserveBottomPx:
-                    obj.kind === 'booth' && placementStatus
+                    obj.kind === 'booth' &&
+                    placementStatus &&
+                    !vendorBoothLabelMeta
                       ? Math.min(h * 0.45, Math.max(16, h * 0.35))
                       : 0,
                 })

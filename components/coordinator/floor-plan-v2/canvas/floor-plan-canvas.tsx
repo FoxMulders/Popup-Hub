@@ -46,6 +46,7 @@ import {
 } from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
+import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import type { ToolState } from '../tools/types'
 import { cn } from '@/lib/utils'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
@@ -125,6 +126,11 @@ export interface FloorPlanCanvasProps {
   /** Fixed pixels-per-foot at zoom = 1. */
   basePxPerFt?: number
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+  boothMapLabelMode?: BoothMapLabelMode
+  boothMapLabelByObjectId?: ReadonlyMap<
+    string,
+    { vendorName: string; category: string }
+  >
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
   autoArrangeMode?: AutoArrangeMode
   /** Computed patron viewing path (feet) — dotted overlay when set. */
@@ -190,6 +196,8 @@ export function FloorPlanCanvas({
   className,
   basePxPerFt = DEFAULT_BASE_PX_PER_FT,
   boothPlacementStatusByObjectId,
+  boothMapLabelMode,
+  boothMapLabelByObjectId,
   onVendorDrop,
   autoArrangeMode = 'grid',
   patronTrafficPath = null,
@@ -727,6 +735,8 @@ export function FloorPlanCanvas({
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+            boothMapLabelMode={boothMapLabelMode}
+            boothMapLabelByObjectId={boothMapLabelByObjectId}
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }
@@ -755,6 +765,8 @@ export function FloorPlanCanvas({
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+            boothMapLabelMode={boothMapLabelMode}
+            boothMapLabelByObjectId={boothMapLabelByObjectId}
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }

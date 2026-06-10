@@ -31,6 +31,7 @@ import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
 import { openDualScreenLedgerWindow } from '@/lib/coordinator/floorplan-sync'
+import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridDocPatch } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
@@ -255,6 +256,10 @@ export interface FloorPlanV2Props {
   /** Fired when the number of placed canvas objects changes. */
   onPlacedCountChange?: (count: number) => void
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+  boothMapLabelByObjectId?: ReadonlyMap<
+    string,
+    { vendorName: string; category: string }
+  >
   onStoreReady?: (store: FloorPlanDocStore | null) => void
   onSelectionChange?: (store: FloorPlanDocStore) => void
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
@@ -330,6 +335,7 @@ function FloorPlanV2Workspace({
   chrome = 'default',
   onPlacedCountChange,
   boothPlacementStatusByObjectId,
+  boothMapLabelByObjectId,
   onStoreReady,
   onSelectionChange,
   onVendorDrop,
@@ -407,7 +413,28 @@ function FloorPlanV2Workspace({
     useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
+  const [boothMapLabelMode, setBoothMapLabelMode] = useState<BoothMapLabelMode>(
+    () => {
+      if (!isDashboard || typeof window === 'undefined') return 'vendor'
+      try {
+        const raw = window.localStorage.getItem('popup-hub:booth-map-label-mode')
+        if (raw === 'category' || raw === 'boothId' || raw === 'vendor') return raw
+      } catch {
+        // ignore
+      }
+      return 'vendor'
+    }
+  )
   const [patronPathEnabled, setPatronPathEnabled] = useState(false)
+
+  useEffect(() => {
+    if (!isDashboard) return
+    try {
+      window.localStorage.setItem('popup-hub:booth-map-label-mode', boothMapLabelMode)
+    } catch {
+      // ignore
+    }
+  }, [boothMapLabelMode, isDashboard])
   const {
     layoutSpringPoses,
     startLayoutSpring,
@@ -2266,6 +2293,8 @@ function FloorPlanV2Workspace({
       highlightedSelectionMetrics={highlightedSelectionMetrics}
       showLabels={showLabels}
       onShowLabelsChange={setShowLabels}
+      boothMapLabelMode={boothMapLabelMode}
+      onBoothMapLabelModeChange={setBoothMapLabelMode}
       canvasFullscreen={dashboardImmersive}
       onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
       onLaunchDualScreen={isDashboard ? handleLaunchDualScreen : undefined}
@@ -2424,6 +2453,10 @@ function FloorPlanV2Workspace({
                     onZoomChange={setCurrentZoom}
                     eventCategoryNames={eventCategoryNames}
                     boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+                    boothMapLabelMode={isDashboard ? boothMapLabelMode : undefined}
+                    boothMapLabelByObjectId={
+                      isDashboard ? boothMapLabelByObjectId : undefined
+                    }
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
@@ -2583,6 +2616,10 @@ function FloorPlanV2Workspace({
                     onZoomChange={setCurrentZoom}
                     eventCategoryNames={eventCategoryNames}
                     boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+                    boothMapLabelMode={isDashboard ? boothMapLabelMode : undefined}
+                    boothMapLabelByObjectId={
+                      isDashboard ? boothMapLabelByObjectId : undefined
+                    }
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}

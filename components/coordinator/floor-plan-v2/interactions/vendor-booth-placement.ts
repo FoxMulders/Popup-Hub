@@ -325,7 +325,7 @@ export function vendorBoothPerimeterSnapEdge(
   const roomId = doc.objectRoom?.[booth.id] ?? frame.id
   const snapFrame = snapFrameForRoom(doc, roomId, frame)
   const { edge, distanceFt } = nearestRoomEdge(booth, snapFrame)
-  return distanceFt <= snapToleranceFt ? edge : null
+  return distanceFt < snapToleranceFt ? edge : null
 }
 
 /** Apply perimeter snap or wall-facing orientation for vendor booths. */

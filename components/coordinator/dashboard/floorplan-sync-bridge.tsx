@@ -15,7 +15,13 @@ import { useBoothMatrixRows } from './use-booth-matrix-rows'
  */
 export function FloorplanSyncBridge() {
   const rows = useBoothMatrixRows()
-  const { selectedEventId, selectedBoothId, focusBooth } = useMarketManagement()
+  const {
+    selectedEventId,
+    selectedBoothId,
+    focusBooth,
+    assignVendorToBoothByVendorId,
+    updateBoothPaymentStatus,
+  } = useMarketManagement()
 
   const publishMatrix = useCallback(() => {
     const payload: FloorplanMatrixSyncRow[] = rows.map((row) => ({
@@ -52,8 +58,24 @@ export function FloorplanSyncBridge() {
       if (message.type === 'selection' && message.boothId) {
         focusBooth(message.boothId)
       }
+      if (message.type === 'matrix_assign_vendor') {
+        assignVendorToBoothByVendorId(message.boothId, message.vendorId)
+        publishMatrix()
+      }
+      if (message.type === 'matrix_set_status') {
+        void updateBoothPaymentStatus(message.boothId, message.status).then(
+          (ok) => {
+            if (ok) publishMatrix()
+          }
+        )
+      }
     })
-  }, [focusBooth, publishMatrix])
+  }, [
+    assignVendorToBoothByVendorId,
+    focusBooth,
+    publishMatrix,
+    updateBoothPaymentStatus,
+  ])
 
   return null
 }

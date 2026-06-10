@@ -21,6 +21,7 @@ import {
   resolveDesignerExitLabel,
 } from '@/components/coordinator/command-center-exit-link'
 import { useMarketManagement } from './market-management-context'
+import { useBoothEntities } from './use-booth-entities'
 
 export interface DashboardFloorPlanViewportProps {
   /** Fired when the CAD canvas store is ready for interaction */
@@ -149,6 +150,18 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     [boothStatusByObjectId]
   )
 
+  const boothEntities = useBoothEntities()
+  const boothMapLabelByObjectId = useMemo(() => {
+    const map = new Map<string, { vendorName: string; category: string }>()
+    for (const entity of boothEntities) {
+      map.set(entity.id, {
+        vendorName: entity.vendorName,
+        category: entity.productCategory,
+      })
+    }
+    return map
+  }, [boothEntities])
+
   useEffect(() => {
     if (!selectedEventId) onInteractive?.()
   }, [selectedEventId, onInteractive])
@@ -201,6 +214,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         eventCategoryNames={categoryNames}
         applications={approvedPool}
         boothPlacementStatusByObjectId={boothStatusMap}
+        boothMapLabelByObjectId={boothMapLabelByObjectId}
         onStoreReady={handleStoreReady}
         onSelectionChange={handleSelectionChange}
         onVendorDrop={handleVendorDrop}

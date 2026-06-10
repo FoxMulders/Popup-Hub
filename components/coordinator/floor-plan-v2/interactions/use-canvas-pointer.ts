@@ -14,7 +14,10 @@ import {
   boothDimensionsForTableSpec,
   boothPatchForTableSize,
 } from '@/lib/booth-planner/table-booth-consolidation'
-import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
+import {
+  isGuestTableBooth,
+  type TableSizeSpec,
+} from '@/lib/booth-planner/table-shape'
 import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { useDebugLog } from '../debug/debug-log-context'
 import { formatPlacementProbe } from '../debug/format-geometry-log'
@@ -74,8 +77,6 @@ import type { AutoArrangeMode } from '../engine/auto-arrange'
 import {
   isVendorBoothObject,
   isCardinalRotation,
-  vendorBoothPerimeterSnapPatch,
-  vendorBoothPerimeterSnapEdge,
   type RoomEdgeSide,
 } from './vendor-booth-placement'
 import {
@@ -86,9 +87,14 @@ import {
 } from './structural-wall-snap'
 import { resolveTablePlacementPreview } from './table-placement-preview'
 import {
-  boothClampDeltaForRoom,
   footprintClampDeltaForRoom,
 } from '@/lib/floor-plan/boundary-constraints'
+import {
+  boothLayoutCommitPatch,
+  boothLayoutLockedWallEdge,
+  boothLayoutMovePatch,
+  resolveBoothMoveSnapFt,
+} from '../engine/booth-layout-engine'
 
 interface UseCanvasPointerOptions {
   store: FloorPlanDocStore
@@ -339,29 +345,6 @@ export function resolveDrawCommitRect(
   }
 }
 
-function applyVendorBoothSnapIfNearWall(
-  booth: BoothObject,
-  doc: Parameters<typeof vendorBoothPerimeterSnapPatch>[1],
-  options?: {
-    snapRotation?: boolean
-    preferredEdge?: RoomEdgeSide | null
-    /** Live drag — position snap only; skip orient fallback that fights clamp/grid. */
-    positionOnly?: boolean
-  }
-): BoothObject {
-  const snap = vendorBoothPerimeterSnapPatch(booth, doc, {
-    preferredEdge: options?.preferredEdge,
-    positionOnly: options?.positionOnly,
-  })
-  if (!snap) return booth
-  const snapRotation = options?.snapRotation ?? true
-  if (!snapRotation || !isCardinalRotation(booth.rotation ?? 0)) {
-    const { rotation: _ignored, ...positionPatch } = snap
-    return { ...booth, ...positionPatch } as BoothObject
-  }
-  return { ...booth, ...snap } as BoothObject
-}
-
 function dragCommitPatchForObject(
   obj: PlacedObject,
   drag: {
@@ -369,22 +352,32 @@ function dragCommitPatchForObject(
     lockedWallEdges: Map<string, RoomEdgeSide>
   },
   doc: FloorPlanDocStore['doc'],
-  activeRoomId: string | null | undefined
+  activeRoomId: string | null | undefined,
+  snapFt: number
 ): Partial<PlacedObject> {
-  let patch: Partial<PlacedObject> = { x: obj.x, y: obj.y }
-  if (isVendorBoothObject(obj)) {
-    const snapped = applyVendorBoothSnapIfNearWall(obj as BoothObject, doc, {
-      preferredEdge: drag.lockedWallEdges.get(obj.id) ?? null,
-    })
-    const snapFt = doc.snapFt > 0 ? doc.snapFt : 1
-    patch = {
-      x: snapToGrid(snapped.x, snapFt),
-      y: snapToGrid(snapped.y, snapFt),
-      width: snapped.width,
-      height: snapped.height,
-      rotation: snapped.rotation,
+  if (obj.kind === 'booth') {
+    const booth = obj as BoothObject
+    if (!isGuestTableBooth(booth)) {
+      return boothLayoutCommitPatch(booth, doc, {
+        snapFt,
+        activeRoomId,
+        preferredEdge: drag.lockedWallEdges.get(booth.id) ?? null,
+      })
     }
-  } else if (isStructuralWallSnapKind(obj.kind)) {
+    const roomId = doc.objectRoom?.[booth.id] ?? activeRoomId
+    if (roomId) {
+      const clamp = footprintClampDeltaForRoom(booth, doc, roomId)
+      if (clamp.dx !== 0 || clamp.dy !== 0) {
+        return {
+          x: booth.x + clamp.dx,
+          y: booth.y + clamp.dy,
+        }
+      }
+    }
+    return { x: booth.x, y: booth.y }
+  }
+  let patch: Partial<PlacedObject> = { x: obj.x, y: obj.y }
+  if (isStructuralWallSnapKind(obj.kind)) {
     const roomId = doc.objectRoom?.[obj.id] ?? activeRoomId
     const frame = roomId ? doc.rooms?.find((r) => r.id === roomId) : null
     if (frame) {
@@ -392,21 +385,6 @@ function dragCommitPatchForObject(
     } else {
       const snap = snapStructuralAssetForDoc(obj, doc)
       if (snap) patch = snap
-    }
-  }
-  const roomId = doc.objectRoom?.[obj.id] ?? activeRoomId
-  if (obj.kind === 'booth' && roomId) {
-    const clamp = footprintClampDeltaForRoom(
-      objectWithPatch(obj, patch),
-      doc,
-      roomId
-    )
-    if (clamp.dx !== 0 || clamp.dy !== 0) {
-      patch = {
-        ...patch,
-        x: (patch.x ?? obj.x) + clamp.dx,
-        y: (patch.y ?? obj.y) + clamp.dy,
-      }
     }
   }
   return patch
@@ -581,6 +559,28 @@ export function useCanvasPointer(
     panActiveRef.current = panActive
   }, [panActive])
 
+  /** Tracks Shift held during drag when pointer events omit modifier state. */
+  const shiftHeldRef = useRef(false)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') shiftHeldRef.current = true
+    }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') shiftHeldRef.current = false
+    }
+    const onBlur = () => {
+      shiftHeldRef.current = false
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
+    }
+  }, [])
+
   const toolStateRef = useRef(toolState)
   useEffect(() => {
     toolStateRef.current = toolState
@@ -612,10 +612,7 @@ export function useCanvasPointer(
         if (ids.includes(obj.id)) {
           originals.set(obj.id, { x: obj.x, y: obj.y })
           if (isVendorBoothObject(obj)) {
-            const edge = vendorBoothPerimeterSnapEdge(
-              obj as BoothObject,
-              store.doc
-            )
+            const edge = boothLayoutLockedWallEdge(obj as BoothObject, store.doc)
             if (edge) lockedWallEdges.set(obj.id, edge)
           }
         }
@@ -1163,7 +1160,11 @@ export function useCanvasPointer(
           id: string
           patch: Partial<PlacedObject>
         }> = []
-        const snap = store.doc.snapFt
+        const snapFt = resolveBoothMoveSnapFt({
+          shiftKey,
+          shiftHeld: shiftHeldRef.current,
+          docSnapFt: store.doc.snapFt,
+        })
         const objectRoom = store.doc.objectRoom ?? {}
         const objById = new Map(store.doc.objects.map((o) => [o.id, o]))
         for (const id of drag.ids) {
@@ -1171,47 +1172,21 @@ export function useCanvasPointer(
           if (!orig) continue
           const obj = objById.get(id)
           if (!obj) continue
-          const proposedX = snapToGrid(orig.x + dx, snap)
-          const proposedY = snapToGrid(orig.y + dy, snap)
-          let patch: Partial<PlacedObject> = {
-            x: proposedX,
-            y: proposedY,
-          }
+          const patch = boothLayoutMovePatch(obj, orig, dx, dy, store.doc, {
+            snapFt,
+            activeRoomId: objectRoom[id] ?? activeRoomIdRef.current ?? null,
+            preferredEdge: drag.lockedWallEdges.get(id) ?? null,
+            positionOnly: true,
+            snapRotation: isCardinalRotation(obj.rotation ?? 0),
+          })
           if (isVendorBoothObject(obj)) {
-            const preferredEdge = drag.lockedWallEdges.get(id) ?? null
-            const snapped = applyVendorBoothSnapIfNearWall(
-              { ...obj, ...patch } as BoothObject,
-              store.doc,
-              {
-                snapRotation: isCardinalRotation(obj.rotation ?? 0),
-                preferredEdge,
-                positionOnly: true,
-              }
-            )
-            patch = {
-              x: snapped.x,
-              y: snapped.y,
-              width: snapped.width,
-              height: snapped.height,
-              rotation: snapped.rotation,
-            }
-            const lockedEdge = vendorBoothPerimeterSnapEdge(
-              snapped,
-              store.doc
-            )
+            const snapped = { ...obj, ...patch } as BoothObject
+            const lockedEdge = boothLayoutLockedWallEdge(snapped, store.doc)
             if (lockedEdge) {
               drag.lockedWallEdges.set(id, lockedEdge)
             } else {
               drag.lockedWallEdges.delete(id)
             }
-          }
-          const probe = objectWithPatch(obj, patch)
-          const roomId = objectRoom[id] ?? activeRoomIdRef.current ?? null
-          const clampDelta = footprintClampDeltaForRoom(probe, store.doc, roomId)
-          patch = {
-            ...patch,
-            x: (patch.x ?? obj.x) + clampDelta.dx,
-            y: (patch.y ?? obj.y) + clampDelta.dy,
           }
           patches.push({
             id,
@@ -1575,6 +1550,11 @@ export function useCanvasPointer(
       const drag = dragRef.current
       if (drag && drag.pointerId === e.pointerId) {
         if (drag.moved) {
+          const commitSnapFt = resolveBoothMoveSnapFt({
+            shiftKey: e.shiftKey,
+            shiftHeld: shiftHeldRef.current,
+            docSnapFt: store.doc.snapFt,
+          })
           // Same-category proximity gate: when the drag would land
           // any moved booth within `<4 cols AND <2 rows` of another
           // same-category booth, snap the entire move back to its
@@ -1592,7 +1572,8 @@ export function useCanvasPointer(
                   o,
                   drag,
                   store.doc,
-                  activeRoomIdRef.current
+                  activeRoomIdRef.current,
+                  commitSnapFt
                 )
               )
             )
@@ -1866,7 +1847,14 @@ function commitDraft(
   }
   // Wall-orientation snap for vendor booths near perimeter walls.
   if (isVendorBoothObject(obj)) {
-    obj = applyVendorBoothSnapIfNearWall(obj as BoothObject, store.doc) as PlacedObject
+    const snapFt = store.doc.snapFt > 0 ? store.doc.snapFt : 1
+    obj = {
+      ...obj,
+      ...boothLayoutCommitPatch(obj as BoothObject, store.doc, {
+        snapFt,
+        activeRoomId: roomId ?? null,
+      }),
+    } as PlacedObject
   }
   // Same-category proximity gate for newly-drawn vendor booths.
   if (obj.kind === 'booth' && (obj as BoothObject).tablePurpose !== 'guest') {

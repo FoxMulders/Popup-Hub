@@ -50,6 +50,7 @@ import type { DrawShape, ToolState } from './types'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
 import { formatDiscreteZoomPercent } from '@/lib/floor-plan/discrete-zoom'
+import { BOOTH_MAP_LABEL_OPTIONS } from '@/lib/coordinator/booth-map-label'
 import {
   CommandButton,
   toolbarControlHeight,
@@ -278,6 +279,10 @@ export interface CanvasCommandBarBlockContext {
   highlightedSelectionMetrics?: string | null
   showLabels?: boolean
   onShowLabelsChange?: (show: boolean) => void
+  boothMapLabelMode?: import('@/lib/coordinator/booth-map-label').BoothMapLabelMode
+  onBoothMapLabelModeChange?: (
+    mode: import('@/lib/coordinator/booth-map-label').BoothMapLabelMode
+  ) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
   onLaunchDualScreen?: () => void
@@ -1204,13 +1209,39 @@ export function renderCanvasCommandBarBlock(
                   )}
                 </CommandButton>
               ) : null}
+              {ctx.onBoothMapLabelModeChange ? (
+                <label
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 rounded-lg border border-stone-200 bg-white px-1.5 text-[10px] font-semibold text-stone-700',
+                    toolbarControlHeight(compact)
+                  )}
+                >
+                  <span className="hidden sm:inline">Map labels</span>
+                  <select
+                    className="max-w-[7.5rem] min-w-0 rounded-lg border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                    aria-label="Map labels — booth text overlay"
+                    value={ctx.boothMapLabelMode ?? 'vendor'}
+                    onChange={(e) =>
+                      ctx.onBoothMapLabelModeChange!(
+                        e.target.value as import('@/lib/coordinator/booth-map-label').BoothMapLabelMode
+                      )
+                    }
+                  >
+                    {BOOTH_MAP_LABEL_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               {ctx.onLaunchDualScreen ? (
                 <button
                   type="button"
                   onClick={ctx.onLaunchDualScreen}
                   title="Open booth matrix in a second window"
                   className={cn(
-                    'inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
+                    'inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
                     toolbarControlHeight(compact)
                   )}
                 >
@@ -1228,7 +1259,7 @@ export function renderCanvasCommandBarBlock(
                       : 'Expand canvas to fill the monitor'
                   }
                   className={cn(
-                    'inline-flex shrink-0 items-center gap-1 rounded-md border border-stone-300 bg-white px-2 text-[11px] font-semibold text-stone-800 hover:bg-stone-50',
+                    'inline-flex shrink-0 items-center gap-1 rounded-lg border border-stone-300 bg-white px-2 text-[11px] font-semibold text-stone-800 hover:bg-stone-50',
                     ctx.canvasFullscreen && 'border-stone-700 bg-stone-800 text-white hover:bg-stone-700',
                     toolbarControlHeight(compact)
                   )}

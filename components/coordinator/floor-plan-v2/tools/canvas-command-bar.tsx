@@ -38,6 +38,10 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   highlightedSelectionMetrics?: string | null
   showLabels?: boolean
   onShowLabelsChange?: (show: boolean) => void
+  boothMapLabelMode?: import('@/lib/coordinator/booth-map-label').BoothMapLabelMode
+  onBoothMapLabelModeChange?: (
+    mode: import('@/lib/coordinator/booth-map-label').BoothMapLabelMode
+  ) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
   onLaunchDualScreen?: () => void
@@ -135,6 +139,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     highlightedSelectionMetrics,
     showLabels = true,
     onShowLabelsChange,
+    boothMapLabelMode,
+    onBoothMapLabelModeChange,
     canvasFullscreen = false,
     onToggleCanvasFullscreen,
     onLaunchDualScreen,
@@ -256,6 +262,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       highlightedSelectionMetrics,
       showLabels,
       onShowLabelsChange,
+      boothMapLabelMode,
+      onBoothMapLabelModeChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
       onLaunchDualScreen,
@@ -338,6 +346,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       highlightedSelectionMetrics,
       showLabels,
       onShowLabelsChange,
+      boothMapLabelMode,
+      onBoothMapLabelModeChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
       onLaunchDualScreen,

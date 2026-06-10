@@ -1,9 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import {
-  footprintClampDeltaForRoom,
-} from '@/lib/floor-plan/boundary-constraints'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
 import type { BoothObject, PlacedObject } from '../state/types'
 import { findFirstViolationInMove } from './category-rules'
@@ -20,14 +17,18 @@ import {
   snapStructuralAssetToRoomFrame,
 } from './structural-wall-snap'
 import {
-  isCardinalRotation,
   isVendorBoothObject,
-  vendorBoothPerimeterSnapPatch,
   type RoomEdgeSide,
 } from './vendor-booth-placement'
+import {
+  boothLayoutMovePatch,
+  BOOTH_MOVE_SNAP_FT,
+  BOOTH_MOVE_SNAP_SHIFT_FT,
+  resolveBoothMoveSnapFt,
+} from '../engine/booth-layout-engine'
 
-export const KEYBOARD_NUDGE_STEP_FT = 1
-export const KEYBOARD_NUDGE_SHIFT_STEP_FT = 5
+export const KEYBOARD_NUDGE_STEP_FT = BOOTH_MOVE_SNAP_FT
+export const KEYBOARD_NUDGE_SHIFT_STEP_FT = BOOTH_MOVE_SNAP_SHIFT_FT
 
 export type KeyboardNudgeDirection = 'up' | 'down' | 'left' | 'right'
 
@@ -68,23 +69,6 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return tag === 'input' || tag === 'textarea' || target.isContentEditable
 }
 
-function applyVendorSnap(
-  booth: BoothObject,
-  doc: FloorPlanDocStore['doc'],
-  preferredEdge?: RoomEdgeSide | null
-): BoothObject {
-  const snap = vendorBoothPerimeterSnapPatch(booth, doc, {
-    preferredEdge,
-    positionOnly: true,
-  })
-  if (!snap) return booth
-  if (!isCardinalRotation(booth.rotation ?? 0)) {
-    const { rotation: _ignored, ...positionPatch } = snap
-    return { ...booth, ...positionPatch } as BoothObject
-  }
-  return { ...booth, ...snap } as BoothObject
-}
-
 function objectWithPatch(
   obj: PlacedObject,
   patch: Partial<PlacedObject>
@@ -98,26 +82,23 @@ function patchAfterNudge(
   dy: number,
   doc: FloorPlanDocStore['doc'],
   activeRoomId: string | null | undefined,
+  snapFt: number,
   preferredEdge?: RoomEdgeSide | null
 ): Partial<PlacedObject> {
+  if (isVendorBoothObject(obj)) {
+    return boothLayoutMovePatch(obj, { x: obj.x, y: obj.y }, dx, dy, doc, {
+      snapFt,
+      activeRoomId,
+      preferredEdge,
+      positionOnly: true,
+    })
+  }
+
   let patch: Partial<PlacedObject> = {
     x: obj.x + dx,
     y: obj.y + dy,
   }
-  if (isVendorBoothObject(obj)) {
-    const snapped = applyVendorSnap(
-      objectWithPatch(obj, patch) as BoothObject,
-      doc,
-      preferredEdge
-    )
-    patch = {
-      x: snapped.x,
-      y: snapped.y,
-      width: snapped.width,
-      height: snapped.height,
-      rotation: snapped.rotation,
-    }
-  } else if (isStructuralWallSnapKind(obj.kind)) {
+  if (isStructuralWallSnapKind(obj.kind)) {
     const structuralRoomId = doc.objectRoom?.[obj.id] ?? activeRoomId
     const frame = structuralRoomId
       ? doc.rooms?.find((r) => r.id === structuralRoomId)
@@ -128,18 +109,6 @@ function patchAfterNudge(
       const snap = snapStructuralAssetForDoc(objectWithPatch(obj, patch), doc)
       if (snap) patch = snap
     }
-  }
-
-  const roomId = doc.objectRoom?.[obj.id] ?? activeRoomId ?? null
-  const roomClampDelta = footprintClampDeltaForRoom(
-    objectWithPatch(obj, patch),
-    doc,
-    roomId
-  )
-  patch = {
-    ...patch,
-    x: (patch.x ?? obj.x) + roomClampDelta.dx,
-    y: (patch.y ?? obj.y) + roomClampDelta.dy,
   }
 
   const probe = objectWithPatch(obj, patch)
@@ -225,7 +194,7 @@ export function nudgeSelectedObjects(
   for (const id of moveIds) {
     const obj = objById.get(id)
     if (!obj) continue
-    const patch = patchAfterNudge(obj, dx, dy, doc, activeRoomId)
+    const patch = patchAfterNudge(obj, dx, dy, doc, activeRoomId, stepFt)
     if (patch.x === obj.x && patch.y === obj.y) continue
     entries.push({
       id,
@@ -304,9 +273,10 @@ export function useSelectionKeyboardNudge(
       if (!direction) return
       if (store.selectedIds.size === 0) return
 
-      const stepFt = e.shiftKey
-        ? KEYBOARD_NUDGE_SHIFT_STEP_FT
-        : KEYBOARD_NUDGE_STEP_FT
+      const stepFt = resolveBoothMoveSnapFt({
+        shiftKey: e.shiftKey,
+        docSnapFt: store.doc.snapFt,
+      })
       const moved = nudgeSelectedObjects(store, direction, stepFt, {
         activeRoomId,
         onProximityViolation,

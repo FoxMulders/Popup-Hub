@@ -295,7 +295,7 @@ export function isBoothSnappedToRoomPerimeter(
   frame: RoomFrame,
   tolFt = PERIMETER_BOOTH_SNAP_FT
 ): boolean {
-  return nearestRoomEdge(booth, frame).distanceFt <= tolFt
+  return nearestRoomEdge(booth, frame).distanceFt < tolFt
 }
 
 /**
@@ -376,7 +376,7 @@ export function snapBoothToUnionPerimeter(
       .filter((hit) => hit.edge === pickedEdge.edge)
       .sort((a, b) => a.distanceFt - b.distanceFt)[0] ?? null
 
-  if (!best || best.distanceFt > tolFt) return null
+  if (!best || best.distanceFt >= tolFt) return null
   return {
     ...booth,
     ...boothOnUnionEdge(best.edge, best.along, best.lineCoord, span, depth),
@@ -390,7 +390,7 @@ export function snapBoothToRoomPerimeter(
   preferredEdge?: RoomEdgeSide | null
 ): BoothObject | null {
   const { edge, distanceFt } = nearestRoomEdge(booth, frame, preferredEdge)
-  if (distanceFt > tolFt) return null
+  if (distanceFt >= tolFt) return null
 
   const { span, depth } = boothSpanAndDepth(
     booth.width,

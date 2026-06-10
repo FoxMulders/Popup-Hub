@@ -23,6 +23,18 @@ export type FloorplanSyncMessage =
   | { type: 'matrix_sync'; source: FloorplanSyncSource; eventId: string | null; rows: FloorplanMatrixSyncRow[]; selectedBoothId: string | null }
   | { type: 'selection'; source: FloorplanSyncSource; boothId: string | null }
   | { type: 'focus_booth'; source: FloorplanSyncSource; boothId: string }
+  | {
+      type: 'matrix_assign_vendor'
+      source: FloorplanSyncSource
+      boothId: string
+      vendorId: string | null
+    }
+  | {
+      type: 'matrix_set_status'
+      source: FloorplanSyncSource
+      boothId: string
+      status: BoothPlacementStatus
+    }
 
 export function createFloorplanSyncChannel(): BroadcastChannel | null {
   if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') {

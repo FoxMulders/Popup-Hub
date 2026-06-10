@@ -4,6 +4,21 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (canvas layout engine — grid snap, wall clearance, booth colors, not deployed)
+- **Layout engine:** `engine/booth-layout-engine.ts` — shared drag/nudge loop: 1′ default snap, 5′ with Shift (`resolveBoothMoveSnapFt`); wired in `use-canvas-pointer.ts` (Shift key listener + drag frames) and `selection-keyboard-nudge.ts`.
+- **Wall placement:** Perimeter snap uses strict `< 4′` threshold (`perimeter-booth-orientation.ts`, `vendor-booth-placement.ts`) so booths can sit exactly 4′ from walls without snap jitter; `verify-vendor-wall-snap.ts` adds 4′ regression.
+- **Clearance colors:** `booth-clearance-visual.ts` — red ≤2′, yellow &gt;2′ and &lt;4′, green ≥4′; structural walls count as obstacles; isolated booths default green (fixes gray/wrong fills); legend copy updated.
+- **Map labels:** Unchanged toggle path — `resolveBoothMapLabelText` + clearance fills compose independently in `canvas-objects.tsx`.
+- **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts`, `verify-vendor-booth-clearance.ts`, `verify-booth-clearance-visual.ts` — PASS.
+- **Smoke test:** `/coordinator/dashboard` — drag booth with 1′ steps; hold Shift for 5′; place booth exactly 4′ from wall (no snap fight); pair booths at 2′ both turn red; toggle Map labels (vendor / category / booth ID).
+
+## Shipped this session (two-pane map–ledger sync + Map Labels, not deployed)
+- **Unified booth state:** `use-booth-entities.ts` — single reactive array (id, dimensions, x/y, clearance band, vendor, category, payment status) feeding Booth Matrix and canvas label meta (`dashboard-floor-plan.tsx`).
+- **Bidirectional ledger:** `booth-matrix-panel.tsx` — vendor `<select>` + status `<select>` call `assignVendorToBoothByVendorId` / `updateBoothPaymentStatus` (`market-management-context.tsx`); canvas labels + clearance fills re-render instantly; `floorplan-sync.ts` + `floorplan-sync-bridge.tsx` relay `matrix_assign_vendor` / `matrix_set_status` from dual-screen ledger window.
+- **Map Labels:** `lib/coordinator/booth-map-label.ts` + toolbar **Map labels** select (`canvas-command-bar-blocks.tsx`); `canvas-objects.tsx` wraps vendor booth text via `wrapTextInContainer` (vendor / category / booth ID modes); mode persisted in `localStorage`.
+- **Chrome:** `app-nav.tsx` logo → `/`; matrix control height tokens in `globals.css`.
+- **Verify:** `/coordinator/dashboard` — change vendor/status in split-pane matrix → canvas label + clearance color update; toggle Map labels; dual-screen ledger stays synced; Full screen + Launch Dual-Screen Mode unchanged.
+
 ## Shipped this session (traffic-aware auto-arrange engine + spring animation, deployed 2026-06-10)
 - **Layout engine:** Replaced generic Turf shelf-scan in `AutoArrangeEngine.ts` with traffic-aware path optimization — maps entrance/exit flow terminals (`traffic-flow-prerequisites.ts`), builds serpentine patron pathway (`buildPatronPathway`), treats corridor as no-fly zone (`buildTrafficNoFlyRects`), packs booths along path margins via `calculatePatronCentricLayout`, shifts occluded booths for path frontage, enforces 3′ clearance (`VENDOR_BOOTH_AISLE_FT`), Turf-validates merged zones.
 - **Spring animation:** `hooks/use-layout-spring.ts` — damped spring rAF; `canvas-objects.tsx` + `floor-plan-canvas.tsx` accept `layoutSpringPoses`; `floor-plan-v2.tsx` `commitVendorPackWithSpring` animates booths from pre-arrange positions on Auto-Arrange / Auto-Layout.

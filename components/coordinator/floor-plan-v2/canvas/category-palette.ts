@@ -21,7 +21,7 @@ export interface PaletteEntry {
   stroke: string
 }
 
-/** Canonical vendor booth colors — green when clearance is good (≥3′ aisle). */
+/** Canonical vendor booth colors — green when clearance is good (≥4′ aisle). */
 export const VENDOR_BOOTH_PALETTE: PaletteEntry = {
   fill: '#bbf7d0',
   stroke: '#16a34a',

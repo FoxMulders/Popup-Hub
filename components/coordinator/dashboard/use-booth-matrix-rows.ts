@@ -1,10 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
-import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
-import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
-import { useMarketManagement } from './market-management-context'
+import type { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
+import { useBoothEntities, type BoothEntity } from './use-booth-entities'
 
 export interface BoothMatrixRow {
   id: string
@@ -13,40 +10,24 @@ export interface BoothMatrixRow {
   category: string
   status: keyof typeof BOOTH_STATUS_THEME
   statusLabel: string
-  x: number
-  y: number
+  vendorId: string | null
+  applicationId: string | null
+}
+
+function toMatrixRow(entity: BoothEntity): BoothMatrixRow {
+  return {
+    id: entity.id,
+    label: entity.label,
+    vendor: entity.vendorName,
+    category: entity.productCategory,
+    status: entity.paymentStatus,
+    statusLabel: entity.statusLabel,
+    vendorId: entity.vendorId,
+    applicationId: entity.applicationId,
+  }
 }
 
 export function useBoothMatrixRows(): BoothMatrixRow[] {
-  const {
-    floorPlanStore,
-    boothStatusByObjectId,
-    approvedPool,
-  } = useMarketManagement()
-
-  return useMemo(() => {
-    if (!floorPlanStore) return []
-    return floorPlanStore.doc.objects
-      .filter(
-        (o): o is BoothObject => o.kind === 'booth' && !isGuestTableBooth(o)
-      )
-      .map((booth) => {
-        const status = boothStatusByObjectId.get(booth.id) ?? 'unassigned'
-        const theme = BOOTH_STATUS_THEME[status]
-        const app = booth.vendorId
-          ? approvedPool.find((a) => a.vendor_id === booth.vendorId)
-          : null
-        return {
-          id: booth.id,
-          label: booth.label || `Booth at ${Math.round(booth.x)}′, ${Math.round(booth.y)}′`,
-          vendor: app?.vendorName ?? (booth.vendorId ? 'Assigned vendor' : '—'),
-          category: booth.categoryName ?? app?.categoryName ?? '—',
-          status,
-          statusLabel: theme.label,
-          x: Math.round(booth.x),
-          y: Math.round(booth.y),
-        }
-      })
-      .sort((a, b) => a.y - b.y || a.x - b.x)
-  }, [approvedPool, boothStatusByObjectId, floorPlanStore])
+  const entities = useBoothEntities()
+  return entities.map(toMatrixRow)
 }

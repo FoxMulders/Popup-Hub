@@ -648,6 +648,11 @@
     padding-block: 0.3125rem;
   }
 
+  .dashboard-matrix-control {
+    min-height: var(--dashboard-toolbar-height);
+    border-radius: var(--dashboard-radius);
+  }
+
   .dashboard-canvas-legend-rail {
     display: flex;
     min-height: 0;
