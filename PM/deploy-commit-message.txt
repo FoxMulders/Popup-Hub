@@ -1,1 +1,0 @@
-feat: coordinator dashboard premium UI refactor

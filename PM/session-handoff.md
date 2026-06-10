@@ -4,7 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (coordinator dashboard premium UI refactor, not deployed)
+## Shipped this session (semver build versioning, deployed 2026-06-10)
+- **`lib/build-info.ts`:** `formatAppVersion` now returns `major.minor.patch` from `package.json`; build counter stays separate in footer (`v1.0.0 · build 68`). Added `parseSemver` / `semverComponentsChanged`.
+- **`scripts/bump-build-number.mjs`:** Resets build to `1` when major, minor, or patch changes; stores semver components in `build-number.json`.
+- **`package.json`:** Added `version:patch`, `version:minor`, `version:major` scripts (`npm version * --no-git-tag-version`).
+- **Verify:** Footer shows `v1.0.0 · build N` (not `v1.0.N`); bump patch via `npm run version:patch` resets build to 1 on next build.
+
+## Shipped this session (coordinator dashboard premium UI refactor, deployed 2026-06-10)
 - **Design tokens:** `globals.css` — `--dashboard-radius`, `--dashboard-toolbar-height`, `--dashboard-panel-gap`; utility classes `.dashboard-panel`, `.dashboard-toolbar-section`, `.dashboard-pill-toggle`, `.dashboard-save-chip`.
 - **Nav + header:** `app-nav.tsx` pill active tabs; `dashboard-command-center-header.tsx` — autosave chip via `DashboardLayoutSaveProvider`, full-pill Edit/Preview, deduped bell/actions; `market-dashboard-client.tsx` wires save context.
 - **Toolbars:** `toolbar-static-layout.ts` merges optimize into alignment-spacing; `vendor-sizes` renders in top bar; discrete zoom (`discrete-zoom.ts`, `use-viewport.ts`); `table-size-pill.tsx` segmented strip + imperial/metric toggle; `layout-room-bar.tsx` edit/delete divider.
@@ -236,9 +242,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `9564c73` (pushed to `origin/master`)
-- Last deploy commit: `9564c73` - feat: event dashboard layout — top toolbar, mobile booth matrix
-- Production: https://popuphub.ca - **build 66** | commit `4168f8b` (handoff updated 2026-06-10 10:05)
+- Branch: `master` @ `20a5d17` (pushed to `origin/master`)
+- Last deploy commit: `20a5d17` - feat: coordinator dashboard premium UI refactor
+- Production: https://popuphub.ca - **v1.0.0 build 68** | commit `20a5d17` (handoff updated 2026-06-10 11:59)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -615,7 +621,7 @@
 
 
 ## Last deploy
-- 2026-06-10 10:05 - Deploy via deploy-popuphub.ps1 - `feat: event dashboard layout — top toolbar, mobile booth matrix` (9564c73)
+- 2026-06-10 11:59 - Deploy via deploy-popuphub.ps1 - `feat: coordinator dashboard premium UI refactor` (20a5d17)
 
 
 ## Goal
