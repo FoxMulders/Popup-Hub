@@ -28,6 +28,7 @@ import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
 import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
 import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
+import { useSelectionKeyboardNudge } from '../interactions/selection-keyboard-nudge'
 import { resolveTablePlacementPreview } from '../interactions/table-placement-preview'
 import {
   detectPlacedObjectOverlaps,
@@ -364,6 +365,12 @@ export function FloorPlanCanvas({
     autoArrangeMode,
     commandCenterViewport,
     stickyDrawPlacement,
+  })
+
+  useSelectionKeyboardNudge(store, {
+    activeRoomId: activeRoomId ?? null,
+    onProximityViolation,
+    onOverlapViolation,
   })
 
   const mergeOverlapCtx = useMemo(

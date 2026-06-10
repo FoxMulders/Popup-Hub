@@ -75,6 +75,8 @@ import {
   isVendorBoothObject,
   isCardinalRotation,
   vendorBoothPerimeterSnapPatch,
+  vendorBoothPerimeterSnapEdge,
+  type RoomEdgeSide,
 } from './vendor-booth-placement'
 import {
   isStructuralWallSnapKind,
@@ -180,6 +182,8 @@ type DragState =
       moved: boolean
       /** Original object positions keyed by id, for absolute deltas. */
       originals: Map<string, { x: number; y: number }>
+      /** Locked perimeter wall per vendor booth — prevents corner flicker. */
+      lockedWallEdges: Map<string, RoomEdgeSide>
     }
 
 type MarqueeState =
@@ -337,9 +341,11 @@ export function resolveDrawCommitRect(
 function applyVendorBoothSnapIfNearWall(
   booth: BoothObject,
   doc: Parameters<typeof vendorBoothPerimeterSnapPatch>[1],
-  options?: { snapRotation?: boolean }
+  options?: { snapRotation?: boolean; preferredEdge?: RoomEdgeSide | null }
 ): BoothObject {
-  const snap = vendorBoothPerimeterSnapPatch(booth, doc)
+  const snap = vendorBoothPerimeterSnapPatch(booth, doc, {
+    preferredEdge: options?.preferredEdge,
+  })
   if (!snap) return booth
   const snapRotation = options?.snapRotation ?? true
   if (!snapRotation || !isCardinalRotation(booth.rotation ?? 0)) {
@@ -351,13 +357,18 @@ function applyVendorBoothSnapIfNearWall(
 
 function dragCommitPatchForObject(
   obj: PlacedObject,
-  drag: { originals: Map<string, { x: number; y: number }> },
+  drag: {
+    originals: Map<string, { x: number; y: number }>
+    lockedWallEdges: Map<string, RoomEdgeSide>
+  },
   doc: FloorPlanDocStore['doc'],
   activeRoomId: string | null | undefined
 ): Partial<PlacedObject> {
   let patch: Partial<PlacedObject> = { x: obj.x, y: obj.y }
   if (isVendorBoothObject(obj)) {
-    const snapped = applyVendorBoothSnapIfNearWall(obj as BoothObject, doc)
+    const snapped = applyVendorBoothSnapIfNearWall(obj as BoothObject, doc, {
+      preferredEdge: drag.lockedWallEdges.get(obj.id) ?? null,
+    })
     patch = {
       x: snapped.x,
       y: snapped.y,
@@ -578,9 +589,17 @@ export function useCanvasPointer(
   const beginDrag = useCallback(
     (pointerId: number, originFt: Point, ids: string[]) => {
       const originals = new Map<string, { x: number; y: number }>()
+      const lockedWallEdges = new Map<string, RoomEdgeSide>()
       for (const obj of store.doc.objects) {
         if (ids.includes(obj.id)) {
           originals.set(obj.id, { x: obj.x, y: obj.y })
+          if (isVendorBoothObject(obj)) {
+            const edge = vendorBoothPerimeterSnapEdge(
+              obj as BoothObject,
+              store.doc
+            )
+            if (edge) lockedWallEdges.set(obj.id, edge)
+          }
         }
       }
       dragRef.current = {
@@ -590,10 +609,11 @@ export function useCanvasPointer(
         lastFt: originFt,
         moved: false,
         originals,
+        lockedWallEdges,
       }
       rotateRef.current = null
     },
-    [store.doc.objects]
+    [store.doc]
   )
 
   const capturePointer = useCallback(
@@ -1134,18 +1154,19 @@ export function useCanvasPointer(
           if (!obj) continue
           const proposedX = snapToGrid(orig.x + dx, snap)
           const proposedY = snapToGrid(orig.y + dy, snap)
-          const probe: PlacedObject = { ...obj, x: proposedX, y: proposedY }
-          const roomId = objectRoom[id] ?? activeRoomIdRef.current ?? null
-          const clampDelta = boothClampDeltaForRoom(probe, store.doc, roomId)
           let patch: Partial<PlacedObject> = {
-            x: proposedX + clampDelta.dx,
-            y: proposedY + clampDelta.dy,
+            x: proposedX,
+            y: proposedY,
           }
           if (isVendorBoothObject(obj)) {
+            const preferredEdge = drag.lockedWallEdges.get(id) ?? null
             const snapped = applyVendorBoothSnapIfNearWall(
               { ...obj, ...patch } as BoothObject,
               store.doc,
-              { snapRotation: isCardinalRotation(obj.rotation ?? 0) }
+              {
+                snapRotation: isCardinalRotation(obj.rotation ?? 0),
+                preferredEdge,
+              }
             )
             patch = {
               x: snapped.x,
@@ -1154,6 +1175,23 @@ export function useCanvasPointer(
               height: snapped.height,
               rotation: snapped.rotation,
             }
+            const lockedEdge = vendorBoothPerimeterSnapEdge(
+              snapped,
+              store.doc
+            )
+            if (lockedEdge) {
+              drag.lockedWallEdges.set(id, lockedEdge)
+            } else {
+              drag.lockedWallEdges.delete(id)
+            }
+          }
+          const probe = objectWithPatch(obj, patch)
+          const roomId = objectRoom[id] ?? activeRoomIdRef.current ?? null
+          const clampDelta = boothClampDeltaForRoom(probe, store.doc, roomId)
+          patch = {
+            ...patch,
+            x: (patch.x ?? obj.x) + clampDelta.dx,
+            y: (patch.y ?? obj.y) + clampDelta.dy,
           }
           patches.push({
             id,

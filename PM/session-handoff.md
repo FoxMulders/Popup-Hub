@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Shipped this session (booth canvas — wall snap, E/W flush placement, arrow-key nudge, not deployed)
+- **E/W 4′ regression:** `VENDOR_WALL_INSET_FT = 0` in `boundary-constraints.ts` — vendor booths flush to west/east room bounds; guest tables keep 4′ `ROOM_PLACEMENT_CLEARANCE_FT`. Axis-dominant perimeter picking + cross-axis preservation in `perimeter-booth-orientation.ts`; snap-before-clamp in `use-canvas-pointer.ts` and `selection-keyboard-nudge.ts`.
+- **Corner flicker:** `pickPerimeterEdgeWithHysteresis` + locked wall edges during drag in `use-canvas-pointer.ts`.
+- **Arrow-key nudge:** `selection-keyboard-nudge.ts` + `useSelectionKeyboardNudge` in `floor-plan-canvas.tsx` — Arrow 1′, Shift+Arrow 5′.
+- **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts`; layout editor → drag booth to west/east wall (flush, no flicker); arrow keys nudge selection.
+
 ## Shipped this session (coordinator mobile dashboard, maps provider, address AI geocode, deployed 2026-06-09)
 - **Coordinator mobile dashboard:** `MarketDashboardClient` routes phones to `CoordinatorMobileOverview` (`isMobileDevice()` or `?overview=mobile`); dashboard page wraps client in `Suspense` for `useSearchParams`.
 - **Post-login redirect:** OAuth callback uses `resolvePostLoginPath` (user-agent aware) instead of `getDefaultDashboard`; `Login_qa` passes `userAgent` only.

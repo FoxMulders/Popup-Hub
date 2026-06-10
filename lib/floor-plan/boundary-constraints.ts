@@ -8,13 +8,15 @@ import type { BoothObject, FloorPlanDoc, PlacedObject } from '@/components/coord
 import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan-v2/state/placement-surface'
 import { BOOTH_SAFETY_BUFFER_FT } from '@/lib/booth-planner/layout-clearance-constants'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
-import { PERIMETER_WALL_THICKNESS_FT } from '@/components/coordinator/floor-plan-v2/interactions/perimeter-walls'
 
 /** Minimum inset from room walls for patron tables (ft). */
 export const ROOM_PLACEMENT_CLEARANCE_FT = BOOTH_SAFETY_BUFFER_FT * 2
 
-/** Perimeter wall inset — vendor booths may sit flush against the inner wall face. */
-export const VENDOR_WALL_INSET_FT = PERIMETER_WALL_THICKNESS_FT
+/**
+ * Vendor booth drag/placement inset from the room frame edge (ft).
+ * 0 = flush to west (min X) and east (max X) room bounds — no 4′ patron buffer.
+ */
+export const VENDOR_WALL_INSET_FT = 0
 
 /** Wall inset used for drag clamp + boundary validation. */
 export function wallInsetClearanceFt(obj: PlacedObject): number {

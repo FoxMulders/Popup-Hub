@@ -6,14 +6,18 @@ import { BOOTH_SAFETY_BUFFER_FT } from '@/lib/booth-planner/layout-clearance-con
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import {
   isBoothSnappedToRoomPerimeter,
+  nearestRoomEdge,
   orientBoothToNearestWallEdge,
   PERIMETER_BOOTH_SNAP_FT,
   snapBoothToRoomPerimeter,
   snapBoothToUnionPerimeter,
+  type RoomEdgeSide,
 } from './perimeter-booth-orientation'
 import { resolveRoomPlacementBounds } from '@/lib/floor-plan/boundary-constraints'
 import { resolveRoomPlacementSurface } from '../state/placement-surface'
 import type { BoothObject, FloorPlanDoc, PlacedObject, RoomFrame } from '../state/types'
+
+export type { RoomEdgeSide } from './perimeter-booth-orientation'
 
 /** Snap vendor booths when within this distance (ft) of a room perimeter wall. */
 export const VENDOR_WALL_SNAP_THRESHOLD_FT = 3
@@ -266,7 +270,8 @@ export function orientVendorBoothToNearestWall(
 export function snapVendorBoothToPerimeter(
   booth: BoothObject,
   doc: Pick<FloorPlanDoc, 'rooms' | 'objectRoom' | 'objects' | 'canvasWidthFt' | 'canvasLengthFt' | 'gridSpacingFt' | 'snapFt'>,
-  snapToleranceFt: number = VENDOR_WALL_SNAP_THRESHOLD_FT
+  snapToleranceFt: number = VENDOR_WALL_SNAP_THRESHOLD_FT,
+  preferredEdge?: RoomEdgeSide | null
 ): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> | null {
   const frame = roomFrameForBooth(
     booth,
@@ -292,9 +297,9 @@ export function snapVendorBoothToPerimeter(
   const tol = snapToleranceFt
   const unionRing = surface?.outerRings[0]
   const snapped = unionRing
-    ? snapBoothToUnionPerimeter(booth, unionRing, tol) ??
-      snapBoothToRoomPerimeter(booth, snapFrame, tol)
-    : snapBoothToRoomPerimeter(booth, snapFrame, tol)
+    ? snapBoothToUnionPerimeter(booth, unionRing, tol, preferredEdge) ??
+      snapBoothToRoomPerimeter(booth, snapFrame, tol, preferredEdge)
+    : snapBoothToRoomPerimeter(booth, snapFrame, tol, preferredEdge)
   if (!snapped) return null
   return {
     x: snapped.x,
@@ -305,13 +310,36 @@ export function snapVendorBoothToPerimeter(
   }
 }
 
+/** Perimeter edge used by the latest vendor snap (for drag hysteresis). */
+export function vendorBoothPerimeterSnapEdge(
+  booth: BoothObject,
+  doc: Pick<FloorPlanDoc, 'rooms' | 'objectRoom' | 'objects' | 'canvasWidthFt' | 'canvasLengthFt' | 'gridSpacingFt' | 'snapFt'>,
+  snapToleranceFt: number = VENDOR_WALL_SNAP_THRESHOLD_FT
+): RoomEdgeSide | null {
+  const frame = roomFrameForBooth(
+    booth,
+    doc.rooms ?? [],
+    doc.objectRoom ?? {}
+  )
+  if (!frame) return null
+  const roomId = doc.objectRoom?.[booth.id] ?? frame.id
+  const snapFrame = snapFrameForRoom(doc, roomId, frame)
+  const { edge, distanceFt } = nearestRoomEdge(booth, snapFrame)
+  return distanceFt <= snapToleranceFt ? edge : null
+}
+
 /** Apply perimeter snap or wall-facing orientation for vendor booths. */
 export function vendorBoothPerimeterSnapPatch(
   booth: BoothObject,
-  doc: Pick<FloorPlanDoc, 'rooms' | 'objectRoom' | 'objects' | 'canvasWidthFt' | 'canvasLengthFt' | 'gridSpacingFt' | 'snapFt'>
+  doc: Pick<FloorPlanDoc, 'rooms' | 'objectRoom' | 'objects' | 'canvasWidthFt' | 'canvasLengthFt' | 'gridSpacingFt' | 'snapFt'>,
+  options?: { preferredEdge?: RoomEdgeSide | null }
 ): Partial<BoothObject> | null {
   return (
-    snapVendorBoothToPerimeter(booth, doc) ??
-    orientVendorBoothToNearestWall(booth, doc)
+    snapVendorBoothToPerimeter(
+      booth,
+      doc,
+      VENDOR_WALL_SNAP_THRESHOLD_FT,
+      options?.preferredEdge
+    ) ?? orientVendorBoothToNearestWall(booth, doc)
   )
 }

@@ -56,6 +56,30 @@ function vendorBooth(x: number, y: number, rotation = 0): BoothObject {
   }
 }
 
+// Booth 2′ from left (west) wall — snap flush at room originX.
+const nearLeft = vendorBooth(10 + 2, 18, 0)
+nearLeft.id = 'vb-left'
+doc.objectRoom = { 'vb-left': roomId }
+const snapLeft = snapVendorBoothToPerimeter(nearLeft, doc)
+assert(snapLeft !== null, 'Expected snap within 3′ of west wall')
+assert(
+  Math.abs(snapLeft!.x - 10) < 0.01,
+  `West snap x=${snapLeft!.x} expected 10 (flush originX)`
+)
+assert(snapLeft!.rotation === 270, `West snap rotation=${snapLeft!.rotation} expected 270`)
+
+// Drag clamp must not block vendor booths within 3′ of west wall (regression was 4′).
+const westProbe = vendorBooth(10 + 2, 18, 270)
+westProbe.id = 'vb-west-clamp'
+westProbe.width = 6
+westProbe.height = 4
+doc.objectRoom = { 'vb-west-clamp': roomId }
+const westClamp = boothClampDeltaForRoom(westProbe, doc, roomId)
+assert(
+  westClamp.dx === 0 && westClamp.dy === 0,
+  `Vendor west clamp should allow approach, got dx=${westClamp.dx} dy=${westClamp.dy}`
+)
+
 // Booth 2′ from top wall inner line — should snap flush with rotation 0 (faces inward).
 const nearTop = vendorBooth(22, 5 + 2)
 const snapTop = snapVendorBoothToPerimeter(nearTop, doc)

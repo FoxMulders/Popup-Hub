@@ -19,6 +19,114 @@ export interface PerimeterSlot {
 /** Distance (ft) from a room edge for auto-arrange perimeter snap (manual placement uses {@link VENDOR_WALL_SNAP_THRESHOLD_FT}). */
 export const PERIMETER_BOOTH_SNAP_FT = 1.25
 
+/** Flush vendor perimeter snap inset (ft) — keep in sync with `VENDOR_WALL_INSET_FT`. */
+export const VENDOR_PERIMETER_SNAP_INSET_FT = 0
+
+/**
+ * Hysteresis band (ft) when choosing a perimeter wall during drag. Once a booth
+ * snaps to one axis, a perpendicular wall must beat it by this margin before the
+ * snap target switches — prevents corner flicker (~0.25′ ≈ 3 px at 12 px/ft).
+ */
+export const WALL_SNAP_EDGE_HYSTERESIS_FT = 0.25
+
+/** Treat two wall distances as tied when within this epsilon (ft). */
+const WALL_SNAP_DISTANCE_EPSILON_FT = 0.02
+
+const EDGE_TIE_PRIORITY: Record<RoomEdgeSide, number> = {
+  top: 0,
+  left: 1,
+  right: 2,
+  bottom: 3,
+}
+
+function isHorizontalEdge(edge: RoomEdgeSide): boolean {
+  return edge === 'left' || edge === 'right'
+}
+
+function minEdgeDistance(
+  candidates: ReadonlyArray<{ edge: RoomEdgeSide; distanceFt: number }>,
+  axis: 'horizontal' | 'vertical'
+): number {
+  const filtered = candidates.filter((c) =>
+    axis === 'horizontal' ? isHorizontalEdge(c.edge) : !isHorizontalEdge(c.edge)
+  )
+  if (filtered.length === 0) return Number.POSITIVE_INFINITY
+  return Math.min(...filtered.map((c) => c.distanceFt))
+}
+
+/**
+ * Pick a single perimeter edge, preferring `preferredEdge` while it remains
+ * within tolerance unless another edge is clearly closer (hysteresis band).
+ *
+ * When horizontal (E/W) and vertical (N/S) distances diverge, only edges on
+ * the dominant axis compete — prevents corner jitter from mixed-axis snaps.
+ */
+export function pickPerimeterEdgeWithHysteresis(
+  candidates: ReadonlyArray<{ edge: RoomEdgeSide; distanceFt: number }>,
+  preferredEdge?: RoomEdgeSide | null,
+  hysteresisFt = WALL_SNAP_EDGE_HYSTERESIS_FT
+): { edge: RoomEdgeSide; distanceFt: number } {
+  if (candidates.length === 0) {
+    return { edge: 'top', distanceFt: Number.POSITIVE_INFINITY }
+  }
+
+  const pickFrom = (
+    pool: ReadonlyArray<{ edge: RoomEdgeSide; distanceFt: number }>,
+    locked?: RoomEdgeSide | null
+  ) => {
+    const sorted = [...pool].sort((a, b) => {
+      const dist = a.distanceFt - b.distanceFt
+      if (Math.abs(dist) <= WALL_SNAP_DISTANCE_EPSILON_FT) {
+        return EDGE_TIE_PRIORITY[a.edge] - EDGE_TIE_PRIORITY[b.edge]
+      }
+      return dist
+    })
+    const closest = sorted[0]!
+    if (!locked) return closest
+    const preferred = pool.find((c) => c.edge === locked)
+    if (!preferred) return closest
+    if (closest.edge === locked) return closest
+    if (closest.distanceFt + hysteresisFt < preferred.distanceFt) return closest
+    return preferred
+  }
+
+  if (preferredEdge && isHorizontalEdge(preferredEdge)) {
+    const horizontal = candidates.filter((c) => isHorizontalEdge(c.edge))
+    if (horizontal.length > 0) {
+      return pickFrom(horizontal, preferredEdge)
+    }
+  }
+  if (preferredEdge && !isHorizontalEdge(preferredEdge)) {
+    const vertical = candidates.filter((c) => !isHorizontalEdge(c.edge))
+    if (vertical.length > 0) {
+      return pickFrom(vertical, preferredEdge)
+    }
+  }
+
+  const minHorizontal = minEdgeDistance(candidates, 'horizontal')
+  const minVertical = minEdgeDistance(candidates, 'vertical')
+  if (
+    Number.isFinite(minHorizontal) &&
+    Number.isFinite(minVertical) &&
+    Math.abs(minHorizontal - minVertical) > WALL_SNAP_DISTANCE_EPSILON_FT
+  ) {
+    if (minHorizontal + hysteresisFt < minVertical) {
+      return pickFrom(
+        candidates.filter((c) => isHorizontalEdge(c.edge)),
+        preferredEdge
+      )
+    }
+    if (minVertical + hysteresisFt < minHorizontal) {
+      return pickFrom(
+        candidates.filter((c) => !isHorizontalEdge(c.edge)),
+        preferredEdge
+      )
+    }
+  }
+
+  return pickFrom(candidates, preferredEdge)
+}
+
 const INWARD_ROTATION: Record<RoomEdgeSide, number> = {
   top: 0,
   right: 90,
@@ -84,7 +192,7 @@ export function boothAtPerimeterEdge(
   frame: RoomFrame,
   spanFt: number,
   depthFt: number,
-  wallThicknessFt = PERIMETER_WALL_THICKNESS_FT
+  wallThicknessFt = VENDOR_PERIMETER_SNAP_INSET_FT
 ): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> {
   const rotation = INWARD_ROTATION[edge]
   const width = spanFt
@@ -150,14 +258,13 @@ function frameEdges(frame: RoomFrame) {
   }
 }
 
-/** Nearest room edge to the booth's rotated AABB (for snap + orient). */
-export function nearestRoomEdge(
+function roomEdgeDistanceCandidates(
   booth: BoothObject,
   frame: RoomFrame
-): { edge: RoomEdgeSide; distanceFt: number } {
+): Array<{ edge: RoomEdgeSide; distanceFt: number }> {
   const aabb = rotatedAabb(booth)
   const edges = frameEdges(frame)
-  const candidates: Array<{ edge: RoomEdgeSide; distanceFt: number }> = [
+  return [
     { edge: 'top', distanceFt: Math.abs(aabb.y - edges.top) },
     {
       edge: 'bottom',
@@ -169,8 +276,18 @@ export function nearestRoomEdge(
       distanceFt: Math.abs(aabb.x + aabb.width - edges.right),
     },
   ]
-  candidates.sort((a, b) => a.distanceFt - b.distanceFt)
-  return candidates[0]!
+}
+
+/** Nearest room edge to the booth's rotated AABB (for snap + orient). */
+export function nearestRoomEdge(
+  booth: BoothObject,
+  frame: RoomFrame,
+  preferredEdge?: RoomEdgeSide | null
+): { edge: RoomEdgeSide; distanceFt: number } {
+  return pickPerimeterEdgeWithHysteresis(
+    roomEdgeDistanceCandidates(booth, frame),
+    preferredEdge
+  )
 }
 
 export function isBoothSnappedToRoomPerimeter(
@@ -189,7 +306,8 @@ export function isBoothSnappedToRoomPerimeter(
 export function snapBoothToUnionPerimeter(
   booth: BoothObject,
   outerRing: ReadonlyArray<readonly [number, number]>,
-  tolFt = PERIMETER_BOOTH_SNAP_FT
+  tolFt = PERIMETER_BOOTH_SNAP_FT,
+  preferredEdge?: RoomEdgeSide | null
 ): BoothObject | null {
   const pts = openRingPoints(outerRing)
   if (pts.length < 3) return null
@@ -203,12 +321,12 @@ export function snapBoothToUnionPerimeter(
   const cx = aabb.x + aabb.width / 2
   const cy = aabb.y + aabb.height / 2
 
-  let best: {
+  const segmentHits: Array<{
     edge: RoomEdgeSide
     along: number
     lineCoord: number
     distanceFt: number
-  } | null = null
+  }> = []
 
   for (let i = 0; i < pts.length; i++) {
     const a = pts[i]!
@@ -222,22 +340,41 @@ export function snapBoothToUnionPerimeter(
         edge === 'top'
           ? Math.abs(aabb.y - yLine)
           : Math.abs(aabb.y + aabb.height - yLine)
-      const along = aabb.x
-      if (!best || dist < best.distanceFt) {
-        best = { edge, along, lineCoord: yLine, distanceFt: dist }
-      }
+      segmentHits.push({
+        edge,
+        along: booth.x,
+        lineCoord: yLine,
+        distanceFt: dist,
+      })
     } else {
       const xLine = a.x
       const dist =
         edge === 'left'
           ? Math.abs(aabb.x - xLine)
           : Math.abs(aabb.x + aabb.width - xLine)
-      const along = aabb.y
-      if (!best || dist < best.distanceFt) {
-        best = { edge, along, lineCoord: xLine, distanceFt: dist }
-      }
+      segmentHits.push({
+        edge,
+        along: booth.y,
+        lineCoord: xLine,
+        distanceFt: dist,
+      })
     }
   }
+
+  if (segmentHits.length === 0) return null
+
+  const edgeDistances = segmentHits.map((hit) => ({
+    edge: hit.edge,
+    distanceFt: hit.distanceFt,
+  }))
+  const pickedEdge = pickPerimeterEdgeWithHysteresis(
+    edgeDistances,
+    preferredEdge
+  )
+  const best =
+    segmentHits
+      .filter((hit) => hit.edge === pickedEdge.edge)
+      .sort((a, b) => a.distanceFt - b.distanceFt)[0] ?? null
 
   if (!best || best.distanceFt > tolFt) return null
   return {
@@ -249,9 +386,10 @@ export function snapBoothToUnionPerimeter(
 export function snapBoothToRoomPerimeter(
   booth: BoothObject,
   frame: RoomFrame,
-  tolFt = PERIMETER_BOOTH_SNAP_FT
+  tolFt = PERIMETER_BOOTH_SNAP_FT,
+  preferredEdge?: RoomEdgeSide | null
 ): BoothObject | null {
-  const { edge, distanceFt } = nearestRoomEdge(booth, frame)
+  const { edge, distanceFt } = nearestRoomEdge(booth, frame, preferredEdge)
   if (distanceFt > tolFt) return null
 
   const { span, depth } = boothSpanAndDepth(
@@ -266,11 +404,12 @@ export function snapBoothToRoomPerimeter(
   switch (edge) {
     case 'top':
     case 'bottom':
-      along = aabb.x
+      // Snap Y to the wall; preserve drag X on the along-wall axis.
+      along = booth.x
       break
     case 'left':
     case 'right':
-      along = aabb.y
+      along = booth.y
       break
   }
 
@@ -295,13 +434,13 @@ function clampAlongEdge(
   booth: Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'>,
   frame: RoomFrame,
   spanFt: number,
-  depthFt: number
+  depthFt: number,
+  inset = VENDOR_PERIMETER_SNAP_INSET_FT
 ): number {
   const ox = frame.originX
   const oy = frame.originY
   const w = frame.widthFt
   const l = frame.lengthFt
-  const inset = PERIMETER_WALL_THICKNESS_FT
 
   if (edge === 'top' || edge === 'bottom') {
     const min = ox + inset
@@ -361,7 +500,7 @@ function boothOnUnionEdge(
   lineCoord: number,
   spanFt: number,
   depthFt: number,
-  inset = PERIMETER_WALL_THICKNESS_FT
+  inset = VENDOR_PERIMETER_SNAP_INSET_FT
 ): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> {
   const rotation = INWARD_ROTATION[edge]
   const width = spanFt
