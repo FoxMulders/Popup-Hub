@@ -123,6 +123,7 @@ set "EXITCODE=!ERRORLEVEL!"
 if "!EXITCODE!"=="2" (
     echo.
     echo Nothing to deploy. See messages above.
+    set "EXITCODE=0"
     goto :done
 )
 

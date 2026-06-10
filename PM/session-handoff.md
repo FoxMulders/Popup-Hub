@@ -4,6 +4,9 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (deploy noop exit code fix, not deployed)
+- **`Deploy-popuphub.bat` / `get-deploy-commit-message.ps1`:** When deploy script returns exit 2 (nothing to ship), bat normalizes to exit 0 so double-click does not show "Deploy failed".
+
 ## Shipped this session (deploy script already-shipped guidance, deployed 2026-06-10)
 - **`deploy-popuphub.ps1`:** When no `not deployed` handoff sections exist, print baseline branch/commit and how to add a section or run `-SkipCommit`; exit 2 (noop) if tree is clean, exit 1 only when uncommitted work lacks a handoff section.
 - **`Deploy-popuphub.bat`:** Exit code 2 shows "Nothing to deploy" instead of "Deploy failed"; PowerShell invoke uses safe `if defined DEPLOY_PS_ARGS` branch (no `PS_ARGS` parse error).
