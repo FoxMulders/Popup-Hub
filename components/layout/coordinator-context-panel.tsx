@@ -4,16 +4,21 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Activity, ArrowRight, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import {
+  CommandCenterExitButton,
+  CommandCenterExitLink,
+} from '@/components/coordinator/command-center-exit-link'
 import {
   coordinatorEventIdFromPath,
   coordinatorNavBackHref,
+  isCoordinatorEventHubPath,
 } from '@/lib/coordinator/coordinator-event-route'
 
 export function CoordinatorContextPanel() {
   const pathname = usePathname() ?? ''
   const onCommandCenter = pathname === '/coordinator/dashboard'
   const eventIdFromRoute = coordinatorEventIdFromPath(pathname)
+  const onEventHub = isCoordinatorEventHubPath(pathname)
 
   return (
     <aside
@@ -21,7 +26,21 @@ export function CoordinatorContextPanel() {
       aria-label="Coordinator context and telemetry"
     >
       {eventIdFromRoute && !onCommandCenter ? (
-        <CommandCenterExitLink eventId={eventIdFromRoute} compact className="w-full" />
+        onEventHub ? (
+          <CommandCenterExitLink
+            eventId={eventIdFromRoute}
+            target="dashboard"
+            compact
+            className="w-full"
+          />
+        ) : (
+          <CommandCenterExitButton
+            eventId={eventIdFromRoute}
+            target="event-overview"
+            compact
+            className="w-full"
+          />
+        )
       ) : null}
 
       <div className="ecosystem-panel-inner rounded-xl border border-stone-200/80 bg-card/90 p-3">

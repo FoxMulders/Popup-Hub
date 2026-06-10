@@ -4,6 +4,18 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (coordinator event hub side-panel navigation fix, not deployed)
+- **`lib/coordinator/coordinator-event-route.ts`:** `isCoordinatorEventHubPath()` — detects primary event overview (`/coordinator/events/[id]`) vs sub-routes.
+- **`coordinator-workspace-rail.tsx` / `coordinator-context-panel.tsx`:** On event hub, hide self-referencing “Event overview” buttons; top exit links to command center (`/coordinator/dashboard`). On sub-routes (layout, check-in, review, applications, etc.), “Event overview” uses `router.push` to `/coordinator/events/{eventId}`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/events/{id}` — no dead “Event overview” in left/right panels; “Command center” exit works. Sub-route `/coordinator/events/{id}/applications` — “Event overview” returns to hub.
+
+## Shipped this session (coordinator pre-flight review & publish page, not deployed)
+- **Route:** `/coordinator/events/[id]/review` — Pre-Flight Review & Publish for draft markets after floor plan work.
+- **Layout snapshot:** `lib/coordinator/layout-telemetry-summary.ts` — vendor booth totals, category breakdown, patron seating/amenities from saved layout; link back to Blueprint Studio (`/coordinator/dashboard?event=`).
+- **Review cards:** Inline save for event logistics, shopper details (parking, wheelchair toggle + notes, pet policy), pricing & category waitlist caps (`CategoryLimitEditor` + unified booth fee).
+- **Publish:** `PATCH /api/coordinator/events/[eventId]` with `{ status: 'published' }` — publish gate, venue verify, booth-fee checks; client button disabled while publishing; success toast + redirect to event overview.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: draft market with layout → `/coordinator/events/{id}/review` → edit cards save → Publish → lands on event hub with live toast.
+
 ## Shipped this session (platform FAQ copy refresh, deployed 2026-06-10)
 - **`lib/legal/faq-content.tsx`:** Added coordinator value-prop FAQ (vs. DMs/spreadsheets); expanded pricing answer (vendor pass-through, coordinator fee toggle, offline-payment trust note); expanded fee rationale with mobile-app funding paragraph.
 - **`app/legal/faq/page.tsx`:** Updated last-modified date to June 10, 2026.

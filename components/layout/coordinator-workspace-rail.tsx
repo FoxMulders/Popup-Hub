@@ -12,10 +12,13 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
-import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import {
+  CommandCenterExitButton,
+  CommandCenterExitLink,
+} from '@/components/coordinator/command-center-exit-link'
 import {
   coordinatorEventIdFromPath,
-  coordinatorNavBackHref,
+  isCoordinatorEventHubPath,
 } from '@/lib/coordinator/coordinator-event-route'
 
 const RAIL_LINKS = [
@@ -29,6 +32,7 @@ export function CoordinatorWorkspaceRail() {
   const pathname = usePathname() ?? ''
   const eventIdFromRoute = coordinatorEventIdFromPath(pathname)
   const onCommandCenter = pathname === '/coordinator/dashboard'
+  const onEventHub = isCoordinatorEventHubPath(pathname)
 
   return (
     <nav
@@ -36,7 +40,21 @@ export function CoordinatorWorkspaceRail() {
       aria-label="Coordinator workspace"
     >
       {eventIdFromRoute && !onCommandCenter ? (
-        <CommandCenterExitLink eventId={eventIdFromRoute} compact className="w-full" />
+        onEventHub ? (
+          <CommandCenterExitLink
+            eventId={eventIdFromRoute}
+            target="dashboard"
+            compact
+            className="w-full"
+          />
+        ) : (
+          <CommandCenterExitButton
+            eventId={eventIdFromRoute}
+            target="event-overview"
+            compact
+            className="w-full"
+          />
+        )
       ) : null}
 
       <div className="ecosystem-panel-inner rounded-xl border border-stone-200/80 bg-card/80 p-3">
@@ -88,19 +106,21 @@ export function CoordinatorWorkspaceRail() {
         </p>
         <p className="mt-1 text-[0.6875rem] leading-snug text-sky-800/90">
           {eventIdFromRoute
-            ? 'Return to this market’s overview, or open the command center for CAD and payments.'
+            ? onEventHub
+              ? 'Open the command center for CAD booth design and live payment telemetry.'
+              : 'Return to this market’s overview, or open the command center for CAD and payments.'
             : 'Open the command center for the CAD booth designer and live financial desk.'}
         </p>
-        {eventIdFromRoute ? (
-          <Link
-            href={coordinatorNavBackHref(pathname)}
+        {eventIdFromRoute && !onEventHub ? (
+          <CommandCenterExitButton
+            eventId={eventIdFromRoute}
+            target="event-overview"
+            compact
             className={cn(
               buttonVariants({ size: 'sm', variant: 'outline' }),
               'mt-2 w-full text-xs'
             )}
-          >
-            Event overview
-          </Link>
+          />
         ) : null}
         <Link
           href={
