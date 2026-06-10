@@ -5,11 +5,11 @@ export const MIN_STROLLER_AISLE_WIDTH_FT = 8
 export const PATRON_AISLE_MIN_FT = 6
 
 /** Uniform safety buffer projected outward from every booth edge (1′ grid cells). */
-export const BOOTH_EDGE_CLEARANCE_FT = 2
+export const BOOTH_EDGE_CLEARANCE_FT = 3
 export const BOOTH_EDGE_CLEARANCE_CELLS = BOOTH_EDGE_CLEARANCE_FT
 
 /** Mandatory safety buffer on each straight booth edge (front, back, left, right). */
-export const BOOTH_SAFETY_BUFFER_FT = 2
+export const BOOTH_SAFETY_BUFFER_FT = 3
 
 /** Grid cells (1′ grid) matching {@link BOOTH_SAFETY_BUFFER_FT}. */
 export const BOOTH_SAFETY_BUFFER_CELLS = BOOTH_SAFETY_BUFFER_FT

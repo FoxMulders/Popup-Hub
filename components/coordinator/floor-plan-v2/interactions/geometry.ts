@@ -81,7 +81,8 @@ export interface Rect {
 
 export function snapToGrid(value: number, snapFt: number): number {
   if (snapFt <= 0) return value
-  return Math.round(value / snapFt) * snapFt
+  const snapped = Math.round(value / snapFt) * snapFt
+  return Number(snapped.toFixed(4))
 }
 
 export function snapPoint(p: Point, snapFt: number): Point {

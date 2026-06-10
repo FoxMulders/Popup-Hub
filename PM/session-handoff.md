@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (coordinator dashboard premium refactor — clearance + workflow, not deployed)
+- **Clearance physics:** `lib/coordinator/booth-clearance-visual.ts` — 3′ baseline; red ≤1′ / orange &lt;3′ / green ≥3′ booth fills during drag; `layout-clearance-constants.ts` safety buffer 3′; snap grid drift fix in `geometry.ts`.
+- **Autosave:** `dashboard-layout-save-context.tsx` — Saving… only after debounced commit; green Saved after 1s hold; `floor-plan-v2.tsx` schedules on `onLayoutCommit` (drag end) not continuous doc fingerprint.
+- **Workflow CTA:** `dashboard-next-step-cta.tsx` — static footer; Blueprint → Ledger when clearance valid; Ledger → overview when allocations complete; clearance tooltip blocks advance.
+- **Toolbar / chrome:** Compressed dashboard gutters; ALIGNMENT & SPACING section unhidden in top bar; vendor matches panel removed; legend docked rail + clearance key; nav contrast fixes; logo → `/coordinator/dashboard`.
+- **Verify:** `/coordinator/dashboard` — drag booth shows clearance colors; Saving… after drag release; Next step disabled when orange/red clearance; valid layout opens Allocation Ledger tab.
+
 ## Shipped this session (virtual split-pane + native dual-screen workspace, deployed 2026-06-10)
 - **Virtual split-pane:** `dashboard-split-workspace.tsx` — Blueprint Studio ~65% + Allocation Ledger ~35%; collapse toggle on ledger header (`dashboard-workspace-view-context.tsx` persisted state); wired in `Dashboard_qa.tsx`.
 - **Dual-screen engine:** `lib/coordinator/floorplan-sync.ts` + `floorplan-sync-bridge.tsx` — `BroadcastChannel('floorplan_sync')`; toolbar **Launch Dual-Screen Mode** (`canvas-command-bar-blocks.tsx`, `floor-plan-v2.tsx`); secondary window `/coordinator/dashboard/ledger` (`dashboard-ledger-window-client.tsx`).

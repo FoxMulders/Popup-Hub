@@ -9,6 +9,7 @@ import type {
   MergedZoneObject,
   OpenWallObject,
   PlacedObject,
+  RoomFrame,
   StageObject,
   WallObject,
 } from '../state/types'
@@ -29,6 +30,13 @@ import {
 import { isJoinableObject } from '../state/room-joins'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { fitTextInContainer, wrapTextInContainer } from './canvas-label-text'
+import {
+  BOOTH_CLEARANCE_THEMES,
+  clearanceBand,
+  minVendorBoothClearanceFt,
+} from '@/lib/coordinator/booth-clearance-visual'
+import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
+import type { FloorPlanDoc } from '../state/types'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
@@ -54,7 +62,10 @@ interface CanvasObjectsProps {
    */
   eventCategoryNames?: ReadonlyArray<string>
   /** Room frames — used to detect dissolved perimeter join groups. */
-  rooms?: ReadonlyArray<{ joinGroupId?: string }>
+  rooms?: ReadonlyArray<RoomFrame>
+  objectRoom?: FloorPlanDoc['objectRoom']
+  /** Highlight clearance bands while dragging booths. */
+  emphasizeClearance?: boolean
   /** Stage ids whose inner wall is dissolved into a room union perimeter. */
   dissolvedStageIds?: ReadonlySet<string>
   /**
@@ -429,6 +440,8 @@ function CanvasObjectsBase({
   editingObjectId,
   eventCategoryNames,
   rooms,
+  objectRoom,
+  emphasizeClearance = false,
   dissolvedStageIds,
   renderLayer = 'all',
 }: CanvasObjectsProps) {
@@ -507,12 +520,37 @@ function CanvasObjectsBase({
           obj.kind === 'booth' && isGuestTableBooth(obj as BoothObject)
             ? undefined
             : boothPlacementStatusByObjectId?.get(obj.id)
-        const fill = fillForObject(
+        let fill = fillForObject(
           obj,
           eventCategoryNames,
           isOverlapping,
           boothPlacementStatusByObjectId
         )
+        let clearanceStroke: string | undefined
+        let clearanceFillOpacity: number | undefined
+
+        if (
+          obj.kind === 'booth' &&
+          isVendorBoothObject(obj) &&
+          !isOverlapping
+        ) {
+          const minFt = minVendorBoothClearanceFt(
+            obj as BoothObject,
+            objects,
+            rooms,
+            objectRoom
+          )
+          const band = clearanceBand(minFt)
+          const showBand =
+            band !== 'good' ||
+            (emphasizeClearance && selectedIds.has(obj.id))
+          if (showBand) {
+            const theme = BOOTH_CLEARANCE_THEMES[band]
+            fill = theme.fill
+            clearanceStroke = theme.stroke
+            clearanceFillOpacity = theme.fillOpacity
+          }
+        }
         // Vendor booths use solid yellow — payment status is shown via label text.
         // When the object is part of an explicit join group its
         // perimeter is no longer "owned" by the object — the
@@ -527,9 +565,12 @@ function CanvasObjectsBase({
           isJoined && isJoinableObject(obj) && obj.kind !== 'stage'
         const displayFill = hideJoinedFixtureBody ? 'transparent' : fill
         const displayFillOpacity =
-          hideJoinedFixtureBody || obj.kind === 'stage' ? 0 : 0.85
+          hideJoinedFixtureBody || obj.kind === 'stage'
+            ? 0
+            : clearanceFillOpacity ?? 0.85
         const stroke =
-          isJoined && !isSelected && !isOverlapping && obj.kind !== 'stage'
+          clearanceStroke ??
+          (isJoined && !isSelected && !isOverlapping && obj.kind !== 'stage'
             ? 'transparent'
             : strokeForObject(
               obj,
@@ -537,7 +578,7 @@ function CanvasObjectsBase({
               eventCategoryNames,
               isOverlapping,
               boothPlacementStatusByObjectId
-            )
+            ))
         const strokeWidth = isOverlapping ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
         const isTableClusterBooth =
           obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)

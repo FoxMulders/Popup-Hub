@@ -136,6 +136,8 @@ interface UseCanvasPointerOptions {
   selectedRoomId?: string | null
   /** Notifies the host when a click selects a room frame. */
   onRoomFrameClick?: (roomId: string, options?: { additive?: boolean }) => void
+  /** Fired after a layout mutation commits (drag end, draw, resize). */
+  onLayoutCommit?: () => void
   /** Fired after a room drag/resize gesture commits geometry. */
   onRoomGeometryCommit?: () => void
   /** Fired when a room drag/resize is blocked (e.g. origin at 0,0). */
@@ -431,6 +433,8 @@ export interface CanvasPointerApi {
   roomGestureActive: boolean
   /** True while dragging an object resize handle. */
   objectGestureActive: boolean
+  /** True while actively dragging booths across the canvas. */
+  boothLayoutGestureActive: boolean
   onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => boolean
   onPointerMove: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerUp: (e: ReactPointerEvent<SVGSVGElement>) => void
@@ -465,6 +469,11 @@ export function useCanvasPointer(
   useEffect(() => {
     onOverlapViolationRef.current = onOverlapViolation
   }, [onOverlapViolation])
+  const onLayoutCommit = options.onLayoutCommit
+  const onLayoutCommitRef = useRef(onLayoutCommit)
+  useEffect(() => {
+    onLayoutCommitRef.current = onLayoutCommit
+  }, [onLayoutCommit])
 
   // The host re-renders this hook every time the doc changes (because
   // `store.doc` is a different object), but `commitDraft` only fires
@@ -525,6 +534,7 @@ export function useCanvasPointer(
   const roomResizeRef = useRef<RoomResizeState>(null)
   const objectResizeRef = useRef<ObjectResizeState>(null)
   const [objectGestureActive, setObjectGestureActive] = useState(false)
+  const [boothLayoutGestureActive, setBoothLayoutGestureActive] = useState(false)
   const onRoomCanvasLimitBlockedRef = useRef(
     options.onRoomCanvasLimitBlocked
   )
@@ -1148,6 +1158,7 @@ export function useCanvasPointer(
           drag.moved || Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05
         dragRef.current = { ...drag, lastFt: ft, moved }
         if (!moved) return
+        setBoothLayoutGestureActive(true)
         const patches: Array<{
           id: string
           patch: Partial<PlacedObject>
@@ -1385,6 +1396,7 @@ export function useCanvasPointer(
                 },
                 { pushHistory: true }
               )
+              onLayoutCommitRef.current?.()
             }
           }
         }
@@ -1397,6 +1409,7 @@ export function useCanvasPointer(
       if (roomResize && roomResize.pointerId === e.pointerId) {
         if (roomResize.moved) {
           onRoomGeometryCommitRef.current?.()
+          onLayoutCommitRef.current?.()
         }
         roomResizeRef.current = null
         setRoomGestureActive(false)
@@ -1554,6 +1567,7 @@ export function useCanvasPointer(
           (msg) => addLogRef.current(msg)
         )
         onAfterDrawCommit?.()
+        onLayoutCommitRef.current?.()
         setDraft(null)
         return
       }
@@ -1665,9 +1679,11 @@ export function useCanvasPointer(
               })
             }
             store.updateObjects(finalPatches, { pushHistory: true })
+            onLayoutCommitRef.current?.()
           }
         }
         dragRef.current = null
+        setBoothLayoutGestureActive(false)
         return
       }
 
@@ -1723,6 +1739,7 @@ export function useCanvasPointer(
     rotating,
     roomGestureActive,
     objectGestureActive,
+    boothLayoutGestureActive,
     onPointerDown,
     onPointerMove,
     onPointerUp,

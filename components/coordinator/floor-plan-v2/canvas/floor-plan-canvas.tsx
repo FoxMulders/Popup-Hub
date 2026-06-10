@@ -140,6 +140,8 @@ export interface FloorPlanCanvasProps {
   stickyDrawPlacement?: boolean
   /** Dock legend as left sidebar panel (dashboard). */
   legendVariant?: 'floating' | 'sidebar'
+  /** Fired when a canvas gesture commits layout changes (drag end, draw, resize). */
+  onLayoutCommit?: () => void
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
@@ -192,6 +194,7 @@ export function FloorPlanCanvas({
   scrollHost = true,
   stickyDrawPlacement = false,
   legendVariant = 'floating',
+  onLayoutCommit,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -382,6 +385,7 @@ export function FloorPlanCanvas({
     autoArrangeMode,
     commandCenterViewport,
     stickyDrawPlacement,
+    onLayoutCommit,
   })
 
   useSelectionKeyboardNudge(store, {
@@ -708,6 +712,7 @@ export function FloorPlanCanvas({
           <CanvasObjects
             objects={store.doc.objects}
             rooms={store.doc.rooms}
+            objectRoom={store.doc.objectRoom}
             dissolvedStageIds={dissolvedStageIds}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
@@ -716,6 +721,9 @@ export function FloorPlanCanvas({
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+            emphasizeClearance={
+              pointer.objectGestureActive || pointer.boothLayoutGestureActive
+            }
             renderLayer="merged_zone"
           />
           {activeRoomFrames(store.doc).length > 0 ? (
@@ -731,6 +739,7 @@ export function FloorPlanCanvas({
           <CanvasObjects
             objects={store.doc.objects}
             rooms={store.doc.rooms}
+            objectRoom={store.doc.objectRoom}
             dissolvedStageIds={dissolvedStageIds}
             selectedIds={store.selectedIds}
             pxPerFt={pxPerFt}
@@ -739,6 +748,9 @@ export function FloorPlanCanvas({
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+            emphasizeClearance={
+              pointer.objectGestureActive || pointer.boothLayoutGestureActive
+            }
             renderLayer="placable"
           />
           {toolState.tool === 'select' ? (

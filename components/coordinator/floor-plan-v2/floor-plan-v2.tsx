@@ -737,26 +737,20 @@ function FloorPlanV2Workspace({
     [store, safeTableSizeFt, applyDefaultPlacementSpec]
   )
 
-  const docAutosaveFingerprint = useMemo(
-    () => JSON.stringify(store.doc),
-    [store.doc]
-  )
-
-  // Crash-recovery autosave: every doc commit lands a serialized
-  // snapshot of the unified multi-room doc in localStorage. Debounced
-  // to 250ms so a continuous gesture doesn't hammer storage; cleared
-  // whenever the wizard's server save succeeds (see saveLayoutRef
-  // wiring below).
-  useEffect(() => {
+  const scheduleLayoutAutosave = useCallback(() => {
     if (!eventId) return
-    if (layoutRooms.length === 0 && (store.doc.rooms?.length ?? 0) === 0 && store.doc.objects.length === 0) {
+    if (
+      layoutRooms.length === 0 &&
+      (store.doc.rooms?.length ?? 0) === 0 &&
+      store.doc.objects.length === 0
+    ) {
       clearMultiRoomDraft(eventId)
       return
     }
     layoutSave?.scheduleAutosave(() => {
       saveMultiRoomDraft(eventId, store.doc)
     })
-  }, [eventId, layoutRooms.length, layoutSave, docAutosaveFingerprint, store.doc])
+  }, [eventId, layoutRooms.length, layoutSave, store.doc])
 
   const handleToolChange = useCallback((next: ToolId) => {
     setTool(next)
@@ -1204,11 +1198,13 @@ function FloorPlanV2Workspace({
       if (cmd && !e.shiftKey && key === 'z') {
         e.preventDefault()
         store.undo()
+        scheduleLayoutAutosave()
         return
       }
       if (cmd && ((e.shiftKey && key === 'z') || key === 'y')) {
         e.preventDefault()
         store.redo()
+        scheduleLayoutAutosave()
         return
       }
 
@@ -1304,6 +1300,7 @@ function FloorPlanV2Workspace({
     handlePaste,
     handleRotateBy,
     layoutNativeFullscreen,
+    scheduleLayoutAutosave,
     setCanvasFullscreen,
     store,
   ])
@@ -2380,6 +2377,7 @@ function FloorPlanV2Workspace({
                     className="absolute inset-0 min-h-0"
                     scrollHost={!isEmbedded}
                     commandCenterViewport
+                    onLayoutCommit={isDashboard ? scheduleLayoutAutosave : undefined}
                     store={store}
                     toolState={{ tool, drawShape }}
                     defaultBoothTableSpec={defaultPlacementSpec}
@@ -2597,7 +2595,7 @@ function FloorPlanV2Workspace({
                     showLabels={showLabels}
                   />
                 </CanvasRootErrorBoundary>
-                <CanvasLegend variant={isDashboard ? 'sidebar' : 'floating'} />
+                {!isDashboard ? <CanvasLegend variant="floating" /> : null}
               </div>
             </div>
 

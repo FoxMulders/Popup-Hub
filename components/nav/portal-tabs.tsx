@@ -89,7 +89,7 @@ export function PortalTabs({
               compact && 'flex-1 text-center',
               selected
                 ? 'bg-white text-forest shadow-[var(--shadow-market-md)] ring-1 ring-stone-200/70'
-                : 'text-muted-foreground/60 hover:bg-white/35 hover:text-foreground',
+                : 'text-stone-700 hover:bg-white/55 hover:text-stone-900',
               pending && !selected && 'pointer-events-none opacity-45'
             )}
           >

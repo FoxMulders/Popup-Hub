@@ -120,7 +120,8 @@ function TopBarToolbarSection({
 }) {
   return (
     <section
-      className="dashboard-toolbar-section shrink-0 min-w-[min(100%,12rem)]"
+      className="dashboard-toolbar-section shrink-0"
+      data-toolbar-section={section.id}
       aria-label={section.header}
     >
       <SectionHeader>{section.header}</SectionHeader>

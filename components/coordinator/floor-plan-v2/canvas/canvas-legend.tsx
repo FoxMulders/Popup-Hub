@@ -8,6 +8,7 @@ import {
   PLACEMENT_VIOLATION,
   VENDOR_BOOTH_LEGEND,
 } from './placement-theme'
+import { BOOTH_CLEARANCE_THEMES } from '@/lib/coordinator/booth-clearance-visual'
 
 /**
  * Persistent canvas allocation legend.
@@ -29,6 +30,8 @@ interface LegendItem {
   swatchClass: string
   label: string
   detail: string
+  swatchFill?: string
+  swatchStroke?: string
 }
 
 const ITEMS: LegendItem[] = [
@@ -48,6 +51,27 @@ const ITEMS: LegendItem[] = [
     label: 'Violation',
     detail:
       'Constraint violation — fails the 4-column / 2-row same-category freeze, overlaps a barrier, or blocks an emergency corridor.',
+  },
+  {
+    swatchClass: 'bg-red-200 ring-1 ring-red-500',
+    label: 'Critical clearance',
+    detail: '≤1′ edge clearance — move booth away from walls or neighbors.',
+    swatchFill: BOOTH_CLEARANCE_THEMES.critical.fill,
+    swatchStroke: BOOTH_CLEARANCE_THEMES.critical.stroke,
+  },
+  {
+    swatchClass: 'bg-orange-200 ring-1 ring-orange-500',
+    label: 'Tight clearance',
+    detail: 'About 2′ edge clearance — aim for 3′ before publishing.',
+    swatchFill: BOOTH_CLEARANCE_THEMES.tight.fill,
+    swatchStroke: BOOTH_CLEARANCE_THEMES.tight.stroke,
+  },
+  {
+    swatchClass: 'bg-emerald-200 ring-1 ring-emerald-500',
+    label: 'Ideal clearance',
+    detail: '≥3′ edge clearance — safe patron aisle spacing.',
+    swatchFill: BOOTH_CLEARANCE_THEMES.good.fill,
+    swatchStroke: BOOTH_CLEARANCE_THEMES.good.stroke,
   },
 ]
 
@@ -198,6 +222,14 @@ export function CanvasLegend({
                 'mt-0.5 inline-block h-3 w-3 shrink-0 rounded-sm',
                 item.swatchClass
               )}
+              style={
+                item.swatchFill
+                  ? {
+                      backgroundColor: item.swatchFill,
+                      border: `1px solid ${item.swatchStroke ?? item.swatchFill}`,
+                    }
+                  : undefined
+              }
             />
             <span className="min-w-0">
               <span className="font-semibold text-stone-800">{item.label}</span>

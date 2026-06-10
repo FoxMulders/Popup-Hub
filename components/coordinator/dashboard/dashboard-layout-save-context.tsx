@@ -23,6 +23,8 @@ const DashboardLayoutSaveContext =
   createContext<DashboardLayoutSaveContextValue | null>(null)
 
 const SAVED_DISPLAY_MS = 3500
+const SAVING_DEBOUNCE_MS = 400
+const SAVED_HOLD_MS = 1000
 
 export function DashboardLayoutSaveProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<LayoutSaveStatus>('idle')
@@ -37,21 +39,24 @@ export function DashboardLayoutSaveProvider({ children }: { children: ReactNode 
   }, [])
 
   const scheduleAutosave = useCallback(
-    (save: () => void, delayMs = 250) => {
+    (save: () => void, delayMs = SAVING_DEBOUNCE_MS) => {
       clearTimers()
       if (fadeTimerRef.current != null) {
         window.clearTimeout(fadeTimerRef.current)
         fadeTimerRef.current = null
       }
-      setStatus('saving')
       saveTimerRef.current = window.setTimeout(() => {
         saveTimerRef.current = null
+        setStatus('saving')
         save()
-        setStatus('saved')
         fadeTimerRef.current = window.setTimeout(() => {
           fadeTimerRef.current = null
-          setStatus('idle')
-        }, SAVED_DISPLAY_MS)
+          setStatus('saved')
+          fadeTimerRef.current = window.setTimeout(() => {
+            fadeTimerRef.current = null
+            setStatus('idle')
+          }, SAVED_DISPLAY_MS)
+        }, SAVED_HOLD_MS)
       }, delayMs)
     },
     [clearTimers]

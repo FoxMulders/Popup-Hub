@@ -69,7 +69,8 @@ export function AppNav({
         ? 'vendor'
         : 'patron'
   const links = NAV_LINKS[navRole] ?? []
-  const homeHref = '/'
+  const homeHref =
+    activePortal === 'coordinator' ? '/coordinator/dashboard' : '/'
 
   async function handleSignOut() {
     await signOutAndRedirectToLogin(supabase)
@@ -130,7 +131,7 @@ export function AppNav({
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                           active
                             ? 'bg-forest text-white shadow-sm'
-                            : 'text-stone-900 hover:bg-stone-100 hover:text-forest'
+                            : 'text-stone-800 hover:bg-stone-100 hover:text-forest'
                         )}
                         aria-current={active ? 'page' : undefined}
                       >

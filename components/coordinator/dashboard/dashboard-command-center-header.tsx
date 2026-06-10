@@ -99,7 +99,6 @@ export function DashboardCommandCenterHeader() {
               'dashboard-pill-toggle__track',
               previewMode && 'is-preview'
             )}
-            aria-hidden
           >
             <span className="dashboard-pill-toggle__thumb" />
           </span>

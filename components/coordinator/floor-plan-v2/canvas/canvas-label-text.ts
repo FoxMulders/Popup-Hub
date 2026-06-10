@@ -31,7 +31,7 @@ export function wrapTextInContainer(
   options: FitTextInContainerOptions = {}
 ): WrappedCanvasLabel {
   const baseFontSize = options.baseFontSize ?? 11
-  const minFontSize = options.minFontSize ?? 6
+  const minFontSize = options.minFontSize ?? 7
   const padX = options.padX ?? 4
   const padY = options.padY ?? 2
   const charWidthRatio = options.charWidthRatio ?? 0.58
@@ -105,7 +105,7 @@ export function fitTextInContainer(
   options: FitTextInContainerOptions = {}
 ): FittedCanvasLabel {
   const baseFontSize = options.baseFontSize ?? 11
-  const minFontSize = options.minFontSize ?? 6
+  const minFontSize = options.minFontSize ?? 7
   const padX = options.padX ?? 4
   const padY = options.padY ?? 2
   const charWidthRatio = options.charWidthRatio ?? 0.58

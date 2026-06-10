@@ -112,6 +112,6 @@ assert(
   'Wall-snapped probe should not expand toward the rear wall'
 )
 
-assert(VENDOR_BOOTH_CLEARANCE_FT === 2, 'Clearance must remain 2′')
+assert(VENDOR_BOOTH_CLEARANCE_FT === 3, 'Clearance must remain 3′')
 
 console.log('verify-vendor-booth-clearance: all checks passed')

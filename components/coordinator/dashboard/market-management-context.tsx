@@ -24,6 +24,7 @@ import {
 } from '@/lib/coordinator/dashboard-vendor-placement'
 import { formatCadCurrency } from '@/lib/coordinator/booth-placement-status'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
+import { docHasUnresolvedClearanceIssues } from '@/lib/coordinator/booth-clearance-visual'
 
 export interface DashboardEventSummary {
   id: string
@@ -71,6 +72,8 @@ export interface MarketManagementState {
   autoSeatApprovedVendors: () => number
   focusBooth: (boothId: string) => void
   totalRevenueCents: number
+  /** True when any vendor booth violates the 3′ clearance baseline. */
+  hasClearanceIssues: boolean
 }
 
 const MarketManagementContext = createContext<MarketManagementState | null>(null)
@@ -366,6 +369,12 @@ export function MarketManagementProvider({
     [floorPlanStore]
   )
 
+  const hasClearanceIssues = useMemo(() => {
+    void docRevision
+    if (!floorPlanStore) return false
+    return docHasUnresolvedClearanceIssues(floorPlanStore.doc)
+  }, [docRevision, floorPlanStore])
+
   const value = useMemo(
     (): MarketManagementState => ({
       events,
@@ -389,6 +398,7 @@ export function MarketManagementProvider({
       autoSeatApprovedVendors,
       focusBooth,
       totalRevenueCents,
+      hasClearanceIssues,
     }),
     [
       events,
@@ -410,6 +420,7 @@ export function MarketManagementProvider({
       autoSeatApprovedVendors,
       focusBooth,
       totalRevenueCents,
+      hasClearanceIssues,
     ]
   )
 

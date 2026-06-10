@@ -30,7 +30,7 @@ export const STATIC_ROW_SEGMENTS: Record<
 > = {
   'room-tools': {
     left: ['room'],
-    right: ['primitives', 'history-clipboard', 'view-align', 'utilities'],
+    right: ['primitives', 'history-clipboard', 'utilities'],
   },
   placement: {
     left: ['patron'],
