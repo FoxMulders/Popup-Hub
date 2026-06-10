@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (deploy noop exit code fix, not deployed)
+## Shipped this session (deploy noop exit code fix, deployed 2026-06-10)
 - **`Deploy-popuphub.bat` / `get-deploy-commit-message.ps1`:** When deploy script returns exit 2 (nothing to ship), bat normalizes to exit 0 so double-click does not show "Deploy failed".
 
 ## Shipped this session (deploy script already-shipped guidance, deployed 2026-06-10)
@@ -199,9 +199,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `6bb5499` (pushed to `origin/master`)
-- Last deploy commit: `6bb5499` - feat: deploy script already-shipped guidance
-- Production: https://popuphub.ca - **build 63** | commit `4fdc5ed` (handoff updated 2026-06-10 08:50)
+- Branch: `master` @ `c38cd24` (pushed to `origin/master`)
+- Last deploy commit: `c38cd24` - feat: deploy noop exit code fix
+- Production: https://popuphub.ca - **build 64** | commit `6d91aa2` (handoff updated 2026-06-10 09:10)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -578,7 +578,7 @@
 
 
 ## Last deploy
-- 2026-06-10 08:50 - Deploy via deploy-popuphub.ps1 - `feat: deploy script already-shipped guidance` (6bb5499)
+- 2026-06-10 09:10 - Deploy via deploy-popuphub.ps1 - `feat: deploy noop exit code fix` (c38cd24)
 
 
 ## Goal
