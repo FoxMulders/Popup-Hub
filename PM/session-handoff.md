@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (traffic-aware auto-arrange engine + spring animation, not deployed)
+- **Layout engine:** Replaced generic Turf shelf-scan in `AutoArrangeEngine.ts` with traffic-aware path optimization — maps entrance/exit flow terminals (`traffic-flow-prerequisites.ts`), builds serpentine patron pathway (`buildPatronPathway`), treats corridor as no-fly zone (`buildTrafficNoFlyRects`), packs booths along path margins via `calculatePatronCentricLayout`, shifts occluded booths for path frontage, enforces 3′ clearance (`VENDOR_BOOTH_AISLE_FT`), Turf-validates merged zones.
+- **Spring animation:** `hooks/use-layout-spring.ts` — damped spring rAF; `canvas-objects.tsx` + `floor-plan-canvas.tsx` accept `layoutSpringPoses`; `floor-plan-v2.tsx` `commitVendorPackWithSpring` animates booths from pre-arrange positions on Auto-Arrange / Auto-Layout.
+- **Verify:** `npx tsx scripts/verify-auto-arrange-engine.ts` and `npx tsx scripts/verify-layout-pathfind.ts` — both PASS.
+- **Smoke test:** `/coordinator/dashboard` — place entry + exit doors on perimeter; run Auto-Arrange; booths spring from overlap line into serpentine traffic layout with 3′ clearance bands.
+
 ## Shipped this session (coordinator dashboard premium refactor — clearance + workflow, deployed 2026-06-10)
 - **Clearance physics:** `lib/coordinator/booth-clearance-visual.ts` — 3′ baseline; red ≤1′ / orange &lt;3′ / green ≥3′ booth fills during drag; `layout-clearance-constants.ts` safety buffer 3′; snap grid drift fix in `geometry.ts`.
 - **Autosave:** `dashboard-layout-save-context.tsx` — Saving… only after debounced commit; green Saved after 1s hold; `floor-plan-v2.tsx` schedules on `onLayoutCommit` (drag end) not continuous doc fingerprint.

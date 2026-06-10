@@ -37,9 +37,12 @@ import {
 } from '@/lib/coordinator/booth-clearance-visual'
 import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 import type { FloorPlanDoc } from '../state/types'
+import type { LayoutSpringPose } from '../hooks/use-layout-spring'
 
 interface CanvasObjectsProps {
   objects: ReadonlyArray<PlacedObject>
+  /** Interpolated poses during auto-arrange spring animation. */
+  layoutSpringPoses?: ReadonlyMap<string, LayoutSpringPose> | null
   selectedIds: ReadonlySet<string>
   pxPerFt: number
   /** When false, hide architectural overlay labels (walls, doors, exits). */
@@ -430,8 +433,18 @@ function boothFocusProps(
   }
 }
 
+function resolveSpringObject(
+  obj: PlacedObject,
+  layoutSpringPoses?: ReadonlyMap<string, LayoutSpringPose> | null
+): PlacedObject {
+  const pose = layoutSpringPoses?.get(obj.id)
+  if (!pose) return obj
+  return { ...obj, x: pose.x, y: pose.y, rotation: pose.rotation }
+}
+
 function CanvasObjectsBase({
   objects,
+  layoutSpringPoses,
   selectedIds,
   pxPerFt,
   showLabels = true,
@@ -509,7 +522,8 @@ function CanvasObjectsBase({
         </g>
       ) : null}
       {showPlacableLayer
-        ? placableObjects.map((obj) => {
+        ? placableObjects.map((rawObj) => {
+        const obj = resolveSpringObject(rawObj, layoutSpringPoses)
         const x = obj.x * pxPerFt
         const y = obj.y * pxPerFt
         const w = obj.width * pxPerFt
@@ -541,15 +555,13 @@ function CanvasObjectsBase({
             objectRoom
           )
           const band = clearanceBand(minFt)
-          const showBand =
-            band !== 'good' ||
-            (emphasizeClearance && selectedIds.has(obj.id))
-          if (showBand) {
-            const theme = BOOTH_CLEARANCE_THEMES[band]
-            fill = theme.fill
-            clearanceStroke = theme.stroke
-            clearanceFillOpacity = theme.fillOpacity
-          }
+          const theme = BOOTH_CLEARANCE_THEMES[band]
+          fill = theme.fill
+          clearanceStroke = theme.stroke
+          clearanceFillOpacity =
+            band === 'good' && !emphasizeClearance
+              ? 0.85
+              : theme.fillOpacity
         }
         // Vendor booths use solid yellow — payment status is shown via label text.
         // When the object is part of an explicit join group its

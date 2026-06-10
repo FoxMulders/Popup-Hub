@@ -4,9 +4,9 @@
 
  *
 
- * Delegates geometry validation to {@link AutoArrangeEngine} (Turf.js
+ * Delegates to {@link AutoArrangeEngine} traffic-aware path optimization.
 
- * shelf scan). Keeps doc-level helpers used by pathfinding and UI.
+ * Keeps doc-level helpers used by pathfinding and UI.
 
  */
 
@@ -196,9 +196,9 @@ function orientBoothToNearestWall(
 
  * Pack vendor booths inside the active room's placement surface
 
- * (merged_zone union or rectangular frame) using Turf-validated shelf
+ * (merged_zone union or rectangular frame) using traffic-aware path
 
- * packing with {@link PACK_BOOTH_AISLE_FT} aisles.
+ * optimization with {@link PACK_BOOTH_AISLE_FT} clearance buffers.
 
  */
 

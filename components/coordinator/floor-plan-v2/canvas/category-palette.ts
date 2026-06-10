@@ -21,10 +21,10 @@ export interface PaletteEntry {
   stroke: string
 }
 
-/** Canonical vendor booth colors on the layout canvas (Tailwind yellow-200 / yellow-500). */
+/** Canonical vendor booth colors — green when clearance is good (≥3′ aisle). */
 export const VENDOR_BOOTH_PALETTE: PaletteEntry = {
-  fill: '#FEF08A',
-  stroke: '#EAB308',
+  fill: '#bbf7d0',
+  stroke: '#16a34a',
 }
 
 /** @deprecated Alias — use {@link VENDOR_BOOTH_PALETTE}. */

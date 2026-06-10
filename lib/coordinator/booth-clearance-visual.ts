@@ -3,7 +3,7 @@ import {
   rotatedAabb,
   type Rect,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
+import { VENDOR_BOOTH_AISLE_FT } from '@/lib/booth-planner/layout-clearance-constants'
 import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
 import type {
   BoothObject,
@@ -12,14 +12,11 @@ import type {
   RoomFrame,
 } from '@/components/coordinator/floor-plan-v2/state/types'
 
-/** Preferred minimum edge clearance between vendor booths and walls (ft). */
-export const BOOTH_CLEARANCE_TARGET_FT = 3
+/** Preferred minimum edge-to-edge aisle (ft) — shared between two booths. */
+export const BOOTH_CLEARANCE_TARGET_FT = VENDOR_BOOTH_AISLE_FT
 
-/** Edge clearance at or below this reads as critically tight (ft). */
+/** Edge-to-edge clearance at or below this reads as critically tight (ft). */
 export const BOOTH_CLEARANCE_CRITICAL_FT = 1
-
-/** Edge clearance at or below this reads as tight (ft). */
-export const BOOTH_CLEARANCE_TIGHT_FT = 2
 
 export type BoothClearanceBand = 'critical' | 'tight' | 'good'
 
@@ -102,8 +99,13 @@ export function clearanceToRoomWallsFt(
 
 export function clearanceBand(clearanceFt: number): BoothClearanceBand {
   if (clearanceFt <= BOOTH_CLEARANCE_CRITICAL_FT) return 'critical'
-  if (clearanceFt < BOOTH_CLEARANCE_TARGET_FT) return 'tight'
-  return 'good'
+  if (clearanceFt < BOOTH_CLEARANCE_TARGET_FT) return 'tight' // (1′, 3′)
+  return 'good' // ≥3′ edge-to-edge
+}
+
+/** Drawable booth footprint — edge-to-edge aisle, not collision probe padding. */
+function boothPlacementRect(booth: BoothObject): Rect {
+  return rotatedAabb(booth)
 }
 
 export function minVendorBoothClearanceFt(
@@ -112,13 +114,16 @@ export function minVendorBoothClearanceFt(
   rooms: ReadonlyArray<RoomFrame> | undefined,
   objectRoom: FloorPlanDoc['objectRoom']
 ): number {
-  const boothAabb = objectFootprintAabb(booth)
+  const boothAabb = boothPlacementRect(booth)
   let minGap = Number.POSITIVE_INFINITY
 
   for (const other of objects) {
     if (other.id === booth.id || other.kind !== 'booth') continue
     if (!isVendorBoothObject(other)) continue
-    const gap = edgeClearanceBetweenRects(boothAabb, rotatedAabb(other))
+    const gap = edgeClearanceBetweenRects(
+      boothAabb,
+      boothPlacementRect(other as BoothObject)
+    )
     if (gap < minGap) minGap = gap
   }
 

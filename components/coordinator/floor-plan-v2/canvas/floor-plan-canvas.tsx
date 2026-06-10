@@ -52,6 +52,8 @@ import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-sta
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
 import { dissolvedStageIdsForDoc } from '@/src/utils/layoutMergeEngine'
 
+import type { LayoutSpringPose } from '../hooks/use-layout-spring'
+
 export interface FloorPlanCanvasProps {
   store: FloorPlanDocStore
   toolState: ToolState
@@ -142,6 +144,8 @@ export interface FloorPlanCanvasProps {
   legendVariant?: 'floating' | 'sidebar'
   /** Fired when a canvas gesture commits layout changes (drag end, draw, resize). */
   onLayoutCommit?: () => void
+  /** Interpolated booth poses during auto-arrange spring animation. */
+  layoutSpringPoses?: ReadonlyMap<string, LayoutSpringPose> | null
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
@@ -195,6 +199,7 @@ export function FloorPlanCanvas({
   stickyDrawPlacement = false,
   legendVariant = 'floating',
   onLayoutCommit,
+  layoutSpringPoses = null,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -711,6 +716,7 @@ export function FloorPlanCanvas({
           />
           <CanvasObjects
             objects={store.doc.objects}
+            layoutSpringPoses={layoutSpringPoses}
             rooms={store.doc.rooms}
             objectRoom={store.doc.objectRoom}
             dissolvedStageIds={dissolvedStageIds}
@@ -738,6 +744,7 @@ export function FloorPlanCanvas({
           ) : null}
           <CanvasObjects
             objects={store.doc.objects}
+            layoutSpringPoses={layoutSpringPoses}
             rooms={store.doc.rooms}
             objectRoom={store.doc.objectRoom}
             dissolvedStageIds={dissolvedStageIds}

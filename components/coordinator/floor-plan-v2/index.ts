@@ -23,7 +23,11 @@ export type { ToolId, DrawShape, ToolState } from './tools/types'
 export {
   packBooths,
   packBoothsForRoom,
+  packBoothsTrafficAware,
+  buildTrafficNoFlyRects,
   AISLE_WIDTH_FT,
+  TRAFFIC_PATH_WIDTH_FT,
+  BOOTH_CLEARANCE_BUFFER_FT,
 } from './engine/AutoArrangeEngine'
 export type {
   BoothPackInput,

@@ -63,6 +63,10 @@ import {
 } from './engine/BoothArrangementEngine'
 import { CalculateOptimalPath } from './engine/PathfindingService'
 import { usePathfinding } from './hooks/use-pathfinding'
+import {
+  layoutSpringTargetsFromBooths,
+  useLayoutSpringAnimation,
+} from './hooks/use-layout-spring'
 import { computePatronAisleOverlayForRoom } from '@/lib/floor-plan/patron-aisle-overlay'
 import { legacyRoomsFromDoc } from './state/legacy-bridge'
 import { hydrateFloorPlanDoc } from './state/layout-hydration'
@@ -404,6 +408,10 @@ function FloorPlanV2Workspace({
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
   const [patronPathEnabled, setPatronPathEnabled] = useState(false)
+  const {
+    layoutSpringPoses,
+    startLayoutSpring,
+  } = useLayoutSpringAnimation()
 
   const prevLayoutRoomCountRef = useRef(layoutRooms.length)
   useEffect(() => {
@@ -1374,6 +1382,28 @@ function FloorPlanV2Workspace({
     [activeRoomId, store.doc]
   )
 
+  const commitVendorPackWithSpring = useCallback(
+    (
+      beforeBooths: ReturnType<typeof vendorBoothsInRoom>,
+      packedBooths: ReturnType<typeof vendorBoothsInRoom>,
+      packedDoc: FloorPlanDoc
+    ) => {
+      const targets = layoutSpringTargetsFromBooths(beforeBooths, packedBooths)
+      if (targets.length === 0) {
+        store.replaceObjects(packedDoc.objects)
+        return
+      }
+      startLayoutSpring(targets, {
+        stiffness: 190,
+        damping: 24,
+        onComplete: () => {
+          store.replaceObjects(packedDoc.objects)
+        },
+      })
+    },
+    [startLayoutSpring, store]
+  )
+
   const placedCount = vendorBoothCount
   const selectedCount = store.selectedIds.size
 
@@ -1674,6 +1704,7 @@ function FloorPlanV2Workspace({
     }
 
     const booths = vendorBoothsInRoom(store.doc, activeRoomId)
+    const before = booths.map((b) => ({ ...b }))
     const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
     const packResult = PackBooths(store.doc, activeRoomId, cleared)
     const packedDoc = applyPackedBoothsToDoc(
@@ -1683,7 +1714,7 @@ function FloorPlanV2Workspace({
     )
     const pathResult = CalculateOptimalPath(packedDoc, activeRoomId)
 
-    store.replaceObjects(packedDoc.objects)
+    commitVendorPackWithSpring(before, packResult.booths, packedDoc)
     setPatronPathEnabled((pathResult?.path.length ?? 0) >= 2)
 
     if (packResult.placedCount === 0) {
@@ -1706,7 +1737,7 @@ function FloorPlanV2Workspace({
         `Packed ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'}. Add entrance/exit doors to visualize traffic flow.`
       )
     }
-  }, [activeRoomId, store, vendorBoothCount])
+  }, [activeRoomId, commitVendorPackWithSpring, store, vendorBoothCount])
 
   const handleAutoArrange = useCallback(() => {
     if (vendorBoothCount === 0) {
@@ -1721,6 +1752,7 @@ function FloorPlanV2Workspace({
     }
 
     const booths = vendorBoothsInRoom(store.doc, activeRoomId)
+    const before = booths.map((b) => ({ ...b }))
     const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
     const packResult = PackBooths(store.doc, activeRoomId, cleared)
     const packedDoc = applyPackedBoothsToDoc(
@@ -1729,7 +1761,7 @@ function FloorPlanV2Workspace({
       packResult.booths
     )
 
-    store.replaceObjects(packedDoc.objects)
+    commitVendorPackWithSpring(before, packResult.booths, packedDoc)
 
     if (packResult.placedCount === 0) {
       toast.error(
@@ -1746,10 +1778,10 @@ function FloorPlanV2Workspace({
       )
     } else {
       toast.success(
-        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'} in ${frame.name} with 5′ aisles.`
+        `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'} in ${frame.name} with traffic-optimized layout and 3′ clearance.`
       )
     }
-  }, [activeRoomId, store, vendorBoothCount])
+  }, [activeRoomId, commitVendorPackWithSpring, store, vendorBoothCount])
 
   const handlePatronPathToggle = useCallback(() => {
     setPatronPathEnabled((enabled) => {
@@ -2378,6 +2410,7 @@ function FloorPlanV2Workspace({
                     scrollHost={!isEmbedded}
                     commandCenterViewport
                     onLayoutCommit={isDashboard ? scheduleLayoutAutosave : undefined}
+                    layoutSpringPoses={layoutSpringPoses}
                     store={store}
                     toolState={{ tool, drawShape }}
                     defaultBoothTableSpec={defaultPlacementSpec}
@@ -2536,6 +2569,7 @@ function FloorPlanV2Workspace({
                   <LayoutCanvas
                     className="absolute inset-0 min-h-0 max-w-full"
                     scrollHost={!isEmbedded}
+                    layoutSpringPoses={layoutSpringPoses}
                     store={store}
                     toolState={{ tool, drawShape }}
                     defaultBoothTableSpec={defaultPlacementSpec}

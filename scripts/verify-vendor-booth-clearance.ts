@@ -65,28 +65,28 @@ function vendor(id: string, x: number, y: number, rotation = 0): BoothObject {
   }
 }
 
-// Uniform probe expands 6×4 → 10×8
+// Uniform probe expands 6×4 by 1.5′ per side → 9×7
 const booth = vendor('a', 0, 0)
 const probe = vendorBoothUniformCollisionProbe(booth)
-assert(probe.width === 10, `width=${probe.width} expected 10`)
-assert(probe.height === 8, `height=${probe.height} expected 8`)
-assert(probe.x === -2, `x=${probe.x} expected -2`)
-assert(probe.y === -2, `y=${probe.y} expected -2`)
+assert(probe.width === 9, `width=${probe.width} expected 9`)
+assert(probe.height === 7, `height=${probe.height} expected 7`)
+assert(probe.x === -1.5, `x=${probe.x} expected -1.5`)
+assert(probe.y === -1.5, `y=${probe.y} expected -1.5`)
 
-// 4′ table gap → probe edges touch (no overlap)
+// 4′ edge-to-edge gap → no probe overlap (3′ aisle + 1′ buffer)
 const a = vendor('a', 0, 0)
 const b = vendor('b', 10, 0)
 assert(
   !placedObjectsOverlap(a, b, overlapCtx),
-  '4′ table gap should not collide (10′ probe span)'
+  '4′ edge gap should not collide (1.5′ buffer each side)'
 )
 
-// 3′ table gap → probes overlap
+// 2′ edge-to-edge gap → probes overlap (<3′ aisle)
 const c = vendor('c', 0, 0)
-const d = vendor('d', 9, 0)
+const d = vendor('d', 8, 0)
 assert(
   placedObjectsOverlap(c, d, overlapCtx),
-  '3′ table gap should collide with 360° buffer'
+  '2′ edge gap should collide with 1.5′ buffers'
 )
 
 assert(
@@ -105,13 +105,13 @@ const wallProbe = vendorBoothCollisionProbe(wallSnapped, wallCtx)
 const uniformProbe = vendorBoothUniformCollisionProbe(wallSnapped)
 assert(
   wallProbe.height < uniformProbe.height,
-  `Wall-snapped probe height=${wallProbe.height} should omit 2′ back buffer`
+  `Wall-snapped probe height=${wallProbe.height} should omit back buffer`
 )
 assert(
   wallProbe.y === wallSnapped.y,
   'Wall-snapped probe should not expand toward the rear wall'
 )
 
-assert(VENDOR_BOOTH_CLEARANCE_FT === 3, 'Clearance must remain 3′')
+assert(VENDOR_BOOTH_CLEARANCE_FT === 1.5, 'Per-booth buffer must be half of 3′ aisle')
 
 console.log('verify-vendor-booth-clearance: all checks passed')
