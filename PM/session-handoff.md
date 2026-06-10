@@ -2,7 +2,7 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (coordinator mobile dashboard, maps provider, address AI geocode, not deployed)
+## Shipped this session (coordinator mobile dashboard, maps provider, address AI geocode, deployed 2026-06-09)
 - **Coordinator mobile dashboard:** `MarketDashboardClient` routes phones to `CoordinatorMobileOverview` (`isMobileDevice()` or `?overview=mobile`); dashboard page wraps client in `Suspense` for `useSearchParams`.
 - **Post-login redirect:** OAuth callback uses `resolvePostLoginPath` (user-agent aware) instead of `getDefaultDashboard`; `Login_qa` passes `userAgent` only.
 - **Google Maps provider:** `event-form`, `wizard-step-venue`, and `event-map` use shared `GoogleMapsProvider` + `GoogleMapsApiFallback` instead of raw `APIProvider`.
@@ -143,9 +143,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `da3a645` (pushed to `origin/master`)
-- Last deploy commit: `da3a645` - feat: C
-- Production: https://popuphub.ca - **build 57** | commit `b9b4dd4` (handoff updated 2026-06-09 20:24)
+- Branch: `master` @ `b1cb747` (pushed to `origin/master`)
+- Last deploy commit: `b1cb747` - feat: c
+- Production: https://popuphub.ca - **build 58** | commit `d335fba` (handoff updated 2026-06-09 21:02)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -522,7 +522,7 @@
 
 
 ## Last deploy
-- 2026-06-09 20:24 - Deploy via deploy-popuphub.ps1 - `feat: C` (da3a645)
+- 2026-06-09 21:02 - Deploy via deploy-popuphub.ps1 - `feat: c` (b1cb747)
 
 
 ## Goal
