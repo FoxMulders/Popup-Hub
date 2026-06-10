@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (platform FAQ copy refresh, not deployed)
+## Shipped this session (platform FAQ copy refresh, deployed 2026-06-10)
 - **`lib/legal/faq-content.tsx`:** Added coordinator value-prop FAQ (vs. DMs/spreadsheets); expanded pricing answer (vendor pass-through, coordinator fee toggle, offline-payment trust note); expanded fee rationale with mobile-app funding paragraph.
 - **`app/legal/faq/page.tsx`:** Updated last-modified date to June 10, 2026.
 - **Verify:** `/legal/faq` — new “Why should I choose Popup Hub…” entry visible; pricing and fee answers show structured multi-paragraph copy.
@@ -354,9 +354,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `aec9032` (pushed to `origin/master`)
-- Last deploy commit: `aec9032` - feat: ship 4 session updates (Blueprint Studio toolbar element panel entry animation; dashboard toolbar layout refactor; coordinator onboarding relaxation + escrow criteria; coordinator escrow + vendor vouch + pass-through fees)
-- Production: https://popuphub.ca - **v1.0.0 build 84** | commit `e9a2012` (handoff updated 2026-06-10 16:42)
+- Branch: `master` @ `1dfd9e8` (pushed to `origin/master`)
+- Last deploy commit: `1dfd9e8` - feat: platform FAQ copy refresh
+- Production: https://popuphub.ca - **v1.0.0 build 85** | commit `60fc094` (handoff updated 2026-06-10 17:08)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -733,7 +733,7 @@
 
 
 ## Last deploy
-- 2026-06-10 16:42 - Deploy via deploy-popuphub.ps1 - `feat: ship 4 session updates (Blueprint Studio toolbar element panel entry animation; dashboard toolbar layout refactor; coordinator onboarding relaxation + escrow criteria; coordinator escrow + vendor vouch + pass-through fees)` (aec9032)
+- 2026-06-10 17:08 - Deploy via deploy-popuphub.ps1 - `feat: platform FAQ copy refresh` (1dfd9e8)
 
 
 ## Goal
