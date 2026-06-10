@@ -403,8 +403,6 @@ export function FloorPlanCanvas({
 
   useSelectionKeyboardNudge(store, {
     activeRoomId: activeRoomId ?? null,
-    onProximityViolation,
-    onOverlapViolation,
   })
 
   useCanvasObjectKeyboard(store, { enabled: commandCenterViewport })

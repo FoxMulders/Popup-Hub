@@ -38,12 +38,10 @@ import type { ToolState } from '../tools/types'
 import {
   aabbFitsCanvas,
   canvasClampDelta,
-  findOverlapInMove,
   groupCanvasClampDelta,
   hitTest,
   normalizeRect,
   objectCenter,
-  placedObjectOverlapsAny,
   pointInsideFrame,
   pointInsideRoomPlacement,
   pointHitsFrameStroke,
@@ -59,10 +57,6 @@ import {
   type ViewportTransform,
 } from './geometry'
 import { objectFootprintAabb } from '../state/table-cluster-layout'
-import {
-  findFirstViolationInMove,
-  findBoothProximityViolation,
-} from './category-rules'
 import {
   objectResizeFromHandle,
   patchForObjectResize,
@@ -1323,56 +1317,25 @@ export function useCanvasPointer(
           const obj = store.doc.objects.find(
             (o) => o.id === objectResize.objectId
           )
-          const initial = objectResize.initial
           if (obj) {
-            const others = store.doc.objects.filter(
-              (o) => o.id !== objectResize.objectId
+            store.updateObject(
+              objectResize.objectId,
+              {
+                x: obj.x,
+                y: obj.y,
+                width: obj.width,
+                height: obj.height,
+                ...(obj.kind === 'booth'
+                  ? {
+                      tableLengthFt: (obj as BoothObject).tableLengthFt,
+                      tableShape: (obj as BoothObject).tableShape,
+                      tablePurpose: (obj as BoothObject).tablePurpose,
+                    }
+                  : {}),
+              },
+              { pushHistory: true }
             )
-            if (
-              findOverlapInMove([obj], others, {
-                rooms: store.doc.rooms ?? [],
-                objectRoom: store.doc.objectRoom,
-                doc: store.doc,
-              })
-            ) {
-              store.updateObject(
-                objectResize.objectId,
-                {
-                  x: initial.x,
-                  y: initial.y,
-                  width: initial.width,
-                  height: initial.height,
-                  ...(initial.kind === 'booth'
-                    ? {
-                        tableLengthFt: (initial as BoothObject).tableLengthFt,
-                        tableShape: (initial as BoothObject).tableShape,
-                        tablePurpose: (initial as BoothObject).tablePurpose,
-                      }
-                    : {}),
-                },
-                { pushHistory: false }
-              )
-              onOverlapViolationRef.current?.()
-            } else {
-              store.updateObject(
-                objectResize.objectId,
-                {
-                  x: obj.x,
-                  y: obj.y,
-                  width: obj.width,
-                  height: obj.height,
-                  ...(obj.kind === 'booth'
-                    ? {
-                        tableLengthFt: (obj as BoothObject).tableLengthFt,
-                        tableShape: (obj as BoothObject).tableShape,
-                        tablePurpose: (obj as BoothObject).tablePurpose,
-                      }
-                    : {}),
-                },
-                { pushHistory: true }
-              )
-              onLayoutCommitRef.current?.()
-            }
+            onLayoutCommitRef.current?.()
           }
         }
         objectResizeRef.current = null
@@ -1577,91 +1540,24 @@ export function useCanvasPointer(
                 )
               )
             )
-          const movedBooths: BoothObject[] = []
-          for (const obj of movedResolved) {
-            if (obj.kind === 'booth') movedBooths.push(obj as BoothObject)
-          }
-          const others = store.doc.objects.filter(
-            (o) => !movedIdSet.has(o.id)
-          )
-          const gridSpacingFt = store.doc.gridSpacingFt || 1
-          const violation = findFirstViolationInMove(
-            movedBooths,
-            others,
-            gridSpacingFt
-          )
-          if (violation) {
-            // Snap back: rewrite each moved object's x/y to its
-            // pre-gesture position. Skip pushHistory because the
-            // gesture is being aborted — there's no net change to
-            // record on the undo stack.
-            const revertPatches: Array<{
-              id: string
-              patch: Partial<PlacedObject>
-            }> = []
-            for (const id of drag.ids) {
-              const orig = drag.originals.get(id)
-              if (orig) {
-                revertPatches.push({
-                  id,
-                  patch: { x: orig.x, y: orig.y },
-                })
-              }
-            }
-            if (revertPatches.length > 0) {
-              store.updateObjects(revertPatches, { pushHistory: false })
-            }
-            onProximityViolationRef.current?.({
-              category: violation.category,
-              dxColumns: violation.dxColumns,
-              dyRows: violation.dyRows,
+          const finalPatches: Array<{
+            id: string
+            patch: Partial<PlacedObject>
+          }> = []
+          for (const resolved of movedResolved) {
+            finalPatches.push({
+              id: resolved.id,
+              patch: {
+                x: resolved.x,
+                y: resolved.y,
+                width: resolved.width,
+                height: resolved.height,
+                rotation: resolved.rotation,
+              },
             })
-          } else if (
-            findOverlapInMove(movedResolved, others, {
-              rooms: store.doc.rooms ?? [],
-              objectRoom: store.doc.objectRoom,
-              doc: store.doc,
-            })
-          ) {
-            const revertPatches: Array<{
-              id: string
-              patch: Partial<PlacedObject>
-            }> = []
-            for (const id of drag.ids) {
-              const orig = drag.originals.get(id)
-              if (orig) {
-                revertPatches.push({
-                  id,
-                  patch: { x: orig.x, y: orig.y },
-                })
-              }
-            }
-            if (revertPatches.length > 0) {
-              store.updateObjects(revertPatches, { pushHistory: false })
-            }
-            onOverlapViolationRef.current?.()
-          } else {
-            // Commit the move with a single history entry. We've been
-            // mutating without history during the gesture; now snapshot.
-            const finalPatches: Array<{
-              id: string
-              patch: Partial<PlacedObject>
-            }> = []
-            for (const resolved of movedResolved) {
-              finalPatches.push({
-                id: resolved.id,
-                patch: {
-                  x: resolved.x,
-                  y: resolved.y,
-                  width: resolved.width,
-                  height: resolved.height,
-                  rotation: resolved.rotation,
-                },
-              })
-            }
-            store.updateObjects(finalPatches, { pushHistory: true })
-            onLayoutCommitRef.current?.()
           }
+          store.updateObjects(finalPatches, { pushHistory: true })
+          onLayoutCommitRef.current?.()
         }
         dragRef.current = null
         setBoothLayoutGestureActive(false)
@@ -1855,37 +1751,6 @@ function commitDraft(
         activeRoomId: roomId ?? null,
       }),
     } as PlacedObject
-  }
-  // Same-category proximity gate for newly-drawn vendor booths.
-  if (obj.kind === 'booth' && (obj as BoothObject).tablePurpose !== 'guest') {
-    const gridSpacingFt = store.doc.gridSpacingFt || 1
-    const violation = findBoothProximityViolation(
-      obj as BoothObject,
-      store.doc.objects,
-      gridSpacingFt
-    )
-    if (violation) {
-      log(
-        `Placement rejected (${obj.kind}): proximity category=${violation.category}`
-      )
-      onProximityViolation?.({
-        category: violation.category,
-        dxColumns: violation.dxColumns,
-        dyRows: violation.dyRows,
-      })
-      return
-    }
-  }
-  if (
-    placedObjectOverlapsAny(obj, store.doc.objects, undefined, {
-      rooms: store.doc.rooms ?? [],
-      objectRoom: store.doc.objectRoom,
-      doc: store.doc,
-    })
-  ) {
-    log(`Placement rejected (${obj.kind}): overlaps existing object`)
-    onOverlapViolation?.()
-    return
   }
   const placementRoomId =
     roomId ??

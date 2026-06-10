@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (manual placement free + row wall orientation, not deployed)
+- **Manual placement:** Removed same-category proximity and collision-buffer rejection from drag commit, draw commit, keyboard nudge, and booth resize — coordinators can place booths freely; auto-arrange engines still enforce distance rules.
+- **Row orientation snap:** `booth-layout-engine.ts` — when a vendor booth shares a row (center Y within 1′), manual drag/draw/preview inherit the row peer's wall-facing rotation; `table-placement-preview.ts` ghost matches.
+- **Verify:** `npx tsx scripts/verify-booth-row-orientation.ts` — PASS.
+
 ## Shipped this session (canvas layout engine — grid snap, wall clearance, booth colors, not deployed)
 - **Layout engine:** `engine/booth-layout-engine.ts` — shared drag/nudge loop: 1′ default snap, 5′ with Shift (`resolveBoothMoveSnapFt`); wired in `use-canvas-pointer.ts` (Shift key listener + drag frames) and `selection-keyboard-nudge.ts`.
 - **Wall placement:** Perimeter snap uses strict `< 4′` threshold (`perimeter-booth-orientation.ts`, `vendor-booth-placement.ts`) so booths can sit exactly 4′ from walls without snap jitter; `verify-vendor-wall-snap.ts` adds 4′ regression.

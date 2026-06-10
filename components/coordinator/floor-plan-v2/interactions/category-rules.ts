@@ -2,8 +2,8 @@
  * Category-driven layout rules.
  *
  * Two rules live here, both pure functions so they can run from the
- * canvas pointer hook, the paste pipeline, and the unit tests
- * without React or DOM dependencies:
+ * The canvas pointer hook and paste pipeline used to enforce this on
+ * manual drag/draw; auto-arrange and validation UIs still use it.
  *
  *   1. `isBoothProximityViolation` — same-category booths cannot sit
  *      within 4 grid columns AND 2 grid rows of each other. The grid

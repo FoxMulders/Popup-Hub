@@ -2,11 +2,9 @@
 
 import { useEffect } from 'react'
 import type { FloorPlanDocStore } from '../state/use-floor-plan-doc'
-import type { BoothObject, PlacedObject } from '../state/types'
-import { findFirstViolationInMove } from './category-rules'
+import type { PlacedObject } from '../state/types'
 import {
   canvasClampDelta,
-  findOverlapInMove,
   groupCanvasClampDelta,
   rotatedAabb,
   aabbFitsCanvas,
@@ -16,10 +14,7 @@ import {
   snapStructuralAssetForDoc,
   snapStructuralAssetToRoomFrame,
 } from './structural-wall-snap'
-import {
-  isVendorBoothObject,
-  type RoomEdgeSide,
-} from './vendor-booth-placement'
+import { isVendorBoothObject } from './vendor-booth-placement'
 import {
   boothLayoutMovePatch,
   BOOTH_MOVE_SNAP_FT,
@@ -82,14 +77,12 @@ function patchAfterNudge(
   dy: number,
   doc: FloorPlanDocStore['doc'],
   activeRoomId: string | null | undefined,
-  snapFt: number,
-  preferredEdge?: RoomEdgeSide | null
+  snapFt: number
 ): Partial<PlacedObject> {
   if (isVendorBoothObject(obj)) {
     return boothLayoutMovePatch(obj, { x: obj.x, y: obj.y }, dx, dy, doc, {
       snapFt,
       activeRoomId,
-      preferredEdge,
       positionOnly: true,
     })
   }
@@ -154,17 +147,11 @@ function clampGroupToCanvas(
 
 export interface SelectionKeyboardNudgeOptions {
   activeRoomId?: string | null
-  onProximityViolation?: (info: {
-    category: string
-    dxColumns: number
-    dyRows: number
-  }) => void
-  onOverlapViolation?: () => void
 }
 
 /**
- * Move every unlocked selected object by `stepFt` along one axis. Applies the
- * same clamp, wall snap, proximity, and overlap gates as pointer drag commit.
+ * Move every unlocked selected object by `stepFt` along one axis.
+ * Manual nudge does not enforce auto-arrange distance or overlap rules.
  */
 export function nudgeSelectedObjects(
   store: FloorPlanDocStore,
@@ -218,40 +205,6 @@ export function nudgeSelectedObjects(
     if (!aabbFitsCanvas(aabb, cw, cl)) return false
   }
 
-  const movedResolved = clamped.map((entry) =>
-    objectWithPatch(objById.get(entry.id)!, entry.patch)
-  )
-  const movedIdSet = new Set(moveIds)
-  const movedBooths: BoothObject[] = []
-  for (const obj of movedResolved) {
-    if (obj.kind === 'booth') movedBooths.push(obj as BoothObject)
-  }
-  const others = doc.objects.filter((o) => !movedIdSet.has(o.id))
-  const gridSpacingFt = doc.gridSpacingFt || 1
-  const violation = findFirstViolationInMove(
-    movedBooths,
-    others,
-    gridSpacingFt
-  )
-  if (violation) {
-    options?.onProximityViolation?.({
-      category: violation.category,
-      dxColumns: violation.dxColumns,
-      dyRows: violation.dyRows,
-    })
-    return false
-  }
-  if (
-    findOverlapInMove(movedResolved, others, {
-      rooms: doc.rooms ?? [],
-      objectRoom: doc.objectRoom,
-      doc,
-    })
-  ) {
-    options?.onOverlapViolation?.()
-    return false
-  }
-
   store.updateObjects(clamped, { pushHistory: true })
   return true
 }
@@ -261,8 +214,6 @@ export function useSelectionKeyboardNudge(
   options?: SelectionKeyboardNudgeOptions
 ): void {
   const activeRoomId = options?.activeRoomId ?? null
-  const onProximityViolation = options?.onProximityViolation
-  const onOverlapViolation = options?.onOverlapViolation
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -279,18 +230,11 @@ export function useSelectionKeyboardNudge(
       })
       const moved = nudgeSelectedObjects(store, direction, stepFt, {
         activeRoomId,
-        onProximityViolation,
-        onOverlapViolation,
       })
       if (moved) e.preventDefault()
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [
-    activeRoomId,
-    onOverlapViolation,
-    onProximityViolation,
-    store,
-  ])
+  }, [activeRoomId, store])
 }

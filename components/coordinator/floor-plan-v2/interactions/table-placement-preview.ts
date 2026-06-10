@@ -3,6 +3,11 @@ import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '../state/types'
 import type { Rect } from './geometry'
 import {
+  findVendorBoothRowPeer,
+  vendorBoothOrientationFromRowPeer,
+  wallEdgeFromRotation,
+} from '../engine/booth-layout-engine'
+import {
   PLACEMENT_PREVIEW_WALL_SNAP_FT,
   orientVendorBoothToNearestWall,
   snapVendorBoothToPerimeter,
@@ -44,7 +49,7 @@ export function resolveTablePlacementPreview(
     defaultBoothTableSpec != null
       ? boothPatchForTableSize(base, defaultBoothTableSpec)
       : null
-  const probe = {
+  let probe = {
     ...base,
     kind: 'booth' as const,
     accentColor: null,
@@ -72,7 +77,24 @@ export function resolveTablePlacementPreview(
           },
         }
       : doc
-  const snap = snapVendorBoothToPerimeter(probe, snapDoc, snapToleranceFt)
+
+  const rowPeer = findVendorBoothRowPeer(probe, snapDoc.objects ?? [], {
+    excludeId: probe.id,
+    gridSpacingFt: snapDoc.gridSpacingFt,
+  })
+  if (rowPeer) {
+    probe = { ...probe, ...vendorBoothOrientationFromRowPeer(probe, rowPeer) }
+  }
+
+  const preferredEdge = rowPeer
+    ? wallEdgeFromRotation(rowPeer.rotation ?? 0)
+    : undefined
+  const snap = snapVendorBoothToPerimeter(
+    probe,
+    snapDoc,
+    snapToleranceFt,
+    preferredEdge
+  )
   if (snap) {
     return {
       x: snap.x,
@@ -80,6 +102,16 @@ export function resolveTablePlacementPreview(
       width: snap.width,
       height: snap.height,
       rotation: snap.rotation ?? 0,
+    }
+  }
+
+  if (rowPeer) {
+    return {
+      x: probe.x,
+      y: probe.y,
+      width: probe.width,
+      height: probe.height,
+      rotation: probe.rotation ?? 0,
     }
   }
 
