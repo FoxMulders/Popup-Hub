@@ -1,1 +1,0 @@
-feat: ship 3 session updates (manual placement free + row wall orientation; canvas layout engine â€” grid snap, wall clearance, booth colors; two-pane mapâ€“ledger sync + Map Labels)

@@ -4,12 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (manual placement free + row wall orientation, not deployed)
+## Shipped this session (manual placement free + row wall orientation, deployed 2026-06-10)
 - **Manual placement:** Removed same-category proximity and collision-buffer rejection from drag commit, draw commit, keyboard nudge, and booth resize — coordinators can place booths freely; auto-arrange engines still enforce distance rules.
 - **Row orientation snap:** `booth-layout-engine.ts` — when a vendor booth shares a row (center Y within 1′), manual drag/draw/preview inherit the row peer's wall-facing rotation; `table-placement-preview.ts` ghost matches.
 - **Verify:** `npx tsx scripts/verify-booth-row-orientation.ts` — PASS.
 
-## Shipped this session (canvas layout engine — grid snap, wall clearance, booth colors, not deployed)
+## Shipped this session (canvas layout engine — grid snap, wall clearance, booth colors, deployed 2026-06-10)
 - **Layout engine:** `engine/booth-layout-engine.ts` — shared drag/nudge loop: 1′ default snap, 5′ with Shift (`resolveBoothMoveSnapFt`); wired in `use-canvas-pointer.ts` (Shift key listener + drag frames) and `selection-keyboard-nudge.ts`.
 - **Wall placement:** Perimeter snap uses strict `< 4′` threshold (`perimeter-booth-orientation.ts`, `vendor-booth-placement.ts`) so booths can sit exactly 4′ from walls without snap jitter; `verify-vendor-wall-snap.ts` adds 4′ regression.
 - **Clearance colors:** `booth-clearance-visual.ts` — red ≤2′, yellow &gt;2′ and &lt;4′, green ≥4′; structural walls count as obstacles; isolated booths default green (fixes gray/wrong fills); legend copy updated.
@@ -17,7 +17,7 @@
 - **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts`, `verify-vendor-booth-clearance.ts`, `verify-booth-clearance-visual.ts` — PASS.
 - **Smoke test:** `/coordinator/dashboard` — drag booth with 1′ steps; hold Shift for 5′; place booth exactly 4′ from wall (no snap fight); pair booths at 2′ both turn red; toggle Map labels (vendor / category / booth ID).
 
-## Shipped this session (two-pane map–ledger sync + Map Labels, not deployed)
+## Shipped this session (two-pane map–ledger sync + Map Labels, deployed 2026-06-10)
 - **Unified booth state:** `use-booth-entities.ts` — single reactive array (id, dimensions, x/y, clearance band, vendor, category, payment status) feeding Booth Matrix and canvas label meta (`dashboard-floor-plan.tsx`).
 - **Bidirectional ledger:** `booth-matrix-panel.tsx` — vendor `<select>` + status `<select>` call `assignVendorToBoothByVendorId` / `updateBoothPaymentStatus` (`market-management-context.tsx`); canvas labels + clearance fills re-render instantly; `floorplan-sync.ts` + `floorplan-sync-bridge.tsx` relay `matrix_assign_vendor` / `matrix_set_status` from dual-screen ledger window.
 - **Map Labels:** `lib/coordinator/booth-map-label.ts` + toolbar **Map labels** select (`canvas-command-bar-blocks.tsx`); `canvas-objects.tsx` wraps vendor booth text via `wrapTextInContainer` (vendor / category / booth ID modes); mode persisted in `localStorage`.
@@ -293,9 +293,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `6aecb28` (pushed to `origin/master`)
-- Last deploy commit: `6aecb28` - feat: traffic-aware auto-arrange engine + spring animation
-- Production: https://popuphub.ca - **v1.0.0 build 76** | commit `92530a8` (handoff updated 2026-06-10 14:28)
+- Branch: `master` @ `f0332c0` (pushed to `origin/master`)
+- Last deploy commit: `f0332c0` - feat: ship 3 session updates (manual placement free + row wall orientation; canvas layout engine — grid snap, wall clearance, booth colors; two-pane map–ledger sync + Map Labels)
+- Production: https://popuphub.ca - **v1.0.0 build 79** | commit `85fc9e2` (handoff updated 2026-06-10 15:20)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -672,7 +672,7 @@
 
 
 ## Last deploy
-- 2026-06-10 14:28 - Deploy via deploy-popuphub.ps1 - `feat: traffic-aware auto-arrange engine + spring animation` (6aecb28)
+- 2026-06-10 15:20 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (manual placement free + row wall orientation; canvas layout engine — grid snap, wall clearance, booth colors; two-pane map–ledger sync + Map Labels)` (f0332c0)
 
 
 ## Goal
