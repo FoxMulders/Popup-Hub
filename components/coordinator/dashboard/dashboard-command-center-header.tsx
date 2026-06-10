@@ -165,7 +165,9 @@ export function DashboardCommandCenterHeader() {
           </h1>
           <div className="mt-0.5 flex flex-wrap items-center gap-2">
             <p className="text-xs font-medium text-stone-600">
-              {isBlueprint ? 'Blueprint Studio' : 'Allocation Ledger'}
+              {isBlueprint
+                ? 'Blueprint Studio + Allocation Ledger'
+                : 'Allocation Ledger'}
             </p>
             <LayoutSaveChip />
           </div>

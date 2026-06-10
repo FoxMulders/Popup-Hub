@@ -16,6 +16,7 @@ import type { VendorApplicationSnapshot } from './booth-placement-status'
 import { CommandCenterFullscreenProvider } from './command-center-fullscreen-context'
 import { DashboardLayoutSaveProvider } from './dashboard-layout-save-context'
 import { DashboardWorkspaceViewProvider } from './dashboard-workspace-view-context'
+import { FloorplanSyncBridge } from './floorplan-sync-bridge'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
 import { CoordinatorMobileOverview } from './coordinator-mobile-overview'
@@ -93,6 +94,7 @@ export function MarketDashboardClient({
       <CommandCenterFullscreenProvider>
         <DashboardLayoutSaveProvider>
           <DashboardWorkspaceViewProvider>
+            <FloorplanSyncBridge />
             <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
               <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
             </div>

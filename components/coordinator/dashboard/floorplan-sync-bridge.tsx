@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import {
   postFloorplanSync,
   subscribeFloorplanSync,
@@ -17,7 +17,7 @@ export function FloorplanSyncBridge() {
   const rows = useBoothMatrixRows()
   const { selectedEventId, selectedBoothId, focusBooth } = useMarketManagement()
 
-  useEffect(() => {
+  const publishMatrix = useCallback(() => {
     const payload: FloorplanMatrixSyncRow[] = rows.map((row) => ({
       id: row.id,
       label: row.label,
@@ -36,8 +36,16 @@ export function FloorplanSyncBridge() {
   }, [rows, selectedBoothId, selectedEventId])
 
   useEffect(() => {
+    publishMatrix()
+  }, [publishMatrix])
+
+  useEffect(() => {
     return subscribeFloorplanSync((message) => {
       if (message.source === 'canvas') return
+      if (message.type === 'ledger_ready') {
+        publishMatrix()
+        return
+      }
       if (message.type === 'focus_booth') {
         focusBooth(message.boothId)
       }
@@ -45,7 +53,7 @@ export function FloorplanSyncBridge() {
         focusBooth(message.boothId)
       }
     })
-  }, [focusBooth])
+  }, [focusBooth, publishMatrix])
 
   return null
 }

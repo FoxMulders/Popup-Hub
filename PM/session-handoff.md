@@ -4,12 +4,14 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (two-page floor plan workspace — Blueprint Studio + Allocation Ledger, not deployed)
-- **Page split:** `dashboard-workspace-view-context.tsx` — Blueprint Studio (canvas + toolbars) vs Allocation Ledger (`?view=ledger`); header tabs in `dashboard-command-center-header.tsx`; booth matrix removed from `dashboard-floor-plan.tsx`; full ledger in `dashboard-allocation-ledger.tsx`.
-- **Toolbar:** Removed VENDOR MATCHES section (`toolbar-static-layout.ts`, `canvas-toolbar-static.tsx`); ALIGNMENT & SPACING + Auto-Arrange visible in top bar; shared toolbar control height in `globals.css`.
-- **Canvas:** `QA_CANVAS_VIEWPORT_CLASS` flex fill fix; status label wrap for “Assigned — unpaid” (`canvas-label-text.ts`, `canvas-objects.tsx`); native browser **Full screen** via `command-center-fullscreen-context.tsx` (replaces Panels/Full canvas CSS mode).
-- **Booth matrix:** Coordinates column removed; even 25% columns; semantic badges; collapsible header; focus-from-ledger switches to Blueprint Studio; ledger full-height table styles in `globals.css`.
-- **Verify:** `/coordinator/dashboard` — Blueprint Studio = canvas only; Allocation Ledger tab = matrix only; Full screen = browser fullscreen; logo → `/`; autosave Saving… → Saved to cloud; alignment Perimeter/Grid/Staggered + Auto-Arrange visible.
+## Shipped this session (virtual split-pane + native dual-screen workspace, not deployed)
+- **Virtual split-pane:** `dashboard-split-workspace.tsx` — Blueprint Studio ~65% + Allocation Ledger ~35%; collapse toggle on ledger header (`dashboard-workspace-view-context.tsx` persisted state); wired in `Dashboard_qa.tsx`.
+- **Dual-screen engine:** `lib/coordinator/floorplan-sync.ts` + `floorplan-sync-bridge.tsx` — `BroadcastChannel('floorplan_sync')`; toolbar **Launch Dual-Screen Mode** (`canvas-command-bar-blocks.tsx`, `floor-plan-v2.tsx`); secondary window `/coordinator/dashboard/ledger` (`dashboard-ledger-window-client.tsx`).
+- **Density + layout:** `--dashboard-gutter` tightened; split-pane CSS in `globals.css`; **Full screen** labeled button (browser fullscreen via `command-center-fullscreen-context.tsx`); reactive autosave chip (yellow Saving… → green Saved to cloud).
+- **Booth matrix:** Coordinates column removed; even 25% columns; semantic status badges; `aria-live` on table region; **Next step** CTA anchored in static footer (`dashboard-allocation-ledger.tsx`, split footer); VENDOR MATCHES removed from toolbar.
+- **Canvas physics:** Vendor booth drag uses `snapToGrid` during move + commit (`use-canvas-pointer.ts`); status labels wrap via `wrapTextInContainer` (`canvas-label-text.ts`, `canvas-objects.tsx`).
+- **Verify:** `/coordinator/dashboard` — split pane + collapse expand; **Launch Dual-Screen Mode** opens ledger window with live matrix sync; booth click in ledger focuses canvas; Full screen fills monitor; logo → `/`; ALIGNMENT & SPACING + Auto-Arrange visible in top bar.
+- **Deploy fix (2026-06-10):** Production build `5b45e5d` failed — `dashboard-split-workspace.tsx` referenced `ledgerPaneCollapsed` before `dashboard-workspace-view-context.tsx` exported it (TS error on Vercel). Working tree now complete; `get-deploy-commit-message.ps1` sanitizes bat REM preview (ASCII-only) to avoid Windows `'et' is not recognized` after failed deploy.
 
 ## Shipped this session (coordinator dashboard density + UX polish, deployed 2026-06-10)
 - **Global chrome:** `app-nav.tsx` — Popup Hub logo links to `/`; nav pills use high-contrast `text-stone-900`; unified `--dashboard-gutter` aligns header, toolbar, and booth matrix left edges.

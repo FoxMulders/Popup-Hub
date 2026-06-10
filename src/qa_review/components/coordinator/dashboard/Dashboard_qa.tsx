@@ -5,6 +5,7 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
 import { DashboardAllocationLedger } from '@/components/coordinator/dashboard/dashboard-allocation-ledger'
+import { DashboardSplitWorkspace } from '@/components/coordinator/dashboard/dashboard-split-workspace'
 import { useDashboardWorkspaceView } from '@/components/coordinator/dashboard/dashboard-workspace-view-context'
 import { DashboardAppShell } from '@/components/coordinator/dashboard/dashboard-app-shell'
 import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashboard-canvas-column'
@@ -129,11 +130,15 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
             ) : showNoRoomEmpty ? (
               <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
             ) : (
-              <DashboardCanvasColumn
-                showBlueprint={showBlueprint}
-                mountCanvas={mountCanvas}
-                reducedMotion={reducedMotion}
-                onCanvasInteractive={handleCanvasInteractive}
+              <DashboardSplitWorkspace
+                blueprint={
+                  <DashboardCanvasColumn
+                    showBlueprint={showBlueprint}
+                    mountCanvas={mountCanvas}
+                    reducedMotion={reducedMotion}
+                    onCanvasInteractive={handleCanvasInteractive}
+                  />
+                }
               />
             )}
           </div>

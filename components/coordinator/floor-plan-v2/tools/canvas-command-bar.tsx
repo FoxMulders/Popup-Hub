@@ -40,6 +40,8 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
+  onLaunchDualScreen?: () => void
+  dualScreenActive?: boolean
   designerExitHref?: string | null
   designerExitLabel?: string
   onDesignerExit?: () => void
@@ -135,6 +137,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onShowLabelsChange,
     canvasFullscreen = false,
     onToggleCanvasFullscreen,
+    onLaunchDualScreen,
+    dualScreenActive = false,
     designerExitHref,
     designerExitLabel,
     onDesignerExit,
@@ -254,6 +258,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onShowLabelsChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
+      onLaunchDualScreen,
+      dualScreenActive,
       designerExitHref,
       designerExitLabel,
       onDesignerExit,
@@ -334,6 +340,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onShowLabelsChange,
       canvasFullscreen,
       onToggleCanvasFullscreen,
+      onLaunchDualScreen,
+      dualScreenActive,
       designerExitHref,
       designerExitLabel,
       onDesignerExit,

@@ -17,6 +17,7 @@ import {
   Locate,
   Minimize2,
   Minus,
+  Monitor,
   MousePointer2,
   Plus,
   Redo2,
@@ -279,6 +280,8 @@ export interface CanvasCommandBarBlockContext {
   onShowLabelsChange?: (show: boolean) => void
   canvasFullscreen?: boolean
   onToggleCanvasFullscreen?: () => void
+  onLaunchDualScreen?: () => void
+  dualScreenActive?: boolean
   designerExitHref?: string | null
   designerExitLabel?: string
   onDesignerExit?: () => void
@@ -1201,28 +1204,42 @@ export function renderCanvasCommandBarBlock(
                   )}
                 </CommandButton>
               ) : null}
+              {ctx.onLaunchDualScreen ? (
+                <button
+                  type="button"
+                  onClick={ctx.onLaunchDualScreen}
+                  title="Open booth matrix in a second window"
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
+                    toolbarControlHeight(compact)
+                  )}
+                >
+                  <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Launch Dual-Screen Mode
+                </button>
+              ) : null}
               {ctx.onToggleCanvasFullscreen ? (
-                <CommandButton
-                  onClick={() => {
-                    ctx.onToggleCanvasFullscreen?.()
-                  }}
+                <button
+                  type="button"
+                  onClick={() => ctx.onToggleCanvasFullscreen?.()}
                   title={
                     ctx.canvasFullscreen
                       ? 'Exit full screen (Esc)'
-                      : 'Full screen editor'
+                      : 'Expand canvas to fill the monitor'
                   }
-                  className={
-                    ctx.canvasFullscreen
-                      ? 'bg-stone-800 text-white hover:bg-stone-700'
-                      : undefined
-                  }
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 rounded-md border border-stone-300 bg-white px-2 text-[11px] font-semibold text-stone-800 hover:bg-stone-50',
+                    ctx.canvasFullscreen && 'border-stone-700 bg-stone-800 text-white hover:bg-stone-700',
+                    toolbarControlHeight(compact)
+                  )}
                 >
                   {ctx.canvasFullscreen ? (
-                    <Minimize2 className="h-3.5 w-3.5" />
+                    <Minimize2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   ) : (
-                    <Expand className="h-3.5 w-3.5" />
+                    <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   )}
-                </CommandButton>
+                  {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+                </button>
               ) : null}
               {ctx.onSaveDraft ? (
                 <TooltipWrapper
@@ -1349,28 +1366,42 @@ export function renderCanvasCommandBarBlock(
               </span>
             </Link>
           ) : null}
+          {ctx.onLaunchDualScreen ? (
+            <button
+              type="button"
+              onClick={ctx.onLaunchDualScreen}
+              title="Open booth matrix in a second window"
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
+                toolbarControlHeight(compact)
+              )}
+            >
+              <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Launch Dual-Screen Mode
+            </button>
+          ) : null}
           {ctx.onToggleCanvasFullscreen ? (
-            <CommandButton
-              onClick={() => {
-                ctx.onToggleCanvasFullscreen?.()
-              }}
+            <button
+              type="button"
+              onClick={() => ctx.onToggleCanvasFullscreen?.()}
               title={
                 ctx.canvasFullscreen
                   ? 'Exit full screen (Esc)'
-                  : 'Full screen editor'
+                  : 'Expand canvas to fill the monitor'
               }
-              className={
-                ctx.canvasFullscreen
-                  ? 'bg-stone-800 text-white hover:bg-stone-700'
-                  : undefined
-              }
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1 rounded-md border border-stone-300 bg-white px-2 text-[11px] font-semibold text-stone-800 hover:bg-stone-50',
+                ctx.canvasFullscreen && 'border-stone-700 bg-stone-800 text-white hover:bg-stone-700',
+                toolbarControlHeight(compact)
+              )}
             >
               {ctx.canvasFullscreen ? (
-                <Minimize2 className="h-3.5 w-3.5" />
+                <Minimize2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
               ) : (
-                <Expand className="h-3.5 w-3.5" />
+                <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
               )}
-            </CommandButton>
+              {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+            </button>
           ) : null}
           <div
             className={cn(

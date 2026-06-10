@@ -374,9 +374,10 @@ function dragCommitPatchForObject(
     const snapped = applyVendorBoothSnapIfNearWall(obj as BoothObject, doc, {
       preferredEdge: drag.lockedWallEdges.get(obj.id) ?? null,
     })
+    const snapFt = doc.snapFt > 0 ? doc.snapFt : 1
     patch = {
-      x: snapped.x,
-      y: snapped.y,
+      x: snapToGrid(snapped.x, snapFt),
+      y: snapToGrid(snapped.y, snapFt),
       width: snapped.width,
       height: snapped.height,
       rotation: snapped.rotation,
@@ -1159,12 +1160,8 @@ export function useCanvasPointer(
           if (!orig) continue
           const obj = objById.get(id)
           if (!obj) continue
-          const proposedX = isVendorBoothObject(obj)
-            ? orig.x + dx
-            : snapToGrid(orig.x + dx, snap)
-          const proposedY = isVendorBoothObject(obj)
-            ? orig.y + dy
-            : snapToGrid(orig.y + dy, snap)
+          const proposedX = snapToGrid(orig.x + dx, snap)
+          const proposedY = snapToGrid(orig.y + dy, snap)
           let patch: Partial<PlacedObject> = {
             x: proposedX,
             y: proposedY,

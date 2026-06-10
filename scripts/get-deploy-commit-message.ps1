@@ -3,8 +3,19 @@
 function Get-DeployCommitMessagePreviewText {
     param([string]$Message)
 
-    if ($Message) { return $Message }
+    if ($Message) { return Sanitize-BatRemComment -Text $Message }
     return '(none - add ## Shipped this session (... , not deployed) to PM/session-handoff.md)'
+}
+
+# cmd.exe reads .bat as ANSI — UTF-8 em dashes and shell metacharacters can break `set` lines.
+function Sanitize-BatRemComment {
+    param([string]$Text)
+
+    if (-not $Text) { return '' }
+    $safe = $Text -replace "[\u2013\u2014]", '-'
+    $safe = $safe -replace "[\r\n]+", ' '
+    $safe = $safe -replace '[&|<>%^!]', ''
+    return $safe.Trim()
 }
 
 function Get-UndeployedHandoffTitles {

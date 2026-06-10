@@ -12,15 +12,14 @@ export function DashboardAllocationLedger() {
 
   return (
     <div className="dashboard-allocation-ledger flex min-h-0 flex-1 flex-col overflow-hidden">
-      <BoothMatrixPanel
-        variant="ledger"
-        defaultOpen
-        headerAction={
-          !previewMode ? (
-            <DashboardNextStepCta inline className="max-w-[16rem]" />
-          ) : undefined
-        }
-      />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <BoothMatrixPanel variant="ledger" defaultOpen />
+      </div>
+      {!previewMode ? (
+        <footer className="dashboard-allocation-ledger__footer shrink-0 border-t border-stone-200/90 bg-stone-50/80 p-1.5">
+          <DashboardNextStepCta inline className="max-w-none" />
+        </footer>
+      ) : null}
     </div>
   )
 }

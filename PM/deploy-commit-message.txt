@@ -1,1 +1,1 @@
-feat: two-page floor plan workspace â€” Blueprint Studio + Allocation Ledger
+feat: virtual split-pane + native dual-screen workspace

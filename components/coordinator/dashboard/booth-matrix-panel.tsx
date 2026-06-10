@@ -26,8 +26,8 @@ export function BoothMatrixPanel({
   defaultOpen,
 }: {
   headerAction?: React.ReactNode
-  /** `ledger` — full-page Allocation Ledger; `embedded` — legacy dock under canvas. */
-  variant?: 'embedded' | 'ledger'
+  /** `ledger` — full-page; `split` — right pane in virtual split; `embedded` — legacy dock. */
+  variant?: 'embedded' | 'ledger' | 'split'
   defaultOpen?: boolean
 }) {
   const rows = useBoothMatrixRows()
@@ -35,35 +35,37 @@ export function BoothMatrixPanel({
   const { focusBooth, selectedBoothId } = useMarketManagement()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const isLedger = variant === 'ledger'
+  const isSplit = variant === 'split'
+  const isDensePane = isLedger || isSplit
 
   const handleFocusBooth = (boothId: string) => {
     if (isLedger) setView('blueprint')
     focusBooth(boothId)
   }
-  const [panelOpen, setPanelOpen] = useState(defaultOpen ?? !isLedger)
+  const [panelOpen, setPanelOpen] = useState(defaultOpen ?? !isDensePane)
   const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const captionId = useId()
 
   const selectedRow = rows.find((row) => row.id === selectedBoothId)
 
   useEffect(() => {
-    if (isLedger) return
+    if (isDensePane) return
     try {
       const raw = window.localStorage.getItem(MATRIX_STORAGE_KEY)
       if (raw === '0') setPanelOpen(false)
     } catch {
       // ignore
     }
-  }, [isLedger])
+  }, [isDensePane])
 
   useEffect(() => {
-    if (isLedger) return
+    if (isDensePane) return
     try {
       window.localStorage.setItem(MATRIX_STORAGE_KEY, panelOpen ? '1' : '0')
     } catch {
       // ignore
     }
-  }, [panelOpen, isLedger])
+  }, [panelOpen, isDensePane])
 
   useEffect(() => {
     if (!selectedRow) return
@@ -89,50 +91,63 @@ export function BoothMatrixPanel({
     <section
       className={cn(
         'dashboard-booth-matrix-panel',
-        isLedger && 'dashboard-booth-matrix-panel--ledger'
+        isLedger && 'dashboard-booth-matrix-panel--ledger',
+        isSplit && 'dashboard-booth-matrix-panel--split'
       )}
       aria-labelledby={captionId}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button
-          type="button"
-          id={captionId}
-          className="dashboard-booth-matrix-panel__trigger min-w-0 flex-1"
-          aria-expanded={panelOpen}
-          aria-controls="booth-matrix-table-region"
-          onClick={() => setPanelOpen((open) => !open)}
-        >
-          <span className="flex min-w-0 items-center gap-1.5">
-            <ChevronDown
-              className={cn(
-                'h-4 w-4 shrink-0 text-stone-600 transition-transform',
-                !panelOpen && '-rotate-90'
-              )}
-              aria-hidden
-            />
-            <span className="truncate text-xs font-bold uppercase tracking-wide text-stone-800">
-              {isLedger ? 'Booth matrix' : 'Booth matrix'}
+      {!isSplit ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <button
+            type="button"
+            id={captionId}
+            className="dashboard-booth-matrix-panel__trigger min-w-0 flex-1"
+            aria-expanded={panelOpen}
+            aria-controls="booth-matrix-table-region"
+            onClick={() => setPanelOpen((open) => !open)}
+          >
+            <span className="flex min-w-0 items-center gap-1.5">
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 shrink-0 text-stone-600 transition-transform',
+                  !panelOpen && '-rotate-90'
+                )}
+                aria-hidden
+              />
+              <span className="truncate text-xs font-bold uppercase tracking-wide text-stone-800">
+                Booth matrix
+              </span>
+              <span className="rounded-full bg-stone-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-stone-700">
+                {rows.length}
+              </span>
             </span>
-            <span className="rounded-full bg-stone-200/80 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-stone-700">
-              {rows.length}
-            </span>
-          </span>
-        </button>
-        {headerAction ? (
-          <div className="relative z-auto shrink-0">{headerAction}</div>
-        ) : null}
-      </div>
+          </button>
+          {headerAction ? (
+            <div className="relative z-auto shrink-0">{headerAction}</div>
+          ) : null}
+        </div>
+      ) : (
+        <h2 id={captionId} className="sr-only">
+          Booth matrix — {rows.length} booths
+        </h2>
+      )}
 
       <p className="sr-only" aria-live="polite" aria-atomic="true">
         {selectionAnnouncement}
       </p>
 
       {panelOpen ? (
-        <div id="booth-matrix-table-region" className="mt-1 space-y-1">
+        <div
+          id="booth-matrix-table-region"
+          className={cn('space-y-1', !isSplit && 'mt-1')}
+          aria-live="polite"
+          aria-relevant="additions removals"
+        >
           <div
             className={cn(
-              'dashboard-booth-matrix-panel__table-wrap hidden md:block',
-              isLedger && 'dashboard-booth-matrix-panel__table-wrap--ledger'
+              'dashboard-booth-matrix-panel__table-wrap',
+              isDensePane && 'dashboard-booth-matrix-panel__table-wrap--ledger',
+              !isDensePane && 'hidden md:block'
             )}
           >
             <table className="w-full table-fixed border-collapse text-left text-sm">
