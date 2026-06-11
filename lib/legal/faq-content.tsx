@@ -72,6 +72,14 @@ export const PLATFORM_FAQ: FaqItem[] = [
           (3% + $1 per booth) keep our discovery tools and operations software funded so patrons can find 
           every local market in one place. 
         </p>
+        <p className="mb-3">
+          To further protect our community, holding funds in escrow is our direct answer to combat market 
+          fraud. This protective holding period is not there to withhold hard-earned revenue from honest 
+          coordinators; rather, it serves as a critical safety net so that vendors can recoup their deposits 
+          should an unwanted fraudulent actor sneak into the ecosystem. By securing these transactions during 
+          the booking phase, we isolate malicious accounts before they can cause widespread financial damage 
+          to local small businesses.
+        </p>
         <p className="mb-4">
           Moving forward, these fees will also directly fund the development and launch of our dedicated 
           mobile app for patrons. Because a mobile application requires continuous maintenance, hosting, 
