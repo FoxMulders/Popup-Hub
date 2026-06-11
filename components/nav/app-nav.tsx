@@ -6,7 +6,6 @@ import { useState } from 'react'
 import { Bell, Menu } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
-import { UserAvatar } from '@/components/profile/user-avatar'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
@@ -87,13 +86,13 @@ export function AppNav({
     <nav
       id="site-app-nav"
       className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
-      style={{ minHeight: 'var(--app-nav-height, 3.15rem)' }}
+      style={{ minHeight: 'var(--app-nav-height, 3.625rem)' }}
     >
       <div className="mx-auto flex max-w-full flex-col gap-1 overflow-x-hidden px-3 py-2 sm:px-4 xl:max-w-[1600px] xl:px-8">
         <CenteredHeaderRow
           left={
             <BrandLogoLockup
-              className="h-9 w-auto max-h-9 shrink-0 sm:h-10 sm:max-h-10"
+              className="h-[2.5875rem] w-auto max-h-[2.5875rem] shrink-0 sm:h-[2.875rem] sm:max-h-[2.875rem]"
               href={homeHref}
             />
           }
@@ -165,19 +164,6 @@ export function AppNav({
                     title="Live notification slot"
                   />
                 )}
-              </Link>
-
-              <Link
-                href="/profile"
-                className="app-tap-target inline-flex rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Profile settings"
-              >
-                <UserAvatar
-                  userId={profile.id}
-                  profile={avatarProfile}
-                  className="h-8 w-8 sm:h-9 sm:w-9"
-                  fallbackClassName="text-xs"
-                />
               </Link>
 
               <button

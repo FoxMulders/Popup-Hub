@@ -171,10 +171,10 @@ export function AppMenuSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-full max-h-[100dvh] w-[min(100vw-1rem,20rem)] min-h-0 flex-col gap-0 overflow-hidden p-0 safe-bottom safe-top"
+        className="flex h-dvh max-h-dvh w-[min(100vw-1rem,20rem)] min-h-0 flex-col gap-0 overflow-hidden p-0 data-[side=right]:h-dvh data-[side=right]:max-h-dvh"
       >
         {menuProfile ? (
-          <div className="shrink-0 border-b border-stone-200 px-3 py-2.5 pr-11">
+          <div className="safe-top shrink-0 border-b border-stone-200 px-3 py-2.5 pr-11">
             <Link
               href="/profile"
               onClick={close}
@@ -196,7 +196,7 @@ export function AppMenuSheet({
             </Link>
           </div>
         ) : (
-          <SheetHeader className="space-y-0 px-3 pb-0 pt-3 pr-11">
+          <SheetHeader className="safe-top space-y-0 px-3 pb-0 pt-3 pr-11">
             <SheetTitle className="text-left font-heading text-base">Menu</SheetTitle>
             {profileName ? (
               <p className="truncate text-left text-xs text-muted-foreground">{profileName}</p>
@@ -205,31 +205,9 @@ export function AppMenuSheet({
         )}
 
         <nav
-          className={cn(
-            'flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 [-webkit-overflow-scrolling:touch]',
-            'pt-2'
-          )}
+          className="safe-bottom flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch]"
           aria-label="App menu"
         >
-          {menuProfile ? (
-            <MenuSection title="Account">
-              <MenuLinkItem
-                href="/profile"
-                label="Profile settings"
-                pathname={pathname}
-                onNavigate={close}
-                icon={
-                  <UserAvatar
-                    userId={menuProfile.userId}
-                    profile={menuProfile.profile}
-                    className="h-6 w-6 shrink-0"
-                    fallbackClassName="text-[10px]"
-                  />
-                }
-              />
-            </MenuSection>
-          ) : null}
-
           {links.length > 0 ? (
             <MenuSection
               title={links.length > 1 ? 'Navigate' : undefined}

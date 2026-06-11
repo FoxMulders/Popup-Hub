@@ -38,7 +38,7 @@ export function GuestNav() {
         <CenteredHeaderRow
           left={
             <BrandLogoLockup
-              className="h-14 w-auto max-h-14 shrink-0 sm:h-16 sm:max-h-16 md:h-18 md:max-h-none"
+              className="h-[4.025rem] w-auto max-h-[4.025rem] shrink-0 sm:h-[4.6rem] sm:max-h-[4.6rem] md:h-[5.175rem] md:max-h-none"
               href="/discover"
             />
           }

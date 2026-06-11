@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, not deployed)
+- **`app-nav.tsx` / `shopper-top-bar.tsx`:** Removed profile avatar from header right rail; profile access via `AppMenuSheet` (avatar + name banner + Profile settings). Shopper top bar hamburger now visible on all breakpoints for signed-in users.
+- **`app-menu-sheet.tsx`:** Fixed menu cut-off — `h-dvh` sheet height, safe-area padding on header/nav children (not outer shell), scrollable `overflow-y-auto` nav body.
+- **Logo +15%:** `popup-hub-logo.tsx` default nav lockup; `app-nav`, `guest-nav`, `shopper-top-bar` header class overrides; `--app-nav-height` 3.15rem → 3.625rem in `globals.css`.
+- **Verify:** Sign in → header shows logo (larger), bell + hamburger only (no header avatar); open menu → profile banner at top, all links scroll on narrow/mobile viewports; guest nav logo scales up without overlap.
+
 ## Shipped this session (coordinator event hub side-panel navigation fix, deployed 2026-06-10)
 - **`lib/coordinator/coordinator-event-route.ts`:** `isCoordinatorEventHubPath()` — detects primary event overview (`/coordinator/events/[id]`) vs sub-routes.
 - **`coordinator-workspace-rail.tsx` / `coordinator-context-panel.tsx`:** On event hub, hide self-referencing “Event overview” buttons; top exit links to command center (`/coordinator/dashboard`). On sub-routes (layout, check-in, review, applications, etc.), “Event overview” uses `router.push` to `/coordinator/events/{eventId}`.

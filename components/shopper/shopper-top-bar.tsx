@@ -14,7 +14,6 @@ import { PortalTabs } from '@/components/nav/portal-tabs'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import { Button } from '@/components/ui/button'
-import { UserAvatar } from '@/components/profile/user-avatar'
 import type { Profile } from '@/types/database'
 
 interface ShopperTopBarProps {
@@ -75,7 +74,7 @@ export function ShopperTopBar({
         <CenteredHeaderRow
           left={
             <BrandLogoLockup
-              className="h-14 w-auto max-h-14 shrink-0 sm:h-16 sm:max-h-16 md:h-18 md:max-h-none"
+              className="h-[4.025rem] w-auto max-h-[4.025rem] shrink-0 sm:h-[4.6rem] sm:max-h-[4.6rem] md:h-[5.175rem] md:max-h-none"
               href="/discover"
             />
           }
@@ -91,24 +90,9 @@ export function ShopperTopBar({
           right={
             profile ? (
               <>
-                <Link
-                  href="/profile"
-                  className="app-tap-target inline-flex rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Profile settings"
-                >
-                  {avatarProfile ? (
-                    <UserAvatar
-                      userId={profile.id}
-                      profile={avatarProfile}
-                      className="h-9 w-9"
-                      fallbackClassName="text-xs"
-                    />
-                  ) : null}
-                </Link>
-
                 <button
                   type="button"
-                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((open) => !open)}
