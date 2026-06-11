@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (Blueprint Studio two-row dashboard layout, not deployed)
+## Shipped this session (Blueprint Studio two-row dashboard layout, deployed 2026-06-11)
 - **Row 1 (header):** `dashboard-command-center-header.tsx` — Blueprint Studio | Allocation Ledger tabs, then portaled view/setup cluster (labels, Event setup, dual-screen, fullscreen, zoom) + hall management (Main Hall bar, undo/redo), then Edit/Preview + New market on one line; no market title row.
 - **Row 2 (tool strip):** `toolbar-static-layout.ts` + `canvas-toolbar-static.tsx` — four labeled sections: SHAPES & BOOTHS (primitives only), VENDOR BOOTHS, PATRON TABLES (renamed), ALIGNMENT & SPACING; vendor/patron each own section with one horizontal icon row.
 - **Portal split:** `canvas-command-bar.tsx` — `headerBarLayout` → `view-setup` + `hall-management`; `topBarLayout` → tool-strip sections only (`DASHBOARD_HEADER_SECTION_IDS` / `DASHBOARD_TOOLSTRIP_SECTION_IDS`).
@@ -395,9 +395,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `41cd05f` (pushed to `origin/master`)
-- Last deploy commit: `41cd05f` - feat: dashboard layout toolbar compaction + shared footer
-- Production: https://popuphub.ca - **v1.0.0 build 90** | commit `174f470` (handoff updated 2026-06-11 15:23)
+- Branch: `master` @ `77d7cee` (pushed to `origin/master`)
+- Last deploy commit: `77d7cee` - feat: Blueprint Studio two-row dashboard layout
+- Production: https://popuphub.ca - **v1.0.0 build 91** | commit `d469da4` (handoff updated 2026-06-11 15:47)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -774,7 +774,7 @@
 
 
 ## Last deploy
-- 2026-06-11 15:23 - Deploy via deploy-popuphub.ps1 - `feat: dashboard layout toolbar compaction + shared footer` (41cd05f)
+- 2026-06-11 15:47 - Deploy via deploy-popuphub.ps1 - `feat: Blueprint Studio two-row dashboard layout` (77d7cee)
 
 
 ## Goal
