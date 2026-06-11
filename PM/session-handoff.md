@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, not deployed)
+## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, deployed 2026-06-11)
 - **`app-nav.tsx` / `shopper-top-bar.tsx`:** Removed profile avatar from header right rail; profile access via `AppMenuSheet` (avatar + name banner + Profile settings). Shopper top bar hamburger now visible on all breakpoints for signed-in users.
 - **`app-menu-sheet.tsx`:** Fixed menu cut-off — `h-dvh` sheet height, safe-area padding on header/nav children (not outer shell), scrollable `overflow-y-auto` nav body.
 - **Logo +15%:** `popup-hub-logo.tsx` default nav lockup; `app-nav`, `guest-nav`, `shopper-top-bar` header class overrides; `--app-nav-height` 3.15rem → 3.625rem in `globals.css`.
@@ -372,9 +372,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8562012` (pushed to `origin/master`)
-- Last deploy commit: `8562012` - feat: ship 2 session updates (coordinator event hub side-panel navigation fix; coordinator pre-flight review & publish page)
-- Production: https://popuphub.ca - **v1.0.0 build 86** | commit `a6b0c09` (handoff updated 2026-06-10 17:24)
+- Branch: `master` @ `8044476` (pushed to `origin/master`)
+- Last deploy commit: `8044476` - feat: header nav UI/UX — profile in menu, logo +15%, menu scroll
+- Production: https://popuphub.ca - **v1.0.0 build 87** | commit `f07d697` (handoff updated 2026-06-11 08:06)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -751,7 +751,7 @@
 
 
 ## Last deploy
-- 2026-06-10 17:24 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (coordinator event hub side-panel navigation fix; coordinator pre-flight review & publish page)` (8562012)
+- 2026-06-11 08:06 - Deploy via deploy-popuphub.ps1 - `feat: header nav UI/UX — profile in menu, logo +15%, menu scroll` (8044476)
 
 
 ## Goal
