@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (SHAPES & BOOTHS toolbar duplicate table panels, not deployed)
+- **`canvas-toolbar-static.tsx`:** SHAPES & BOOTHS top bar uses one horizontal motion row — **Patron Elements** left, designer tools center (primitives + history), **Vendor Booths** right. Removed the extra static tool row above a second vendor/patron stack that duplicated table-size controls flanking the entry animation.
+- **`toolbar-element-panels-motion.ts` + `globals.css`:** Row layout for `.toolbar-element-panels`; flank panels `w-auto shrink-0`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` → SHAPES & BOOTHS shows a single patron table group on the left and vendor table group on the right of the animated designer-tool cluster (no duplicate size rows above/below).
+
 ## Shipped this session (booth matrix tables/payment, admin coordinator, woodworking, mobile layout advisory, not deployed)
 - **Booth matrix:** `Tables` + `Payment` columns (table_count + method/settlement summary); vendor pool shelf + vendor applications list show same data for vendors.
 - **Admin coordinator:** migration `105_platform_operator_coordinator_access.sql` restores `coordinator` role for `bradmulders@gmail.com`; draft API + coordinator layout portal list honor `is_admin`; `grant-platform-operator.ts` sets coordinator role.
