@@ -4,6 +4,19 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Baseline — Blueprint Studio layout responsiveness QA
+- **Branch:** `cursor/blueprint-layout-responsiveness-9b85` (base `master`)
+- **Baseline commit before QA changes:** `ce107af` (`feat: dashboard and floor-plan editor polish`)
+- **Production/build:** Not deployed in this scoped QA pass; production baseline unchanged.
+
+## Shipped this session (Blueprint Studio small-screen guards, not deployed)
+- **Responsive handler:** `floor-plan-viewport-advisory.tsx` now exports the explicit floor-plan matrix regression copy and a reusable `FloorPlanDesktopRequiredBoundary` using the existing 1024px × 550px desktop breakpoint.
+- **Dashboard coverage:** Main QA dashboard bootstrap keeps the event-aware desktop-required overlay; legacy `dashboard-bootstrap.tsx` now wraps itself in the same provider and unmounts canvas content while the overlay is active.
+- **Layout/matrix coverage:** Standalone dual-screen booth matrix (`/coordinator/dashboard/ledger`), spatial layout editors, and both production + QA floor-plan wizard steps now render through the shared guard instead of exposing the matrix/canvas on small screens.
+- **Verify:** `npx tsc --noEmit` — PASS. `npm run lint` — PASS with existing warnings only (419 warnings, 0 errors).
+- **Blockers:** None for this scoped QA fix. Local Next package did not include `node_modules/next/dist/docs/*`; attempted local docs read after `npm ci`.
+- **Next actions:** Smoke `/coordinator/dashboard`, `/coordinator/dashboard/ledger`, `/coordinator/events/{id}/layout`, and setup wizard Step 3 at sub-1024px or sub-550px viewports to confirm the overlay message and exit targets.
+
 ## Active work — dashboard header uniform button sizing (local, not deployed)
 - **`globals.css`:** Header row controls (tabs, pill toggle, toolbar buttons) normalized to `--dashboard-toolbar-height`; `overflow-x: hidden` on command-center header.
 - **`dashboard-command-center-header.tsx`:** Tighter header gaps.

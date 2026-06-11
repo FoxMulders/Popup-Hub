@@ -12,8 +12,9 @@ import {
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
-import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
+  FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX,
+  FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX,
   isPocketSizedViewport,
   useFloorPlanViewportDimensions,
   type FloorPlanViewportTier,
@@ -74,10 +75,20 @@ export function FloorPlanViewportLayoutProvider({ children }: { children: ReactN
 const BLUEPRINT_GRID_CLASS =
   'bg-slate-950 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]'
 
+export const FLOOR_PLAN_SMALL_SCREEN_REGRESSION_MESSAGE =
+  `The floor plan matrix is not optimized for small screens. Reopen Blueprint Studio at the recommended desktop layout breakpoint (${FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX}px wide by ${FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX}px tall or larger).`
+
+export interface DesktopScreenRequiredOverlayProps {
+  exitHref?: string
+  onExit?: () => void
+}
+
 /** Full-screen iron-dome gate — canvas unmounted; cyber-arcade fallback UI. */
-export function DesktopScreenRequiredOverlay() {
+export function DesktopScreenRequiredOverlay({
+  exitHref = '/coordinator/dashboard',
+  onExit,
+}: DesktopScreenRequiredOverlayProps) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
-  const { selectedEventId } = useMarketManagement()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -95,12 +106,12 @@ export function DesktopScreenRequiredOverlay() {
   }, [showDesktopRequired])
 
   const handleAbortMission = useCallback(() => {
-    router.push(
-      selectedEventId
-        ? `/coordinator/events/${selectedEventId}`
-        : '/coordinator/dashboard'
-    )
-  }, [router, selectedEventId])
+    if (onExit) {
+      onExit()
+      return
+    }
+    router.push(exitHref)
+  }, [exitHref, onExit, router])
 
   if (!showDesktopRequired || !mounted) return null
 
@@ -143,6 +154,10 @@ export function DesktopScreenRequiredOverlay() {
           This layout canvas is way too massive for a pocket-sized screen.
         </p>
 
+        <p className="mt-4 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm font-semibold leading-relaxed text-amber-100">
+          {FLOOR_PLAN_SMALL_SCREEN_REGRESSION_MESSAGE}
+        </p>
+
         <p className="mt-4 text-sm leading-relaxed text-slate-300">
           You are trying to orchestrate an entire physical marketplace on a screen meant for
           checking text messages. To snap doors flat, give those yellow vendor tables their
@@ -174,6 +189,58 @@ export function DesktopScreenRequiredOverlay() {
   )
 
   return createPortal(overlay, document.body)
+}
+
+export interface FloorPlanDesktopRequiredBoundaryProps
+  extends DesktopScreenRequiredOverlayProps {
+  children: ReactNode
+  placeholderClassName?: string
+}
+
+/**
+ * Shared entry-point guard for Blueprint Studio surfaces that can render the
+ * floor-plan matrix/canvas outside the main dashboard bootstrap.
+ */
+export function FloorPlanDesktopRequiredBoundary({
+  children,
+  exitHref,
+  onExit,
+  placeholderClassName,
+}: FloorPlanDesktopRequiredBoundaryProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay exitHref={exitHref} onExit={onExit} />
+      <FloorPlanDesktopRequiredBoundaryContent
+        placeholderClassName={placeholderClassName}
+      >
+        {children}
+      </FloorPlanDesktopRequiredBoundaryContent>
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function FloorPlanDesktopRequiredBoundaryContent({
+  children,
+  placeholderClassName,
+}: {
+  children: ReactNode
+  placeholderClassName?: string
+}) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
+
+  if (showDesktopRequired) {
+    return (
+      <div
+        className={cn(
+          'flex h-full min-h-[40vh] items-center justify-center p-6 text-center',
+          placeholderClassName
+        )}
+        aria-hidden
+      />
+    )
+  }
+
+  return <>{children}</>
 }
 
 /** @deprecated Iron dome blocks all sub-desktop viewports — banner is no longer shown. */
