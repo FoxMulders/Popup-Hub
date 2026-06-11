@@ -154,6 +154,7 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
     payment_method: app.payment_method,
     application_payment_status: app.application_payment_status,
     booth_number: app.booth_number,
+    table_count: app.table_count ?? 1,
     categoryName: categoryNameFromRow(app),
     vendorName: vendorNameFromRow(app),
   })

@@ -47,11 +47,8 @@ export function floorPlanViewportTierFromWidth(width: number): FloorPlanViewport
   )
 }
 
-export function useFloorPlanViewportDimensions(): FloorPlanViewportDimensions {
-  const [dimensions, setDimensions] = useState<FloorPlanViewportDimensions>({
-    width: 1280,
-    height: 800,
-  })
+export function useFloorPlanViewportDimensions(): FloorPlanViewportDimensions | null {
+  const [dimensions, setDimensions] = useState<FloorPlanViewportDimensions | null>(null)
 
   useEffect(() => {
     const sync = () =>
@@ -69,13 +66,15 @@ export function useFloorPlanViewportDimensions(): FloorPlanViewportDimensions {
 }
 
 export function useIsPocketSizedViewport(): boolean {
-  const { width, height } = useFloorPlanViewportDimensions()
-  return isPocketSizedViewport(width, height)
+  const dimensions = useFloorPlanViewportDimensions()
+  if (!dimensions) return true
+  return isPocketSizedViewport(dimensions.width, dimensions.height)
 }
 
 export function useFloorPlanViewportTier(): FloorPlanViewportTier {
-  const { width, height } = useFloorPlanViewportDimensions()
-  return floorPlanViewportTierFromDimensions(width, height)
+  const dimensions = useFloorPlanViewportDimensions()
+  if (!dimensions) return 'mobile'
+  return floorPlanViewportTierFromDimensions(dimensions.width, dimensions.height)
 }
 
 /** True when the viewport is taller than it is wide. */

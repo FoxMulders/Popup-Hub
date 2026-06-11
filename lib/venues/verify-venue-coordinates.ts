@@ -6,6 +6,31 @@ export interface VenueVerificationInput {
   longitude: number
   address?: string
   pinDropped?: boolean
+  /** From Google Places autocomplete or a prior verification — skips server Geocoding when set. */
+  placeTypes?: string[]
+}
+
+const GEOCODE_AUTH_ERROR =
+  'Google Geocoding API is not enabled for the server API key. In Google Cloud Console, enable the Geocoding API for your project and add it to the key used on Vercel (GOOGLE_MAPS_SERVER_API_KEY or NEXT_PUBLIC_GOOGLE_MAPS_API_KEY). Maps JavaScript API and Places API alone are not enough to publish events.'
+
+function isGeocodeAuthorizationFailure(status?: string, errorMessage?: string): boolean {
+  if (status === 'REQUEST_DENIED') return true
+  const message = errorMessage?.toLowerCase() ?? ''
+  return (
+    message.includes('not authorized') ||
+    message.includes('api key is invalid') ||
+    message.includes('this api project is not authorized')
+  )
+}
+
+function formatGeocodeFailure(status?: string, errorMessage?: string): string {
+  if (isGeocodeAuthorizationFailure(status, errorMessage)) {
+    return GEOCODE_AUTH_ERROR
+  }
+  return (
+    errorMessage ??
+    'Could not verify this location. Choose a named venue, park, or public space.'
+  )
 }
 
 export interface VenueVerificationResult {
@@ -137,6 +162,11 @@ export async function verifyVenueCoordinates(
   const local = evaluateVenueCoordinatesLocally(input)
   if (local) return local
 
+  const clientPlaceTypes = input.placeTypes?.filter((t) => typeof t === 'string' && t.trim())
+  if (clientPlaceTypes?.length) {
+    return evaluateVenuePlaceTypes(clientPlaceTypes)
+  }
+
   const apiKey =
     process.env.GOOGLE_MAPS_SERVER_API_KEY?.trim() ||
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
@@ -176,9 +206,7 @@ export async function verifyVenueCoordinates(
     return {
       verified: false,
       status: 'rejected',
-      reason:
-        data.error_message ??
-        'Could not verify this location. Choose a named venue, park, or public space.',
+      reason: formatGeocodeFailure(data.status, data.error_message),
       placeTypes: [],
     }
   }

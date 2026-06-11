@@ -7,6 +7,10 @@ import { FloorPlanV2WizardQa } from '@/src/qa_review/components/coordinator/floo
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import type { BoothLayout, Event } from '@/types/database'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { SpatialLayoutShell } from '@/components/coordinator/spatial-layout/spatial-layout-shell'
 import { SpatialLayoutToolbar } from '@/components/coordinator/spatial-layout/spatial-layout-toolbar'
 import { useSpatialLayoutState } from '@/components/coordinator/spatial-layout/use-spatial-layout-state'
@@ -109,7 +113,9 @@ export function SpatialLayoutEditor({
   const isDraft = event.status === 'draft'
 
   return (
-    <SpatialLayoutShell
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay />
+      <SpatialLayoutShell
       toolbar={
         <SpatialLayoutToolbar
           eventId={eventId}
@@ -155,5 +161,6 @@ export function SpatialLayoutEditor({
         className="h-full min-h-0"
       />
     </SpatialLayoutShell>
+    </FloorPlanViewportLayoutProvider>
   )
 }

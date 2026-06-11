@@ -107,6 +107,7 @@ export function VenuePlacesAutocomplete({
         isEstablishment,
         postalCode: pickAddressComponent(place.address_components, 'postal_code'),
         country: pickAddressComponent(place.address_components, 'country'),
+        googlePlaceTypes: place.types ?? undefined,
         preferVenueName: mode === 'venue',
       })
     },

@@ -9,6 +9,11 @@ import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-cli
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
 import type { BoothLayout, Event } from '@/types/database'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { SpatialLayoutShell } from './spatial-layout-shell'
 import { SpatialLayoutToolbar } from './spatial-layout-toolbar'
 import { useSpatialLayoutState } from './use-spatial-layout-state'
@@ -111,6 +116,7 @@ export function SpatialLayoutEditor({
             address: event.address,
             locationName: event.location_name,
             pinDropped: true,
+            placeTypes: event.venue_place_types?.length ? event.venue_place_types : undefined,
             persist: true,
           }),
         })
@@ -147,6 +153,109 @@ export function SpatialLayoutEditor({
   const isDraft = event.status === 'draft'
 
   return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay exitHref={`/coordinator/events/${eventId}`} />
+      <SpatialLayoutEditorBody
+        eventId={eventId}
+        eventName={eventName}
+        isDraft={isDraft}
+        layoutGeneration={layoutGeneration}
+        rooms={rooms}
+        activeRoomId={activeRoomId}
+        baselineTableLengthFt={baselineTableLengthFt}
+        eventCategoryNames={eventCategoryNames}
+        layoutCapacity={layoutCapacity}
+        applications={applications}
+        hasOverlap={hasOverlap}
+        placedCount={placedCount}
+        saving={saving}
+        savingDraft={savingDraft}
+        saveLayoutRef={saveLayoutRef}
+        event={event}
+        onLayoutRoomsChange={handleLayoutRoomsChange}
+        onAddRoom={handleAddRoom}
+        onRenameRoom={handleRenameRoom}
+        onDeleteRoom={handleDeleteRoom}
+        onBaselineTableLengthChange={handleBaselineTableLengthChange}
+        onOverlapChange={setHasOverlap}
+        onPlacedCountChange={setPlacedCount}
+        onSave={handleSave}
+        onSaveDraft={handleSaveDraft}
+        onReloadFromServer={handleReloadFromServer}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function SpatialLayoutEditorBody({
+  eventId,
+  eventName,
+  isDraft,
+  layoutGeneration,
+  rooms,
+  activeRoomId,
+  baselineTableLengthFt,
+  eventCategoryNames,
+  layoutCapacity,
+  applications,
+  hasOverlap,
+  placedCount,
+  saving,
+  savingDraft,
+  saveLayoutRef,
+  event,
+  onLayoutRoomsChange,
+  onAddRoom,
+  onRenameRoom,
+  onDeleteRoom,
+  onBaselineTableLengthChange,
+  onOverlapChange,
+  onPlacedCountChange,
+  onSave,
+  onSaveDraft,
+  onReloadFromServer,
+}: {
+  eventId: string
+  eventName: string
+  isDraft: boolean
+  layoutGeneration: number
+  rooms: ReturnType<typeof useSpatialLayoutState>['rooms']
+  activeRoomId: string
+  baselineTableLengthFt: ReturnType<typeof useSpatialLayoutState>['baselineTableLengthFt']
+  eventCategoryNames: string[]
+  layoutCapacity: number
+  applications: SpatialLayoutEditorProps['applications']
+  hasOverlap: boolean
+  placedCount: number
+  saving: boolean
+  savingDraft: boolean
+  saveLayoutRef: React.MutableRefObject<(() => Promise<boolean>) | null>
+  event: Event
+  onLayoutRoomsChange: ReturnType<typeof useSpatialLayoutState>['handleLayoutRoomsChange']
+  onAddRoom: ReturnType<typeof useSpatialLayoutState>['handleAddRoom']
+  onRenameRoom: ReturnType<typeof useSpatialLayoutState>['handleRenameRoom']
+  onDeleteRoom: ReturnType<typeof useSpatialLayoutState>['handleDeleteRoom']
+  onBaselineTableLengthChange: ReturnType<
+    typeof useSpatialLayoutState
+  >['handleBaselineTableLengthChange']
+  onOverlapChange: (hasOverlap: boolean) => void
+  onPlacedCountChange: (count: number) => void
+  onSave: () => void | Promise<void>
+  onSaveDraft: () => void | Promise<void>
+  onReloadFromServer: () => void
+}) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
+
+  if (showDesktopRequired) {
+    return (
+      <div
+        className="flex h-full min-h-[40vh] items-center justify-center"
+        aria-hidden
+      />
+    )
+  }
+
+  return (
     <SpatialLayoutShell
       toolbar={
         <SpatialLayoutToolbar
@@ -158,10 +267,10 @@ export function SpatialLayoutEditor({
           isDraft={isDraft}
           saving={saving}
           savingDraft={savingDraft}
-          onSave={handleSave}
-          onSaveDraft={handleSaveDraft}
+          onSave={onSave}
+          onSaveDraft={onSaveDraft}
           saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
-          onReloadFromServer={handleReloadFromServer}
+          onReloadFromServer={onReloadFromServer}
         />
       }
     >
@@ -178,20 +287,20 @@ export function SpatialLayoutEditor({
         designerExitEventName={eventName}
         layoutRooms={rooms}
         layoutActiveRoomId={activeRoomId}
-        onLayoutRoomsChange={handleLayoutRoomsChange}
+        onLayoutRoomsChange={onLayoutRoomsChange}
         saveLayoutRef={saveLayoutRef}
         eventCategoryNames={eventCategoryNames}
-        onAddRoom={handleAddRoom}
-        onRenameRoom={handleRenameRoom}
-        onDeleteRoom={handleDeleteRoom}
+        onAddRoom={onAddRoom}
+        onRenameRoom={onRenameRoom}
+        onDeleteRoom={onDeleteRoom}
         baselineTableLengthFt={baselineTableLengthFt}
-        onBaselineTableLengthChange={handleBaselineTableLengthChange}
+        onBaselineTableLengthChange={onBaselineTableLengthChange}
         layoutCapacity={layoutCapacity}
         applications={applications}
-        onOverlapChange={setHasOverlap}
-        onPlacedCountChange={setPlacedCount}
-        onSaveMarket={handleSave}
-        onSaveDraft={handleSaveDraft}
+        onOverlapChange={onOverlapChange}
+        onPlacedCountChange={onPlacedCountChange}
+        onSaveMarket={onSave}
+        onSaveDraft={onSaveDraft}
         saveMarketDisabled={hasOverlap || saving || savingDraft}
         saveMarketLoading={saving}
         saveDraftDisabled={hasOverlap || saving || savingDraft}

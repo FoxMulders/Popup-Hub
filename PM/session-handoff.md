@@ -124,6 +124,20 @@
 - **Window sizing:** `floorplan-sync.ts` — wall-cast popup defaults to 1920×1080; presenter stays 1024×900; distinct window names unchanged.
 - **Verify:** `/coordinator/dashboard` — open both dual-screen buttons; presenter = light interactive ledger, wall cast = dark read-only display; selecting a booth on canvas highlights the row on wall cast; clicking a booth in presenter focuses canvas.
 
+## Shipped this session (booth matrix tables/payment, admin coordinator, woodworking, mobile layout advisory, not deployed)
+- **Booth matrix:** `Tables` + `Payment` columns (table_count + method/settlement summary); vendor pool shelf + vendor applications list show same data for vendors.
+- **Admin coordinator:** migration `105_platform_operator_coordinator_access.sql` restores `coordinator` role for `bradmulders@gmail.com`; draft API + coordinator layout portal list honor `is_admin`; `grant-platform-operator.ts` sets coordinator role.
+- **Woodworking:** migration `106_ensure_woodworking_category.sql` idempotent catalog entry (`is_broad`).
+- **Mobile layout regression:** dashboard mounts iron-dome overlay again (removed UA short-circuit); advisory copy cites **1024px wide (11"+ display)**; event hub shows banner when redirected from `/layout` with `?layout=desktop-required`; spatial layout editor wrapped in viewport provider.
+- **Verify:** `npx tsc --noEmit` — PASS. Apply migrations `105`–`106` on Supabase. Smoke: booth matrix shows tables/payment; phone on `/coordinator/dashboard` shows desktop-required message; Brad can access coordinator tools after migration.
+
+## Shipped this session (foot traffic simulation engine, not deployed)
+- **`src/utils/trafficSimulation.ts`:** Waypoint grid from walkable aisles; A* patron paths with stochastic drift; booth exposure scoring (0–100) via sight-radius + facing check; aisle heatmap cells; async batching via `requestIdleCallback`.
+- **`hooks/use-traffic-simulation.ts` + `use-canvas-store.ts`:** Canvas store exposes `trafficSimulation`, `boothExposureByObjectId`, loading/progress when `trafficSimulationEnabled`.
+- **Canvas UI:** `TrafficExposureOverlay` heatmap (blue→red aisles, booth tint); Footprints toolbar toggle in Blueprint Studio command bar.
+- **Build fix:** `collect-sitemap-entries.ts` — skip Supabase-backed URLs when `NEXT_PUBLIC_SUPABASE_*` env is unset so `npm run build` succeeds in env-less CI/sandbox.
+- **Verify:** `npx tsc --noEmit` + `npm run build` — PASS. Smoke: `/coordinator/dashboard` → place booths + entry/exit doors → toggle Footprints icon → aisle heat + booth exposure overlay appears without blocking drag.
+
 ## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, deployed 2026-06-11)
 - **`app-nav.tsx` / `shopper-top-bar.tsx`:** Removed profile avatar from header right rail; profile access via `AppMenuSheet` (avatar + name banner + Profile settings). Shopper top bar hamburger now visible on all breakpoints for signed-in users.
 - **`app-menu-sheet.tsx`:** Fixed menu cut-off — `h-dvh` sheet height, safe-area padding on header/nav children (not outer shell), scrollable `overflow-y-auto` nav body.

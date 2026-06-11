@@ -8,6 +8,8 @@ export interface PlaceResult {
   isEstablishment: boolean
   postalCode: string | null
   country: string | null
+  /** Google Places `types` from autocomplete — used for publish verification without server Geocoding. */
+  googlePlaceTypes?: string[]
   /** When true, always apply `name` to the venue name field (venue autocomplete). */
   preferVenueName?: boolean
 }

@@ -1,6 +1,6 @@
 /**
  * Grant platform operator admin access to bradmulders@gmail.com.
- * Does not promote to coordinator — booth payouts stay on coordinator Connect profiles.
+ * Grants platform admin plus coordinator hosting access for ops and market testing.
  *
  * Platform fee settlement (this operator):
  * - Square (appFeeMoney) → thetipsyfoxyeg@gmail.com (The Tipsy Fox Square application) — active rail
@@ -82,13 +82,11 @@ async function main() {
     .eq('user_id', userId)
     .maybeSingle()
 
-  const role = passport ? 'vendor' : 'shopper'
-
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .update({
       is_admin: true,
-      role,
+      role: 'coordinator',
       etransfer_payment_email: null,
     })
     .eq('id', userId)
@@ -100,7 +98,7 @@ async function main() {
   }
 
   const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
-    user_metadata: { role },
+    user_metadata: { role: 'coordinator' },
   })
 
   if (authError) {

@@ -45,6 +45,13 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
     )
   }
 
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    return entries
+  }
+
   const supabase = createPublicSupabaseClient()
 
   const { data: events } = await supabase
