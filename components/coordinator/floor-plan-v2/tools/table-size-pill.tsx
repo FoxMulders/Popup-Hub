@@ -11,6 +11,7 @@ import {
   formatTableSizeDisplay,
   TableSizeUnitsToggle,
   useTableSizeUnits,
+  type TableSizeUnits,
 } from '@/lib/booth-planner/table-size-units'
 import {
   GUEST_TABLE_LENGTHS_FT,
@@ -31,6 +32,12 @@ interface TableSizePillProps {
   disabled?: boolean
   className?: string
   compact?: boolean
+  /** Vendor draw tool armed — vendor size chips highlight only when true. */
+  vendorPlacementActive?: boolean
+  /** Patron round draw tool armed. */
+  roundPlacementActive?: boolean
+  /** Patron rect draw tool armed. */
+  rectPlacementActive?: boolean
 }
 
 export interface PatronTableSizeRowsProps {
@@ -109,6 +116,8 @@ function GuestTableSizeButtons({
   disabled = false,
   compact = false,
   chipGrid = false,
+  units,
+  highlightActive = false,
 }: {
   shape: 'round' | 'rectangular'
   value: TableSizeSpec
@@ -116,6 +125,9 @@ function GuestTableSizeButtons({
   disabled?: boolean
   compact?: boolean
   chipGrid?: boolean
+  units: TableSizeUnits
+  /** When false, no size chip shows the selected/active fill. */
+  highlightActive?: boolean
 }) {
   if (chipGrid) {
     return (
@@ -130,7 +142,8 @@ function GuestTableSizeButtons({
         {GUEST_TABLE_LENGTHS_FT.map((ft) => {
           const selection =
             shape === 'round' ? guestRoundTableSpec(ft) : guestRectTableSpec(ft)
-          const active = tableSizeSpecsEqual(value, selection)
+          const active =
+            highlightActive && tableSizeSpecsEqual(value, selection)
           return (
             <button
               key={`${shape}-${ft}`}
@@ -145,7 +158,7 @@ function GuestTableSizeButtons({
               }
               className={utilityChipClass(active, disabled, 'patron')}
             >
-              {ft}′
+              {formatTableSizeDisplay(ft, units)}
             </button>
           )
         })}
@@ -166,7 +179,8 @@ function GuestTableSizeButtons({
       {GUEST_TABLE_LENGTHS_FT.map((ft) => {
         const selection =
           shape === 'round' ? guestRoundTableSpec(ft) : guestRectTableSpec(ft)
-        const active = tableSizeSpecsEqual(value, selection)
+        const active =
+          highlightActive && tableSizeSpecsEqual(value, selection)
         return (
           <button
             key={`${shape}-${ft}`}
@@ -181,7 +195,7 @@ function GuestTableSizeButtons({
             }
             className={sizeButtonClass(active, disabled, 'patron')}
           >
-            {ft}′
+            {formatTableSizeDisplay(ft, units)}
           </button>
         )
       })}
@@ -201,6 +215,7 @@ export function PatronSidebarControls({
   compact = false,
   className,
 }: PatronTableSizeRowsProps) {
+  const [units] = useTableSizeUnits()
   const activeShape =
     rectToolActive || (value.purpose === 'guest' && value.shape === 'rectangular')
       ? 'rectangular'
@@ -248,6 +263,10 @@ export function PatronSidebarControls({
           disabled={disabled}
           compact={compact}
           chipGrid
+          units={units}
+          highlightActive={
+            activeShape === 'round' ? roundToolActive : rectToolActive
+          }
         />
       </div>
     </div>
@@ -260,12 +279,15 @@ export function VendorSidebarSizeGrid({
   onChange,
   disabled = false,
   className,
+  placementActive = false,
 }: {
   value: TableSizeSpec
   onChange: (selection: TableSizeSpec) => void
   disabled?: boolean
   compact?: boolean
   className?: string
+  /** When false, no size chip shows the selected/active fill. */
+  placementActive?: boolean
 }) {
   const { isTablet } = useFloorPlanViewportLayout()
   const [units, setUnits] = useTableSizeUnits()
@@ -282,7 +304,8 @@ export function VendorSidebarSizeGrid({
       >
         {TABLE_SIZES.map((ft) => {
           const selection = vendorTableSpec(ft)
-          const active = tableSizeSpecsEqual(value, selection)
+          const active =
+            placementActive && tableSizeSpecsEqual(value, selection)
           return (
             <button
               key={`booth-sidebar-${ft}`}
@@ -320,6 +343,8 @@ export function PatronTableSizeRows({
   compact = false,
   className,
 }: PatronTableSizeRowsProps) {
+  const [units] = useTableSizeUnits()
+
   return (
     <div
       className={cn('flex w-full min-w-0 flex-col gap-0.5', className)}
@@ -344,6 +369,8 @@ export function PatronTableSizeRows({
           onChange={onSelectSize}
           disabled={disabled}
           compact={compact}
+          units={units}
+          highlightActive={roundToolActive}
         />
       </div>
       <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2">
@@ -364,6 +391,8 @@ export function PatronTableSizeRows({
           onChange={onSelectSize}
           disabled={disabled}
           compact={compact}
+          units={units}
+          highlightActive={rectToolActive}
         />
       </div>
     </div>
@@ -382,6 +411,9 @@ export function TableSizePill({
   disabled = false,
   className,
   compact = false,
+  vendorPlacementActive = false,
+  roundPlacementActive = false,
+  rectPlacementActive = false,
 }: TableSizePillProps) {
   const { isTablet } = useFloorPlanViewportLayout()
   const [units, setUnits] = useTableSizeUnits()
@@ -431,7 +463,9 @@ export function TableSizePill({
           <>
             {TABLE_SIZES.map((ft) => {
               const selection = vendorTableSpec(ft)
-              const active = tableSizeSpecsEqual(value, selection)
+              const active =
+                vendorPlacementActive &&
+                tableSizeSpecsEqual(value, selection)
               return (
                 <button
                   key={`booth-${ft}`}
@@ -457,7 +491,9 @@ export function TableSizePill({
           <>
             {GUEST_TABLE_LENGTHS_FT.map((ft) => {
               const selection = guestRoundTableSpec(ft)
-              const active = tableSizeSpecsEqual(value, selection)
+              const active =
+                roundPlacementActive &&
+                tableSizeSpecsEqual(value, selection)
               return (
                 <button
                   key={`round-${ft}`}
@@ -474,7 +510,9 @@ export function TableSizePill({
             })}
             {GUEST_TABLE_LENGTHS_FT.map((ft) => {
               const selection = guestRectTableSpec(ft)
-              const active = tableSizeSpecsEqual(value, selection)
+              const active =
+                rectPlacementActive &&
+                tableSizeSpecsEqual(value, selection)
               return (
                 <button
                   key={`guest-rect-${ft}`}

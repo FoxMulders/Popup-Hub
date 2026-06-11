@@ -82,11 +82,15 @@ export function CommandCenterExitLink({
           ? 'relative z-[10001] gap-1.5 bg-forest font-semibold text-white shadow-md hover:bg-forest/90 pointer-events-auto'
           : 'gap-1.5 text-stone-700 hover:text-forest pointer-events-auto',
         compact && !prominent && 'h-8 px-2 text-xs',
-        prominent && 'h-9 px-3 text-sm',
+        compact && prominent && 'h-7 gap-1 px-2 text-[11px]',
+        prominent && !compact && 'h-9 px-3 text-sm',
         className
       )}
     >
-      <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+      <ArrowLeft
+        className={cn('shrink-0', compact ? 'h-3.5 w-3.5' : 'h-4 w-4')}
+        aria-hidden
+      />
       <span className="truncate">{label}</span>
     </Link>
   )

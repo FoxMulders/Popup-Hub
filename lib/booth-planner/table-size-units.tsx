@@ -6,13 +6,51 @@ import { cn } from '@/lib/utils'
 export type TableSizeUnits = 'imperial' | 'metric'
 
 const STORAGE_KEY = 'popup-hub:table-size-units'
+const TABLE_SIZE_UNITS_CHANGED = 'popup-hub:table-size-units-changed'
+
+function formatMetricMeters(ft: number): string {
+  const meters = ft * 0.3048
+  return `${meters % 1 === 0 ? meters.toFixed(0) : meters.toFixed(1)} m`
+}
+
+function formatImperialFeet(ft: number, roundWhole = false): string {
+  if (roundWhole) return `${Math.round(ft)}′`
+  const rounded = Math.round(ft * 10) / 10
+  return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)}′`
+}
 
 export function formatTableSizeDisplay(ft: number, units: TableSizeUnits): string {
-  if (units === 'metric') {
-    const meters = ft * 0.3048
-    return `${meters % 1 === 0 ? meters.toFixed(0) : meters.toFixed(1)} m`
-  }
+  if (units === 'metric') return formatMetricMeters(ft)
   return `${ft}′`
+}
+
+/** Single dimension label (supports fractional feet). */
+export function formatDimensionDisplay(ft: number, units: TableSizeUnits): string {
+  if (units === 'metric') return formatMetricMeters(ft)
+  return formatImperialFeet(ft)
+}
+
+/** Width × length footprint label. */
+export function formatFootprintDisplay(
+  widthFt: number,
+  lengthFt: number,
+  units: TableSizeUnits
+): string {
+  if (units === 'metric') {
+    const formatM = (ft: number) => {
+      const m = ft * 0.3048
+      return m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)
+    }
+    return `${formatM(widthFt)} m × ${formatM(lengthFt)} m`
+  }
+  return `${formatImperialFeet(widthFt, true)} × ${formatImperialFeet(lengthFt, true)}`
+}
+
+function emitTableSizeUnitsChanged(units: TableSizeUnits) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent<TableSizeUnits>(TABLE_SIZE_UNITS_CHANGED, { detail: units })
+  )
 }
 
 export function useTableSizeUnits(): [TableSizeUnits, (units: TableSizeUnits) => void] {
@@ -25,6 +63,13 @@ export function useTableSizeUnits(): [TableSizeUnits, (units: TableSizeUnits) =>
     } catch {
       // ignore
     }
+
+    const onUnitsChanged = (event: Event) => {
+      const next = (event as CustomEvent<TableSizeUnits>).detail
+      if (next === 'metric' || next === 'imperial') setUnitsState(next)
+    }
+    window.addEventListener(TABLE_SIZE_UNITS_CHANGED, onUnitsChanged)
+    return () => window.removeEventListener(TABLE_SIZE_UNITS_CHANGED, onUnitsChanged)
   }, [])
 
   const setUnits = useCallback((next: TableSizeUnits) => {
@@ -34,6 +79,7 @@ export function useTableSizeUnits(): [TableSizeUnits, (units: TableSizeUnits) =>
     } catch {
       // ignore
     }
+    emitTableSizeUnitsChanged(next)
   }, [])
 
   return [units, setUnits]

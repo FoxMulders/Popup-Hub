@@ -139,7 +139,7 @@ export function TableSizeSelector({
                   aria-pressed={active}
                   className={buttonClass(active)}
                 >
-                  <span className="block">{ft}′</span>
+                  <span className="block">{formatTableSizeDisplay(ft, units)}</span>
                   <span className={subLabelClass(active)}>Round</span>
                 </button>
               )
@@ -167,7 +167,7 @@ export function TableSizeSelector({
                   aria-pressed={active}
                   className={buttonClass(active)}
                 >
-                  <span className="block">{ft}′</span>
+                  <span className="block">{formatTableSizeDisplay(ft, units)}</span>
                   <span className={subLabelClass(active)}>Rect</span>
                 </button>
               )

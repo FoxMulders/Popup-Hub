@@ -6,8 +6,11 @@
 
 import type { ObjectKind } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { PlacementProbe } from '@/components/coordinator/floor-plan-v2/geometry/is-point-in-room'
-import type { FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
-import { aabbFitsCanvas } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
+import type { FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
+import {
+  aabbFitsCanvas,
+  placedObjectsOverlap,
+} from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 
 /** Default tap-to-place footprint (typical box truck). */
 export const DEFAULT_FOOD_TRUCK_WIDTH_FT = 8
@@ -45,10 +48,44 @@ export function objectFitsCanvas(
   )
 }
 
-export function isValidCanvasOpenPlacement(
+function placementProbeAsObject(
+  obj: PlacementProbe,
+  id = '__canvas_open_probe__'
+): PlacedObject {
+  return {
+    id,
+    kind: obj.kind,
+    x: obj.x,
+    y: obj.y,
+    width: obj.width,
+    height: obj.height,
+    rotation: obj.rotation ?? 0,
+  } as PlacedObject
+}
+
+/** True when a canvas-open object intersects any solid wall barrier. */
+export function canvasOpenPlacementOverlapsWall(
   doc: FloorPlanDoc,
-  obj: PlacementProbe
+  obj: PlacementProbe,
+  excludeIds?: ReadonlySet<string>
 ): boolean {
   if (!isCanvasOpenPlacementKind(obj.kind)) return false
-  return objectFitsCanvas(doc, obj)
+  const probe = placementProbeAsObject(obj)
+  for (const other of doc.objects) {
+    if (excludeIds?.has(other.id)) continue
+    if (other.kind !== 'wall') continue
+    if (placedObjectsOverlap(probe, other)) return true
+  }
+  return false
+}
+
+export function isValidCanvasOpenPlacement(
+  doc: FloorPlanDoc,
+  obj: PlacementProbe,
+  excludeIds?: ReadonlySet<string>
+): boolean {
+  if (!isCanvasOpenPlacementKind(obj.kind)) return false
+  if (!objectFitsCanvas(doc, obj)) return false
+  if (canvasOpenPlacementOverlapsWall(doc, obj, excludeIds)) return false
+  return true
 }

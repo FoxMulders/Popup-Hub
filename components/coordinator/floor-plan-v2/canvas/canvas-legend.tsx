@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { CanvasSideRail } from './canvas-side-rail'
 import {
   PLACEMENT_AVAILABLE,
   PLACEMENT_VIOLATION,
@@ -19,15 +20,12 @@ import { BOOTH_CLEARANCE_THEMES } from '@/lib/coordinator/booth-clearance-visual
  * zone overlays so coordinators can decode placement feedback without
  * needing to memorise the colour grammar.
  *
- * Docked / sidebar variants slide horizontally off the left edge of
- * the canvas — only a chevron tab remains when collapsed so the grid
- * keeps full width and drag coordinates stay untouched. The collapsed
- * / expanded state survives across sessions via `localStorage`.
+ * Docked / sidebar variants sit in flex side rails beside the canvas —
+ * only a chevron tab remains when collapsed. Expanded rails reserve
+ * 200px + tab width so the floor plan never renders underneath them.
+ * Collapsed / expanded state survives across sessions via `localStorage`.
  */
 const STORAGE_KEY = 'popup-hub:floor-plan-v2:legend-collapsed'
-
-/** Panel body width — tab sits outside this and stays visible when collapsed. */
-const LEFT_PANEL_WIDTH_PX = 200
 
 interface LegendItem {
   swatchClass: string
@@ -58,14 +56,14 @@ const ITEMS: LegendItem[] = [
   {
     swatchClass: 'bg-red-200 ring-1 ring-red-500',
     label: 'Critical clearance',
-    detail: '≤2′ edge clearance — move booth away from walls or neighbors.',
+    detail: '<3′ edge clearance — move booth away from walls or neighbors.',
     swatchFill: BOOTH_CLEARANCE_THEMES.critical.fill,
     swatchStroke: BOOTH_CLEARANCE_THEMES.critical.stroke,
   },
   {
     swatchClass: 'bg-orange-200 ring-1 ring-orange-500',
     label: 'Tight clearance',
-    detail: 'Between 2′ and 3′ edge clearance — aim for 4′ before publishing.',
+    detail: '≥3′ and <4′ edge clearance — aim for 4′ before publishing.',
     swatchFill: BOOTH_CLEARANCE_THEMES.tight.fill,
     swatchStroke: BOOTH_CLEARANCE_THEMES.tight.stroke,
   },
@@ -123,51 +121,22 @@ function LeftCollapsibleLegendPanel({
   className?: string
 }) {
   return (
-    <div
-      className="canvas-legend-panel pointer-events-none absolute inset-y-0 left-0 z-10"
-      role="region"
-      aria-label="Allocation legend"
+    <CanvasSideRail
+      side="left"
+      collapsed={collapsed}
+      onCollapsedChange={onCollapsedChange}
+      title="Legend"
+      ariaLabel="Allocation legend"
+      expandTitle="Show allocation legend"
+      collapseTitle="Hide allocation legend"
+      className={cn('canvas-legend-panel', className)}
+      panelClassName={cn(
+        'canvas-legend-docked min-h-0',
+        docked && 'max-w-none shadow-[4px_0_20px_rgb(28_25_23_/_0.1)]'
+      )}
     >
-      <div
-        className="flex h-full transition-transform duration-300 ease-in-out motion-reduce:transition-none"
-        style={{
-          transform: collapsed
-            ? `translateX(-${LEFT_PANEL_WIDTH_PX}px)`
-            : 'translateX(0)',
-        }}
-      >
-        <div
-          className={cn(
-            'canvas-legend-docked pointer-events-auto flex h-full shrink-0 flex-col border-r border-stone-200/90 bg-white/95 p-2 shadow-[4px_0_16px_rgb(28_25_23_/_0.08)] backdrop-blur-sm',
-            docked && 'max-w-none shadow-[4px_0_20px_rgb(28_25_23_/_0.1)]',
-            className
-          )}
-          style={{ width: LEFT_PANEL_WIDTH_PX }}
-        >
-          <div className="mb-1 shrink-0">
-            <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-stone-500">
-              Legend
-            </span>
-          </div>
-          <LegendItemsList docked={docked} />
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onCollapsedChange(!collapsed)}
-          title={collapsed ? 'Show allocation legend' : 'Hide allocation legend'}
-          aria-label={collapsed ? 'Show allocation legend' : 'Hide allocation legend'}
-          aria-expanded={!collapsed}
-          className="canvas-legend-tab pointer-events-auto inline-flex h-full w-7 shrink-0 flex-col items-center justify-center gap-1 rounded-r-md border border-l-0 border-stone-200/90 bg-white/95 text-stone-500 shadow-[4px_0_12px_rgb(28_25_23_/_0.08)] backdrop-blur-sm hover:bg-white hover:text-stone-700"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-          ) : (
-            <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
-          )}
-        </button>
-      </div>
-    </div>
+      <LegendItemsList docked={docked} />
+    </CanvasSideRail>
   )
 }
 

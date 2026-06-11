@@ -8,13 +8,14 @@
  *   4. Hard projection — clamp to room, resolve overlaps, enforce no-fly.
  *
  * Clearance bands align with `lib/coordinator/booth-clearance-visual.ts`:
- *   ≥4′ good · 2′–3′ tight · ≤2′ critical.
+ *   ≥4′ good · ≥3′ tight · <3′ critical.
  */
 
 import {
   BOOTH_CLEARANCE_CRITICAL_FT,
   BOOTH_CLEARANCE_GOOD_FT,
   BOOTH_CLEARANCE_TIGHT_FT,
+  clearanceBand,
   edgeClearanceBetweenRects,
 } from '@/lib/coordinator/booth-clearance-visual'
 import {
@@ -160,12 +161,6 @@ function obstaclesToRects(
     width: o.width,
     height: o.height,
   }))
-}
-
-function clearanceBand(clearanceFt: number): ClearanceHeatCell['band'] {
-  if (clearanceFt <= BOOTH_CLEARANCE_CRITICAL_FT) return 'critical'
-  if (clearanceFt < BOOTH_CLEARANCE_GOOD_FT) return 'tight'
-  return 'good'
 }
 
 function minClearanceToObstacles(aabb: Rect, obstacles: Rect[]): number {

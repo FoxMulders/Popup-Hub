@@ -54,6 +54,9 @@ import { cn } from '@/lib/utils'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
 import { dissolvedStageIdsForDoc } from '@/src/utils/layoutMergeEngine'
+import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
+import { vendorBoothClearanceThemeForProbe } from '@/lib/coordinator/booth-clearance-visual'
+import type { BoothObject } from '../state/types'
 
 import type { LayoutSpringPose } from '../hooks/use-layout-spring'
 
@@ -159,6 +162,8 @@ export interface FloorPlanCanvasProps {
   onLayoutCommit?: () => void
   /** Interpolated booth poses during auto-arrange spring animation. */
   layoutSpringPoses?: ReadonlyMap<string, LayoutSpringPose> | null
+  /** View-only presentation — pan/zoom allowed, no object or layout edits. */
+  viewOnly?: boolean
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
@@ -216,6 +221,7 @@ export function FloorPlanCanvas({
   legendVariant = 'floating',
   onLayoutCommit,
   layoutSpringPoses = null,
+  viewOnly = false,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
@@ -237,6 +243,14 @@ export function FloorPlanCanvas({
     () => canvasGridSpacingForTableFt(effectiveTableSizeFt),
     [effectiveTableSizeFt]
   )
+
+  const roomGridFrame = useMemo(() => {
+    const roomId = selectedRoomId ?? activeRoomId
+    if (!roomId) return null
+    const frame = (store.doc.rooms ?? []).find((f) => f.id === roomId)
+    if (!frame || frame.mergedIntoObjectId) return null
+    return frame
+  }, [activeRoomId, selectedRoomId, store.doc.rooms])
 
   const getZoomMath = useCallback<() => ZoomMath>(() => {
     const objects = store.doc.objects
@@ -411,9 +425,10 @@ export function FloorPlanCanvas({
 
   useSelectionKeyboardNudge(store, {
     activeRoomId: activeRoomId ?? null,
+    enabled: !viewOnly,
   })
 
-  useCanvasObjectKeyboard(store, { enabled: commandCenterViewport })
+  useCanvasObjectKeyboard(store, { enabled: commandCenterViewport && !viewOnly })
 
   const mergeOverlapCtx = useMemo(
     () => ({
@@ -439,10 +454,10 @@ export function FloorPlanCanvas({
   const isGhostPreview =
     pointer.draftRect == null && pointer.placementHoverRect != null
 
-  const draftOverlaps = useMemo(() => {
+  const draftPreviewProbe = useMemo((): BoothObject | null => {
     const rawRect = previewSourceRect
     const kind = previewSourceKind
-    if (!rawRect || !kind) return false
+    if (!rawRect || kind !== 'booth') return null
     const rect = resolveDrawCommitRect(
       kind,
       rawRect,
@@ -457,12 +472,65 @@ export function FloorPlanCanvas({
       activeRoomId ?? null
     )
     const rotation =
-      pointer.draftRect != null
-        ? 0
-        : pointer.placementHoverRotation
+      pointer.draftRect != null ? 0 : pointer.placementHoverRotation
+    const base = {
+      id: '__draft__',
+      kind: 'booth' as const,
+      x: preview?.x ?? rect.x,
+      y: preview?.y ?? rect.y,
+      width: preview?.width ?? rect.width,
+      height: preview?.height ?? rect.height,
+      rotation: preview?.rotation ?? rotation,
+      accentColor: null,
+    }
+    const sizePatch =
+      defaultBoothTableSpec != null
+        ? boothPatchForTableSize(base, defaultBoothTableSpec)
+        : null
+    return {
+      ...base,
+      ...(sizePatch ?? {}),
+      tablePurpose: defaultBoothTableSpec?.purpose,
+    } as BoothObject
+  }, [
+    activeRoomId,
+    defaultBoothTableSpec,
+    pointer.draftRect,
+    pointer.placementHoverRotation,
+    previewSourceKind,
+    previewSourceRect,
+    store.doc,
+    store.doc.snapFt,
+  ])
+
+  const draftOverlaps = useMemo(() => {
+    if (!previewSourceRect || !previewSourceKind) return false
+    if (draftPreviewProbe) {
+      return placedObjectOverlapsAny(
+        draftPreviewProbe,
+        store.doc.objects,
+        undefined,
+        mergeOverlapCtx
+      )
+    }
+    const rect = resolveDrawCommitRect(
+      previewSourceKind,
+      previewSourceRect,
+      store.doc.snapFt,
+      defaultBoothTableSpec
+    )
+    const preview = resolveTablePlacementPreview(
+      previewSourceKind,
+      rect,
+      defaultBoothTableSpec,
+      store.doc,
+      activeRoomId ?? null
+    )
+    const rotation =
+      pointer.draftRect != null ? 0 : pointer.placementHoverRotation
     const probe = {
       id: '__draft__',
-      kind,
+      kind: previewSourceKind,
       x: preview?.x ?? rect.x,
       y: preview?.y ?? rect.y,
       width: preview?.width ?? rect.width,
@@ -473,6 +541,7 @@ export function FloorPlanCanvas({
   }, [
     activeRoomId,
     defaultBoothTableSpec,
+    draftPreviewProbe,
     mergeOverlapCtx,
     pointer.draftRect,
     pointer.placementHoverRotation,
@@ -481,6 +550,27 @@ export function FloorPlanCanvas({
     store.doc,
     store.doc.objects,
     store.doc.snapFt,
+  ])
+
+  const draftClearanceTheme = useMemo(() => {
+    if (!draftPreviewProbe || draftOverlaps) return null
+    if (defaultBoothTableSpec?.purpose === 'guest') return null
+    const previewRoomId = activeRoomId ?? store.doc.rooms?.[0]?.id ?? null
+    return vendorBoothClearanceThemeForProbe(
+      draftPreviewProbe,
+      store.doc.objects,
+      store.doc.rooms,
+      store.doc.objectRoom,
+      previewRoomId
+    )
+  }, [
+    activeRoomId,
+    defaultBoothTableSpec?.purpose,
+    draftOverlaps,
+    draftPreviewProbe,
+    store.doc.objectRoom,
+    store.doc.objects,
+    store.doc.rooms,
   ])
 
   const draftPreviewRect = useMemo(() => {
@@ -605,11 +695,15 @@ export function FloorPlanCanvas({
     store.doc.canvasWidthFt,
   ])
 
-  const cursor = pointer.rotating
-    ? 'grabbing'
-    : viewport.isPanning
+  const cursor = viewOnly
+    ? viewport.isPanning
       ? 'grabbing'
-      : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool, commandCenterViewport)
+      : 'grab'
+    : pointer.rotating
+      ? 'grabbing'
+      : viewport.isPanning
+        ? 'grabbing'
+        : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool, commandCenterViewport)
 
   const ftAtClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -627,18 +721,18 @@ export function FloorPlanCanvas({
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
-      if (!onVendorDrop) return
+      if (viewOnly || !onVendorDrop) return
       if (e.dataTransfer.types.includes(VENDOR_DRAG_MIME)) {
         e.preventDefault()
         e.dataTransfer.dropEffect = 'copy'
       }
     },
-    [onVendorDrop]
+    [onVendorDrop, viewOnly]
   )
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
-      if (!onVendorDrop) return
+      if (viewOnly || !onVendorDrop) return
       const raw = e.dataTransfer.getData(VENDOR_DRAG_MIME)
       if (!raw) return
       e.preventDefault()
@@ -651,7 +745,7 @@ export function FloorPlanCanvas({
         // ignore malformed drag payload
       }
     },
-    [ftAtClient, onVendorDrop]
+    [ftAtClient, onVendorDrop, viewOnly]
   )
 
   const { onWheel: onViewportWheel, ...viewportPointerHandlers } =
@@ -668,9 +762,9 @@ export function FloorPlanCanvas({
         commandCenterViewport && 'bg-stone-100',
         className
       )}
-      tabIndex={0}
+      tabIndex={viewOnly ? -1 : 0}
       role="application"
-      aria-label="Floor plan canvas viewport"
+      aria-label={viewOnly ? 'Floor plan preview' : 'Floor plan canvas viewport'}
       style={{ touchAction: 'none', cursor }}
       {...viewportPointerHandlers}
       onWheelCapture={onViewportWheel}
@@ -706,23 +800,35 @@ export function FloorPlanCanvas({
             WebkitTouchCallout: 'none',
           }}
           onPointerDown={(e) => {
-            if (toolState.tool === 'hand') return
+            if (viewOnly || toolState.tool === 'hand') return
             e.preventDefault()
             pointer.onPointerDown(e)
           }}
-          onPointerMove={pointer.onPointerMove}
-          onPointerUp={pointer.onPointerUp}
-          onPointerCancel={pointer.onPointerUp}
-          onContextMenu={pointer.onContextMenu}
-          onDoubleClick={handleDoubleClick}
+          onPointerMove={viewOnly ? undefined : pointer.onPointerMove}
+          onPointerUp={viewOnly ? undefined : pointer.onPointerUp}
+          onPointerCancel={viewOnly ? undefined : pointer.onPointerUp}
+          onContextMenu={viewOnly ? undefined : pointer.onContextMenu}
+          onDoubleClick={viewOnly ? undefined : handleDoubleClick}
         >
-          <CanvasGrid
-            widthFt={store.doc.canvasWidthFt}
-            lengthFt={store.doc.canvasLengthFt}
-            spacingFt={gridSpacing.minorFt}
-            majorEvery={gridSpacing.majorEvery ?? CANVAS_GRID_MAJOR_EVERY}
-            pxPerFt={pxPerFt}
-          />
+          <g
+            transform={
+              roomGridFrame
+                ? `translate(${roomGridFrame.originX * pxPerFt}, ${roomGridFrame.originY * pxPerFt})`
+                : undefined
+            }
+          >
+            <CanvasGrid
+              widthFt={
+                roomGridFrame?.widthFt ?? store.doc.canvasWidthFt
+              }
+              lengthFt={
+                roomGridFrame?.lengthFt ?? store.doc.canvasLengthFt
+              }
+              spacingFt={gridSpacing.minorFt}
+              majorEvery={gridSpacing.majorEvery ?? CANVAS_GRID_MAJOR_EVERY}
+              pxPerFt={pxPerFt}
+            />
+          </g>
           <RoomDropZones
             doc={store.doc}
             pxPerFt={pxPerFt}
@@ -778,7 +884,7 @@ export function FloorPlanCanvas({
             }
             renderLayer="placable"
           />
-          {toolState.tool === 'select' ? (
+          {toolState.tool === 'select' && !viewOnly ? (
             <SelectionChrome
               objects={store.doc.objects}
               selectedIds={filteredSelectionIds(
@@ -788,7 +894,7 @@ export function FloorPlanCanvas({
               pxPerFt={pxPerFt}
             />
           ) : null}
-          {toolState.tool === 'select' && (selectedRoomId ?? activeRoomId)
+          {toolState.tool === 'select' && !viewOnly && (selectedRoomId ?? activeRoomId)
             ? (() => {
                 const interactionRoomId = selectedRoomId ?? activeRoomId
                 const frame = (store.doc.rooms ?? []).find(
@@ -804,7 +910,7 @@ export function FloorPlanCanvas({
                 )
               })()
             : null}
-          {toolState.tool === 'select' ? (
+          {toolState.tool === 'select' && !viewOnly ? (
             <SelectionRotateHandles
               objects={store.doc.objects}
               selectedIds={filteredSelectionIds(
@@ -817,15 +923,18 @@ export function FloorPlanCanvas({
               }
             />
           ) : null}
-          <DraftPreview
-            rect={draftPreviewRect}
-            kind={previewSourceKind}
-            pxPerFt={pxPerFt}
-            hasOverlap={draftOverlaps}
-            rotation={draftPreviewRotation}
-            ghost={isGhostPreview}
-          />
-          <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
+          {!viewOnly ? (
+            <DraftPreview
+              rect={draftPreviewRect}
+              kind={previewSourceKind}
+              pxPerFt={pxPerFt}
+              hasOverlap={draftOverlaps}
+              rotation={draftPreviewRotation}
+              ghost={isGhostPreview}
+              clearanceTheme={draftClearanceTheme}
+            />
+          ) : null}
+          {!viewOnly ? <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} /> : null}
           <PatronAisleOverlay corridors={patronAisleCorridors} pxPerFt={pxPerFt} />
           <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />
           <UnifiedLayoutFlowOverlay
@@ -833,7 +942,7 @@ export function FloorPlanCanvas({
             clearanceField={unifiedLayoutOverlay?.clearanceField}
             pxPerFt={pxPerFt}
           />
-          {editingObj ? (
+          {!viewOnly && editingObj ? (
             <InlineLabelEditor
               obj={editingObj}
               pxPerFt={pxPerFt}

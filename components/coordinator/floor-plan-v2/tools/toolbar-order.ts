@@ -12,6 +12,7 @@ export type CanvasToolbarBlockId =
   | 'patron'
   | 'room'
   | 'utilities'
+  | 'dual-screen'
 
 export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
   'optimize',
@@ -23,6 +24,7 @@ export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
   'patron',
   'room',
   'utilities',
+  'dual-screen',
 ] as const
 
 export const DEFAULT_CANVAS_TOOLBAR_ORDER: CanvasToolbarBlockId[] = [

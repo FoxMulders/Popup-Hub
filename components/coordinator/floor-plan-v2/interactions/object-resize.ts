@@ -1,3 +1,5 @@
+import type { TableSizeUnits } from '@/lib/booth-planner/table-size-units'
+import { formatDimensionDisplay } from '@/lib/booth-planner/table-size-units'
 import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
 import {
   GUEST_RECTANGULAR_TABLE_DEPTH_FT,
@@ -152,27 +154,26 @@ export function objectResizeFromHandle(
   return { x, y, width, height }
 }
 
-function formatDimFt(value: number): string {
-  const rounded = Math.round(value * 10) / 10
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
-}
 
 /** Human-readable W×H (or diameter) label for selection chrome. */
-export function formatObjectDimensions(obj: PlacedObject): string {
+export function formatObjectDimensions(
+  obj: PlacedObject,
+  units: TableSizeUnits = 'imperial'
+): string {
   if (obj.kind === 'booth') {
     const booth = obj as BoothObject
     const purpose = resolveTablePurpose(booth)
     const shape: TableShape = booth.tableShape ?? 'rectangular'
     if (purpose === 'guest' && shape === 'round') {
-      return `${formatDimFt(booth.width)}′ Ø`
+      return `${formatDimensionDisplay(booth.width, units)} Ø`
     }
     if (purpose === 'guest' && shape === 'rectangular') {
       const length = Math.max(booth.width, booth.height)
       const depth = Math.min(booth.width, booth.height)
-      return `${formatDimFt(length)}′ × ${formatDimFt(depth)}′`
+      return `${formatDimensionDisplay(length, units)} × ${formatDimensionDisplay(depth, units)}`
     }
   }
-  return `${formatDimFt(obj.width)}′ × ${formatDimFt(obj.height)}′`
+  return `${formatDimensionDisplay(obj.width, units)} × ${formatDimensionDisplay(obj.height, units)}`
 }
 
 /** Merge raw geometry with booth table metadata after a resize gesture. */

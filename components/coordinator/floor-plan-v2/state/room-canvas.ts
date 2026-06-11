@@ -24,8 +24,19 @@ export const CANVAS_DIMENSION_SCALE = 5
 export const MIN_ROOM_DIMENSION_FT = 10
 
 /** Human-readable room dimensions for the unified room bar. */
-export function formatRoomDimensions(widthFt: number, lengthFt: number): string {
-  return `${Math.round(widthFt)}' × ${Math.round(lengthFt)}'`
+export function formatRoomDimensions(
+  widthFt: number,
+  lengthFt: number,
+  units: 'imperial' | 'metric' = 'imperial'
+): string {
+  if (units === 'metric') {
+    const formatM = (ft: number) => {
+      const m = ft * 0.3048
+      return m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)
+    }
+    return `${formatM(widthFt)} m × ${formatM(lengthFt)} m`
+  }
+  return `${Math.round(widthFt)}′ × ${Math.round(lengthFt)}′`
 }
 
 export interface FtBounds {

@@ -1,11 +1,10 @@
 'use client'
 
-import Link from 'next/link'
-import { Plus } from 'lucide-react'
-import { buttonVariants } from '@/components/ui/button'
+import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardHeaderToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
+import { useMarketManagement } from './market-management-context'
 import { cn } from '@/lib/utils'
 
 function WorkspaceTabs() {
@@ -43,57 +42,85 @@ function WorkspaceTabs() {
   )
 }
 
-export function DashboardCommandCenterHeader() {
-  const { fullscreen, previewMode, setPreviewMode } = useCommandCenterFullscreen()
-  const { isBlueprint } = useDashboardWorkspaceView()
-
-  const headerActions = (
-    <div className="flex shrink-0 items-center gap-2">
-      {isBlueprint ? (
-        <button
-          type="button"
-          className="dashboard-pill-toggle"
-          role="switch"
-          aria-checked={previewMode}
-          aria-label={previewMode ? 'Switch to edit mode' : 'Switch to preview mode'}
-          onClick={() => setPreviewMode(!previewMode)}
-        >
-          <span className={cn('dashboard-pill-toggle__label', !previewMode && 'is-active')}>
-            Edit
-          </span>
-          <span
-            className={cn(
-              'dashboard-pill-toggle__track',
-              previewMode && 'is-preview'
-            )}
-          >
-            <span className="dashboard-pill-toggle__thumb" />
-          </span>
-          <span className={cn('dashboard-pill-toggle__label', previewMode && 'is-active')}>
-            Preview
-          </span>
-        </button>
-      ) : null}
-
-      {!fullscreen ? (
-        <Link
-          href="/coordinator/events/new"
-          className={cn(buttonVariants({ size: 'sm' }), 'gap-1.5 rounded-lg')}
-        >
-          <Plus className="h-4 w-4" aria-hidden />
-          New market
-        </Link>
-      ) : null}
-    </div>
-  )
+function EditPreviewToggle() {
+  const { previewMode, setPreviewMode } = useCommandCenterFullscreen()
 
   return (
-    <div className="dashboard-command-center-header flex flex-nowrap items-center gap-2 overflow-x-auto px-3 py-1 sm:px-4">
-      <WorkspaceTabs />
-      {isBlueprint && !previewMode ? (
-        <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 items-center" />
+    <button
+      type="button"
+      className="dashboard-pill-toggle"
+      role="switch"
+      aria-checked={previewMode}
+      aria-label={previewMode ? 'Switch to edit mode' : 'Switch to preview mode'}
+      onClick={() => setPreviewMode(!previewMode)}
+    >
+      <span className={cn('dashboard-pill-toggle__label', !previewMode && 'is-active')}>
+        Edit
+      </span>
+      <span
+        className={cn(
+          'dashboard-pill-toggle__track',
+          previewMode && 'is-preview'
+        )}
+      >
+        <span className="dashboard-pill-toggle__thumb" />
+      </span>
+      <span className={cn('dashboard-pill-toggle__label', previewMode && 'is-active')}>
+        Preview
+      </span>
+    </button>
+  )
+}
+
+function EventSetupExitLink() {
+  const { selectedEventId, events } = useMarketManagement()
+  const { setFullscreen } = useCommandCenterFullscreen()
+  const selectedEvent = events.find((event) => event.id === selectedEventId)
+
+  if (!selectedEventId) return null
+
+  return (
+    <CommandCenterExitLink
+      eventId={selectedEventId}
+      eventName={selectedEvent?.name}
+      eventStatus={selectedEvent?.status}
+      compact
+      prominent
+      onBeforeNavigate={() => setFullscreen(false)}
+    />
+  )
+}
+
+export function DashboardCommandCenterHeader() {
+  const { previewMode } = useCommandCenterFullscreen()
+  const { isBlueprint } = useDashboardWorkspaceView()
+  const { selectedEventId } = useMarketManagement()
+
+  if (previewMode) {
+    return (
+      <div className="dashboard-command-center-header dashboard-command-center-header--preview flex min-w-0 items-center justify-end px-3 py-1 sm:px-4">
+        <EditPreviewToggle />
+      </div>
+    )
+  }
+
+  return (
+    <div className="dashboard-command-center-header flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden px-3 py-1 sm:gap-2 sm:px-4">
+      {selectedEventId ? (
+        <>
+          <EventSetupExitLink />
+          <div className="h-4 w-px shrink-0 bg-stone-200" aria-hidden />
+        </>
       ) : null}
-      <div className="ml-auto flex shrink-0 items-center gap-2">{headerActions}</div>
+      <WorkspaceTabs />
+      {isBlueprint ? (
+        <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 items-center overflow-hidden" />
+      ) : null}
+      {isBlueprint ? (
+        <div className="ml-auto shrink-0">
+          <EditPreviewToggle />
+        </div>
+      ) : null}
     </div>
   )
 }

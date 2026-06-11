@@ -157,13 +157,7 @@ export function AppNav({
                   <Badge className="absolute -right-1 -top-1 h-4 min-w-4 px-1 text-[10px] leading-none">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </Badge>
-                ) : (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400 ring-2 ring-white"
-                    aria-hidden
-                    title="Live notification slot"
-                  />
-                )}
+                ) : null}
               </Link>
 
               <button

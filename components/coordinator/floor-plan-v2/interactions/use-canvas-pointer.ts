@@ -23,6 +23,7 @@ import { useDebugLog } from '../debug/debug-log-context'
 import { formatPlacementProbe } from '../debug/format-geometry-log'
 import {
   isCanvasOpenPlacementKind,
+  isValidCanvasOpenPlacement,
   defaultFoodTruckFootprintFt,
 } from '@/lib/floor-plan/canvas-open-placement'
 import {
@@ -70,10 +71,13 @@ import {
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import { isVendorBoothObject } from './vendor-booth-placement'
 import {
+  defaultStructuralDoorFootprintFt,
   isStructuralWallSnapKind,
+  orientLongEdgeAlongWall,
   snapStructuralAssetForDoc,
   snapStructuralAssetToLocalPerimeter,
   snapStructuralAssetToRoomFrame,
+  structuralLayoutMovePatch,
 } from './structural-wall-snap'
 import { resolveTablePlacementPreview } from './table-placement-preview'
 import {
@@ -304,6 +308,22 @@ export function resolveDrawCommitRect(
   }
   if (kind === 'stage') {
     const { width, height } = defaultStageFootprintFt()
+    const cx = rect.x + rect.width / 2
+    const cy = rect.y + rect.height / 2
+    return {
+      x: snapToGrid(cx - width / 2, snapFt),
+      y: snapToGrid(cy - height / 2, snapFt),
+      width,
+      height,
+    }
+  }
+  if (kind === 'door' || kind === 'emergency_exit') {
+    const drawnW = Math.max(minSize, rect.width)
+    const drawnH = Math.max(minSize, rect.height)
+    const hasDragExtent = drawnW > minSize || drawnH > minSize
+    const { width, height } = hasDragExtent
+      ? orientLongEdgeAlongWall(drawnW, drawnH)
+      : defaultStructuralDoorFootprintFt()
     const cx = rect.x + rect.width / 2
     const cy = rect.y + rect.height / 2
     return {
@@ -1148,10 +1168,20 @@ export function useCanvasPointer(
           if (!orig) continue
           const obj = objById.get(id)
           if (!obj) continue
-          const patch = boothLayoutMovePatch(obj, orig, dx, dy, store.doc, {
-            snapFt,
-            activeRoomId: objectRoom[id] ?? activeRoomIdRef.current ?? null,
-          })
+          const patch = isStructuralWallSnapKind(obj.kind)
+            ? structuralLayoutMovePatch(
+                obj,
+                orig,
+                dx,
+                dy,
+                store.doc,
+                objectRoom[id] ?? activeRoomIdRef.current ?? null,
+                snapFt
+              )
+            : boothLayoutMovePatch(obj, orig, dx, dy, store.doc, {
+                snapFt,
+                activeRoomId: objectRoom[id] ?? activeRoomIdRef.current ?? null,
+              })
           patches.push({
             id,
             patch,
@@ -1176,7 +1206,10 @@ export function useCanvasPointer(
       const activeTool = toolStateRef.current
       const isTableDrawPreview =
         activeTool.tool === 'draw' && activeTool.drawShape === 'booth'
-      if (stickyDrawPlacementRef.current || isTableDrawPreview) {
+      const isStructuralDrawPreview =
+        activeTool.tool === 'draw' &&
+        isStructuralWallSnapKind(activeTool.drawShape)
+      if (stickyDrawPlacementRef.current || isTableDrawPreview || isStructuralDrawPreview) {
         const gestureActive =
           draftRef.current ||
           dragRef.current ||
@@ -1428,20 +1461,26 @@ export function useCanvasPointer(
           const frame = store.doc.rooms?.find((r) => r.id === drawRoomId)
           if (frame) {
             const local = snapStructuralAssetToLocalPerimeter(
-              placementProbe,
+              {
+                ...placementProbe,
+                x: placementProbe.x - frame.originX,
+                y: placementProbe.y - frame.originY,
+              },
               frame.widthFt,
               frame.lengthFt
             )
             rect = {
               x: frame.originX + local.x!,
               y: frame.originY + local.y!,
-              width: rect.width,
-              height: rect.height,
+              width: local.width ?? rect.width,
+              height: local.height ?? rect.height,
             }
             placementProbe = {
               ...placementProbe,
               x: rect.x,
               y: rect.y,
+              width: rect.width,
+              height: rect.height,
               rotation: local.rotation ?? 0,
             }
           }
@@ -1513,17 +1552,36 @@ export function useCanvasPointer(
             id: string
             patch: Partial<PlacedObject>
           }> = []
+          let blockedByWall = false
           for (const resolved of movedResolved) {
-            finalPatches.push({
-              id: resolved.id,
-              patch: {
-                x: resolved.x,
-                y: resolved.y,
-                width: resolved.width,
-                height: resolved.height,
-                rotation: resolved.rotation,
-              },
-            })
+            const patch = {
+              x: resolved.x,
+              y: resolved.y,
+              width: resolved.width,
+              height: resolved.height,
+              rotation: resolved.rotation,
+            }
+            if (
+              isCanvasOpenPlacementKind(resolved.kind) &&
+              !isValidCanvasOpenPlacement(store.readDoc(), resolved, movedIdSet)
+            ) {
+              const orig = drag.originals.get(resolved.id)
+              if (orig) {
+                finalPatches.push({
+                  id: resolved.id,
+                  patch: {
+                    x: orig.x,
+                    y: orig.y,
+                  },
+                })
+                blockedByWall = true
+                continue
+              }
+            }
+            finalPatches.push({ id: resolved.id, patch })
+          }
+          if (blockedByWall) {
+            onOverlapViolationRef.current?.()
           }
           store.updateObjects(finalPatches, { pushHistory: true })
           onLayoutCommitRef.current?.()

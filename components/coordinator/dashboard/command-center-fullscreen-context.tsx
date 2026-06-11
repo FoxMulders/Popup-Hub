@@ -13,6 +13,26 @@ import {
 import { CANVAS_FULLSCREEN_CLASS } from '@/components/coordinator/floor-plan-v2/canvas/use-native-fullscreen'
 
 const DASHBOARD_ROOT_ID = 'coordinator-dashboard-root'
+const COMMAND_CENTER_FULLSCREEN_CLASS = 'command-center-canvas-fullscreen'
+const DASHBOARD_PREVIEW_ATTR = 'data-dashboard-preview'
+
+function applyDashboardFullscreenClasses(active: boolean) {
+  if (active) {
+    document.documentElement.classList.add(CANVAS_FULLSCREEN_CLASS)
+    document.documentElement.classList.add(COMMAND_CENTER_FULLSCREEN_CLASS)
+    return
+  }
+  document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+  document.documentElement.classList.remove(COMMAND_CENTER_FULLSCREEN_CLASS)
+}
+
+function applyDashboardPreviewAttr(active: boolean) {
+  if (active) {
+    document.documentElement.setAttribute(DASHBOARD_PREVIEW_ATTR, 'true')
+    return
+  }
+  document.documentElement.removeAttribute(DASHBOARD_PREVIEW_ATTR)
+}
 
 interface CommandCenterFullscreenContextValue {
   fullscreen: boolean
@@ -32,14 +52,16 @@ function dashboardFullscreenTarget(): HTMLElement | null {
 
 export function CommandCenterFullscreenProvider({ children }: { children: ReactNode }) {
   const [fullscreen, setFullscreenState] = useState(false)
-  const [previewMode, setPreviewMode] = useState(false)
+  const [previewMode, setPreviewModeState] = useState(false)
 
   useLayoutEffect(() => {
-    document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+    applyDashboardFullscreenClasses(false)
+    applyDashboardPreviewAttr(false)
     document.body.dataset.dashboardCommandCenter = 'true'
     return () => {
       delete document.body.dataset.dashboardCommandCenter
-      document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+      applyDashboardFullscreenClasses(false)
+      applyDashboardPreviewAttr(false)
       if (document.fullscreenElement) {
         void document.exitFullscreen().catch(() => {})
       }
@@ -49,7 +71,7 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
   const setFullscreen = useCallback(async (value: boolean) => {
     const root = dashboardFullscreenTarget() ?? document.documentElement
     if (value) {
-      document.documentElement.classList.add(CANVAS_FULLSCREEN_CLASS)
+      applyDashboardFullscreenClasses(true)
       try {
         if (!document.fullscreenElement) {
           await root.requestFullscreen()
@@ -61,7 +83,7 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
       return
     }
 
-    document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+    applyDashboardFullscreenClasses(false)
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen()
@@ -75,8 +97,10 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
   useEffect(() => {
     const onFullscreenChange = () => {
       if (!document.fullscreenElement) {
-        document.documentElement.classList.remove(CANVAS_FULLSCREEN_CLASS)
+        applyDashboardFullscreenClasses(false)
         setFullscreenState(false)
+        setPreviewModeState(false)
+        applyDashboardPreviewAttr(false)
       }
     }
     document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -87,9 +111,18 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
     void setFullscreen(!fullscreen)
   }, [fullscreen, setFullscreen])
 
+  const setPreviewMode = useCallback(
+    (value: boolean) => {
+      setPreviewModeState(value)
+      applyDashboardPreviewAttr(value)
+      void setFullscreen(value)
+    },
+    [setFullscreen]
+  )
+
   const togglePreviewMode = useCallback(() => {
-    setPreviewMode((v) => !v)
-  }, [])
+    setPreviewMode(!previewMode)
+  }, [previewMode, setPreviewMode])
 
   const value = useMemo(
     () => ({
@@ -100,7 +133,7 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
       setPreviewMode,
       togglePreviewMode,
     }),
-    [fullscreen, setFullscreen, toggleFullscreen, previewMode, togglePreviewMode]
+    [fullscreen, setFullscreen, toggleFullscreen, previewMode, setPreviewMode, togglePreviewMode]
   )
 
   return (

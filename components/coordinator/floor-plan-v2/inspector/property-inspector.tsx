@@ -248,7 +248,7 @@ function prettyKindHint(kind: PlacedObject['kind']): string {
     case 'stage':
       return 'Performance area. Re-size to match the platform footprint.'
     case 'food_truck':
-      return 'Mobile concession unit. Place anywhere on the canvas, including parking areas outside rooms.'
+      return 'Mobile concession unit. Place on open canvas or parking areas — cannot overlap solid walls.'
     case 'label':
       return 'Free-form text annotation.'
     case 'merged_zone':

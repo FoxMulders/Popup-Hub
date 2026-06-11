@@ -30,8 +30,8 @@ export function BoothMatrixPanel({
   defaultOpen,
 }: {
   headerAction?: React.ReactNode
-  /** `ledger` — full-page; `split` — right pane in virtual split; `embedded` — legacy dock. */
-  variant?: 'embedded' | 'ledger' | 'split'
+  /** `ledger` — full-page; `split` — right pane in virtual split; `docked` — canvas side rail; `embedded` — legacy dock. */
+  variant?: 'embedded' | 'ledger' | 'split' | 'docked'
   defaultOpen?: boolean
 }) {
   const rows = useBoothMatrixRows()
@@ -47,7 +47,8 @@ export function BoothMatrixPanel({
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const isLedger = variant === 'ledger'
   const isSplit = variant === 'split'
-  const isDensePane = isLedger || isSplit
+  const isDocked = variant === 'docked'
+  const isDensePane = isLedger || isSplit || isDocked
 
   const handleFocusBooth = (boothId: string) => {
     if (isLedger) setView('blueprint')
@@ -95,6 +96,13 @@ export function BoothMatrixPanel({
         </div>
       )
     }
+    if (isDocked) {
+      return (
+        <p className="text-[11px] leading-snug text-stone-500">
+          No booths yet — place booths on the canvas to populate the ledger.
+        </p>
+      )
+    }
     return null
   }
 
@@ -103,11 +111,12 @@ export function BoothMatrixPanel({
       className={cn(
         'dashboard-booth-matrix-panel',
         isLedger && 'dashboard-booth-matrix-panel--ledger',
-        isSplit && 'dashboard-booth-matrix-panel--split'
+        isSplit && 'dashboard-booth-matrix-panel--split',
+        isDocked && 'dashboard-booth-matrix-panel--docked'
       )}
       aria-labelledby={captionId}
     >
-      {!isSplit ? (
+      {!isSplit && !isDocked ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button
             type="button"
@@ -150,15 +159,20 @@ export function BoothMatrixPanel({
       {panelOpen ? (
         <div
           id="booth-matrix-table-region"
-          className={cn('space-y-1', !isSplit && 'mt-1')}
+          className={cn(
+            'space-y-1',
+            !isSplit && !isDocked && 'mt-1',
+            isDocked && 'flex min-h-0 flex-1 flex-col overflow-hidden'
+          )}
           aria-live="polite"
           aria-relevant="additions removals"
         >
           <div
             className={cn(
               'dashboard-booth-matrix-panel__table-wrap',
-              isDensePane && 'dashboard-booth-matrix-panel__table-wrap--ledger',
-              !isDensePane && 'hidden md:block'
+              isDocked && 'hidden',
+              !isDensePane && 'hidden md:block',
+              isDensePane && !isDocked && 'dashboard-booth-matrix-panel__table-wrap--ledger'
             )}
           >
             <table className="w-full table-fixed border-collapse text-left text-sm">
@@ -238,8 +252,62 @@ export function BoothMatrixPanel({
             </table>
           </div>
 
-          <div className="flex flex-col gap-1 md:hidden">
+          <div
+            className={cn(
+              'flex flex-col gap-1',
+              isDocked
+                ? 'min-h-0 flex-1 overflow-y-auto pr-0.5'
+                : 'md:hidden'
+            )}
+          >
             {rows.map((row) => {
+              if (isDocked) {
+                return (
+                  <div
+                    key={row.id}
+                    className="space-y-1.5 rounded-md border border-stone-200 bg-white p-2"
+                    aria-current={selectedBoothId === row.id ? 'true' : undefined}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-1.5 text-left text-xs font-semibold text-stone-800 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                      aria-label={`Focus booth ${row.label} on canvas — ${row.statusLabel}`}
+                      onClick={() => handleFocusBooth(row.id)}
+                    >
+                      <StatusBadge status={row.status} label={row.statusLabel} compact />
+                      <span className="min-w-0 truncate">{row.label}</span>
+                    </button>
+                    <MatrixVendorSelect
+                      boothId={row.id}
+                      vendorId={row.vendorId}
+                      disabled={isPending}
+                      vendors={approvedPool}
+                      onAssign={(vendorId) =>
+                        assignVendorToBoothByVendorId(row.id, vendorId)
+                      }
+                    />
+                    <p className="truncate text-[10px] text-stone-500">{row.category}</p>
+                    {row.vendorId ? (
+                      <MatrixStatusSelect
+                        boothId={row.id}
+                        status={row.status}
+                        disabled={isPending}
+                        onChange={(status) => {
+                          startTransition(async () => {
+                            const ok = await updateBoothPaymentStatus(row.id, status)
+                            if (!ok) {
+                              toast.error('Could not update booth status')
+                            }
+                          })
+                        }}
+                      />
+                    ) : (
+                      <StatusBadge status={row.status} label={row.statusLabel} />
+                    )}
+                  </div>
+                )
+              }
+
               const expanded = expandedId === row.id
               return (
                 <div

@@ -114,7 +114,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
             hidden={previewMode || immersive || !isBlueprint}
           />
         }
-        immersive={immersive}
+        immersive={immersive || previewMode}
         ariaBusy={ariaBusy}
         className="dashboard-app-shell--qa-global-scroll"
         center={

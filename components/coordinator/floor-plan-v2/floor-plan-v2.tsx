@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  startTransition,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -35,6 +36,7 @@ import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridDocPatch } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
+import { CanvasLedger } from './canvas/canvas-ledger'
 import { focusFloorPlanCanvas } from './canvas/canvas-focus'
 import {
   fitViewportToContent,
@@ -65,11 +67,11 @@ import {
 import type { UnifiedSolverMeta } from './engine/UnifiedLayoutSolver'
 import { CalculateOptimalPath } from './engine/PathfindingService'
 import { usePathfinding } from './hooks/use-pathfinding'
+import { usePatronAisleOverlay } from './hooks/use-patron-aisle-overlay'
 import {
   layoutSpringTargetsFromBooths,
   useLayoutSpringAnimation,
 } from './hooks/use-layout-spring'
-import { computePatronAisleOverlayForRoom } from '@/lib/floor-plan/patron-aisle-overlay'
 import { legacyRoomsFromDoc } from './state/legacy-bridge'
 import { hydrateFloorPlanDoc } from './state/layout-hydration'
 import {
@@ -117,6 +119,7 @@ import {
   rotatedAabb,
 } from './interactions/geometry'
 import { formatObjectDimensions } from './interactions/object-resize'
+import { useTableSizeUnits } from '@/lib/booth-planner/table-size-units'
 import type { LayoutRoom } from '@/types/database'
 import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
@@ -383,6 +386,7 @@ function FloorPlanV2Workspace({
   const showToolbarRoomControls =
     roomHandlersReady && (!isEmbedded || layoutRooms.length === 0)
   const commandCenterFullscreen = useCommandCenterFullscreen()
+  const dashboardPreview = isDashboard && commandCenterFullscreen.previewMode
   const toolbarPortal = useDashboardToolbarPortal()
   const layoutSave = useDashboardLayoutSave()
 
@@ -576,10 +580,11 @@ function FloorPlanV2Workspace({
     enabled: patronPathEnabled,
     cellFt: store.doc.snapFt,
   })
-  const patronAisleCorridors = useMemo(() => {
-    if (!patronPathEnabled || !activeRoomId) return null
-    return computePatronAisleOverlayForRoom(store.doc, activeRoomId)
-  }, [activeRoomId, patronPathEnabled, store.doc])
+  const patronAisleCorridors = usePatronAisleOverlay(
+    store.doc,
+    activeRoomId,
+    patronPathEnabled
+  )
   const [rawSelectedRoomId, setSelectedRoomId] = useState<string | null>(null)
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(
     () => new Set()
@@ -664,6 +669,7 @@ function FloorPlanV2Workspace({
   }, [eventId, layoutRoomIdsKey, layoutRooms.length, logState, store])
 
   const highlightedRoomId = selectedRoomId ?? activeRoomId
+  const [tableSizeUnits] = useTableSizeUnits()
   const highlightedRoomMetrics = useMemo(() => {
     const frame = (store.doc.rooms ?? []).find((r) => r.id === highlightedRoomId)
     if (!frame) return null
@@ -678,8 +684,8 @@ function FloorPlanV2Workspace({
     if (store.selectedIds.size !== 1) return null
     const obj = store.doc.objects.find((o) => store.selectedIds.has(o.id))
     if (!obj) return null
-    return formatObjectDimensions(obj)
-  }, [store.selectedIds, store.doc.objects])
+    return formatObjectDimensions(obj, tableSizeUnits)
+  }, [store.selectedIds, store.doc.objects, tableSizeUnits])
 
   // Validated copy of the wizard-owned baseline table length. The
   // command-bar pill binds to this; upstream the value comes from
@@ -834,12 +840,18 @@ function FloorPlanV2Workspace({
       }
       return
     }
-    store.removeObjects(removable.map((o) => o.id))
-    if (lockedSelected.length > 0) {
-      toast.message(
-        `Locked fixtures retained (${lockedSelected.length}).`,
-        { duration: 1500 }
-      )
+    const removableIds = removable.map((o) => o.id)
+    const lockedCount = lockedSelected.length
+    // Urgent commit — keep outside startTransition so the canvas paints
+    // the removal before deferred pathfinding / aisle overlays recompute.
+    store.removeObjects(removableIds)
+    if (lockedCount > 0) {
+      startTransition(() => {
+        toast.message(
+          `Locked fixtures retained (${lockedCount}).`,
+          { duration: 1500 }
+        )
+      })
     }
   }, [store])
 
@@ -1237,6 +1249,8 @@ function FloorPlanV2Workspace({
 
   // Keyboard shortcuts.
   useEffect(() => {
+    if (dashboardPreview) return
+
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null
       const tag = target?.tagName?.toLowerCase()
@@ -1350,6 +1364,7 @@ function FloorPlanV2Workspace({
     handleDeleteSelected,
     handlePaste,
     handleRotateBy,
+    dashboardPreview,
     layoutNativeFullscreen,
     scheduleLayoutAutosave,
     setCanvasFullscreen,
@@ -1480,8 +1495,29 @@ function FloorPlanV2Workspace({
   )
 
   const handleRoomGeometryCommit = useCallback(() => {
-    syncLayoutRoomsFromDoc(store.doc)
-  }, [store.doc, syncLayoutRoomsFromDoc])
+    syncLayoutRoomsFromDoc(store.readDoc())
+  }, [store, syncLayoutRoomsFromDoc])
+
+  const handlePatchRoomDimensions = useCallback(
+    (roomId: string, patch: { widthFt: number; lengthFt: number }) => {
+      const frame = store.readDoc().rooms?.find((f) => f.id === roomId)
+      if (!frame || frame.mergedIntoObjectId) return
+      const ok = store.resizeRoomFrame(roomId, {
+        originX: frame.originX,
+        originY: frame.originY,
+        widthFt: patch.widthFt,
+        lengthFt: patch.lengthFt,
+      })
+      if (!ok) {
+        toast.message(
+          'Room size exceeds canvas limits — try a smaller width or length.'
+        )
+        return
+      }
+      syncLayoutRoomsFromDoc(store.readDoc())
+    },
+    [store, syncLayoutRoomsFromDoc]
+  )
 
   const handleRotateRoomLeft = useCallback(() => {
     if (!rotateTargetRoomId) {
@@ -2334,6 +2370,8 @@ function FloorPlanV2Workspace({
     onRenameRoom: showToolbarRoomControls ? onRenameRoom : undefined,
     onDeleteRoom: showToolbarRoomControls ? onDeleteRoom : undefined,
     highlightedRoomMetrics,
+    highlightedRoomId: highlightedRoomId,
+    onPatchRoomDimensions: handlePatchRoomDimensions,
     highlightedSelectionMetrics,
     showLabels,
     onShowLabelsChange: setShowLabels,
@@ -2468,7 +2506,7 @@ function FloorPlanV2Workspace({
         className="min-h-0 min-w-0 flex-1"
       >
         <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
-        {isDashboard ? (
+        {isDashboard && !dashboardPreview ? (
           <>
             {dashboardCommandBar && !portalToolbarToTop
               ? dashboardCommandBar
@@ -2481,9 +2519,13 @@ function FloorPlanV2Workspace({
             toolbarPortal?.headerTarget
               ? createPortal(dashboardHeaderCommandBar, toolbarPortal.headerTarget)
               : null}
+          </>
+        ) : null}
+        {isDashboard ? (
             <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">
-              <div className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-stone-100">
-                <CanvasLegend variant="docked" />
+              <div className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-stone-100">
+                {!dashboardPreview ? <CanvasLegend variant="docked" /> : null}
+                <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <CanvasRootErrorBoundary
                   onReset={() => {
                     logState('Canvas error boundary: reset triggered')
@@ -2562,11 +2604,13 @@ function FloorPlanV2Workspace({
                     onAfterDrawCommit={handleAfterDrawCommit}
                     stickyDrawPlacement
                     showLabels={showLabels}
+                    viewOnly={dashboardPreview}
                   />
                 </CanvasRootErrorBoundary>
+                </div>
+                {!dashboardPreview ? <CanvasLedger /> : null}
               </div>
             </div>
-          </>
         ) : (
           <div
             className={cn(

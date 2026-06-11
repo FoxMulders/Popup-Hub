@@ -21,6 +21,10 @@ import {
   isJoinableObject,
   objectFrameOverlapsOrTouches,
 } from '../state/room-joins'
+import {
+  findRoomIdForStructuralPlacement,
+  isStructuralWallSnapKind,
+} from '../interactions/structural-wall-snap'
 
 export type PlacementProbe = Pick<
   PlacedObject,
@@ -189,6 +193,10 @@ export function resolvePlacementRoomIdForObject(
   const hit = findRoomIdForPlacementPoint(doc, center)
   if (hit) return hit
 
+  if (isStructuralWallSnapKind(obj.kind)) {
+    return findRoomIdForStructuralPlacement(doc, center, preferredRoomId)
+  }
+
   if (isCanvasOpenPlacementKind(obj.kind)) return null
 
   const joinHit = findRoomIdForJoinableObjectPlacement(doc, obj)
@@ -208,6 +216,12 @@ export function isValidObjectPlacement(
 ): boolean {
   if (isCanvasOpenPlacementKind(obj.kind)) {
     return isValidCanvasOpenPlacement(doc, obj)
+  }
+
+  if (isStructuralWallSnapKind(obj.kind)) {
+    const resolved =
+      roomId ?? resolvePlacementRoomIdForObject(doc, obj, null)
+    return resolved != null
   }
 
   const resolved =

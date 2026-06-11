@@ -48,16 +48,16 @@ export function DashboardNextStepCta({
         disabled={clearanceBlocked}
         className={cn(
           buttonVariants({ size: inline ? 'sm' : 'lg' }),
-          'flex w-full flex-col items-start gap-0.5 rounded-xl border-2 border-forest bg-forest text-left text-white shadow-lg shadow-forest/25 hover:bg-forest/90 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-55',
+          'flex w-full items-center gap-2 rounded-xl border-2 border-forest bg-forest text-left text-white shadow-lg shadow-forest/25 hover:bg-forest/90 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-55',
           inline && 'rounded-lg px-3 py-2'
         )}
         onClick={() => setView('ledger')}
       >
-        <span className="flex w-full items-center justify-between gap-2 text-sm font-bold uppercase tracking-wide">
-          {label}
-          <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-sm">
+          <span className="font-bold uppercase tracking-wide">{label}</span>
+          <span className="ml-2 text-xs font-normal text-white/90">{detail}</span>
         </span>
-        <span className="text-xs font-normal text-white/90">{detail}</span>
+        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
       </button>
     )
 
@@ -109,7 +109,7 @@ export function DashboardNextStepCta({
       href={href}
       className={cn(
         buttonVariants({ size: inline ? 'sm' : 'lg' }),
-        'flex w-full flex-col items-start gap-0.5 rounded-xl border-2 border-forest bg-forest text-left text-white shadow-lg shadow-forest/25 hover:bg-forest/90 focus-visible:ring-offset-2',
+        'flex w-full items-center gap-2 rounded-xl border-2 border-forest bg-forest text-left text-white shadow-lg shadow-forest/25 hover:bg-forest/90 focus-visible:ring-offset-2',
         inline && 'rounded-lg px-3 py-2',
         ledgerBlocked && 'pointer-events-none opacity-55'
       )}
@@ -118,11 +118,11 @@ export function DashboardNextStepCta({
         if (ledgerBlocked) e.preventDefault()
       }}
     >
-      <span className="flex w-full items-center justify-between gap-2 text-sm font-bold uppercase tracking-wide">
-        {label}
-        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 truncate text-sm">
+        <span className="font-bold uppercase tracking-wide">{label}</span>
+        <span className="ml-2 text-xs font-normal text-white/90">{detail}</span>
       </span>
-      <span className="text-xs font-normal text-white/90">{detail}</span>
+      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
     </Link>
   )
 

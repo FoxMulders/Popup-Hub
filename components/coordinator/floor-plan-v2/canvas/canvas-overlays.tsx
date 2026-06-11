@@ -3,6 +3,7 @@
 import type { ObjectKind, PlacedObject } from '../state/types'
 import { rotatedAabb, type Rect } from '../interactions/geometry'
 import { PLACEMENT_AVAILABLE, PLACEMENT_VIOLATION } from './placement-theme'
+import type { BoothClearanceTheme } from '@/lib/coordinator/booth-clearance-visual'
 
 interface DraftPreviewProps {
   rect: Rect | null
@@ -13,6 +14,8 @@ interface DraftPreviewProps {
   rotation?: number
   /** Semi-transparent cursor ghost before click. */
   ghost?: boolean
+  /** Vendor booth clearance band colours (draw/hover preview). */
+  clearanceTheme?: BoothClearanceTheme | null
 }
 
 export function DraftPreview({
@@ -22,6 +25,7 @@ export function DraftPreview({
   hasOverlap = false,
   rotation = 0,
   ghost = false,
+  clearanceTheme = null,
 }: DraftPreviewProps) {
   if (!rect || !kind) return null
   const x = rect.x * pxPerFt
@@ -32,25 +36,35 @@ export function DraftPreview({
   const cy = y + h / 2
   const isBoothPlacement = kind === 'booth'
   const isStagePlacement = kind === 'stage'
+  const useClearanceBand =
+    isBoothPlacement && !hasOverlap && clearanceTheme != null
   const stroke = hasOverlap
     ? PLACEMENT_VIOLATION.stroke
-    : isBoothPlacement
-      ? PLACEMENT_AVAILABLE.stroke
-      : previewStroke(kind)
+    : useClearanceBand
+      ? clearanceTheme.stroke
+      : isBoothPlacement
+        ? PLACEMENT_AVAILABLE.stroke
+        : previewStroke(kind)
   const fill = hasOverlap
     ? PLACEMENT_VIOLATION.fill
-    : isBoothPlacement
-      ? PLACEMENT_AVAILABLE.fill
-      : previewFill(kind)
+    : useClearanceBand
+      ? clearanceTheme.fill
+      : isBoothPlacement
+        ? PLACEMENT_AVAILABLE.fill
+        : previewFill(kind)
   const fillOpacity = ghost
-    ? 0.4
+    ? useClearanceBand
+      ? Math.min(0.55, clearanceTheme.fillOpacity)
+      : 0.4
     : hasOverlap
       ? PLACEMENT_VIOLATION.fillOpacity
-      : isBoothPlacement
-        ? PLACEMENT_AVAILABLE.fillOpacity
-        : isStagePlacement
-          ? 0
-          : 0.35
+      : useClearanceBand
+        ? clearanceTheme.fillOpacity
+        : isBoothPlacement
+          ? PLACEMENT_AVAILABLE.fillOpacity
+          : isStagePlacement
+            ? 0
+            : 0.35
   const shape = (
     <rect
       x={x}

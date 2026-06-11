@@ -76,6 +76,85 @@ import {
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
+function DualScreenLaunchButtons({
+  onLaunchDualScreen,
+  compact,
+  variant = 'prominent',
+  iconOnly = false,
+}: {
+  onLaunchDualScreen: (mode: DualScreenMode) => void
+  compact: boolean
+  variant?: 'prominent' | 'subtle'
+  /** Header row — square icon buttons matching toolbar height. */
+  iconOnly?: boolean
+}) {
+  if (iconOnly) {
+    const iconClass = cn(
+      'inline-flex shrink-0 items-center justify-center rounded-md border p-0',
+      toolbarIconButtonSize(compact),
+      variant === 'prominent'
+        ? 'border-emerald-600 bg-emerald-700 text-white hover:bg-emerald-800'
+        : 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+    )
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => onLaunchDualScreen('presenter')}
+          title="Presenter — interactive booth matrix"
+          aria-label="Open presenter dual-screen view"
+          className={iconClass}
+        >
+          <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={() => onLaunchDualScreen('wall-cast')}
+          title="Wall Cast — read-only booth matrix"
+          aria-label="Open wall cast dual-screen view"
+          className={iconClass}
+        >
+          <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        </button>
+      </>
+    )
+  }
+
+  const buttonClass =
+    variant === 'prominent'
+      ? cn(
+          'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-600 bg-emerald-700 px-2 text-[11px] font-semibold text-white hover:bg-emerald-800',
+          toolbarControlHeight(compact)
+        )
+      : cn(
+          'inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
+          toolbarControlHeight(compact)
+        )
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => onLaunchDualScreen('presenter')}
+        title="Open interactive booth matrix for presenter view"
+        className={buttonClass}
+      >
+        <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        Presenter
+      </button>
+      <button
+        type="button"
+        onClick={() => onLaunchDualScreen('wall-cast')}
+        title="Open read-only booth matrix for wall display"
+        className={buttonClass}
+      >
+        <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        Wall Cast
+      </button>
+    </>
+  )
+}
+
 function FloorPlanOptimizeControl({
   mode,
   onModeChange,
@@ -296,6 +375,11 @@ export interface CanvasCommandBarBlockContext {
     widthFt: number
     lengthFt: number
   } | null
+  highlightedRoomId?: string | null
+  onPatchRoomDimensions?: (
+    roomId: string,
+    patch: { widthFt: number; lengthFt: number }
+  ) => void
   /** W×H label for the single selected canvas object (booth/table). */
   highlightedSelectionMetrics?: string | null
   showLabels?: boolean
@@ -415,6 +499,10 @@ export function renderCanvasCommandBarBlock(
     ctx.onTableSizeChange?.(spec)
     activateDrawShape('booth')
   }
+
+  const vendorPlacementActive = isTablePlacementActive('vendor')
+  const roundPlacementActive = isTablePlacementActive('guest-round')
+  const rectPlacementActive = isTablePlacementActive('guest-rect')
 
   switch (id) {
     case 'primitives':
@@ -615,6 +703,30 @@ export function renderCanvasCommandBarBlock(
           </div>
         )
       }
+      if (headerBarLayout) {
+        return (
+          <div
+            className="flex flex-row flex-nowrap items-center gap-0.5 overflow-hidden"
+            role="group"
+            aria-label="History"
+          >
+            <CommandButton
+              onClick={ctx.onUndo}
+              disabled={!ctx.canUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={ctx.onRedo}
+              disabled={!ctx.canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+          </div>
+        )
+      }
       return (
         <>
           <div
@@ -687,6 +799,7 @@ export function renderCanvasCommandBarBlock(
               onChange={activateTableSize}
               compact={compact}
               className="min-w-0"
+              placementActive={vendorPlacementActive}
             />
             {ctx.highlightedSelectionMetrics &&
             ctx.tableSizeFt.purpose !== 'guest' ? (
@@ -707,6 +820,7 @@ export function renderCanvasCommandBarBlock(
           sections="vendor"
           compact={compact}
           className="shrink-0"
+          vendorPlacementActive={vendorPlacementActive}
         />
       )
 
@@ -753,6 +867,7 @@ export function renderCanvasCommandBarBlock(
                 sections="vendor"
                 compact={compact}
                 className="shrink-0"
+                vendorPlacementActive={vendorPlacementActive}
               />
               {ctx.highlightedSelectionMetrics &&
               ctx.tableSizeFt.purpose !== 'guest' ? (
@@ -863,6 +978,8 @@ export function renderCanvasCommandBarBlock(
                 onRenameRoom={ctx.onRenameRoom}
                 onDeleteRoom={ctx.onDeleteRoom}
                 highlightedRoomMetrics={ctx.highlightedRoomMetrics}
+                highlightedRoomId={ctx.highlightedRoomId}
+                onPatchRoomDimensions={ctx.onPatchRoomDimensions}
                 embedded
                 sidebar
               />
@@ -973,11 +1090,14 @@ export function renderCanvasCommandBarBlock(
               onRenameRoom={ctx.onRenameRoom}
               onDeleteRoom={ctx.onDeleteRoom}
               highlightedRoomMetrics={ctx.highlightedRoomMetrics}
+              highlightedRoomId={ctx.highlightedRoomId}
+              onPatchRoomDimensions={ctx.onPatchRoomDimensions}
               embedded
+              headerBar={headerBarLayout}
               sidebar={sidebarLayout}
             />
           ) : null}
-          {ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
+          {!headerBarLayout && ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
             <>
               {(ctx.onSelectRoom && ctx.onAddRoom) ||
               ctx.onJoinRooms ||
@@ -1008,7 +1128,7 @@ export function renderCanvasCommandBarBlock(
               </div>
             </>
           ) : null}
-          {ctx.onJoinRooms || ctx.onUnjoinRoom ? (
+          {!headerBarLayout && (ctx.onJoinRooms || ctx.onUnjoinRoom) ? (
             <>
               <div className={toolbarDividerClass(compact)} aria-hidden />
               <div
@@ -1162,7 +1282,136 @@ export function renderCanvasCommandBarBlock(
         </>
       )
 
+    case 'dual-screen':
+      if (!ctx.onLaunchDualScreen) return null
+      return (
+        <DualScreenLaunchButtons
+          onLaunchDualScreen={ctx.onLaunchDualScreen}
+          compact={compact}
+          variant={headerBarLayout ? 'prominent' : 'subtle'}
+          iconOnly={headerBarLayout}
+        />
+      )
+
     case 'utilities':
+      if (headerBarLayout) {
+        return (
+          <>
+            {ctx.onToggleCanvasFullscreen ? (
+              <CommandButton
+                onClick={() => ctx.onToggleCanvasFullscreen?.()}
+                title={
+                  ctx.canvasFullscreen
+                    ? 'Exit full screen (Esc)'
+                    : 'Expand canvas to fill the monitor'
+                }
+                active={ctx.canvasFullscreen}
+                className={
+                  ctx.canvasFullscreen
+                    ? 'border border-stone-700 bg-stone-800 text-white hover:bg-stone-700'
+                    : 'border border-stone-300 bg-white hover:bg-stone-50'
+                }
+              >
+                {ctx.canvasFullscreen ? (
+                  <Minimize2 className="h-3.5 w-3.5" aria-hidden />
+                ) : (
+                  <Expand className="h-3.5 w-3.5" aria-hidden />
+                )}
+              </CommandButton>
+            ) : null}
+            {ctx.onBoothMapLabelModeChange ? (
+              <>
+                <div className={toolbarDividerClass(compact)} aria-hidden />
+                <label
+                  className={cn(
+                    'inline-flex shrink-0 items-center rounded-md border border-stone-200 bg-white px-1',
+                    toolbarControlHeight(compact)
+                  )}
+                >
+                  <select
+                    className="max-w-[4.5rem] min-w-0 rounded-md border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                    aria-label="Map labels — booth text overlay"
+                    value={ctx.boothMapLabelMode ?? 'vendor'}
+                    onChange={(e) =>
+                      ctx.onBoothMapLabelModeChange!(
+                        e.target.value as import('@/lib/coordinator/booth-map-label').BoothMapLabelMode
+                      )
+                    }
+                  >
+                    {BOOTH_MAP_LABEL_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            ) : null}
+            {ctx.onPatronPathToggle ? (
+              <>
+                <div className={toolbarDividerClass(compact)} aria-hidden />
+                <CommandButton
+                  onClick={ctx.onPatronPathToggle}
+                  title={
+                    ctx.patronPathEnabled
+                      ? 'Hide patron flow aisles (6′ paths)'
+                      : 'Toggle patron flow — show 6′ walking aisles'
+                  }
+                  active={ctx.patronPathEnabled}
+                  className={
+                    ctx.patronPathEnabled
+                      ? 'bg-emerald-200 text-emerald-950 hover:bg-emerald-200'
+                      : 'text-emerald-800 hover:bg-emerald-50'
+                  }
+                >
+                  <Route className="h-3.5 w-3.5" />
+                </CommandButton>
+              </>
+            ) : null}
+            <div className={toolbarDividerClass(compact)} aria-hidden />
+            <div
+              className={cn(
+                'inline-flex shrink-0 items-center overflow-hidden rounded-md border border-stone-200',
+                toolbarControlHeight(compact)
+              )}
+            >
+              <button
+                type="button"
+                onClick={ctx.onZoomOut}
+                title="Zoom out"
+                aria-label="Zoom out"
+                className={cn(
+                  'inline-flex items-center justify-center text-stone-600 hover:bg-stone-100',
+                  toolbarIconButtonSize(compact)
+                )}
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomReset}
+                title="Reset zoom to 100%"
+                aria-label="Reset zoom"
+                className="inline-flex h-full min-w-[2.25rem] items-center justify-center border-x border-stone-200 px-1 text-[10px] font-semibold tabular-nums text-stone-700 hover:bg-stone-100"
+              >
+                {formatDiscreteZoomPercent(ctx.zoom, 0.25)}
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomIn}
+                title="Zoom in"
+                aria-label="Zoom in"
+                className={cn(
+                  'inline-flex items-center justify-center text-stone-600 hover:bg-stone-100',
+                  toolbarIconButtonSize(compact)
+                )}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </>
+        )
+      }
       if (dashboardStripLayout) {
         const topBarDivider = (
           <div className="h-4 w-[1px] shrink-0 bg-gray-300" aria-hidden />
@@ -1174,78 +1423,29 @@ export function renderCanvasCommandBarBlock(
               role="group"
               aria-label="Canvas navigation"
             >
-              {ctx.designerExitHref ? (
-                <Link
-                  href={ctx.designerExitHref}
-                  prefetch
-                  onClick={() => ctx.onDesignerExit?.()}
-                  className="relative z-[10001] inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-emerald-700 px-2.5 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-emerald-800 pointer-events-auto"
-                  aria-label={ctx.designerExitLabel ?? 'Back to Event Setup'}
-                >
-                  <ArrowLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span className="whitespace-nowrap">
-                    {ctx.designerExitLabel ?? 'Event setup'}
-                  </span>
-                </Link>
-              ) : null}
               {ctx.onToggleCanvasFullscreen ? (
-                <>
-                  {ctx.designerExitHref ? topBarDivider : null}
-                  <button
-                    type="button"
-                    onClick={() => ctx.onToggleCanvasFullscreen?.()}
-                    title={
-                      ctx.canvasFullscreen
-                        ? 'Exit full screen (Esc)'
-                        : 'Expand canvas to fill the monitor'
-                    }
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-stone-300 bg-white px-2 text-[11px] font-semibold text-stone-800 hover:bg-stone-50',
-                      ctx.canvasFullscreen &&
-                        'border-stone-700 bg-stone-800 text-white hover:bg-stone-700',
-                      toolbarControlHeight(compact)
-                    )}
-                  >
-                    {ctx.canvasFullscreen ? (
-                      <Minimize2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    ) : (
-                      <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    )}
-                    {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
-                  </button>
-                </>
-              ) : null}
-              {ctx.onLaunchDualScreen ? (
-                <>
-                  {ctx.designerExitHref || ctx.onToggleCanvasFullscreen
-                    ? topBarDivider
-                    : null}
-                  <button
-                    type="button"
-                    onClick={() => ctx.onLaunchDualScreen!('presenter')}
-                    title="Open interactive booth matrix for presenter view"
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-600 bg-emerald-700 px-2 text-[11px] font-semibold text-white hover:bg-emerald-800',
-                      toolbarControlHeight(compact)
-                    )}
-                  >
-                    <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Dual-Screen: Presenter
-                  </button>
-                  {topBarDivider}
-                  <button
-                    type="button"
-                    onClick={() => ctx.onLaunchDualScreen!('wall-cast')}
-                    title="Open read-only booth matrix for wall display"
-                    className={cn(
-                      'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-600 bg-emerald-700 px-2 text-[11px] font-semibold text-white hover:bg-emerald-800',
-                      toolbarControlHeight(compact)
-                    )}
-                  >
-                    <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Dual-Screen: Wall Cast
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => ctx.onToggleCanvasFullscreen?.()}
+                  title={
+                    ctx.canvasFullscreen
+                      ? 'Exit full screen (Esc)'
+                      : 'Expand canvas to fill the monitor'
+                  }
+                  className={cn(
+                    'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-stone-300 bg-white px-2 text-[11px] font-semibold text-stone-800 hover:bg-stone-50',
+                    ctx.canvasFullscreen &&
+                      'border-stone-700 bg-stone-800 text-white hover:bg-stone-700',
+                    toolbarControlHeight(compact)
+                  )}
+                >
+                  {ctx.canvasFullscreen ? (
+                    <Minimize2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  ) : (
+                    <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  )}
+                  {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+                </button>
               ) : null}
             </div>
             {topBarDivider}
@@ -1481,18 +1681,11 @@ export function renderCanvasCommandBarBlock(
                 </label>
               ) : null}
               {ctx.onLaunchDualScreen ? (
-                <button
-                  type="button"
-                  onClick={() => ctx.onLaunchDualScreen!('presenter')}
-                  title="Open booth matrix in a second window"
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
-                    toolbarControlHeight(compact)
-                  )}
-                >
-                  <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  Launch Dual-Screen Mode
-                </button>
+                <DualScreenLaunchButtons
+                  onLaunchDualScreen={ctx.onLaunchDualScreen}
+                  compact={compact}
+                  variant="subtle"
+                />
               ) : null}
               {ctx.onToggleCanvasFullscreen ? (
                 <button
@@ -1643,18 +1836,11 @@ export function renderCanvasCommandBarBlock(
             </Link>
           ) : null}
           {ctx.onLaunchDualScreen ? (
-            <button
-              type="button"
-              onClick={() => ctx.onLaunchDualScreen!('presenter')}
-              title="Open booth matrix in a second window"
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 text-[11px] font-semibold text-emerald-900 hover:bg-emerald-100',
-                toolbarControlHeight(compact)
-              )}
-            >
-              <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Launch Dual-Screen Mode
-            </button>
+            <DualScreenLaunchButtons
+              onLaunchDualScreen={ctx.onLaunchDualScreen}
+              compact={compact}
+              variant="subtle"
+            />
           ) : null}
           {ctx.onToggleCanvasFullscreen ? (
             <button

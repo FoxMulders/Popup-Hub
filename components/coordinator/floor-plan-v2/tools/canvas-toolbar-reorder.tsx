@@ -114,6 +114,7 @@ const BLOCK_LABELS: Record<CanvasToolbarBlockId, string> = {
   patron: 'Patron',
   room: 'Room layout',
   utilities: 'View and save',
+  'dual-screen': 'Dual-screen',
 }
 
 /** Compact wrapping ribbon — blocks size to content and never span full column width. */

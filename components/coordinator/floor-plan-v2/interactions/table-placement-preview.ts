@@ -12,6 +12,10 @@ import {
   orientVendorBoothToNearestWall,
   snapVendorBoothToPerimeter,
 } from './vendor-booth-placement'
+import {
+  isStructuralWallSnapKind,
+  resolveStructuralPlacementPreview,
+} from './structural-wall-snap'
 
 export type TablePlacementPreview = Rect & { rotation: number }
 
@@ -33,6 +37,9 @@ export function resolveTablePlacementPreview(
   activeRoomId: string | null | undefined,
   snapToleranceFt = PLACEMENT_PREVIEW_WALL_SNAP_FT
 ): TablePlacementPreview | null {
+  if (isStructuralWallSnapKind(kind)) {
+    return resolveStructuralPlacementPreview(kind, rect, doc, activeRoomId)
+  }
   if (kind !== 'booth') {
     return { ...rect, rotation: 0 }
   }

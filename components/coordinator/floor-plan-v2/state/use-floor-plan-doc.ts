@@ -139,6 +139,9 @@ export interface FloorPlanDocStore {
     options?: { pushHistory?: boolean }
   ) => void
 
+  /** Latest committed doc (synchronous — use right after resize/move commits). */
+  readDoc: () => FloorPlanDoc
+
   /**
    * Translate a room frame and every object tagged with that room id
    * by `(dx, dy)` in a single immutable pass with one history entry.
@@ -844,12 +847,15 @@ export function useFloorPlanDoc(
     })
   }, [pruneStaleSelection])
 
+  const readDoc = useCallback(() => docRef.current, [])
+
   return useMemo<FloorPlanDocStore>(
     () => ({
       doc,
       selectedIds,
       canUndo: history.past.length > 0,
       canRedo: history.future.length > 0,
+      readDoc,
       resetDoc,
       addObject,
       addObjects,
@@ -878,6 +884,7 @@ export function useFloorPlanDoc(
       selectedIds,
       history.past.length,
       history.future.length,
+      readDoc,
       resetDoc,
       addObject,
       addObjects,

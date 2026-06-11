@@ -26,11 +26,11 @@ function useToolbarCompact(explicit?: boolean): boolean {
 }
 
 export function toolbarControlHeight(compact: boolean): string {
-  return compact ? 'h-8' : 'h-8'
+  return 'h-[var(--dashboard-toolbar-height,1.75rem)]'
 }
 
 export function toolbarIconButtonSize(compact: boolean): string {
-  return compact ? 'h-[1.65rem] w-[1.65rem]' : 'h-7 w-7'
+  return 'h-[var(--dashboard-toolbar-height,1.75rem)] w-[var(--dashboard-toolbar-height,1.75rem)]'
 }
 
 export function toolbarDividerClass(compact: boolean): string {
@@ -67,7 +67,9 @@ export function CommandButton({
         aria-pressed={active}
         className={cn(
           'inline-flex shrink-0 items-center justify-center rounded-md p-0 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-40 touch-manipulation',
-          isCompact ? 'h-8 w-8' : 'min-h-12 min-w-12 lg:h-8 lg:w-8',
+          isCompact
+            ? 'h-[var(--dashboard-toolbar-height,1.75rem)] w-[var(--dashboard-toolbar-height,1.75rem)]'
+            : 'min-h-12 min-w-12 lg:h-8 lg:w-8',
           active && 'bg-stone-900 text-white hover:bg-stone-800',
           className
         )}

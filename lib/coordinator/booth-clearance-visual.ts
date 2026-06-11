@@ -17,7 +17,7 @@ export const BOOTH_CLEARANCE_TARGET_FT = 4
 /** Red band — critical violation (ft). */
 export const BOOTH_CLEARANCE_CRITICAL_FT = 2
 
-/** Yellow band upper bound — tight clearance (ft). */
+/** Yellow band lower bound — tight clearance begins at this (ft). */
 export const BOOTH_CLEARANCE_TIGHT_FT = 3
 
 /** Green band — clean clearance at or above this (ft). */
@@ -67,22 +67,8 @@ export function edgeClearanceBetweenRects(a: Rect, b: Rect): number {
     Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
   if (overlapX > 0 && overlapY > 0) return 0
 
-  const gapX =
-    overlapY > 0
-      ? Math.max(
-          a.x - (b.x + b.width),
-          b.x - (a.x + a.width),
-          0
-        )
-      : 0
-  const gapY =
-    overlapX > 0
-      ? Math.max(
-          a.y - (b.y + b.height),
-          b.y - (a.y + a.height),
-          0
-        )
-      : 0
+  const gapX = Math.max(a.x - (b.x + b.width), b.x - (a.x + a.width), 0)
+  const gapY = Math.max(a.y - (b.y + b.height), b.y - (a.y + a.height), 0)
 
   if (gapX > 0 && gapY > 0) return Math.min(gapX, gapY)
   if (gapX > 0) return gapX
@@ -112,12 +98,34 @@ export function clearanceToRoomWallsFt(
   return Math.min(left, top, right, bottom)
 }
 
+/** ≥4′ good · ≥3′ tight (yellow) · <3′ critical (red). */
 export function clearanceBand(clearanceFt: number): BoothClearanceBand {
   if (!Number.isFinite(clearanceFt) || clearanceFt >= BOOTH_CLEARANCE_GOOD_FT) {
     return 'good'
   }
-  if (clearanceFt <= BOOTH_CLEARANCE_CRITICAL_FT) return 'critical'
-  return 'tight'
+  if (clearanceFt >= BOOTH_CLEARANCE_TIGHT_FT) return 'tight'
+  return 'critical'
+}
+
+/** Clearance theme for a vendor booth probe during draw/hover preview. */
+export function vendorBoothClearanceThemeForProbe(
+  probe: BoothObject,
+  objects: ReadonlyArray<PlacedObject>,
+  rooms: ReadonlyArray<RoomFrame> | undefined,
+  objectRoom: FloorPlanDoc['objectRoom'],
+  previewRoomId: string | null | undefined
+): BoothClearanceTheme {
+  const objectRoomWithProbe =
+    previewRoomId != null
+      ? { ...(objectRoom ?? {}), [probe.id]: previewRoomId }
+      : objectRoom
+  const minFt = minVendorBoothClearanceFt(
+    probe,
+    objects,
+    rooms,
+    objectRoomWithProbe
+  )
+  return BOOTH_CLEARANCE_THEMES[clearanceBand(minFt)]
 }
 
 /** Drawable booth footprint — edge-to-edge aisle, not collision probe padding. */

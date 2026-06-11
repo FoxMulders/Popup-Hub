@@ -4,8 +4,102 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — dashboard header uniform button sizing (local, not deployed)
+- **`globals.css`:** Header row controls (tabs, pill toggle, toolbar buttons) normalized to `--dashboard-toolbar-height`; `overflow-x: hidden` on command-center header.
+- **`dashboard-command-center-header.tsx`:** Tighter header gaps.
+- **`command-center-exit-link.tsx`:** Compact+prominent exit link matches toolbar height (`h-7`).
+- **`canvas-toolbar-static.tsx`:** Dual-screen cluster inline (no section label stack); tighter portal gaps.
+- **`canvas-command-bar-blocks.tsx`:** Header-specific compact view/setup (icon fullscreen, narrow map labels, square zoom); dual-screen icon-only; hall history undo/redo only; room rotate/join hidden in header.
+- **`layout-room-bar.tsx`:** `headerBar` mode — inline W/L fields, truncated room tabs, no horizontal scroll.
+- **`command-button.tsx`:** Toolbar icon/control heights use `--dashboard-toolbar-height`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — Blueprint Studio header row fits without horizontal scrollbar; all controls same height.
+
+## Active work — canvas delete INP / deferred pathfinding (local, not deployed)
+- **`hooks/use-pathfinding.ts`:** Replaced synchronous `useMemo` + `CalculateOptimalPath` with `useDeferredValue` + `setTimeout(0)` + `startTransition` so booth delete paints before A*/TSP runs.
+- **`hooks/use-patron-aisle-overlay.ts` (new):** Same deferral pattern for patron aisle corridor overlay.
+- **`floor-plan-v2.tsx`:** `handleDeleteSelected` keeps `store.removeObjects` urgent (outside transition); locked-fixture toast deferred via `startTransition`.
+- **Root cause:** Patron path overlay (`usePathfinding`) ran heavy grid pathfinding synchronously during the same render pass as `removeObjects`, blocking INP ~2s when path overlay enabled.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — enable patron path overlay, delete a booth — element disappears immediately; path overlay refreshes shortly after without UI freeze.
+
+## Active work — dashboard header Event setup + Dual-Screen section (local, not deployed)
+- **`dashboard-command-center-header.tsx`:** ← Event setup exit link moved to the main header row (left of workspace tabs), using `CommandCenterExitLink` + `useMarketManagement`.
+- **`toolbar-static-layout.ts` / `canvas-toolbar-static.tsx`:** New header section **DUAL-SCREEN** with grouped **Presenter** + **Wall Cast** buttons (`HeaderBarDualScreenCluster`); view/setup cluster keeps fullscreen, map labels, patron path, zoom, save.
+- **`canvas-command-bar-blocks.tsx` / `toolbar-order.ts`:** New `dual-screen` toolbar block; removed duplicate Event setup + prefixed dual-screen buttons from utilities strip; dropped generic **Launch Dual-Screen Mode** in favor of paired Presenter/Wall Cast controls.
+- **`globals.css`:** `.dashboard-header-dual-screen` min-width guard.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — header row shows ← Event setup | Blueprint Studio | Allocation Ledger | view/setup tools | **DUAL-SCREEN** (Presenter + Wall Cast grouped) | hall management; no standalone Launch Dual-Screen button.
+
+## Active work — vendor/patron size chips only highlight when armed (local, not deployed)
+- **`table-size-pill.tsx`:** Vendor and patron size buttons no longer show forest/violet active fill from the default placement template alone; chips highlight only when the corresponding draw tool is armed (`vendorPlacementActive`, `roundPlacementActive`, `rectPlacementActive` / `placementActive`).
+- **`canvas-command-bar-blocks.tsx`:** Passes `isTablePlacementActive(...)` into `TableSizePill` and `VendorSidebarSizeGrid`.
+- **Root cause:** `defaultPlacementSpec` always seeds vendor 6′ for draw math, so the 6′ chip appeared selected even in Select mode.
+- **Verify:** `npx tsx scripts/verify-table-size-default.ts` — PASS. Smoke: `/coordinator/dashboard` — on load / Select tool, vendor 6′ (and other sizes) stay neutral white; click vendor draw square → matching size lights forest green; switch to Select → sizes dim again.
+
+## Active work — door wall snap (long edge, no booth rules) (local, not deployed)
+- **`structural-wall-snap.ts`:** Doors/exits snap flush to nearest room wall with **long edge along the wall** (`orientLongEdgeAlongWall` + rotation 0° horizontal / 90° vertical); default 3×1 ft footprint; live drag uses `structuralLayoutMovePatch` (not booth grid/clamp).
+- **`is-point-in-room.ts`:** Doors skip booth interior-centroid and strict boundary validation; nearest-room resolution via `findRoomIdForStructuralPlacement`.
+- **`use-canvas-pointer.ts` / `table-placement-preview.ts`:** Tap/draw/hover preview wall-snaps doors; draw commit propagates snapped width/height/rotation.
+- **`scripts/verify-structural-wall-snap.ts`:** Horizontal + vertical long-edge orientation + placement regression.
+- **Verify:** `npx tsx scripts/verify-structural-wall-snap.ts` — PASS. Smoke: `/coordinator/dashboard` — draw Door near each wall; long edge runs along wall; move door — stays wall-snapped; no booth clearance bands on doors.
+
+## Active work — Blueprint Studio preview fullscreen (local, not deployed)
+- **`command-center-fullscreen-context.tsx`:** Preview mode enters native fullscreen (`command-center-canvas-fullscreen` + browser FS); Esc exits preview; `data-dashboard-preview` on `<html>`.
+- **`dashboard-command-center-header.tsx`:** Restored Edit/Preview pill toggle — preview shows only the toggle (fixed top-right overlay).
+- **`floor-plan-v2.tsx` / `floor-plan-canvas.tsx`:** `viewOnly` disables draw/select/drop/keyboard edits; pan/zoom still works.
+- **`globals.css`:** Preview hides tool strip, footer, verification banner, side rails; canvas fills viewport.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — flip Preview → fullscreen canvas, no tools/rails; flip Edit or Esc → restore editing chrome.
+
+## Active work — main hall grid sizing + food truck wall collision (local, not deployed)
+- **`layout-room-bar.tsx`:** Editable Width/Length (ft) fields for the highlighted room (Main Hall) in the hall-management toolbar; commits via `onPatchRoomDimensions`.
+- **`floor-plan-v2.tsx` / `use-floor-plan-doc.ts`:** `handlePatchRoomDimensions` resizes the room frame and syncs wizard `venue_width`/`venue_length`; `readDoc()` for immediate post-resize sync.
+- **`floor-plan-canvas.tsx`:** Placement grid is drawn at the active/selected room frame (size + origin), so editing Main Hall resizes the visible grid.
+- **`canvas-open-placement.ts` / `use-canvas-pointer.ts`:** Food trucks rejected when overlapping solid `wall` objects (draw, tap-place, and drag-drop revert).
+- **`scripts/verify-food-truck-placement.ts`:** Wall overlap regression cases.
+- **Verify:** `npx tsx scripts/verify-food-truck-placement.ts` — PASS; `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — edit Main Hall W/L in header; grid matches; food truck cannot sit on a wall.
+
+## Active work — table size units sync across size grids (local, not deployed)
+- **`table-size-units.tsx`:** `useTableSizeUnits` broadcasts changes via custom event so all toolbars stay in sync; added `formatDimensionDisplay` / `formatFootprintDisplay` helpers.
+- **`table-size-pill.tsx` / `table-size-selector.tsx`:** Patron table size chips now respect ft/m toggle (were hardcoded `6′`, etc.).
+- **`layout-room-bar.tsx` / `object-resize.ts` / `floor-plan-v2.tsx`:** Room metrics badge and selection dimension chip follow the active unit preference.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — toggle ft/m on vendor sizes; patron table chips, room dimensions, and selection metrics all switch units together.
+
+## Active work — notification bell dot when caught up (local, not deployed)
+- **`components/nav/app-nav.tsx`:** Removed amber placeholder dot on the bell when `unreadCount === 0`; badge only when unread notifications exist (matches notifications page “You're all caught up”).
+
+## Active work — canvas legend/ledger matching side rails (local, not deployed)
+- **`canvas-side-rail.tsx`:** Shared 200px body + 28px tab side-rail shell for legend and ledger popouts.
+- **`canvas-legend.tsx` / `canvas-ledger.tsx`:** Both use flex side rails inside the canvas host (no absolute overlay); canvas grid sits between them and no longer sits under the panels.
+- **`floor-plan-v2.tsx`:** Dashboard canvas host is `flex-row` — legend | canvas | ledger.
+- **`dashboard-split-workspace.tsx`:** Removed 35% ledger column; ledger moved into canvas right rail.
+- **`booth-matrix-panel.tsx`:** New `docked` variant — compact scroll cards for 200px rail.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` (≥ lg) — legend + ledger same width; expand/collapse each rail; floor plan does not render under either panel.
+
+## Active work — booth clearance preview + 3′ yellow band (local, not deployed)
+- **`lib/coordinator/booth-clearance-visual.ts`:** `clearanceBand` uses `BOOTH_CLEARANCE_TIGHT_FT` (3′) — red below 3′, yellow at ≥3′ and <4′, green at ≥4′; added `vendorBoothClearanceThemeForProbe` for draw/hover preview.
+- **`floor-plan-canvas.tsx` / `canvas-overlays.tsx`:** Vendor booth draw drag, tap-to-place ghost, and cursor hover preview show clearance band colours before commit; overlap still wins (red violation); guest/patron previews stay sky-blue.
+- **`UnifiedLayoutSolver.ts`:** Reuses shared `clearanceBand`.
+- **`canvas-legend.tsx`:** Critical legend updated to `<3′`; tight remains `≥3′ and <4′`.
+- **`scripts/verify-booth-clearance-visual.ts`:** Band thresholds + 3′ preview-probe regression.
+- **Verify:** `npx tsx scripts/verify-booth-clearance-visual.ts` — PASS. Smoke: `/coordinator/dashboard` — draw vendor booth near neighbor — preview turns red below 3′, yellow at 3′–4′, green at ≥4′ before click; overlap still red.
+
+## Active work — booth clearance diagonal distance fix (local, not deployed)
+- **`lib/coordinator/booth-clearance-visual.ts`:** `edgeClearanceBetweenRects` computes true diagonal corner gaps.
+- **`canvas-objects.tsx`:** Patron/guest tables use `isGuestTableBooth` (purple dashed, no vendor clearance bands).
+- **`scripts/verify-booth-clearance-visual.ts`:** Regression tests for diagonal separation and scatter layout.
+
+## Active work — dashboard header trim (local, not deployed)
+- **`dashboard-command-center-header.tsx`:** Edit/Preview toggle restored at header right (Blueprint Studio only); workspace tabs + portaled room/canvas toolbar use `overflow-hidden` (no horizontal scrollbar). +New market removed from header row.
+- **`canvas-command-bar.tsx` / `canvas-toolbar-static.tsx` / `globals.css`:** Header bar layout no longer scrolls horizontally.
+
+## Shipped this session (dashboard and floor-plan editor polish, not deployed)
+- **Header row:** Uniform `--dashboard-toolbar-height` on tabs, Event setup, view/setup, dual-screen, hall management, Edit/Preview; compact icon controls; no horizontal scrollbar (`globals.css`, `dashboard-command-center-header.tsx`, `canvas-command-bar-blocks.tsx`, `layout-room-bar.tsx`, `command-button.tsx`).
+- **Header layout:** Event setup in main row; DUAL-SCREEN Presenter/Wall Cast cluster; hall W/L dimension fields; Edit/Preview restored (`command-center-exit-link.tsx`, `canvas-toolbar-static.tsx`, `toolbar-static-layout.ts`).
+- **Canvas UX:** Legend + allocation ledger as matching 200px side rails inside canvas host; preview fullscreen mode; deferred pathfinding/patron aisle overlay for faster booth delete INP.
+- **Floor-plan tools:** Vendor/patron size chips highlight only when draw tool armed; ft/m sync across size grids; door long-edge wall snap; food truck wall collision; Main Hall editable W/L resizes grid; booth clearance preview bands (3′ yellow / diagonal gap fix).
+- **Nav/footer:** Bell badge only when unread; Next step CTA single-line footer layout.
+- **Verify:** `npx tsc --noEmit` — PASS; `npx tsx scripts/verify-booth-clearance-visual.ts` + `verify-structural-wall-snap.ts` + `verify-food-truck-placement.ts` — PASS. Smoke: `/coordinator/dashboard` — header fits one row; legend/ledger rails; preview toggle; patron path delete feels instant.
+
 ## Shipped this session (Blueprint Studio two-row dashboard layout, deployed 2026-06-11)
-- **Row 1 (header):** `dashboard-command-center-header.tsx` — Blueprint Studio | Allocation Ledger tabs, then portaled view/setup cluster (labels, Event setup, dual-screen, fullscreen, zoom) + hall management (Main Hall bar, undo/redo), then Edit/Preview + New market on one line; no market title row.
+- **Row 1 (header):** `dashboard-command-center-header.tsx` — Blueprint Studio | Allocation Ledger tabs, then portaled view/setup cluster (labels, Event setup, dual-screen, fullscreen, zoom) + hall management (Main Hall bar, undo/redo); no market title row.
 - **Row 2 (tool strip):** `toolbar-static-layout.ts` + `canvas-toolbar-static.tsx` — four labeled sections: SHAPES & BOOTHS (primitives only), VENDOR BOOTHS, PATRON TABLES (renamed), ALIGNMENT & SPACING; vendor/patron each own section with one horizontal icon row.
 - **Portal split:** `canvas-command-bar.tsx` — `headerBarLayout` → `view-setup` + `hall-management`; `topBarLayout` → tool-strip sections only (`DASHBOARD_HEADER_SECTION_IDS` / `DASHBOARD_TOOLSTRIP_SECTION_IDS`).
 - **Payout banner:** removed from `market-dashboard-client.tsx` / `app/coordinator/dashboard/page.tsx`; `CoordinatorCommunityTrustBanner` on coordinator `app/profile/page.tsx` via `loadCoordinatorEscrowContext`.
@@ -13,9 +107,12 @@
 
 ## Shipped this session (dashboard layout toolbar compaction + shared footer, deployed 2026-06-11)
 - **SHAPES & BOOTHS single row:** `canvas-toolbar-static.tsx` + `globals.css` — primitives, vendor booths, and patron elements render in one horizontal row to maximize canvas height.
-- **ROOM & CANVAS in header:** Room/canvas controls portaled into Blueprint Studio header beside Edit/Preview and +New market via `DashboardHeaderToolbarPortalTarget`; top toolbar strip now shows Shapes & Booths + Alignment only (`toolbar-static-layout.ts` section filter, `floor-plan-v2.tsx` dual command-bar portals).
+- **ROOM & CANVAS in header:** Room/canvas controls portaled into Blueprint Studio header via `DashboardHeaderToolbarPortalTarget`; top toolbar strip now shows Shapes & Booths + Alignment only (`toolbar-static-layout.ts` section filter, `floor-plan-v2.tsx` dual command-bar portals).
 - **Shared footer:** `dashboard-workspace-footer.tsx` — same `DashboardNextStepCta` footer on Blueprint Studio and Allocation Ledger views (`Dashboard_qa.tsx`); removed duplicate ledger-pane footers.
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — room tools in header row; shapes/booths one row; footer visible on both workspace tabs.
+
+## Active work — Next step CTA single-line layout (local, not deployed)
+- **`dashboard-next-step-cta.tsx`:** Label + detail text on one row (was stacked `flex-col` in footer button); arrow pinned right; `truncate` on overflow.
 
 ## Shipped this session (initial loader side booth stagger + right-align scale, deployed 2026-06-11)
 - **`components/brand/initial-loader-reveal.tsx`:** Left/right perimeter stalls use half-cell brick stagger (24 px offset on alternating rows); tables sit bottom-aligned in each 48×48 square; scale-in animation anchors on the inner/right edge of each square (not center) so sides read as right-aligned in their cells; inner ring inset updated for stagger extent.

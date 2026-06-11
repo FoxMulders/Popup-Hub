@@ -600,15 +600,15 @@ function CanvasObjectsBase({
         const strokeWidth = isOverlapping ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
         const isTableClusterBooth =
           obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)
+        const isPatronTableBooth =
+          obj.kind === 'booth' && isGuestTableBooth(obj as BoothObject)
         const isRoundBooth =
-          obj.kind === 'booth' &&
+          isPatronTableBooth &&
           (obj as BoothObject).tableShape === 'round' &&
-          ((obj as BoothObject).tablePurpose ?? 'guest') === 'guest' &&
           !isTableClusterBooth
         const isGuestRectBooth =
-          obj.kind === 'booth' &&
-          (obj as BoothObject).tablePurpose === 'guest' &&
-          (obj as BoothObject).tableShape === 'rectangular' &&
+          isPatronTableBooth &&
+          (obj as BoothObject).tableShape !== 'round' &&
           !isTableClusterBooth
         const transform =
           !isTableClusterBooth && obj.rotation && obj.rotation !== 0

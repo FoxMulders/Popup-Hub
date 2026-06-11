@@ -12,6 +12,10 @@ import { Button } from '@/components/ui/button'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { Plus, Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  formatFootprintDisplay,
+  useTableSizeUnits,
+} from '@/lib/booth-planner/table-size-units'
 
 interface LayoutRoomBarProps {
   rooms: LayoutRoom[]
@@ -37,6 +41,13 @@ interface LayoutRoomBarProps {
     widthFt: number
     lengthFt: number
   } | null
+  /** Room id that owns `highlightedRoomMetrics` (for dimension edits). */
+  highlightedRoomId?: string | null
+  /** Apply width/length edits from the room bar (resizes the hall grid). */
+  onPatchRoomDimensions?: (
+    roomId: string,
+    patch: { widthFt: number; lengthFt: number }
+  ) => void
   /**
    * Slim toolbar mode: render as a thin horizontal ribbon designed
    * to stack directly under the canvas command bar instead of as a
@@ -53,6 +64,8 @@ interface LayoutRoomBarProps {
   embedded?: boolean
   /** Left-rail sidebar — stack room picker, dimensions, and add room vertically. */
   sidebar?: boolean
+  /** Dashboard header row — single-line, no horizontal scroll. */
+  headerBar?: boolean
 }
 
 const DEFAULT_FIRST_ROOM_WIDTH_FT = 50
@@ -133,6 +146,151 @@ function FirstRoomAddPanel({
   )
 }
 
+function RoomDimensionFields({
+  roomId,
+  widthFt,
+  lengthFt,
+  onPatchRoomDimensions,
+  layout = 'inline',
+  headerBar = false,
+}: {
+  roomId: string
+  widthFt: number
+  lengthFt: number
+  onPatchRoomDimensions: (
+    roomId: string,
+    patch: { widthFt: number; lengthFt: number }
+  ) => void
+  layout?: 'inline' | 'stacked'
+  headerBar?: boolean
+}) {
+  const [draftW, setDraftW] = useState(String(Math.round(widthFt)))
+  const [draftL, setDraftL] = useState(String(Math.round(lengthFt)))
+
+  useEffect(() => {
+    setDraftW(String(Math.round(widthFt)))
+    setDraftL(String(Math.round(lengthFt)))
+  }, [widthFt, lengthFt, roomId])
+
+  function commitField(axis: 'width' | 'length', raw: string) {
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed)) return
+    const nextW =
+      axis === 'width'
+        ? Math.max(MIN_ROOM_DIMENSION_FT, parsed)
+        : Math.max(MIN_ROOM_DIMENSION_FT, Number(draftW) || widthFt)
+    const nextL =
+      axis === 'length'
+        ? Math.max(MIN_ROOM_DIMENSION_FT, parsed)
+        : Math.max(MIN_ROOM_DIMENSION_FT, Number(draftL) || lengthFt)
+    if (nextW === Math.round(widthFt) && nextL === Math.round(lengthFt)) return
+    onPatchRoomDimensions(roomId, { widthFt: nextW, lengthFt: nextL })
+  }
+
+  const fieldClass = headerBar
+    ? 'h-[var(--dashboard-toolbar-height,1.75rem)] w-[2.75rem] rounded-md border border-stone-200 bg-card px-1 text-[10px] tabular-nums'
+    : 'h-7 w-[4.25rem] rounded-md border border-stone-200 bg-card px-1.5 text-xs tabular-nums'
+
+  if (headerBar) {
+    return (
+      <div
+        className="flex min-w-0 shrink-0 items-center gap-1"
+        role="group"
+        aria-label="Room dimensions"
+      >
+        <label className="flex shrink-0 items-center gap-0.5">
+          <span className="text-[10px] font-semibold text-muted-foreground">W</span>
+          <input
+            type="number"
+            min={MIN_ROOM_DIMENSION_FT}
+            step={1}
+            value={draftW}
+            onChange={(e) => setDraftW(e.target.value)}
+            onBlur={() => commitField('width', draftW)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitField('width', draftW)
+            }}
+            className={fieldClass}
+            aria-label="Room width in feet"
+          />
+        </label>
+        <label className="flex shrink-0 items-center gap-0.5">
+          <span className="text-[10px] font-semibold text-muted-foreground">L</span>
+          <input
+            type="number"
+            min={MIN_ROOM_DIMENSION_FT}
+            step={1}
+            value={draftL}
+            onChange={(e) => setDraftL(e.target.value)}
+            onBlur={() => commitField('length', draftL)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitField('length', draftL)
+            }}
+            className={fieldClass}
+            aria-label="Room length in feet"
+          />
+        </label>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex min-w-0 items-end gap-2',
+        layout === 'stacked' ? 'w-full flex-col items-stretch' : 'shrink-0'
+      )}
+      role="group"
+      aria-label="Room dimensions"
+    >
+      <label
+        className={cn(
+          'flex flex-col gap-0.5',
+          layout === 'stacked' ? 'w-full' : 'shrink-0'
+        )}
+      >
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Width (ft)
+        </span>
+        <input
+          type="number"
+          min={MIN_ROOM_DIMENSION_FT}
+          step={1}
+          value={draftW}
+          onChange={(e) => setDraftW(e.target.value)}
+          onBlur={() => commitField('width', draftW)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitField('width', draftW)
+          }}
+          className={cn(fieldClass, layout === 'stacked' && 'w-full')}
+        />
+      </label>
+      <label
+        className={cn(
+          'flex flex-col gap-0.5',
+          layout === 'stacked' ? 'w-full' : 'shrink-0'
+        )}
+      >
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Length (ft)
+        </span>
+        <input
+          type="number"
+          min={MIN_ROOM_DIMENSION_FT}
+          step={1}
+          value={draftL}
+          onChange={(e) => setDraftL(e.target.value)}
+          onBlur={() => commitField('length', draftL)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitField('length', draftL)
+          }}
+          className={cn(fieldClass, layout === 'stacked' && 'w-full')}
+        />
+      </label>
+    </div>
+  )
+}
+
 export function LayoutRoomBar({
   rooms,
   activeRoomId,
@@ -142,10 +300,14 @@ export function LayoutRoomBar({
   onDeleteRoom,
   compact = false,
   highlightedRoomMetrics = null,
+  highlightedRoomId = null,
+  onPatchRoomDimensions,
   slim = false,
   embedded = false,
   sidebar = false,
+  headerBar = false,
 }: LayoutRoomBarProps) {
+  const [units] = useTableSizeUnits()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
   /**
@@ -156,6 +318,18 @@ export function LayoutRoomBar({
    */
   const [presetMenuOpen, setPresetMenuOpen] = useState(false)
   const presetMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const roomMetricsLabel = highlightedRoomMetrics
+    ? `${highlightedRoomMetrics.name}: ${formatFootprintDisplay(
+        highlightedRoomMetrics.widthFt,
+        highlightedRoomMetrics.lengthFt,
+        units
+      )}`
+    : null
+  const showDimensionEditors =
+    highlightedRoomMetrics != null &&
+    highlightedRoomId != null &&
+    onPatchRoomDimensions != null
 
   // Close the preset menu on outside-click / Escape so it behaves like
   // a real popover, not a sticky dropdown.
@@ -190,6 +364,7 @@ export function LayoutRoomBar({
   }
 
   const inlineToolbar = slim || embedded
+  const headerToolbar = headerBar && embedded && !sidebar
 
   if (rooms.length === 0) {
     return (
@@ -215,7 +390,10 @@ export function LayoutRoomBar({
         embedded && sidebar
           ? 'flex min-w-0 w-full flex-col gap-1.5'
           : embedded
-            ? 'flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-1'
+            ? cn(
+                'flex min-w-0 flex-1 items-center gap-x-1 gap-y-1',
+                headerToolbar ? 'flex-nowrap overflow-hidden' : 'flex-wrap'
+              )
             : slim
             ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
             : 'market-panel p-3 space-y-2'
@@ -240,7 +418,14 @@ export function LayoutRoomBar({
         >
           Rooms / zones
         </p>
-        {highlightedRoomMetrics ? (
+        {showDimensionEditors ? (
+          <RoomDimensionFields
+            roomId={highlightedRoomId}
+            widthFt={highlightedRoomMetrics.widthFt}
+            lengthFt={highlightedRoomMetrics.lengthFt}
+            onPatchRoomDimensions={onPatchRoomDimensions}
+          />
+        ) : roomMetricsLabel ? (
           <span
             className={cn(
               'rounded-md border border-stone-200 bg-stone-50 font-semibold tabular-nums text-stone-700',
@@ -248,9 +433,7 @@ export function LayoutRoomBar({
             )}
             title="Physical dimensions of the highlighted room"
           >
-            {highlightedRoomMetrics.name}: {Math.round(highlightedRoomMetrics.widthFt)}'
-            {' × '}
-            {Math.round(highlightedRoomMetrics.lengthFt)}'
+            {roomMetricsLabel}
           </span>
         ) : null}
         <div className="relative" ref={presetMenuRef}>
@@ -323,14 +506,20 @@ export function LayoutRoomBar({
       </div>
       ) : (
         <>
-          {!sidebar && highlightedRoomMetrics ? (
+          {!sidebar && showDimensionEditors ? (
+            <RoomDimensionFields
+              roomId={highlightedRoomId}
+              widthFt={highlightedRoomMetrics.widthFt}
+              lengthFt={highlightedRoomMetrics.lengthFt}
+              onPatchRoomDimensions={onPatchRoomDimensions}
+              headerBar={headerToolbar}
+            />
+          ) : !sidebar && roomMetricsLabel ? (
             <span
               className="shrink-0 rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-[11px] font-semibold tabular-nums text-stone-700"
               title="Physical dimensions of the highlighted room"
             >
-              {highlightedRoomMetrics.name}: {Math.round(highlightedRoomMetrics.widthFt)}'
-              {' × '}
-              {Math.round(highlightedRoomMetrics.lengthFt)}'
+              {roomMetricsLabel}
             </span>
           ) : null}
           {!sidebar ? (
@@ -341,7 +530,12 @@ export function LayoutRoomBar({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 min-h-0 w-7 gap-0 rounded-none border-0 p-0 text-xs"
+                className={cn(
+                  'gap-0 rounded-none border-0 p-0',
+                  headerToolbar
+                    ? 'h-[var(--dashboard-toolbar-height,1.75rem)] min-h-0 w-[var(--dashboard-toolbar-height,1.75rem)]'
+                    : 'h-7 min-h-0 w-7 text-xs'
+                )}
                 onClick={() => onAddRoom({ presetId: 'blank' })}
                 aria-label="Add room"
               >
@@ -354,7 +548,12 @@ export function LayoutRoomBar({
               aria-expanded={presetMenuOpen}
               aria-haspopup="menu"
               onClick={() => setPresetMenuOpen((v) => !v)}
-              className="flex h-7 min-h-0 w-6 items-center justify-center border-l border-stone-200 px-0 text-stone-600 hover:bg-canvas"
+              className={cn(
+                'flex items-center justify-center border-l border-stone-200 px-0 text-stone-600 hover:bg-canvas',
+                headerToolbar
+                  ? 'h-[var(--dashboard-toolbar-height,1.75rem)] min-h-0 w-5'
+                  : 'h-7 min-h-0 w-6'
+              )}
             >
               <ChevronDown
                 className={cn(
@@ -401,7 +600,12 @@ export function LayoutRoomBar({
           sidebar
             ? 'w-full flex-col items-stretch gap-1 pb-0'
             : embedded
-              ? 'min-w-0 flex-1 items-center overflow-x-auto pb-0'
+              ? cn(
+                  'min-w-0 items-center pb-0',
+                  headerToolbar
+                    ? 'flex min-w-0 flex-1 shrink overflow-hidden'
+                    : 'min-w-0 flex-1 overflow-x-auto pb-0'
+                )
               : slim
                 ? 'min-w-0 flex-1 items-center pb-0'
                 : 'pb-1',
@@ -409,7 +613,9 @@ export function LayoutRoomBar({
             (compact
               ? 'flex-col items-stretch'
               : slim || embedded
-                ? 'overflow-x-auto'
+                ? headerToolbar
+                  ? 'flex-nowrap'
+                  : 'overflow-x-auto'
                 : 'scroll-touch-x items-center')
         )}
       >
@@ -474,7 +680,9 @@ export function LayoutRoomBar({
                 className={cn(
                   'font-medium transition-all duration-200 active:translate-y-0.5',
                   inlineToolbar
-                    ? 'h-7 px-2.5 text-xs'
+                    ? headerToolbar
+                      ? 'h-[var(--dashboard-toolbar-height,1.75rem)] max-w-[5.5rem] truncate px-2 text-[11px]'
+                      : 'h-7 px-2.5 text-xs'
                     : 'min-h-11 px-4 text-sm',
                   isActive
                     ? 'bg-forest text-primary-foreground'
@@ -491,7 +699,9 @@ export function LayoutRoomBar({
                     className={cn(
                       'border-l border-stone-200 text-muted-foreground hover:bg-canvas',
                       inlineToolbar
-                        ? 'flex h-7 w-7 items-center justify-center'
+                        ? headerToolbar
+                          ? 'flex h-[var(--dashboard-toolbar-height,1.75rem)] w-[var(--dashboard-toolbar-height,1.75rem)] items-center justify-center'
+                          : 'flex h-7 w-7 items-center justify-center'
                         : 'touch-target'
                     )}
                     onClick={() => startRename(room)}
@@ -508,7 +718,9 @@ export function LayoutRoomBar({
                     className={cn(
                       'rounded-r-md text-terracotta-600 hover:bg-rose-50',
                       inlineToolbar
-                        ? 'flex h-7 w-7 items-center justify-center'
+                        ? headerToolbar
+                          ? 'flex h-[var(--dashboard-toolbar-height,1.75rem)] w-[var(--dashboard-toolbar-height,1.75rem)] items-center justify-center'
+                          : 'flex h-7 w-7 items-center justify-center'
                         : 'touch-target'
                     )}
                     onClick={() => onDeleteRoom(room.id)}
@@ -523,13 +735,20 @@ export function LayoutRoomBar({
       </div>
       {sidebar && embedded ? (
         <>
-          {highlightedRoomMetrics ? (
+          {showDimensionEditors ? (
+            <RoomDimensionFields
+              roomId={highlightedRoomId}
+              widthFt={highlightedRoomMetrics.widthFt}
+              lengthFt={highlightedRoomMetrics.lengthFt}
+              onPatchRoomDimensions={onPatchRoomDimensions}
+              layout="stacked"
+            />
+          ) : roomMetricsLabel ? (
             <span
               className="w-full rounded-md border border-stone-200 bg-stone-50 px-2 py-1 text-center text-[11px] font-semibold tabular-nums text-stone-700"
               title="Physical dimensions of the highlighted room"
             >
-              {Math.round(highlightedRoomMetrics.widthFt)}′ ×{' '}
-              {Math.round(highlightedRoomMetrics.lengthFt)}′
+              {roomMetricsLabel}
             </span>
           ) : null}
           <div className="relative w-full" ref={presetMenuRef}>

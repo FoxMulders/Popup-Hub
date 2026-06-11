@@ -104,6 +104,7 @@ export function getStaticRowSegments(
 
 export type SidebarSectionId =
   | 'view-setup'
+  | 'dual-screen'
   | 'hall-management'
   | 'room-canvas'
   | 'shapes-booths'
@@ -118,6 +119,7 @@ export type SidebarSectionId =
 /** Dashboard toolbar section titles. */
 export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
   | 'view-setup'
+  | 'dual-screen'
   | 'hall-management'
   | 'shapes-booths'
   | 'vendor-booths'
@@ -126,6 +128,7 @@ export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
   string
 > = {
   'view-setup': 'VIEW & SETUP',
+  'dual-screen': 'DUAL-SCREEN',
   'hall-management': 'HALL MANAGEMENT',
   'shapes-booths': 'SHAPES & BOOTHS',
   'vendor-booths': 'VENDOR BOOTHS',
@@ -136,6 +139,7 @@ export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
 /** Header row 1 + top strip row 2 section groupings. */
 export const DASHBOARD_HEADER_SECTION_IDS: readonly SidebarSectionId[] = [
   'view-setup',
+  'dual-screen',
   'hall-management',
 ] as const
 
@@ -176,6 +180,11 @@ export function getVisibleSidebarSections(
       id: 'view-setup',
       header: LAYOUT_EDITOR_SIDEBAR_HEADERS['view-setup'],
       blocks: ['utilities'],
+    })
+    sections.push({
+      id: 'dual-screen',
+      header: LAYOUT_EDITOR_SIDEBAR_HEADERS['dual-screen'],
+      blocks: ['dual-screen'],
     })
     sections.push({
       id: 'hall-management',

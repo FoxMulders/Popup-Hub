@@ -12,6 +12,7 @@ import {
   isValidObjectPlacement,
   resolvePlacementRoomIdForObject,
 } from '../components/coordinator/floor-plan-v2/geometry/is-point-in-room'
+import { canvasOpenPlacementOverlapsWall } from '../lib/floor-plan/canvas-open-placement'
 import {
   docFromLegacyRoom,
   legacyRoomFromDoc,
@@ -113,6 +114,37 @@ console.log('Food truck — parking lot outside Main Hall')
     'off-canvas truck rejected',
     isValidObjectPlacement(doc, offCanvas, null),
     false
+  )
+}
+
+console.log('Food truck — wall overlap rejected')
+{
+  const doc: FloorPlanDoc = makeEmptyDoc(80, 80)
+  doc.objects.push({
+    id: 'wall-1',
+    kind: 'wall',
+    x: 20,
+    y: 10,
+    width: 2,
+    height: 30,
+    rotation: 0,
+  } as PlacedObject)
+  const overlapping = truck('ft-wall', 18, 15, 8, 20)
+  const clear = truck('ft-clear', 40, 15, 8, 20)
+  expect(
+    'overlapping truck blocked',
+    isValidObjectPlacement(doc, overlapping, null),
+    false
+  )
+  expect(
+    'clear truck allowed',
+    isValidObjectPlacement(doc, clear, null),
+    true
+  )
+  expect(
+    'overlap predicate matches',
+    canvasOpenPlacementOverlapsWall(doc, overlapping),
+    true
   )
 }
 

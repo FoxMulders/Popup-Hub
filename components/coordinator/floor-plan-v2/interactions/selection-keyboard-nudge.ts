@@ -146,6 +146,7 @@ function clampGroupToCanvas(
 
 export interface SelectionKeyboardNudgeOptions {
   activeRoomId?: string | null
+  enabled?: boolean
 }
 
 /**
@@ -213,8 +214,11 @@ export function useSelectionKeyboardNudge(
   options?: SelectionKeyboardNudgeOptions
 ): void {
   const activeRoomId = options?.activeRoomId ?? null
+  const enabled = options?.enabled ?? true
 
   useEffect(() => {
+    if (!enabled) return
+
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return
       if (isEditableTarget(e.target)) return
@@ -235,5 +239,5 @@ export function useSelectionKeyboardNudge(
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeRoomId, store])
+  }, [activeRoomId, enabled, store])
 }
