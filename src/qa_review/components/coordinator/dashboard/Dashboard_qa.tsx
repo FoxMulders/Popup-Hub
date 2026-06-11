@@ -55,7 +55,6 @@ export interface DashboardBootstrapQaProps {
 export function DashboardBootstrapQa({ header }: DashboardBootstrapQaProps) {
   return (
     <FloorPlanViewportLayoutProvider>
-      <DesktopScreenRequiredOverlay />
       <DashboardBootstrapQaInner header={header} />
     </FloorPlanViewportLayoutProvider>
   )
@@ -104,6 +103,13 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
 
   return (
     <DashboardToolbarPortalProvider>
+      <DesktopScreenRequiredOverlay
+        exitHref={
+          selectedEventId
+            ? `/coordinator/events/${selectedEventId}`
+            : '/coordinator/dashboard'
+        }
+      />
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         {liveMessage}
       </span>
