@@ -4,11 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (initial loader side booth stagger + right-align scale, not deployed)
+## Shipped this session (initial loader side booth stagger + right-align scale, deployed 2026-06-11)
 - **`components/brand/initial-loader-reveal.tsx`:** Left/right perimeter stalls use half-cell brick stagger (24 px offset on alternating rows); tables sit bottom-aligned in each 48×48 square; scale-in animation anchors on the inner/right edge of each square (not center) so sides read as right-aligned in their cells; inner ring inset updated for stagger extent.
 - **Verify:** Hard refresh (clear `popup-hub-initial-loader-shown` in sessionStorage if needed) — side columns show brick stagger; each stall grows from its square’s right edge toward the ring center.
 
-## Shipped this session (dual-screen presenter vs wall-cast differentiation, not deployed)
+## Shipped this session (dual-screen presenter vs wall-cast differentiation, deployed 2026-06-11)
 - **Bug:** Both **Dual-Screen: Presenter** and **Dual-Screen: Wall Cast** opened `/coordinator/dashboard/ledger` with the same interactive table — only the header label differed.
 - **Fix:** `dashboard-ledger-window-client.tsx` — **Presenter** keeps compact light UI with clickable booth names that focus the canvas; **Wall Cast** is read-only with dark high-contrast projection layout (large type, status-colored rows, canvas selection highlight + auto-scroll, no click handlers).
 - **Window sizing:** `floorplan-sync.ts` — wall-cast popup defaults to 1920×1080; presenter stays 1024×900; distinct window names unchanged.
@@ -382,9 +382,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `d45e448` (pushed to `origin/master`)
-- Last deploy commit: `d45e448` - feat: Unified Auto-Arrange + Patron Flow solver
-- Production: https://popuphub.ca - **v1.0.0 build 88** | commit `34f947f` (handoff updated 2026-06-11 09:36)
+- Branch: `master` @ `19ddf46` (pushed to `origin/master`)
+- Last deploy commit: `19ddf46` - feat: ship 2 session updates (initial loader side booth stagger + right-align scale; dual-screen presenter vs wall-cast differentiation)
+- Production: https://popuphub.ca - **v1.0.0 build 89** | commit `8e05367` (handoff updated 2026-06-11 13:18)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -761,7 +761,7 @@
 
 
 ## Last deploy
-- 2026-06-11 09:36 - Deploy via deploy-popuphub.ps1 - `feat: Unified Auto-Arrange + Patron Flow solver` (d45e448)
+- 2026-06-11 13:18 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (initial loader side booth stagger + right-align scale; dual-screen presenter vs wall-cast differentiation)` (19ddf46)
 
 
 ## Goal
