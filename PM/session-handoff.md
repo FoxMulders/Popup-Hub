@@ -8,7 +8,8 @@
 - **`src/utils/trafficSimulation.ts`:** Waypoint grid from walkable aisles; A* patron paths with stochastic drift; booth exposure scoring (0–100) via sight-radius + facing check; aisle heatmap cells; async batching via `requestIdleCallback`.
 - **`hooks/use-traffic-simulation.ts` + `use-canvas-store.ts`:** Canvas store exposes `trafficSimulation`, `boothExposureByObjectId`, loading/progress when `trafficSimulationEnabled`.
 - **Canvas UI:** `TrafficExposureOverlay` heatmap (blue→red aisles, booth tint); Footprints toolbar toggle in Blueprint Studio command bar.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` → place booths + entry/exit doors → toggle Footprints icon → aisle heat + booth exposure overlay appears without blocking drag.
+- **Build fix:** `collect-sitemap-entries.ts` — skip Supabase-backed URLs when `NEXT_PUBLIC_SUPABASE_*` env is unset so `npm run build` succeeds in env-less CI/sandbox.
+- **Verify:** `npx tsc --noEmit` + `npm run build` — PASS. Smoke: `/coordinator/dashboard` → place booths + entry/exit doors → toggle Footprints icon → aisle heat + booth exposure overlay appears without blocking drag.
 
 ## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, deployed 2026-06-11)
 - **`app-nav.tsx` / `shopper-top-bar.tsx`:** Removed profile avatar from header right rail; profile access via `AppMenuSheet` (avatar + name banner + Profile settings). Shopper top bar hamburger now visible on all breakpoints for signed-in users.

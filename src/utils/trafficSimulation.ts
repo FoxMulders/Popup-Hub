@@ -130,11 +130,6 @@ function cellKey(col: number, row: number): string {
   return `${col},${row}`
 }
 
-function parseKey(key: string): GridCoord {
-  const [col, row] = key.split(',').map(Number)
-  return { col: col!, row: row! }
-}
-
 function centerOf(obj: PlacedObject): PathPoint {
   const aabb = rotatedAabb(obj)
   return {

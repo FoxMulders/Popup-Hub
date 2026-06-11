@@ -77,36 +77,6 @@ import {
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
-function TrafficSimulationButton({
-  ctx,
-}: {
-  ctx: CanvasCommandBarBlockContext
-}) {
-  if (!ctx.onTrafficSimulationToggle) return null
-  const loading = ctx.trafficSimulationLoading ?? false
-  return (
-    <CommandButton
-      onClick={ctx.onTrafficSimulationToggle}
-      disabled={loading}
-      title={
-        loading
-          ? 'Running foot traffic simulation…'
-          : ctx.trafficSimulationEnabled
-            ? 'Hide traffic simulation heatmap'
-            : 'Run traffic simulation — patron drift & booth exposure'
-      }
-      active={ctx.trafficSimulationEnabled}
-      className={
-        ctx.trafficSimulationEnabled
-          ? 'bg-orange-200 text-orange-950 hover:bg-orange-200'
-          : 'text-orange-800 hover:bg-orange-50'
-      }
-    >
-      <Footprints className="h-3.5 w-3.5" />
-    </CommandButton>
-  )
-}
-
 function FloorPlanOptimizeControl({
   mode,
   onModeChange,
@@ -362,6 +332,36 @@ export interface CanvasCommandBarBlockContext {
   sidebarLayout?: boolean
   /** Dashboard top strip — horizontal tool groups below the header. */
   topBarLayout?: boolean
+}
+
+function TrafficSimulationButton({
+  ctx,
+}: {
+  ctx: CanvasCommandBarBlockContext
+}) {
+  if (!ctx.onTrafficSimulationToggle) return null
+  const loading = ctx.trafficSimulationLoading ?? false
+  return (
+    <CommandButton
+      onClick={ctx.onTrafficSimulationToggle}
+      disabled={loading}
+      title={
+        loading
+          ? 'Running foot traffic simulation…'
+          : ctx.trafficSimulationEnabled
+            ? 'Hide traffic simulation heatmap'
+            : 'Run traffic simulation — patron drift & booth exposure'
+      }
+      active={ctx.trafficSimulationEnabled}
+      className={
+        ctx.trafficSimulationEnabled
+          ? 'bg-orange-200 text-orange-950 hover:bg-orange-200'
+          : 'text-orange-800 hover:bg-orange-50'
+      }
+    >
+      <Footprints className="h-3.5 w-3.5" />
+    </CommandButton>
+  )
 }
 
 export function renderCanvasCommandBarBlock(
