@@ -9,6 +9,7 @@ export interface WizardGooglePlaceSelectSetters {
   setPinDropped: (v: boolean) => void
   setMarketCity: Dispatch<SetStateAction<string>>
   setLocationName: Dispatch<SetStateAction<string>>
+  setVenuePlaceTypes?: Dispatch<SetStateAction<string[]>>
 }
 
 /** Apply a Places pick to wizard Step 1 state (venue + address + map pin). */
@@ -20,6 +21,9 @@ export function applyWizardGooglePlaceSelect(
   setters.setLat(place.lat)
   setters.setLng(place.lng)
   setters.setPinDropped(true)
+  if (place.googlePlaceTypes?.length) {
+    setters.setVenuePlaceTypes?.(place.googlePlaceTypes)
+  }
 
   if (place.cityId) {
     setters.setMarketCity((current) =>

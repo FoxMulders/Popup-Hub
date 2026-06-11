@@ -2392,6 +2392,9 @@ function FloorPlanV2Workspace({
     saveDraftLoading,
     patronPathEnabled,
     onPatronPathToggle: handlePatronPathToggle,
+    trafficSimulationEnabled,
+    onTrafficSimulationToggle: handleTrafficSimulationToggle,
+    trafficSimulationLoading: store.trafficSimulationLoading,
     eventId,
   }
 

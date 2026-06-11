@@ -35,6 +35,7 @@ import {
   Eye,
   EyeOff,
   Route,
+  Footprints,
 } from 'lucide-react'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
@@ -403,6 +404,9 @@ export interface CanvasCommandBarBlockContext {
   saveDraftLoading?: boolean
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
+  trafficSimulationEnabled?: boolean
+  onTrafficSimulationToggle?: () => void
+  trafficSimulationLoading?: boolean
   onRequestAiLayoutFeedback?: () => void
   canRequestAiLayoutFeedback?: boolean
   aiLayoutFeedbackLoading?: boolean
@@ -414,6 +418,36 @@ export interface CanvasCommandBarBlockContext {
   topBarLayout?: boolean
   /** Dashboard header row — view/setup + hall management. */
   headerBarLayout?: boolean
+}
+
+function TrafficSimulationButton({
+  ctx,
+}: {
+  ctx: CanvasCommandBarBlockContext
+}) {
+  if (!ctx.onTrafficSimulationToggle) return null
+  const loading = ctx.trafficSimulationLoading ?? false
+  return (
+    <CommandButton
+      onClick={ctx.onTrafficSimulationToggle}
+      disabled={loading}
+      title={
+        loading
+          ? 'Running foot traffic simulation…'
+          : ctx.trafficSimulationEnabled
+            ? 'Hide traffic simulation heatmap'
+            : 'Run traffic simulation — patron drift & booth exposure'
+      }
+      active={ctx.trafficSimulationEnabled}
+      className={
+        ctx.trafficSimulationEnabled
+          ? 'bg-orange-200 text-orange-950 hover:bg-orange-200'
+          : 'text-orange-800 hover:bg-orange-50'
+      }
+    >
+      <Footprints className="h-3.5 w-3.5" />
+    </CommandButton>
+  )
 }
 
 export function renderCanvasCommandBarBlock(
@@ -571,6 +605,7 @@ export function renderCanvasCommandBarBlock(
                 <Route className="h-3.5 w-3.5" />
               </CommandButton>
             ) : null}
+            <TrafficSimulationButton ctx={ctx} />
             <CommandButton
               onClick={ctx.onDeleteSelected}
               disabled={!hasSelection}
@@ -657,6 +692,7 @@ export function renderCanvasCommandBarBlock(
                 <Route className="h-3.5 w-3.5" />
               </CommandButton>
             ) : null}
+            <TrafficSimulationButton ctx={ctx} />
             <CommandButton
               onClick={ctx.onDeleteSelected}
               disabled={!hasSelection}
@@ -1493,6 +1529,7 @@ export function renderCanvasCommandBarBlock(
                 <Route className="h-3.5 w-3.5" />
               </CommandButton>
             ) : null}
+            <TrafficSimulationButton ctx={ctx} />
             <div
               className={cn(
                 'inline-flex items-center overflow-hidden rounded-md border border-stone-200',
@@ -1633,6 +1670,7 @@ export function renderCanvasCommandBarBlock(
                   <Route className="h-3.5 w-3.5" />
                 </CommandButton>
               ) : null}
+              <TrafficSimulationButton ctx={ctx} />
               {ctx.onShowLabelsChange ? (
                 <CommandButton
                   onClick={() => ctx.onShowLabelsChange!(!ctx.showLabels)}

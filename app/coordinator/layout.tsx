@@ -30,13 +30,12 @@ export default async function CoordinatorLayout({ children }: { children: React.
 
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
-  const availablePortals = getAvailablePortals(profile.role)
+  const portalOptions = { isAdmin: profile.is_admin }
+  const availablePortals = getAvailablePortals(profile.role, portalOptions)
 
-  const requiredPortal = portalFromAccessiblePath('/coordinator', profile.role, {
-    isAdmin: profile.is_admin,
-  })
+  const requiredPortal = portalFromAccessiblePath('/coordinator', profile.role, portalOptions)
   if (requiredPortal !== 'coordinator') {
-    redirect(getDefaultDashboard(profile.role, 0))
+    redirect(getDefaultDashboard(profile.role, 0, undefined, portalOptions))
   }
 
   if (parseActivePortal(portalCookie) !== 'coordinator') {

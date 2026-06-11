@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — publish blocked by Geocoding API key (branch `cursor/google-geocoding-publish-fix-1d38`, not deployed)
+- **Root cause:** Publish calls `POST /api/coordinator/venues/verify` → server **Geocoding API** (`maps.googleapis.com/maps/api/geocode/json`). Browser maps use **Maps JavaScript API** + **Places API** only — a key restricted to those two APIs fails at publish with “This API key is not authorized…”.
+- **Code:** Clearer Geocoding-specific error; accept Google Places `types` from wizard / stored `venue_place_types` so publish can verify without server Geocoding when user picked a venue from Places autocomplete.
+- **Ops fix (required for map-click-only venues):** Google Cloud Console → enable **Geocoding API** → Credentials → edit Vercel key (`GOOGLE_MAPS_SERVER_API_KEY` preferred, else `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`) → API restrictions must include Geocoding API (or use separate server key with Geocoding only).
+- **Verify:** `npx tsx scripts/verify-venue-coordinates.ts` — PASS. Smoke: publish draft event after Places venue pick; or enable Geocoding API and publish with manual pin.
+
 ## Active work — dashboard header uniform button sizing (local, not deployed)
 - **`globals.css`:** Header row controls (tabs, pill toggle, toolbar buttons) normalized to `--dashboard-toolbar-height`; `overflow-x: hidden` on command-center header.
 - **`dashboard-command-center-header.tsx`:** Tighter header gaps.
@@ -123,6 +129,20 @@
 - **Fix:** `dashboard-ledger-window-client.tsx` — **Presenter** keeps compact light UI with clickable booth names that focus the canvas; **Wall Cast** is read-only with dark high-contrast projection layout (large type, status-colored rows, canvas selection highlight + auto-scroll, no click handlers).
 - **Window sizing:** `floorplan-sync.ts` — wall-cast popup defaults to 1920×1080; presenter stays 1024×900; distinct window names unchanged.
 - **Verify:** `/coordinator/dashboard` — open both dual-screen buttons; presenter = light interactive ledger, wall cast = dark read-only display; selecting a booth on canvas highlights the row on wall cast; clicking a booth in presenter focuses canvas.
+
+## Shipped this session (booth matrix tables/payment, admin coordinator, woodworking, mobile layout advisory, not deployed)
+- **Booth matrix:** `Tables` + `Payment` columns (table_count + method/settlement summary); vendor pool shelf + vendor applications list show same data for vendors.
+- **Admin coordinator:** migration `105_platform_operator_coordinator_access.sql` restores `coordinator` role for `bradmulders@gmail.com`; draft API + coordinator layout portal list honor `is_admin`; `grant-platform-operator.ts` sets coordinator role.
+- **Woodworking:** migration `106_ensure_woodworking_category.sql` idempotent catalog entry (`is_broad`).
+- **Mobile layout regression:** dashboard mounts iron-dome overlay again (removed UA short-circuit); advisory copy cites **1024px wide (11"+ display)**; event hub shows banner when redirected from `/layout` with `?layout=desktop-required`; spatial layout editor wrapped in viewport provider.
+- **Verify:** `npx tsc --noEmit` — PASS. Apply migrations `105`–`106` on Supabase. Smoke: booth matrix shows tables/payment; phone on `/coordinator/dashboard` shows desktop-required message; Brad can access coordinator tools after migration.
+
+## Shipped this session (foot traffic simulation engine, not deployed)
+- **`src/utils/trafficSimulation.ts`:** Waypoint grid from walkable aisles; A* patron paths with stochastic drift; booth exposure scoring (0–100) via sight-radius + facing check; aisle heatmap cells; async batching via `requestIdleCallback`.
+- **`hooks/use-traffic-simulation.ts` + `use-canvas-store.ts`:** Canvas store exposes `trafficSimulation`, `boothExposureByObjectId`, loading/progress when `trafficSimulationEnabled`.
+- **Canvas UI:** `TrafficExposureOverlay` heatmap (blue→red aisles, booth tint); Footprints toolbar toggle in Blueprint Studio command bar.
+- **Build fix:** `collect-sitemap-entries.ts` — skip Supabase-backed URLs when `NEXT_PUBLIC_SUPABASE_*` env is unset so `npm run build` succeeds in env-less CI/sandbox.
+- **Verify:** `npx tsc --noEmit` + `npm run build` — PASS. Smoke: `/coordinator/dashboard` → place booths + entry/exit doors → toggle Footprints icon → aisle heat + booth exposure overlay appears without blocking drag.
 
 ## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, deployed 2026-06-11)
 - **`app-nav.tsx` / `shopper-top-bar.tsx`:** Removed profile avatar from header right rail; profile access via `AppMenuSheet` (avatar + name banner + Profile settings). Shopper top bar hamburger now visible on all breakpoints for signed-in users.

@@ -289,6 +289,9 @@ export function MarketSetupWizard({
   const [lat, setLat] = useState(existing?.latitude ?? 53.5461)
   const [lng, setLng] = useState(existing?.longitude ?? -113.4938)
   const [pinDropped, setPinDropped] = useState(!!existing?.latitude)
+  const [venuePlaceTypes, setVenuePlaceTypes] = useState<string[]>(
+    existing?.venue_place_types ?? []
+  )
   const [skipVenueLayout, setSkipVenueLayout] = useState(existing?.skip_venue_layout ?? false)
 
   const totalSteps = skipVenueLayout ? 2 : 3
@@ -595,6 +598,7 @@ export function MarketSetupWizard({
               address,
               locationName,
               pinDropped,
+              placeTypes: venuePlaceTypes.length > 0 ? venuePlaceTypes : undefined,
               persist: true,
             }),
           })
@@ -833,6 +837,7 @@ export function MarketSetupWizard({
         setPinDropped,
         setMarketCity,
         setLocationName,
+        setVenuePlaceTypes,
       })
     },
     []

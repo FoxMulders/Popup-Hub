@@ -21,14 +21,18 @@ import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reaso
 import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
+import { LayoutDesktopRequiredBanner } from '@/components/coordinator/layout-desktop-required-banner'
 import type { BoothApplication, Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ layout?: string }>
 }
 
-export default async function CoordinatorEventDetailPage({ params }: Props) {
+export default async function CoordinatorEventDetailPage({ params, searchParams }: Props) {
   const { id } = await params
+  const { layout: layoutQuery } = await searchParams
+  const showLayoutDesktopRequired = layoutQuery === 'desktop-required'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -123,6 +127,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+      {showLayoutDesktopRequired ? (
+        <LayoutDesktopRequiredBanner eventId={id} />
+      ) : null}
       <div className="market-panel p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <EventInlineEditor event={event as Event} />

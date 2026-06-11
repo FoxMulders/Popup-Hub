@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     locationName,
     pinDropped,
     persist = true,
+    placeTypes: placeTypesBody,
   } = body as {
     eventId?: string
     latitude?: number
@@ -43,10 +44,30 @@ export async function POST(request: Request) {
     locationName?: string
     pinDropped?: boolean
     persist?: boolean
+    placeTypes?: unknown
   }
 
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return NextResponse.json({ error: 'latitude and longitude are required' }, { status: 400 })
+  }
+
+  let placeTypes = Array.isArray(placeTypesBody)
+    ? placeTypesBody.filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
+    : undefined
+
+  if ((!placeTypes || placeTypes.length === 0) && eventId) {
+    const { data: storedEvent } = await supabase
+      .from('events')
+      .select('venue_place_types')
+      .eq('id', eventId)
+      .maybeSingle()
+
+    const storedTypes = storedEvent?.venue_place_types?.filter(
+      (t): t is string => typeof t === 'string' && t.trim().length > 0
+    )
+    if (storedTypes?.length) {
+      placeTypes = storedTypes
+    }
   }
 
   const result = await verifyVenueCoordinates({
@@ -54,6 +75,7 @@ export async function POST(request: Request) {
     longitude: longitude!,
     address,
     pinDropped,
+    placeTypes,
   })
 
   const fields = venueVerificationFieldsFromResult(result)

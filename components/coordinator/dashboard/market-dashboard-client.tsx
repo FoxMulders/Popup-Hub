@@ -6,7 +6,6 @@ import { Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
 import { cn } from '@/lib/utils'
-import { isMobileDevice } from '@/lib/pwa/platform'
 import {
   MarketManagementProvider,
   type DashboardEventSummary,
@@ -58,7 +57,7 @@ export function MarketDashboardClient({
 }: MarketDashboardClientProps) {
   const searchParams = useSearchParams()
   const forceMobileOverview = searchParams.get('overview') === 'mobile'
-  const useMobileOverview = forceMobileOverview || isMobileDevice()
+  const useMobileOverview = forceMobileOverview
 
   if (events.length === 0) {
     return (
