@@ -98,7 +98,7 @@ export function openDualScreenWindow(
   const url = `/coordinator/dashboard/ledger?${params}`
   const features =
     mode === 'wall-cast'
-      ? 'noopener,noreferrer,width=1280,height=720,menubar=no,toolbar=no,location=no,status=no'
+      ? 'noopener,noreferrer,width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no'
       : 'noopener,noreferrer,width=1024,height=900,menubar=no,toolbar=no,location=no,status=no'
   return window.open(url, DUAL_SCREEN_WINDOW_NAMES[mode], features)
 }

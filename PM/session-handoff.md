@@ -4,6 +4,16 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (initial loader side booth stagger + right-align scale, not deployed)
+- **`components/brand/initial-loader-reveal.tsx`:** Left/right perimeter stalls use half-cell brick stagger (24 px offset on alternating rows); tables sit bottom-aligned in each 48×48 square; scale-in animation anchors on the inner/right edge of each square (not center) so sides read as right-aligned in their cells; inner ring inset updated for stagger extent.
+- **Verify:** Hard refresh (clear `popup-hub-initial-loader-shown` in sessionStorage if needed) — side columns show brick stagger; each stall grows from its square’s right edge toward the ring center.
+
+## Shipped this session (dual-screen presenter vs wall-cast differentiation, not deployed)
+- **Bug:** Both **Dual-Screen: Presenter** and **Dual-Screen: Wall Cast** opened `/coordinator/dashboard/ledger` with the same interactive table — only the header label differed.
+- **Fix:** `dashboard-ledger-window-client.tsx` — **Presenter** keeps compact light UI with clickable booth names that focus the canvas; **Wall Cast** is read-only with dark high-contrast projection layout (large type, status-colored rows, canvas selection highlight + auto-scroll, no click handlers).
+- **Window sizing:** `floorplan-sync.ts` — wall-cast popup defaults to 1920×1080; presenter stays 1024×900; distinct window names unchanged.
+- **Verify:** `/coordinator/dashboard` — open both dual-screen buttons; presenter = light interactive ledger, wall cast = dark read-only display; selecting a booth on canvas highlights the row on wall cast; clicking a booth in presenter focuses canvas.
+
 ## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, deployed 2026-06-11)
 - **`app-nav.tsx` / `shopper-top-bar.tsx`:** Removed profile avatar from header right rail; profile access via `AppMenuSheet` (avatar + name banner + Profile settings). Shopper top bar hamburger now visible on all breakpoints for signed-in users.
 - **`app-menu-sheet.tsx`:** Fixed menu cut-off — `h-dvh` sheet height, safe-area padding on header/nav children (not outer shell), scrollable `overflow-y-auto` nav body.

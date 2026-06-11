@@ -37,7 +37,15 @@ function fitLogoInRing(
   return { width, height, anchorY: height * LOGO_ICON_ANCHOR_Y }
 }
 
-type BoothRect = { x: number; y: number; w: number; h: number; delay: number }
+type BoothRect = {
+  x: number
+  y: number
+  w: number
+  h: number
+  delay: number
+  /** Left/right perimeter columns — scale-in anchors on the inner edge of each square cell. */
+  wall?: 'left' | 'right'
+}
 
 type PerimeterRing = {
   booths: BoothRect[]
@@ -67,12 +75,15 @@ function buildPerimeterRing(): PerimeterRing {
   const topSpan = topCount * BOOTH_W + (topCount - 1) * GAP
   const topRowX = topStartX + (topUsable - topSpan) / 2
 
+  const CELL = BOOTH_H + GAP
+  const halfStep = CELL / 2
+
   const sideStartY = topY + BOOTH_H + GAP
   const sideEndY = bottomY - GAP - BOOTH_H
   const sideUsable = sideEndY - sideStartY
   const sideCount = Math.max(
     1,
-    Math.floor((sideUsable + GAP) / (BOOTH_H + GAP)),
+    Math.floor((sideUsable - (CELL - BOOTH_H)) / halfStep) + 1,
   )
 
   const booths: BoothRect[] = []
@@ -88,20 +99,23 @@ function buildPerimeterRing(): PerimeterRing {
     })
   }
   for (let i = 0; i < sideCount; i++) {
-    const y = sideStartY + i * (BOOTH_H + GAP)
+    const stagger = i % 2 === 1 ? halfStep : 0
+    const y = sideStartY + i * halfStep + (CELL - BOOTH_H)
     booths.push({
-      x: leftX,
+      x: leftX + stagger,
       y,
       w: BOOTH_W,
       h: BOOTH_H,
       delay: delayStep++ * 0.05,
+      wall: 'left',
     })
     booths.push({
-      x: rightX,
+      x: rightX - stagger,
       y,
       w: BOOTH_W,
       h: BOOTH_H,
       delay: delayStep++ * 0.05,
+      wall: 'right',
     })
   }
   for (let i = 0; i < topCount; i++) {
@@ -115,11 +129,11 @@ function buildPerimeterRing(): PerimeterRing {
   }
 
   const inner = {
-    left: leftX + BOOTH_W,
-    right: rightX,
+    left: leftX + BOOTH_W + halfStep,
+    right: rightX - halfStep,
     top: topY + BOOTH_H,
     bottom: bottomY,
-    cx: (leftX + BOOTH_W + rightX) / 2,
+    cx: (leftX + BOOTH_W + halfStep + rightX - halfStep) / 2,
     cy: (topY + BOOTH_H + bottomY) / 2,
   }
 
@@ -220,13 +234,16 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         {booths.map((booth, index) => {
           const t = clamp01((boothT - booth.delay) / (1 - booth.delay))
           const scale = 0.88 + t * 0.12
-          const cx = booth.x + booth.w / 2
-          const cy = booth.y + booth.h / 2
+          const anchorX =
+            booth.wall === 'left' || booth.wall === 'right'
+              ? booth.x + booth.w
+              : booth.x + booth.w / 2
+          const anchorY = booth.y + booth.h / 2
           return (
             <g
               key={index}
               opacity={t * 0.9}
-              transform={`translate(${cx}, ${cy}) scale(${scale}) translate(${-cx}, ${-cy})`}
+              transform={`translate(${anchorX}, ${anchorY}) scale(${scale}) translate(${-anchorX}, ${-anchorY})`}
             >
               <rect
                 x={booth.x}
