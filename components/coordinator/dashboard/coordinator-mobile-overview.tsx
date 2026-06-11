@@ -6,6 +6,11 @@ import { CalendarDays, ChevronRight, LayoutDashboard, Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
 import { cn } from '@/lib/utils'
+import {
+  floorPlanMobileAdvisoryBody,
+  floorPlanRecommendedScreenLabel,
+  FLOOR_PLAN_MOBILE_ADVISORY_TITLE,
+} from '@/lib/floor-plan/viewport-advisory-copy'
 import type { DashboardEventSummary } from './market-management-context'
 
 interface CoordinatorMobileOverviewProps {
@@ -40,9 +45,18 @@ export function CoordinatorMobileOverview({
         <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground sm:text-3xl">
           Your markets
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Use a tablet or desktop for the full booth layout designer. On this device you can
-          review events, applications, and day-of operations.
+        <div
+          className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950"
+          role="status"
+        >
+          <p className="font-semibold">{FLOOR_PLAN_MOBILE_ADVISORY_TITLE}</p>
+          <p className="mt-1 text-amber-900/90">
+            Use a screen larger than {floorPlanRecommendedScreenLabel()}.{' '}
+            {floorPlanMobileAdvisoryBody()}
+          </p>
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          On this device you can still review events, applications, and day-of operations.
         </p>
       </div>
 

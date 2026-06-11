@@ -14,6 +14,7 @@ export interface VendorApplicationSnapshot {
   payment_method: string | null
   application_payment_status: string | null
   booth_number: number | null
+  table_count: number
   categoryName?: string | null
   vendorName?: string | null
 }

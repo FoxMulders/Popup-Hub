@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (booth matrix tables/payment, admin coordinator, woodworking, mobile layout advisory, not deployed)
+- **Booth matrix:** `Tables` + `Payment` columns (table_count + method/settlement summary); vendor pool shelf + vendor applications list show same data for vendors.
+- **Admin coordinator:** migration `105_platform_operator_coordinator_access.sql` restores `coordinator` role for `bradmulders@gmail.com`; draft API + coordinator layout portal list honor `is_admin`; `grant-platform-operator.ts` sets coordinator role.
+- **Woodworking:** migration `106_ensure_woodworking_category.sql` idempotent catalog entry (`is_broad`).
+- **Mobile layout regression:** dashboard mounts iron-dome overlay again (removed UA short-circuit); advisory copy cites **1024px wide (11"+ display)**; event hub shows banner when redirected from `/layout` with `?layout=desktop-required`; spatial layout editor wrapped in viewport provider.
+- **Verify:** `npx tsc --noEmit` — PASS. Apply migrations `105`–`106` on Supabase. Smoke: booth matrix shows tables/payment; phone on `/coordinator/dashboard` shows desktop-required message; Brad can access coordinator tools after migration.
+
 ## Shipped this session (foot traffic simulation engine, not deployed)
 - **`src/utils/trafficSimulation.ts`:** Waypoint grid from walkable aisles; A* patron paths with stochastic drift; booth exposure scoring (0–100) via sight-radius + facing check; aisle heatmap cells; async batching via `requestIdleCallback`.
 - **`hooks/use-traffic-simulation.ts` + `use-canvas-store.ts`:** Canvas store exposes `trafficSimulation`, `boothExposureByObjectId`, loading/progress when `trafficSimulationEnabled`.

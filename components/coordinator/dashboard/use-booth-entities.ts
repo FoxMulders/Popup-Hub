@@ -7,6 +7,7 @@ import {
   minVendorBoothClearanceFt,
   type BoothClearanceBand,
 } from '@/lib/coordinator/booth-clearance-visual'
+import { formatApplicationPaymentSummary } from '@/lib/applications/payment-summary'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { useMarketManagement } from './market-management-context'
@@ -26,6 +27,8 @@ export interface BoothEntity {
   statusLabel: string
   vendorId: string | null
   applicationId: string | null
+  tableCount: number | null
+  paymentSummary: string
 }
 
 export function useBoothEntities(): BoothEntity[] {
@@ -77,6 +80,10 @@ export function useBoothEntities(): BoothEntity[] {
           statusLabel: theme.label,
           vendorId: booth.vendorId ?? null,
           applicationId: app?.id ?? null,
+          tableCount: app?.table_count ?? null,
+          paymentSummary: app
+            ? formatApplicationPaymentSummary(app)
+            : '—',
         }
       })
       .sort((a, b) => a.y - b.y || a.x - b.x)

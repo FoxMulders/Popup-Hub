@@ -3,6 +3,7 @@
 import { motion, useDragControls } from 'framer-motion'
 import { GripVertical, Star, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatApplicationPaymentSummary } from '@/lib/applications/payment-summary'
 import type { VendorApplicationSnapshot } from './booth-placement-status'
 
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
@@ -56,6 +57,12 @@ function VendorPoolCard({ vendor }: { vendor: VendorApplicationSnapshot }) {
         <p className="truncate text-sm font-semibold">{vendor.vendorName ?? 'Vendor'}</p>
         <p className="truncate text-[11px] text-muted-foreground">
           {vendor.categoryName ?? 'Uncategorized'}
+          {vendor.table_count > 0
+            ? ` · ${vendor.table_count} table${vendor.table_count === 1 ? '' : 's'}`
+            : ''}
+        </p>
+        <p className="truncate text-[10px] text-stone-500">
+          {formatApplicationPaymentSummary(vendor)}
         </p>
         <div className="mt-1 flex items-center gap-1.5 text-[10px] font-medium text-stone-600">
           {vendor.status === 'waitlisted' ? (

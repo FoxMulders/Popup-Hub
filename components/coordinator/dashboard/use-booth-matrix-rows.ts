@@ -8,6 +8,8 @@ export interface BoothMatrixRow {
   label: string
   vendor: string
   category: string
+  tableCount: number | null
+  paymentSummary: string
   status: keyof typeof BOOTH_STATUS_THEME
   statusLabel: string
   vendorId: string | null
@@ -20,6 +22,8 @@ function toMatrixRow(entity: BoothEntity): BoothMatrixRow {
     label: entity.label,
     vendor: entity.vendorName,
     category: entity.productCategory,
+    tableCount: entity.tableCount,
+    paymentSummary: entity.paymentSummary,
     status: entity.paymentStatus,
     statusLabel: entity.statusLabel,
     vendorId: entity.vendorId,

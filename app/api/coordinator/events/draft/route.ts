@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { canActAsCoordinator } from '@/lib/auth/rbac'
+import { canActAsCoordinator, isPlatformAdmin } from '@/lib/auth/rbac'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
   coordinatorPublishBlockReason,
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Coordinator account required' }, { status: 403 })
   }
 
-  if (profile?.role !== 'coordinator') {
+  if (profile?.role !== 'coordinator' && !isPlatformAdmin(profile)) {
     return NextResponse.json(
       {
         error:

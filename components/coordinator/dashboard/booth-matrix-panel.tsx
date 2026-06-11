@@ -163,20 +163,26 @@ export function BoothMatrixPanel({
           >
             <table className="w-full table-fixed border-collapse text-left text-sm">
               <caption className="sr-only">
-                Floor plan booth assignments, categories, and payment status
+                Floor plan booth assignments, table counts, payment method, and placement status
               </caption>
               <thead>
                 <tr className="border-b border-stone-200 bg-stone-100/90">
-                  <th scope="col" className="w-1/4 px-2 font-semibold">
+                  <th scope="col" className="px-2 font-semibold">
                     Booth
                   </th>
-                  <th scope="col" className="w-1/4 px-2 font-semibold">
+                  <th scope="col" className="px-2 font-semibold">
                     Vendor
                   </th>
-                  <th scope="col" className="w-1/4 px-2 font-semibold">
+                  <th scope="col" className="px-2 font-semibold">
                     Category
                   </th>
-                  <th scope="col" className="w-1/4 px-2 font-semibold">
+                  <th scope="col" className="w-16 px-2 text-center font-semibold">
+                    Tables
+                  </th>
+                  <th scope="col" className="px-2 font-semibold">
+                    Payment
+                  </th>
+                  <th scope="col" className="px-2 font-semibold">
                     Status
                   </th>
                 </tr>
@@ -210,6 +216,10 @@ export function BoothMatrixPanel({
                       />
                     </td>
                     <td className="truncate px-2">{row.category}</td>
+                    <td className="px-2 text-center tabular-nums">
+                      {row.tableCount ?? '—'}
+                    </td>
+                    <td className="truncate px-2 text-[11px]">{row.paymentSummary}</td>
                     <td className="px-2">
                       {row.vendorId ? (
                         <MatrixStatusSelect
@@ -268,6 +278,10 @@ export function BoothMatrixPanel({
                       <dd>{row.vendor}</dd>
                       <dt className="font-semibold text-muted-foreground">Category</dt>
                       <dd>{row.category}</dd>
+                      <dt className="font-semibold text-muted-foreground">Tables</dt>
+                      <dd>{row.tableCount ?? '—'}</dd>
+                      <dt className="font-semibold text-muted-foreground">Payment</dt>
+                      <dd>{row.paymentSummary}</dd>
                       <dt className="font-semibold text-muted-foreground">Status</dt>
                       <dd>
                         <StatusBadge status={row.status} label={row.statusLabel} />

@@ -14,6 +14,11 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
+  floorPlanMobileAdvisoryBody,
+  floorPlanRecommendedScreenLabel,
+  FLOOR_PLAN_MOBILE_ADVISORY_TITLE,
+} from '@/lib/floor-plan/viewport-advisory-copy'
+import {
   isPocketSizedViewport,
   useFloorPlanViewportDimensions,
   type FloorPlanViewportTier,
@@ -49,8 +54,10 @@ export function useFloorPlanViewportLayout(): FloorPlanViewportLayoutContextValu
 }
 
 export function FloorPlanViewportLayoutProvider({ children }: { children: ReactNode }) {
-  const { width, height } = useFloorPlanViewportDimensions()
-  const pocketSized = isPocketSizedViewport(width, height)
+  const dimensions = useFloorPlanViewportDimensions()
+  const pocketSized = dimensions
+    ? isPocketSizedViewport(dimensions.width, dimensions.height)
+    : true
 
   const value = useMemo<FloorPlanViewportLayoutContextValue>(() => {
     return {
@@ -136,19 +143,15 @@ export function DesktopScreenRequiredOverlay() {
           id="pocket-viewport-title"
           className="font-heading text-xl font-bold tracking-tight text-amber-50 sm:text-2xl"
         >
-          Whoa there, Ant-Man! 🐜
+          {FLOOR_PLAN_MOBILE_ADVISORY_TITLE}
         </h2>
 
         <p className="mt-2 text-sm font-semibold text-amber-200/90 sm:text-base">
-          This layout canvas is way too massive for a pocket-sized screen.
+          Use a screen larger than {floorPlanRecommendedScreenLabel()}.
         </p>
 
         <p className="mt-4 text-sm leading-relaxed text-slate-300">
-          You are trying to orchestrate an entire physical marketplace on a screen meant for
-          checking text messages. To snap doors flat, give those yellow vendor tables their
-          mandatory 360-degree, 2-foot breathing rooms, and summon our Gemini-powered traffic
-          flow wizard, you are going to need a bigger boat. Or, you know... a regular desktop
-          monitor.
+          {floorPlanMobileAdvisoryBody()}
         </p>
 
         <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/50 p-4 text-sm leading-relaxed text-slate-300">
