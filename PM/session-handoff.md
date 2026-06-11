@@ -372,9 +372,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8044476` (pushed to `origin/master`)
-- Last deploy commit: `8044476` - feat: header nav UI/UX — profile in menu, logo +15%, menu scroll
-- Production: https://popuphub.ca - **v1.0.0 build 87** | commit `f07d697` (handoff updated 2026-06-11 08:06)
+- Branch: `master` @ `d45e448` (pushed to `origin/master`)
+- Last deploy commit: `d45e448` - feat: Unified Auto-Arrange + Patron Flow solver
+- Production: https://popuphub.ca - **v1.0.0 build 88** | commit `34f947f` (handoff updated 2026-06-11 09:36)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -751,7 +751,7 @@
 
 
 ## Last deploy
-- 2026-06-11 08:06 - Deploy via deploy-popuphub.ps1 - `feat: header nav UI/UX — profile in menu, logo +15%, menu scroll` (8044476)
+- 2026-06-11 09:36 - Deploy via deploy-popuphub.ps1 - `feat: Unified Auto-Arrange + Patron Flow solver` (d45e448)
 
 
 ## Goal
@@ -1137,7 +1137,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Deploy tooling:** `init-shell-env.ps1` (PATH for Explorer launches); `git-sync.ps1` (`Invoke-NativeCommand` / `Invoke-Git`, stale lock recovery); `Deploy-popuphub.bat` (pwsh when available, any cwd, default commit message for current WIP, `--no-pause`); handoff baseline records deploy commit message
 - **Deploy fix (local, uncommitted):** Windows PowerShell `$ErrorActionPreference = 'Stop'` + `2>&1 | ForEach-Object` treated Vercel/git stderr as fatal — fixed via `Invoke-NativeCommand`
 
-## Shipped this session (Unified Auto-Arrange + Patron Flow solver, not deployed)
+## Shipped this session (Unified Auto-Arrange + Patron Flow solver, deployed 2026-06-11)
 - **`UnifiedLayoutSolver.ts`:** Coupled booth + spine solver — skeleton init (serpentine pathway + no-fly rects) → patron-centric slot seed → coupled force loop (4′ ideal / 2′–3′ / ≤2′ clearance bands + category proximity kernel) → hard projection + minimum-clearance enforcement.
 - **Wiring:** `layoutSolver: 'unified'` on `PackBooths` / `autoArrangeVendorUnifiedInRoom`; AI Auto-Arrange (non-grid) tries unified first via `request-ai-auto-arrange.ts` deterministic fallback; traffic-aware pack remains fallback when unified places zero.
 - **Overlay:** `UnifiedLayoutFlowOverlay` — emerald spine polyline + clearance-band heat field (`critical`/`tight`/`good`); auto-enabled after unified arrange / AI Auto-Arrange when solver meta present.
