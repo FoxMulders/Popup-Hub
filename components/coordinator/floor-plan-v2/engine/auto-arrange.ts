@@ -137,6 +137,11 @@ export interface AutoArrangeOptions {
   scope?: AutoArrangeScope
   /** Placement strategy — defaults to aligned grid. */
   mode?: AutoArrangeModeLegacy
+  /**
+   * Booth packing engine for traffic-flow modes.
+   * `unified` runs coupled booth+spine solver before AI / traffic-aware fallback.
+   */
+  layoutSolver?: 'traffic-aware' | 'unified'
   /** Aisle width between rows / along perimeter (ft). Default 8. */
   aisleWidthFt?: number
   /** Venue baseline table length for multi-table consolidation. */
@@ -208,6 +213,9 @@ export interface AutoArrangeResult {
 export interface AutoArrangeInRoomResult extends AutoArrangeResult {
   /** Room frame the pass ran inside. */
   roomId: string
+  /** Unified solver overlay state when `layoutSolver: 'unified'`. */
+  unifiedMeta?: import('./UnifiedLayoutSolver').UnifiedSolverMeta
+  unifiedSolverUsed?: boolean
 }
 
 interface Rect {

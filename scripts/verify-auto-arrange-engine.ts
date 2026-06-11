@@ -1,5 +1,5 @@
 /**
- * Smoke test — traffic-aware packBooths inside merged_zone with stage obstacle.
+ * Smoke test — traffic-aware packBooths + unified layout solver clearance bands.
  * Run: npx tsx scripts/verify-auto-arrange-engine.ts
  */
 
@@ -10,6 +10,12 @@ import {
   packBooths,
 } from '../components/coordinator/floor-plan-v2/engine/AutoArrangeEngine'
 import { buildPatronPathway } from '../components/coordinator/floor-plan-v2/engine/patron-centric-layout'
+import { BOOTH_CLEARANCE_GOOD_FT } from '@/lib/coordinator/booth-clearance-visual'
+import {
+  runUnifiedLayoutSolver,
+  minPairwiseClearanceFt,
+  countCriticalClearanceViolations,
+} from '../components/coordinator/floor-plan-v2/engine/UnifiedLayoutSolver'
 import type { Position } from 'geojson'
 
 const roomW = 80
@@ -64,6 +70,38 @@ const ring = ringToRoomPolygon([
   [0, 0],
 ])
 
+const unified = runUnifiedLayoutSolver(roomW, roomH, booths, {
+  entrance,
+  exit,
+  obstacles: [{ x: 36, y: 28, width: 8, height: 6 }],
+  idealClearanceFt: BOOTH_CLEARANCE_GOOD_FT,
+  gridSpacingFt: 0.5,
+})
+
+const sparseRoom = { w: 120, h: 90 }
+const sparseEntrance = { x: sparseRoom.w / 2, y: 4 }
+const sparseExit = { x: sparseRoom.w / 2, y: sparseRoom.h - 4 }
+const sparseBooths = booths.slice(0, 4)
+const sparseUnified = runUnifiedLayoutSolver(
+  sparseRoom.w,
+  sparseRoom.h,
+  sparseBooths,
+  {
+    entrance: sparseEntrance,
+    exit: sparseExit,
+    idealClearanceFt: BOOTH_CLEARANCE_GOOD_FT,
+    gridSpacingFt: 0.5,
+  }
+)
+
+const unifiedMinGap = minPairwiseClearanceFt(unified.placed, booths)
+const criticalPairs = countCriticalClearanceViolations(unified.placed, booths)
+const sparseMinGap = minPairwiseClearanceFt(sparseUnified.placed, sparseBooths)
+const sparseCritical = countCriticalClearanceViolations(
+  sparseUnified.placed,
+  sparseBooths
+)
+
 console.log('=== Traffic-Aware AutoArrangeEngine ===')
 console.log(`pathway points: ${pathway.length}, no-fly rects: ${noFly.length}`)
 console.log(
@@ -74,14 +112,48 @@ console.log(
 )
 console.log(`ring coords: ${ring[0]?.length ?? 0} points`)
 
+console.log('\n=== Unified Layout Solver ===')
+console.log(
+  `unified placed: ${unified.placed.length}, unplaced: ${unified.unplaced.length}, spine points: ${unified.meta.pathway.length}, heat cells: ${unified.meta.clearanceField.length}`
+)
+console.log(`min pairwise clearance: ${unifiedMinGap.toFixed(2)}′, critical pairs: ${criticalPairs}`)
+console.log(
+  `sparse room min clearance: ${sparseMinGap.toFixed(2)}′, critical pairs: ${sparseCritical}`
+)
+
 const placedOk = traffic.placed.length >= 3
 const noFlyOk = noFly.length >= pathway.length - 1
 const metaOk = Boolean(traffic.meta?.pathway.length)
 const turfOk = turfResult.placed.length >= 3
 
+const unifiedPlacedOk = unified.placed.length >= 3
+const unifiedSpineOk = unified.meta.pathway.length >= 2
+const unifiedHeatOk = unified.meta.clearanceField.length >= 4
+const unifiedClearanceOk =
+  sparseUnified.placed.length >= 3 &&
+  sparseMinGap >= BOOTH_CLEARANCE_GOOD_FT - 0.25 &&
+  sparseCritical === 0
+
 console.log(`${placedOk ? 'PASS' : 'FAIL'}  traffic-aware placed at least 3/6 booths`)
 console.log(`${noFlyOk ? 'PASS' : 'FAIL'}  no-fly zone covers pathway segments`)
 console.log(`${metaOk ? 'PASS' : 'FAIL'}  layout meta includes serpentine pathway`)
 console.log(`${turfOk ? 'PASS' : 'FAIL'}  Turf validation keeps ≥3 booths in polygon`)
+console.log(`${unifiedPlacedOk ? 'PASS' : 'FAIL'}  unified solver placed at least 3/6 booths`)
+console.log(`${unifiedSpineOk ? 'PASS' : 'FAIL'}  unified solver emits patron spine polyline`)
+console.log(`${unifiedHeatOk ? 'PASS' : 'FAIL'}  unified solver emits clearance heat field`)
+console.log(
+  `${unifiedClearanceOk ? 'PASS' : 'FAIL'}  ideal mode: min edge ≥4′ and zero ≤2′ violations`
+)
 
-if (!placedOk || !noFlyOk || !metaOk || !turfOk) process.exit(1)
+if (
+  !placedOk ||
+  !noFlyOk ||
+  !metaOk ||
+  !turfOk ||
+  !unifiedPlacedOk ||
+  !unifiedSpineOk ||
+  !unifiedHeatOk ||
+  !unifiedClearanceOk
+) {
+  process.exit(1)
+}

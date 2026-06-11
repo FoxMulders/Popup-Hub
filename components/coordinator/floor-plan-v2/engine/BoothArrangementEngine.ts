@@ -46,6 +46,11 @@ import {
 
 } from './AutoArrangeEngine'
 
+import {
+  packBoothsUnifiedForRoom,
+  type UnifiedPackResult,
+} from './UnifiedLayoutSolver'
+
 
 
 /** Minimum edge-to-edge aisle between booth footprints (ft). */
@@ -62,6 +67,11 @@ export interface PackBoothsOptions {
 
   snapFt?: number
 
+  /** `unified` runs coupled booth+spine solver; default traffic-aware path pack. */
+  layoutSolver?: 'traffic-aware' | 'unified'
+
+  eventCategoryNames?: ReadonlyArray<string>
+
 }
 
 
@@ -73,6 +83,9 @@ export interface PackBoothsResult {
   placedCount: number
 
   droppedCount: number
+
+  /** Present when `layoutSolver: 'unified'` produced overlay meta. */
+  unifiedMeta?: UnifiedPackResult['unifiedMeta']
 
 }
 
@@ -232,17 +245,19 @@ export function PackBooths(
 
 
 
-  const packResult = packBoothsForRoom(
+  const packInput = booths.map((b) => ({ id: b.id, width: b.width, height: b.height }))
 
-    doc,
+  const packOpts = {
+    aisleWidth: aisleFt,
+    wallInsetFt,
+    stepFt: snapFt,
+    eventCategoryNames: options.eventCategoryNames,
+  }
 
-    roomId,
-
-    booths.map((b) => ({ id: b.id, width: b.width, height: b.height })),
-
-    { aisleWidth: aisleFt, wallInsetFt, stepFt: snapFt }
-
-  )
+  const packResult =
+    options.layoutSolver === 'unified'
+      ? packBoothsUnifiedForRoom(doc, roomId, packInput, packOpts)
+      : packBoothsForRoom(doc, roomId, packInput, packOpts)
 
 
 
@@ -265,6 +280,11 @@ export function PackBooths(
     placedCount,
 
     droppedCount: packResult.unplaced.length,
+
+    unifiedMeta:
+      options.layoutSolver === 'unified'
+        ? (packResult as UnifiedPackResult).unifiedMeta
+        : undefined,
 
   }
 
@@ -391,5 +411,49 @@ export type {
   PackBoothsResult as TurfPackBoothsResult,
 
 } from './AutoArrangeEngine'
+
+import type { AutoArrangeInRoomResult, AutoArrangeOptions } from './auto-arrange'
+
+/**
+ * Auto-arrange vendor booths via the unified booth+spine solver.
+ * Patron tables are left untouched. Falls back to traffic-aware pack
+ * when unified places zero booths.
+ */
+export function autoArrangeVendorUnifiedInRoom(
+  doc: FloorPlanDoc,
+  roomId: string,
+  options: AutoArrangeOptions = {}
+): AutoArrangeInRoomResult | null {
+  const booths = vendorBoothsInRoom(doc, roomId)
+  if (booths.length === 0) return null
+
+  const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
+  let packResult = PackBooths(doc, roomId, cleared, {
+    layoutSolver: 'unified',
+    eventCategoryNames: options.eventCategoryNames,
+    snapFt: doc.snapFt ?? 1,
+  })
+
+  if (packResult.placedCount === 0) {
+    packResult = PackBooths(doc, roomId, cleared, {
+      layoutSolver: 'traffic-aware',
+      eventCategoryNames: options.eventCategoryNames,
+      snapFt: doc.snapFt ?? 1,
+    })
+  }
+
+  const packedDoc = applyPackedBoothsToDoc(doc, roomId, packResult.booths)
+  return {
+    doc: packedDoc,
+    placedCount: packResult.placedCount,
+    droppedCount: packResult.droppedCount,
+    unsatisfiedCategoryCount: 0,
+    overflowCount: 0,
+    removedOverlapCount: 0,
+    roomId,
+    unifiedMeta: packResult.unifiedMeta,
+    unifiedSolverUsed: Boolean(packResult.unifiedMeta),
+  }
+}
 
 

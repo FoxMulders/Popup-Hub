@@ -16,6 +16,8 @@ import {
   MarqueePreview,
   PatronTrafficPathOverlay,
   PatronAisleOverlay,
+  UnifiedLayoutFlowOverlay,
+  type UnifiedClearanceHeatCell,
   SelectionChrome,
   SelectionRotateHandles,
 } from './canvas-overlays'
@@ -142,6 +144,11 @@ export interface FloorPlanCanvasProps {
     width: number
     height: number
   }> | null
+  /** Unified solver spine + clearance heat overlay (feet). */
+  unifiedLayoutOverlay?: {
+    spinePath: ReadonlyArray<{ x: number; y: number }> | null
+    clearanceField: ReadonlyArray<UnifiedClearanceHeatCell> | null
+  } | null
   /** Command center: higher zoom floor so drags feel less jumpy when framed out. */
   commandCenterViewport?: boolean
   /** Keep draw tool armed between placements; show hover ghost preview. */
@@ -202,6 +209,7 @@ export function FloorPlanCanvas({
   autoArrangeMode = 'grid',
   patronTrafficPath = null,
   patronAisleCorridors = null,
+  unifiedLayoutOverlay = null,
   commandCenterViewport = false,
   scrollHost = true,
   stickyDrawPlacement = false,
@@ -820,6 +828,11 @@ export function FloorPlanCanvas({
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
           <PatronAisleOverlay corridors={patronAisleCorridors} pxPerFt={pxPerFt} />
           <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />
+          <UnifiedLayoutFlowOverlay
+            spinePath={unifiedLayoutOverlay?.spinePath}
+            clearanceField={unifiedLayoutOverlay?.clearanceField}
+            pxPerFt={pxPerFt}
+          />
           {editingObj ? (
             <InlineLabelEditor
               obj={editingObj}

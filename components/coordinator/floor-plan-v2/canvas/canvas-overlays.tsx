@@ -354,6 +354,75 @@ export function PatronAisleOverlay({ corridors, pxPerFt }: PatronAisleOverlayPro
   )
 }
 
+export interface UnifiedClearanceHeatCell {
+  x: number
+  y: number
+  sizeFt: number
+  band: 'critical' | 'tight' | 'good'
+}
+
+interface UnifiedLayoutFlowOverlayProps {
+  spinePath: ReadonlyArray<{ x: number; y: number }> | null | undefined
+  clearanceField: ReadonlyArray<UnifiedClearanceHeatCell> | null | undefined
+  pxPerFt: number
+}
+
+const HEAT_FILL: Record<UnifiedClearanceHeatCell['band'], string> = {
+  critical: '#fecaca',
+  tight: '#fef08a',
+  good: '#bbf7d0',
+}
+
+/** Unified solver spine polyline + clearance-band heat field. */
+export function UnifiedLayoutFlowOverlay({
+  spinePath,
+  clearanceField,
+  pxPerFt,
+}: UnifiedLayoutFlowOverlayProps) {
+  const hasHeat = Boolean(clearanceField?.length)
+  const hasSpine = Boolean(spinePath && spinePath.length >= 2)
+  if (!hasHeat && !hasSpine) return null
+
+  const spinePoints = hasSpine
+    ? spinePath!.map((p) => `${p.x * pxPerFt},${p.y * pxPerFt}`).join(' ')
+    : ''
+
+  return (
+    <g
+      aria-label="Unified layout patron spine and clearance heat"
+      pointerEvents="none"
+      className="unified-layout-flow-overlay"
+    >
+      {hasHeat
+        ? clearanceField!.map((cell, i) => (
+            <rect
+              key={`unified-heat-${i}`}
+              x={cell.x * pxPerFt}
+              y={cell.y * pxPerFt}
+              width={cell.sizeFt * pxPerFt}
+              height={cell.sizeFt * pxPerFt}
+              fill={HEAT_FILL[cell.band]}
+              fillOpacity={0.22}
+              stroke="none"
+            />
+          ))
+        : null}
+      {hasSpine ? (
+        <polyline
+          points={spinePoints}
+          fill="none"
+          stroke="#059669"
+          strokeWidth={2.5}
+          strokeDasharray="10 6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        />
+      ) : null}
+    </g>
+  )
+}
+
 export function SelectionOverlay({
   objects,
   selectedIds,

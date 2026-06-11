@@ -31,6 +31,9 @@ import {
   runPatronPerimeterLayout,
   runVendorPerimeterLayout,
 } from '@/src/utils/layoutMergeEngine'
+import {
+  autoArrangeVendorUnifiedInRoom,
+} from '@/components/coordinator/floor-plan-v2/engine/BoothArrangementEngine'
 
 export interface RunAutoArrangeWithAiResult extends AutoArrangeInRoomResult {
   /** True when Gemini returned placements (deterministic engine skipped). */
@@ -215,6 +218,38 @@ function deterministicFallback(
 ): AutoArrangeInRoomResult | null {
   const mode = options.mode ?? 'grid'
   const scope = options.scope ?? 'vendor'
+  const useUnified =
+    options.layoutSolver === 'unified' ||
+    (mode !== 'grid' && scope !== 'patron')
+
+  if (useUnified) {
+    const traffic = evaluateTrafficFlowPrerequisites(doc, roomId)
+    if (traffic.satisfied || options.layoutSolver === 'unified') {
+      const unified = autoArrangeVendorUnifiedInRoom(doc, roomId, {
+        ...options,
+        layoutSolver: 'unified',
+      })
+      if (unified && unified.placedCount > 0) {
+        if (scope === 'all') {
+          const patronPass = autoArrangeInRoom(unified.doc, roomId, {
+            ...options,
+            scope: 'patron',
+            layoutSolver: 'traffic-aware',
+          })
+          if (patronPass) {
+            return {
+              ...patronPass,
+              placedCount: unified.placedCount + patronPass.placedCount,
+              unifiedMeta: unified.unifiedMeta,
+              unifiedSolverUsed: unified.unifiedSolverUsed,
+            }
+          }
+        }
+        return unified
+      }
+    }
+  }
+
   if (mode === 'perimeter-only' && scope !== 'all') {
     return scope === 'patron'
       ? runPatronPerimeterLayout(doc, roomId, options)

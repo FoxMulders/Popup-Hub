@@ -29,6 +29,18 @@ export {
   TRAFFIC_PATH_WIDTH_FT,
   BOOTH_CLEARANCE_BUFFER_FT,
 } from './engine/AutoArrangeEngine'
+export {
+  runUnifiedLayoutSolver,
+  packBoothsUnifiedForRoom,
+  UNIFIED_IDEAL_CLEARANCE_FT,
+  minPairwiseClearanceFt,
+  countCriticalClearanceViolations,
+} from './engine/UnifiedLayoutSolver'
+export type {
+  UnifiedSolverMeta,
+  UnifiedSolverResult,
+  ClearanceHeatCell,
+} from './engine/UnifiedLayoutSolver'
 export type {
   BoothPackInput,
   BoothPlacement,

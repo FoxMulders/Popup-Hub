@@ -62,6 +62,7 @@ import {
   PackBooths,
   vendorBoothsInRoom,
 } from './engine/BoothArrangementEngine'
+import type { UnifiedSolverMeta } from './engine/UnifiedLayoutSolver'
 import { CalculateOptimalPath } from './engine/PathfindingService'
 import { usePathfinding } from './hooks/use-pathfinding'
 import {
@@ -426,6 +427,10 @@ function FloorPlanV2Workspace({
     }
   )
   const [patronPathEnabled, setPatronPathEnabled] = useState(false)
+  const [unifiedLayoutOverlay, setUnifiedLayoutOverlay] = useState<{
+    spinePath: ReadonlyArray<{ x: number; y: number }>
+    clearanceField: UnifiedSolverMeta['clearanceField']
+  } | null>(null)
 
   useEffect(() => {
     if (!isDashboard) return
@@ -613,6 +618,7 @@ function FloorPlanV2Workspace({
 
   useEffect(() => {
     setPatronPathEnabled(false)
+    setUnifiedLayoutOverlay(null)
   }, [activeRoomId])
 
   // New rooms become the active room in the sidebar but did not set
@@ -1670,6 +1676,7 @@ function FloorPlanV2Workspace({
     const arrangeOptions = {
       scope: 'all' as const,
       mode: autoArrangeMode,
+      layoutSolver: 'unified' as const,
       eventCategoryNames,
       baselineTableLengthFt: safeTableSizeFt,
       vendorTableMetaByKey,
@@ -1698,6 +1705,13 @@ function FloorPlanV2Workspace({
         return
       }
       store.replaceObjects(result.doc.objects)
+      if (result.unifiedMeta) {
+        setUnifiedLayoutOverlay({
+          spinePath: result.unifiedMeta.pathway,
+          clearanceField: result.unifiedMeta.clearanceField,
+        })
+        setPatronPathEnabled(true)
+      }
       const spaceOverflow = result.overflowCount + result.droppedCount
       if (spaceOverflow > 0) {
         toast.warning(
@@ -1743,7 +1757,10 @@ function FloorPlanV2Workspace({
     const booths = vendorBoothsInRoom(store.doc, activeRoomId)
     const before = booths.map((b) => ({ ...b }))
     const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
-    const packResult = PackBooths(store.doc, activeRoomId, cleared)
+    const packResult = PackBooths(store.doc, activeRoomId, cleared, {
+      layoutSolver: 'unified',
+      eventCategoryNames,
+    })
     const packedDoc = applyPackedBoothsToDoc(
       store.doc,
       activeRoomId,
@@ -1752,7 +1769,15 @@ function FloorPlanV2Workspace({
     const pathResult = CalculateOptimalPath(packedDoc, activeRoomId)
 
     commitVendorPackWithSpring(before, packResult.booths, packedDoc)
-    setPatronPathEnabled((pathResult?.path.length ?? 0) >= 2)
+    if (packResult.unifiedMeta) {
+      setUnifiedLayoutOverlay({
+        spinePath: packResult.unifiedMeta.pathway,
+        clearanceField: packResult.unifiedMeta.clearanceField,
+      })
+      setPatronPathEnabled(true)
+    } else {
+      setPatronPathEnabled((pathResult?.path.length ?? 0) >= 2)
+    }
 
     if (packResult.placedCount === 0) {
       toast.error('Auto-layout could not fit any booths inside the merged zone.')
@@ -1774,7 +1799,7 @@ function FloorPlanV2Workspace({
         `Packed ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'}. Add entrance/exit doors to visualize traffic flow.`
       )
     }
-  }, [activeRoomId, commitVendorPackWithSpring, store, vendorBoothCount])
+  }, [activeRoomId, commitVendorPackWithSpring, eventCategoryNames, store, vendorBoothCount])
 
   const handleAutoArrange = useCallback(() => {
     if (vendorBoothCount === 0) {
@@ -1791,7 +1816,10 @@ function FloorPlanV2Workspace({
     const booths = vendorBoothsInRoom(store.doc, activeRoomId)
     const before = booths.map((b) => ({ ...b }))
     const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
-    const packResult = PackBooths(store.doc, activeRoomId, cleared)
+    const packResult = PackBooths(store.doc, activeRoomId, cleared, {
+      layoutSolver: 'unified',
+      eventCategoryNames,
+    })
     const packedDoc = applyPackedBoothsToDoc(
       store.doc,
       activeRoomId,
@@ -1799,6 +1827,13 @@ function FloorPlanV2Workspace({
     )
 
     commitVendorPackWithSpring(before, packResult.booths, packedDoc)
+    if (packResult.unifiedMeta) {
+      setUnifiedLayoutOverlay({
+        spinePath: packResult.unifiedMeta.pathway,
+        clearanceField: packResult.unifiedMeta.clearanceField,
+      })
+      setPatronPathEnabled(true)
+    }
 
     if (packResult.placedCount === 0) {
       toast.error(
@@ -1818,7 +1853,7 @@ function FloorPlanV2Workspace({
         `Auto-arranged ${packResult.placedCount} booth${packResult.placedCount === 1 ? '' : 's'} in ${frame.name} with traffic-optimized layout and 3′ clearance.`
       )
     }
-  }, [activeRoomId, commitVendorPackWithSpring, store, vendorBoothCount])
+  }, [activeRoomId, commitVendorPackWithSpring, eventCategoryNames, store, vendorBoothCount])
 
   const handlePatronPathToggle = useCallback(() => {
     setPatronPathEnabled((enabled) => {
@@ -2466,6 +2501,7 @@ function FloorPlanV2Workspace({
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
                     patronAisleCorridors={patronAisleCorridors}
+                    unifiedLayoutOverlay={unifiedLayoutOverlay}
                     onProximityViolation={(info) => {
                       toast.error(
                         `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
@@ -2629,6 +2665,7 @@ function FloorPlanV2Workspace({
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
                     patronAisleCorridors={patronAisleCorridors}
+                    unifiedLayoutOverlay={unifiedLayoutOverlay}
                     onProximityViolation={(info) => {
                       toast.error(
                         `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,

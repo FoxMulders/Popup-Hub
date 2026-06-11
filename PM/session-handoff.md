@@ -1137,6 +1137,33 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - **Deploy tooling:** `init-shell-env.ps1` (PATH for Explorer launches); `git-sync.ps1` (`Invoke-NativeCommand` / `Invoke-Git`, stale lock recovery); `Deploy-popuphub.bat` (pwsh when available, any cwd, default commit message for current WIP, `--no-pause`); handoff baseline records deploy commit message
 - **Deploy fix (local, uncommitted):** Windows PowerShell `$ErrorActionPreference = 'Stop'` + `2>&1 | ForEach-Object` treated Vercel/git stderr as fatal — fixed via `Invoke-NativeCommand`
 
+## Shipped this session (Unified Auto-Arrange + Patron Flow solver, not deployed)
+- **`UnifiedLayoutSolver.ts`:** Coupled booth + spine solver — skeleton init (serpentine pathway + no-fly rects) → patron-centric slot seed → coupled force loop (4′ ideal / 2′–3′ / ≤2′ clearance bands + category proximity kernel) → hard projection + minimum-clearance enforcement.
+- **Wiring:** `layoutSolver: 'unified'` on `PackBooths` / `autoArrangeVendorUnifiedInRoom`; AI Auto-Arrange (non-grid) tries unified first via `request-ai-auto-arrange.ts` deterministic fallback; traffic-aware pack remains fallback when unified places zero.
+- **Overlay:** `UnifiedLayoutFlowOverlay` — emerald spine polyline + clearance-band heat field (`critical`/`tight`/`good`); auto-enabled after unified arrange / AI Auto-Arrange when solver meta present.
+- **Verify:** `npx tsx scripts/verify-auto-arrange-engine.ts` — PASS (traffic-aware + unified placement + sparse-room ≥4′ clearance regression).
+
+## Active work — Unified Auto-Arrange + Patron Flow (simultaneous optimization spec)
+
+**Status:** Implemented locally — see shipped section above. Remaining: prod smoke-test on `/coordinator/dashboard` with entry/exit doors → AI Auto-Arrange (Staggered/Perimeter) → spine + heat overlay visible; Toggle Patron Flow still shows legacy aisle/path overlays.
+
+**Existing anchors (do not duplicate):**
+- Clearance bands: `lib/coordinator/booth-clearance-visual.ts` (`BOOTH_CLEARANCE_GOOD_FT = 4`, `TIGHT = 3`, `CRITICAL = 2`)
+- Category proximity: `category-rules.ts` (`PROXIMITY_MIN_COLUMNS/ROWS` → spatial density kernel)
+- Patron spine (v1): `patron-centric-layout.ts` `buildPatronPathway` + `AutoArrangeEngine.ts` `buildTrafficNoFlyRects`
+- Modified Loop (grid preset): `lib/booth-planner/modified-loop-layout.ts` + `patron-path-trace.ts`
+- Aisle target: `layout-clearance-constants.ts` `VENDOR_BOOTH_AISLE_FT = 3` (engine lifts auto-arrange floor to 4′ ideal via `UNIFIED_IDEAL_CLEARANCE_FT`)
+
+~~**Next implementation steps:**~~
+~~1. Add `UnifiedLayoutSolver` module~~ — **done**
+~~2. Wire as opt-in mode on AI Auto-Arrange~~ — **done**
+~~3. Extend `verify-auto-arrange-engine.ts`~~ — **done**
+~~4. Patron Flow Overlay~~ — **done**
+
+**Blockers:** None — prod smoke-test pending.
+
+---
+
 ## Active work — Layout blank start + navigation
 
 ### Root causes addressed
