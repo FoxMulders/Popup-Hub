@@ -1,1 +1,0 @@
-feat: dashboard and floor-plan editor polish

@@ -90,7 +90,7 @@
 - **`dashboard-command-center-header.tsx`:** Edit/Preview toggle restored at header right (Blueprint Studio only); workspace tabs + portaled room/canvas toolbar use `overflow-hidden` (no horizontal scrollbar). +New market removed from header row.
 - **`canvas-command-bar.tsx` / `canvas-toolbar-static.tsx` / `globals.css`:** Header bar layout no longer scrolls horizontally.
 
-## Shipped this session (dashboard and floor-plan editor polish, not deployed)
+## Shipped this session (dashboard and floor-plan editor polish, deployed 2026-06-11)
 - **Header row:** Uniform `--dashboard-toolbar-height` on tabs, Event setup, view/setup, dual-screen, hall management, Edit/Preview; compact icon controls; no horizontal scrollbar (`globals.css`, `dashboard-command-center-header.tsx`, `canvas-command-bar-blocks.tsx`, `layout-room-bar.tsx`, `command-button.tsx`).
 - **Header layout:** Event setup in main row; DUAL-SCREEN Presenter/Wall Cast cluster; hall W/L dimension fields; Edit/Preview restored (`command-center-exit-link.tsx`, `canvas-toolbar-static.tsx`, `toolbar-static-layout.ts`).
 - **Canvas UX:** Legend + allocation ledger as matching 200px side rails inside canvas host; preview fullscreen mode; deferred pathfinding/patron aisle overlay for faster booth delete INP.
@@ -492,9 +492,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `77d7cee` (pushed to `origin/master`)
-- Last deploy commit: `77d7cee` - feat: Blueprint Studio two-row dashboard layout
-- Production: https://popuphub.ca - **v1.0.0 build 91** | commit `d469da4` (handoff updated 2026-06-11 15:47)
+- Branch: `master` @ `ce107af` (pushed to `origin/master`)
+- Last deploy commit: `ce107af` - feat: dashboard and floor-plan editor polish
+- Production: https://popuphub.ca - **v1.0.0 build 92** | commit `0813426` (handoff updated 2026-06-11 16:42)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -871,7 +871,7 @@
 
 
 ## Last deploy
-- 2026-06-11 15:47 - Deploy via deploy-popuphub.ps1 - `feat: Blueprint Studio two-row dashboard layout` (77d7cee)
+- 2026-06-11 16:42 - Deploy via deploy-popuphub.ps1 - `feat: dashboard and floor-plan editor polish` (ce107af)
 
 
 ## Goal
