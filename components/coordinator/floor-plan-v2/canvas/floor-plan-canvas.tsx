@@ -16,7 +16,9 @@ import {
   MarqueePreview,
   PatronTrafficPathOverlay,
   PatronAisleOverlay,
+  TrafficExposureOverlay,
   UnifiedLayoutFlowOverlay,
+  type TrafficExposureHeatCell,
   type UnifiedClearanceHeatCell,
   SelectionChrome,
   SelectionRotateHandles,
@@ -149,6 +151,12 @@ export interface FloorPlanCanvasProps {
     spinePath: ReadonlyArray<{ x: number; y: number }> | null
     clearanceField: ReadonlyArray<UnifiedClearanceHeatCell> | null
   } | null
+  /** Foot-traffic simulation aisle heatmap + booth exposure tint. */
+  trafficExposureOverlay?: {
+    heatmapCells: ReadonlyArray<TrafficExposureHeatCell>
+    boothExposureByObjectId: ReadonlyMap<string, number>
+  } | null
+  trafficSimulationLoading?: boolean
   /** Command center: higher zoom floor so drags feel less jumpy when framed out. */
   commandCenterViewport?: boolean
   /** Keep draw tool armed between placements; show hover ghost preview. */
@@ -210,6 +218,8 @@ export function FloorPlanCanvas({
   patronTrafficPath = null,
   patronAisleCorridors = null,
   unifiedLayoutOverlay = null,
+  trafficExposureOverlay = null,
+  trafficSimulationLoading = false,
   commandCenterViewport = false,
   scrollHost = true,
   stickyDrawPlacement = false,
@@ -828,6 +838,15 @@ export function FloorPlanCanvas({
           <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} />
           <PatronAisleOverlay corridors={patronAisleCorridors} pxPerFt={pxPerFt} />
           <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />
+          <TrafficExposureOverlay
+            heatmapCells={trafficExposureOverlay?.heatmapCells}
+            boothExposureByObjectId={
+              trafficExposureOverlay?.boothExposureByObjectId
+            }
+            objects={store.doc.objects}
+            pxPerFt={pxPerFt}
+            loading={trafficSimulationLoading}
+          />
           <UnifiedLayoutFlowOverlay
             spinePath={unifiedLayoutOverlay?.spinePath}
             clearanceField={unifiedLayoutOverlay?.clearanceField}

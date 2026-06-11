@@ -22,6 +22,8 @@ import {
   useFloorPlanDoc,
   type FloorPlanDocStore,
 } from './use-floor-plan-doc'
+import { useTrafficSimulation } from '../hooks/use-traffic-simulation'
+import type { TrafficSimulationResult } from '@/src/utils/trafficSimulation'
 
 function roomsGeometryValid(rooms: RoomFrame[] | undefined): boolean {
   if (!rooms || rooms.length === 0) return false
@@ -63,11 +65,21 @@ export interface CanvasStore extends FloorPlanDocStore {
   resetState: () => void
   /** Bootstrap a default 50×50′ Main Hall (auto-init only). */
   seedMainHall: () => void
+  /** Foot-traffic simulation output when enabled (async, non-blocking). */
+  trafficSimulation: TrafficSimulationResult | null
+  trafficSimulationLoading: boolean
+  /** Booth exposure scores 0–100 keyed by booth object id. */
+  boothExposureByObjectId: ReadonlyMap<string, number>
+  trafficSimulationProgress: { completed: number; total: number } | null
 }
 
 export interface UseCanvasStoreOptions {
   disableAutoMainHall?: boolean
   eventId?: string
+  /** Active room for traffic simulation (wizard selection). */
+  activeRoomId?: string | null
+  /** Run patron drift simulation and compute booth exposure heatmap. */
+  trafficSimulationEnabled?: boolean
 }
 
 export function useCanvasStore(
@@ -76,6 +88,8 @@ export function useCanvasStore(
 ): CanvasStore {
   const disableAutoMainHall = options?.disableAutoMainHall ?? false
   const eventId = options?.eventId
+  const activeRoomId = options?.activeRoomId ?? null
+  const trafficSimulationEnabled = options?.trafficSimulationEnabled ?? false
   const store = useFloorPlanDoc(forceRecomputeGeometry(initial), {
     disableAutoMainHall,
     eventId,
@@ -90,6 +104,16 @@ export function useCanvasStore(
   )
 
   const rooms = useMemo(() => activeRoomFrames(store.doc), [store.doc])
+
+  const {
+    result: trafficSimulation,
+    loading: trafficSimulationLoading,
+    boothExposureByObjectId,
+    progress: trafficSimulationProgress,
+  } = useTrafficSimulation(store.doc, activeRoomId, {
+    enabled: trafficSimulationEnabled,
+    cellFt: store.doc.snapFt,
+  })
 
   const validatePlacement = useCallback(
     (
@@ -153,7 +177,22 @@ export function useCanvasStore(
       validatePlacement,
       resetState,
       seedMainHall,
+      trafficSimulation,
+      trafficSimulationLoading,
+      boothExposureByObjectId,
+      trafficSimulationProgress,
     }),
-    [logState, resetState, rooms, seedMainHall, store, validatePlacement]
+    [
+      boothExposureByObjectId,
+      logState,
+      resetState,
+      rooms,
+      seedMainHall,
+      store,
+      trafficSimulation,
+      trafficSimulationLoading,
+      trafficSimulationProgress,
+      validatePlacement,
+    ]
   )
 }

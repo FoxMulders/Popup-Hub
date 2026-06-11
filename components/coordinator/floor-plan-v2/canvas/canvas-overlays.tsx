@@ -373,6 +373,111 @@ const HEAT_FILL: Record<UnifiedClearanceHeatCell['band'], string> = {
   good: '#bbf7d0',
 }
 
+export interface TrafficExposureHeatCell {
+  x: number
+  y: number
+  sizeFt: number
+  /** Visit density 0–1. */
+  intensity: number
+}
+
+interface TrafficExposureOverlayProps {
+  heatmapCells: ReadonlyArray<TrafficExposureHeatCell> | null | undefined
+  boothExposureByObjectId?: ReadonlyMap<string, number>
+  objects: ReadonlyArray<PlacedObject>
+  pxPerFt: number
+  loading?: boolean
+}
+
+function exposureTint(score: number): string {
+  if (score >= 75) return '#ef4444'
+  if (score >= 50) return '#f97316'
+  if (score >= 25) return '#facc15'
+  return '#38bdf8'
+}
+
+function aisleHeatFill(intensity: number): string {
+  if (intensity >= 0.75) return '#dc2626'
+  if (intensity >= 0.5) return '#f97316'
+  if (intensity >= 0.25) return '#fbbf24'
+  return '#3b82f6'
+}
+
+/**
+ * Aisle visit heatmap (cool blue → hot red) plus booth exposure tint overlay.
+ */
+export function TrafficExposureOverlay({
+  heatmapCells,
+  boothExposureByObjectId,
+  objects,
+  pxPerFt,
+  loading = false,
+}: TrafficExposureOverlayProps) {
+  const hasHeat = Boolean(heatmapCells?.length)
+  const booths = objects.filter((o) => o.kind === 'booth')
+  const hasBoothTint = Boolean(
+    boothExposureByObjectId?.size && booths.length > 0
+  )
+  if (!hasHeat && !hasBoothTint && !loading) return null
+
+  return (
+    <g
+      aria-label="Foot traffic simulation heatmap"
+      pointerEvents="none"
+      className="traffic-exposure-overlay"
+    >
+      {hasHeat
+        ? heatmapCells!.map((cell, i) => (
+            <rect
+              key={`traffic-heat-${i}`}
+              x={cell.x * pxPerFt}
+              y={cell.y * pxPerFt}
+              width={cell.sizeFt * pxPerFt}
+              height={cell.sizeFt * pxPerFt}
+              fill={aisleHeatFill(cell.intensity)}
+              fillOpacity={0.18 + cell.intensity * 0.22}
+              stroke="none"
+            />
+          ))
+        : null}
+      {hasBoothTint
+        ? booths.map((booth) => {
+            const score = boothExposureByObjectId?.get(booth.id)
+            if (score == null || score <= 0) return null
+            const aabb = rotatedAabb(booth)
+            return (
+              <rect
+                key={`traffic-booth-${booth.id}`}
+                x={aabb.x * pxPerFt}
+                y={aabb.y * pxPerFt}
+                width={aabb.width * pxPerFt}
+                height={aabb.height * pxPerFt}
+                fill={exposureTint(score)}
+                fillOpacity={0.12 + (score / 100) * 0.28}
+                stroke={exposureTint(score)}
+                strokeWidth={1.25}
+                strokeOpacity={0.45}
+                rx={2}
+              />
+            )
+          })
+        : null}
+      {loading ? (
+        <text
+          x={12}
+          y={20}
+          fill="#0f172a"
+          fontSize={11}
+          fontWeight={600}
+          opacity={0.7}
+        >
+          Simulating foot traffic…
+        </text>
+      ) : null}
+    </g>
+  )
+}
+
 /** Unified solver spine polyline + clearance-band heat field. */
 export function UnifiedLayoutFlowOverlay({
   spinePath,

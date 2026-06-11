@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (foot traffic simulation engine, not deployed)
+- **`src/utils/trafficSimulation.ts`:** Waypoint grid from walkable aisles; A* patron paths with stochastic drift; booth exposure scoring (0–100) via sight-radius + facing check; aisle heatmap cells; async batching via `requestIdleCallback`.
+- **`hooks/use-traffic-simulation.ts` + `use-canvas-store.ts`:** Canvas store exposes `trafficSimulation`, `boothExposureByObjectId`, loading/progress when `trafficSimulationEnabled`.
+- **Canvas UI:** `TrafficExposureOverlay` heatmap (blue→red aisles, booth tint); Footprints toolbar toggle in Blueprint Studio command bar.
+- **Build fix:** `collect-sitemap-entries.ts` — skip Supabase-backed URLs when `NEXT_PUBLIC_SUPABASE_*` env is unset so `npm run build` succeeds in env-less CI/sandbox.
+- **Verify:** `npx tsc --noEmit` + `npm run build` — PASS. Smoke: `/coordinator/dashboard` → place booths + entry/exit doors → toggle Footprints icon → aisle heat + booth exposure overlay appears without blocking drag.
+
 ## Shipped this session (header nav UI/UX — profile in menu, logo +15%, menu scroll, deployed 2026-06-11)
 - **`app-nav.tsx` / `shopper-top-bar.tsx`:** Removed profile avatar from header right rail; profile access via `AppMenuSheet` (avatar + name banner + Profile settings). Shopper top bar hamburger now visible on all breakpoints for signed-in users.
 - **`app-menu-sheet.tsx`:** Fixed menu cut-off — `h-dvh` sheet height, safe-area padding on header/nav children (not outer shell), scrollable `overflow-y-auto` nav body.

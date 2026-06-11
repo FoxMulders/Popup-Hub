@@ -67,6 +67,9 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   saveDraftLoading?: boolean
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
+  trafficSimulationEnabled?: boolean
+  onTrafficSimulationToggle?: () => void
+  trafficSimulationLoading?: boolean
   eventId?: string | null
   onRequestAiLayoutFeedback?: () => void
   canRequestAiLayoutFeedback?: boolean
@@ -161,6 +164,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     saveDraftLoading,
     patronPathEnabled,
     onPatronPathToggle,
+    trafficSimulationEnabled,
+    onTrafficSimulationToggle,
+    trafficSimulationLoading,
     eventId,
     onRequestAiLayoutFeedback,
     canRequestAiLayoutFeedback,
@@ -280,6 +286,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       saveDraftLoading,
       patronPathEnabled,
       onPatronPathToggle,
+      trafficSimulationEnabled,
+      onTrafficSimulationToggle,
+      trafficSimulationLoading,
       onRequestAiLayoutFeedback,
       canRequestAiLayoutFeedback,
       aiLayoutFeedbackLoading,
@@ -364,6 +373,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       saveDraftLoading,
       patronPathEnabled,
       onPatronPathToggle,
+      trafficSimulationEnabled,
+      onTrafficSimulationToggle,
+      trafficSimulationLoading,
       onRequestAiLayoutFeedback,
       canRequestAiLayoutFeedback,
       aiLayoutFeedbackLoading,
