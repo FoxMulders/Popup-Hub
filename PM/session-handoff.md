@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — publish blocked by Geocoding API key (branch `cursor/google-geocoding-publish-fix-1d38`, not deployed)
+- **Root cause:** Publish calls `POST /api/coordinator/venues/verify` → server **Geocoding API** (`maps.googleapis.com/maps/api/geocode/json`). Browser maps use **Maps JavaScript API** + **Places API** only — a key restricted to those two APIs fails at publish with “This API key is not authorized…”.
+- **Code:** Clearer Geocoding-specific error; accept Google Places `types` from wizard / stored `venue_place_types` so publish can verify without server Geocoding when user picked a venue from Places autocomplete.
+- **Ops fix (required for map-click-only venues):** Google Cloud Console → enable **Geocoding API** → Credentials → edit Vercel key (`GOOGLE_MAPS_SERVER_API_KEY` preferred, else `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`) → API restrictions must include Geocoding API (or use separate server key with Geocoding only).
+- **Verify:** `npx tsx scripts/verify-venue-coordinates.ts` — PASS. Smoke: publish draft event after Places venue pick; or enable Geocoding API and publish with manual pin.
+
 ## Active work — dashboard header uniform button sizing (local, not deployed)
 - **`globals.css`:** Header row controls (tabs, pill toggle, toolbar buttons) normalized to `--dashboard-toolbar-height`; `overflow-x: hidden` on command-center header.
 - **`dashboard-command-center-header.tsx`:** Tighter header gaps.
