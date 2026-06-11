@@ -353,10 +353,14 @@ function FloorPlanV2Workspace({
     []
   )
 
+  const [trafficSimulationEnabled, setTrafficSimulationEnabled] = useState(false)
+
   const disableAutoMainHall = true
   const store = useCanvasStore(initialDoc, {
     disableAutoMainHall,
     eventId: eventId ?? undefined,
+    activeRoomId: layoutActiveRoomId,
+    trafficSimulationEnabled,
   })
   const { addLog, logState, logError } = useDebugLog()
 
@@ -1867,6 +1871,31 @@ function FloorPlanV2Workspace({
     })
   }, [])
 
+  const handleTrafficSimulationToggle = useCallback(() => {
+    setTrafficSimulationEnabled((enabled) => {
+      const next = !enabled
+      if (next) {
+        toast.message(
+          'Traffic simulation on — aisle heatmap and booth exposure scores updating.',
+          { duration: 3600 }
+        )
+      }
+      return next
+    })
+  }, [])
+
+  const trafficExposureOverlay = useMemo(() => {
+    if (!trafficSimulationEnabled || !store.trafficSimulation) return null
+    return {
+      heatmapCells: store.trafficSimulation.heatmapCells,
+      boothExposureByObjectId: store.boothExposureByObjectId,
+    }
+  }, [
+    store.boothExposureByObjectId,
+    store.trafficSimulation,
+    trafficSimulationEnabled,
+  ])
+
   const handleAddRoomWithSelectTool = useCallback(
     (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
       onAddRoom?.(options)
@@ -2355,6 +2384,9 @@ function FloorPlanV2Workspace({
       saveDraftLoading={saveDraftLoading}
       patronPathEnabled={patronPathEnabled}
       onPatronPathToggle={handlePatronPathToggle}
+      trafficSimulationEnabled={trafficSimulationEnabled}
+      onTrafficSimulationToggle={handleTrafficSimulationToggle}
+      trafficSimulationLoading={store.trafficSimulationLoading}
       eventId={eventId}
     />
   ) : null
@@ -2502,6 +2534,8 @@ function FloorPlanV2Workspace({
                     patronTrafficPath={patronTrafficPath}
                     patronAisleCorridors={patronAisleCorridors}
                     unifiedLayoutOverlay={unifiedLayoutOverlay}
+                    trafficExposureOverlay={trafficExposureOverlay}
+                    trafficSimulationLoading={store.trafficSimulationLoading}
                     onProximityViolation={(info) => {
                       toast.error(
                         `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,
@@ -2629,6 +2663,9 @@ function FloorPlanV2Workspace({
                 saveDraftLoading={saveDraftLoading}
                 patronPathEnabled={patronPathEnabled}
                 onPatronPathToggle={handlePatronPathToggle}
+                trafficSimulationEnabled={trafficSimulationEnabled}
+                onTrafficSimulationToggle={handleTrafficSimulationToggle}
+                trafficSimulationLoading={store.trafficSimulationLoading}
               />
               <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-lg border border-stone-200 bg-stone-100">
                 <CanvasRootErrorBoundary
@@ -2666,6 +2703,8 @@ function FloorPlanV2Workspace({
                     patronTrafficPath={patronTrafficPath}
                     patronAisleCorridors={patronAisleCorridors}
                     unifiedLayoutOverlay={unifiedLayoutOverlay}
+                    trafficExposureOverlay={trafficExposureOverlay}
+                    trafficSimulationLoading={store.trafficSimulationLoading}
                     onProximityViolation={(info) => {
                       toast.error(
                         `Same-category booths must be at least 4 columns or 2 rows apart — "${info.category}" placement reverted.`,

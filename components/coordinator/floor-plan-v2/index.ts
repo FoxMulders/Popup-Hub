@@ -56,6 +56,18 @@ export {
   type NavigationGrid,
 } from './engine/PathfindingService'
 export { usePathfinding } from './hooks/use-pathfinding'
+export { useTrafficSimulation } from './hooks/use-traffic-simulation'
+export type { UseTrafficSimulationOptions, UseTrafficSimulationResult } from './hooks/use-traffic-simulation'
+export {
+  runTrafficSimulation,
+  runTrafficSimulationAsync,
+  buildTrafficWaypointGrid,
+  type TrafficSimulationResult,
+  type TrafficSimulationOptions,
+  type BoothExposure,
+  type TrafficHeatmapCell,
+  type TrafficWaypointGrid,
+} from '@/src/utils/trafficSimulation'
 export {
   activeRoomFrames,
   ensureCanvasHasPlaceableRoom,

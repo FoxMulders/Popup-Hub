@@ -65,5 +65,9 @@ export function useCanvasStoreWizardQa(
     validatePlacement,
     resetState,
     seedMainHall,
+    trafficSimulation: null,
+    trafficSimulationLoading: false,
+    boothExposureByObjectId: new Map<string, number>(),
+    trafficSimulationProgress: null,
   }
 }
