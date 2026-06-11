@@ -1,1 +1,0 @@
-feat: dashboard layout toolbar compaction + shared footer

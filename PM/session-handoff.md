@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (dashboard layout toolbar compaction + shared footer, not deployed)
+## Shipped this session (dashboard layout toolbar compaction + shared footer, deployed 2026-06-11)
 - **SHAPES & BOOTHS single row:** `canvas-toolbar-static.tsx` + `globals.css` — primitives, vendor booths, and patron elements render in one horizontal row to maximize canvas height.
 - **ROOM & CANVAS in header:** Room/canvas controls portaled into Blueprint Studio header beside Edit/Preview and +New market via `DashboardHeaderToolbarPortalTarget`; top toolbar strip now shows Shapes & Booths + Alignment only (`toolbar-static-layout.ts` section filter, `floor-plan-v2.tsx` dual command-bar portals).
 - **Shared footer:** `dashboard-workspace-footer.tsx` — same `DashboardNextStepCta` footer on Blueprint Studio and Allocation Ledger views (`Dashboard_qa.tsx`); removed duplicate ledger-pane footers.
@@ -388,9 +388,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `19ddf46` (pushed to `origin/master`)
-- Last deploy commit: `19ddf46` - feat: ship 2 session updates (initial loader side booth stagger + right-align scale; dual-screen presenter vs wall-cast differentiation)
-- Production: https://popuphub.ca - **v1.0.0 build 89** | commit `8e05367` (handoff updated 2026-06-11 13:18)
+- Branch: `master` @ `41cd05f` (pushed to `origin/master`)
+- Last deploy commit: `41cd05f` - feat: dashboard layout toolbar compaction + shared footer
+- Production: https://popuphub.ca - **v1.0.0 build 90** | commit `174f470` (handoff updated 2026-06-11 15:23)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -767,7 +767,7 @@
 
 
 ## Last deploy
-- 2026-06-11 13:18 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (initial loader side booth stagger + right-align scale; dual-screen presenter vs wall-cast differentiation)` (19ddf46)
+- 2026-06-11 15:23 - Deploy via deploy-popuphub.ps1 - `feat: dashboard layout toolbar compaction + shared footer` (41cd05f)
 
 
 ## Goal
