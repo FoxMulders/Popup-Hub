@@ -1,6 +1,6 @@
 import type { Variants } from 'framer-motion'
 
-/** Stagger container for SHAPES & BOOTHS asset tables (vendor top, patron bottom). */
+/** Stagger container for SHAPES & BOOTHS — patron left, designer tools center, vendor right. */
 export const toolbarElementPanelsContainer: Variants = {
   hidden: {},
   visible: {
@@ -12,8 +12,8 @@ export const toolbarElementPanelsContainer: Variants = {
 }
 
 /**
- * Single asset table entry — strict vertical center axis (x stays 0).
- * Both vendor booths and patron elements share this path so they land centered.
+ * Single toolbar cluster entry — strict vertical center axis (x stays 0).
+ * Patron, designer tools, and vendor panels share this path so they land centered.
  */
 export const toolbarElementPanel: Variants = {
   hidden: {

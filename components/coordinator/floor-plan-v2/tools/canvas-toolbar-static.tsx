@@ -153,7 +153,7 @@ function TopBarAssetTablePanel({
 
   return (
     <motion.div
-      className="toolbar-element-panel flex w-full min-w-0 flex-col items-center justify-center gap-0.5"
+      className="toolbar-element-panel flex w-auto min-w-0 shrink-0 flex-col items-center justify-center gap-0.5"
       variants={reducedMotion ? undefined : toolbarElementPanel}
       initial={reducedMotion ? false : 'hidden'}
       animate={reducedMotion ? undefined : 'visible'}
@@ -191,7 +191,10 @@ function TopBarShapesBoothsSection({
     (id) => id === 'vendor' || id === 'vendor-sizes'
   )
   const patronBlocks = section.blocks.filter((id) => id === 'patron')
-  const hasAssetTables = vendorBlocks.length > 0 || patronBlocks.length > 0
+  const hasToolbarRow =
+    generalBlocks.length > 0 ||
+    vendorBlocks.length > 0 ||
+    patronBlocks.length > 0
 
   return (
     <section
@@ -200,41 +203,50 @@ function TopBarShapesBoothsSection({
       aria-label={section.header}
     >
       <SectionHeader>{section.header}</SectionHeader>
-      <div className="flex min-h-[var(--dashboard-toolbar-height)] min-w-0 flex-col items-center justify-center gap-2">
-        {generalBlocks.length > 0 ? (
-          <div className="flex min-w-0 flex-wrap items-center justify-center gap-1.5">
-            {generalBlocks.map((blockId) => (
-              <div
-                key={blockId}
-                className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
-              >
-                {renderBlock(blockId)}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {hasAssetTables ? (
+      <div className="flex min-h-[var(--dashboard-toolbar-height)] min-w-0 items-center justify-center">
+        {hasToolbarRow ? (
           <motion.div
-            className="toolbar-element-panels flex w-full min-w-0 flex-col items-center justify-center gap-1.5"
+            className="toolbar-element-panels flex w-full min-w-0 flex-row flex-wrap items-center justify-center gap-2"
             variants={reducedMotion ? undefined : toolbarElementPanelsContainer}
             initial={reducedMotion ? false : 'hidden'}
             animate={reducedMotion ? undefined : 'visible'}
           >
-            <TopBarAssetTablePanel
-              label="Vendor Booths"
-              tone="vendor"
-              blockIds={vendorBlocks}
-              renderBlock={renderBlock}
-              reducedMotion={reducedMotion}
-            />
-            <TopBarAssetTablePanel
-              label="Patron Elements"
-              tone="patron"
-              blockIds={patronBlocks}
-              renderBlock={renderBlock}
-              reducedMotion={reducedMotion}
-              patronRow
-            />
+            {patronBlocks.length > 0 ? (
+              <TopBarAssetTablePanel
+                label="Patron Elements"
+                tone="patron"
+                blockIds={patronBlocks}
+                renderBlock={renderBlock}
+                reducedMotion={reducedMotion}
+                patronRow
+              />
+            ) : null}
+            {generalBlocks.length > 0 ? (
+              <motion.div
+                className="toolbar-element-center flex min-w-0 flex-wrap items-center justify-center gap-1.5"
+                variants={reducedMotion ? undefined : toolbarElementPanel}
+                initial={reducedMotion ? false : 'hidden'}
+                animate={reducedMotion ? undefined : 'visible'}
+              >
+                {generalBlocks.map((blockId) => (
+                  <div
+                    key={blockId}
+                    className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
+                  >
+                    {renderBlock(blockId)}
+                  </div>
+                ))}
+              </motion.div>
+            ) : null}
+            {vendorBlocks.length > 0 ? (
+              <TopBarAssetTablePanel
+                label="Vendor Booths"
+                tone="vendor"
+                blockIds={vendorBlocks}
+                renderBlock={renderBlock}
+                reducedMotion={reducedMotion}
+              />
+            ) : null}
           </motion.div>
         ) : null}
       </div>

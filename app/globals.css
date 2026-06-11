@@ -589,14 +589,21 @@
   }
 
   .dashboard-toolbar-section[data-toolbar-section='shapes-booths'] > div:last-child {
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
   }
 
-  .dashboard-toolbar-section .toolbar-element-panels,
-  .dashboard-toolbar-section .toolbar-element-panel {
+  .dashboard-toolbar-section .toolbar-element-panels {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .dashboard-toolbar-section .toolbar-element-panel,
+  .dashboard-toolbar-section .toolbar-element-center {
     display: flex;
     flex-direction: column;
     align-items: center;
