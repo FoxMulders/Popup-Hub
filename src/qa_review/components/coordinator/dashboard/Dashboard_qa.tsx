@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
 import { useCommandCenterFullscreen } from '@/components/coordinator/dashboard/command-center-fullscreen-context'
@@ -11,6 +12,7 @@ import { DashboardAppShell } from '@/components/coordinator/dashboard/dashboard-
 import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashboard-canvas-column'
 import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 import { DashboardTopToolbarStrip } from '@/components/coordinator/dashboard/dashboard-top-toolbar-strip'
+import { DashboardWorkspaceFooter } from '@/components/coordinator/dashboard/dashboard-workspace-footer'
 import { DashboardNoRoomEmptyState } from '@/components/coordinator/dashboard/dashboard-no-room-empty-state'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
@@ -116,31 +118,34 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
         ariaBusy={ariaBusy}
         className="dashboard-app-shell--qa-global-scroll"
         center={
-          <div
-            className={QA_CANVAS_VIEWPORT_CLASS}
-            data-dashboard-preview={previewMode ? 'true' : undefined}
-          >
-            {showDesktopRequired ? (
-              <div
-                className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
-                aria-hidden
-              />
-            ) : isLedger ? (
-              <DashboardAllocationLedger />
-            ) : showNoRoomEmpty ? (
-              <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
-            ) : (
-              <DashboardSplitWorkspace
-                blueprint={
-                  <DashboardCanvasColumn
-                    showBlueprint={showBlueprint}
-                    mountCanvas={mountCanvas}
-                    reducedMotion={reducedMotion}
-                    onCanvasInteractive={handleCanvasInteractive}
-                  />
-                }
-              />
-            )}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div
+              className={cn(QA_CANVAS_VIEWPORT_CLASS, 'min-h-0 flex-1 overflow-hidden')}
+              data-dashboard-preview={previewMode ? 'true' : undefined}
+            >
+              {showDesktopRequired ? (
+                <div
+                  className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
+                  aria-hidden
+                />
+              ) : isLedger ? (
+                <DashboardAllocationLedger />
+              ) : showNoRoomEmpty ? (
+                <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
+              ) : (
+                <DashboardSplitWorkspace
+                  blueprint={
+                    <DashboardCanvasColumn
+                      showBlueprint={showBlueprint}
+                      mountCanvas={mountCanvas}
+                      reducedMotion={reducedMotion}
+                      onCanvasInteractive={handleCanvasInteractive}
+                    />
+                  }
+                />
+              )}
+            </div>
+            <DashboardWorkspaceFooter />
           </div>
         }
       />

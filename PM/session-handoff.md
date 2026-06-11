@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (dashboard layout toolbar compaction + shared footer, not deployed)
+- **SHAPES & BOOTHS single row:** `canvas-toolbar-static.tsx` + `globals.css` — primitives, vendor booths, and patron elements render in one horizontal row to maximize canvas height.
+- **ROOM & CANVAS in header:** Room/canvas controls portaled into Blueprint Studio header beside Edit/Preview and +New market via `DashboardHeaderToolbarPortalTarget`; top toolbar strip now shows Shapes & Booths + Alignment only (`toolbar-static-layout.ts` section filter, `floor-plan-v2.tsx` dual command-bar portals).
+- **Shared footer:** `dashboard-workspace-footer.tsx` — same `DashboardNextStepCta` footer on Blueprint Studio and Allocation Ledger views (`Dashboard_qa.tsx`); removed duplicate ledger-pane footers.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — room tools in header row; shapes/booths one row; footer visible on both workspace tabs.
+
 ## Shipped this session (initial loader side booth stagger + right-align scale, deployed 2026-06-11)
 - **`components/brand/initial-loader-reveal.tsx`:** Left/right perimeter stalls use half-cell brick stagger (24 px offset on alternating rows); tables sit bottom-aligned in each 48×48 square; scale-in animation anchors on the inner/right edge of each square (not center) so sides read as right-aligned in their cells; inner ring inset updated for stagger extent.
 - **Verify:** Hard refresh (clear `popup-hub-initial-loader-shown` in sessionStorage if needed) — side columns show brick stagger; each stall grows from its square’s right edge toward the ring center.

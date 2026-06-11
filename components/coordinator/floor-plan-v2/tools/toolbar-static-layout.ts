@@ -128,13 +128,23 @@ export interface SidebarSectionDef {
   blocks: readonly CanvasToolbarBlockId[]
 }
 
+export interface SidebarSectionsFilter {
+  /** When set, only these section ids are returned (in canonical order). */
+  includeOnly?: readonly SidebarSectionId[]
+  /** Omit these section ids from the result. */
+  exclude?: readonly SidebarSectionId[]
+}
+
 /** Full-width sidebar blocks — stacked top-to-bottom (no split columns). */
-export function getVisibleSidebarSections(ctx: {
-  needsRoomFirst: boolean
-  showRoom: boolean
-  showPatron: boolean
-  showVendor: boolean
-}): SidebarSectionDef[] {
+export function getVisibleSidebarSections(
+  ctx: {
+    needsRoomFirst: boolean
+    showRoom: boolean
+    showPatron: boolean
+    showVendor: boolean
+  },
+  filter?: SidebarSectionsFilter
+): SidebarSectionDef[] {
   const sections: SidebarSectionDef[] = []
 
   if (ctx.showRoom) {
@@ -146,7 +156,7 @@ export function getVisibleSidebarSections(ctx: {
   }
 
   if (ctx.needsRoomFirst) {
-    return sections
+    return applySidebarSectionsFilter(sections, filter)
   }
 
   const shapesBlocks: CanvasToolbarBlockId[] = [
@@ -173,6 +183,22 @@ export function getVisibleSidebarSections(ctx: {
     blocks: alignmentBlocks,
   })
 
+  return applySidebarSectionsFilter(sections, filter)
+}
+
+function applySidebarSectionsFilter(
+  sections: SidebarSectionDef[],
+  filter?: SidebarSectionsFilter
+): SidebarSectionDef[] {
+  if (!filter) return sections
+  if (filter.includeOnly?.length) {
+    const allowed = new Set(filter.includeOnly)
+    return sections.filter((s) => allowed.has(s.id))
+  }
+  if (filter.exclude?.length) {
+    const blocked = new Set(filter.exclude)
+    return sections.filter((s) => !blocked.has(s.id))
+  }
   return sections
 }
 

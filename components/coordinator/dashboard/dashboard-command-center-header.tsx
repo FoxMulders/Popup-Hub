@@ -6,6 +6,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useDashboardLayoutSave } from './dashboard-layout-save-context'
+import { DashboardHeaderToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { useMarketManagement } from './market-management-context'
 import { cn } from '@/lib/utils'
@@ -117,7 +118,7 @@ export function DashboardCommandCenterHeader() {
 
   if (fullscreen) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1 sm:px-4">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {selectedEventId ? (
             <CommandCenterExitLink
@@ -131,13 +132,16 @@ export function DashboardCommandCenterHeader() {
           ) : null}
           <WorkspaceTabs />
         </div>
+        {isBlueprint && !previewMode ? (
+          <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 justify-end" />
+        ) : null}
         {headerActions}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 px-3 py-1.5 sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-heading text-base font-semibold tracking-tight text-foreground sm:text-lg">
@@ -152,6 +156,9 @@ export function DashboardCommandCenterHeader() {
             <LayoutSaveChip />
           </div>
         </div>
+        {isBlueprint && !previewMode ? (
+          <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 justify-end" />
+        ) : null}
         {headerActions}
       </div>
       <WorkspaceTabs />

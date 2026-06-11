@@ -34,6 +34,7 @@ import {
   type CanvasToolbarStaticRowId,
   type SidebarSectionDef,
   type StaticRowCollapsedState,
+  type SidebarSectionsFilter,
 } from './toolbar-static-layout'
 const STATIC_ROW_ICONS: Record<
   CanvasToolbarStaticRowId,
@@ -59,6 +60,10 @@ export interface CanvasToolbarStaticProps {
   sidebarLayout?: boolean
   /** Dashboard top strip — horizontal tool groups with compact gaps. */
   topBarLayout?: boolean
+  /** Dashboard header row — inline room/canvas controls beside Edit/Preview. */
+  headerBarLayout?: boolean
+  /** Limit which sidebar sections render (top bar vs header split). */
+  sectionsFilter?: SidebarSectionsFilter
   eventId?: string | null
 }
 
@@ -200,22 +205,18 @@ function TopBarShapesBoothsSection({
       aria-label={section.header}
     >
       <SectionHeader>{section.header}</SectionHeader>
-      <div className="flex min-h-[var(--dashboard-toolbar-height)] min-w-0 flex-col items-center justify-center gap-2">
-        {generalBlocks.length > 0 ? (
-          <div className="flex min-w-0 flex-wrap items-center justify-center gap-1.5">
-            {generalBlocks.map((blockId) => (
-              <div
-                key={blockId}
-                className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
-              >
-                {renderBlock(blockId)}
-              </div>
-            ))}
+      <div className="flex min-h-[var(--dashboard-toolbar-height)] min-w-0 flex-row flex-wrap items-center justify-center gap-1.5">
+        {generalBlocks.map((blockId) => (
+          <div
+            key={blockId}
+            className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
+          >
+            {renderBlock(blockId)}
           </div>
-        ) : null}
+        ))}
         {hasAssetTables ? (
           <motion.div
-            className="toolbar-element-panels flex w-full min-w-0 flex-col items-center justify-center gap-1.5"
+            className="toolbar-element-panels flex min-w-0 flex-row flex-wrap items-center justify-center gap-1.5"
             variants={reducedMotion ? undefined : toolbarElementPanelsContainer}
             initial={reducedMotion ? false : 'hidden'}
             animate={reducedMotion ? undefined : 'visible'}
@@ -239,6 +240,31 @@ function TopBarShapesBoothsSection({
         ) : null}
       </div>
     </section>
+  )
+}
+
+function HeaderBarRoomCanvasSection({
+  section,
+  renderBlock,
+}: {
+  section: SidebarSectionDef
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+}) {
+  return (
+    <div
+      className="dashboard-header-room-tools flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5"
+      data-toolbar-section={section.id}
+      aria-label={section.header}
+    >
+      {section.blocks.map((blockId) => (
+        <div
+          key={blockId}
+          className="flex min-w-0 flex-wrap items-center gap-0.5 rounded-md border border-stone-200/80 bg-stone-50/50 px-0.5 py-0.5"
+        >
+          {renderBlock(blockId)}
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -529,6 +555,8 @@ export function CanvasToolbarStatic({
   layoutCtx,
   sidebarLayout = false,
   topBarLayout = false,
+  headerBarLayout = false,
+  sectionsFilter,
   eventId,
 }: CanvasToolbarStaticProps) {
   const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
@@ -619,10 +647,29 @@ export function CanvasToolbarStatic({
   }
 
   const sidebarSections = useMemo(
-    () => (sidebarLayout || topBarLayout ? getVisibleSidebarSections(segmentCtx) : []),
-    [sidebarLayout, topBarLayout, segmentCtx]
+    () =>
+      sidebarLayout || topBarLayout || headerBarLayout
+        ? getVisibleSidebarSections(segmentCtx, sectionsFilter)
+        : [],
+    [sidebarLayout, topBarLayout, headerBarLayout, segmentCtx, sectionsFilter]
   )
   const reducedMotion = useReducedMotion()
+
+  if (headerBarLayout) {
+    if (sidebarSections.length === 0) return null
+
+    return (
+      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1.5">
+        {sidebarSections.map((section) => (
+          <HeaderBarRoomCanvasSection
+            key={section.id}
+            section={section}
+            renderBlock={renderBlock}
+          />
+        ))}
+      </div>
+    )
+  }
 
   if (topBarLayout) {
     if (sidebarSections.length === 0) return null

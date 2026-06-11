@@ -24,6 +24,8 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   sidebarLayout?: boolean
   /** Dashboard top strip — horizontal tool groups below the header. */
   topBarLayout?: boolean
+  /** Dashboard header row — room/canvas controls beside Edit/Preview. */
+  headerBarLayout?: boolean
   className?: string
   rooms?: LayoutRoom[]
   activeRoomId?: string
@@ -83,6 +85,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     staticLayout = false,
     sidebarLayout = false,
     topBarLayout = false,
+    headerBarLayout = false,
     className,
     toolState,
     onToolChange,
@@ -369,6 +372,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       aiLayoutFeedbackLoading,
       sidebarLayout,
       topBarLayout,
+      headerBarLayout,
     ]
   )
 
@@ -411,14 +415,15 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
         className={cn(
           'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
           staticLayout ? 'py-0.5' : 'py-1',
-          !staticLayout && !sidebarLayout && !topBarLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
+          !staticLayout && !sidebarLayout && !topBarLayout && !headerBarLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
           staticLayout &&
             !sidebarLayout &&
             !topBarLayout &&
+            !headerBarLayout &&
             'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
           sidebarLayout &&
             'min-h-0 w-full shrink-0 overflow-y-auto overflow-x-hidden border-0 bg-transparent px-0 shadow-none',
-          topBarLayout &&
+          (topBarLayout || headerBarLayout) &&
             'w-full min-w-0 shrink-0 overflow-x-auto overflow-y-hidden border-0 bg-transparent px-0 shadow-none',
           className
         )}
@@ -432,6 +437,14 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
               layoutCtx={staticLayoutCtx}
               sidebarLayout={sidebarLayout}
               topBarLayout={topBarLayout}
+              headerBarLayout={headerBarLayout}
+              sectionsFilter={
+                topBarLayout
+                  ? { exclude: ['room-canvas'] }
+                  : headerBarLayout
+                    ? { includeOnly: ['room-canvas'] }
+                    : undefined
+              }
               eventId={eventId}
               renderBlock={(id) => renderCanvasCommandBarBlock(id, blockContext)}
             />

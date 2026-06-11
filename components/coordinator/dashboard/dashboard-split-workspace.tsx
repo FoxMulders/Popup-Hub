@@ -2,8 +2,6 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { BoothMatrixPanel } from './booth-matrix-panel'
-import { DashboardNextStepCta } from './dashboard-next-step-cta'
-import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { cn } from '@/lib/utils'
 
@@ -18,7 +16,6 @@ export interface DashboardSplitWorkspaceProps {
  */
 export function DashboardSplitWorkspace({ blueprint }: DashboardSplitWorkspaceProps) {
   const { ledgerPaneCollapsed, toggleLedgerPane } = useDashboardWorkspaceView()
-  const { previewMode } = useCommandCenterFullscreen()
 
   return (
     <div
@@ -71,12 +68,6 @@ export function DashboardSplitWorkspace({ blueprint }: DashboardSplitWorkspacePr
           <div className="dashboard-split-workspace__ledger-body min-h-0 flex-1 overflow-hidden">
             <BoothMatrixPanel variant="split" defaultOpen />
           </div>
-
-          {!previewMode ? (
-            <footer className="dashboard-split-workspace__ledger-footer shrink-0 border-t border-stone-200/90 bg-stone-50/80 p-1.5">
-              <DashboardNextStepCta inline className="max-w-none" />
-            </footer>
-          ) : null}
         </aside>
       )}
     </div>
