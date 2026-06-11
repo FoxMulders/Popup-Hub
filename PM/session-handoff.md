@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (Blueprint Studio two-row dashboard layout, not deployed)
+- **Row 1 (header):** `dashboard-command-center-header.tsx` — Blueprint Studio | Allocation Ledger tabs, then portaled view/setup cluster (labels, Event setup, dual-screen, fullscreen, zoom) + hall management (Main Hall bar, undo/redo), then Edit/Preview + New market on one line; no market title row.
+- **Row 2 (tool strip):** `toolbar-static-layout.ts` + `canvas-toolbar-static.tsx` — four labeled sections: SHAPES & BOOTHS (primitives only), VENDOR BOOTHS, PATRON TABLES (renamed), ALIGNMENT & SPACING; vendor/patron each own section with one horizontal icon row.
+- **Portal split:** `canvas-command-bar.tsx` — `headerBarLayout` → `view-setup` + `hall-management`; `topBarLayout` → tool-strip sections only (`DASHBOARD_HEADER_SECTION_IDS` / `DASHBOARD_TOOLSTRIP_SECTION_IDS`).
+- **Payout banner:** removed from `market-dashboard-client.tsx` / `app/coordinator/dashboard/page.tsx`; `CoordinatorCommunityTrustBanner` on coordinator `app/profile/page.tsx` via `loadCoordinatorEscrowContext`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — two rows (nav + tools), four tool sections; `/profile` — Full payout access card for coordinators.
+
 ## Shipped this session (dashboard layout toolbar compaction + shared footer, deployed 2026-06-11)
 - **SHAPES & BOOTHS single row:** `canvas-toolbar-static.tsx` + `globals.css` — primitives, vendor booths, and patron elements render in one horizontal row to maximize canvas height.
 - **ROOM & CANVAS in header:** Room/canvas controls portaled into Blueprint Studio header beside Edit/Preview and +New market via `DashboardHeaderToolbarPortalTarget`; top toolbar strip now shows Shapes & Booths + Alignment only (`toolbar-static-layout.ts` section filter, `floor-plan-v2.tsx` dual command-bar portals).

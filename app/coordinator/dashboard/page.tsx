@@ -10,9 +10,7 @@ import {
   coordinatorHasPaymentTrustPath,
   coordinatorPaymentCollectionBlockReason,
   coordinatorPublishBlockReason,
-  hasVerifiedBusinessTaxId,
 } from '@/lib/coordinator/verification'
-import { coordinatorEscrowExempt } from '@/lib/coordinator/escrow'
 import { MarketDashboardClient } from '@/components/coordinator/dashboard/market-dashboard-client'
 import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
 import type { DashboardEventSummary } from '@/components/coordinator/dashboard/market-management-context'
@@ -67,7 +65,6 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
   const [
     { data: profile },
     { data: revenueRows },
-    { count: vouchCount },
     { data: layouts },
     { data: applications },
   ] = await Promise.all([
@@ -79,10 +76,6 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
       .eq('id', user.id)
       .single(),
     revenueQuery,
-    supabase
-      .from('coordinator_vouches')
-      .select('id', { count: 'exact', head: true })
-      .eq('coordinator_id', user.id),
     coordinatorEventIds.length > 0
       ? supabase.from('booth_layouts').select('*').in('event_id', coordinatorEventIds)
       : Promise.resolve({ data: [] as import('@/types/database').BoothLayout[] }),
@@ -219,8 +212,6 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
   const stripeConnected =
     !!profile?.stripe_connected_id && profile?.stripe_onboarding_complete === true
   const paymentTrustComplete = coordinatorHasPaymentTrustPath(fraudGate)
-  const verifiedBusinessTaxId = hasVerifiedBusinessTaxId(fraudGate)
-  const escrowExempt = coordinatorEscrowExempt(fraudGate, vouchCount ?? 0)
 
   const initialEventId =
     eventQuery && events.some((e) => e.id === eventQuery)
@@ -244,9 +235,6 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
         publishBlockReason={coordinatorPublishBlockReason(fraudGate)}
         paymentCollectionBlockReason={coordinatorPaymentCollectionBlockReason(fraudGate)}
         paymentTrustComplete={paymentTrustComplete}
-        escrowExempt={escrowExempt}
-        hasVerifiedBusinessTaxId={verifiedBusinessTaxId}
-        coordinatorVouchCount={vouchCount ?? 0}
       />
     </Suspense>
   )

@@ -21,7 +21,6 @@ import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/comp
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
 import { CoordinatorMobileOverview } from './coordinator-mobile-overview'
 import { CoordinatorVerificationBanner } from '@/components/coordinator/coordinator-verification-banner'
-import { CoordinatorCommunityTrustBanner } from '@/components/coordinator/coordinator-community-trust'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
 export interface MarketDashboardClientProps {
@@ -39,9 +38,6 @@ export interface MarketDashboardClientProps {
   publishBlockReason?: string | null
   paymentCollectionBlockReason?: string | null
   paymentTrustComplete?: boolean
-  escrowExempt?: boolean
-  hasVerifiedBusinessTaxId?: boolean
-  coordinatorVouchCount?: number
 }
 
 export function MarketDashboardClient({
@@ -59,9 +55,6 @@ export function MarketDashboardClient({
   publishBlockReason = null,
   paymentCollectionBlockReason = null,
   paymentTrustComplete = false,
-  escrowExempt = false,
-  hasVerifiedBusinessTaxId = false,
-  coordinatorVouchCount = 0,
 }: MarketDashboardClientProps) {
   const searchParams = useSearchParams()
   const forceMobileOverview = searchParams.get('overview') === 'mobile'
@@ -116,11 +109,6 @@ export function MarketDashboardClient({
             <FloorplanSyncBridge />
             <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
               <div className="shrink-0 space-y-2 px-[var(--dashboard-gutter,1rem)] pt-3">
-                <CoordinatorCommunityTrustBanner
-                  escrowExempt={escrowExempt}
-                  hasVerifiedBusinessTaxId={hasVerifiedBusinessTaxId}
-                  vouchCount={coordinatorVouchCount}
-                />
                 {(publishBlockReason || paymentCollectionBlockReason || !paymentTrustComplete) && (
                   <CoordinatorVerificationBanner
                     verificationStatus={verificationStatus}

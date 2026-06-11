@@ -14,7 +14,11 @@ import {
 import { CanvasToolbarReorder } from './canvas-toolbar-reorder'
 import { CanvasToolbarStatic } from './canvas-toolbar-static'
 import type { DualScreenMode } from '@/lib/coordinator/floorplan-sync'
-import { getVisibleStaticToolbarRows } from './toolbar-static-layout'
+import {
+  DASHBOARD_HEADER_SECTION_IDS,
+  DASHBOARD_TOOLSTRIP_SECTION_IDS,
+  getVisibleStaticToolbarRows,
+} from './toolbar-static-layout'
 import { ToolbarCompactProvider } from './command-button'
 
 interface CanvasCommandBarProps extends CanvasToolHostProps {
@@ -288,7 +292,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       aiLayoutFeedbackLoading,
       compact: true,
       sidebarLayout,
-      topBarLayout,
+      topBarLayout: topBarLayout || headerBarLayout,
+      headerBarLayout,
     }),
     [
       toolState,
@@ -440,9 +445,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
               headerBarLayout={headerBarLayout}
               sectionsFilter={
                 topBarLayout
-                  ? { exclude: ['room-canvas'] }
+                  ? { includeOnly: DASHBOARD_TOOLSTRIP_SECTION_IDS }
                   : headerBarLayout
-                    ? { includeOnly: ['room-canvas'] }
+                    ? { includeOnly: DASHBOARD_HEADER_SECTION_IDS }
                     : undefined
               }
               eventId={eventId}

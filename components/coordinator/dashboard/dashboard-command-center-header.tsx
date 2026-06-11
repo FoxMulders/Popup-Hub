@@ -1,45 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { Check, Cloud, Plus } from 'lucide-react'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { Plus } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
-import { useDashboardLayoutSave } from './dashboard-layout-save-context'
 import { DashboardHeaderToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
-import { useMarketManagement } from './market-management-context'
 import { cn } from '@/lib/utils'
-
-function LayoutSaveChip() {
-  const save = useDashboardLayoutSave()
-  if (!save || save.status === 'idle') return null
-
-  const saving = save.status === 'saving'
-
-  return (
-    <span
-      className="dashboard-save-chip"
-      data-status={save.status}
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      {saving ? (
-        <Cloud className="h-3 w-3 shrink-0 animate-pulse" aria-hidden />
-      ) : (
-        <Check className="h-3 w-3 shrink-0" aria-hidden />
-      )}
-      {saving ? 'Saving…' : 'Saved to cloud'}
-    </span>
-  )
-}
 
 function WorkspaceTabs() {
   const { view, setView, isBlueprint, isLedger } = useDashboardWorkspaceView()
 
   return (
     <nav
-      className="dashboard-workspace-tabs flex flex-wrap items-center gap-1"
+      className="dashboard-workspace-tabs flex shrink-0 items-center gap-1"
       aria-label="Floor plan workspace"
     >
       <button
@@ -70,14 +44,11 @@ function WorkspaceTabs() {
 }
 
 export function DashboardCommandCenterHeader() {
-  const { events, selectedEventId } = useMarketManagement()
-  const { fullscreen, setFullscreen, previewMode, setPreviewMode } =
-    useCommandCenterFullscreen()
+  const { fullscreen, previewMode, setPreviewMode } = useCommandCenterFullscreen()
   const { isBlueprint } = useDashboardWorkspaceView()
-  const selectedEvent = events.find((e) => e.id === selectedEventId)
 
   const headerActions = (
-    <div className="flex shrink-0 flex-wrap items-center gap-2">
+    <div className="flex shrink-0 items-center gap-2">
       {isBlueprint ? (
         <button
           type="button"
@@ -116,52 +87,13 @@ export function DashboardCommandCenterHeader() {
     </div>
   )
 
-  if (fullscreen) {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1 sm:px-4">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-          {selectedEventId ? (
-            <CommandCenterExitLink
-              eventId={selectedEventId}
-              eventName={selectedEvent?.name}
-              eventStatus={selectedEvent?.status}
-              compact
-              prominent
-              onBeforeNavigate={() => setFullscreen(false)}
-            />
-          ) : null}
-          <WorkspaceTabs />
-        </div>
-        {isBlueprint && !previewMode ? (
-          <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 justify-end" />
-        ) : null}
-        {headerActions}
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-1.5 px-3 py-1.5 sm:px-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate font-heading text-base font-semibold tracking-tight text-foreground sm:text-lg">
-            {selectedEvent?.name ?? 'Booth layout designer'}
-          </h1>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2">
-            <p className="text-xs font-medium text-stone-600">
-              {isBlueprint
-                ? 'Blueprint Studio + Allocation Ledger'
-                : 'Allocation Ledger'}
-            </p>
-            <LayoutSaveChip />
-          </div>
-        </div>
-        {isBlueprint && !previewMode ? (
-          <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 justify-end" />
-        ) : null}
-        {headerActions}
-      </div>
+    <div className="dashboard-command-center-header flex flex-nowrap items-center gap-2 overflow-x-auto px-3 py-1 sm:px-4">
       <WorkspaceTabs />
+      {isBlueprint && !previewMode ? (
+        <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 items-center" />
+      ) : null}
+      <div className="ml-auto flex shrink-0 items-center gap-2">{headerActions}</div>
     </div>
   )
 }

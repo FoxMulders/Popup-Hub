@@ -103,24 +103,48 @@ export function getStaticRowSegments(
 }
 
 export type SidebarSectionId =
+  | 'view-setup'
+  | 'hall-management'
   | 'room-canvas'
   | 'shapes-booths'
+  | 'vendor-booths'
+  | 'patron-tables'
   | 'alignment-spacing'
   | 'floor-plan-optimize'
   | 'room-controls'
   | 'designer-tools'
   | 'patron-layout'
-  | 'vendor-booths'
 
-/** Left-rail layout editor — three scannable tool groups. */
+/** Dashboard toolbar section titles. */
 export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
-  'room-canvas' | 'shapes-booths' | 'alignment-spacing',
+  | 'view-setup'
+  | 'hall-management'
+  | 'shapes-booths'
+  | 'vendor-booths'
+  | 'patron-tables'
+  | 'alignment-spacing',
   string
 > = {
-  'room-canvas': 'ROOM & CANVAS',
+  'view-setup': 'VIEW & SETUP',
+  'hall-management': 'HALL MANAGEMENT',
   'shapes-booths': 'SHAPES & BOOTHS',
+  'vendor-booths': 'VENDOR BOOTHS',
+  'patron-tables': 'PATRON TABLES',
   'alignment-spacing': 'ALIGNMENT & SPACING',
 }
+
+/** Header row 1 + top strip row 2 section groupings. */
+export const DASHBOARD_HEADER_SECTION_IDS: readonly SidebarSectionId[] = [
+  'view-setup',
+  'hall-management',
+] as const
+
+export const DASHBOARD_TOOLSTRIP_SECTION_IDS: readonly SidebarSectionId[] = [
+  'shapes-booths',
+  'vendor-booths',
+  'patron-tables',
+  'alignment-spacing',
+] as const
 
 export interface SidebarSectionDef {
   id: SidebarSectionId
@@ -149,9 +173,14 @@ export function getVisibleSidebarSections(
 
   if (ctx.showRoom) {
     sections.push({
-      id: 'room-canvas',
-      header: LAYOUT_EDITOR_SIDEBAR_HEADERS['room-canvas'],
-      blocks: ['room', 'utilities'],
+      id: 'view-setup',
+      header: LAYOUT_EDITOR_SIDEBAR_HEADERS['view-setup'],
+      blocks: ['utilities'],
+    })
+    sections.push({
+      id: 'hall-management',
+      header: LAYOUT_EDITOR_SIDEBAR_HEADERS['hall-management'],
+      blocks: ['room', 'history-clipboard'],
     })
   }
 
@@ -159,22 +188,27 @@ export function getVisibleSidebarSections(
     return applySidebarSectionsFilter(sections, filter)
   }
 
-  const shapesBlocks: CanvasToolbarBlockId[] = [
-    'primitives',
-    'history-clipboard',
-    'vendor',
-  ]
-  if (ctx.showVendor) {
-    shapesBlocks.push('vendor-sizes')
-  }
-  if (ctx.showPatron) {
-    shapesBlocks.push('patron')
-  }
   sections.push({
     id: 'shapes-booths',
     header: LAYOUT_EDITOR_SIDEBAR_HEADERS['shapes-booths'],
-    blocks: shapesBlocks,
+    blocks: ['primitives'],
   })
+
+  if (ctx.showVendor) {
+    sections.push({
+      id: 'vendor-booths',
+      header: LAYOUT_EDITOR_SIDEBAR_HEADERS['vendor-booths'],
+      blocks: ['vendor', 'vendor-sizes'],
+    })
+  }
+
+  if (ctx.showPatron) {
+    sections.push({
+      id: 'patron-tables',
+      header: LAYOUT_EDITOR_SIDEBAR_HEADERS['patron-tables'],
+      blocks: ['patron'],
+    })
+  }
 
   const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align', 'optimize']
   sections.push({

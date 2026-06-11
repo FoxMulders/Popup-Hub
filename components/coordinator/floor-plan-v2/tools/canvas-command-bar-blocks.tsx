@@ -328,6 +328,8 @@ export interface CanvasCommandBarBlockContext {
   sidebarLayout?: boolean
   /** Dashboard top strip — horizontal tool groups below the header. */
   topBarLayout?: boolean
+  /** Dashboard header row — view/setup + hall management. */
+  headerBarLayout?: boolean
 }
 
 export function renderCanvasCommandBarBlock(
@@ -340,6 +342,8 @@ export function renderCanvasCommandBarBlock(
   const compact = ctx.compact ?? false
   const sidebarLayout = ctx.sidebarLayout ?? false
   const topBarLayout = ctx.topBarLayout ?? false
+  const headerBarLayout = ctx.headerBarLayout ?? false
+  const dashboardStripLayout = topBarLayout || headerBarLayout
   const rotateRoomId = ctx.selectedRoomId ?? ctx.activeRoomId ?? null
   const canRotateRoom = Boolean(rotateRoomId) && Boolean(ctx.onRotateRoomLeft)
   const rotateRoomHint = rotateRoomId
@@ -707,7 +711,7 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'vendor':
-      if (sidebarLayout || topBarLayout) {
+      if (sidebarLayout || dashboardStripLayout) {
         return (
           <div className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-hidden">
             <CommandButton
@@ -765,7 +769,7 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'patron':
-      if (sidebarLayout || topBarLayout) {
+      if (sidebarLayout || dashboardStripLayout) {
         return (
           <div className="w-full min-w-0">
             {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
@@ -787,7 +791,7 @@ export function renderCanvasCommandBarBlock(
                 roundToolActive={isTablePlacementActive('guest-round')}
                 rectToolActive={isTablePlacementActive('guest-rect')}
                 compact={compact}
-                className={topBarLayout ? 'flex-row items-center' : undefined}
+                className={dashboardStripLayout ? 'flex-row items-center' : undefined}
               />
             ) : null}
           </div>
@@ -1159,7 +1163,7 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'utilities':
-      if (topBarLayout) {
+      if (dashboardStripLayout) {
         const topBarDivider = (
           <div className="h-4 w-[1px] shrink-0 bg-gray-300" aria-hidden />
         )

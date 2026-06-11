@@ -5,6 +5,9 @@ import type { Profile } from '@/types/database'
 import { FoundingVendorBadge } from '@/components/vendor/founding-vendor-badge'
 import { ProfileForm } from './profile-form'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
+import { CoordinatorCommunityTrustBanner } from '@/components/coordinator/coordinator-community-trust'
+import { loadCoordinatorEscrowContext } from '@/lib/coordinator/escrow'
+import { hasVerifiedBusinessTaxId } from '@/lib/coordinator/verification'
 import { PurchaseHistory } from '@/components/shopper/purchase-history'
 import { AccountAccessPanel } from '@/components/profile/account-access-panel'
 import { AccountSecurityCard } from '@/components/profile/account-security-card'
@@ -39,6 +42,11 @@ export default async function ProfilePage() {
           .select('id', { count: 'exact', head: true })
           .eq('coordinator_id', user.id)
       : { count: 0 }
+
+  const escrowContext =
+    profile.role === 'coordinator'
+      ? await loadCoordinatorEscrowContext(supabase, user.id)
+      : null
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 xl:px-16">
@@ -117,6 +125,14 @@ export default async function ProfilePage() {
                   Early adopter perks are active — premium placement and priority queue bypass included.
                 </p>
               </div>
+            ) : null}
+
+            {profile.role === 'coordinator' && escrowContext ? (
+              <CoordinatorCommunityTrustBanner
+                escrowExempt={escrowContext.escrowExempt}
+                hasVerifiedBusinessTaxId={hasVerifiedBusinessTaxId(profile as Profile)}
+                vouchCount={escrowContext.vouchCount}
+              />
             ) : null}
 
             {profile.role === 'coordinator' && (

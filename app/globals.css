@@ -589,38 +589,38 @@
     min-width: min(100%, 14rem);
   }
 
-  .dashboard-toolbar-section[data-toolbar-section='shapes-booths'] > div:last-child {
+  .dashboard-toolbar-section[data-toolbar-section='shapes-booths'] > div:last-child,
+  .dashboard-toolbar-section[data-toolbar-section='vendor-booths'] > div:last-child,
+  .dashboard-toolbar-section[data-toolbar-section='patron-tables'] > div:last-child {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 0.375rem;
   }
 
-  .dashboard-toolbar-section[data-toolbar-section='shapes-booths'] .toolbar-element-panels {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-  }
-
-  .dashboard-toolbar-section .toolbar-element-panels,
   .dashboard-toolbar-section .toolbar-element-panel {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+  }
+
+  .dashboard-command-center-header {
+    min-height: 2.25rem;
   }
 
   .dashboard-header-toolbar-portal {
     scrollbar-width: thin;
   }
 
-  .dashboard-header-toolbar-portal .dashboard-header-room-tools {
-    flex-wrap: wrap;
-    justify-content: flex-end;
+  .dashboard-header-view-setup {
+    box-shadow: 0 1px 2px rgb(28 25 23 / 0.04);
+  }
+
+  .dashboard-header-hall-tools {
+    flex-wrap: nowrap;
   }
 
   .dashboard-toolbar-section > div:last-child {
