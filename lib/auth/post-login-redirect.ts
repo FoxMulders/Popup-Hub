@@ -35,11 +35,11 @@ export function resolvePostLoginPath(input: {
     if (redirectTo.startsWith('/coordinator') && !isCoordinatorLayoutPath(redirectTo)) {
       return redirectTo
     }
-    return '/coordinator/dashboard?overview=mobile'
+    return '/coordinator'
   }
 
   if (role === 'coordinator') {
-    return redirectTo.startsWith('/coordinator') ? redirectTo : '/coordinator/dashboard'
+    return redirectTo.startsWith('/coordinator') ? redirectTo : '/coordinator'
   }
 
   if (role === 'vendor') {

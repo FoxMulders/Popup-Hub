@@ -14,6 +14,12 @@ type PaymentSettingsResponse = {
   defaultEventPaymentFlags: UnifiedEventPaymentFlags
 }
 
+const DEFAULT_WIZARD_PAYMENT_FLAGS: UnifiedEventPaymentFlags = {
+  accepts_credit_card: true,
+  accepts_etransfer: false,
+  accepts_cash: false,
+}
+
 function PaymentMethodChip({
   id,
   label,
@@ -57,11 +63,7 @@ function PaymentMethodChip({
 
 export function WizardPaymentPreviewStrip() {
   const [loading, setLoading] = useState(true)
-  const [flags, setFlags] = useState<UnifiedEventPaymentFlags>({
-    accepts_credit_card: true,
-    accepts_etransfer: false,
-    accepts_cash: false,
-  })
+  const [flags, setFlags] = useState<UnifiedEventPaymentFlags>({ ...DEFAULT_WIZARD_PAYMENT_FLAGS })
   const [instructions, setInstructions] = useState('')
   const [squareConnected, setSquareConnected] = useState(false)
   const [stripeConnected, setStripeConnected] = useState(false)
@@ -96,7 +98,10 @@ export function WizardPaymentPreviewStrip() {
         if (!res.ok) return
         const data = (await res.json()) as PaymentSettingsResponse
         if (cancelled) return
-        setFlags(data.defaultEventPaymentFlags)
+        setFlags({
+          ...DEFAULT_WIZARD_PAYMENT_FLAGS,
+          ...(data.defaultEventPaymentFlags ?? {}),
+        })
         setInstructions(data.paymentInstructions ?? '')
         setSquareConnected(data.squareConnected)
         setStripeConnected(data.stripeConnected)

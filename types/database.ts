@@ -2,6 +2,23 @@ export type Role = 'shopper' | 'vendor' | 'coordinator'
 export type EventListingType = 'community_market' | 'garage_yard_sale'
 export type BookingMode = 'instant' | 'juried'
 export type BoothClearancePolicy = 'not_required' | 'leave_furniture' | 'pack_furniture'
+export type BoothContractClauseSource = 'platform' | 'custom'
+
+export interface BoothContractClause {
+  id: string
+  title: string
+  body: string
+  source: BoothContractClauseSource
+  enabled: boolean
+  sort_order: number
+}
+
+export interface BoothContractSnapshot {
+  content_hash: string
+  clauses: BoothContractClause[]
+  pdf_url: string | null
+  acknowledged_at: string
+}
 export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'
 export type EventStatus = 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected' | 'waitlisted' | 'cancelled' | 'pending_insurance'
@@ -269,6 +286,10 @@ export interface Event {
   venue_place_types?: string[]
   vendor_access_equality_until?: string | null
   pass_fees_to_vendor?: boolean
+  booth_contract_enabled?: boolean
+  booth_contract_clauses?: BoothContractClause[]
+  booth_contract_pdf_url?: string | null
+  booth_contract_updated_at?: string | null
   coordinator?: Profile
   category_limits?: EventCategoryLimit[]
   event_days?: EventDay[]
@@ -332,6 +353,8 @@ export interface BoothApplication {
   attending_event_day_ids: string[]
   attending_dates: string[]
   attendance_terms_acknowledged_at: string | null
+  booth_contract_acknowledged_at: string | null
+  booth_contract_snapshot: BoothContractSnapshot | null
   applied_at: string
   approved_at: string | null
   checked_in: boolean

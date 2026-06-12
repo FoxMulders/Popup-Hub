@@ -84,6 +84,11 @@ import {
 } from '@/lib/monetization/booth-pricing'
 import { VendorCoordinatorVouchButton } from '@/components/coordinator/coordinator-community-trust'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
+import { BoothContractAcknowledgment } from '@/components/events/booth-contract-acknowledgment'
+import {
+  contractRequiresVendorAcknowledgment,
+  resolveEventBoothContract,
+} from '@/lib/booth-contract/resolve-event-contract'
 
 interface ExistingApplication {
   id: string
@@ -154,6 +159,11 @@ export function ApplyButton({
 
   const requireFullAttendance = event.require_full_attendance ?? true
   const scheduleDays = useMemo(() => resolveEventScheduleDays(event), [event])
+  const resolvedBoothContract = useMemo(() => resolveEventBoothContract(event), [event])
+  const boothContractRequired = useMemo(
+    () => contractRequiresVendorAcknowledgment(event),
+    [event]
+  )
 
   useEffect(() => {
     setLocalApplicationStatus(applicationStatus)
@@ -451,6 +461,7 @@ export function ApplyButton({
         neighborPreference: standBeside.trim() || null,
         joinWaitlist,
         attendanceTermsAcknowledged: termsAcknowledged,
+        boothContractAcknowledged: boothContractRequired ? termsAcknowledged : undefined,
         attendingEventDayIds: attendance.attendingEventDayIds,
         attendingDates: attendance.attendingDates,
         paymentMethod,
@@ -559,7 +570,11 @@ export function ApplyButton({
     }
 
     if (!termsAcknowledged) {
-      toast.error('Please agree to the attendance terms before submitting')
+      toast.error(
+        boothContractRequired
+          ? 'Please agree to the digital booth contract before submitting'
+          : 'Please agree to the attendance terms before submitting'
+      )
       return
     }
 
@@ -583,7 +598,11 @@ export function ApplyButton({
 
   async function handleConfirmWaitlist() {
     if (!termsAcknowledged) {
-      toast.error('Please agree to the attendance terms before joining the waitlist')
+      toast.error(
+        boothContractRequired
+          ? 'Please agree to the digital booth contract before joining the waitlist'
+          : 'Please agree to the attendance terms before joining the waitlist'
+      )
       return
     }
 
@@ -1014,7 +1033,14 @@ export function ApplyButton({
               </div>
             ) : null}
 
-            <div className="rounded-lg border bg-stone-50 p-3">
+            <div className="rounded-lg border bg-stone-50 p-3 space-y-3">
+              {boothContractRequired ? (
+                <BoothContractAcknowledgment
+                  clauses={resolvedBoothContract.clauses}
+                  pdfUrl={resolvedBoothContract.pdfUrl}
+                  updatedAt={resolvedBoothContract.updatedAt}
+                />
+              ) : null}
               <label className="flex items-start gap-3 text-sm text-foreground">
                 <input
                   type="checkbox"
@@ -1023,9 +1049,11 @@ export function ApplyButton({
                   className="mt-0.5 h-4 w-4 rounded border-stone-300 text-harvest-600 focus:ring-harvest-500"
                 />
                 <span>
-                  {requireFullAttendance
-                    ? 'I agree to attend all scheduled days of this market. I understand that arriving late or packing up early violates organizer policy.'
-                    : 'I confirm my selected attendance days and agree to be present during the operating hours of those specific dates.'}
+                  {boothContractRequired
+                    ? 'I have read and agree to the digital booth contract for this market, including all enabled clauses and any attached PDF.'
+                    : requireFullAttendance
+                      ? 'I agree to attend all scheduled days of this market. I understand that arriving late or packing up early violates organizer policy.'
+                      : 'I confirm my selected attendance days and agree to be present during the operating hours of those specific dates.'}
                 </span>
               </label>
             </div>

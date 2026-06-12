@@ -12,7 +12,7 @@ function devMockCoordinatorRedirectTo(): string {
     return DEV_MOCK_COORDINATOR_EVENT_PATH
   }
   if (email === 'coordinator@coordinator.dev') {
-    return '/coordinator/dashboard'
+    return '/coordinator'
   }
   return DEV_MOCK_COORDINATOR_EVENT_PATH
 }

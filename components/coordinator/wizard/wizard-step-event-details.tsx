@@ -38,7 +38,8 @@ import {
 import { ScheduleWeekendShortcuts } from '@/components/shared/schedule-weekend-shortcuts'
 import { cn } from '@/lib/utils'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
-import type { BoothClearancePolicy, EventListingType } from '@/types/database'
+import { BoothContractEditor } from '@/components/coordinator/booth-contract-editor'
+import type { BoothClearancePolicy, BoothContractClause, EventListingType } from '@/types/database'
 import { WIZARD_TIME_OPTIONS } from './wizard-time-options'
 import { FlyerCoverUpload } from '@/components/coordinator/flyer-cover-upload'
 import { FlyerFieldHighlight } from '@/components/coordinator/flyer-field-highlight'
@@ -87,6 +88,16 @@ export interface WizardStepEventDetailsProps {
   onRequireFullAttendanceChange: (v: boolean) => void
   marketInsuranceRequired: boolean
   onMarketInsuranceRequiredChange: (v: boolean) => void
+  boothContractEnabled: boolean
+  onBoothContractEnabledChange: (v: boolean) => void
+  boothContractClauses: BoothContractClause[]
+  onBoothContractClausesChange: (clauses: BoothContractClause[]) => void
+  boothContractPdfUrl: string | null
+  onBoothContractPdfUrlChange: (url: string | null) => void
+  boothContractReviewed: boolean
+  onBoothContractReviewedChange: (v: boolean) => void
+  coordinatorId: string
+  eventId: string | null
   onApplyWeekendRange: (range: { startDate: string; endDate: string }) => void
 }
 
@@ -509,6 +520,23 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         <div className="wizard-glass-inset p-4">
           <WizardPaymentPreviewStrip />
         </div>
+        <BoothContractEditor
+          eventId={props.eventId}
+          coordinatorId={props.coordinatorId}
+          eventName={props.name}
+          enabled={props.boothContractEnabled}
+          onEnabledChange={props.onBoothContractEnabledChange}
+          clauses={props.boothContractClauses}
+          onClausesChange={props.onBoothContractClausesChange}
+          pdfUrl={props.boothContractPdfUrl}
+          onPdfUrlChange={props.onBoothContractPdfUrlChange}
+          requireFullAttendance={props.requireFullAttendance}
+          marketInsuranceRequired={props.marketInsuranceRequired}
+          boothClearancePolicy={props.boothClearancePolicy}
+          contractReviewed={props.boothContractReviewed}
+          onContractReviewedChange={props.onBoothContractReviewedChange}
+          compact
+        />
       </WizardZone>
     </div>
   )

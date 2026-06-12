@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
-import { markCoordinatorCommunityVerified } from '@/lib/coordinator/escrow'
 import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
   coordinatorHasPaymentTrustPath,
@@ -11,7 +10,7 @@ import {
   isSquareConnectedCoordinator,
 } from '@/lib/coordinator/verification'
 import { validateBusinessNumber } from '@/lib/vendor/verification'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
   const supabase = await createClient()
@@ -127,22 +126,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  if (
-    hasVerifiedBusinessTaxId({
-      coordinator_verification_status: evaluated.coordinator_verification_status,
-      coordinator_business_number: evaluated.coordinator_business_number,
-    })
-  ) {
-    const service = await createServiceClient()
-    await markCoordinatorCommunityVerified(service, user.id, 'tax_verified')
-  }
-
   const message =
     evaluated.coordinator_verification_status === 'verified'
-      ? 'Organizer verification complete — verified business tax ID unlocks full payouts and offline payment collection.'
+      ? 'Organizer verification complete — you can collect offline payments after approval.'
       : businessNumber
         ? 'Verification submitted — an admin will review your business details. You can publish draft markets; offline payment collection unlocks after approval.'
-        : 'Organization details saved. Connect Square or Stripe to publish and collect card payments, or add a business tax ID later to unlock full payouts early.'
+        : 'Organization details saved. Connect Square or Stripe to publish and collect card payments.'
 
   return NextResponse.json({
     ok: true,

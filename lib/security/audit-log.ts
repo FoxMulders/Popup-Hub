@@ -12,6 +12,7 @@ export type SecurityAuditEventType =
   | 'coordinator_community_verified'
   | 'coordinator_escrow_mass_release'
   | 'coordinator_vendor_vouch'
+  | 'coordinator_peer_vouch'
 
 const EVENT_TO_ACTION: Record<SecurityAuditEventType, SecurityAuditActionType> = {
   vendor_dispute_suspension: SECURITY_AUDIT_ACTION.VENDOR_DISPUTE_SUSPENSION,
@@ -21,6 +22,7 @@ const EVENT_TO_ACTION: Record<SecurityAuditEventType, SecurityAuditActionType> =
   coordinator_community_verified: SECURITY_AUDIT_ACTION.COORDINATOR_COMMUNITY_VERIFIED,
   coordinator_escrow_mass_release: SECURITY_AUDIT_ACTION.COORDINATOR_ESCROW_RELEASE,
   coordinator_vendor_vouch: SECURITY_AUDIT_ACTION.COORDINATOR_VENDOR_VOUCH,
+  coordinator_peer_vouch: SECURITY_AUDIT_ACTION.COORDINATOR_PEER_VOUCH,
 }
 
 export async function logSecurityEvent(input: {

@@ -19,6 +19,7 @@ export const FEATURE_TARGET_COMPONENTS: Record<
     { value: 'canvas_floor_plan', label: 'Canvas Floor Plan Designer' },
     { value: 'ai_auto_arrange', label: 'AI Auto-Arrange Flow' },
     { value: 'vendor_payments_escrow', label: 'Vendor Payments & Escrow' },
+    { value: 'booth_contracts', label: 'Digital Booth Contracts' },
     { value: 'other', label: 'Other' },
   ],
   vendor: [

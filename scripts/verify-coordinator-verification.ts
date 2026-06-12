@@ -65,7 +65,10 @@ async function main() {
   }
   assert(hasOfflineOrganizerProfile(offlineOrgOnly), 'org-only offline profile can publish')
   assert(!hasVerifiedBusinessTaxId(offlineOrgOnly), 'org-only is not verified tax id')
-  assert(coordinatorRequiresEscrowHold(offlineOrgOnly, 0), 'org-only without vouches requires escrow')
+  assert(
+    coordinatorRequiresEscrowHold(offlineOrgOnly, { vendorVouchCount: 0, coordinatorVouchCount: 0 }),
+    'org-only without vouches requires escrow'
+  )
 
   const taxVerified = {
     coordinator_verification_status: 'verified' as const,
@@ -73,7 +76,10 @@ async function main() {
     coordinator_account_status: 'active' as const,
   }
   assert(hasVerifiedBusinessTaxId(taxVerified), 'verified tax id detected')
-  assert(!coordinatorRequiresEscrowHold(taxVerified, 0), 'verified tax id exempts escrow')
+  assert(
+    coordinatorRequiresEscrowHold(taxVerified, { vendorVouchCount: 0, coordinatorVouchCount: 0 }),
+    'verified business number no longer exempts escrow without community trust'
+  )
 
   const suspended = {
     coordinator_verification_status: 'verified' as const,
@@ -100,8 +106,8 @@ async function main() {
   assert(orgOnly.coordinator_business_number === null, 'org-only stores no business number')
 
   assert(
-    coordinatorEscrowExempt({ coordinator_is_verified: true }, 0),
-    'admin community verified exempts escrow'
+    coordinatorEscrowExempt({ coordinator_is_verified: true }, { vendorVouchCount: 0, coordinatorVouchCount: 0 }),
+    'community verified exempts escrow'
   )
 
   console.log('verify-coordinator-verification: PASS')

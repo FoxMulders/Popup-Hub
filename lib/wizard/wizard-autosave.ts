@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { BoothClearancePolicy, EventListingType } from '@/types/database'
+import type { BoothClearancePolicy, BoothContractClause, EventListingType } from '@/types/database'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import { DESCRIPTION_MIN_LENGTH } from '@/lib/wizard/critique/copy-audit'
 import { effectiveScheduleTypeForListing } from '@/lib/events/listing-type'
@@ -30,6 +30,9 @@ export interface EventDraftPayload {
   marketCity?: string
   boothPriceCents?: number
   multiTableDiscountPercent?: number
+  boothContractEnabled?: boolean
+  boothContractClauses?: BoothContractClause[]
+  boothContractPdfUrl?: string | null
 }
 
 export interface DayRowPayload {
@@ -213,6 +216,12 @@ export async function persistEventDraft(
       100,
       Math.max(0, Math.round(draft.multiTableDiscountPercent ?? 0))
     ),
+    booth_contract_enabled: draft.boothContractEnabled ?? true,
+    booth_contract_clauses: draft.boothContractClauses ?? [],
+    booth_contract_pdf_url: draft.boothContractPdfUrl ?? null,
+    ...(draft.boothContractClauses && draft.boothContractClauses.length > 0
+      ? { booth_contract_updated_at: new Date().toISOString() }
+      : {}),
   }
 
   const eventDatabasePayload = {

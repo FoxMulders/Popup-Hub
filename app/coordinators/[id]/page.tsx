@@ -8,6 +8,8 @@ import { PassportStoriesPublicStrip } from '@/components/passport/passport-stori
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { Badge } from '@/components/ui/badge'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
+import { CoordinatorPeerVouchButton } from '@/components/coordinator/coordinator-community-trust'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { format } from 'date-fns'
 import { Calendar, MapPin, ArrowLeft } from 'lucide-react'
 import type { Event } from '@/types/database'
@@ -47,6 +49,10 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
   const supabase = await createClient()
   const service = await createServiceClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   const { data: profile } = await supabase
     .from('profiles')
     .select(`
@@ -54,13 +60,36 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
       reliability_score,
       coordinator_cancellation_count,
       coordinator_late_cancellation_count,
-      recent_late_cancellation_at
+      recent_late_cancellation_at,
+      coordinator_is_verified
     `)
     .eq('id', id)
     .eq('role', 'coordinator')
     .single()
 
   if (!profile) notFound()
+
+  let canPeerVouch = false
+  let alreadyPeerVouched = false
+
+  if (user && user.id !== id) {
+    const { data: viewer } = await supabase
+      .from('profiles')
+      .select('role, is_admin, coordinator_is_verified')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (viewer && canActAsCoordinator(viewer) && viewer.coordinator_is_verified === true) {
+      canPeerVouch = true
+      const { data: existingVouch } = await supabase
+        .from('coordinator_peer_vouches')
+        .select('id')
+        .eq('coordinator_id', id)
+        .eq('voucher_id', user.id)
+        .maybeSingle()
+      alreadyPeerVouched = !!existingVouch
+    }
+  }
 
   const [displayAvatarUrl, publicPassport] = await Promise.all([
     resolveProfileAvatarForServer(supabase, profile),
@@ -102,6 +131,19 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
           score={profile.reliability_score as number}
           recentLateCancellationAt={profile.recent_late_cancellation_at as string | null}
         />
+
+        {profile.coordinator_is_verified ? (
+          <Badge className="bg-sage-100 text-sage-800">Community verified organizer</Badge>
+        ) : null}
+
+        {canPeerVouch ? (
+          <CoordinatorPeerVouchButton
+            coordinatorId={profile.id}
+            coordinatorName={displayName}
+            canVouch
+            alreadyVouched={alreadyPeerVouched}
+          />
+        ) : null}
 
         <div className="grid grid-cols-2 gap-3 pt-2 text-center text-sm">
           <div className="rounded-xl border bg-canvas p-3">

@@ -7,7 +7,6 @@ import { ProfileForm } from './profile-form'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { CoordinatorCommunityTrustBanner } from '@/components/coordinator/coordinator-community-trust'
 import { loadCoordinatorEscrowContext } from '@/lib/coordinator/escrow'
-import { hasVerifiedBusinessTaxId } from '@/lib/coordinator/verification'
 import { PurchaseHistory } from '@/components/shopper/purchase-history'
 import { AccountAccessPanel } from '@/components/profile/account-access-panel'
 import { AccountSecurityCard } from '@/components/profile/account-security-card'
@@ -132,8 +131,8 @@ export default async function ProfilePage() {
             {profile.role === 'coordinator' && escrowContext ? (
               <CoordinatorCommunityTrustBanner
                 escrowExempt={escrowContext.escrowExempt}
-                hasVerifiedBusinessTaxId={hasVerifiedBusinessTaxId(profile as Profile)}
-                vouchCount={escrowContext.vouchCount}
+                vendorVouchCount={escrowContext.vendorVouchCount}
+                coordinatorVouchCount={escrowContext.coordinatorVouchCount}
               />
             ) : null}
 

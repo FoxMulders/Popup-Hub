@@ -22,7 +22,7 @@ export const PLATFORM_FAQ: FaqItem[] = [
           <strong>Zero-Spreadsheet Management:</strong> Say goodbye to administrative chaos. Instantly review juried applications, manage accepted makers, and map out your venue layout visually using our drag-and-drop Blueprint Studio.
         </p>
         <p>
-          <strong>Community-Driven Trust:</strong> Our built-in verification network balances vendor safety with coordinator cash flow. New organizers get a 25% advance immediately to secure their venue, while the remaining 75% is held safely by the platform until the event successfully completes. You can bypass this hold entirely by getting vouched for by three established community vendors.
+          <strong>Community-Driven Trust:</strong> Our built-in verification network balances vendor safety with coordinator cash flow. New organizers get a 25% advance immediately to secure their venue, while the remaining 75% is held safely by the platform until the event successfully completes. You can bypass this hold by earning community trust — either 3 vouches from verified organizers or 10 vouches from verified vendors who have worked your markets.
         </p>
         <p>
           <strong>Flexible Fee Controls:</strong> Keep 100% of your listed booth price. Coordinators can choose whether payment processing and platform fees (3% + $1) are deducted from their payouts or automatically passed through to vendors at checkout.

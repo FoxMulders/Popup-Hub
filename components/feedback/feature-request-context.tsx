@@ -10,11 +10,21 @@ import {
 } from 'react'
 import { usePathname } from 'next/navigation'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
+import type { FeatureSubmitterRole } from '@/lib/feedback/feature-request-config'
 import type { Profile } from '@/types/database'
 import { FeatureRequestModal } from '@/components/feedback/feature-request-modal'
 
+export interface FeatureRequestPrefill {
+  title?: string
+  problem?: string
+  dreamSolution?: string
+  submitterRole?: FeatureSubmitterRole
+  targetComponent?: string
+}
+
 interface FeatureRequestContextValue {
   open: () => void
+  openWithPrefill: (prefill: FeatureRequestPrefill) => void
   close: () => void
 }
 
@@ -41,11 +51,19 @@ export function FeatureRequestProvider({
 }: FeatureRequestProviderProps) {
   const pathname = usePathname() ?? ''
   const [open, setOpen] = useState(false)
+  const [prefill, setPrefill] = useState<FeatureRequestPrefill | null>(null)
   const activePortal = resolveActivePortal(portalCookie, profile, pathname)
 
   const value = useMemo(
     () => ({
-      open: () => setOpen(true),
+      open: () => {
+        setPrefill(null)
+        setOpen(true)
+      },
+      openWithPrefill: (next: FeatureRequestPrefill) => {
+        setPrefill(next)
+        setOpen(true)
+      },
       close: () => setOpen(false),
     }),
     []
@@ -53,6 +71,7 @@ export function FeatureRequestProvider({
 
   const handleOpenChange = useCallback((next: boolean) => {
     setOpen(next)
+    if (!next) setPrefill(null)
   }, [])
 
   return (
@@ -64,6 +83,7 @@ export function FeatureRequestProvider({
         profile={profile}
         activePortal={activePortal}
         pagePath={pathname}
+        prefill={prefill}
       />
     </FeatureRequestContext.Provider>
   )

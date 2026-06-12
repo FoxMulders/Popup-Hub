@@ -15,16 +15,21 @@ export {
   ESCROW_HOLD_PERCENT,
   ESCROW_IMMEDIATE_PERCENT,
   REQUIRED_VOUCHES,
+  REQUIRED_VENDOR_VOUCHES,
+  REQUIRED_COORDINATOR_VOUCHES,
   SUCCESSFUL_EVENTS_FOR_VERIFY,
   ESCROW_RELEASE_HOURS_AFTER_EVENT,
   splitOrganizerPayoutCents,
   computeEscrowEligibleReleaseAt,
   coordinatorEscrowExempt,
   coordinatorRequiresEscrowHold,
+  coordinatorVouchThresholdMet,
   type CoordinatorEscrowProfile,
+  type CoordinatorVouchCounts,
   type EscrowSettlementMode,
   type EscrowHoldStatus,
 } from '@/lib/coordinator/escrow-policy'
+import { loadCoordinatorVouchCounts } from '@/lib/coordinator/vouch'
 export async function loadCoordinatorEscrowProfile(
   supabase: SupabaseClient,
   coordinatorId: string
@@ -40,33 +45,28 @@ export async function loadCoordinatorEscrowProfile(
   return data
 }
 
-async function countCoordinatorVouches(
-  supabase: SupabaseClient,
-  coordinatorId: string
-): Promise<number> {
-  const { count, error } = await supabase
-    .from('coordinator_vouches')
-    .select('id', { count: 'exact', head: true })
-    .eq('coordinator_id', coordinatorId)
-
-  if (error) throw error
-  return count ?? 0
-}
-
 export async function loadCoordinatorEscrowContext(
   supabase: SupabaseClient,
   coordinatorId: string
 ): Promise<{
   profile: CoordinatorEscrowProfile | null
+  vendorVouchCount: number
+  coordinatorVouchCount: number
+  /** @deprecated Use vendorVouchCount */
   vouchCount: number
   escrowExempt: boolean
 }> {
-  const profile = await loadCoordinatorEscrowProfile(supabase, coordinatorId)
-  const vouchCount = await countCoordinatorVouches(supabase, coordinatorId)
+  const [profile, counts] = await Promise.all([
+    loadCoordinatorEscrowProfile(supabase, coordinatorId),
+    loadCoordinatorVouchCounts(supabase, coordinatorId),
+  ])
+
   return {
     profile,
-    vouchCount,
-    escrowExempt: coordinatorEscrowExempt(profile, vouchCount),
+    vendorVouchCount: counts.vendorVouchCount,
+    coordinatorVouchCount: counts.coordinatorVouchCount,
+    vouchCount: counts.vendorVouchCount,
+    escrowExempt: coordinatorEscrowExempt(profile, counts),
   }
 }
 
@@ -203,8 +203,14 @@ export async function distributeCoordinatorBoothPayout(
     return { escrowApplied: false }
   }
 
-  const { profile, vouchCount } = await loadCoordinatorEscrowContext(supabase, params.coordinatorId)
-  const escrowExempt = coordinatorEscrowExempt(profile, vouchCount)
+  const { profile, vendorVouchCount, coordinatorVouchCount } = await loadCoordinatorEscrowContext(
+    supabase,
+    params.coordinatorId
+  )
+  const escrowExempt = coordinatorEscrowExempt(profile, {
+    vendorVouchCount,
+    coordinatorVouchCount,
+  })
 
   if (escrowExempt) {
     if (params.settlementMode === 'wallet') {

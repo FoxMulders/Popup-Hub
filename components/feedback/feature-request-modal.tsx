@@ -34,6 +34,7 @@ import {
 } from '@/lib/feedback/feature-request-config'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
+import type { FeatureRequestPrefill } from '@/components/feedback/feature-request-context'
 
 interface FeatureRequestModalProps {
   open: boolean
@@ -41,6 +42,7 @@ interface FeatureRequestModalProps {
   profile: Profile
   activePortal: ActivePortal
   pagePath: string
+  prefill?: FeatureRequestPrefill | null
 }
 
 const EMPTY_FORM = {
@@ -56,6 +58,7 @@ export function FeatureRequestModal({
   profile,
   activePortal,
   pagePath,
+  prefill = null,
 }: FeatureRequestModalProps) {
   const [submitterRole, setSubmitterRole] = useState<FeatureSubmitterRole>(
     defaultSubmitterRoleFromPortal(activePortal)
@@ -83,14 +86,23 @@ export function FeatureRequestModal({
 
   useEffect(() => {
     if (!open) return
-    const role = defaultSubmitterRoleFromPortal(activePortal)
+    const role = prefill?.submitterRole ?? defaultSubmitterRoleFromPortal(activePortal)
     setSubmitterRole(role)
-    setTargetComponent(FEATURE_TARGET_COMPONENTS[role][0]?.value ?? 'other')
-    setForm(EMPTY_FORM)
+    const defaultTarget =
+      prefill?.targetComponent ??
+      FEATURE_TARGET_COMPONENTS[role][0]?.value ??
+      'other'
+    setTargetComponent(defaultTarget)
+    setForm({
+      title: prefill?.title ?? '',
+      problem: prefill?.problem ?? '',
+      dreamSolution: prefill?.dreamSolution ?? '',
+      impactLevel: 'nice_to_have',
+    })
     setScreenshot(null)
     setPreviewUrl(null)
     setSubmitted(false)
-  }, [activePortal, open])
+  }, [activePortal, open, prefill])
 
   useEffect(() => {
     return () => {

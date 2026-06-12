@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -97,6 +97,7 @@ export function PaymentMethodsForm({
   const [etransferEmail, setEtransferEmail] = useState('')
   const [offlineInstructions, setOfflineInstructions] = useState('')
   const [flags, setFlags] = useState({ ...DEFAULT_PAYMENT_FLAGS })
+  const userEditedRef = useRef({ etransferEmail: false, offlineInstructions: false })
 
   useEffect(() => {
     const stripeParam = searchParams.get('stripe')
@@ -128,10 +129,14 @@ export function PaymentMethodsForm({
             ...(data.defaultEventPaymentFlags ?? {}),
           },
         })
-        setEtransferEmail(data.etransferPaymentEmail ?? '')
-        setOfflineInstructions(
-          data.paymentInstructions ?? data.offlinePaymentInstructions ?? ''
-        )
+        if (!userEditedRef.current.etransferEmail) {
+          setEtransferEmail(data.etransferPaymentEmail ?? '')
+        }
+        if (!userEditedRef.current.offlineInstructions) {
+          setOfflineInstructions(
+            data.paymentInstructions ?? data.offlinePaymentInstructions ?? ''
+          )
+        }
         setFlags({
           ...DEFAULT_PAYMENT_FLAGS,
           ...(data.defaultEventPaymentFlags ?? {}),
@@ -203,12 +208,11 @@ export function PaymentMethodsForm({
     }
   }
 
-  if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading payment settings…</p>
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" aria-busy={loading}>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading saved payment settings…</p>
+      ) : null}
       {loadError ? (
         <p className="rounded-lg border border-harvest-200 bg-harvest-50 px-3 py-2 text-sm text-harvest-900">
           {loadError} You can still enter payment details below — save when ready.
@@ -368,8 +372,11 @@ export function PaymentMethodsForm({
             <Input
               id="etransfer-email"
               type="email"
-              value={etransferEmail}
-              onChange={(e) => setEtransferEmail(e.target.value)}
+              value={etransferEmail ?? ''}
+              onChange={(e) => {
+                userEditedRef.current.etransferEmail = true
+                setEtransferEmail(e.target.value)
+              }}
               placeholder="payments@yourmarket.ca"
             />
           </div>
@@ -378,8 +385,11 @@ export function PaymentMethodsForm({
             <Textarea
               id="offline-instructions"
               rows={4}
-              value={offlineInstructions}
-              onChange={(e) => setOfflineInstructions(e.target.value)}
+              value={offlineInstructions ?? ''}
+              onChange={(e) => {
+                userEditedRef.current.offlineInstructions = true
+                setOfflineInstructions(e.target.value)
+              }}
               placeholder="Include where to send e-Transfers, who to pay cash to at load-in, and any memo/reference requirements."
             />
           </div>

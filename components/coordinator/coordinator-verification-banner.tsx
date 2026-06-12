@@ -108,8 +108,8 @@ export function CoordinatorVerificationBanner({
                 (isPending
                   ? 'You can edit draft markets while we review your details. Offline payment collection unlocks after approval.'
                   : paymentConnected
-                    ? 'Payment account connected — you can publish and collect card payments. Optionally add a verified business tax ID to unlock full payouts early.'
-                    : 'Connect Square or Stripe to publish and collect card payments, or submit your organization name for offline markets. Business tax ID is optional.')}
+                    ? 'Payment account connected — you can publish and collect card payments.'
+                    : 'Connect Square or Stripe to publish and collect card payments, or submit your organization name for offline markets.')}
             </p>
           </div>
 
@@ -138,7 +138,7 @@ export function CoordinatorVerificationBanner({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="coordinator-bn">
-                  Business registration / tax ID{' '}
+                  Business registration number{' '}
                   <span className="font-normal text-muted-foreground">(optional)</span>
                 </Label>
                 <Input

@@ -7,14 +7,18 @@
 import {
   ESCROW_HOLD_PERCENT,
   ESCROW_IMMEDIATE_PERCENT,
-  REQUIRED_VOUCHES,
+  REQUIRED_VENDOR_VOUCHES,
+  REQUIRED_COORDINATOR_VOUCHES,
   SUCCESSFUL_EVENTS_FOR_VERIFY,
   coordinatorEscrowExempt,
   coordinatorRequiresEscrowHold,
+  coordinatorVouchThresholdMet,
   splitOrganizerPayoutCents,
 } from '../lib/coordinator/escrow'
-import { hasVerifiedBusinessTaxId } from '../lib/coordinator/verification'
-import { vendorCanVouchForCoordinator } from '../lib/coordinator/vouch'
+import {
+  coordinatorCanVouchForCoordinator,
+  vendorCanVouchForCoordinator,
+} from '../lib/coordinator/vouch'
 import { computeBoothCheckoutBreakdown } from '../lib/monetization/booth-checkout'
 
 function assert(cond: boolean, msg: string) {
@@ -30,7 +34,8 @@ const defaultFeeConfig = {
 function main() {
   assert(ESCROW_HOLD_PERCENT === 75, 'hold percent is 75')
   assert(ESCROW_IMMEDIATE_PERCENT === 25, 'immediate percent is 25')
-  assert(REQUIRED_VOUCHES === 3, 'required vouches is 3')
+  assert(REQUIRED_VENDOR_VOUCHES === 10, 'required vendor vouches is 10')
+  assert(REQUIRED_COORDINATOR_VOUCHES === 3, 'required coordinator vouches is 3')
   assert(SUCCESSFUL_EVENTS_FOR_VERIFY === 2, 'successful events threshold is 2')
 
   const split = splitOrganizerPayoutCents(10_000)
@@ -100,29 +105,61 @@ function main() {
   })
   assert(!blocked.ok, 'high-risk vendor cannot vouch')
 
+  const peerEligible = coordinatorCanVouchForCoordinator({
+    role: 'coordinator',
+    coordinator_is_verified: true,
+    coordinator_account_status: 'active',
+  })
+  assert(peerEligible.ok, 'community-verified coordinator can peer vouch')
+
+  const peerBlocked = coordinatorCanVouchForCoordinator({
+    role: 'coordinator',
+    coordinator_is_verified: false,
+    coordinator_account_status: 'active',
+  })
+  assert(!peerBlocked.ok, 'unverified coordinator cannot peer vouch')
+
   const squareOnly = {
     coordinator_verification_status: 'unverified' as const,
     square_access_token: 'token',
     payout_onboarding_status: 'complete' as const,
   }
-  assert(!hasVerifiedBusinessTaxId(squareOnly), 'Square alone is not verified tax id')
-  assert(coordinatorRequiresEscrowHold(squareOnly, 0), 'Square-only organizer requires escrow')
-  assert(
-    coordinatorEscrowExempt(squareOnly, REQUIRED_VOUCHES),
-    'three vouches exempt escrow without tax id'
-  )
+  assert(coordinatorRequiresEscrowHold(squareOnly, { vendorVouchCount: 0, coordinatorVouchCount: 0 }), 'Square-only organizer requires escrow')
 
   assert(
-    coordinatorEscrowExempt({ coordinator_verification_status: 'verified', coordinator_business_number: '123456789' }, 0),
-    'verified tax id exempts escrow via profile'
+    coordinatorEscrowExempt(squareOnly, { vendorVouchCount: REQUIRED_VENDOR_VOUCHES, coordinatorVouchCount: 0 }),
+    'ten vendor vouches exempt escrow'
   )
   assert(
-    coordinatorEscrowExempt({}, 3),
-    'three vouches exempt escrow'
+    coordinatorEscrowExempt(squareOnly, { vendorVouchCount: 0, coordinatorVouchCount: REQUIRED_COORDINATOR_VOUCHES }),
+    'three coordinator vouches exempt escrow'
   )
   assert(
-    coordinatorRequiresEscrowHold({}, 2),
-    'two vouches still requires escrow hold'
+    coordinatorEscrowExempt({ coordinator_is_verified: true }, { vendorVouchCount: 0, coordinatorVouchCount: 0 }),
+    'community verified flag exempts escrow'
+  )
+  assert(
+    !coordinatorEscrowExempt(
+      { coordinator_verification_status: 'verified', coordinator_business_number: '123456789' },
+      { vendorVouchCount: 0, coordinatorVouchCount: 0 }
+    ),
+    'business number alone no longer exempts escrow'
+  )
+  assert(
+    coordinatorRequiresEscrowHold({}, { vendorVouchCount: 9, coordinatorVouchCount: 2 }),
+    'nine vendor and two coordinator vouches still requires escrow'
+  )
+  assert(
+    coordinatorVouchThresholdMet({ vendorVouchCount: 10, coordinatorVouchCount: 0 }),
+    'vendor threshold met at 10'
+  )
+  assert(
+    coordinatorVouchThresholdMet({ vendorVouchCount: 2, coordinatorVouchCount: 3 }),
+    'coordinator threshold met at 3'
+  )
+  assert(
+    !coordinatorVouchThresholdMet({ vendorVouchCount: 5, coordinatorVouchCount: 2 }),
+    'mixed partial counts do not verify'
   )
 
   console.log('verify-coordinator-escrow: PASS')

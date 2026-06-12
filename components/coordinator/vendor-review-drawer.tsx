@@ -48,6 +48,7 @@ import {
   AlertTriangle,
   Camera,
   CheckCircle,
+  FileText,
   Globe,
   Loader2,
   ShoppingBag,
@@ -429,6 +430,35 @@ export function VendorReviewDrawer({
                     <p className="font-medium">{marketSummary.categoryCapLabel}</p>
                     {marketSummary.categoryCapTone === 'full' ? (
                       <p className="mt-1 text-xs">Approving may require a waitlist or category exception.</p>
+                    ) : null}
+                  </div>
+                </section>
+              ) : null}
+
+              {app.booth_contract_acknowledged_at ? (
+                <section className="rounded-2xl border p-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Digital Booth Contract
+                  </h3>
+                  <div className="mt-3 rounded-xl border border-sage-200 bg-sage-50 px-3 py-2 text-sm">
+                    <p className="font-medium text-sage-900">Contract accepted</p>
+                    <p className="mt-1 text-muted-foreground">
+                      Acknowledged{' '}
+                      {new Date(app.booth_contract_acknowledged_at).toLocaleString('en-CA', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })}
+                    </p>
+                    {app.booth_contract_snapshot?.pdf_url ? (
+                      <a
+                        href={app.booth_contract_snapshot.pdf_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-harvest-700 hover:underline"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        View accepted contract PDF
+                      </a>
                     ) : null}
                   </div>
                 </section>

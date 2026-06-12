@@ -78,8 +78,15 @@ export function StructuredCardFields({
   const cvcId = `${idPrefix}-cvc`
   const postalId = `${idPrefix}-postal`
 
+  const safeValue: StructuredCardValue = {
+    cardNumber: value.cardNumber ?? '',
+    expiry: value.expiry ?? '',
+    cvc: value.cvc ?? '',
+    postal: value.postal ?? '',
+  }
+
   function patch(next: Partial<StructuredCardValue>) {
-    onChange({ ...value, ...next })
+    onChange({ ...safeValue, ...next })
   }
 
   return (
@@ -106,7 +113,7 @@ export function StructuredCardFields({
            * downstream tokenizers don't have to strip whitespace.
            */
           maxLength={19}
-          value={formatCardNumber(value.cardNumber)}
+          value={formatCardNumber(safeValue.cardNumber)}
           onChange={(e) => patch({ cardNumber: digitsOnly(e.target.value).slice(0, 16) })}
           className="font-mono tracking-wider"
         />
@@ -124,7 +131,7 @@ export function StructuredCardFields({
           autoComplete="cc-exp"
           placeholder="MM/YY"
           maxLength={5}
-          value={formatExpiry(value.expiry)}
+          value={formatExpiry(safeValue.expiry)}
           onChange={(e) => patch({ expiry: digitsOnly(e.target.value).slice(0, 4) })}
           className="font-mono text-center tracking-widest"
         />
@@ -147,7 +154,7 @@ export function StructuredCardFields({
           autoComplete="cc-csc"
           placeholder="•••"
           maxLength={4}
-          value={value.cvc}
+          value={safeValue.cvc}
           onChange={(e) => patch({ cvc: digitsOnly(e.target.value).slice(0, 4) })}
           className="font-mono text-center tracking-widest"
         />
@@ -165,7 +172,7 @@ export function StructuredCardFields({
           autoComplete="postal-code"
           placeholder="A1B 2C3"
           maxLength={10}
-          value={value.postal}
+          value={safeValue.postal}
           onChange={(e) => patch({ postal: e.target.value })}
           className="uppercase"
         />

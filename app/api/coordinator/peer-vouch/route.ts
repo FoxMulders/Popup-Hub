@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { vendorVouchForCoordinator } from '@/lib/coordinator/vouch'
+import { coordinatorPeerVouchForCoordinator } from '@/lib/coordinator/vouch'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -14,12 +15,12 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'vendor') {
-    return NextResponse.json({ error: 'Vendor account required' }, { status: 403 })
+  if (!canActAsCoordinator(profile)) {
+    return NextResponse.json({ error: 'Organizer account required' }, { status: 403 })
   }
 
   const body = (await request.json()) as { coordinatorId?: string }
@@ -30,9 +31,9 @@ export async function POST(request: Request) {
   }
 
   const service = await createServiceClient()
-  const result = await vendorVouchForCoordinator(service, {
-    vendorId: user.id,
-    coordinatorId,
+  const result = await coordinatorPeerVouchForCoordinator(service, {
+    voucherCoordinatorId: user.id,
+    targetCoordinatorId: coordinatorId,
   })
 
   if (!result.ok) {

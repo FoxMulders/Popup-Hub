@@ -84,9 +84,11 @@ import { buildWizardScheduleLines } from '@/lib/wizard/wizard-schedule-summary'
 import { useFlyerScan } from '@/hooks/use-flyer-scan'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
 import { cn } from '@/lib/utils'
+import { normalizeEventContractClauses } from '@/lib/legal/booth-contract-templates'
 import type {
   BoothLayout,
   BoothClearancePolicy,
+  BoothContractClause,
   Category,
   CoordinatorSavedVenue,
   Event,
@@ -280,6 +282,23 @@ export function MarketSetupWizard({
   )
   const [raffleDonationRequirement, setRaffleDonationRequirement] = useState(
     existing?.raffle_donation_requirement ?? ''
+  )
+  const [boothContractEnabled, setBoothContractEnabled] = useState(
+    existing?.booth_contract_enabled ?? true
+  )
+  const [boothContractClauses, setBoothContractClauses] = useState<BoothContractClause[]>(() =>
+    normalizeEventContractClauses(existing?.booth_contract_clauses, {
+      requireFullAttendance: existing?.require_full_attendance ?? true,
+      marketInsuranceRequired: existing?.market_insurance_required ?? false,
+      boothClearancePolicy: existing?.booth_clearance_policy ?? 'leave_furniture',
+      eventName: existing?.name,
+    })
+  )
+  const [boothContractPdfUrl, setBoothContractPdfUrl] = useState<string | null>(
+    existing?.booth_contract_pdf_url ?? null
+  )
+  const [boothContractReviewed, setBoothContractReviewed] = useState(
+    Boolean(existing?.booth_contract_updated_at)
   )
   const [coverImageUrl, setCoverImageUrl] = useState(existing?.cover_image_url ?? '')
   const [coverFile, setCoverFile] = useState<File | null>(null)
@@ -580,6 +599,9 @@ export function MarketSetupWizard({
             endAt: bounds.endAt,
             coverImageUrl: coverUrl,
             status: opts?.publish ? 'published' : 'draft',
+            boothContractEnabled,
+            boothContractClauses,
+            boothContractPdfUrl,
           },
           applyUnifiedBoothFeeToCategoryLimits(categoryLimits, boothPriceCents),
           dayRows,
@@ -1270,6 +1292,16 @@ export function MarketSetupWizard({
                 onBoothClearancePolicyChange={setBoothClearancePolicy}
                 raffleDonationRequirement={raffleDonationRequirement}
                 onRaffleDonationRequirementChange={setRaffleDonationRequirement}
+                boothContractEnabled={boothContractEnabled}
+                onBoothContractEnabledChange={setBoothContractEnabled}
+                boothContractClauses={boothContractClauses}
+                onBoothContractClausesChange={setBoothContractClauses}
+                boothContractPdfUrl={boothContractPdfUrl}
+                onBoothContractPdfUrlChange={setBoothContractPdfUrl}
+                boothContractReviewed={boothContractReviewed}
+                onBoothContractReviewedChange={setBoothContractReviewed}
+                coordinatorId={coordinatorId}
+                eventId={eventId}
                 coverImageUrl={coverImageUrl}
                 onCoverFileSelected={handleCoverFileSelected}
                 parsingFlyer={parsingFlyer}

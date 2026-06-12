@@ -120,7 +120,7 @@ export function isShopperBlockedPath(pathname: string): boolean {
 export const SHOPPER_BLOCKED_REDIRECT = '/discover'
 
 export function accessDeniedRedirect(userRole: string | null | undefined): string {
-  if (hasAccess(userRole, 'coordinator')) return '/coordinator/dashboard'
+  if (hasAccess(userRole, 'coordinator')) return '/coordinator'
   if (hasAccess(userRole, 'vendor')) return '/vendor/dashboard'
   return SHOPPER_BLOCKED_REDIRECT
 }

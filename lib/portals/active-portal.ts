@@ -13,7 +13,7 @@ export const PORTAL_LABELS: Record<ActivePortal, string> = {
 export function getPortalHome(portal: ActivePortal): string {
   switch (portal) {
     case 'coordinator':
-      return '/coordinator/dashboard'
+      return '/coordinator'
     case 'vendor':
       return '/vendor/dashboard'
     case 'patron':

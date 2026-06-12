@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server'
+import {
+  buildBoothContractSnapshot,
+  contractRequiresVendorAcknowledgment,
+  resolveEventBoothContract,
+} from '@/lib/booth-contract/resolve-event-contract'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import {
@@ -128,6 +133,7 @@ export async function POST(request: Request) {
     neighborPreference?: string | null
     joinWaitlist?: boolean
     attendanceTermsAcknowledged?: boolean
+    boothContractAcknowledged?: boolean
     attendingEventDayIds?: string[]
     attendingDates?: string[]
     paymentMethod?: 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH' | 'credit_card' | 'etransfer' | 'cash'
@@ -141,6 +147,7 @@ export async function POST(request: Request) {
     neighborPreference,
     joinWaitlist,
     attendanceTermsAcknowledged,
+    boothContractAcknowledged,
     attendingEventDayIds,
     attendingDates,
     paymentMethod: rawPaymentMethod,
@@ -162,7 +169,7 @@ export async function POST(request: Request) {
     supabase
       .from('events')
       .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, venue_verified, venue_verification_status, venue_verification_reason, vendor_access_equality_until, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete, coordinator_verification_status, coordinator_account_status, coordinator_risk_score)'
+        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, booth_contract_enabled, booth_contract_clauses, booth_contract_pdf_url, booth_contract_updated_at, booth_clearance_policy, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, venue_verified, venue_verification_status, venue_verification_reason, vendor_access_equality_until, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete, coordinator_verification_status, coordinator_account_status, coordinator_risk_score)'
       )
       .eq('id', eventId)
       .maybeSingle(),
@@ -243,6 +250,24 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
+
+  const boothContractRequired = contractRequiresVendorAcknowledgment(event)
+  if (boothContractRequired && !boothContractAcknowledged) {
+    return NextResponse.json(
+      { error: 'You must agree to the digital booth contract before submitting.' },
+      { status: 400 }
+    )
+  }
+
+  const resolvedBoothContract = resolveEventBoothContract(event)
+  const boothContractSnapshot =
+    boothContractRequired
+      ? buildBoothContractSnapshot({
+          clauses: resolvedBoothContract.clauses,
+          pdfUrl: resolvedBoothContract.pdfUrl,
+          acknowledgedAt: new Date().toISOString(),
+        })
+      : null
 
   const scheduleDays = resolveEventScheduleDays(event)
   const attendanceSelection = normalizeAttendanceSelection(
@@ -492,6 +517,8 @@ export async function POST(request: Request) {
         attending_event_day_ids: selectedAttendanceEventDayIds,
         attending_dates: selectedAttendanceDates,
         attendance_terms_acknowledged_at: now,
+        booth_contract_acknowledged_at: boothContractSnapshot ? now : null,
+        booth_contract_snapshot: boothContractSnapshot,
         applicable_documentation_url: applicableDocumentationUrl?.trim() || null,
         table_count: tableCount,
         ...(isReservedBoothStatus(status) ? { approved_at: now } : {}),
@@ -534,6 +561,8 @@ export async function POST(request: Request) {
           attending_event_day_ids: selectedAttendanceEventDayIds,
           attending_dates: selectedAttendanceDates,
           attendance_terms_acknowledged_at: now,
+          booth_contract_acknowledged_at: boothContractSnapshot ? now : null,
+          booth_contract_snapshot: boothContractSnapshot,
           table_count: tableCount,
         })
         .select(

@@ -22,6 +22,7 @@ import {
 } from '@/lib/coordinator/coordinator-event-route'
 
 const RAIL_LINKS = [
+  { href: '/coordinator', label: 'Home', icon: Calendar },
   { href: '/coordinator/dashboard', label: 'Command center', icon: LayoutDashboard },
   { href: '/coordinator/events/new', label: 'New market', icon: Plus },
   { href: '/coordinator/payment-methods', label: 'Payments', icon: CreditCard },
@@ -72,9 +73,11 @@ export function CoordinatorWorkspaceRail() {
       <ul className="flex flex-col gap-1" role="list">
         {RAIL_LINKS.map(({ href, label, icon: Icon }) => {
           const active =
-            href === '/coordinator/dashboard'
-              ? pathname === '/coordinator/dashboard'
-              : pathname === href || pathname.startsWith(`${href}/`)
+            href === '/coordinator'
+              ? pathname === '/coordinator'
+              : href === '/coordinator/dashboard'
+                ? pathname === '/coordinator/dashboard'
+                : pathname === href || pathname.startsWith(`${href}/`)
           return (
             <li key={href}>
               <Link

@@ -1,1 +1,1 @@
-feat: ship 31 session updates (vendor apply map, passport routing, logo, billing inputs; dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; +27 more)
+feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)

@@ -4,13 +4,38 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — coordinator login home (local, not deployed)
+- **`app/coordinator/page.tsx` + `components/coordinator/coordinator-home.tsx`:** Post-login coordinator landing with **Create a new market** and **View your markets** cards.
+- **Redirects:** `getPortalHome('coordinator')`, `resolvePostLoginPath`, `accessDeniedRedirect`, dev mock login → `/coordinator`.
+- **Nav:** Coordinator **Home** link in app nav + workspace rail; command center stays at `/coordinator/dashboard`.
+- **Verify:** `npx tsx scripts/verify-document-scroll-routes.ts` — PASS. Smoke: sign in as coordinator → `/coordinator` with both CTAs; **View your markets** → command center.
+
+## Active work — dual-path coordinator community vouches (local, not deployed)
+- **`106_coordinator_peer_vouches.sql`:** New `coordinator_peer_vouches` table (community-verified organizer → organizer).
+- **`lib/coordinator/escrow-policy.ts`:** `REQUIRED_VENDOR_VOUCHES = 10`, `REQUIRED_COORDINATOR_VOUCHES = 3`; dual OR logic; removed business-number escrow bypass.
+- **`lib/coordinator/vouch.ts`:** Peer vouch eligibility + shared paid-vendor gate; `maybeMarkCommunityVerifiedFromVouches`.
+- **`app/api/coordinator/peer-vouch/route.ts`:** POST peer vouch for organizers.
+- **UI:** Dual progress bars in `coordinator-community-trust.tsx`; peer vouch button on `/coordinators/[id]`; FAQ + verification banner copy de-emphasizes tax ID.
+- **Verify:** `npx tsx scripts/verify-coordinator-escrow.ts` — PASS; `npx tsx scripts/verify-coordinator-verification.ts` — PASS. Apply migration `106` before smoke-testing vouches in dev.
+
+## Active work — digital booth contracts (local, not deployed)
+- **`105_event_booth_contracts.sql`:** `events.booth_contract_*` columns; `booth_applications.booth_contract_acknowledged_at` + `booth_contract_snapshot`; `event-assets` bucket with PDF support.
+- **`lib/legal/booth-contract-templates.ts` + `lib/booth-contract/resolve-event-contract.ts`:** Platform default clauses (payment, refund, teardown, conduct, insurance, attendance); resolve/hash/snapshot helpers.
+- **`components/coordinator/booth-contract-editor.tsx`:** Clause toggles, custom clauses, PDF upload, save, **Suggest an enhancement** → feature request prefill.
+- **Wizard / event form / autosave:** Wired into `wizard-step-event-details`, `market-setup-wizard`, `event-form`, `wizard-autosave`; readiness checklist item **Booth contract reviewed**.
+- **Vendor apply:** `apply-button.tsx` shows contract + acknowledgment; `app/api/vendor/apply/route.ts` validates and stores snapshot.
+- **Coordinator review:** `vendor-review-drawer.tsx` shows contract accepted timestamp + PDF link.
+- **Feature requests:** `booth_contracts` target component; `FeatureRequestContext.openWithPrefill`.
+- **Verify:** `npx tsc --noEmit` — PASS; `npx tsx scripts/verify-booth-contracts.ts` — PASS. Smoke: coordinator wizard Step 1 → edit/save contract; vendor apply dialog shows clauses; suggest enhancement opens prefilled modal.
+
 ## Active work — vendor apply map, passport routing, logo, billing inputs (local, not deployed)
 - **`market-application-layout-view.tsx`:** Role-agnostic venue preview (`eventData`, `layoutId`, `layout`) using `PublicFloorplan` + `layoutHasDrawableGeometry`.
 - **`app/vendor/events/[id]/page.tsx`:** Loads `booth_layouts`, renders layout preview above apply card; passport CTA → `/vendor/passport`.
 - **`passport-page-view.tsx` + routes:** `passportRoute` prop — `/vendor/passport` always shows vendor wizard; `/profile/passport` uses profile role. `passportPathForProfile()` for profile links.
 - **`popup-hub-logo.tsx` / `app-nav.tsx` / `brand-mark.tsx`:** Larger nav lockup (~20%), tighter logo shell padding (`p-0.5` / `p-1`).
-- **`payment-methods-form.tsx`:** Default settings seed so inputs stay editable when API fetch fails or returns partial data.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: vendor `/vendor/events/[id]` shows venue map when layout has booths; `/vendor/passport` shows vendor wizard for coordinator accounts; `/coordinator/payment-methods` e-Transfer field accepts typing after load.
+- **`payment-methods-form.tsx`:** Offline payment inputs always render (no loading gate); `EMPTY_PAYMENT_SETTINGS` seed; fetch errors keep fields editable; `onChange` + `onValueChange` on e-Transfer email; skip server hydrate after user edits.
+- **`structured-card-fields.tsx`:** Coalesce undefined card field values so controlled inputs never freeze.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/payment-methods` — e-Transfer + instructions accept typing during/after load and after failed fetch.
 
 ## Active work — dual-screen toolbar + room-scoped canvas bounds (local, not deployed)
 - **`canvas-toolbar-static.tsx`:** `HeaderBarDualScreenCluster` restores visible **DUAL-SCREEN** section header with **Presenter** / **Wall Cast** buttons stacked beneath; header row uses `items-stretch` + `overflow-y-visible` so controls are not clipped.

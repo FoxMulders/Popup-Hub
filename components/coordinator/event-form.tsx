@@ -30,6 +30,9 @@ import { Loader2, MapPin, Calendar, Settings2, Upload, Gavel, Trash2, HelpCircle
 import { buildNextEventDayRow } from '@/lib/events/event-day-rows'
 import { ScheduleWeekendShortcuts } from '@/components/shared/schedule-weekend-shortcuts'
 import { FlyerCoverUpload } from '@/components/coordinator/flyer-cover-upload'
+import { BoothContractEditor } from '@/components/coordinator/booth-contract-editor'
+import { enabledContractClausesForStorage } from '@/lib/booth-contract/resolve-event-contract'
+import { normalizeEventContractClauses } from '@/lib/legal/booth-contract-templates'
 import { FlyerFieldHighlight } from '@/components/coordinator/flyer-field-highlight'
 import { useFlyerScan } from '@/hooks/use-flyer-scan'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
@@ -129,6 +132,23 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   )
   const [raffleDonationRequirement, setRaffleDonationRequirement] = useState(
     existing?.raffle_donation_requirement ?? ''
+  )
+  const [boothContractEnabled, setBoothContractEnabled] = useState(
+    existing?.booth_contract_enabled ?? true
+  )
+  const [boothContractClauses, setBoothContractClauses] = useState(() =>
+    normalizeEventContractClauses(existing?.booth_contract_clauses, {
+      requireFullAttendance: existing?.require_full_attendance ?? true,
+      marketInsuranceRequired: existing?.market_insurance_required ?? false,
+      boothClearancePolicy: existing?.booth_clearance_policy ?? 'leave_furniture',
+      eventName: existing?.name,
+    })
+  )
+  const [boothContractPdfUrl, setBoothContractPdfUrl] = useState<string | null>(
+    existing?.booth_contract_pdf_url ?? null
+  )
+  const [boothContractReviewed, setBoothContractReviewed] = useState(
+    Boolean(existing?.booth_contract_updated_at)
   )
   const [marketInsuranceRequired, setMarketInsuranceRequired] = useState(
     existing?.market_insurance_required ?? false
@@ -407,6 +427,12 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
           Math.max(0, Math.round(multiTableDiscountPercent))
         ),
         pass_fees_to_vendor: passFeesToVendor,
+        booth_contract_enabled: boothContractEnabled,
+        booth_contract_clauses: enabledContractClausesForStorage(boothContractClauses),
+        booth_contract_pdf_url: boothContractPdfUrl,
+        booth_contract_updated_at: boothContractReviewed
+          ? existing?.booth_contract_updated_at ?? new Date().toISOString()
+          : existing?.booth_contract_updated_at ?? null,
       }
 
       let eventId = existing?.id
@@ -820,6 +846,26 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
                 checked={marketInsuranceRequired}
                 onCheckedChange={setMarketInsuranceRequired}
               />
+            </div>
+
+            <div id="booth-contract" className="scroll-mt-24">
+              <BoothContractEditor
+              eventId={existing?.id ?? null}
+              coordinatorId={userId}
+              eventName={name}
+              enabled={boothContractEnabled}
+              onEnabledChange={setBoothContractEnabled}
+              clauses={boothContractClauses}
+              onClausesChange={setBoothContractClauses}
+              pdfUrl={boothContractPdfUrl}
+              onPdfUrlChange={setBoothContractPdfUrl}
+              requireFullAttendance={existing?.require_full_attendance ?? true}
+              marketInsuranceRequired={marketInsuranceRequired}
+              boothClearancePolicy={boothClearancePolicy}
+              contractReviewed={boothContractReviewed}
+              onContractReviewedChange={setBoothContractReviewed}
+              onSaved={() => router.refresh()}
+            />
             </div>
           </CardContent>
         </Card>

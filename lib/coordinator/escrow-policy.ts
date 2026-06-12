@@ -1,7 +1,4 @@
-import {
-  hasVerifiedBusinessTaxId,
-  type CoordinatorFraudGate,
-} from '@/lib/coordinator/verification'
+import type { CoordinatorFraudGate } from '@/lib/coordinator/verification'
 
 /** Fraction of organizer payout held until post-event release for unverified coordinators. */
 export const ESCROW_HOLD_PERCENT = 75
@@ -9,7 +6,12 @@ export const ESCROW_HOLD_PERCENT = 75
 /** Fraction released immediately to cover venue deposits. */
 export const ESCROW_IMMEDIATE_PERCENT = 25
 
-export const REQUIRED_VOUCHES = 3
+export const REQUIRED_VENDOR_VOUCHES = 10
+
+export const REQUIRED_COORDINATOR_VOUCHES = 3
+
+/** @deprecated Use REQUIRED_VENDOR_VOUCHES */
+export const REQUIRED_VOUCHES = REQUIRED_VENDOR_VOUCHES
 
 export const SUCCESSFUL_EVENTS_FOR_VERIFY = 2
 
@@ -18,6 +20,11 @@ export const ESCROW_RELEASE_HOURS_AFTER_EVENT = 24
 export type EscrowSettlementMode = 'wallet' | 'external_processor'
 
 export type EscrowHoldStatus = 'held' | 'released' | 'blocked'
+
+export type CoordinatorVouchCounts = {
+  vendorVouchCount: number
+  coordinatorVouchCount: number
+}
 
 export function splitOrganizerPayoutCents(organizerPayoutCents: number): {
   immediateCents: number
@@ -43,19 +50,30 @@ export type CoordinatorEscrowProfile = CoordinatorFraudGate & {
   coordinator_successful_events_count?: number | null
 }
 
+export function coordinatorVouchThresholdMet(counts: CoordinatorVouchCounts): boolean {
+  return (
+    counts.vendorVouchCount >= REQUIRED_VENDOR_VOUCHES ||
+    counts.coordinatorVouchCount >= REQUIRED_COORDINATOR_VOUCHES
+  )
+}
+
 export function coordinatorEscrowExempt(
   profile: CoordinatorEscrowProfile | null | undefined,
-  vouchCount: number
+  counts: CoordinatorVouchCounts | number
 ): boolean {
-  if (hasVerifiedBusinessTaxId(profile)) return true
-  if (vouchCount >= REQUIRED_VOUCHES) return true
+  const vouchCounts: CoordinatorVouchCounts =
+    typeof counts === 'number'
+      ? { vendorVouchCount: counts, coordinatorVouchCount: 0 }
+      : counts
+
   if (profile?.coordinator_is_verified === true) return true
+  if (coordinatorVouchThresholdMet(vouchCounts)) return true
   return false
 }
 
 export function coordinatorRequiresEscrowHold(
   profile: CoordinatorEscrowProfile | null | undefined,
-  vouchCount: number
+  counts: CoordinatorVouchCounts | number
 ): boolean {
-  return !coordinatorEscrowExempt(profile, vouchCount)
+  return !coordinatorEscrowExempt(profile, counts)
 }

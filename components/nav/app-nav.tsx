@@ -43,7 +43,8 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
     { href: '/wallet', label: 'Wallet' },
   ],
   coordinator: [
-    { href: '/coordinator/dashboard', label: 'Dashboard' },
+    { href: '/coordinator', label: 'Home' },
+    { href: '/coordinator/dashboard', label: 'Command center' },
     { href: '/coordinator/events/new', label: 'New Event' },
     { href: '/wallet', label: 'Wallet' },
   ],
@@ -117,7 +118,7 @@ export function AppNav({
                 <div className="hidden min-w-0 flex-wrap items-center justify-center gap-0.5 overflow-x-hidden md:flex lg:gap-1">
                   {links.map(({ href, label }) => {
                     const active =
-                      href === '/coordinator/dashboard'
+                      href === '/coordinator' || href === '/coordinator/dashboard'
                         ? pathname === href
                         : pathname === href || pathname.startsWith(`${href}/`)
                     return (

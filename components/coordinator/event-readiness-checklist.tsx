@@ -73,6 +73,12 @@ export function EventReadinessChecklist({
         event.venue_verification_status === 'verified' ||
         event.venue_verification_status === 'manual_override',
     },
+    {
+      key: 'contract',
+      label: 'Booth contract reviewed',
+      done: Boolean(event.booth_contract_updated_at) || event.booth_contract_enabled === false,
+      skippable: event.booth_contract_enabled === false,
+    },
     { key: 'published', label: 'Event published', done: event.status !== 'draft' },
     { key: 'applied', label: 'Vendors applied', done: applicationCount > 0 },
     { key: 'approved', label: 'Vendors approved', done: approvedCount > 0 },
@@ -103,6 +109,11 @@ export function EventReadinessChecklist({
         type: 'scroll',
         targetId: 'event-status',
         label: 'Publish from status menu',
+      },
+      contract: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/edit#booth-contract`,
+        label: 'Review digital booth contract',
       },
       categories: {
         type: 'link',
@@ -157,6 +168,11 @@ export function EventReadinessChecklist({
         targetId: 'event-status',
         label: 'Change publish status',
       },
+      contract: {
+        type: 'link',
+        href: `/coordinator/events/${eventId}/edit#booth-contract`,
+        label: 'Edit booth contract',
+      },
       square: {
         type: 'link',
         href: '/coordinator/payment-methods',
@@ -188,6 +204,8 @@ export function EventReadinessChecklist({
   const nextStepHints: Record<string, string> = {
     published:
       'Use the status dropdown at the top of this page and choose “Publish Event” so vendors can discover and apply.',
+    contract:
+      'Review the default digital booth contract, add custom clauses, or attach your PDF before vendors apply.',
     categories:
       'Add at least one vendor category with booth slot limits and pricing.',
     square: requiresSquare
