@@ -45,7 +45,6 @@ import {
   objectCenter,
   pointInsideFrame,
   pointInsideRoomPlacement,
-  pointHitsFrameStroke,
   rectsIntersect,
   rotatedAabb,
   roomDragMotionScale,
@@ -68,6 +67,7 @@ import {
   roomResizeFromHandle,
   type RoomResizeHandle,
 } from '../state/room-canvas'
+import { hitTestRoomStroke } from '../state/room-joins'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import { isVendorBoothObject } from './vendor-booth-placement'
 import {
@@ -868,19 +868,19 @@ export function useCanvasPointer(
             activeFrame &&
             !activeFrame.mergedIntoObjectId &&
             (pointInsideRoomPlacement(activeFrame, ft, store.doc, activeFrame.id) ||
-              pointHitsFrameStroke(activeFrame, ft, 0.75))
+              hitTestRoomStroke(frames, ft, 0.75) === activeFrame.id)
           ) {
             roomId = activeFrame.id
           } else {
-            for (let i = frames.length - 1; i >= 0; i--) {
-              const f = frames[i]!
-              if (f.mergedIntoObjectId) continue
-              if (
-                pointInsideRoomPlacement(f, ft, store.doc, f.id) ||
-                pointHitsFrameStroke(f, ft, 0.75)
-              ) {
-                roomId = f.id
-                break
+            roomId = hitTestRoomStroke(frames, ft, 0.75)
+            if (!roomId) {
+              for (let i = frames.length - 1; i >= 0; i--) {
+                const f = frames[i]!
+                if (f.mergedIntoObjectId) continue
+                if (pointInsideRoomPlacement(f, ft, store.doc, f.id)) {
+                  roomId = f.id
+                  break
+                }
               }
             }
           }

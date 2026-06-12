@@ -16,6 +16,10 @@ export interface WizardStepCapacityProps {
   venueWidth: number
   venueLength: number
   venueReadOnly: boolean
+  venueManualEntry?: boolean
+  onVenueManualEntryChange?: (manual: boolean) => void
+  onVenueWidthChange?: (width: number) => void
+  onVenueLengthChange?: (length: number) => void
   categoryLimits: CategoryLimit[]
   onCategoryLimitsChange: (limits: CategoryLimit[]) => void
   globalMlmCap: number
@@ -39,6 +43,10 @@ export function WizardStepCapacity({
   venueWidth,
   venueLength,
   venueReadOnly,
+  venueManualEntry,
+  onVenueManualEntryChange,
+  onVenueWidthChange,
+  onVenueLengthChange,
   categoryLimits,
   onCategoryLimitsChange,
   globalMlmCap,
@@ -142,12 +150,14 @@ export function WizardStepCapacity({
               allowMlm={allowMlm}
               venueWidthFt={venueWidth}
               venueLengthFt={venueLength}
-              onVenueWidthChange={() => {}}
-              onVenueLengthChange={() => {}}
+              onVenueWidthChange={onVenueWidthChange}
+              onVenueLengthChange={onVenueLengthChange}
               existingLimits={categoryLimits}
               onPopulate={onCategoryLimitsChange}
               globalMlmCap={globalMlmCap}
               venueReadOnly={venueReadOnly}
+              venueManualEntry={venueManualEntry}
+              onVenueManualEntryChange={onVenueManualEntryChange}
               venueElements={venueElements}
               entrance={entrance}
               tableLengthFt={baselineTableLengthFt}

@@ -75,6 +75,11 @@ import type {
   PlacedObject,
   RoomFrame,
 } from './types'
+import {
+  computeRoomWallSegments,
+  pointDistanceToSegment,
+  pointHitsFrameStroke,
+} from '../interactions/geometry'
 
 export {
   mergeAdjacentStructures,
@@ -596,6 +601,88 @@ export function buildJoinedZone(
     aabb: merged.aabb,
     areaSqFt: merged.areaSqFt,
   }
+}
+
+/** Boolean-union perimeter for overlap/touch groups without `joinGroupId`. */
+export interface AutoUnionZone {
+  zoneId: string
+  frameIds: string[]
+  rings: Ring[]
+  perimeterWalls: WallSegment2[]
+  aabb: RoomJoinBbox
+}
+
+function frameUsesStoredUnionPerimeter(frame: RoomFrame): boolean {
+  return Boolean(frame.perimeterRing && frame.perimeterRing.length > 5)
+}
+
+/**
+ * Build dissolved perimeters for rooms that overlap or touch but were
+ * not explicitly joined. Interior walls are removed via polygon union.
+ */
+export function buildAutoUnionZones(
+  frames: ReadonlyArray<RoomFrame>,
+  excludeFrameIds: ReadonlySet<string> = new Set(),
+  epsilon = DEFAULT_TOUCH_EPSILON_FT
+): AutoUnionZone[] {
+  const eligible = frames.filter(
+    (f) =>
+      !f.mergedIntoObjectId &&
+      !f.joinGroupId &&
+      !frameUsesStoredUnionPerimeter(f) &&
+      !excludeFrameIds.has(f.id)
+  )
+  const zones: AutoUnionZone[] = []
+  for (const group of joinableGroups(eligible, epsilon)) {
+    if (group.length < 2) continue
+    const members = group
+      .map((id) => eligible.find((f) => f.id === id))
+      .filter((f): f is RoomFrame => f != null)
+    if (members.length < 2) continue
+    const zoneId = `auto-union:${[...group].sort().join('+')}`
+    const zone = buildJoinedZone(zoneId, members)
+    if (!zone) continue
+    zones.push({
+      zoneId,
+      frameIds: group,
+      rings: zone.rings,
+      perimeterWalls: zone.perimeterWalls,
+      aabb: zone.aabb,
+    })
+  }
+  return zones
+}
+
+/** Hit-test the visible union perimeter / room walls (not full AABB). */
+export function hitTestRoomStroke(
+  frames: ReadonlyArray<RoomFrame>,
+  p: { x: number; y: number },
+  tolerance: number,
+  excludeFrameIds: ReadonlySet<string> = new Set()
+): string | null {
+  const autoZones = buildAutoUnionZones(frames, excludeFrameIds)
+  const autoUnionIds = new Set<string>()
+  for (const zone of autoZones) {
+    for (const id of zone.frameIds) autoUnionIds.add(id)
+    for (const [a, b] of zone.perimeterWalls) {
+      if (pointDistanceToSegment(p, a[0], a[1], b[0], b[1]) <= tolerance) {
+        return zone.frameIds[0] ?? null
+      }
+    }
+  }
+
+  const wallSegments = computeRoomWallSegments(frames)
+  for (let i = frames.length - 1; i >= 0; i--) {
+    const frame = frames[i]!
+    if (frame.mergedIntoObjectId) continue
+    if (autoUnionIds.has(frame.id)) continue
+    if (excludeFrameIds.has(frame.id)) continue
+    const visibleEdges = wallSegments.get(frame.id)
+    if (pointHitsFrameStroke(frame, p, tolerance, visibleEdges)) {
+      return frame.id
+    }
+  }
+  return null
 }
 
 /**

@@ -27,10 +27,10 @@ import { InlineLabelEditor } from './inline-label-editor'
 import { RoomDropZones } from './room-drop-zones'
 import { RoomFrames } from './room-frames'
 import { RoomSelectionOverlay } from './room-selection-overlay'
-import { activeRoomFramingBounds } from '../state/room-canvas'
 import { activeRoomFrames } from './canvas-engine'
 import { FLOOR_PLAN_CANVAS_ID } from './canvas-focus'
-import { useViewport, type ViewportApi, type ZoomMath } from './use-viewport'
+import { useViewport, type ViewportApi, type ZoomMath, type PanClampBounds } from './use-viewport'
+import { fitViewportToContent, VIEWPORT_FIT_PADDING_PX } from './use-layout-viewport'
 import { useCanvasPointer, resolveDrawCommitRect } from '../interactions/use-canvas-pointer'
 import { useCanvasObjectKeyboard } from '../interactions/use-canvas-object-keyboard'
 import { useSelectionKeyboardNudge } from '../interactions/selection-keyboard-nudge'
@@ -50,7 +50,8 @@ import {
 } from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
-import { packVendorBoothsInRoomGrid } from '../engine/auto-arrange'
+import { autoArrangeInRoom } from '../engine/auto-arrange'
+import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import type { ToolState } from '../tools/types'
 import { cn } from '@/lib/utils'
@@ -164,6 +165,10 @@ export interface FloorPlanCanvasProps {
   legendVariant?: 'floating' | 'sidebar'
   /** Fired when a canvas gesture commits layout changes (drag end, draw, resize). */
   onLayoutCommit?: () => void
+  /** Step 2 capacity ceiling for strict grid auto-arrange. */
+  layoutCapacity?: number
+  /** Baseline table length for vendor booth footprints during arrange. */
+  baselineTableLengthFt?: LayoutBaselineTableLengthFt
   /** Interpolated booth poses during auto-arrange spring animation. */
   layoutSpringPoses?: ReadonlyMap<string, LayoutSpringPose> | null
   /** View-only presentation — pan/zoom allowed, no object or layout edits. */
@@ -226,6 +231,8 @@ export function FloorPlanCanvas({
   stickyDrawPlacement = false,
   legendVariant = 'floating',
   onLayoutCommit,
+  layoutCapacity,
+  baselineTableLengthFt,
   layoutSpringPoses = null,
   viewOnly = false,
   showClearanceWarnings = true,
@@ -233,6 +240,8 @@ export function FloorPlanCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const clipViewportRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  /** Middle-button pan preview target — GPU translate3d during drag. */
+  const panContentRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
   const zoomForAnchorRef = useRef(1)
 
@@ -313,10 +322,57 @@ export function FloorPlanCanvas({
     store.selectedIds,
   ])
 
+  const getPanClampBounds = useCallback((): PanClampBounds | null => {
+    const scroll = scrollRef.current
+    if (!scroll || !scrollHost) return null
+    const ratio = basePxPerFt * zoomForAnchorRef.current
+    if (ratio <= 0) return null
+
+    const frame = roomGridFrame
+    const originX = frame?.originX ?? 0
+    const originY = frame?.originY ?? 0
+    const gridW = frame?.widthFt ?? store.doc.canvasWidthFt
+    const gridH = frame?.lengthFt ?? store.doc.canvasLengthFt
+    const gridLeft = (padFt + originX) * ratio
+    const gridTop = (padFt + originY) * ratio
+    const gridRight = gridLeft + gridW * ratio
+    const gridBottom = gridTop + gridH * ratio
+    const minVisible = 48
+    const cw = scroll.clientWidth
+    const ch = scroll.clientHeight
+
+    if (gridRight - gridLeft <= cw) {
+      const centeredLeft = gridLeft - (cw - (gridRight - gridLeft)) / 2
+      const centeredTop = gridTop - (ch - (gridBottom - gridTop)) / 2
+      return {
+        minLeft: centeredLeft,
+        maxLeft: centeredLeft,
+        minTop: centeredTop,
+        maxTop: centeredTop,
+      }
+    }
+
+    return {
+      minLeft: gridRight - minVisible,
+      maxLeft: gridLeft - cw + minVisible,
+      minTop: gridBottom - minVisible,
+      maxTop: gridTop - ch + minVisible,
+    }
+  }, [
+    basePxPerFt,
+    padFt,
+    roomGridFrame,
+    scrollHost,
+    store.doc.canvasLengthFt,
+    store.doc.canvasWidthFt,
+  ])
+
   const viewport = useViewport({
     scrollRef,
+    panContentRef,
     initialZoom: 1,
     getZoomMath,
+    getPanClampBounds,
     zoomMin: commandCenterViewport ? COMMAND_CENTER_ZOOM_MIN : undefined,
     zoomStepMultiplier: commandCenterViewport ? 2 : 4,
     getToolMode: () => toolState.tool,
@@ -351,40 +407,14 @@ export function FloorPlanCanvas({
   }, [activeRoomId, store.doc.objects, store.doc.rooms])
 
   const frameActiveRoom = useCallback(() => {
-    const frames = store.doc.rooms ?? []
-    if (frames.length === 0) {
-      viewport.fitToBounds(
-        {
-          minX: 0,
-          minY: 0,
-          maxX: store.doc.canvasWidthFt,
-          maxY: store.doc.canvasLengthFt,
-        },
-        {
-          padding: commandCenterViewport ? 0 : 0.08,
-          fillMode: commandCenterViewport ? 'cover' : 'contain',
-        }
-      )
-      return
-    }
-    const bounds = activeRoomFramingBounds(
-      frames,
-      activeRoomId,
-      store.doc.objects,
-      store.doc.objectRoom
-    )
-    viewport.fitToBounds(bounds, {
-      padding: commandCenterViewport ? 0 : 0.08,
-      fillMode: commandCenterViewport ? 'cover' : 'contain',
+    fitViewportToContent(viewport, store.doc, activeRoomId, {
+      paddingPx: commandCenterViewport ? undefined : VIEWPORT_FIT_PADDING_PX,
+      commandCenterViewport,
     })
   }, [
     activeRoomId,
     commandCenterViewport,
-    store.doc.canvasLengthFt,
-    store.doc.canvasWidthFt,
-    store.doc.objectRoom,
-    store.doc.objects,
-    store.doc.rooms,
+    store.doc,
     viewport,
   ])
 
@@ -410,17 +440,20 @@ export function FloorPlanCanvas({
   }, [frameActiveRoom, scrollHost])
 
   const clipToActiveRoom = !scrollHost && roomGridFrame != null
+  /** Command center: size the scroll surface to the active room grid, not the 5× doc canvas. */
+  const edgeToRoomGrid = tightToGrid && roomGridFrame != null
+  const gridClipActive = clipToActiveRoom || edgeToRoomGrid
 
   const transform = useMemo(
     () => ({
       basePxPerFt,
       zoom: viewport.zoom,
-      surfaceOriginFtX: clipToActiveRoom ? roomGridFrame!.originX : 0,
-      surfaceOriginFtY: clipToActiveRoom ? roomGridFrame!.originY : 0,
+      surfaceOriginFtX: gridClipActive ? roomGridFrame!.originX : 0,
+      surfaceOriginFtY: gridClipActive ? roomGridFrame!.originY : 0,
     }),
     [
       basePxPerFt,
-      clipToActiveRoom,
+      gridClipActive,
       roomGridFrame,
       viewport.zoom,
     ]
@@ -431,7 +464,7 @@ export function FloorPlanCanvas({
     toolState,
     scrollRef,
     surfaceRef,
-    clipViewportRef: clipToActiveRoom ? clipViewportRef : undefined,
+    clipViewportRef: gridClipActive ? clipViewportRef : undefined,
     transform,
     panActive: viewport.panActive,
     onAfterDrawCommit,
@@ -488,33 +521,31 @@ export function FloorPlanCanvas({
       toast.message('Select a room before arranging booths.')
       return
     }
-    const selectedVendorIds = new Set(
-      [...store.selectedIds].filter((id) => {
-        const obj = store.doc.objects.find((o) => o.id === id)
-        return (
-          obj?.kind === 'booth' &&
-          !isGuestTableBooth(obj as BoothObject) &&
-          (store.doc.objectRoom ?? {})[id] === activeRoomId
-        )
-      })
-    )
-    const result = packVendorBoothsInRoomGrid(store.doc, activeRoomId, {
-      selectedIds: selectedVendorIds.size > 0 ? selectedVendorIds : undefined,
-      snapFt: store.doc.snapFt,
+    const result = autoArrangeInRoom(store.doc, activeRoomId, {
+      scope: 'vendor',
+      mode: 'grid',
+      eventCategoryNames,
+      baselineTableLengthFt,
+      dropUnplacedBooths: true,
+      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
+        ? { maxBooths: layoutCapacity }
+        : {}),
     })
     if (!result) {
       toast.error('Could not read the active room grid.')
       return
     }
     if (result.placedCount === 0) {
-      toast.error('No vendor booths fit inside the room grid.')
+      toast.error('No vendor booths fit inside the room under spacing rules.')
       return
     }
     store.replaceObjects(result.doc.objects, { pushHistory: true })
     onLayoutCommit?.()
-    if (result.droppedCount > 0) {
+    const omitted =
+      result.overflowCount + result.droppedCount + result.removedOverlapCount
+    if (omitted > 0) {
       toast.warning(
-        `Arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'}; ${result.droppedCount} could not fit.`,
+        `Arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} safely; ${omitted} could not fit and ${omitted === 1 ? 'was' : 'were'} omitted.`,
         { duration: 4500 }
       )
     } else {
@@ -522,7 +553,14 @@ export function FloorPlanCanvas({
         `Arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} in the room grid.`
       )
     }
-  }, [activeRoomId, onLayoutCommit, store])
+  }, [
+    activeRoomId,
+    baselineTableLengthFt,
+    eventCategoryNames,
+    layoutCapacity,
+    onLayoutCommit,
+    store,
+  ])
 
   const dissolvedStageIds = useMemo(
     () => dissolvedStageIdsForDoc(store.doc),
@@ -750,10 +788,10 @@ export function FloorPlanCanvas({
   }, [editingObj, editingObjectId])
 
   const pxPerFt = transform.basePxPerFt * transform.zoom
-  const visibleWidthFt = clipToActiveRoom
+  const visibleWidthFt = gridClipActive
     ? roomGridFrame!.widthFt
     : store.doc.canvasWidthFt
-  const visibleLengthFt = clipToActiveRoom
+  const visibleLengthFt = gridClipActive
     ? roomGridFrame!.lengthFt
     : store.doc.canvasLengthFt
   const docWidthPx = visibleWidthFt * pxPerFt
@@ -763,32 +801,42 @@ export function FloorPlanCanvas({
   const padPx = padFt * pxPerFt
   const totalWidthPx = docWidthPx + padPx * 2
   const totalHeightPx = docHeightPx + padPx * 2
-  const surfaceOffsetPx = clipToActiveRoom
+  const surfaceOffsetPx = gridClipActive
     ? {
         left: -roomGridFrame!.originX * pxPerFt,
         top: -roomGridFrame!.originY * pxPerFt,
       }
     : { left: tightToGrid ? 0 : padPx, top: tightToGrid ? 0 : padPx }
 
-  const centeredForDimsRef = useRef<{ w: number; l: number } | null>(null)
+  useLayoutEffect(() => {
+    clipViewportRef.current = gridClipActive ? panContentRef.current : null
+  }, [gridClipActive])
+
+  const centeredForDimsRef = useRef<{ w: number; l: number; roomId: string | null } | null>(
+    null
+  )
   useLayoutEffect(() => {
     if (!scrollHost) return
     const scroll = scrollRef.current
     if (!scroll) return
     if (scroll.clientWidth === 0 || scroll.clientHeight === 0) return
-    const w = store.doc.canvasWidthFt
-    const l = store.doc.canvasLengthFt
+    const w = roomGridFrame?.widthFt ?? store.doc.canvasWidthFt
+    const l = roomGridFrame?.lengthFt ?? store.doc.canvasLengthFt
+    const roomKey = activeRoomId ?? null
     const last = centeredForDimsRef.current
-    if (last && last.w === w && last.l === l) return
-    scroll.scrollLeft = (padFt + w / 2) * pxPerFt - scroll.clientWidth / 2
-    scroll.scrollTop = (padFt + l / 2) * pxPerFt - scroll.clientHeight / 2
-    centeredForDimsRef.current = { w, l }
+    if (last && last.w === w && last.l === l && last.roomId === roomKey) return
+    fitViewportToContent(viewport, store.doc, activeRoomId, {
+      paddingPx: commandCenterViewport ? undefined : VIEWPORT_FIT_PADDING_PX,
+      commandCenterViewport,
+    })
+    centeredForDimsRef.current = { w, l, roomId: roomKey }
   }, [
-    padFt,
-    pxPerFt,
+    activeRoomId,
+    commandCenterViewport,
+    roomGridFrame,
     scrollHost,
-    store.doc.canvasLengthFt,
-    store.doc.canvasWidthFt,
+    store.doc,
+    viewport,
   ])
 
   const cursor = viewOnly
@@ -803,7 +851,7 @@ export function FloorPlanCanvas({
 
   const ftAtClient = useCallback(
     (clientX: number, clientY: number) => {
-      const clipEl = clipToActiveRoom ? clipViewportRef.current : null
+      const clipEl = gridClipActive ? clipViewportRef.current : null
       const surface = surfaceRef.current
       if (!clipEl && !surface) return { x: 0, y: 0 }
       const rect = (clipEl ?? surface)!.getBoundingClientRect()
@@ -819,6 +867,7 @@ export function FloorPlanCanvas({
     [
       basePxPerFt,
       clipToActiveRoom,
+      gridClipActive,
       transform.surfaceOriginFtX,
       transform.surfaceOriginFtY,
       viewport.zoom,
@@ -912,22 +961,22 @@ export function FloorPlanCanvas({
         onDrop={handleDrop}
       >
         <div
-          ref={clipToActiveRoom ? clipViewportRef : undefined}
+          ref={panContentRef}
           className={cn(!scrollHost && 'w-fit')}
           style={{
             width: totalWidthPx,
             height: totalHeightPx,
             position: 'relative',
-            overflow: clipToActiveRoom ? 'hidden' : undefined,
+            overflow: gridClipActive ? 'hidden' : undefined,
           }}
         >
           <svg
             ref={surfaceRef}
             className="floor-plan-canvas-surface"
-            width={clipToActiveRoom ? svgWidthPx : docWidthPx}
-            height={clipToActiveRoom ? svgHeightPx : docHeightPx}
+            width={gridClipActive ? svgWidthPx : docWidthPx}
+            height={gridClipActive ? svgHeightPx : docHeightPx}
             style={{
-              position: clipToActiveRoom || !tightToGrid ? 'absolute' : 'relative',
+              position: gridClipActive || !tightToGrid ? 'absolute' : 'relative',
               left: surfaceOffsetPx.left,
               top: surfaceOffsetPx.top,
               display: 'block',

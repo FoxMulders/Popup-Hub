@@ -791,6 +791,9 @@ export function subtractIntervals(
  * coincident edge (within `epsilon` feet on the perpendicular axis
  * AND with non-zero overlap on the parallel axis).
  *
+ * Touching neighbours are handled here; partial/full rectangle overlap
+ * is dissolved at render time via `buildAutoUnionZones` (boolean union).
+ *
  * Returns a map `frameId → RoomEdge[]` where each entry is an edge
  * sub-interval that should still be painted as a wall. Edges that
  * overlap a neighbour fully are simply omitted from the list — their
@@ -935,24 +938,62 @@ export function pointInsideRoomPlacement(
   return pointInsideFrame(frame, p)
 }
 
+/** Shortest distance from `p` to a line segment in canvas feet. */
+export function pointDistanceToSegment(
+  p: Point,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): number {
+  const dx = bx - ax
+  const dy = by - ay
+  const lenSq = dx * dx + dy * dy
+  if (lenSq < 1e-12) return Math.hypot(p.x - ax, p.y - ay)
+  const t = Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.y - ay) * dy) / lenSq))
+  const projX = ax + t * dx
+  const projY = ay + t * dy
+  return Math.hypot(p.x - projX, p.y - projY)
+}
+
+function pointDistanceToRoomEdge(p: Point, edge: RoomEdge): number {
+  if (edge.axis === 'horizontal') {
+    return pointDistanceToSegment(p, edge.from, edge.coord, edge.to, edge.coord)
+  }
+  return pointDistanceToSegment(p, edge.coord, edge.from, edge.coord, edge.to)
+}
+
+export function pointHitsWallSegments(
+  p: Point,
+  segments: ReadonlyArray<{
+    x1: number
+    y1: number
+    x2: number
+    y2: number
+  }>,
+  tolerance: number
+): boolean {
+  for (const seg of segments) {
+    if (
+      pointDistanceToSegment(p, seg.x1, seg.y1, seg.x2, seg.y2) <= tolerance
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
 export function pointHitsFrameStroke(
   frame: RoomFrameGeom,
   p: Point,
-  tolerance: number
+  tolerance: number,
+  visibleEdges?: ReadonlyArray<RoomEdge>
 ): boolean {
-  const inX = p.x >= frame.originX - tolerance && p.x <= frame.originX + frame.widthFt + tolerance
-  const inY = p.y >= frame.originY - tolerance && p.y <= frame.originY + frame.lengthFt + tolerance
-  if (!inX || !inY) return false
-  const distLeft = Math.abs(p.x - frame.originX)
-  const distRight = Math.abs(p.x - (frame.originX + frame.widthFt))
-  const distTop = Math.abs(p.y - frame.originY)
-  const distBottom = Math.abs(p.y - (frame.originY + frame.lengthFt))
-  return (
-    distLeft <= tolerance ||
-    distRight <= tolerance ||
-    distTop <= tolerance ||
-    distBottom <= tolerance
-  )
+  const edges = visibleEdges ?? frameEdges(frame)
+  for (const edge of edges) {
+    if (pointDistanceToRoomEdge(p, edge) <= tolerance) return true
+  }
+  return false
 }
 
 /** Translate browser-client coords into ft-space using a known viewport rect. */

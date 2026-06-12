@@ -144,6 +144,7 @@ export const DASHBOARD_HEADER_SECTION_IDS: readonly SidebarSectionId[] = [
 ] as const
 
 export const DASHBOARD_TOOLSTRIP_SECTION_IDS: readonly SidebarSectionId[] = [
+  'dual-screen',
   'shapes-booths',
   'vendor-booths',
   'patron-tables',

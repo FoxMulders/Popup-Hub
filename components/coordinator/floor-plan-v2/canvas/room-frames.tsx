@@ -5,7 +5,7 @@ import {
   computeRoomWallSegments,
   detectMergedRoomPairs,
 } from '../interactions/geometry'
-import { buildJoinedZone, isJoinableObject, objectFrameOverlapsOrTouches } from '../state/room-joins'
+import { buildJoinedZone, buildAutoUnionZones, isJoinableObject, objectFrameOverlapsOrTouches } from '../state/room-joins'
 import { unionLayoutParticipants } from '@/src/utils/layoutMergeEngine'
 import { EXTERIOR_LABEL_OFFSET_PX } from '../interactions/geometry'
 import type { PlacedObject, RoomFrame } from '../state/types'
@@ -280,6 +280,59 @@ function RoomFramesBase({
     [implicitUnionZones]
   )
 
+  /** Overlap/touch unions without an explicit join group. */
+  const autoUnionZones = useMemo(() => {
+    const result: Array<{
+      zoneId: string
+      memberIds: string[]
+      pathData: string
+      perimeterLines: Array<{ x1: number; y1: number; x2: number; y2: number }>
+      labelX: number
+      labelY: number
+    }> = []
+    const zones = buildAutoUnionZones(frames, implicitUnionRoomIds)
+    for (const zone of zones) {
+      const segments: string[] = []
+      for (const ring of zone.rings) {
+        if (ring.length === 0) continue
+        const [first, ...rest] = ring
+        segments.push(`M ${first![0] * pxPerFt} ${first![1] * pxPerFt}`)
+        for (const [px, py] of rest) {
+          segments.push(`L ${px * pxPerFt} ${py * pxPerFt}`)
+        }
+        segments.push('Z')
+      }
+      const members = zone.frameIds
+        .map((id) => frames.find((f) => f.id === id))
+        .filter((f): f is RoomFrame => f != null)
+      const labelAnchor = members.reduce<RoomFrame | null>((best, f) => {
+        const score = f.originY * 1e6 + f.originX
+        if (!best) return f
+        const bestScore = best.originY * 1e6 + best.originX
+        return score < bestScore ? f : best
+      }, null)
+      result.push({
+        zoneId: zone.zoneId,
+        memberIds: zone.frameIds,
+        pathData: segments.join(' '),
+        perimeterLines: zone.perimeterWalls.map(([a, b]) => ({
+          x1: a[0] * pxPerFt,
+          y1: a[1] * pxPerFt,
+          x2: b[0] * pxPerFt,
+          y2: b[1] * pxPerFt,
+        })),
+        labelX: (labelAnchor?.originX ?? zone.aabb.minX) * pxPerFt,
+        labelY: (labelAnchor?.originY ?? zone.aabb.minY) * pxPerFt,
+      })
+    }
+    return result
+  }, [frames, implicitUnionRoomIds, pxPerFt])
+
+  const autoUnionRoomIds = useMemo(
+    () => new Set(autoUnionZones.flatMap((z) => z.memberIds)),
+    [autoUnionZones]
+  )
+
   if (frames.length === 0) return null
 
   // Visible wall segments per room (with merged sections subtracted).
@@ -417,6 +470,89 @@ function RoomFramesBase({
         </g>
       ))}
 
+      {autoUnionZones.map((zone) => (
+        <g key={zone.zoneId} data-auto-union={zone.zoneId}>
+          {zone.pathData ? (
+            <path
+              d={zone.pathData}
+              fill="none"
+              stroke="none"
+              shapeRendering="geometricPrecision"
+              pointerEvents="all"
+              data-auto-union-path={zone.zoneId}
+              data-room-stroke="true"
+              data-room-id={zone.memberIds[0] ?? zone.zoneId}
+              style={{ cursor: 'grab' }}
+            />
+          ) : null}
+          <g data-auto-union-walls={zone.zoneId}>
+            {zone.perimeterLines.map((line, idx) => (
+              <g key={`${zone.zoneId}-wall-${idx}`}>
+                <line
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke="transparent"
+                  strokeWidth={14}
+                  strokeLinecap="square"
+                  pointerEvents="stroke"
+                  data-room-stroke="true"
+                  data-room-id={zone.memberIds[0] ?? zone.zoneId}
+                  style={{ cursor: 'grab' }}
+                />
+                <line
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke={PERIMETER_STROKE_MERGED}
+                  strokeWidth={PERIMETER_WIDTH_JOINED}
+                  strokeLinecap="square"
+                  shapeRendering="geometricPrecision"
+                  pointerEvents="none"
+                  data-auto-union-path={zone.zoneId}
+                />
+              </g>
+            ))}
+          </g>
+          <g pointerEvents="none">
+            {showLabels
+              ? (() => {
+                  const roomCount = zone.memberIds.length
+                  const summary = `Combined · ${roomCount} room${roomCount === 1 ? '' : 's'}`
+                  const tagH = 22
+                  const tagGap = EXTERIOR_LABEL_OFFSET_PX
+                  const tagW = Math.min(260, Math.max(120, summary.length * 7 + 24))
+                  const tagY = zone.labelY - tagH - tagGap
+                  return (
+                    <>
+                      <rect
+                        x={zone.labelX}
+                        y={tagY}
+                        width={tagW}
+                        height={tagH}
+                        rx={4}
+                        fill="#15803d"
+                        fillOpacity={0.92}
+                      />
+                      <text
+                        x={zone.labelX + 8}
+                        y={tagY + 16}
+                        fontSize={12}
+                        fontWeight={700}
+                        fill="#f0fdf4"
+                      >
+                        {summary}
+                      </text>
+                    </>
+                  )
+                })()
+              : null}
+          </g>
+        </g>
+      ))}
+
       {frames.map((frame) => {
         if (frame.mergedIntoObjectId) return null
         const x = frame.originX * pxPerFt
@@ -427,8 +563,12 @@ function RoomFramesBase({
         const isSelected = selectedRoomId === frame.id
         const isJoined = joinedFrameIds.has(frame.id)
         const isImplicitUnion = implicitUnionRoomIds.has(frame.id)
+        const isAutoUnion = autoUnionRoomIds.has(frame.id)
         const isMerged =
-          !isJoined && !isImplicitUnion && (joinedNeighbors.get(frame.id)?.size ?? 0) > 0
+          !isJoined &&
+          !isImplicitUnion &&
+          !isAutoUnion &&
+          (joinedNeighbors.get(frame.id)?.size ?? 0) > 0
         const stroke = isSelected
           ? PERIMETER_STROKE_SELECTED
           : isMerged
@@ -453,7 +593,7 @@ function RoomFramesBase({
 
         return (
           <g key={`frame-${frame.id}`} data-room-id={frame.id}>
-            {!isJoined && !isImplicitUnion && unionPath ? (
+            {!isJoined && !isImplicitUnion && !isAutoUnion && unionPath ? (
               <path
                 d={unionPath}
                 fill="none"
@@ -471,7 +611,7 @@ function RoomFramesBase({
                 single combined interior pathway. Suppressed entirely
                 for members of an explicit join group: their wall is
                 the dissolved zone's outer polygon, painted above. */}
-            {!isJoined && !isImplicitUnion && !unionPath
+            {!isJoined && !isImplicitUnion && !isAutoUnion && !unionPath
               ? segments.map((seg, idx) => {
                   const isHorizontal = seg.axis === 'horizontal'
                   const x1 = (isHorizontal ? seg.from : seg.coord) * pxPerFt
@@ -514,7 +654,7 @@ function RoomFramesBase({
                 drag stays grabbable — coordinators must be able to
                 slide a room within the joined zone, even though the
                 visible wall is suppressed. */}
-            {isJoined ? (
+            {isJoined || isAutoUnion ? (
               <rect
                 x={x}
                 y={y}
@@ -538,7 +678,7 @@ function RoomFramesBase({
                 tag's bottom edge clears the perimeter stroke by a
                 consistent margin at every zoom level. */}
             <g pointerEvents="none">
-              {showLabels && !isJoined
+              {showLabels && !isJoined && !isAutoUnion
                 ? (() => {
                     const tagH = 22
                     const tagGap = EXTERIOR_LABEL_OFFSET_PX

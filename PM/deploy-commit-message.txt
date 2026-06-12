@@ -1,1 +1,1 @@
-feat: ship 26 session updates (wizard Step 3 auto seed + grid pack; wizard Step 2 single-column layout; publish blocked by server Geocoding key; booth validation: physical overlap vs boundary warnings; +22 more)
+feat: ship 30 session updates (dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; Step 2 venue inputs + canvas viewport + strict arrange; +26 more)

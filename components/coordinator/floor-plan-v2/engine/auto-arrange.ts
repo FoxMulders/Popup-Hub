@@ -52,6 +52,7 @@ import {
   BOOTH_SAFETY_BUFFER_FT,
   MIN_CLEARANCE_FT,
   PATRON_AISLE_MIN_FT,
+  PERIMETER_WALL_CLEARANCE_FT,
 } from '@/lib/booth-planner/layout-clearance-constants'
 import {
   expandedFootprintsOverlap,
@@ -106,8 +107,8 @@ import {
 export const CHAIR_LENGTH_FT = 1.75
 /** Two patrons walking shoulder-to-shoulder ≈ 5 ft. */
 export const PATRON_PAIR_WIDTH_FT = 5
-/** Wall to back of vendor booth — patron aisle minimum at perimeter. */
-export const GRID_WALL_INSET_FT = PATRON_AISLE_MIN_FT
+/** Wall to back of vendor booth — 5′ perimeter clearance for grid modes. */
+export const GRID_WALL_INSET_FT = PERIMETER_WALL_CLEARANCE_FT
 /** Back-to-back island gap (2 chairs back-to-back + 1 walking buffer). */
 export const BACK_TO_BACK_GAP_FT = CHAIR_LENGTH_FT * 3
 /** Wall to back of vendor booth (2 chairs) — non-grid modes. */
@@ -184,6 +185,11 @@ export interface AutoArrangeOptions {
   placementOuterRing?: PlacementRing
   /** Local origin for `placementOuterRing` (defaults to 0,0). */
   placementOrigin?: { x: number; y: number }
+  /**
+   * When true, vendor booths that cannot be placed safely are omitted
+   * from the canvas instead of being retained at their prior positions.
+   */
+  dropUnplacedBooths?: boolean
 }
 
 export interface AutoArrangeResult {
@@ -277,7 +283,12 @@ function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
   const out: Rect[] = []
   for (const obj of doc.objects) {
     if (obj.kind === 'booth' || obj.kind === 'merged_zone') continue
-    out.push(rotatedAabb(obj))
+    const base = rotatedAabb(obj)
+    if (obj.kind === 'door' || obj.kind === 'emergency_exit') {
+      out.push(expandRectForClearance(base, PERIMETER_WALL_CLEARANCE_FT))
+    } else {
+      out.push(base)
+    }
   }
   return out
 }
@@ -1289,6 +1300,7 @@ function autoArrangeVendorBooths(
     localRing: PlacementRing | null
     otherObjects: PlacedObject[]
     obstacles: Rect[]
+    dropUnplacedBooths?: boolean
   }
 ): VendorAutoArrangePassResult {
   const {
@@ -1299,6 +1311,7 @@ function autoArrangeVendorBooths(
     localRing,
     otherObjects,
     obstacles,
+    dropUnplacedBooths = false,
   } = options
 
   if (sourceBooths.length === 0) {
@@ -1471,6 +1484,18 @@ function autoArrangeVendorBooths(
       layoutMode === 'perimeter' ? perimeterOrientFrame : undefined,
   })
 
+  if (dropUnplacedBooths) {
+    const dropped = sourceBooths.length - newBooths.length
+    return {
+      newVendorBooths: newBooths,
+      vendorDroppedCount: dropped,
+      unsatisfiedCategoryCount,
+      overflowCount,
+      removedOverlapCount: dropped,
+      layoutExplanation: deterministic.explanation,
+    }
+  }
+
   const { merged, unmovedCount, removedCount } = retainUnplacedVendorBooths(
     sourceBooths,
     newBooths,
@@ -1610,6 +1635,7 @@ export function autoArrange(
           localRing,
           otherObjects,
           obstacles: vendorObstacles,
+          dropUnplacedBooths: options.dropUnplacedBooths,
         })
 
   const vendorRects =

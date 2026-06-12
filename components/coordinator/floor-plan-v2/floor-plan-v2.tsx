@@ -1681,9 +1681,9 @@ function FloorPlanV2Workspace({
     viewportApiRef.current?.zoomOut()
   }, [])
   const handleZoomReset = useCallback(() => {
-    fitViewportToContent(viewportApiRef.current, store.doc, activeRoomId)
+    viewportApiRef.current?.resetViewport()
     recoverCanvasFocus()
-  }, [activeRoomId, recoverCanvasFocus, store.doc])
+  }, [recoverCanvasFocus])
   /**
    * "Center View" — the toolbar button that recovers framing.
    *
@@ -1797,6 +1797,7 @@ function FloorPlanV2Workspace({
         eventCategoryNames,
         baselineTableLengthFt: safeTableSizeFt,
         vendorTableMetaByKey,
+        dropUnplacedBooths: true,
         ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
           ? { maxBooths: layoutCapacity }
           : {}),
@@ -2524,7 +2525,18 @@ function FloorPlanV2Workspace({
     boothMapLabelMode,
     onBoothMapLabelModeChange: setBoothMapLabelMode,
     canvasFullscreen: dashboardImmersive,
-    onToggleCanvasFullscreen: () => setCanvasFullscreen((v) => !v),
+    onToggleCanvasFullscreen: () => {
+      setCanvasFullscreen((v) => {
+        const next = !v
+        if (next) {
+          requestAnimationFrame(() => {
+            viewportApiRef.current?.resetViewport()
+            recoverCanvasFocus()
+          })
+        }
+        return next
+      })
+    },
     onLaunchDualScreen: isDashboard ? handleLaunchDualScreen : undefined,
     dualScreenActive,
     designerExitHref: resolvedDesignerExitHref,
@@ -2835,7 +2847,18 @@ function FloorPlanV2Workspace({
                 showLabels={showLabels}
                 onShowLabelsChange={setShowLabels}
                 canvasFullscreen={layoutNativeFullscreen}
-                onToggleCanvasFullscreen={() => setCanvasFullscreen((v) => !v)}
+                onToggleCanvasFullscreen={() => {
+                  setCanvasFullscreen((v) => {
+                    const next = !v
+                    if (next) {
+                      requestAnimationFrame(() => {
+                        viewportApiRef.current?.resetViewport()
+                        recoverCanvasFocus()
+                      })
+                    }
+                    return next
+                  })
+                }}
                 designerExitHref={resolvedDesignerExitHref}
                 designerExitLabel={resolvedDesignerExitLabel}
                 onDesignerExit={handleDesignerExit}
@@ -2937,6 +2960,8 @@ function FloorPlanV2Workspace({
                     }}
                     onAfterDrawCommit={handleAfterDrawCommit}
                     showLabels={showLabels}
+                    layoutCapacity={layoutCapacity}
+                    baselineTableLengthFt={safeTableSizeFt}
                     showClearanceWarnings={showClearanceWarnings}
                   />
                 </CanvasRootErrorBoundary>

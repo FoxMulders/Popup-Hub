@@ -7,6 +7,7 @@
  */
 
 import {
+  buildAutoUnionZones,
   buildJoinedZone,
   framesOverlap,
   framesOverlapOrTouch,
@@ -123,6 +124,28 @@ console.log('Scenario 7: epsilon-touch tolerance (≤ 0.25 ft gap counts as touc
   expect('touch with 0.2 ft gap', framesTouch(a, b), true)
   const c = frame('c', 30.5, 0, 30, 30) // 0.5 ft gap > eps
   expect('no touch with 0.5 ft gap', framesTouch(a, c), false)
+}
+
+console.log('Scenario 8: partial overlap dissolves interior walls (auto union)')
+{
+  const main = frame('main', 0, 0, 100, 100)
+  const room2 = frame('room2', 50, 20, 30, 40)
+  const zones = buildAutoUnionZones([main, room2])
+  expect('one auto union zone', zones.length, 1)
+  const walls = zones[0]!.perimeterWalls
+  // Room 2's right edge (x=80) falls inside Main Hall — must not render.
+  const interiorRoom2Right = walls.filter(([a, b]) => {
+    const x = (a[0] + b[0]) / 2
+    const lo = Math.min(a[1], b[1])
+    const hi = Math.max(a[1], b[1])
+    return (
+      Math.abs(x - 80) < 1e-6 &&
+      lo >= 20 - 1e-6 &&
+      hi <= 60 + 1e-6 &&
+      hi - lo > 1e-6
+    )
+  })
+  expect('room2 interior right wall removed', interiorRoom2Right.length, 0)
 }
 
 if (process.exitCode === 1) {

@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Sparkles, Calculator, HelpCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -27,8 +28,11 @@ interface SmartPopulateBoothCapsProps {
   onPopulate: (limits: CategoryLimit[]) => void
   venueElements?: import('@/types/database').VenueElement[]
   entrance?: 'north' | 'south' | 'east' | 'west'
-  /** When true, venue fields are read-only (driven by layout planner room state). */
+  /** When true, venue fields follow the venue template unless manual entry is on. */
   venueReadOnly?: boolean
+  /** Controlled manual-entry toggle (wizard Step 2). */
+  venueManualEntry?: boolean
+  onVenueManualEntryChange?: (manual: boolean) => void
   compact?: boolean
   /** Controlled baseline table length (layout planner drives selector externally). */
   tableLengthFt?: TableLengthOptionFt
@@ -101,6 +105,8 @@ export function SmartPopulateBoothCaps({
   existingLimits,
   onPopulate,
   venueReadOnly = false,
+  venueManualEntry: controlledManualEntry,
+  onVenueManualEntryChange,
   compact = false,
   venueElements,
   entrance = 'south',
@@ -111,6 +117,22 @@ export function SmartPopulateBoothCaps({
   blockReason,
   globalMlmCap,
 }: SmartPopulateBoothCapsProps) {
+  const [internalManualEntry, setInternalManualEntry] = useState(false)
+  const manualEntry = controlledManualEntry ?? internalManualEntry
+  const setManualEntry = (next: boolean) => {
+    onVenueManualEntryChange?.(next)
+    if (controlledManualEntry === undefined) {
+      setInternalManualEntry(next)
+    }
+  }
+
+  const [widthDraft, setWidthDraft] = useState(String(venueWidthFt))
+  const [lengthDraft, setLengthDraft] = useState(String(venueLengthFt))
+  useEffect(() => {
+    setWidthDraft(String(venueWidthFt))
+    setLengthDraft(String(venueLengthFt))
+  }, [venueWidthFt, venueLengthFt])
+
   const [internalTableLengthFt, setInternalTableLengthFt] =
     useState<TableLengthOptionFt>(DEFAULT_TABLE_LENGTH_FT)
   const tableLengthFt = controlledTableLengthFt ?? internalTableLengthFt
@@ -161,7 +183,8 @@ export function SmartPopulateBoothCaps({
     )
   }
 
-  const showVenueInputs = !venueReadOnly
+  const showVenueInputs = true
+  const venueInputsEditable = manualEntry || !venueReadOnly
 
   return (
     <div
@@ -182,6 +205,27 @@ export function SmartPopulateBoothCaps({
         </div>
       </div>
 
+      {venueReadOnly ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-sage-200/80 bg-white/70 px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-sage-900">Floor dimensions</p>
+            <p className="text-[10px] text-sage-800/80">
+              {manualEntry
+                ? 'Manual entry — type custom width and length below.'
+                : 'Auto — using your venue template dimensions.'}
+            </p>
+          </div>
+          <label className="flex shrink-0 items-center gap-2 text-[10px] font-medium text-sage-800">
+            <span>Manual entry</span>
+            <Switch
+              checked={manualEntry}
+              onCheckedChange={setManualEntry}
+              aria-label="Toggle manual venue dimension entry"
+            />
+          </label>
+        </div>
+      ) : null}
+
       {(showVenueInputs || !hideTableSizeSelector) && (
         <div
           className={`grid gap-3 ${
@@ -200,9 +244,24 @@ export function SmartPopulateBoothCaps({
                   type="number"
                   min={10}
                   step={1}
-                  value={venueWidthFt}
-                  onChange={(e) => onVenueWidthChange?.(Number(e.target.value) || 0)}
-                  className="w-full rounded-lg border border-sage-200 bg-card px-2 py-1.5 text-sm"
+                  value={widthDraft}
+                  readOnly={!venueInputsEditable}
+                  disabled={!venueInputsEditable}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setWidthDraft(next)
+                    const parsed = Number(next)
+                    if (Number.isFinite(parsed) && parsed > 0) {
+                      onVenueWidthChange?.(parsed)
+                    }
+                  }}
+                  onBlur={() => {
+                    const parsed = Number(widthDraft)
+                    if (!Number.isFinite(parsed) || parsed <= 0) {
+                      setWidthDraft(String(venueWidthFt))
+                    }
+                  }}
+                  className="w-full rounded-lg border border-sage-200 bg-card px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500"
                 />
               </div>
               <div className="space-y-1">
@@ -211,9 +270,24 @@ export function SmartPopulateBoothCaps({
                   type="number"
                   min={10}
                   step={1}
-                  value={venueLengthFt}
-                  onChange={(e) => onVenueLengthChange?.(Number(e.target.value) || 0)}
-                  className="w-full rounded-lg border border-sage-200 bg-card px-2 py-1.5 text-sm"
+                  value={lengthDraft}
+                  readOnly={!venueInputsEditable}
+                  disabled={!venueInputsEditable}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setLengthDraft(next)
+                    const parsed = Number(next)
+                    if (Number.isFinite(parsed) && parsed > 0) {
+                      onVenueLengthChange?.(parsed)
+                    }
+                  }}
+                  onBlur={() => {
+                    const parsed = Number(lengthDraft)
+                    if (!Number.isFinite(parsed) || parsed <= 0) {
+                      setLengthDraft(String(venueLengthFt))
+                    }
+                  }}
+                  className="w-full rounded-lg border border-sage-200 bg-card px-2 py-1.5 text-sm disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-500"
                 />
               </div>
             </>

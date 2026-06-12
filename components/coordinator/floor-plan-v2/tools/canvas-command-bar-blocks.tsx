@@ -1291,8 +1291,8 @@ export function renderCanvasCommandBarBlock(
         <DualScreenLaunchButtons
           onLaunchDualScreen={ctx.onLaunchDualScreen}
           compact={compact}
-          variant={headerBarLayout ? 'prominent' : 'subtle'}
-          iconOnly={headerBarLayout}
+          variant={headerBarLayout || sidebarLayout ? 'prominent' : 'subtle'}
+          iconOnly={false}
         />
       )
 

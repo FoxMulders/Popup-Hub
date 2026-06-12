@@ -4,6 +4,33 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — dual-screen toolbar + room-scoped canvas bounds (local, not deployed)
+- **`canvas-toolbar-static.tsx`:** `HeaderBarDualScreenCluster` restores visible **DUAL-SCREEN** section header with **Presenter** / **Wall Cast** buttons stacked beneath; header row uses `items-stretch` + `overflow-y-visible` so controls are not clipped.
+- **`canvas-command-bar-blocks.tsx`:** Dual-screen block always renders labeled buttons (no icon-only header mode).
+- **`toolbar-static-layout.ts`:** Dual-screen section also appears in the top tool strip for sidebar-style section layout.
+- **`globals.css`:** Header toolbar portal + command-center header allow vertical overflow; dual-screen cluster min-width guard.
+- **`floor-plan-canvas.tsx`:** Command-center scroll wrapper (`panContentRef`) sizes to the active room grid footprint (e.g. 74×74 ft) instead of the full 5× doc canvas — SVG clips via offset + `overflow:hidden`; pointer origin follows room origin.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — **DUAL-SCREEN** shows Presenter + Wall Cast under header; canvas pan/zoom has no dead scroll beyond room walls.
+
+## Active work — room overlap boolean union (local, not deployed)
+- **`state/room-joins.ts`:** `buildAutoUnionZones()` + `hitTestRoomStroke()` — polygon-clipping union for overlap/touch room groups without explicit `joinGroupId`; interior walls dissolved to one outer perimeter.
+- **`canvas/room-frames.tsx`:** Auto-union zones render merged perimeter strokes; member rooms suppress individual box walls.
+- **`interactions/geometry.ts`:** `pointHitsFrameStroke` uses visible edge segments (not full AABB); `pointDistanceToSegment` for accurate wall hit-testing.
+- **`interactions/use-canvas-pointer.ts`:** Room drag/select uses `hitTestRoomStroke` so hidden interior walls are not grabbable.
+- **Verify:** `npx tsx scripts/verify-room-joins.ts` — PASS (scenario 8: partial overlap). Smoke: overlap Room 2 into Main Hall — no interior cross walls; single continuous outer perimeter.
+
+## Active work — middle-button pan GPU preview (local, not deployed)
+- **`use-viewport.ts` / `floor-plan-canvas.tsx`:** Middle-mouse pan tracks live delta in refs; `requestAnimationFrame` applies `translate3d` on `panContentRef` during drag; scroll position commits on pointer-up only (space-drag / touch hand pan still use scroll).
+- **Verify:** Command center floor plan — middle-drag feels fluid (no per-move React scroll); release snaps scroll to final position; grid stays aligned after release.
+
+## Active work — Step 2 venue inputs + canvas viewport + strict arrange (local, not deployed)
+- **`smart-populate-booth-caps.tsx`:** Venue width/length always visible; **Manual entry** toggle unlocks editable fields (draft string state); auto mode shows template dims disabled when preset-anchored.
+- **`wizard-step-capacity.tsx` / `market-setup-wizard.tsx`:** Wired `onVenueWidthChange` / `onVenueLengthChange` to room state; `step2VenueWidth/Length` respects manual override vs template anchor.
+- **`use-viewport.ts` / `floor-plan-canvas.tsx`:** Pan clamp keeps room grid partially on-screen; **100%** uses `resetViewport()`; fullscreen enter recenters; initial load uses `fitViewportToContent` with 40px safe zone.
+- **`auto-arrange.ts` / `wizard-initial-layout.ts`:** `dropUnplacedBooths` omits booths that violate spacing; 5′ perimeter (`PERIMETER_WALL_CLEARANCE_FT`); door/exit obstacles expanded; seed count capped via `maxDeterministicGridSlotCount`.
+- **`floor-plan-canvas.tsx`:** **Arrange layout** uses `autoArrangeInRoom` grid mode (not shelf-pack); placed vendor count drives Step 3 validation.
+- **Verify:** `npx tsx scripts/verify-wizard-initial-layout.ts` — PASS. Smoke: Step 2 toggle Manual entry → edit 74×74; Step 3 grid centered; middle-drag cannot lose grid; Arrange layout omits overflow booths.
+
 ## Active work — wizard Step 3 auto seed + grid pack (local, not deployed)
 - **`lib/floor-plan/wizard-initial-layout.ts`:** Builds generic vendor booths from Step 2 category caps (round-robin, clamped to `layoutCapacity`) and runs `autoArrangeInRoom` grid mode top-left inside Main Hall.
 - **`floor-plan-v2.tsx`:** One-time wizard initial layout on blank canvas; forwards `configuredCategorySlots`.

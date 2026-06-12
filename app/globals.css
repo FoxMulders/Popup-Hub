@@ -609,7 +609,8 @@
 
   .dashboard-command-center-header {
     min-height: var(--dashboard-toolbar-height);
-    overflow-x: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
   }
 
   .dashboard-command-center-header .dashboard-workspace-tab {
@@ -662,7 +663,8 @@
   }
 
   .dashboard-header-toolbar-portal {
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
   }
 
   .dashboard-header-view-setup {
@@ -674,7 +676,13 @@
   }
 
   .dashboard-header-dual-screen {
-    min-width: 0;
+    min-width: min(100%, 11rem);
+    overflow: visible;
+  }
+
+  .dashboard-header-dual-screen > div:last-child {
+    position: relative;
+    z-index: 1;
   }
 
   .dashboard-toolbar-section > div:last-child {

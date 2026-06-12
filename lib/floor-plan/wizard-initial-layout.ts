@@ -1,6 +1,10 @@
 import { autoArrangeInRoom } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import type { AutoArrangeInRoomResult } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import {
+  GRID_WALL_INSET_FT,
+  DEFAULT_AISLE_WIDTH_FT,
+} from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
+import {
   boothDimensionsForTableSpec,
   boothPatchForTableSize,
 } from '@/lib/booth-planner/table-booth-consolidation'
@@ -10,6 +14,8 @@ import {
   isLayoutBaselineTableLengthFt,
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
+import { maxDeterministicGridSlotCount } from '@/lib/floor-plan/deterministic-market-layout'
+import { MIN_CLEARANCE_FT } from '@/lib/booth-planner/layout-clearance-constants'
 import { syncBoothCompoundBounds } from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
 import type { BoothObject, FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { LayoutRoom } from '@/types/database'
@@ -64,18 +70,37 @@ export function shouldRunWizardInitialLayout(
 
 function roundRobinPlaceholderCount(
   slots: ReadonlyArray<WizardCategorySlot>,
-  layoutCapacity: number | undefined
+  layoutCapacity: number | undefined,
+  roomWidthFt: number,
+  roomLengthFt: number,
+  baselineTableLengthFt: LayoutBaselineTableLengthFt
 ): number {
   const totalConfigured = slots.reduce(
     (sum, slot) => sum + Math.max(0, slot.maxSlots),
     0
   )
   if (totalConfigured <= 0) return 0
-  const ceiling =
-    typeof layoutCapacity === 'number' && layoutCapacity > 0
-      ? layoutCapacity
-      : totalConfigured
-  return Math.min(totalConfigured, ceiling)
+
+  const spec = vendorTableSpec(baselineTableLengthFt)
+  const dims = boothDimensionsForTableSpec(spec)
+  const physicalMax = maxDeterministicGridSlotCount({
+    marketWidthFt: roomWidthFt,
+    marketHeightFt: roomLengthFt,
+    tableWidthFt: dims.width,
+    tableHeightFt: dims.height,
+    layoutMode: 'grid',
+    aisleWidthFt: DEFAULT_AISLE_WIDTH_FT,
+    wallInsetFt: GRID_WALL_INSET_FT,
+    tableEdgeGapFt: MIN_CLEARANCE_FT * 2,
+  })
+
+  const ceilingCandidates = [
+    totalConfigured,
+    physicalMax,
+    typeof layoutCapacity === 'number' && layoutCapacity > 0 ? layoutCapacity : totalConfigured,
+  ].filter((n) => typeof n === 'number' && n > 0) as number[]
+
+  return Math.min(...ceilingCandidates)
 }
 
 /** Build generic vendor booth placeholders — one per configured cap (round-robin). */
@@ -84,6 +109,8 @@ export function buildWizardGenericVendorBooths(
   options: {
     baselineTableLengthFt?: LayoutBaselineTableLengthFt
     layoutCapacity?: number
+    roomWidthFt?: number
+    roomLengthFt?: number
   } = {}
 ): BoothObject[] {
   const baselineFt =
@@ -94,7 +121,10 @@ export function buildWizardGenericVendorBooths(
 
   const targetCount = roundRobinPlaceholderCount(
     categorySlots,
-    options.layoutCapacity
+    options.layoutCapacity,
+    options.roomWidthFt ?? 0,
+    options.roomLengthFt ?? 0,
+    baselineFt
   )
   if (targetCount <= 0) return []
 
@@ -174,9 +204,15 @@ export function runWizardInitialLayout(
     eventCategoryNames,
   } = input
 
+  const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
+  const roomWidthFt = frame?.widthFt ?? doc.canvasWidthFt
+  const roomLengthFt = frame?.lengthFt ?? doc.canvasLengthFt
+
   const booths = buildWizardGenericVendorBooths(categorySlots, {
     baselineTableLengthFt,
     layoutCapacity,
+    roomWidthFt,
+    roomLengthFt,
   })
 
   if (booths.length === 0) {
@@ -195,6 +231,8 @@ export function runWizardInitialLayout(
     mode: 'grid',
     eventCategoryNames,
     baselineTableLengthFt: baselineFt,
+    aisleWidthFt: DEFAULT_AISLE_WIDTH_FT,
+    dropUnplacedBooths: true,
     ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
       ? { maxBooths: layoutCapacity }
       : {}),

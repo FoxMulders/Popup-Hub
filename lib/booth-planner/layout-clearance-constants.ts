@@ -4,6 +4,9 @@ export const MIN_STROLLER_AISLE_WIDTH_FT = 8
 /** Mandatory unobstructed patron walking path width (ft) between booth rows and walls. */
 export const PATRON_AISLE_MIN_FT = 6
 
+/** Mandatory clearance from outer walls and exit doors during grid auto-arrange (ft). */
+export const PERIMETER_WALL_CLEARANCE_FT = 5
+
 /**
  * Global minimum booth-to-booth and booth-to-wall spacing (ft).
  * Expanded footprint collision uses this value on every side of the raw booth rect.

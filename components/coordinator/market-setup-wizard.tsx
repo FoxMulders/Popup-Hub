@@ -392,14 +392,23 @@ export function MarketSetupWizard({
     [categoryLimits]
   )
 
+  const [venueDimensionsManual, setVenueDimensionsManual] = useState(false)
+
+  const step2VenueWidth = venueDimensionsManual
+    ? activeRoom.venue_width
+    : templateAnchor.width
+  const step2VenueLength = venueDimensionsManual
+    ? activeRoom.venue_length
+    : templateAnchor.length
+
   const layoutCapacity = useMemo(() => {
-    const floor = calculateNetUsableFloorSpace(templateAnchor.width, templateAnchor.length, {
+    const floor = calculateNetUsableFloorSpace(step2VenueWidth, step2VenueLength, {
       venueElements: activeRoom.venue_elements,
       entrance: activeRoom.entrance,
     })
     const footprint = boothUnitFootprint(baselineTableLengthFt)
     return calculateMaxBoothCapacity(floor.netUsableSqFt, footprint.sqFt)
-  }, [templateAnchor, activeRoom.venue_elements, activeRoom.entrance, baselineTableLengthFt])
+  }, [step2VenueWidth, step2VenueLength, activeRoom.venue_elements, activeRoom.entrance, baselineTableLengthFt])
 
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
   // Floor plan v2 owns its own state. The legacy planner exposed
@@ -724,6 +733,30 @@ export function MarketSetupWizard({
   function handleBoothPriceCentsChange(cents: number) {
     setBoothPriceCents(cents)
     setCategoryLimits((prev) => applyUnifiedBoothFeeToCategoryLimits(prev, cents))
+  }
+
+  function handleVenueWidthChange(ft: number) {
+    if (ft <= 0) return
+    setVenueDimensionsManual(true)
+    setRooms((prev) => updateRoomInList(prev, activeRoomId, { venue_width: ft }))
+  }
+
+  function handleVenueLengthChange(ft: number) {
+    if (ft <= 0) return
+    setVenueDimensionsManual(true)
+    setRooms((prev) => updateRoomInList(prev, activeRoomId, { venue_length: ft }))
+  }
+
+  function handleVenueManualEntryChange(manual: boolean) {
+    setVenueDimensionsManual(manual)
+    if (!manual && templateAnchor.preset) {
+      setRooms((prev) =>
+        updateRoomInList(prev, activeRoomId, {
+          venue_width: templateAnchor.width,
+          venue_length: templateAnchor.length,
+        })
+      )
+    }
   }
 
   function handleCategoryLimitsChange(limits: CategoryLimit[]) {
@@ -1278,9 +1311,13 @@ export function MarketSetupWizard({
               <WizardStepCapacity
                 categories={sortedCategories}
                 allowMlm={allowMlm}
-                venueWidth={templateAnchor.width}
-                venueLength={templateAnchor.length}
+                venueWidth={step2VenueWidth}
+                venueLength={step2VenueLength}
                 venueReadOnly={templateAnchor.isAnchored}
+                venueManualEntry={venueDimensionsManual}
+                onVenueManualEntryChange={handleVenueManualEntryChange}
+                onVenueWidthChange={handleVenueWidthChange}
+                onVenueLengthChange={handleVenueLengthChange}
                 categoryLimits={categoryLimits}
                 onCategoryLimitsChange={handleCategoryLimitsChange}
                 globalMlmCap={globalMlmCap}

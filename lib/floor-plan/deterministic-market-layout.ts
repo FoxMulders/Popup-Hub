@@ -1,4 +1,4 @@
-import { PATRON_AISLE_MIN_FT } from '@/lib/booth-planner/layout-clearance-constants'
+import { PATRON_AISLE_MIN_FT, PERIMETER_WALL_CLEARANCE_FT } from '@/lib/booth-planner/layout-clearance-constants'
 import {
   expandedFootprintBBox,
   footprintWithinWallClearance,
@@ -1014,4 +1014,25 @@ export function autoArrangeModeToMarketLayout(
   if (mode === 'perimeter-only') return 'perimeter'
   if (mode === 'staggered') return 'staggered'
   return 'grid'
+}
+
+/**
+ * Maximum vendor booths that fit under grid back-to-back row rules for a
+ * given room size — used to cap wizard seed counts before auto-arrange.
+ */
+export function maxDeterministicGridSlotCount(
+  input: Omit<DeterministicMarketLayoutInput, 'tableCount' | 'tableIds'>
+): number {
+  const probeCount = 4096
+  const result = generateDeterministicMarketLayout({
+    ...input,
+    layoutMode: input.layoutMode === 'perimeter' ? 'grid' : input.layoutMode,
+    tableCount: probeCount,
+    tableIds: Array.from({ length: probeCount }, (_, i) => `slot_${i}`),
+    aisleWidthFt: input.aisleWidthFt ?? PATRON_AISLE_MIN_FT,
+    wallInsetFt: input.wallInsetFt ?? PERIMETER_WALL_CLEARANCE_FT,
+    tableEdgeGapFt: input.tableEdgeGapFt ?? VENDOR_TABLE_EDGE_GAP_FT,
+  })
+  if (!result.ok) return 0
+  return result.layoutSlotCandidates?.length ?? result.placements.length
 }

@@ -38,6 +38,8 @@ const slots = [
 const booths = buildWizardGenericVendorBooths(slots, {
   baselineTableLengthFt: 6,
   layoutCapacity: 20,
+  roomWidthFt: 74,
+  roomLengthFt: 74,
 })
 assert.equal(booths.length, 7, 'round-robin placeholders match total caps')
 assert.ok(

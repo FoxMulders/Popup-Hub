@@ -43,8 +43,20 @@ export interface ZoomMath {
   anchorFt: { x: number; y: number }
 }
 
+export interface PanClampBounds {
+  minLeft: number
+  maxLeft: number
+  minTop: number
+  maxTop: number
+}
+
 export interface UseViewportOptions {
   scrollRef: RefObject<HTMLDivElement | null>
+  /**
+   * Inner canvas content wrapper — middle-button pan applies a GPU
+   * `translate3d` preview here during drag and commits scroll on release.
+   */
+  panContentRef?: RefObject<HTMLDivElement | null>
   initialZoom?: number
   /** Floor for fit/zoom-out; default 0.25. Command center uses ~0.72 for steadier drags. */
   zoomMin?: number
@@ -57,6 +69,11 @@ export interface UseViewportOptions {
    * selection state without React stale-closure pitfalls.
    */
   getZoomMath: () => ZoomMath
+  /**
+   * Optional scroll clamp so pan gestures cannot drag the room grid
+   * completely off-screen.
+   */
+  getPanClampBounds?: () => PanClampBounds | null
   /**
    * Optional accessor that returns the host's currently-active tool.
    * When provided, single-touch drags on the scroll container are
@@ -143,6 +160,8 @@ interface PanInternal {
   startClientY: number
   scrollLeft: number
   scrollTop: number
+  /** Middle-button drag uses transform preview + scroll commit on release. */
+  middleButtonTransformPan: boolean
 }
 
 interface PinchInternal {
@@ -170,6 +189,25 @@ function distance(a: ActivePointer, b: ActivePointer): number {
  *
  * Negative scroll positions are clamped to 0 — browsers refuse them.
  */
+function clampScrollPosition(
+  scroll: HTMLDivElement,
+  bounds: PanClampBounds | null | undefined
+): void {
+  if (!bounds) {
+    const maxLeft = Math.max(0, scroll.scrollWidth - scroll.clientWidth)
+    const maxTop = Math.max(0, scroll.scrollHeight - scroll.clientHeight)
+    scroll.scrollLeft = Math.min(maxLeft, Math.max(0, scroll.scrollLeft))
+    scroll.scrollTop = Math.min(maxTop, Math.max(0, scroll.scrollTop))
+    return
+  }
+  const minLeft = Math.min(bounds.minLeft, bounds.maxLeft)
+  const maxLeft = Math.max(bounds.minLeft, bounds.maxLeft)
+  const minTop = Math.min(bounds.minTop, bounds.maxTop)
+  const maxTop = Math.max(bounds.minTop, bounds.maxTop)
+  scroll.scrollLeft = Math.min(maxLeft, Math.max(minLeft, scroll.scrollLeft))
+  scroll.scrollTop = Math.min(maxTop, Math.max(minTop, scroll.scrollTop))
+}
+
 function computeScroll(
   anchorFtX: number,
   anchorFtY: number,
@@ -186,8 +224,10 @@ function computeScroll(
 export function useViewport(options: UseViewportOptions): ViewportApi {
   const {
     scrollRef,
+    panContentRef,
     initialZoom = 1,
     getZoomMath,
+    getPanClampBounds,
     getToolMode,
     zoomMin = ZOOM_MIN,
     zoomStepMultiplier = 4,
@@ -225,10 +265,52 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     getZoomMathRef.current = getZoomMath
   }, [getZoomMath])
 
+  const getPanClampBoundsRef = useRef(getPanClampBounds)
+  useEffect(() => {
+    getPanClampBoundsRef.current = getPanClampBounds
+  }, [getPanClampBounds])
+
   const activePointers = useRef<Map<number, ActivePointer>>(new Map())
   const panRef = useRef<PanInternal | null>(null)
   const pinchRef = useRef<PinchInternal | null>(null)
   const spaceHeldRef = useRef(false)
+  /** Live middle-button pan delta — never drives React state during drag. */
+  const panLiveDxRef = useRef(0)
+  const panLiveDyRef = useRef(0)
+  const panRafRef = useRef<number | null>(null)
+
+  const clearMiddleButtonPanTransform = useCallback(() => {
+    const content = panContentRef?.current
+    if (!content) return
+    content.style.transform = ''
+    content.style.willChange = ''
+  }, [panContentRef])
+
+  const applyMiddleButtonPanTransform = useCallback(() => {
+    const content = panContentRef?.current
+    if (!content) return
+    const dx = panLiveDxRef.current
+    const dy = panLiveDyRef.current
+    content.style.willChange = 'transform'
+    content.style.transform = `translate3d(${-dx}px, ${-dy}px, 0)`
+  }, [panContentRef])
+
+  const commitMiddleButtonPanScroll = useCallback(
+    (scroll: HTMLDivElement, pan: PanInternal) => {
+      scroll.scrollLeft = pan.scrollLeft - panLiveDxRef.current
+      scroll.scrollTop = pan.scrollTop - panLiveDyRef.current
+      clampScrollPosition(scroll, getPanClampBoundsRef.current?.())
+      clearMiddleButtonPanTransform()
+    },
+    [clearMiddleButtonPanTransform]
+  )
+
+  const cancelMiddleButtonPanRaf = useCallback(() => {
+    if (panRafRef.current != null) {
+      cancelAnimationFrame(panRafRef.current)
+      panRafRef.current = null
+    }
+  }, [])
   /** Zoom level that maps to 100% in the toolbar after fit-to-content. */
   const baselineZoomRef = useRef(initialZoom)
 
@@ -253,6 +335,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     }
     scroll.scrollLeft = target.left
     scroll.scrollTop = target.top
+    clampScrollPosition(scroll, getPanClampBoundsRef.current?.())
     pendingScrollRef.current = null
   }, [scrollRef, zoom])
 
@@ -389,6 +472,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       // needed because the document's pixel size is unchanged.
       scroll.scrollLeft = target.left
       scroll.scrollTop = target.top
+      clampScrollPosition(scroll, getPanClampBoundsRef.current?.())
     }
   }, [scrollRef, clamp])
 
@@ -542,6 +626,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       if (scroll) {
         scroll.scrollLeft += e.deltaX
         scroll.scrollTop += e.deltaY
+        clampScrollPosition(scroll, getPanClampBoundsRef.current?.())
       }
     },
     [applyZoomAtDocAnchor, applyZoomAtScreen, scrollRef]
@@ -559,9 +644,13 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         clientY: e.clientY,
       })
 
-      const isMouseLikePan =
+      const isMiddleButtonPan =
+        e.pointerType === 'mouse' && e.button === 1
+      const isSpaceDragPan =
         e.pointerType === 'mouse' &&
-        (e.button === 1 || (e.button === 0 && spaceHeldRef.current))
+        e.button === 0 &&
+        spaceHeldRef.current
+      const isMouseLikePan = isMiddleButtonPan || isSpaceDragPan
       const tool = getToolModeRef.current?.()
       const isSingleTouchHandPan =
         tool === 'hand' &&
@@ -576,12 +665,17 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
           // setPointerCapture can throw on synthesized pointers in
           // tests; ignore — we still get pointermove via bubbling.
         }
+        const middleButtonTransformPan =
+          isMiddleButtonPan && panContentRef?.current != null
+        panLiveDxRef.current = 0
+        panLiveDyRef.current = 0
         panRef.current = {
           pointerId: e.pointerId,
           startClientX: e.clientX,
           startClientY: e.clientY,
           scrollLeft: scroll.scrollLeft,
           scrollTop: scroll.scrollTop,
+          middleButtonTransformPan,
         }
         setIsPanning(true)
         setPanActive(true)
@@ -605,7 +699,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         setPanActive(true)
       }
     },
-    [scrollRef]
+    [panContentRef, scrollRef]
   )
 
   const onPointerMove = useCallback(
@@ -623,8 +717,21 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       if (pan && pan.pointerId === e.pointerId) {
         const dx = e.clientX - pan.startClientX
         const dy = e.clientY - pan.startClientY
-        scroll.scrollLeft = pan.scrollLeft - dx
-        scroll.scrollTop = pan.scrollTop - dy
+        if (pan.middleButtonTransformPan) {
+          panLiveDxRef.current = dx
+          panLiveDyRef.current = dy
+          if (panRafRef.current == null) {
+            panRafRef.current = requestAnimationFrame(() => {
+              panRafRef.current = null
+              if (!panRef.current?.middleButtonTransformPan) return
+              applyMiddleButtonPanTransform()
+            })
+          }
+        } else {
+          scroll.scrollLeft = pan.scrollLeft - dx
+          scroll.scrollTop = pan.scrollTop - dy
+          clampScrollPosition(scroll, getPanClampBoundsRef.current?.())
+        }
         return
       }
 
@@ -649,7 +756,11 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         )
       }
     },
-    [applyZoomAtScreen, scrollRef]
+    [
+      applyMiddleButtonPanTransform,
+      applyZoomAtScreen,
+      scrollRef,
+    ]
   )
 
   const releasePointer = useCallback(
@@ -660,6 +771,17 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       if (pan && pan.pointerId === e.pointerId) {
         if (e.currentTarget.hasPointerCapture(e.pointerId)) {
           e.currentTarget.releasePointerCapture(e.pointerId)
+        }
+        if (pan.middleButtonTransformPan) {
+          cancelMiddleButtonPanRaf()
+          panLiveDxRef.current = e.clientX - pan.startClientX
+          panLiveDyRef.current = e.clientY - pan.startClientY
+          const scroll = scrollRef.current
+          if (scroll) {
+            commitMiddleButtonPanScroll(scroll, pan)
+          } else {
+            clearMiddleButtonPanTransform()
+          }
         }
         panRef.current = null
         setIsPanning(false)
@@ -676,7 +798,12 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         setPanActive(false)
       }
     },
-    []
+    [
+      cancelMiddleButtonPanRaf,
+      clearMiddleButtonPanTransform,
+      commitMiddleButtonPanScroll,
+      scrollRef,
+    ]
   )
 
   const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -694,11 +821,13 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
 
   useEffect(
     () => () => {
+      cancelMiddleButtonPanRaf()
+      clearMiddleButtonPanTransform()
       activePointers.current.clear()
       panRef.current = null
       pinchRef.current = null
     },
-    []
+    [cancelMiddleButtonPanRaf, clearMiddleButtonPanTransform]
   )
 
   /** Recover if a pan/pinch ends outside the scroll container (lost pointer). */
@@ -706,6 +835,15 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     const releaseStaleGestures = () => {
       const pan = panRef.current
       if (pan && !activePointers.current.has(pan.pointerId)) {
+        if (pan.middleButtonTransformPan) {
+          cancelMiddleButtonPanRaf()
+          const scroll = scrollRef.current
+          if (scroll) {
+            commitMiddleButtonPanScroll(scroll, pan)
+          } else {
+            clearMiddleButtonPanTransform()
+          }
+        }
         panRef.current = null
         setIsPanning(false)
         setPanActive(false)
@@ -730,7 +868,12 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
       window.removeEventListener('pointercancel', releaseStaleGestures)
       window.removeEventListener('blur', releaseStaleGestures)
     }
-  }, [])
+  }, [
+    cancelMiddleButtonPanRaf,
+    clearMiddleButtonPanTransform,
+    commitMiddleButtonPanScroll,
+    scrollRef,
+  ])
 
   /** Block Safari gesture zoom on the canvas viewport (passive: false). */
   useEffect(() => {
