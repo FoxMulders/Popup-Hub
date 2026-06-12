@@ -10,6 +10,10 @@ import {
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
 import { GoogleMapsProvider } from '@/components/map/google-maps-provider'
+import {
+  getGoogleMapsBrowserApiKey,
+  GOOGLE_MAPS_JS_LIBRARIES,
+} from '@/lib/google-maps/config'
 import { GoogleMapsApiFallback } from '@/components/map/google-maps-api-fallback'
 import { MapRecenter } from '@/components/map/map-recenter'
 import { Button } from '@/components/ui/button'
@@ -494,8 +498,8 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
 
   return (
     <GoogleMapsProvider
-      apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
-      libraries={['places']}
+      apiKey={getGoogleMapsBrowserApiKey()}
+      libraries={[...GOOGLE_MAPS_JS_LIBRARIES]}
       fallback={<GoogleMapsApiFallback />}
     >
     <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-8 items-start">

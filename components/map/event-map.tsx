@@ -9,6 +9,10 @@ import {
   useMap,
 } from '@vis.gl/react-google-maps'
 import { GoogleMapsProvider } from '@/components/map/google-maps-provider'
+import {
+  getGoogleMapsBrowserApiKey,
+  GOOGLE_MAPS_JS_LIBRARIES,
+} from '@/lib/google-maps/config'
 import type { Event } from '@/types/database'
 import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Badge } from '@/components/ui/badge'
@@ -248,7 +252,7 @@ function GoogleEventMap({
 }
 
 export function EventMap({ events, center: centerProp, radiusKm }: EventMapProps) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
+  const apiKey = getGoogleMapsBrowserApiKey()
 
   // Always anchor the map on the user's selected origin (`centerProp`) when
   // available — falling back to the first event only when the user hasn't
@@ -267,6 +271,7 @@ export function EventMap({ events, center: centerProp, radiusKm }: EventMapProps
       ) : (
         <GoogleMapsProvider
           apiKey={apiKey}
+          libraries={[...GOOGLE_MAPS_JS_LIBRARIES]}
           fallback={<EventMapFallback events={events} />}
         >
           <GoogleEventMap events={events} center={center} radiusKm={radiusKm} />

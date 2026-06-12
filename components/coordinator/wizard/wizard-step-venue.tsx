@@ -8,6 +8,10 @@ import {
   useApiIsLoaded,
 } from '@vis.gl/react-google-maps'
 import { GoogleMapsProvider } from '@/components/map/google-maps-provider'
+import {
+  getGoogleMapsBrowserApiKey,
+  GOOGLE_MAPS_JS_LIBRARIES,
+} from '@/lib/google-maps/config'
 import { GoogleMapsApiFallback } from '@/components/map/google-maps-api-fallback'
 import { useNormalizeAddressAi } from '@/hooks/use-normalize-address-ai'
 import { MapRecenter } from '@/components/map/map-recenter'
@@ -552,7 +556,7 @@ function WizardStepVenueFallback({
 }
 
 export function WizardStepVenueWithMapsProvider(props: WizardStepVenueProps) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? ''
+  const apiKey = getGoogleMapsBrowserApiKey()
   if (!apiKey) {
     const cityLabel = getMarketCityById(props.city).label
     return (
@@ -571,7 +575,7 @@ export function WizardStepVenueWithMapsProvider(props: WizardStepVenueProps) {
   return (
     <GoogleMapsProvider
       apiKey={apiKey}
-      libraries={['places']}
+      libraries={[...GOOGLE_MAPS_JS_LIBRARIES]}
       fallback={<GoogleMapsApiFallback className="rounded-xl border border-amber-200 bg-amber-50/80 p-6" />}
     >
       <WizardStepVenue {...props} />

@@ -62,6 +62,11 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BUILD_COMMIT: buildCommit,
     NEXT_PUBLIC_BUILD_NUMBER: String(buildNumber),
     NEXT_PUBLIC_BUILD_TIME: buildTime,
+    // Accept GOOGLE_MAPS_API_KEY from Vercel when NEXT_PUBLIC_* was not set separately.
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
+      process.env.GOOGLE_MAPS_API_KEY?.trim() ||
+      '',
   },
   images: {
     formats: ['image/avif', 'image/webp'],

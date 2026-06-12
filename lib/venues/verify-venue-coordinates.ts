@@ -1,3 +1,4 @@
+import { getGoogleMapsServerApiKey } from '@/lib/google-maps/config'
 import { isNamedEstablishmentPlace } from '@/lib/wizard/google-place-venue'
 import type { VenueVerificationStatus } from '@/types/database'
 
@@ -137,9 +138,7 @@ export async function verifyVenueCoordinates(
   const local = evaluateVenueCoordinatesLocally(input)
   if (local) return local
 
-  const apiKey =
-    process.env.GOOGLE_MAPS_SERVER_API_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
+  const apiKey = getGoogleMapsServerApiKey()
 
   if (!apiKey) {
     const addressLooksValid = (input.address?.trim().length ?? 0) >= 10
