@@ -28,6 +28,7 @@ import { hydrateVenuePreset, resolveTemplateAnchoredDimensions } from '@/lib/boo
 import {
   getEdmontonVenueById,
   isEdmontonVenueId,
+  matchEdmontonVenuePreset,
 } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { sortCategoriesByName } from '@/lib/categories'
@@ -732,11 +733,53 @@ export function MarketSetupWizard({
     setCategoryLimits(applyUnifiedBoothFeeToCategoryLimits(next, boothPriceCents))
   }
 
-  function handleVenuePresetChange(presetId: VenuePresetId) {
+  function applyVenuePresetToRoom(presetId: VenuePresetId) {
     const patch = hydrateVenuePreset(presetId)
     setRooms((prev) => updateRoomInList(prev, activeRoomId, patch))
+  }
 
-    if (presetId === 'blank') return
+  function syncVenueTemplateFromSelection(params: {
+    venueName?: string
+    address?: string
+    lat?: number
+    lng?: number
+    cityId?: string | null
+  }) {
+    const cityForMatch = params.cityId ?? marketCity
+    if (!isEdmontonMarketCity(cityForMatch)) {
+      if (venuePresetId !== 'blank') {
+        applyVenuePresetToRoom('blank')
+      }
+      return
+    }
+
+    const matched = matchEdmontonVenuePreset({
+      venueName: params.venueName,
+      address: params.address,
+      lat: params.lat,
+      lng: params.lng,
+    })
+
+    if (matched) {
+      if (matched !== venuePresetId) {
+        applyVenuePresetToRoom(matched)
+      }
+      return
+    }
+
+    if (venuePresetId !== 'blank') {
+      applyVenuePresetToRoom('blank')
+    }
+  }
+
+  function handleVenuePresetChange(
+    presetId: VenuePresetId,
+    options?: { syncLocation?: boolean }
+  ) {
+    const syncLocation = options?.syncLocation !== false
+    applyVenuePresetToRoom(presetId)
+
+    if (!syncLocation || presetId === 'blank') return
 
     const blueprint = getEdmontonVenueById(presetId)
     if (!blueprint) return
@@ -771,6 +814,13 @@ export function MarketSetupWizard({
     setLng(venue.longitude)
     setPinDropped(true)
     setMarketCity(resolveMarketCityId(venue.market_city, venue.address))
+    syncVenueTemplateFromSelection({
+      venueName: venue.location_name,
+      address: venue.address,
+      lat: venue.latitude,
+      lng: venue.longitude,
+      cityId: resolveMarketCityId(venue.market_city, venue.address),
+    })
   }
 
   function handleBaselineTableLengthChange(ft: LayoutBaselineTableLengthFt) {
@@ -824,19 +874,23 @@ export function MarketSetupWizard({
    * bounds, listing-type rules, AND venue location / map pin / template
    * dimensions in a single pass.
    */
-  const handleGooglePlaceSelect = useCallback(
-    (place: PlaceResult) => {
-      applyWizardGooglePlaceSelect(place, {
-        setAddress,
-        setLat,
-        setLng,
-        setPinDropped,
-        setMarketCity,
-        setLocationName,
-      })
-    },
-    []
-  )
+  function handleGooglePlaceSelect(place: PlaceResult) {
+    applyWizardGooglePlaceSelect(place, {
+      setAddress,
+      setLat,
+      setLng,
+      setPinDropped,
+      setMarketCity,
+      setLocationName,
+    })
+    syncVenueTemplateFromSelection({
+      venueName: place.name,
+      address: place.address,
+      lat: place.lat,
+      lng: place.lng,
+      cityId: place.cityId,
+    })
+  }
 
   function validateStep2(): boolean {
     const error = getWizardStep2ValidationError({
@@ -987,6 +1041,10 @@ export function MarketSetupWizard({
       toast.error('Save event details before opening the canvas')
     }
   }, [currentStep, eventId])
+
+  useEffect(() => {
+    resetWizardScrollAnchor(currentStep)
+  }, [currentStep])
 
   // Floor plan v2 owns Step 3. The canvas surface mounts empty and is
   // mutated only by direct user gestures (pointer-down draw, marquee

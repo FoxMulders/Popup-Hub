@@ -78,6 +78,8 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   saveDraftLoading?: boolean
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
+  showClearanceWarnings?: boolean
+  onClearanceWarningsToggle?: () => void
   eventId?: string | null
   onRequestAiLayoutFeedback?: () => void
   canRequestAiLayoutFeedback?: boolean
@@ -175,6 +177,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     saveDraftLoading,
     patronPathEnabled,
     onPatronPathToggle,
+    showClearanceWarnings,
+    onClearanceWarningsToggle,
     eventId,
     onRequestAiLayoutFeedback,
     canRequestAiLayoutFeedback,
@@ -296,6 +300,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       saveDraftLoading,
       patronPathEnabled,
       onPatronPathToggle,
+      showClearanceWarnings,
+      onClearanceWarningsToggle,
       onRequestAiLayoutFeedback,
       canRequestAiLayoutFeedback,
       aiLayoutFeedbackLoading,
@@ -383,6 +389,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       saveDraftLoading,
       patronPathEnabled,
       onPatronPathToggle,
+      showClearanceWarnings,
+      onClearanceWarningsToggle,
       onRequestAiLayoutFeedback,
       canRequestAiLayoutFeedback,
       aiLayoutFeedbackLoading,

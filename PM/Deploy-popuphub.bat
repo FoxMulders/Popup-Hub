@@ -3,10 +3,10 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 REM PopUp Hub - build, commit, sync push, Vercel prod, session handoff (single instance).
 REM Works when: double-clicked in Explorer, run from cmd/PowerShell, any current directory.
-REM Next commit (auto): (none - add ## Shipped this session (... , not deployed) to PM/session-handoff.md)
+REM Next commit (auto): feat: deploy script auto-handoff
 REM
-REM Commit message is always auto-generated from PM/session-handoff.md undeployed
-REM Shipped sections. Update handoff after each scoped task; double-click to ship.
+REM Commit message is auto-generated from handoff Shipped / Active work sections,
+REM or "feat: ship local changes" when uncommitted work exists.
 REM Preview line above and PM/deploy-commit-message.txt refresh automatically.
 REM
 REM Vercel: git push does NOT auto-deploy master (vercel.json git.deploymentEnabled).

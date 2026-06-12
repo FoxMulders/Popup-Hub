@@ -98,7 +98,7 @@ export function clearanceToRoomWallsFt(
   return Math.min(left, top, right, bottom)
 }
 
-/** ≥4′ good · ≥3′ tight (yellow) · <3′ critical (red). */
+/** ≥4′ good · ≥3′ tight (yellow) · <3′ critical (red, ≤2′ especially tight). */
 export function clearanceBand(clearanceFt: number): BoothClearanceBand {
   if (!Number.isFinite(clearanceFt) || clearanceFt >= BOOTH_CLEARANCE_GOOD_FT) {
     return 'good'

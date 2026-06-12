@@ -18,7 +18,7 @@
 
 import { pointInAnyRing } from '../geometry/point-in-polygon'
 
-import { rotatedAabb } from '../interactions/geometry'
+import { rotatedAabb, type Rect } from '../interactions/geometry'
 
 import {
 
@@ -28,7 +28,11 @@ import {
 
 } from '../state/placement-surface'
 
+import { objectFootprintAabb } from '../state/table-cluster-layout'
+
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '../state/types'
+
+import { MIN_CLEARANCE_FT } from '@/lib/booth-planner/layout-clearance-constants'
 
 import { mergedZoneRingsForRoom, vendorBoothsInRoom } from './BoothArrangementEngine'
 
@@ -121,6 +125,9 @@ const CARDINAL = [
 
 
 const IMPASSABLE_KINDS = new Set<PlacedObject['kind']>(['booth', 'stage', 'wall'])
+
+/** Booths packed off-canvas use this sentinel — skip for obstacle carving. */
+const OFF_CANVAS_SENTINEL_X = -500
 
 
 
@@ -304,6 +311,212 @@ function resolveWalkableRings(
 
 
 
+function isPlacedOnCanvas(obj: PlacedObject): boolean {
+
+  return obj.x > OFF_CANVAS_SENTINEL_X
+
+}
+
+
+
+/** Full compound footprint for booths (table clusters); rotated AABB otherwise. */
+
+function obstacleFootprintAabb(obj: PlacedObject): Rect {
+
+  if (obj.kind === 'booth') {
+
+    return objectFootprintAabb(obj)
+
+  }
+
+  return rotatedAabb(obj)
+
+}
+
+
+
+/**
+
+ * Active layout obstacles: impassable room fixtures plus every vendor booth
+
+ * in the current layout (explicit list wins over doc.objects alone).
+
+ */
+
+function collectLayoutObstacles(
+
+  doc: FloorPlanDoc,
+
+  roomId: string,
+
+  layoutBooths: ReadonlyArray<BoothObject>
+
+): PlacedObject[] {
+
+  const seen = new Set<string>()
+
+  const obstacles: PlacedObject[] = []
+
+
+
+  const push = (obj: PlacedObject) => {
+
+    if (seen.has(obj.id)) return
+
+    seen.add(obj.id)
+
+    obstacles.push(obj)
+
+  }
+
+
+
+  for (const obj of objectsInRoom(doc, roomId)) {
+
+    if (IMPASSABLE_KINDS.has(obj.kind)) {
+
+      push(obj)
+
+    }
+
+  }
+
+
+
+  for (const booth of layoutBooths) {
+
+    if (isPlacedOnCanvas(booth)) {
+
+      push(booth)
+
+    }
+
+  }
+
+
+
+  return obstacles
+
+}
+
+
+
+function markFootprintOnGrid(
+
+  walkable: boolean[][],
+
+  aabb: Rect,
+
+  originX: number,
+
+  originY: number,
+
+  cellFt: number,
+
+  paddingFt: number,
+
+  rows: number,
+
+  cols: number
+
+): void {
+
+  const minCol = Math.floor((aabb.x - paddingFt - originX) / cellFt)
+
+  const maxCol = Math.ceil(
+
+    (aabb.x + aabb.width + paddingFt - originX) / cellFt
+
+  )
+
+  const minRow = Math.floor((aabb.y - paddingFt - originY) / cellFt)
+
+  const maxRow = Math.ceil(
+
+    (aabb.y + aabb.height + paddingFt - originY) / cellFt
+
+  )
+
+
+
+  for (let row = minRow; row <= maxRow; row++) {
+
+    for (let col = minCol; col <= maxCol; col++) {
+
+      if (row >= 0 && row < rows && col >= 0 && col < cols) {
+
+        walkable[row]![col] = false
+
+      }
+
+    }
+
+  }
+
+}
+
+
+
+/**
+
+ * Secondary guard — widen clearance one extra cell where two booth edges
+
+ * meet at a diagonal so paths hug aisles instead of clipping corners.
+
+ */
+
+function applyCornerClearanceGuard(
+
+  walkable: boolean[][],
+
+  rows: number,
+
+  cols: number
+
+): void {
+
+  for (let row = 0; row < rows; row++) {
+
+    for (let col = 0; col < cols; col++) {
+
+      if (!walkable[row]![col]) continue
+
+
+
+      const northBlocked = row > 0 && !walkable[row - 1]![col]
+
+      const southBlocked = row < rows - 1 && !walkable[row + 1]![col]
+
+      const westBlocked = col > 0 && !walkable[row]![col - 1]
+
+      const eastBlocked = col < cols - 1 && !walkable[row]![col + 1]
+
+
+
+      if (
+
+        (northBlocked && westBlocked) ||
+
+        (northBlocked && eastBlocked) ||
+
+        (southBlocked && westBlocked) ||
+
+        (southBlocked && eastBlocked)
+
+      ) {
+
+        walkable[row]![col] = false
+
+      }
+
+    }
+
+  }
+
+}
+
+
+
 /**
 
  * Build a navigation grid from merged_zone / room boundary polygons.
@@ -320,13 +533,19 @@ export function buildNavigationGrid(
 
   roomId: string,
 
-  options: Pick<CalculateOptimalPathOptions, 'cellFt' | 'obstacleBufferFt' | 'roomBoundary'> = {}
+  options: Pick<
+
+    CalculateOptimalPathOptions,
+
+    'cellFt' | 'obstacleBufferFt' | 'roomBoundary' | 'booths'
+
+  > = {}
 
 ): NavigationGrid | null {
 
   const cellFt = options.cellFt ?? doc.snapFt ?? 1
 
-  const obstacleBufferFt = options.obstacleBufferFt ?? 0
+  const clearanceFt = options.obstacleBufferFt ?? MIN_CLEARANCE_FT
 
   const boundary = resolveWalkableRings(doc, roomId, options.roomBoundary)
 
@@ -378,47 +597,37 @@ export function buildNavigationGrid(
 
 
 
-  const roomObjects = objectsInRoom(doc, roomId)
+  const layoutBooths = options.booths ?? vendorBoothsInRoom(doc, roomId)
 
-  const impassable = roomObjects.filter((o) => IMPASSABLE_KINDS.has(o.kind))
+  const obstacles = collectLayoutObstacles(doc, roomId, layoutBooths)
 
 
 
-  for (const obj of impassable) {
-
-    const aabb = rotatedAabb(obj)
-
-    const minCol = Math.floor((aabb.x - obstacleBufferFt - originX) / cellFt)
-
-    const maxCol = Math.ceil(
-
-      (aabb.x + aabb.width + obstacleBufferFt - originX) / cellFt
-
+  // Mark every booth/stage/wall footprint plus its 3′ safety buffer as impassable.
+  for (const obj of obstacles) {
+    markFootprintOnGrid(
+      walkable,
+      obstacleFootprintAabb(obj),
+      originX,
+      originY,
+      cellFt,
+      clearanceFt,
+      rows,
+      cols
     )
-
-    const minRow = Math.floor((aabb.y - obstacleBufferFt - originY) / cellFt)
-
-    const maxRow = Math.ceil(
-
-      (aabb.y + aabb.height + obstacleBufferFt - originY) / cellFt
-
-    )
-
-    for (let row = minRow; row <= maxRow; row++) {
-
-      for (let col = minCol; col <= maxCol; col++) {
-
-        if (row >= 0 && row < rows && col >= 0 && col < cols) {
-
-          walkable[row]![col] = false
-
-        }
-
-      }
-
-    }
-
   }
+
+
+
+  // Pass 3 — trim diagonal pinch cells adjacent to blocked booth edges.
+
+  applyCornerClearanceGuard(walkable, rows, cols)
+
+
+
+  // A* cardinal adjacency reads the final walkable[][] — blocked cells
+
+  // implicitly drop their graph edges on the next path query.
 
 
 
@@ -780,11 +989,13 @@ export function CalculateOptimalPath(
 
   const cellFt = options.cellFt ?? doc.snapFt ?? 1
 
-  const obstacleBufferFt = options.obstacleBufferFt ?? 1
+  const obstacleBufferFt = options.obstacleBufferFt ?? MIN_CLEARANCE_FT
 
   const roomBoundary =
 
     options.roomBoundary ?? mergedZoneRingsForRoom(doc, roomId)
+
+  const layoutBooths = options.booths ?? vendorBoothsInRoom(doc, roomId)
 
 
 
@@ -795,6 +1006,8 @@ export function CalculateOptimalPath(
     obstacleBufferFt,
 
     roomBoundary,
+
+    booths: layoutBooths,
 
   })
 
@@ -818,11 +1031,7 @@ export function CalculateOptimalPath(
 
 
 
-  const vendorBooths = (
-
-    options.booths ?? vendorBoothsInRoom(doc, roomId)
-
-  ).filter((b) => b.x > -500)
+  const vendorBooths = layoutBooths.filter((b) => b.x > -500)
 
 
 

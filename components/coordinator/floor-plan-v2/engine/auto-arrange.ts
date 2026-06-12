@@ -47,8 +47,20 @@ import {
 import {
   BOOTH_CORE_SEPARATION_CELLS,
   BOOTH_SAFETY_BUFFER_FT,
+  MIN_CLEARANCE_FT,
   PATRON_AISLE_MIN_FT,
 } from '@/lib/booth-planner/layout-clearance-constants'
+import {
+  expandedFootprintsOverlap,
+  perimeterStepFt,
+  validateBoothAgainstPlaced,
+} from '@/lib/booth-planner/expanded-footprint'
+
+export { MIN_CLEARANCE_FT, MIN_CLEARANCE } from '@/lib/booth-planner/expanded-footprint'
+export {
+  validateBoothPlacementCoordinate,
+  validateBoothAgainstPlaced,
+} from '@/lib/booth-planner/expanded-footprint'
 
 export {
   calculatePatronCentricLayout,
@@ -409,15 +421,8 @@ function placeBoothsAtSlots(
     if (placedRect.x < -1e-6 || placedRect.y < -1e-6) {
       return false
     }
-    if (!allowPerimeterEdgeFlush) {
-      if (
-        placedRect.x < wallInsetFt - 1e-6 ||
-        placedRect.y < wallInsetFt - 1e-6 ||
-        placedRect.x + placedRect.width > cw - wallInsetFt + 1e-6 ||
-        placedRect.y + placedRect.height > cl - wallInsetFt + 1e-6
-      ) {
-        return false
-      }
+    if (!validateBoothAgainstPlaced(placedRect, cw, cl, placedRects)) {
+      return false
     }
     const obstacleProbe = expandRectForClearance(placedRect, BOOTH_OBSTACLE_CLEARANCE_FT)
     if (obstacles.some((r) => aabbOverlap(obstacleProbe, r))) return false
@@ -566,8 +571,8 @@ function findStagingPosition(
 ): { x: number; y: number } | null {
   const w = booth.width
   const h = booth.height
-  const pitchX = w + BOOTH_PLACEMENT_GAP_FT
-  const pitchY = h + BOOTH_PLACEMENT_GAP_FT
+  const pitchX = perimeterStepFt(w)
+  const pitchY = perimeterStepFt(h)
   const overlapCtx = overlapDoc
     ? {
         canvasWidthFt: overlapDoc.canvasWidthFt,
@@ -582,16 +587,10 @@ function findStagingPosition(
 
   function slotIsFree(x: number, y: number): boolean {
     const rect: Rect = { x: roundHalf(x), y: roundHalf(y), width: w, height: h }
-    if (
-      rect.x < wallInsetFt - 1e-6 ||
-      rect.y < wallInsetFt - 1e-6 ||
-      rect.x + rect.width > cw - wallInsetFt + 1e-6 ||
-      rect.y + rect.height > cl - wallInsetFt + 1e-6
-    ) {
+    if (!validateBoothAgainstPlaced(rect, cw, cl, placedRects)) {
       return false
     }
     if (obstacles.some((o) => aabbOverlap(rect, o))) return false
-    if (placedRects.some((r) => aabbOverlap(rect, r))) return false
     const probe: BoothObject = { ...booth, x: rect.x, y: rect.y, rotation: 0 }
     if (placedBooths.some((p) => placedObjectsOverlap(probe, p, overlapCtx))) {
       return false
@@ -600,13 +599,13 @@ function findStagingPosition(
   }
 
   for (
-    let y = wallInsetFt;
-    y + h <= cl - wallInsetFt + 1e-6;
+    let y = MIN_CLEARANCE_FT;
+    y + h <= cl - MIN_CLEARANCE_FT + 1e-6;
     y += pitchY
   ) {
     for (
-      let x = wallInsetFt;
-      x + w <= cw - wallInsetFt + 1e-6;
+      let x = MIN_CLEARANCE_FT;
+      x + w <= cw - MIN_CLEARANCE_FT + 1e-6;
       x += pitchX
     ) {
       if (slotIsFree(x, y)) return { x: roundHalf(x), y: roundHalf(y) }
@@ -1413,7 +1412,7 @@ function autoArrangeVendorBooths(
     tableIds: sourceBooths.map((b) => b.id),
     layoutMode,
     aisleWidthFt,
-    tableEdgeGapFt: BOOTH_PLACEMENT_GAP_FT,
+    tableEdgeGapFt: MIN_CLEARANCE_FT * 2,
     wallInsetFt,
     snapFt,
     entrance,
@@ -1860,24 +1859,27 @@ export function validateClearances(
 
   for (const booth of booths) {
     const aabb = objectFootprintAabb(booth)
-    if (aabb.x < wallBuffer - 1e-6) {
+    const wallMin = isGuestTableBooth(booth)
+      ? wallBuffer
+      : MIN_CLEARANCE_FT
+    if (aabb.x < wallMin - 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to left wall (x=${aabb.x}, need ≥${wallBuffer})`
+        `booth ${booth.id} too close to left wall (x=${aabb.x}, need ≥${wallMin})`
       )
     }
-    if (aabb.x + aabb.width > cw - wallBuffer + 1e-6) {
+    if (aabb.x + aabb.width > cw - wallMin + 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to right wall (right=${aabb.x + aabb.width}, max=${cw - wallBuffer})`
+        `booth ${booth.id} too close to right wall (right=${aabb.x + aabb.width}, max=${cw - wallMin})`
       )
     }
-    if (aabb.y < wallBuffer - 1e-6) {
+    if (aabb.y < wallMin - 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to top wall (y=${aabb.y}, need ≥${wallBuffer})`
+        `booth ${booth.id} too close to top wall (y=${aabb.y}, need ≥${wallMin})`
       )
     }
-    if (aabb.y + aabb.height > cl - wallBuffer + 1e-6) {
+    if (aabb.y + aabb.height > cl - wallMin + 1e-6) {
       errors.push(
-        `booth ${booth.id} too close to bottom wall (bottom=${aabb.y + aabb.height}, max=${cl - wallBuffer})`
+        `booth ${booth.id} too close to bottom wall (bottom=${aabb.y + aabb.height}, max=${cl - wallMin})`
       )
     }
   }
@@ -1889,7 +1891,16 @@ export function validateClearances(
       if (placedObjectsOverlap(a, b, overlapCtx)) {
         errors.push(`booths ${a.id} and ${b.id} overlap`)
       } else if (!isGuestTableBooth(a) && !isGuestTableBooth(b)) {
-        // Vendor 360° probes are authoritative — skip redundant gap check.
+        if (
+          expandedFootprintsOverlap(
+            objectFootprintAabb(a),
+            objectFootprintAabb(b)
+          )
+        ) {
+          errors.push(
+            `booths ${a.id} and ${b.id} violate ${MIN_CLEARANCE_FT}′ safety buffer (need ${MIN_CLEARANCE_FT * 2}′ edge-to-edge)`
+          )
+        }
       } else {
         const minGap = minBoothEdgeGapFt(a, b)
         if (

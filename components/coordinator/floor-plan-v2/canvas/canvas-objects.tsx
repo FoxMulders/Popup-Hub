@@ -76,6 +76,8 @@ interface CanvasObjectsProps {
   objectRoom?: FloorPlanDoc['objectRoom']
   /** Highlight clearance bands while dragging booths. */
   emphasizeClearance?: boolean
+  /** When false, vendor booths use payment/status fill instead of aisle bands. */
+  showClearanceWarnings?: boolean
   /** Stage ids whose inner wall is dissolved into a room union perimeter. */
   dissolvedStageIds?: ReadonlySet<string>
   /**
@@ -464,6 +466,7 @@ function CanvasObjectsBase({
   rooms,
   objectRoom,
   emphasizeClearance = false,
+  showClearanceWarnings = true,
   dissolvedStageIds,
   renderLayer = 'all',
 }: CanvasObjectsProps) {
@@ -553,6 +556,7 @@ function CanvasObjectsBase({
         let clearanceFillOpacity: number | undefined
 
         if (
+          showClearanceWarnings &&
           obj.kind === 'booth' &&
           isVendorBoothObject(obj) &&
           !isOverlapping

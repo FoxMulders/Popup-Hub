@@ -1,4 +1,11 @@
 import { PATRON_AISLE_MIN_FT } from '@/lib/booth-planner/layout-clearance-constants'
+import {
+  expandedFootprintBBox,
+  footprintWithinWallClearance,
+  MIN_CLEARANCE_FT,
+  perimeterStepFt,
+  validateBoothPlacementCoordinate,
+} from '@/lib/booth-planner/expanded-footprint'
 
 /**
  * Deterministic Computational Geometry & Market Layout Engine — PopupHub.ca
@@ -123,6 +130,8 @@ export const DEFAULT_AISLE_WIDTH_FT = PATRON_AISLE_MIN_FT
 export const DEFAULT_WALL_INSET_FT = PATRON_AISLE_MIN_FT
 /** Default edge-to-edge gap between table footprints in grid/staggered columns (ft). */
 export const TABLE_EDGE_GAP_FT = 2
+/** Vendor booth column pitch uses expanded-footprint spacing (3′ buffer per side). */
+export const VENDOR_TABLE_EDGE_GAP_FT = MIN_CLEARANCE_FT * 2
 
 export interface SlotCandidate {
   x: number
@@ -279,7 +288,20 @@ function staggerOffsetX(rowIndex0: number, tw: number): number {
 }
 
 /** Edge-to-edge gap between booth backs in a double-row block (ft). */
-const BACK_TO_BACK_ROW_GAP_FT = 0
+const BACK_TO_BACK_ROW_GAP_FT = MIN_CLEARANCE_FT * 2
+
+function slotPassesSafetyBarrier(
+  rect: MarketLayoutRect,
+  placedExpanded: ReadonlyArray<MarketLayoutRect>,
+  cw: number,
+  ch: number,
+  inset: number,
+  restrictedZones: ReadonlyArray<MarketLayoutRect>
+): boolean {
+  if (!fitsBounds(rect, cw, ch, inset)) return false
+  if (hitsRestricted(rect, restrictedZones)) return false
+  return validateBoothPlacementCoordinate(rect, cw, ch, placedExpanded)
+}
 
 function blockRowY(
   entrance: MarketLayoutPoint | undefined,
@@ -314,9 +336,30 @@ function buildGridBackToBackSlots(
   const blockHeight = th * 2 + BACK_TO_BACK_ROW_GAP_FT
   const blockStep = blockHeight + aisleFt
   const colStep = tw + tableEdgeGapFt
-  const minX = inset
+  const minX = Math.max(inset, MIN_CLEARANCE_FT)
+  const wallClear = MIN_CLEARANCE_FT
+  const placedExpanded: MarketLayoutRect[] = []
   const slots: SlotCandidate[] = []
   let blockIndex0 = 0
+
+  const recordIfFits = (
+    x: number,
+    y: number,
+    row: number,
+    column: number
+  ): void => {
+    const sx = snapToTableGrid(x, tw, minX)
+    const sy = snapToTableGrid(y, th, minX)
+    const raw = tableRect(sx, sy, tw, th, 0)
+    if (
+      !validateBoothPlacementCoordinate(raw, cw, ch, placedExpanded) ||
+      hitsRestricted(raw, restrictedZones)
+    ) {
+      return
+    }
+    placedExpanded.push(expandedFootprintBBox(raw))
+    slots.push({ x: sx, y: sy, row, column, rotation: 0 })
+  }
 
   while (blockIndex0 < 5000) {
     const blockY = snapToTableGrid(
@@ -327,34 +370,22 @@ function buildGridBackToBackSlots(
     const y0 = blockY
     const y1 = blockY + th + BACK_TO_BACK_ROW_GAP_FT
 
-    if (y1 + th > ch - inset + 1e-6 || y0 < inset - 1e-6) {
+    if (y1 + th > ch - wallClear + 1e-6 || y0 < wallClear - 1e-6) {
       if (blockIndex0 === 0) break
       const entranceOnTop = entrance == null ? true : entrance.y <= ch / 2
-      if (entranceOnTop && y1 + th > ch - inset + 1e-6) break
-      if (!entranceOnTop && y0 < inset - 1e-6) break
+      if (entranceOnTop && y1 + th > ch - wallClear + 1e-6) break
+      if (!entranceOnTop && y0 < wallClear - 1e-6) break
       if (blockIndex0 > 0) break
     }
 
     let colIndex0 = 0
-    while (minX + colIndex0 * colStep + tw <= cw - inset + 1e-6) {
+    while (minX + colIndex0 * colStep + tw <= cw - wallClear + 1e-6) {
       const x = snapToTableGrid(minX + colIndex0 * colStep, tw, minX)
       for (const [y, rowInBlock] of [
         [y0, 0],
         [y1, 1],
       ] as const) {
-        const rect = tableRect(x, y, tw, th, 0)
-        if (
-          fitsBounds(rect, cw, ch, inset) &&
-          !hitsRestricted(rect, restrictedZones)
-        ) {
-          slots.push({
-            x,
-            y,
-            row: blockIndex0 * 2 + rowInBlock,
-            column: colIndex0,
-            rotation: 0,
-          })
-        }
+        recordIfFits(x, y, blockIndex0 * 2 + rowInBlock, colIndex0)
       }
       colIndex0++
     }
@@ -409,8 +440,10 @@ function buildInteriorSlots(
 
   const rowStep = th + aisleFt
   const colStep = tw + tableEdgeGapFt
-  const minX = inset
+  const minX = Math.max(inset, MIN_CLEARANCE_FT)
+  const wallClear = MIN_CLEARANCE_FT
   const slots: SlotCandidate[] = []
+  const placedExpanded: MarketLayoutRect[] = []
   let rowIndex0 = 0
 
   while (rowIndex0 < 5000) {
@@ -419,27 +452,34 @@ function buildInteriorSlots(
       th,
       inset
     )
-    if (y + th > ch - inset + 1e-6 || y < inset - 1e-6) {
+    if (y + th > ch - wallClear + 1e-6 || y < wallClear - 1e-6) {
       if (rowIndex0 === 0) break
       const entranceOnTop = entrance == null ? true : entrance.y <= ch / 2
-      if (entranceOnTop && y + th > ch - inset + 1e-6) break
-      if (!entranceOnTop && y < inset - 1e-6) break
+      if (entranceOnTop && y + th > ch - wallClear + 1e-6) break
+      if (!entranceOnTop && y < wallClear - 1e-6) break
       if (rowIndex0 > 0) break
     }
 
     const xOffset = mode === 'staggered' ? staggerOffsetX(rowIndex0, tw) : 0
     let colIndex0 = 0
 
-    while (minX + xOffset + colIndex0 * colStep + tw <= cw - inset + 1e-6) {
+    while (minX + xOffset + colIndex0 * colStep + tw <= cw - wallClear + 1e-6) {
       const x =
         mode === 'staggered'
           ? minX + xOffset + colIndex0 * colStep
           : snapToTableGrid(minX + colIndex0 * colStep, tw, minX)
       const rect = tableRect(x, y, tw, th, 0)
       if (
-        fitsBounds(rect, cw, ch, inset) &&
-        !hitsRestricted(rect, restrictedZones)
+        slotPassesSafetyBarrier(
+          rect,
+          placedExpanded,
+          cw,
+          ch,
+          inset,
+          restrictedZones
+        )
       ) {
+        placedExpanded.push(expandedFootprintBBox(rect))
         slots.push({
           x,
           y,
@@ -472,54 +512,66 @@ function buildPerimeterSlots(
   ch: number,
   tw: number,
   th: number,
-  aisleFt: number,
-  inset: number
+  _aisleFt: number,
+  _inset: number
 ): SlotCandidate[] {
-  const alongStep = tw + aisleFt
-  const alongStepY = th + aisleFt
+  const placedExpanded: MarketLayoutRect[] = []
   const slots: SlotCandidate[] = []
+  const wallClear = MIN_CLEARANCE_FT
 
-  const push = (
+  const recordIfFits = (
     x: number,
     y: number,
     rotation: 0 | 90,
-    edgeIndex: number,
-    col: number
-  ) => {
+    edgeIndex: number
+  ): void => {
+    const sx = snapToTableGrid(x, tw, wallClear)
+    const sy = snapToTableGrid(y, th, wallClear)
+    const raw = tableRect(sx, sy, tw, th, rotation)
+    if (!footprintWithinWallClearance(raw, cw, ch, wallClear)) return
+    const expanded = expandedFootprintBBox(raw)
+    if (placedExpanded.some((p) => rectOverlaps(expanded, p))) return
+    placedExpanded.push(expanded)
     slots.push({
-      x: snapToTableGrid(x, tw, inset),
-      y: snapToTableGrid(y, th, inset),
+      x: sx,
+      y: sy,
       row: edgeIndex,
-      column: col,
+      column: slots.filter((s) => s.row === edgeIndex).length,
       rotation,
     })
   }
 
-  let col = 0
-  for (let x = inset; x + tw <= cw - inset + 1e-6; x += alongStep) {
-    push(x, inset, 0, 0, col++)
+  const stepAlong = perimeterStepFt(tw)
+  const stepAlongRotated = perimeterStepFt(tw)
+
+  for (let x = wallClear; x + tw <= cw - wallClear + 1e-6; x += stepAlong) {
+    recordIfFits(x, wallClear, 0, 0)
   }
 
-  col = 0
-  const rightStartY = inset + th + aisleFt
-  for (let y = rightStartY; y + th <= ch - inset + 1e-6; y += alongStepY) {
-    push(cw - inset - tw, y, 90, 1, col++)
-  }
-
-  col = 0
-  const bottomY = ch - inset - th
+  const rightX = cw - wallClear - th
   for (
-    let x = cw - inset - tw - alongStep;
-    x >= inset - 1e-6;
-    x -= alongStep
+    let y = wallClear;
+    y + tw <= ch - wallClear + 1e-6;
+    y += stepAlongRotated
   ) {
-    push(x, bottomY, 0, 2, col++)
+    recordIfFits(rightX, y, 90, 1)
   }
 
-  col = 0
-  const leftMaxY = ch - inset - th - alongStepY
-  for (let y = leftMaxY; y >= rightStartY - 1e-6; y -= alongStepY) {
-    push(inset, y, 90, 3, col++)
+  const bottomY = ch - wallClear - th
+  for (
+    let x = cw - wallClear - tw;
+    x >= wallClear - 1e-6;
+    x -= stepAlong
+  ) {
+    recordIfFits(x, bottomY, 0, 2)
+  }
+
+  for (
+    let y = ch - wallClear - tw;
+    y >= wallClear - 1e-6;
+    y -= stepAlongRotated
+  ) {
+    recordIfFits(wallClear, y, 90, 3)
   }
 
   return slots
@@ -530,16 +582,16 @@ export function maxPerimeterTableCapacity(
   marketHeightFt: number,
   tableWidthFt: number,
   tableHeightFt: number,
-  aisleWidthFt = DEFAULT_AISLE_WIDTH_FT,
-  wallInsetFt = DEFAULT_WALL_INSET_FT
+  _aisleWidthFt = DEFAULT_AISLE_WIDTH_FT,
+  _wallInsetFt = DEFAULT_WALL_INSET_FT
 ): number {
   return buildPerimeterSlots(
     marketWidthFt,
     marketHeightFt,
     tableWidthFt,
     tableHeightFt,
-    aisleWidthFt,
-    wallInsetFt
+    _aisleWidthFt,
+    _wallInsetFt
   ).length
 }
 
@@ -598,13 +650,24 @@ function fillPlacementsFromSlots(
   restrictedZones: ReadonlyArray<MarketLayoutRect>
 ): MarketLayoutTablePlacement[] {
   const placements: MarketLayoutTablePlacement[] = []
+  const placedExpanded: MarketLayoutRect[] = []
   let tableIdx = 0
   for (const slot of ordered) {
     if (tableIdx >= tableCount) break
     const rect = tableRect(slot.x, slot.y, tw, th, slot.rotation)
-    if (!fitsBounds(rect, cw, ch, inset) || hitsRestricted(rect, restrictedZones)) {
+    if (
+      !slotPassesSafetyBarrier(
+        rect,
+        placedExpanded,
+        cw,
+        ch,
+        inset,
+        restrictedZones
+      )
+    ) {
       continue
     }
+    placedExpanded.push(expandedFootprintBBox(rect))
     placements.push(
       toTablePlacement(tableIds[tableIdx]!, slot, aisleFt, layoutMode)
     )
@@ -831,11 +894,12 @@ function runLayout(params: {
   }
 
   if (layoutMode === 'perimeter') {
+    const perimeterWallClear = MIN_CLEARANCE_FT
     const perimeterSlots = buildPerimeterSlots(cw, ch, tw, th, aisleFt, inset)
     const validPerimeterSlots = perimeterSlots.filter((slot) => {
       const rect = tableRect(slot.x, slot.y, tw, th, slot.rotation)
       return (
-        fitsBounds(rect, cw, ch, inset) &&
+        fitsBounds(rect, cw, ch, perimeterWallClear) &&
         !hitsRestricted(rect, restrictedZones)
       )
     })
@@ -843,7 +907,7 @@ function runLayout(params: {
     if (tableCount > capacity) {
       return {
         ok: false,
-        error: `Perimeter capacity exceeded: requested ${tableCount} tables but maximum ${capacity} fit with ${aisleFt} ft aisle spacing.`,
+        error: `Perimeter capacity exceeded: requested ${tableCount} tables but maximum ${capacity} fit with ${MIN_CLEARANCE_FT} ft booth clearance.`,
         maxPerimeterCapacity: capacity,
         layoutMode: 'perimeter',
       }
@@ -860,7 +924,7 @@ function runLayout(params: {
       th,
       cw,
       ch,
-      inset,
+      perimeterWallClear,
       aisleFt,
       'perimeter',
       restrictedZones

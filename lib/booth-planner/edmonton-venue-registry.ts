@@ -1,5 +1,6 @@
 import type { VenuePresetDoorSegment, VenueFixedAsset } from '@/lib/booth-planner/venue-presets'
 import type { OffFloorZone } from '@/lib/booth-planner/off-floor-zones'
+import { distanceKm } from '@/lib/shopper/geo'
 
 /** Edmonton capital-region quadrant for localized venue search. */
 export type EdmontonVenueQuadrant = 'north' | 'south' | 'east' | 'west'
@@ -257,4 +258,92 @@ export function filterEdmontonVenues(
     if (query && !venue.label.toLowerCase().includes(query)) return false
     return true
   })
+}
+
+const VENUE_MATCH_NOISE =
+  /\b(community league|community hall|hall|edmonton|ab|alberta|canada)\b/gi
+
+function normalizeVenueMatchText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(VENUE_MATCH_NOISE, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function normalizeStreetAddress(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/,.*$/, '')
+    .replace(/\b(nw|ne|sw|se|ab|alberta|canada)\b/gi, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function venueNameMatchesBlueprint(venueName: string, venue: EdmontonVenueBlueprint): boolean {
+  const normalizedName = normalizeVenueMatchText(venueName)
+  if (!normalizedName) return false
+
+  const normalizedLabel = normalizeVenueMatchText(venue.label)
+  if (
+    normalizedName === normalizedLabel ||
+    normalizedName.includes(normalizedLabel) ||
+    normalizedLabel.includes(normalizedName)
+  ) {
+    return true
+  }
+
+  const slug = venue.id.replace(/-/g, ' ')
+  return normalizedName.includes(slug) || slug.includes(normalizedName)
+}
+
+function venueAddressMatchesBlueprint(address: string, venue: EdmontonVenueBlueprint): boolean {
+  const normalizedAddress = normalizeStreetAddress(address)
+  if (!normalizedAddress) return false
+  const normalizedBlueprint = normalizeStreetAddress(venue.address)
+  return (
+    normalizedAddress === normalizedBlueprint ||
+    normalizedAddress.includes(normalizedBlueprint) ||
+    normalizedBlueprint.includes(normalizedAddress)
+  )
+}
+
+/** Match a Places pick or saved venue to a known Edmonton hall template. */
+export function matchEdmontonVenuePreset(params: {
+  venueName?: string
+  address?: string
+  lat?: number
+  lng?: number
+}): EdmontonVenueId | null {
+  const venueName = params.venueName?.trim() ?? ''
+  const address = params.address?.trim() ?? ''
+  const { lat, lng } = params
+
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    let closest: { id: EdmontonVenueId; distanceKm: number } | null = null
+    for (const venue of EDMONTON_VENUE_BLUEPRINTS) {
+      const distance = distanceKm(
+        { lat: lat!, lng: lng! },
+        { lat: venue.latitude, lng: venue.longitude }
+      )
+      if (distance <= 0.2 && (!closest || distance < closest.distanceKm)) {
+        closest = { id: venue.id, distanceKm: distance }
+      }
+    }
+    if (closest) return closest.id
+  }
+
+  if (address) {
+    for (const venue of EDMONTON_VENUE_BLUEPRINTS) {
+      if (venueAddressMatchesBlueprint(address, venue)) return venue.id
+    }
+  }
+
+  if (venueName) {
+    for (const venue of EDMONTON_VENUE_BLUEPRINTS) {
+      if (venueNameMatchesBlueprint(venueName, venue)) return venue.id
+    }
+  }
+
+  return null
 }

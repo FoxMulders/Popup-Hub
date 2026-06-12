@@ -25,7 +25,7 @@ export const VENDOR_WALL_SNAP_THRESHOLD_FT = 4
 /** Tighter threshold for cursor ghost preview before click (2′). */
 export const PLACEMENT_PREVIEW_WALL_SNAP_FT = 2
 
-/** Mandatory 2′ clearance on every booth edge for collision tests (ft). */
+/** Mandatory 3′ clearance on every booth edge for collision tests (ft). */
 export const VENDOR_BOOTH_CLEARANCE_FT = BOOTH_SAFETY_BUFFER_FT
 
 /** @deprecated Use {@link VENDOR_BOOTH_CLEARANCE_FT}. */
@@ -68,7 +68,7 @@ export function isVendorBoothObject(
 
 /**
  * Expand a vendor booth footprint uniformly by {@link VENDOR_BOOTH_CLEARANCE_FT}
- * on every local edge. A 6′×4′ table tests as 10′×8′ for overlap detection.
+ * on every local edge. A 6′×4′ table tests as 12′×10′ for overlap detection.
  */
 export function vendorBoothUniformCollisionProbe(
   booth: BoothObject,

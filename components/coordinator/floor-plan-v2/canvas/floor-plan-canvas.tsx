@@ -164,6 +164,8 @@ export interface FloorPlanCanvasProps {
   layoutSpringPoses?: ReadonlyMap<string, LayoutSpringPose> | null
   /** View-only presentation — pan/zoom allowed, no object or layout edits. */
   viewOnly?: boolean
+  /** Yellow/red aisle bands on vendor booths (dashboard toggle). */
+  showClearanceWarnings?: boolean
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
@@ -222,13 +224,14 @@ export function FloorPlanCanvas({
   onLayoutCommit,
   layoutSpringPoses = null,
   viewOnly = false,
+  showClearanceWarnings = true,
 }: FloorPlanCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
   const zoomForAnchorRef = useRef(1)
 
   const padFt = commandCenterViewport
-    ? 8
+    ? 0
     : Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
 
   const effectiveTableSizeFt = useMemo(
@@ -349,7 +352,7 @@ export function FloorPlanCanvas({
           maxX: store.doc.canvasWidthFt,
           maxY: store.doc.canvasLengthFt,
         },
-        { padding: commandCenterViewport ? 0.06 : 0.08 }
+        { padding: commandCenterViewport ? 0 : 0.08 }
       )
       return
     }
@@ -360,7 +363,7 @@ export function FloorPlanCanvas({
       store.doc.objectRoom
     )
     viewport.fitToBounds(bounds, {
-      padding: commandCenterViewport ? 0.03 : 0.08,
+      padding: commandCenterViewport ? 0 : 0.08,
     })
   }, [
     activeRoomId,
@@ -553,6 +556,7 @@ export function FloorPlanCanvas({
   ])
 
   const draftClearanceTheme = useMemo(() => {
+    if (!showClearanceWarnings) return null
     if (!draftPreviewProbe || draftOverlaps) return null
     if (defaultBoothTableSpec?.purpose === 'guest') return null
     const previewRoomId = activeRoomId ?? store.doc.rooms?.[0]?.id ?? null
@@ -564,6 +568,7 @@ export function FloorPlanCanvas({
       previewRoomId
     )
   }, [
+    showClearanceWarnings,
     activeRoomId,
     defaultBoothTableSpec?.purpose,
     draftOverlaps,
@@ -756,10 +761,9 @@ export function FloorPlanCanvas({
       id={FLOOR_PLAN_CANVAS_ID}
       ref={scrollRef}
       className={cn(
-        'canvas-container pointer-events-auto relative w-full min-w-0 max-w-full bg-stone-100 outline-none',
-        scrollHost && !commandCenterViewport && 'h-full overflow-auto',
-        scrollHost && commandCenterViewport && 'h-full overflow-hidden scrollbar-none',
-        commandCenterViewport && 'bg-stone-100',
+        'canvas-container pointer-events-auto relative w-full min-w-0 max-w-full outline-none',
+        scrollHost && !commandCenterViewport && 'h-full overflow-auto bg-stone-100',
+        scrollHost && commandCenterViewport && 'h-full overflow-hidden scrollbar-none bg-stone-50',
         className
       )}
       tabIndex={viewOnly ? -1 : 0}
@@ -790,9 +794,10 @@ export function FloorPlanCanvas({
             display: 'block',
             pointerEvents: 'auto',
             zIndex: 1,
-            background: '#fafaf9',
-            boxShadow:
-              '0 0 0 1px rgb(214 211 209), 0 4px 14px rgb(28 25 23 / 0.12)',
+            background: commandCenterViewport ? 'transparent' : '#fafaf9',
+            boxShadow: commandCenterViewport
+              ? undefined
+              : '0 0 0 1px rgb(214 211 209), 0 4px 14px rgb(28 25 23 / 0.12)',
             cursor,
             touchAction: 'none',
             userSelect: 'none',
@@ -801,6 +806,8 @@ export function FloorPlanCanvas({
           }}
           onPointerDown={(e) => {
             if (viewOnly || toolState.tool === 'hand') return
+            // Middle-button / aux-click pan is handled on the scroll viewport.
+            if (e.pointerType === 'mouse' && e.button !== 0) return
             e.preventDefault()
             pointer.onPointerDown(e)
           }}
@@ -852,6 +859,7 @@ export function FloorPlanCanvas({
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }
+            showClearanceWarnings={showClearanceWarnings}
             renderLayer="merged_zone"
           />
           {activeRoomFrames(store.doc).length > 0 ? (
@@ -882,6 +890,7 @@ export function FloorPlanCanvas({
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }
+            showClearanceWarnings={showClearanceWarnings}
             renderLayer="placable"
           />
           {toolState.tool === 'select' && !viewOnly ? (

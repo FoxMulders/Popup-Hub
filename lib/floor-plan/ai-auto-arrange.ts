@@ -9,6 +9,11 @@ import {
   clipBoothToLocalRoom,
   ROOM_PLACEMENT_CLEARANCE_FT,
 } from '@/lib/floor-plan/boundary-constraints'
+import {
+  MIN_CLEARANCE_FT,
+  validateBoothAgainstPlaced,
+} from '@/lib/booth-planner/expanded-footprint'
+import { rotatedAabb } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 
@@ -124,7 +129,9 @@ ${JSON.stringify(input.fixtures, null, 2)}
 ${trafficSection}
 
 CONSTRAINTS:
-- Every placement must keep the full ${ROOM_PLACEMENT_CLEARANCE_FT}' inset from walls: x ≥ ${ROOM_PLACEMENT_CLEARANCE_FT}, y ≥ ${ROOM_PLACEMENT_CLEARANCE_FT}, x+width ≤ ${input.roomWidthFt - ROOM_PLACEMENT_CLEARANCE_FT}, y+height ≤ ${input.roomLengthFt - ROOM_PLACEMENT_CLEARANCE_FT}.
+- Every VENDOR booth (isPatron=false) must keep at least ${MIN_CLEARANCE_FT}' between its footprint and room walls: x ≥ ${MIN_CLEARANCE_FT}, y ≥ ${MIN_CLEARANCE_FT}, x+width ≤ ${input.roomWidthFt - MIN_CLEARANCE_FT}, y+height ≤ ${input.roomLengthFt - MIN_CLEARANCE_FT}.
+- Maintain at least ${MIN_CLEARANCE_FT * 2}' edge-to-edge spacing between vendor booth footprints (treat each booth as width+6' × length+6' for collision).
+- Patron tables (isPatron=true) keep ${ROOM_PLACEMENT_CLEARANCE_FT}' wall inset where applicable.
 - Maintain ≥ ${input.aisleWidthFt}' clear walkways between rows and around clusters.
 - Maximize vendor visibility from the primary traffic loop; patrons should see booth fronts without weaving through dead-ends.
 - Same-category vendors should cluster when space allows but never violate aisle width.
@@ -187,24 +194,37 @@ export async function optimizeLayoutWithAi(
   }
 }
 
-/** Apply AI placements to booth objects in room-local coordinates; clip out-of-bounds slots. */
+/** Apply AI placements to booth objects in room-local coordinates; reject invalid slots. */
 export function applyAiPlacementsToBooths(
   booths: BoothObject[],
   placements: AiAutoArrangePlacement[],
   roomW: number,
   roomH: number
-): { booths: BoothObject[]; clippedCount: number } {
+): { booths: BoothObject[]; clippedCount: number; rejectedCount: number } {
   const byId = new Map(placements.map((p) => [p.id, p]))
   let clippedCount = 0
+  let rejectedCount = 0
+  const placedRects: Array<{ x: number; y: number; width: number; height: number }> = []
   const updated = booths.map((booth) => {
     const slot = byId.get(booth.id)
     if (!slot) return booth
-    const before = { ...booth, x: slot.x, y: slot.y, rotation: slot.rotation ?? booth.rotation ?? 0 }
-    const after = clipBoothToLocalRoom(before, roomW, roomH)
+    const candidate: BoothObject = {
+      ...booth,
+      x: slot.x,
+      y: slot.y,
+      rotation: slot.rotation ?? booth.rotation ?? 0,
+    }
+    const raw = rotatedAabb(candidate)
+    if (!validateBoothAgainstPlaced(raw, roomW, roomH, placedRects)) {
+      rejectedCount++
+      return booth
+    }
+    const after = clipBoothToLocalRoom(candidate, roomW, roomH)
     if (after.x !== slot.x || after.y !== slot.y) clippedCount++
+    placedRects.push(rotatedAabb(after))
     return after
   })
-  return { booths: updated, clippedCount }
+  return { booths: updated, clippedCount, rejectedCount }
 }
 
 export function isPatronBooth(b: BoothObject): boolean {

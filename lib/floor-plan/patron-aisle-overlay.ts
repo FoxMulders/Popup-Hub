@@ -3,7 +3,11 @@
  * Mirrors the grid auto-arrange back-to-back block pattern with 6′ aisles.
  */
 
-import { PATRON_AISLE_MIN_FT } from '@/lib/booth-planner/layout-clearance-constants'
+import {
+  MIN_CLEARANCE_FT,
+  BOOTH_PAIR_MIN_EDGE_GAP_FT,
+  PATRON_AISLE_MIN_FT,
+} from '@/lib/booth-planner/layout-clearance-constants'
 import type { FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
 import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan-v2/state/placement-surface'
@@ -16,7 +20,7 @@ export interface PatronAisleRect {
   height: number
 }
 
-const BACK_TO_BACK_ROW_GAP_FT = 0
+const BACK_TO_BACK_ROW_GAP_FT = BOOTH_PAIR_MIN_EDGE_GAP_FT
 
 function medianBoothDimension(values: number[], fallback: number): number {
   if (values.length === 0) return fallback

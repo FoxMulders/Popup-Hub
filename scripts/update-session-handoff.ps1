@@ -4,7 +4,8 @@
 param(
     [string]$DeployUrl = 'https://popuphub.ca',
     [string]$Note = '',
-    [string]$CommitMessage = ''
+    [string]$CommitMessage = '',
+    [string[]]$ActiveWorkTitlesToMark = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -57,7 +58,7 @@ try {
     $date = Get-Date -Format 'yyyy-MM-dd HH:mm'
     $deployDate = Get-Date -Format 'yyyy-MM-dd'
     $content = Get-Content $HandoffPath -Raw
-    $content = Mark-ShippedSectionsDeployed -Content $content -DeployedOn $deployDate
+    $content = Mark-ShippedSectionsDeployed -Content $content -DeployedOn $deployDate -ActiveWorkTitlesToMark $ActiveWorkTitlesToMark
 
     $commitLine = if ($CommitMessage) {
         "- Last deploy commit: ``$commit`` - $CommitMessage"
@@ -100,7 +101,7 @@ try {
     if ($nextMessage) {
         Write-Host "Next deploy commit message: $nextMessage" -ForegroundColor DarkGray
     } else {
-        Write-Host 'Next deploy commit message: (none — add Shipped this session sections)' -ForegroundColor DarkGray
+        Write-Host 'Next deploy commit message: (none — clean tree, no undeployed handoff sections)' -ForegroundColor DarkGray
     }
 } finally {
     Pop-Location

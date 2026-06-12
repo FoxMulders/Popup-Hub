@@ -25,8 +25,8 @@ export const VIEWPORT_FIT_PADDING_PX = 40
  */
 export const VIEWPORT_FIT_PADDING = 0.125
 
-/** Tighter framing for command-center dashboard chrome. */
-export const COMMAND_CENTER_FIT_PADDING = 0.06
+/** Edge-to-edge grid framing on the command-center dashboard. */
+export const COMMAND_CENTER_FIT_PADDING = 0
 
 /** Derive pan from scroll position (call after scroll/zoom events, not during render). */
 export function scrollToViewportMatrix(

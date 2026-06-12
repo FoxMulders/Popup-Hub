@@ -1,5 +1,11 @@
 import { objectCenter, rotatedAabb } from './geometry'
 import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
+import {
+  expandedFootprintBBox,
+  footprintWithinWallClearance,
+  MIN_CLEARANCE_FT,
+  perimeterStepFt,
+} from '@/lib/booth-planner/expanded-footprint'
 import { PERIMETER_WALL_THICKNESS_FT } from './perimeter-walls'
 import type { BoothObject, RoomFrame } from '../state/types'
 
@@ -234,14 +240,23 @@ export function orientBoothForPerimeterSlot(
   slot: PerimeterSlot,
   boothW: number,
   boothH: number,
-  frame: RoomFrame
+  frame: RoomFrame,
+  wallClearanceFt = MIN_CLEARANCE_FT
 ): BoothObject {
   const { span, depth } = boothSpanAndDepth(boothW, boothH, booth.tableLengthFt)
   const along =
     slot.edge === 'top' || slot.edge === 'bottom' ? slot.x : slot.y
   return {
     ...booth,
-    ...boothAtPerimeterEdge(booth, slot.edge, along, frame, span, depth),
+    ...boothAtPerimeterEdge(
+      booth,
+      slot.edge,
+      along,
+      frame,
+      span,
+      depth,
+      wallClearanceFt
+    ),
   }
 }
 
@@ -526,20 +541,69 @@ function boothOnUnionEdge(
 /**
  * Perimeter slots along a rectilinear union ring (post-merge / join zone).
  * Skips collinear stair-steps; each slot is pre-oriented (`direct: true`).
+ * Uses expanded-footprint hard constraints so corners never overlap.
  */
 export function perimeterSlotsAlongRing(
   ring: ReadonlyArray<readonly [number, number]>,
   boothW: number,
   boothH: number,
-  edgeClearanceFt = 2
+  _edgeClearanceFt = MIN_CLEARANCE_FT
 ): PerimeterSlot[] {
   const pts = openRingPoints(ring)
   if (pts.length < 3) return []
   const centroid = ringCentroid(pts)
   const inset = PERIMETER_WALL_THICKNESS_FT + 0.5
-  const stepAlong = boothW + edgeClearanceFt
   const { span, depth } = boothSpanAndDepth(boothW, boothH)
+  const stepAlong = perimeterStepFt(span)
   const slots: PerimeterSlot[] = []
+  const placedExpanded: Array<{
+    x: number
+    y: number
+    width: number
+    height: number
+  }> = []
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const p of pts) {
+    minX = Math.min(minX, p.x)
+    minY = Math.min(minY, p.y)
+    maxX = Math.max(maxX, p.x)
+    maxY = Math.max(maxY, p.y)
+  }
+
+  const recordIfFits = (pos: PerimeterSlot): void => {
+    const probe: BoothObject = {
+      id: '__probe__',
+      kind: 'booth',
+      label: '',
+      accentColor: null,
+      categoryName: null,
+      x: pos.x,
+      y: pos.y,
+      width: span,
+      height: depth,
+      rotation: rotationForPerimeterEdge(pos.edge),
+    }
+    const raw = rotatedAabb(probe)
+    const wallClear = Math.max(MIN_CLEARANCE_FT, inset)
+    if (
+      raw.x < minX + wallClear - 1e-6 ||
+      raw.y < minY + wallClear - 1e-6 ||
+      raw.x + raw.width > maxX - wallClear + 1e-6 ||
+      raw.y + raw.height > maxY - wallClear + 1e-6
+    ) {
+      return
+    }
+    const expanded = expandedFootprintBBox(raw)
+    if (placedExpanded.some((p) => expandedFootprintsOverlapRaw(expanded, p))) {
+      return
+    }
+    placedExpanded.push(expanded)
+    slots.push(pos)
+  }
 
   for (let i = 0; i < pts.length; i++) {
     const a = pts[i]!
@@ -551,9 +615,20 @@ export function perimeterSlotsAlongRing(
       const yLine = a.y
       const x0 = Math.min(a.x, b.x)
       const x1 = Math.max(a.x, b.x)
-      for (let along = x0 + inset; along + span <= x1 - inset; along += stepAlong) {
-        const pos = boothOnUnionEdge(edge, along, yLine, span, depth)
-        slots.push({
+      for (
+        let along = x0 + inset;
+        along + span <= x1 - inset;
+        along += stepAlong
+      ) {
+        const pos = boothOnUnionEdge(
+          edge,
+          along,
+          yLine,
+          span,
+          depth,
+          MIN_CLEARANCE_FT
+        )
+        recordIfFits({
           x: pos.x,
           y: pos.y,
           edge,
@@ -564,9 +639,20 @@ export function perimeterSlotsAlongRing(
       const xLine = a.x
       const y0 = Math.min(a.y, b.y)
       const y1 = Math.max(a.y, b.y)
-      for (let along = y0 + inset; along + span <= y1 - inset; along += stepAlong) {
-        const pos = boothOnUnionEdge(edge, along, xLine, span, depth)
-        slots.push({
+      for (
+        let along = y0 + inset;
+        along + span <= y1 - inset;
+        along += stepAlong
+      ) {
+        const pos = boothOnUnionEdge(
+          edge,
+          along,
+          xLine,
+          span,
+          depth,
+          MIN_CLEARANCE_FT
+        )
+        recordIfFits({
           x: pos.x,
           y: pos.y,
           edge,
@@ -579,6 +665,18 @@ export function perimeterSlotsAlongRing(
   return slots
 }
 
+function expandedFootprintsOverlapRaw(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number }
+): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  )
+}
+
 /** Perimeter-only auto-arrange slots tagged with wall edge. */
 export function perimeterSlotsWithEdges(
   cw: number,
@@ -586,26 +684,47 @@ export function perimeterSlotsWithEdges(
   boothW: number,
   boothH: number
 ): PerimeterSlot[] {
-  const inset = PERIMETER_WALL_THICKNESS_FT + 0.5
-  const step = boothW + 2
-  const stepY = boothH + 2
+  const wallClear = MIN_CLEARANCE_FT
+  const step = perimeterStepFt(boothW)
+  const stepY = perimeterStepFt(boothW)
   const slots: PerimeterSlot[] = []
+  const placedExpanded: Array<{
+    x: number
+    y: number
+    width: number
+    height: number
+  }> = []
 
-  for (let x = inset; x + boothW <= cw - inset; x += step) {
-    slots.push({ x, y: inset, edge: 'top' })
+  const recordIfFits = (slot: PerimeterSlot, rawW: number, rawH: number): void => {
+    const raw = { x: slot.x, y: slot.y, width: rawW, height: rawH }
+    if (!footprintWithinWallClearance(raw, cw, cl, wallClear)) return
+    const expanded = expandedFootprintBBox(raw)
+    if (placedExpanded.some((p) => expandedFootprintsOverlapRaw(expanded, p))) {
+      return
+    }
+    placedExpanded.push(expanded)
+    slots.push(slot)
   }
-  for (let y = inset + boothH + 2; y + boothH <= cl - inset; y += stepY) {
-    slots.push({ x: cw - inset - boothW, y, edge: 'right' })
+
+  for (let x = wallClear; x + boothW <= cw - wallClear; x += step) {
+    recordIfFits({ x, y: wallClear, edge: 'top' }, boothW, boothH)
   }
-  for (let x = cw - inset - boothW - step; x >= inset; x -= step) {
-    slots.push({ x, y: cl - inset - boothH, edge: 'bottom' })
+  for (let y = wallClear + boothH; y + boothW <= cl - wallClear; y += stepY) {
+    recordIfFits(
+      { x: cw - wallClear - boothH, y, edge: 'right' },
+      boothH,
+      boothW
+    )
   }
-  for (
-    let y = cl - inset - boothH - stepY;
-    y >= inset + boothH + 2;
-    y -= stepY
-  ) {
-    slots.push({ x: inset, y, edge: 'left' })
+  for (let x = cw - wallClear - boothW - step; x >= wallClear; x -= step) {
+    recordIfFits(
+      { x, y: cl - wallClear - boothH, edge: 'bottom' },
+      boothW,
+      boothH
+    )
+  }
+  for (let y = cl - wallClear - boothW - stepY; y >= wallClear + boothH; y -= stepY) {
+    recordIfFits({ x: wallClear, y, edge: 'left' }, boothH, boothW)
   }
 
   return slots

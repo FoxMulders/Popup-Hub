@@ -34,12 +34,12 @@ export function DashboardNextStepCta({
 
   const clearanceBlocked = isBlueprint && hasClearanceIssues
   const clearanceTooltip =
-    'Resolve booth clearance constraints to proceed.'
+    'Vendor booths need at least 3′ edge clearance from neighbors and walls — widen aisles until red/yellow tints turn green (4′).'
 
   if (isBlueprint) {
     const label = 'Next step: Allocation Ledger'
     const detail = clearanceBlocked
-      ? 'Booths need at least 3′ clearance from walls and neighbors'
+      ? 'Booths need at least 3′ clearance — yellow at 3′–4′, red below 3′ (see legend panel)'
       : 'Finalize vendor mapping and booth payments in the ledger'
 
     const button = (

@@ -94,7 +94,7 @@ export function SvgLayoutCanvas({
             <p className="truncate text-[10px] font-black uppercase tracking-wider text-black">
               {roomLabel ?? `${cols}′ × ${rows}′ · 1′ grid`}
             </p>
-            <p className="text-[10px] text-muted-foreground">Space + drag to pan · Ctrl + scroll to zoom</p>
+            <p className="text-[10px] text-muted-foreground">Middle-drag or Space + drag to pan · Ctrl + scroll to zoom</p>
           </div>
           <LayoutZoomSlider zoom={zoom} onZoomChange={onZoomChange} className="shrink-0" />
         </div>
@@ -113,7 +113,7 @@ export function SvgLayoutCanvas({
         {...panHandlers}
         className={cn(
           'relative min-h-[240px] w-full min-w-0 flex-1 overflow-auto bg-zinc-100 outline-none',
-          isPanning ? 'cursor-grabbing' : 'cursor-default'
+          isPanning ? 'cursor-grabbing' : 'cursor-grab'
         )}
       >
         {viewportOverlay ? (

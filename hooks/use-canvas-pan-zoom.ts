@@ -167,6 +167,7 @@ export function useCanvasPanZoom({ scrollRef, initialZoom = LAYOUT_ZOOM_DEFAULT 
 
       if (isMouseLikePan || isTouchPan) {
         event.preventDefault()
+        event.stopPropagation()
         panRef.current = {
           pointerId: event.pointerId,
           startClientX: event.clientX,
@@ -332,12 +333,27 @@ export function useCanvasPanZoom({ scrollRef, initialZoom = LAYOUT_ZOOM_DEFAULT 
     }
   }, [])
 
+  /** Suppress the browser's middle-click autoscroll icon on the canvas. */
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const blockMiddleAutoScroll = (ev: MouseEvent) => {
+      if (ev.button === 1) ev.preventDefault()
+    }
+    el.addEventListener('mousedown', blockMiddleAutoScroll, { capture: true })
+    el.addEventListener('auxclick', blockMiddleAutoScroll, { capture: true })
+    return () => {
+      el.removeEventListener('mousedown', blockMiddleAutoScroll, { capture: true })
+      el.removeEventListener('auxclick', blockMiddleAutoScroll, { capture: true })
+    }
+  }, [scrollRef])
+
   return {
     zoom,
     onZoomChange,
     panHandlers: {
       onWheel,
-      onPointerDown,
+      onPointerDownCapture: onPointerDown,
       onPointerMove,
       onPointerUp,
       onPointerCancel: onPointerUp,

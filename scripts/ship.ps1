@@ -25,9 +25,10 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Initialize-ProjectShellEnv
 Push-Location $ProjectRoot
 
-$handoffMessage = Sync-DeployCommitMessageArtifacts -ProjectRoot $ProjectRoot
+$deployHandoffPlan = Get-DeployHandoffPlan -ProjectRoot $ProjectRoot -AllowLocalChangesFallback
+$handoffMessage = Sync-DeployCommitMessageArtifacts -ProjectRoot $ProjectRoot -Message $deployHandoffPlan.Message
 if (-not $Message) { $Message = $handoffMessage }
-if (-not $Message) { throw 'No deploy commit message — add Shipped this session sections to PM/session-handoff.md' }
+if (-not $Message) { throw 'No deploy commit message — working tree is clean and handoff has no undeployed sections' }
 
 Write-Host "Ship commit message (auto): $Message" -ForegroundColor DarkGray
 
@@ -73,7 +74,7 @@ try {
     }
 
     Write-Step "Updating session handoff"
-    & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -Note 'Ship via ship.ps1' -CommitMessage $Message
+    & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -Note 'Ship via ship.ps1' -CommitMessage $Message -ActiveWorkTitlesToMark $deployHandoffPlan.ActiveWorkTitles
     $handoffStatus = git status --porcelain -- 'PM/session-handoff.md'
     if ($handoffStatus) {
         git add PM/session-handoff.md

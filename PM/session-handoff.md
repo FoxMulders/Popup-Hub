@@ -2,7 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-**Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
+**Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
+
+## Shipped this session (deploy script auto-handoff, not deployed)
+- **`scripts/get-deploy-commit-message.ps1`:** Commit message from Shipped sections → Active work sections → `feat: ship local changes`; UTF-8 handoff read; fix empty-array return that blocked deploy.
+- **`scripts/deploy-popuphub.ps1`:** Deploy proceeds when uncommitted work exists (no manual Shipped section rename); clean tree with nothing undeployed → no-op only.
+- **`scripts/update-session-handoff.ps1` / `ship.ps1`:** Active work sections used for deploy flip to Shipped deployed after release.
 
 ## Shipped this session (Google OAuth PKCE callback fix, deployed 2026-06-12)
 - **`lib/supabase/client.ts`:** `detectSessionInUrl: false` — OAuth codes exchange only on the server at `/api/auth/callback` (avoids client/server race on `?code=`).

@@ -10,6 +10,8 @@ import {
   VENDOR_BOOTH_LEGEND,
 } from './placement-theme'
 import { BOOTH_CLEARANCE_THEMES } from '@/lib/coordinator/booth-clearance-visual'
+import { BoothClearanceWarningPanel } from '@/components/coordinator/booth-clearance-warning-panel'
+import type { DocClearanceSummary } from '@/lib/coordinator/booth-clearance-summary'
 
 /**
  * Persistent canvas allocation legend.
@@ -56,7 +58,7 @@ const ITEMS: LegendItem[] = [
   {
     swatchClass: 'bg-red-200 ring-1 ring-red-500',
     label: 'Critical clearance',
-    detail: '<3′ edge clearance — move booth away from walls or neighbors.',
+    detail: '<3′ edge clearance (≤2′ is especially tight) — move booth away from walls or neighbors.',
     swatchFill: BOOTH_CLEARANCE_THEMES.critical.fill,
     swatchStroke: BOOTH_CLEARANCE_THEMES.critical.stroke,
   },
@@ -76,8 +78,17 @@ const ITEMS: LegendItem[] = [
   },
 ]
 
-function LegendItemsList({ docked }: { docked?: boolean }) {
+function LegendItemsList({
+  docked,
+  clearanceSummary,
+  showClearanceWarnings,
+}: {
+  docked?: boolean
+  clearanceSummary?: DocClearanceSummary | null
+  showClearanceWarnings?: boolean
+}) {
   return (
+    <>
     <ul className={cn('space-y-1.5', docked && 'min-h-0 flex-1 overflow-y-auto')}>
       {ITEMS.map((item) => (
         <li
@@ -106,6 +117,10 @@ function LegendItemsList({ docked }: { docked?: boolean }) {
         </li>
       ))}
     </ul>
+    {showClearanceWarnings && clearanceSummary ? (
+      <BoothClearanceWarningPanel summary={clearanceSummary} docked={docked} />
+    ) : null}
+    </>
   )
 }
 
@@ -114,11 +129,15 @@ function LeftCollapsibleLegendPanel({
   onCollapsedChange,
   docked,
   className,
+  clearanceSummary,
+  showClearanceWarnings,
 }: {
   collapsed: boolean
   onCollapsedChange: (next: boolean) => void
   docked?: boolean
   className?: string
+  clearanceSummary?: DocClearanceSummary | null
+  showClearanceWarnings?: boolean
 }) {
   return (
     <CanvasSideRail
@@ -135,7 +154,11 @@ function LeftCollapsibleLegendPanel({
         docked && 'max-w-none shadow-[4px_0_20px_rgb(28_25_23_/_0.1)]'
       )}
     >
-      <LegendItemsList docked={docked} />
+      <LegendItemsList
+        docked={docked}
+        clearanceSummary={clearanceSummary}
+        showClearanceWarnings={showClearanceWarnings}
+      />
     </CanvasSideRail>
   )
 }
@@ -143,9 +166,13 @@ function LeftCollapsibleLegendPanel({
 export function CanvasLegend({
   className,
   variant = 'floating',
+  clearanceSummary = null,
+  showClearanceWarnings = true,
 }: {
   className?: string
   variant?: 'floating' | 'sidebar' | 'docked'
+  clearanceSummary?: DocClearanceSummary | null
+  showClearanceWarnings?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const isDocked = variant === 'docked'
@@ -178,6 +205,8 @@ export function CanvasLegend({
         onCollapsedChange={setCollapsed}
         docked={isDocked}
         className={className}
+        clearanceSummary={clearanceSummary}
+        showClearanceWarnings={showClearanceWarnings}
       />
     )
   }
@@ -249,7 +278,10 @@ export function CanvasLegend({
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
-      <LegendItemsList />
+      <LegendItemsList
+        clearanceSummary={clearanceSummary}
+        showClearanceWarnings={showClearanceWarnings}
+      />
     </div>
   )
 }

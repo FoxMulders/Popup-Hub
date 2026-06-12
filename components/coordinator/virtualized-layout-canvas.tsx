@@ -18,10 +18,10 @@ import {
 import { cn } from '@/lib/utils'
 import { CANVAS_VIEWPORT_SCALE } from '@/components/coordinator/svg-layout-canvas'
 import {
-  LAYOUT_ZOOM_DEFAULT,
   LayoutZoomSlider,
   LayoutZoomViewport,
 } from '@/components/coordinator/layout-zoom-slider'
+import { useCanvasPanZoom } from '@/hooks/use-canvas-pan-zoom'
 
 const VIRTUAL_CANVAS_MAX_HEIGHT = `min(calc(72vh * ${CANVAS_VIEWPORT_SCALE}), ${900 * CANVAS_VIEWPORT_SCALE}px)`
 
@@ -107,7 +107,9 @@ export function VirtualizedLayoutCanvas({
   onGridCellDragLeave,
 }: VirtualizedLayoutCanvasProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [zoom, setZoom] = useState(LAYOUT_ZOOM_DEFAULT)
+  const { zoom, onZoomChange, panHandlers, isPanning } = useCanvasPanZoom({
+    scrollRef,
+  })
   const partitioned = shouldPartitionGrid(cols, rows)
   const quadrants = partitioned ? quadrantBoundsForGrid(cols, rows) : null
 
@@ -209,8 +211,9 @@ export function VirtualizedLayoutCanvas({
   }
 
   const boundsClass = cn(
-    'overflow-auto rounded-lg border-2 border-stone-300 bg-canvas',
-    fitToBounds ? 'w-full' : 'inline-block max-w-full'
+    'overflow-auto rounded-lg border-2 border-stone-300 bg-canvas outline-none',
+    fitToBounds ? 'w-full' : 'inline-block max-w-full',
+    isPanning ? 'cursor-grabbing' : 'cursor-grab'
   )
 
   const gridContent = (
@@ -266,10 +269,15 @@ export function VirtualizedLayoutCanvas({
       <div className={cn('flex min-h-0 w-full min-w-0 flex-col', className)}>
         <div className="sticky top-0 z-20 shrink-0 border-b border-stone-200 bg-white px-2 py-1.5">
           <div className="flex justify-end">
-            <LayoutZoomSlider zoom={zoom} onZoomChange={setZoom} />
+            <LayoutZoomSlider zoom={zoom} onZoomChange={onZoomChange} />
           </div>
         </div>
-        <div className={boundsClass} style={scrollViewportStyle}>
+        <div
+          ref={scrollRef}
+          {...panHandlers}
+          className={boundsClass}
+          style={scrollViewportStyle}
+        >
           <LayoutZoomViewport zoom={zoom} width={gridWidthPx} height={gridHeightPx}>
             {gridContent}
           </LayoutZoomViewport>
@@ -282,10 +290,10 @@ export function VirtualizedLayoutCanvas({
     <div className={cn('flex min-h-0 w-full min-w-0 flex-col', className)}>
       <div className="sticky top-0 z-20 shrink-0 border-b border-stone-200 bg-white px-2 py-1.5">
         <div className="flex justify-end">
-          <LayoutZoomSlider zoom={zoom} onZoomChange={setZoom} />
+          <LayoutZoomSlider zoom={zoom} onZoomChange={onZoomChange} />
         </div>
       </div>
-      <div ref={scrollRef} className={boundsClass} style={scrollViewportStyle}>
+      <div ref={scrollRef} {...panHandlers} className={boundsClass} style={scrollViewportStyle}>
         <LayoutZoomViewport zoom={zoom} width={gridWidthPx} height={gridHeightPx}>
           {partitionedContent}
         </LayoutZoomViewport>

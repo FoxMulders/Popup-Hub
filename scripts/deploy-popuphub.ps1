@@ -41,18 +41,14 @@ function Write-NothingToShipGuidance {
 
     Write-Host ''
     Write-Host 'Nothing new to ship.' -ForegroundColor Yellow
-    Write-Host '  All ## Shipped this session sections in PM/session-handoff.md are already marked deployed.' -ForegroundColor Gray
+    Write-Host '  Working tree is clean and no undeployed handoff sections were found.' -ForegroundColor Gray
     Write-Host "  Branch: $Branch @ $Commit" -ForegroundColor Gray
-    if ($HasLocalChanges) {
-        Write-Host '  Working tree: uncommitted changes (add a handoff section before deploy).' -ForegroundColor Yellow
-    } else {
-        Write-Host '  Working tree: clean — production matches your last deploy.' -ForegroundColor Gray
-    }
     Write-Host '  Production: https://popuphub.ca' -ForegroundColor Gray
     Write-Host ''
-    Write-Host 'To ship new work, add to PM/session-handoff.md:' -ForegroundColor Cyan
-    Write-Host '  ## Shipped this session (short title, not deployed)' -ForegroundColor White
-    Write-Host '  - summary bullets' -ForegroundColor White
+    Write-Host 'Deploy picks commit messages automatically from (in order):' -ForegroundColor Cyan
+    Write-Host '  1. ## Shipped this session (title, not deployed)' -ForegroundColor White
+    Write-Host '  2. ## Active work — title (local, not deployed)' -ForegroundColor White
+    Write-Host '  3. feat: ship local changes (when you have uncommitted work)' -ForegroundColor White
     Write-Host ''
     Write-Host 'To redeploy production without a new commit:' -ForegroundColor Cyan
     Write-Host '  PM\Deploy-popuphub.bat -SkipCommit' -ForegroundColor White
@@ -63,7 +59,8 @@ if ($MessageArgs -and $MessageArgs.Count -gt 0) {
     $Message = $MessageArgs -join ' '
 }
 
-$handoffMessage = Sync-DeployCommitMessageArtifacts -ProjectRoot $ProjectRoot
+$deployHandoffPlan = Get-DeployHandoffPlan -ProjectRoot $ProjectRoot -AllowLocalChangesFallback
+$handoffMessage = Sync-DeployCommitMessageArtifacts -ProjectRoot $ProjectRoot -Message $deployHandoffPlan.Message
 if (-not $Message) {
     $Message = $handoffMessage
 }
@@ -75,18 +72,21 @@ if (-not $Message) {
         $hasLocalChanges = [bool](git status --porcelain)
 
         if ($SkipCommit) {
-            Write-Host 'Redeploy mode (-SkipCommit): continuing without a new handoff section.' -ForegroundColor DarkGray
+            Write-Host 'Redeploy mode (-SkipCommit): continuing without a new commit.' -ForegroundColor DarkGray
         } else {
             Write-NothingToShipGuidance -Branch $branch -Commit $commit -HasLocalChanges:$hasLocalChanges
-            if (-not $hasLocalChanges) {
-                Write-Host '==> No deploy performed (already up to date).' -ForegroundColor Green
-                exit 2
-            }
-            exit 1
+            Write-Host '==> No deploy performed (already up to date).' -ForegroundColor Green
+            exit 2
         }
     } finally {
         Pop-Location
     }
+}
+
+if ($deployHandoffPlan.Source -eq 'active-work') {
+    Write-Host "Deploy commit source: Active work handoff sections ($($deployHandoffPlan.ActiveWorkTitles.Count) titles)" -ForegroundColor DarkGray
+} elseif ($deployHandoffPlan.Source -eq 'local-changes') {
+    Write-Host 'Deploy commit source: uncommitted local changes (no undeployed handoff sections)' -ForegroundColor DarkGray
 }
 
 if ($Message) {
@@ -171,7 +171,7 @@ try {
         Write-Step 'Updating session handoff'
         $short = git rev-parse --short HEAD
         $handoffProdUrl = 'https://popuphub.ca'
-        & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -DeployUrl $handoffProdUrl -Note 'Deploy via deploy-popuphub.ps1' -CommitMessage $Message
+        & (Join-Path $PSScriptRoot 'update-session-handoff.ps1') -DeployUrl $handoffProdUrl -Note 'Deploy via deploy-popuphub.ps1' -CommitMessage $Message -ActiveWorkTitlesToMark $deployHandoffPlan.ActiveWorkTitles
 
         $handoffPaths = @(
             'PM/session-handoff.md',

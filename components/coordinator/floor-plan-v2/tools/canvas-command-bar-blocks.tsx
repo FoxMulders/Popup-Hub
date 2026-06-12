@@ -35,6 +35,7 @@ import {
   Eye,
   EyeOff,
   Route,
+  AlertTriangle,
 } from 'lucide-react'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
@@ -403,6 +404,8 @@ export interface CanvasCommandBarBlockContext {
   saveDraftLoading?: boolean
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
+  showClearanceWarnings?: boolean
+  onClearanceWarningsToggle?: () => void
   onRequestAiLayoutFeedback?: () => void
   canRequestAiLayoutFeedback?: boolean
   aiLayoutFeedbackLoading?: boolean
@@ -1368,6 +1371,27 @@ export function renderCanvasCommandBarBlock(
                 </CommandButton>
               </>
             ) : null}
+            {ctx.onClearanceWarningsToggle ? (
+              <>
+                <div className={toolbarDividerClass(compact)} aria-hidden />
+                <CommandButton
+                  onClick={ctx.onClearanceWarningsToggle}
+                  title={
+                    ctx.showClearanceWarnings
+                      ? 'Hide booth clearance warnings (yellow/red aisles)'
+                      : 'Show booth clearance warnings — yellow at 3′, red below 3′ (≤2′ critical)'
+                  }
+                  active={ctx.showClearanceWarnings}
+                  className={
+                    ctx.showClearanceWarnings
+                      ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
+                      : 'text-amber-800 hover:bg-amber-50'
+                  }
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                </CommandButton>
+              </>
+            ) : null}
             <div className={toolbarDividerClass(compact)} aria-hidden />
             <div
               className={cn(
@@ -1491,6 +1515,24 @@ export function renderCanvasCommandBarBlock(
                 }
               >
                 <Route className="h-3.5 w-3.5" />
+              </CommandButton>
+            ) : null}
+            {ctx.onClearanceWarningsToggle ? (
+              <CommandButton
+                onClick={ctx.onClearanceWarningsToggle}
+                title={
+                  ctx.showClearanceWarnings
+                    ? 'Hide booth clearance warnings (yellow/red aisles)'
+                    : 'Show booth clearance warnings — yellow at 3′, red below 3′ (≤2′ critical)'
+                }
+                active={ctx.showClearanceWarnings}
+                className={
+                  ctx.showClearanceWarnings
+                    ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
+                    : 'text-amber-800 hover:bg-amber-50'
+                }
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
               </CommandButton>
             ) : null}
             <div
@@ -1631,6 +1673,24 @@ export function renderCanvasCommandBarBlock(
                   }
                 >
                   <Route className="h-3.5 w-3.5" />
+                </CommandButton>
+              ) : null}
+              {ctx.onClearanceWarningsToggle ? (
+                <CommandButton
+                  onClick={ctx.onClearanceWarningsToggle}
+                  title={
+                    ctx.showClearanceWarnings
+                      ? 'Hide booth clearance warnings (yellow/red aisles)'
+                      : 'Show booth clearance warnings — yellow at 3′, red below 3′ (≤2′ critical)'
+                  }
+                  active={ctx.showClearanceWarnings}
+                  className={
+                    ctx.showClearanceWarnings
+                      ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
+                      : 'text-amber-800 hover:bg-amber-50'
+                  }
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
                 </CommandButton>
               ) : null}
               {ctx.onShowLabelsChange ? (

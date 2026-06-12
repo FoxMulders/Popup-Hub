@@ -65,28 +65,28 @@ function vendor(id: string, x: number, y: number, rotation = 0): BoothObject {
   }
 }
 
-// Uniform probe expands 6×4 by 1.5′ per side → 9×7
+// Uniform probe expands 6×4 by 3′ per side → 12×10
 const booth = vendor('a', 0, 0)
 const probe = vendorBoothUniformCollisionProbe(booth)
-assert(probe.width === 9, `width=${probe.width} expected 9`)
-assert(probe.height === 7, `height=${probe.height} expected 7`)
-assert(probe.x === -1.5, `x=${probe.x} expected -1.5`)
-assert(probe.y === -1.5, `y=${probe.y} expected -1.5`)
+assert(probe.width === 12, `width=${probe.width} expected 12`)
+assert(probe.height === 10, `height=${probe.height} expected 10`)
+assert(probe.x === -3, `x=${probe.x} expected -3`)
+assert(probe.y === -3, `y=${probe.y} expected -3`)
 
-// 4′ edge-to-edge gap → no probe overlap (3′ aisle + 1′ buffer)
+// 7′ edge-to-edge gap → no probe overlap (6′ minimum + 1′ buffer)
 const a = vendor('a', 0, 0)
-const b = vendor('b', 10, 0)
+const b = vendor('b', 13, 0)
 assert(
   !placedObjectsOverlap(a, b, overlapCtx),
-  '4′ edge gap should not collide (1.5′ buffer each side)'
+  '7′ edge gap should not collide (3′ buffer each side)'
 )
 
-// 2′ edge-to-edge gap → probes overlap (<3′ aisle)
+// 5′ edge-to-edge gap → probes overlap (<6′ aisle)
 const c = vendor('c', 0, 0)
-const d = vendor('d', 8, 0)
+const d = vendor('d', 11, 0)
 assert(
   placedObjectsOverlap(c, d, overlapCtx),
-  '2′ edge gap should collide with 1.5′ buffers'
+  '5′ edge gap should collide with 3′ buffers'
 )
 
 assert(
@@ -112,6 +112,6 @@ assert(
   'Wall-snapped probe should not expand toward the rear wall'
 )
 
-assert(VENDOR_BOOTH_CLEARANCE_FT === 1.5, 'Per-booth buffer must be half of 3′ aisle')
+assert(VENDOR_BOOTH_CLEARANCE_FT === 3, 'Per-booth safety buffer must be 3′')
 
 console.log('verify-vendor-booth-clearance: all checks passed')

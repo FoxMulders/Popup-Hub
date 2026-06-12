@@ -33,6 +33,11 @@ import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
 import { cn } from '@/lib/utils'
 import { openDualScreenWindow, type DualScreenMode } from '@/lib/coordinator/floorplan-sync'
 import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
+import { summarizeDocClearanceIssues } from '@/lib/coordinator/booth-clearance-summary'
+import {
+  readClearanceWarningsEnabled,
+  writeClearanceWarningsEnabled,
+} from '@/lib/coordinator/booth-clearance-warnings-pref'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridDocPatch } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
@@ -431,6 +436,10 @@ function FloorPlanV2Workspace({
     }
   )
   const [patronPathEnabled, setPatronPathEnabled] = useState(false)
+  const [showClearanceWarnings, setShowClearanceWarnings] = useState(() =>
+    readClearanceWarningsEnabled()
+  )
+  const clearanceIssueToastRef = useRef(false)
   const [unifiedLayoutOverlay, setUnifiedLayoutOverlay] = useState<{
     spinePath: ReadonlyArray<{ x: number; y: number }>
     clearanceField: UnifiedSolverMeta['clearanceField']
@@ -444,6 +453,47 @@ function FloorPlanV2Workspace({
       // ignore
     }
   }, [boothMapLabelMode, isDashboard])
+  const clearanceSummary = useMemo(
+    () => summarizeDocClearanceIssues(store.doc),
+    [store.doc]
+  )
+
+  useEffect(() => {
+    if (!showClearanceWarnings) {
+      clearanceIssueToastRef.current = false
+      return
+    }
+    const hasIssues =
+      clearanceSummary.criticalCount + clearanceSummary.tightCount > 0
+    if (!hasIssues) {
+      clearanceIssueToastRef.current = false
+      return
+    }
+    if (clearanceIssueToastRef.current) return
+    clearanceIssueToastRef.current = true
+    const parts: string[] = []
+    if (clearanceSummary.criticalCount > 0) {
+      parts.push(
+        `${clearanceSummary.criticalCount} red (<3′, ≤2′ critical)`
+      )
+    }
+    if (clearanceSummary.tightCount > 0) {
+      parts.push(`${clearanceSummary.tightCount} yellow (3′–4′)`)
+    }
+    toast.warning(
+      `Booth aisle clearance: ${parts.join(', ')}. See the legend panel for details — hide warnings with the triangle icon in the header.`,
+      { duration: 6000 }
+    )
+  }, [
+    clearanceSummary.criticalCount,
+    clearanceSummary.tightCount,
+    showClearanceWarnings,
+  ])
+
+  useEffect(() => {
+    writeClearanceWarningsEnabled(showClearanceWarnings)
+  }, [showClearanceWarnings])
+
   const {
     layoutSpringPoses,
     startLayoutSpring,
@@ -1903,6 +1953,24 @@ function FloorPlanV2Workspace({
     })
   }, [])
 
+  const handleClearanceWarningsToggle = useCallback(() => {
+    setShowClearanceWarnings((enabled) => {
+      const next = !enabled
+      if (next) {
+        toast.message(
+          'Clearance warnings on — vendor booths tint yellow (3′–4′) or red (<3′) by nearest aisle gap.',
+          { duration: 4200 }
+        )
+      } else {
+        toast.message(
+          'Clearance warnings hidden — re-enable anytime with the triangle icon in the header toolbar.',
+          { duration: 4200 }
+        )
+      }
+      return next
+    })
+  }, [])
+
   const handleAddRoomWithSelectTool = useCallback(
     (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
       onAddRoom?.(options)
@@ -2392,6 +2460,8 @@ function FloorPlanV2Workspace({
     saveDraftLoading,
     patronPathEnabled,
     onPatronPathToggle: handlePatronPathToggle,
+    showClearanceWarnings,
+    onClearanceWarningsToggle: handleClearanceWarningsToggle,
     eventId,
   }
 
@@ -2523,8 +2593,14 @@ function FloorPlanV2Workspace({
         ) : null}
         {isDashboard ? (
             <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">
-              <div className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-stone-100">
-                {!dashboardPreview ? <CanvasLegend variant="docked" /> : null}
+              <div className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-stone-50">
+                {!dashboardPreview ? (
+                  <CanvasLegend
+                    variant="docked"
+                    clearanceSummary={clearanceSummary}
+                    showClearanceWarnings={showClearanceWarnings}
+                  />
+                ) : null}
                 <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <CanvasRootErrorBoundary
                   onReset={() => {
@@ -2605,6 +2681,7 @@ function FloorPlanV2Workspace({
                     stickyDrawPlacement
                     showLabels={showLabels}
                     viewOnly={dashboardPreview}
+                    showClearanceWarnings={showClearanceWarnings}
                   />
                 </CanvasRootErrorBoundary>
                 </div>
@@ -2692,6 +2769,8 @@ function FloorPlanV2Workspace({
                 saveDraftLoading={saveDraftLoading}
                 patronPathEnabled={patronPathEnabled}
                 onPatronPathToggle={handlePatronPathToggle}
+                showClearanceWarnings={showClearanceWarnings}
+                onClearanceWarningsToggle={handleClearanceWarningsToggle}
               />
               <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-lg border border-stone-200 bg-stone-100">
                 <CanvasRootErrorBoundary
@@ -2769,9 +2848,16 @@ function FloorPlanV2Workspace({
                     }}
                     onAfterDrawCommit={handleAfterDrawCommit}
                     showLabels={showLabels}
+                    showClearanceWarnings={showClearanceWarnings}
                   />
                 </CanvasRootErrorBoundary>
-                {!isDashboard ? <CanvasLegend variant="floating" /> : null}
+                {!isDashboard ? (
+                  <CanvasLegend
+                    variant="floating"
+                    clearanceSummary={clearanceSummary}
+                    showClearanceWarnings={showClearanceWarnings}
+                  />
+                ) : null}
               </div>
             </div>
 

@@ -114,7 +114,8 @@ export interface ViewportApi extends ViewportState {
     options?: { padding?: number; stepFactor?: number; zoomMax?: number }
   ) => void
   scrollHandlers: {
-    onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void
+    /** Capture phase so middle-button pan wins over SVG object handlers. */
+    onPointerDownCapture: (e: ReactPointerEvent<HTMLDivElement>) => void
     onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void
     onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => void
     onPointerCancel: (e: ReactPointerEvent<HTMLDivElement>) => void
@@ -558,6 +559,8 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
         (e.pointerType === 'touch' || e.pointerType === 'pen') &&
         activePointers.current.size === 1
       if (isMouseLikePan || isSingleTouchHandPan) {
+        e.preventDefault()
+        e.stopPropagation()
         try {
           e.currentTarget.setPointerCapture(e.pointerId)
         } catch {
@@ -737,6 +740,21 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     }
   }, [scrollRef, zoom])
 
+  /** Suppress the browser's middle-click autoscroll icon on the canvas. */
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (!scroll) return
+    const blockMiddleAutoScroll = (ev: MouseEvent) => {
+      if (ev.button === 1) ev.preventDefault()
+    }
+    scroll.addEventListener('mousedown', blockMiddleAutoScroll, { capture: true })
+    scroll.addEventListener('auxclick', blockMiddleAutoScroll, { capture: true })
+    return () => {
+      scroll.removeEventListener('mousedown', blockMiddleAutoScroll, { capture: true })
+      scroll.removeEventListener('auxclick', blockMiddleAutoScroll, { capture: true })
+    }
+  }, [scrollRef])
+
   const getBaselineZoom = useCallback(() => {
     const baseline = baselineZoomRef.current
     return baseline > 0 ? baseline : 1
@@ -756,7 +774,7 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
     fitToBounds,
     fitToBoundsStepped,
     scrollHandlers: {
-      onPointerDown,
+      onPointerDownCapture: onPointerDown,
       onPointerMove,
       onPointerUp: releasePointer,
       onPointerCancel: releasePointer,

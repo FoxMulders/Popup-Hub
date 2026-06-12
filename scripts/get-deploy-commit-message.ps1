@@ -4,7 +4,7 @@ function Get-DeployCommitMessagePreviewText {
     param([string]$Message)
 
     if ($Message) { return Sanitize-BatRemComment -Text $Message }
-    return '(none - add ## Shipped this session (... , not deployed) to PM/session-handoff.md)'
+    return '(auto from handoff Active work / Shipped sections, or uncommitted changes)'
 }
 
 # cmd.exe reads .bat as ANSI — UTF-8 em dashes and shell metacharacters can break `set` lines.
@@ -18,16 +18,31 @@ function Sanitize-BatRemComment {
     return $safe.Trim()
 }
 
-function Get-UndeployedHandoffTitles {
+function Get-SessionHandoffPath {
     param([string]$ProjectRoot)
 
     $handoffPath = Join-Path $ProjectRoot 'PM\session-handoff.md'
-    if (-not (Test-Path -LiteralPath $handoffPath)) {
+    if (Test-Path -LiteralPath $handoffPath) {
+        return $handoffPath
+    }
+    return $null
+}
+
+function Get-SessionHandoffLines {
+    param([string]$ProjectRoot)
+
+    $handoffPath = Get-SessionHandoffPath -ProjectRoot $ProjectRoot
+    if (-not $handoffPath) {
         return @()
     }
+    return @(Get-Content -LiteralPath $handoffPath -Encoding utf8)
+}
+
+function Get-UndeployedShippedHandoffTitles {
+    param([string]$ProjectRoot)
 
     $titles = [System.Collections.Generic.List[string]]::new()
-    foreach ($line in Get-Content -LiteralPath $handoffPath) {
+    foreach ($line in Get-SessionHandoffLines -ProjectRoot $ProjectRoot) {
         if ($line -match '^## Shipped .+\((.+?), not deployed\)') {
             [void]$titles.Add($Matches[1].Trim())
             continue
@@ -40,9 +55,101 @@ function Get-UndeployedHandoffTitles {
             [void]$titles.Add(($line -replace '^##\s+', '').Trim())
         }
     }
-    # Unary comma — single title must stay a one-element array, not a scalar string
-    # (otherwise "feat: $($titles[0])" indexes the first character).
-    return ,@($titles.ToArray())
+    return [string[]]$titles.ToArray()
+}
+
+function Get-ActiveWorkHandoffTitles {
+    param([string]$ProjectRoot)
+
+    $titles = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in Get-SessionHandoffLines -ProjectRoot $ProjectRoot) {
+        if ($line -match '^## Active work [\u2013\u2014\-] (.+) \(local, not deployed\)') {
+            [void]$titles.Add($Matches[1].Trim())
+            continue
+        }
+        if ($line -match '^## Active work [\u2013\u2014\-] (.+) \(not deployed\)') {
+            [void]$titles.Add($Matches[1].Trim())
+        }
+    }
+    return [string[]]$titles.ToArray()
+}
+
+# Back-compat alias used by older scripts/docs.
+function Get-UndeployedHandoffTitles {
+    param([string]$ProjectRoot)
+    return Get-UndeployedShippedHandoffTitles -ProjectRoot $ProjectRoot
+}
+
+function Format-DeployCommitMessageFromTitles {
+    param(
+        [string[]]$Titles,
+        [int]$MaxTitlesInSummary = 4
+    )
+
+    if ($Titles.Count -eq 0) { return $null }
+    if ($Titles.Count -eq 1) {
+        return "feat: $($Titles[0])"
+    }
+
+    $listed = @($Titles | Select-Object -First $MaxTitlesInSummary)
+    $extra = $Titles.Count - $listed.Count
+    $summary = $listed -join '; '
+    if ($extra -gt 0) {
+        $summary += "; +$extra more"
+    }
+    return "feat: ship $($Titles.Count) session updates ($summary)"
+}
+
+function Get-DeployHandoffPlan {
+    param(
+        [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
+        [int]$MaxTitlesInSummary = 4,
+        [switch]$AllowLocalChangesFallback
+    )
+
+    $shippedTitles = Get-UndeployedShippedHandoffTitles -ProjectRoot $ProjectRoot
+    if ($shippedTitles.Length -gt 0) {
+        return @{
+            Message = Format-DeployCommitMessageFromTitles -Titles $shippedTitles -MaxTitlesInSummary $MaxTitlesInSummary
+            Source = 'shipped'
+            ShippedTitles = $shippedTitles
+            ActiveWorkTitles = @()
+        }
+    }
+
+    $activeTitles = Get-ActiveWorkHandoffTitles -ProjectRoot $ProjectRoot
+    if ($activeTitles.Length -gt 0) {
+        return @{
+            Message = Format-DeployCommitMessageFromTitles -Titles $activeTitles -MaxTitlesInSummary $MaxTitlesInSummary
+            Source = 'active-work'
+            ShippedTitles = @()
+            ActiveWorkTitles = $activeTitles
+        }
+    }
+
+    if ($AllowLocalChangesFallback) {
+        Push-Location $ProjectRoot
+        try {
+            $hasLocalChanges = [bool](git status --porcelain 2>$null)
+        } finally {
+            Pop-Location
+        }
+        if ($hasLocalChanges) {
+            return @{
+                Message = 'feat: ship local changes'
+                Source = 'local-changes'
+                ShippedTitles = @()
+                ActiveWorkTitles = @()
+            }
+        }
+    }
+
+    return @{
+        Message = $null
+        Source = 'none'
+        ShippedTitles = @()
+        ActiveWorkTitles = @()
+    }
 }
 
 function Get-DeployBatFileContent {
@@ -56,8 +163,8 @@ REM PopUp Hub - build, commit, sync push, Vercel prod, session handoff (single i
 REM Works when: double-clicked in Explorer, run from cmd/PowerShell, any current directory.
 REM Next commit (auto): $PreviewText
 REM
-REM Commit message is always auto-generated from PM/session-handoff.md undeployed
-REM Shipped sections. Update handoff after each scoped task; double-click to ship.
+REM Commit message is auto-generated from handoff Shipped / Active work sections,
+REM or "feat: ship local changes" when uncommitted work exists.
 REM Preview line above and PM/deploy-commit-message.txt refresh automatically.
 REM
 REM Vercel: git push does NOT auto-deploy master (vercel.json git.deploymentEnabled).
@@ -182,11 +289,13 @@ function Update-DeployBatCommitMessageLine {
 function Sync-DeployCommitMessageArtifacts {
     param(
         [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
-        [string]$Message = ''
+        [string]$Message = '',
+        [switch]$AllowLocalChangesFallback
     )
 
     if (-not $Message) {
-        $Message = Get-DeployCommitMessageFromHandoff -ProjectRoot $ProjectRoot
+        $plan = Get-DeployHandoffPlan -ProjectRoot $ProjectRoot -AllowLocalChangesFallback:$AllowLocalChangesFallback
+        $Message = $plan.Message
     }
 
     $preview = Get-DeployCommitMessagePreviewText -Message $Message
@@ -201,35 +310,20 @@ function Sync-DeployCommitMessageArtifacts {
 function Get-DeployCommitMessageFromHandoff {
     param(
         [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
-        [int]$MaxTitlesInSummary = 4
+        [int]$MaxTitlesInSummary = 4,
+        [switch]$AllowLocalChangesFallback
     )
 
-    $handoffPath = Join-Path $ProjectRoot 'PM\session-handoff.md'
-    if (-not (Test-Path -LiteralPath $handoffPath)) {
-        return $null
-    }
-
-    $titles = Get-UndeployedHandoffTitles -ProjectRoot $ProjectRoot
-
-    if ($titles.Count -eq 0) { return $null }
-    if ($titles.Count -eq 1) {
-        return "feat: $($titles[0])"
-    }
-
-    $listed = @($titles | Select-Object -First $MaxTitlesInSummary)
-    $extra = $titles.Count - $listed.Count
-    $summary = $listed -join '; '
-    if ($extra -gt 0) {
-        $summary += "; +$extra more"
-    }
-    return "feat: ship $($titles.Count) session updates ($summary)"
+    $plan = Get-DeployHandoffPlan -ProjectRoot $ProjectRoot -MaxTitlesInSummary $MaxTitlesInSummary -AllowLocalChangesFallback:$AllowLocalChangesFallback
+    return $plan.Message
 }
 
 function Mark-ShippedSectionsDeployed {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Content,
-        [string]$DeployedOn = (Get-Date -Format 'yyyy-MM-dd')
+        [string]$DeployedOn = (Get-Date -Format 'yyyy-MM-dd'),
+        [string[]]$ActiveWorkTitlesToMark = @()
     )
 
     $content = [regex]::Replace(
@@ -242,9 +336,23 @@ function Mark-ShippedSectionsDeployed {
         '(?m)^## Shipped .+\((.+?)[\s\u2014-]+not deployed\)',
         "## Shipped this session (`$1, deployed $DeployedOn)"
     )
-    return [regex]::Replace(
+    $content = [regex]::Replace(
         $content,
         '(?m)^(## Shipped .+\()not deployed(\))',
         "`${1}deployed $DeployedOn)"
     )
+
+    $activeWorkHeadingPattern = '## Active work [\u2013\u2014\-] '
+
+    foreach ($title in $ActiveWorkTitlesToMark) {
+        if (-not $title) { continue }
+        $escaped = [regex]::Escape($title)
+        $localPattern = '(?m)^' + $activeWorkHeadingPattern + $escaped + ' \(local, not deployed\)'
+        $legacyPattern = '(?m)^' + $activeWorkHeadingPattern + $escaped + ' \(not deployed\)'
+        $replacement = "## Shipped this session ($title, deployed $DeployedOn)"
+        $content = [regex]::Replace($content, $localPattern, $replacement)
+        $content = [regex]::Replace($content, $legacyPattern, $replacement)
+    }
+
+    return $content
 }
