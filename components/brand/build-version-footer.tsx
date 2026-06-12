@@ -22,18 +22,44 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
     >
       <div
         className={cn(
-          'mx-auto flex max-w-[1600px] flex-row flex-wrap items-center justify-between gap-x-4 gap-y-1',
-          'px-3 py-2 sm:gap-x-4 sm:py-2 xl:px-10',
+          'mx-auto flex max-w-[1600px] flex-col items-center gap-2',
+          'px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-1 sm:py-2 xl:px-10',
           'pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]'
         )}
       >
-        <nav aria-label="Legal and help" className="min-w-0 flex-1">
-          <ul className="m-0 flex list-none flex-row flex-wrap items-center justify-center gap-x-3 gap-y-0 p-0 sm:justify-start sm:gap-x-4">
+        <nav aria-label="Legal and help" className="min-w-0 w-full sm:flex-1">
+          <div className="flex flex-col items-center gap-1 sm:hidden">
+            <ul className="m-0 flex list-none justify-center gap-x-3 p-0">
+              {LEGAL_LINKS.slice(0, 3).map(({ href, label }) => (
+                <li key={href} className="m-0">
+                  <Link
+                    href={href}
+                    className="inline-flex min-h-6 items-center px-0.5 text-[10px] font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <ul className="m-0 flex list-none justify-center gap-x-3 p-0">
+              {LEGAL_LINKS.slice(3).map(({ href, label }) => (
+                <li key={href} className="m-0">
+                  <Link
+                    href={href}
+                    className="inline-flex min-h-6 items-center px-0.5 text-[10px] font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <ul className="m-0 hidden list-none flex-row flex-wrap items-center justify-start gap-x-4 gap-y-0 p-0 sm:flex">
             {LEGAL_LINKS.map(({ href, label }) => (
               <li key={href} className="m-0">
                 <Link
                   href={href}
-                  className="inline-flex min-h-6 items-center px-0.5 text-[10px] font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation sm:min-h-7 sm:text-xs"
+                  className="inline-flex min-h-7 items-center px-0.5 text-xs font-medium text-foreground/80 hover:text-sage-700 hover:underline touch-manipulation"
                 >
                   {label}
                 </Link>
@@ -43,7 +69,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
         </nav>
 
         <p
-          className="m-0 flex shrink-0 flex-row flex-wrap items-center justify-center gap-x-1.5 text-xs leading-snug text-muted-foreground sm:justify-end sm:text-sm"
+          className="m-0 flex shrink-0 flex-row flex-wrap items-center justify-center gap-x-1.5 text-center text-xs leading-snug text-muted-foreground sm:justify-end sm:text-sm"
           title={tooltip}
         >
           <span>Popup Hub</span>

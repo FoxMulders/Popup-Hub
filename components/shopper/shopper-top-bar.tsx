@@ -74,7 +74,7 @@ export function ShopperTopBar({
         <CenteredHeaderRow
           left={
             <BrandLogoLockup
-              className="h-[4.025rem] w-auto max-h-[4.025rem] shrink-0 sm:h-[4.6rem] sm:max-h-[4.6rem] md:h-[5.175rem] md:max-h-none"
+              className="h-[2.5875rem] w-auto max-h-[2.5875rem] shrink-0 sm:h-[2.875rem] sm:max-h-[2.875rem]"
               href="/discover"
             />
           }
