@@ -9,6 +9,12 @@
 - **Regenerated:** `public/icons/*`, `app/icon.png`, `app/apple-icon.png`, favicons. SW cache bumped `v13` → `v14`.
 - **Verify:** Re-run `node scripts/process-logo.mjs` after logo source changes; smoke Add to Home Screen on iOS — roof peak fully visible (delete old shortcut first).
 
+## Active work — Google Maps API key / restrictions (local, not deployed)
+- **`lib/google-maps/config.ts`:** Documents required GCP APIs (Maps JavaScript, Places, Geocoding); central `getGoogleMapsBrowserApiKey()` accepts `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` or `GOOGLE_MAPS_API_KEY`.
+- **`next.config.ts`:** Injects `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` from `GOOGLE_MAPS_API_KEY` when only the latter is set on Vercel.
+- **Maps providers:** Load `places` + `marker` libraries on discover map, wizard Step 1, and event form.
+- **Verify:** GCP key restrictions include all three APIs + referrers `popuphub.ca`, `*.vercel.app`, `localhost`; smoke `/discover` map + `/coordinator/events/new` venue autocomplete.
+
 ## Active work — public landing logo + CTA cleanup (local, not deployed)
 - **`guest-nav.tsx` / `shopper-top-bar.tsx`:** Logo height aligned with signed-in `AppNav` (~41px mobile) — fixes oversized header on mobile landing.
 - **`popup-hub-logo.tsx`:** Reduced default `nav` and `auth` mark heights so auth screens no longer overlap CTAs.
