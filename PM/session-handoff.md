@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (Google OAuth PKCE callback fix, not deployed)
+## Shipped this session (Google OAuth PKCE callback fix, deployed 2026-06-12)
 - **`lib/supabase/client.ts`:** `detectSessionInUrl: false` — OAuth codes exchange only on the server at `/api/auth/callback` (avoids client/server race on `?code=`).
 - **`app/api/auth/callback/route.ts`:** Read PKCE verifier from `request.cookies`; attach session `Set-Cookie` headers directly on the redirect response (Next.js 15+ does not always propagate `cookies().set` onto redirects).
 - **`lib/supabase/middleware.ts`:** Skip session refresh on `/api/auth/callback` so middleware does not touch cookies before the code exchange.
@@ -561,8 +561,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `08e6663` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.0.0 build 97** | commit `08e6663` (handoff updated 2026-06-12 09:55)
+- Branch: `master` @ `4e41c44` (pushed to `origin/master`)
+- Last deploy commit: `4e41c44` - feat: Google OAuth PKCE callback fix
+- Production: https://popuphub.ca - **v1.0.0 build 94** | commit `800f114` (handoff updated 2026-06-12 10:00)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -939,7 +940,7 @@
 
 
 ## Last deploy
-- 2026-06-12 09:55 - Deploy via deploy-popuphub.ps1 (08e6663)
+- 2026-06-12 10:00 - Deploy via deploy-popuphub.ps1 - `feat: Google OAuth PKCE callback fix` (4e41c44)
 
 
 ## Goal
