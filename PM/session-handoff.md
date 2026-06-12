@@ -15,6 +15,12 @@
 - **`lib/supabase/middleware.ts`:** Skip session refresh on `/api/auth/callback` so middleware does not touch cookies before the code exchange.
 - **Verify:** `/login` → Continue with Google → lands signed in (no “PKCE code verifier not found” on `/login?error=auth_callback_failed`). Repeat after sign-out. If it still fails on a preview URL, add that origin to Supabase Auth redirect URLs.
 
+## Active work — physical overlap vs clearance buffer (local, not deployed)
+- **`interactions/geometry.ts`:** `placedObjectsOverlap` now tests drawable footprints only (no 3′ vendor probe expansion). New `placedObjectsClearanceOverlap` keeps buffer-aware checks for auto-arrange and `checkCollision`.
+- **`engine/auto-arrange.ts`:** Slot validation uses `placedObjectsClearanceOverlap` so auto-layout still enforces 6′ aisles.
+- **Root cause:** Red overlap chrome (`detectPlacedObjectOverlaps`) used clearance-expanded probes — staggered vendors flagged each other (and upstream booths) even when physical borders were several feet apart. Yellow/red aisle warnings (`minVendorBoothClearanceFt`) were already edge-to-edge and unchanged.
+- **Verify:** `npx tsx scripts/verify-object-overlaps.ts` — PASS. `npx tsx scripts/verify-vendor-booth-clearance.ts` — PASS. Smoke: staggered vendor layout — only booths whose rects actually touch show red overlap; tight-but-clear pairs show yellow/green via clearance toggle.
+
 ## Active work — middle-mouse grid pan (local, not deployed)
 - **`use-viewport.ts` / `use-canvas-pan-zoom.ts`:** Middle-button pan starts in pointer capture phase (before SVG/grid handlers), calls `preventDefault` + `stopPropagation`, and blocks browser autoscroll on `mousedown`/`auxclick`.
 - **`floor-plan-canvas.tsx`:** SVG pointer handler skips non-primary mouse buttons so dashboard grid pan is not swallowed.

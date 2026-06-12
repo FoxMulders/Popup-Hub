@@ -412,24 +412,10 @@ export function shouldSkipOverlapPair(
   return kinds.has('door') || kinds.has('emergency_exit')
 }
 
-/**
- * True when the rotated AABBs of `a` and `b` intersect with non-zero
- * area. Edge-touching (zero overlap) returns false.
- */
-export function placedObjectsOverlap(
-  a: PlacedObject,
-  b: PlacedObject,
-  ctx?: MergeOverlapContext
+function placedObjectsOverlapProbes(
+  probesA: ReadonlyArray<PlacedObject>,
+  probesB: ReadonlyArray<PlacedObject>
 ): boolean {
-  if (shouldSkipOverlapPair(a, b)) return false
-  if (ctx && isMergeOverlapExempt(a, b, ctx)) return false
-  const vendorCtx = ctx?.doc
-  const probesA = placementProbesForObject(
-    collisionProbeForObject(a, vendorCtx)
-  )
-  const probesB = placementProbesForObject(
-    collisionProbeForObject(b, vendorCtx)
-  )
   for (const pa of probesA) {
     for (const pb of probesB) {
       if (rectsOverlapPositiveArea(rotatedAabb(pa), rotatedAabb(pb))) {
@@ -438,6 +424,43 @@ export function placedObjectsOverlap(
     }
   }
   return false
+}
+
+/**
+ * True when drawable footprints intersect with non-zero area.
+ * Edge-touching (zero overlap) returns false. Does not expand vendor
+ * booths by the safety-buffer — use {@link placedObjectsClearanceOverlap}
+ * for auto-arrange and minimum-aisle placement gates.
+ */
+export function placedObjectsOverlap(
+  a: PlacedObject,
+  b: PlacedObject,
+  ctx?: MergeOverlapContext
+): boolean {
+  if (shouldSkipOverlapPair(a, b)) return false
+  if (ctx && isMergeOverlapExempt(a, b, ctx)) return false
+  return placedObjectsOverlapProbes(
+    placementProbesForObject(a),
+    placementProbesForObject(b)
+  )
+}
+
+/**
+ * True when clearance-expanded vendor probes intersect. Each vendor booth
+ * is padded by {@link VENDOR_BOOTH_CLEARANCE_FT} before the test.
+ */
+export function placedObjectsClearanceOverlap(
+  a: PlacedObject,
+  b: PlacedObject,
+  ctx?: MergeOverlapContext
+): boolean {
+  if (shouldSkipOverlapPair(a, b)) return false
+  if (ctx && isMergeOverlapExempt(a, b, ctx)) return false
+  const vendorCtx = ctx?.doc
+  return placedObjectsOverlapProbes(
+    placementProbesForObject(collisionProbeForObject(a, vendorCtx)),
+    placementProbesForObject(collisionProbeForObject(b, vendorCtx))
+  )
 }
 
 /**
@@ -477,13 +500,13 @@ export function placedObjectOverlapsAny(
   return false
 }
 
-/** Bounding-box collision with vendor 360° clearance expansion. */
+/** Minimum-aisle collision — vendor booths include the 360° safety buffer. */
 export function checkCollision(
   a: PlacedObject,
   b: PlacedObject,
   ctx?: MergeOverlapContext
 ): boolean {
-  return placedObjectsOverlap(a, b, ctx)
+  return placedObjectsClearanceOverlap(a, b, ctx)
 }
 
 export function findOverlapInMove(

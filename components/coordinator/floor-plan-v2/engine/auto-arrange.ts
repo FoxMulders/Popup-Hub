@@ -21,7 +21,7 @@ import type {
 } from '../state/types'
 import {
   collisionProbeForObject,
-  placedObjectsOverlap,
+  placedObjectsClearanceOverlap,
   rotatedAabb,
 } from '../interactions/geometry'
 import { objectFootprintAabb } from '../state/table-cluster-layout'
@@ -427,7 +427,7 @@ function placeBoothsAtSlots(
     const obstacleProbe = expandRectForClearance(placedRect, BOOTH_OBSTACLE_CLEARANCE_FT)
     if (obstacles.some((r) => aabbOverlap(obstacleProbe, r))) return false
     for (const placed of newBooths) {
-      if (placedObjectsOverlap(probeBooth, placed, overlapCtx)) return false
+      if (placedObjectsClearanceOverlap(probeBooth, placed, overlapCtx)) return false
     }
     return true
   }
@@ -556,7 +556,7 @@ function boothOverlapsPlaced(
         objectRoom: overlapDoc.objectRoom,
       }
     : undefined
-  return placed.some((p) => placedObjectsOverlap(booth, p, overlapCtx))
+  return placed.some((p) => placedObjectsClearanceOverlap(booth, p, overlapCtx))
 }
 
 function findStagingPosition(
@@ -592,7 +592,7 @@ function findStagingPosition(
     }
     if (obstacles.some((o) => aabbOverlap(rect, o))) return false
     const probe: BoothObject = { ...booth, x: rect.x, y: rect.y, rotation: 0 }
-    if (placedBooths.some((p) => placedObjectsOverlap(probe, p, overlapCtx))) {
+    if (placedBooths.some((p) => placedObjectsClearanceOverlap(probe, p, overlapCtx))) {
       return false
     }
     return true
@@ -1888,7 +1888,7 @@ export function validateClearances(
     for (let j = i + 1; j < booths.length; j++) {
       const a = booths[i]!
       const b = booths[j]!
-      if (placedObjectsOverlap(a, b, overlapCtx)) {
+      if (placedObjectsClearanceOverlap(a, b, overlapCtx)) {
         errors.push(`booths ${a.id} and ${b.id} overlap`)
       } else if (!isGuestTableBooth(a) && !isGuestTableBooth(b)) {
         if (

@@ -6,6 +6,7 @@
 
 import {
   checkCollision,
+  placedObjectsClearanceOverlap,
   placedObjectsOverlap,
 } from '../components/coordinator/floor-plan-v2/interactions/geometry'
 import {
@@ -73,25 +74,31 @@ assert(probe.height === 10, `height=${probe.height} expected 10`)
 assert(probe.x === -3, `x=${probe.x} expected -3`)
 assert(probe.y === -3, `y=${probe.y} expected -3`)
 
-// 7′ edge-to-edge gap → no probe overlap (6′ minimum + 1′ buffer)
+// 7′ edge-to-edge gap → no clearance probe overlap (6′ minimum + 1′ buffer)
 const a = vendor('a', 0, 0)
 const b = vendor('b', 13, 0)
 assert(
-  !placedObjectsOverlap(a, b, overlapCtx),
+  !placedObjectsClearanceOverlap(a, b, overlapCtx),
   '7′ edge gap should not collide (3′ buffer each side)'
 )
 
-// 5′ edge-to-edge gap → probes overlap (<6′ aisle)
+// 5′ edge-to-edge gap → clearance probes overlap (<6′ aisle)
 const c = vendor('c', 0, 0)
 const d = vendor('d', 11, 0)
 assert(
-  placedObjectsOverlap(c, d, overlapCtx),
+  placedObjectsClearanceOverlap(c, d, overlapCtx),
   '5′ edge gap should collide with 3′ buffers'
 )
 
 assert(
   checkCollision(c, d, overlapCtx),
-  'checkCollision should mirror placedObjectsOverlap'
+  'checkCollision should mirror placedObjectsClearanceOverlap'
+)
+
+// Physical footprints with 5′ gap do not overlap (buffer is visual-only)
+assert(
+  !placedObjectsOverlap(c, d, overlapCtx),
+  '5′ edge gap should not physically overlap'
 )
 
 // Wall-snapped top row: back buffer omitted on top edge

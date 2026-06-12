@@ -1,1 +1,1 @@
-feat: ship 22 session updates (middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; wizard venue template sync on venue pick; +18 more)
+feat: ship 23 session updates (physical overlap vs clearance buffer; middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; +19 more)

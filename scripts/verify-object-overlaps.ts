@@ -5,6 +5,7 @@
 import {
   detectPlacedObjectOverlaps,
   findOverlapInMove,
+  placedObjectsClearanceOverlap,
   placedObjectsOverlap,
 } from '../components/coordinator/floor-plan-v2/interactions/geometry'
 import type { PlacedObject } from '../components/coordinator/floor-plan-v2/state/types'
@@ -67,6 +68,36 @@ console.log('detectPlacedObjectOverlaps — static layout scan')
   const objects = [obj('a', 'booth', 0, 0), obj('b', 'stage', 2, 2), obj('c', 'booth', 20, 20)]
   const ids = detectPlacedObjectOverlaps(objects)
   expect('flags both overlapping ids', [...ids].sort(), ['a', 'b'])
+}
+
+console.log('placedObjectsOverlap — staggered vendors with 3′ buffers do not false-flag')
+{
+  function vendor(id: string, x: number, y: number): PlacedObject {
+    return {
+      id,
+      kind: 'booth',
+      x,
+      y,
+      width: 6,
+      height: 4,
+      rotation: 0,
+      accentColor: null,
+      tablePurpose: 'vendor',
+    }
+  }
+  const bottomLeft = vendor('bl', 0, 12)
+  const middle = vendor('mid', 8, 8)
+  const topLeft = vendor('top', 0, 0)
+  expect(
+    'staggered vendors are not physically overlapping',
+    detectPlacedObjectOverlaps([bottomLeft, middle, topLeft]).size,
+    0
+  )
+  expect(
+    'clearance probes still collide when aisles are tight',
+    placedObjectsClearanceOverlap(bottomLeft, middle),
+    true
+  )
 }
 
 console.log('findOverlapInMove — drag commit gate')
