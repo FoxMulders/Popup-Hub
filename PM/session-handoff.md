@@ -566,9 +566,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `bc53745` (pushed to `origin/master`)
-- Last deploy commit: `bc53745` - feat: deploy script auto-handoff
-- Production: https://popuphub.ca - **v1.0.0 build 95** | commit `8d19782` (handoff updated 2026-06-12 10:15)
+- Branch: `master` @ `1b655f2` (pushed to `origin/master`)
+- Last deploy commit: `1b655f2` - feat: ship 22 session updates (middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; wizard venue template sync on venue pick; +18 more)
+- Production: https://popuphub.ca - **v1.0.0 build 96** | commit `acf92cb` (handoff updated 2026-06-12 10:20)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -945,7 +945,7 @@
 
 
 ## Last deploy
-- 2026-06-12 10:15 - Deploy via deploy-popuphub.ps1 - `feat: deploy script auto-handoff` (bc53745)
+- 2026-06-12 10:20 - Deploy via deploy-popuphub.ps1 - `feat: ship 22 session updates (middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; wizard venue template sync on venue pick; +18 more)` (1b655f2)
 
 
 ## Goal
