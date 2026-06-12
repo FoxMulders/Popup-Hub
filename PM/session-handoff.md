@@ -4,6 +4,63 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — middle-mouse grid pan (local, not deployed)
+- **`use-viewport.ts` / `use-canvas-pan-zoom.ts`:** Middle-button pan starts in pointer capture phase (before SVG/grid handlers), calls `preventDefault` + `stopPropagation`, and blocks browser autoscroll on `mousedown`/`auxclick`.
+- **`floor-plan-canvas.tsx`:** SVG pointer handler skips non-primary mouse buttons so dashboard grid pan is not swallowed.
+- **`virtualized-layout-canvas.tsx` / `svg-layout-canvas.tsx`:** Wired `useCanvasPanZoom` on large 8′ grids; grab/grabbing cursor + hint copy.
+- **Verify:** `/coordinator/dashboard` and booth planner — middle-drag pans the grid; cursor shows grab/grabbing; no autoscroll icon.
+
+## Active work — dashboard canvas edge-to-edge grid (local, not deployed)
+- **`floor-plan-canvas.tsx`:** Command-center viewport uses `padFt = 0`, zero fit padding, transparent SVG (no white card shadow), stone-50 scroll host — grid fills the canvas with no letterboxing.
+- **`canvas-grid.tsx`:** Pattern tiles include stone-50 cell fill so aisle gaps show grid lines instead of bare SVG background.
+- **`use-layout-viewport.ts`:** `COMMAND_CENTER_FIT_PADDING = 0`.
+- **`floor-plan-v2.tsx`:** Dashboard canvas host background `bg-stone-50` to match grid.
+- **Verify:** `/coordinator/dashboard` — active room grid fills the canvas column edge-to-edge; no gray margin or floating white card around the grid.
+
+## Active work — wizard step scroll-to-top (local, not deployed)
+- **`lib/wizard/wizard-scroll-anchor.ts`:** Reset `.setup-wizard-body`, `#site-main`, and window on step change (setup pages scroll inside the body shell, not the window). Removed step-3 `scrollIntoView` to floor plan — always land at page top.
+- **`market-setup-wizard.tsx`:** `useEffect` on `currentStep` calls `resetWizardScrollAnchor` so reactive step changes (skip layout, missing event id) also scroll to top.
+- **Verify:** `/coordinator/events/new` — scroll down on Step 1, click Proceed → Step 2 opens at top; repeat Step 2 → Step 3; Back also resets scroll.
+
+## Active work — wizard venue template sync on venue pick (local, not deployed)
+- **`lib/booth-planner/edmonton-venue-registry.ts`:** `matchEdmontonVenuePreset()` — match Places/saved picks to Edmonton hall templates by coordinates (~200 m), street address, or venue name.
+- **`components/coordinator/market-setup-wizard.tsx`:** `syncVenueTemplateFromSelection()` updates the Venue Template dropdown + room preset when a venue is picked from autocomplete, saved-venue chips, or geocode — without overwriting the selected address/pin. Template dropdown still loads full location when chosen directly.
+- **`scripts/verify-edmonton-venue-match.ts`:** PASS (name, address, coords, unknown venue).
+- **Verify:** `/coordinator/events/new` — search and click “Kilkenny Community League” in venue name → Venue Template switches to Kilkenny; pick a non-registry venue → template resets to Blank; pick a saved venue chip → template follows stored/matched hall.
+
+## Active work — booth 3′ safety buffer + pathfinding aisle routing (local, not deployed)
+- **`lib/booth-planner/layout-clearance-constants.ts`:** `BOOTH_SAFETY_BUFFER_FT = 3.0` per side; `BOOTH_PAIR_MIN_EDGE_GAP_FT = 6.0` between physical borders; grid pitch `BOOTH_CORE_SEPARATION_CELLS = 6`.
+- **`lib/booth-planner/expanded-footprint.ts`:** Removed back-to-back clearance bypass; `validateBoothPlacementCoordinate` rejects any expanded-footprint intersection (3′ buffer each booth).
+- **`lib/floor-plan/deterministic-market-layout.ts`:** `BACK_TO_BACK_ROW_GAP_FT = 6′`; grid/stagger/perimeter slot loops use hard safety-barrier validator before accepting coordinates.
+- **`auto-arrange.ts`:** All vendor slot acceptance via `validateBoothAgainstPlaced`; `validateClearances` checks expanded footprints for vendor pairs; grid passes `tableEdgeGapFt: 6′`.
+- **`engine/PathfindingService.ts`:** Navigation grid marks each booth footprint + 3′ buffer as impassable (`MIN_CLEARANCE_FT`); paths route through green aisle bands only.
+- **Root cause:** Grid layout used `BACK_TO_BACK_ROW_GAP_FT = 0` and 1.5′ collision probes — booths packed flush back-to-back and A* cut through vendor squares.
+- **Verify:** `verify-vendor-booth-clearance.ts` — PASS. `verify-auto-arrange.ts` — 31/31. `verify-layout-pathfind.ts` — PASS (path stays in aisles). Smoke: auto-arrange grid room → no red clearance warnings on back-to-back pairs; patron path overlay avoids booth interiors.
+
+## Active work — patron pathfinding booth obstacle grid (local, not deployed)
+- **`engine/PathfindingService.ts`:** `buildNavigationGrid` now explicitly blocks every active layout booth (via `collectLayoutObstacles` + optional `booths` override); uses `objectFootprintAabb` for compound table clusters; two-pass carve (strict footprint, then `BOOTH_SAFETY_BUFFER_FT` aisle clearance) plus corner pinch guard; A* reads final `walkable[][]` so blocked cells drop graph edges implicitly.
+- **Root cause:** Grid obstacle pass used raw `rotatedAabb` and only `objectsInRoom` impassables — paths could clip through booth/table footprints not fully represented on the walkability grid.
+- **Verify:** `npx tsc --noEmit` — PASS. `npx tsx scripts/verify-layout-pathfind.ts` — PASS. Smoke: `/coordinator/dashboard` — enable patron path overlay on a packed room; dashed path stays in green aisle bands and does not cut through booth rects.
+
+## Active work — booth clearance coordinator warnings + toggle (local, not deployed)
+- **`lib/coordinator/booth-clearance-summary.ts` (new):** Per-doc clearance issue rollup + explanatory copy (yellow 3′–4′, red <3′ / ≤2′ critical).
+- **`lib/coordinator/booth-clearance-warnings-pref.ts` (new):** `localStorage` preference for clearance warning overlay (default on).
+- **`components/coordinator/booth-clearance-warning-panel.tsx` (new):** Legend-rail alert listing affected booths and how to disable warnings.
+- **`canvas-legend.tsx`:** Embeds warning panel when issues exist; legend copy clarifies ≤2′ critical red band.
+- **`floor-plan-v2.tsx`:** Toggle state, one-time toast when issues appear, passes `showClearanceWarnings` to canvas + toolbar.
+- **`canvas-command-bar-blocks.tsx` / `canvas-command-bar.tsx`:** Header triangle toggle (amber when on) beside patron flow.
+- **`canvas-objects.tsx` / `floor-plan-canvas.tsx`:** Yellow/red vendor booth tints gated by toggle.
+- **`dashboard-next-step-cta.tsx`:** Clearer blocked-step copy referencing color bands.
+- **Verify:** `npx tsc --noEmit` — pre-existing duplicate import in `auto-arrange.ts` only. Smoke: `/coordinator/dashboard` — place booths <4′ apart → yellow/red tints + legend alert; click triangle in header → tints and alert hide (preference persists).
+
+## Active work — perimeter + grid hard clearance validator (local, not deployed)
+- **`lib/booth-planner/expanded-footprint.ts`:** Central `validateBoothPlacementCoordinate` / `validateBoothAgainstPlaced` — 3′ wall inset, expanded footprint (width+6, length+6), back-to-back grid exception.
+- **`lib/booth-planner/layout-clearance-constants.ts`:** `MIN_CLEARANCE_FT = 3.0` (canonical).
+- **`auto-arrange.ts`:** All vendor slot acceptance uses expanded-footprint validator; grid `tableEdgeGapFt` = 6′; staging scan uses `perimeterStepFt`; `validateClearances` aligns vendor walls to 3′.
+- **`deterministic-market-layout.ts`:** Grid/perimeter slot loops use validator + 6′ column pitch for vendors (`VENDOR_TABLE_EDGE_GAP_FT`); patron tables keep 2′ default gap.
+- **`ai-auto-arrange.ts`:** AI prompt + `applyAiPlacementsToBooths` reject coordinates that fail the hard constraint.
+- **Verify:** `verify-deterministic-market-layout.ts` 10/10; `verify-auto-arrange.ts` 31/31.
+
 ## Shipped this session (sitemap build fix, deployed 2026-06-11)
 - **`lib/supabase/public.ts`:** Added `hasPublicSupabaseConfig()` helper.
 - **`lib/seo/collect-sitemap-entries.ts`:** Return static sitemap entries when `NEXT_PUBLIC_SUPABASE_*` is missing at build time — fixes Vercel preview `npm run build` failure on `/sitemap.xml`.
@@ -498,8 +555,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `1e5c437` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.0.0 build 94** | commit `1e5c437` (handoff updated 2026-06-11 20:58)
+- Branch: `master` @ `677a423` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.0.0 build 96** | commit `677a423` (handoff updated 2026-06-12 07:56)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -876,7 +933,7 @@
 
 
 ## Last deploy
-- 2026-06-11 20:58 - Deploy via deploy-popuphub.ps1 (1e5c437)
+- 2026-06-12 07:56 - Deploy via deploy-popuphub.ps1 (677a423)
 
 
 ## Goal
