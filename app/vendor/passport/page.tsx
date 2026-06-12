@@ -3,5 +3,5 @@ import { loadPassportPageData } from '@/lib/passport/load-passport-page'
 
 export default async function VendorPassportPage() {
   const data = await loadPassportPageData()
-  return <PassportPageView {...data} />
+  return <PassportPageView {...data} passportRoute="vendor" />
 }

@@ -45,6 +45,26 @@ interface PaymentSettingsState {
   }
 }
 
+const DEFAULT_PAYMENT_FLAGS: PaymentSettingsState['defaultEventPaymentFlags'] = {
+  accepts_credit_card: true,
+  accepts_etransfer: false,
+  accepts_cash: false,
+}
+
+const EMPTY_PAYMENT_SETTINGS: PaymentSettingsState = {
+  walletBalanceCents: 0,
+  walletBlocked: false,
+  walletGraceUntil: null,
+  balanceOwed: 0,
+  etransferPaymentEmail: null,
+  paymentInstructions: null,
+  offlinePaymentInstructions: null,
+  squareConnected: false,
+  stripeConnected: false,
+  stripeOnboardingComplete: false,
+  defaultEventPaymentFlags: { ...DEFAULT_PAYMENT_FLAGS },
+}
+
 interface PaymentMethodsFormProps {
   userId: string
   squareOauthUrl: string | null
@@ -67,19 +87,16 @@ export function PaymentMethodsForm({
   const searchParams = useSearchParams()
   const backHref = coordinatorNavBackHref(pathname)
   const backOnEvent = coordinatorEventIdFromPath(pathname) != null
-  const [settings, setSettings] = useState<PaymentSettingsState | null>(null)
+  const [settings, setSettings] = useState<PaymentSettingsState>(EMPTY_PAYMENT_SETTINGS)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, startSave] = useTransition()
   const [stripeLoading, setStripeLoading] = useState(false)
   const [topUpLoading, setTopUpLoading] = useState(false)
 
   const [etransferEmail, setEtransferEmail] = useState('')
   const [offlineInstructions, setOfflineInstructions] = useState('')
-  const [flags, setFlags] = useState({
-    accepts_credit_card: true,
-    accepts_etransfer: false,
-    accepts_cash: false,
-  })
+  const [flags, setFlags] = useState({ ...DEFAULT_PAYMENT_FLAGS })
 
   useEffect(() => {
     const stripeParam = searchParams.get('stripe')
@@ -95,16 +112,38 @@ export function PaymentMethodsForm({
 
   useEffect(() => {
     fetch('/api/coordinator/payment-settings')
-      .then((res) => res.json())
-      .then((data: PaymentSettingsState) => {
-        setSettings(data)
+      .then(async (res) => {
+        if (!res.ok) {
+          const json = (await res.json().catch(() => ({}))) as { error?: string }
+          throw new Error(json.error ?? 'Could not load payment settings')
+        }
+        return res.json() as Promise<PaymentSettingsState>
+      })
+      .then((data) => {
+        setSettings({
+          ...EMPTY_PAYMENT_SETTINGS,
+          ...data,
+          defaultEventPaymentFlags: {
+            ...DEFAULT_PAYMENT_FLAGS,
+            ...(data.defaultEventPaymentFlags ?? {}),
+          },
+        })
         setEtransferEmail(data.etransferPaymentEmail ?? '')
         setOfflineInstructions(
           data.paymentInstructions ?? data.offlinePaymentInstructions ?? ''
         )
-        setFlags(data.defaultEventPaymentFlags)
+        setFlags({
+          ...DEFAULT_PAYMENT_FLAGS,
+          ...(data.defaultEventPaymentFlags ?? {}),
+        })
+        setLoadError(null)
       })
-      .catch(() => toast.error('Could not load payment settings'))
+      .catch((err: unknown) => {
+        const message =
+          err instanceof Error ? err.message : 'Could not load payment settings'
+        setLoadError(message)
+        toast.error(message)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -164,12 +203,17 @@ export function PaymentMethodsForm({
     }
   }
 
-  if (loading || !settings) {
+  if (loading) {
     return <p className="text-sm text-muted-foreground">Loading payment settings…</p>
   }
 
   return (
     <div className="space-y-6">
+      {loadError ? (
+        <p className="rounded-lg border border-harvest-200 bg-harvest-50 px-3 py-2 text-sm text-harvest-900">
+          {loadError} You can still enter payment details below — save when ready.
+        </p>
+      ) : null}
       <Card className="border-emerald-200/80">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

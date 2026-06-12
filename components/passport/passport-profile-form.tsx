@@ -92,7 +92,7 @@ export function PassportProfileForm({ profile, existing }: PassportProfileFormPr
             <PassportSocialFields
               value={state.social}
               onChange={updateSocial}
-              idPrefix="coordinator-passport"
+              idPrefix={`${role}-passport`}
             />
 
             <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4 text-sm text-muted-foreground">

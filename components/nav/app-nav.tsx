@@ -92,7 +92,7 @@ export function AppNav({
         <CenteredHeaderRow
           left={
             <BrandLogoLockup
-              className="h-[2.5875rem] w-auto max-h-[2.5875rem] shrink-0 sm:h-[2.875rem] sm:max-h-[2.875rem]"
+              className="h-[4.65rem] w-auto max-h-[4.65rem] shrink-0 sm:h-[5.175rem] sm:max-h-[5.175rem]"
               href={homeHref}
             />
           }

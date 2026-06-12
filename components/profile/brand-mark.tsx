@@ -33,7 +33,7 @@ export function BrandMark({
   const resolvedSrc = resolveAnyPublicAssetUrl(src)
 
   const frameClass = cn(
-    'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-white p-1.5',
+    'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-white p-1',
     SIZE_STYLES[size],
     className
   )

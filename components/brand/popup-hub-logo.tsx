@@ -70,7 +70,7 @@ function LogoAnimationButton({
         // itself uses `preserveAspectRatio` to stay centred and
         // proportional, so visually it still reads as contained.
         'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
-        compact ? 'min-h-11 min-w-11 p-1.5' : 'min-h-11 min-w-[7rem] p-1',
+        compact ? 'min-h-11 min-w-11 p-0.5' : 'min-h-11 min-w-[7rem] p-0.5',
         className,
       )}
       aria-label={`${title} — play market animation`}
@@ -189,8 +189,8 @@ export function PopupHubIcon(props: PopupHubLogoProps) {
 type BrandLogoMarkSize = 'nav' | 'auth'
 
 const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
-  nav: 'h-[5.175rem] w-auto sm:h-[5.75rem]',
-  auth: 'h-40 w-auto sm:h-48',
+  nav: 'h-[6.2rem] w-auto sm:h-[6.9rem]',
+  auth: 'h-44 w-auto sm:h-48',
 }
 
 interface BrandLogoMarkProps {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowRight, IdCard, Loader2, User } from 'lucide-react'
 import type { Profile } from '@/types/database'
-import { PASSPORT_PATH } from '@/lib/passport/requirements'
+import { passportPathForProfile } from '@/lib/passport/requirements'
 
 interface ProfileFormProps {
   profile: Profile
@@ -109,7 +109,7 @@ export function ProfileForm({ profile, passportComplete = true }: ProfileFormPro
               Public brand details live on your passport, not here.
             </p>
           </div>
-          <Link href={PASSPORT_PATH}>
+          <Link href={passportPathForProfile(profile)}>
             <Button variant="outline" size="sm" className="gap-1.5 border-harvest-400 bg-white">
               <IdCard className="h-4 w-4" />
               Open passport

@@ -1,1 +1,1 @@
-feat: ship 30 session updates (dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; Step 2 venue inputs + canvas viewport + strict arrange; +26 more)
+feat: ship 31 session updates (vendor apply map, passport routing, logo, billing inputs; dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; +27 more)

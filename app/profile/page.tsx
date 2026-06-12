@@ -12,7 +12,7 @@ import { PurchaseHistory } from '@/components/shopper/purchase-history'
 import { AccountAccessPanel } from '@/components/profile/account-access-panel'
 import { AccountSecurityCard } from '@/components/profile/account-security-card'
 import { NotificationPreferencesGrid } from '@/components/profile/notification-preferences-grid'
-import { PASSPORT_PATH, passportCompletionSummary } from '@/lib/passport/requirements'
+import { passportCompletionSummary, passportPathForProfile } from '@/lib/passport/requirements'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, IdCard } from 'lucide-react'
@@ -48,6 +48,8 @@ export default async function ProfilePage() {
       ? await loadCoordinatorEscrowContext(supabase, user.id)
       : null
 
+  const passportHref = passportPathForProfile(profile as Profile)
+
   return (
     <div className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-6 xl:px-16">
         <div className="mb-10 flex flex-wrap items-start justify-between gap-4">
@@ -55,7 +57,7 @@ export default async function ProfilePage() {
             <h1 className="text-4xl font-bold text-foreground">Profile Settings</h1>
             <p className="mt-1.5 text-lg text-muted-foreground">Manage your account and notification preferences</p>
           </div>
-          <Link href={PASSPORT_PATH}>
+          <Link href={passportHref}>
             <Button className=" gap-2">
               <IdCard className="h-4 w-4" />
               My Passport
@@ -79,7 +81,7 @@ export default async function ProfilePage() {
 
           <aside className="space-y-6">
             <Link
-              href={PASSPORT_PATH}
+              href={passportHref}
               className="block rounded-2xl border bg-white p-6 transition hover:border-harvest-200 hover:shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">

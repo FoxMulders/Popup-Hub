@@ -24,7 +24,8 @@ import { isPassportReadyForApplication } from '@/lib/vendor/passport-application
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
-import type { Auction, Event, EventCategoryLimit } from '@/types/database'
+import { MarketApplicationLayoutView } from '@/components/events/market-application-layout-view'
+import type { Auction, BoothLayout, Event, EventCategoryLimit } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -38,8 +39,14 @@ export default async function VendorEventDetailPage({ params }: Props) {
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: event, error: eventError }, { data: existingApp, error: appError }, { data: eventAuctions }, { data: wallet }, { data: passport }] =
-    await Promise.all([
+  const [
+    { data: event, error: eventError },
+    { data: existingApp, error: appError },
+    { data: layoutRow },
+    { data: eventAuctions },
+    { data: wallet },
+    { data: passport },
+  ] = await Promise.all([
     supabase
       .from('events')
       .select(VENDOR_EVENT_SELECT)
@@ -48,10 +55,13 @@ export default async function VendorEventDetailPage({ params }: Props) {
       .maybeSingle(),
     supabase
       .from('booth_applications')
-      .select('id, status, payment_status, payment_method, application_payment_status, category_id, table_count')
+      .select(
+        'id, status, payment_status, payment_method, application_payment_status, category_id, table_count, booth_number'
+      )
       .eq('event_id', id)
       .eq('vendor_id', user.id)
       .maybeSingle(),
+    supabase.from('booth_layouts').select('*').eq('event_id', id).maybeSingle(),
     supabase
       .from('auctions')
       .select('*')
@@ -261,6 +271,20 @@ export default async function VendorEventDetailPage({ params }: Props) {
         </div>
       ) : null}
 
+      {!isQuarterAuction ? (
+        <MarketApplicationLayoutView
+          eventData={{
+            id: eventRecord.id,
+            name: eventRecord.name,
+            status: eventRecord.status,
+          }}
+          layoutId={(layoutRow as BoothLayout | null)?.id ?? null}
+          layout={(layoutRow as BoothLayout | null) ?? null}
+          highlightBoothNumber={existingApp?.booth_number ?? null}
+          className="rounded-2xl border bg-white p-6"
+        />
+      ) : null}
+
       <div id="your-application" className="scroll-mt-24 rounded-2xl border bg-white p-6">
         <h2 className="mb-3 text-lg font-semibold text-foreground">
           {existingApp ? 'Your application' : 'Apply for this market'}
@@ -297,7 +321,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
             <p className="mt-1 text-harvest-800/90">
               Add your business name and at least one category so organizers can review your fit.
             </p>
-            <Link href="/profile/passport" className="mt-3 inline-block">
+            <Link href="/vendor/passport" className="mt-3 inline-block">
               <Button size="sm" variant="outline" className="border-harvest-400 bg-white">
                 Set up passport
               </Button>

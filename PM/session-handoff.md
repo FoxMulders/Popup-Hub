@@ -4,6 +4,14 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — vendor apply map, passport routing, logo, billing inputs (local, not deployed)
+- **`market-application-layout-view.tsx`:** Role-agnostic venue preview (`eventData`, `layoutId`, `layout`) using `PublicFloorplan` + `layoutHasDrawableGeometry`.
+- **`app/vendor/events/[id]/page.tsx`:** Loads `booth_layouts`, renders layout preview above apply card; passport CTA → `/vendor/passport`.
+- **`passport-page-view.tsx` + routes:** `passportRoute` prop — `/vendor/passport` always shows vendor wizard; `/profile/passport` uses profile role. `passportPathForProfile()` for profile links.
+- **`popup-hub-logo.tsx` / `app-nav.tsx` / `brand-mark.tsx`:** Larger nav lockup (~20%), tighter logo shell padding (`p-0.5` / `p-1`).
+- **`payment-methods-form.tsx`:** Default settings seed so inputs stay editable when API fetch fails or returns partial data.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: vendor `/vendor/events/[id]` shows venue map when layout has booths; `/vendor/passport` shows vendor wizard for coordinator accounts; `/coordinator/payment-methods` e-Transfer field accepts typing after load.
+
 ## Active work — dual-screen toolbar + room-scoped canvas bounds (local, not deployed)
 - **`canvas-toolbar-static.tsx`:** `HeaderBarDualScreenCluster` restores visible **DUAL-SCREEN** section header with **Presenter** / **Wall Cast** buttons stacked beneath; header row uses `items-stretch` + `overflow-y-visible` so controls are not clipped.
 - **`canvas-command-bar-blocks.tsx`:** Dual-screen block always renders labeled buttons (no icon-only header mode).

@@ -2,6 +2,22 @@ import type { Profile, Role, VendorPassport } from '@/types/database'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
 
 export const PASSPORT_PATH = '/profile/passport'
+export const VENDOR_PASSPORT_PATH = '/vendor/passport'
+
+export type PassportRouteKind = 'vendor' | 'profile'
+
+/** Prefer the vendor portal route when the account sells at markets. */
+export function passportPathForProfile(profile: Pick<Profile, 'role'>): string {
+  return profile.role === 'vendor' ? VENDOR_PASSPORT_PATH : PASSPORT_PATH
+}
+
+export function shouldRenderVendorPassportWizard(
+  profile: Pick<Profile, 'role'>,
+  passportRoute: PassportRouteKind = 'profile'
+): boolean {
+  if (passportRoute === 'vendor') return true
+  return profile.role === 'vendor'
+}
 
 export type PassportField =
   | 'display_name'

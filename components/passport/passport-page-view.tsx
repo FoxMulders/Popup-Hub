@@ -7,25 +7,37 @@ import type { PassportPageData } from '@/lib/passport/load-passport-page'
 import {
   passportCompletionSummary,
   passportDescription,
-  passportTitle,
+  shouldRenderVendorPassportWizard,
+  type PassportRouteKind,
 } from '@/lib/passport/requirements'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
 
-export function PassportPageView({ profile, passport, categories, products }: PassportPageData) {
-  const isVendor = profile.role === 'vendor'
-  const completion = passportCompletionSummary(profile.role, passport, profile)
+interface PassportPageViewProps extends PassportPageData {
+  passportRoute?: PassportRouteKind
+}
 
-  if (isVendor) {
+export function PassportPageView({
+  profile,
+  passport,
+  categories,
+  products,
+  passportRoute = 'profile',
+}: PassportPageViewProps) {
+  const showVendorWizard = shouldRenderVendorPassportWizard(profile, passportRoute)
+  const completion = passportCompletionSummary(profile.role, passport, profile)
+  const storiesRole = showVendorWizard ? 'vendor' : profile.role
+
+  if (showVendorWizard) {
     return (
       <div className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 xl:px-10">
         <div className="mb-8 space-y-3">
           <Link
-            href="/profile"
+            href={passportRoute === 'vendor' ? '/vendor/dashboard' : '/profile'}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to profile
+            {passportRoute === 'vendor' ? 'Back to vendor dashboard' : 'Back to profile'}
           </Link>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-4xl font-bold text-foreground">
@@ -67,7 +79,7 @@ export function PassportPageView({ profile, passport, categories, products }: Pa
     <div className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 xl:px-10">
       <PassportProfileForm profile={profile} existing={passport} />
       <div className="mt-8">
-        <PassportStoriesManager ownerId={profile.id} role={profile.role} />
+        <PassportStoriesManager ownerId={profile.id} role={storiesRole} />
       </div>
     </div>
   )
