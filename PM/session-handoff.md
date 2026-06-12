@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — initial loader perimeter table stagger fix (local, not deployed)
+- **`components/brand/initial-loader-reveal.tsx`:** Side booths now use full 48px cell rows (was 24px half-step, which stacked 36px-tall tables and read as duplicates). Right column is vertically offset by half a cell from the left with opposite horizontal brick stagger; right-wall scale-in anchors on the inner (left) edge.
+- **Root cause:** `i * halfStep` vertical spacing placed consecutive side tables 12px apart vertically — overlapping footprints looked like duplicate stalls.
+- **Verify:** Hard refresh (clear `popup-hub-initial-loader-shown` in sessionStorage) — left/right columns show brick stagger without stacked duplicates; opposite walls are half-cell out of phase.
+
 ## Active work — middle-mouse grid pan (local, not deployed)
 - **`use-viewport.ts` / `use-canvas-pan-zoom.ts`:** Middle-button pan starts in pointer capture phase (before SVG/grid handlers), calls `preventDefault` + `stopPropagation`, and blocks browser autoscroll on `mousedown`/`auxclick`.
 - **`floor-plan-canvas.tsx`:** SVG pointer handler skips non-primary mouse buttons so dashboard grid pan is not swallowed.
