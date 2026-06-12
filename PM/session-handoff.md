@@ -620,9 +620,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `347a0f0` (pushed to `origin/master`)
-- Last deploy commit: `347a0f0` - feat: ship 26 session updates (wizard Step 3 auto seed + grid pack; wizard Step 2 single-column layout; publish blocked by server Geocoding key; booth validation: physical overlap vs boundary warnings; +22 more)
-- Production: https://popuphub.ca - **v1.0.0 build 103** | commit `0589506` (handoff updated 2026-06-12 13:17)
+- Branch: `master` @ `3d60f50` (pushed to `origin/master`)
+- Last deploy commit: `3d60f50` - feat: ship 30 session updates (dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; Step 2 venue inputs + canvas viewport + strict arrange; +26 more)
+- Production: https://popuphub.ca - **v1.0.0 build 104** | commit `54bea8f` (handoff updated 2026-06-12 13:43)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -999,7 +999,7 @@
 
 
 ## Last deploy
-- 2026-06-12 13:17 - Deploy via deploy-popuphub.ps1 - `feat: ship 26 session updates (wizard Step 3 auto seed + grid pack; wizard Step 2 single-column layout; publish blocked by server Geocoding key; booth validation: physical overlap vs boundary warnings; +22 more)` (347a0f0)
+- 2026-06-12 13:43 - Deploy via deploy-popuphub.ps1 - `feat: ship 30 session updates (dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; Step 2 venue inputs + canvas viewport + strict arrange; +26 more)` (3d60f50)
 
 
 ## Goal
