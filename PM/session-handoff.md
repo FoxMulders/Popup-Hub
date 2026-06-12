@@ -657,9 +657,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `a2bddd8` (pushed to `origin/master`)
-- Last deploy commit: `a2bddd8` - feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)
-- Production: https://popuphub.ca - **v1.0.0 build 107** | commit `5eb3d15` (handoff updated 2026-06-12 17:20)
+- Branch: `master` @ `d772d6d` (pushed to `origin/master`)
+- Last deploy commit: `d772d6d` - feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)
+- Production: https://popuphub.ca - **v1.0.0 build 108** | commit `8f3f5f4` (handoff updated 2026-06-12 17:27)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1036,7 +1036,7 @@
 
 
 ## Last deploy
-- 2026-06-12 17:20 - Deploy via deploy-popuphub.ps1 - `feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)` (a2bddd8)
+- 2026-06-12 17:27 - Deploy via deploy-popuphub.ps1 - `feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)` (d772d6d)
 
 
 ## Goal

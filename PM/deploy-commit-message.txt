@@ -1,1 +1,1 @@
-feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)
+feat: ship 35 session updates (initial loader booth ring layout; coordinator login home; dual-path coordinator community vouches; digital booth contracts; +31 more)
