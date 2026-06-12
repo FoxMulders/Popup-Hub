@@ -1,1 +1,1 @@
-feat: ship 23 session updates (physical overlap vs clearance buffer; middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; +19 more)
+feat: ship 24 session updates (publish blocked by server Geocoding key; physical overlap vs clearance buffer; middle-mouse grid pan; dashboard canvas edge-to-edge grid; +20 more)

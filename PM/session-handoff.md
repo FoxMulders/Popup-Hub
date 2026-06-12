@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — publish blocked by server Geocoding key (local, not deployed)
+- **Root cause:** Publish runs server-side venue verification via Geocoding REST API (`verify-venue-coordinates.ts`). Browser key (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`) has **Website** referrer restrictions — Vercel server requests have no matching referer → Google returns *"This API key is not authorized…"* and publish fails.
+- **Fix (GCP + Vercel):** Create a **second** API key: Application restrictions = **None** (or IP, not Websites); API restrictions = **Geocoding API** only. Set `GOOGLE_MAPS_SERVER_API_KEY` on Vercel production (+ preview), redeploy. Keep existing browser key for maps/Places with website restrictions unchanged.
+- **Code:** `verify-venue-coordinates.ts` now falls back to `GOOGLE_MAPS_API_KEY` (already on Vercel but was unused); clearer error when key has browser-only restrictions. `sync-vercel-env.ps1` + `PRODUCTION_NEXT_STEPS.md` document the two-key setup.
+- **Verify:** After server key + redeploy → draft market → Pre-Flight Review → Publish succeeds (no Google authorization toast).
+
 ## Shipped this session (deploy script auto-handoff, deployed 2026-06-12)
 - **`scripts/get-deploy-commit-message.ps1`:** Commit message from Shipped sections → Active work sections → `feat: ship local changes`; UTF-8 handoff read; fix empty-array return that blocked deploy.
 - **`scripts/deploy-popuphub.ps1`:** Deploy proceeds when uncommitted work exists (no manual Shipped section rename); clean tree with nothing undeployed → no-op only.

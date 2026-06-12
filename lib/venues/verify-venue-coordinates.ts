@@ -137,8 +137,11 @@ export async function verifyVenueCoordinates(
   const local = evaluateVenueCoordinatesLocally(input)
   if (local) return local
 
+  // Server-side Geocoding REST calls must use a key without HTTP referrer restrictions.
+  // Browser keys (NEXT_PUBLIC_*) are website-restricted and fail publish-time venue checks.
   const apiKey =
     process.env.GOOGLE_MAPS_SERVER_API_KEY?.trim() ||
+    process.env.GOOGLE_MAPS_API_KEY?.trim() ||
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
 
   if (!apiKey) {
@@ -173,12 +176,17 @@ export async function verifyVenueCoordinates(
   const data = (await res.json()) as GeocodeResponse
 
   if (data.status !== 'OK' || !data.results?.length) {
+    const googleMessage = data.error_message?.trim()
+    const reason =
+      googleMessage &&
+      /not authorized|referer|referrer|ip.*not authorized/i.test(googleMessage)
+        ? 'Venue verification failed: the server Maps API key is missing or uses browser-only website restrictions. In Google Cloud Console, create a separate key with Geocoding API enabled and no website referrer restrictions, then set GOOGLE_MAPS_SERVER_API_KEY on Vercel and redeploy.'
+        : (googleMessage ??
+          'Could not verify this location. Choose a named venue, park, or public space.')
     return {
       verified: false,
       status: 'rejected',
-      reason:
-        data.error_message ??
-        'Could not verify this location. Choose a named venue, park, or public space.',
+      reason,
       placeTypes: [],
     }
   }

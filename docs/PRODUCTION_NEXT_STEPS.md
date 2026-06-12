@@ -54,7 +54,8 @@ Use this checklist after pushing code to GitHub. Live site: [popup-hub.vercel.ap
 
 ### Optional (graceful skip if unset)
 
-- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` — map pins on discover
+- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` — browser Maps / Places (website referrer restrictions OK)
+- `GOOGLE_MAPS_SERVER_API_KEY` — server Geocoding for publish-time venue verification (**no** website restrictions; Geocoding API only). Falls back to `GOOGLE_MAPS_API_KEY`, then the public key.
 - `RESEND_API_KEY` — transactional email
 - `TWILIO_*` — SMS notifications
 - `STRIPE_*` — quarter-auction charity flow
