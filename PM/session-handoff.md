@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (sitemap build fix, not deployed)
+- **`lib/supabase/public.ts`:** Added `hasPublicSupabaseConfig()` helper.
+- **`lib/seo/collect-sitemap-entries.ts`:** Return static sitemap entries when `NEXT_PUBLIC_SUPABASE_*` is missing at build time — fixes Vercel preview `npm run build` failure on `/sitemap.xml`.
+- **Root cause:** Preview deployments lack Supabase env during static prerender; `createPublicSupabaseClient()` threw and aborted the build.
+- **Verify:** `npm run build` without `.env.local` — PASS (sitemap.xml prerenders with static URLs only).
+
 ## Active work — dashboard header uniform button sizing (local, not deployed)
 - **`globals.css`:** Header row controls (tabs, pill toggle, toolbar buttons) normalized to `--dashboard-toolbar-height`; `overflow-x: hidden` on command-center header.
 - **`dashboard-command-center-header.tsx`:** Tighter header gaps.
