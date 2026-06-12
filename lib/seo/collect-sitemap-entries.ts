@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { EXPERIENCE_THEME_CATALOG, experienceDesignerPath } from '@/lib/seo/experience-theme-metadata'
-import { createPublicSupabaseClient } from '@/lib/supabase/public'
+import { createPublicSupabaseClient, hasPublicSupabaseConfig } from '@/lib/supabase/public'
 import { publicAppUrl } from '@/lib/url/public-app-url'
 
 type SitemapEntry = MetadataRoute.Sitemap[number]
@@ -43,6 +43,10 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
         priority: 0.6,
       }),
     )
+  }
+
+  if (!hasPublicSupabaseConfig()) {
+    return entries
   }
 
   const supabase = createPublicSupabaseClient()
