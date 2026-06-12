@@ -4,6 +4,10 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — initial loader booth ring layout (local, not deployed)
+- **`components/brand/initial-loader-reveal.tsx`:** Top row shifted one booth cell right; side columns trimmed to alternating tiles (left keeps 1st/3rd/5th, right keeps 2nd/4th/6th) for 3×3 symmetry with top/bottom rows.
+- **Verify:** Reload app — initial loader shows 3 booths per side, top row offset right of bottom row.
+
 ## Active work — coordinator login home (local, not deployed)
 - **`app/coordinator/page.tsx` + `components/coordinator/coordinator-home.tsx`:** Post-login coordinator landing with **Create a new market** and **View your markets** cards.
 - **Redirects:** `getPortalHome('coordinator')`, `resolvePostLoginPath`, `accessDeniedRedirect`, dev mock login → `/coordinator`.

@@ -81,17 +81,22 @@ function buildPerimeterRing(): PerimeterRing {
   const sideStartY = topY + BOOTH_H + GAP
   const sideEndY = bottomY - GAP - BOOTH_H
   const sideUsable = sideEndY - sideStartY
-  const sideCount = Math.max(
-    1,
-    Math.floor((sideUsable - (CELL - BOOTH_H)) / halfStep) + 1,
+  const sideCount = Math.min(
+    6,
+    Math.max(
+      1,
+      Math.floor((sideUsable - (CELL - BOOTH_H)) / halfStep) + 1,
+    ),
   )
+  /** Top row sits one booth cell right of the centred slot so it lines up with the logo. */
+  const topShift = BOOTH_W + GAP
 
   const booths: BoothRect[] = []
   let delayStep = 0
 
   for (let i = 0; i < topCount; i++) {
     booths.push({
-      x: topRowX + i * (BOOTH_W + GAP),
+      x: topRowX + topShift + i * (BOOTH_W + GAP),
       y: topY,
       w: BOOTH_W,
       h: BOOTH_H,
@@ -101,22 +106,26 @@ function buildPerimeterRing(): PerimeterRing {
   for (let i = 0; i < sideCount; i++) {
     const stagger = i % 2 === 1 ? halfStep : 0
     const y = sideStartY + i * halfStep + (CELL - BOOTH_H)
-    booths.push({
-      x: leftX + stagger,
-      y,
-      w: BOOTH_W,
-      h: BOOTH_H,
-      delay: delayStep++ * 0.05,
-      wall: 'left',
-    })
-    booths.push({
-      x: rightX - stagger,
-      y,
-      w: BOOTH_W,
-      h: BOOTH_H,
-      delay: delayStep++ * 0.05,
-      wall: 'right',
-    })
+    if (i % 2 === 0) {
+      booths.push({
+        x: leftX + stagger,
+        y,
+        w: BOOTH_W,
+        h: BOOTH_H,
+        delay: delayStep++ * 0.05,
+        wall: 'left',
+      })
+    }
+    if (i % 2 === 1) {
+      booths.push({
+        x: rightX - stagger,
+        y,
+        w: BOOTH_W,
+        h: BOOTH_H,
+        delay: delayStep++ * 0.05,
+        wall: 'right',
+      })
+    }
   }
   for (let i = 0; i < topCount; i++) {
     booths.push({
