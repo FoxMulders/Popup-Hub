@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (sitemap build fix, not deployed)
+## Shipped this session (sitemap build fix, deployed 2026-06-11)
 - **`lib/supabase/public.ts`:** Added `hasPublicSupabaseConfig()` helper.
 - **`lib/seo/collect-sitemap-entries.ts`:** Return static sitemap entries when `NEXT_PUBLIC_SUPABASE_*` is missing at build time — fixes Vercel preview `npm run build` failure on `/sitemap.xml`.
 - **Root cause:** Preview deployments lack Supabase env during static prerender; `createPublicSupabaseClient()` threw and aborted the build.
@@ -498,9 +498,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `ce107af` (pushed to `origin/master`)
-- Last deploy commit: `ce107af` - feat: dashboard and floor-plan editor polish
-- Production: https://popuphub.ca - **v1.0.0 build 92** | commit `0813426` (handoff updated 2026-06-11 16:42)
+- Branch: `master` @ `19c2001` (pushed to `origin/master`)
+- Last deploy commit: `19c2001` - feat: sitemap build fix
+- Production: https://popuphub.ca - **v1.0.0 build 93** | commit `4c13fab` (handoff updated 2026-06-11 20:53)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -877,7 +877,7 @@
 
 
 ## Last deploy
-- 2026-06-11 16:42 - Deploy via deploy-popuphub.ps1 - `feat: dashboard and floor-plan editor polish` (ce107af)
+- 2026-06-11 20:53 - Deploy via deploy-popuphub.ps1 - `feat: sitemap build fix` (19c2001)
 
 
 ## Goal
