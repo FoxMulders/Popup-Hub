@@ -5,9 +5,9 @@
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
 ## Active work — PWA app icon roof clipping (local, not deployed)
-- **`scripts/process-logo.mjs`:** `opticallyCenterBuffer` now expands the canvas instead of clipping when the wordmark-heavy lockup shifts upward; `iconOnBackground` adds a safe inset so iOS home-screen icons keep the stall roof peak visible.
-- **Regenerated:** `public/icons/*`, `app/icon.png`, `app/apple-icon.png`, favicons.
-- **Verify:** Re-run `node scripts/process-logo.mjs` after logo source changes; smoke Add to Home Screen on iOS — roof peak fully visible inside rounded icon.
+- **`scripts/process-logo.mjs`:** `opticallyCenterBuffer` expands canvas instead of clipping when the lockup shifts up; `trimToSquare` adds 5% roof headroom; `iconOnBackground` uses 10% top safe inset for iOS home-screen masks.
+- **Regenerated:** `public/icons/*`, `app/icon.png`, `app/apple-icon.png`, favicons. SW cache bumped `v13` → `v14`.
+- **Verify:** Re-run `node scripts/process-logo.mjs` after logo source changes; smoke Add to Home Screen on iOS — roof peak fully visible (delete old shortcut first).
 
 ## Active work — public landing logo + CTA cleanup (local, not deployed)
 - **`guest-nav.tsx` / `shopper-top-bar.tsx`:** Logo height aligned with signed-in `AppNav` (~41px mobile) — fixes oversized header on mobile landing.
