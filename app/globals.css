@@ -1137,6 +1137,19 @@
     width: 100%;
   }
 
+  /* Embedded wizard — content-sized canvas hugs the grid vertically */
+  #floor-plan-workspace .floor-plan-canvas-host--content-sized {
+    flex: 0 0 auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  #floor-plan-workspace .floor-plan-canvas-host--content-sized > [role='application'],
+  #floor-plan-workspace [data-canvas-scroll-host='false'] {
+    height: auto;
+    overflow: visible;
+  }
+
   /* Canvas receives pointer events; decorative overlays must not block placement */
   #floor-plan-workspace .canvas-editor-root,
   #floor-plan-workspace .floor-plan-canvas-host,

@@ -226,11 +226,15 @@ export function FloorPlanCanvas({
   viewOnly = false,
   showClearanceWarnings = true,
 }: FloorPlanCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const clipViewportRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<SVGSVGElement>(null)
   const zoomForAnchorRef = useRef(1)
 
-  const padFt = commandCenterViewport
+  /** Edge-to-edge grid: no infinite pad; size the DOM to the grid footprint. */
+  const tightToGrid = commandCenterViewport || !scrollHost
+  const padFt = tightToGrid
     ? 0
     : Math.max(40, store.doc.canvasWidthFt, store.doc.canvasLengthFt)
 
@@ -352,7 +356,10 @@ export function FloorPlanCanvas({
           maxX: store.doc.canvasWidthFt,
           maxY: store.doc.canvasLengthFt,
         },
-        { padding: commandCenterViewport ? 0 : 0.08 }
+        {
+          padding: commandCenterViewport ? 0 : 0.08,
+          fillMode: commandCenterViewport ? 'cover' : 'contain',
+        }
       )
       return
     }
@@ -364,6 +371,7 @@ export function FloorPlanCanvas({
     )
     viewport.fitToBounds(bounds, {
       padding: commandCenterViewport ? 0 : 0.08,
+      fillMode: commandCenterViewport ? 'cover' : 'contain',
     })
   }, [
     activeRoomId,
@@ -397,9 +405,21 @@ export function FloorPlanCanvas({
     return () => observer.disconnect()
   }, [frameActiveRoom, scrollHost])
 
+  const clipToActiveRoom = !scrollHost && roomGridFrame != null
+
   const transform = useMemo(
-    () => ({ basePxPerFt, zoom: viewport.zoom }),
-    [basePxPerFt, viewport.zoom]
+    () => ({
+      basePxPerFt,
+      zoom: viewport.zoom,
+      surfaceOriginFtX: clipToActiveRoom ? roomGridFrame!.originX : 0,
+      surfaceOriginFtY: clipToActiveRoom ? roomGridFrame!.originY : 0,
+    }),
+    [
+      basePxPerFt,
+      clipToActiveRoom,
+      roomGridFrame,
+      viewport.zoom,
+    ]
   )
 
   const pointer = useCanvasPointer({
@@ -407,6 +427,7 @@ export function FloorPlanCanvas({
     toolState,
     scrollRef,
     surfaceRef,
+    clipViewportRef: clipToActiveRoom ? clipViewportRef : undefined,
     transform,
     panActive: viewport.panActive,
     onAfterDrawCommit,
@@ -673,11 +694,25 @@ export function FloorPlanCanvas({
   }, [editingObj, editingObjectId])
 
   const pxPerFt = transform.basePxPerFt * transform.zoom
-  const docWidthPx = store.doc.canvasWidthFt * pxPerFt
-  const docHeightPx = store.doc.canvasLengthFt * pxPerFt
+  const visibleWidthFt = clipToActiveRoom
+    ? roomGridFrame!.widthFt
+    : store.doc.canvasWidthFt
+  const visibleLengthFt = clipToActiveRoom
+    ? roomGridFrame!.lengthFt
+    : store.doc.canvasLengthFt
+  const docWidthPx = visibleWidthFt * pxPerFt
+  const docHeightPx = visibleLengthFt * pxPerFt
+  const svgWidthPx = store.doc.canvasWidthFt * pxPerFt
+  const svgHeightPx = store.doc.canvasLengthFt * pxPerFt
   const padPx = padFt * pxPerFt
   const totalWidthPx = docWidthPx + padPx * 2
   const totalHeightPx = docHeightPx + padPx * 2
+  const surfaceOffsetPx = clipToActiveRoom
+    ? {
+        left: -roomGridFrame!.originX * pxPerFt,
+        top: -roomGridFrame!.originY * pxPerFt,
+      }
+    : { left: tightToGrid ? 0 : padPx, top: tightToGrid ? 0 : padPx }
 
   const centeredForDimsRef = useRef<{ w: number; l: number } | null>(null)
   useLayoutEffect(() => {
@@ -712,16 +747,26 @@ export function FloorPlanCanvas({
 
   const ftAtClient = useCallback(
     (clientX: number, clientY: number) => {
+      const clipEl = clipToActiveRoom ? clipViewportRef.current : null
       const surface = surfaceRef.current
-      if (!surface) return { x: 0, y: 0 }
-      const rect = surface.getBoundingClientRect()
+      if (!clipEl && !surface) return { x: 0, y: 0 }
+      const rect = (clipEl ?? surface)!.getBoundingClientRect()
       const px = clientX - rect.left
       const py = clientY - rect.top
       const ratio = basePxPerFt * viewport.zoom
       if (ratio === 0) return { x: 0, y: 0 }
-      return { x: px / ratio, y: py / ratio }
+      return {
+        x: px / ratio + (transform.surfaceOriginFtX ?? 0),
+        y: py / ratio + (transform.surfaceOriginFtY ?? 0),
+      }
     },
-    [basePxPerFt, viewport.zoom]
+    [
+      basePxPerFt,
+      clipToActiveRoom,
+      transform.surfaceOriginFtX,
+      transform.surfaceOriginFtY,
+      viewport.zoom,
+    ]
   )
 
   const handleDragOver = useCallback(
@@ -758,40 +803,54 @@ export function FloorPlanCanvas({
 
   return (
     <div
-      id={FLOOR_PLAN_CANVAS_ID}
-      ref={scrollRef}
+      ref={containerRef}
       className={cn(
-        'canvas-container pointer-events-auto relative w-full min-w-0 max-w-full outline-none',
-        scrollHost && !commandCenterViewport && 'h-full overflow-auto bg-stone-100',
-        scrollHost && commandCenterViewport && 'h-full overflow-hidden scrollbar-none bg-stone-50',
+        'floor-plan-canvas-root relative min-h-0 min-w-0 w-full',
+        scrollHost ? 'h-full flex-1' : 'h-auto w-fit max-w-full',
         className
       )}
-      tabIndex={viewOnly ? -1 : 0}
-      role="application"
-      aria-label={viewOnly ? 'Floor plan preview' : 'Floor plan canvas viewport'}
-      style={{ touchAction: 'none', cursor }}
-      {...viewportPointerHandlers}
-      onWheelCapture={onViewportWheel}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
       <div
-        style={{
-          width: totalWidthPx,
-          height: totalHeightPx,
-          position: 'relative',
-        }}
+        id={FLOOR_PLAN_CANVAS_ID}
+        ref={scrollRef}
+        data-canvas-scroll-host={scrollHost ? 'true' : 'false'}
+        className={cn(
+          'canvas-container pointer-events-auto relative w-full min-w-0 max-w-full outline-none',
+          scrollHost && !commandCenterViewport && 'h-full overflow-auto bg-stone-100',
+          scrollHost &&
+            commandCenterViewport &&
+            'h-full overflow-hidden scrollbar-none bg-stone-50',
+          !scrollHost && 'h-auto overflow-visible bg-stone-100'
+        )}
+        tabIndex={viewOnly ? -1 : 0}
+        role="application"
+        aria-label={viewOnly ? 'Floor plan preview' : 'Floor plan canvas viewport'}
+        style={{ touchAction: 'none', cursor }}
+        {...viewportPointerHandlers}
+        onWheelCapture={onViewportWheel}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
-        <svg
-          ref={surfaceRef}
-          className="floor-plan-canvas-surface"
-          width={docWidthPx}
-          height={docHeightPx}
+        <div
+          ref={clipToActiveRoom ? clipViewportRef : undefined}
+          className={cn(!scrollHost && 'w-fit')}
           style={{
-            position: 'absolute',
-            left: padPx,
-            top: padPx,
-            display: 'block',
+            width: totalWidthPx,
+            height: totalHeightPx,
+            position: 'relative',
+            overflow: clipToActiveRoom ? 'hidden' : undefined,
+          }}
+        >
+          <svg
+            ref={surfaceRef}
+            className="floor-plan-canvas-surface"
+            width={clipToActiveRoom ? svgWidthPx : docWidthPx}
+            height={clipToActiveRoom ? svgHeightPx : docHeightPx}
+            style={{
+              position: clipToActiveRoom || !tightToGrid ? 'absolute' : 'relative',
+              left: surfaceOffsetPx.left,
+              top: surfaceOffsetPx.top,
+              display: 'block',
             pointerEvents: 'auto',
             zIndex: 1,
             background: commandCenterViewport ? 'transparent' : '#fafaf9',
@@ -960,6 +1019,7 @@ export function FloorPlanCanvas({
             />
           ) : null}
         </svg>
+        </div>
       </div>
     </div>
   )

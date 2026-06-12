@@ -73,11 +73,12 @@ export function WizardStepCapacity({
         </span>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="flex w-full flex-col items-center gap-4">
         <WizardZone
           id="wizard-zone-capacity-floor"
           title="Physical &amp; pricing setup"
           subtitle="Floor dimensions, booth capacity, and market-wide table pricing."
+          className="mx-auto w-full max-w-4xl"
         >
           {!skipVenueLayout ? (
             <>
@@ -121,7 +122,7 @@ export function WizardStepCapacity({
                 <h4 className="text-sm font-heading font-semibold text-forest">Quarter auction</h4>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Booth fees are set per vendor during the live auction — no market-wide table price.
-                  Configure category caps on the right.
+                  Configure category caps below.
                 </p>
               </div>
             )}
@@ -132,6 +133,7 @@ export function WizardStepCapacity({
           id="wizard-zone-capacity-categories"
           title="Inventory &amp; category limits"
           subtitle="Apply suggested caps from your floor, then assign booth limits by vendor type."
+          className="mx-auto w-full max-w-4xl"
         >
           {!skipVenueLayout ? (
             <SmartPopulateBoothCaps

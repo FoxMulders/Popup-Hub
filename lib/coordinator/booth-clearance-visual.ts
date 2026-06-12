@@ -107,6 +107,54 @@ export function clearanceBand(clearanceFt: number): BoothClearanceBand {
   return 'critical'
 }
 
+/**
+ * Shortest edge-to-edge gap to room walls and structural fixtures only.
+ * Vendor-to-vendor spacing is intentionally excluded — aisle tightness
+ * is not a boundary violation and must not tint booths yellow/red.
+ */
+export function minVendorBoothBoundaryClearanceFt(
+  booth: BoothObject,
+  objects: ReadonlyArray<PlacedObject>,
+  rooms: ReadonlyArray<RoomFrame> | undefined,
+  objectRoom: FloorPlanDoc['objectRoom']
+): number {
+  const boothAabb = boothPlacementRect(booth)
+  let minGap = Number.POSITIVE_INFINITY
+
+  for (const other of objects) {
+    if (other.id === booth.id) continue
+    const obstacleGap = obstacleClearanceFt(boothAabb, other)
+    if (obstacleGap != null && obstacleGap < minGap) minGap = obstacleGap
+  }
+
+  const roomId = objectRoom?.[booth.id]
+  const room = roomId ? rooms?.find((r) => r.id === roomId) : undefined
+  if (room) {
+    const wallGap = clearanceToRoomWallsFt(boothAabb, room)
+    if (wallGap < minGap) minGap = wallGap
+  }
+
+  if (!Number.isFinite(minGap)) return BOOTH_CLEARANCE_GOOD_FT
+  return Math.max(0, minGap)
+}
+
+/** Yellow when a real boundary is tight; green when walls/fixtures are clear. */
+export function vendorBoothBoundaryWarningBand(
+  booth: BoothObject,
+  objects: ReadonlyArray<PlacedObject>,
+  rooms: ReadonlyArray<RoomFrame> | undefined,
+  objectRoom: FloorPlanDoc['objectRoom']
+): BoothClearanceBand {
+  const minFt = minVendorBoothBoundaryClearanceFt(
+    booth,
+    objects,
+    rooms,
+    objectRoom
+  )
+  if (minFt >= BOOTH_CLEARANCE_GOOD_FT) return 'good'
+  return 'tight'
+}
+
 /** Clearance theme for a vendor booth probe during draw/hover preview. */
 export function vendorBoothClearanceThemeForProbe(
   probe: BoothObject,
@@ -119,13 +167,13 @@ export function vendorBoothClearanceThemeForProbe(
     previewRoomId != null
       ? { ...(objectRoom ?? {}), [probe.id]: previewRoomId }
       : objectRoom
-  const minFt = minVendorBoothClearanceFt(
+  const band = vendorBoothBoundaryWarningBand(
     probe,
     objects,
     rooms,
     objectRoomWithProbe
   )
-  return BOOTH_CLEARANCE_THEMES[clearanceBand(minFt)]
+  return BOOTH_CLEARANCE_THEMES[band]
 }
 
 /** Drawable booth footprint — edge-to-edge aisle, not collision probe padding. */
@@ -183,13 +231,16 @@ export function docHasUnresolvedClearanceIssues(doc: FloorPlanDoc): boolean {
     const booth = obj as BoothObject
     if (isGuestTableBooth(booth)) continue
     if (!isVendorBoothObject(booth)) continue
-    const minFt = minVendorBoothClearanceFt(
-      booth,
-      doc.objects,
-      rooms,
-      doc.objectRoom
-    )
-    if (clearanceBand(minFt) !== 'good') return true
+    if (
+      vendorBoothBoundaryWarningBand(
+        booth,
+        doc.objects,
+        rooms,
+        doc.objectRoom
+      ) !== 'good'
+    ) {
+      return true
+    }
   }
   return false
 }

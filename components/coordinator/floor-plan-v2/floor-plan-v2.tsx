@@ -2772,7 +2772,14 @@ function FloorPlanV2Workspace({
                 showClearanceWarnings={showClearanceWarnings}
                 onClearanceWarningsToggle={handleClearanceWarningsToggle}
               />
-              <div className="floor-plan-canvas-host relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded-lg border border-stone-200 bg-stone-100">
+              <div
+                className={cn(
+                  'floor-plan-canvas-host relative flex min-h-0 min-w-0 flex-col rounded-lg border border-stone-200 bg-stone-100',
+                  isEmbedded
+                    ? 'floor-plan-canvas-host--content-sized h-auto shrink-0 overflow-visible'
+                    : 'h-full flex-1 overflow-auto'
+                )}
+              >
                 <CanvasRootErrorBoundary
                   onReset={() => {
                     logState('Canvas error boundary: reset triggered')
@@ -2783,7 +2790,11 @@ function FloorPlanV2Workspace({
                   }}
                 >
                   <LayoutCanvas
-                    className="absolute inset-0 min-h-0 max-w-full"
+                    className={
+                      isEmbedded
+                        ? 'relative min-h-0 w-full max-w-full'
+                        : 'absolute inset-0 min-h-0 max-w-full'
+                    }
                     scrollHost={!isEmbedded}
                     layoutSpringPoses={layoutSpringPoses}
                     store={store}

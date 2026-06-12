@@ -32,8 +32,7 @@ import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { fitTextInContainer, wrapTextInContainer } from './canvas-label-text'
 import {
   BOOTH_CLEARANCE_THEMES,
-  clearanceBand,
-  minVendorBoothClearanceFt,
+  vendorBoothBoundaryWarningBand,
 } from '@/lib/coordinator/booth-clearance-visual'
 import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 import type { FloorPlanDoc } from '../state/types'
@@ -561,13 +560,12 @@ function CanvasObjectsBase({
           isVendorBoothObject(obj) &&
           !isOverlapping
         ) {
-          const minFt = minVendorBoothClearanceFt(
+          const band = vendorBoothBoundaryWarningBand(
             obj as BoothObject,
             objects,
             rooms,
             objectRoom
           )
-          const band = clearanceBand(minFt)
           const theme = BOOTH_CLEARANCE_THEMES[band]
           fill = theme.fill
           clearanceStroke = theme.stroke

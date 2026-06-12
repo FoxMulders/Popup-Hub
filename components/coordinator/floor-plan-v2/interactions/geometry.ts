@@ -51,6 +51,9 @@ export interface ViewportTransform {
   basePxPerFt: number
   /** Current zoom factor. */
   zoom: number
+  /** When the visible surface is clipped to a room, offset px→ft mapping. */
+  surfaceOriginFtX?: number
+  surfaceOriginFtY?: number
 }
 
 export function pxPerFt(t: ViewportTransform): number {

@@ -2,11 +2,12 @@ import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
 import type { BoothObject, FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
-  BOOTH_CLEARANCE_CRITICAL_FT,
   BOOTH_CLEARANCE_GOOD_FT,
   BOOTH_CLEARANCE_TIGHT_FT,
   clearanceBand,
+  minVendorBoothBoundaryClearanceFt,
   minVendorBoothClearanceFt,
+  vendorBoothBoundaryWarningBand,
   type BoothClearanceBand,
 } from '@/lib/coordinator/booth-clearance-visual'
 
@@ -23,7 +24,7 @@ export interface DocClearanceSummary {
   issues: BoothClearanceIssueRow[]
 }
 
-/** Per-booth clearance bands for vendor booths on the doc. */
+/** Per-booth boundary clearance bands for vendor booths on the doc. */
 export function summarizeDocClearanceIssues(doc: FloorPlanDoc): DocClearanceSummary {
   const rooms = doc.rooms ?? []
   const issues: BoothClearanceIssueRow[] = []
@@ -34,13 +35,18 @@ export function summarizeDocClearanceIssues(doc: FloorPlanDoc): DocClearanceSumm
     if (isGuestTableBooth(booth)) continue
     if (!isVendorBoothObject(booth)) continue
 
-    const minFt = minVendorBoothClearanceFt(
+    const minFt = minVendorBoothBoundaryClearanceFt(
       booth,
       doc.objects,
       rooms,
       doc.objectRoom
     )
-    const band = clearanceBand(minFt)
+    const band = vendorBoothBoundaryWarningBand(
+      booth,
+      doc.objects,
+      rooms,
+      doc.objectRoom
+    )
     if (band === 'good') continue
 
     issues.push({
@@ -62,6 +68,14 @@ export function summarizeDocClearanceIssues(doc: FloorPlanDoc): DocClearanceSumm
   }
 }
 
+/** Aisle gap between two vendor booths (informational — not a boundary violation). */
+export function vendorBoothAisleClearanceFt(
+  booth: BoothObject,
+  objects: ReadonlyArray<PlacedObject>
+): number {
+  return minVendorBoothClearanceFt(booth, objects, undefined, {})
+}
+
 export function formatClearanceFeet(minFt: number): string {
   if (!Number.isFinite(minFt)) return '—'
   const rounded = Math.round(minFt * 10) / 10
@@ -69,14 +83,14 @@ export function formatClearanceFeet(minFt: number): string {
 }
 
 export const BOOTH_CLEARANCE_WARNING_EXPLANATION = {
-  title: 'Booth aisle clearance',
+  title: 'Booth boundary clearance',
   intro:
-    'Vendor booths are tinted by the shortest edge-to-edge gap to another vendor booth or to walls, stages, and doors.',
+    'Vendor booths are tinted when they sit too close to room walls, stages, doors, or other structural fixtures. Neighbouring vendor spacing is not flagged here — only real boundary conflicts.',
   yellow:
-    `Yellow (tight): ${BOOTH_CLEARANCE_TIGHT_FT}′–${BOOTH_CLEARANCE_GOOD_FT - 1}′ clearance — shoppers can squeeze through, but aim for ${BOOTH_CLEARANCE_GOOD_FT}′ before publishing.`,
+    `Yellow (warning): less than ${BOOTH_CLEARANCE_GOOD_FT}′ to a wall or fixture — move the booth inward or away from the obstacle.`,
   red:
-    `Red (critical): less than ${BOOTH_CLEARANCE_TIGHT_FT}′ clearance (${BOOTH_CLEARANCE_CRITICAL_FT}′ or less is especially tight) — move the booth or widen the aisle.`,
-  green: `Green (ideal): ${BOOTH_CLEARANCE_GOOD_FT}′ or more — comfortable two-way patron traffic.`,
+    'Red (overlap): booth footprints physically intersect another object — separate the booths until their borders no longer touch.',
+  green: `Green (ideal): ${BOOTH_CLEARANCE_GOOD_FT}′ or more from every boundary — comfortable placement.`,
   toggleHint:
-    'Hide yellow/red booth tints and this alert from the header toolbar — click the clearance warnings button (triangle icon) next to patron flow.',
+    'Hide yellow/green booth tints and this alert from the header toolbar — click the clearance warnings button (triangle icon) next to patron flow.',
 } as const

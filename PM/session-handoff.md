@@ -4,6 +4,10 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — wizard Step 2 single-column layout (local, not deployed)
+- **`wizard-step-capacity.tsx`:** Capacity & pricing step — **Physical & pricing setup** and **Inventory & category limits** stacked in a centered single column (`flex flex-col items-center w-full`); each `WizardZone` uses `w-full max-w-4xl mx-auto`. Quarter-auction copy updated ("below" vs "on the right").
+- **Verify:** `/coordinator/events/new` → Step 2 — both cards centered, full width up to `max-w-4xl`, physical/pricing card above inventory/limits.
+
 ## Active work — publish blocked by server Geocoding key (local, not deployed)
 - **Root cause:** Publish runs server-side venue verification via Geocoding REST API (`verify-venue-coordinates.ts`). Browser key (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`) has **Website** referrer restrictions — Vercel server requests have no matching referer → Google returns *"This API key is not authorized…"* and publish fails.
 - **Fix (GCP + Vercel):** Create a **second** API key: Application restrictions = **None** (or IP, not Websites); API restrictions = **Geocoding API** only. Set `GOOGLE_MAPS_SERVER_API_KEY` on Vercel production (+ preview), redeploy. Keep existing browser key for maps/Places with website restrictions unchanged.
@@ -33,12 +37,12 @@
 - **`virtualized-layout-canvas.tsx` / `svg-layout-canvas.tsx`:** Wired `useCanvasPanZoom` on large 8′ grids; grab/grabbing cursor + hint copy.
 - **Verify:** `/coordinator/dashboard` and booth planner — middle-drag pans the grid; cursor shows grab/grabbing; no autoscroll icon.
 
-## Active work — dashboard canvas edge-to-edge grid (local, not deployed)
-- **`floor-plan-canvas.tsx`:** Command-center viewport uses `padFt = 0`, zero fit padding, transparent SVG (no white card shadow), stone-50 scroll host — grid fills the canvas with no letterboxing.
-- **`canvas-grid.tsx`:** Pattern tiles include stone-50 cell fill so aisle gaps show grid lines instead of bare SVG background.
-- **`use-layout-viewport.ts`:** `COMMAND_CENTER_FIT_PADDING = 0`.
-- **`floor-plan-v2.tsx`:** Dashboard canvas host background `bg-stone-50` to match grid.
-- **Verify:** `/coordinator/dashboard` — active room grid fills the canvas column edge-to-edge; no gray margin or floating white card around the grid.
+## Active work — floor plan canvas tight grid sizing (local, not deployed)
+- **`floor-plan-canvas.tsx`:** `tightToGrid` mode (`commandCenterViewport` or `scrollHost=false`) drops infinite `padFt`; outer wrapper is `h-auto` when content-sized; embedded wizard clips to active room grid (`widthFt × lengthFt`) with overflow hidden; pointer mapping uses clip viewport + `surfaceOriginFt`.
+- **`use-viewport.ts`:** `fitToBounds` supports `fillMode: 'cover'` for command-center framing (fills height, no top/bottom letterboxing on wide rooms).
+- **`floor-plan-v2.tsx` + `globals.css`:** Embedded wizard host uses `floor-plan-canvas-host--content-sized` (`h-auto`, no `absolute inset-0` stretch).
+- **`use-canvas-pointer.ts` / `geometry.ts`:** Optional `clipViewportRef` + `surfaceOriginFt` on `ViewportTransform` for clipped content-sized canvas.
+- **Verify:** `/coordinator/dashboard` — grid fills canvas column edge-to-edge vertically on wide rooms. `/coordinator/events/new` Step 3 (embedded) — canvas wrapper height matches room grid with no stone dead space above/below.
 
 ## Active work — wizard step scroll-to-top (local, not deployed)
 - **`lib/wizard/wizard-scroll-anchor.ts`:** Reset `.setup-wizard-body`, `#site-main`, and window on step change (setup pages scroll inside the body shell, not the window). Removed step-3 `scrollIntoView` to floor plan — always land at page top.

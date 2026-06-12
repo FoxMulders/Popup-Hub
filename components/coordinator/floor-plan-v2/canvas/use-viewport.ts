@@ -102,7 +102,12 @@ export interface ViewportApi extends ViewportState {
    */
   fitToBounds: (
     bounds: { minX: number; minY: number; maxX: number; maxY: number },
-    options?: { padding?: number; paddingPx?: number }
+    options?: {
+      padding?: number
+      paddingPx?: number
+      /** `cover` fills the viewport (may crop); default `contain` letterboxes. */
+      fillMode?: 'contain' | 'cover'
+    }
   ) => number | undefined
   /**
    * Like `fitToBounds`, but picks zoom by stepping down from `zoomMax`
@@ -429,7 +434,11 @@ export function useViewport(options: UseViewportOptions): ViewportApi {
 
       const zoomForWidth = usableW / (widthFt * math.basePxPerFt)
       const zoomForHeight = usableH / (heightFt * math.basePxPerFt)
-      const targetZoom = clamp(Math.min(zoomForWidth, zoomForHeight))
+      const targetZoom = clamp(
+        options?.fillMode === 'cover'
+          ? Math.max(zoomForWidth, zoomForHeight)
+          : Math.min(zoomForWidth, zoomForHeight)
+      )
 
       const newPxPerFt = math.basePxPerFt * targetZoom
       const centerXFt = (bounds.minX + bounds.maxX) / 2

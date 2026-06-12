@@ -94,6 +94,8 @@ interface UseCanvasPointerOptions {
   toolState: ToolState
   scrollRef: RefObject<HTMLElement | null>
   surfaceRef: RefObject<SVGSVGElement | null>
+  /** When set, pointer coords use this clip box instead of the SVG rect. */
+  clipViewportRef?: RefObject<HTMLElement | null>
   transform: ViewportTransform
   /**
    * When true the canvas's own pointer pipeline yields to whatever
@@ -424,8 +426,15 @@ export interface CanvasPointerApi {
 export function useCanvasPointer(
   options: UseCanvasPointerOptions
 ): CanvasPointerApi {
-  const { store, toolState, scrollRef, surfaceRef, transform, panActive } =
-    options
+  const {
+    store,
+    toolState,
+    scrollRef,
+    surfaceRef,
+    clipViewportRef,
+    transform,
+    panActive,
+  } = options
   const { addLog } = useDebugLog()
   const addLogRef = useRef(addLog)
   useEffect(() => {
@@ -593,7 +602,8 @@ export function useCanvasPointer(
       const surface = surfaceRef.current
       const scroll = scrollRef.current
       if (!surface || !scroll) return { x: 0, y: 0 }
-      const rect = surface.getBoundingClientRect()
+      const clipEl = clipViewportRef?.current
+      const rect = (clipEl ?? surface).getBoundingClientRect()
       // The SVG element renders at the scaled (zoomed) size already. Its
       // client rect is the viewport position; client coords minus that
       // origin gives us a position inside the surface in pixels.
@@ -601,9 +611,20 @@ export function useCanvasPointer(
       const py = clientY - rect.top
       const ratio = transform.basePxPerFt * transform.zoom
       if (ratio === 0) return { x: 0, y: 0 }
-      return { x: px / ratio, y: py / ratio }
+      return {
+        x: px / ratio + (transform.surfaceOriginFtX ?? 0),
+        y: py / ratio + (transform.surfaceOriginFtY ?? 0),
+      }
     },
-    [scrollRef, surfaceRef, transform.basePxPerFt, transform.zoom]
+    [
+      clipViewportRef,
+      scrollRef,
+      surfaceRef,
+      transform.basePxPerFt,
+      transform.surfaceOriginFtX,
+      transform.surfaceOriginFtY,
+      transform.zoom,
+    ]
   )
 
   const beginDrag = useCallback(
