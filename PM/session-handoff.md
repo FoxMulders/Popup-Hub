@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — public landing logo + CTA cleanup (local, not deployed)
+- **`guest-nav.tsx` / `shopper-top-bar.tsx`:** Logo height aligned with signed-in `AppNav` (~41px mobile) — fixes oversized header on mobile landing.
+- **`popup-hub-logo.tsx`:** Reduced default `nav` and `auth` mark heights so auth screens no longer overlap CTAs.
+- **`landing-audience-nav.tsx`:** Hero CTAs now **Browse markets** `or` **Sign in** (with literal “or” between buttons).
+- **`public-landing.tsx`:** Removed redundant “For shoppers / vendors / organizers” audience cards below the hero.
+- **Verify:** Smoke `/` logged out — compact header logo; hero shows browse + or + sign in; no audience cards below fold.
+
 ## Active work — dashboard header uniform button sizing (local, not deployed)
 - **`globals.css`:** Header row controls (tabs, pill toggle, toolbar buttons) normalized to `--dashboard-toolbar-height`; `overflow-x: hidden` on command-center header.
 - **`dashboard-command-center-header.tsx`:** Tighter header gaps.
