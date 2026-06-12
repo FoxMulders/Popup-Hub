@@ -144,15 +144,25 @@ async function opticallyCenterBuffer(buffer) {
   const left = Math.round(meta.width / 2 - cx)
   const top = Math.round(meta.height / 2 - cy)
 
+  // Expand the canvas when the optical shift would clip artwork (e.g. stall roof peak).
+  const minX = Math.min(0, left)
+  const minY = Math.min(0, top)
+  const maxX = Math.max(meta.width, left + meta.width)
+  const maxY = Math.max(meta.height, top + meta.height)
+  const outWidth = maxX - minX
+  const outHeight = maxY - minY
+  const compositeLeft = left - minX
+  const compositeTop = top - minY
+
   return sharp({
     create: {
-      width: meta.width,
-      height: meta.height,
+      width: outWidth,
+      height: outHeight,
       channels: 4,
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   })
-    .composite([{ input: buffer, left, top }])
+    .composite([{ input: buffer, left: compositeLeft, top: compositeTop }])
     .png()
     .toBuffer()
 }
@@ -246,18 +256,56 @@ async function extractIconMark() {
 
 async function iconOnBackground(iconBuffer, size, background, scale = 0.72) {
   const square = await trimToSquare(iconBuffer)
-  const iconSize = Math.round(size * scale)
+  const safeInset = Math.round(size * 0.06)
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const currentScale = scale * 0.94 ** attempt
+    const iconSize = Math.round(size * currentScale)
+    const resized = await sharp(square)
+      .resize(iconSize, iconSize, {
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer()
+
+    const resizedMeta = await sharp(resized).metadata()
+    const { x: cx, y: cy } = await getVisualCentroid(resized)
+    const left = Math.round(size / 2 - cx)
+    const top = Math.round(size / 2 - cy)
+    const fits =
+      left >= safeInset &&
+      top >= safeInset &&
+      left + resizedMeta.width <= size - safeInset &&
+      top + resizedMeta.height <= size - safeInset
+
+    if (fits) {
+      return sharp({
+        create: {
+          width: size,
+          height: size,
+          channels: 4,
+          background,
+        },
+      })
+        .composite([{ input: resized, left, top }])
+        .png()
+        .toBuffer()
+    }
+  }
+
+  const fallbackSize = Math.round(size * scale * 0.7)
   const resized = await sharp(square)
-    .resize(iconSize, iconSize, {
+    .resize(fallbackSize, fallbackSize, {
       fit: 'contain',
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
     .png()
     .toBuffer()
 
-  const { x: cx, y: cy } = await getVisualCentroid(resized)
-  const left = Math.round(size / 2 - cx)
-  const top = Math.round(size / 2 - cy)
+  const resizedMeta = await sharp(resized).metadata()
+  const left = Math.round((size - resizedMeta.width) / 2)
+  const top = Math.round((size - resizedMeta.height) / 2)
 
   return sharp({
     create: {
