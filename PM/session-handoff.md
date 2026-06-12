@@ -10,7 +10,8 @@
 - **`landing-audience-nav.tsx`:** Hero CTAs now **Browse markets** `or` **Sign in** (with literal “or” between buttons).
 - **`public-landing.tsx`:** Removed redundant “For shoppers / vendors / organizers” audience cards below the hero.
 - **`collect-sitemap-entries.ts`:** Skip Supabase-backed URLs when preview/build env lacks `NEXT_PUBLIC_SUPABASE_*` — fixes Vercel preview `npm run build` failure on `/sitemap.xml`.
-- **Verify:** Smoke `/` logged out — compact header logo; hero shows browse + or + sign in; no audience cards below fold. `npm run build` without Supabase env vars — PASS.
+- **`build-version-footer.tsx`:** Mobile footer stacks as two rows — legal links split 3+2, then build line centered below; desktop unchanged (single row).
+- **Verify:** Smoke `/` logged out — compact header logo; hero shows browse + or + sign in; no audience cards below fold. Mobile footer: two link rows + build line. `npm run build` without Supabase env vars — PASS.
 
 ## Active work — dashboard header uniform button sizing (local, not deployed)
 - **`globals.css`:** Header row controls (tabs, pill toggle, toolbar buttons) normalized to `--dashboard-toolbar-height`; `overflow-x: hidden` on command-center header.
