@@ -653,9 +653,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `3bda489` (pushed to `origin/master`)
-- Last deploy commit: `3bda489` - feat: ship 31 session updates (vendor apply map, passport routing, logo, billing inputs; dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; +27 more)
-- Production: https://popuphub.ca - **v1.0.0 build 106** | commit `6b0240b` (handoff updated 2026-06-12 16:53)
+- Branch: `master` @ `a2bddd8` (pushed to `origin/master`)
+- Last deploy commit: `a2bddd8` - feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)
+- Production: https://popuphub.ca - **v1.0.0 build 107** | commit `5eb3d15` (handoff updated 2026-06-12 17:20)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1032,7 +1032,7 @@
 
 
 ## Last deploy
-- 2026-06-12 16:53 - Deploy via deploy-popuphub.ps1 - `feat: ship 31 session updates (vendor apply map, passport routing, logo, billing inputs; dual-screen toolbar + room-scoped canvas bounds; room overlap boolean union; middle-button pan GPU preview; +27 more)` (3bda489)
+- 2026-06-12 17:20 - Deploy via deploy-popuphub.ps1 - `feat: ship 34 session updates (coordinator login home; dual-path coordinator community vouches; digital booth contracts; vendor apply map, passport routing, logo, billing inputs; +30 more)` (a2bddd8)
 
 
 ## Goal
