@@ -39,6 +39,12 @@ function redirectOAuthCodeToCallback(request: NextRequest): NextResponse | null 
 }
 
 export async function updateSession(request: NextRequest) {
+  // Let the auth callback route exchange the PKCE code without middleware
+  // touching cookies first (avoids racing or clearing the code verifier).
+  if (request.nextUrl.pathname === '/api/auth/callback') {
+    return NextResponse.next({ request })
+  }
+
   const oauthRedirect = redirectOAuthCodeToCallback(request)
   if (oauthRedirect) return oauthRedirect
 

@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` only ships when at least one section uses `## Shipped this session (title, not deployed)` (comma before `not deployed`). After deploy, sections flip to `deployed yyyy-MM-dd`. If everything is already deployed and the tree is clean, the script prints guidance and exits without error. Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session (Google OAuth PKCE callback fix, not deployed)
+- **`lib/supabase/client.ts`:** `detectSessionInUrl: false` — OAuth codes exchange only on the server at `/api/auth/callback` (avoids client/server race on `?code=`).
+- **`app/api/auth/callback/route.ts`:** Read PKCE verifier from `request.cookies`; attach session `Set-Cookie` headers directly on the redirect response (Next.js 15+ does not always propagate `cookies().set` onto redirects).
+- **`lib/supabase/middleware.ts`:** Skip session refresh on `/api/auth/callback` so middleware does not touch cookies before the code exchange.
+- **Verify:** `/login` → Continue with Google → lands signed in (no “PKCE code verifier not found” on `/login?error=auth_callback_failed`). Repeat after sign-out. If it still fails on a preview URL, add that origin to Supabase Auth redirect URLs.
+
 ## Active work — middle-mouse grid pan (local, not deployed)
 - **`use-viewport.ts` / `use-canvas-pan-zoom.ts`:** Middle-button pan starts in pointer capture phase (before SVG/grid handlers), calls `preventDefault` + `stopPropagation`, and blocks browser autoscroll on `mousedown`/`auxclick`.
 - **`floor-plan-canvas.tsx`:** SVG pointer handler skips non-primary mouse buttons so dashboard grid pan is not swallowed.

@@ -1,6 +1,6 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { parseActivePortal, ACTIVE_PORTAL_COOKIE } from '@/lib/portals/active-portal'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 
@@ -24,6 +24,16 @@ function loginErrorRedirect(
   return NextResponse.redirect(url)
 }
 
+function attachCookies(
+  response: NextResponse,
+  cookiesToSet: { name: string; value: string; options: CookieOptions }[]
+): NextResponse {
+  cookiesToSet.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options)
+  })
+  return response
+}
+
 /** Prefer the live request host (custom domain, preview, or localhost) over configured env URLs. */
 function resolveRedirectOrigin(request: Request): string {
   const requestUrl = new URL(request.url)
@@ -42,7 +52,7 @@ function resolveRedirectOrigin(request: Request): string {
   return requestUrl.origin
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const origin = resolveRedirectOrigin(request)
   const code = requestUrl.searchParams.get('code')
@@ -63,18 +73,22 @@ export async function GET(request: Request) {
   }
 
   const cookieStore = await cookies()
+  const sessionCookies: { name: string; value: string; options: CookieOptions }[] = []
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll()
+          // Read PKCE verifier from the incoming request cookies (set by the browser client).
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value, options }) => {
             cookieStore.set(name, value, options)
-          )
+            sessionCookies.push({ name, value, options })
+          })
         },
       },
     }
@@ -121,16 +135,16 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .single()
 
+  let redirectPath = next
   if (profile) {
     const activePortal = parseActivePortal(cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value)
-    const dashboard = resolvePostLoginPath({
+    redirectPath = resolvePostLoginPath({
       role: profile.role,
       redirectTo: next,
       userAgent: request.headers.get('user-agent'),
       activePortal,
     })
-    return NextResponse.redirect(`${origin}${dashboard}`)
   }
 
-  return NextResponse.redirect(`${origin}${next}`)
+  return attachCookies(NextResponse.redirect(`${origin}${redirectPath}`), sessionCookies)
 }
