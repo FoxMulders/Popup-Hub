@@ -25,11 +25,14 @@
 - **`lib/supabase/middleware.ts`:** Skip session refresh on `/api/auth/callback` so middleware does not touch cookies before the code exchange.
 - **Verify:** `/login` → Continue with Google → lands signed in (no “PKCE code verifier not found” on `/login?error=auth_callback_failed`). Repeat after sign-out. If it still fails on a preview URL, add that origin to Supabase Auth redirect URLs.
 
-## Active work — physical overlap vs clearance buffer (local, not deployed)
-- **`interactions/geometry.ts`:** `placedObjectsOverlap` now tests drawable footprints only (no 3′ vendor probe expansion). New `placedObjectsClearanceOverlap` keeps buffer-aware checks for auto-arrange and `checkCollision`.
-- **`engine/auto-arrange.ts`:** Slot validation uses `placedObjectsClearanceOverlap` so auto-layout still enforces 6′ aisles.
-- **Root cause:** Red overlap chrome (`detectPlacedObjectOverlaps`) used clearance-expanded probes — staggered vendors flagged each other (and upstream booths) even when physical borders were several feet apart. Yellow/red aisle warnings (`minVendorBoothClearanceFt`) were already edge-to-edge and unchanged.
-- **Verify:** `npx tsx scripts/verify-object-overlaps.ts` — PASS. `npx tsx scripts/verify-vendor-booth-clearance.ts` — PASS. Smoke: staggered vendor layout — only booths whose rects actually touch show red overlap; tight-but-clear pairs show yellow/green via clearance toggle.
+## Active work — booth validation: physical overlap vs boundary warnings (local, not deployed)
+- **`interactions/geometry.ts`:** `physicalOverlapProbesForObject` — overlap validation uses each booth's stored W×H only (no sub-table probe splits, no 3′ padding). `placedObjectsClearanceOverlap` unchanged for intentional aisle-buffer gates.
+- **`booth-clearance-visual.ts`:** `minVendorBoothBoundaryClearanceFt` + `vendorBoothBoundaryWarningBand` — yellow/red only for walls/fixtures; perimeter-snapped rear wall excluded; vendor-vendor spacing not tinted.
+- **`canvas-objects.tsx`:** Red = physical intersection only; clearance toggle applies boundary bands when not `good`.
+- **`engine/auto-arrange.ts`:** `packVendorBoothsInRoomGrid` row-packs selected/unplaced vendor booths in the active room with snap + exact W×H collision; `placeBoothsAtSlots` uses physical overlap only.
+- **`canvas/floor-plan-canvas.tsx`:** **Arrange layout** floating action triggers `packVendorBoothsInRoomGrid`.
+- **Root cause:** Sub-table probes + clearance-expanded overlap checks flagged staggered rows as red; aisle-gap coloring treated neighbour spacing as yellow even with clear separation.
+- **Verify:** `npx tsx scripts/verify-object-overlaps.ts` — PASS (incl. table-cluster case). `npx tsx scripts/verify-booth-clearance-visual.ts` — PASS. Grid rows — no false red; yellow only on real wall/fixture conflicts; **Arrange layout** packs Main Hall cleanly.
 
 ## Active work — middle-mouse grid pan (local, not deployed)
 - **`use-viewport.ts` / `use-canvas-pan-zoom.ts`:** Middle-button pan starts in pointer capture phase (before SVG/grid handlers), calls `preventDefault` + `stopPropagation`, and blocks browser autoscroll on `mousedown`/`auxclick`.
@@ -582,9 +585,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `470f45b` (pushed to `origin/master`)
-- Last deploy commit: `470f45b` - feat: ship 24 session updates (publish blocked by server Geocoding key; physical overlap vs clearance buffer; middle-mouse grid pan; dashboard canvas edge-to-edge grid; +20 more)
-- Production: https://popuphub.ca - **v1.0.0 build 98** | commit `d7b02f7` (handoff updated 2026-06-12 12:22)
+- Branch: `master` @ `1993b2e` (pushed to `origin/master`)
+- Last deploy commit: `1993b2e` - feat: ship 25 session updates (wizard Step 2 single-column layout; publish blocked by server Geocoding key; physical overlap vs clearance buffer; middle-mouse grid pan; +21 more)
+- Production: https://popuphub.ca - **v1.0.0 build 99** | commit `094152c` (handoff updated 2026-06-12 12:39)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -961,7 +964,7 @@
 
 
 ## Last deploy
-- 2026-06-12 12:22 - Deploy via deploy-popuphub.ps1 - `feat: ship 24 session updates (publish blocked by server Geocoding key; physical overlap vs clearance buffer; middle-mouse grid pan; dashboard canvas edge-to-edge grid; +20 more)` (470f45b)
+- 2026-06-12 12:39 - Deploy via deploy-popuphub.ps1 - `feat: ship 25 session updates (wizard Step 2 single-column layout; publish blocked by server Geocoding key; physical overlap vs clearance buffer; middle-mouse grid pan; +21 more)` (1993b2e)
 
 
 ## Goal
