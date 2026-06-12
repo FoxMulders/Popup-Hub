@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session (deploy script auto-handoff, not deployed)
+## Shipped this session (deploy script auto-handoff, deployed 2026-06-12)
 - **`scripts/get-deploy-commit-message.ps1`:** Commit message from Shipped sections → Active work sections → `feat: ship local changes`; UTF-8 handoff read; fix empty-array return that blocked deploy.
 - **`scripts/deploy-popuphub.ps1`:** Deploy proceeds when uncommitted work exists (no manual Shipped section rename); clean tree with nothing undeployed → no-op only.
 - **`scripts/update-session-handoff.ps1` / `ship.ps1`:** Active work sections used for deploy flip to Shipped deployed after release.
@@ -566,9 +566,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `4e41c44` (pushed to `origin/master`)
-- Last deploy commit: `4e41c44` - feat: Google OAuth PKCE callback fix
-- Production: https://popuphub.ca - **v1.0.0 build 94** | commit `800f114` (handoff updated 2026-06-12 10:00)
+- Branch: `master` @ `bc53745` (pushed to `origin/master`)
+- Last deploy commit: `bc53745` - feat: deploy script auto-handoff
+- Production: https://popuphub.ca - **v1.0.0 build 95** | commit `8d19782` (handoff updated 2026-06-12 10:15)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -945,7 +945,7 @@
 
 
 ## Last deploy
-- 2026-06-12 10:00 - Deploy via deploy-popuphub.ps1 - `feat: Google OAuth PKCE callback fix` (4e41c44)
+- 2026-06-12 10:15 - Deploy via deploy-popuphub.ps1 - `feat: deploy script auto-handoff` (bc53745)
 
 
 ## Goal
