@@ -1,4 +1,4 @@
-import { LandingAudienceCards, LandingHeroActions } from '@/components/public/landing-audience-nav'
+import { LandingHeroActions } from '@/components/public/landing-audience-nav'
 
 export function PublicLanding() {
   return (
@@ -15,8 +15,6 @@ export function PublicLanding() {
           <LandingHeroActions />
         </div>
       </section>
-
-      <LandingAudienceCards />
     </main>
   )
 }

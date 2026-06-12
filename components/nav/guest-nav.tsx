@@ -34,11 +34,11 @@ export function GuestNav() {
 
   return (
     <nav className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
+      <div className="mx-auto flex max-w-full flex-col gap-1 overflow-x-hidden px-3 py-2 sm:px-4 xl:max-w-[1600px] xl:px-8">
         <CenteredHeaderRow
           left={
             <BrandLogoLockup
-              className="h-[4.025rem] w-auto max-h-[4.025rem] shrink-0 sm:h-[4.6rem] sm:max-h-[4.6rem] md:h-[5.175rem] md:max-h-none"
+              className="h-[2.5875rem] w-auto max-h-[2.5875rem] shrink-0 sm:h-[2.875rem] sm:max-h-[2.875rem]"
               href="/discover"
             />
           }
