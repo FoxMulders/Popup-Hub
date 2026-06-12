@@ -15,6 +15,11 @@
 - **`lib/supabase/middleware.ts`:** Skip session refresh on `/api/auth/callback` so middleware does not touch cookies before the code exchange.
 - **Verify:** `/login` → Continue with Google → lands signed in (no “PKCE code verifier not found” on `/login?error=auth_callback_failed`). Repeat after sign-out. If it still fails on a preview URL, add that origin to Supabase Auth redirect URLs.
 
+## Active work — initial loader perimeter table stagger fix (local, not deployed)
+- **`components/brand/initial-loader-reveal.tsx`:** Side booths now use full 48px cell rows (was 24px half-step, which stacked 36px-tall tables and read as duplicates). Right column is vertically offset by half a cell from the left with opposite horizontal brick stagger; right-wall scale-in anchors on the inner (left) edge.
+- **Root cause:** `i * halfStep` vertical spacing placed consecutive side tables 12px apart vertically — overlapping footprints looked like duplicate stalls.
+- **Verify:** Hard refresh (clear `popup-hub-initial-loader-shown` in sessionStorage) — left/right columns show brick stagger without stacked duplicates; opposite walls are half-cell out of phase.
+
 ## Active work — middle-mouse grid pan (local, not deployed)
 - **`use-viewport.ts` / `use-canvas-pan-zoom.ts`:** Middle-button pan starts in pointer capture phase (before SVG/grid handlers), calls `preventDefault` + `stopPropagation`, and blocks browser autoscroll on `mousedown`/`auxclick`.
 - **`floor-plan-canvas.tsx`:** SVG pointer handler skips non-primary mouse buttons so dashboard grid pan is not swallowed.
