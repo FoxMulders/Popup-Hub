@@ -572,9 +572,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `1b655f2` (pushed to `origin/master`)
-- Last deploy commit: `1b655f2` - feat: ship 22 session updates (middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; wizard venue template sync on venue pick; +18 more)
-- Production: https://popuphub.ca - **v1.0.0 build 96** | commit `acf92cb` (handoff updated 2026-06-12 10:20)
+- Branch: `master` @ `80c40f8` (pushed to `origin/master`)
+- Last deploy commit: `80c40f8` - feat: ship 23 session updates (physical overlap vs clearance buffer; middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; +19 more)
+- Production: https://popuphub.ca - **v1.0.0 build 97** | commit `73d2567` (handoff updated 2026-06-12 12:06)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -951,7 +951,7 @@
 
 
 ## Last deploy
-- 2026-06-12 10:20 - Deploy via deploy-popuphub.ps1 - `feat: ship 22 session updates (middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; wizard venue template sync on venue pick; +18 more)` (1b655f2)
+- 2026-06-12 12:06 - Deploy via deploy-popuphub.ps1 - `feat: ship 23 session updates (physical overlap vs clearance buffer; middle-mouse grid pan; dashboard canvas edge-to-edge grid; wizard step scroll-to-top; +19 more)` (80c40f8)
 
 
 ## Goal
