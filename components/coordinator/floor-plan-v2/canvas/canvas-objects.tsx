@@ -566,10 +566,12 @@ function CanvasObjectsBase({
             rooms,
             objectRoom
           )
-          const theme = BOOTH_CLEARANCE_THEMES[band]
-          fill = theme.fill
-          clearanceStroke = theme.stroke
-          clearanceFillOpacity = theme.fillOpacity
+          if (band !== 'good') {
+            const theme = BOOTH_CLEARANCE_THEMES[band]
+            fill = theme.fill
+            clearanceStroke = theme.stroke
+            clearanceFillOpacity = theme.fillOpacity
+          }
         }
         // Vendor booths use solid yellow — payment status is shown via label text.
         // When the object is part of an explicit join group its

@@ -4,6 +4,14 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — wizard Step 3 auto seed + grid pack (local, not deployed)
+- **`lib/floor-plan/wizard-initial-layout.ts`:** Builds generic vendor booths from Step 2 category caps (round-robin, clamped to `layoutCapacity`) and runs `autoArrangeInRoom` grid mode top-left inside Main Hall.
+- **`floor-plan-v2.tsx`:** One-time wizard initial layout on blank canvas; forwards `configuredCategorySlots`.
+- **`market-setup-wizard.tsx`:** Auto-adds Main Hall at Step 1 venue dimensions on Step 3 entry; switched import to production `wizard-step-floor-plan` (was QA mirror).
+- **`wizard-step-floor-plan.tsx`:** Gates **Save market** until vendor booths are placed when caps exist.
+- **Verify:** `npx tsx scripts/verify-wizard-initial-layout.ts` — PASS (7/7 in 74×74). Smoke: `/coordinator/events/new` → Step 2 caps → Step 3 — booths appear in grid; Save market enables.
+- **Build fix:** `booth-clearance-visual.ts` — spread `objects`/`rooms` when building `VendorCollisionContext` (readonly → mutable); unblocks `next build` TS check.
+
 ## Active work — wizard Step 2 single-column layout (local, not deployed)
 - **`wizard-step-capacity.tsx`:** Capacity & pricing step — **Physical & pricing setup** and **Inventory & category limits** stacked in a centered single column (`flex flex-col items-center w-full`); each `WizardZone` uses `w-full max-w-4xl mx-auto`. Quarter-auction copy updated ("below" vs "on the right").
 - **Verify:** `/coordinator/events/new` → Step 2 — both cards centered, full width up to `max-w-4xl`, physical/pricing card above inventory/limits.

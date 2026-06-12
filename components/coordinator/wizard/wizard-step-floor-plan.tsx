@@ -18,10 +18,12 @@ export interface WizardStepFloorPlanProps extends FloorPlanV2Props {
   tableSizeLabel?: string | null
   layoutCapacity: number
   totalCategoryCaps?: number
+  configuredCategorySlots?: FloorPlanV2Props['configuredCategorySlots']
   eventDisplayName: string
   onBack: () => void
   navDisabled?: boolean
   plannerOverlap?: boolean
+  onPlacedCountChange?: (count: number) => void
 }
 
 export function WizardStepFloorPlan({
@@ -31,6 +33,8 @@ export function WizardStepFloorPlan({
   onBack,
   navDisabled = false,
   plannerOverlap = false,
+  totalCategoryCaps = 0,
+  onPlacedCountChange: onPlacedCountChangeExternal,
   eventId,
   layoutRooms,
   layoutActiveRoomId,
@@ -38,9 +42,27 @@ export function WizardStepFloorPlan({
   onAddRoom,
   onRenameRoom,
   onDeleteRoom,
+  configuredCategorySlots,
+  onSaveMarket,
+  saveMarketDisabled,
+  saveMarketLoading,
   ...floorPlanProps
 }: WizardStepFloorPlanProps) {
   const [placedCount, setPlacedCount] = useState(0)
+
+  const handlePlacedCountChange = (count: number) => {
+    setPlacedCount(count)
+    onPlacedCountChangeExternal?.(count)
+  }
+
+  const configuredTotal =
+    configuredCategorySlots?.reduce(
+      (sum, slot) => sum + Math.max(0, slot.maxSlots),
+      0
+    ) ?? totalCategoryCaps
+
+  const layoutStepBlocked =
+    configuredTotal > 0 && placedCount === 0
 
   function handleSelectRoom(roomId: string) {
     onLayoutRoomsChange(layoutRooms, roomId)
@@ -73,6 +95,10 @@ export function WizardStepFloorPlan({
           hasOverlap={plannerOverlap}
           showDraftBadge
           onBack={onBack}
+          onSave={onSaveMarket}
+          saveDisabled={saveMarketDisabled || layoutStepBlocked}
+          saveLoading={saveMarketLoading}
+          saveLabel="Save market"
           fullEditorHref={
             eventId ? `/coordinator/events/${eventId}/layout` : undefined
           }
@@ -88,7 +114,13 @@ export function WizardStepFloorPlan({
       }
       footer={
         <div className="px-3 py-1 sm:px-4">
-          <WizardNav step={3} onBack={onBack} nextDisabled={navDisabled} />
+          <WizardNav
+            step={3}
+            onBack={onBack}
+            onNext={onSaveMarket}
+            nextDisabled={navDisabled || saveMarketDisabled || layoutStepBlocked}
+            nextLabel="Save market"
+          />
         </div>
       }
     >
@@ -101,8 +133,12 @@ export function WizardStepFloorPlan({
         onAddRoom={onAddRoom}
         onRenameRoom={onRenameRoom}
         onDeleteRoom={onDeleteRoom}
+        configuredCategorySlots={configuredCategorySlots}
         layoutCapacity={layoutCapacity}
-        onPlacedCountChange={setPlacedCount}
+        onPlacedCountChange={handlePlacedCountChange}
+        onSaveMarket={onSaveMarket}
+        saveMarketDisabled={saveMarketDisabled || layoutStepBlocked}
+        saveMarketLoading={saveMarketLoading}
         chrome="embedded"
         className="h-full min-h-0"
       />

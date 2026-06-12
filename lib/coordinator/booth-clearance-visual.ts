@@ -3,7 +3,12 @@ import {
   rotatedAabb,
   type Rect,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
+import { nearestRoomEdge } from '@/components/coordinator/floor-plan-v2/interactions/perimeter-booth-orientation'
+import {
+  isVendorBoothObject,
+  isVendorBoothWallSnappedForCollision,
+  type VendorCollisionContext,
+} from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
 import type {
   BoothObject,
   FloorPlanDoc,
@@ -85,17 +90,38 @@ function roomInteriorRect(room: RoomFrame): Rect {
   }
 }
 
+const ROOM_EDGE_GAP_INDEX: Record<'left' | 'top' | 'right' | 'bottom', number> = {
+  left: 0,
+  top: 1,
+  right: 2,
+  bottom: 3,
+}
+
 /** Distance from booth AABB to the nearest room perimeter edge (ft). */
 export function clearanceToRoomWallsFt(
   boothAabb: Rect,
-  room: RoomFrame
+  room: RoomFrame,
+  options?: {
+    booth?: BoothObject
+    collisionCtx?: VendorCollisionContext
+  }
 ): number {
   const interior = roomInteriorRect(room)
-  const left = boothAabb.x - interior.x
-  const top = boothAabb.y - interior.y
-  const right = interior.x + interior.width - (boothAabb.x + boothAabb.width)
-  const bottom = interior.y + interior.height - (boothAabb.y + boothAabb.height)
-  return Math.min(left, top, right, bottom)
+  const gaps = [
+    boothAabb.x - interior.x,
+    boothAabb.y - interior.y,
+    interior.x + interior.width - (boothAabb.x + boothAabb.width),
+    interior.y + interior.height - (boothAabb.y + boothAabb.height),
+  ]
+
+  const booth = options?.booth
+  const collisionCtx = options?.collisionCtx
+  if (booth && collisionCtx && isVendorBoothWallSnappedForCollision(booth, collisionCtx)) {
+    const { edge } = nearestRoomEdge(booth, room)
+    gaps[ROOM_EDGE_GAP_INDEX[edge]] = Number.POSITIVE_INFINITY
+  }
+
+  return Math.min(...gaps)
 }
 
 /** ≥4′ good · ≥3′ tight (yellow) · <3′ critical (red, ≤2′ especially tight). */
@@ -130,7 +156,21 @@ export function minVendorBoothBoundaryClearanceFt(
   const roomId = objectRoom?.[booth.id]
   const room = roomId ? rooms?.find((r) => r.id === roomId) : undefined
   if (room) {
-    const wallGap = clearanceToRoomWallsFt(boothAabb, room)
+    const collisionCtx: VendorCollisionContext | undefined = rooms
+      ? {
+          canvasWidthFt: 0,
+          canvasLengthFt: 0,
+          gridSpacingFt: 1,
+          snapFt: 1,
+          objects: [...objects],
+          rooms: [...rooms],
+          objectRoom,
+        }
+      : undefined
+    const wallGap = clearanceToRoomWallsFt(boothAabb, room, {
+      booth,
+      collisionCtx,
+    })
     if (wallGap < minGap) minGap = wallGap
   }
 
@@ -151,8 +191,7 @@ export function vendorBoothBoundaryWarningBand(
     rooms,
     objectRoom
   )
-  if (minFt >= BOOTH_CLEARANCE_GOOD_FT) return 'good'
-  return 'tight'
+  return clearanceBand(minFt)
 }
 
 /** Clearance theme for a vendor booth probe during draw/hover preview. */

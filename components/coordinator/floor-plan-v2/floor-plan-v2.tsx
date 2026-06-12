@@ -35,6 +35,10 @@ import { openDualScreenWindow, type DualScreenMode } from '@/lib/coordinator/flo
 import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import { summarizeDocClearanceIssues } from '@/lib/coordinator/booth-clearance-summary'
 import {
+  runWizardInitialLayout,
+  shouldRunWizardInitialLayout,
+} from '@/lib/floor-plan/wizard-initial-layout'
+import {
   readClearanceWarningsEnabled,
   writeClearanceWarningsEnabled,
 } from '@/lib/coordinator/booth-clearance-warnings-pref'
@@ -231,6 +235,15 @@ export interface FloorPlanV2Props {
    */
   layoutCapacity?: number
   /**
+   * Step 2 category caps — when the canvas is blank on first Step 3
+   * entry, generic vendor booths are seeded and grid-packed once.
+   */
+  configuredCategorySlots?: ReadonlyArray<{
+    categoryId: string
+    categoryName: string
+    maxSlots: number
+  }>
+  /**
    * Approved vendor applications — used to read `table_count` when
    * consolidating multi-table booths during Auto-Arrange.
    */
@@ -264,6 +277,8 @@ export interface FloorPlanV2Props {
   chrome?: 'default' | 'embedded'
   /** Fired when the number of placed canvas objects changes. */
   onPlacedCountChange?: (count: number) => void
+  /** Wizard — fired after the one-time Step 3 auto seed + grid pack. */
+  onWizardInitialLayoutComplete?: (result: { placedCount: number }) => void
   boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
   boothMapLabelByObjectId?: ReadonlyMap<
     string,
@@ -331,6 +346,7 @@ function FloorPlanV2Workspace({
   baselineTableLengthFt,
   onBaselineTableLengthChange,
   layoutCapacity,
+  configuredCategorySlots,
   applications,
   className,
   onOverlapChange,
@@ -343,6 +359,7 @@ function FloorPlanV2Workspace({
   variant = 'wizard',
   chrome = 'default',
   onPlacedCountChange,
+  onWizardInitialLayoutComplete,
   boothPlacementStatusByObjectId,
   boothMapLabelByObjectId,
   onStoreReady,
@@ -472,16 +489,13 @@ function FloorPlanV2Workspace({
     if (clearanceIssueToastRef.current) return
     clearanceIssueToastRef.current = true
     const parts: string[] = []
-    if (clearanceSummary.criticalCount > 0) {
+    if (clearanceSummary.tightCount > 0) {
       parts.push(
-        `${clearanceSummary.criticalCount} red (<3′, ≤2′ critical)`
+        `${clearanceSummary.tightCount} yellow (too close to a wall or fixture)`
       )
     }
-    if (clearanceSummary.tightCount > 0) {
-      parts.push(`${clearanceSummary.tightCount} yellow (3′–4′)`)
-    }
     toast.warning(
-      `Booth aisle clearance: ${parts.join(', ')}. See the legend panel for details — hide warnings with the triangle icon in the header.`,
+      `Booth boundary clearance: ${parts.join(', ')}. Red overlap tint means booths physically intersect. See the legend panel — hide warnings with the triangle icon in the header.`,
       { duration: 6000 }
     )
   }, [
@@ -1544,6 +1558,70 @@ function FloorPlanV2Workspace({
     [activeRoomId, layoutRooms, onLayoutRoomsChange]
   )
 
+  const wizardInitialLayoutRanRef = useRef(false)
+
+  useEffect(() => {
+    if (variant !== 'wizard') return
+    if (wizardInitialLayoutRanRef.current) return
+    if (!configuredCategorySlots?.length) return
+    if (
+      !shouldRunWizardInitialLayout(
+        layoutRooms,
+        store.doc,
+        configuredCategorySlots
+      )
+    ) {
+      return
+    }
+
+    const roomId =
+      activeRoomId && layoutRooms.some((r) => r.id === activeRoomId)
+        ? activeRoomId
+        : layoutRooms[0]?.id
+    if (!roomId) return
+
+    const frame = (store.doc.rooms ?? []).find((r) => r.id === roomId)
+    if (!frame) return
+
+    wizardInitialLayoutRanRef.current = true
+
+    const result = runWizardInitialLayout({
+      doc: store.doc,
+      roomId,
+      categorySlots: configuredCategorySlots,
+      baselineTableLengthFt: safeTableSizeFt,
+      layoutCapacity,
+      eventCategoryNames,
+    })
+
+    if (result.placedCount <= 0) {
+      wizardInitialLayoutRanRef.current = false
+      return
+    }
+
+    store.replaceObjects(result.doc.objects, { pushHistory: false })
+    store.patchDoc({ objectRoom: result.doc.objectRoom ?? {} }, { pushHistory: false })
+    syncLayoutRoomsFromDoc(store.readDoc(), roomId)
+    resetCanvasViewport()
+    onWizardInitialLayoutComplete?.({ placedCount: result.placedCount })
+    logState(
+      `wizardInitialLayout(): placed ${result.placedCount}/${result.requestedCount} vendor booths in ${frame.name}`
+    )
+  }, [
+    activeRoomId,
+    configuredCategorySlots,
+    eventCategoryNames,
+    layoutCapacity,
+    layoutRooms,
+    logState,
+    onWizardInitialLayoutComplete,
+    resetCanvasViewport,
+    safeTableSizeFt,
+    store,
+    syncLayoutRoomsFromDoc,
+    variant,
+  ])
+
   const handleRoomGeometryCommit = useCallback(() => {
     syncLayoutRoomsFromDoc(store.readDoc())
   }, [store, syncLayoutRoomsFromDoc])
@@ -1958,7 +2036,7 @@ function FloorPlanV2Workspace({
       const next = !enabled
       if (next) {
         toast.message(
-          'Clearance warnings on — vendor booths tint yellow (3′–4′) or red (<3′) by nearest aisle gap.',
+          'Clearance warnings on — yellow when a booth is tight to a wall or fixture; red only when footprints physically overlap.',
           { duration: 4200 }
         )
       } else {

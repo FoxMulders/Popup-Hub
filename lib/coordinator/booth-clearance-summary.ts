@@ -3,10 +3,7 @@ import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/inte
 import type { BoothObject, FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
   BOOTH_CLEARANCE_GOOD_FT,
-  BOOTH_CLEARANCE_TIGHT_FT,
-  clearanceBand,
   minVendorBoothBoundaryClearanceFt,
-  minVendorBoothClearanceFt,
   vendorBoothBoundaryWarningBand,
   type BoothClearanceBand,
 } from '@/lib/coordinator/booth-clearance-visual'
@@ -66,14 +63,6 @@ export function summarizeDocClearanceIssues(doc: FloorPlanDoc): DocClearanceSumm
     tightCount: issues.filter((row) => row.band === 'tight').length,
     issues,
   }
-}
-
-/** Aisle gap between two vendor booths (informational — not a boundary violation). */
-export function vendorBoothAisleClearanceFt(
-  booth: BoothObject,
-  objects: ReadonlyArray<PlacedObject>
-): number {
-  return minVendorBoothClearanceFt(booth, objects, undefined, {})
 }
 
 export function formatClearanceFeet(minFt: number): string {

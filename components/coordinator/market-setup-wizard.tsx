@@ -72,7 +72,7 @@ import {
   WizardStepStepper,
 } from '@/components/coordinator/wizard/wizard-step-stepper'
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
-import { WizardStepFloorPlan } from '@/src/qa_review/components/coordinator/wizard/wizard-step-floor-plan_qa'
+import { WizardStepFloorPlan } from '@/components/coordinator/wizard/wizard-step-floor-plan'
 import { WizardStepEventDetails, type DayRow } from '@/components/coordinator/wizard/wizard-step-event-details'
 import { WizardStepVenueWithMapsProvider } from '@/components/coordinator/wizard/wizard-step-venue'
 import { applyWizardGooglePlaceSelect } from '@/lib/wizard/wizard-google-place-select'
@@ -1046,10 +1046,31 @@ export function MarketSetupWizard({
     resetWizardScrollAnchor(currentStep)
   }, [currentStep])
 
-  // Floor plan v2 owns Step 3. The canvas surface mounts empty and is
-  // mutated only by direct user gestures (pointer-down draw, marquee
-  // select, drag move). No effect in this file paints presets, seeds
-  // placeholders, or runs auto-plan on mount or on canvas interaction.
+  const seededMainHallRef = useRef(false)
+  useEffect(() => {
+    if (currentStep !== 3 || skipVenueLayout || !eventId) return
+    if (rooms.length > 0) {
+      seededMainHallRef.current = true
+      return
+    }
+    if (seededMainHallRef.current) return
+    seededMainHallRef.current = true
+    const { rooms: nextRooms, activeRoomId: nextActiveId } = appendLayoutRoom(rooms, {
+      widthFt: templateAnchor.width,
+      lengthFt: templateAnchor.length,
+      baselineTableLengthFt,
+    })
+    setRooms(nextRooms)
+    setActiveRoomId(nextActiveId)
+  }, [
+    baselineTableLengthFt,
+    currentStep,
+    eventId,
+    rooms,
+    skipVenueLayout,
+    templateAnchor.length,
+    templateAnchor.width,
+  ])
 
   const isFloorPlanStep = currentStep === 3 && !skipVenueLayout
 
@@ -1286,11 +1307,8 @@ export function MarketSetupWizard({
             </>
           ) : null}
 
-          {/* Step 3 — Floor Plan v2. The legacy BoothPlanner was retired
-              from this surface in favor of a free-form, object-oriented
-              canvas (see components/coordinator/floor-plan-v2). The
-              v2 module owns its own state, tools, and inspector — no
-              automatic presets, no capacity clamps, no forced templates. */}
+          {/* Step 3 — Floor Plan v2 seeds generic vendor booths from Step 2
+              caps and grid-packs them inside Main Hall on first entry. */}
           {currentStep === 3 && eventId && !skipVenueLayout ? (
             <WizardStepFloorPlan
               eventId={eventId}
@@ -1299,6 +1317,11 @@ export function MarketSetupWizard({
               onLayoutRoomsChange={handleLayoutRoomsChange}
               saveLayoutRef={saveLayoutRef}
               eventCategoryNames={eventCategoryNames}
+              configuredCategorySlots={categoryLimits.map((cl) => ({
+                categoryId: cl.categoryId,
+                categoryName: cl.categoryName,
+                maxSlots: cl.maxSlots ?? 0,
+              }))}
               onAddRoom={handleAddRoom}
               onRenameRoom={handleRenameRoom}
               onDeleteRoom={handleDeleteRoom}
@@ -1319,7 +1342,6 @@ export function MarketSetupWizard({
               onBack={goBack}
               navDisabled={transitioning}
               plannerOverlap={plannerOverlap}
-              existingLayout={existingLayout ?? null}
             />
           ) : null}
         </div>

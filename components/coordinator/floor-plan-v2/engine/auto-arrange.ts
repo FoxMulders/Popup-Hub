@@ -22,7 +22,10 @@ import type {
 import {
   collisionProbeForObject,
   placedObjectsClearanceOverlap,
+  placedObjectsOverlap,
+  rectsOverlapPositiveArea,
   rotatedAabb,
+  snapToGrid,
 } from '../interactions/geometry'
 import { objectFootprintAabb } from '../state/table-cluster-layout'
 import {
@@ -421,13 +424,11 @@ function placeBoothsAtSlots(
     if (placedRect.x < -1e-6 || placedRect.y < -1e-6) {
       return false
     }
-    if (!validateBoothAgainstPlaced(placedRect, cw, cl, placedRects)) {
+    if (obstacles.some((r) => rectsOverlapPositiveArea(placedRect, r))) {
       return false
     }
-    const obstacleProbe = expandRectForClearance(placedRect, BOOTH_OBSTACLE_CLEARANCE_FT)
-    if (obstacles.some((r) => aabbOverlap(obstacleProbe, r))) return false
     for (const placed of newBooths) {
-      if (placedObjectsClearanceOverlap(probeBooth, placed, overlapCtx)) return false
+      if (placedObjectsOverlap(probeBooth, placed, overlapCtx)) return false
     }
     return true
   }
@@ -556,7 +557,7 @@ function boothOverlapsPlaced(
         objectRoom: overlapDoc.objectRoom,
       }
     : undefined
-  return placed.some((p) => placedObjectsClearanceOverlap(booth, p, overlapCtx))
+  return placed.some((p) => placedObjectsOverlap(booth, p, overlapCtx))
 }
 
 function findStagingPosition(
@@ -587,12 +588,13 @@ function findStagingPosition(
 
   function slotIsFree(x: number, y: number): boolean {
     const rect: Rect = { x: roundHalf(x), y: roundHalf(y), width: w, height: h }
-    if (!validateBoothAgainstPlaced(rect, cw, cl, placedRects)) {
+    if (rect.x + rect.width > cw + 1e-6 || rect.y + rect.height > cl + 1e-6) {
       return false
     }
-    if (obstacles.some((o) => aabbOverlap(rect, o))) return false
+    if (rect.x < -1e-6 || rect.y < -1e-6) return false
+    if (obstacles.some((o) => rectsOverlapPositiveArea(rect, o))) return false
     const probe: BoothObject = { ...booth, x: rect.x, y: rect.y, rotation: 0 }
-    if (placedBooths.some((p) => placedObjectsClearanceOverlap(probe, p, overlapCtx))) {
+    if (placedBooths.some((p) => placedObjectsOverlap(probe, p, overlapCtx))) {
       return false
     }
     return true
@@ -1805,6 +1807,170 @@ export function autoArrangeAllRooms(
     results.push(result)
   }
   return results
+}
+
+export interface PackVendorBoothsInGridOptions {
+  /** When set, only reposition these vendor booth ids. */
+  boothIds?: ReadonlySet<string>
+  /** Selected ids take precedence over the unplaced fallback. */
+  selectedIds?: ReadonlySet<string>
+  snapFt?: number
+}
+
+export interface PackVendorBoothsInGridResult {
+  doc: FloorPlanDoc
+  placedCount: number
+  droppedCount: number
+  roomId: string
+}
+
+function boothLooksUnplaced(booth: BoothObject, frame: RoomFrame): boolean {
+  if (booth.x === 0 && booth.y === 0 && (booth.rotation ?? 0) === 0) {
+    return true
+  }
+  const aabb = rotatedAabb(booth)
+  const eps = 1e-4
+  return (
+    aabb.x + aabb.width <= frame.originX + eps ||
+    aabb.y + aabb.height <= frame.originY + eps ||
+    aabb.x >= frame.originX + frame.widthFt - eps ||
+    aabb.y >= frame.originY + frame.lengthFt - eps
+  )
+}
+
+/**
+ * Shelf-pack vendor booths row-by-row inside a room grid using exact W×H
+ * footprints (no clearance buffer in the collision loop). Targets selected
+ * vendor booths first, otherwise unplaced booths in the room.
+ */
+export function packVendorBoothsInRoomGrid(
+  doc: FloorPlanDoc,
+  roomId: string,
+  options: PackVendorBoothsInGridOptions = {}
+): PackVendorBoothsInGridResult | null {
+  const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
+  if (!frame) return null
+
+  const objectRoom = doc.objectRoom ?? {}
+  const snapFt = options.snapFt ?? (doc.snapFt > 0 ? doc.snapFt : 0.5)
+  const overlapCtx = {
+    rooms: doc.rooms ?? [],
+    objectRoom,
+    doc,
+  }
+
+  const vendorInRoom = doc.objects.filter(
+    (o): o is BoothObject =>
+      o.kind === 'booth' &&
+      !isGuestTableBooth(o as BoothObject) &&
+      objectRoom[o.id] === roomId
+  )
+
+  const selectedVendor = vendorInRoom.filter((b) =>
+    options.selectedIds?.has(b.id)
+  )
+  const explicitIds = options.boothIds
+  let toArrange: BoothObject[]
+  if (explicitIds?.size) {
+    toArrange = vendorInRoom.filter((b) => explicitIds.has(b.id))
+  } else if (selectedVendor.length > 0) {
+    toArrange = selectedVendor
+  } else {
+    toArrange = vendorInRoom.filter((b) => boothLooksUnplaced(b, frame))
+  }
+  if (toArrange.length === 0) {
+    toArrange = [...vendorInRoom]
+  }
+
+  const arrangeIds = new Set(toArrange.map((b) => b.id))
+  const fixedObjects = doc.objects.filter((o) => !arrangeIds.has(o.id))
+  const obstacles = obstacleRectsFor({
+    ...doc,
+    objects: fixedObjects.filter((o) => o.kind !== 'booth'),
+  })
+
+  const surface = resolveRoomPlacementSurface(doc, roomId)
+  const originX = surface?.minX ?? frame.originX
+  const originY = surface?.minY ?? frame.originY
+  const maxX = surface?.maxX ?? frame.originX + frame.widthFt
+  const maxY = surface?.maxY ?? frame.originY + frame.lengthFt
+
+  const sorted = [...toArrange].sort(
+    (a, b) => b.width * b.height - a.width * a.height || a.id.localeCompare(b.id)
+  )
+
+  const placed: BoothObject[] = []
+  let cursorX = originX
+  let cursorY = originY
+  let rowHeight = 0
+
+  for (const src of sorted) {
+    const w = roundHalf(src.width)
+    const h = roundHalf(src.height)
+    let packed: BoothObject | null = null
+    let attempts = 0
+    const maxAttempts = 5000
+
+    while (!packed && attempts < maxAttempts) {
+      attempts++
+      const x = snapToGrid(cursorX, snapFt)
+      const y = snapToGrid(cursorY, snapFt)
+      const probe: BoothObject = {
+        ...src,
+        x,
+        y,
+        width: w,
+        height: h,
+        rotation: 0,
+      }
+      const aabb = rotatedAabb(probe)
+      const fitsHorizontally = aabb.x + aabb.width <= maxX + 1e-6
+      const fitsVertically = aabb.y + aabb.height <= maxY + 1e-6
+      const insideOrigin = aabb.x >= originX - 1e-6 && aabb.y >= originY - 1e-6
+
+      if (insideOrigin && fitsHorizontally && fitsVertically) {
+        const blockedByObstacle = obstacles.some((o) =>
+          rectsOverlapPositiveArea(aabb, o)
+        )
+        const blockedByFixed = fixedObjects.some(
+          (o) => o.kind === 'booth' && placedObjectsOverlap(probe, o, overlapCtx)
+        )
+        const blockedByPlaced = placed.some((p) =>
+          placedObjectsOverlap(probe, p, overlapCtx)
+        )
+        if (!blockedByObstacle && !blockedByFixed && !blockedByPlaced) {
+          packed = probe
+          break
+        }
+      }
+
+      if (fitsHorizontally && insideOrigin) {
+        cursorX = x + w + snapFt
+        rowHeight = Math.max(rowHeight, h)
+        continue
+      }
+
+      cursorX = originX
+      cursorY = snapToGrid(cursorY + Math.max(rowHeight, h) + snapFt, snapFt)
+      rowHeight = 0
+      if (cursorY + h > maxY + 1e-6) break
+    }
+
+    if (!packed) continue
+    placed.push(packed)
+    cursorX = packed.x + packed.width + snapFt
+    rowHeight = Math.max(rowHeight, packed.height)
+  }
+
+  const placedById = new Map(placed.map((b) => [b.id, b]))
+  const nextObjects = doc.objects.map((o) => placedById.get(o.id) ?? o)
+
+  return {
+    doc: { ...doc, objects: nextObjects },
+    placedCount: placed.length,
+    droppedCount: sorted.length - placed.length,
+    roomId,
+  }
 }
 
 function roundHalf(n: number): number {

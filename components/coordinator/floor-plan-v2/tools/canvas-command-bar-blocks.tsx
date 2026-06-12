@@ -1379,7 +1379,7 @@ export function renderCanvasCommandBarBlock(
                   title={
                     ctx.showClearanceWarnings
                       ? 'Hide booth clearance warnings (yellow/red aisles)'
-                      : 'Show booth clearance warnings — yellow at 3′, red below 3′ (≤2′ critical)'
+                      : 'Show booth clearance warnings — yellow near walls/fixtures, red only on physical overlap'
                   }
                   active={ctx.showClearanceWarnings}
                   className={
@@ -1523,7 +1523,7 @@ export function renderCanvasCommandBarBlock(
                 title={
                   ctx.showClearanceWarnings
                     ? 'Hide booth clearance warnings (yellow/red aisles)'
-                    : 'Show booth clearance warnings — yellow at 3′, red below 3′ (≤2′ critical)'
+                    : 'Show booth clearance warnings — yellow near walls/fixtures, red only on physical overlap'
                 }
                 active={ctx.showClearanceWarnings}
                 className={
@@ -1681,7 +1681,7 @@ export function renderCanvasCommandBarBlock(
                   title={
                     ctx.showClearanceWarnings
                       ? 'Hide booth clearance warnings (yellow/red aisles)'
-                      : 'Show booth clearance warnings — yellow at 3′, red below 3′ (≤2′ critical)'
+                      : 'Show booth clearance warnings — yellow near walls/fixtures, red only on physical overlap'
                   }
                   active={ctx.showClearanceWarnings}
                   className={

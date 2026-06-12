@@ -7,9 +7,11 @@
 import {
   BOOTH_CLEARANCE_CRITICAL_FT,
   BOOTH_CLEARANCE_GOOD_FT,
+  BOOTH_CLEARANCE_THEMES,
   BOOTH_CLEARANCE_TIGHT_FT,
   clearanceBand,
   edgeClearanceBetweenRects,
+  minVendorBoothBoundaryClearanceFt,
   minVendorBoothClearanceFt,
   vendorBoothClearanceThemeForProbe,
 } from '../lib/coordinator/booth-clearance-visual'
@@ -106,10 +108,10 @@ assert(
   'both booths flag critical when 2′ apart'
 )
 
-// Placement preview — 3′ gap shows yellow before commit.
+// Placement preview — neighbour spacing is not a boundary warning.
 doc.objects = [boothA]
 doc.objectRoom = { a: roomId }
-const previewAt3 = {
+const previewNearVendor = {
   id: '__preview__',
   kind: 'booth',
   x: 29,
@@ -119,25 +121,42 @@ const previewAt3 = {
   rotation: 0,
   tablePurpose: 'vendor',
 } as BoothObject
-const previewTheme = vendorBoothClearanceThemeForProbe(
-  previewAt3,
+const previewNearVendorTheme = vendorBoothClearanceThemeForProbe(
+  previewNearVendor,
   doc.objects,
   doc.rooms,
   doc.objectRoom,
   roomId
 )
 assert(
-  previewTheme.fill === '#fef08a',
-  '3′ preview probe uses tight (yellow) fill before placement'
+  previewNearVendorTheme.fill === BOOTH_CLEARANCE_THEMES.good.fill,
+  '3′ from another vendor is not a boundary warning'
+)
+
+const previewNearWall = {
+  ...previewNearVendor,
+  x: 13,
+  y: 14,
+} as BoothObject
+const previewNearWallTheme = vendorBoothClearanceThemeForProbe(
+  previewNearWall,
+  doc.objects,
+  doc.rooms,
+  doc.objectRoom,
+  roomId
+)
+assert(
+  previewNearWallTheme.fill === BOOTH_CLEARANCE_THEMES.tight.fill,
+  'preview flush to room wall uses tight (yellow) fill'
 )
 assert(
   clearanceBand(
-    minVendorBoothClearanceFt(previewAt3, doc.objects, doc.rooms, {
+    minVendorBoothBoundaryClearanceFt(previewNearWall, doc.objects, doc.rooms, {
       ...doc.objectRoom,
       __preview__: roomId,
     })
   ) === 'tight',
-  '3′ preview clearance band is tight'
+  'preview near room wall is a boundary warning'
 )
 
 // Restore paired-booth doc for scatter tests below.

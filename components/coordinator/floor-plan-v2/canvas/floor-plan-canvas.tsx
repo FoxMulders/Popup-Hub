@@ -9,6 +9,8 @@ import {
   useState,
   type MutableRefObject,
 } from 'react'
+import { LayoutGrid } from 'lucide-react'
+import { toast } from 'sonner'
 import { CanvasGrid } from './canvas-grid'
 import { CanvasObjects } from './canvas-objects'
 import {
@@ -48,11 +50,13 @@ import {
 } from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
+import { packVendorBoothsInRoomGrid } from '../engine/auto-arrange'
 import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import type { ToolState } from '../tools/types'
 import { cn } from '@/lib/utils'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { dissolvedStageIdsForDoc } from '@/src/utils/layoutMergeEngine'
 import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
 import { vendorBoothClearanceThemeForProbe } from '@/lib/coordinator/booth-clearance-visual'
@@ -468,6 +472,58 @@ export function FloorPlanCanvas({
     [mergeOverlapCtx, store.doc.objects]
   )
 
+  const canPackVendorGrid = useMemo(() => {
+    if (viewOnly || !activeRoomId) return false
+    const objectRoom = store.doc.objectRoom ?? {}
+    return store.doc.objects.some(
+      (o) =>
+        o.kind === 'booth' &&
+        !isGuestTableBooth(o as BoothObject) &&
+        objectRoom[o.id] === activeRoomId
+    )
+  }, [activeRoomId, store.doc.objectRoom, store.doc.objects, viewOnly])
+
+  const handlePackVendorGrid = useCallback(() => {
+    if (!activeRoomId) {
+      toast.message('Select a room before arranging booths.')
+      return
+    }
+    const selectedVendorIds = new Set(
+      [...store.selectedIds].filter((id) => {
+        const obj = store.doc.objects.find((o) => o.id === id)
+        return (
+          obj?.kind === 'booth' &&
+          !isGuestTableBooth(obj as BoothObject) &&
+          (store.doc.objectRoom ?? {})[id] === activeRoomId
+        )
+      })
+    )
+    const result = packVendorBoothsInRoomGrid(store.doc, activeRoomId, {
+      selectedIds: selectedVendorIds.size > 0 ? selectedVendorIds : undefined,
+      snapFt: store.doc.snapFt,
+    })
+    if (!result) {
+      toast.error('Could not read the active room grid.')
+      return
+    }
+    if (result.placedCount === 0) {
+      toast.error('No vendor booths fit inside the room grid.')
+      return
+    }
+    store.replaceObjects(result.doc.objects, { pushHistory: true })
+    onLayoutCommit?.()
+    if (result.droppedCount > 0) {
+      toast.warning(
+        `Arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'}; ${result.droppedCount} could not fit.`,
+        { duration: 4500 }
+      )
+    } else {
+      toast.success(
+        `Arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} in the room grid.`
+      )
+    }
+  }, [activeRoomId, onLayoutCommit, store])
+
   const dissolvedStageIds = useMemo(
     () => dissolvedStageIdsForDoc(store.doc),
     [store.doc]
@@ -810,6 +866,30 @@ export function FloorPlanCanvas({
         className
       )}
     >
+      {!viewOnly ? (
+        <div className="pointer-events-none absolute right-2 top-2 z-20 flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={handlePackVendorGrid}
+            disabled={!canPackVendorGrid}
+            title={
+              canPackVendorGrid
+                ? 'Arrange selected or unplaced vendor booths row-by-row inside the room grid'
+                : 'Draw vendor booths in the active room first'
+            }
+            aria-label="Arrange vendor booths in room grid"
+            className={cn(
+              'pointer-events-auto inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[0.6875rem] font-semibold shadow-sm backdrop-blur-sm transition-colors',
+              canPackVendorGrid
+                ? 'border-emerald-300 bg-white/95 text-emerald-900 hover:bg-emerald-50'
+                : 'cursor-not-allowed border-stone-200 bg-white/80 text-stone-400'
+            )}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+            Arrange layout
+          </button>
+        </div>
+      ) : null}
       <div
         id={FLOOR_PLAN_CANVAS_ID}
         ref={scrollRef}

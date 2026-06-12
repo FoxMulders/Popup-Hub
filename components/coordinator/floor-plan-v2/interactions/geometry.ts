@@ -415,6 +415,14 @@ export function shouldSkipOverlapPair(
   return kinds.has('door') || kinds.has('emergency_exit')
 }
 
+/**
+ * Overlap validation uses each object's stored W×H (with rotation), not
+ * sub-table splits or clearance-expanded vendor probes.
+ */
+function physicalOverlapProbesForObject(obj: PlacedObject): PlacedObject[] {
+  return [obj]
+}
+
 function placedObjectsOverlapProbes(
   probesA: ReadonlyArray<PlacedObject>,
   probesB: ReadonlyArray<PlacedObject>
@@ -443,8 +451,8 @@ export function placedObjectsOverlap(
   if (shouldSkipOverlapPair(a, b)) return false
   if (ctx && isMergeOverlapExempt(a, b, ctx)) return false
   return placedObjectsOverlapProbes(
-    placementProbesForObject(a),
-    placementProbesForObject(b)
+    physicalOverlapProbesForObject(a),
+    physicalOverlapProbesForObject(b)
   )
 }
 
