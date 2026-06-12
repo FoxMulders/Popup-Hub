@@ -4,6 +4,31 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — vendor apply event not found fix (local, not deployed)
+- **Root cause:** `/api/vendor/apply` used an explicit `events` column list (including booth-contract fields from migration `105`) while the vendor detail page uses `VENDOR_EVENT_SELECT` (`*`). When optional columns are missing or the select fails, Supabase returns `data: null` and the route surfaced **Event not found** even for published markets.
+- **Fix:** `VENDOR_APPLY_EVENT_SELECT` in `lib/queries/events.ts` (`*` + `event_days` + coordinator profile); apply route loads the event via service client, logs query errors, and returns **Could not load market details** on fetch failure.
+- **Verify:** Open a published market → Apply → submit; should no longer toast **Event not found**. `npx tsc --noEmit` — PASS.
+
+## Active work — apply dialog viewport fit (local, not deployed)
+- **`components/events/apply-button.tsx`:** Apply dialog capped at `92dvh`, scrollable body, pinned submit footer; category list scrolls when long (`max-h-36`).
+- **Verify:** Open Apply on a market with many passport categories + payment + contract — dialog stays on screen at 100% zoom; submit button always visible.
+
+## Active work — automatic image compression for uploads (local, not deployed)
+- **`lib/media/compress-image-for-upload.ts`:** Browser-side resize + re-encode (canvas) to keep JPEG/PNG/WebP under storage limits before upload.
+- **Wired into:** passport story upload, market feed upload, flyer scan (`use-flyer-scan.ts`), feature-request screenshot picker.
+- **Behavior:** Large phone photos are silently compressed; only fails if still over 5 MB after max shrink. PNG photos convert to JPEG for better compression.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: upload a 8–12 MB phone photo to passport story or market feed — should publish without manual resizing.
+
+## Active work — MLM broad product category (local, not deployed)
+- **`107_mlm_broad_category.sql`:** Adds **Multi Level Marketer (MLM)** as a broad (`is_broad=true`), MLM-flagged (`is_mlm=true`) vendor passport primary category.
+- **Verify:** Apply migration `107`; vendor passport Step 2 shows the new bucket; coordinator wizard Step 2 lists it under Commercial / MLMs when MLM vendors are allowed.
+
+## Active work — vendor applied-market markers (local, not deployed)
+- **`event-card.tsx` + `vendor-market-grid.tsx`:** Markets the vendor already applied to show an **Applied · {status}** overlay badge and harvest ring on the card grid.
+- **`apply-button.tsx` + `application-status-ui.ts`:** Block reapplication in UI (toast guard + terminal states for declined/cancelled/closed); 409 responses close the apply dialog.
+- **`app/vendor/events/[id]/page.tsx`:** Pass `applicationId` to ApplyButton for follow-up actions.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: vendor with existing application → `/vendor/events` card shows Applied badge + status action (no Apply Now); declined/cancelled markets show status link + “Additional applications are not accepted.”
+
 ## Active work — initial loader booth ring layout (local, not deployed)
 - **`components/brand/initial-loader-reveal.tsx`:** Top row shifted one booth cell right; side columns trimmed to alternating tiles (left keeps 1st/3rd/5th, right keeps 2nd/4th/6th) for 3×3 symmetry with top/bottom rows.
 - **Verify:** Reload app — initial loader shows 3 booths per side, top row offset right of bottom row.

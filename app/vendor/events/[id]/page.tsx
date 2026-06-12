@@ -347,6 +347,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
           event={eventRecord as Event}
           userId={user.id}
           applicationStatus={existingApp?.status ?? null}
+          applicationId={existingApp?.id ?? null}
           existingApplication={existingApp ?? null}
           boothPriceCents={boothPriceCents}
           applicationsOpen={applicationsOpen}

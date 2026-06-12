@@ -110,3 +110,10 @@ export const VENDOR_EVENT_SELECT = `
   ),
   event_days(*)
 `
+
+/** Server-side vendor apply — use * on events/profiles so missing optional columns do not break the query. */
+export const VENDOR_APPLY_EVENT_SELECT = `
+  *,
+  event_days(id, event_id, date, start_time, end_time, sort_order),
+  coordinator:profiles!events_coordinator_id_fkey(*)
+`

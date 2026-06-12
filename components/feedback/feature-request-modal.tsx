@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
+import { compressImageForUpload } from '@/lib/media/compress-image-for-upload'
 import Image from 'next/image'
 import { Loader2, PartyPopper, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -120,7 +121,7 @@ export function FeatureRequestModal({
     setTargetComponent(firstTarget)
   }
 
-  function applyScreenshot(file: File | null) {
+  async function applyScreenshot(file: File | null) {
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     if (!file) {
       setScreenshot(null)
@@ -134,15 +135,18 @@ export function FeatureRequestModal({
       return
     }
 
-    setScreenshot(file)
-    setPreviewUrl(URL.createObjectURL(file))
+    const prepared = await compressImageForUpload(file, 5 * 1024 * 1024)
+    setScreenshot(prepared)
+    setPreviewUrl(URL.createObjectURL(prepared))
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault()
     setDragActive(false)
     const file = event.dataTransfer.files?.[0] ?? null
-    applyScreenshot(file)
+    applyScreenshot(file).catch(() => {
+      toast.error('Could not prepare screenshot')
+    })
   }
 
   function submit() {
@@ -388,7 +392,9 @@ export function FeatureRequestModal({
                         accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                         className="sr-only"
                         disabled={pending}
-                        onChange={(event) => applyScreenshot(event.target.files?.[0] ?? null)}
+                        onChange={(event) => {
+                          void applyScreenshot(event.target.files?.[0] ?? null)
+                        }}
                       />
                     </label>
                   )}

@@ -76,7 +76,7 @@ import type { VendorCheckoutMethod } from '@/lib/payments/booth-payment-display'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import { uploadApplicationDocument } from '@/lib/vendor/upload-application-document'
 import { ApplicationStatusActions, ApplicationStatusBadgeLink } from '@/components/vendor/application-status-actions'
-import { hasExistingVendorApplication } from '@/lib/vendor/application-status-ui'
+import { hasExistingVendorApplication, VENDOR_REAPPLICATION_BLOCKED_MESSAGE } from '@/lib/vendor/application-status-ui'
 import {
   computeApplicationBoothPriceCents,
   isCommunityMarketListing,
@@ -164,6 +164,10 @@ export function ApplyButton({
     () => contractRequiresVendorAcknowledgment(event),
     [event]
   )
+
+  const resolvedApplicationId = applicationId ?? existingApplication?.id ?? null
+  const trackedApplicationStatus =
+    localApplicationStatus ?? existingApplication?.status ?? applicationStatus
 
   useEffect(() => {
     setLocalApplicationStatus(applicationStatus)
@@ -397,6 +401,11 @@ export function ApplyButton({
   }, [open, enabledPaymentMethods, paymentMethod])
 
   async function handleApplyClick() {
+    if (hasExistingVendorApplication(trackedApplicationStatus)) {
+      toast.error(VENDOR_REAPPLICATION_BLOCKED_MESSAGE)
+      return
+    }
+
     setPassportLoading(true)
     try {
       const [{ data: passport, error }, { data: profile }] = await Promise.all([
@@ -495,6 +504,8 @@ export function ApplyButton({
       }
       if (res.status === 409) {
         setLocalApplicationStatus(data.application?.status ?? 'pending')
+        setOpen(false)
+        setWaitlistConfirmOpen(false)
       }
       toast.error(data.error ?? 'Failed to submit application')
       return
@@ -614,10 +625,6 @@ export function ApplyButton({
     }
   }
 
-  const resolvedApplicationId = applicationId ?? existingApplication?.id ?? null
-  const trackedApplicationStatus =
-    localApplicationStatus ?? existingApplication?.status ?? applicationStatus
-
   if (!applicationsOpen && !hasExistingVendorApplication(trackedApplicationStatus)) {
     return (
       <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
@@ -640,8 +647,8 @@ export function ApplyButton({
           Applications closed — not selected
         </Badge>
         <p className="text-center text-xs text-muted-foreground">
-          This market closed before the organizer reviewed your application.
-          Discover other open markets to apply again.
+          This market closed before the organizer reviewed your application.{' '}
+          {VENDOR_REAPPLICATION_BLOCKED_MESSAGE}
         </p>
       </div>
     )
@@ -787,17 +794,23 @@ export function ApplyButton({
 
   if (trackedApplicationStatus === 'cancelled') {
     return (
-      <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
-        Application cancelled
-      </Badge>
+      <div className="space-y-2">
+        <ApplicationStatusBadgeLink event={event} status="cancelled" />
+        <p className="text-center text-xs text-muted-foreground">
+          {VENDOR_REAPPLICATION_BLOCKED_MESSAGE}
+        </p>
+      </div>
     )
   }
 
   if (trackedApplicationStatus === 'rejected') {
     return (
-      <Badge className={`w-full justify-center py-1.5 ${marketStatusBadge.neutral}`}>
-        Not selected
-      </Badge>
+      <div className="space-y-2">
+        <ApplicationStatusBadgeLink event={event} status="rejected" />
+        <p className="text-center text-xs text-muted-foreground">
+          {VENDOR_REAPPLICATION_BLOCKED_MESSAGE}
+        </p>
+      </div>
     )
   }
 
@@ -835,15 +848,15 @@ export function ApplyButton({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[min(92dvh,720px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+          <DialogHeader className="shrink-0 space-y-1 px-4 pt-4 pr-10">
             <DialogTitle>Apply to {event.name}</DialogTitle>
             <DialogDescription>
               Your passport categories are checked automatically against open booth spots.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-2">
             {passportPreview ? <PassportApplyPreview passport={passportPreview} /> : null}
 
             <div className="space-y-2">
@@ -851,7 +864,7 @@ export function ApplyButton({
               {slotsLoading ? (
                 <Skeleton className="h-20 w-full rounded-md" />
               ) : categoryMatch && categoryMatch.passportSlots.length > 0 ? (
-                <ul className="space-y-1.5 rounded-lg border bg-stone-50 p-3">
+                <ul className="max-h-36 space-y-1.5 overflow-y-auto rounded-lg border bg-stone-50 p-3">
                   {categoryMatch.passportSlots.map((slot) => (
                     <li
                       key={slot.categoryId}
@@ -1058,6 +1071,9 @@ export function ApplyButton({
               </label>
             </div>
 
+          </div>
+
+          <div className="shrink-0 border-t bg-popover px-4 py-3">
             <Button
               className="w-full"
               onClick={handleConfirmSubmit}

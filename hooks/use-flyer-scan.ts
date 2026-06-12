@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { showFlyerParseErrorToast } from '@/components/coordinator/flyer-parse-error-toast'
 import { applyParsedFlyer } from '@/lib/flyer/apply-parsed-flyer'
+import { compressImageForUpload } from '@/lib/media/compress-image-for-upload'
 import type { FlyerFieldKey, FlyerFormHandlers, ParsedFlyerResponse } from '@/lib/flyer/types'
 
 interface ParseFlyerApiResponse extends ParsedFlyerResponse {
@@ -39,8 +40,9 @@ export function useFlyerScan() {
       setParsing(true)
 
       try {
+        const prepared = await compressImageForUpload(file, 5 * 1024 * 1024)
         const formData = new FormData()
-        formData.append('file', file)
+        formData.append('file', prepared)
 
         const res = await fetch('/api/parse-flyer', {
           method: 'POST',

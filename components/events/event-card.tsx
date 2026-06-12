@@ -6,7 +6,8 @@ import { MapPin, Calendar, Clock, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { getEventDateLabel } from '@/lib/shopper/events'
 import { marketStatusBadge } from '@/lib/theme/market'
-import type { Event } from '@/types/database'
+import { vendorApplicationCardBadgeLabel } from '@/lib/vendor/application-status-ui'
+import type { ApplicationStatus, Event } from '@/types/database'
 import type { EventDisplayStatus } from '@/lib/queries/events'
 
 interface EventCardProps {
@@ -22,6 +23,8 @@ interface EventCardProps {
   selectedDate?: Date
   liveAuctionId?: string
   showMarketOwner?: boolean
+  vendorApplicationStatus?: ApplicationStatus | null
+  vendorApplicationsOpen?: boolean
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -52,8 +55,14 @@ export function EventCard({
   selectedDate,
   liveAuctionId,
   showMarketOwner = false,
+  vendorApplicationStatus = null,
+  vendorApplicationsOpen = true,
 }: EventCardProps) {
   const badgeStatus = displayStatus ?? event.status
+  const appliedLabel =
+    vendorApplicationStatus != null
+      ? vendorApplicationCardBadgeLabel(vendorApplicationStatus, vendorApplicationsOpen)
+      : null
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const hours =
     hoursLabel ??
@@ -63,7 +72,11 @@ export function EventCard({
     : format(new Date(event.start_at), 'EEE, MMM d, yyyy')
 
   return (
-    <Card className="group flex h-full flex-col overflow-hidden transition hover:shadow-[var(--shadow-market-md)]">
+    <Card
+      className={`group flex h-full flex-col overflow-hidden transition hover:shadow-[var(--shadow-market-md)]${
+        appliedLabel ? ' ring-2 ring-harvest-300/70' : ''
+      }`}
+    >
       <div className="relative h-48 w-full overflow-hidden rounded-t-xl border-b border-stone-200 bg-canvas">
         {event.cover_image_url ? (
           <ExpandableImage
@@ -87,9 +100,19 @@ export function EventCard({
             {distanceLabel}
           </Badge>
         ) : null}
+        {appliedLabel ? (
+          <Badge
+            className="pointer-events-none absolute bottom-2 left-2 z-10 max-w-[calc(100%-1rem)] truncate border border-harvest-300 bg-white/95 text-[10px] font-semibold text-harvest-900 shadow-sm"
+            aria-label={appliedLabel}
+          >
+            {appliedLabel}
+          </Badge>
+        ) : null}
         {liveAuctionId ? (
           <span
-            className="absolute bottom-2 left-2 z-10 inline-flex items-center rounded-md border border-harvest-300 bg-harvest-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm"
+            className={`absolute z-10 inline-flex items-center rounded-md border border-harvest-300 bg-harvest-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm ${
+              appliedLabel ? 'bottom-2 right-2' : 'bottom-2 left-2'
+            }`}
             aria-label="Live quarter auction at this market"
           >
             Live auction

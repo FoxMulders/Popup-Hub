@@ -9,6 +9,7 @@ import { getCoordinatorAccessToken } from '@/lib/square/oauth'
 import {
   isEventOpenForApplications,
   OPEN_EVENT_STATUSES,
+  VENDOR_APPLY_EVENT_SELECT,
 } from '@/lib/queries/events'
 import { fetchCategoryAvailableSlots } from '@/lib/queries/event-capacity'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
@@ -158,28 +159,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
   }
 
-  const [{ data: passport }, { data: event }, { data: existing }] = await Promise.all([
-    supabase
-      .from('vendor_passports')
-      .select(
-        'id, business_name, primary_category_id, category_ids, is_verified, verification_status, business_number, social_handle, risk_score, account_status'
-      )
-      .eq('user_id', vendorId)
-      .maybeSingle(),
-    supabase
-      .from('events')
-      .select(
-        'id, name, booking_mode, status, start_at, end_at, allow_mlm, listing_type, booth_price_cents, multi_table_discount_percent, is_multi_day, require_full_attendance, market_insurance_required, booth_contract_enabled, booth_contract_clauses, booth_contract_pdf_url, booth_contract_updated_at, booth_clearance_policy, coordinator_id, square_merchant_id, accepts_credit_card, accepts_etransfer, accepts_cash, accepts_square, accepts_stripe, accepts_offline_etransfer, accepts_offline_cash, venue_verified, venue_verification_status, venue_verification_reason, vendor_access_equality_until, event_days(id, event_id, date, start_time, end_time, sort_order), coordinator:profiles!events_coordinator_id_fkey(email, full_name, stripe_connected_id, stripe_onboarding_complete, coordinator_verification_status, coordinator_account_status, coordinator_risk_score)'
-      )
-      .eq('id', eventId)
-      .maybeSingle(),
-    supabase
-      .from('booth_applications')
-      .select('id, status')
-      .eq('event_id', eventId)
-      .eq('vendor_id', vendorId)
-      .maybeSingle(),
-  ])
+  const serviceSupabase = await createServiceClient()
+
+  const [{ data: passport }, { data: event, error: eventError }, { data: existing }] =
+    await Promise.all([
+      supabase
+        .from('vendor_passports')
+        .select(
+          'id, business_name, primary_category_id, category_ids, is_verified, verification_status, business_number, social_handle, risk_score, account_status'
+        )
+        .eq('user_id', vendorId)
+        .maybeSingle(),
+      serviceSupabase
+        .from('events')
+        .select(VENDOR_APPLY_EVENT_SELECT)
+        .eq('id', eventId)
+        .maybeSingle(),
+      supabase
+        .from('booth_applications')
+        .select('id, status')
+        .eq('event_id', eventId)
+        .eq('vendor_id', vendorId)
+        .maybeSingle(),
+    ])
+
+  if (eventError) {
+    console.error('[vendor/apply] event query failed', {
+      eventId,
+      message: eventError.message,
+      code: eventError.code,
+    })
+    return NextResponse.json({ error: 'Could not load market details' }, { status: 500 })
+  }
 
   if (!isPassportReadyForApplication(passport)) {
     return NextResponse.json(
@@ -312,7 +323,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not resolve an application category.' }, { status: 400 })
   }
 
-  const serviceSupabase = await createServiceClient()
   const boothAccess = await assertVendorCanApplyToCategory(serviceSupabase, {
     event,
     vendorId,

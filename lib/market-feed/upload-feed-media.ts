@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { compressImageForUpload } from '@/lib/media/compress-image-for-upload'
 import type { MarketFeedMediaType } from '@/types/database'
 
 const MARKET_FEED_BUCKET = 'market-feed'
@@ -50,31 +51,36 @@ export async function uploadMarketFeedMedia(
     throw new Error('Upload a JPEG, PNG, WebP image or MP4/WebM video clip.')
   }
 
-  if (mediaType === 'image' && input.file.size > MAX_IMAGE_BYTES) {
-    throw new Error('Images must be 5 MB or smaller.')
+  const file =
+    mediaType === 'image'
+      ? await compressImageForUpload(input.file, MAX_IMAGE_BYTES)
+      : input.file
+
+  if (mediaType === 'image' && file.size > MAX_IMAGE_BYTES) {
+    throw new Error('Images must be 5 MB or smaller. Try a smaller photo or crop before uploading.')
   }
 
   if (mediaType === 'video') {
-    if (input.file.size > MAX_VIDEO_BYTES) {
+    if (file.size > MAX_VIDEO_BYTES) {
       throw new Error('Video clips must be 15 MB or smaller.')
     }
-    const durationOk = await validateFeedVideoDuration(input.file)
+    const durationOk = await validateFeedVideoDuration(file)
     if (!durationOk) {
       throw new Error('Video clips must be 30 seconds or shorter.')
     }
   }
 
-  const ext = input.file.name.includes('.')
-    ? input.file.name.split('.').pop()!.toLowerCase()
+  const ext = file.name.includes('.')
+    ? file.name.split('.').pop()!.toLowerCase()
     : mediaType === 'video'
       ? 'mp4'
       : 'jpg'
 
-  const path = `${input.vendorId}/${input.eventId}/feed-${Date.now()}-${sanitizeFileName(input.file.name || `clip.${ext}`)}`
+  const path = `${input.vendorId}/${input.eventId}/feed-${Date.now()}-${sanitizeFileName(file.name || `clip.${ext}`)}`
 
-  const { error } = await supabase.storage.from(MARKET_FEED_BUCKET).upload(path, input.file, {
+  const { error } = await supabase.storage.from(MARKET_FEED_BUCKET).upload(path, file, {
     upsert: false,
-    contentType: input.file.type || undefined,
+    contentType: file.type || undefined,
   })
 
   if (error) {

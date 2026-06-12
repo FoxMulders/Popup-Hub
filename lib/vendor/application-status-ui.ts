@@ -56,6 +56,9 @@ export function hasExistingVendorApplication(
   return status != null
 }
 
+export const VENDOR_REAPPLICATION_BLOCKED_MESSAGE =
+  'You already applied to this market. Additional applications are not accepted.'
+
 /**
  * UI shape used when an application's market closes before the organizer
  * could decide on it. Only triggered for `pending` rows — `waitlisted`
@@ -89,6 +92,15 @@ export function resolveVendorApplicationStatusUi(
     return VENDOR_APPLICATION_CLOSED_UNSELECTED_UI
   }
   return VENDOR_APPLICATION_STATUS_UI[status]
+}
+
+/** Short label for vendor market cards — always leads with "Applied". */
+export function vendorApplicationCardBadgeLabel(
+  status: ApplicationStatus,
+  applicationsOpen = true,
+): string {
+  const ui = resolveVendorApplicationStatusUi(status, applicationsOpen)
+  return `Applied · ${ui.label}`
 }
 
 export function filterVendorApplications<T extends { status: ApplicationStatus; event?: { status?: string } | null }>(

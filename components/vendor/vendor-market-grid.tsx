@@ -94,6 +94,8 @@ function MarketGrid({
             showMarketOwner
             displayStatus={displayStatus}
             capacityLabel={capacityLabel}
+            vendorApplicationStatus={applicationsByEventId[event.id]?.status ?? null}
+            vendorApplicationsOpen={applicationsOpen}
             distanceLabel={
               showDistance && event.distance_km != null
                 ? formatDistance(event.distance_km)

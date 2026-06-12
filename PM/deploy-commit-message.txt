@@ -1,1 +1,1 @@
-feat: ship 35 session updates (initial loader booth ring layout; coordinator login home; dual-path coordinator community vouches; digital booth contracts; +31 more)
+feat: ship 40 session updates (vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; MLM broad product category; +36 more)

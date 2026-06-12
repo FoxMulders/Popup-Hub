@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { compressImageForUpload } from '@/lib/media/compress-image-for-upload'
 import {
   PASSPORT_STORY_MAX_IMAGE_BYTES,
   PASSPORT_STORY_MAX_VIDEO_BYTES,
@@ -26,32 +27,37 @@ export async function uploadPassportStoryMedia(
     throw new Error('Upload a JPEG, PNG, WebP image or MP4/WebM video clip.')
   }
 
-  if (mediaType === 'image' && input.file.size > PASSPORT_STORY_MAX_IMAGE_BYTES) {
-    throw new Error('Images must be 5 MB or smaller.')
+  const file =
+    mediaType === 'image'
+      ? await compressImageForUpload(input.file, PASSPORT_STORY_MAX_IMAGE_BYTES)
+      : input.file
+
+  if (mediaType === 'image' && file.size > PASSPORT_STORY_MAX_IMAGE_BYTES) {
+    throw new Error('Images must be 5 MB or smaller. Try a smaller photo or crop before uploading.')
   }
 
   let durationSeconds: number | null = null
   if (mediaType === 'video') {
-    if (input.file.size > PASSPORT_STORY_MAX_VIDEO_BYTES) {
+    if (file.size > PASSPORT_STORY_MAX_VIDEO_BYTES) {
       throw new Error('Video clips must be 15 MB or smaller.')
     }
-    durationSeconds = await validateStoryVideoDuration(input.file)
+    durationSeconds = await validateStoryVideoDuration(file)
     if (durationSeconds == null) {
       throw new Error(getStoryVideoDurationError())
     }
   }
 
-  const ext = input.file.name.includes('.')
-    ? input.file.name.split('.').pop()!.toLowerCase()
+  const ext = file.name.includes('.')
+    ? file.name.split('.').pop()!.toLowerCase()
     : mediaType === 'video'
       ? 'mp4'
       : 'jpg'
 
-  const path = `${input.ownerId}/passport-stories/story-${Date.now()}-${sanitizeFileName(input.file.name || `clip.${ext}`)}`
+  const path = `${input.ownerId}/passport-stories/story-${Date.now()}-${sanitizeFileName(file.name || `clip.${ext}`)}`
 
-  const { error } = await supabase.storage.from(STORY_BUCKET).upload(path, input.file, {
+  const { error } = await supabase.storage.from(STORY_BUCKET).upload(path, file, {
     upsert: false,
-    contentType: input.file.type || undefined,
+    contentType: file.type || undefined,
   })
 
   if (error) {
