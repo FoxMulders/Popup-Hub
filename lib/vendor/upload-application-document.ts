@@ -17,7 +17,7 @@ export async function uploadApplicationDocument(
   supabase: SupabaseClient,
   userId: string,
   file: File,
-  kind: 'permit' | 'insurance',
+  kind: 'permit' | 'insurance' | 'signed-contract' | 'signature',
   applicationId?: string,
 ): Promise<string> {
   if (!ALLOWED_MIME.has(file.type)) {

@@ -2,6 +2,7 @@
 
 import { Circle, RectangleHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { VENDOR_BOOTH_TOOLBAR } from '@/components/coordinator/floor-plan-v2/canvas/placement-theme'
 import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import {
   TABLE_SIZES,
@@ -68,7 +69,7 @@ function utilityChipClass(
 ): string {
   const activeClass =
     tone === 'vendor'
-      ? 'border-forest/40 bg-forest text-primary-foreground hover:bg-forest'
+      ? VENDOR_BOOTH_TOOLBAR.chipActiveBorder
       : tone === 'patron'
         ? 'border-violet-300 bg-violet-600 text-white hover:bg-violet-600'
         : 'border-sky-300 bg-sky-600 text-white hover:bg-sky-600'
@@ -87,7 +88,7 @@ function sizeButtonClass(
 ): string {
   const activeClass =
     tone === 'vendor'
-      ? 'bg-forest text-primary-foreground'
+      ? VENDOR_BOOTH_TOOLBAR.chipActive
       : tone === 'patron'
         ? 'bg-violet-600 text-white'
         : 'bg-sky-600 text-white'

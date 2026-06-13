@@ -36,6 +36,30 @@ export const LAYOUT_EDITOR_HELP_CATEGORY_LABELS: Record<
 
 export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
   {
+    id: 'quick-start',
+    category: 'basics',
+    title: 'New here? Quick start in 5 steps',
+    summary:
+      'You do not need every toolbar button on day one. Follow this order, then search help for anything else.',
+    steps: [
+      'Start with a room — use the room tabs to add or switch zones (Main Hall, Patio, etc.).',
+      'Sketch the venue — Draw walls, doors, and exits on the perimeter before placing booths.',
+      'Place vendor booths — under Vendor Booths, pick a table length, then click the canvas to add booths.',
+      'Navigate easily — H pans the canvas, V selects and moves objects, Ctrl+Z undoes mistakes.',
+      'Save when ready — Save draft keeps your work; fix any overlap warnings before saving.',
+    ],
+    keywords: [
+      'quick start',
+      'beginner',
+      'new',
+      'first time',
+      'overwhelmed',
+      'start here',
+      'getting started',
+      'how to begin',
+    ],
+  },
+  {
     id: 'overview',
     category: 'basics',
     title: 'Layout editor overview',
@@ -395,6 +419,28 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'publish',
       'persist',
       'button',
+    ],
+  },
+  {
+    id: 'save-layout-template',
+    category: 'save',
+    title: 'Saved layouts for reuse',
+    summary:
+      'Save your floor plan structure at a venue and optionally share it with other coordinators.',
+    steps: [
+      'Save layout for reuse — stores rooms, fixtures, and booth positions for this venue address.',
+      'Vendor assignments are not saved — only the hall structure comes back on load.',
+      'Share at this venue — makes the layout visible to other coordinators at the same location.',
+      'Load saved layout — pick from Your layouts or Shared at this venue in the toolbar.',
+    ],
+    keywords: [
+      'template',
+      'reuse',
+      'saved layout',
+      'public',
+      'share',
+      'venue',
+      'bookmark',
     ],
   },
   {

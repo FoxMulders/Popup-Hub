@@ -117,7 +117,7 @@ export function MarqueePreview({ rect, pxPerFt }: MarqueeProps) {
 function previewFill(kind: ObjectKind): string {
   switch (kind) {
     case 'booth':
-      return '#fde68a'
+      return '#bbf7d0'
     case 'wall':
       return '#1c1917'
     case 'open_wall':
@@ -140,7 +140,7 @@ function previewFill(kind: ObjectKind): string {
 function previewStroke(kind: ObjectKind): string {
   switch (kind) {
     case 'booth':
-      return '#a16207'
+      return '#16a34a'
     case 'wall':
       return '#0c0a09'
     case 'open_wall':

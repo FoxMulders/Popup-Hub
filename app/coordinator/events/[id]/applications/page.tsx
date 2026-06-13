@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { redirect, notFound } from 'next/navigation'
 import { ApplicationBoard } from '@/components/coordinator/application-board'
+import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -74,6 +75,7 @@ export default async function ApplicationsPage({ params }: Props) {
               </Badge>
             </div>
           </div>
+          <TestSuitePopulateButton eventId={id} />
         </div>
       </div>
 

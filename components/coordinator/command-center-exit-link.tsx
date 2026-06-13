@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { setupWizardStepHref } from '@/lib/wizard/setup-step-url'
 
 export type DesignerExitTarget = 'auto' | 'event-setup' | 'event-overview' | 'dashboard'
 
@@ -16,13 +17,13 @@ export function resolveDesignerExitHref(
   if (target === 'dashboard') return '/coordinator/dashboard'
   if (!eventId) return '/coordinator/dashboard'
   if (target === 'event-setup') {
-    return `/coordinator/events/${eventId}/setup?step=3`
+    return setupWizardStepHref(eventId, 3)
   }
   if (target === 'event-overview') {
     return `/coordinator/events/${eventId}`
   }
   if (eventStatus === 'draft') {
-    return `/coordinator/events/${eventId}/setup?step=3`
+    return setupWizardStepHref(eventId, 3)
   }
   return `/coordinator/events/${eventId}`
 }

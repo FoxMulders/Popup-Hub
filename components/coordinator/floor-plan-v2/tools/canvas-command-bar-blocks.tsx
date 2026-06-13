@@ -46,8 +46,10 @@ import {
   AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
 } from '../engine/traffic-flow-prerequisites'
 import type { DrawShape, ToolState } from './types'
+import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
+import { VENDOR_BOOTH_TOOLBAR } from '@/components/coordinator/floor-plan-v2/canvas/placement-theme'
 import { formatDiscreteZoomPercent } from '@/lib/floor-plan/discrete-zoom'
 import { BOOTH_MAP_LABEL_OPTIONS } from '@/lib/coordinator/booth-map-label'
 import {
@@ -64,6 +66,7 @@ import {
   VendorSidebarSizeGrid,
 } from './table-size-pill'
 import type { DualScreenMode } from '@/lib/coordinator/floorplan-sync'
+import { FillRoomControl } from './fill-room-control'
 import type { CanvasToolbarBlockId } from './toolbar-order'
 import {
   guestRectTableSpec,
@@ -320,14 +323,11 @@ const CREATION_SHAPES: Array<{
 
 function LayoutToolbarHelpTrigger({ compact }: { compact: boolean }) {
   return (
-    <TooltipWrapper text="Layout editor help — smart search (?)">
-      <span className="inline-flex">
-        <LayoutEditorHelpButton
-          variant="icon"
-          className={toolbarIconButtonSize(compact)}
-        />
-      </span>
-    </TooltipWrapper>
+    <LayoutEditorHelpButton
+      variant="prominent"
+      size="sm"
+      className={cn('shrink-0 shadow-sm', toolbarControlHeight(compact), 'px-2.5')}
+    />
   )
 }
 
@@ -424,6 +424,12 @@ export interface CanvasCommandBarBlockContext {
   onRequestAiLayoutFeedback?: () => void
   canRequestAiLayoutFeedback?: boolean
   aiLayoutFeedbackLoading?: boolean
+  vendorFillMaxCapacity?: number
+  patronFillMaxCapacity?: number
+  onFillVendorTables?: (count: number) => void
+  onFillPatronTables?: (count: number) => void
+  fillRoomDisabledReason?: string | null
+  eventId?: string | null
   /** Static dashboard ribbon — tighter control heights (~10% shorter). */
   compact?: boolean
   /** Left-rail layout designer sidebar — stacked columns and split headers. */
@@ -527,10 +533,17 @@ export function renderCanvasCommandBarBlock(
       if (sidebarLayout) {
         return (
           <div
+            data-layout-help="draw-tools"
             className="flex w-full min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-x-auto"
             role="group"
             aria-label="Designer tools"
           >
+            <div
+              data-layout-help="navigation"
+              className="inline-flex shrink-0 items-center gap-0.5"
+              role="group"
+              aria-label="Navigation tools"
+            >
             <CommandButton
               onClick={() => ctx.onToolChange('select')}
               title="Select (V)"
@@ -545,6 +558,7 @@ export function renderCanvasCommandBarBlock(
             >
               <Hand className="h-3.5 w-3.5" />
             </CommandButton>
+            </div>
             {CREATION_SHAPES.map((shape) => (
               <CommandButton
                 key={shape.id}
@@ -603,6 +617,7 @@ export function renderCanvasCommandBarBlock(
       return (
         <>
           <div
+            data-layout-help="navigation"
             className="flex items-center gap-0.5"
             role="group"
             aria-label="Navigation tools"
@@ -627,6 +642,7 @@ export function renderCanvasCommandBarBlock(
             aria-hidden
           />
           <div
+            data-layout-help="draw-tools"
             className="flex flex-nowrap items-center gap-0.5 overflow-x-auto"
             role="group"
             aria-label="Creation tools"
@@ -811,7 +827,7 @@ export function renderCanvasCommandBarBlock(
       }
       if (sidebarLayout) {
         return (
-          <div className="relative w-full min-w-0 shrink-0">
+          <div className="relative flex w-full min-w-0 shrink-0 flex-col gap-1.5">
             <VendorSidebarSizeGrid
               value={ctx.tableSizeFt}
               onChange={activateTableSize}
@@ -819,6 +835,17 @@ export function renderCanvasCommandBarBlock(
               className="min-w-0"
               placementActive={vendorPlacementActive}
             />
+            {ctx.onFillVendorTables ? (
+              <FillRoomControl
+                scope="vendor"
+                maxCapacity={ctx.vendorFillMaxCapacity ?? 0}
+                disabled={Boolean(ctx.fillRoomDisabledReason)}
+                disabledReason={ctx.fillRoomDisabledReason}
+                onFill={ctx.onFillVendorTables}
+                compact={compact}
+                sidebarLayout
+              />
+            ) : null}
             {ctx.highlightedSelectionMetrics &&
             ctx.tableSizeFt.purpose !== 'guest' ? (
               <span
@@ -832,20 +859,38 @@ export function renderCanvasCommandBarBlock(
         )
       }
       return (
-        <TableSizePill
-          value={ctx.tableSizeFt}
-          onChange={activateTableSize}
-          sections="vendor"
-          compact={compact}
-          className="shrink-0"
-          vendorPlacementActive={vendorPlacementActive}
-        />
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <TableSizePill
+            value={ctx.tableSizeFt}
+            onChange={activateTableSize}
+            sections="vendor"
+            compact={compact}
+            className="shrink-0"
+            vendorPlacementActive={vendorPlacementActive}
+          />
+          {ctx.onFillVendorTables ? (
+            <>
+              <div className={toolbarDividerClass(compact)} aria-hidden />
+              <FillRoomControl
+                scope="vendor"
+                maxCapacity={ctx.vendorFillMaxCapacity ?? 0}
+                disabled={Boolean(ctx.fillRoomDisabledReason)}
+                disabledReason={ctx.fillRoomDisabledReason}
+                onFill={ctx.onFillVendorTables}
+                compact={compact}
+              />
+            </>
+          ) : null}
+        </div>
       )
 
     case 'vendor':
       if (sidebarLayout || dashboardStripLayout) {
         return (
-          <div className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-hidden">
+          <div
+            data-layout-help="vendor-booths"
+            className="flex min-w-0 flex-row flex-nowrap items-center gap-0.5 overflow-hidden"
+          >
             <CommandButton
               onClick={() => activateTablePlacement('vendor')}
               title="Draw vendor — size from Vendor column"
@@ -853,8 +898,8 @@ export function renderCanvasCommandBarBlock(
               className={cn(
                 'shrink-0',
                 isTablePlacementActive('vendor')
-                  ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
-                  : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
+                  ? VENDOR_BOOTH_TOOLBAR.buttonActive
+                  : VENDOR_BOOTH_TOOLBAR.buttonIdle
               )}
             >
               <Square className="h-3.5 w-3.5" />
@@ -863,15 +908,18 @@ export function renderCanvasCommandBarBlock(
         )
       }
       return (
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-0.5">
+        <div
+          data-layout-help="vendor-booths"
+          className="flex min-w-0 flex-wrap items-center justify-end gap-0.5"
+        >
           <CommandButton
             onClick={() => activateTablePlacement('vendor')}
             title="Draw vendor — size from Vendor column"
             active={isTablePlacementActive('vendor')}
             className={
               isTablePlacementActive('vendor')
-                ? 'bg-amber-200 text-amber-950 hover:bg-amber-200'
-                : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
+                ? VENDOR_BOOTH_TOOLBAR.buttonActive
+                : VENDOR_BOOTH_TOOLBAR.buttonIdle
             }
           >
             <Square className="h-3.5 w-3.5" />
@@ -890,7 +938,10 @@ export function renderCanvasCommandBarBlock(
               {ctx.highlightedSelectionMetrics &&
               ctx.tableSizeFt.purpose !== 'guest' ? (
                 <span
-                  className="hidden shrink-0 rounded-md border border-amber-200/90 bg-amber-50/80 px-2 py-1 text-[10px] font-semibold tabular-nums text-amber-900 sm:inline"
+                  className={cn(
+                    'hidden shrink-0 rounded-md border px-2 py-1 text-[10px] font-semibold tabular-nums sm:inline',
+                    VENDOR_BOOTH_TOOLBAR.metricsBadge
+                  )}
                   aria-live="polite"
                 >
                   {ctx.highlightedSelectionMetrics}
@@ -904,7 +955,7 @@ export function renderCanvasCommandBarBlock(
     case 'patron':
       if (sidebarLayout || dashboardStripLayout) {
         return (
-          <div className="w-full min-w-0">
+          <div className="flex w-full min-w-0 flex-col gap-1.5">
             {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
               <PatronSidebarControls
                 value={ctx.tableSizeFt}
@@ -925,6 +976,17 @@ export function renderCanvasCommandBarBlock(
                 rectToolActive={isTablePlacementActive('guest-rect')}
                 compact={compact}
                 className={dashboardStripLayout ? 'flex-row items-center' : undefined}
+              />
+            ) : null}
+            {ctx.onFillPatronTables ? (
+              <FillRoomControl
+                scope="patron"
+                maxCapacity={ctx.patronFillMaxCapacity ?? 0}
+                disabled={Boolean(ctx.fillRoomDisabledReason)}
+                disabledReason={ctx.fillRoomDisabledReason}
+                onFill={ctx.onFillPatronTables}
+                compact={compact}
+                sidebarLayout={sidebarLayout}
               />
             ) : null}
           </div>
@@ -954,6 +1016,19 @@ export function renderCanvasCommandBarBlock(
               className="min-w-0 shrink-0"
             />
           ) : null}
+          {ctx.onFillPatronTables ? (
+            <>
+              <div className={toolbarDividerClass(compact)} aria-hidden />
+              <FillRoomControl
+                scope="patron"
+                maxCapacity={ctx.patronFillMaxCapacity ?? 0}
+                disabled={Boolean(ctx.fillRoomDisabledReason)}
+                disabledReason={ctx.fillRoomDisabledReason}
+                onFill={ctx.onFillPatronTables}
+                compact={compact}
+              />
+            </>
+          ) : null}
           {ctx.highlightedSelectionMetrics &&
           ctx.tableSizeFt?.purpose === 'guest' ? (
             <span
@@ -968,17 +1043,23 @@ export function renderCanvasCommandBarBlock(
 
     case 'optimize':
       return (
-        <FloorPlanOptimizeControl
-          mode={ctx.autoArrangeMode ?? 'grid'}
-          onModeChange={ctx.onAutoArrangeModeChange}
-          onRun={ctx.onAutoArrangeFloorPlan}
-          canRun={ctx.canAutoArrangeFloorPlan}
-          disabledReason={ctx.autoArrangeDisabledReason}
-          compact={compact}
-          sidebarLayout={sidebarLayout}
-          topBarLayout={topBarLayout}
-        />
+        <div data-layout-help="optimize" className="inline-flex min-w-0">
+          <FloorPlanOptimizeControl
+            mode={ctx.autoArrangeMode ?? 'grid'}
+            onModeChange={ctx.onAutoArrangeModeChange}
+            onRun={ctx.onAutoArrangeFloorPlan}
+            canRun={ctx.canAutoArrangeFloorPlan}
+            disabledReason={ctx.autoArrangeDisabledReason}
+            compact={compact}
+            sidebarLayout={sidebarLayout}
+            topBarLayout={topBarLayout}
+          />
+        </div>
       )
+
+    case 'test-suite':
+      if (!ctx.eventId) return null
+      return <TestSuitePopulateButton eventId={ctx.eventId} compact={compact} />
 
     case 'room':
       if (sidebarLayout) {
@@ -1536,6 +1617,10 @@ export function renderCanvasCommandBarBlock(
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
+            <span
+              data-layout-help="save-actions"
+              className="inline-flex shrink-0 items-center gap-0.5"
+            >
             {ctx.onSaveDraft ? (
               <TooltipWrapper
                 text={
@@ -1584,6 +1669,7 @@ export function renderCanvasCommandBarBlock(
                 </button>
               </TooltipWrapper>
             ) : null}
+            </span>
           </>
         )
       }
@@ -1738,6 +1824,10 @@ export function renderCanvasCommandBarBlock(
                   {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
                 </button>
               ) : null}
+              <span
+                data-layout-help="save-actions"
+                className="inline-flex shrink-0 items-center gap-0.5"
+              >
               {ctx.onSaveDraft ? (
                 <TooltipWrapper
                   text={
@@ -1790,6 +1880,7 @@ export function renderCanvasCommandBarBlock(
                   </button>
                 </TooltipWrapper>
               ) : null}
+              </span>
             </div>
             <div
               className={cn(
@@ -1929,6 +2020,10 @@ export function renderCanvasCommandBarBlock(
               <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
+          <span
+            data-layout-help="save-actions"
+            className="inline-flex shrink-0 items-center gap-0.5"
+          >
           {ctx.onSaveDraft ? (
             <TooltipWrapper
               text={
@@ -1979,6 +2074,7 @@ export function renderCanvasCommandBarBlock(
               </button>
             </TooltipWrapper>
           ) : null}
+          </span>
         </>
       )
 

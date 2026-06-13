@@ -219,7 +219,7 @@ export function getVisibleSidebarSections(
     blocks: ['primitives'],
   })
 
-  const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align', 'optimize']
+  const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align', 'optimize', 'test-suite']
   sections.push({
     id: 'alignment-spacing',
     header: LAYOUT_EDITOR_SIDEBAR_HEADERS['alignment-spacing'],

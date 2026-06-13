@@ -63,6 +63,7 @@ import {
   focusWizardStep2Field,
   getWizardStep2ValidationError,
 } from '@/lib/wizard/wizard-step2-validation'
+import { setupWizardStepToUrlParam } from '@/lib/wizard/setup-step-url'
 import type { PlaceResult } from '@/lib/wizard/wizard-place-types'
 import { WizardNav, type WizardStep } from '@/components/coordinator/wizard/wizard-nav'
 import { WizardAmbientShell, WizardDivider } from '@/components/coordinator/wizard/wizard-ui'
@@ -318,7 +319,7 @@ export function MarketSetupWizard({
     const id = resolvedEventId ?? eventId
     if (!id || typeof window === 'undefined') return
     const url = new URL(window.location.href)
-    url.searchParams.set('step', String(step))
+    url.searchParams.set('step', setupWizardStepToUrlParam(step))
     window.history.replaceState(null, '', `${url.pathname}${url.search}`)
   }
 
@@ -1385,6 +1386,9 @@ export function MarketSetupWizard({
               layoutActiveRoomId={activeRoomId}
               onLayoutRoomsChange={handleLayoutRoomsChange}
               saveLayoutRef={saveLayoutRef}
+              coordinatorId={coordinatorId}
+              locationName={locationName}
+              address={address}
               eventCategoryNames={eventCategoryNames}
               configuredCategorySlots={categoryLimits.map((cl) => ({
                 categoryId: cl.categoryId,

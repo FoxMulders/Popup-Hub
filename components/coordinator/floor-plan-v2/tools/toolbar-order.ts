@@ -3,6 +3,7 @@
  */
 
 export type CanvasToolbarBlockId =
+  | 'test-suite'
   | 'optimize'
   | 'primitives'
   | 'history-clipboard'
@@ -15,6 +16,7 @@ export type CanvasToolbarBlockId =
   | 'dual-screen'
 
 export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
+  'test-suite',
   'optimize',
   'primitives',
   'history-clipboard',

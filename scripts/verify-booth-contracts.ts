@@ -54,8 +54,29 @@ const snapshot = buildBoothContractSnapshot({
   clauses: resolved.clauses,
   pdfUrl: resolved.pdfUrl,
   acknowledgedAt: '2026-06-12T12:00:00.000Z',
+  signature: {
+    method: 'digital',
+    signedName: 'Jane Vendor',
+    signatureImageUrl: 'https://example.com/sig.png',
+    signedAt: '2026-06-12T12:01:00.000Z',
+  },
 })
 assert(snapshot.content_hash === hash, 'snapshot hash should match')
+assert(snapshot.signature_method === 'digital', 'snapshot should include signature method')
+assert(snapshot.signed_name === 'Jane Vendor', 'snapshot should include signed name')
+
+const uploadedSnapshot = buildBoothContractSnapshot({
+  clauses: resolved.clauses,
+  pdfUrl: resolved.pdfUrl,
+  acknowledgedAt: '2026-06-12T12:00:00.000Z',
+  signature: {
+    method: 'uploaded',
+    signedDocumentUrl: 'https://example.com/signed.pdf',
+    signedAt: '2026-06-12T12:02:00.000Z',
+  },
+})
+assert(uploadedSnapshot.signature_method === 'uploaded', 'uploaded signature method expected')
+assert(uploadedSnapshot.signed_document_url === 'https://example.com/signed.pdf', 'signed doc url expected')
 
 const disabled = {
   ...event,

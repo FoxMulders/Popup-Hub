@@ -84,7 +84,12 @@ import {
 } from '@/lib/monetization/booth-pricing'
 import { VendorCoordinatorVouchButton } from '@/components/coordinator/coordinator-community-trust'
 import { TouchFileInput } from '@/components/ui/touch-file-input'
-import { BoothContractAcknowledgment } from '@/components/events/booth-contract-acknowledgment'
+import {
+  BoothContractSigning,
+  EMPTY_BOOTH_CONTRACT_SIGNING,
+  isBoothContractSigningComplete,
+  type BoothContractSigningValue,
+} from '@/components/events/booth-contract-signing'
 import {
   contractRequiresVendorAcknowledgment,
   resolveEventBoothContract,
@@ -145,6 +150,9 @@ export function ApplyButton({
   const [waitlistConfirmOpen, setWaitlistConfirmOpen] = useState(false)
   const [selectedDayKeys, setSelectedDayKeys] = useState<Set<string>>(new Set())
   const [termsAcknowledged, setTermsAcknowledged] = useState(false)
+  const [contractSigning, setContractSigning] = useState<BoothContractSigningValue>(
+    EMPTY_BOOTH_CONTRACT_SIGNING
+  )
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('SQUARE')
   const [permitFile, setPermitFile] = useState<File | null>(null)
   const [tableCount, setTableCount] = useState(1)
@@ -194,6 +202,7 @@ export function ApplyButton({
     if (!open) {
       setSelectedDayKeys(new Set())
       setTermsAcknowledged(false)
+      setContractSigning(EMPTY_BOOTH_CONTRACT_SIGNING)
       setPermitFile(null)
       setTableCount(1)
       return
@@ -271,8 +280,11 @@ export function ApplyButton({
   const isInstant = event.booking_mode === 'instant'
   const partialDaySelectionReady =
     requireFullAttendance || selectedDayKeys.size > 0
+  const contractSigningComplete =
+    !boothContractRequired || isBoothContractSigningComplete(contractSigning)
   const canSubmitApplication =
     termsAcknowledged &&
+    contractSigningComplete &&
     partialDaySelectionReady &&
     !submitting &&
     !slotsLoading &&
@@ -462,6 +474,33 @@ export function ApplyButton({
       )
     }
 
+    let signatureImageUrl: string | null = null
+    let signedDocumentUrl: string | null = null
+
+    if (boothContractRequired && contractSigning.method === 'digital' && contractSigning.signatureDataUrl) {
+      const blob = await (await fetch(contractSigning.signatureDataUrl)).blob()
+      const signatureFile = new File([blob], 'contract-signature.png', { type: 'image/png' })
+      signatureImageUrl = await uploadApplicationDocument(
+        supabase,
+        userId,
+        signatureFile,
+        'signature',
+      )
+    }
+
+    if (
+      boothContractRequired &&
+      contractSigning.method === 'uploaded' &&
+      contractSigning.signedDocumentFile
+    ) {
+      signedDocumentUrl = await uploadApplicationDocument(
+        supabase,
+        userId,
+        contractSigning.signedDocumentFile,
+        'signed-contract',
+      )
+    }
+
     const res = await fetch('/api/vendor/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -470,7 +509,14 @@ export function ApplyButton({
         neighborPreference: standBeside.trim() || null,
         joinWaitlist,
         attendanceTermsAcknowledged: termsAcknowledged,
-        boothContractAcknowledged: boothContractRequired ? termsAcknowledged : undefined,
+        boothContractAcknowledged: boothContractRequired ? true : undefined,
+        boothContractSignatureMethod: boothContractRequired ? contractSigning.method : undefined,
+        boothContractSignedName:
+          boothContractRequired && contractSigning.method === 'digital'
+            ? contractSigning.signedName.trim()
+            : undefined,
+        boothContractSignatureImageUrl: signatureImageUrl,
+        boothContractSignedDocumentUrl: signedDocumentUrl,
         attendingEventDayIds: attendance.attendingEventDayIds,
         attendingDates: attendance.attendingDates,
         paymentMethod,
@@ -581,11 +627,12 @@ export function ApplyButton({
     }
 
     if (!termsAcknowledged) {
-      toast.error(
-        boothContractRequired
-          ? 'Please agree to the digital booth contract before submitting'
-          : 'Please agree to the attendance terms before submitting'
-      )
+      toast.error('Please agree to the attendance terms before submitting')
+      return
+    }
+
+    if (boothContractRequired && !contractSigningComplete) {
+      toast.error('Please sign the booth contract digitally or upload a signed copy')
       return
     }
 
@@ -609,11 +656,12 @@ export function ApplyButton({
 
   async function handleConfirmWaitlist() {
     if (!termsAcknowledged) {
-      toast.error(
-        boothContractRequired
-          ? 'Please agree to the digital booth contract before joining the waitlist'
-          : 'Please agree to the attendance terms before joining the waitlist'
-      )
+      toast.error('Please agree to the attendance terms before joining the waitlist')
+      return
+    }
+
+    if (boothContractRequired && !contractSigningComplete) {
+      toast.error('Please sign the booth contract digitally or upload a signed copy')
       return
     }
 
@@ -1048,10 +1096,14 @@ export function ApplyButton({
 
             <div className="rounded-lg border bg-stone-50 p-3 space-y-3">
               {boothContractRequired ? (
-                <BoothContractAcknowledgment
+                <BoothContractSigning
                   clauses={resolvedBoothContract.clauses}
                   pdfUrl={resolvedBoothContract.pdfUrl}
                   updatedAt={resolvedBoothContract.updatedAt}
+                  eventName={event.name}
+                  value={contractSigning}
+                  onChange={setContractSigning}
+                  disabled={submitting}
                 />
               ) : null}
               <label className="flex items-start gap-3 text-sm text-foreground">
@@ -1062,11 +1114,9 @@ export function ApplyButton({
                   className="mt-0.5 h-4 w-4 rounded border-stone-300 text-harvest-600 focus:ring-harvest-500"
                 />
                 <span>
-                  {boothContractRequired
-                    ? 'I have read and agree to the digital booth contract for this market, including all enabled clauses and any attached PDF.'
-                    : requireFullAttendance
-                      ? 'I agree to attend all scheduled days of this market. I understand that arriving late or packing up early violates organizer policy.'
-                      : 'I confirm my selected attendance days and agree to be present during the operating hours of those specific dates.'}
+                  {requireFullAttendance
+                    ? 'I agree to attend all scheduled days of this market. I understand that arriving late or packing up early violates organizer policy.'
+                    : 'I confirm my selected attendance days and agree to be present during the operating hours of those specific dates.'}
                 </span>
               </label>
             </div>

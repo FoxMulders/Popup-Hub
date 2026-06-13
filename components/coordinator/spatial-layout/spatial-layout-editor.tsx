@@ -7,8 +7,9 @@ import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2/floor-plan-v
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
+import { setupWizardStepHref } from '@/lib/wizard/setup-step-url'
 import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
-import type { BoothLayout, Event } from '@/types/database'
+import type { BoothLayout, Event, LayoutRoom } from '@/types/database'
 import { SpatialLayoutShell } from './spatial-layout-shell'
 import { SpatialLayoutToolbar } from './spatial-layout-toolbar'
 import { useSpatialLayoutState } from './use-spatial-layout-state'
@@ -34,6 +35,9 @@ export function SpatialLayoutEditor({
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
+  const layoutSnapshotRef = useRef<
+    (() => { rooms: LayoutRoom[]; activeRoomId: string } | null) | null
+  >(null)
 
   const [hasOverlap, setHasOverlap] = useState(false)
   const [placedCount, setPlacedCount] = useState(0)
@@ -59,6 +63,19 @@ export function SpatialLayoutEditor({
     setLayoutGeneration((n) => n + 1)
     toast.message('Reloaded layout from server — merge overlays cleared from cache.')
   }, [eventId])
+
+  const handleApplySavedLayout = useCallback(
+    (rooms: LayoutRoom[], activeRoomId: string) => {
+      clearMultiRoomDraft(eventId)
+      handleLayoutRoomsChange(rooms, activeRoomId)
+      setLayoutGeneration((n) => n + 1)
+    },
+    [eventId, handleLayoutRoomsChange]
+  )
+
+  const getLayoutSnapshot = useCallback(() => {
+    return layoutSnapshotRef.current?.() ?? null
+  }, [])
 
   const handleSaveDraft = useCallback(async () => {
     if (hasOverlap) {
@@ -152,6 +169,9 @@ export function SpatialLayoutEditor({
         <SpatialLayoutToolbar
           eventId={eventId}
           eventName={eventName}
+          coordinatorId={event.coordinator_id}
+          locationName={event.location_name}
+          address={event.address}
           placedCount={placedCount}
           layoutCapacity={layoutCapacity}
           hasOverlap={hasOverlap}
@@ -162,6 +182,8 @@ export function SpatialLayoutEditor({
           onSaveDraft={handleSaveDraft}
           saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
           onReloadFromServer={handleReloadFromServer}
+          getLayoutSnapshot={getLayoutSnapshot}
+          onApplySavedLayout={handleApplySavedLayout}
         />
       }
     >
@@ -169,9 +191,7 @@ export function SpatialLayoutEditor({
         key={layoutGeneration}
         eventId={eventId}
         designerExitHref={
-          isDraft
-            ? `/coordinator/events/${eventId}/setup?step=3`
-            : `/coordinator/events/${eventId}`
+          isDraft ? setupWizardStepHref(eventId, 3) : `/coordinator/events/${eventId}`
         }
         designerExitLabel={isDraft ? 'Back to Event Setup' : 'Event overview'}
         designerExitEventStatus={event.status}
@@ -180,6 +200,7 @@ export function SpatialLayoutEditor({
         layoutActiveRoomId={activeRoomId}
         onLayoutRoomsChange={handleLayoutRoomsChange}
         saveLayoutRef={saveLayoutRef}
+        layoutSnapshotRef={layoutSnapshotRef}
         eventCategoryNames={eventCategoryNames}
         onAddRoom={handleAddRoom}
         onRenameRoom={handleRenameRoom}

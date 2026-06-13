@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { ApplicationBoard } from '@/components/coordinator/application-board'
 import { EventInlineEditor } from '@/components/coordinator/event-inline-editor'
+import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
 import { EventReadinessChecklist } from '@/components/coordinator/event-readiness-checklist'
 import { MarketFeedbackAdminPanel } from '@/components/coordinator/market-feedback-admin-panel'
@@ -127,6 +128,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <EventInlineEditor event={event as Event} />
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <TestSuitePopulateButton eventId={id} compact />
             {isDraft ? (
               <DeleteDraftMarketDialog eventId={id} eventName={event.name} />
             ) : null}

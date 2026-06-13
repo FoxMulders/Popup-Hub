@@ -114,6 +114,9 @@ export function SpatialLayoutEditor({
         <SpatialLayoutToolbar
           eventId={eventId}
           eventName={eventName}
+          coordinatorId={event.coordinator_id}
+          locationName={event.location_name}
+          address={event.address}
           placedCount={placedCount}
           layoutCapacity={layoutCapacity}
           hasOverlap={hasOverlap}
@@ -123,6 +126,8 @@ export function SpatialLayoutEditor({
           onSave={handleSave}
           onSaveDraft={handleSaveDraft}
           saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
+          getLayoutSnapshot={() => null}
+          onApplySavedLayout={() => {}}
         />
       }
     >

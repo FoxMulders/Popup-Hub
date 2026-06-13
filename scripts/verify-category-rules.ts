@@ -92,9 +92,9 @@ console.log('paletteForCategory — falls back to hash when category not in even
 console.log('paletteForCategory — empty/null falls back to default')
 {
   const def = paletteForCategory(null)
-  expect('default booth fill', def.fill, '#fde68a')
+  expect('default booth fill', def.fill, '#bbf7d0')
   const def2 = paletteForCategory('   ')
-  expect('whitespace falls back too', def2.fill, '#fde68a')
+  expect('whitespace falls back too', def2.fill, '#bbf7d0')
 }
 
 console.log('nextCategoryName — wraps and handles edge cases')

@@ -13,11 +13,18 @@ export interface BoothContractClause {
   sort_order: number
 }
 
+export type BoothContractSignatureMethod = 'digital' | 'uploaded'
+
 export interface BoothContractSnapshot {
   content_hash: string
   clauses: BoothContractClause[]
   pdf_url: string | null
   acknowledged_at: string
+  signature_method?: BoothContractSignatureMethod
+  signed_name?: string | null
+  signature_image_url?: string | null
+  signed_document_url?: string | null
+  signed_at?: string
 }
 export type LayoutSpacingMode = 'standard' | 'table_provided' | 'one_foot'
 export type EventStatus = 'draft' | 'published' | 'active' | 'completed' | 'cancelled'
@@ -355,6 +362,8 @@ export interface BoothApplication {
   attendance_terms_acknowledged_at: string | null
   booth_contract_acknowledged_at: string | null
   booth_contract_snapshot: BoothContractSnapshot | null
+  booth_contract_signed_at: string | null
+  booth_contract_signature_method: BoothContractSignatureMethod | null
   applied_at: string
   approved_at: string | null
   checked_in: boolean
@@ -864,6 +873,20 @@ export interface CoordinatorSavedVenue {
   venue_preset_id: string | null
   skip_venue_layout: boolean
   market_city: string
+  last_used_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CoordinatorSavedLayout {
+  id: string
+  coordinator_id: string
+  name: string
+  location_name: string
+  address: string
+  layout_rooms: LayoutRoom[]
+  active_room_id: string | null
+  is_public: boolean
   last_used_at: string
   created_at: string
   updated_at: string

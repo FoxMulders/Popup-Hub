@@ -582,14 +582,12 @@ function CanvasObjectsBase({
             rooms,
             objectRoom
           )
-          if (band !== 'good') {
-            const theme = BOOTH_CLEARANCE_THEMES[band]
-            fill = theme.fill
-            clearanceStroke = theme.stroke
-            clearanceFillOpacity = theme.fillOpacity
-          }
+          const theme = BOOTH_CLEARANCE_THEMES[band]
+          fill = theme.fill
+          clearanceStroke = theme.stroke
+          clearanceFillOpacity = theme.fillOpacity
         }
-        // Vendor booths use solid yellow — payment status is shown via label text.
+        // Vendor booths use light green when clearance is good; yellow/red when tight.
         // When the object is part of an explicit join group its
         // perimeter is no longer "owned" by the object — the
         // dissolved zone polygon (rendered in <RoomFrames>) draws

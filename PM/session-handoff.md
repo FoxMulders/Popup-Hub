@@ -4,15 +4,67 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — vendor booth light green (local, not deployed)
+- **Canvas:** Well-placed vendor booths (`good` clearance band) tint light green (`#bbf7d0`); draw preview fallback matches.
+- **Toolbar:** Vendor table draw button + size chips use light emerald (`VENDOR_BOOTH_TOOLBAR`) instead of amber/dark forest.
+- **Verify:** `/coordinator/dashboard` or event layout — place vendor booth with ≥4′ clearance → light green fill; draw tool + size pill highlight emerald when armed.
+
+## Active work — setup wizard step URL refresh fix (local, not deployed)
+- **Root cause:** `syncStepInUrl` wrote internal step numbers (`?step=3` for floor plan) while `parseInitialStep` still mapped legacy 4-step URLs (`?step=3` → Capacity). Refresh on Step 3 sent users back to Step 2.
+- **`lib/wizard/setup-step-url.ts`:** Shared encode/decode — floor plan → `?step=4`, capacity → `?step=3`; `market-setup-wizard`, layout exit links, and setup page now use it.
+- **Verify:** `npx tsx scripts/verify-setup-step-url.ts` — PASS. Open setup → advance to floor plan → URL shows `?step=4` → Ctrl+R stays on floor plan.
+
+## Active work — vendor contract signing (local, not deployed)
+- **`109_vendor_contract_signatures.sql`:** `booth_contract_signed_at` + `booth_contract_signature_method` on `booth_applications`.
+- **`BoothContractSnapshot`:** `signature_method`, `signed_name`, `signature_image_url`, `signed_document_url`, `signed_at`.
+- **`signature-pad.tsx` + `booth-contract-signing.tsx`:** Digital canvas sign (name + draw) or print/upload signed PDF/scan tabs in apply dialog.
+- **`lib/booth-contract/print-contract.ts`:** Print clauses or open coordinator PDF.
+- **Apply flow:** `apply-button.tsx` uploads signature/doc; `app/api/vendor/apply/route.ts` validates and stores snapshot; coordinator notified on uploaded signed copy.
+- **Coordinator review:** `vendor-review-drawer.tsx` shows digital signature image or uploaded signed document link.
+- **Verify:** Run migration `109` on Supabase. `npx tsx scripts/verify-booth-contracts.ts` — PASS. Smoke: vendor apply dialog → Sign digitally (name + draw) OR Print & upload → submit; coordinator application review shows signature or signed copy.
+
+## Active work — coordinator saved layouts (local, not deployed)
+- **`108_coordinator_saved_layouts.sql`:** New table for coordinator-owned floor plan templates keyed by venue (`location_name` + `address`), with optional `is_public` for sharing at the same venue.
+- **`lib/coordinator/saved-layouts.ts` + `saved-layout-snapshot.ts`:** List/save/delete/touch helpers; vendor assignments stripped on save; fresh room/cell ids on load.
+- **`components/coordinator/saved-layout-picker.tsx`:** Load dropdown (Your layouts / Shared at this venue), save dialog with public toggle, quick-delete chips for own layouts.
+- **UI:** Spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 header (`/coordinator/events/{id}/setup?step=4`).
+- **Verify:** Run migration `108` on Supabase. Coordinator → event layout → build rooms/fixtures → **Save layout for reuse** → new event at same venue → **Load saved layout**. Toggle **Share at this venue** and confirm another coordinator account sees it under Shared.
+
+## Active work — fill room with tables (local, not deployed)
+- **`lib/floor-plan/fill-room-with-tables.ts`:** Replace vendor or patron tables in the active room with N tables of the selected size, then grid-pack via `autoArrangeInRoom`. Capacity estimate uses `maxDeterministicGridSlotCount`.
+- **`fill-room-control.tsx` + toolbar:** Number input (defaults to max fit) + **Fill room** button in Vendor Booths and Patron Tables sections (dashboard + layout editor sidebar).
+- **Verify:** Coordinator dashboard or event layout → select a room → Vendor Booths: set size, enter count, **Fill room** → grid of vendor booths; Patron Tables: same for guest round/rect tables. Existing tables of that type in the room are replaced.
+
+## Active work — canvas label grow-to-fit (local, not deployed)
+- **`canvas-label-text.ts`:** `wrapTextInContainer` and `fitTextInContainer` now scale **up** to the largest font that fits (short labels fill booth boxes) as well as shrinking/wrapping when text overflows. Optional `maxFontSize` override added.
+- **Verify:** Coordinator dashboard — short booth labels (e.g. "Booth", category names) render larger inside yellow vendor cells; long vendor names still wrap or ellipsis without clipping.
+
+## Active work — Supabase migrations pushed (2026-06-13)
+- **`npx supabase db push --yes`:** Migration **088** (`market_booth_pricing_schema_repair`) was already applied on remote; pending **104**–**107** applied successfully.
+- **Verify:** `npx tsx scripts/verify-events-schema.ts` — PASS (`events.booth_price_cents`, `events.multi_table_discount_percent`, `booth_applications.table_count`).
+
 ## Active work — reinstate vendor spacing clearance warnings (local, not deployed)
 - **`booth-clearance-visual.ts`:** Added `vendorBoothClearanceWarningBand` (uses `minVendorBoothClearanceFt` incl. neighbours); canvas + preview probe + legend summary use it again. `minVendorBoothBoundaryClearanceFt` kept for boundary-only checks.
-- **`booth-clearance-summary.ts` + `booth-clearance-warning-panel.tsx`:** Copy updated — yellow at 3′–4′ edge clearance to neighbours/walls/fixtures; red below 3′.
+- **`booth-clearance-summary.ts` + `booth-clearance-warning-panel.tsx`:** Copy updated — yellow at 3′–4′ edge clearance to neighbours/walls/fixtures; red below 3′. Toast/toggle copy: yellow = may be too close; red = too close (vendor, table, wall, or fixture); legend + triangle toggle hint.
 - **Verify:** `npx tsx scripts/verify-object-overlaps.ts` — PASS (3′ pair → yellow `tight`). Place two vendor booths 3′ apart → yellow tint + legend alert; ≥4′ → no tint.
 
 ## Active work — zoom in/out regression fix (local, not deployed)
 - **Root cause:** `frameActiveRoom` in production `floor-plan-canvas.tsx` depended on the `viewport` API object (recreated every render, including each zoom tick). That re-ran `fitViewportToContent` continuously — toolbar zoom and Ctrl+wheel appeared dead as the camera snapped back to fit.
 - **Fix:** Restored `viewportRef` + `frameActiveRoomRef` pattern from QA mirrors; framing effects keyed on `viewportFramingKey` / room dimensions only (not `originX`/`originY` drags); ResizeObserver reframes once when viewport first becomes measurable.
 - **Verify:** `/coordinator/dashboard` and `/coordinator/events/{id}/layout` — zoom +/- steps 50/75/100/125%; Ctrl+wheel zoom holds; pan after zoom does not snap back.
+
+## Active work — layout help interactive on-page tour (local, not deployed)
+- **`layout-editor-help-tours.ts` + `layout-editor-help-tour.tsx`:** 5-step quick-start tour with emerald spotlight ring, step card (Back/Next/Done), scroll-into-view on targets.
+- **`data-layout-help` anchors:** rooms bar, navigation (V/H), draw tools, vendor booths, canvas, save actions, optimize, layout help button — wired in command bar, spatial toolbar, and canvas host.
+- **Entry points:** first visit auto-tour (~1.2s), banner **Guide me on the page**, help dialog **Start interactive tour** / per-topic **Show me on the page**.
+- **Verify:** `/coordinator/events/{id}/layout` → tour highlights each control in place; Step 5 spotlights Save draft / Save layout in header.
+
+## Active work — layout help first-time UX (local, not deployed)
+- **Prominent green "Layout help"** button in spatial header (beside title) and canvas toolbars.
+- **Dismissible getting-started banner** above the canvas until dismissed (localStorage).
+- **Floating "Layout help" pill** bottom-right with "New? Start here" hint until first open.
+- **Auto-opens quick-start guide** once on first visit (~900ms delay).
+- **Quick-start help topic** + richer welcome header in the search dialog.
 
 ## Active work — remove legacy join/merge and stage tools (local, not deployed)
 - Removed **Merge / Unjoin** room controls from the layout editor toolbar and deleted join-plan handler wiring in `floor-plan-v2.tsx`.
@@ -48,10 +100,9 @@
 
 ## Active work — test suite populate button (local, not deployed)
 - **`persist-test-suite-applications.ts`:** Seeds diverse vendor suite as real auth users + passports + `booth_applications` with `approved` + paid (`CASH` / `COMPLETED`). Clears prior `@popuphub.seed` applications on the event before re-run.
-- **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` (dev or `ALLOW_COORDINATOR_TEST_SUITE=true`).
-- **UI:** **Test suite** on the layout editor only — spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 header (`/coordinator/events/{id}/setup?step=3`). Not on Command center dashboard. Booth planner test-vendors panel retains **Populate test suite** for legacy canvas.
-- **Workflow seed:** `seed-workflow-fixtures.ts` now inserts one approved & paid application for `vendor@me.com`.
-- **Verify:** Dev coordinator → event layout toolbar → **Test suite** → Applications board shows approved & paid vendors; coordinator dashboard approved pool populated. `npm run seed:test-users` then `npm run test:e2e:workflow`.
+- **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` — coordinator-scoped; set `DISABLE_COORDINATOR_TEST_SUITE=true` to block on a deploy.
+- **UI:** Violet **Test suite** button in Blueprint Studio **ALIGNMENT & SPACING** toolbar (Command center dashboard), plus event hub and Applications page headers. Also on spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 (`/coordinator/events/{id}/setup?step=3`).
+- **Verify:** Dev coordinator → Command center → Blueprint Studio → scroll toolbar to **ALIGNMENT & SPACING** → **Test suite** (next to AI Auto-Arrange). Or event hub / Applications header. Applications board shows approved & paid vendors after populate.
 
 ## Active work — CI lint fix (local, not deployed)
 - **Root cause:** GitHub CI runs `npm run lint` before `npm run build`; `use-floor-plan-doc.ts` used `let nextDoc` where the variable is never reassigned → `prefer-const` error (1 error, 435 warnings).

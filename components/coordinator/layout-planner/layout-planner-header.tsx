@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { SavedLayoutPicker } from '@/components/coordinator/saved-layout-picker'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { cn } from '@/lib/utils'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
+import type { LayoutRoom } from '@/types/database'
 
 export interface LayoutPlannerHeaderProps {
   mode: 'wizard' | 'standalone'
@@ -25,6 +27,12 @@ export interface LayoutPlannerHeaderProps {
   title?: string
   showDraftBadge?: boolean
   fullEditorHref?: string
+  coordinatorId?: string
+  locationName?: string
+  address?: string
+  getLayoutSnapshot?: () => { rooms: LayoutRoom[]; activeRoomId: string } | null
+  onApplySavedLayout?: (rooms: LayoutRoom[], activeRoomId: string) => void
+  savedLayoutDisabled?: boolean
   className?: string
 }
 
@@ -44,6 +52,12 @@ export function LayoutPlannerHeader({
   title = 'Spatial layout',
   showDraftBadge = false,
   fullEditorHref,
+  coordinatorId,
+  locationName = '',
+  address = '',
+  getLayoutSnapshot,
+  onApplySavedLayout,
+  savedLayoutDisabled = false,
   className,
 }: LayoutPlannerHeaderProps) {
   const resolvedBackHref = backHref ?? (eventId ? `/coordinator/events/${eventId}` : '/coordinator/events')
@@ -130,6 +144,17 @@ export function LayoutPlannerHeader({
           </Link>
         ) : null}
         {eventId ? <TestSuitePopulateButton eventId={eventId} compact /> : null}
+        {coordinatorId && getLayoutSnapshot && onApplySavedLayout ? (
+          <SavedLayoutPicker
+            coordinatorId={coordinatorId}
+            locationName={locationName}
+            address={address}
+            getLayoutSnapshot={getLayoutSnapshot}
+            onApplyLayout={onApplySavedLayout}
+            compact
+            disabled={savedLayoutDisabled}
+          />
+        ) : null}
         {onSave ? (
           <Button
             type="button"

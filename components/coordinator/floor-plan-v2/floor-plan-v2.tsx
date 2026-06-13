@@ -23,6 +23,8 @@ import {
 } from '@/lib/booth-planner/layout-table-size'
 import {
   isGuestTableBooth,
+  guestRectTableSpec,
+  guestRoundTableSpec,
   normalizeTableSizeSpec,
   vendorTableSpec,
   type TableSizeSpec,
@@ -38,6 +40,10 @@ import {
   runWizardInitialLayout,
   shouldRunWizardInitialLayout,
 } from '@/lib/floor-plan/wizard-initial-layout'
+import {
+  estimateRoomFillCapacity,
+  fillRoomWithTables,
+} from '@/lib/floor-plan/fill-room-with-tables'
 import {
   readClearanceWarningsEnabled,
   writeClearanceWarningsEnabled,
@@ -59,7 +65,7 @@ import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
-import { LayoutEditorHelpHost } from './tools/layout-editor-help'
+import { LayoutEditorHelpBanner, LayoutEditorHelpHost } from './tools/layout-editor-help'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import type { AutoArrangeMode } from './engine/auto-arrange'
 import { autoArrangeInRoom } from './engine/auto-arrange'
@@ -178,6 +184,10 @@ export interface FloorPlanV2Props {
    * writes the doc through `persistLayoutDraft`.
    */
   saveLayoutRef?: MutableRefObject<(() => Promise<boolean>) | null>
+  /** Read-only projection of the current floor plan for saved-layout templates. */
+  layoutSnapshotRef?: MutableRefObject<
+    (() => { rooms: import('@/types/database').LayoutRoom[]; activeRoomId: string } | null) | null
+  >
   /**
    * Sorted list of category names defined on this event (Step 2 of
    * the wizard). Forwarded to the booth property inspector so the
@@ -317,6 +327,7 @@ function FloorPlanV2Workspace({
   layoutActiveRoomId,
   onLayoutRoomsChange,
   saveLayoutRef,
+  layoutSnapshotRef,
   eventCategoryNames,
   onAddRoom,
   onRenameRoom,
@@ -466,14 +477,20 @@ function FloorPlanV2Workspace({
     }
     if (clearanceIssueToastRef.current) return
     clearanceIssueToastRef.current = true
+    const neighborTargets = 'another vendor, table, wall, or fixture'
     const parts: string[] = []
     if (clearanceSummary.tightCount > 0) {
       parts.push(
-        `${clearanceSummary.tightCount} yellow (too close to a wall or fixture)`
+        `${clearanceSummary.tightCount} yellow (may be too close to ${neighborTargets})`
+      )
+    }
+    if (clearanceSummary.criticalCount > 0) {
+      parts.push(
+        `${clearanceSummary.criticalCount} red (too close to ${neighborTargets})`
       )
     }
     toast.warning(
-      `Booth boundary clearance: ${parts.join(', ')}. Red overlap tint means booths physically intersect. See the legend panel — hide warnings with the triangle icon in the header.`,
+      `Booth boundary clearance: ${parts.join('; ')}. See the legend panel — hide warnings with the triangle icon in the header.`,
       { duration: 6000 }
     )
   }, [
@@ -1418,6 +1435,18 @@ function FloorPlanV2Workspace({
     store,
   ])
 
+  useEffect(() => {
+    if (!layoutSnapshotRef) return
+    layoutSnapshotRef.current = () => {
+      if (layoutRooms.length === 0) return null
+      const projectedRooms = legacyRoomsFromDoc(layoutRooms, store.doc)
+      return { rooms: projectedRooms, activeRoomId }
+    }
+    return () => {
+      if (layoutSnapshotRef.current) layoutSnapshotRef.current = null
+    }
+  }, [activeRoomId, layoutRooms, layoutSnapshotRef, store.doc])
+
   // Wire the wizard save ref to a v2-aware persistence function that
   // splits the unified doc back into per-room rows.
   useEffect(() => {
@@ -1754,6 +1783,154 @@ function FloorPlanV2Workspace({
     vendorBoothCount > 0 ||
     patronTableCount > 0
 
+  const fillRoomDisabledReason = useMemo(() => {
+    const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
+    if (!frame || frame.mergedIntoObjectId) {
+      return 'Select a room on the canvas first.'
+    }
+    return null
+  }, [activeRoomId, store.doc.rooms])
+
+  const vendorFillTableSpec = useMemo((): TableSizeSpec => {
+    if (defaultPlacementSpec.purpose === 'vendor') return defaultPlacementSpec
+    return vendorTableSpec(safeTableSizeFt)
+  }, [defaultPlacementSpec, safeTableSizeFt])
+
+  const patronFillTableSpec = useMemo((): TableSizeSpec => {
+    if (defaultPlacementSpec.purpose === 'guest') return defaultPlacementSpec
+    return guestRoundTableSpec(6)
+  }, [defaultPlacementSpec])
+
+  const vendorFillMaxCapacity = useMemo(
+    () =>
+      fillRoomDisabledReason
+        ? 0
+        : estimateRoomFillCapacity(store.doc, activeRoomId, vendorFillTableSpec, {
+            autoArrangeMode,
+            layoutCapacity,
+          }),
+    [
+      activeRoomId,
+      autoArrangeMode,
+      fillRoomDisabledReason,
+      layoutCapacity,
+      store.doc,
+      vendorFillTableSpec,
+    ]
+  )
+
+  const patronFillMaxCapacity = useMemo(
+    () =>
+      fillRoomDisabledReason
+        ? 0
+        : estimateRoomFillCapacity(store.doc, activeRoomId, patronFillTableSpec, {
+            autoArrangeMode,
+          }),
+    [
+      activeRoomId,
+      autoArrangeMode,
+      fillRoomDisabledReason,
+      patronFillTableSpec,
+      store.doc,
+    ]
+  )
+
+  const applyFillRoomResult = useCallback(
+    (
+      result: ReturnType<typeof fillRoomWithTables>,
+      frameName: string,
+      label: string
+    ) => {
+      if (result.placedCount <= 0) {
+        toast.error(
+          `Could not fit any ${label} inside ${frameName} — try a smaller count or larger room.`
+        )
+        return
+      }
+
+      if (result.arrange?.roomScaledForPatronPath) {
+        store.patchDoc({
+          rooms: result.doc.rooms,
+          canvasWidthFt: result.doc.canvasWidthFt,
+          canvasLengthFt: result.doc.canvasLengthFt,
+        })
+      }
+      store.replaceObjects(result.doc.objects)
+      syncLayoutRoomsFromDoc(store.readDoc())
+      resetCanvasViewport()
+
+      const dropped = result.requestedCount - result.placedCount
+      if (dropped > 0) {
+        toast.warning(
+          `Placed ${result.placedCount} of ${result.requestedCount} ${label} — ${dropped} could not fit.`,
+          { duration: 5000 }
+        )
+      } else {
+        toast.success(
+          `Filled ${frameName} with ${result.placedCount} ${label}.`,
+          { duration: 3500 }
+        )
+      }
+    },
+    [resetCanvasViewport, store, syncLayoutRoomsFromDoc]
+  )
+
+  const handleFillVendorTables = useCallback(
+    (count: number) => {
+      const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
+      if (!frame) {
+        toast.error('Select a room on the canvas first.')
+        return
+      }
+      const result = fillRoomWithTables({
+        doc: store.doc,
+        roomId: activeRoomId,
+        count,
+        tableSpec: vendorFillTableSpec,
+        scope: 'vendor',
+        eventCategoryNames,
+        layoutCapacity,
+        autoArrangeMode,
+      })
+      applyFillRoomResult(result, frame.name, 'vendor tables')
+    },
+    [
+      activeRoomId,
+      applyFillRoomResult,
+      autoArrangeMode,
+      eventCategoryNames,
+      layoutCapacity,
+      store.doc,
+      vendorFillTableSpec,
+    ]
+  )
+
+  const handleFillPatronTables = useCallback(
+    (count: number) => {
+      const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
+      if (!frame) {
+        toast.error('Select a room on the canvas first.')
+        return
+      }
+      const result = fillRoomWithTables({
+        doc: store.doc,
+        roomId: activeRoomId,
+        count,
+        tableSpec: patronFillTableSpec,
+        scope: 'patron',
+        autoArrangeMode,
+      })
+      applyFillRoomResult(result, frame.name, 'patron tables')
+    },
+    [
+      activeRoomId,
+      applyFillRoomResult,
+      autoArrangeMode,
+      patronFillTableSpec,
+      store.doc,
+    ]
+  )
+
   const handleAutoArrangeFloorPlan = useCallback(async () => {
     if (vendorBoothCount === 0 && patronTableCount === 0) {
       toast.message('Nothing to arrange — draw at least one vendor booth or patron table first.')
@@ -2042,7 +2219,7 @@ function FloorPlanV2Workspace({
       const next = !enabled
       if (next) {
         toast.message(
-          'Clearance warnings on — yellow when a booth is tight to a wall or fixture; red only when footprints physically overlap.',
+          'Clearance warnings on — yellow when a booth may be too close to another vendor, table, wall, or fixture; red when it is too close.',
           { duration: 4200 }
         )
       } else {
@@ -2212,6 +2389,11 @@ function FloorPlanV2Workspace({
     showClearanceWarnings,
     onClearanceWarningsToggle: handleClearanceWarningsToggle,
     eventId,
+    vendorFillMaxCapacity,
+    patronFillMaxCapacity,
+    onFillVendorTables: handleFillVendorTables,
+    onFillPatronTables: handleFillPatronTables,
+    fillRoomDisabledReason,
   }
 
   const dashboardCommandBar = isDashboard ? (
@@ -2306,6 +2488,7 @@ function FloorPlanV2Workspace({
         className
       )}
     >
+      <LayoutEditorHelpBanner />
       {debugGeometry ? (
         <DiagnosticSidebar doc={store.doc} onClearAndReset={hardResetCanvas} />
       ) : null}
@@ -2334,7 +2517,10 @@ function FloorPlanV2Workspace({
         ) : null}
         {isDashboard ? (
             <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">
-              <div className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-stone-50">
+              <div
+                data-layout-help="canvas"
+                className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-stone-50"
+              >
                 {!dashboardPreview ? (
                   <CanvasLegend
                     variant="docked"
@@ -2512,8 +2698,14 @@ function FloorPlanV2Workspace({
                 onPatronPathToggle={handlePatronPathToggle}
                 showClearanceWarnings={showClearanceWarnings}
                 onClearanceWarningsToggle={handleClearanceWarningsToggle}
+                vendorFillMaxCapacity={vendorFillMaxCapacity}
+                patronFillMaxCapacity={patronFillMaxCapacity}
+                onFillVendorTables={handleFillVendorTables}
+                onFillPatronTables={handleFillPatronTables}
+                fillRoomDisabledReason={fillRoomDisabledReason}
               />
               <div
+                data-layout-help="canvas"
                 className={cn(
                   'floor-plan-canvas-host relative flex min-h-0 min-w-0 flex-col rounded-lg border border-stone-200 bg-stone-100',
                   isEmbedded

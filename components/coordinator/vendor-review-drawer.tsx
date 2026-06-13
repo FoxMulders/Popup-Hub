@@ -435,24 +435,58 @@ export function VendorReviewDrawer({
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Digital Booth Contract
                   </h3>
-                  <div className="mt-3 rounded-xl border border-sage-200 bg-sage-50 px-3 py-2 text-sm">
-                    <p className="font-medium text-sage-900">Contract accepted</p>
-                    <p className="mt-1 text-muted-foreground">
-                      Acknowledged{' '}
-                      {new Date(app.booth_contract_acknowledged_at).toLocaleString('en-CA', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
+                  <div className="mt-3 rounded-xl border border-sage-200 bg-sage-50 px-3 py-2 text-sm space-y-2">
+                    <p className="font-medium text-sage-900">
+                      {app.booth_contract_snapshot?.signature_method === 'uploaded'
+                        ? 'Signed copy uploaded'
+                        : app.booth_contract_snapshot?.signature_method === 'digital'
+                          ? 'Digitally signed'
+                          : 'Contract accepted'}
                     </p>
+                    {app.booth_contract_snapshot?.signed_name ? (
+                      <p className="text-muted-foreground">
+                        Signed as {app.booth_contract_snapshot.signed_name}
+                      </p>
+                    ) : null}
+                    <p className="text-muted-foreground">
+                      {app.booth_contract_signed_at || app.booth_contract_acknowledged_at
+                        ? `Signed ${new Date(
+                            app.booth_contract_signed_at ?? app.booth_contract_acknowledged_at!
+                          ).toLocaleString('en-CA', {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })}`
+                        : null}
+                    </p>
+                    {app.booth_contract_snapshot?.signature_image_url ? (
+                      <div className="mt-2 rounded-lg border bg-white p-2">
+                        <img
+                          src={app.booth_contract_snapshot.signature_image_url}
+                          alt="Vendor digital signature"
+                          className="max-h-24 w-auto"
+                        />
+                      </div>
+                    ) : null}
+                    {app.booth_contract_snapshot?.signed_document_url ? (
+                      <a
+                        href={app.booth_contract_snapshot.signed_document_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-harvest-700 hover:underline"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        View uploaded signed contract
+                      </a>
+                    ) : null}
                     {app.booth_contract_snapshot?.pdf_url ? (
                       <a
                         href={app.booth_contract_snapshot.pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-harvest-700 hover:underline"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-harvest-700 hover:underline"
                       >
                         <FileText className="h-3.5 w-3.5" />
-                        View accepted contract PDF
+                        View contract PDF template
                       </a>
                     ) : null}
                   </div>

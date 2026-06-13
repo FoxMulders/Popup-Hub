@@ -369,6 +369,7 @@ export function LayoutRoomBar({
   if (rooms.length === 0) {
     return (
       <div
+        data-layout-help="rooms"
         className={cn(
           embedded
             ? 'flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1'
@@ -386,6 +387,7 @@ export function LayoutRoomBar({
 
   return (
     <div
+      data-layout-help="rooms"
       className={cn(
         embedded && sidebar
           ? 'flex min-w-0 w-full flex-col gap-1.5'
@@ -395,8 +397,8 @@ export function LayoutRoomBar({
                 headerToolbar ? 'flex-nowrap overflow-hidden' : 'flex-wrap'
               )
             : slim
-            ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
-            : 'market-panel p-3 space-y-2'
+              ? 'flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-stone-200 bg-white px-2 py-1.5 shadow-sm'
+              : 'market-panel p-3 space-y-2'
       )}
       role={embedded ? 'group' : 'toolbar'}
       aria-label="Rooms and zones"

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
-import { isDevMockAuthEnabled } from '@/lib/auth/dev-mock-session'
 import {
   calculateMaxBoothCapacity,
   calculateNetUsableFloorSpace,
@@ -14,10 +13,11 @@ import {
   isLayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 
+/** Kill switch only — coordinator auth + event scope are enforced below. */
 function testSuiteSeedAllowed(): boolean {
-  return isDevMockAuthEnabled() || process.env.ALLOW_COORDINATOR_TEST_SUITE === 'true'
+  if (process.env.DISABLE_COORDINATOR_TEST_SUITE === 'true') return false
+  return true
 }
-
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> }

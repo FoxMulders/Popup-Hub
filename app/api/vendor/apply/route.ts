@@ -135,6 +135,10 @@ export async function POST(request: Request) {
     joinWaitlist?: boolean
     attendanceTermsAcknowledged?: boolean
     boothContractAcknowledged?: boolean
+    boothContractSignatureMethod?: 'digital' | 'uploaded'
+    boothContractSignedName?: string | null
+    boothContractSignatureImageUrl?: string | null
+    boothContractSignedDocumentUrl?: string | null
     attendingEventDayIds?: string[]
     attendingDates?: string[]
     paymentMethod?: 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH' | 'credit_card' | 'etransfer' | 'cash'
@@ -149,6 +153,10 @@ export async function POST(request: Request) {
     joinWaitlist,
     attendanceTermsAcknowledged,
     boothContractAcknowledged,
+    boothContractSignatureMethod,
+    boothContractSignedName,
+    boothContractSignatureImageUrl,
+    boothContractSignedDocumentUrl,
     attendingEventDayIds,
     attendingDates,
     paymentMethod: rawPaymentMethod,
@@ -265,18 +273,57 @@ export async function POST(request: Request) {
   const boothContractRequired = contractRequiresVendorAcknowledgment(event)
   if (boothContractRequired && !boothContractAcknowledged) {
     return NextResponse.json(
-      { error: 'You must agree to the digital booth contract before submitting.' },
+      { error: 'You must sign the digital booth contract before submitting.' },
       { status: 400 }
     )
   }
 
+  if (boothContractRequired) {
+    if (boothContractSignatureMethod !== 'digital' && boothContractSignatureMethod !== 'uploaded') {
+      return NextResponse.json(
+        { error: 'Choose digital signature or upload a signed contract copy.' },
+        { status: 400 }
+      )
+    }
+    if (boothContractSignatureMethod === 'digital') {
+      const signedName = boothContractSignedName?.trim() ?? ''
+      if (!signedName) {
+        return NextResponse.json({ error: 'Enter your full legal name to sign digitally.' }, { status: 400 })
+      }
+      if (!boothContractSignatureImageUrl?.trim()) {
+        return NextResponse.json({ error: 'Draw your digital signature before submitting.' }, { status: 400 })
+      }
+    }
+    if (boothContractSignatureMethod === 'uploaded' && !boothContractSignedDocumentUrl?.trim()) {
+      return NextResponse.json(
+        { error: 'Upload a scan or photo of your signed contract before submitting.' },
+        { status: 400 }
+      )
+    }
+  }
+
   const resolvedBoothContract = resolveEventBoothContract(event)
+  const contractSignedAt = new Date().toISOString()
   const boothContractSnapshot =
     boothContractRequired
       ? buildBoothContractSnapshot({
           clauses: resolvedBoothContract.clauses,
           pdfUrl: resolvedBoothContract.pdfUrl,
-          acknowledgedAt: new Date().toISOString(),
+          acknowledgedAt: contractSignedAt,
+          signature: {
+            method: boothContractSignatureMethod!,
+            signedName:
+              boothContractSignatureMethod === 'digital' ? boothContractSignedName?.trim() ?? null : null,
+            signatureImageUrl:
+              boothContractSignatureMethod === 'digital'
+                ? boothContractSignatureImageUrl?.trim() ?? null
+                : null,
+            signedDocumentUrl:
+              boothContractSignatureMethod === 'uploaded'
+                ? boothContractSignedDocumentUrl?.trim() ?? null
+                : null,
+            signedAt: contractSignedAt,
+          },
         })
       : null
 
@@ -529,6 +576,8 @@ export async function POST(request: Request) {
         attendance_terms_acknowledged_at: now,
         booth_contract_acknowledged_at: boothContractSnapshot ? now : null,
         booth_contract_snapshot: boothContractSnapshot,
+        booth_contract_signed_at: boothContractSnapshot?.signed_at ?? null,
+        booth_contract_signature_method: boothContractSnapshot?.signature_method ?? null,
         applicable_documentation_url: applicableDocumentationUrl?.trim() || null,
         table_count: tableCount,
         ...(isReservedBoothStatus(status) ? { approved_at: now } : {}),
@@ -573,6 +622,8 @@ export async function POST(request: Request) {
           attendance_terms_acknowledged_at: now,
           booth_contract_acknowledged_at: boothContractSnapshot ? now : null,
           booth_contract_snapshot: boothContractSnapshot,
+          booth_contract_signed_at: boothContractSnapshot?.signed_at ?? null,
+          booth_contract_signature_method: boothContractSnapshot?.signature_method ?? null,
           table_count: tableCount,
         })
         .select(
@@ -626,6 +677,23 @@ export async function POST(request: Request) {
     console.error('[email] market application received unexpected error:', emailErr, {
       eventId,
       vendorId,
+    })
+  }
+
+  if (
+    inserted?.id &&
+    boothContractSnapshot?.signature_method === 'uploaded' &&
+    event.coordinator_id
+  ) {
+    await serviceSupabase.from('notifications').insert({
+      user_id: event.coordinator_id,
+      type: 'application_follow_up',
+      message: `A vendor uploaded a signed booth contract for "${event.name}". Review the signed copy in their application.`,
+      metadata: {
+        event_id: eventId,
+        application_id: inserted.id,
+        vendor_id: vendorId,
+      },
     })
   }
 

@@ -26,3 +26,13 @@ export const VENDOR_BOOTH_LEGEND = {
   stroke: '#16a34a',
   fillOpacity: 0.85,
 } as const
+
+/** Toolbar vendor draw + size chips (matches {@link VENDOR_BOOTH_PALETTE}). */
+export const VENDOR_BOOTH_TOOLBAR = {
+  buttonIdle: 'bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100',
+  buttonActive: 'bg-emerald-200 text-emerald-950 hover:bg-emerald-200',
+  chipActive: 'bg-emerald-200 text-emerald-950',
+  chipActiveBorder:
+    'border-emerald-300/80 bg-emerald-200 text-emerald-950 hover:bg-emerald-200',
+  metricsBadge: 'border-emerald-200/90 bg-emerald-50/80 text-emerald-900',
+} as const

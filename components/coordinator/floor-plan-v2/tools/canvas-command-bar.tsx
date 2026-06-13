@@ -84,6 +84,11 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onRequestAiLayoutFeedback?: () => void
   canRequestAiLayoutFeedback?: boolean
   aiLayoutFeedbackLoading?: boolean
+  vendorFillMaxCapacity?: number
+  patronFillMaxCapacity?: number
+  onFillVendorTables?: (count: number) => void
+  onFillPatronTables?: (count: number) => void
+  fillRoomDisabledReason?: string | null
 }
 
 /**
@@ -176,6 +181,11 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onRequestAiLayoutFeedback,
     canRequestAiLayoutFeedback,
     aiLayoutFeedbackLoading,
+    vendorFillMaxCapacity,
+    patronFillMaxCapacity,
+    onFillVendorTables,
+    onFillPatronTables,
+    fillRoomDisabledReason,
   } = props
 
   const showTableSize = Boolean(onTableSizeChange) && tableSizeFt != null
@@ -279,6 +289,12 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onRequestAiLayoutFeedback,
       canRequestAiLayoutFeedback,
       aiLayoutFeedbackLoading,
+      vendorFillMaxCapacity,
+      patronFillMaxCapacity,
+      onFillVendorTables,
+      onFillPatronTables,
+      fillRoomDisabledReason,
+      eventId,
       compact: true,
       sidebarLayout,
       topBarLayout: topBarLayout || headerBarLayout,
@@ -362,6 +378,12 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onRequestAiLayoutFeedback,
       canRequestAiLayoutFeedback,
       aiLayoutFeedbackLoading,
+      vendorFillMaxCapacity,
+      patronFillMaxCapacity,
+      onFillVendorTables,
+      onFillPatronTables,
+      fillRoomDisabledReason,
+      eventId,
       sidebarLayout,
       topBarLayout,
       headerBarLayout,

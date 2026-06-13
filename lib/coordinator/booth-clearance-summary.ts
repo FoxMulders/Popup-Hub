@@ -72,14 +72,16 @@ export function formatClearanceFeet(minFt: number): string {
   return Number.isInteger(rounded) ? `${rounded}′` : `${rounded.toFixed(1)}′`
 }
 
+const CLEARANCE_NEIGHBOR_TARGETS = 'another vendor, table, wall, or fixture'
+
 export const BOOTH_CLEARANCE_WARNING_EXPLANATION = {
   title: 'Booth boundary clearance',
   intro:
-    'Vendor booths are tinted when edge-to-edge clearance to a neighbour, wall, stage, door, or other fixture falls below 4′.',
+    'Vendor booths are tinted when edge-to-edge clearance falls below 4′.',
   yellow:
-    `Yellow (warning): ${BOOTH_CLEARANCE_TIGHT_FT}′–${BOOTH_CLEARANCE_GOOD_FT - 1}′ clearance — widen the aisle before publishing.`,
+    `Yellow (warning): ${BOOTH_CLEARANCE_TIGHT_FT}′–${BOOTH_CLEARANCE_GOOD_FT - 1}′ clearance — may be too close to ${CLEARANCE_NEIGHBOR_TARGETS}.`,
   red:
-    `Red (critical): less than ${BOOTH_CLEARANCE_TIGHT_FT}′ edge clearance — move booths apart until aisles meet the 4′ target.`,
+    `Red (critical): less than ${BOOTH_CLEARANCE_TIGHT_FT}′ clearance — too close to ${CLEARANCE_NEIGHBOR_TARGETS}.`,
   green: `Green (ideal): ${BOOTH_CLEARANCE_GOOD_FT}′ or more from every boundary — comfortable placement.`,
   toggleHint:
     'Hide yellow/green booth tints and this alert from the header toolbar — click the clearance warnings button (triangle icon) next to patron flow.',

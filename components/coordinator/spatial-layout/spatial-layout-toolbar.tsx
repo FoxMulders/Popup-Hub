@@ -4,13 +4,18 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LayoutEditorHelpButton } from '@/components/coordinator/floor-plan-v2/tools/layout-editor-help'
+import { SavedLayoutPicker } from '@/components/coordinator/saved-layout-picker'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { cn } from '@/lib/utils'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
+import type { LayoutRoom } from '@/types/database'
 
 export interface SpatialLayoutToolbarProps {
   eventId: string
   eventName: string
+  coordinatorId: string
+  locationName: string
+  address: string
   placedCount: number
   layoutCapacity: number
   hasOverlap: boolean
@@ -21,11 +26,16 @@ export interface SpatialLayoutToolbarProps {
   onSaveDraft?: () => void
   saveLabel: string
   onReloadFromServer?: () => void
+  getLayoutSnapshot: () => { rooms: LayoutRoom[]; activeRoomId: string } | null
+  onApplySavedLayout: (rooms: LayoutRoom[], activeRoomId: string) => void
 }
 
 export function SpatialLayoutToolbar({
   eventId,
   eventName,
+  coordinatorId,
+  locationName,
+  address,
   placedCount,
   layoutCapacity,
   hasOverlap,
@@ -36,6 +46,8 @@ export function SpatialLayoutToolbar({
   onSaveDraft,
   saveLabel,
   onReloadFromServer,
+  getLayoutSnapshot,
+  onApplySavedLayout,
 }: SpatialLayoutToolbarProps) {
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200/80 bg-card/95 px-3 py-2.5 backdrop-blur-sm sm:px-4">
@@ -62,6 +74,7 @@ export function SpatialLayoutToolbar({
               </span>
             ) : null}
           </div>
+          <LayoutEditorHelpButton variant="prominent" className="shrink-0" />
         </div>
       </div>
 
@@ -82,7 +95,15 @@ export function SpatialLayoutToolbar({
             Draft
           </span>
         ) : null}
-        <LayoutEditorHelpButton variant="compact" />
+        <SavedLayoutPicker
+          coordinatorId={coordinatorId}
+          locationName={locationName}
+          address={address}
+          getLayoutSnapshot={getLayoutSnapshot}
+          onApplyLayout={onApplySavedLayout}
+          compact
+          disabled={saving || savingDraft}
+        />
         <TestSuitePopulateButton eventId={eventId} compact />
         {onReloadFromServer ? (
           <Button
@@ -96,6 +117,7 @@ export function SpatialLayoutToolbar({
             Reload saved layout
           </Button>
         ) : null}
+        <span data-layout-help="save-actions" className="inline-flex items-center gap-2">
         {onSaveDraft ? (
           <Button
             type="button"
@@ -117,6 +139,7 @@ export function SpatialLayoutToolbar({
         >
           {saving ? 'Saving…' : saveLabel}
         </Button>
+        </span>
       </div>
     </header>
   )

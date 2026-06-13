@@ -3,6 +3,7 @@ import { normalizeEventContractClauses } from '@/lib/legal/booth-contract-templa
 import type {
   BoothClearancePolicy,
   BoothContractClause,
+  BoothContractSignatureMethod,
   BoothContractSnapshot,
   Event,
 } from '@/types/database'
@@ -92,13 +93,30 @@ export function buildBoothContractSnapshot(input: {
   clauses: BoothContractClause[]
   pdfUrl: string | null
   acknowledgedAt: string
+  signature?: {
+    method: BoothContractSignatureMethod
+    signedName?: string | null
+    signatureImageUrl?: string | null
+    signedDocumentUrl?: string | null
+    signedAt: string
+  }
 }): BoothContractSnapshot {
-  return {
+  const snapshot: BoothContractSnapshot = {
     content_hash: contractContentHash(input.clauses, input.pdfUrl),
     clauses: input.clauses,
     pdf_url: input.pdfUrl,
     acknowledged_at: input.acknowledgedAt,
   }
+
+  if (input.signature) {
+    snapshot.signature_method = input.signature.method
+    snapshot.signed_name = input.signature.signedName ?? null
+    snapshot.signature_image_url = input.signature.signatureImageUrl ?? null
+    snapshot.signed_document_url = input.signature.signedDocumentUrl ?? null
+    snapshot.signed_at = input.signature.signedAt
+  }
+
+  return snapshot
 }
 
 export function enabledContractClausesForStorage(clauses: BoothContractClause[]): BoothContractClause[] {
