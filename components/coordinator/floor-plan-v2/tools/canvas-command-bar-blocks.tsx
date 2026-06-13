@@ -1307,7 +1307,7 @@ export function renderCanvasCommandBarBlock(
               iconOnly={false}
             />
           ) : null}
-          {topBarLayout && ctx.onToggleCanvasFullscreen ? (
+          {(topBarLayout || headerBarLayout) && ctx.onToggleCanvasFullscreen ? (
             <button
               type="button"
               onClick={() => ctx.onToggleCanvasFullscreen?.()}

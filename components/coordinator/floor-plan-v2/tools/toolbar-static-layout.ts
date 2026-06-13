@@ -130,7 +130,7 @@ export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
   'view-setup': 'VIEW & SETUP',
   'dual-screen': 'DUAL-SCREEN',
   'hall-management': 'HALL MANAGEMENT',
-  'shapes-booths': 'SHAPES & BOOTHS',
+  'shapes-booths': 'SHAPES',
   'vendor-booths': 'VENDOR BOOTHS',
   'patron-tables': 'PATRON TABLES',
   'alignment-spacing': 'ALIGNMENT & SPACING',
@@ -139,14 +139,14 @@ export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
 /** Header row 1 + top strip row 2 section groupings. */
 export const DASHBOARD_HEADER_SECTION_IDS: readonly SidebarSectionId[] = [
   'view-setup',
+  'dual-screen',
   'hall-management',
 ] as const
 
 export const DASHBOARD_TOOLSTRIP_SECTION_IDS: readonly SidebarSectionId[] = [
-  'dual-screen',
-  'shapes-booths',
   'vendor-booths',
   'patron-tables',
+  'shapes-booths',
   'alignment-spacing',
 ] as const
 
@@ -197,12 +197,6 @@ export function getVisibleSidebarSections(
     return applySidebarSectionsFilter(sections, filter)
   }
 
-  sections.push({
-    id: 'shapes-booths',
-    header: LAYOUT_EDITOR_SIDEBAR_HEADERS['shapes-booths'],
-    blocks: ['primitives'],
-  })
-
   if (ctx.showVendor) {
     sections.push({
       id: 'vendor-booths',
@@ -218,6 +212,12 @@ export function getVisibleSidebarSections(
       blocks: ['patron'],
     })
   }
+
+  sections.push({
+    id: 'shapes-booths',
+    header: LAYOUT_EDITOR_SIDEBAR_HEADERS['shapes-booths'],
+    blocks: ['primitives'],
+  })
 
   const alignmentBlocks: CanvasToolbarBlockId[] = ['view-align', 'optimize']
   sections.push({

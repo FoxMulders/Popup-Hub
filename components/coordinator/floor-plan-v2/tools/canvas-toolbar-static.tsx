@@ -172,6 +172,31 @@ function HeaderBarViewSetupCluster({
   )
 }
 
+function HeaderBarDualScreenCluster({
+  section,
+  renderBlock,
+}: {
+  section: SidebarSectionDef
+  renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
+}) {
+  return (
+    <div
+      className="dashboard-header-dual-screen flex shrink-0 flex-col justify-center gap-0.5 rounded-md border border-stone-200/90 bg-stone-50/80 px-1 py-0.5"
+      data-toolbar-section={section.id}
+      aria-label={section.header}
+    >
+      <SectionHeader>{section.header}</SectionHeader>
+      <div className="flex min-w-0 flex-nowrap items-center gap-0.5">
+        {section.blocks.map((blockId) => (
+          <div key={blockId} className="flex min-w-0 shrink-0 items-center">
+            {renderBlock(blockId)}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function HeaderBarHallCluster({
   section,
   renderBlock,
@@ -605,6 +630,15 @@ export function CanvasToolbarStatic({
           if (section.id === 'view-setup') {
             return (
               <HeaderBarViewSetupCluster
+                key={section.id}
+                section={section}
+                renderBlock={renderBlock}
+              />
+            )
+          }
+          if (section.id === 'dual-screen') {
+            return (
+              <HeaderBarDualScreenCluster
                 key={section.id}
                 section={section}
                 renderBlock={renderBlock}
