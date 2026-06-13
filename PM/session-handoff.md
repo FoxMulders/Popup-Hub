@@ -4,6 +4,16 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — polygon room reshape (local, not deployed)
+- **`geometry/polygon-edit.ts`:** Pure helpers — edge/vertex hit-testing, insert vertex on edge, translate ring, `isSimplePolygon` self-intersection guard, `syncFrameBoundsFromRing`, dual rect vs vertex handle mode (`isAxisAlignedRect`).
+- **`state/use-floor-plan-doc.ts`:** `updateRoomPerimeter()` commits ring edits with undo; `moveRoomFrame()` now translates `perimeterRing`; rect resize re-syncs ring via `sanitizeRoomFrame`.
+- **`interactions/use-canvas-pointer.ts`:** Vertex drag gesture (select tool); idle edge/vertex hover state; rAF-coalesced updates with snap (Shift = freeform).
+- **`canvas/room-selection-overlay.tsx`:** Dashed ring outline; 8 corner handles for axis-aligned 4-vertex rects; vertex handles for non-rect / >4-vertex polygons; edge hover highlight.
+- **`canvas/floor-plan-canvas.tsx`:** Cursor overrides (`crosshair` on edge, `grab` on vertex); double-click on room edge inserts vertex.
+- **Data model:** Authoritative shape is existing `RoomFrame.perimeterRing` (`[x,y][]` in canvas feet); `widthFt`/`lengthFt` remain derived AABB cache. Default Main Hall still 50×50′ via `frameToRing`.
+- **Limitation:** Legacy save (`legacyRoomsFromDoc`) still writes AABB `venue_width`/`venue_length` only — full polygon persists in `FloorPlanDoc` / local multi-room draft.
+- **Verify:** `npx tsx components/coordinator/floor-plan-v2/geometry/polygon-edit.test.ts` — PASS; `npx tsc --noEmit` — PASS. Smoke: Blueprint Studio → select room → drag vertex / double-click edge → placement still respects polygon interior.
+
 ## Active work — vendor apply event not found fix (local, not deployed)
 - **Root cause:** `/api/vendor/apply` used an explicit `events` column list (including booth-contract fields from migration `105`) while the vendor detail page uses `VENDOR_EVENT_SELECT` (`*`). When optional columns are missing or the select fails, Supabase returns `data: null` and the route surfaced **Event not found** even for published markets.
 - **Fix:** `VENDOR_APPLY_EVENT_SELECT` in `lib/queries/events.ts` (`*` + `event_days` + coordinator profile); apply route loads the event via service client, logs query errors, and returns **Could not load market details** on fetch failure.

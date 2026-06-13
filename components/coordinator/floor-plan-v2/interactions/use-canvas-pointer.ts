@@ -88,6 +88,12 @@ import {
   boothLayoutMovePatch,
   resolveBoothMoveSnapFt,
 } from '../engine/booth-layout-engine'
+import {
+  editableRingForFrame,
+  moveVertex,
+  nearestEdgeHit,
+  nearestVertexHit,
+} from '../geometry/polygon-edit'
 
 interface UseCanvasPointerOptions {
   store: FloorPlanDocStore
@@ -262,6 +268,16 @@ type RoomResizeState =
       limitNotified: boolean
     }
 
+type RoomVertexDragState =
+  | null
+  | {
+      pointerId: number
+      roomId: string
+      vertexIndex: number
+      initialRing: ReadonlyArray<readonly [number, number]>
+      moved: boolean
+    }
+
 /**
  * 15° increments match the toolbar buttons; holding Shift switches to
  * smooth 1° rotation for fine adjustments.
@@ -413,6 +429,12 @@ export interface CanvasPointerApi {
   rotating: boolean
   /** True during macro room drag or resize. */
   roomGestureActive: boolean
+  /** True while dragging a room perimeter vertex. */
+  roomVertexDragActive: boolean
+  /** Hovered edge on the selected room (select tool). */
+  roomEdgeHover: { roomId: string; edgeIndex: number } | null
+  /** Hovered vertex index on the selected room. */
+  roomVertexHover: number | null
   /** True while dragging an object resize handle. */
   objectGestureActive: boolean
   /** True while actively dragging booths across the canvas. */
@@ -519,8 +541,15 @@ export function useCanvasPointer(
   const rotateRef = useRef<RotateState>(null)
   const [rotating, setRotating] = useState(false)
   const [roomGestureActive, setRoomGestureActive] = useState(false)
+  const [roomVertexDragActive, setRoomVertexDragActive] = useState(false)
   const roomDragRef = useRef<RoomDragState>(null)
   const roomResizeRef = useRef<RoomResizeState>(null)
+  const roomVertexDragRef = useRef<RoomVertexDragState>(null)
+  const [roomEdgeHover, setRoomEdgeHover] = useState<{
+    roomId: string
+    edgeIndex: number
+  } | null>(null)
+  const [roomVertexHover, setRoomVertexHover] = useState<number | null>(null)
   const objectResizeRef = useRef<ObjectResizeState>(null)
   const [objectGestureActive, setObjectGestureActive] = useState(false)
   const [boothLayoutGestureActive, setBoothLayoutGestureActive] = useState(false)
@@ -542,6 +571,22 @@ export function useCanvasPointer(
   useEffect(() => {
     onRoomGeometryCommitRef.current = options.onRoomGeometryCommit
   }, [options.onRoomGeometryCommit])
+  const selectedRoomIdRef = useRef(options.selectedRoomId ?? null)
+  useEffect(() => {
+    selectedRoomIdRef.current = options.selectedRoomId ?? null
+  }, [options.selectedRoomId])
+
+  const pxPerFt = transform.basePxPerFt * transform.zoom
+
+  const edgeHitToleranceFt = useCallback((): number => {
+    if (pxPerFt <= 0) return 0.75
+    return Math.max(0.5, 8 / pxPerFt)
+  }, [pxPerFt])
+
+  const vertexHitToleranceFt = useCallback((): number => {
+    if (pxPerFt <= 0) return 0.6
+    return Math.max(0.4, 6 / pxPerFt)
+  }, [pxPerFt])
 
   /**
    * Pointermove can fire at the device's native rate (often 120 Hz on
@@ -763,6 +808,35 @@ export function useCanvasPointer(
         }
       }
 
+      const vertexHandleEl = target?.closest('[data-room-vertex-index]')
+      if (vertexHandleEl && allowRoomGestures && activeTool.tool === 'select') {
+        const roomId = vertexHandleEl.getAttribute('data-room-id')
+        const indexRaw = vertexHandleEl.getAttribute('data-room-vertex-index')
+        const vertexIndex = indexRaw != null ? Number(indexRaw) : NaN
+        const frame = (store.doc.rooms ?? []).find((f) => f.id === roomId)
+        if (
+          roomId &&
+          frame &&
+          !frame.mergedIntoObjectId &&
+          !frame.joinGroupId &&
+          Number.isFinite(vertexIndex)
+        ) {
+          capturePointer(e.currentTarget, e.pointerId)
+          store.clearSelection()
+          onRoomFrameClickRef.current?.(roomId)
+          setRoomGestureActive(true)
+          setRoomVertexDragActive(true)
+          roomVertexDragRef.current = {
+            pointerId: e.pointerId,
+            roomId,
+            vertexIndex,
+            initialRing: editableRingForFrame(frame),
+            moved: false,
+          }
+          return true
+        }
+      }
+
       // Rotate handle takes priority over the underlying object hit-
       // test. The handle carries `data-rotate-handle="true"` and
       // `data-object-id` so we can pick up the right object without
@@ -939,8 +1013,38 @@ export function useCanvasPointer(
       const rotate = rotateRef.current
       const roomDrag = roomDragRef.current
       const roomResize = roomResizeRef.current
+      const roomVertexDrag = roomVertexDragRef.current
       const objectResize = objectResizeRef.current
       const { ft, pointerId, shiftKey, metaKey, ctrlKey } = move
+
+      if (roomVertexDrag && roomVertexDrag.pointerId === pointerId) {
+        const frame = (store.doc.rooms ?? []).find(
+          (f) => f.id === roomVertexDrag.roomId
+        )
+        if (!frame) return
+        const currentRing = editableRingForFrame(frame)
+        const candidate = shiftKey
+          ? { x: ft.x, y: ft.y }
+          : snapPoint(ft, store.doc.snapFt)
+        const trialRing = moveVertex(currentRing, roomVertexDrag.vertexIndex, candidate)
+        const ok = store.updateRoomPerimeter(roomVertexDrag.roomId, trialRing, {
+          pushHistory: !roomVertexDrag.moved,
+        })
+        if (ok) {
+          const wasMoved = roomVertexDrag.moved
+          const isMovedNow =
+            wasMoved ||
+            candidate.x !==
+              roomVertexDrag.initialRing[roomVertexDrag.vertexIndex]?.[0] ||
+            candidate.y !==
+              roomVertexDrag.initialRing[roomVertexDrag.vertexIndex]?.[1]
+          roomVertexDragRef.current = {
+            ...roomVertexDrag,
+            moved: isMovedNow,
+          }
+        }
+        return
+      }
 
       if (objectResize && objectResize.pointerId === pointerId) {
         const localPointer = pointerInObjectSpace(objectResize.initial, ft)
@@ -1237,6 +1341,7 @@ export function useCanvasPointer(
           rotateRef.current ||
           roomDragRef.current ||
           roomResizeRef.current ||
+          roomVertexDragRef.current ||
           objectResizeRef.current ||
           marqueeNow
         if (activeTool.tool === 'draw' && !gestureActive) {
@@ -1278,15 +1383,59 @@ export function useCanvasPointer(
         }
         setPlacementHover(null)
       }
+
+      if (activeTool.tool === 'select') {
+        const interactionRoomId =
+          selectedRoomIdRef.current ?? activeRoomIdRef.current
+        const frame =
+          interactionRoomId &&
+          (store.doc.rooms ?? []).find((f) => f.id === interactionRoomId)
+        if (
+          frame &&
+          !frame.mergedIntoObjectId &&
+          !frame.joinGroupId &&
+          !draftRef.current &&
+          !dragRef.current &&
+          !rotateRef.current &&
+          !roomDragRef.current &&
+          !roomResizeRef.current &&
+          !roomVertexDragRef.current &&
+          !objectResizeRef.current &&
+          !marqueeNow
+        ) {
+          const ring = editableRingForFrame(frame)
+          const edgeTol = edgeHitToleranceFt()
+          const vertTol = vertexHitToleranceFt()
+          const vertHit = nearestVertexHit(ft, ring, vertTol)
+          if (vertHit != null) {
+            setRoomVertexHover(vertHit)
+            setRoomEdgeHover(null)
+            return
+          }
+          const edgeHit = nearestEdgeHit(ft, ring, edgeTol)
+          if (edgeHit) {
+            setRoomEdgeHover({
+              roomId: frame.id,
+              edgeIndex: edgeHit.edgeIndex,
+            })
+            setRoomVertexHover(null)
+            return
+          }
+        }
+        setRoomEdgeHover(null)
+        setRoomVertexHover(null)
+      }
     },
     [
       commandCenterViewport,
+      edgeHitToleranceFt,
       marquee,
       readDefaultBoothTableSpec,
       setDraft,
       setPlacementHover,
       store,
       transform.zoom,
+      vertexHitToleranceFt,
     ]
   )
 
@@ -1375,6 +1524,18 @@ export function useCanvasPointer(
         }
         roomResizeRef.current = null
         setRoomGestureActive(false)
+        return
+      }
+
+      const roomVertexDrag = roomVertexDragRef.current
+      if (roomVertexDrag && roomVertexDrag.pointerId === e.pointerId) {
+        if (roomVertexDrag.moved) {
+          onRoomGeometryCommitRef.current?.()
+          onLayoutCommitRef.current?.()
+        }
+        roomVertexDragRef.current = null
+        setRoomGestureActive(false)
+        setRoomVertexDragActive(false)
         return
       }
 
@@ -1663,6 +1824,9 @@ export function useCanvasPointer(
       : null,
     rotating,
     roomGestureActive,
+    roomVertexDragActive,
+    roomEdgeHover,
+    roomVertexHover,
     objectGestureActive,
     boothLayoutGestureActive,
     onPointerDown,

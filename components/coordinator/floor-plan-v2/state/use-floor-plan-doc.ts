@@ -26,6 +26,7 @@ import { applyBoothObjectPatch } from './table-cluster-layout'
 import {
   forceRecomputeGeometry,
   isValidPlacementLocationBBox,
+  sanitizeRoomFrame,
 } from './geometry-sanitize'
 import { mergeUnionSelectionInDoc } from './merge-selection-union'
 import {
@@ -34,6 +35,14 @@ import {
 } from './destructive-merge'
 import { ensureCanvasHasPlaceableRoom } from './canvas-init'
 import { getSuppressAutoMainHall } from './canvas-session-guards'
+import {
+  closeRing,
+  isSimplePolygon,
+  openVertices,
+  syncFrameBoundsFromRing,
+  translateRing,
+} from '../geometry/polygon-edit'
+import { rebuildSpatialIndexForRoom } from './placement-surface'
 
 export { forceRecomputeGeometry } from './geometry-sanitize'
 
@@ -165,6 +174,16 @@ export interface FloorPlanDocStore {
   resizeRoomFrame: (
     roomId: string,
     patch: RoomResizePatch,
+    options?: { pushHistory?: boolean }
+  ) => boolean
+
+  /**
+   * Replace a room's perimeter ring (polygon reshape). Syncs the frame
+   * AABB, revalidates simplicity, and reconciles perimeter children.
+   */
+  updateRoomPerimeter: (
+    roomId: string,
+    ring: ReadonlyArray<readonly [number, number]>,
     options?: { pushHistory?: boolean }
   ) => boolean
 
@@ -495,15 +514,19 @@ export function useFloorPlanDoc(
       )
 
       const objectRoom = current.objectRoom ?? {}
-      const nextFrames = frames.map((f) =>
-        movingRoomIds.has(f.id)
-          ? {
-              ...f,
-              originX: f.originX + clampedDx,
-              originY: f.originY + clampedDy,
-            }
-          : f
-      )
+      const nextFrames = frames.map((f) => {
+        if (!movingRoomIds.has(f.id)) return f
+        const perimeterRing =
+          f.perimeterRing && f.perimeterRing.length >= 3
+            ? translateRing(f.perimeterRing, clampedDx, clampedDy)
+            : f.perimeterRing
+        return {
+          ...f,
+          originX: f.originX + clampedDx,
+          originY: f.originY + clampedDy,
+          perimeterRing,
+        }
+      })
       let nextObjects = current.objects.map((o) => {
         const ownerRoom = objectRoom[o.id]
         if (!ownerRoom || !movingRoomIds.has(ownerRoom)) return o
@@ -543,6 +566,43 @@ export function useFloorPlanDoc(
     [commit]
   )
 
+  const updateRoomPerimeter = useCallback<
+    FloorPlanDocStore['updateRoomPerimeter']
+  >(
+    (roomId, ring, options) => {
+      const pushHistory = options?.pushHistory ?? true
+      const current = docRef.current
+      const frames = current.rooms ?? []
+      const oldFrame = frames.find((f) => f.id === roomId)
+      if (!oldFrame) return false
+      if (oldFrame.mergedIntoObjectId) return false
+      if (oldFrame.joinGroupId) return false
+
+      const closed = closeRing(openVertices(ring))
+      const verts = openVertices(closed)
+      if (verts.length < 3) return false
+      if (!isSimplePolygon(verts)) return false
+
+      const nextFrame = syncFrameBoundsFromRing(oldFrame, closed)
+      const nextFrames = frames.map((f) => (f.id === roomId ? nextFrame : f))
+      const extents = reconcileCanvasExtents(nextFrames, undefined, current.objects)
+
+      let nextDoc = reconcileRoomPerimeterChildren(
+        {
+          ...current,
+          rooms: nextFrames,
+          canvasWidthFt: extents.canvasWidthFt,
+          canvasLengthFt: extents.canvasLengthFt,
+        },
+        roomId
+      )
+      rebuildSpatialIndexForRoom(nextDoc, roomId)
+      commit(nextDoc, pushHistory)
+      return true
+    },
+    [commit]
+  )
+
   const resizeRoomFrame = useCallback<FloorPlanDocStore['resizeRoomFrame']>(
     (roomId, patch, options) => {
       const pushHistory = options?.pushHistory ?? true
@@ -557,7 +617,7 @@ export function useFloorPlanDoc(
         canvasWidthFt: current.canvasWidthFt,
         canvasLengthFt: current.canvasLengthFt,
       })
-      const nextFrame = { ...oldFrame, ...clamped }
+      const nextFrame = sanitizeRoomFrame({ ...oldFrame, ...clamped })
 
       const nextFrames = frames.map((f) => (f.id === roomId ? nextFrame : f))
       const objectRoom = current.objectRoom ?? {}
@@ -866,6 +926,7 @@ export function useFloorPlanDoc(
       patchDoc,
       moveRoomFrame,
       resizeRoomFrame,
+      updateRoomPerimeter,
       rotateRoomFrame,
       joinRooms,
       joinSelection,
@@ -895,6 +956,7 @@ export function useFloorPlanDoc(
       patchDoc,
       moveRoomFrame,
       resizeRoomFrame,
+      updateRoomPerimeter,
       rotateRoomFrame,
       joinRooms,
       joinSelection,

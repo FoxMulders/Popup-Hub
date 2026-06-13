@@ -62,6 +62,11 @@ import { dissolvedStageIdsForDoc } from '@/src/utils/layoutMergeEngine'
 import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
 import { vendorBoothClearanceThemeForProbe } from '@/lib/coordinator/booth-clearance-visual'
 import type { BoothObject } from '../state/types'
+import {
+  editableRingForFrame,
+  insertVertexOnEdge,
+  nearestEdgeHit,
+} from '../geometry/polygon-edit'
 
 import type { LayoutSpringPose } from '../hooks/use-layout-spring'
 
@@ -737,26 +742,6 @@ export function FloorPlanCanvas({
     return store.doc.objects.find((o) => o.id === editingObjectId) ?? null
   }, [editingObjectId, store.doc.objects])
 
-  const handleDoubleClick = useCallback(
-    (e: React.MouseEvent<SVGSVGElement>) => {
-      if (toolState.tool !== 'select') return
-      const target = e.target as Element | null
-      const id = target
-        ?.closest('[data-object-id]')
-        ?.getAttribute('data-object-id')
-      if (!id) return
-      const obj = store.doc.objects.find((o) => o.id === id)
-      if (!obj || obj.locked) return
-      e.preventDefault()
-      e.stopPropagation()
-      if (!store.selectedIds.has(id)) {
-        store.setSelection([id])
-      }
-      setEditingObjectId(id)
-    },
-    [store, toolState.tool]
-  )
-
   const commitEditing = useCallback(
     (next: string) => {
       if (!editingObj) {
@@ -843,11 +828,20 @@ export function FloorPlanCanvas({
     ? viewport.isPanning
       ? 'grabbing'
       : 'grab'
-    : pointer.rotating
+    : pointer.roomVertexDragActive
+      ? 'grabbing'
+      : pointer.rotating
       ? 'grabbing'
       : viewport.isPanning
         ? 'grabbing'
-        : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool, commandCenterViewport)
+        : pointer.roomVertexHover != null
+          ? 'grab'
+          : pointer.roomEdgeHover != null
+            ? 'crosshair'
+            : cursorForTool(
+                viewport.isPanning ? 'pan' : toolState.tool,
+                commandCenterViewport
+              )
 
   const ftAtClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -871,6 +865,58 @@ export function FloorPlanCanvas({
       transform.surfaceOriginFtX,
       transform.surfaceOriginFtY,
       viewport.zoom,
+    ]
+  )
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      if (toolState.tool !== 'select') return
+      const target = e.target as Element | null
+      const id = target
+        ?.closest('[data-object-id]')
+        ?.getAttribute('data-object-id')
+      if (id) {
+        const obj = store.doc.objects.find((o) => o.id === id)
+        if (!obj || obj.locked) return
+        e.preventDefault()
+        e.stopPropagation()
+        if (!store.selectedIds.has(id)) {
+          store.setSelection([id])
+        }
+        setEditingObjectId(id)
+        return
+      }
+
+      const interactionRoomId = selectedRoomId ?? activeRoomId ?? null
+      if (!interactionRoomId) return
+      const frame = (store.doc.rooms ?? []).find((f) => f.id === interactionRoomId)
+      if (!frame || frame.mergedIntoObjectId || frame.joinGroupId) return
+
+      const ft = ftAtClient(e.clientX, e.clientY)
+      const ring = editableRingForFrame(frame)
+      const edgeTol = pxPerFt > 0 ? Math.max(0.5, 8 / pxPerFt) : 0.75
+      const hit = nearestEdgeHit(ft, ring, edgeTol)
+      if (!hit) return
+
+      const nextRing = insertVertexOnEdge(ring, hit.edgeIndex, hit.projection)
+      const ok = store.updateRoomPerimeter(interactionRoomId, nextRing, {
+        pushHistory: true,
+      })
+      if (!ok) return
+      e.preventDefault()
+      e.stopPropagation()
+      onRoomGeometryCommit?.()
+      onLayoutCommit?.()
+    },
+    [
+      activeRoomId,
+      ftAtClient,
+      onLayoutCommit,
+      onRoomGeometryCommit,
+      pxPerFt,
+      selectedRoomId,
+      store,
+      toolState.tool,
     ]
   )
 
@@ -1103,6 +1149,11 @@ export function FloorPlanCanvas({
                     frame={frame}
                     pxPerFt={pxPerFt}
                     suppressHandles={pointer.roomGestureActive}
+                    hoveredEdgeIndex={
+                      pointer.roomEdgeHover?.roomId === frame.id
+                        ? pointer.roomEdgeHover.edgeIndex
+                        : null
+                    }
                   />
                 )
               })()

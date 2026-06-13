@@ -1,4 +1,5 @@
 import { rotatedAabb } from '../interactions/geometry'
+import { translateRing } from '../geometry/polygon-edit'
 import {
   placementSurfaceFramingBounds,
   resolveRoomPlacementSurface,
@@ -244,11 +245,19 @@ function framesWithMovedRoom(
   dx: number,
   dy: number
 ): RoomFrame[] {
-  return frames.map((f) =>
-    f.id === roomId
-      ? { ...f, originX: f.originX + dx, originY: f.originY + dy }
-      : f
-  )
+  return frames.map((f) => {
+    if (f.id !== roomId) return f
+    const perimeterRing =
+      f.perimeterRing && f.perimeterRing.length >= 3
+        ? translateRing(f.perimeterRing, dx, dy)
+        : f.perimeterRing
+    return {
+      ...f,
+      originX: f.originX + dx,
+      originY: f.originY + dy,
+      perimeterRing,
+    }
+  })
 }
 
 function framesWithResizedRoom(
