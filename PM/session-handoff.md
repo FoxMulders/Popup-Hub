@@ -765,9 +765,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `cb07898` (pushed to `origin/master`)
-- Last deploy commit: `cb07898` - feat: ship 50 session updates (toolbar row reorder; test suite populate button; CI lint fix; manual layout orientation pattern; +46 more)
-- Production: https://popuphub.ca - **v1.0.0 build 118** | commit `b98cbee` (handoff updated 2026-06-13 10:32)
+- Branch: `master` @ `57675e7` (pushed to `origin/master`)
+- Last deploy commit: `57675e7` - feat: ship 51 session updates (layout route uses production editor; toolbar row reorder; test suite populate button; CI lint fix; +47 more)
+- Production: https://popuphub.ca - **v1.0.0 build 119** | commit `61b881c` (handoff updated 2026-06-13 10:41)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1144,7 +1144,7 @@
 
 
 ## Last deploy
-- 2026-06-13 10:32 - Deploy via deploy-popuphub.ps1 - `feat: ship 50 session updates (toolbar row reorder; test suite populate button; CI lint fix; manual layout orientation pattern; +46 more)` (cb07898)
+- 2026-06-13 10:41 - Deploy via deploy-popuphub.ps1 - `feat: ship 51 session updates (layout route uses production editor; toolbar row reorder; test suite populate button; CI lint fix; +47 more)` (57675e7)
 
 
 ## Goal
