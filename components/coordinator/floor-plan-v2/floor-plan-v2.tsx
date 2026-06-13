@@ -867,14 +867,18 @@ function FloorPlanV2Workspace({
     setTool(next)
   }, [])
 
-  /** Dashboard: stay armed for rapid stamping; wizard: revert to Select. */
+  /** Booth stamping stays armed until the coordinator picks another tool. */
   const handleAfterDrawCommit = useCallback(() => {
+    if (tool === 'draw' && drawShape === 'booth') {
+      store.clearSelection()
+      return
+    }
     if (isDashboard) {
       store.clearSelection()
       return
     }
     setTool('select')
-  }, [isDashboard, store])
+  }, [drawShape, isDashboard, store, tool])
 
   const handleDrawShapeChange = useCallback((next: DrawShape) => {
     setDrawShape(next)
@@ -2793,6 +2797,7 @@ function FloorPlanV2Workspace({
                       )
                     }}
                     onAfterDrawCommit={handleAfterDrawCommit}
+                    stickyDrawPlacement
                     showLabels={showLabels}
                     layoutCapacity={layoutCapacity}
                     baselineTableLengthFt={safeTableSizeFt}

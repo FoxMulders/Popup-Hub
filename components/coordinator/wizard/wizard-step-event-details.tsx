@@ -196,7 +196,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             {props.listingType === 'garage_yard_sale' ? (
               <p className={WIZARD_INFO_BOX}>
                 Quarter auctions appear on the patron map when published. Vendor applications are required;
-                there is no floor-plan booth placement — set caps on step 3.
+                there is no floor-plan booth placement — set caps on step 2.
               </p>
             ) : null}
           </div>

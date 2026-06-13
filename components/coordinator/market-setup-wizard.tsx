@@ -1102,6 +1102,12 @@ export function MarketSetupWizard({
     resetWizardScrollAnchor(currentStep)
   }, [currentStep])
 
+  useEffect(() => {
+    if (currentStep !== 2 || typeof window === 'undefined') return
+    const urlStep = new URL(window.location.href).searchParams.get('step')
+    if (urlStep === '3') syncStepInUrl(2)
+  }, [currentStep, eventId])
+
   const seededMainHallRef = useRef(false)
   useEffect(() => {
     if (currentStep !== 3 || skipVenueLayout || !eventId) return

@@ -1,1 +1,1 @@
-feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard step URL refresh fix; vendor contract signing; +61 more)
+feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard capacity URL step fix; vendor contract signing; +61 more)

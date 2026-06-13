@@ -14,10 +14,11 @@
 - **Toolbar:** Vendor table draw button + size chips use light emerald (`VENDOR_BOOTH_TOOLBAR`) instead of amber/dark forest.
 - **Verify:** `/coordinator/dashboard` or event layout — place vendor booth with ≥4′ clearance → light green fill; draw tool + size pill highlight emerald when armed.
 
-## Active work — setup wizard step URL refresh fix (local, not deployed)
-- **Root cause:** `syncStepInUrl` wrote internal step numbers (`?step=3` for floor plan) while `parseInitialStep` still mapped legacy 4-step URLs (`?step=3` → Capacity). Refresh on Step 3 sent users back to Step 2.
-- **`lib/wizard/setup-step-url.ts`:** Shared encode/decode — floor plan → `?step=4`, capacity → `?step=3`; `market-setup-wizard`, layout exit links, and setup page now use it.
-- **Verify:** `npx tsx scripts/verify-setup-step-url.ts` — PASS. Open setup → advance to floor plan → URL shows `?step=4` → Ctrl+R stays on floor plan.
+## Active work — setup wizard capacity URL step fix (local, not deployed)
+- **Issue:** Capacity & pricing showed as `?step=3` in the URL while the UI labeled it Step 2 (legacy 4-step mapping).
+- **Fix:** `setupWizardStepToUrlParam(2)` now writes `?step=2`; legacy `?step=3` capacity links still parse correctly and normalize to `?step=2` on load. Floor plan stays at `?step=4` to avoid colliding with old capacity bookmarks.
+- **Also:** Quarter-auction copy on Step 1 now says "step 2" for caps; skip-layout layout redirect uses `?step=2`.
+- **Verify:** `npx tsx scripts/verify-setup-step-url.ts` — PASS. Open setup → Capacity → URL shows `?step=2`; old `?step=3` bookmark lands on Capacity and URL updates to `?step=2`.
 
 ## Active work — vendor contract signing (local, not deployed)
 - **`109_vendor_contract_signatures.sql`:** `booth_contract_signed_at` + `booth_contract_signature_method` on `booth_applications`.
@@ -59,10 +60,12 @@
 - **Verify:** `/coordinator/dashboard` and `/coordinator/events/{id}/layout` — zoom +/- steps 50/75/100/125%; Ctrl+wheel zoom holds; pan after zoom does not snap back.
 
 ## Active work — layout help interactive on-page tour (local, not deployed)
-- **`layout-editor-help-tours.ts` + `layout-editor-help-tour.tsx`:** 5-step quick-start tour with emerald spotlight ring, step card (Back/Next/Done), scroll-into-view on targets.
+- **`layout-editor-help-tours.ts` + `layout-editor-help-tour.tsx`:** 5-step quick-start tour with step card (Back/Next/Done), scroll-into-view on targets.
+- **Overlay UX:** static four-panel scrim (no full-page flash); emerald pulse/glow only on the highlighted control ring.
+- **Positioning:** viewport-clamped highlight box, header clearance on step 1 rooms bar, card portaled to `document.body` (avoids wizard shell clipping), measured card height + prefer-below when target is near top.
 - **`data-layout-help` anchors:** rooms bar, navigation (V/H), draw tools, vendor booths, canvas, save actions, optimize, layout help button — wired in command bar, spatial toolbar, and canvas host.
 - **Entry points:** first visit auto-tour (~1.2s), banner **Guide me on the page**, help dialog **Start interactive tour** / per-topic **Show me on the page**.
-- **Verify:** `/coordinator/events/{id}/layout` → tour highlights each control in place; Step 5 spotlights Save draft / Save layout in header.
+- **Verify:** `/coordinator/events/{id}/layout` → Step 1 rooms bar fully visible (not clipped under header); page dim stays steady; only target control pulses.
 
 ## Active work — layout help first-time UX (local, not deployed)
 - **Prominent green "Layout help"** button in spatial header (beside title) and canvas toolbars.
@@ -105,7 +108,7 @@
 
 ## Active work — test suite populate button (local, not deployed)
 - **`persist-test-suite-applications.ts`:** Seeds diverse vendor suite as real auth users + passports + `booth_applications` with `approved` + paid (`CASH` / `COMPLETED`). Clears prior `@popuphub.seed` applications on the event before re-run.
-- **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` — coordinator-scoped; set `DISABLE_COORDINATOR_TEST_SUITE=true` to block on a deploy.
+- **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` — coordinator-scoped; uses `createAdminClient()` for profile/passport writes (SSR service client still hit RLS). Set `DISABLE_COORDINATOR_TEST_SUITE=true` to block on a deploy.
 - **UI:** Violet **Test suite** button in Blueprint Studio **ALIGNMENT & SPACING** toolbar (Command center dashboard), plus event hub and Applications page headers. Also on spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 (`/coordinator/events/{id}/setup?step=3`).
 - **Verify:** Dev coordinator → Command center → Blueprint Studio → scroll toolbar to **ALIGNMENT & SPACING** → **Test suite** (next to AI Auto-Arrange). Or event hub / Applications header. Applications board shows approved & paid vendors after populate.
 

@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,7 +9,6 @@ import {
   type LayoutHelpTargetId,
   type LayoutHelpTourStep,
 } from '@/lib/floor-plan/layout-editor-help-tours'
-import { cn } from '@/lib/utils'
 
 interface HighlightBox {
   top: number
@@ -17,17 +17,138 @@ interface HighlightBox {
   height: number
 }
 
+const TARGET_PAD = 6
+const VIEWPORT_MARGIN = 8
+const HEADER_CLEARANCE = 64
+const CARD_MARGIN = 12
+const CARD_ESTIMATED_HEIGHT = 280
+
 function measureTarget(targetId: LayoutHelpTargetId): HighlightBox | null {
   const el = document.querySelector(`[data-layout-help="${targetId}"]`)
   if (!el) return null
-  const pad = 6
+
   const rect = el.getBoundingClientRect()
-  return {
-    top: rect.top - pad,
-    left: rect.left - pad,
-    width: rect.width + pad * 2,
-    height: rect.height + pad * 2,
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+
+  let top = rect.top - TARGET_PAD
+  let left = rect.left - TARGET_PAD
+  let width = rect.width + TARGET_PAD * 2
+  let height = rect.height + TARGET_PAD * 2
+
+  if (left < VIEWPORT_MARGIN) {
+    const shift = VIEWPORT_MARGIN - left
+    left = VIEWPORT_MARGIN
+    width = Math.max(rect.width, width - shift)
   }
+  if (top < VIEWPORT_MARGIN) {
+    const shift = VIEWPORT_MARGIN - top
+    top = VIEWPORT_MARGIN
+    height = Math.max(rect.height, height - shift)
+  }
+  width = Math.min(width, vw - left - VIEWPORT_MARGIN)
+  height = Math.min(height, vh - top - VIEWPORT_MARGIN)
+
+  return {
+    top,
+    left,
+    width: Math.max(0, width),
+    height: Math.max(0, height),
+  }
+}
+
+function scrollTargetIntoView(el: Element) {
+  const rect = el.getBoundingClientRect()
+  const block =
+    rect.top < HEADER_CLEARANCE || rect.bottom > window.innerHeight - CARD_MARGIN
+      ? 'start'
+      : 'nearest'
+  el.scrollIntoView({ block, behavior: 'smooth', inline: 'nearest' })
+
+  if (rect.top < HEADER_CLEARANCE) {
+    window.setTimeout(() => {
+      const after = el.getBoundingClientRect()
+      if (after.top < HEADER_CLEARANCE) {
+        window.scrollBy({
+          top: after.top - HEADER_CLEARANCE,
+          behavior: 'smooth',
+        })
+      }
+    }, 0)
+  }
+}
+
+function TourScrimPanels({ box }: { box: HighlightBox }) {
+  const scrimClass = 'fixed z-[251] bg-slate-900/75 pointer-events-none'
+  const holeBottom = box.top + box.height
+  const holeRight = box.left + box.width
+
+  return (
+    <>
+      <div
+        className={scrimClass}
+        style={{ top: 0, left: 0, right: 0, height: box.top }}
+        aria-hidden
+      />
+      <div
+        className={scrimClass}
+        style={{ top: box.top, left: 0, width: box.left, height: box.height }}
+        aria-hidden
+      />
+      <div
+        className={scrimClass}
+        style={{
+          top: box.top,
+          left: holeRight,
+          right: 0,
+          height: box.height,
+        }}
+        aria-hidden
+      />
+      <div
+        className={scrimClass}
+        style={{ top: holeBottom, left: 0, right: 0, bottom: 0 }}
+        aria-hidden
+      />
+    </>
+  )
+}
+
+function computeCardPosition(box: HighlightBox | null, cardHeight: number) {
+  const margin = CARD_MARGIN
+  const cardWidth = Math.min(360, window.innerWidth - margin * 2)
+  const effectiveHeight = Math.max(cardHeight, CARD_ESTIMATED_HEIGHT)
+
+  if (!box) {
+    return {
+      top: Math.max(margin, window.innerHeight / 2 - effectiveHeight / 2),
+      left: (window.innerWidth - cardWidth) / 2,
+      width: cardWidth,
+    }
+  }
+
+  const spaceBelow = window.innerHeight - (box.top + box.height) - margin
+  const spaceAbove = box.top - margin
+  const targetNearTop = box.top < window.innerHeight * 0.38
+
+  let top: number
+  if (targetNearTop || spaceBelow >= effectiveHeight) {
+    top = box.top + box.height + margin
+  } else if (spaceAbove >= effectiveHeight) {
+    top = box.top - effectiveHeight - margin
+  } else {
+    top = box.top + box.height + margin
+  }
+
+  top = Math.max(
+    margin,
+    Math.min(top, window.innerHeight - effectiveHeight - margin)
+  )
+
+  let left = box.left + box.width / 2 - cardWidth / 2
+  left = Math.max(margin, Math.min(left, window.innerWidth - cardWidth - margin))
+
+  return { top, left, width: cardWidth }
 }
 
 export function LayoutEditorHelpTourOverlay({
@@ -43,9 +164,15 @@ export function LayoutEditorHelpTourOverlay({
 }) {
   const step = steps[stepIndex]
   const [box, setBox] = useState<HighlightBox | null>(null)
+  const [cardHeight, setCardHeight] = useState(CARD_ESTIMATED_HEIGHT)
+  const cardRef = useRef<HTMLDivElement>(null)
   const [resolvedTarget, setResolvedTarget] = useState<LayoutHelpTargetId | null>(
     null
   )
+
+  const refreshBox = useCallback((targetId: LayoutHelpTargetId) => {
+    setBox(measureTarget(targetId))
+  }, [])
 
   const updateGeometry = useCallback(() => {
     if (!step) return
@@ -55,87 +182,89 @@ export function LayoutEditorHelpTourOverlay({
       setBox(null)
       return
     }
+
     const el = document.querySelector(`[data-layout-help="${target}"]`)
-    if (el) {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth', inline: 'nearest' })
-      window.setTimeout(() => {
-        setBox(measureTarget(target))
-      }, 280)
-    } else {
+    if (!el) {
       setBox(null)
+      return
     }
-  }, [step])
+
+    refreshBox(target)
+    scrollTargetIntoView(el)
+    requestAnimationFrame(() => refreshBox(target))
+    window.setTimeout(() => refreshBox(target), 120)
+  }, [step, refreshBox])
 
   useLayoutEffect(() => {
+    setCardHeight(CARD_ESTIMATED_HEIGHT)
     updateGeometry()
-    const onScroll = () => {
-      if (!resolvedTarget) return
-      setBox(measureTarget(resolvedTarget))
-    }
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
-    return () => {
-      window.removeEventListener('scroll', onScroll, true)
-      window.removeEventListener('resize', onScroll)
-    }
-  }, [updateGeometry, resolvedTarget, stepIndex])
+  }, [updateGeometry, stepIndex])
 
-  const cardPosition = useMemo(() => {
-    const margin = 12
-    const cardWidth = Math.min(360, window.innerWidth - margin * 2)
-    if (!box) {
-      return {
-        top: Math.max(margin, window.innerHeight / 2 - 120),
-        left: (window.innerWidth - cardWidth) / 2,
-        width: cardWidth,
-      }
+  useLayoutEffect(() => {
+    if (!resolvedTarget) return
+
+    const onGeometryChange = () => refreshBox(resolvedTarget)
+    window.addEventListener('scroll', onGeometryChange, true)
+    window.addEventListener('resize', onGeometryChange)
+    return () => {
+      window.removeEventListener('scroll', onGeometryChange, true)
+      window.removeEventListener('resize', onGeometryChange)
     }
-    let top = box.top + box.height + margin
-    const estimatedHeight = 200
-    if (top + estimatedHeight > window.innerHeight - margin) {
-      top = Math.max(margin, box.top - estimatedHeight - margin)
+  }, [resolvedTarget, refreshBox])
+
+  useLayoutEffect(() => {
+    const el = cardRef.current
+    if (!el) return
+    const measured = el.getBoundingClientRect().height
+    if (measured > 0 && Math.abs(measured - cardHeight) > 4) {
+      setCardHeight(measured)
     }
-    let left = box.left + box.width / 2 - cardWidth / 2
-    left = Math.max(margin, Math.min(left, window.innerWidth - cardWidth - margin))
-    return { top, left, width: cardWidth }
-  }, [box])
+  }, [step, stepIndex, box, cardHeight])
+
+  const cardPosition = useMemo(
+    () => computeCardPosition(box, cardHeight),
+    [box, cardHeight]
+  )
 
   if (!step) return null
 
   const isFirst = stepIndex === 0
   const isLast = stepIndex >= steps.length - 1
 
-  return (
+  const overlay = (
     <div
-      className="fixed inset-0 z-[250]"
+      className="fixed inset-0 z-[250] pointer-events-none"
       role="dialog"
       aria-modal="true"
       aria-labelledby="layout-help-tour-title"
     >
       {box ? (
-        <div
-          className="pointer-events-none fixed z-[251] rounded-xl ring-4 ring-emerald-400 ring-offset-2 ring-offset-transparent shadow-[0_0_0_9999px_rgba(15,23,42,0.78)] transition-all duration-300 ease-out animate-pulse"
-          style={{
-            top: box.top,
-            left: box.left,
-            width: box.width,
-            height: box.height,
-          }}
-          aria-hidden
-        />
+        <>
+          <TourScrimPanels box={box} />
+          <div
+            className="pointer-events-none fixed z-[252] rounded-lg ring-2 ring-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.55)] animate-pulse"
+            style={{
+              top: box.top,
+              left: box.left,
+              width: box.width,
+              height: box.height,
+              transition: 'top 150ms ease-out, left 150ms ease-out, width 150ms ease-out, height 150ms ease-out',
+            }}
+            aria-hidden
+          />
+        </>
       ) : (
-        <div
-          className="fixed inset-0 z-[251] bg-slate-900/75"
-          aria-hidden
-        />
+        <div className="fixed inset-0 z-[251] bg-slate-900/75" aria-hidden />
       )}
 
       <div
-        className="fixed z-[252] rounded-xl border border-emerald-200/90 bg-white p-4 shadow-2xl"
+        ref={cardRef}
+        className="pointer-events-auto fixed z-[253] rounded-xl border border-emerald-200/90 bg-white p-4 shadow-2xl"
         style={{
           top: cardPosition.top,
           left: cardPosition.left,
           width: cardPosition.width,
+          transition: 'top 150ms ease-out, left 150ms ease-out',
         }}
       >
         <div className="flex items-start gap-2">
@@ -208,4 +337,8 @@ export function LayoutEditorHelpTourOverlay({
       </div>
     </div>
   )
+
+  if (typeof document === 'undefined') return overlay
+
+  return createPortal(overlay, document.body)
 }

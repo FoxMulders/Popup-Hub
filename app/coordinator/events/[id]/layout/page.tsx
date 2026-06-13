@@ -52,7 +52,7 @@ export default async function EventLayoutPage({ params }: Props) {
   }
 
   if (event.skip_venue_layout) {
-    redirect(`/coordinator/events/${id}/setup?step=3`)
+    redirect(`/coordinator/events/${id}/setup?step=2`)
   }
 
   const { data: applications } = await supabase

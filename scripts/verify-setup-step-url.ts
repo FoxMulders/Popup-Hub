@@ -16,17 +16,18 @@ function expect(label: string, actual: unknown, expected: unknown) {
 }
 
 expect('step 1 url param', setupWizardStepToUrlParam(1), '1')
-expect('step 2 url param', setupWizardStepToUrlParam(2), '3')
+expect('step 2 url param', setupWizardStepToUrlParam(2), '2')
 expect('step 3 url param', setupWizardStepToUrlParam(3), '4')
 
-expect('legacy step 1', parseSetupWizardStepFromUrl('1', false), 1)
-expect('legacy step 2', parseSetupWizardStepFromUrl('2', false), 1)
+expect('step 1 url', parseSetupWizardStepFromUrl('1', false), 1)
+expect('step 2 url capacity', parseSetupWizardStepFromUrl('2', false), 2)
 expect('legacy capacity step 3', parseSetupWizardStepFromUrl('3', false), 2)
 expect('legacy floor plan step 4', parseSetupWizardStepFromUrl('4', false), 3)
 expect('floor plan refresh round-trip', parseSetupWizardStepFromUrl(setupWizardStepToUrlParam(3), false), 3)
 expect('capacity refresh round-trip', parseSetupWizardStepFromUrl(setupWizardStepToUrlParam(2), false), 2)
 
 expect('skip layout clamps floor plan', parseSetupWizardStepFromUrl('4', true), 2)
+expect('skip layout legacy capacity step 3', parseSetupWizardStepFromUrl('3', true), 2)
 expect(
   'floor plan href',
   setupWizardStepHref('evt-1', 3),

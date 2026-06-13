@@ -14,6 +14,7 @@ export interface TestSuiteCategoryLimit {
 }
 
 export interface PersistTestSuiteInput {
+  /** Service-role Supabase client (bypasses RLS) — use `createAdminClient()`. */
   supabase: SupabaseClient
   authAdmin: SupabaseClient['auth']['admin']
   eventId: string

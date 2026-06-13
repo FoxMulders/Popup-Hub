@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import {
@@ -28,7 +28,7 @@ export async function POST(
 
   const { eventId } = await params
   const supabase = await createClient()
-  const serviceSupabase = await createServiceClient()
+  const adminSupabase = createAdminClient()
 
   const {
     data: { user },
@@ -50,7 +50,7 @@ export async function POST(
   const scope = await getCoordinatorScope(supabase, user.id)
 
   const { data: event, error: eventError } = await applyCoordinatorEventScope(
-    serviceSupabase
+    adminSupabase
       .from('events')
       .select(
         `
@@ -72,7 +72,7 @@ export async function POST(
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
 
-  const { data: layout } = await serviceSupabase
+  const { data: layout } = await adminSupabase
     .from('booth_layouts')
     .select('venue_width, venue_length, baseline_table_length_ft, layout_rooms, venue_preset_id')
     .eq('event_id', eventId)
@@ -120,8 +120,8 @@ export async function POST(
 
   try {
     const result = await persistTestSuiteApplications({
-      supabase: serviceSupabase,
-      authAdmin: serviceSupabase.auth.admin,
+      supabase: adminSupabase,
+      authAdmin: adminSupabase.auth.admin,
       eventId,
       coordinatorId: event.coordinator_id,
       maxBoothCapacity,
