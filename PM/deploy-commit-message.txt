@@ -1,1 +1,1 @@
-feat: ship 43 session updates (booth payment card form fix; sticky site footer; polygon room reshape; vendor apply event not found fix; +39 more)
+feat: ship 43 session updates (full workflow QA test suite; sticky site footer; polygon room reshape; vendor apply event not found fix; +39 more)

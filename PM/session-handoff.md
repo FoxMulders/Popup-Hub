@@ -4,7 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Active work — booth payment card form fix (local, not deployed)
+## Active work — full workflow QA test suite (local, not deployed)
+- **Manual checklist:** `docs/QA_FULL_WORKFLOW.md` — coordinator/vendor/patron signup through publish, passport, apply, approve, assign, discovery (local + staging appendix).
+- **Automated local:** `npm run qa:workflow` (seed → RBAC → Playwright workflow → DB walkthrough); `npm run test:e2e:workflow` (browser only).
+- **Staging HTTP smoke:** `npm run qa:workflow:staging` or `npm run verify:prod` with `PLAYWRIGHT_SMOKE_EVENT_ID`.
+- **Seed:** `npm run seed:test-users` — accounts + vendor passport + draft market → `tests/e2e/workflow/.fixtures.json`.
+- **Verify:** `npm run test:rbac-signup`; `npx tsx scripts/qa-full-workflow-walkthrough.ts` (needs Supabase env + optional local dev server for HTTP steps).
+
 - **Root cause:** `pay-booth-modal.tsx` showed decorative HTML card fields that were not wired to Square, plus a separate Square iframe that failed to initialize (re-attach without destroy, missing location fallback).
 - **Fix:** Single Square card input again; destroy/remount lifecycle on retry; `payment-config` resolves app id via `resolveSquareApplicationId()` and backfills `square_location_id` from Square API when missing.
 - **Verify:** Vendor with approved unpaid booth → open **Complete booth payment** → Square card fields render in the modal; enter sandbox card → Pay succeeds. Local dev may require `npm run dev:https` for Square SDK.
@@ -706,9 +712,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8026077` (pushed to `origin/master`)
-- Last deploy commit: `8026077` - feat: ship 41 session updates (polygon room reshape; vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; +37 more)
-- Production: https://popuphub.ca - **v1.0.0 build 112** | commit `ca59887` (handoff updated 2026-06-13 09:30)
+- Branch: `master` @ `0df3e8a` (pushed to `origin/master`)
+- Last deploy commit: `0df3e8a` - feat: ship 43 session updates (booth payment card form fix; sticky site footer; polygon room reshape; vendor apply event not found fix; +39 more)
+- Production: https://popuphub.ca - **v1.0.0 build 113** | commit `7a63fbd` (handoff updated 2026-06-13 09:41)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1085,7 +1091,7 @@
 
 
 ## Last deploy
-- 2026-06-13 09:30 - Deploy via deploy-popuphub.ps1 - `feat: ship 41 session updates (polygon room reshape; vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; +37 more)` (8026077)
+- 2026-06-13 09:41 - Deploy via deploy-popuphub.ps1 - `feat: ship 43 session updates (booth payment card form fix; sticky site footer; polygon room reshape; vendor apply event not found fix; +39 more)` (0df3e8a)
 
 
 ## Goal
