@@ -855,9 +855,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `49a91d7` (pushed to `origin/master`)
-- Last deploy commit: `49a91d7` - feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard capacity URL step fix; vendor contract signing; +61 more)
-- Production: https://popuphub.ca - **v1.0.0 build 130** | commit `59c2180` (handoff updated 2026-06-13 15:40)
+- Branch: `master` @ `89cefcc` (pushed to `origin/master`)
+- Last deploy commit: `89cefcc` - feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard capacity URL step fix; vendor contract signing; +61 more)
+- Production: https://popuphub.ca - **v1.0.0 build 131** | commit `6516875` (handoff updated 2026-06-13 15:45)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1234,7 +1234,7 @@
 
 
 ## Last deploy
-- 2026-06-13 15:40 - Deploy via deploy-popuphub.ps1 - `feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard capacity URL step fix; vendor contract signing; +61 more)` (49a91d7)
+- 2026-06-13 15:45 - Deploy via deploy-popuphub.ps1 - `feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard capacity URL step fix; vendor contract signing; +61 more)` (89cefcc)
 
 
 ## Goal
