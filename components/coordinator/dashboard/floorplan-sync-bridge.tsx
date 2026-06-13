@@ -20,7 +20,6 @@ export function FloorplanSyncBridge() {
     selectedBoothId,
     focusBooth,
     assignVendorToBoothByVendorId,
-    updateBoothPaymentStatus,
   } = useMarketManagement()
 
   const publishMatrix = useCallback(() => {
@@ -62,19 +61,11 @@ export function FloorplanSyncBridge() {
         assignVendorToBoothByVendorId(message.boothId, message.vendorId)
         publishMatrix()
       }
-      if (message.type === 'matrix_set_status') {
-        void updateBoothPaymentStatus(message.boothId, message.status).then(
-          (ok) => {
-            if (ok) publishMatrix()
-          }
-        )
-      }
     })
   }, [
     assignVendorToBoothByVendorId,
     focusBooth,
     publishMatrix,
-    updateBoothPaymentStatus,
   ])
 
   return null

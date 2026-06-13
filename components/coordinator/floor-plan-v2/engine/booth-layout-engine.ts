@@ -23,6 +23,14 @@ export const BOOTH_MOVE_SNAP_SHIFT_FT = 5
 /** Max center-Y delta (ft) to treat vendor booths as sharing a horizontal row. */
 export const BOOTH_ROW_CENTER_TOLERANCE_FT = 1
 
+/** Max center-X delta (ft) to treat vendor booths as sharing a vertical column. */
+export const BOOTH_COLUMN_CENTER_TOLERANCE_FT = BOOTH_ROW_CENTER_TOLERANCE_FT
+
+export type VendorManualLayoutOrganization =
+  | 'horizontal-row'
+  | 'vertical-column'
+  | null
+
 export function resolveBoothMoveSnapFt(options: {
   shiftKey?: boolean
   shiftHeld?: boolean
@@ -82,6 +90,69 @@ export function findVendorBoothRowPeer(
     }
   }
   return best
+}
+
+/**
+ * When every vendor booth in scope shares a row or column (including an
+ * optional placement probe), the manual layout is a straight line — new
+ * placements default to horizontal table length (rotation 0) instead of
+ * snapping to the nearest wall.
+ */
+export function detectVendorManualLayoutOrganization(
+  objects: ReadonlyArray<PlacedObject>,
+  objectRoom: Record<string, string> | undefined,
+  activeRoomId: string | null | undefined,
+  options?: {
+    excludeId?: string
+    gridSpacingFt?: number
+    probe?: Pick<BoothObject, 'x' | 'y' | 'width' | 'height'>
+  }
+): VendorManualLayoutOrganization {
+  const grid = options?.gridSpacingFt ?? 1
+  const rowTol = Math.max(BOOTH_ROW_CENTER_TOLERANCE_FT, grid * 0.5)
+  const colTol = Math.max(BOOTH_COLUMN_CENTER_TOLERANCE_FT, grid * 0.5)
+
+  const vendors: Array<{ cx: number; cy: number }> = []
+  for (const other of objects) {
+    if (other.id === options?.excludeId) continue
+    if (!isVendorBoothObject(other)) continue
+    if (activeRoomId) {
+      const roomId = objectRoom?.[other.id] ?? activeRoomId
+      if (roomId !== activeRoomId) continue
+    }
+    vendors.push(boothCenterFt(other as BoothObject))
+  }
+  if (options?.probe) {
+    const { cx, cy } = boothCenterFt(options.probe)
+    vendors.push({ cx, cy })
+  }
+  if (vendors.length < 2) return null
+
+  const anchor = vendors[0]!
+  const allSameRow = vendors.every((c) => Math.abs(c.cy - anchor.cy) <= rowTol)
+  if (allSameRow) return 'horizontal-row'
+  const allSameColumn = vendors.every((c) => Math.abs(c.cx - anchor.cx) <= colTol)
+  if (allSameColumn) return 'vertical-column'
+  return null
+}
+
+/** Table length runs E–W (rotation 0) — default for straight manual layouts. */
+export function vendorBoothHorizontalLayoutOrientation(
+  booth: BoothObject
+): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> {
+  const { span, depth } = boothSpanAndDepth(
+    booth.width,
+    booth.height,
+    booth.tableLengthFt
+  )
+  const center = objectCenter(booth)
+  return {
+    x: center.x - span / 2,
+    y: center.y - depth / 2,
+    width: span,
+    height: depth,
+    rotation: 0,
+  }
 }
 
 /** Align rotation and long-edge layout with a row peer (same wall facing). */

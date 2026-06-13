@@ -29,7 +29,20 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'workflow',
+      testMatch: /workflow\/.*\.spec\.ts/,
+      fullyParallel: false,
+      workers: 1,
+      timeout: 120_000,
+      grep: /@workflow/,
+      use: {
+        ...devices['Desktop Edge'],
+        channel: 'msedge',
+      },
+    },
+    {
       name: 'desktop-edge',
+      testIgnore: /workflow\/.*\.spec\.ts/,
       use: {
         ...devices['Desktop Edge'],
         channel: 'msedge',
@@ -37,12 +50,14 @@ export default defineConfig({
     },
     {
       name: 'ios-webkit',
+      testIgnore: /workflow\/.*\.spec\.ts/,
       use: {
         ...devices['iPhone 14'],
       },
     },
     {
       name: 'android-chromium',
+      testIgnore: /workflow\/.*\.spec\.ts/,
       use: {
         ...devices['Pixel 7'],
       },

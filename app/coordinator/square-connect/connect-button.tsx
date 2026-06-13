@@ -26,6 +26,12 @@ function isValidSquareOAuthUrl(oauthUrl: string): boolean {
       console.error('[square/oauth] Connect blocked: state missing in authorize URL', { oauthUrl })
       return false
     }
+    if (oauthUrl.includes('scope=') && oauthUrl.includes('%2B')) {
+      console.error('[square/oauth] Connect blocked: scope uses %2B instead of + separators', {
+        oauthUrl,
+      })
+      return false
+    }
     return true
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

@@ -2,6 +2,8 @@
 
 Manual smoke test for the coordinator-first MVP. Layout canvas polish is out of scope — Step 4 may use blank or auto-populated floor plans only.
 
+**Full cross-role workflow (coordinator + vendor + patron):** [QA_FULL_WORKFLOW.md](./QA_FULL_WORKFLOW.md)
+
 ## Setup
 
 - [ ] Dev server running (`npm run dev`)
@@ -63,6 +65,8 @@ npm run qa:launch:fast     # same without production build
 npm run qa:layout
 npm run test:shopper-routing
 npm run test:shopper-routing:live
+npm run qa:workflow              # full cross-role: seed + Playwright + DB walkthrough
+npm run test:e2e:workflow        # Playwright workflow specs only
 npm run verify:prod        # HTTP smoke against popup-hub.vercel.app
 npm run test:e2e:shopper-floorplan   # Playwright floor plan routing
 npm run test:e2e:public-discovery    # Playwright discover + legacy redirect smoke

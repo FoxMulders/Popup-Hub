@@ -4,7 +4,31 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Active work — full workflow QA test suite (local, not deployed)
+## Active work — manual layout horizontal default (local, not deployed)
+- **`booth-layout-engine.ts`:** `detectVendorManualLayoutOrganization` — when all vendor booths in the active room (plus placement probe) share a row or column, layout is treated as a straight manual line.
+- **`table-placement-preview.ts`:** Straight horizontal-row or vertical-column layouts default to horizontal table length (rotation 0), skipping perimeter snap and nearest-wall orientation.
+- **Verify:** `npx tsx scripts/verify-booth-row-orientation.ts` — PASS. Dashboard → draw vendor booths in a single row or column near a wall; ghost preview stays horizontal (E–W) instead of rotating to the nearest wall.
+
+## Active work — map labels dropdown width (local, not deployed)
+- **`canvas-command-bar-blocks.tsx`:** Map labels `<select>` widened from `max-w-[4.5rem]` / `max-w-[7.5rem]` to `w-[9.5rem]` so **Vendor name**, **Product category**, and **Booth ID / number** display without truncation.
+- **Verify:** Coordinator dashboard → Blueprint Studio toolbar → Map labels dropdown shows full option text for all three modes.
+
+## Active work — booth payment read-only in matrix (local, not deployed)
+- **Rule:** Booths cannot be marked paid/unpaid from the floor-plan booth matrix. Payment is applicant-only (Applications board, offline confirm, Square/Stripe checkout); booth color/status reflects the assigned vendor's application.
+- **Removed:** `MatrixStatusSelect` + `updateBoothPaymentStatus` + local `paymentOverrides` in `market-management-context.tsx`; `matrix_set_status` sync message.
+- **Kept:** Vendor assignment via booth matrix `<select>`; VIP hold + offline **Mark applicant as paid** on telemetry desk (application API).
+- **Verify:** Coordinator dashboard → booth matrix Status column is read-only badge; assign vendor without changing payment; mark paid from Applications / telemetry desk only.
+
+## Active work — Square OAuth scope encoding fix (local, not deployed)
+- **Root cause:** `formatSquareOAuthScopeParam` joined scopes with literal `+`, which `URLSearchParams` encoded as `%2B`. Square expects `+` as scope separators (or spaces); `%2B` yields a 400 and blank authorize page.
+- **Fix:** Pass space-separated scopes to `URLSearchParams` so they encode as `+` per Square docs. Client validation rejects `%2B` in authorize URLs.
+- **Verify:** Coordinator → Payment Methods → Connect with Square → authorize URL contains `scope=MERCHANT_PROFILE_READ+PAYMENTS_WRITE+ORDERS_WRITE` (not `%2B`). Sandbox still requires an open Sandbox seller dashboard tab from Developer Console.
+
+- **Root cause:** `POST /api/stripe/connect` returns 503 when `STRIPE_SECRET_KEY` is unset. Production Vercel env has Square keys but no `STRIPE_*` vars; local `.env.local` also lacks Stripe keys.
+- **Fix:** `payment-settings` exposes `stripeConfigured`; Payment Methods page hides Connect Stripe button and wallet top-up when false, with operator-facing setup hint.
+- **To enable Stripe:** Add `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to `.env.local`, enable Connect (Express) in Stripe Dashboard, run `.\scripts\sync-vercel-env.ps1`, redeploy. Webhook endpoint: `https://popup-hub.vercel.app/api/stripe/webhook`.
+- **Verify:** Without keys — Payment Methods shows setup message, no toast on load. With keys — Connect Stripe opens Stripe onboarding.
+
 - **Manual checklist:** `docs/QA_FULL_WORKFLOW.md` — coordinator/vendor/patron signup through publish, passport, apply, approve, assign, discovery (local + staging appendix).
 - **Automated local:** `npm run qa:workflow` (seed → RBAC → Playwright workflow → DB walkthrough); `npm run test:e2e:workflow` (browser only).
 - **Staging HTTP smoke:** `npm run qa:workflow:staging` or `npm run verify:prod` with `PLAYWRIGHT_SMOKE_EVENT_ID`.
@@ -95,6 +119,12 @@
 - **`coordinator-passport-extras.tsx` + `coordinator-verification-banner.tsx` + verification API:** Organization name only — no business registration field.
 - **`lib/vendor/verification.ts`:** Applying to markets requires social handle only; business number no longer blocks apply.
 - **UI cleanup:** Removed tax ID from apply preview and coordinator vendor review drawer.
+
+## Active work — dual-screen toolbar consolidation (local, not deployed)
+- **`toolbar-static-layout.ts`:** Removed duplicate **DUAL-SCREEN** from header row (`DASHBOARD_HEADER_SECTION_IDS`); section lives only in the top tool strip.
+- **`canvas-command-bar-blocks.tsx`:** **Full screen** labeled button moved into tool-strip **DUAL-SCREEN** cluster beside Presenter / Wall Cast; all three use light-green full labels (`border-emerald-300 bg-emerald-50`); fullscreen icon removed from header view/setup cluster.
+- **`canvas-toolbar-static.tsx`:** Removed unused `HeaderBarDualScreenCluster`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — header has no DUAL-SCREEN block; tool strip **DUAL-SCREEN** shows Presenter, Wall Cast, and Full screen with light-green styling.
 
 ## Active work — dual-screen toolbar + room-scoped canvas bounds (local, not deployed)
 - **`canvas-toolbar-static.tsx`:** `HeaderBarDualScreenCluster` restores visible **DUAL-SCREEN** section header with **Presenter** / **Wall Cast** buttons stacked beneath; header row uses `items-stretch` + `overflow-y-visible` so controls are not clipped.
@@ -438,7 +468,7 @@
 
 ## Shipped this session (two-pane map–ledger sync + Map Labels, deployed 2026-06-10)
 - **Unified booth state:** `use-booth-entities.ts` — single reactive array (id, dimensions, x/y, clearance band, vendor, category, payment status) feeding Booth Matrix and canvas label meta (`dashboard-floor-plan.tsx`).
-- **Bidirectional ledger:** `booth-matrix-panel.tsx` — vendor `<select>` + status `<select>` call `assignVendorToBoothByVendorId` / `updateBoothPaymentStatus` (`market-management-context.tsx`); canvas labels + clearance fills re-render instantly; `floorplan-sync.ts` + `floorplan-sync-bridge.tsx` relay `matrix_assign_vendor` / `matrix_set_status` from dual-screen ledger window.
+- **Bidirectional ledger:** `booth-matrix-panel.tsx` — vendor `<select>` calls `assignVendorToBoothByVendorId`; payment status is read-only (derived from applicant); canvas labels + clearance fills re-render instantly; `floorplan-sync.ts` + `floorplan-sync-bridge.tsx` relay `matrix_assign_vendor` from dual-screen ledger window.
 - **Map Labels:** `lib/coordinator/booth-map-label.ts` + toolbar **Map labels** select (`canvas-command-bar-blocks.tsx`); `canvas-objects.tsx` wraps vendor booth text via `wrapTextInContainer` (vendor / category / booth ID modes); mode persisted in `localStorage`.
 - **Chrome:** `app-nav.tsx` logo → `/`; matrix control height tokens in `globals.css`.
 - **Verify:** `/coordinator/dashboard` — change vendor/status in split-pane matrix → canvas label + clearance color update; toggle Map labels; dual-screen ledger stays synced; Full screen + Launch Dual-Screen Mode unchanged.

@@ -139,7 +139,6 @@ export const LAYOUT_EDITOR_SIDEBAR_HEADERS: Record<
 /** Header row 1 + top strip row 2 section groupings. */
 export const DASHBOARD_HEADER_SECTION_IDS: readonly SidebarSectionId[] = [
   'view-setup',
-  'dual-screen',
   'hall-management',
 ] as const
 

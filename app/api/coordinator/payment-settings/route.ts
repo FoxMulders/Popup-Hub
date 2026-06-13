@@ -12,6 +12,7 @@ import {
   writeEventPaymentFlags,
 } from '@/lib/payments/event-payment-flags'
 import { getCoordinatorBalanceOwed } from '@/lib/payments/account-balance'
+import { isStripeConfigured } from '@/lib/stripe/client'
 
 export async function GET() {
   const supabase = await createClient()
@@ -66,6 +67,7 @@ export async function GET() {
     squareConnected,
     stripeConnected: !!profile.stripe_connected_id,
     stripeOnboardingComplete: profile.stripe_onboarding_complete === true,
+    stripeConfigured: isStripeConfigured(),
     defaultEventPaymentFlags: unifiedFlags,
     defaultEventPaymentFlagsLegacy: {
       accepts_square: connectedEvent?.accepts_square ?? true,

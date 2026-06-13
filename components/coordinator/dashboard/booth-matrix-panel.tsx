@@ -1,11 +1,9 @@
 'use client'
 
-import { useEffect, useId, useState, useTransition } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { toast } from 'sonner'
 import {
   BOOTH_STATUS_THEME,
-  type BoothPlacementStatus,
 } from '@/lib/coordinator/booth-placement-status'
 import { cn } from '@/lib/utils'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
@@ -41,9 +39,7 @@ export function BoothMatrixPanel({
     selectedBoothId,
     approvedPool,
     assignVendorToBoothByVendorId,
-    updateBoothPaymentStatus,
   } = useMarketManagement()
-  const [isPending, startTransition] = useTransition()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const isLedger = variant === 'ledger'
   const isSplit = variant === 'split'
@@ -216,7 +212,6 @@ export function BoothMatrixPanel({
                       <MatrixVendorSelect
                         boothId={row.id}
                         vendorId={row.vendorId}
-                        disabled={isPending}
                         vendors={approvedPool}
                         onAssign={(vendorId) =>
                           assignVendorToBoothByVendorId(row.id, vendorId)
@@ -225,26 +220,7 @@ export function BoothMatrixPanel({
                     </td>
                     <td className="truncate px-2">{row.category}</td>
                     <td className="px-2">
-                      {row.vendorId ? (
-                        <MatrixStatusSelect
-                          boothId={row.id}
-                          status={row.status}
-                          disabled={isPending}
-                          onChange={(status) => {
-                            startTransition(async () => {
-                              const ok = await updateBoothPaymentStatus(
-                                row.id,
-                                status
-                              )
-                              if (!ok) {
-                                toast.error('Could not update booth status')
-                              }
-                            })
-                          }}
-                        />
-                      ) : (
-                        <StatusBadge status={row.status} label={row.statusLabel} />
-                      )}
+                      <StatusBadge status={row.status} label={row.statusLabel} />
                     </td>
                   </tr>
                 ))}
@@ -280,30 +256,13 @@ export function BoothMatrixPanel({
                     <MatrixVendorSelect
                       boothId={row.id}
                       vendorId={row.vendorId}
-                      disabled={isPending}
                       vendors={approvedPool}
                       onAssign={(vendorId) =>
                         assignVendorToBoothByVendorId(row.id, vendorId)
                       }
                     />
                     <p className="truncate text-[10px] text-stone-500">{row.category}</p>
-                    {row.vendorId ? (
-                      <MatrixStatusSelect
-                        boothId={row.id}
-                        status={row.status}
-                        disabled={isPending}
-                        onChange={(status) => {
-                          startTransition(async () => {
-                            const ok = await updateBoothPaymentStatus(row.id, status)
-                            if (!ok) {
-                              toast.error('Could not update booth status')
-                            }
-                          })
-                        }}
-                      />
-                    ) : (
-                      <StatusBadge status={row.status} label={row.statusLabel} />
-                    )}
+                    <StatusBadge status={row.status} label={row.statusLabel} />
                   </div>
                 )
               }
@@ -391,7 +350,6 @@ function MatrixVendorSelect({
   boothId,
   vendorId,
   vendors,
-  disabled,
   onAssign,
 }: {
   boothId: string
@@ -400,14 +358,12 @@ function MatrixVendorSelect({
     vendor_id: string
     vendorName?: string | null
   }>
-  disabled?: boolean
   onAssign: (vendorId: string | null) => void
 }) {
   return (
     <select
       className={MATRIX_SELECT_CLASS}
       aria-label={`Vendor for booth ${boothId}`}
-      disabled={disabled}
       value={vendorId ?? ''}
       onChange={(e) => {
         const value = e.target.value
@@ -418,41 +374,6 @@ function MatrixVendorSelect({
       {vendors.map((vendor) => (
         <option key={vendor.vendor_id} value={vendor.vendor_id}>
           {vendor.vendorName ?? 'Vendor'}
-        </option>
-      ))}
-    </select>
-  )
-}
-
-function MatrixStatusSelect({
-  boothId,
-  status,
-  disabled,
-  onChange,
-}: {
-  boothId: string
-  status: BoothPlacementStatus
-  disabled?: boolean
-  onChange: (status: BoothPlacementStatus) => void
-}) {
-  const options: BoothPlacementStatus[] = [
-    'unassigned',
-    'assigned_unpaid',
-    'paid',
-    'vip_hold',
-  ]
-
-  return (
-    <select
-      className={cn(MATRIX_SELECT_CLASS, STATUS_PILL_CLASS[status])}
-      aria-label={`Payment status for booth ${boothId}`}
-      disabled={disabled}
-      value={status}
-      onChange={(e) => onChange(e.target.value as BoothPlacementStatus)}
-    >
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {BOOTH_STATUS_THEME[option].label}
         </option>
       ))}
     </select>

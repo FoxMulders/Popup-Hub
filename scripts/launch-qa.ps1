@@ -35,7 +35,8 @@ try {
 
     Write-Host ""
     Write-Host "==> All launch QA checks passed." -ForegroundColor Green
-    Write-Host "    Manual checklist: docs/COORDINATOR_QA.md" -ForegroundColor DarkGray
+    Write-Host "    Manual checklist: docs/COORDINATOR_QA.md
+    Full workflow QA: docs/QA_FULL_WORKFLOW.md (npm run qa:workflow)" -ForegroundColor DarkGray
     Write-Host "    Production smoke: npm run verify:prod" -ForegroundColor DarkGray
     exit 0
 }

@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Role } from '../types/database'
+import { seedWorkflowFixtures } from './seed-workflow-fixtures'
 
 type ServiceClient = SupabaseClient<any>
 
@@ -221,10 +222,16 @@ async function main() {
   if (ids.coordinator && ids.vendor) {
     await linkVendorApproval(supabase, ids.coordinator, ids.vendor)
     console.log('  ✓ linked vendor@me.com → coordinator@me.com approval')
+
+    const fixtures = await seedWorkflowFixtures(supabase, ids.coordinator, ids.vendor)
+    console.log(`  ✓ vendor passport (${fixtures.categoryName})`)
+    console.log(`  ✓ draft market "${fixtures.draftEventName}" (${fixtures.draftEventId})`)
+    console.log('  ✓ workflow fixtures → tests/e2e/workflow/.fixtures.json')
   }
 
   console.log('\nDone. All accounts use password: testing')
   console.log('Sign in at http://localhost:3000/login')
+  console.log('Full workflow QA: npm run qa:workflow')
 }
 
 main().catch((error) => {

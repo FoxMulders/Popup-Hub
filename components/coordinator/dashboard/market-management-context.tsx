@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { LayoutRoom, PaymentStatus } from '@/types/database'
+import type { LayoutRoom } from '@/types/database'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
@@ -70,10 +70,6 @@ export interface MarketManagementState {
   assignVendorToBooth: (boothId: string, application: VendorApplicationSnapshot) => void
   assignVendorToBoothByVendorId: (boothId: string, vendorId: string | null) => void
   unassignBooth: (boothId: string) => void
-  updateBoothPaymentStatus: (
-    boothId: string,
-    status: BoothPlacementStatus
-  ) => Promise<boolean>
   autoSeatApprovedVendors: () => number
   focusBooth: (boothId: string) => void
   totalRevenueCents: number
@@ -129,9 +125,6 @@ export function MarketManagementProvider({
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [vipHoldIds, setVipHoldIds] = useState<Set<string>>(() => new Set())
   const [docRevision, setDocRevision] = useState(0)
-  const [paymentOverrides, setPaymentOverrides] = useState<
-    Record<string, Partial<VendorApplicationSnapshot>>
-  >({})
 
   useEffect(() => {
     if (!selectedEventId) return
@@ -141,21 +134,12 @@ export function MarketManagementProvider({
     setLayoutActiveRoomId(bundle.activeRoomId)
     setSelectedBoothId(null)
     setFloorPlanStore(null)
-    setPaymentOverrides({})
   }, [layoutsByEventId, selectedEventId])
 
   const approvedPool = useMemo(
     () => (selectedEventId ? approvedByEventId[selectedEventId] ?? [] : []),
     [approvedByEventId, selectedEventId]
   )
-
-  const effectiveApprovedPool = useMemo(() => {
-    if (Object.keys(paymentOverrides).length === 0) return approvedPool
-    return approvedPool.map((app) => ({
-      ...app,
-      ...(paymentOverrides[app.id] ?? {}),
-    }))
-  }, [approvedPool, paymentOverrides])
 
   const pendingApplications = useMemo(
     () => (selectedEventId ? pendingByEventId[selectedEventId] ?? [] : []),
@@ -170,19 +154,19 @@ export function MarketManagementProvider({
 
   const appByVendorId = useMemo(() => {
     const map = new Map<string, VendorApplicationSnapshot>()
-    for (const app of effectiveApprovedPool) {
+    for (const app of approvedPool) {
       map.set(app.vendor_id, app)
     }
     return map
-  }, [effectiveApprovedPool])
+  }, [approvedPool])
 
   const appByApplicationId = useMemo(() => {
     const map = new Map<string, VendorApplicationSnapshot>()
-    for (const app of effectiveApprovedPool) {
+    for (const app of approvedPool) {
       map.set(app.id, app)
     }
     return map
-  }, [effectiveApprovedPool])
+  }, [approvedPool])
 
   const registerFloorPlanStore = useCallback(
     (store: FloorPlanDocStore | null) => {
@@ -348,89 +332,13 @@ export function MarketManagementProvider({
         unassignBooth(boothId)
         return
       }
-      const application = effectiveApprovedPool.find(
+      const application = approvedPool.find(
         (app) => app.vendor_id === vendorId
       )
       if (!application) return
       assignVendorToBooth(boothId, application)
     },
-    [assignVendorToBooth, effectiveApprovedPool, unassignBooth]
-  )
-
-  const updateBoothPaymentStatus = useCallback(
-    async (boothId: string, status: BoothPlacementStatus): Promise<boolean> => {
-      if (!floorPlanStore) return false
-      const booth = floorPlanStore.doc.objects.find(
-        (o) => o.id === boothId && o.kind === 'booth'
-      ) as BoothObject | undefined
-      if (!booth) return false
-
-      if (status === 'unassigned') {
-        unassignBooth(boothId)
-        return true
-      }
-
-      const app = booth.vendorId ? appByVendorId.get(booth.vendorId) : undefined
-      if (!app) return false
-
-      if (status === 'vip_hold') {
-        if (!vipHoldIds.has(app.id)) {
-          setVipHoldIds((prev) => new Set(prev).add(app.id))
-        }
-        setDocRevision((n) => n + 1)
-        return true
-      }
-
-      if (status === 'assigned_unpaid') {
-        if (vipHoldIds.has(app.id)) {
-          setVipHoldIds((prev) => {
-            const next = new Set(prev)
-            next.delete(app.id)
-            return next
-          })
-        }
-        setPaymentOverrides((prev) => ({
-          ...prev,
-          [app.id]: {
-            payment_status: 'unpaid' as PaymentStatus,
-            application_payment_status: 'PENDING_REVIEW',
-          },
-        }))
-        setDocRevision((n) => n + 1)
-        return true
-      }
-
-      if (status === 'paid') {
-        if (vipHoldIds.has(app.id)) {
-          setVipHoldIds((prev) => {
-            const next = new Set(prev)
-            next.delete(app.id)
-            return next
-          })
-        }
-        try {
-          const res = await fetch(
-            `/api/coordinator/confirm-etransfer/${app.id}`,
-            { method: 'POST' }
-          )
-          if (!res.ok) return false
-          setPaymentOverrides((prev) => ({
-            ...prev,
-            [app.id]: {
-              payment_status: 'paid' as PaymentStatus,
-              application_payment_status: 'COMPLETED',
-            },
-          }))
-          setDocRevision((n) => n + 1)
-          return true
-        } catch {
-          return false
-        }
-      }
-
-      return false
-    },
-    [appByVendorId, floorPlanStore, unassignBooth, vipHoldIds]
+    [assignVendorToBooth, approvedPool, unassignBooth]
   )
 
   const autoSeatApprovedVendors = useCallback((): number => {
@@ -504,7 +412,6 @@ export function MarketManagementProvider({
       assignVendorToBooth,
       assignVendorToBoothByVendorId,
       unassignBooth,
-      updateBoothPaymentStatus,
       autoSeatApprovedVendors,
       focusBooth,
       totalRevenueCents,
@@ -528,7 +435,6 @@ export function MarketManagementProvider({
       assignVendorToBooth,
       assignVendorToBoothByVendorId,
       unassignBooth,
-      updateBoothPaymentStatus,
       autoSeatApprovedVendors,
       focusBooth,
       totalRevenueCents,

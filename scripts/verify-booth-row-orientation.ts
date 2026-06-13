@@ -1,11 +1,13 @@
 /**
- * Manual placement row orientation — inherit wall facing from row peers.
+ * Manual placement row/column orientation — straight layouts default horizontal.
  *
  * Run: npx tsx scripts/verify-booth-row-orientation.ts
  */
 
 import {
+  detectVendorManualLayoutOrganization,
   findVendorBoothRowPeer,
+  vendorBoothHorizontalLayoutOrientation,
   vendorBoothOrientationFromRowPeer,
   wallEdgeFromRotation,
 } from '../components/coordinator/floor-plan-v2/engine/booth-layout-engine'
@@ -48,6 +50,32 @@ const offRow = vendor('d', 30, 30, 0)
 assert(
   findVendorBoothRowPeer(offRow, [rowA, rowB]) === null,
   'Booth on a different Y should not match row peers'
+)
+
+const colA = vendor('col-a', 40, 10, 90)
+const colB = vendor('col-b', 40, 18, 90)
+const colCandidate = vendor('col-c', 40, 26, 0)
+assert(
+  detectVendorManualLayoutOrganization([colA, colB], undefined, null, {
+    probe: colCandidate,
+  }) === 'vertical-column',
+  'Three aligned centers on X should read as a vertical column layout'
+)
+const horizontalDefault = vendorBoothHorizontalLayoutOrientation(colCandidate)
+assert(
+  horizontalDefault.rotation === 0,
+  `Vertical manual layout should default to horizontal table length, got rotation ${horizontalDefault.rotation}`
+)
+assert(
+  horizontalDefault.width === 6 && horizontalDefault.height === 4,
+  'Horizontal default should keep long edge on width'
+)
+
+assert(
+  detectVendorManualLayoutOrganization([rowA, rowB], undefined, null, {
+    probe: candidate,
+  }) === 'horizontal-row',
+  'Row-aligned booths should read as horizontal-row layout'
 )
 
 console.log('verify-booth-row-orientation: all checks passed')

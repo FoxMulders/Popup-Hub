@@ -29,6 +29,8 @@
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/tests/e2e/workflow/.workflow-state.json
+/tests/e2e/workflow/.fixtures.json
 
 # debug
 npm-debug.log*

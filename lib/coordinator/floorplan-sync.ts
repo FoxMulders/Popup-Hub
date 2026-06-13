@@ -29,12 +29,6 @@ export type FloorplanSyncMessage =
       boothId: string
       vendorId: string | null
     }
-  | {
-      type: 'matrix_set_status'
-      source: FloorplanSyncSource
-      boothId: string
-      status: BoothPlacementStatus
-    }
 
 export function createFloorplanSyncChannel(): BroadcastChannel | null {
   if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') {

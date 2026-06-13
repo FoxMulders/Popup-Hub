@@ -38,6 +38,7 @@ interface PaymentSettingsState {
   squareConnected: boolean
   stripeConnected: boolean
   stripeOnboardingComplete: boolean
+  stripeConfigured: boolean
   defaultEventPaymentFlags: {
     accepts_credit_card: boolean
     accepts_etransfer: boolean
@@ -62,6 +63,7 @@ const EMPTY_PAYMENT_SETTINGS: PaymentSettingsState = {
   squareConnected: false,
   stripeConnected: false,
   stripeOnboardingComplete: false,
+  stripeConfigured: false,
   defaultEventPaymentFlags: { ...DEFAULT_PAYMENT_FLAGS },
 }
 
@@ -175,6 +177,10 @@ export function PaymentMethodsForm({
   }
 
   async function connectStripe() {
+    if (!settings.stripeConfigured) {
+      toast.error('Stripe Connect is not enabled on this deployment yet')
+      return
+    }
     setStripeLoading(true)
     try {
       const res = await fetch('/api/stripe/connect', { method: 'POST' })
@@ -245,20 +251,26 @@ export function PaymentMethodsForm({
             <p className="text-sm text-muted-foreground">Legacy wallet (optional top-up)</p>
             <p className="font-medium">{formatCents(settings.walletBalanceCents)}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {[2500, 5000, 10000].map((cents) => (
-              <Button
-                key={cents}
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={topUpLoading}
-                onClick={() => topUpWallet(cents)}
-              >
-                Top up {formatCents(cents)}
-              </Button>
-            ))}
-          </div>
+          {settings.stripeConfigured ? (
+            <div className="flex flex-wrap gap-2">
+              {[2500, 5000, 10000].map((cents) => (
+                <Button
+                  key={cents}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={topUpLoading}
+                  onClick={() => topUpWallet(cents)}
+                >
+                  Top up {formatCents(cents)}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Wallet top-up requires Stripe to be configured on this deployment.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -337,7 +349,13 @@ export function PaymentMethodsForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {settings.stripeOnboardingComplete ? (
+          {!settings.stripeConfigured ? (
+            <p className="text-sm text-harvest-800">
+              Stripe Connect is not enabled on this deployment yet. Card checkout is still
+              available through Square above. To enable Stripe, set{' '}
+              <code>STRIPE_SECRET_KEY</code> in environment variables and redeploy.
+            </p>
+          ) : settings.stripeOnboardingComplete ? (
             <div className="flex items-center gap-2 rounded-lg bg-indigo-50 p-3">
               <CheckCircle className="h-5 w-5 text-indigo-600" />
               <p className="text-sm font-medium text-indigo-900">Stripe Connect active</p>
@@ -348,7 +366,7 @@ export function PaymentMethodsForm({
               Connect Stripe
             </Button>
           )}
-          {settings.stripeOnboardingComplete ? (
+          {settings.stripeConfigured && settings.stripeOnboardingComplete ? (
             <p className="text-xs text-muted-foreground">
               Stripe Connect is available for credit card checkout alongside Square.
             </p>

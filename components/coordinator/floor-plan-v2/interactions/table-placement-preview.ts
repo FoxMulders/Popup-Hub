@@ -3,7 +3,9 @@ import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '../state/types'
 import type { Rect } from './geometry'
 import {
+  detectVendorManualLayoutOrganization,
   findVendorBoothRowPeer,
+  vendorBoothHorizontalLayoutOrientation,
   vendorBoothOrientationFromRowPeer,
   wallEdgeFromRotation,
 } from '../engine/booth-layout-engine'
@@ -84,6 +86,30 @@ export function resolveTablePlacementPreview(
           },
         }
       : doc
+
+  const manualLayout = detectVendorManualLayoutOrganization(
+    snapDoc.objects ?? [],
+    snapDoc.objectRoom,
+    previewRoomId,
+    {
+      excludeId: probe.id,
+      gridSpacingFt: snapDoc.gridSpacingFt,
+      probe,
+    }
+  )
+  if (
+    manualLayout === 'horizontal-row' ||
+    manualLayout === 'vertical-column'
+  ) {
+    probe = { ...probe, ...vendorBoothHorizontalLayoutOrientation(probe) }
+    return {
+      x: probe.x,
+      y: probe.y,
+      width: probe.width,
+      height: probe.height,
+      rotation: probe.rotation ?? 0,
+    }
+  }
 
   const rowPeer = findVendorBoothRowPeer(probe, snapDoc.objects ?? [], {
     excludeId: probe.id,

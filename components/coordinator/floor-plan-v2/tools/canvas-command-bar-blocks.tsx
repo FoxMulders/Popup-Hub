@@ -77,10 +77,20 @@ import {
 
 type TablePlacementMode = 'vendor' | 'guest-round' | 'guest-rect'
 
+function lightGreenToolbarButtonClass(compact: boolean, active = false) {
+  return cn(
+    'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border px-2 text-[11px] font-semibold',
+    toolbarControlHeight(compact),
+    active
+      ? 'border-emerald-600 bg-emerald-200 text-emerald-950 hover:bg-emerald-200'
+      : 'border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100'
+  )
+}
+
 function DualScreenLaunchButtons({
   onLaunchDualScreen,
   compact,
-  variant = 'prominent',
+  variant = 'subtle',
   iconOnly = false,
 }: {
   onLaunchDualScreen: (mode: DualScreenMode) => void
@@ -1286,42 +1296,43 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'dual-screen':
-      if (!ctx.onLaunchDualScreen) return null
+      if (!ctx.onLaunchDualScreen && !ctx.onToggleCanvasFullscreen) return null
       return (
-        <DualScreenLaunchButtons
-          onLaunchDualScreen={ctx.onLaunchDualScreen}
-          compact={compact}
-          variant={headerBarLayout || sidebarLayout ? 'prominent' : 'subtle'}
-          iconOnly={false}
-        />
+        <>
+          {ctx.onLaunchDualScreen ? (
+            <DualScreenLaunchButtons
+              onLaunchDualScreen={ctx.onLaunchDualScreen}
+              compact={compact}
+              variant="subtle"
+              iconOnly={false}
+            />
+          ) : null}
+          {topBarLayout && ctx.onToggleCanvasFullscreen ? (
+            <button
+              type="button"
+              onClick={() => ctx.onToggleCanvasFullscreen?.()}
+              title={
+                ctx.canvasFullscreen
+                  ? 'Exit full screen (Esc)'
+                  : 'Expand canvas to fill the monitor'
+              }
+              className={lightGreenToolbarButtonClass(compact, ctx.canvasFullscreen)}
+            >
+              {ctx.canvasFullscreen ? (
+                <Minimize2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              ) : (
+                <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              )}
+              {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+            </button>
+          ) : null}
+        </>
       )
 
     case 'utilities':
       if (headerBarLayout) {
         return (
           <>
-            {ctx.onToggleCanvasFullscreen ? (
-              <CommandButton
-                onClick={() => ctx.onToggleCanvasFullscreen?.()}
-                title={
-                  ctx.canvasFullscreen
-                    ? 'Exit full screen (Esc)'
-                    : 'Expand canvas to fill the monitor'
-                }
-                active={ctx.canvasFullscreen}
-                className={
-                  ctx.canvasFullscreen
-                    ? 'border border-stone-700 bg-stone-800 text-white hover:bg-stone-700'
-                    : 'border border-stone-300 bg-white hover:bg-stone-50'
-                }
-              >
-                {ctx.canvasFullscreen ? (
-                  <Minimize2 className="h-3.5 w-3.5" aria-hidden />
-                ) : (
-                  <Expand className="h-3.5 w-3.5" aria-hidden />
-                )}
-              </CommandButton>
-            ) : null}
             {ctx.onBoothMapLabelModeChange ? (
               <>
                 <div className={toolbarDividerClass(compact)} aria-hidden />
@@ -1332,7 +1343,7 @@ export function renderCanvasCommandBarBlock(
                   )}
                 >
                   <select
-                    className="max-w-[4.5rem] min-w-0 rounded-md border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                    className="w-[9.5rem] rounded-md border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                     aria-label="Map labels — booth text overlay"
                     value={ctx.boothMapLabelMode ?? 'vendor'}
                     onChange={(e) =>
@@ -1482,7 +1493,7 @@ export function renderCanvasCommandBarBlock(
               >
                 <span className="hidden sm:inline">Map labels</span>
                 <select
-                  className="max-w-[7.5rem] min-w-0 rounded-lg border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  className="w-[9.5rem] rounded-lg border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                   aria-label="Map labels — booth text overlay"
                   value={ctx.boothMapLabelMode ?? 'vendor'}
                   onChange={(e) =>
@@ -1723,7 +1734,7 @@ export function renderCanvasCommandBarBlock(
                 >
                   <span className="hidden sm:inline">Map labels</span>
                   <select
-                    className="max-w-[7.5rem] min-w-0 rounded-lg border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                    className="w-[9.5rem] rounded-lg border-0 bg-transparent py-0 text-[10px] font-semibold text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
                     aria-label="Map labels — booth text overlay"
                     value={ctx.boothMapLabelMode ?? 'vendor'}
                     onChange={(e) =>

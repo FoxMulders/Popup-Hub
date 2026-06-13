@@ -1,6 +1,6 @@
 import { resolveSquareApplicationId } from '@/lib/square/app-credentials'
 
-/** Space-separated scopes; encoded with `+` in the authorize URL per Square docs. */
+/** Space-separated scopes; URLSearchParams encodes spaces as `+` per Square OAuth docs. */
 const SQUARE_OAUTH_SCOPES = 'MERCHANT_PROFILE_READ PAYMENTS_WRITE ORDERS_WRITE'
 
 export function isSquareProductionEnvironment(): boolean {
@@ -22,7 +22,9 @@ export function getSquareOAuthScopes(): string {
 
 export function formatSquareOAuthScopeParam(scope?: string): string {
   const raw = (scope ?? SQUARE_OAUTH_SCOPES).trim()
-  return raw.split(/\s+/).filter(Boolean).join('+')
+  // Pass space-separated scopes to URLSearchParams — it encodes spaces as `+`, which Square
+  // treats as scope separators. Joining with literal `+` here would encode to `%2B` and 400.
+  return raw.split(/\s+/).filter(Boolean).join(' ')
 }
 
 export function getSquareAppId(): string | null {

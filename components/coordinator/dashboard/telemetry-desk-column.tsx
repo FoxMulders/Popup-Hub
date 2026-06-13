@@ -186,7 +186,7 @@ export function TelemetryDeskColumn() {
                     ) : (
                       <CheckCircle2 className="mr-2 h-4 w-4" />
                     )}
-                    Mark as Paid
+                    Mark applicant as paid
                   </Button>
                 ) : null}
                 <Button
@@ -203,7 +203,8 @@ export function TelemetryDeskColumn() {
           </motion.div>
         ) : (
           <p className="mt-4 text-xs text-muted-foreground">
-            Select a booth on the canvas to inspect payment status and toggle VIP hold.
+            Select a booth to inspect its vendor&apos;s payment status. Mark applicants as paid from
+            the Applications board or here when offline payment is pending.
           </p>
         )}
 
