@@ -63,55 +63,14 @@ function scrollTargetIntoView(el: Element) {
     rect.top < HEADER_CLEARANCE || rect.bottom > window.innerHeight - CARD_MARGIN
       ? 'start'
       : 'nearest'
-  el.scrollIntoView({ block, behavior: 'smooth', inline: 'nearest' })
+  el.scrollIntoView({ block, behavior: 'auto', inline: 'nearest' })
 
   if (rect.top < HEADER_CLEARANCE) {
-    window.setTimeout(() => {
-      const after = el.getBoundingClientRect()
-      if (after.top < HEADER_CLEARANCE) {
-        window.scrollBy({
-          top: after.top - HEADER_CLEARANCE,
-          behavior: 'smooth',
-        })
-      }
-    }, 0)
+    const after = el.getBoundingClientRect()
+    if (after.top < HEADER_CLEARANCE) {
+      window.scrollBy({ top: after.top - HEADER_CLEARANCE, behavior: 'auto' })
+    }
   }
-}
-
-function TourScrimPanels({ box }: { box: HighlightBox }) {
-  const scrimClass = 'fixed z-[251] bg-slate-900/75 pointer-events-none'
-  const holeBottom = box.top + box.height
-  const holeRight = box.left + box.width
-
-  return (
-    <>
-      <div
-        className={scrimClass}
-        style={{ top: 0, left: 0, right: 0, height: box.top }}
-        aria-hidden
-      />
-      <div
-        className={scrimClass}
-        style={{ top: box.top, left: 0, width: box.left, height: box.height }}
-        aria-hidden
-      />
-      <div
-        className={scrimClass}
-        style={{
-          top: box.top,
-          left: holeRight,
-          right: 0,
-          height: box.height,
-        }}
-        aria-hidden
-      />
-      <div
-        className={scrimClass}
-        style={{ top: holeBottom, left: 0, right: 0, bottom: 0 }}
-        aria-hidden
-      />
-    </>
-  )
 }
 
 function computeCardPosition(box: HighlightBox | null, cardHeight: number) {
@@ -174,6 +133,21 @@ export function LayoutEditorHelpTourOverlay({
     setBox(measureTarget(targetId))
   }, [])
 
+  const refreshBoxRafRef = useRef<number | null>(null)
+
+  const scheduleRefreshBox = useCallback(
+    (targetId: LayoutHelpTargetId) => {
+      if (refreshBoxRafRef.current != null) {
+        cancelAnimationFrame(refreshBoxRafRef.current)
+      }
+      refreshBoxRafRef.current = requestAnimationFrame(() => {
+        refreshBoxRafRef.current = null
+        refreshBox(targetId)
+      })
+    },
+    [refreshBox]
+  )
+
   const updateGeometry = useCallback(() => {
     if (!step) return
     const target = findLayoutHelpTarget(step.target, step.fallbackTargets)
@@ -189,11 +163,10 @@ export function LayoutEditorHelpTourOverlay({
       return
     }
 
-    refreshBox(target)
     scrollTargetIntoView(el)
-    requestAnimationFrame(() => refreshBox(target))
-    window.setTimeout(() => refreshBox(target), 120)
-  }, [step, refreshBox])
+    refreshBox(target)
+    scheduleRefreshBox(target)
+  }, [step, refreshBox, scheduleRefreshBox])
 
   useLayoutEffect(() => {
     setCardHeight(CARD_ESTIMATED_HEIGHT)
@@ -203,14 +176,17 @@ export function LayoutEditorHelpTourOverlay({
   useLayoutEffect(() => {
     if (!resolvedTarget) return
 
-    const onGeometryChange = () => refreshBox(resolvedTarget)
+    const onGeometryChange = () => scheduleRefreshBox(resolvedTarget)
     window.addEventListener('scroll', onGeometryChange, true)
     window.addEventListener('resize', onGeometryChange)
     return () => {
       window.removeEventListener('scroll', onGeometryChange, true)
       window.removeEventListener('resize', onGeometryChange)
+      if (refreshBoxRafRef.current != null) {
+        cancelAnimationFrame(refreshBoxRafRef.current)
+      }
     }
-  }, [resolvedTarget, refreshBox])
+  }, [resolvedTarget, scheduleRefreshBox])
 
   useLayoutEffect(() => {
     const el = cardRef.current
@@ -238,24 +214,22 @@ export function LayoutEditorHelpTourOverlay({
       aria-modal="true"
       aria-labelledby="layout-help-tour-title"
     >
+      <div
+        className="fixed inset-0 z-[251] bg-slate-900/75 pointer-events-none"
+        aria-hidden
+      />
       {box ? (
-        <>
-          <TourScrimPanels box={box} />
-          <div
-            className="pointer-events-none fixed z-[252] rounded-lg ring-2 ring-emerald-400 shadow-[0_0_12px_2px_rgba(52,211,153,0.55)] animate-pulse"
-            style={{
-              top: box.top,
-              left: box.left,
-              width: box.width,
-              height: box.height,
-              transition: 'top 150ms ease-out, left 150ms ease-out, width 150ms ease-out, height 150ms ease-out',
-            }}
-            aria-hidden
-          />
-        </>
-      ) : (
-        <div className="fixed inset-0 z-[251] bg-slate-900/75" aria-hidden />
-      )}
+        <div
+          className="pointer-events-none fixed z-[252] rounded-lg ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-900"
+          style={{
+            top: box.top,
+            left: box.left,
+            width: box.width,
+            height: box.height,
+          }}
+          aria-hidden
+        />
+      ) : null}
 
       <div
         ref={cardRef}
@@ -264,7 +238,6 @@ export function LayoutEditorHelpTourOverlay({
           top: cardPosition.top,
           left: cardPosition.left,
           width: cardPosition.width,
-          transition: 'top 150ms ease-out, left 150ms ease-out',
         }}
       >
         <div className="flex items-start gap-2">
