@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — toolbar row reorder (local, not deployed)
+- **`toolbar-static-layout.ts`:** **DUAL-SCREEN** moved from tool strip to header row (`DASHBOARD_HEADER_SECTION_IDS`); tool strip order is **VENDOR BOOTHS** → **PATRON TABLES** → **SHAPES** → **ALIGNMENT & SPACING**; shapes label dropped “& BOOTHS”.
+- **`canvas-toolbar-static.tsx`:** Restored `HeaderBarDualScreenCluster` in header portal (Presenter / Wall Cast + Full screen).
+- **`canvas-command-bar-blocks.tsx`:** Full screen button renders in header dual-screen cluster when `headerBarLayout`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — header row shows DUAL-SCREEN; tool strip order vendor → patron → shapes → alignment.
+
 ## Active work — test suite populate button (local, not deployed)
 - **`persist-test-suite-applications.ts`:** Seeds diverse vendor suite as real auth users + passports + `booth_applications` with `approved` + paid (`CASH` / `COMPLETED`). Clears prior `@popuphub.seed` applications on the event before re-run.
 - **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` (dev or `ALLOW_COORDINATOR_TEST_SUITE=true`).
@@ -754,9 +760,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `de76dd1` (pushed to `origin/master`)
-- Last deploy commit: `de76dd1` - feat: ship 48 session updates (CI lint fix; manual layout orientation pattern; map labels dropdown width; booth payment read-only in matrix; +44 more)
-- Production: https://popuphub.ca - **v1.0.0 build 115** | commit `8580749` (handoff updated 2026-06-13 10:17)
+- Branch: `master` @ `1da38fe` (pushed to `origin/master`)
+- Last deploy commit: `1da38fe` - feat: ship 49 session updates (test suite populate button; CI lint fix; manual layout orientation pattern; map labels dropdown width; +45 more)
+- Production: https://popuphub.ca - **v1.0.0 build 116** | commit `a7827d7` (handoff updated 2026-06-13 10:22)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1133,7 +1139,7 @@
 
 
 ## Last deploy
-- 2026-06-13 10:17 - Deploy via deploy-popuphub.ps1 - `feat: ship 48 session updates (CI lint fix; manual layout orientation pattern; map labels dropdown width; booth payment read-only in matrix; +44 more)` (de76dd1)
+- 2026-06-13 10:22 - Deploy via deploy-popuphub.ps1 - `feat: ship 49 session updates (test suite populate button; CI lint fix; manual layout orientation pattern; map labels dropdown width; +45 more)` (1da38fe)
 
 
 ## Goal

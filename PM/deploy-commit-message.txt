@@ -1,1 +1,1 @@
-feat: ship 49 session updates (test suite populate button; CI lint fix; manual layout orientation pattern; map labels dropdown width; +45 more)
+feat: ship 50 session updates (toolbar row reorder; test suite populate button; CI lint fix; manual layout orientation pattern; +46 more)
