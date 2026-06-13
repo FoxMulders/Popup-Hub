@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — layout route uses production editor (local, not deployed)
+- **Root cause:** `/coordinator/events/[id]/layout` imported `SpatialLayoutEditor` from `src/qa_review/.../spatial-layout-editor_qa` (old FloorPlanV2 wizard QA build). Event overview → Layout round-trip loaded that stale editor.
+- **Fix:** `app/coordinator/events/[id]/layout/page.tsx` now imports from `@/components/coordinator/spatial-layout/spatial-layout-editor` (production FloorPlanV2).
+- **Verify:** Layout page → Event overview → Layout — same production spatial editor as command center / setup wizard.
+
 ## Active work — toolbar row reorder (local, not deployed)
 - **`toolbar-static-layout.ts`:** **DUAL-SCREEN** moved from tool strip to header row (`DASHBOARD_HEADER_SECTION_IDS`); tool strip order is **VENDOR BOOTHS** → **PATRON TABLES** → **SHAPES** → **ALIGNMENT & SPACING**; shapes label dropped “& BOOTHS”.
 - **`canvas-toolbar-static.tsx`:** Restored `HeaderBarDualScreenCluster` in header portal (Presenter / Wall Cast + Full screen).
@@ -13,7 +18,7 @@
 ## Active work — test suite populate button (local, not deployed)
 - **`persist-test-suite-applications.ts`:** Seeds diverse vendor suite as real auth users + passports + `booth_applications` with `approved` + paid (`CASH` / `COMPLETED`). Clears prior `@popuphub.seed` applications on the event before re-run.
 - **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` (dev or `ALLOW_COORDINATOR_TEST_SUITE=true`).
-- **UI:** `Populate test suite — approved & paid` in `FakeVendorsPanel` (booth planner left rail); **Test suite (N)** in spatial layout toolbar (dev).
+- **UI:** **Test suite** on the layout editor only — spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 header (`/coordinator/events/{id}/setup?step=3`). Not on Command center dashboard. Booth planner test-vendors panel retains **Populate test suite** for legacy canvas.
 - **Workflow seed:** `seed-workflow-fixtures.ts` now inserts one approved & paid application for `vendor@me.com`.
 - **Verify:** Dev coordinator → event layout toolbar → **Test suite** → Applications board shows approved & paid vendors; coordinator dashboard approved pool populated. `npm run seed:test-users` then `npm run test:e2e:workflow`.
 

@@ -54,7 +54,7 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
             View your markets
           </span>
           <span className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Open the command center for booth layouts, vendor applications, and day-of operations.
+            Browse your markets, open event hubs, and jump into layout or day-of tools per market.
           </span>
           <span className={cn(buttonVariants({ variant: 'outline' }), 'mt-5 w-full gap-1.5 sm:w-auto')}>
             <CalendarDays className="h-4 w-4" aria-hidden />

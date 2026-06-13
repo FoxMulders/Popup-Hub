@@ -13,10 +13,6 @@ import { SpatialLayoutShell } from './spatial-layout-shell'
 import { SpatialLayoutToolbar } from './spatial-layout-toolbar'
 import { useSpatialLayoutState } from './use-spatial-layout-state'
 
-const showTestSuiteButton =
-  process.env.NODE_ENV === 'development' ||
-  process.env.NEXT_PUBLIC_ALLOW_TEST_SUITE === 'true'
-
 export interface SpatialLayoutEditorProps {
   eventId: string
   event: Event
@@ -43,7 +39,6 @@ export function SpatialLayoutEditor({
   const [placedCount, setPlacedCount] = useState(0)
   const [saving, setSaving] = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
-  const [testSuiteRunning, setTestSuiteRunning] = useState(false)
   const [layoutGeneration, setLayoutGeneration] = useState(0)
 
   const {
@@ -151,40 +146,6 @@ export function SpatialLayoutEditor({
   const eventName = event.name?.trim() ?? 'Untitled event'
   const isDraft = event.status === 'draft'
 
-  const maxBoothCapacity = useMemo(() => {
-    const limits = (
-      event as Event & {
-        category_limits?: Array<{ max_slots?: number | null }>
-      }
-    ).category_limits
-    return (limits ?? []).reduce((sum, row) => sum + Math.max(0, row.max_slots ?? 0), 0)
-  }, [event])
-
-  const handlePopulateTestSuite = useCallback(async () => {
-    if (testSuiteRunning) return
-    setTestSuiteRunning(true)
-    try {
-      const response = await fetch(`/api/coordinator/events/${eventId}/seed-test-suite`, {
-        method: 'POST',
-      })
-      const body = (await response.json()) as {
-        error?: string
-        applicationCount?: number
-        tableSlots?: number
-      }
-      if (!response.ok) {
-        toast.error(body.error ?? 'Could not populate test suite')
-        return
-      }
-      toast.success(
-        `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)`
-      )
-      router.refresh()
-    } finally {
-      setTestSuiteRunning(false)
-    }
-  }, [eventId, router, testSuiteRunning])
-
   return (
     <SpatialLayoutShell
       toolbar={
@@ -193,7 +154,6 @@ export function SpatialLayoutEditor({
           eventName={eventName}
           placedCount={placedCount}
           layoutCapacity={layoutCapacity}
-          maxBoothCapacity={maxBoothCapacity}
           hasOverlap={hasOverlap}
           isDraft={isDraft}
           saving={saving}
@@ -202,9 +162,6 @@ export function SpatialLayoutEditor({
           onSaveDraft={handleSaveDraft}
           saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
           onReloadFromServer={handleReloadFromServer}
-          showTestSuiteButton={showTestSuiteButton}
-          testSuiteRunning={testSuiteRunning}
-          onPopulateTestSuite={() => void handlePopulateTestSuite()}
         />
       }
     >

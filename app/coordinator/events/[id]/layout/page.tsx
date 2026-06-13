@@ -4,7 +4,7 @@ import { isMobileUserAgent } from '@/lib/auth/mobile-user-agent'
 import {
   SpatialLayoutEditor,
   type SpatialLayoutEditorProps,
-} from '@/src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa'
+} from '@/components/coordinator/spatial-layout/spatial-layout-editor'
 import { createClient } from '@/lib/supabase/server'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import type { BoothLayout, Event } from '@/types/database'

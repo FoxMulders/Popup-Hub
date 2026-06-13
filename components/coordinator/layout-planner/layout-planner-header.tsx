@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { cn } from '@/lib/utils'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
 
@@ -128,6 +129,7 @@ export function LayoutPlannerHeader({
             Full editor
           </Link>
         ) : null}
+        {eventId ? <TestSuitePopulateButton eventId={eventId} compact /> : null}
         {onSave ? (
           <Button
             type="button"
