@@ -27,10 +27,6 @@ import {
   defaultFoodTruckFootprintFt,
 } from '@/lib/floor-plan/canvas-open-placement'
 import {
-  defaultStageFootprintFt,
-  nextStageLabel,
-} from '@/lib/floor-plan/stage-placement'
-import {
   isValidObjectPlacement,
   resolvePlacementRoomIdForObject,
   type PlacementProbe,
@@ -315,17 +311,6 @@ export function resolveDrawCommitRect(
   const minSize = snapFt || 1
   if (kind === 'food_truck') {
     const { width, height } = defaultFoodTruckFootprintFt()
-    const cx = rect.x + rect.width / 2
-    const cy = rect.y + rect.height / 2
-    return {
-      x: snapToGrid(cx - width / 2, snapFt),
-      y: snapToGrid(cy - height / 2, snapFt),
-      width,
-      height,
-    }
-  }
-  if (kind === 'stage') {
-    const { width, height } = defaultStageFootprintFt()
     const cx = rect.x + rect.width / 2
     const cy = rect.y + rect.height / 2
     return {
@@ -1930,13 +1915,6 @@ function commitDraft(
       // window, and the renderer falls back to this default when
       // the field is absent — see canvas-objects.tsx.
       obj = { ...base, kind: 'open_wall', counterDepthFt: 1.5 }
-      break
-    case 'stage':
-      obj = {
-        ...base,
-        kind: 'stage',
-        label: nextStageLabel(store.doc.objects),
-      }
       break
     case 'food_truck':
       obj = { ...base, kind: 'food_truck', label: 'Food truck' }

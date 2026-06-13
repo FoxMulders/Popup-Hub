@@ -307,12 +307,14 @@ export function SelectionRotateHandles({
 interface PatronTrafficPathProps {
   path: ReadonlyArray<{ x: number; y: number }> | null | undefined
   pxPerFt: number
+  isPartial?: boolean
 }
 
 /** Dashed polyline for computed patron traffic flow (non-interactive). */
 export function PatronTrafficPathOverlay({
   path,
   pxPerFt,
+  isPartial = false,
 }: PatronTrafficPathProps) {
   if (!path || path.length < 2) return null
   const points = path
@@ -322,9 +324,9 @@ export function PatronTrafficPathOverlay({
     <polyline
       points={points}
       fill="none"
-      stroke="#0284c7"
+      stroke={isPartial ? '#ea580c' : '#0284c7'}
       strokeWidth={2}
-      strokeDasharray="6 4"
+      strokeDasharray={isPartial ? '4 6' : '6 4'}
       strokeLinecap="round"
       strokeLinejoin="round"
       pointerEvents="none"

@@ -34,6 +34,10 @@ import type { BoothObject, FloorPlanDoc, PlacedObject } from '../state/types'
 
 import { MIN_CLEARANCE_FT } from '@/lib/booth-planner/layout-clearance-constants'
 
+import { BOOTH_CLEARANCE_GOOD_FT } from '@/lib/coordinator/booth-clearance-visual'
+
+import { IDEAL_PEDESTRIAN_AISLE_FT } from '@/lib/floor-plan/layout-density'
+
 import { mergedZoneRingsForRoom, vendorBoothsInRoom } from './BoothArrangementEngine'
 
 
@@ -55,6 +59,18 @@ export interface OptimalPathResult {
   visitOrder: string[]
 
   totalDistanceFt: number
+
+  /** True when routing used relaxed clearance or skipped unreachable legs. */
+
+  isPartial?: boolean
+
+  /** Vendor booths narrowing the patron path below ideal clearance (ft). */
+
+  bottleneckBoothIds?: string[]
+
+  /** `strict` uses full safety buffer; `relaxed` widens walkable pinch points. */
+
+  clearanceMode?: 'strict' | 'relaxed'
 
 }
 
@@ -869,6 +885,436 @@ export function astarGrid(
 
 
 
+/** Chebyshev distance to nearest blocked cell — local corridor width proxy. */
+
+function buildLocalClearanceField(
+
+  walkable: boolean[][],
+
+  rows: number,
+
+  cols: number,
+
+  cellFt: number
+
+): number[][] {
+
+  const dist = Array.from({ length: rows }, () => Array<number>(cols).fill(0))
+
+  const queue: GridCoord[] = []
+
+
+
+  for (let r = 0; r < rows; r++) {
+
+    for (let c = 0; c < cols; c++) {
+
+      if (walkable[r]![c]) continue
+
+      dist[r]![c] = 0
+
+      queue.push({ col: c, row: r })
+
+    }
+
+  }
+
+
+
+  let head = 0
+
+  while (head < queue.length) {
+
+    const cur = queue[head++]!
+
+    const base = dist[cur.row]![cur.col]!
+
+    for (const { dc, dr } of CARDINAL) {
+
+      const nr = cur.row + dr
+
+      const nc = cur.col + dc
+
+      if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) continue
+
+      const next = base + 1
+
+      if (next >= (dist[nr]![nc] ?? Infinity)) continue
+
+      dist[nr]![nc] = next
+
+      queue.push({ col: nc, row: nr })
+
+    }
+
+  }
+
+
+
+  for (let r = 0; r < rows; r++) {
+
+    for (let c = 0; c < cols; c++) {
+
+      if (!walkable[r]![c]) {
+
+        dist[r]![c] = 0
+
+        continue
+
+      }
+
+      dist[r]![c] = (dist[r]![c] ?? 0) * cellFt
+
+    }
+
+  }
+
+
+
+  return dist
+
+}
+
+
+
+/** Prefer cells with more local clearance — falls back to uniform A*. */
+
+export function astarGridClearanceBiased(
+
+  walkable: boolean[][],
+
+  start: GridCoord,
+
+  goal: GridCoord,
+
+  cols: number,
+
+  rows: number,
+
+  localClearanceFt: number[][],
+
+  idealClearanceFt = IDEAL_PEDESTRIAN_AISLE_FT
+
+): GridCoord[] | null {
+
+  const from = snapToWalkable(start.col, start.row, walkable, cols, rows)
+
+  const to = snapToWalkable(goal.col, goal.row, walkable, cols, rows)
+
+  if (!from || !to) return null
+
+
+
+  const goalKey = cellKey(to.col, to.row)
+
+  const open: Array<{ key: string; f: number }> = []
+
+  const gScore = new Map<string, number>()
+
+  const cameFrom = new Map<string, string | null>()
+
+  const startKey = cellKey(from.col, from.row)
+
+  gScore.set(startKey, 0)
+
+  cameFrom.set(startKey, null)
+
+  open.push({ key: startKey, f: euclideanGrid(from, to) })
+
+
+
+  while (open.length > 0) {
+
+    open.sort((a, b) => a.f - b.f)
+
+    const current = open.shift()!
+
+    if (current.key === goalKey) break
+
+
+
+    const { col: cc, row: cr } = parseKey(current.key)
+
+    const baseG = gScore.get(current.key) ?? Infinity
+
+
+
+    for (const { dc, dr } of CARDINAL) {
+
+      const nc = cc + dc
+
+      const nr = cr + dr
+
+      if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) continue
+
+      if (!walkable[nr]![nc]) continue
+
+
+
+      const clearance = localClearanceFt[nr]![nc] ?? 0
+
+      const pinch = clearance < idealClearanceFt ? (idealClearanceFt - clearance) * 0.35 : 0
+
+      const stepCost = 1 + pinch
+
+      const nKey = cellKey(nc, nr)
+
+      const tentative = baseG + stepCost
+
+      if (tentative >= (gScore.get(nKey) ?? Infinity)) continue
+
+
+
+      gScore.set(nKey, tentative)
+
+      cameFrom.set(nKey, current.key)
+
+      open.push({
+
+        key: nKey,
+
+        f: tentative + euclideanGrid({ col: nc, row: nr }, to),
+
+      })
+
+    }
+
+  }
+
+
+
+  if (!cameFrom.has(goalKey)) return null
+
+
+
+  const path: GridCoord[] = []
+
+  let key: string | null = goalKey
+
+  while (key) {
+
+    path.push(parseKey(key))
+
+    key = cameFrom.get(key) ?? null
+
+  }
+
+  path.reverse()
+
+  return path.length >= 1 ? path : null
+
+}
+
+
+
+function detectPathfindingBottleneckBooths(
+
+  path: GridCoord[],
+
+  localClearanceFt: number[][],
+
+  booths: ReadonlyArray<BoothObject>,
+
+  idealClearanceFt: number,
+
+  originX: number,
+
+  originY: number,
+
+  cellFt: number
+
+): string[] {
+
+  const ids = new Set<string>()
+
+  for (const cell of path) {
+
+    const clearance = localClearanceFt[cell.row]?.[cell.col] ?? 0
+
+    if (clearance >= idealClearanceFt) continue
+
+    const px = originX + (cell.col + 0.5) * cellFt
+
+    const py = originY + (cell.row + 0.5) * cellFt
+
+    for (const booth of booths) {
+
+      const aabb = rotatedAabb(booth)
+
+      const expanded = {
+
+        x: aabb.x - idealClearanceFt,
+
+        y: aabb.y - idealClearanceFt,
+
+        width: aabb.width + idealClearanceFt * 2,
+
+        height: aabb.height + idealClearanceFt * 2,
+
+      }
+
+      if (
+
+        px >= expanded.x &&
+
+        px <= expanded.x + expanded.width &&
+
+        py >= expanded.y &&
+
+        py <= expanded.y + expanded.height
+
+      ) {
+
+        ids.add(booth.id)
+
+      }
+
+    }
+
+  }
+
+  return [...ids]
+
+}
+
+
+
+function routePatronPathOnGrid(input: {
+
+  walkable: boolean[][]
+
+  cols: number
+
+  rows: number
+
+  originX: number
+
+  originY: number
+
+  cellFt: number
+
+  waypoints: PathPoint[]
+
+  vendorBooths: BoothObject[]
+
+  useClearanceBias: boolean
+
+}): {
+
+  path: PathPoint[]
+
+  totalDistanceFt: number
+
+  gridSegments: GridCoord[][]
+
+  bottleneckBoothIds: string[]
+
+  isPartial: boolean
+
+} {
+
+  const {
+
+    walkable,
+
+    cols,
+
+    rows,
+
+    originX,
+
+    originY,
+
+    cellFt,
+
+    waypoints,
+
+    vendorBooths,
+
+    useClearanceBias,
+
+  } = input
+
+  const localClearanceFt = buildLocalClearanceField(walkable, rows, cols, cellFt)
+
+  const gridSegments: GridCoord[][] = []
+
+  let totalDistanceFt = 0
+
+  let failedLegs = 0
+
+
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+
+    const a = ftToGrid(waypoints[i]!, originX, originY, cellFt)
+
+    const b = ftToGrid(waypoints[i + 1]!, originX, originY, cellFt)
+
+    const segment = useClearanceBias
+
+      ? astarGridClearanceBiased(walkable, a, b, cols, rows, localClearanceFt)
+
+      : astarGrid(walkable, a, b, cols, rows)
+
+    if (!segment) {
+
+      failedLegs++
+
+      continue
+
+    }
+
+    gridSegments.push(segment)
+
+    totalDistanceFt += gridPathDistance(segment, cellFt)
+
+  }
+
+
+
+  const merged = mergeGridPaths(gridSegments)
+
+  const path = merged.map((g) => gridToFt(g, originX, originY, cellFt))
+
+  const bottleneckBoothIds = detectPathfindingBottleneckBooths(
+
+    merged,
+
+    localClearanceFt,
+
+    vendorBooths,
+
+    BOOTH_CLEARANCE_GOOD_FT,
+
+    originX,
+
+    originY,
+
+    cellFt
+
+  )
+
+
+
+  return {
+
+    path,
+
+    totalDistanceFt,
+
+    gridSegments,
+
+    bottleneckBoothIds,
+
+    isPartial: failedLegs > 0,
+
+  }
+
+}
+
+
+
 function gridPathDistance(path: GridCoord[], cellFt: number): number {
 
   if (path.length < 2) return 0
@@ -989,7 +1435,9 @@ export function CalculateOptimalPath(
 
   const cellFt = options.cellFt ?? doc.snapFt ?? 1
 
-  const obstacleBufferFt = options.obstacleBufferFt ?? MIN_CLEARANCE_FT
+  const strictBufferFt = options.obstacleBufferFt ?? MIN_CLEARANCE_FT
+
+  const relaxedBufferFt = Math.max(1, strictBufferFt - 2)
 
   const roomBoundary =
 
@@ -999,23 +1447,11 @@ export function CalculateOptimalPath(
 
 
 
-  const grid = buildNavigationGrid(doc, roomId, {
+  const vendorBooths = layoutBooths.filter((b) => b.x > -500)
 
-    cellFt,
-
-    obstacleBufferFt,
-
-    roomBoundary,
-
-    booths: layoutBooths,
-
-  })
-
-  if (!grid) return null
+  if (vendorBooths.length === 0) return null
 
 
-
-  const { walkable, cols, rows, originX, originY } = grid
 
   const roomObjects = objectsInRoom(doc, roomId)
 
@@ -1023,27 +1459,15 @@ export function CalculateOptimalPath(
 
   const exit = findExit(roomObjects)
 
-
-
   const boundary = resolveWalkableRings(doc, roomId, roomBoundary)
 
-  const fallbackStart = boundary?.centroid ?? { x: originX, y: originY }
-
-
-
-  const vendorBooths = layoutBooths.filter((b) => b.x > -500)
-
-
-
-  if (vendorBooths.length === 0) return null
+  const fallbackStart = boundary?.centroid ?? { x: 0, y: 0 }
 
 
 
   const startFt = entrance ? centerOf(entrance) : fallbackStart
 
   const ordered = nearestNeighborOrder(startFt, vendorBooths)
-
-
 
   const waypoints: PathPoint[] = [
 
@@ -1059,45 +1483,83 @@ export function CalculateOptimalPath(
 
   }
 
-
-
-  const gridSegments: GridCoord[][] = []
-
-  let totalDistanceFt = 0
-
   const visitOrder = ordered.map((b) => b.id)
 
 
 
-  for (let i = 0; i < waypoints.length - 1; i++) {
+  for (const [clearanceMode, bufferFt, useBias] of [
 
-    const a = ftToGrid(waypoints[i]!, originX, originY, cellFt)
+    ['strict', strictBufferFt, true],
 
-    const b = ftToGrid(waypoints[i + 1]!, originX, originY, cellFt)
+    ['relaxed', relaxedBufferFt, true],
 
-    const segment = astarGrid(walkable, a, b, cols, rows)
+  ] as const) {
 
-    if (!segment) continue
+    const grid = buildNavigationGrid(doc, roomId, {
 
-    gridSegments.push(segment)
+      cellFt,
 
-    totalDistanceFt += gridPathDistance(segment, cellFt)
+      obstacleBufferFt: bufferFt,
+
+      roomBoundary,
+
+      booths: layoutBooths,
+
+    })
+
+    if (!grid) continue
+
+
+
+    const routed = routePatronPathOnGrid({
+
+      walkable: grid.walkable,
+
+      cols: grid.cols,
+
+      rows: grid.rows,
+
+      originX: grid.originX,
+
+      originY: grid.originY,
+
+      cellFt,
+
+      waypoints,
+
+      vendorBooths,
+
+      useClearanceBias: useBias,
+
+    })
+
+
+
+    if (routed.path.length >= 2) {
+
+      return {
+
+        path: routed.path,
+
+        visitOrder,
+
+        totalDistanceFt: routed.totalDistanceFt,
+
+        isPartial: routed.isPartial,
+
+        bottleneckBoothIds: routed.bottleneckBoothIds,
+
+        clearanceMode,
+
+      }
+
+    }
 
   }
 
 
 
-  if (gridSegments.length === 0) return null
-
-
-
-  const merged = mergeGridPaths(gridSegments)
-
-  const path = merged.map((g) => gridToFt(g, originX, originY, cellFt))
-
-
-
-  return { path, visitOrder, totalDistanceFt }
+  return null
 
 }
 

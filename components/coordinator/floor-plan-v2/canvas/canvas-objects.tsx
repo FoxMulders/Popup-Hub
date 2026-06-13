@@ -32,7 +32,7 @@ import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { fitTextInContainer, wrapTextInContainer } from './canvas-label-text'
 import {
   BOOTH_CLEARANCE_THEMES,
-  vendorBoothBoundaryWarningBand,
+  vendorBoothClearanceWarningBand,
 } from '@/lib/coordinator/booth-clearance-visual'
 import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 import type { FloorPlanDoc } from '../state/types'
@@ -57,6 +57,8 @@ interface CanvasObjectsProps {
   boothMapLabelByObjectId?: ReadonlyMap<string, { vendorName: string; category: string }>
   /** Object ids currently overlapping another placed object. */
   overlappingIds?: ReadonlySet<string>
+  /** Vendor booths pinching the patron path below ideal clearance. */
+  pathfindingBottleneckIds?: ReadonlySet<string>
   /**
    * Object whose label is currently being edited inline. The editing
    * input is rendered as a sibling overlay; we suppress the static
@@ -90,9 +92,14 @@ function fillForObject(
   obj: PlacedObject,
   eventCategoryNames?: ReadonlyArray<string>,
   isOverlapping?: boolean,
-  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>,
+  isPathfindingBottleneck?: boolean
 ): string {
-  if (isOverlapping) return PLACEMENT_VIOLATION.fill
+  if (isOverlapping || isPathfindingBottleneck) {
+    return isPathfindingBottleneck
+      ? BOOTH_CLEARANCE_THEMES.critical.fill
+      : PLACEMENT_VIOLATION.fill
+  }
   switch (obj.kind) {
     case 'booth': {
       const booth = obj as BoothObject
@@ -134,9 +141,14 @@ function strokeForObject(
   isSelected: boolean,
   eventCategoryNames?: ReadonlyArray<string>,
   isOverlapping?: boolean,
-  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>
+  boothPlacementStatusByObjectId?: ReadonlyMap<string, BoothPlacementStatus>,
+  isPathfindingBottleneck?: boolean
 ): string {
-  if (isOverlapping) return PLACEMENT_VIOLATION.stroke
+  if (isOverlapping || isPathfindingBottleneck) {
+    return isPathfindingBottleneck
+      ? BOOTH_CLEARANCE_THEMES.critical.stroke
+      : PLACEMENT_VIOLATION.stroke
+  }
   if (isSelected) return '#0f766e'
   switch (obj.kind) {
     case 'booth': {
@@ -460,6 +472,7 @@ function CanvasObjectsBase({
   boothMapLabelMode = 'vendor',
   boothMapLabelByObjectId,
   overlappingIds,
+  pathfindingBottleneckIds,
   editingObjectId,
   eventCategoryNames,
   rooms,
@@ -541,6 +554,8 @@ function CanvasObjectsBase({
         const h = obj.height * pxPerFt
         const isSelected = selectedIds.has(obj.id)
         const isOverlapping = overlappingIds?.has(obj.id) ?? false
+        const isPathfindingBottleneck =
+          pathfindingBottleneckIds?.has(obj.id) ?? false
         const placementStatus =
           obj.kind === 'booth' && isGuestTableBooth(obj as BoothObject)
             ? undefined
@@ -549,7 +564,8 @@ function CanvasObjectsBase({
           obj,
           eventCategoryNames,
           isOverlapping,
-          boothPlacementStatusByObjectId
+          boothPlacementStatusByObjectId,
+          isPathfindingBottleneck
         )
         let clearanceStroke: string | undefined
         let clearanceFillOpacity: number | undefined
@@ -560,7 +576,7 @@ function CanvasObjectsBase({
           isVendorBoothObject(obj) &&
           !isOverlapping
         ) {
-          const band = vendorBoothBoundaryWarningBand(
+          const band = vendorBoothClearanceWarningBand(
             obj as BoothObject,
             objects,
             rooms,
@@ -592,16 +608,18 @@ function CanvasObjectsBase({
             : clearanceFillOpacity ?? 0.85
         const stroke =
           clearanceStroke ??
-          (isJoined && !isSelected && !isOverlapping && obj.kind !== 'stage'
+          (isJoined && !isSelected && !isOverlapping && !isPathfindingBottleneck && obj.kind !== 'stage'
             ? 'transparent'
             : strokeForObject(
               obj,
               isSelected,
               eventCategoryNames,
               isOverlapping,
-              boothPlacementStatusByObjectId
+              boothPlacementStatusByObjectId,
+              isPathfindingBottleneck
             ))
-        const strokeWidth = isOverlapping ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
+        const strokeWidth =
+          isOverlapping || isPathfindingBottleneck ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
         const isTableClusterBooth =
           obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)
         const isPatronTableBooth =

@@ -66,6 +66,13 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   saveDraftLoading?: boolean
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
+  onJoinRooms?: () => void
+  canJoinRooms?: boolean
+  joinCandidateCount?: number
+  joinBlockedReason?: string | null
+  mergePrefersShapes?: boolean
+  onUnjoinRoom?: () => void
+  canUnjoinRoom?: boolean
   eventId?: string | null
 }
 

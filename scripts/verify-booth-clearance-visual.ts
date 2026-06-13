@@ -108,7 +108,7 @@ assert(
   'both booths flag critical when 2′ apart'
 )
 
-// Placement preview — neighbour spacing is not a boundary warning.
+// Placement preview — neighbour spacing within 3′–4′ shows yellow.
 doc.objects = [boothA]
 doc.objectRoom = { a: roomId }
 const previewNearVendor = {
@@ -129,8 +129,8 @@ const previewNearVendorTheme = vendorBoothClearanceThemeForProbe(
   roomId
 )
 assert(
-  previewNearVendorTheme.fill === BOOTH_CLEARANCE_THEMES.good.fill,
-  '3′ from another vendor is not a boundary warning'
+  previewNearVendorTheme.fill === BOOTH_CLEARANCE_THEMES.tight.fill,
+  '3′ from another vendor shows yellow (tight) clearance'
 )
 
 const previewNearWall = {

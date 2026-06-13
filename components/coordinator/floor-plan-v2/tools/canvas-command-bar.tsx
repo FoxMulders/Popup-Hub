@@ -128,13 +128,6 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     autoArrangeDisabledReason,
     autoArrangeMode,
     onAutoArrangeModeChange,
-    onJoinRooms,
-    canJoinRooms,
-    joinCandidateCount,
-    joinBlockedReason,
-    mergePrefersShapes,
-    onUnjoinRoom,
-    canUnjoinRoom,
     onClearAll,
     onDeleteSelected,
     tableSizeFt,
@@ -185,7 +178,6 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     aiLayoutFeedbackLoading,
   } = props
 
-  const showJoinGroup = Boolean(onJoinRooms) || Boolean(onUnjoinRoom)
   const showTableSize = Boolean(onTableSizeChange) && tableSizeFt != null
   const showRooms =
     Boolean(onSelectRoom) &&
@@ -205,19 +197,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     Boolean(onPatronAutoArrange) ||
     Boolean(onPrepareTableDraw) ||
     Boolean(onTableSizeChange)
-  const showRoom = showRooms || showJoinGroup || showRoomTransform
-
-  const joinLabel =
-    canJoinRooms && joinCandidateCount && joinCandidateCount > 1
-      ? `Merge (${joinCandidateCount})`
-      : 'Merge'
-  const joinTitle = canJoinRooms
-    ? mergePrefersShapes
-      ? 'Boolean union: fuse selected shapes into one path (interior edges removed)'
-      : 'Dissolve shared walls between touching rooms into one outer perimeter'
-    : joinBlockedReason
-      ? `Can't merge: ${joinBlockedReason}`
-      : 'Select 2+ shapes, or move rooms flush together, then Merge'
+  const showRoom = showRooms || showRoomTransform
 
   const blockContext = useMemo<CanvasCommandBarBlockContext>(
     () => ({
@@ -256,12 +236,6 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       autoArrangeMode: autoArrangeMode ?? vendorAutoArrangeMode,
       onAutoArrangeModeChange:
         onAutoArrangeModeChange ?? onVendorAutoArrangeModeChange,
-      onJoinRooms,
-      canJoinRooms,
-      joinLabel,
-      joinTitle,
-      onUnjoinRoom,
-      canUnjoinRoom,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,
@@ -345,12 +319,6 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       autoArrangeDisabledReason,
       autoArrangeMode,
       onAutoArrangeModeChange,
-      onJoinRooms,
-      canJoinRooms,
-      joinLabel,
-      joinTitle,
-      onUnjoinRoom,
-      canUnjoinRoom,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,

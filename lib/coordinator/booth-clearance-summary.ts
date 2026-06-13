@@ -3,8 +3,9 @@ import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/inte
 import type { BoothObject, FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
   BOOTH_CLEARANCE_GOOD_FT,
-  minVendorBoothBoundaryClearanceFt,
-  vendorBoothBoundaryWarningBand,
+  BOOTH_CLEARANCE_TIGHT_FT,
+  minVendorBoothClearanceFt,
+  vendorBoothClearanceWarningBand,
   type BoothClearanceBand,
 } from '@/lib/coordinator/booth-clearance-visual'
 
@@ -32,13 +33,13 @@ export function summarizeDocClearanceIssues(doc: FloorPlanDoc): DocClearanceSumm
     if (isGuestTableBooth(booth)) continue
     if (!isVendorBoothObject(booth)) continue
 
-    const minFt = minVendorBoothBoundaryClearanceFt(
+    const minFt = minVendorBoothClearanceFt(
       booth,
       doc.objects,
       rooms,
       doc.objectRoom
     )
-    const band = vendorBoothBoundaryWarningBand(
+    const band = vendorBoothClearanceWarningBand(
       booth,
       doc.objects,
       rooms,
@@ -74,11 +75,11 @@ export function formatClearanceFeet(minFt: number): string {
 export const BOOTH_CLEARANCE_WARNING_EXPLANATION = {
   title: 'Booth boundary clearance',
   intro:
-    'Vendor booths are tinted when they sit too close to room walls, stages, doors, or other structural fixtures. Neighbouring vendor spacing is not flagged here — only real boundary conflicts.',
+    'Vendor booths are tinted when edge-to-edge clearance to a neighbour, wall, stage, door, or other fixture falls below 4′.',
   yellow:
-    `Yellow (warning): less than ${BOOTH_CLEARANCE_GOOD_FT}′ to a wall or fixture — move the booth inward or away from the obstacle.`,
+    `Yellow (warning): ${BOOTH_CLEARANCE_TIGHT_FT}′–${BOOTH_CLEARANCE_GOOD_FT - 1}′ clearance — widen the aisle before publishing.`,
   red:
-    'Red (overlap): booth footprints physically intersect another object — separate the booths until their borders no longer touch.',
+    `Red (critical): less than ${BOOTH_CLEARANCE_TIGHT_FT}′ edge clearance — move booths apart until aisles meet the 4′ target.`,
   green: `Green (ideal): ${BOOTH_CLEARANCE_GOOD_FT}′ or more from every boundary — comfortable placement.`,
   toggleHint:
     'Hide yellow/green booth tints and this alert from the header toolbar — click the clearance warnings button (triangle icon) next to patron flow.',

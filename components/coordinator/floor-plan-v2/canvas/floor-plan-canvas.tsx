@@ -150,6 +150,10 @@ export interface FloorPlanCanvasProps {
   autoArrangeMode?: AutoArrangeMode
   /** Computed patron viewing path (feet) — dotted overlay when set. */
   patronTrafficPath?: ReadonlyArray<{ x: number; y: number }> | null
+  /** Vendor booths narrowing the active patron path. */
+  pathfindingBottleneckIds?: ReadonlySet<string>
+  /** True when pathfinding used relaxed clearance or skipped legs. */
+  patronPathIsPartial?: boolean
   /** 6′ patron aisle corridor rects (feet) — green overlay when set. */
   patronAisleCorridors?: ReadonlyArray<{
     x: number
@@ -229,6 +233,8 @@ export function FloorPlanCanvas({
   onVendorDrop,
   autoArrangeMode = 'grid',
   patronTrafficPath = null,
+  pathfindingBottleneckIds,
+  patronPathIsPartial = false,
   patronAisleCorridors = null,
   unifiedLayoutOverlay = null,
   commandCenterViewport = false,
@@ -383,17 +389,26 @@ export function FloorPlanCanvas({
     getToolMode: () => toolState.tool,
   })
 
+  // Stable ref — the hook returns a fresh API object each render; reading
+  // it from a ref keeps framing effects from re-firing on every zoom/pan.
+  const viewportRef = useRef(viewport)
+  viewportRef.current = viewport
+
   zoomForAnchorRef.current = viewport.zoom
 
   useEffect(() => {
-    onViewportReady?.(viewport)
+    onViewportReady?.(viewportRef.current)
     return () => onViewportReady?.(null)
-  }, [onViewportReady, viewport])
+  }, [onViewportReady])
 
   useEffect(() => {
     onZoomChange?.(viewport.zoom)
   }, [onZoomChange, viewport.zoom])
 
+  /**
+   * Re-frame when the active room or room *dimensions* change — not when
+   * origins move (drag), so zoom and pan are not reset on every move.
+   */
   const roomsFramingKey = useMemo(() => {
     const frames = store.doc.rooms ?? []
     const mergedSig = (store.doc.objects ?? [])
@@ -406,43 +421,63 @@ export function FloorPlanCanvas({
     return `${activeRoomId ?? ''}:${frames
       .map(
         (f) =>
-          `${f.id}:${f.originX},${f.originY},${f.widthFt},${f.lengthFt},${f.mergedIntoObjectId ?? ''}`
+          `${f.id}:${f.widthFt},${f.lengthFt},${f.mergedIntoObjectId ?? ''}`
       )
       .join('|')}:${mergedSig}`
   }, [activeRoomId, store.doc.objects, store.doc.rooms])
 
+  /** When no rooms exist, reframe if the open canvas dimensions change. */
+  const viewportFramingKey = useMemo(() => {
+    const frames = store.doc.rooms ?? []
+    if (frames.length === 0) {
+      return `${roomsFramingKey}@canvas:${store.doc.canvasWidthFt},${store.doc.canvasLengthFt}`
+    }
+    return roomsFramingKey
+  }, [
+    roomsFramingKey,
+    store.doc.canvasLengthFt,
+    store.doc.canvasWidthFt,
+    store.doc.rooms,
+  ])
+
   const frameActiveRoom = useCallback(() => {
-    fitViewportToContent(viewport, store.doc, activeRoomId, {
+    fitViewportToContent(viewportRef.current, store.doc, activeRoomId, {
       paddingPx: commandCenterViewport ? undefined : VIEWPORT_FIT_PADDING_PX,
       commandCenterViewport,
     })
-  }, [
-    activeRoomId,
-    commandCenterViewport,
-    store.doc,
-    viewport,
-  ])
+  }, [activeRoomId, commandCenterViewport, store.doc])
+
+  const frameActiveRoomRef = useRef(frameActiveRoom)
+  frameActiveRoomRef.current = frameActiveRoom
 
   const didInitialFrameRef = useRef(false)
   useEffect(() => {
     if (!scrollHost) return
-    frameActiveRoom()
+    frameActiveRoomRef.current()
     didInitialFrameRef.current = true
-  }, [frameActiveRoom, roomsFramingKey, scrollHost])
+  }, [viewportFramingKey, scrollHost])
 
+  const observedViewportSizeRef = useRef({ w: 0, h: 0 })
   useEffect(() => {
     if (!scrollHost) return
     const scroll = scrollRef.current
     if (!scroll || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
       if (!didInitialFrameRef.current) return
-      if (scroll.clientWidth > 0 && scroll.clientHeight > 0) {
-        frameActiveRoom()
-      }
+      const w = scroll.clientWidth
+      const h = scroll.clientHeight
+      if (w <= 0 || h <= 0) return
+      const last = observedViewportSizeRef.current
+      // Reframe once when the viewport first becomes measurable (flex
+      // layout after mount). Skip later resizes — scrollbar toggles and
+      // window resizes were resetting pan/zoom and locking the room center.
+      if (last.w > 0 && last.h > 0) return
+      observedViewportSizeRef.current = { w, h }
+      frameActiveRoomRef.current()
     })
     observer.observe(scroll)
     return () => observer.disconnect()
-  }, [frameActiveRoom, scrollHost])
+  }, [scrollHost])
 
   const clipToActiveRoom = !scrollHost && roomGridFrame != null
   /** Command center: size the scroll surface to the active room grid, not the 5× doc canvas. */
@@ -810,7 +845,7 @@ export function FloorPlanCanvas({
     const roomKey = activeRoomId ?? null
     const last = centeredForDimsRef.current
     if (last && last.w === w && last.l === l && last.roomId === roomKey) return
-    fitViewportToContent(viewport, store.doc, activeRoomId, {
+    fitViewportToContent(viewportRef.current, store.doc, activeRoomId, {
       paddingPx: commandCenterViewport ? undefined : VIEWPORT_FIT_PADDING_PX,
       commandCenterViewport,
     })
@@ -820,8 +855,8 @@ export function FloorPlanCanvas({
     commandCenterViewport,
     roomGridFrame,
     scrollHost,
-    store.doc,
-    viewport,
+    store.doc.canvasLengthFt,
+    store.doc.canvasWidthFt,
   ])
 
   const cursor = viewOnly
@@ -1085,6 +1120,7 @@ export function FloorPlanCanvas({
             pxPerFt={pxPerFt}
             showLabels={showLabels}
             overlappingIds={overlappingIds}
+            pathfindingBottleneckIds={pathfindingBottleneckIds}
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
@@ -1116,6 +1152,7 @@ export function FloorPlanCanvas({
             pxPerFt={pxPerFt}
             showLabels={showLabels}
             overlappingIds={overlappingIds}
+            pathfindingBottleneckIds={pathfindingBottleneckIds}
             editingObjectId={editingObjectId}
             eventCategoryNames={eventCategoryNames}
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
@@ -1184,7 +1221,11 @@ export function FloorPlanCanvas({
           ) : null}
           {!viewOnly ? <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} /> : null}
           <PatronAisleOverlay corridors={patronAisleCorridors} pxPerFt={pxPerFt} />
-          <PatronTrafficPathOverlay path={patronTrafficPath} pxPerFt={pxPerFt} />
+          <PatronTrafficPathOverlay
+            path={patronTrafficPath}
+            isPartial={patronPathIsPartial}
+            pxPerFt={pxPerFt}
+          />
           <UnifiedLayoutFlowOverlay
             spinePath={unifiedLayoutOverlay?.spinePath}
             clearanceField={unifiedLayoutOverlay?.clearanceField}

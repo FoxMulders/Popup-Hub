@@ -86,7 +86,7 @@ export function BoothClearanceWarningPanel({
                 <li key={row.id}>
                   <span className="font-medium">{row.label}</span>
                   {' — '}
-                  {formatClearanceFeet(row.minClearanceFt)} to nearest obstacle (
+                  {formatClearanceFeet(row.minClearanceFt)} to nearest neighbour or obstacle (
                   {row.band === 'critical' ? 'red' : 'yellow'})
                 </li>
               ))}

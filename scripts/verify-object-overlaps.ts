@@ -10,6 +10,7 @@ import {
 } from '../components/coordinator/floor-plan-v2/interactions/geometry'
 import {
   vendorBoothBoundaryWarningBand,
+  vendorBoothClearanceWarningBand,
 } from '../lib/coordinator/booth-clearance-visual'
 import type {
   BoothObject,
@@ -145,7 +146,12 @@ console.log('grid vendors — physical overlap vs boundary warnings')
     0
   )
   expect(
-    '3′ vendor spacing is not a boundary warning',
+    '3′ vendor spacing flags yellow clearance warning',
+    vendorBoothClearanceWarningBand(booths[0] as BoothObject, booths, [], {}),
+    'tight'
+  )
+  expect(
+    '3′ vendor spacing is not a boundary-only warning',
     vendorBoothBoundaryWarningBand(booths[0] as BoothObject, booths, [], {}),
     'good'
   )

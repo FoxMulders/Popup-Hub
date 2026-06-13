@@ -13,6 +13,11 @@ import {
   MIN_CLEARANCE_FT,
   validateBoothAgainstPlaced,
 } from '@/lib/booth-planner/expanded-footprint'
+import {
+  CROSS_AISLE_HIGHWAY_FT,
+  DENSE_GRID_COLUMN_THRESHOLD,
+  IDEAL_PEDESTRIAN_AISLE_FT,
+} from '@/lib/floor-plan/layout-density'
 import { rotatedAabb } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
@@ -107,10 +112,19 @@ TRAFFIC RULES:
 - Design a continuous traffic loop from each Entry point through the hall to each Exit point.
 - Orient every VENDOR booth (isPatron=false) so its storefront/open side faces this primary circulation path.
 - Place PATRON zones (isPatron=true) in secondary, low-velocity areas — room center, designated food corners, or zones offset from the main vendor aisle — so seating never bottlenecks the primary loop.
-- Keep the primary loop ≥ ${input.aisleWidthFt}' wide with no dead-ends between Entry and Exit.`
+- Keep the primary loop ≥ ${input.aisleWidthFt}' wide with no dead-ends between Entry and Exit.
+- When placing ${DENSE_GRID_COLUMN_THRESHOLD}+ columns, reserve one uninterrupted ${CROSS_AISLE_HIGHWAY_FT}' cross-aisle (horizontal or vertical) connecting entry and exit thresholds.`
     : `
 DOORS / EXITS (route high-traffic flow through these — avoid dead-ends and bottlenecks):
 ${JSON.stringify(input.fixtures, null, 2)}`
+
+  const crossAisleRule =
+    input.items.filter((i) => !i.isPatron).length >= DENSE_GRID_COLUMN_THRESHOLD
+      ? `
+CROSS-AISLE HIGHWAY (mandatory for dense grids):
+- Leave one completely clear ${CROSS_AISLE_HIGHWAY_FT}' band (horizontal or vertical) through the hall center so patrons can cross between booth blocks without dead-ends.
+- The cross-aisle must connect the entry threshold to the exit threshold for a continuous walking loop.`
+      : ''
 
   return `You are a venue layout optimizer for indoor pop-up markets.
 
@@ -127,12 +141,13 @@ ${JSON.stringify(input.obstacles, null, 2)}
 ENTRY / EXIT FIXTURES (exact coordinates and orientations — already snapped to perimeter walls):
 ${JSON.stringify(input.fixtures, null, 2)}
 ${trafficSection}
+${crossAisleRule}
 
 CONSTRAINTS:
 - Every VENDOR booth (isPatron=false) must keep at least ${MIN_CLEARANCE_FT}' between its footprint and room walls: x ≥ ${MIN_CLEARANCE_FT}, y ≥ ${MIN_CLEARANCE_FT}, x+width ≤ ${input.roomWidthFt - MIN_CLEARANCE_FT}, y+height ≤ ${input.roomLengthFt - MIN_CLEARANCE_FT}.
-- Maintain at least ${MIN_CLEARANCE_FT * 2}' edge-to-edge spacing between vendor booth footprints (treat each booth as width+6' × length+6' for collision).
+- Maintain at least ${IDEAL_PEDESTRIAN_AISLE_FT}' edge-to-edge spacing between vendor booth footprints for pedestrian aisles (treat each booth as width+6' × length+6' for collision).
 - Patron tables (isPatron=true) keep ${ROOM_PLACEMENT_CLEARANCE_FT}' wall inset where applicable.
-- Maintain ≥ ${input.aisleWidthFt}' clear walkways between rows and around clusters.
+- Maintain ≥ ${Math.max(input.aisleWidthFt, IDEAL_PEDESTRIAN_AISLE_FT)}' clear walkways between rows and around clusters.
 - Maximize vendor visibility from the primary traffic loop; patrons should see booth fronts without weaving through dead-ends.
 - Same-category vendors should cluster when space allows but never violate aisle width.
 - Return EXACTLY one placement per item id; coordinates are top-left corner in feet; rotation in degrees.

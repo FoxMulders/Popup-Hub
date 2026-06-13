@@ -6,6 +6,14 @@ import {
   perimeterStepFt,
   validateBoothPlacementCoordinate,
 } from '@/lib/booth-planner/expanded-footprint'
+import {
+  boothOverlapsCrossAisleZone,
+  estimateGridCapacity,
+  IDEAL_PEDESTRIAN_AISLE_FT,
+  planCrossAisleZones,
+  shouldInjectCrossAisle,
+  type CrossAisleZone,
+} from '@/lib/floor-plan/layout-density'
 
 /**
  * Deterministic Computational Geometry & Market Layout Engine — PopupHub.ca
@@ -331,7 +339,8 @@ function buildGridBackToBackSlots(
   inset: number,
   entrance: MarketLayoutPoint | undefined,
   restrictedZones: ReadonlyArray<MarketLayoutRect>,
-  tableEdgeGapFt: number
+  tableEdgeGapFt: number,
+  tableCount = 0
 ): SlotCandidate[] {
   const blockHeight = th * 2 + BACK_TO_BACK_ROW_GAP_FT
   const blockStep = blockHeight + aisleFt
@@ -341,6 +350,31 @@ function buildGridBackToBackSlots(
   const placedExpanded: MarketLayoutRect[] = []
   const slots: SlotCandidate[] = []
   let blockIndex0 = 0
+
+  const { columnCount, slotCount } = estimateGridCapacity({
+    roomWidthFt: cw,
+    roomLengthFt: ch,
+    boothWidthFt: tw,
+    boothHeightFt: th,
+    wallInsetFt: inset,
+    tableEdgeGapFt,
+    aisleWidthFt: aisleFt,
+  })
+  const crossAisleZones: CrossAisleZone[] = shouldInjectCrossAisle({
+    columnCount,
+    boothCount: tableCount > 0 ? tableCount : slotCount,
+    roomWidthFt: cw,
+    roomLengthFt: ch,
+    maxSlotsWithoutCrossAisle: slotCount,
+  })
+    ? planCrossAisleZones({
+        roomWidthFt: cw,
+        roomLengthFt: ch,
+        wallInsetFt: inset,
+        columnCount,
+        entrance,
+      })
+    : []
 
   const recordIfFits = (
     x: number,
@@ -352,6 +386,7 @@ function buildGridBackToBackSlots(
     const sy = snapToTableGrid(y, th, minX)
     const raw = tableRect(sx, sy, tw, th, 0)
     if (
+      boothOverlapsCrossAisleZone(sx, sy, tw, th, crossAisleZones) ||
       !validateBoothPlacementCoordinate(raw, cw, ch, placedExpanded) ||
       hitsRestricted(raw, restrictedZones)
     ) {
@@ -422,7 +457,8 @@ function buildInteriorSlots(
   mode: 'grid' | 'staggered',
   entrance: MarketLayoutPoint | undefined,
   restrictedZones: ReadonlyArray<MarketLayoutRect>,
-  tableEdgeGapFt: number
+  tableEdgeGapFt: number,
+  tableCount = 0
 ): SlotCandidate[] {
   if (mode === 'grid') {
     return buildGridBackToBackSlots(
@@ -434,7 +470,8 @@ function buildInteriorSlots(
       inset,
       entrance,
       restrictedZones,
-      tableEdgeGapFt
+      tableEdgeGapFt,
+      tableCount
     )
   }
 
@@ -787,9 +824,15 @@ export function computeMarketLayout(
     request.tableIds?.length === tableCount
       ? [...request.tableIds]
       : defaultTableIds(tableCount)
-  const aisleFt = request.aisleSpacing ?? DEFAULT_AISLE_WIDTH_FT
+  const aisleFt = Math.max(
+    request.aisleSpacing ?? DEFAULT_AISLE_WIDTH_FT,
+    IDEAL_PEDESTRIAN_AISLE_FT
+  )
   const inset = request.wallInsetFt ?? DEFAULT_WALL_INSET_FT
-  const tableEdgeGapFt = request.tableEdgeGapFt ?? TABLE_EDGE_GAP_FT
+  const tableEdgeGapFt = Math.max(
+    request.tableEdgeGapFt ?? TABLE_EDGE_GAP_FT,
+    IDEAL_PEDESTRIAN_AISLE_FT
+  )
   const { entrance, restrictedZones } = parseConstraints(request.constraints)
 
   return runLayout({
@@ -962,7 +1005,8 @@ function runLayout(params: {
     layoutMode === 'staggered' ? 'staggered' : 'grid',
     entrance,
     restrictedZones,
-    tableEdgeGapFt
+    tableEdgeGapFt,
+    tableCount
   )
   const ordered = orderSlotsWithPremium(interiorSlots, premiumLocations)
   const placements = fillPlacementsFromSlots(

@@ -1,1 +1,1 @@
-feat: ship 51 session updates (layout route uses production editor; toolbar row reorder; test suite populate button; CI lint fix; +47 more)
+feat: ship 56 session updates (reinstate vendor spacing clearance warnings; zoom in/out regression fix; remove legacy join/merge and stage tools; layout editor help search; +52 more)

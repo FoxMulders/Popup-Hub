@@ -499,10 +499,11 @@ function FloorPlanV2Workspace({
   // a frame as the canvas selection while the user is interacting
   // with it.
   const activeRoomId = layoutActiveRoomId
-  const patronTrafficPath = usePathfinding(store.doc, activeRoomId, {
+  const patronPathfinding = usePathfinding(store.doc, activeRoomId, {
     enabled: patronPathEnabled,
     cellFt: store.doc.snapFt,
   })
+  const patronTrafficPath = patronPathfinding.path
   const patronAisleCorridors = useMemo(() => {
     if (!patronPathEnabled || !activeRoomId) return null
     return computePatronAisleOverlayForRoom(store.doc, activeRoomId)
@@ -2144,19 +2145,6 @@ function FloorPlanV2Workspace({
             canPatronAutoArrange={patronTableCount > 0}
             patronAutoArrangeMode={patronAutoArrangeMode}
             onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
-            onJoinRooms={handleMerge}
-            canJoinRooms={canMerge}
-            joinCandidateCount={
-              destructiveMergePlan.canMerge
-                ? destructiveMergePlan.count
-                : shapeMergePlan.canMergeShapes
-                  ? shapeMergePlan.count
-                  : undefined
-            }
-            joinBlockedReason={mergeBlockedReason}
-            mergePrefersShapes={shapeMergePlan.canMergeShapes}
-            onUnjoinRoom={handleUnjoinRoom}
-            canUnjoinRoom={canSplitMerge}
             tableSizeFt={tableSizePillValue}
             onTableSizeChange={handleTableSizeChange}
             onPrepareTableDraw={handlePrepareTableDraw}
@@ -2303,19 +2291,6 @@ function FloorPlanV2Workspace({
                     canPatronAutoArrange={patronTableCount > 0}
                     patronAutoArrangeMode={patronAutoArrangeMode}
                     onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
-                    onJoinRooms={handleMerge}
-                    canJoinRooms={canMerge}
-                    joinCandidateCount={
-                      destructiveMergePlan.canMerge
-                        ? destructiveMergePlan.count
-                        : shapeMergePlan.canMergeShapes
-                          ? shapeMergePlan.count
-                          : undefined
-                    }
-                    joinBlockedReason={mergeBlockedReason}
-                    mergePrefersShapes={shapeMergePlan.canMergeShapes}
-                    onUnjoinRoom={handleUnjoinRoom}
-                    canUnjoinRoom={canSplitMerge}
                     tableSizeFt={tableSizePillValue}
                     onTableSizeChange={handleTableSizeChange}
                     onPrepareTableDraw={handlePrepareTableDraw}
@@ -2387,19 +2362,6 @@ function FloorPlanV2Workspace({
                 canPatronAutoArrange={patronTableCount > 0}
                 patronAutoArrangeMode={patronAutoArrangeMode}
                 onPatronAutoArrangeModeChange={setPatronAutoArrangeMode}
-                onJoinRooms={handleMerge}
-                canJoinRooms={canMerge}
-                joinCandidateCount={
-                  destructiveMergePlan.canMerge
-                    ? destructiveMergePlan.count
-                    : shapeMergePlan.canMergeShapes
-                      ? shapeMergePlan.count
-                      : undefined
-                }
-                joinBlockedReason={mergeBlockedReason}
-                mergePrefersShapes={shapeMergePlan.canMergeShapes}
-                onUnjoinRoom={handleUnjoinRoom}
-                canUnjoinRoom={canSplitMerge}
                 tableSizeFt={tableSizePillValue}
                 onTableSizeChange={handleTableSizeChange}
                 onPrepareTableDraw={handlePrepareTableDraw}

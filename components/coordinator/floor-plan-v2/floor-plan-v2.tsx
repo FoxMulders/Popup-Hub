@@ -59,7 +59,7 @@ import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
-import { analyzeMergeIntersections } from '@/src/utils/layoutMergeLocal'
+import { LayoutEditorHelpHost } from './tools/layout-editor-help'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import type { AutoArrangeMode } from './engine/auto-arrange'
 import { autoArrangeInRoom } from './engine/auto-arrange'
@@ -99,15 +99,6 @@ import {
 } from './state/geometry-sanitize'
 import { useCanvasStore } from './state/use-canvas-store'
 import { CanvasRootErrorBoundary } from './canvas/canvas-root-error-boundary'
-import {
-  DEFAULT_TOUCH_EPSILON_FT,
-  isJoinableObject,
-  mixedNeighborsOf,
-  neighborsOf,
-  objectFrameOverlapsOrTouches,
-  roomIdsFormConnectedComponent,
-} from './state/room-joins'
-import { isMergeUnionEligible } from './state/merge-selection-union'
 import { vendorTableMetaFromApplications } from '@/lib/booth-planner/table-booth-consolidation'
 import { planTableSizeChange } from './state/table-size-selection'
 import type {
@@ -143,19 +134,6 @@ import { useDashboardLayoutSave } from '@/components/coordinator/dashboard/dashb
 
 /** Step (in degrees) per click of the rotate +/- toolbar buttons. */
 const ROTATE_STEP_DEG = 15
-
-function joinableObjectsOverlapAnyRoom(
-  objects: ReadonlyArray<PlacedObject>,
-  frames: ReadonlyArray<RoomFrame>
-): boolean {
-  for (const obj of objects) {
-    if (!isJoinableObject(obj)) continue
-    for (const frame of frames) {
-      if (objectFrameOverlapsOrTouches(obj, frame)) return true
-    }
-  }
-  return false
-}
 
 /**
  * Clipboard entry — every selected object is captured as a kind-typed
@@ -640,10 +618,15 @@ function FloorPlanV2Workspace({
   // a frame as the canvas selection while the user is interacting
   // with it.
   const activeRoomId = layoutActiveRoomId
-  const patronTrafficPath = usePathfinding(store.doc, activeRoomId, {
+  const patronPathfinding = usePathfinding(store.doc, activeRoomId, {
     enabled: patronPathEnabled,
     cellFt: store.doc.snapFt,
   })
+  const patronTrafficPath = patronPathfinding.path
+  const pathfindingBottleneckIds = useMemo(
+    () => new Set(patronPathfinding.bottleneckBoothIds),
+    [patronPathfinding.bottleneckBoothIds]
+  )
   const patronAisleCorridors = usePatronAisleOverlay(
     store.doc,
     activeRoomId,
@@ -1812,7 +1795,19 @@ function FloorPlanV2Workspace({
         )
         return
       }
+      if (result.roomScaledForPatronPath) {
+        store.patchDoc({
+          rooms: result.doc.rooms,
+          canvasWidthFt: result.doc.canvasWidthFt,
+          canvasLengthFt: result.doc.canvasLengthFt,
+        })
+      }
       store.replaceObjects(result.doc.objects)
+      if (result.roomScaledForPatronPath && result.densityWarning) {
+        toast.info(result.densityWarning, { duration: 6000 })
+      } else if (result.densityWarning) {
+        toast.warning(result.densityWarning, { duration: 6500 })
+      }
       const removed = result.removedOverlapCount
       const overflow = result.overflowCount + result.droppedCount
       if (removed > 0) {
@@ -1944,6 +1939,10 @@ function FloorPlanV2Workspace({
       setPatronPathEnabled((pathResult?.path.length ?? 0) >= 2)
     }
 
+    if (pathResult?.bottleneckBoothIds?.length) {
+      setPatronPathEnabled(true)
+    }
+
     if (packResult.placedCount === 0) {
       toast.error('Auto-layout could not fit any booths inside the merged zone.')
       return
@@ -1956,6 +1955,12 @@ function FloorPlanV2Workspace({
         { duration: 5000 }
       )
     } else if (pathResult) {
+      if (pathResult.isPartial) {
+        toast.warning(
+          `Patron path routed through tight aisles — ${pathResult.bottleneckBoothIds?.length ?? 0} bottleneck booth${(pathResult.bottleneckBoothIds?.length ?? 0) === 1 ? '' : 's'} highlighted in red.`,
+          { duration: 5500 }
+        )
+      }
       toast.success(
         `Auto-layout complete — patron path visits ${pathResult.visitOrder.length} booth${pathResult.visitOrder.length === 1 ? '' : 's'} (${Math.round(pathResult.totalDistanceFt)}′).`
       )
@@ -2091,341 +2096,6 @@ function FloorPlanV2Workspace({
     [activeRoomId, layoutRooms, onLayoutRoomsChange, store]
   )
 
-  /** Join eligibility: touching/overlapping rooms (~5 in tolerance) or stages. */
-  const joinPlan = useMemo(() => {
-    const frames = store.doc.rooms ?? []
-    const objects = store.doc.objects ?? []
-    const empty = {
-      canJoin: false,
-      joinRoomIds: [] as string[],
-      joinObjectIds: [] as string[],
-      candidateCount: 0,
-      unjoinGroupId: null as string | null,
-      blockedReason: null as string | null,
-    }
-
-    const selectedIdsArray = Array.from(store.selectedIds)
-    const singleSelectedObj =
-      selectedIdsArray.length === 1
-        ? objects.find((o) => o.id === selectedIdsArray[0]!)
-        : null
-
-    // Case B: two+ rooms selected on canvas (Shift+click) for explicit join.
-    const prunedRoomIds = Array.from(selectedRoomIds).filter((id) =>
-      frames.some((f) => f.id === id)
-    )
-    if (prunedRoomIds.length >= 2) {
-      const connected = roomIdsFormConnectedComponent(
-        prunedRoomIds,
-        frames,
-        DEFAULT_TOUCH_EPSILON_FT
-      )
-      const groupId =
-        frames.find((f) => prunedRoomIds.includes(f.id))?.joinGroupId ?? null
-      return {
-        canJoin: connected,
-        joinRoomIds: prunedRoomIds,
-        joinObjectIds: [] as string[],
-        candidateCount: prunedRoomIds.length,
-        unjoinGroupId: groupId,
-        blockedReason: connected
-          ? null
-          : 'Selected rooms must touch or overlap to join',
-      }
-    }
-
-    // Case A: a joinable `PlacedObject` (e.g. stage) is the initiator.
-    if (singleSelectedObj && isJoinableObject(singleSelectedObj)) {
-      const initiatorGroupId = singleSelectedObj.joinGroupId ?? null
-      const neighbors = mixedNeighborsOf(
-        { kind: 'object', id: singleSelectedObj.id },
-        frames,
-        objects,
-        DEFAULT_TOUCH_EPSILON_FT
-      )
-      const joinRoomIds: string[] = []
-      const joinObjectIds: string[] = [singleSelectedObj.id]
-      for (const n of neighbors) {
-        if (n.kind === 'room') {
-          const f = frames.find((x) => x.id === n.id)
-          if (!f) continue
-          if (initiatorGroupId && f.joinGroupId === initiatorGroupId) continue
-          joinRoomIds.push(n.id)
-        } else {
-          const o = objects.find((x) => x.id === n.id)
-          if (!o) continue
-          if (initiatorGroupId && o.joinGroupId === initiatorGroupId) continue
-          joinObjectIds.push(n.id)
-        }
-      }
-      const candidateCount = joinRoomIds.length + joinObjectIds.length - 1
-      return {
-        canJoin: candidateCount > 0,
-        joinRoomIds,
-        joinObjectIds,
-        candidateCount,
-        unjoinGroupId: initiatorGroupId,
-        blockedReason: null as string | null,
-      }
-    }
-
-    // Case C: selected/active room + geometric neighbours. When a booth
-    // (or other non-joinable asset) is still selected, use the active room
-    // from the sidebar — not a stale canvas room pick — so Join still works.
-    const joinTargetRoomId =
-      singleSelectedObj && !isJoinableObject(singleSelectedObj)
-        ? activeRoomId
-        : (selectedRoomId ?? activeRoomId)
-    if (!joinTargetRoomId) {
-      return empty
-    }
-    const target = frames.find((f) => f.id === joinTargetRoomId)
-    if (!target) return empty
-
-    const targetGroupId = target.joinGroupId ?? null
-    const neighbors = mixedNeighborsOf(
-      { kind: 'room', id: target.id },
-      frames,
-      objects,
-      DEFAULT_TOUCH_EPSILON_FT
-    )
-    const joinRoomIds: string[] = [target.id]
-    const joinObjectIds: string[] = []
-    for (const n of neighbors) {
-      if (n.kind === 'room') {
-        const f = frames.find((x) => x.id === n.id)
-        if (!f) continue
-        if (targetGroupId && f.joinGroupId === targetGroupId) continue
-        joinRoomIds.push(n.id)
-      } else {
-        const o = objects.find((x) => x.id === n.id)
-        if (!o) continue
-        if (targetGroupId && o.joinGroupId === targetGroupId) continue
-        joinObjectIds.push(n.id)
-      }
-    }
-    const candidateCount =
-      joinRoomIds.length - 1 + joinObjectIds.length
-    return {
-      canJoin: candidateCount > 0,
-      joinRoomIds,
-      joinObjectIds,
-      candidateCount,
-      unjoinGroupId: targetGroupId,
-      blockedReason:
-        candidateCount > 0
-          ? null
-          : 'Move rooms flush together (within ~5 in), then Join',
-    }
-  }, [
-    store.doc.rooms,
-    store.doc.objects,
-    store.selectedIds,
-    selectedRoomId,
-    selectedRoomIds,
-    activeRoomId,
-  ])
-
-  const joinedZoneCount = useMemo(() => {
-    const frames = store.doc.rooms ?? []
-    const groupIds = new Set<string>()
-    for (const f of frames) {
-      if (f.joinGroupId) groupIds.add(f.joinGroupId)
-    }
-    let count = 0
-    for (const gid of groupIds) {
-      if (frames.filter((f) => f.joinGroupId === gid).length >= 2) count++
-    }
-    return count
-  }, [store.doc.rooms])
-
-  const destructiveMergePlan = useMemo(() => {
-    const joinRoomIds = [...joinPlan.joinRoomIds]
-    const joinObjectIds = [...joinPlan.joinObjectIds]
-
-    if (joinRoomIds.length + joinObjectIds.length < 2) {
-      const frames = store.doc.rooms ?? []
-      const selected = Array.from(store.selectedIds)
-      const joinableSelected = store.doc.objects.filter(
-        (o) => selected.includes(o.id) && isJoinableObject(o)
-      )
-      if (joinableSelected.length >= 1 && frames.length >= 1) {
-        for (const obj of joinableSelected) {
-          for (const frame of frames) {
-            if (frame.mergedIntoObjectId) continue
-            if (!objectFrameOverlapsOrTouches(obj, frame)) continue
-            if (!joinRoomIds.includes(frame.id)) joinRoomIds.push(frame.id)
-            if (!joinObjectIds.includes(obj.id)) joinObjectIds.push(obj.id)
-          }
-        }
-      }
-    }
-
-    const total = joinRoomIds.length + joinObjectIds.length
-    return {
-      canMerge: total >= 2,
-      joinRoomIds,
-      joinObjectIds,
-      count: total,
-    }
-  }, [
-    joinPlan.joinObjectIds,
-    joinPlan.joinRoomIds,
-    store.doc.objects,
-    store.doc.rooms,
-    store.selectedIds,
-  ])
-
-  const shapeMergePlan = useMemo(() => {
-    const selected = Array.from(store.selectedIds)
-    const eligible = store.doc.objects.filter(
-      (o) => selected.includes(o.id) && isMergeUnionEligible(o)
-    )
-    const hasRoomParticipant = destructiveMergePlan.joinRoomIds.length > 0
-    const objectOnly =
-      eligible.length >= 2 &&
-      !hasRoomParticipant &&
-      !joinableObjectsOverlapAnyRoom(eligible, store.doc.rooms ?? [])
-    return {
-      canMergeShapes: objectOnly,
-      objectIds: eligible.map((o) => o.id),
-      count: eligible.length,
-    }
-  }, [
-    destructiveMergePlan.joinRoomIds.length,
-    store.doc.objects,
-    store.doc.rooms,
-    store.selectedIds,
-  ])
-
-  const canMerge =
-    destructiveMergePlan.canMerge || shapeMergePlan.canMergeShapes
-
-  const mergeBlockedReason = canMerge
-    ? null
-    : joinPlan.blockedReason ??
-      'Overlap or touch a stage against a room (or select two fixtures), then Merge'
-
-  const runDestructiveMerge = useCallback(() => {
-    if (!destructiveMergePlan.canMerge) {
-      if (mergeBlockedReason) {
-        toast.message(mergeBlockedReason, { duration: 2200 })
-      }
-      return
-    }
-    addLog('Triggering destructive union merge...')
-    addLog(
-      `Merge input roomIds=${JSON.stringify(destructiveMergePlan.joinRoomIds)} objectIds=${JSON.stringify(destructiveMergePlan.joinObjectIds)}`
-    )
-    addLog(`doc.rooms before merge: ${serializeRooms(store.doc)}`)
-    const spatialCheck = analyzeMergeIntersections(store.doc, {
-      roomIds: destructiveMergePlan.joinRoomIds,
-      objectIds: destructiveMergePlan.joinObjectIds,
-    })
-    if (!spatialCheck.valid) {
-      if (spatialCheck.reason) {
-        addLog(`Merge blocked (local spatial): ${spatialCheck.reason}`)
-        toast.message(spatialCheck.reason, { duration: 2200 })
-      }
-      return
-    }
-    const result = store.destructiveMerge({
-      roomIds: destructiveMergePlan.joinRoomIds,
-      objectIds: destructiveMergePlan.joinObjectIds,
-    })
-    if (!result.mergedId) {
-      if (result.reason) {
-        addLog(`Merge failed: ${result.reason}`)
-        toast.message(result.reason, { duration: 2200 })
-      }
-      return
-    }
-    const mergedFrame = store.doc.rooms?.find((r) => r.id === result.mergedId)
-    const newRoomVertices = mergedFrame?.perimeterRing ?? []
-    addLog(`Merge output vertices: ${JSON.stringify(newRoomVertices)}`)
-    addLog(`doc.rooms after merge: ${serializeRooms(store.doc)}`)
-    setSelectedRoomId(result.mergedId)
-    setSelectedRoomIds(new Set([result.mergedId]))
-    syncLayoutRoomsFromDoc(store.doc, result.mergedId)
-    recoverCanvasFocus()
-    toast.success(
-      'Merged into one hall — source rooms removed, union perimeter saved.',
-      { duration: 2000 }
-    )
-  }, [
-    addLog,
-    destructiveMergePlan,
-    mergeBlockedReason,
-    recoverCanvasFocus,
-    store,
-    syncLayoutRoomsFromDoc,
-  ])
-
-  const handleMerge = useCallback(() => {
-    if (destructiveMergePlan.canMerge) {
-      runDestructiveMerge()
-      return
-    }
-    if (shapeMergePlan.canMergeShapes) {
-      addLog(
-        `Triggering fixture union merge objectIds=${JSON.stringify(shapeMergePlan.objectIds)}`
-      )
-      const result = store.mergeUnionSelection(shapeMergePlan.objectIds)
-      if (result.mergedId) {
-        addLog(`Fixture merge created merged_zone id=${result.mergedId}`)
-        setSelectedRoomIds(new Set())
-        setSelectedRoomId(null)
-        toast.success('Merged into one shape — shared edges removed.', {
-          duration: 1800,
-        })
-        recoverCanvasFocus()
-      } else if (result.reason) {
-        addLog(`Fixture merge failed: ${result.reason}`)
-        toast.message(result.reason, { duration: 2200 })
-      }
-      return
-    }
-    runDestructiveMerge()
-  }, [
-    addLog,
-    destructiveMergePlan.canMerge,
-    recoverCanvasFocus,
-    runDestructiveMerge,
-    shapeMergePlan,
-    store,
-  ])
-
-  const selectedMergedZoneId = useMemo(() => {
-    for (const id of store.selectedIds) {
-      const o = store.doc.objects.find((x) => x.id === id)
-      if (o?.kind === 'merged_zone') return id
-    }
-    const frames = store.doc.rooms ?? []
-    for (const f of frames) {
-      if (f.mergedIntoObjectId && store.selectedIds.has(f.id)) {
-        return f.mergedIntoObjectId
-      }
-    }
-    return null
-  }, [store.doc.objects, store.doc.rooms, store.selectedIds])
-
-  const canSplitMerge = selectedMergedZoneId !== null || joinPlan.unjoinGroupId !== null
-
-  const handleUnjoinRoom = useCallback(() => {
-    if (selectedMergedZoneId) {
-      store.splitDestructiveMerge(selectedMergedZoneId)
-      toast.message('Merge split — room outlines restored (use Undo to recover stages).', {
-        duration: 2000,
-      })
-      return
-    }
-    const groupId = joinPlan.unjoinGroupId
-    if (!groupId) return
-    store.unjoinRooms(groupId)
-    toast.message('Joined zone split — each member is standalone again.', {
-      duration: 1500,
-    })
-  }, [joinPlan.unjoinGroupId, selectedMergedZoneId, store])
 
   const portalToolbarToTop =
     isDashboard &&
@@ -2496,17 +2166,6 @@ function FloorPlanV2Workspace({
     autoArrangeDisabledReason,
     autoArrangeMode,
     onAutoArrangeModeChange: setAutoArrangeMode,
-    onJoinRooms: handleMerge,
-    canJoinRooms: canMerge,
-    joinCandidateCount: destructiveMergePlan.canMerge
-      ? destructiveMergePlan.count
-      : shapeMergePlan.canMergeShapes
-        ? shapeMergePlan.count
-        : undefined,
-    joinBlockedReason: mergeBlockedReason,
-    mergePrefersShapes: shapeMergePlan.canMergeShapes,
-    onUnjoinRoom: handleUnjoinRoom,
-    canUnjoinRoom: canSplitMerge,
     tableSizeFt: tableSizePillValue,
     onTableSizeChange: handleTableSizeChange,
     onPrepareTableDraw: handlePrepareTableDraw,
@@ -2602,14 +2261,6 @@ function FloorPlanV2Workspace({
           </p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
-          {joinedZoneCount > 0 ? (
-            <span
-              className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-900"
-              title="Number of dissolved (joined) zones on this canvas"
-            >
-              {joinedZoneCount} joined zone{joinedZoneCount === 1 ? '' : 's'}
-            </span>
-          ) : null}
           <div className="rounded-md border border-stone-200 bg-white px-2 py-1 text-[11px] font-semibold text-stone-700">
             {placedCount} vendor booth{placedCount === 1 ? '' : 's'} placed
             {selectedCount > 0 ? ` · ${selectedCount} selected` : ''}
@@ -2727,6 +2378,8 @@ function FloorPlanV2Workspace({
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
+                    pathfindingBottleneckIds={pathfindingBottleneckIds}
+                    patronPathIsPartial={patronPathfinding.isPartial}
                     patronAisleCorridors={patronAisleCorridors}
                     unifiedLayoutOverlay={unifiedLayoutOverlay}
                     onProximityViolation={(info) => {
@@ -2820,19 +2473,6 @@ function FloorPlanV2Workspace({
                 autoArrangeDisabledReason={autoArrangeDisabledReason}
                 autoArrangeMode={autoArrangeMode}
                 onAutoArrangeModeChange={setAutoArrangeMode}
-                onJoinRooms={handleMerge}
-                canJoinRooms={canMerge}
-                joinCandidateCount={
-                  destructiveMergePlan.canMerge
-                    ? destructiveMergePlan.count
-                    : shapeMergePlan.canMergeShapes
-                      ? shapeMergePlan.count
-                      : undefined
-                }
-                joinBlockedReason={mergeBlockedReason}
-                mergePrefersShapes={shapeMergePlan.canMergeShapes}
-                onUnjoinRoom={handleUnjoinRoom}
-                canUnjoinRoom={canSplitMerge}
                 tableSizeFt={tableSizePillValue}
                 onTableSizeChange={handleTableSizeChange}
                 onPrepareTableDraw={handlePrepareTableDraw}
@@ -2918,6 +2558,8 @@ function FloorPlanV2Workspace({
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
+                    pathfindingBottleneckIds={pathfindingBottleneckIds}
+                    patronPathIsPartial={patronPathfinding.isPartial}
                     patronAisleCorridors={patronAisleCorridors}
                     unifiedLayoutOverlay={unifiedLayoutOverlay}
                     onProximityViolation={(info) => {
@@ -3018,6 +2660,7 @@ function FloorPlanV2Workspace({
         )}
         </div>
       </FullscreenLayout>
+      <LayoutEditorHelpHost />
     </div>
   )
 }

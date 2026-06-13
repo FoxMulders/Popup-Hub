@@ -194,6 +194,22 @@ export function vendorBoothBoundaryWarningBand(
   return clearanceBand(minFt)
 }
 
+/** ≥4′ good · ≥3′ yellow · <3′ red — vendor neighbours, walls, and fixtures. */
+export function vendorBoothClearanceWarningBand(
+  booth: BoothObject,
+  objects: ReadonlyArray<PlacedObject>,
+  rooms: ReadonlyArray<RoomFrame> | undefined,
+  objectRoom: FloorPlanDoc['objectRoom']
+): BoothClearanceBand {
+  const minFt = minVendorBoothClearanceFt(
+    booth,
+    objects,
+    rooms,
+    objectRoom
+  )
+  return clearanceBand(minFt)
+}
+
 /** Clearance theme for a vendor booth probe during draw/hover preview. */
 export function vendorBoothClearanceThemeForProbe(
   probe: BoothObject,
@@ -206,7 +222,7 @@ export function vendorBoothClearanceThemeForProbe(
     previewRoomId != null
       ? { ...(objectRoom ?? {}), [probe.id]: previewRoomId }
       : objectRoom
-  const band = vendorBoothBoundaryWarningBand(
+  const band = vendorBoothClearanceWarningBand(
     probe,
     objects,
     rooms,
@@ -255,7 +271,21 @@ export function minVendorBoothClearanceFt(
   const roomId = objectRoom?.[booth.id]
   const room = roomId ? rooms?.find((r) => r.id === roomId) : undefined
   if (room) {
-    const wallGap = clearanceToRoomWallsFt(boothAabb, room)
+    const collisionCtx: VendorCollisionContext | undefined = rooms
+      ? {
+          canvasWidthFt: 0,
+          canvasLengthFt: 0,
+          gridSpacingFt: 1,
+          snapFt: 1,
+          objects: [...objects],
+          rooms: [...rooms],
+          objectRoom,
+        }
+      : undefined
+    const wallGap = clearanceToRoomWallsFt(boothAabb, room, {
+      booth,
+      collisionCtx,
+    })
     if (wallGap < minGap) minGap = wallGap
   }
 
@@ -271,7 +301,7 @@ export function docHasUnresolvedClearanceIssues(doc: FloorPlanDoc): boolean {
     if (isGuestTableBooth(booth)) continue
     if (!isVendorBoothObject(booth)) continue
     if (
-      vendorBoothBoundaryWarningBand(
+      vendorBoothClearanceWarningBand(
         booth,
         doc.objects,
         rooms,

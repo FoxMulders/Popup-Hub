@@ -3,6 +3,7 @@
 import { startTransition, useDeferredValue, useEffect, useState } from 'react'
 import {
   CalculateOptimalPath,
+  type OptimalPathResult,
   type PathPoint,
 } from '../engine/PathfindingService'
 import { mergedZoneRingsForRoom } from '../engine/BoothArrangementEngine'
@@ -22,6 +23,20 @@ export interface UsePathfindingOptions {
   roomBoundary?: ReadonlyArray<PlacementRing>
 }
 
+export interface PatronPathfindingState {
+  path: PathPoint[]
+  bottleneckBoothIds: string[]
+  isPartial: boolean
+  clearanceMode: OptimalPathResult['clearanceMode']
+}
+
+const EMPTY_STATE: PatronPathfindingState = {
+  path: [],
+  bottleneckBoothIds: [],
+  isPartial: false,
+  clearanceMode: undefined,
+}
+
 /**
  * Computes the optimal patron path through walkable merged-zone cells,
  * visiting every booth in nearest-neighbor order with A* legs.
@@ -33,7 +48,7 @@ export function usePathfinding(
   doc: FloorPlanDoc,
   roomId: string | null | undefined,
   options: UsePathfindingOptions = {}
-): PathPoint[] {
+): PatronPathfindingState {
   const {
     enabled = true,
     cellFt,
@@ -49,11 +64,11 @@ export function usePathfinding(
   const deferredBooths = useDeferredValue(booths)
   const deferredRoomBoundary = useDeferredValue(roomBoundary)
 
-  const [path, setPath] = useState<PathPoint[]>([])
+  const [state, setState] = useState<PatronPathfindingState>(EMPTY_STATE)
 
   useEffect(() => {
     if (!deferredEnabled || !deferredRoomId) {
-      setPath([])
+      setState(EMPTY_STATE)
       return
     }
 
@@ -73,7 +88,16 @@ export function usePathfinding(
           roomBoundary: resolvedBoundary,
         })
         if (!cancelled) {
-          setPath(result?.path ?? [])
+          setState(
+            result
+              ? {
+                  path: result.path,
+                  bottleneckBoothIds: result.bottleneckBoothIds ?? [],
+                  isPartial: result.isPartial ?? false,
+                  clearanceMode: result.clearanceMode,
+                }
+              : EMPTY_STATE
+          )
         }
       })
     }, 0)
@@ -92,5 +116,5 @@ export function usePathfinding(
     deferredRoomBoundary,
   ])
 
-  return path
+  return state
 }

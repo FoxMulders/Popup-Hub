@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { LayoutEditorHelpButton } from '@/components/coordinator/floor-plan-v2/tools/layout-editor-help'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { cn } from '@/lib/utils'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
@@ -81,6 +82,7 @@ export function SpatialLayoutToolbar({
             Draft
           </span>
         ) : null}
+        <LayoutEditorHelpButton variant="compact" />
         <TestSuitePopulateButton eventId={eventId} compact />
         {onReloadFromServer ? (
           <Button

@@ -45,6 +45,7 @@ import {
   autoArrangeModeToMarketLayout,
   DEFAULT_AISLE_WIDTH_FT,
   generateDeterministicMarketLayout,
+  maxDeterministicGridSlotCount,
   TABLE_EDGE_GAP_FT,
 } from '@/lib/floor-plan/deterministic-market-layout'
 import {
@@ -67,6 +68,15 @@ export {
 } from '@/lib/booth-planner/expanded-footprint'
 
 export {
+  assessLayoutDensity,
+  computeMinimumRoomForWalkingLoop,
+  IDEAL_PEDESTRIAN_AISLE_FT,
+  CROSS_AISLE_HIGHWAY_FT,
+  DENSE_GRID_COLUMN_THRESHOLD,
+  type LayoutDensityAssessment,
+} from '@/lib/floor-plan/layout-density'
+
+export {
   calculatePatronCentricLayout,
   type PatronCentricLayoutResult,
   type PatronLayoutObjectInput,
@@ -74,7 +84,6 @@ export {
   PATRON_CORRIDOR_WIDTH_FT,
   PATRON_VISION_CONE_DEG,
 } from './patron-centric-layout'
-
 export {
   computeMarketLayout,
   generateDeterministicMarketLayout,
@@ -90,6 +99,10 @@ export {
 } from '@/lib/floor-plan/deterministic-market-layout'
 import { PERIMETER_WALL_THICKNESS_FT } from '../interactions/perimeter-walls'
 import { clipBoothToLocalRoom } from '@/lib/floor-plan/boundary-constraints'
+import {
+  assessLayoutDensity,
+  IDEAL_PEDESTRIAN_AISLE_FT,
+} from '@/lib/floor-plan/layout-density'
 import {
   boothSpanAndDepth,
   orientBoothForPerimeterSlot,
@@ -190,6 +203,11 @@ export interface AutoArrangeOptions {
    * from the canvas instead of being retained at their prior positions.
    */
   dropUnplacedBooths?: boolean
+  /**
+   * When density validation fails, expand room W×L to the computed minimum
+   * so a patron walking loop can exist. Defaults to true.
+   */
+  autoScaleRoomForPatronPath?: boolean
 }
 
 export interface AutoArrangeResult {
@@ -229,6 +247,11 @@ export interface AutoArrangeResult {
    * (tables could not fit equidistantly inside the active bounding box).
    */
   patronArrangeAborted?: string
+  /** Set when booth count exceeds safe walking-loop capacity for room size. */
+  densityWarning?: string
+  suggestedRoomDimensions?: { widthFt: number; lengthFt: number }
+  /** True when the engine expanded room bounds to satisfy patron-path density. */
+  roomScaledForPatronPath?: boolean
 }
 
 export interface AutoArrangeInRoomResult extends AutoArrangeResult {
@@ -1586,6 +1609,91 @@ export function autoArrange(
     scope === 'patron' ? [] : boothFootprintObstacleRects(guestBooths, doc)
   const vendorObstacles = [...structuralObstacles, ...patronFixedObstacles]
 
+  const vendorWidths = allVendorBooths.map((b) => b.width)
+  const vendorHeights = allVendorBooths.map((b) => b.height)
+  const medianW =
+    vendorWidths.length > 0
+      ? [...vendorWidths].sort((a, b) => a - b)[Math.floor(vendorWidths.length / 2)]!
+      : 6
+  const medianH =
+    vendorHeights.length > 0
+      ? [...vendorHeights].sort((a, b) => a - b)[Math.floor(vendorHeights.length / 2)]!
+      : 4
+
+  const doors = otherObjects.filter((o) => o.kind === 'door')
+  const entranceDoor =
+    doors.find((d) => d.kind === 'door' && d.doorType === 'entrance') ?? doors[0]
+  const entrancePoint = entranceDoor
+    ? {
+        x: entranceDoor.x + entranceDoor.width / 2,
+        y: entranceDoor.y + entranceDoor.height / 2,
+      }
+    : undefined
+
+  const densityAssessment =
+    scope !== 'patron' && allVendorBooths.length > 0
+      ? assessLayoutDensity({
+          roomWidthFt: cw,
+          roomLengthFt: cl,
+          boothWidthFt: medianW,
+          boothHeightFt: medianH,
+          boothCount: allVendorBooths.length,
+          wallInsetFt: GRID_WALL_INSET_FT,
+          tableEdgeGapFt: Math.max(BOOTH_PLACEMENT_GAP_FT, IDEAL_PEDESTRIAN_AISLE_FT),
+          aisleWidthFt: Math.max(aisleWidthFt, IDEAL_PEDESTRIAN_AISLE_FT),
+          entrance: entrancePoint,
+        })
+      : null
+
+  const sourceBooths =
+    typeof maxBooths === 'number' && maxBooths >= 0
+      ? allVendorBooths.slice(0, Math.floor(maxBooths))
+      : allVendorBooths
+  const overflowCount = allVendorBooths.length - sourceBooths.length
+
+  let arrangeWidthFt = cw
+  let arrangeLengthFt = cl
+  let roomScaledForPatronPath = false
+  if (
+    densityAssessment &&
+    !densityAssessment.walkingLoopFeasible &&
+    options.autoScaleRoomForPatronPath !== false &&
+    densityAssessment.suggestedRoomDimensions
+  ) {
+    arrangeWidthFt = densityAssessment.suggestedRoomDimensions.widthFt
+    arrangeLengthFt = densityAssessment.suggestedRoomDimensions.lengthFt
+    roomScaledForPatronPath = true
+  }
+
+  if (scope !== 'patron' && sourceBooths.length > 0) {
+    const layoutMode = autoArrangeModeToMarketLayout(mode)
+    const gridProbeMode = layoutMode === 'perimeter' ? 'grid' : layoutMode
+    let probeAttempts = 0
+    while (probeAttempts < 300) {
+      const capacity = maxDeterministicGridSlotCount({
+        marketWidthFt: arrangeWidthFt,
+        marketHeightFt: arrangeLengthFt,
+        tableWidthFt: medianW,
+        tableHeightFt: medianH,
+        layoutMode: gridProbeMode,
+        aisleWidthFt: Math.max(aisleWidthFt, IDEAL_PEDESTRIAN_AISLE_FT),
+        tableEdgeGapFt: Math.max(BOOTH_PLACEMENT_GAP_FT, IDEAL_PEDESTRIAN_AISLE_FT),
+        wallInsetFt: GRID_WALL_INSET_FT,
+        entrance: entrancePoint,
+      })
+      if (capacity >= sourceBooths.length) break
+      arrangeLengthFt += 2
+      if (probeAttempts % 6 === 5) arrangeWidthFt += 2
+      roomScaledForPatronPath = true
+      probeAttempts++
+    }
+  }
+
+  const arrangeDoc: FloorPlanDoc =
+    arrangeWidthFt !== cw || arrangeLengthFt !== cl
+      ? { ...doc, canvasWidthFt: arrangeWidthFt, canvasLengthFt: arrangeLengthFt }
+      : doc
+
   const hasVendor = allVendorBooths.length > 0
   const hasGuest = guestBooths.length > 0
   if (
@@ -1602,12 +1710,6 @@ export function autoArrange(
       removedOverlapCount: 0,
     }
   }
-
-  const sourceBooths =
-    typeof maxBooths === 'number' && maxBooths >= 0
-      ? allVendorBooths.slice(0, Math.floor(maxBooths))
-      : allVendorBooths
-  const overflowCount = allVendorBooths.length - sourceBooths.length
 
   const placementOrigin = options.placementOrigin ?? { x: 0, y: 0 }
   const localRing = options.placementOuterRing
@@ -1626,10 +1728,10 @@ export function autoArrange(
           overflowCount: 0,
           removedOverlapCount: 0,
         }
-      : autoArrangeVendorBooths(doc, sourceBooths, {
+      : autoArrangeVendorBooths(arrangeDoc, sourceBooths, {
           mode,
           eventCategoryNames,
-          aisleWidthFt,
+          aisleWidthFt: Math.max(aisleWidthFt, IDEAL_PEDESTRIAN_AISLE_FT),
           overflowCount,
           placementOrigin,
           localRing,
@@ -1660,7 +1762,7 @@ export function autoArrange(
         })
 
   const merged = mergeAutoArrangeResult(
-    doc,
+    arrangeDoc,
     otherObjects,
     vendorPass,
     guestPass,
@@ -1670,7 +1772,17 @@ export function autoArrange(
   if (vendorPass.perimeterCapacityError && merged.placedCount === 0) {
     merged.perimeterCapacityError = vendorPass.perimeterCapacityError
   }
-  return merged
+  return {
+    ...merged,
+    densityWarning:
+      densityAssessment && !densityAssessment.walkingLoopFeasible && !roomScaledForPatronPath
+        ? densityAssessment.densityWarning
+        : roomScaledForPatronPath
+          ? `Room expanded to ${arrangeWidthFt}′×${arrangeLengthFt}′ to preserve ${IDEAL_PEDESTRIAN_AISLE_FT}′ aisles and a patron cross-aisle.`
+          : densityAssessment?.densityWarning,
+    suggestedRoomDimensions: densityAssessment?.suggestedRoomDimensions,
+    roomScaledForPatronPath,
+  }
 }
 
 /**
@@ -1778,9 +1890,21 @@ export function autoArrangeInRoom(
   }
 
   const result = autoArrange(localDoc, arrangeOptions)
+  const effectiveLocalW = result.roomScaledForPatronPath
+    ? result.doc.canvasWidthFt
+    : localW
+  const effectiveLocalL = result.roomScaledForPatronPath
+    ? result.doc.canvasLengthFt
+    : localL
+
   const clippedObjects = result.doc.objects.map((o) => {
     if (o.kind !== 'booth') return o
-    return clipBoothToLocalRoom(o as BoothObject, localW, localL, WALL_BUFFER_FT)
+    return clipBoothToLocalRoom(
+      o as BoothObject,
+      effectiveLocalW,
+      effectiveLocalL,
+      WALL_BUFFER_FT
+    )
   })
   const reglobal = clippedObjects.map(
     (o) =>
@@ -1796,8 +1920,8 @@ export function autoArrangeInRoom(
     if (!boothWithinRoomFrame(obj, frame, doc)) {
       const clipped = clipBoothToLocalRoom(
         { ...(obj as BoothObject), x: obj.x - originX, y: obj.y - originY },
-        localW,
-        localL,
+        effectiveLocalW,
+        effectiveLocalL,
         WALL_BUFFER_FT
       )
       obj.x = clipped.x + originX
@@ -1805,10 +1929,32 @@ export function autoArrangeInRoom(
     }
   }
 
+  const updatedRooms = (doc.rooms ?? []).map((room) =>
+    room.id === roomId && result.roomScaledForPatronPath
+      ? {
+          ...room,
+          widthFt: effectiveLocalW,
+          lengthFt: effectiveLocalL,
+        }
+      : room
+  )
+
+  const canvasWidthFt = Math.max(
+    doc.canvasWidthFt,
+    originX + effectiveLocalW
+  )
+  const canvasLengthFt = Math.max(
+    doc.canvasLengthFt,
+    originY + effectiveLocalL
+  )
+
   return {
     ...result,
     doc: {
       ...doc,
+      canvasWidthFt,
+      canvasLengthFt,
+      rooms: updatedRooms,
       objects: [...others, ...reglobal],
     },
     roomId,

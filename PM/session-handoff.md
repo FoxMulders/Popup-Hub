@@ -4,6 +4,37 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — reinstate vendor spacing clearance warnings (local, not deployed)
+- **`booth-clearance-visual.ts`:** Added `vendorBoothClearanceWarningBand` (uses `minVendorBoothClearanceFt` incl. neighbours); canvas + preview probe + legend summary use it again. `minVendorBoothBoundaryClearanceFt` kept for boundary-only checks.
+- **`booth-clearance-summary.ts` + `booth-clearance-warning-panel.tsx`:** Copy updated — yellow at 3′–4′ edge clearance to neighbours/walls/fixtures; red below 3′.
+- **Verify:** `npx tsx scripts/verify-object-overlaps.ts` — PASS (3′ pair → yellow `tight`). Place two vendor booths 3′ apart → yellow tint + legend alert; ≥4′ → no tint.
+
+## Active work — zoom in/out regression fix (local, not deployed)
+- **Root cause:** `frameActiveRoom` in production `floor-plan-canvas.tsx` depended on the `viewport` API object (recreated every render, including each zoom tick). That re-ran `fitViewportToContent` continuously — toolbar zoom and Ctrl+wheel appeared dead as the camera snapped back to fit.
+- **Fix:** Restored `viewportRef` + `frameActiveRoomRef` pattern from QA mirrors; framing effects keyed on `viewportFramingKey` / room dimensions only (not `originX`/`originY` drags); ResizeObserver reframes once when viewport first becomes measurable.
+- **Verify:** `/coordinator/dashboard` and `/coordinator/events/{id}/layout` — zoom +/- steps 50/75/100/125%; Ctrl+wheel zoom holds; pan after zoom does not snap back.
+
+## Active work — remove legacy join/merge and stage tools (local, not deployed)
+- Removed **Merge / Unjoin** room controls from the layout editor toolbar and deleted join-plan handler wiring in `floor-plan-v2.tsx`.
+- Removed **Stage** from draw tools (`CREATION_SHAPES`) and blocked new stage placement in `use-canvas-pointer.ts`.
+- Updated layout editor help topics — dropped join/unjoin guide and stage references.
+- Legacy layouts may still contain stage objects or joined zones; rendering/hydration unchanged.
+
+## Active work — layout editor help search (local, not deployed)
+- **`lib/floor-plan/layout-editor-help-content.ts`:** 19 searchable topics covering rooms, tools, vendors, patrons, optimize, view, save, and keyboard shortcuts.
+- **`lib/floor-plan/search-layout-editor-help.ts`:** Token-based smart search with synonym keywords and category grouping.
+- **`layout-editor-help.tsx`:** Help dialog with Sparkles search UI, topic list + step detail panel, `?` keyboard shortcut.
+- **UI:** Help button on spatial layout toolbar (`/coordinator/events/{id}/layout`) and canvas utilities (command center + wizard floor plan).
+- **Verify:** Open layout editor → Help or `?` → search "auto arrange", "join rooms", "save draft" → matching topics with step-by-step instructions.
+
+## Active work — patron path density & cross-aisle (local, not deployed)
+- **`lib/floor-plan/layout-density.ts`:** 4′ ideal pedestrian aisles, 6′ cross-aisle highways, density assessment, minimum room sizing, `shouldInjectCrossAisle`.
+- **`deterministic-market-layout.ts` + `auto-arrange.ts`:** Grid generation skips cross-aisle bands; auto-arrange scales room W×L when density fails (probe via `maxDeterministicGridSlotCount`).
+- **`PathfindingService.ts`:** Clearance-biased A* with strict→relaxed fallback; bottleneck booth ids for red canvas highlight.
+- **`ai-auto-arrange.ts`:** Prompt requires cross-aisle + 4′ aisles for dense halls.
+- **UI:** Density toasts on grid auto-arrange; patron path partial route (orange); bottleneck booths tinted red when Patron Path is on.
+- **Verify:** `npx tsx scripts/verify-layout-density-patron-path.ts` — PASS.
+
 ## Active work — layout route uses production editor (local, not deployed)
 - **Root cause:** `/coordinator/events/[id]/layout` imported `SpatialLayoutEditor` from `src/qa_review/.../spatial-layout-editor_qa` (old FloorPlanV2 wizard QA build). Event overview → Layout round-trip loaded that stale editor.
 - **Fix:** `app/coordinator/events/[id]/layout/page.tsx` now imports from `@/components/coordinator/spatial-layout/spatial-layout-editor` (production FloorPlanV2).

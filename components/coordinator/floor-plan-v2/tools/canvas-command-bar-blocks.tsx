@@ -8,7 +8,6 @@ import {
   AlignHorizontalDistributeCenter,
   AlignVerticalDistributeCenter,
   ClipboardPaste,
-  Combine,
   Copy,
   DoorOpen,
   Expand,
@@ -25,7 +24,6 @@ import {
   RotateCw,
   Save,
   Siren,
-  Split,
   Square,
   Tag,
   Trash2,
@@ -58,6 +56,7 @@ import {
   toolbarDividerClass,
   toolbarIconButtonSize,
 } from './command-button'
+import { LayoutEditorHelpButton } from './layout-editor-help'
 import {
   TableSizePill,
   PatronTableSizeRows,
@@ -311,7 +310,6 @@ const CREATION_SHAPES: Array<{
   { id: 'open_wall', label: 'Open wall', icon: RectangleHorizontal, variant: 'arch' },
   { id: 'door', label: 'Door', icon: DoorOpen, variant: 'arch' },
   { id: 'emergency_exit', label: 'Exit', icon: Siren, variant: 'arch' },
-  { id: 'stage', label: 'Stage', icon: Square, variant: 'arch' },
   {
     id: 'food_truck',
     label: 'Food truck',
@@ -319,6 +317,19 @@ const CREATION_SHAPES: Array<{
     variant: 'arch',
   },
 ]
+
+function LayoutToolbarHelpTrigger({ compact }: { compact: boolean }) {
+  return (
+    <TooltipWrapper text="Layout editor help — smart search (?)">
+      <span className="inline-flex">
+        <LayoutEditorHelpButton
+          variant="icon"
+          className={toolbarIconButtonSize(compact)}
+        />
+      </span>
+    </TooltipWrapper>
+  )
+}
 
 /**
  * Props for every toolbar block — pass through from `CanvasCommandBar`
@@ -359,12 +370,6 @@ export interface CanvasCommandBarBlockContext {
   canPatronAutoArrange?: boolean
   patronAutoArrangeMode?: AutoArrangeMode
   onPatronAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
-  onJoinRooms?: () => void
-  canJoinRooms?: boolean
-  joinLabel: string
-  joinTitle: string
-  onUnjoinRoom?: () => void
-  canUnjoinRoom?: boolean
   onClearAll: () => void
   onDeleteSelected: () => void
   tableSizeFt?: TableSizeSpec
@@ -1065,25 +1070,6 @@ export function renderCanvasCommandBarBlock(
                 >
                   <RotateCw className="h-3.5 w-3.5" />
                 </CommandButton>
-                {ctx.onJoinRooms ? (
-                  <CommandButton
-                    onClick={ctx.onJoinRooms}
-                    disabled={!ctx.canJoinRooms}
-                    title={`${ctx.joinLabel} — ${ctx.joinTitle}`}
-                    className="bg-sky-50 text-sky-900 hover:bg-sky-100"
-                  >
-                    <Combine className="h-3.5 w-3.5" />
-                  </CommandButton>
-                ) : null}
-                {ctx.onUnjoinRoom ? (
-                  <CommandButton
-                    onClick={ctx.onUnjoinRoom}
-                    disabled={!ctx.canUnjoinRoom}
-                    title="Unjoin — split the active room out of its joined zone"
-                  >
-                    <Split className="h-3.5 w-3.5" />
-                  </CommandButton>
-                ) : null}
               </div>
             ) : null}
           </>
@@ -1112,9 +1098,7 @@ export function renderCanvasCommandBarBlock(
           ) : null}
           {!headerBarLayout && ctx.onRotateRoomLeft && ctx.onRotateRoomRight ? (
             <>
-              {(ctx.onSelectRoom && ctx.onAddRoom) ||
-              ctx.onJoinRooms ||
-              ctx.onUnjoinRoom ? (
+              {ctx.onSelectRoom && ctx.onAddRoom ? (
                 <div className={toolbarDividerClass(compact)} aria-hidden />
               ) : null}
               <div
@@ -1138,36 +1122,6 @@ export function renderCanvasCommandBarBlock(
                 >
                   <RotateCw className="h-3.5 w-3.5" />
                 </CommandButton>
-              </div>
-            </>
-          ) : null}
-          {!headerBarLayout && (ctx.onJoinRooms || ctx.onUnjoinRoom) ? (
-            <>
-              <div className={toolbarDividerClass(compact)} aria-hidden />
-              <div
-                className="flex items-center gap-0.5"
-                role="group"
-                aria-label="Room joining"
-              >
-                {ctx.onJoinRooms ? (
-                  <CommandButton
-                    onClick={ctx.onJoinRooms}
-                    disabled={!ctx.canJoinRooms}
-                    title={`${ctx.joinLabel} — ${ctx.joinTitle}`}
-                    className="bg-sky-50 text-sky-900 hover:bg-sky-100"
-                  >
-                    <Combine className="h-3.5 w-3.5" />
-                  </CommandButton>
-                ) : null}
-                {ctx.onUnjoinRoom ? (
-                  <CommandButton
-                    onClick={ctx.onUnjoinRoom}
-                    disabled={!ctx.canUnjoinRoom}
-                    title="Unjoin — split the active room out of its joined zone"
-                  >
-                    <Split className="h-3.5 w-3.5" />
-                  </CommandButton>
-                ) : null}
               </div>
             </>
           ) : null}
@@ -1390,7 +1344,7 @@ export function renderCanvasCommandBarBlock(
                   title={
                     ctx.showClearanceWarnings
                       ? 'Hide booth clearance warnings (yellow/red aisles)'
-                      : 'Show booth clearance warnings — yellow near walls/fixtures, red only on physical overlap'
+                      : 'Show booth clearance warnings — yellow at 3′–4′ aisles, red below 3′'
                   }
                   active={ctx.showClearanceWarnings}
                   className={
@@ -1404,6 +1358,7 @@ export function renderCanvasCommandBarBlock(
               </>
             ) : null}
             <div className={toolbarDividerClass(compact)} aria-hidden />
+            <LayoutToolbarHelpTrigger compact={compact} />
             <div
               className={cn(
                 'inline-flex shrink-0 items-center overflow-hidden rounded-md border border-stone-200',
@@ -1484,6 +1439,7 @@ export function renderCanvasCommandBarBlock(
               ) : null}
             </div>
             {topBarDivider}
+            <LayoutToolbarHelpTrigger compact={compact} />
             {ctx.onBoothMapLabelModeChange ? (
               <label
                 className={cn(
@@ -1534,7 +1490,7 @@ export function renderCanvasCommandBarBlock(
                 title={
                   ctx.showClearanceWarnings
                     ? 'Hide booth clearance warnings (yellow/red aisles)'
-                    : 'Show booth clearance warnings — yellow near walls/fixtures, red only on physical overlap'
+                    : 'Show booth clearance warnings — yellow at 3′–4′ aisles, red below 3′'
                 }
                 active={ctx.showClearanceWarnings}
                 className={
@@ -1634,6 +1590,7 @@ export function renderCanvasCommandBarBlock(
       if (sidebarLayout) {
         return (
           <div className="flex w-full min-w-0 flex-col gap-1.5">
+            <LayoutToolbarHelpTrigger compact={compact} />
             {ctx.onRequestAiLayoutFeedback ? (
               <button
                 type="button"
@@ -1692,7 +1649,7 @@ export function renderCanvasCommandBarBlock(
                   title={
                     ctx.showClearanceWarnings
                       ? 'Hide booth clearance warnings (yellow/red aisles)'
-                      : 'Show booth clearance warnings — yellow near walls/fixtures, red only on physical overlap'
+                      : 'Show booth clearance warnings — yellow at 3′–4′ aisles, red below 3′'
                   }
                   active={ctx.showClearanceWarnings}
                   className={
@@ -1873,6 +1830,8 @@ export function renderCanvasCommandBarBlock(
       }
       return (
         <>
+          <LayoutToolbarHelpTrigger compact={compact} />
+          <div className={toolbarDividerClass(compact)} aria-hidden />
           {ctx.onShowLabelsChange ? (
             <CommandButton
               onClick={() => ctx.onShowLabelsChange!(!ctx.showLabels)}

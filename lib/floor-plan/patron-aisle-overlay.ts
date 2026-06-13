@@ -12,6 +12,11 @@ import type { FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-
 import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/state/table-cluster-layout'
 import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan-v2/state/placement-surface'
 import { TABLE_EDGE_GAP_FT } from '@/lib/floor-plan/deterministic-market-layout'
+import {
+  estimateGridCapacity,
+  planCrossAisleZones,
+  shouldInjectCrossAisle,
+} from '@/lib/floor-plan/layout-density'
 
 export interface PatronAisleRect {
   x: number
@@ -36,6 +41,7 @@ export function computeGridPatronAisleCorridors(input: {
   roomLengthFt: number
   boothWidthFt: number
   boothHeightFt: number
+  boothCount?: number
   aisleWidthFt?: number
   wallInsetFt?: number
   tableEdgeGapFt?: number
@@ -45,6 +51,7 @@ export function computeGridPatronAisleCorridors(input: {
     roomLengthFt: ch,
     boothWidthFt: tw,
     boothHeightFt: th,
+    boothCount = 0,
     aisleWidthFt = PATRON_AISLE_MIN_FT,
     wallInsetFt = PATRON_AISLE_MIN_FT,
     tableEdgeGapFt = TABLE_EDGE_GAP_FT,
@@ -108,6 +115,39 @@ export function computeGridPatronAisleCorridors(input: {
       })
     }
     colX += colStep
+  }
+
+  const { columnCount, slotCount } = estimateGridCapacity({
+    roomWidthFt: cw,
+    roomLengthFt: ch,
+    boothWidthFt: tw,
+    boothHeightFt: th,
+    wallInsetFt: inset,
+    tableEdgeGapFt,
+    aisleWidthFt,
+  })
+  if (
+    shouldInjectCrossAisle({
+      columnCount,
+      boothCount: boothCount > 0 ? boothCount : slotCount,
+      roomWidthFt: cw,
+      roomLengthFt: ch,
+      maxSlotsWithoutCrossAisle: slotCount,
+    })
+  ) {
+    for (const zone of planCrossAisleZones({
+      roomWidthFt: cw,
+      roomLengthFt: ch,
+      wallInsetFt: inset,
+      columnCount,
+    })) {
+      corridors.push({
+        x: zone.x,
+        y: zone.y,
+        width: zone.width,
+        height: zone.height,
+      })
+    }
   }
 
   return corridors
@@ -200,6 +240,7 @@ export function computePatronAisleOverlayForRoom(
     roomLengthFt: localL,
     boothWidthFt: boothW,
     boothHeightFt: boothH,
+    boothCount: booths.length,
   })
 
   const doorConnectors = doorConnectorCorridors(
