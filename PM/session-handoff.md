@@ -796,9 +796,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `57675e7` (pushed to `origin/master`)
-- Last deploy commit: `57675e7` - feat: ship 51 session updates (layout route uses production editor; toolbar row reorder; test suite populate button; CI lint fix; +47 more)
-- Production: https://popuphub.ca - **v1.0.0 build 119** | commit `61b881c` (handoff updated 2026-06-13 10:41)
+- Branch: `master` @ `ec6de68` (pushed to `origin/master`)
+- Last deploy commit: `ec6de68` - feat: ship 56 session updates (reinstate vendor spacing clearance warnings; zoom in/out regression fix; remove legacy join/merge and stage tools; layout editor help search; +52 more)
+- Production: https://popuphub.ca - **v1.0.0 build 126** | commit `ec6de68` (handoff updated 2026-06-13 14:52)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1175,7 +1175,7 @@
 
 
 ## Last deploy
-- 2026-06-13 10:41 - Deploy via deploy-popuphub.ps1 - `feat: ship 51 session updates (layout route uses production editor; toolbar row reorder; test suite populate button; CI lint fix; +47 more)` (57675e7)
+- 2026-06-13 14:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 56 session updates (reinstate vendor spacing clearance warnings; zoom in/out regression fix; remove legacy join/merge and stage tools; layout editor help search; +52 more)` (ec6de68)
 
 
 ## Goal
