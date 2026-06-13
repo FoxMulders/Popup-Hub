@@ -9,6 +9,7 @@ import {
   useDeferredValue,
 } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { autoLayoutAsync } from '@/lib/booth-planner/auto-layout-async'
 import { resolveAutoPlanStrategy } from '@/lib/booth-planner/auto-plan-strategy'
@@ -611,6 +612,8 @@ export function BoothPlanner({
   const [autoPlanRunning, setAutoPlanRunning] = useState(false)
   const [randomFillRunning, setRandomFillRunning] = useState(false)
   const [seedFillRunning, setSeedFillRunning] = useState(false)
+  const [testSuiteRunning, setTestSuiteRunning] = useState(false)
+  const router = useRouter()
   const [showPatronFlow, setShowPatronFlow] = useState(true)
   const autoPlanAbortRef = useRef(false)
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => new Set())
@@ -2107,6 +2110,42 @@ export function BoothPlanner({
         : summary,
       { duration: 5000 }
     )
+  }
+
+  async function handlePopulateTestSuite() {
+    if (testSuiteRunning || seedFillRunning || randomFillRunning || autoPlanRunning) return
+
+    setTestSuiteRunning(true)
+    try {
+      const response = await fetch(`/api/coordinator/events/${eventId}/seed-test-suite`, {
+        method: 'POST',
+      })
+      const body = (await response.json()) as {
+        error?: string
+        applicationCount?: number
+        tableSlots?: number
+        skippedForCapacity?: number
+      }
+
+      if (!response.ok) {
+        toast.error(body.error ?? 'Could not populate test suite')
+        return
+      }
+
+      handleClearBooths()
+      setFakeVendors([])
+
+      const summary = `${body.applicationCount ?? 0} approved & paid applications (${body.tableSlots ?? 0} table slots)`
+      setLastFillSummary(`${summary} — refreshing roster and auto-planning…`)
+      router.refresh()
+
+      await handleAutoPlan()
+
+      setLastFillSummary(summary)
+      toast.success(`Test suite populated: ${summary}`, { duration: 5000 })
+    } finally {
+      setTestSuiteRunning(false)
+    }
   }
 
   async function handleSeedDiverseApplicationsToMax() {
@@ -3749,6 +3788,23 @@ export function BoothPlanner({
                   onRemove={handleRemoveVendorFromPlan}
                   onDragStart={handleUnplacedDragStart}
                   mlmCategoryNames={mlmCategoryNamesSet}
+                />
+                <FakeVendorsPanel
+                  fakeVendorCount={fakeVendors.length}
+                  layoutCapacity={layoutCapacity}
+                  maxBoothCapacity={maxBoothCapacity}
+                  lastFillSummary={lastFillSummary}
+                  allowsTentVendors={allowsTentVendors}
+                  randomFillRunning={randomFillRunning}
+                  seedFillRunning={seedFillRunning}
+                  testSuiteRunning={testSuiteRunning}
+                  compact
+                  onAdd={handleAddFakeVendors}
+                  onClear={handleClearFakeVendors}
+                  onAutoFill={handleAutoFillTestVendors}
+                  onRandomFillToMax={() => void handleRandomFillTestVendorsToMax()}
+                  onSeedDiverseToMax={() => void handleSeedDiverseApplicationsToMax()}
+                  onPopulateTestSuite={() => void handlePopulateTestSuite()}
                 />
               </>
             }

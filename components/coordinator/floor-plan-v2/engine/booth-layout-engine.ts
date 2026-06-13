@@ -12,6 +12,7 @@ import {
   rotationForPerimeterEdge,
   type RoomEdgeSide,
 } from '../interactions/perimeter-booth-orientation'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 
 /** Default booth drag / arrow-nudge increment (feet). */
@@ -23,13 +24,11 @@ export const BOOTH_MOVE_SNAP_SHIFT_FT = 5
 /** Max center-Y delta (ft) to treat vendor booths as sharing a horizontal row. */
 export const BOOTH_ROW_CENTER_TOLERANCE_FT = 1
 
-/** Max center-X delta (ft) to treat vendor booths as sharing a vertical column. */
-export const BOOTH_COLUMN_CENTER_TOLERANCE_FT = BOOTH_ROW_CENTER_TOLERANCE_FT
+/** Table length axis inferred from a placed booth footprint + rotation. */
+export type BoothTableLengthOrientation = 'horizontal' | 'vertical'
 
-export type VendorManualLayoutOrganization =
-  | 'horizontal-row'
-  | 'vertical-column'
-  | null
+/** Unanimous table-length axis across placed booths in the active room. */
+export type PlacedTableOrientationPattern = BoothTableLengthOrientation | null
 
 export function resolveBoothMoveSnapFt(options: {
   shiftKey?: boolean
@@ -93,52 +92,57 @@ export function findVendorBoothRowPeer(
 }
 
 /**
- * When every vendor booth in scope shares a row or column (including an
- * optional placement probe), the manual layout is a straight line — new
- * placements default to horizontal table length (rotation 0) instead of
- * snapping to the nearest wall.
+ * Infer whether table length runs E–W (horizontal) or N–S (vertical) from a
+ * placed booth. Round guest tables return null (symmetric — no vote).
  */
-export function detectVendorManualLayoutOrganization(
+export function boothTableLengthOrientation(
+  booth: Pick<
+    BoothObject,
+    'width' | 'height' | 'rotation' | 'tableShape' | 'tablePurpose'
+  >
+): BoothTableLengthOrientation | null {
+  if (isGuestTableBooth(booth) && booth.tableShape === 'round') return null
+  const r = ((Math.round((booth.rotation ?? 0) / 90) * 90) % 360 + 360) % 360
+  if (r === 90 || r === 270) return 'vertical'
+  return 'horizontal'
+}
+
+/**
+ * When every orientable table in the active room shares the same length
+ * axis, new placements inherit that axis instead of snapping to the
+ * nearest wall — regardless of row/column spatial arrangement.
+ */
+export function detectPlacedTableOrientationPattern(
   objects: ReadonlyArray<PlacedObject>,
   objectRoom: Record<string, string> | undefined,
   activeRoomId: string | null | undefined,
-  options?: {
-    excludeId?: string
-    gridSpacingFt?: number
-    probe?: Pick<BoothObject, 'x' | 'y' | 'width' | 'height'>
-  }
-): VendorManualLayoutOrganization {
-  const grid = options?.gridSpacingFt ?? 1
-  const rowTol = Math.max(BOOTH_ROW_CENTER_TOLERANCE_FT, grid * 0.5)
-  const colTol = Math.max(BOOTH_COLUMN_CENTER_TOLERANCE_FT, grid * 0.5)
+  options?: { excludeId?: string }
+): PlacedTableOrientationPattern {
+  let pattern: BoothTableLengthOrientation | null = null
 
-  const vendors: Array<{ cx: number; cy: number }> = []
-  for (const other of objects) {
-    if (other.id === options?.excludeId) continue
-    if (!isVendorBoothObject(other)) continue
+  for (const obj of objects) {
+    if (obj.id === options?.excludeId) continue
+    if (obj.kind !== 'booth') continue
     if (activeRoomId) {
-      const roomId = objectRoom?.[other.id] ?? activeRoomId
+      const roomId = objectRoom?.[obj.id] ?? activeRoomId
       if (roomId !== activeRoomId) continue
     }
-    vendors.push(boothCenterFt(other as BoothObject))
+    const axis = boothTableLengthOrientation(obj as BoothObject)
+    if (axis == null) continue
+    if (pattern == null) {
+      pattern = axis
+    } else if (pattern !== axis) {
+      return null
+    }
   }
-  if (options?.probe) {
-    const { cx, cy } = boothCenterFt(options.probe)
-    vendors.push({ cx, cy })
-  }
-  if (vendors.length < 2) return null
 
-  const anchor = vendors[0]!
-  const allSameRow = vendors.every((c) => Math.abs(c.cy - anchor.cy) <= rowTol)
-  if (allSameRow) return 'horizontal-row'
-  const allSameColumn = vendors.every((c) => Math.abs(c.cx - anchor.cx) <= colTol)
-  if (allSameColumn) return 'vertical-column'
-  return null
+  return pattern
 }
 
-/** Table length runs E–W (rotation 0) — default for straight manual layouts. */
-export function vendorBoothHorizontalLayoutOrientation(
-  booth: BoothObject
+/** Apply horizontal or vertical table-length axis at the booth center. */
+export function vendorBoothLayoutOrientationForAxis(
+  booth: BoothObject,
+  axis: BoothTableLengthOrientation
 ): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> {
   const { span, depth } = boothSpanAndDepth(
     booth.width,
@@ -151,8 +155,15 @@ export function vendorBoothHorizontalLayoutOrientation(
     y: center.y - depth / 2,
     width: span,
     height: depth,
-    rotation: 0,
+    rotation: axis === 'horizontal' ? 0 : 90,
   }
+}
+
+/** @deprecated Use {@link vendorBoothLayoutOrientationForAxis} with `'horizontal'`. */
+export function vendorBoothHorizontalLayoutOrientation(
+  booth: BoothObject
+): Pick<BoothObject, 'x' | 'y' | 'width' | 'height' | 'rotation'> {
+  return vendorBoothLayoutOrientationForAxis(booth, 'horizontal')
 }
 
 /** Align rotation and long-edge layout with a row peer (same wall facing). */

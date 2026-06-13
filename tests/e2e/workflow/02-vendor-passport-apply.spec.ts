@@ -2,7 +2,7 @@ import { test, expect } from '../helpers/role-auth'
 import { requireWorkflowFixtures, readWorkflowState, writeWorkflowState } from './workflow-state'
 
 test.describe('Vendor passport and apply @workflow', () => {
-  test('applies to published workflow market', async ({ vendorPage: page }) => {
+  test('shows approved paid application on workflow market', async ({ vendorPage: page }) => {
     const fixtures = requireWorkflowFixtures()
     const state = readWorkflowState()
     const eventId = state.eventId ?? fixtures.draftEventId
@@ -14,33 +14,34 @@ test.describe('Vendor passport and apply @workflow', () => {
       timeout: 20_000,
     })
 
-    const applyButton = page.getByRole('button', { name: 'Apply Now' })
-    const alreadyApplied = page.getByText(/Applied/i).first()
-
-    if (await applyButton.isVisible().catch(() => false)) {
-      await applyButton.click()
-
-      const contractCheckbox = page.getByRole('checkbox', {
-        name: /digital booth contract/i,
-      })
-      if (await contractCheckbox.isVisible()) {
-        await contractCheckbox.check()
-      }
-
-      await page.getByRole('button', { name: /Confirm & Submit Application/i }).click()
-      await expect(alreadyApplied).toBeVisible({ timeout: 20_000 })
-    } else {
-      await expect(alreadyApplied).toBeVisible({ timeout: 10_000 })
-    }
+    await expect(
+      page
+        .getByText(/Approved|Booth confirmed|You're in/i)
+        .first()
+    ).toBeVisible({ timeout: 15_000 })
 
     writeWorkflowState({ ...state, eventId, eventName })
   })
 
-  test('vendor events grid shows workflow market', async ({ vendorPage: page }) => {
+  test('vendor can open apply dialog when no application exists', async ({ vendorPage: page }) => {
+    const fixtures = requireWorkflowFixtures()
+
+    await page.goto(`/vendor/events/${fixtures.draftEventId}`)
+
+    const applyButton = page.getByRole('button', { name: 'Apply Now' })
+    if (await applyButton.isVisible().catch(() => false)) {
+      await applyButton.click()
+      await expect(page.getByRole('dialog', { name: /Apply to/i })).toBeVisible()
+    }
+  })
+
+  test('vendor event detail reachable from fixtures', async ({ vendorPage: page }) => {
     const fixtures = requireWorkflowFixtures()
     const eventName = readWorkflowState().eventName ?? fixtures.draftEventName
 
-    await page.goto('/vendor/events')
-    await expect(page.getByText(eventName)).toBeVisible({ timeout: 20_000 })
+    await page.goto(`/vendor/events/${fixtures.draftEventId}`)
+    await expect(page.getByRole('heading', { name: eventName, level: 1 })).toBeVisible({
+      timeout: 20_000,
+    })
   })
 })

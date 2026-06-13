@@ -1,13 +1,14 @@
 /**
- * Manual placement row/column orientation — straight layouts default horizontal.
+ * Manual placement orientation — inherit unanimous table-length axis from room.
  *
  * Run: npx tsx scripts/verify-booth-row-orientation.ts
  */
 
 import {
-  detectVendorManualLayoutOrganization,
+  boothTableLengthOrientation,
+  detectPlacedTableOrientationPattern,
   findVendorBoothRowPeer,
-  vendorBoothHorizontalLayoutOrientation,
+  vendorBoothLayoutOrientationForAxis,
   vendorBoothOrientationFromRowPeer,
   wallEdgeFromRotation,
 } from '../components/coordinator/floor-plan-v2/engine/booth-layout-engine'
@@ -52,30 +53,44 @@ assert(
   'Booth on a different Y should not match row peers'
 )
 
-const colA = vendor('col-a', 40, 10, 90)
-const colB = vendor('col-b', 40, 18, 90)
-const colCandidate = vendor('col-c', 40, 26, 0)
 assert(
-  detectVendorManualLayoutOrganization([colA, colB], undefined, null, {
-    probe: colCandidate,
-  }) === 'vertical-column',
-  'Three aligned centers on X should read as a vertical column layout'
-)
-const horizontalDefault = vendorBoothHorizontalLayoutOrientation(colCandidate)
-assert(
-  horizontalDefault.rotation === 0,
-  `Vertical manual layout should default to horizontal table length, got rotation ${horizontalDefault.rotation}`
+  boothTableLengthOrientation(vendor('h', 0, 0, 0)) === 'horizontal',
+  'Rotation 0 should read as horizontal table length'
 )
 assert(
-  horizontalDefault.width === 6 && horizontalDefault.height === 4,
-  'Horizontal default should keep long edge on width'
+  boothTableLengthOrientation(vendor('v', 0, 0, 90)) === 'vertical',
+  'Rotation 90 should read as vertical table length'
 )
 
+const scatteredHorizontalA = vendor('sh-a', 10, 10, 0)
+const scatteredHorizontalB = vendor('sh-b', 30, 40, 180)
 assert(
-  detectVendorManualLayoutOrganization([rowA, rowB], undefined, null, {
-    probe: candidate,
-  }) === 'horizontal-row',
-  'Row-aligned booths should read as horizontal-row layout'
+  detectPlacedTableOrientationPattern([scatteredHorizontalA, scatteredHorizontalB], undefined, null) ===
+    'horizontal',
+  'Scattered booths with the same length axis should read as horizontal pattern'
+)
+
+const verticalA = vendor('vert-a', 10, 10, 90)
+const verticalB = vendor('vert-b', 40, 30, 90)
+assert(
+  detectPlacedTableOrientationPattern([verticalA, verticalB], undefined, null) === 'vertical',
+  'All vertical booths should read as vertical pattern'
+)
+
+const mixedA = vendor('mix-a', 0, 0, 0)
+const mixedB = vendor('mix-b', 0, 0, 90)
+assert(
+  detectPlacedTableOrientationPattern([mixedA, mixedB], undefined, null) === null,
+  'Mixed orientations should not produce a pattern'
+)
+
+const verticalDefault = vendorBoothLayoutOrientationForAxis(
+  vendor('next', 50, 50, 0),
+  'vertical'
+)
+assert(
+  verticalDefault.rotation === 90,
+  `Vertical pattern should place rotation 90, got ${verticalDefault.rotation}`
 )
 
 console.log('verify-booth-row-orientation: all checks passed')

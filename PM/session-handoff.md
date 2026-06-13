@@ -4,10 +4,22 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Active work — manual layout horizontal default (local, not deployed)
-- **`booth-layout-engine.ts`:** `detectVendorManualLayoutOrganization` — when all vendor booths in the active room (plus placement probe) share a row or column, layout is treated as a straight manual line.
-- **`table-placement-preview.ts`:** Straight horizontal-row or vertical-column layouts default to horizontal table length (rotation 0), skipping perimeter snap and nearest-wall orientation.
-- **Verify:** `npx tsx scripts/verify-booth-row-orientation.ts` — PASS. Dashboard → draw vendor booths in a single row or column near a wall; ghost preview stays horizontal (E–W) instead of rotating to the nearest wall.
+## Active work — test suite populate button (local, not deployed)
+- **`persist-test-suite-applications.ts`:** Seeds diverse vendor suite as real auth users + passports + `booth_applications` with `approved` + paid (`CASH` / `COMPLETED`). Clears prior `@popuphub.seed` applications on the event before re-run.
+- **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` (dev or `ALLOW_COORDINATOR_TEST_SUITE=true`).
+- **UI:** `Populate test suite — approved & paid` in `FakeVendorsPanel` (booth planner left rail); **Test suite (N)** in spatial layout toolbar (dev).
+- **Workflow seed:** `seed-workflow-fixtures.ts` now inserts one approved & paid application for `vendor@me.com`.
+- **Verify:** Dev coordinator → event layout toolbar → **Test suite** → Applications board shows approved & paid vendors; coordinator dashboard approved pool populated. `npm run seed:test-users` then `npm run test:e2e:workflow`.
+
+## Active work — CI lint fix (local, not deployed)
+- **Root cause:** GitHub CI runs `npm run lint` before `npm run build`; `use-floor-plan-doc.ts` used `let nextDoc` where the variable is never reassigned → `prefer-const` error (1 error, 435 warnings).
+- **Fix:** `let nextDoc` → `const nextDoc` in `updateRoomPerimeter()` (`components/coordinator/floor-plan-v2/state/use-floor-plan-doc.ts`).
+- **Verify:** `npm run lint` exits 0; `npm run build` passes locally. Vercel production deploys were already succeeding — failure was CI lint gate only.
+
+## Active work — manual layout orientation pattern (local, not deployed)
+- **`booth-layout-engine.ts`:** `detectPlacedTableOrientationPattern` scans all orientable tables in the active room; when every booth shares the same table-length axis (horizontal E–W or vertical N–S), new placements inherit that axis regardless of row/column layout.
+- **`table-placement-preview.ts`:** Unanimous pattern overrides perimeter snap and nearest-wall orientation for vendor booths and rectangular patron tables.
+- **Verify:** `npx tsx scripts/verify-booth-row-orientation.ts` — PASS. Dashboard → place several booths at different positions but same rotation; ghost preview matches the established axis instead of snapping to the nearest wall.
 
 ## Active work — map labels dropdown width (local, not deployed)
 - **`canvas-command-bar-blocks.tsx`:** Map labels `<select>` widened from `max-w-[4.5rem]` / `max-w-[7.5rem]` to `w-[9.5rem]` so **Vendor name**, **Product category**, and **Booth ID / number** display without truncation.

@@ -587,7 +587,7 @@ export function useFloorPlanDoc(
       const nextFrames = frames.map((f) => (f.id === roomId ? nextFrame : f))
       const extents = reconcileCanvasExtents(nextFrames, undefined, current.objects)
 
-      let nextDoc = reconcileRoomPerimeterChildren(
+      const nextDoc = reconcileRoomPerimeterChildren(
         {
           ...current,
           rooms: nextFrames,

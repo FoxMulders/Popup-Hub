@@ -54,6 +54,7 @@ export async function seedVendorPassport(
     .from('categories')
     .select('id, name')
     .eq('is_broad', true)
+    .neq('name', 'Alcohol')
     .order('name')
     .limit(1)
     .maybeSingle()
@@ -175,6 +176,21 @@ export async function seedWorkflowDraftEvent(
     .eq('id', eventId)
 
   if (publishError) throw new Error(`publish event: ${publishError.message}`)
+
+  const { error: applicationError } = await supabase.from('booth_applications').insert({
+    event_id: eventId,
+    vendor_id: vendorId,
+    category_id: categoryId,
+    status: 'approved',
+    payment_status: 'paid',
+    payment_method: 'CASH',
+    application_payment_status: 'COMPLETED',
+    approved_at: new Date().toISOString(),
+  })
+
+  if (applicationError) {
+    throw new Error(`seed application: ${applicationError.message}`)
+  }
 
   return { eventId, eventName }
 }

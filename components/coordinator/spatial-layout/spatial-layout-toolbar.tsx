@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, FlaskConical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
@@ -11,6 +11,7 @@ export interface SpatialLayoutToolbarProps {
   eventName: string
   placedCount: number
   layoutCapacity: number
+  maxBoothCapacity?: number
   hasOverlap: boolean
   isDraft: boolean
   saving: boolean
@@ -19,6 +20,9 @@ export interface SpatialLayoutToolbarProps {
   onSaveDraft?: () => void
   saveLabel: string
   onReloadFromServer?: () => void
+  onPopulateTestSuite?: () => void
+  testSuiteRunning?: boolean
+  showTestSuiteButton?: boolean
 }
 
 export function SpatialLayoutToolbar({
@@ -34,6 +38,10 @@ export function SpatialLayoutToolbar({
   onSaveDraft,
   saveLabel,
   onReloadFromServer,
+  onPopulateTestSuite,
+  testSuiteRunning = false,
+  showTestSuiteButton = false,
+  maxBoothCapacity = 0,
 }: SpatialLayoutToolbarProps) {
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200/80 bg-card/95 px-3 py-2.5 backdrop-blur-sm sm:px-4">
@@ -79,6 +87,21 @@ export function SpatialLayoutToolbar({
           <span className={cn(WIZARD_DRAFT_BADGE, 'py-1')} aria-label="Event status">
             Draft
           </span>
+        ) : null}
+        {showTestSuiteButton && onPopulateTestSuite ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="h-8 shrink-0 gap-1.5 border-violet-300 bg-violet-50 text-violet-900 hover:bg-violet-100"
+            disabled={testSuiteRunning || saving || maxBoothCapacity <= 0}
+            onClick={onPopulateTestSuite}
+          >
+            <FlaskConical className="h-3.5 w-3.5" aria-hidden />
+            {testSuiteRunning
+              ? 'Populating…'
+              : `Test suite (${maxBoothCapacity})`}
+          </Button>
         ) : null}
         {onReloadFromServer ? (
           <Button

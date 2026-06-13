@@ -3,9 +3,9 @@ import type { TableSizeSpec } from '@/lib/booth-planner/table-shape'
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '../state/types'
 import type { Rect } from './geometry'
 import {
-  detectVendorManualLayoutOrganization,
+  detectPlacedTableOrientationPattern,
   findVendorBoothRowPeer,
-  vendorBoothHorizontalLayoutOrientation,
+  vendorBoothLayoutOrientationForAxis,
   vendorBoothOrientationFromRowPeer,
   wallEdgeFromRotation,
 } from '../engine/booth-layout-engine'
@@ -65,16 +65,6 @@ export function resolveTablePlacementPreview(
     ...(sizePatch ?? {}),
   } as BoothObject
 
-  if (defaultBoothTableSpec?.purpose === 'guest') {
-    return {
-      x: probe.x,
-      y: probe.y,
-      width: probe.width,
-      height: probe.height,
-      rotation: probe.rotation ?? 0,
-    }
-  }
-
   const previewRoomId = activeRoomId ?? doc.rooms?.[0]?.id ?? null
   const snapDoc =
     previewRoomId != null
@@ -87,21 +77,36 @@ export function resolveTablePlacementPreview(
         }
       : doc
 
-  const manualLayout = detectVendorManualLayoutOrganization(
+  if (defaultBoothTableSpec?.purpose === 'guest') {
+    const pattern = detectPlacedTableOrientationPattern(
+      snapDoc.objects ?? [],
+      snapDoc.objectRoom,
+      previewRoomId,
+      { excludeId: probe.id }
+    )
+    if (pattern && defaultBoothTableSpec.shape !== 'round') {
+      probe = { ...probe, ...vendorBoothLayoutOrientationForAxis(probe, pattern) }
+    }
+    return {
+      x: probe.x,
+      y: probe.y,
+      width: probe.width,
+      height: probe.height,
+      rotation: probe.rotation ?? 0,
+    }
+  }
+
+  const orientationPattern = detectPlacedTableOrientationPattern(
     snapDoc.objects ?? [],
     snapDoc.objectRoom,
     previewRoomId,
-    {
-      excludeId: probe.id,
-      gridSpacingFt: snapDoc.gridSpacingFt,
-      probe,
-    }
+    { excludeId: probe.id }
   )
-  if (
-    manualLayout === 'horizontal-row' ||
-    manualLayout === 'vertical-column'
-  ) {
-    probe = { ...probe, ...vendorBoothHorizontalLayoutOrientation(probe) }
+  if (orientationPattern) {
+    probe = {
+      ...probe,
+      ...vendorBoothLayoutOrientationForAxis(probe, orientationPattern),
+    }
     return {
       x: probe.x,
       y: probe.y,

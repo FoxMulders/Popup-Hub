@@ -35,7 +35,9 @@ interface FakeVendorsPanelProps {
   onAutoFill: () => void
   onRandomFillToMax: () => void
   onSeedDiverseToMax?: () => void
+  onPopulateTestSuite?: () => void
   seedFillRunning?: boolean
+  testSuiteRunning?: boolean
 }
 
 export function FakeVendorsPanel({
@@ -52,7 +54,9 @@ export function FakeVendorsPanel({
   onAutoFill,
   onRandomFillToMax,
   onSeedDiverseToMax,
+  onPopulateTestSuite,
   seedFillRunning = false,
+  testSuiteRunning = false,
 }: FakeVendorsPanelProps) {
   const [count, setCount] = useState(5)
   const [namePrefix, setNamePrefix] = useState('Test Vendor')
@@ -166,6 +170,33 @@ export function FakeVendorsPanel({
       </div>
 
       <div className={cn('flex gap-2', compact ? 'flex-col' : 'flex-wrap items-center')}>
+        <TooltipWrapper
+          text="Creates real vendor accounts with approved, paid booth applications — then auto-plans the diverse seed suite on canvas."
+          className={compact ? 'w-full' : undefined}
+        >
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            onClick={onPopulateTestSuite}
+            disabled={
+              testSuiteRunning ||
+              seedFillRunning ||
+              randomFillRunning ||
+              maxBoothCapacity <= 0 ||
+              !onPopulateTestSuite
+            }
+            className={cn(
+              'gap-1 bg-violet-700 text-white hover:bg-violet-800',
+              compact && 'w-full justify-start text-xs'
+            )}
+          >
+            <FlaskConical className="h-4 w-4 shrink-0" />
+            {testSuiteRunning
+              ? 'Populating test suite…'
+              : `Populate test suite — approved & paid (${maxBoothCapacity})`}
+          </Button>
+        </TooltipWrapper>
         <Button
           type="button"
           size="sm"
@@ -191,6 +222,7 @@ export function FakeVendorsPanel({
             disabled={
               seedFillRunning ||
               randomFillRunning ||
+              testSuiteRunning ||
               maxBoothCapacity <= 0 ||
               !onSeedDiverseToMax
             }
@@ -214,7 +246,7 @@ export function FakeVendorsPanel({
             size="sm"
             variant="outline"
             onClick={onRandomFillToMax}
-            disabled={randomFillRunning || maxBoothCapacity <= 0}
+            disabled={randomFillRunning || testSuiteRunning || maxBoothCapacity <= 0}
             className={cn(
               'gap-1 border-violet-300 text-violet-900 hover:bg-violet-100',
               compact && 'w-full justify-start text-xs'
