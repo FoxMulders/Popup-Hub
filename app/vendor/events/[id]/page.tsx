@@ -25,6 +25,7 @@ import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
 import { MarketApplicationLayoutView } from '@/components/events/market-application-layout-view'
+import { VendorEventVenueMap } from '@/components/vendor/vendor-event-venue-map'
 import type { Auction, BoothLayout, Event, EventCategoryLimit } from '@/types/database'
 
 interface Props {
@@ -270,6 +271,18 @@ export default async function VendorEventDetailPage({ params }: Props) {
           </ul>
         </div>
       ) : null}
+
+      <VendorEventVenueMap
+        event={{
+          id: eventRecord.id,
+          name: eventRecord.name,
+          latitude: eventRecord.latitude,
+          longitude: eventRecord.longitude,
+          status: eventRecord.status,
+          location_name: eventRecord.location_name,
+          address: eventRecord.address,
+        }}
+      />
 
       {!isQuarterAuction ? (
         <MarketApplicationLayoutView

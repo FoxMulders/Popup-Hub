@@ -60,10 +60,6 @@ export function PassportApplyPreview({ passport }: PassportApplyPreviewProps) {
             )}
           </dd>
         </div>
-        <div>
-          <dt className="text-muted-foreground">Tax ID</dt>
-          <dd className="font-medium">{passport.tax_id_on_file ? 'On file' : 'Not provided'}</dd>
-        </div>
       </dl>
     </div>
   )

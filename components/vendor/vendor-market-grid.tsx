@@ -4,7 +4,9 @@ import { useMemo, useState } from 'react'
 import { EventCard } from '@/components/events/event-card'
 import { ApplyButton } from '@/components/events/apply-button'
 import { MarketAreaFilter } from '@/components/markets/market-area-filter'
+import { EventMap } from '@/components/map/event-map'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
 import { formatEventCapacitySummary, type EventCapacitySummary } from '@/lib/queries/event-capacity'
@@ -20,6 +22,7 @@ import {
   type EventWithMeta,
 } from '@/lib/shopper/events'
 import type { ApplicationStatus, Event } from '@/types/database'
+import { cn } from '@/lib/utils'
 import { Search } from 'lucide-react'
 
 export type VendorEventApplication = {
@@ -125,6 +128,7 @@ export function VendorMarketGrid({
   capacityByEventId,
 }: VendorMarketGridProps) {
   const [search, setSearch] = useState('')
+  const [view, setView] = useState<'list' | 'map'>('list')
   const {
     origin,
     radiusKm,
@@ -174,6 +178,58 @@ export function VendorMarketGrid({
         />
       </div>
 
+      <div className="inline-flex w-full max-w-md rounded-lg border bg-white p-1 shadow-sm">
+        <Button
+          type="button"
+          role="tab"
+          aria-selected={view === 'list'}
+          variant={view === 'list' ? 'default' : 'ghost'}
+          className={cn(
+            'min-h-11 flex-1 touch-manipulation rounded-md shadow-none',
+            view === 'list' && 'shadow-sm'
+          )}
+          onClick={() => setView('list')}
+        >
+          List
+        </Button>
+        <Button
+          type="button"
+          role="tab"
+          aria-selected={view === 'map'}
+          variant={view === 'map' ? 'default' : 'ghost'}
+          className={cn(
+            'min-h-11 flex-1 touch-manipulation rounded-md shadow-none',
+            view === 'map' && 'shadow-sm'
+          )}
+          onClick={() => setView('map')}
+        >
+          Map
+        </Button>
+      </div>
+
+      {view === 'map' ? (
+        <div
+          className={cn(
+            'relative isolate z-0 overflow-hidden rounded-2xl border shadow-sm [touch-action:auto]',
+            'h-[min(70vh,520px)] md:h-[480px]'
+          )}
+        >
+          <EventMap
+            events={filteredActive}
+            center={origin}
+            radiusKm={radiusKm}
+          />
+          {filteredActive.length === 0 ? (
+            <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center">
+              <div className="pointer-events-auto rounded-xl border border-stone-200 bg-white/95 px-4 py-2 text-center text-xs font-medium shadow-sm backdrop-blur-sm sm:max-w-md">
+                {search
+                  ? 'No open markets match your search on the map — try widening the radius or clearing search.'
+                  : 'No open markets within this distance — pan the map or widen the radius.'}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : (
       <Tabs defaultValue="active">
         <TabsList>
           <TabsTrigger value="active">
@@ -214,6 +270,7 @@ export function VendorMarketGrid({
           />
         </TabsContent>
       </Tabs>
+      )}
     </div>
   )
 }

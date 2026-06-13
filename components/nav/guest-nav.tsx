@@ -37,10 +37,7 @@ export function GuestNav() {
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
           left={
-            <BrandLogoLockup
-              className="h-[4.025rem] w-auto max-h-[4.025rem] shrink-0 sm:h-[4.6rem] sm:max-h-[4.6rem] md:h-[5.175rem] md:max-h-none"
-              href="/discover"
-            />
+            <BrandLogoLockup className="shrink-0" href="/discover" />
           }
           center={
             <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 overflow-x-hidden md:flex lg:gap-2">

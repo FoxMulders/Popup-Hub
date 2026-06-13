@@ -75,14 +75,13 @@ export function validateSocialHandle(raw: string | null | undefined): SocialHand
  * Returns a small risk bump when formats match but registry lookup is unavailable.
  */
 export async function crossCheckVendorIdentity(input: {
-  businessNumber: string
   socialHandle: string
   businessName?: string | null
 }): Promise<{ externalRiskDelta: number; notes: string[] }> {
   const notes: string[] = []
   let externalRiskDelta = 0
 
-  if (!input.businessNumber || !input.socialHandle) {
+  if (!input.socialHandle) {
     externalRiskDelta += 15
     notes.push('missing_identity_fields')
   }
@@ -101,10 +100,13 @@ export async function crossCheckVendorIdentity(input: {
 export function computeRiskScore(input: VendorVerificationInput): number {
   let score = 0
 
-  const bn = validateBusinessNumber(input.business_number)
+  const bnProvided = Boolean(input.business_number?.trim())
+  const bn = bnProvided
+    ? validateBusinessNumber(input.business_number)
+    : { ok: true, normalized: null as string | null }
   const handle = validateSocialHandle(input.social_handle ?? socialHandleFromInstagram(input.instagram_url))
 
-  if (!bn.ok) score += 35
+  if (bnProvided && !bn.ok) score += 35
   if (!handle.ok) score += 25
 
   if (input.verification_status === 'rejected') score += 50
@@ -147,10 +149,9 @@ export function vendorApplyBlockReason(passport: VendorFraudGate | null | undefi
     return 'Your account requires additional verification before applying to markets.'
   }
 
-  const bn = validateBusinessNumber(passport.business_number)
   const handle = validateSocialHandle(passport.social_handle)
-  if (!bn.ok || !handle.ok) {
-    return 'Add a valid business number and social handle to your Vendor Passport before applying.'
+  if (!handle.ok) {
+    return 'Add a valid social handle to your Vendor Passport before applying.'
   }
 
   return null
@@ -172,7 +173,10 @@ export async function evaluateAndScoreVendorPassport(input: VendorVerificationIn
   business_number: string | null
   social_handle: string | null
 }> {
-  const bn = validateBusinessNumber(input.business_number)
+  const bnProvided = Boolean(input.business_number?.trim())
+  const bn = bnProvided
+    ? validateBusinessNumber(input.business_number)
+    : { ok: true, normalized: null as string | null }
   const handle = validateSocialHandle(
     input.social_handle ?? socialHandleFromInstagram(input.instagram_url)
   )
@@ -183,9 +187,8 @@ export async function evaluateAndScoreVendorPassport(input: VendorVerificationIn
     social_handle: handle.normalized,
   })
 
-  if (bn.ok && handle.ok && bn.normalized && handle.normalized) {
+  if (handle.ok && handle.normalized) {
     const cross = await crossCheckVendorIdentity({
-      businessNumber: bn.normalized,
       socialHandle: handle.normalized,
       businessName: input.business_name,
     })
@@ -195,7 +198,7 @@ export async function evaluateAndScoreVendorPassport(input: VendorVerificationIn
   let verification_status: VendorVerificationStatus = input.verification_status ?? 'unverified'
   if (input.is_verified || input.verification_status === 'verified') {
     verification_status = 'verified'
-  } else if (bn.ok && handle.ok && risk <= RISK_SCORE_BLOCK_THRESHOLD) {
+  } else if (handle.ok && (!bnProvided || bn.ok) && risk <= RISK_SCORE_BLOCK_THRESHOLD) {
     verification_status = 'pending'
   }
 

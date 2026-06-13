@@ -68,13 +68,16 @@
 - **Verify:** `npx tsc --noEmit` — PASS; `npx tsx scripts/verify-booth-contracts.ts` — PASS. Smoke: coordinator wizard Step 1 → edit/save contract; vendor apply dialog shows clauses; suggest enhancement opens prefilled modal.
 
 ## Active work — vendor apply map, passport routing, logo, billing inputs (local, not deployed)
-- **`market-application-layout-view.tsx`:** Role-agnostic venue preview (`eventData`, `layoutId`, `layout`) using `PublicFloorplan` + `layoutHasDrawableGeometry`.
-- **`app/vendor/events/[id]/page.tsx`:** Loads `booth_layouts`, renders layout preview above apply card; passport CTA → `/vendor/passport`.
-- **`passport-page-view.tsx` + routes:** `passportRoute` prop — `/vendor/passport` always shows vendor wizard; `/profile/passport` uses profile role. `passportPathForProfile()` for profile links.
-- **`popup-hub-logo.tsx` / `app-nav.tsx` / `brand-mark.tsx`:** Larger nav lockup (~20%), tighter logo shell padding (`p-0.5` / `p-1`).
-- **`payment-methods-form.tsx`:** Offline payment inputs always render (no loading gate); `EMPTY_PAYMENT_SETTINGS` seed; fetch errors keep fields editable; `onChange` + `onValueChange` on e-Transfer email; skip server hydrate after user edits.
-- **`structured-card-fields.tsx`:** Coalesce undefined card field values so controlled inputs never freeze.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/payment-methods` — e-Transfer + instructions accept typing during/after load and after failed fetch.
+- **`vendor-market-grid.tsx`:** List/Map toggle on **Apply for open markets** with `EventMap` + radius filter (matches Discover UX).
+- **`vendor-event-venue-map.tsx` + `app/vendor/events/[id]/page.tsx`:** Google map for market coordinates on vendor apply detail; floor plan preview via `MarketApplicationLayoutView` when layout cells exist.
+- **`app/vendor/dashboard/page.tsx`:** Incomplete passport CTA → `/vendor/passport` (not `/profile/passport`).
+- **`coordinator-passport-extras.tsx` + `passport-page-view.tsx`:** Coordinator passport at `/profile/passport` adds org name / business number / payment links; vendor wizard stays on `/vendor/passport` only.
+- **`popup-hub-logo.tsx` / nav headers / `vendor-logo.tsx` / `brand-mark.tsx`:** Larger wordmark in nav; ~6% padding in white logo frames so marks fill the box.
+- **`app/api/coordinator/payment-settings/route.ts`:** E-Transfer email + vendor instructions savable without payment-trust gate; trust check only when turning on acceptance flags.
+- **`passport-wizard.tsx`:** Removed business/tax number and EIN step; wizard is now Business Info → Category → Photos (social handle only for identity).
+- **`coordinator-passport-extras.tsx` + `coordinator-verification-banner.tsx` + verification API:** Organization name only — no business registration field.
+- **`lib/vendor/verification.ts`:** Applying to markets requires social handle only; business number no longer blocks apply.
+- **UI cleanup:** Removed tax ID from apply preview and coordinator vendor review drawer.
 
 ## Active work — dual-screen toolbar + room-scoped canvas bounds (local, not deployed)
 - **`canvas-toolbar-static.tsx`:** `HeaderBarDualScreenCluster` restores visible **DUAL-SCREEN** section header with **Presenter** / **Wall Cast** buttons stacked beneath; header row uses `items-stretch` + `overflow-y-visible` so controls are not clipped.

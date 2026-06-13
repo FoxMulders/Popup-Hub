@@ -267,11 +267,6 @@ export function VendorReviewDrawer({
                       onVerify={onVerify}
                       verifying={!!verifying}
                     />
-                    {passport?.tax_id_encrypted ? (
-                      <Badge variant="outline" className="text-xs">
-                        Tax ID on file
-                      </Badge>
-                    ) : null}
                     {passport?.requires_electricity ? (
                       <Badge variant="outline" className="text-xs gap-1">
                         <Zap className="h-3 w-3" />

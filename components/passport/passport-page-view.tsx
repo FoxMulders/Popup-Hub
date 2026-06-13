@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { PassportWizard } from '@/components/passport/passport-wizard'
+import { CoordinatorPassportExtras } from '@/components/passport/coordinator-passport-extras'
 import { PassportProfileForm } from '@/components/passport/passport-profile-form'
 import { PassportStoriesManager } from '@/components/passport/passport-stories-manager'
 import { VendorProductManager } from '@/components/vendor/vendor-product-manager'
@@ -78,6 +79,11 @@ export function PassportPageView({
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 xl:px-10">
       <PassportProfileForm profile={profile} existing={passport} />
+      {profile.role === 'coordinator' ? (
+        <div className="mt-8">
+          <CoordinatorPassportExtras />
+        </div>
+      ) : null}
       <div className="mt-8">
         <PassportStoriesManager ownerId={profile.id} role={storiesRole} />
       </div>

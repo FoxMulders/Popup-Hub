@@ -6,9 +6,13 @@ export const VENDOR_PASSPORT_PATH = '/vendor/passport'
 
 export type PassportRouteKind = 'vendor' | 'profile'
 
+/** Vendor portal always uses the full vendor wizard route. */
+export const VENDOR_PASSPORT_HREF = VENDOR_PASSPORT_PATH
+
 /** Prefer the vendor portal route when the account sells at markets. */
 export function passportPathForProfile(profile: Pick<Profile, 'role'>): string {
-  return profile.role === 'vendor' ? VENDOR_PASSPORT_PATH : PASSPORT_PATH
+  if (profile.role === 'vendor') return VENDOR_PASSPORT_PATH
+  return PASSPORT_PATH
 }
 
 export function shouldRenderVendorPassportWizard(
@@ -23,7 +27,6 @@ export type PassportField =
   | 'display_name'
   | 'bio'
   | 'categories'
-  | 'tax_id'
   | 'logo'
   | 'product_photos'
   | 'online_presence'
@@ -44,7 +47,7 @@ export function requiredPassportFields(role: Role): PassportField[] {
 export function optionalPassportFields(role: Role): PassportField[] {
   switch (role) {
     case 'vendor':
-      return ['bio', 'tax_id', 'logo', 'product_photos', 'online_presence']
+      return ['bio', 'logo', 'product_photos', 'online_presence']
     case 'coordinator':
       return ['bio', 'online_presence']
     case 'shopper':

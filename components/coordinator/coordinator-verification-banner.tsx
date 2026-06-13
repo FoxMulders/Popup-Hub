@@ -32,7 +32,6 @@ export function CoordinatorVerificationBanner({
   const [pending, startTransition] = useTransition()
   const [expanded, setExpanded] = useState(verificationStatus === 'unverified')
   const [orgName, setOrgName] = useState(organizationName ?? '')
-  const [businessNumber, setBusinessNumber] = useState('')
 
   if (
     verificationStatus === 'verified' &&
@@ -62,7 +61,6 @@ export function CoordinatorVerificationBanner({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizationName: orgName,
-          businessNumber: businessNumber.trim() || undefined,
         }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
@@ -126,7 +124,7 @@ export function CoordinatorVerificationBanner({
             verificationStatus === 'rejected' ||
             (isPending && !organizationName)) &&
           expanded ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-1">
               <div className="space-y-1.5">
                 <Label htmlFor="coordinator-org-name">Organization name</Label>
                 <Input
@@ -134,18 +132,6 @@ export function CoordinatorVerificationBanner({
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
                   placeholder="Your market or business name"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="coordinator-bn">
-                  Business registration number{' '}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
-                </Label>
-                <Input
-                  id="coordinator-bn"
-                  value={businessNumber}
-                  onChange={(e) => setBusinessNumber(e.target.value)}
-                  placeholder="BN or EIN (e.g. 123456789)"
                 />
               </div>
               <div className="sm:col-span-2 flex flex-wrap gap-2">

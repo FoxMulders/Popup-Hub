@@ -10,8 +10,8 @@ const SIZE_CLASSES = {
   sm: 'max-h-10 max-w-[6.5rem]',
   md: 'max-h-12 max-w-[8.5rem]',
   lg: 'max-h-16 max-w-[11rem]',
-  xl: 'max-h-32 max-w-full',
-  profile: 'max-h-20 max-w-[14rem]',
+  xl: 'max-h-40 max-w-full',
+  profile: 'max-h-24 max-w-[16rem]',
 } as const
 
 const FALLBACK_MIN = {
@@ -47,7 +47,7 @@ export function VendorLogo({
   const resolvedSrc = resolvePublicAssetUrl(src)
   const frameClass = cn(
     'inline-flex min-h-0 min-w-0 shrink-0 items-center justify-center overflow-hidden border border-stone-200 bg-white',
-    shape === 'circle' ? 'rounded-full p-0.5' : 'rounded-lg p-1.5',
+    shape === 'circle' ? 'rounded-full p-[6%]' : 'rounded-lg p-[6%]',
     SIZE_CLASSES[size],
     FALLBACK_MIN[size],
     className
@@ -60,7 +60,7 @@ export function VendorLogo({
           src={resolvedSrc}
           alt={alt}
           className={cn(
-            'block max-h-full w-auto max-w-full object-center',
+            'block h-full w-full max-h-full max-w-full object-center',
             shape === 'circle' ? 'h-full w-full rounded-full object-cover' : 'object-contain'
           )}
           onError={() => setImageFailed(true)}

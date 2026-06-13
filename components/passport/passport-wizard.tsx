@@ -31,7 +31,7 @@ interface PassportWizardProps {
   redirectAfterSave?: string
 }
 
-const STEPS = ['Business Info', 'Category', 'Tax & Compliance', 'Photos']
+const STEPS = ['Business Info', 'Category', 'Photos']
 
 export function PassportWizard({
   categories,
@@ -69,7 +69,6 @@ export function PassportWizard({
       (id) => id !== (existing?.primary_category_id ?? '')
     )
   )
-  const [taxId, setTaxId] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState(existing?.logo_url ?? '')
   const [itemFiles, setItemFiles] = useState<File[]>([])
@@ -82,7 +81,6 @@ export function PassportWizard({
   const [requiresElectricity, setRequiresElectricity] = useState(
     existing?.requires_electricity ?? false
   )
-  const [businessNumber, setBusinessNumber] = useState(existing?.business_number ?? '')
   const [socialHandle, setSocialHandle] = useState(existing?.social_handle ?? '')
 
   function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -123,7 +121,6 @@ export function PassportWizard({
 
       const verification = await evaluateAndScoreVendorPassport({
         business_name: businessName,
-        business_number: businessNumber,
         social_handle: socialHandle,
         instagram_url: instagramUrl,
         is_verified: existing?.is_verified,
@@ -138,14 +135,14 @@ export function PassportWizard({
         categoryIds: [primaryCategoryId, ...categoryIds.filter((id) => id !== primaryCategoryId)],
         logoUrl,
         itemImageUrls: uploadedItemUrls,
-        taxIdEncrypted: taxId ? btoa(taxId) : existing?.tax_id_encrypted ?? null,
+        taxIdEncrypted: existing?.tax_id_encrypted ?? null,
         websiteUrl: normalizeUrl(websiteUrl),
         shopUrl: normalizeUrl(shopUrl),
         instagramUrl: normalizeUrl(instagramUrl),
         tiktokUrl: normalizeTikTokUrl(tiktokUrl),
         facebookUrl: normalizeUrl(facebookUrl),
         requiresElectricity,
-        businessNumber: verification.business_number,
+        businessNumber: null,
         socialHandle: verification.social_handle,
         verificationStatus: verification.verification_status,
         riskScore: verification.risk_score,
@@ -208,8 +205,7 @@ export function PassportWizard({
           <CardDescription>
             {step === 0 && 'Tell markets who you are and what you sell'}
             {step === 1 && 'Select all categories that apply to your business'}
-            {step === 2 && 'Tax identification for compliance purposes'}
-            {step === 3 && 'Upload your logo and product photos'}
+            {step === 2 && 'Upload your logo and product photos'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -254,16 +250,6 @@ export function PassportWizard({
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Identity verification
                 </p>
-                <div className="space-y-1">
-                  <Label htmlFor="business-number">Business / tax number *</Label>
-                  <Input
-                    id="business-number"
-                    placeholder="123456789 or 12-3456789"
-                    value={businessNumber}
-                    onChange={(e) => setBusinessNumber(e.target.value)}
-                    required
-                  />
-                </div>
                 <div className="space-y-1">
                   <Label htmlFor="social-handle">Primary social handle *</Label>
                   <Input
@@ -437,39 +423,8 @@ export function PassportWizard({
             </div>
           )}
 
-          {/* Step 2: Tax */}
+          {/* Step 2: Photos */}
           {step === 2 && (
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <Label htmlFor="tax">EIN / Tax ID</Label>
-                  <Tooltip>
-                    <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-muted-foreground" /></TooltipTrigger>
-                    <TooltipContent className="max-w-xs">Your CRA Business Number (Canada) or EIN (US). This is encrypted and only visible to you. Required for payouts.</TooltipContent>
-                  </Tooltip>
-                </div>
-                <Input
-                  id="tax"
-                  placeholder="XX-XXXXXXX"
-                  value={taxId}
-                  onChange={(e) => setTaxId(e.target.value)}
-                  autoComplete="off"
-                  type="password"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Encrypted and stored securely. Required by some coordinators. Leave blank if not applicable.
-                </p>
-              </div>
-              {existing?.tax_id_encrypted && !taxId && (
-                <p className="text-xs text-green-600 flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" /> Tax ID on file
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Photos */}
-          {step === 3 && (
             <div className="space-y-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5">

@@ -9,7 +9,6 @@ import {
   hasVerifiedBusinessTaxId,
   isSquareConnectedCoordinator,
 } from '@/lib/coordinator/verification'
-import { validateBusinessNumber } from '@/lib/vendor/verification'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
@@ -86,29 +85,17 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     organizationName?: string
-    businessNumber?: string
   }
 
   const organizationName = body.organizationName?.trim()
-  const businessNumber = body.businessNumber?.trim()
 
   if (!organizationName) {
     return NextResponse.json({ error: 'Organization name is required.' }, { status: 400 })
   }
 
-  if (businessNumber) {
-    const bnCheck = validateBusinessNumber(businessNumber)
-    if (!bnCheck.ok) {
-      return NextResponse.json(
-        { error: 'Enter a valid business registration or tax ID, or leave the field blank.' },
-        { status: 400 }
-      )
-    }
-  }
-
   const evaluated = await evaluateCoordinatorVerification({
     coordinator_organization_name: organizationName,
-    coordinator_business_number: businessNumber ?? null,
+    coordinator_business_number: null,
     coordinator_verification_status: profile.coordinator_verification_status,
   })
 
@@ -129,9 +116,7 @@ export async function POST(request: Request) {
   const message =
     evaluated.coordinator_verification_status === 'verified'
       ? 'Organizer verification complete — you can collect offline payments after approval.'
-      : businessNumber
-        ? 'Verification submitted — an admin will review your business details. You can publish draft markets; offline payment collection unlocks after approval.'
-        : 'Organization details saved. Connect Square or Stripe to publish and collect card payments.'
+      : 'Organization details saved. Connect Square or Stripe to publish and collect card payments.'
 
   return NextResponse.json({
     ok: true,

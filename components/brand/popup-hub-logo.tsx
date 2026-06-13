@@ -70,7 +70,7 @@ function LogoAnimationButton({
         // itself uses `preserveAspectRatio` to stay centred and
         // proportional, so visually it still reads as contained.
         'relative z-10 inline-flex cursor-pointer touch-manipulation items-center justify-center rounded-md border-0 bg-transparent transition-opacity hover:opacity-90 active:scale-[0.98]',
-        compact ? 'min-h-11 min-w-11 p-0.5' : 'min-h-11 min-w-[7rem] p-0.5',
+        compact ? 'min-h-11 min-w-11 p-0' : 'min-h-11 min-w-[7rem] p-0',
         className,
       )}
       aria-label={`${title} — play market animation`}
@@ -169,7 +169,7 @@ export function PopupHubLogo({
       height={LOGO_HEIGHT}
       unoptimized
       draggable={false}
-      className="pointer-events-none h-auto w-auto select-none bg-transparent object-contain"
+      className="pointer-events-none h-full w-full max-h-full max-w-full select-none bg-transparent object-contain"
       priority={priority}
     />
   )
@@ -189,7 +189,7 @@ export function PopupHubIcon(props: PopupHubLogoProps) {
 type BrandLogoMarkSize = 'nav' | 'auth'
 
 const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
-  nav: 'h-[6.2rem] w-auto sm:h-[6.9rem]',
+  nav: 'h-[5.5rem] w-auto sm:h-[6.2rem]',
   auth: 'h-44 w-auto sm:h-48',
 }
 

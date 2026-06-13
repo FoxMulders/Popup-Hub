@@ -73,10 +73,7 @@ export function ShopperTopBar({
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 sm:max-w-7xl sm:px-6">
         <CenteredHeaderRow
           left={
-            <BrandLogoLockup
-              className="h-[4.025rem] w-auto max-h-[4.025rem] shrink-0 sm:h-[4.6rem] sm:max-h-[4.6rem] md:h-[5.175rem] md:max-h-none"
-              href="/discover"
-            />
+            <BrandLogoLockup className="shrink-0" href="/discover" />
           }
           center={
             profile && availablePortals.length > 1 ? (

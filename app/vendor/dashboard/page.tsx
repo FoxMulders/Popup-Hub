@@ -160,7 +160,7 @@ export default async function VendorDashboard() {
                 <AlertTriangle className="h-5 w-5 text-harvest-500" />
                 <div>
                   <p className="text-sm font-semibold text-foreground">Not created</p>
-                  <Link href="/profile/passport">
+                  <Link href="/vendor/passport">
                     <Button size="sm" variant="link" className="h-auto p-0 text-xs text-harvest-600">
                       Create now →
                     </Button>

@@ -51,6 +51,6 @@ export async function POST() {
     role: updated.role,
     verificationStatus: updated.coordinator_verification_status ?? 'unverified',
     message:
-      'Organizer access enabled. Connect Square or Stripe to publish and collect card payments, or add your organization name for offline markets. Business tax ID is optional.',
+      'Organizer access enabled. Connect Square or Stripe to publish and collect card payments, or add your organization name for offline markets.',
   })
 }

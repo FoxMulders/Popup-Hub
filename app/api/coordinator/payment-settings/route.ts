@@ -111,13 +111,17 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const enablingPaymentCollection =
-    body.etransferPaymentEmail !== undefined ||
-    body.offlinePaymentInstructions !== undefined ||
-    body.paymentInstructions !== undefined ||
-    body.defaultEventPaymentFlags !== undefined
+  const enablingAcceptanceFlags =
+    body.defaultEventPaymentFlags !== undefined &&
+    (body.defaultEventPaymentFlags.accepts_credit_card === true ||
+      body.defaultEventPaymentFlags.accepts_etransfer === true ||
+      body.defaultEventPaymentFlags.accepts_cash === true ||
+      body.defaultEventPaymentFlags.accepts_square === true ||
+      body.defaultEventPaymentFlags.accepts_stripe === true ||
+      body.defaultEventPaymentFlags.accepts_offline_etransfer === true ||
+      body.defaultEventPaymentFlags.accepts_offline_cash === true)
 
-  if (enablingPaymentCollection) {
+  if (enablingAcceptanceFlags) {
     const { data: squareEvent } = await supabase
       .from('events')
       .select('id')
