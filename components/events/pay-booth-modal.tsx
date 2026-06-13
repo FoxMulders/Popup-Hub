@@ -13,14 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Loader2, ShieldCheck } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { formatCents } from '@/lib/square/client'
-import {
-  EMPTY_STRUCTURED_CARD,
-  StructuredCardFields,
-  isStructuredCardValid,
-  type StructuredCardValue,
-} from '@/components/payments/structured-card-fields'
 import type { PlatformFeeMode } from '@/types/database'
 
 declare global {
@@ -33,6 +27,7 @@ declare global {
 
 interface SquareCardInstance {
   attach: (element: HTMLElement) => Promise<void>
+  destroy: () => Promise<void>
   tokenize: () => Promise<{
     status: string
     token?: string
@@ -52,7 +47,7 @@ interface PayBoothModalProps {
 }
 
 interface PaymentConfig {
-  squareAppId: string
+  squareAppId: string | null
   squareLocationId: string | null
   squareConnected: boolean
   feeConfig: {
@@ -78,36 +73,22 @@ export function PayBoothModal({
   const [squareLoaded, setSquareLoaded] = useState(false)
   const [cardContainer, setCardContainer] = useState<HTMLDivElement | null>(null)
   const [card, setCard] = useState<SquareCardInstance | null>(null)
+  const [cardInitLoading, setCardInitLoading] = useState(false)
   const [paying, setPaying] = useState(false)
-  /*
-   * Mirror of what's typed in the visible structured-fields grid.
-   * The grid is the public-facing UI — the Square iframe below it
-   * stays the secure tokenizer (no raw PAN ever leaves the browser
-   * via our own state), but pre-validating the typed values lets us
-   * disable the Pay button until every field has a sane shape.
-   */
-  const [cardValue, setCardValue] = useState<StructuredCardValue>(EMPTY_STRUCTURED_CARD)
   const [paymentError, setPaymentError] = useState<string | null>(null)
-  const [cardResetKey, setCardResetKey] = useState(0)
+  const [cardMountKey, setCardMountKey] = useState(0)
   const payingRef = useRef(false)
+  const cardRef = useRef<SquareCardInstance | null>(null)
 
-  function resetPaymentForm(message?: string) {
-    payingRef.current = false
-    setPaying(false)
-    setCardValue(EMPTY_STRUCTURED_CARD)
+  function retryCardForm() {
+    setPaymentError(null)
     setCard(null)
-    setCardResetKey((k) => k + 1)
-    setPaymentError(message ?? null)
+    cardRef.current = null
+    setCardMountKey((k) => k + 1)
   }
 
-  /*
-   * Reset the structured grid every time the modal closes so the next
-   * vendor's session opens with empty inputs (avoids "ghost" digits
-   * left over from a prior approved-but-unpaid attempt).
-   */
   useEffect(() => {
     if (!open) {
-      setCardValue(EMPTY_STRUCTURED_CARD)
       setPaymentError(null)
     }
   }, [open])
@@ -125,24 +106,66 @@ export function PayBoothModal({
   useEffect(() => {
     if (!open || !squareLoaded || !config?.squareLocationId || !cardContainer) return
 
+    let cancelled = false
+
     async function initCard() {
-      if (!window.Square || !config?.squareAppId || !config.squareLocationId) return
+      if (!window.Square || !config?.squareAppId || !config.squareLocationId) {
+        if (!cancelled) {
+          setPaymentError(
+            'Card checkout is not configured for this market. Ask the coordinator to finish Square setup.'
+          )
+        }
+        return
+      }
+
+      setCardInitLoading(true)
+      setPaymentError(null)
+
       try {
+        if (cardRef.current) {
+          await cardRef.current.destroy().catch(() => undefined)
+          cardRef.current = null
+        }
+
         const payments = await window.Square.payments(
           config.squareAppId,
           config.squareLocationId
         )
         // @ts-expect-error Square SDK dynamic
         const newCard = await payments.card()
+        if (cancelled) {
+          await newCard.destroy().catch(() => undefined)
+          return
+        }
         await newCard.attach(cardContainer!)
+        cardRef.current = newCard
         setCard(newCard)
-      } catch {
-        resetPaymentForm('Could not initialize card form — try again.')
+      } catch (err) {
+        if (cancelled) return
+        const detail =
+          err instanceof Error && err.message.trim().length > 0
+            ? err.message
+            : 'Could not initialize card form — try again.'
+        setPaymentError(detail)
+        setCard(null)
+        cardRef.current = null
+      } finally {
+        if (!cancelled) setCardInitLoading(false)
       }
     }
 
-    initCard()
-  }, [open, squareLoaded, config, cardContainer, cardResetKey])
+    const timer = window.setTimeout(initCard, 50)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+      if (cardRef.current) {
+        cardRef.current.destroy().catch(() => undefined)
+        cardRef.current = null
+      }
+      setCard(null)
+    }
+  }, [open, squareLoaded, config, cardContainer, cardMountKey])
 
   async function handlePay() {
     if (payingRef.current) return
@@ -163,7 +186,7 @@ export function PayBoothModal({
       if (result.status !== 'OK' || !result.token) {
         const message = result.errors?.[0]?.message ?? 'Card error'
         toast.error(message)
-        resetPaymentForm(message)
+        setPaymentError(message)
         return
       }
 
@@ -179,7 +202,7 @@ export function PayBoothModal({
       if (!res.ok) {
         const message = json.error ?? 'Payment failed'
         toast.error(message)
-        resetPaymentForm(message)
+        setPaymentError(message)
         return
       }
 
@@ -189,18 +212,24 @@ export function PayBoothModal({
     } catch {
       const message = 'Payment could not be processed — please try again.'
       toast.error(message)
-      resetPaymentForm(message)
+      setPaymentError(message)
     } finally {
       payingRef.current = false
       setPaying(false)
     }
   }
 
+  const squareReady =
+    !!config?.squareAppId && !!config?.squareLocationId && config.squareConnected
+
   return (
     <>
       <Script
         src="https://web.squarecdn.com/v1/square.js"
         onLoad={() => setSquareLoaded(true)}
+        onError={() =>
+          setPaymentError('Could not load Square payment SDK — check your connection and try again.')
+        }
       />
       <Dialog
         open={open}
@@ -219,15 +248,6 @@ export function PayBoothModal({
             <Skeleton className="h-40 w-full rounded-lg" />
           ) : (
             <div className="space-y-4 py-2">
-              {/*
-               * Public-facing summary: vendors see ONE line — the
-               * booth fee. Internal platform-fee math (3% + $1
-               * processing margin) and the coordinator-payout
-               * breakdown stay backstage; surfacing them here would
-               * leak our pricing model and confuse the buyer who only
-               * cares what their card is charged. Coordinators see
-               * the full breakdown in their own dashboards.
-               */}
               <div className="rounded-lg bg-canvas p-3 text-sm space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Booth fee</span>
@@ -248,22 +268,28 @@ export function PayBoothModal({
                 <p className="text-sm text-harvest-700 bg-harvest-50 rounded-lg p-3">
                   The coordinator has not connected Square yet. Payment will be available once they finish setup.
                 </p>
+              ) : !squareReady ? (
+                <p className="text-sm text-harvest-700 bg-harvest-50 rounded-lg p-3">
+                  Square is connected but the checkout location is missing. Ask the coordinator to reconnect Square from Payment Methods.
+                </p>
               ) : (
                 <>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <Label className="text-sm">Card details</Label>
-                    {/*
-                     * Visible structured grid — Card Number / Expiry /
-                     * CVC / Postal as four discrete native inputs. This
-                     * is what buyers see and interact with first; it
-                     * mirrors the layout of every modern checkout form
-                     * (Stripe Elements, Apple Pay sheet, etc).
-                     */}
-                    <StructuredCardFields
-                      value={cardValue}
-                      onChange={setCardValue}
-                      disabled={paying}
-                    />
+                    <div
+                      key={cardMountKey}
+                      ref={setCardContainer}
+                      className="relative min-h-[100px] rounded-lg border bg-white p-3"
+                    >
+                      {cardInitLoading ? (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Secured by Square — card details never touch our servers.
+                    </p>
 
                     {paymentError ? (
                       <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -273,46 +299,22 @@ export function PayBoothModal({
                           variant="outline"
                           size="sm"
                           className="mt-2"
-                          onClick={() => resetPaymentForm()}
+                          onClick={retryCardForm}
                         >
                           Try again
                         </Button>
                       </div>
                     ) : null}
-
-                    {/*
-                     * Square's tokenization iframe stays mounted as
-                     * the PCI-compliant submission layer. We render
-                     * it as a clearly-labeled "Secure submit" panel so
-                     * the buyer knows exactly which surface actually
-                     * processes the charge — Square's iframe handles
-                     * card-data exfiltration to their servers; the
-                     * structured grid above is presentation only.
-                     */}
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-                      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                        <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-                        Secure submission
-                      </p>
-                      <div
-                        ref={setCardContainer}
-                        className="min-h-[60px] rounded-md border bg-white p-3"
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        Re-enter your card here to authorize payment via Square. Card data
-                        never touches our servers.
-                      </p>
-                    </div>
                   </div>
                   <Button
                     className="w-full"
                     onClick={handlePay}
-                    disabled={paying || !card || !isStructuredCardValid(cardValue)}
+                    disabled={paying || cardInitLoading || !card}
                   >
                     {paying ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : null}
-                    Pay {formatCents(boothPriceCents)}
+                    Pay {formatCents(chargeTotalCents)}
                   </Button>
                 </>
               )}

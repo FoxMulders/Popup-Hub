@@ -7,7 +7,11 @@ import {
 import { readCoordinatorPaymentInstructions } from '@/lib/payments/event-payment-flags'
 import { resolveEventFeeConfig } from '@/lib/monetization/fee-config'
 import { loadCoordinatorEscrowContext } from '@/lib/coordinator/escrow'
-import { getCoordinatorAccessToken } from '@/lib/square/oauth'
+import {
+  fetchPrimaryLocationId,
+  getCoordinatorAccessToken,
+} from '@/lib/square/oauth'
+import { resolveSquareApplicationId } from '@/lib/square/app-credentials'
 import { resolveCoordinatorEtransferEmail } from '@/lib/coordinator/etransfer-email'
 
 export async function GET(
@@ -64,10 +68,20 @@ export async function GET(
   const stripeConnected =
     !!coordinator?.stripe_connected_id && coordinator?.stripe_onboarding_complete === true
 
-  const locationId =
+  let locationId =
     credentials?.locationId ??
     process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID ??
     null
+
+  if (!locationId && credentials?.accessToken) {
+    locationId = await fetchPrimaryLocationId(credentials.accessToken)
+    if (locationId) {
+      await serviceSupabase
+        .from('profiles')
+        .update({ square_location_id: locationId })
+        .eq('id', event.coordinator_id)
+    }
+  }
 
   const feeConfig = resolveEventFeeConfig(event)
   const coordinatorEtransferEmail = resolveCoordinatorEtransferEmail(coordinator)
@@ -82,7 +96,7 @@ export async function GET(
 
   return NextResponse.json({
     eventId: event.id,
-    squareAppId: process.env.NEXT_PUBLIC_SQUARE_APP_ID,
+    squareAppId: resolveSquareApplicationId(),
     squareLocationId: locationId,
     squareConnected,
     stripeConnected,
