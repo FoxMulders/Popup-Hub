@@ -695,9 +695,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `0751343` (pushed to `origin/master`)
-- Last deploy commit: `0751343` - feat: ship 41 session updates (polygon room reshape; vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; +37 more)
-- Production: https://popuphub.ca - **v1.0.0 build 110** | commit `1900ebe` (handoff updated 2026-06-13 09:00)
+- Branch: `master` @ `4ef1c8a` (pushed to `origin/master`)
+- Last deploy commit: `4ef1c8a` - feat: ship 41 session updates (polygon room reshape; vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; +37 more)
+- Production: https://popuphub.ca - **v1.0.0 build 111** | commit `5bd6c9a` (handoff updated 2026-06-13 09:05)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1074,7 +1074,7 @@
 
 
 ## Last deploy
-- 2026-06-13 09:00 - Deploy via deploy-popuphub.ps1 - `feat: ship 41 session updates (polygon room reshape; vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; +37 more)` (0751343)
+- 2026-06-13 09:05 - Deploy via deploy-popuphub.ps1 - `feat: ship 41 session updates (polygon room reshape; vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; +37 more)` (4ef1c8a)
 
 
 ## Goal
