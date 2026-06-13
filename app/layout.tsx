@@ -93,9 +93,9 @@ export default async function RootLayout({
           <AuthSessionGuard />
           <ServiceWorkerRegister />
           <div className="flex min-h-dvh flex-1 flex-col">
-            <TooltipProvider>
-              {children}
-            </TooltipProvider>
+            <div id="site-layout-main" className="flex min-h-0 flex-1 flex-col">
+              <TooltipProvider>{children}</TooltipProvider>
+            </div>
             <BuildVersionFooter />
           </div>
           <InstallPrompt />

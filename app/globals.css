@@ -226,6 +226,15 @@
     @apply min-h-0;
   }
 
+  /*
+   * Sticky site footer — page shells must grow within the band above
+   * BuildVersionFooter, not declare a full raw viewport height.
+   */
+  #site-layout-main :is(.min-h-screen, .min-h-dvh, .min-h-svh, .min-h-\[100dvh\], .min-h-\[100svh\]) {
+    min-height: 0 !important;
+    flex: 1 1 auto;
+  }
+
   /* Command center booth designer: hide site chrome, keep back link in dashboard header */
   html.command-center-canvas-fullscreen {
     overflow: hidden;

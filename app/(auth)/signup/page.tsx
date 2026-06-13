@@ -335,7 +335,7 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-linen via-canvas to-harvest-50 p-4 py-10">
+    <div className="relative flex min-h-0 flex-1 items-center justify-center bg-gradient-to-br from-linen via-canvas to-harvest-50 p-4 py-10">
       <Suspense fallback={<div className="w-full max-w-lg h-[32rem] animate-pulse market-panel rounded-2xl" />}>
         <SignupForm />
       </Suspense>

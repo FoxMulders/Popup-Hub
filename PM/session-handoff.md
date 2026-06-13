@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — sticky site footer (local, not deployed)
+- **`app/layout.tsx`:** `#site-layout-main` flex wrapper grows to fill viewport above `BuildVersionFooter`.
+- **`app/globals.css`:** Remap legacy `min-h-screen` / `min-h-dvh` shells inside `#site-layout-main` to `flex-1` so they do not push the footer below the fold.
+- **Layout shells:** Login, signup, shared/shopper/vendor layout chrome use `flex-1 min-h-0` instead of `min-h-screen`.
+- **Verify:** Short pages (login, `/coordinator`, guest discover) — build footer visible at bottom of viewport without scrolling; long pages — footer still follows content after scroll.
+
 ## Active work — polygon room reshape (local, not deployed)
 - **`geometry/polygon-edit.ts`:** Pure helpers — edge/vertex hit-testing, insert vertex on edge, translate ring, `isSimplePolygon` self-intersection guard, `syncFrameBoundsFromRing`, dual rect vs vertex handle mode (`isAxisAlignedRect`).
 - **`state/use-floor-plan-doc.ts`:** `updateRoomPerimeter()` commits ring edits with undo; `moveRoomFrame()` now translates `perimeterRing`; rect resize re-syncs ring via `sanitizeRoomFrame`.

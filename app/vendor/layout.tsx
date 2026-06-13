@@ -21,7 +21,7 @@ export default async function VendorLayout({ children }: { children: React.React
   if (!profile) redirect('/login')
 
   if (!hasAccessForProfile(profile, 'vendor')) {
-    return <div className="min-h-screen bg-cream">{children}</div>
+    return <div className="min-h-0 flex-1 bg-cream">{children}</div>
   }
 
   const cookieStore = await cookies()

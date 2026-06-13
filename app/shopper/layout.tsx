@@ -39,7 +39,7 @@ export default async function ShopperLayout({ children }: { children: React.Reac
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-cream">
+    <div className="flex min-h-0 flex-1 flex-col bg-cream">
       <GuestNav />
       <main className="flex flex-1 flex-col">{children}</main>
     </div>

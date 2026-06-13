@@ -20,7 +20,7 @@ export function ShopperLayoutChrome({
 }: ShopperLayoutChromeProps) {
   return (
     <FeatureRequestProvider profile={profile} portalCookie={portalCookie}>
-      <div className="flex min-h-screen flex-col bg-cream">
+      <div className="flex min-h-0 flex-1 flex-col bg-cream">
         <AppNav profile={profile} availablePortals={availablePortals} portalCookie={portalCookie} />
         <main className="flex flex-1 flex-col">{children}</main>
       </div>
