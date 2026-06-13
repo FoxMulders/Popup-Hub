@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — sticky vendor/patron table placement (local, not deployed)
+- **Regression:** Wizard/layout editor reverted to Select after each booth stamp; only dashboard stayed armed.
+- **Fix:** `handleAfterDrawCommit` keeps draw+booth armed (clears selection only); `stickyDrawPlacement` on wizard canvas too.
+- **Verify:** Setup Step 3 or `/coordinator/events/{id}/layout` → arm Vendor or Patron table → click to place repeatedly until picking Select, wall, or another tool.
+
 ## Active work — vendor booth light green (local, not deployed)
 - **Canvas:** Well-placed vendor booths (`good` clearance band) tint light green (`#bbf7d0`); draw preview fallback matches.
 - **Toolbar:** Vendor table draw button + size chips use light emerald (`VENDOR_BOOTH_TOOLBAR`) instead of amber/dark forest.
@@ -847,9 +852,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `ec6de68` (pushed to `origin/master`)
-- Last deploy commit: `ec6de68` - feat: ship 56 session updates (reinstate vendor spacing clearance warnings; zoom in/out regression fix; remove legacy join/merge and stage tools; layout editor help search; +52 more)
-- Production: https://popuphub.ca - **v1.0.0 build 126** | commit `ec6de68` (handoff updated 2026-06-13 14:52)
+- Branch: `master` @ `032f5ad` (pushed to `origin/master`)
+- Last deploy commit: `032f5ad` - feat: ship 63 session updates (setup wizard step URL refresh fix; vendor contract signing; coordinator saved layouts; fill room with tables; +59 more)
+- Production: https://popuphub.ca - **v1.0.0 build 129** | commit `ae88ba0` (handoff updated 2026-06-13 15:25)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1226,7 +1231,7 @@
 
 
 ## Last deploy
-- 2026-06-13 14:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 56 session updates (reinstate vendor spacing clearance warnings; zoom in/out regression fix; remove legacy join/merge and stage tools; layout editor help search; +52 more)` (ec6de68)
+- 2026-06-13 15:25 - Deploy via deploy-popuphub.ps1 - `feat: ship 63 session updates (setup wizard step URL refresh fix; vendor contract signing; coordinator saved layouts; fill room with tables; +59 more)` (032f5ad)
 
 
 ## Goal
