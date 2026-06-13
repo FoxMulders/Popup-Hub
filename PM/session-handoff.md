@@ -61,7 +61,7 @@
 
 ## Active work — layout help interactive on-page tour (local, not deployed)
 - **`layout-editor-help-tours.ts` + `layout-editor-help-tour.tsx`:** 5-step quick-start tour with step card (Back/Next/Done), scroll-into-view on targets.
-- **Overlay UX:** static four-panel scrim (no full-page flash); emerald pulse/glow only on the highlighted control ring.
+- **Overlay UX:** steady full-screen dim for entire tour (no scrim flicker); static emerald ring on highlighted control (no pulse).
 - **Positioning:** viewport-clamped highlight box, header clearance on step 1 rooms bar, card portaled to `document.body` (avoids wizard shell clipping), measured card height + prefer-below when target is near top.
 - **`data-layout-help` anchors:** rooms bar, navigation (V/H), draw tools, vendor booths, canvas, save actions, optimize, layout help button — wired in command bar, spatial toolbar, and canvas host.
 - **Entry points:** first visit auto-tour (~1.2s), banner **Guide me on the page**, help dialog **Start interactive tour** / per-topic **Show me on the page**.
@@ -855,9 +855,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `032f5ad` (pushed to `origin/master`)
-- Last deploy commit: `032f5ad` - feat: ship 63 session updates (setup wizard step URL refresh fix; vendor contract signing; coordinator saved layouts; fill room with tables; +59 more)
-- Production: https://popuphub.ca - **v1.0.0 build 129** | commit `ae88ba0` (handoff updated 2026-06-13 15:25)
+- Branch: `master` @ `49a91d7` (pushed to `origin/master`)
+- Last deploy commit: `49a91d7` - feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard capacity URL step fix; vendor contract signing; +61 more)
+- Production: https://popuphub.ca - **v1.0.0 build 130** | commit `59c2180` (handoff updated 2026-06-13 15:40)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1234,7 +1234,7 @@
 
 
 ## Last deploy
-- 2026-06-13 15:25 - Deploy via deploy-popuphub.ps1 - `feat: ship 63 session updates (setup wizard step URL refresh fix; vendor contract signing; coordinator saved layouts; fill room with tables; +59 more)` (032f5ad)
+- 2026-06-13 15:40 - Deploy via deploy-popuphub.ps1 - `feat: ship 65 session updates (sticky vendor/patron table placement; vendor booth light green; setup wizard capacity URL step fix; vendor contract signing; +61 more)` (49a91d7)
 
 
 ## Goal
