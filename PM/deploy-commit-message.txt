@@ -1,1 +1,1 @@
-feat: ship 41 session updates (polygon room reshape; vendor apply event not found fix; apply dialog viewport fit; automatic image compression for uploads; +37 more)
+feat: ship 43 session updates (booth payment card form fix; sticky site footer; polygon room reshape; vendor apply event not found fix; +39 more)
