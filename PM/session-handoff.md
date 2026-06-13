@@ -754,9 +754,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `66cf8c0` (pushed to `origin/master`)
-- Last deploy commit: `66cf8c0` - feat: ship 46 session updates (map labels dropdown width; booth payment read-only in matrix; Square OAuth scope encoding fix; sticky site footer; +42 more)
-- Production: https://popuphub.ca - **v1.0.0 build 115** | commit `66cf8c0` (handoff updated 2026-06-13 09:55)
+- Branch: `master` @ `de76dd1` (pushed to `origin/master`)
+- Last deploy commit: `de76dd1` - feat: ship 48 session updates (CI lint fix; manual layout orientation pattern; map labels dropdown width; booth payment read-only in matrix; +44 more)
+- Production: https://popuphub.ca - **v1.0.0 build 115** | commit `8580749` (handoff updated 2026-06-13 10:17)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1133,7 +1133,7 @@
 
 
 ## Last deploy
-- 2026-06-13 09:55 - Deploy via deploy-popuphub.ps1 - `feat: ship 46 session updates (map labels dropdown width; booth payment read-only in matrix; Square OAuth scope encoding fix; sticky site footer; +42 more)` (66cf8c0)
+- 2026-06-13 10:17 - Deploy via deploy-popuphub.ps1 - `feat: ship 48 session updates (CI lint fix; manual layout orientation pattern; map labels dropdown width; booth payment read-only in matrix; +44 more)` (de76dd1)
 
 
 ## Goal
