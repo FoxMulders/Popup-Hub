@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — patron table toolbar horizontal layout (local, not deployed)
+- **Issue:** Patron layout controls (circle/rect size pickers + Fill) stacked vertically in the placement toolbar row.
+- **Fix:** `PatronTableSizeRows` uses a horizontal flex row; patron block wrapper uses `flex-nowrap` so Fill stays on the same line.
+- **Verify:** Event layout or dashboard → expand **Patron & vendor** toolbar row → circle + 5′/6′/8′, rectangle + 5′/6′/8′, and Fill appear on one horizontal strip.
+
 ## Active work — booth label vertical alignment (local, not deployed)
 - **Issue:** Booth labels (e.g. "Booth 1") overlapped the top stroke — SVG baseline offset was too small and ignored padY.
 - **Fix:** `canvas-objects.tsx` `renderObjectLabel` centers wrapped text with padY inset and ~0.75em baseline offset so cap height stays inside the box.
@@ -887,9 +892,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `e23dc5e` (pushed to `origin/master`)
-- Last deploy commit: `e23dc5e` - feat: ship 69 session updates (room preset menu clipping fix; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)
-- Production: https://popuphub.ca - **v1.0.0 build 134** | commit `fbb880c` (handoff updated 2026-06-13 18:59)
+- Branch: `master` @ `831133a` (pushed to `origin/master`)
+- Last deploy commit: `831133a` - feat: ship 69 session updates (booth label vertical alignment; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)
+- Production: https://popuphub.ca - **v1.0.0 build 135** | commit `7fcb4e8` (handoff updated 2026-06-13 19:04)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1266,7 +1271,7 @@
 
 
 ## Last deploy
-- 2026-06-13 18:59 - Deploy via deploy-popuphub.ps1 - `feat: ship 69 session updates (room preset menu clipping fix; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)` (e23dc5e)
+- 2026-06-13 19:04 - Deploy via deploy-popuphub.ps1 - `feat: ship 69 session updates (booth label vertical alignment; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)` (831133a)
 
 
 ## Goal

@@ -1,1 +1,1 @@
-feat: ship 69 session updates (booth label vertical alignment; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)
+feat: ship 70 session updates (patron table toolbar horizontal layout; booth label vertical alignment; Supabase security linter fixes; community league hall venue verification; +66 more)
