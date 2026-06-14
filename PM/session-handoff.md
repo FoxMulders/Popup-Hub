@@ -926,9 +926,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `0e56608` (pushed to `origin/master`)
-- Last deploy commit: `0e56608` - feat: ship 73 session updates (patron path overlay pathfinding fix; layout help overlap + wizard dual-screen restore; test suite dense fill + progress; patron table toolbar horizontal layout; +69 more)
-- Production: https://popuphub.ca - **v1.0.0 build 136** | commit `5f53de7` (handoff updated 2026-06-14 10:12)
+- Branch: `master` @ `2469782` (pushed to `origin/master`)
+- Last deploy commit: `2469782` - feat: ship 75 session updates (1' grid lines restored; category proximity edge gaps + Arrange layout in header; patron path overlay pathfinding fix; layout help overlap + wizard dual-screen restore; +71 more)
+- Production: https://popuphub.ca - **v1.0.0 build 137** | commit `fb7d368` (handoff updated 2026-06-14 13:50)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1305,7 +1305,7 @@
 
 
 ## Last deploy
-- 2026-06-14 10:12 - Deploy via deploy-popuphub.ps1 - `feat: ship 73 session updates (patron path overlay pathfinding fix; layout help overlap + wizard dual-screen restore; test suite dense fill + progress; patron table toolbar horizontal layout; +69 more)` (0e56608)
+- 2026-06-14 13:50 - Deploy via deploy-popuphub.ps1 - `feat: ship 75 session updates (1' grid lines restored; category proximity edge gaps + Arrange layout in header; patron path overlay pathfinding fix; layout help overlap + wizard dual-screen restore; +71 more)` (2469782)
 
 
 ## Goal
