@@ -150,6 +150,10 @@ export interface FloorPlanCanvasProps {
   autoArrangeMode?: AutoArrangeMode
   /** Computed patron viewing path (feet) — dotted overlay when set. */
   patronTrafficPath?: ReadonlyArray<{ x: number; y: number }> | null
+  /** Per-leg path segments — avoids phantom chords when a leg fails. */
+  patronTrafficPathSegments?: ReadonlyArray<
+    ReadonlyArray<{ x: number; y: number }>
+  > | null
   /** Vendor booths narrowing the active patron path. */
   pathfindingBottleneckIds?: ReadonlySet<string>
   /** True when pathfinding used relaxed clearance or skipped legs. */
@@ -233,6 +237,7 @@ export function FloorPlanCanvas({
   onVendorDrop,
   autoArrangeMode = 'grid',
   patronTrafficPath = null,
+  patronTrafficPathSegments = null,
   pathfindingBottleneckIds,
   patronPathIsPartial = false,
   patronAisleCorridors = null,
@@ -1223,6 +1228,7 @@ export function FloorPlanCanvas({
           <PatronAisleOverlay corridors={patronAisleCorridors} pxPerFt={pxPerFt} />
           <PatronTrafficPathOverlay
             path={patronTrafficPath}
+            pathSegments={patronTrafficPathSegments}
             isPartial={patronPathIsPartial}
             pxPerFt={pxPerFt}
           />

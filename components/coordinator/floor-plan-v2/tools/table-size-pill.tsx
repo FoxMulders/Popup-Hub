@@ -332,7 +332,7 @@ export function VendorSidebarSizeGrid({
   )
 }
 
-/** Patron layout sidebar — circle row and rectangle row, never wrapped together. */
+/** Patron toolbar — circle and rectangle size pickers on one horizontal strip. */
 export function PatronTableSizeRows({
   value,
   onSelectSize,
@@ -348,11 +348,14 @@ export function PatronTableSizeRows({
 
   return (
     <div
-      className={cn('flex w-full min-w-0 flex-col gap-0.5', className)}
+      className={cn(
+        'flex w-full min-w-0 flex-row flex-nowrap items-center gap-2',
+        className
+      )}
       role="group"
       aria-label="Patron table sizes"
     >
-      <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2">
+      <div className="flex min-w-0 shrink-0 flex-nowrap items-stretch gap-2">
         <button
           type="button"
           disabled={disabled}
@@ -374,7 +377,7 @@ export function PatronTableSizeRows({
           highlightActive={roundToolActive}
         />
       </div>
-      <div className="flex w-full min-w-0 flex-wrap items-stretch gap-2">
+      <div className="flex min-w-0 shrink-0 flex-nowrap items-stretch gap-2">
         <button
           type="button"
           disabled={disabled}

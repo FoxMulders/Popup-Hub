@@ -955,7 +955,7 @@ export function renderCanvasCommandBarBlock(
     case 'patron':
       if (sidebarLayout || dashboardStripLayout) {
         return (
-          <div className="flex w-full min-w-0 flex-col gap-1.5">
+          <div className="flex w-full min-w-0 flex-row flex-nowrap items-center gap-1.5">
             {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
               <PatronSidebarControls
                 value={ctx.tableSizeFt}
@@ -986,14 +986,13 @@ export function renderCanvasCommandBarBlock(
                 disabledReason={ctx.fillRoomDisabledReason}
                 onFill={ctx.onFillPatronTables}
                 compact={compact}
-                sidebarLayout={sidebarLayout}
               />
             ) : null}
           </div>
         )
       }
       return (
-        <div className="flex min-w-0 flex-wrap items-center gap-0.5">
+        <div className="flex min-w-0 flex-nowrap items-center gap-0.5">
           {ctx.onTableSizeChange && ctx.tableSizeFt != null ? (
             <PatronTableSizeRows
               value={ctx.tableSizeFt}

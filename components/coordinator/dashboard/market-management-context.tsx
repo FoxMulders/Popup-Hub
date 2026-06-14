@@ -21,9 +21,9 @@ import {
   approvedVendorsNotOnCanvas,
   boothVendorIdReconciliationPatches,
   pickBoothForApplication,
-  seatApplicationsOnOpenBooths,
 } from '@/lib/coordinator/dashboard-vendor-placement'
 import type { FloorPlanLayoutActions } from '@/lib/coordinator/floor-plan-layout-actions'
+import { populateTestSuiteCanvas } from '@/lib/coordinator/populate-test-suite-canvas'
 import { formatCadCurrency } from '@/lib/coordinator/booth-placement-status'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { docHasUnresolvedClearanceIssues } from '@/lib/coordinator/booth-clearance-visual'
@@ -80,6 +80,10 @@ export interface MarketManagementState {
     tableSlots: number
     boothsFilled: number
     boothsAssigned: number
+    boothsRequested: number
+    canvasReady: boolean
+    roomName?: string | null
+    error?: string
   }>
   focusBooth: (boothId: string) => void
   totalRevenueCents: number
@@ -184,57 +188,49 @@ export function MarketManagementProvider({
     []
   )
 
-  const seatApprovedApplications = useCallback(
-    (applications: readonly VendorApplicationSnapshot[]): number => {
-      if (!floorPlanStore || applications.length === 0) return 0
-      const booths = floorPlanStore.doc.objects.filter(
-        (object): object is BoothObject => object.kind === 'booth' && !isGuestTableBooth(object)
-      )
-      const patches = seatApplicationsOnOpenBooths(applications, booths)
-      for (const patch of patches) {
-        floorPlanStore.updateObject(
-          patch.boothId,
-          {
-            vendorId: patch.vendorId,
-            label: patch.label,
-            categoryName: patch.categoryName,
-          } as Partial<BoothObject>,
-          { pushHistory: true }
-        )
-      }
-      if (patches.length > 0) {
-        setDocRevision((revision) => revision + 1)
-      }
-      return patches.length
-    },
-    [floorPlanStore]
-  )
-
   const populateTestSuiteOnCanvas = useCallback(
     async (eventId: string) => {
       const approved = await refreshApprovedPool(eventId)
-      const tableSlots = approved.reduce(
-        (sum, application) => sum + Math.max(1, application.tableCount ?? 1),
-        0
-      )
-      const roomCapacity = floorPlanLayoutActions?.estimateVendorFillCapacity() ?? tableSlots
-      const boothsToFill = Math.min(roomCapacity, tableSlots)
 
-      if (boothsToFill > 0 && floorPlanLayoutActions) {
-        floorPlanLayoutActions.fillVendorTables(boothsToFill)
-        await floorPlanLayoutActions.autoArrangeFloorPlan()
+      if (!floorPlanStore) {
+        return {
+          vendors: approved.length,
+          tableSlots: approved.reduce(
+            (sum, application) => sum + Math.max(1, application.tableCount ?? 1),
+            0
+          ),
+          boothsFilled: 0,
+          boothsAssigned: 0,
+          boothsRequested: 0,
+          canvasReady: false,
+          roomName: null,
+          error:
+            'Floor plan is still loading — wait for the canvas, then click Test suite again.',
+        }
       }
 
-      const boothsAssigned = seatApprovedApplications(approved)
+      const result = populateTestSuiteCanvas({
+        store: floorPlanStore,
+        activeRoomId: layoutActiveRoomId,
+        approved,
+      })
+
+      if (result.boothsPlaced > 0 || result.boothsAssigned > 0) {
+        setDocRevision((revision) => revision + 1)
+      }
 
       return {
-        vendors: approved.length,
-        tableSlots,
-        boothsFilled: boothsToFill,
-        boothsAssigned,
+        vendors: result.vendors,
+        tableSlots: result.tableSlots,
+        boothsFilled: result.boothsPlaced,
+        boothsAssigned: result.boothsAssigned,
+        boothsRequested: result.boothsRequested,
+        canvasReady: result.canvasReady,
+        roomName: result.roomName,
+        error: result.error,
       }
     },
-    [floorPlanLayoutActions, refreshApprovedPool, seatApprovedApplications]
+    [floorPlanStore, layoutActiveRoomId, refreshApprovedPool]
   )
 
   const pendingApplications = useMemo(

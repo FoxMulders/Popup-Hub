@@ -25,15 +25,21 @@ export interface UsePathfindingOptions {
 
 export interface PatronPathfindingState {
   path: PathPoint[]
+  pathSegments: PathPoint[][]
   bottleneckBoothIds: string[]
+  missedBoothIds: string[]
   isPartial: boolean
+  missingDoors: boolean
   clearanceMode: OptimalPathResult['clearanceMode']
 }
 
 const EMPTY_STATE: PatronPathfindingState = {
   path: [],
+  pathSegments: [],
   bottleneckBoothIds: [],
+  missedBoothIds: [],
   isPartial: false,
+  missingDoors: false,
   clearanceMode: undefined,
 }
 
@@ -92,8 +98,11 @@ export function usePathfinding(
             result
               ? {
                   path: result.path,
+                  pathSegments: result.pathSegments ?? (result.path.length >= 2 ? [result.path] : []),
                   bottleneckBoothIds: result.bottleneckBoothIds ?? [],
+                  missedBoothIds: result.missedBoothIds ?? [],
                   isPartial: result.isPartial ?? false,
+                  missingDoors: result.missingDoors ?? false,
                   clearanceMode: result.clearanceMode,
                 }
               : EMPTY_STATE

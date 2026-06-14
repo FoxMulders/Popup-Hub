@@ -4,6 +4,24 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — patron path overlay pathfinding fix (local, not deployed)
+- **`PathfindingService.ts`:** Door threshold terminals via `evaluateTrafficFlowPrerequisites` + inward projection; booth **approach nodes** (not centers); A*-distance TSP + 2-opt; LOS string-pull smoothing; segment routing without phantom chords; `missedBoothIds` / `missingDoors` flags; fixed `ftToGrid` ↔ `gridToFt` consistency.
+- **`lib/floor-plan/grid-path-smoothing.ts` (new):** Bresenham line-of-sight + string-pull for grid paths.
+- **UI:** `PatronTrafficPathOverlay` renders multiple polylines per leg; toasts for missing doors / unreachable booths; missed booths highlighted with bottlenecks.
+- **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — all checks PASS. Smoke: enable patron path on packed room with entry/exit doors → path starts at entrance, visits every vendor booth in aisles, ends at exit.
+
+## Active work — layout help overlap + wizard dual-screen restore (local, not deployed)
+- **Issue:** Floating green **Layout help** FAB overlapped wizard footer (Save market / Back); **Presenter** / **Wall Cast** dual-screen buttons missing on setup Step 3 and full layout editor.
+- **Root cause:** `LayoutEditorHelpFab` fixed to bottom-right while toolbar already has Layout help; `onLaunchDualScreen` gated to `variant === 'dashboard'` only.
+- **Fix:** Hide floating FAB when toolbar exposes help (`showFloatingFab={isDashboard}`). Enable dual-screen launch on all floor-plan surfaces; add `FloorPlanDualScreenBridge` for wizard/spatial sync. Add `dual-screen` to default toolbar order.
+- **Verify:** Setup Step 3 → no FAB over footer; toolbar shows Presenter + Wall Cast + Full screen; open Presenter → booth matrix connects. Command center dashboard still has floating FAB + dual-screen.
+
+## Active work — test suite dense fill + progress (local, not deployed)
+- **Issue:** Test suite placed only ~12 booths in Main Hall (deterministic grid capacity cap) with no in-flight progress UI.
+- **Root cause:** `estimateRoomFillCapacity` / `fillRoomWithTables` deterministic grid allows 12 slots in 50′×50′ with 6′×2′ vendor tables (aisle rules); shelf-pack fits all 58.
+- **Fix:** `fill-room-with-tables.ts` — `packMode: 'dense'` uses `packVendorBoothsInRoomGrid` (QA/test-suite path). `populate-test-suite-canvas.ts` requests full `tableSlots` count via dense pack. `test-suite-populate-button.tsx` — staged toast + inline progress bar (seed → place → assign); warns when placed &lt; target.
+- **Verify:** Command center with Main Hall visible → **Test suite** → progress stages visible → 58 vendor booths placed and assigned for 48-vendor seed. `npx tsx` dense fill probe: 58/58 in 50×50.
+
 ## Active work — patron table toolbar horizontal layout (local, not deployed)
 - **Issue:** Patron layout controls (circle/rect size pickers + Fill) stacked vertically in the placement toolbar row.
 - **Fix:** `PatronTableSizeRows` uses a horizontal flex row; patron block wrapper uses `flex-nowrap` so Fill stays on the same line.
@@ -147,7 +165,7 @@
 - **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` — coordinator-scoped; uses `createAdminClient()` for profile/passport writes (SSR service client still hit RLS). Set `DISABLE_COORDINATOR_TEST_SUITE=true` to block on a deploy.
 - **UI:** Violet **Test suite** button in Blueprint Studio **ALIGNMENT & SPACING** toolbar (Command center dashboard), plus event hub and Applications page headers. Also on spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 (`/coordinator/events/{id}/setup?step=3`).
 - **Seed logic:** Fills up to **sum of category `max_slots`** (market capacity). Then **fills the live canvas room** from FloorPlanV2 dimensions, auto-arranges booths, and assigns approved vendors (paid). Not capped by stale `booth_layouts` DB dimensions.
-- **Verify:** Command center → **Test suite** → toast shows vendor + table counts and grid fill stats → booths appear on canvas with vendors assigned. Patron **Fill room** works in Main Hall (off-canvas seed tables no longer constrain arrange).
+- **Verify:** Command center → **Test suite** → toast reports grid placement (`N vendor booths placed`) or a clear warning if canvas not ready. Uses `populateTestSuiteCanvas` on the live floor-plan store (not toolbar callbacks).
 
 ## Active work — CI lint fix (local, not deployed)
 - **Root cause:** GitHub CI runs `npm run lint` before `npm run build`; `use-floor-plan-doc.ts` used `let nextDoc` where the variable is never reassigned → `prefer-const` error (1 error, 435 warnings).

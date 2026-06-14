@@ -222,7 +222,12 @@ export function LayoutEditorHelpFab() {
 }
 
 /** Mount once per layout editor surface (floor plan workspace or spatial layout page). */
-export function LayoutEditorHelpHost() {
+export function LayoutEditorHelpHost({
+  showFloatingFab = true,
+}: {
+  /** Hide when the toolbar already exposes Layout help (avoids footer overlap). */
+  showFloatingFab?: boolean
+} = {}) {
   const [active, setActive] = useState(false)
 
   useEffect(() => {
@@ -236,10 +241,14 @@ export function LayoutEditorHelpHost() {
 
   if (!active) return null
 
-  return <LayoutEditorHelpHostInner />
+  return <LayoutEditorHelpHostInner showFloatingFab={showFloatingFab} />
 }
 
-function LayoutEditorHelpHostInner() {
+function LayoutEditorHelpHostInner({
+  showFloatingFab,
+}: {
+  showFloatingFab: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selectedId, setSelectedId] = useState<string>(QUICK_START_TOPIC_ID)
@@ -325,7 +334,7 @@ function LayoutEditorHelpHostInner() {
 
   return (
     <>
-      {!tourSteps ? <LayoutEditorHelpFab /> : null}
+      {!tourSteps && showFloatingFab ? <LayoutEditorHelpFab /> : null}
       {tourSteps ? (
         <LayoutEditorHelpTourOverlay
           steps={tourSteps}

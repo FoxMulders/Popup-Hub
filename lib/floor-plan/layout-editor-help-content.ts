@@ -389,7 +389,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'Presenter — interactive booth matrix you can drive from a laptop.',
       'Wall Cast — read-only matrix for a projector or TV.',
       'Both views sync with the saved layout and live booth assignments.',
-      'Available from the command center dashboard toolbar.',
+      'Use Presenter / Wall Cast in the toolbar (wizard Step 3, full editor, or command center).',
     ],
     keywords: [
       'dual screen',

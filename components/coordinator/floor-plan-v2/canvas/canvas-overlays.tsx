@@ -306,6 +306,8 @@ export function SelectionRotateHandles({
  */
 interface PatronTrafficPathProps {
   path: ReadonlyArray<{ x: number; y: number }> | null | undefined
+  /** When set, each segment renders separately so failed legs never draw phantom chords. */
+  pathSegments?: ReadonlyArray<ReadonlyArray<{ x: number; y: number }>> | null
   pxPerFt: number
   isPartial?: boolean
 }
@@ -313,26 +315,43 @@ interface PatronTrafficPathProps {
 /** Dashed polyline for computed patron traffic flow (non-interactive). */
 export function PatronTrafficPathOverlay({
   path,
+  pathSegments,
   pxPerFt,
   isPartial = false,
 }: PatronTrafficPathProps) {
-  if (!path || path.length < 2) return null
-  const points = path
-    .map((p) => `${p.x * pxPerFt},${p.y * pxPerFt}`)
-    .join(' ')
+  const segments =
+    pathSegments && pathSegments.length > 0
+      ? pathSegments.filter((s) => s.length >= 2)
+      : path && path.length >= 2
+        ? [path]
+        : []
+
+  if (segments.length === 0) return null
+
+  const stroke = isPartial ? '#ea580c' : '#0284c7'
+  const dash = isPartial ? '4 6' : '6 4'
+
   return (
-    <polyline
-      points={points}
-      fill="none"
-      stroke={isPartial ? '#ea580c' : '#0284c7'}
-      strokeWidth={2}
-      strokeDasharray={isPartial ? '4 6' : '6 4'}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      pointerEvents="none"
-      aria-hidden="true"
-      className="patron-traffic-path"
-    />
+    <g aria-hidden="true" className="patron-traffic-path">
+      {segments.map((segment, i) => {
+        const points = segment
+          .map((p) => `${p.x * pxPerFt},${p.y * pxPerFt}`)
+          .join(' ')
+        return (
+          <polyline
+            key={`patron-traffic-segment-${i}`}
+            points={points}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={2}
+            strokeDasharray={dash}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pointerEvents="none"
+          />
+        )
+      })}
+    </g>
   )
 }
 

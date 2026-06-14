@@ -1,6 +1,7 @@
 import {
   autoArrangeInRoom,
   GRID_WALL_INSET_FT,
+  packVendorBoothsInRoomGrid,
   type AutoArrangeInRoomResult,
   type AutoArrangeMode,
 } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
@@ -33,6 +34,9 @@ import {
 
 export type FillRoomTableScope = 'vendor' | 'patron'
 
+/** `deterministic` — aisle-aware grid via auto-arrange; `dense` — shelf-pack for QA fills. */
+export type FillRoomPackMode = 'deterministic' | 'dense'
+
 export interface FillRoomWithTablesInput {
   doc: FloorPlanDoc
   roomId: string
@@ -42,6 +46,7 @@ export interface FillRoomWithTablesInput {
   eventCategoryNames?: ReadonlyArray<string>
   layoutCapacity?: number
   autoArrangeMode?: AutoArrangeMode
+  packMode?: FillRoomPackMode
 }
 
 export interface FillRoomWithTablesResult {
@@ -202,6 +207,7 @@ export function fillRoomWithTables(
     eventCategoryNames,
     layoutCapacity,
     autoArrangeMode = 'grid',
+    packMode = 'deterministic',
   } = input
 
   const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
@@ -231,10 +237,33 @@ export function fillRoomWithTables(
     }
   }
 
-  const targetCount = Math.min(requestedCount, maxCapacity)
+  const targetCount =
+    packMode === 'dense' && scope === 'vendor'
+      ? requestedCount
+      : Math.min(requestedCount, maxCapacity)
   const clearedDoc = removeRoomBoothsByScope(doc, roomId, scope)
   const booths = buildFillBooths(targetCount, tableSpec, eventCategoryNames)
   const seededDoc = attachBoothsToRoom(clearedDoc, roomId, booths)
+
+  if (packMode === 'dense' && scope === 'vendor') {
+    const pack = packVendorBoothsInRoomGrid(seededDoc, roomId)
+    if (!pack) {
+      return {
+        doc: seededDoc,
+        placedCount: 0,
+        requestedCount: targetCount,
+        maxCapacity,
+        arrange: null,
+      }
+    }
+    return {
+      doc: pack.doc,
+      placedCount: pack.placedCount,
+      requestedCount: targetCount,
+      maxCapacity,
+      arrange: null,
+    }
+  }
 
   const baselineTableLengthFt: LayoutBaselineTableLengthFt | undefined =
     tableSpec.purpose === 'vendor' && isLayoutBaselineTableLengthFt(tableSpec.ft)

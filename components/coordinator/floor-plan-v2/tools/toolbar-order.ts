@@ -37,6 +37,7 @@ export const DEFAULT_CANVAS_TOOLBAR_ORDER: CanvasToolbarBlockId[] = [
   'primitives',
   'history-clipboard',
   'view-align',
+  'dual-screen',
 ]
 
 const STORAGE_KEY = 'popup-hub:floor-plan-v2:toolbar-order'

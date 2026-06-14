@@ -67,6 +67,7 @@ import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
 import { LayoutEditorHelpBanner, LayoutEditorHelpHost } from './tools/layout-editor-help'
+import { FloorPlanDualScreenBridge } from './floor-plan-dual-screen-bridge'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import type { AutoArrangeMode } from './engine/auto-arrange'
 import { autoArrangeInRoom } from './engine/auto-arrange'
@@ -647,10 +648,50 @@ function FloorPlanV2Workspace({
     cellFt: store.doc.snapFt,
   })
   const patronTrafficPath = patronPathfinding.path
+  const patronTrafficPathSegments = patronPathfinding.pathSegments
   const pathfindingBottleneckIds = useMemo(
-    () => new Set(patronPathfinding.bottleneckBoothIds),
-    [patronPathfinding.bottleneckBoothIds]
+    () =>
+      new Set([
+        ...patronPathfinding.bottleneckBoothIds,
+        ...patronPathfinding.missedBoothIds,
+      ]),
+    [patronPathfinding.bottleneckBoothIds, patronPathfinding.missedBoothIds]
   )
+  const patronPathToastRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!patronPathEnabled) {
+      patronPathToastRef.current = null
+      return
+    }
+    const signature = [
+      patronPathfinding.missingDoors ? 'doors' : '',
+      patronPathfinding.missedBoothIds.join(','),
+      patronPathfinding.isPartial ? 'partial' : 'ok',
+    ].join('|')
+    if (patronPathToastRef.current === signature) return
+    patronPathToastRef.current = signature
+
+    if (patronPathfinding.missingDoors) {
+      toast.warning(
+        'Place entry and exit doors on perimeter walls to compute the patron walk path.',
+        { duration: 5500 }
+      )
+      return
+    }
+    if (patronPathfinding.missedBoothIds.length > 0) {
+      const n = patronPathfinding.missedBoothIds.length
+      toast.warning(
+        `Patron path could not reach ${n} booth${n === 1 ? '' : 's'} — aisles may be too narrow.`,
+        { duration: 5500 }
+      )
+    }
+  }, [
+    patronPathEnabled,
+    patronPathfinding.missingDoors,
+    patronPathfinding.missedBoothIds,
+    patronPathfinding.isPartial,
+  ])
   const patronAisleCorridors = usePatronAisleOverlay(
     store.doc,
     activeRoomId,
@@ -1264,7 +1305,6 @@ function FloorPlanV2Workspace({
 
   const handleLaunchDualScreen = useCallback(
     (mode: DualScreenMode) => {
-      if (!isDashboard) return
       const existing = dualScreenWindowRefs.current[mode]
       if (existing && !existing.closed) {
         existing.focus()
@@ -1280,11 +1320,10 @@ function FloorPlanV2Workspace({
         )
       }
     },
-    [eventId, isDashboard]
+    [eventId]
   )
 
   useEffect(() => {
-    if (!isDashboard) return
     const timer = window.setInterval(() => {
       let anyOpen = false
       for (const mode of ['presenter', 'wall-cast'] as const) {
@@ -1298,7 +1337,7 @@ function FloorPlanV2Workspace({
       setDualScreenActive(anyOpen)
     }, 1500)
     return () => window.clearInterval(timer)
-  }, [isDashboard])
+  }, [])
 
   /** Command center panels mode — hides side columns, not native canvas overlay. */
   const dashboardImmersive = isDashboard && commandCenterFullscreen.fullscreen
@@ -2401,7 +2440,7 @@ function FloorPlanV2Workspace({
         return next
       })
     },
-    onLaunchDualScreen: isDashboard ? handleLaunchDualScreen : undefined,
+    onLaunchDualScreen: handleLaunchDualScreen,
     dualScreenActive,
     designerExitHref: resolvedDesignerExitHref,
     designerExitLabel: resolvedDesignerExitLabel,
@@ -2592,6 +2631,7 @@ function FloorPlanV2Workspace({
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
+                    patronTrafficPathSegments={patronTrafficPathSegments}
                     pathfindingBottleneckIds={pathfindingBottleneckIds}
                     patronPathIsPartial={patronPathfinding.isPartial}
                     patronAisleCorridors={patronAisleCorridors}
@@ -2713,6 +2753,8 @@ function FloorPlanV2Workspace({
                     return next
                   })
                 }}
+                onLaunchDualScreen={handleLaunchDualScreen}
+                dualScreenActive={dualScreenActive}
                 designerExitHref={resolvedDesignerExitHref}
                 designerExitLabel={resolvedDesignerExitLabel}
                 onDesignerExit={handleDesignerExit}
@@ -2778,6 +2820,7 @@ function FloorPlanV2Workspace({
                     onVendorDrop={onVendorDrop}
                     autoArrangeMode={autoArrangeMode}
                     patronTrafficPath={patronTrafficPath}
+                    patronTrafficPathSegments={patronTrafficPathSegments}
                     pathfindingBottleneckIds={pathfindingBottleneckIds}
                     patronPathIsPartial={patronPathfinding.isPartial}
                     patronAisleCorridors={patronAisleCorridors}
@@ -2881,7 +2924,14 @@ function FloorPlanV2Workspace({
         )}
         </div>
       </FullscreenLayout>
-      <LayoutEditorHelpHost />
+      <LayoutEditorHelpHost showFloatingFab={isDashboard} />
+      {!isDashboard ? (
+        <FloorPlanDualScreenBridge
+          eventId={eventId ?? null}
+          store={store}
+          boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
+        />
+      ) : null}
     </div>
   )
 }
