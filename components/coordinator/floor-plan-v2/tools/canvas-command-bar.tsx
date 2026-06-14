@@ -70,6 +70,9 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   autoArrangeDisabledReason?: string | null
   autoArrangeMode?: AutoArrangeMode
   onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  onArrangeLayout?: () => void
+  canArrangeLayout?: boolean
+  arrangeLayoutDisabledReason?: string | null
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
@@ -133,6 +136,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     autoArrangeDisabledReason,
     autoArrangeMode,
     onAutoArrangeModeChange,
+    onArrangeLayout,
+    canArrangeLayout,
+    arrangeLayoutDisabledReason,
     onClearAll,
     onDeleteSelected,
     tableSizeFt,
@@ -246,6 +252,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       autoArrangeMode: autoArrangeMode ?? vendorAutoArrangeMode,
       onAutoArrangeModeChange:
         onAutoArrangeModeChange ?? onVendorAutoArrangeModeChange,
+      onArrangeLayout,
+      canArrangeLayout,
+      arrangeLayoutDisabledReason,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,
@@ -335,6 +344,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       autoArrangeDisabledReason,
       autoArrangeMode,
       onAutoArrangeModeChange,
+      onArrangeLayout,
+      canArrangeLayout,
+      arrangeLayoutDisabledReason,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,

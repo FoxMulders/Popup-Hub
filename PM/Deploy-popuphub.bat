@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 REM PopUp Hub - build, commit, sync push, Vercel prod, session handoff (single instance).
 REM Works when: double-clicked in Explorer, run from cmd/PowerShell, any current directory.
-REM Next commit (auto): feat: ship 73 session updates (patron path overlay pathfinding fix; layout help overlap + wizard dual-screen restore; test suite dense fill + progress; patron table toolbar horizontal layout; +69 more)
+REM Next commit (auto): feat: ship 76 session updates (Deploy bat cmd.exe DE parse fix; 1′ grid lines restored; category proximity edge gaps + Arrange layout in header; patron path overlay pathfinding fix; +72 more)
 REM
 REM Commit message is auto-generated from handoff Shipped / Active work sections,
 REM or "feat: ship local changes" when uncommitted work exists.
@@ -26,40 +26,41 @@ set "BAT_DIR=%~dp0"
 set "REPO_ROOT=%BAT_DIR%.."
 for %%I in ("%REPO_ROOT%") do set "REPO_ROOT=%%~fI"
 
-set "DEPLOY_PS_ARGS="
+set "DPL_PS_ARGS="
 :parseBatFlags
 if "%~1"=="" goto :afterBatFlags
-if /i "%~1"=="--no-pause" set "DEPLOY_NO_PAUSE=1" & shift & goto :parseBatFlags
-if /i "%~1"=="-NoPause" set "DEPLOY_NO_PAUSE=1" & shift & goto :parseBatFlags
-if /i "%~1"=="-SkipBuild" set "DEPLOY_PS_ARGS=!DEPLOY_PS_ARGS! -SkipBuild" & shift & goto :parseBatFlags
-if /i "%~1"=="-SkipCommit" set "DEPLOY_PS_ARGS=!DEPLOY_PS_ARGS! -SkipCommit" & shift & goto :parseBatFlags
-if /i "%~1"=="-SkipDeploy" set "DEPLOY_PS_ARGS=!DEPLOY_PS_ARGS! -SkipDeploy" & shift & goto :parseBatFlags
-if /i "%~1"=="-SkipHandoff" set "DEPLOY_PS_ARGS=!DEPLOY_PS_ARGS! -SkipHandoff" & shift & goto :parseBatFlags
+if /i "%~1"=="--no-pause" set "DPL_NO_PAUSE=1" & shift & goto :parseBatFlags
+if /i "%~1"=="-NoPause" set "DPL_NO_PAUSE=1" & shift & goto :parseBatFlags
+if /i "%~1"=="-SkipBuild" set "DPL_PS_ARGS=!DPL_PS_ARGS! -SkipBuild" & shift & goto :parseBatFlags
+if /i "%~1"=="-SkipCommit" set "DPL_PS_ARGS=!DPL_PS_ARGS! -SkipCommit" & shift & goto :parseBatFlags
+if /i "%~1"=="-SkipDeploy" set "DPL_PS_ARGS=!DPL_PS_ARGS! -SkipDeploy" & shift & goto :parseBatFlags
+if /i "%~1"=="-SkipHandoff" set "DPL_PS_ARGS=!DPL_PS_ARGS! -SkipHandoff" & shift & goto :parseBatFlags
 echo Unknown flag: %~1
 set "EXITCODE=1"
 goto :fail
 
 :afterBatFlags
 
-cd /d "%REPO_ROOT%"
+cd /d "!REPO_ROOT!"
 if errorlevel 1 (
     echo Could not change to repo root:
-    echo   %REPO_ROOT%
+    echo   !REPO_ROOT!
     set "EXITCODE=1"
     goto :fail
 )
 
-if not exist "%REPO_ROOT%\.git\" (
+if not exist "!REPO_ROOT!\.git\" (
     echo Not a git repository:
-    echo   %REPO_ROOT%
+    echo   !REPO_ROOT!
     set "EXITCODE=1"
     goto :fail
 )
 
-set "DEPLOY_PS1=%REPO_ROOT%\scripts\deploy-popuphub.ps1"
-if not exist "%DEPLOY_PS1%" (
+REM DPL_* names avoid cmd parsing %DE inside %DEPLOY_*% (PLOY_PS1 is not recognized).
+set "DPL_SCRIPT=!REPO_ROOT!\scripts\deploy-popuphub.ps1"
+if not exist "!DPL_SCRIPT!" (
     echo Missing deploy script:
-    echo   %DEPLOY_PS1%
+    echo   !DPL_SCRIPT!
     set "EXITCODE=1"
     goto :fail
 )
@@ -68,15 +69,15 @@ set "PS_EXE="
 where pwsh >nul 2>&1
 if not errorlevel 1 set "PS_EXE=pwsh.exe"
 if not defined PS_EXE set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
-if not exist "%PS_EXE%" set "PS_EXE=powershell.exe"
+if not exist "!PS_EXE!" set "PS_EXE=powershell.exe"
 
 set "BUMP_BUILD_NUMBER=1"
-if defined DEPLOY_PS_ARGS set "DEPLOY_PS_ARGS=!DEPLOY_PS_ARGS:~1!"
+if defined DPL_PS_ARGS set "DPL_PS_ARGS=!DPL_PS_ARGS:~1!"
 
-if defined DEPLOY_PS_ARGS (
-    "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%" %DEPLOY_PS_ARGS%
+if defined DPL_PS_ARGS (
+    "!PS_EXE!" -NoProfile -ExecutionPolicy Bypass -File "!DPL_SCRIPT!" !DPL_PS_ARGS!
 ) else (
-    "%PS_EXE%" -NoProfile -ExecutionPolicy Bypass -File "%DEPLOY_PS1%"
+    "!PS_EXE!" -NoProfile -ExecutionPolicy Bypass -File "!DPL_SCRIPT!"
 )
 set "EXITCODE=!ERRORLEVEL!"
 
@@ -104,7 +105,7 @@ call :maybe_pause
 exit /b !EXITCODE!
 
 :maybe_pause
-if defined DEPLOY_NO_PAUSE exit /b 0
+if defined DPL_NO_PAUSE exit /b 0
 if defined CI exit /b 0
 echo %CMDCMDLINE% | findstr /i /c:"/c" >nul 2>&1
 if not errorlevel 1 (

@@ -12,6 +12,7 @@
  */
 
 import {
+  boothEdgeGapsInGridSpaces,
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
 } from '../interactions/category-rules'
@@ -433,15 +434,10 @@ function violatesProximity(
   gridSpacingFt: number
 ): boolean {
   if (!category) return false
-  const cx = rect.x + rect.width / 2
-  const cy = rect.y + rect.height / 2
   for (const p of placed) {
     if ((p.categoryName ?? null) !== category) continue
     const aabb = rotatedAabb(p as PlacementProbe)
-    const ocx = aabb.x + aabb.width / 2
-    const ocy = aabb.y + aabb.height / 2
-    const dxColumns = Math.abs(cx - ocx) / gridSpacingFt
-    const dyRows = Math.abs(cy - ocy) / gridSpacingFt
+    const { dxColumns, dyRows } = boothEdgeGapsInGridSpaces(rect, aabb, gridSpacingFt)
     if (
       dxColumns < PROXIMITY_MIN_COLUMNS &&
       dyRows < PROXIMITY_MIN_ROWS

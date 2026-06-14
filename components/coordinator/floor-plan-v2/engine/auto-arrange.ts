@@ -29,6 +29,7 @@ import {
 } from '../interactions/geometry'
 import { objectFootprintAabb } from '../state/table-cluster-layout'
 import {
+  boothEdgeGapsInGridSpaces,
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
 } from '../interactions/category-rules'
@@ -406,16 +407,15 @@ function placeBoothsAtSlots(
 
   function violatesProximity(rect: Rect, category: string | null): boolean {
     if (!category) return false
-    const cx = rect.x + rect.width / 2
-    const cy = rect.y + rect.height / 2
     for (let i = 0; i < newBooths.length; i++) {
       const placed = newBooths[i]!
       if ((placed.categoryName ?? null) !== category) continue
       const placedRect = placedRects[i]!
-      const ocx = placedRect.x + placedRect.width / 2
-      const ocy = placedRect.y + placedRect.height / 2
-      const dxColumns = Math.abs(cx - ocx) / gridSpacingFt
-      const dyRows = Math.abs(cy - ocy) / gridSpacingFt
+      const { dxColumns, dyRows } = boothEdgeGapsInGridSpaces(
+        rect,
+        placedRect,
+        gridSpacingFt
+      )
       if (
         dxColumns < PROXIMITY_MIN_COLUMNS &&
         dyRows < PROXIMITY_MIN_ROWS

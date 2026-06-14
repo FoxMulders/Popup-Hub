@@ -362,6 +362,9 @@ export interface CanvasCommandBarBlockContext {
   autoArrangeDisabledReason?: string | null
   autoArrangeMode?: AutoArrangeMode
   onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  onArrangeLayout?: () => void
+  canArrangeLayout?: boolean
+  arrangeLayoutDisabledReason?: string | null
   onVendorAutoArrange?: () => void
   canVendorAutoArrange?: boolean
   vendorAutoArrangeMode?: AutoArrangeMode
@@ -1038,6 +1041,33 @@ export function renderCanvasCommandBarBlock(
             </span>
           ) : null}
         </div>
+      )
+
+    case 'arrange-layout':
+      if (!ctx.onArrangeLayout) return null
+      return (
+        <button
+          type="button"
+          onClick={ctx.onArrangeLayout}
+          disabled={!ctx.canArrangeLayout}
+          title={
+            ctx.canArrangeLayout
+              ? 'Arrange vendor booths row-by-row inside the room grid with category spacing'
+              : ctx.arrangeLayoutDisabledReason ??
+                'Draw vendor booths in the active room first'
+          }
+          aria-label="Arrange vendor booths in room grid"
+          className={cn(
+            'inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[0.6875rem] font-semibold transition-colors',
+            toolbarControlHeight(compact),
+            ctx.canArrangeLayout
+              ? 'border-emerald-300 bg-white text-emerald-900 hover:bg-emerald-50'
+              : 'cursor-not-allowed border-stone-200 bg-white/80 text-stone-400'
+          )}
+        >
+          <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+          Arrange layout
+        </button>
       )
 
     case 'optimize':

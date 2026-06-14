@@ -107,6 +107,7 @@ function ToolbarReorderItem({
 const BLOCK_LABELS: Record<CanvasToolbarBlockId, string> = {
   'test-suite': 'Populate test suite vendors',
   optimize: 'Auto-arrange floor plan',
+  'arrange-layout': 'Arrange layout in room grid',
   primitives: 'Canvas tools',
   'history-clipboard': 'History and clipboard',
   'view-align': 'View and alignment',

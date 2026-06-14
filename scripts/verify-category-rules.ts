@@ -113,28 +113,40 @@ console.log('proximity — same-category < 4 cols AND < 2 rows triggers')
 {
   const gridFt = 1
   const a = booth('a', 0, 0, 'Food')
-  const b = booth('b', 1, 1, 'Food') // dx=1 col, dy=1 row → both below thresholds
+  const b = booth('b', 1, 1, 'Food') // overlapping footprints → edge gaps 0
   const v = findBoothProximityViolation(b, [a], gridFt)
   expect('violation reported', v?.conflictId, 'a')
-  expect('dxColumns reported', v?.dxColumns, 1)
-  expect('dyRows reported', v?.dyRows, 1)
+  expect('dxColumns reported', v?.dxColumns, 0)
+  expect('dyRows reported', v?.dyRows, 0)
+}
+
+console.log('proximity — flush adjacent same-category booths trigger')
+{
+  const gridFt = 1
+  const a = booth('a', 0, 0, 'Food')
+  const b = booth('b', 6, 0, 'Food')
+  expect(
+    'horizontally adjacent booths violate',
+    findBoothProximityViolation(b, [a], gridFt)?.conflictId,
+    'a'
+  )
 }
 
 console.log('proximity — boundary cases')
 {
   const gridFt = 1
-  // dx exactly = 4 (boundary not less than 4) → NO violation
+  // 4-col edge gap exactly → NO violation
   const a = booth('a', 0, 0, 'Food')
-  const b = booth('b', 4, 1, 'Food')
+  const b = booth('b', 10, 0, 'Food')
   expect(
-    '4-col gap is exactly the threshold (no violation)',
+    '4-col edge gap is exactly the threshold (no violation)',
     findBoothProximityViolation(b, [a], gridFt),
     null
   )
-  // dy exactly = 2 → NO violation
-  const c = booth('c', 0, 2, 'Food')
+  // 2-row edge gap exactly → NO violation
+  const c = booth('c', 0, 8, 'Food')
   expect(
-    '2-row gap is exactly the threshold (no violation)',
+    '2-row edge gap is exactly the threshold (no violation)',
     findBoothProximityViolation(c, [a], gridFt),
     null
   )
@@ -182,13 +194,13 @@ console.log('proximity — non-booth others ignored')
 
 console.log('proximity — grid spacing scales the rule')
 {
-  // gridSpacing = 4 ft → 4 cols = 16 ft, 2 rows = 8 ft
+  // gridSpacing = 4 ft → 4 cols = 16 ft edge gap, 2 rows = 8 ft edge gap
   const gridFt = 4
   const a = booth('a', 0, 0, 'Food')
-  const b = booth('b', 14, 0, 'Food') // dx=14 ft → 3.5 cols, dy=0 rows → both below thresholds
+  const b = booth('b', 14, 0, 'Food') // 8 ft edge gap → 2 cols, overlapping rows
   const v = findBoothProximityViolation(b, [a], gridFt)
   expect('large grid spacing scales threshold', v !== null, true)
-  const c = booth('c', 20, 0, 'Food') // dx=20 ft → 5 cols → above threshold
+  const c = booth('c', 22, 0, 'Food') // 16 ft edge gap → 4 cols
   expect(
     'placement past the scaled threshold is allowed',
     findBoothProximityViolation(c, [a], gridFt),

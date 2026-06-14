@@ -19,6 +19,7 @@ import {
   edgeClearanceBetweenRects,
 } from '@/lib/coordinator/booth-clearance-visual'
 import {
+  boothEdgeGapsInGridSpaces,
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
 } from '../interactions/category-rules'
@@ -178,12 +179,11 @@ function violatesCategoryProximity(
   gridSpacingFt: number
 ): boolean {
   if (!a.category || !b.category || a.category !== b.category) return false
-  const acx = a.x + a.width / 2
-  const acy = a.y + a.height / 2
-  const bcx = b.x + b.width / 2
-  const bcy = b.y + b.height / 2
-  const dxColumns = Math.abs(acx - bcx) / gridSpacingFt
-  const dyRows = Math.abs(acy - bcy) / gridSpacingFt
+  const { dxColumns, dyRows } = boothEdgeGapsInGridSpaces(
+    nodeAabb(a),
+    nodeAabb(b),
+    gridSpacingFt
+  )
   return dxColumns < PROXIMITY_MIN_COLUMNS && dyRows < PROXIMITY_MIN_ROWS
 }
 

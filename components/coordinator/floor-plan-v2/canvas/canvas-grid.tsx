@@ -47,7 +47,7 @@ function CanvasGridBase({
           height={minorPx}
           patternUnits="userSpaceOnUse"
         >
-          <rect width={minorPx} height={minorPx} fill="#fafaf9" />
+          {/* Stroke only — opaque tile fills hide 1′ lines under the 5′ major layer. */}
           <path
             d={`M ${minorPx} 0 L 0 0 0 ${minorPx}`}
             fill="none"
@@ -61,7 +61,6 @@ function CanvasGridBase({
           height={majorPx}
           patternUnits="userSpaceOnUse"
         >
-          <rect width={majorPx} height={majorPx} fill="#fafaf9" />
           <path
             d={`M ${majorPx} 0 L 0 0 0 ${majorPx}`}
             fill="none"
@@ -70,6 +69,7 @@ function CanvasGridBase({
           />
         </pattern>
       </defs>
+      <rect x={0} y={0} width={widthPx} height={heightPx} fill="#fafaf9" />
       <rect
         x={0}
         y={0}

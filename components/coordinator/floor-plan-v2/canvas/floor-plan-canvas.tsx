@@ -9,8 +9,6 @@ import {
   useState,
   type MutableRefObject,
 } from 'react'
-import { LayoutGrid } from 'lucide-react'
-import { toast } from 'sonner'
 import { CanvasGrid } from './canvas-grid'
 import { CanvasObjects } from './canvas-objects'
 import {
@@ -50,7 +48,6 @@ import {
 } from './canvas-grid-spacing'
 import type { LabelObject, PlacedObject } from '../state/types'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
-import { autoArrangeInRoom } from '../engine/auto-arrange'
 import type { LayoutBaselineTableLengthFt } from '@/lib/booth-planner/layout-table-size'
 import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import type { ToolState } from '../tools/types'
@@ -550,63 +547,6 @@ export function FloorPlanCanvas({
     [mergeOverlapCtx, store.doc.objects]
   )
 
-  const canPackVendorGrid = useMemo(() => {
-    if (viewOnly || !activeRoomId) return false
-    const objectRoom = store.doc.objectRoom ?? {}
-    return store.doc.objects.some(
-      (o) =>
-        o.kind === 'booth' &&
-        !isGuestTableBooth(o as BoothObject) &&
-        objectRoom[o.id] === activeRoomId
-    )
-  }, [activeRoomId, store.doc.objectRoom, store.doc.objects, viewOnly])
-
-  const handlePackVendorGrid = useCallback(() => {
-    if (!activeRoomId) {
-      toast.message('Select a room before arranging booths.')
-      return
-    }
-    const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      scope: 'vendor',
-      mode: 'grid',
-      eventCategoryNames,
-      baselineTableLengthFt,
-      dropUnplacedBooths: true,
-      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
-        ? { maxBooths: layoutCapacity }
-        : {}),
-    })
-    if (!result) {
-      toast.error('Could not read the active room grid.')
-      return
-    }
-    if (result.placedCount === 0) {
-      toast.error('No vendor booths fit inside the room under spacing rules.')
-      return
-    }
-    store.replaceObjects(result.doc.objects, { pushHistory: true })
-    onLayoutCommit?.()
-    const omitted =
-      result.overflowCount + result.droppedCount + result.removedOverlapCount
-    if (omitted > 0) {
-      toast.warning(
-        `Arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} safely; ${omitted} could not fit and ${omitted === 1 ? 'was' : 'were'} omitted.`,
-        { duration: 4500 }
-      )
-    } else {
-      toast.success(
-        `Arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} in the room grid.`
-      )
-    }
-  }, [
-    activeRoomId,
-    baselineTableLengthFt,
-    eventCategoryNames,
-    layoutCapacity,
-    onLayoutCommit,
-    store,
-  ])
-
   const dissolvedStageIds = useMemo(
     () => dissolvedStageIdsForDoc(store.doc),
     [store.doc]
@@ -1001,30 +941,6 @@ export function FloorPlanCanvas({
         className
       )}
     >
-      {!viewOnly ? (
-        <div className="pointer-events-none absolute right-2 top-2 z-20 flex flex-col items-end gap-1">
-          <button
-            type="button"
-            onClick={handlePackVendorGrid}
-            disabled={!canPackVendorGrid}
-            title={
-              canPackVendorGrid
-                ? 'Arrange selected or unplaced vendor booths row-by-row inside the room grid'
-                : 'Draw vendor booths in the active room first'
-            }
-            aria-label="Arrange vendor booths in room grid"
-            className={cn(
-              'pointer-events-auto inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[0.6875rem] font-semibold shadow-sm backdrop-blur-sm transition-colors',
-              canPackVendorGrid
-                ? 'border-emerald-300 bg-white/95 text-emerald-900 hover:bg-emerald-50'
-                : 'cursor-not-allowed border-stone-200 bg-white/80 text-stone-400'
-            )}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-            Arrange layout
-          </button>
-        </div>
-      ) : null}
       <div
         id={FLOOR_PLAN_CANVAS_ID}
         ref={scrollRef}

@@ -9,7 +9,7 @@
  *   - Categories rotate so adjacent slots never share one when more
  *     than one category is defined.
  *   - The same-category proximity rule (`< 4 cols AND < 2 rows`,
- *     center-to-center) is satisfied across every same-category
+ *     edge-to-edge) is satisfied across every same-category
  *     pair the engine produced.
  *
  * Run with: npx tsx scripts/verify-auto-arrange.ts
@@ -45,6 +45,7 @@ import { docFromLegacyRooms } from '../components/coordinator/floor-plan-v2/stat
 import {
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
+  boothEdgeGapsInGridSpaces,
 } from '../components/coordinator/floor-plan-v2/interactions/category-rules'
 import type {
   BoothObject,
@@ -325,16 +326,11 @@ for (const c of cases) {
       const a = booths[i]!
       const acat = a.categoryName?.trim().toLowerCase()
       if (!acat) continue
-      const acx = a.x + a.width / 2
-      const acy = a.y + a.height / 2
       for (let j = i + 1; j < booths.length; j++) {
         const b = booths[j]!
         const bcat = b.categoryName?.trim().toLowerCase()
         if (!bcat || bcat !== acat) continue
-        const bcx = b.x + b.width / 2
-        const bcy = b.y + b.height / 2
-        const dxCols = Math.abs(acx - bcx) / grid
-        const dyRows = Math.abs(acy - bcy) / grid
+        const { dxColumns: dxCols, dyRows } = boothEdgeGapsInGridSpaces(a, b, grid)
         if (
           dxCols < PROXIMITY_MIN_COLUMNS &&
           dyRows < PROXIMITY_MIN_ROWS

@@ -2137,6 +2137,63 @@ function FloorPlanV2Workspace({
     vendorTableMetaByKey,
   ])
 
+  const canArrangeLayout = useMemo(() => {
+    if (!activeRoomId) return false
+    const objectRoom = store.doc.objectRoom ?? {}
+    return store.doc.objects.some(
+      (o) =>
+        o.kind === 'booth' &&
+        !isGuestTableBooth(o) &&
+        objectRoom[o.id] === activeRoomId
+    )
+  }, [activeRoomId, store.doc.objectRoom, store.doc.objects])
+
+  const handleArrangeLayoutInRoom = useCallback(() => {
+    if (!activeRoomId) {
+      toast.message('Select a room before arranging booths.')
+      return
+    }
+    const result = autoArrangeInRoom(store.doc, activeRoomId, {
+      scope: 'vendor',
+      mode: 'grid',
+      eventCategoryNames,
+      baselineTableLengthFt: safeTableSizeFt,
+      dropUnplacedBooths: true,
+      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
+        ? { maxBooths: layoutCapacity }
+        : {}),
+    })
+    if (!result) {
+      toast.error('Could not read the active room grid.')
+      return
+    }
+    if (result.placedCount === 0) {
+      toast.error('No vendor booths fit inside the room under spacing rules.')
+      return
+    }
+    store.replaceObjects(result.doc.objects, { pushHistory: true })
+    scheduleLayoutAutosave()
+    const omitted =
+      result.overflowCount + result.droppedCount + result.removedOverlapCount
+    if (omitted > 0) {
+      toast.warning(
+        `Arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} safely; ${omitted} could not fit and ${omitted === 1 ? 'was' : 'were'} omitted.`,
+        { duration: 4500 }
+      )
+    } else {
+      toast.success(
+        `Arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} in the room grid.`
+      )
+    }
+  }, [
+    activeRoomId,
+    eventCategoryNames,
+    layoutCapacity,
+    safeTableSizeFt,
+    scheduleLayoutAutosave,
+    store,
+  ])
+
   useEffect(() => {
     if (!onLayoutActionsReady) return
     onLayoutActionsReady({
@@ -2410,6 +2467,8 @@ function FloorPlanV2Workspace({
     autoArrangeDisabledReason,
     autoArrangeMode,
     onAutoArrangeModeChange: setAutoArrangeMode,
+    onArrangeLayout: handleArrangeLayoutInRoom,
+    canArrangeLayout,
     tableSizeFt: tableSizePillValue,
     onTableSizeChange: handleTableSizeChange,
     onPrepareTableDraw: handlePrepareTableDraw,
@@ -2727,6 +2786,8 @@ function FloorPlanV2Workspace({
                 autoArrangeDisabledReason={autoArrangeDisabledReason}
                 autoArrangeMode={autoArrangeMode}
                 onAutoArrangeModeChange={setAutoArrangeMode}
+                onArrangeLayout={handleArrangeLayoutInRoom}
+                canArrangeLayout={canArrangeLayout}
                 tableSizeFt={tableSizePillValue}
                 onTableSizeChange={handleTableSizeChange}
                 onPrepareTableDraw={handlePrepareTableDraw}

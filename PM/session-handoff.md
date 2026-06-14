@@ -4,6 +4,22 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Deploy bat cmd.exe %DE parse fix (local, not deployed)
+- **Issue:** `PM\Deploy-popuphub.bat` failed with `'PLOY_PS1"' is not recognized` (exit 9009) — cmd.exe parsed `%DE` inside `%DEPLOY_PS1%` before the full variable name.
+- **Fix:** Renamed bat vars to `DPL_*` (`DPL_SCRIPT`, `DPL_PS_ARGS`, `DPL_NO_PAUSE`); path/script invocations use delayed expansion (`!VAR!`). Template in `get-deploy-commit-message.ps1` updated so regenerated `.bat` stays safe.
+- **Verify:** `cmd /c "set DE=broken&& PM\Deploy-popuphub.bat -SkipBuild -SkipCommit -SkipDeploy -SkipHandoff --no-pause"` — PowerShell deploy script runs (no PLOY_PS1 error).
+
+## Active work — 1′ grid lines restored (local, not deployed)
+- **Issue:** Floor plan canvas showed only 5′ major grid blocks — 1′ minor subdivisions disappeared.
+- **Root cause:** `canvas-grid.tsx` pattern tiles gained opaque `#fafaf9` fills; the 5′ major pattern layer painted over the 1′ minor strokes.
+- **Fix:** Pattern tiles are stroke-only again; single background rect supplies the stone fill beneath both layers.
+- **Verify:** `/coordinator/dashboard` — 50′ room shows 1′ minor lines with darker 5′ accents; zoom to 100%+ for clearest cells.
+
+## Active work — category proximity edge gaps + Arrange layout in header (local, not deployed)
+- **Issue:** Same-category booths (color) could sit flush adjacent after **Arrange layout** — proximity used center-to-center distance, so large booths cleared the 4-col / 2-row rule while touching. **Arrange layout** floated over the canvas instead of the dashboard header bar.
+- **Fix:** `category-rules.ts` — `boothEdgeGapsInGridSpaces` measures edge-to-edge gaps; auto-arrange, patron-centric layout, and unified solver updated. **Arrange layout** moved to header bar blank space (`ml-auto` in `canvas-toolbar-static.tsx`); wired via `handleArrangeLayoutInRoom` in `floor-plan-v2.tsx`; removed canvas overlay button.
+- **Verify:** `npx tsx scripts/verify-category-rules.ts` — PASS. `npx tsx scripts/verify-auto-arrange.ts` — 31/31 PASS. Smoke: dashboard Blueprint Studio → **Arrange layout** in top header (right of hall tools) → grid packs with no same-color neighbors touching.
+
 ## Active work — patron path overlay pathfinding fix (local, not deployed)
 - **`PathfindingService.ts`:** Door threshold terminals via `evaluateTrafficFlowPrerequisites` + inward projection; booth **approach nodes** (not centers); A*-distance TSP + 2-opt; LOS string-pull smoothing; segment routing without phantom chords; `missedBoothIds` / `missingDoors` flags; fixed `ftToGrid` ↔ `gridToFt` consistency.
 - **`lib/floor-plan/grid-path-smoothing.ts` (new):** Bresenham line-of-sight + string-pull for grid paths.
@@ -1738,7 +1754,7 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 | Mobile workspace page scroll | **Local** — side rails hidden below lg; center column scrolls |
 | Mobile wizard text fields | **Local** — Step 1 description/raffle static labels; venue+address Places two-way sync; re-test on phone |
 | Blank start — only add-room + size fields | **Deployed** — sign-in smoke |
-| Deploy / handoff script | **Fixed** — `update-session-handoff.ps1` ASCII punctuation (Windows PS parse error) |
+| Deploy / handoff script | **Fixed** — `%DEPLOY_*%` → `DPL_*` + delayed expansion (Windows cmd `%DE` parse / PLOY_PS1 error) |
 
 **Manual checklist after sign-in:** `/coordinator/dashboard` — site footer hidden, canvas fills viewport below nav, toolbar buttons respond, curation queue select works; **Back to market** / **+ New market** / **Full canvas** toggle.
 

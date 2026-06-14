@@ -8,8 +8,9 @@
  *   1. `isBoothProximityViolation` — same-category booths cannot sit
  *      within 4 grid columns AND 2 grid rows of each other. The grid
  *      origin is the canvas (0,0); column/row distance is measured
- *      between booth centers and converted from grid spaces to feet
- *      using `gridSpacingFt` (the document's snap unit). Coordinators
+ *      edge-to-edge between booth footprints and converted from feet
+ *      to grid spaces using `gridSpacingFt` (the document snap unit).
+ *      Coordinators
  *      who already placed two same-category booths flush against
  *      each other before this rule existed are not punished — the
  *      function only flags candidate placements that would *create*
@@ -35,16 +36,63 @@ export const PROXIMITY_MIN_ROWS = 2
 interface ProximityViolation {
   /** id of the existing booth the candidate is too close to. */
   conflictId: string
-  /** column-axis distance between booth centers, in grid spaces. */
+  /** Horizontal edge-to-edge gap in grid column spaces. */
   dxColumns: number
-  /** row-axis distance between booth centers, in grid spaces. */
+  /** Vertical edge-to-edge gap in grid row spaces. */
   dyRows: number
   /** Category in conflict (mirrors `candidate.categoryName`). */
   category: string
 }
 
-function boothCenter(b: { x: number; y: number; width: number; height: number }) {
-  return { cx: b.x + b.width / 2, cy: b.y + b.height / 2 }
+export interface BoothFootprintRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+/** Edge-to-edge booth separation along each axis, in grid column/row spaces. */
+export function boothEdgeGapsInGridSpaces(
+  a: BoothFootprintRect,
+  b: BoothFootprintRect,
+  gridSpacingFt: number
+): { dxColumns: number; dyRows: number } {
+  if (gridSpacingFt <= 0) {
+    return { dxColumns: Number.POSITIVE_INFINITY, dyRows: Number.POSITIVE_INFINITY }
+  }
+
+  const overlapX =
+    Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+  const overlapY =
+    Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+  const gapXFt =
+    overlapX > 0
+      ? 0
+      : Math.max(a.x - (b.x + b.width), b.x - (a.x + a.width), 0)
+  const gapYFt =
+    overlapY > 0
+      ? 0
+      : Math.max(a.y - (b.y + b.height), b.y - (a.y + a.height), 0)
+
+  return {
+    dxColumns: gapXFt / gridSpacingFt,
+    dyRows: gapYFt / gridSpacingFt,
+  }
+}
+
+export function sameCategoryProximityViolated(
+  a: BoothFootprintRect & { categoryName?: string | null },
+  b: BoothFootprintRect & { categoryName?: string | null },
+  gridSpacingFt: number,
+  options?: { minColumns?: number; minRows?: number }
+): boolean {
+  const catA = a.categoryName?.trim().toLowerCase()
+  const catB = b.categoryName?.trim().toLowerCase()
+  if (!catA || !catB || catA !== catB) return false
+  const minCols = options?.minColumns ?? PROXIMITY_MIN_COLUMNS
+  const minRows = options?.minRows ?? PROXIMITY_MIN_ROWS
+  const { dxColumns, dyRows } = boothEdgeGapsInGridSpaces(a, b, gridSpacingFt)
+  return dxColumns < minCols && dyRows < minRows
 }
 
 /**
@@ -77,8 +125,12 @@ export function findBoothProximityViolation(
   if (!cat) return null
   const minCols = options?.minColumns ?? PROXIMITY_MIN_COLUMNS
   const minRows = options?.minRows ?? PROXIMITY_MIN_ROWS
-
-  const { cx: ccx, cy: ccy } = boothCenter(candidate)
+  const candidateRect: BoothFootprintRect = {
+    x: candidate.x,
+    y: candidate.y,
+    width: candidate.width,
+    height: candidate.height,
+  }
 
   for (const other of others) {
     if (other.id === candidate.id) continue
@@ -87,11 +139,7 @@ export function findBoothProximityViolation(
     const otherCat = otherBooth.categoryName?.trim().toLowerCase()
     if (!otherCat || otherCat !== cat) continue
 
-    const { cx: ocx, cy: ocy } = boothCenter(otherBooth)
-    const dxFt = Math.abs(ccx - ocx)
-    const dyFt = Math.abs(ccy - ocy)
-    const dxColumns = dxFt / gridSpacingFt
-    const dyRows = dyFt / gridSpacingFt
+    const { dxColumns, dyRows } = boothEdgeGapsInGridSpaces(candidateRect, otherBooth, gridSpacingFt)
     if (dxColumns < minCols && dyRows < minRows) {
       return {
         conflictId: otherBooth.id,
