@@ -5,8 +5,18 @@ import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle, FileText } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle, FileText, GripVertical } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
@@ -68,13 +78,19 @@ function CategoryOverflowBadge({ app }: { app: BoothApplication }) {
   )
 }
 
-const COLUMNS: { status: ApplicationStatus; label: string; color: string }[] = [
+const BOARD_COLUMNS: { status: ApplicationStatus; label: string; color: string }[] = [
   { status: 'pending', label: 'Pending Review', color: 'text-harvest-800 bg-harvest-50 border-harvest-200' },
   { status: 'pending_insurance', label: 'Pending Insurance', color: 'text-harvest-800 bg-harvest-100 border-harvest-300' },
   { status: 'approved', label: 'Approved', color: 'text-sage-800 bg-sage-50 border-sage-200' },
   { status: 'waitlisted', label: 'Waitlisted', color: 'text-muted-foreground bg-canvas border-stone-200' },
   { status: 'rejected', label: 'Declined', color: 'text-terracotta-800 bg-terracotta-50 border-terracotta-200' },
 ]
+
+/** Map a column's display status to the status sent to the API on drop. */
+function columnDropStatus(columnStatus: ApplicationStatus): ApplicationStatus {
+  if (columnStatus === 'pending_insurance') return 'approved'
+  return columnStatus
+}
 
 export function ApplicationBoard({
   applications,
@@ -90,6 +106,10 @@ export function ApplicationBoard({
   const [viewingApp, setViewingApp] = useState<BoothApplication | null>(null)
   const [isPending, startTransition] = useTransition()
   const [verifyingVendorId, setVerifyingVendorId] = useState<string | null>(null)
+  const [draggingAppId, setDraggingAppId] = useState<string | null>(null)
+  const [dropTargetStatus, setDropTargetStatus] = useState<ApplicationStatus | null>(null)
+  const [declineDropApp, setDeclineDropApp] = useState<BoothApplication | null>(null)
+  const [declineDropMessage, setDeclineDropMessage] = useState('')
 
   useEffect(() => {
     setApps(applications)
@@ -137,13 +157,26 @@ export function ApplicationBoard({
     }
   }
 
-  const grouped = COLUMNS.reduce<Record<ApplicationStatus, BoothApplication[]>>(
+  const grouped = BOARD_COLUMNS.reduce<Record<ApplicationStatus, BoothApplication[]>>(
     (acc, col) => {
       acc[col.status] = apps.filter((a) => a.status === col.status)
       return acc
     },
     { pending: [], pending_insurance: [], approved: [], waitlisted: [], rejected: [], cancelled: [] }
   )
+
+  function handleColumnDrop(appId: string, columnStatus: ApplicationStatus) {
+    const app = apps.find((a) => a.id === appId)
+    if (!app || app.status === columnStatus) return
+
+    if (columnStatus === 'rejected') {
+      setDeclineDropApp(app)
+      setDeclineDropMessage('')
+      return
+    }
+
+    void updateStatus(appId, columnDropStatus(columnStatus))
+  }
 
   async function confirmEtransferPayment(appId: string) {
     startTransition(async () => {
@@ -328,10 +361,17 @@ export function ApplicationBoard({
         )}
       </dl>
 
+      {!eventCancelled ? (
+        <p className="text-xs text-muted-foreground">
+          Drag cards between columns to change status. Open a card to review details or use quick actions on pending applications.
+        </p>
+      ) : null}
+
       {/* Kanban columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
-        {COLUMNS.map((col) => {
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-5">
+        {BOARD_COLUMNS.map((col) => {
           const colApps = grouped[col.status]
+          const isDropTarget = dropTargetStatus === col.status
           return (
             <div key={col.status} className="space-y-3">
               <div className={`flex items-center justify-between px-3 py-2 rounded-lg border ${col.color}`}>
@@ -339,7 +379,30 @@ export function ApplicationBoard({
                 <span className="text-xs font-bold">{colApps.length}</span>
               </div>
 
-              <div className="space-y-2">
+              <div
+                className={cn(
+                  'min-h-[8rem] space-y-2 rounded-xl p-1 transition-colors',
+                  isDropTarget && 'bg-sage-50 ring-2 ring-sage-300 ring-offset-2',
+                )}
+                onDragOver={(event) => {
+                  if (eventCancelled || !draggingAppId) return
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = 'move'
+                  setDropTargetStatus(col.status)
+                }}
+                onDragLeave={(event) => {
+                  if (event.currentTarget.contains(event.relatedTarget as Node)) return
+                  setDropTargetStatus((prev) => (prev === col.status ? null : prev))
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  setDropTargetStatus(null)
+                  const appId = event.dataTransfer.getData('application/id') || draggingAppId
+                  setDraggingAppId(null)
+                  if (!appId || eventCancelled) return
+                  handleColumnDrop(appId, col.status)
+                }}
+              >
                 {colApps.length === 0 ? (
                   <div className="rounded-xl border-2 border-dashed border-stone-200 py-8 text-center bg-canvas/50">
                     <p className="text-xs text-muted-foreground">None here</p>
@@ -351,11 +414,17 @@ export function ApplicationBoard({
                       app={app}
                       categoryNameById={categoryLookup}
                       eventCancelled={eventCancelled}
+                      isDragging={draggingAppId === app.id}
                       onOpenReview={() => setViewingApp(app)}
                       onApprove={() => updateStatus(app.id, 'approved')}
                       onReject={() => updateStatus(app.id, 'rejected')}
                       onWaitlist={() => updateStatus(app.id, 'waitlisted')}
                       onConfirmEtransfer={() => confirmEtransferPayment(app.id)}
+                      onDragStart={() => setDraggingAppId(app.id)}
+                      onDragEnd={() => {
+                        setDraggingAppId(null)
+                        setDropTargetStatus(null)
+                      }}
                       loading={isPending}
                     />
                   ))
@@ -365,6 +434,62 @@ export function ApplicationBoard({
           )
         })}
       </div>
+
+      <Dialog
+        open={!!declineDropApp}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeclineDropApp(null)
+            setDeclineDropMessage('')
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Decline application</DialogTitle>
+            <DialogDescription>
+              Optional message for{' '}
+              {declineDropApp?.passport?.business_name ??
+                declineDropApp?.vendor?.full_name ??
+                'this vendor'}
+              . They will receive it in their notification.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={declineDropMessage}
+            onChange={(event) => setDeclineDropMessage(event.target.value)}
+            placeholder="Thank you for applying. We had limited spots in your category this round…"
+            rows={4}
+          />
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeclineDropApp(null)
+                setDeclineDropMessage('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => {
+                if (!declineDropApp) return
+                void updateStatus(
+                  declineDropApp.id,
+                  'rejected',
+                  declineDropMessage.trim() || undefined,
+                )
+                setDeclineDropApp(null)
+                setDeclineDropMessage('')
+              }}
+            >
+              Decline application
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <VendorReviewDrawer
         app={viewingApp}
@@ -391,31 +516,47 @@ function ApplicationCard({
   app,
   categoryNameById,
   eventCancelled,
+  isDragging,
   onOpenReview,
   onApprove,
   onReject,
   onWaitlist,
   onConfirmEtransfer,
+  onDragStart,
+  onDragEnd,
   loading,
 }: {
   app: BoothApplication
   categoryNameById: Record<string, string>
   eventCancelled?: boolean
+  isDragging?: boolean
   onOpenReview: () => void
   onApprove: () => void
   onReject: () => void
   onWaitlist: () => void
   onConfirmEtransfer: () => void
+  onDragStart: () => void
+  onDragEnd: () => void
   loading: boolean
 }) {
   const passport = app.passport
   const vendor = app.vendor
   const displayName = passport?.business_name ?? vendor?.full_name ?? 'Vendor'
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+  const showPendingActions = !eventCancelled && app.status === 'pending'
+  const showWaitlistRecoveryActions =
+    !eventCancelled && app.status === 'waitlisted'
+  const showViewOnlyOnCard =
+    app.status === 'approved' ||
+    app.status === 'pending_insurance' ||
+    app.status === 'rejected'
 
   return (
     <Card
-      className="overflow-hidden transition-shadow hover:shadow-sm cursor-pointer"
+      className={cn(
+        'overflow-hidden transition-shadow hover:shadow-sm cursor-pointer',
+        isDragging && 'opacity-50 ring-2 ring-sage-400',
+      )}
       onClick={onOpenReview}
       role="button"
       tabIndex={0}
@@ -437,6 +578,27 @@ function ApplicationCard({
       )}
       <CardContent className="p-3 space-y-2">
         <div className="flex items-center gap-2">
+          {!eventCancelled ? (
+            <button
+              type="button"
+              draggable
+              className="shrink-0 rounded p-0.5 text-stone-400 hover:text-stone-600 cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage-500"
+              aria-label={`Drag ${displayName} to another column`}
+              onClick={(event) => event.stopPropagation()}
+              onDragStart={(event) => {
+                event.stopPropagation()
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData('application/id', app.id)
+                onDragStart()
+              }}
+              onDragEnd={(event) => {
+                event.stopPropagation()
+                onDragEnd()
+              }}
+            >
+              <GripVertical className="h-4 w-4" aria-hidden />
+            </button>
+          ) : null}
           <VendorLogo
             src={passport?.logo_url ?? vendor?.avatar_url}
             alt={`${displayName} logo`}
@@ -528,7 +690,7 @@ function ApplicationCard({
             onClick={onOpenReview}
           >
             <Eye className="h-4 w-4" />
-            Review
+            {showViewOnlyOnCard ? 'View' : 'Review'}
           </Button>
           {!eventCancelled &&
             app.payment_method === 'ETRANSFER' &&
@@ -545,9 +707,7 @@ function ApplicationCard({
                   : 'Mark as Paid & Approve'}
               </Button>
             )}
-          {!eventCancelled &&
-            app.status !== 'approved' &&
-            app.status !== 'pending_insurance' &&
+          {showPendingActions &&
             !(
               app.payment_method === 'ETRANSFER' &&
               app.application_payment_status === 'PENDING_REVIEW'
@@ -567,7 +727,7 @@ function ApplicationCard({
                 Approve
               </Button>
             )}
-          {!eventCancelled && app.status !== 'waitlisted' && app.status !== 'rejected' && (
+          {showPendingActions && (
             <Button
               size="sm"
               variant="outline"
@@ -578,7 +738,7 @@ function ApplicationCard({
               Waitlist
             </Button>
           )}
-          {!eventCancelled && app.status !== 'rejected' && (
+          {(showPendingActions || showWaitlistRecoveryActions) && (
             <Button
               size="sm"
               variant="ghost"

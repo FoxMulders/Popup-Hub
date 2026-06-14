@@ -10,12 +10,14 @@ export async function resolveEventVenueVerification(input: {
   latitude: number
   longitude: number
   address?: string
+  locationName?: string
   pinDropped?: boolean
 }): Promise<VenueVerificationResult> {
   return verifyVenueCoordinates({
     latitude: input.latitude,
     longitude: input.longitude,
     address: input.address,
+    locationName: input.locationName,
     pinDropped: input.pinDropped,
   })
 }
@@ -27,6 +29,7 @@ export async function persistEventVenueVerification(
     latitude: number
     longitude: number
     address?: string
+    locationName?: string
     pinDropped?: boolean
   }
 ): Promise<VenueVerificationResult> {
@@ -43,6 +46,7 @@ export async function assertEventVenueVerifiedForPublish(
     latitude: number
     longitude: number
     address?: string
+    locationName?: string
     pinDropped?: boolean
   }
 ): Promise<{ ok: true } | { ok: false; reason: string }> {

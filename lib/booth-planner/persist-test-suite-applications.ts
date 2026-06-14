@@ -1,7 +1,8 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import {
-  buildDiverseSeedApplicationSlots,
-  resolveSeedTargetTableCount,
+  DIVERSE_SEED_TEMPLATES,
+  resolveSeedVenueProfile,
+  SEED_TABLE_CEILINGS,
   type SeedVenueProfile,
 } from '@/lib/booth-planner/seed-vendor-applications'
 
@@ -20,7 +21,6 @@ export interface PersistTestSuiteInput {
   eventId: string
   coordinatorId: string
   maxBoothCapacity: number
-  layoutCapacity?: number
   venuePresetId?: string | null
   roomName?: string | null
   categoryLimits: TestSuiteCategoryLimit[]
@@ -48,6 +48,7 @@ interface VendorGroup {
   seedGroupId: string
   vendorName: string
   categoryName: string
+  categoryId: string
   tableCount: number
   requestedBoothType: 'inside' | 'power'
   serial: number
@@ -57,73 +58,77 @@ function testSuiteEmail(eventId: string, serial: number): string {
   return `testsuite-${eventId.slice(0, 8)}-${serial}@${TEST_SUITE_EMAIL_DOMAIN}`
 }
 
-function resolveCategoryId(
-  categoryName: string,
-  limits: TestSuiteCategoryLimit[],
-  categoriesByName: Map<string, string>
-): string | null {
-  const normalized = categoryName.trim().toLowerCase()
-  const fromLimit = limits.find((l) => l.category_name.trim().toLowerCase() === normalized)
-  if (fromLimit) return fromLimit.category_id
-  return categoriesByName.get(normalized) ?? limits[0]?.category_id ?? null
+/** Vendor application slots from category caps — not physical layout table count. */
+export function resolveTestSuiteTargetVendorCount(input: {
+  maxBoothCapacity: number
+  venuePresetId?: string | null
+  roomName?: string | null
+}): number {
+  const profile = resolveSeedVenueProfile(input)
+  const ceiling =
+    profile === 'kilkenny'
+      ? SEED_TABLE_CEILINGS.kilkenny
+      : profile === 'main_hall'
+        ? SEED_TABLE_CEILINGS.main_hall
+        : input.maxBoothCapacity
+  return Math.max(0, Math.min(input.maxBoothCapacity, ceiling))
 }
 
-function groupSlotsForVendors(
-  targetTableCount: number,
-  limits: TestSuiteCategoryLimit[],
-  categoriesByName: Map<string, string>
+/** Round-robin category slots so seed vendors spread across caps (not only the first category). */
+function buildCategoryAssignmentQueue(limits: TestSuiteCategoryLimit[]): string[] {
+  const queue: string[] = []
+  const remaining = new Map(
+    limits.map((limit) => [limit.category_id, Math.max(0, limit.max_slots)])
+  )
+
+  let added = true
+  while (added) {
+    added = false
+    for (const limit of limits) {
+      const left = remaining.get(limit.category_id) ?? 0
+      if (left <= 0) continue
+      queue.push(limit.category_id)
+      remaining.set(limit.category_id, left - 1)
+      added = true
+    }
+  }
+
+  return queue
+}
+
+function buildTestSuiteVendorGroups(
+  targetVendorCount: number,
+  limits: TestSuiteCategoryLimit[]
 ): { groups: VendorGroup[]; skipped: number } {
-  const slots = buildDiverseSeedApplicationSlots(targetTableCount)
-  const byGroup = new Map<string, typeof slots>()
-  const groupOrder: string[] = []
-
-  for (const slot of slots) {
-    if (!byGroup.has(slot.seedGroupId)) {
-      byGroup.set(slot.seedGroupId, [])
-      groupOrder.push(slot.seedGroupId)
-    }
-    byGroup.get(slot.seedGroupId)!.push(slot)
-  }
-
-  const remainingByCategory = new Map<string, number>()
-  for (const limit of limits) {
-    remainingByCategory.set(limit.category_id, Math.max(0, limit.max_slots))
-  }
-
+  const assignmentQueue = buildCategoryAssignmentQueue(limits)
+  const effectiveTarget = Math.min(targetVendorCount, assignmentQueue.length)
+  const limitById = new Map(limits.map((limit) => [limit.category_id, limit]))
   const groups: VendorGroup[] = []
-  let skipped = 0
-  let serial = 0
 
-  for (const groupId of groupOrder) {
-    const members = byGroup.get(groupId)!
-    members.sort((a, b) => a.slotIndex - b.slotIndex)
-    const lead = members[0]!
-    const tableCount = lead.slotCount ?? members.length
-    const categoryId = resolveCategoryId(lead.categoryName, limits, categoriesByName)
-    if (!categoryId) {
-      skipped += 1
-      continue
-    }
+  for (let i = 0; i < effectiveTarget; i++) {
+    const template = DIVERSE_SEED_TEMPLATES[i % DIVERSE_SEED_TEMPLATES.length]!
+    const categoryId = assignmentQueue[i]!
+    const limit = limitById.get(categoryId)!
+    const vendorName =
+      effectiveTarget > DIVERSE_SEED_TEMPLATES.length
+        ? `${template.businessName} (${i + 1})`
+        : template.businessName
 
-    const remaining = remainingByCategory.get(categoryId) ?? 0
-    if (remaining <= 0) {
-      skipped += 1
-      continue
-    }
-
-    remainingByCategory.set(categoryId, remaining - 1)
-    serial += 1
     groups.push({
-      seedGroupId: groupId,
-      vendorName: lead.vendorName,
-      categoryName: lead.categoryName,
-      tableCount,
-      requestedBoothType: lead.requestedBoothType,
-      serial,
+      seedGroupId: `seed-group-${i + 1}`,
+      vendorName,
+      categoryName: limit.category_name,
+      categoryId,
+      tableCount: template.quantity,
+      requestedBoothType: template.powerRequired ? 'power' : 'inside',
+      serial: i + 1,
     })
   }
 
-  return { groups, skipped }
+  return {
+    groups,
+    skipped: Math.max(0, targetVendorCount - effectiveTarget),
+  }
 }
 
 async function findAuthUserByEmail(
@@ -207,7 +212,6 @@ export async function persistTestSuiteApplications(
     eventId,
     coordinatorId,
     maxBoothCapacity,
-    layoutCapacity,
     venuePresetId,
     roomName,
     categoryLimits,
@@ -217,40 +221,25 @@ export async function persistTestSuiteApplications(
     throw new Error('Add at least one category cap before populating the test suite.')
   }
 
-  const { data: categories } = await supabase.from('categories').select('id, name')
-  const categoriesByName = new Map(
-    (categories ?? []).map((c) => [c.name.trim().toLowerCase(), c.id])
-  )
-
   const limitsWithNames = categoryLimits.map((limit) => ({
     ...limit,
-    category_name:
-      limit.category_name ||
-      categories?.find((c) => c.id === limit.category_id)?.name ||
-      'Uncategorized',
+    category_name: limit.category_name || 'Uncategorized',
   }))
 
-  const targetTableCount = resolveSeedTargetTableCount({
+  const targetVendorCount = resolveTestSuiteTargetVendorCount({
     maxBoothCapacity,
-    layoutCapacity,
     venuePresetId,
     roomName,
   })
 
   await clearTestSuiteApplications(supabase, eventId)
 
-  const { groups, skipped } = groupSlotsForVendors(
-    targetTableCount,
-    limitsWithNames,
-    categoriesByName
-  )
+  const { groups, skipped } = buildTestSuiteVendorGroups(targetVendorCount, limitsWithNames)
   const now = new Date().toISOString()
   const applications: TestSuiteApplicationRecord[] = []
 
   for (const group of groups) {
-    const categoryId = resolveCategoryId(group.categoryName, limitsWithNames, categoriesByName)
-    if (!categoryId) continue
-
+    const categoryId = group.categoryId
     const email = testSuiteEmail(eventId, group.serial)
     const vendorId = await upsertTestVendorUser(authAdmin, email, group.vendorName)
 

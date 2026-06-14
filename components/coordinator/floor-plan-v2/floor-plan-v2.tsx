@@ -258,11 +258,12 @@ export interface FloorPlanV2Props {
   /** Dashboard embed — compact chrome, telemetry-driven booth fills. */
   variant?: 'wizard' | 'dashboard'
   /**
-   * When `embedded`, the parent layout shell owns top chrome and the
-   * room rail — hide the internal "Layout tools" header and keep rooms
-   * out of the command bar.
+   * `embedded` — parent owns top chrome and room rail; hides layout-tools header
+   * and room controls in the command bar.
+   * `spatial` — parent owns top chrome only; hides layout-tools header but keeps
+   * rooms in the command bar (standalone spatial layout route).
    */
-  chrome?: 'default' | 'embedded'
+  chrome?: 'default' | 'embedded' | 'spatial'
   /** Fired when the number of placed canvas objects changes. */
   onPlacedCountChange?: (count: number) => void
   /** Wizard — fired after the one-time Step 3 auto seed + grid pack. */
@@ -392,6 +393,8 @@ function FloorPlanV2Workspace({
   }, [addLog])
   const isDashboard = variant === 'dashboard'
   const isEmbedded = chrome === 'embedded'
+  const isSpatialChrome = chrome === 'spatial'
+  const hideLayoutToolsHeader = isEmbedded || isSpatialChrome
   const roomHandlersReady =
     Boolean(onAddRoom) && Boolean(onRenameRoom) && Boolean(onDeleteRoom)
   const showToolbarRoomControls =
@@ -2417,7 +2420,7 @@ function FloorPlanV2Workspace({
   ) : null
 
   const layoutHeader =
-    !isDashboard && !isEmbedded ? (
+    !isDashboard && !hideLayoutToolsHeader ? (
       <header className="flex flex-wrap items-center gap-3 rounded-lg border-b border-stone-200/80 bg-card/60 px-2 py-2">
         <div className="min-w-0">
           <h2 className="font-heading text-base font-bold tracking-tight text-forest sm:text-lg">
@@ -2625,7 +2628,7 @@ function FloorPlanV2Workspace({
           <div
             className={cn(
               'flex w-full flex-row items-stretch overflow-hidden min-h-0 flex-1',
-              isEmbedded ? 'h-full' : 'h-[calc(100vh-64px)]'
+              isEmbedded || isSpatialChrome ? 'h-full' : 'h-[calc(100vh-64px)]'
             )}
           >
             <div className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">

@@ -6,6 +6,7 @@ import { FlaskConical } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useOptionalMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 
 export interface TestSuitePopulateButtonProps {
   eventId: string
@@ -19,6 +20,7 @@ export function TestSuitePopulateButton({
   className,
 }: TestSuitePopulateButtonProps) {
   const router = useRouter()
+  const market = useOptionalMarketManagement()
   const [running, setRunning] = useState(false)
 
   async function handlePopulate() {
@@ -32,6 +34,8 @@ export function TestSuitePopulateButton({
         error?: string
         applicationCount?: number
         tableSlots?: number
+        skippedForCapacity?: number
+        targetVendorCount?: number
       }
 
       if (!response.ok) {
@@ -39,11 +43,17 @@ export function TestSuitePopulateButton({
         return
       }
 
+      await market?.refreshApprovedPool(eventId)
       router.refresh()
 
+      const skipped =
+        body.skippedForCapacity && body.skippedForCapacity > 0
+          ? ` (${body.skippedForCapacity} skipped — category caps)`
+          : ''
+
       toast.success(
-        `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables). Auto-arrange or assign booths from Applications.`,
-        { duration: 6000 }
+        `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}. Use AI Auto-Arrange or drag vendors from the approved pool.`,
+        { duration: 8000 }
       )
     } finally {
       setRunning(false)
@@ -62,7 +72,7 @@ export function TestSuitePopulateButton({
         compact ? 'h-8 px-2.5 text-xs' : 'h-9',
         className
       )}
-      title="Seed diverse vendors with approved, paid booth applications for layout QA"
+      title="Seed approved, paid vendors up to your market category capacity for layout QA"
     >
       <FlaskConical className={cn('shrink-0', compact ? 'h-3.5 w-3.5' : 'h-4 w-4')} aria-hidden />
       {running ? 'Populating…' : compact ? 'Test suite' : 'Populate test suite'}

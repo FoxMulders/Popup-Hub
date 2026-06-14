@@ -50,48 +50,54 @@ export function SpatialLayoutToolbar({
   onApplySavedLayout,
 }: SpatialLayoutToolbarProps) {
   return (
-    <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-stone-200/80 bg-card/95 px-3 py-2.5 backdrop-blur-sm sm:px-4">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
-        <Link
-          href={`/coordinator/events/${eventId}`}
-          prefetch
-          className="relative z-20 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          Event overview
-        </Link>
-        <div className="min-w-0">
-          <p className="text-[0.625rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            Floor plan
-          </p>
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <h1 className="font-heading text-base font-bold tracking-tight text-forest sm:text-lg">
-              Spatial layout
-            </h1>
-            {eventName ? (
-              <span className="max-w-[32ch] truncate text-sm font-medium text-foreground/80">
-                {eventName}
-              </span>
-            ) : null}
-          </div>
-          <LayoutEditorHelpButton variant="prominent" className="shrink-0" />
-        </div>
+    <header
+      className="flex shrink-0 items-center gap-2 border-b border-stone-200/80 bg-card/95 px-2 py-1.5 backdrop-blur-sm sm:gap-3 sm:px-3"
+    >
+      <Link
+        href={`/coordinator/events/${eventId}`}
+        prefetch
+        className="relative z-20 inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-canvas hover:text-foreground sm:px-2 sm:text-sm"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+        <span className="hidden sm:inline">Event overview</span>
+        <span className="sm:hidden">Back</span>
+      </Link>
+
+      <div
+        className="hidden h-4 w-px shrink-0 bg-stone-200 sm:block"
+        aria-hidden
+      />
+
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <h1 className="shrink-0 font-heading text-sm font-bold tracking-tight text-forest sm:text-base">
+          Spatial layout
+        </h1>
+        {eventName ? (
+          <span className="min-w-0 truncate text-xs font-medium text-muted-foreground sm:max-w-[28ch] sm:text-sm">
+            {eventName}
+          </span>
+        ) : null}
+        <LayoutEditorHelpButton
+          variant="prominent"
+          size="sm"
+          className="h-7 shrink-0 px-2.5 text-xs sm:h-8 sm:px-3"
+        />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums text-muted-foreground">
-        <span className="rounded-md border border-stone-200 bg-white px-2.5 py-1 font-medium text-foreground">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 text-xs tabular-nums text-muted-foreground sm:gap-2">
+        <span className="rounded-md border border-stone-200 bg-white px-2 py-0.5 font-medium text-foreground">
           {placedCount} of {layoutCapacity} max
         </span>
         {hasOverlap ? (
           <span
-            className="rounded-md border border-amber-300/80 bg-amber-50 px-2.5 py-1 font-medium text-amber-950"
+            className="rounded-md border border-amber-300/80 bg-amber-50 px-2 py-0.5 font-medium text-amber-950"
             role="status"
           >
             Overlaps
           </span>
         ) : null}
         {isDraft ? (
-          <span className={cn(WIZARD_DRAFT_BADGE, 'py-1')} aria-label="Event status">
+          <span className={cn(WIZARD_DRAFT_BADGE, 'py-0.5')} aria-label="Event status">
             Draft
           </span>
         ) : null}
@@ -110,35 +116,38 @@ export function SpatialLayoutToolbar({
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 shrink-0"
+            className="hidden h-7 shrink-0 px-2 text-xs lg:inline-flex"
             disabled={saving}
             onClick={onReloadFromServer}
           >
-            Reload saved layout
+            Reload
           </Button>
         ) : null}
-        <span data-layout-help="save-actions" className="inline-flex items-center gap-2">
-        {onSaveDraft ? (
+        <span
+          data-layout-help="save-actions"
+          className="inline-flex shrink-0 items-center gap-1.5"
+        >
+          {onSaveDraft ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 px-2.5 text-xs sm:h-8"
+              disabled={hasOverlap || saving || savingDraft}
+              onClick={onSaveDraft}
+            >
+              {savingDraft ? 'Saving…' : 'Save draft'}
+            </Button>
+          ) : null}
           <Button
             type="button"
-            variant="outline"
             size="sm"
-            className="h-8 shrink-0"
+            className="h-7 shrink-0 px-2.5 text-xs sm:h-8"
             disabled={hasOverlap || saving || savingDraft}
-            onClick={onSaveDraft}
+            onClick={onSave}
           >
-            {savingDraft ? 'Saving draft…' : 'Save draft'}
+            {saving ? 'Saving…' : saveLabel}
           </Button>
-        ) : null}
-        <Button
-          type="button"
-          size="sm"
-          className="h-8 shrink-0"
-          disabled={hasOverlap || saving || savingDraft}
-          onClick={onSave}
-        >
-          {saving ? 'Saving…' : saveLabel}
-        </Button>
         </span>
       </div>
     </header>

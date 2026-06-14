@@ -1,3 +1,4 @@
+import { matchEdmontonVenuePreset } from '@/lib/booth-planner/edmonton-venue-registry'
 import { isNamedEstablishmentPlace } from '@/lib/wizard/google-place-venue'
 import type { VenueVerificationStatus } from '@/types/database'
 
@@ -5,7 +6,18 @@ export interface VenueVerificationInput {
   latitude: number
   longitude: number
   address?: string
+  locationName?: string
   pinDropped?: boolean
+}
+
+const NAMED_PUBLIC_VENUE_PATTERN =
+  /\b(community league|community hall|community centre|community center|recreation centre|recreation center|legion|curling club|fairground|pavilion|arena|event centre|event center|civic centre|civic center|seniors centre|seniors center|expo centre|expo center)\b/i
+
+/** Venue name patterns for public event spaces Google often tags as street addresses only. */
+export function isNamedPublicEventSpace(name: string | undefined): boolean {
+  const trimmed = name?.trim() ?? ''
+  if (trimmed.length < 4) return false
+  return NAMED_PUBLIC_VENUE_PATTERN.test(trimmed)
 }
 
 export interface VenueVerificationResult {
@@ -91,6 +103,59 @@ function classifyPlaceTypes(types: string[]): {
   }
 }
 
+function pickGeocodeTypesFromResults(
+  results: Array<{ types?: string[] }>
+): string[] {
+  for (const result of results) {
+    const types = result.types ?? []
+    if (!types.length) continue
+    if (classifyPlaceTypes(types).verified) return types
+  }
+  for (const result of results) {
+    const types = result.types ?? []
+    if (isNamedEstablishmentPlace(types)) return types
+  }
+  return results[0]?.types ?? []
+}
+
+function evaluateKnownOrNamedVenueFallback(
+  input: VenueVerificationInput
+): VenueVerificationResult | null {
+  if (input.pinDropped === false) return null
+
+  const address = input.address?.trim() ?? ''
+  if (address.length < 10) return null
+
+  const locationName = input.locationName?.trim() ?? ''
+
+  if (
+    matchEdmontonVenuePreset({
+      venueName: locationName,
+      address,
+      lat: input.latitude,
+      lng: input.longitude,
+    })
+  ) {
+    return {
+      verified: true,
+      status: 'verified',
+      reason: null,
+      placeTypes: ['known_edmonton_venue'],
+    }
+  }
+
+  if (locationName && isNamedPublicEventSpace(locationName)) {
+    return {
+      verified: true,
+      status: 'verified',
+      reason: null,
+      placeTypes: ['named_public_venue'],
+    }
+  }
+
+  return null
+}
+
 export function evaluateVenuePlaceTypes(types: string[]): VenueVerificationResult {
   const classification = classifyPlaceTypes(types)
   return {
@@ -145,6 +210,9 @@ export async function verifyVenueCoordinates(
     process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
 
   if (!apiKey) {
+    const fallback = evaluateKnownOrNamedVenueFallback(input)
+    if (fallback) return fallback
+
     const addressLooksValid = (input.address?.trim().length ?? 0) >= 10
     if (addressLooksValid && input.pinDropped !== false) {
       return {
@@ -176,6 +244,9 @@ export async function verifyVenueCoordinates(
   const data = (await res.json()) as GeocodeResponse
 
   if (data.status !== 'OK' || !data.results?.length) {
+    const fallback = evaluateKnownOrNamedVenueFallback(input)
+    if (fallback) return fallback
+
     const googleMessage = data.error_message?.trim()
     const reason =
       googleMessage &&
@@ -191,8 +262,14 @@ export async function verifyVenueCoordinates(
     }
   }
 
-  const best = data.results[0]!
-  return evaluateVenuePlaceTypes(best.types ?? [])
+  const types = pickGeocodeTypesFromResults(data.results)
+  const result = evaluateVenuePlaceTypes(types)
+  if (result.verified) return result
+
+  const fallback = evaluateKnownOrNamedVenueFallback(input)
+  if (fallback) return fallback
+
+  return result
 }
 
 export function venueVerificationFieldsFromResult(

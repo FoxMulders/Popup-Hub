@@ -217,7 +217,7 @@ export function SpatialLayoutEditor({
         saveMarketLoading={saving}
         saveDraftDisabled={hasOverlap || saving || savingDraft}
         saveDraftLoading={savingDraft}
-        chrome="default"
+        chrome="spatial"
         preferServerLayout
         debugGeometry={false}
         className="h-full min-h-0"

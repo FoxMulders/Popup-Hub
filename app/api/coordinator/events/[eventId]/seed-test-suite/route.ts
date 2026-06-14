@@ -2,16 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
-import {
-  calculateMaxBoothCapacity,
-  calculateNetUsableFloorSpace,
-  boothUnitFootprint,
-} from '@/lib/booth-planner/smart-populate-booth-caps'
-import { persistTestSuiteApplications } from '@/lib/booth-planner/persist-test-suite-applications'
-import {
-  DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
-  isLayoutBaselineTableLengthFt,
-} from '@/lib/booth-planner/layout-table-size'
+import { persistTestSuiteApplications, resolveTestSuiteTargetVendorCount } from '@/lib/booth-planner/persist-test-suite-applications'
 
 /** Kill switch only — coordinator auth + event scope are enforced below. */
 function testSuiteSeedAllowed(): boolean {
@@ -74,31 +65,17 @@ export async function POST(
 
   const { data: layout } = await adminSupabase
     .from('booth_layouts')
-    .select('venue_width, venue_length, baseline_table_length_ft, layout_rooms, venue_preset_id')
+    .select('layout_rooms, venue_preset_id')
     .eq('event_id', eventId)
     .maybeSingle()
 
   const rooms =
     (layout?.layout_rooms as Array<{
       name?: string
-      venue_width?: number
-      venue_length?: number
       venue_preset_id?: string | null
-      baseline_table_length_ft?: number | null
     }> | null) ?? []
 
   const activeRoom = rooms[0]
-  const venueWidth = activeRoom?.venue_width ?? layout?.venue_width ?? 50
-  const venueLength = activeRoom?.venue_length ?? layout?.venue_length ?? 50
-  const baselineFtRaw = activeRoom?.baseline_table_length_ft ?? layout?.baseline_table_length_ft
-  const baselineTableLengthFt =
-    baselineFtRaw != null && isLayoutBaselineTableLengthFt(baselineFtRaw)
-      ? baselineFtRaw
-      : DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT
-
-  const footprint = boothUnitFootprint(baselineTableLengthFt)
-  const netUsable = calculateNetUsableFloorSpace(venueWidth, venueLength)
-  const layoutCapacity = calculateMaxBoothCapacity(netUsable.netUsableSqFt, footprint.sqFt)
 
   const categoryLimits =
     (
@@ -117,6 +94,11 @@ export async function POST(
     }) ?? []
 
   const maxBoothCapacity = categoryLimits.reduce((sum, row) => sum + Math.max(0, row.max_slots), 0)
+  const targetVendorCount = resolveTestSuiteTargetVendorCount({
+    maxBoothCapacity,
+    venuePresetId: activeRoom?.venue_preset_id ?? layout?.venue_preset_id ?? null,
+    roomName: activeRoom?.name ?? null,
+  })
 
   try {
     const result = await persistTestSuiteApplications({
@@ -125,7 +107,6 @@ export async function POST(
       eventId,
       coordinatorId: event.coordinator_id,
       maxBoothCapacity,
-      layoutCapacity,
       venuePresetId: activeRoom?.venue_preset_id ?? layout?.venue_preset_id ?? null,
       roomName: activeRoom?.name ?? null,
       categoryLimits,
@@ -133,6 +114,7 @@ export async function POST(
 
     return NextResponse.json({
       ok: true,
+      targetVendorCount,
       vendorCount: result.vendorCount,
       applicationCount: result.applicationCount,
       tableSlots: result.tableSlots,

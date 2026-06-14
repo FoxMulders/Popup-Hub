@@ -4,6 +4,16 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — community league hall venue verification (local, not deployed)
+- **Issue:** Publish failed with “Coordinates point to a street address only” for community league halls — Google reverse geocode often returns only `street_address` + `route` for these buildings.
+- **Fix:** `verify-venue-coordinates.ts` now scans all geocode results (not just the first), accepts known Edmonton hall registry matches, and accepts named public venues (community league/hall, recreation centre, legion, etc.) when a pin is dropped with a complete address. `locationName` is passed through verify API + publish toggle.
+- **Verify:** `npx tsx scripts/verify-venue-coordinates.ts` — PASS. Publish a market at a community league hall with venue name like “Kilkenny Community League” and pin on the building.
+
+## Active work — application board status UX (local, not deployed)
+- **Issue:** Approved+paid cards still showed Review / Waitlist / Decline; no way to move cards between columns.
+- **Fix:** Card actions are status-aware (approved/pending insurance/rejected → View only; pending → full workflow; waitlisted → Approve/Decline). Drag handle on each card; drop on column updates status (Declined column prompts for optional message).
+- **Verify:** `/coordinator/events/{id}/applications` — approved paid vendors show View only; drag grip to Pending / Waitlist / Declined columns.
+
 ## Active work — sticky vendor/patron table placement (local, not deployed)
 - **Regression:** Wizard/layout editor reverted to Select after each booth stamp; only dashboard stayed armed.
 - **Fix:** `handleAfterDrawCommit` keeps draw+booth armed (clears selection only); `stickyDrawPlacement` on wizard canvas too.
@@ -59,7 +69,10 @@
 - **Fix:** Restored `viewportRef` + `frameActiveRoomRef` pattern from QA mirrors; framing effects keyed on `viewportFramingKey` / room dimensions only (not `originX`/`originY` drags); ResizeObserver reframes once when viewport first becomes measurable.
 - **Verify:** `/coordinator/dashboard` and `/coordinator/events/{id}/layout` — zoom +/- steps 50/75/100/125%; Ctrl+wheel zoom holds; pan after zoom does not snap back.
 
-## Active work — layout help interactive on-page tour (local, not deployed)
+## Active work — spatial layout compact header (local, not deployed)
+- **`chrome="spatial"`** on `FloorPlanV2` — drops redundant internal "Layout tools" bar; rooms stay in command bar.
+- **`spatial-layout-toolbar.tsx`** — single compact row: back, title + event name + help inline, actions on the right (`h-7`/`py-1.5`).
+
 - **`layout-editor-help-tours.ts` + `layout-editor-help-tour.tsx`:** 5-step quick-start tour with step card (Back/Next/Done), scroll-into-view on targets.
 - **Overlay UX:** steady full-screen dim for entire tour (no scrim flicker); static emerald ring on highlighted control (no pulse).
 - **Positioning:** viewport-clamped highlight box, header clearance on step 1 rooms bar, card portaled to `document.body` (avoids wizard shell clipping), measured card height + prefer-below when target is near top.
@@ -110,7 +123,8 @@
 - **`persist-test-suite-applications.ts`:** Seeds diverse vendor suite as real auth users + passports + `booth_applications` with `approved` + paid (`CASH` / `COMPLETED`). Clears prior `@popuphub.seed` applications on the event before re-run.
 - **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` — coordinator-scoped; uses `createAdminClient()` for profile/passport writes (SSR service client still hit RLS). Set `DISABLE_COORDINATOR_TEST_SUITE=true` to block on a deploy.
 - **UI:** Violet **Test suite** button in Blueprint Studio **ALIGNMENT & SPACING** toolbar (Command center dashboard), plus event hub and Applications page headers. Also on spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 (`/coordinator/events/{id}/setup?step=3`).
-- **Verify:** Dev coordinator → Command center → Blueprint Studio → scroll toolbar to **ALIGNMENT & SPACING** → **Test suite** (next to AI Auto-Arrange). Or event hub / Applications header. Applications board shows approved & paid vendors after populate.
+- **Seed logic:** Fills up to **sum of category `max_slots`** (e.g. 48 vendors), not physical room layout capacity. Vendors round-robin across category caps. Button calls `refreshApprovedPool` so Command center approved shelf updates without full reload.
+- **Verify:** Command center → **Test suite** → toast shows ~48 vendors (matching category caps) → approved vendor pool populates → **AI Auto-Arrange** places booths.
 
 ## Active work — CI lint fix (local, not deployed)
 - **Root cause:** GitHub CI runs `npm run lint` before `npm run build`; `use-floor-plan-doc.ts` used `let nextDoc` where the variable is never reassigned → `prefer-const` error (1 error, 435 warnings).

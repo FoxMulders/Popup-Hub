@@ -71,6 +71,7 @@ export interface MarketManagementState {
   assignVendorToBoothByVendorId: (boothId: string, vendorId: string | null) => void
   unassignBooth: (boothId: string) => void
   autoSeatApprovedVendors: () => number
+  refreshApprovedPool: (eventId: string) => Promise<void>
   focusBooth: (boothId: string) => void
   totalRevenueCents: number
   /** True when any vendor booth violates the 3′ clearance baseline. */
@@ -78,6 +79,10 @@ export interface MarketManagementState {
 }
 
 const MarketManagementContext = createContext<MarketManagementState | null>(null)
+
+export function useOptionalMarketManagement(): MarketManagementState | null {
+  return useContext(MarketManagementContext)
+}
 
 export function useMarketManagement(): MarketManagementState {
   const ctx = useContext(MarketManagementContext)
@@ -113,6 +118,12 @@ export function MarketManagementProvider({
   totalRevenueCents,
 }: MarketManagementProviderProps) {
   const [selectedEventId, setSelectedEventId] = useState(initialEventId ?? events[0]?.id ?? null)
+  const [approvedByEventIdState, setApprovedByEventIdState] =
+    useState(approvedByEventId)
+
+  useEffect(() => {
+    setApprovedByEventIdState(approvedByEventId)
+  }, [approvedByEventId])
 
   const initialLayout = selectedEventId ? layoutsByEventId[selectedEventId] : undefined
   const [layoutRooms, setLayoutRoomsState] = useState<LayoutRoom[]>(
@@ -137,9 +148,22 @@ export function MarketManagementProvider({
   }, [layoutsByEventId, selectedEventId])
 
   const approvedPool = useMemo(
-    () => (selectedEventId ? approvedByEventId[selectedEventId] ?? [] : []),
-    [approvedByEventId, selectedEventId]
+    () => (selectedEventId ? approvedByEventIdState[selectedEventId] ?? [] : []),
+    [approvedByEventIdState, selectedEventId]
   )
+
+  const refreshApprovedPool = useCallback(async (eventId: string) => {
+    const response = await fetch(`/api/coordinator/events/${eventId}/application-pool`)
+    if (!response.ok) return
+    const body = (await response.json()) as {
+      approved?: VendorApplicationSnapshot[]
+    }
+    if (!body.approved) return
+    setApprovedByEventIdState((prev) => ({
+      ...prev,
+      [eventId]: body.approved!,
+    }))
+  }, [])
 
   const pendingApplications = useMemo(
     () => (selectedEventId ? pendingByEventId[selectedEventId] ?? [] : []),
@@ -413,6 +437,7 @@ export function MarketManagementProvider({
       assignVendorToBoothByVendorId,
       unassignBooth,
       autoSeatApprovedVendors,
+      refreshApprovedPool,
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,
@@ -436,6 +461,7 @@ export function MarketManagementProvider({
       assignVendorToBoothByVendorId,
       unassignBooth,
       autoSeatApprovedVendors,
+      refreshApprovedPool,
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,

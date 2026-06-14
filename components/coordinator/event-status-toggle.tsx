@@ -80,7 +80,7 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
       const { data: eventRow, error: venueLoadError } = await supabase
         .from('events')
         .select(
-          'latitude, longitude, address, venue_verified, venue_verification_status, venue_verification_reason'
+          'latitude, longitude, address, location_name, venue_verified, venue_verification_status, venue_verification_reason'
         )
         .eq('id', event.id)
         .single()
@@ -99,6 +99,7 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
             latitude: eventRow.latitude,
             longitude: eventRow.longitude,
             address: eventRow.address,
+            locationName: eventRow.location_name,
             pinDropped: true,
             persist: true,
           }),

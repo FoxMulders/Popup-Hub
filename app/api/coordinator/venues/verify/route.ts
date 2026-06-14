@@ -53,6 +53,7 @@ export async function POST(request: Request) {
     latitude: latitude!,
     longitude: longitude!,
     address,
+    locationName,
     pinDropped,
   })
 
