@@ -942,9 +942,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `04b1e86` (pushed to `origin/master`)
-- Last deploy commit: `04b1e86` - feat: ship 76 session updates (Deploy bat cmd.exe %DE parse fix; 1' grid lines restored; category proximity edge gaps + Arrange layout in header; patron path overlay pathfinding fix; +72 more)
-- Production: https://popuphub.ca - **v1.0.0 build 138** | commit `5925118` (handoff updated 2026-06-14 15:21)
+- Branch: `master` @ `89190e3` (pushed to `origin/master`)
+- Last deploy commit: `89190e3` - feat: ship 77 session updates (Vendor Fairness Layout Engine; Deploy bat cmd.exe %DE parse fix; 1' grid lines restored; category proximity edge gaps + Arrange layout in header; +73 more)
+- Production: https://popuphub.ca - **v1.0.0 build 139** | commit `f869c45` (handoff updated 2026-06-14 15:30)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1321,7 +1321,7 @@
 
 
 ## Last deploy
-- 2026-06-14 15:21 - Deploy via deploy-popuphub.ps1 - `feat: ship 76 session updates (Deploy bat cmd.exe %DE parse fix; 1' grid lines restored; category proximity edge gaps + Arrange layout in header; patron path overlay pathfinding fix; +72 more)` (04b1e86)
+- 2026-06-14 15:30 - Deploy via deploy-popuphub.ps1 - `feat: ship 77 session updates (Vendor Fairness Layout Engine; Deploy bat cmd.exe %DE parse fix; 1' grid lines restored; category proximity edge gaps + Arrange layout in header; +73 more)` (89190e3)
 
 
 ## Goal
