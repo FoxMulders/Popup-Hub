@@ -9,6 +9,7 @@ type ApplicationRow = {
   payment_method: string | null
   application_payment_status: string | null
   booth_number: number | null
+  table_count?: number | null
   vendor?: { full_name?: string | null } | { full_name?: string | null }[] | null
   category?: { name?: string | null } | { name?: string | null }[] | null
 }
@@ -34,6 +35,7 @@ export function toVendorApplicationSnapshot(app: ApplicationRow): VendorApplicat
     booth_number: app.booth_number,
     categoryName: categoryNameFromRow(app),
     vendorName: vendorNameFromRow(app),
+    tableCount: Math.max(1, app.table_count ?? 1),
   }
 }
 

@@ -76,3 +76,42 @@ export function pickBoothForApplication(
   }
   return openBooths[0] ?? null
 }
+
+/** Seat approved vendors onto open booths — honors multi-table `tableCount` per application. */
+export function seatApplicationsOnOpenBooths(
+  applications: readonly VendorApplicationSnapshot[],
+  booths: readonly BoothObject[]
+): Array<{
+  boothId: string
+  vendorId: string
+  label: string
+  categoryName: string | null
+}> {
+  const openBooths = booths
+    .filter((booth) => !booth.vendorId)
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+  const patches: Array<{
+    boothId: string
+    vendorId: string
+    label: string
+    categoryName: string | null
+  }> = []
+
+  for (const application of applications) {
+    const slots = Math.max(1, application.tableCount ?? 1)
+    for (let slot = 0; slot < slots; slot++) {
+      const booth = pickBoothForApplication(openBooths, application)
+      if (!booth) break
+      patches.push({
+        boothId: booth.id,
+        vendorId: application.vendor_id,
+        label: application.vendorName ?? 'Vendor',
+        categoryName: application.categoryName ?? null,
+      })
+      const index = openBooths.findIndex((candidate) => candidate.id === booth.id)
+      if (index >= 0) openBooths.splice(index, 1)
+    }
+  }
+
+  return patches
+}

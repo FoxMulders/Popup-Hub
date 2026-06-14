@@ -156,6 +156,7 @@ export default async function CoordinatorDashboard({ searchParams }: DashboardPa
     booth_number: app.booth_number,
     categoryName: categoryNameFromRow(app),
     vendorName: vendorNameFromRow(app),
+    tableCount: Math.max(1, (app as { table_count?: number }).table_count ?? 1),
   })
 
   const approvedByEventId: Record<string, VendorApplicationSnapshot[]> = {}

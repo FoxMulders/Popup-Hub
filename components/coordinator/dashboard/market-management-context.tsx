@@ -21,7 +21,9 @@ import {
   approvedVendorsNotOnCanvas,
   boothVendorIdReconciliationPatches,
   pickBoothForApplication,
+  seatApplicationsOnOpenBooths,
 } from '@/lib/coordinator/dashboard-vendor-placement'
+import type { FloorPlanLayoutActions } from '@/lib/coordinator/floor-plan-layout-actions'
 import { formatCadCurrency } from '@/lib/coordinator/booth-placement-status'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { docHasUnresolvedClearanceIssues } from '@/lib/coordinator/booth-clearance-visual'
@@ -71,7 +73,14 @@ export interface MarketManagementState {
   assignVendorToBoothByVendorId: (boothId: string, vendorId: string | null) => void
   unassignBooth: (boothId: string) => void
   autoSeatApprovedVendors: () => number
-  refreshApprovedPool: (eventId: string) => Promise<void>
+  refreshApprovedPool: (eventId: string) => Promise<VendorApplicationSnapshot[]>
+  registerFloorPlanLayoutActions: (actions: FloorPlanLayoutActions | null) => void
+  populateTestSuiteOnCanvas: (eventId: string) => Promise<{
+    vendors: number
+    tableSlots: number
+    boothsFilled: number
+    boothsAssigned: number
+  }>
   focusBooth: (boothId: string) => void
   totalRevenueCents: number
   /** True when any vendor booth violates the 3′ clearance baseline. */
@@ -133,6 +142,8 @@ export function MarketManagementProvider({
     initialLayout?.activeRoomId ?? ''
   )
   const [floorPlanStore, setFloorPlanStore] = useState<FloorPlanDocStore | null>(null)
+  const [floorPlanLayoutActions, setFloorPlanLayoutActions] =
+    useState<FloorPlanLayoutActions | null>(null)
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [vipHoldIds, setVipHoldIds] = useState<Set<string>>(() => new Set())
   const [docRevision, setDocRevision] = useState(0)
@@ -154,16 +165,77 @@ export function MarketManagementProvider({
 
   const refreshApprovedPool = useCallback(async (eventId: string) => {
     const response = await fetch(`/api/coordinator/events/${eventId}/application-pool`)
-    if (!response.ok) return
+    if (!response.ok) return []
     const body = (await response.json()) as {
       approved?: VendorApplicationSnapshot[]
     }
-    if (!body.approved) return
+    const approved = body.approved ?? []
     setApprovedByEventIdState((prev) => ({
       ...prev,
-      [eventId]: body.approved!,
+      [eventId]: approved,
     }))
+    return approved
   }, [])
+
+  const registerFloorPlanLayoutActions = useCallback(
+    (actions: FloorPlanLayoutActions | null) => {
+      setFloorPlanLayoutActions(actions)
+    },
+    []
+  )
+
+  const seatApprovedApplications = useCallback(
+    (applications: readonly VendorApplicationSnapshot[]): number => {
+      if (!floorPlanStore || applications.length === 0) return 0
+      const booths = floorPlanStore.doc.objects.filter(
+        (object): object is BoothObject => object.kind === 'booth' && !isGuestTableBooth(object)
+      )
+      const patches = seatApplicationsOnOpenBooths(applications, booths)
+      for (const patch of patches) {
+        floorPlanStore.updateObject(
+          patch.boothId,
+          {
+            vendorId: patch.vendorId,
+            label: patch.label,
+            categoryName: patch.categoryName,
+          } as Partial<BoothObject>,
+          { pushHistory: true }
+        )
+      }
+      if (patches.length > 0) {
+        setDocRevision((revision) => revision + 1)
+      }
+      return patches.length
+    },
+    [floorPlanStore]
+  )
+
+  const populateTestSuiteOnCanvas = useCallback(
+    async (eventId: string) => {
+      const approved = await refreshApprovedPool(eventId)
+      const tableSlots = approved.reduce(
+        (sum, application) => sum + Math.max(1, application.tableCount ?? 1),
+        0
+      )
+      const roomCapacity = floorPlanLayoutActions?.estimateVendorFillCapacity() ?? tableSlots
+      const boothsToFill = Math.min(roomCapacity, tableSlots)
+
+      if (boothsToFill > 0 && floorPlanLayoutActions) {
+        floorPlanLayoutActions.fillVendorTables(boothsToFill)
+        await floorPlanLayoutActions.autoArrangeFloorPlan()
+      }
+
+      const boothsAssigned = seatApprovedApplications(approved)
+
+      return {
+        vendors: approved.length,
+        tableSlots,
+        boothsFilled: boothsToFill,
+        boothsAssigned,
+      }
+    },
+    [floorPlanLayoutActions, refreshApprovedPool, seatApprovedApplications]
+  )
 
   const pendingApplications = useMemo(
     () => (selectedEventId ? pendingByEventId[selectedEventId] ?? [] : []),
@@ -438,6 +510,8 @@ export function MarketManagementProvider({
       unassignBooth,
       autoSeatApprovedVendors,
       refreshApprovedPool,
+      registerFloorPlanLayoutActions,
+      populateTestSuiteOnCanvas,
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,
@@ -462,6 +536,8 @@ export function MarketManagementProvider({
       unassignBooth,
       autoSeatApprovedVendors,
       refreshApprovedPool,
+      registerFloorPlanLayoutActions,
+      populateTestSuiteOnCanvas,
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,

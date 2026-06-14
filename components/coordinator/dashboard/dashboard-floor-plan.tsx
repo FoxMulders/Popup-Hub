@@ -36,6 +36,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     layoutActiveRoomId,
     setLayoutRooms,
     registerFloorPlanStore,
+    registerFloorPlanLayoutActions,
     boothStatusByObjectId,
     assignVendorToBooth,
     setSelectedBoothId,
@@ -216,6 +217,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         boothPlacementStatusByObjectId={boothStatusMap}
         boothMapLabelByObjectId={boothMapLabelByObjectId}
         onStoreReady={handleStoreReady}
+        onLayoutActionsReady={registerFloorPlanLayoutActions}
         onSelectionChange={handleSelectionChange}
         onVendorDrop={handleVendorDrop}
         className="min-h-0 flex-1"

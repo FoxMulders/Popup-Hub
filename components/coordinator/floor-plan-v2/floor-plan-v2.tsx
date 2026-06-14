@@ -29,6 +29,7 @@ import {
   vendorTableSpec,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
+import type { FloorPlanLayoutActions } from '@/lib/coordinator/floor-plan-layout-actions'
 import { createClient } from '@/lib/supabase/client'
 import { persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
 import { layoutPayloadFromRooms } from '@/lib/booth-planner/layout-rooms'
@@ -274,6 +275,8 @@ export interface FloorPlanV2Props {
     { vendorName: string; category: string }
   >
   onStoreReady?: (store: FloorPlanDocStore | null) => void
+  /** Command center — fill/arrange hooks for test-suite canvas populate. */
+  onLayoutActionsReady?: (actions: FloorPlanLayoutActions | null) => void
   onSelectionChange?: (store: FloorPlanDocStore) => void
   onVendorDrop?: (applicationId: string, canvasX: number, canvasY: number) => void
   /**
@@ -353,6 +356,7 @@ function FloorPlanV2Workspace({
   boothPlacementStatusByObjectId,
   boothMapLabelByObjectId,
   onStoreReady,
+  onLayoutActionsReady,
   onSelectionChange,
   onVendorDrop,
   debugGeometry = false,
@@ -2090,6 +2094,21 @@ function FloorPlanV2Workspace({
     trafficFlowPrerequisites.satisfied,
     vendorBoothCount,
     vendorTableMetaByKey,
+  ])
+
+  useEffect(() => {
+    if (!onLayoutActionsReady) return
+    onLayoutActionsReady({
+      fillVendorTables: handleFillVendorTables,
+      autoArrangeFloorPlan: handleAutoArrangeFloorPlan,
+      estimateVendorFillCapacity: () => vendorFillMaxCapacity,
+    })
+    return () => onLayoutActionsReady(null)
+  }, [
+    handleAutoArrangeFloorPlan,
+    handleFillVendorTables,
+    onLayoutActionsReady,
+    vendorFillMaxCapacity,
   ])
 
   const handleAutoLayoutAndPathfind = useCallback(() => {

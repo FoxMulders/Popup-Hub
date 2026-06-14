@@ -16,6 +16,7 @@ export interface VendorApplicationSnapshot {
   booth_number: number | null
   categoryName?: string | null
   vendorName?: string | null
+  tableCount?: number
 }
 
 export function deriveBoothPlacementStatus(

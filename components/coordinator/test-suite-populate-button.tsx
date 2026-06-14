@@ -43,17 +43,24 @@ export function TestSuitePopulateButton({
         return
       }
 
-      await market?.refreshApprovedPool(eventId)
+      let layoutSummary = ''
+      if (market?.populateTestSuiteOnCanvas) {
+        const layout = await market.populateTestSuiteOnCanvas(eventId)
+        layoutSummary = ` Grid: ${layout.boothsFilled} booths placed, ${layout.boothsAssigned} assigned to vendors.`
+      } else {
+        await market?.refreshApprovedPool(eventId)
+      }
+
       router.refresh()
 
       const skipped =
         body.skippedForCapacity && body.skippedForCapacity > 0
-          ? ` (${body.skippedForCapacity} skipped — category caps)`
+          ? ` (${body.skippedForCapacity} skipped at category caps)`
           : ''
 
       toast.success(
-        `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}. Use AI Auto-Arrange or drag vendors from the approved pool.`,
-        { duration: 8000 }
+        `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}.${layoutSummary}`,
+        { duration: 9000 }
       )
     } finally {
       setRunning(false)
@@ -72,7 +79,7 @@ export function TestSuitePopulateButton({
         compact ? 'h-8 px-2.5 text-xs' : 'h-9',
         className
       )}
-      title="Seed approved, paid vendors up to your market category capacity for layout QA"
+      title="Seed approved paid vendors to market capacity, fill the room grid, and assign booths for allocation QA"
     >
       <FlaskConical className={cn('shrink-0', compact ? 'h-3.5 w-3.5' : 'h-4 w-4')} aria-hidden />
       {running ? 'Populating…' : compact ? 'Test suite' : 'Populate test suite'}

@@ -52,6 +52,7 @@ export async function GET(
       payment_method,
       application_payment_status,
       booth_number,
+      table_count,
       vendor:profiles!booth_applications_vendor_id_fkey(full_name),
       category:categories(name)
     `
