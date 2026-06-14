@@ -4,7 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Active work — room preset menu clipping fix (local, not deployed)
+## Active work — layout help tour step 1 clarity (local, not deployed)
+- **Issue:** Quick-start Step 1 said "Use these tabs" while the tour card sat on top of the room picker — unclear what it referred to.
+- **Fix:** Step 1 copy now points at the green outline, room name buttons, and + Add room in the left panel. Tour card moves beside left-rail targets (into the canvas area) instead of below them so the highlighted controls stay visible.
+- **Verify:** `/coordinator/events/{id}/layout` → start quick-start tour → Step 1 card sits to the right of the green outline; Main Hall tab and + Add room remain visible.
+
 - **Issue:** "Add room" preset dropdown was clipped on the left in the layout planner left rail (~240px) — menu used `absolute` positioning inside `overflow-hidden` ancestors.
 - **Fix:** `layout-room-bar.tsx` — preset picker now uses portaled `Popover` (`RoomPresetPicker`) so the menu renders above scroll/overflow containers with viewport-aware positioning.
 - **Verify:** Setup Step 3 or `/coordinator/events/{id}/layout` left rail → click chevron on **Add room** → full preset list visible (Empty room, Kitchen Area, etc.).
@@ -134,7 +138,7 @@
 - **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` — coordinator-scoped; uses `createAdminClient()` for profile/passport writes (SSR service client still hit RLS). Set `DISABLE_COORDINATOR_TEST_SUITE=true` to block on a deploy.
 - **UI:** Violet **Test suite** button in Blueprint Studio **ALIGNMENT & SPACING** toolbar (Command center dashboard), plus event hub and Applications page headers. Also on spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 (`/coordinator/events/{id}/setup?step=3`).
 - **Seed logic:** Fills up to **sum of category `max_slots`** (market capacity). Then **fills the live canvas room** from FloorPlanV2 dimensions, auto-arranges booths, and assigns approved vendors (paid). Not capped by stale `booth_layouts` DB dimensions.
-- **Verify:** Command center → **Test suite** → toast shows vendor + table counts and grid fill stats → booths appear on canvas with vendors assigned.
+- **Verify:** Command center → **Test suite** → toast shows vendor + table counts and grid fill stats → booths appear on canvas with vendors assigned. Patron **Fill room** works in Main Hall (off-canvas seed tables no longer constrain arrange).
 
 ## Active work — CI lint fix (local, not deployed)
 - **Root cause:** GitHub CI runs `npm run lint` before `npm run build`; `use-floor-plan-doc.ts` used `let nextDoc` where the variable is never reassigned → `prefer-const` error (1 error, 435 warnings).
@@ -879,9 +883,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `7a6ee53` (pushed to `origin/master`)
-- Last deploy commit: `7a6ee53` - feat: ship 68 session updates (Supabase security linter fixes; community league hall venue verification; application board status UX; sticky vendor/patron table placement; +64 more)
-- Production: https://popuphub.ca - **v1.0.0 build 133** | commit `c18452d` (handoff updated 2026-06-13 18:54)
+- Branch: `master` @ `e23dc5e` (pushed to `origin/master`)
+- Last deploy commit: `e23dc5e` - feat: ship 69 session updates (room preset menu clipping fix; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)
+- Production: https://popuphub.ca - **v1.0.0 build 134** | commit `fbb880c` (handoff updated 2026-06-13 18:59)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1258,7 +1262,7 @@
 
 
 ## Last deploy
-- 2026-06-13 18:54 - Deploy via deploy-popuphub.ps1 - `feat: ship 68 session updates (Supabase security linter fixes; community league hall venue verification; application board status UX; sticky vendor/patron table placement; +64 more)` (7a6ee53)
+- 2026-06-13 18:59 - Deploy via deploy-popuphub.ps1 - `feat: ship 69 session updates (room preset menu clipping fix; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)` (e23dc5e)
 
 
 ## Goal
