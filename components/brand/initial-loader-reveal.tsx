@@ -81,13 +81,8 @@ function buildPerimeterRing(): PerimeterRing {
   const sideStartY = topY + BOOTH_H + GAP
   const sideEndY = bottomY - GAP - BOOTH_H
   const sideUsable = sideEndY - sideStartY
-  const sideCount = Math.min(
-    6,
-    Math.max(
-      1,
-      Math.floor((sideUsable - (CELL - BOOTH_H)) / halfStep) + 1,
-    ),
-  )
+  /** One full 48×48 cell per row — half-step vertical spacing stacked booths and read as duplicates. */
+  const sideCount = Math.max(1, Math.floor((sideUsable - GAP) / CELL) + 1)
   /** Top row sits one booth cell right of the centred slot so it lines up with the logo. */
   const topShift = BOOTH_W + GAP
 
@@ -104,22 +99,22 @@ function buildPerimeterRing(): PerimeterRing {
     })
   }
   for (let i = 0; i < sideCount; i++) {
-    const stagger = i % 2 === 1 ? halfStep : 0
-    const y = sideStartY + i * halfStep + (CELL - BOOTH_H)
-    if (i % 2 === 0) {
+    const leftStagger = i % 2 === 1 ? halfStep : 0
+    const leftY = sideStartY + i * CELL + GAP
+    booths.push({
+      x: leftX + leftStagger,
+      y: leftY,
+      w: BOOTH_W,
+      h: BOOTH_H,
+      delay: delayStep++ * 0.05,
+      wall: 'left',
+    })
+    const rightStagger = i % 2 === 0 ? halfStep : 0
+    const rightY = leftY + halfStep
+    if (rightY + BOOTH_H <= bottomY) {
       booths.push({
-        x: leftX + stagger,
-        y,
-        w: BOOTH_W,
-        h: BOOTH_H,
-        delay: delayStep++ * 0.05,
-        wall: 'left',
-      })
-    }
-    if (i % 2 === 1) {
-      booths.push({
-        x: rightX - stagger,
-        y,
+        x: rightX - rightStagger,
+        y: rightY,
         w: BOOTH_W,
         h: BOOTH_H,
         delay: delayStep++ * 0.05,
@@ -244,9 +239,11 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           const t = clamp01((boothT - booth.delay) / (1 - booth.delay))
           const scale = 0.88 + t * 0.12
           const anchorX =
-            booth.wall === 'left' || booth.wall === 'right'
+            booth.wall === 'left'
               ? booth.x + booth.w
-              : booth.x + booth.w / 2
+              : booth.wall === 'right'
+                ? booth.x
+                : booth.x + booth.w / 2
           const anchorY = booth.y + booth.h / 2
           return (
             <g
