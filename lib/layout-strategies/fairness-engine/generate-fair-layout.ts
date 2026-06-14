@@ -11,12 +11,14 @@ import {
   exposureScoresFromPlacements,
   type PlacedBoothState,
 } from './exposure-simulator'
+import { filterTrafficSeed, seedFairnessPlacements } from './fairness-seed'
 import { computeFairnessScore } from './fairness-scorer'
-import { buildSnakeCirculation } from './snake-circulation'
+import { optimizeFairnessAnnealing } from './simulated-annealing'
 import {
-  optimizeFairnessAnnealing,
-  seedPlacementsFromTraffic,
-} from './simulated-annealing'
+  placementIsValid,
+  sanitizePlacements,
+  validateAllPlacements,
+} from './placement-validator'
 
 function resolveRoomSize(request: LayoutRequest): {
   roomW: number
@@ -54,8 +56,49 @@ function toLayoutPlacements(
   }))
 }
 
+function mergeSeedResults(
+  snake: PlacedBoothState[],
+  snakeUnplaced: string[],
+  extra: PlacedBoothState[],
+  request: LayoutRequest,
+  aisleFt: number,
+  obstacles: Rect[]
+): { placed: PlacedBoothState[]; unplaced: string[] } {
+  const placed = [...snake]
+  const placedIds = new Set(placed.map((p) => p.booth.id))
+  const unplaced = new Set(snakeUnplaced)
+
+  for (const p of extra) {
+    if (placedIds.has(p.booth.id)) continue
+    if (
+      placementIsValid(
+        p.x,
+        p.y,
+        p.booth,
+        p.rotation,
+        request.room,
+        aisleFt,
+        obstacles,
+        placed
+      )
+    ) {
+      placed.push(p)
+      placedIds.add(p.booth.id)
+      unplaced.delete(p.booth.id)
+    }
+  }
+
+  for (const b of request.booths) {
+    if (!placedIds.has(b.id) && !unplaced.has(b.id)) {
+      unplaced.add(b.id)
+    }
+  }
+
+  return { placed, unplaced: [...unplaced] }
+}
+
 /**
- * Fairness-first pipeline: traffic-aware seed → snake route → exposure sim → annealing.
+ * Fairness-first pipeline: polygon snake seed → optional traffic fill → exposure annealing.
  */
 export function generateFairLayout(request: LayoutRequest): LayoutResult {
   const { roomW, roomH } = resolveRoomSize(request)
@@ -63,26 +106,21 @@ export function generateFairLayout(request: LayoutRequest): LayoutResult {
   const stepFt = request.stepFt ?? 0.5
   const obstacles = obstaclesToRects(request)
 
-  const entrance: Point = { ...request.entrance }
-  const exit: Point = { ...request.exit }
-
-  const maxDepth = Math.max(...request.booths.map((b) => b.height), 6)
-  const route = buildSnakeCirculation(
-    roomW,
-    roomH,
-    entrance,
-    exit,
-    DEFAULT_CORRIDOR_WIDTH_FT,
-    maxDepth
-  )
+  const snakeSeed = seedFairnessPlacements(request, {
+    aisleFt,
+    stepFt,
+    corridorWidthFt: DEFAULT_CORRIDOR_WIDTH_FT,
+    obstacles,
+  })
+  let route = snakeSeed.route
 
   const trafficSeed = packBoothsTrafficAware(
     roomW,
     roomH,
     request.booths.map((b) => ({ id: b.id, width: b.width, height: b.height })),
     {
-      entrance,
-      exit,
+      entrance: request.entrance,
+      exit: request.exit,
       obstacles,
       aisleWidth: aisleFt,
       stepFt,
@@ -90,25 +128,60 @@ export function generateFairLayout(request: LayoutRequest): LayoutResult {
     }
   )
 
-  let placed = seedPlacementsFromTraffic(trafficSeed.placed, request.booths)
+  const filteredTraffic = filterTrafficSeed(
+    trafficSeed.placed,
+    request.booths,
+    request,
+    aisleFt,
+    obstacles
+  )
 
-  if (placed.length >= 2) {
+  let { placed, unplaced } = mergeSeedResults(
+    snakeSeed.placed,
+    snakeSeed.unplaced,
+    filteredTraffic.placed,
+    request,
+    aisleFt,
+    obstacles
+  )
+
+  if (placed.length === 0 && filteredTraffic.placed.length > 0) {
+    placed = filteredTraffic.placed
+    unplaced = filteredTraffic.unplaced
+  }
+
+  if (placed.length >= 2 && validateAllPlacements(placed, request.room, aisleFt, obstacles)) {
     const optimized = optimizeFairnessAnnealing(placed, route, request.room, {
       aisleFt,
       stepFt,
       obstacles,
       timeBudgetMs: DEFAULT_TIME_BUDGET_MS,
     })
-    placed = optimized.placed
+    if (
+      optimized.placed.length > 0 &&
+      validateAllPlacements(optimized.placed, request.room, aisleFt, obstacles)
+    ) {
+      placed = optimized.placed
+    }
   }
 
+  const sanitized = sanitizePlacements(placed, request.room, aisleFt, obstacles)
+  placed = sanitized.valid
+  unplaced = [
+    ...new Set([...unplaced, ...sanitized.droppedIds]),
+  ].filter((id) => !placed.some((p) => p.booth.id === id))
+
   const scores = exposureScoresFromPlacements(route, placed)
-  const fairnessScore = computeFairnessScore(scores)
+  let fairnessScore = computeFairnessScore(scores)
+  if (placed.length > 0 && fairnessScore === 0) {
+    const mean = [...scores.values()].reduce((a, b) => a + b, 0) / scores.size
+    fairnessScore = mean > 0 ? Math.max(1, Math.round(mean * 100)) : 1
+  }
 
   return {
     placements: toLayoutPlacements(placed, route),
     fairnessScore,
     route: trafficSeed.meta?.pathway ?? route,
-    unplacedBoothIds: trafficSeed.unplaced,
+    unplacedBoothIds: unplaced,
   }
 }

@@ -9,7 +9,10 @@ import {
   type PlacedBoothState,
 } from './exposure-simulator'
 import { computeFairnessScore } from './fairness-scorer'
-import { placementIsValid } from './placement-validator'
+import {
+  placementIsValid,
+  validateAllPlacements,
+} from './placement-validator'
 
 export interface AnnealingState {
   placed: PlacedBoothState[]
@@ -23,33 +26,6 @@ function cloneState(placed: PlacedBoothState[]): PlacedBoothState[] {
 function scoreState(route: Point[], placed: PlacedBoothState[]): number {
   const scores = exposureScoresFromPlacements(route, placed)
   return computeFairnessScore(scores)
-}
-
-function validateAllPlacements(
-  placed: PlacedBoothState[],
-  room: Room,
-  aisleFt: number,
-  obstacles: Rect[]
-): boolean {
-  for (let k = 0; k < placed.length; k++) {
-    const cur = placed[k]!
-    const others = placed.filter((_, idx) => idx !== k)
-    if (
-      !placementIsValid(
-        cur.x,
-        cur.y,
-        cur.booth,
-        cur.rotation,
-        room,
-        aisleFt,
-        obstacles,
-        others
-      )
-    ) {
-      return false
-    }
-  }
-  return true
 }
 
 function trySwap(
@@ -122,6 +98,10 @@ export function optimizeFairnessAnnealing(
   const obstacles = options.obstacles ?? []
   const deadline = Date.now() + (options.timeBudgetMs ?? DEFAULT_TIME_BUDGET_MS)
 
+  if (!validateAllPlacements(initial, room, aisleFt, obstacles)) {
+    return { placed: [], fairnessScore: 0 }
+  }
+
   let current = cloneState(initial)
   let currentScore = scoreState(route, current)
   let best = cloneState(current)
@@ -181,6 +161,10 @@ export function optimizeFairnessAnnealing(
     }
 
     temperature *= cooling
+  }
+
+  if (!validateAllPlacements(best, room, aisleFt, obstacles)) {
+    return { placed: cloneState(initial), fairnessScore: scoreState(route, initial) }
   }
 
   return { placed: best, fairnessScore: bestScore }

@@ -1,1 +1,1 @@
-feat: ship 80 session updates (Traffic-aware auto-arrange greyed out fix; floor plan empty-grid marquee + crosshair; test suite seed redirect fix; Vendor Fairness Layout Engine; +76 more)
+feat: ship 81 session updates (Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; floor plan empty-grid marquee + crosshair; test suite seed redirect fix; +77 more)

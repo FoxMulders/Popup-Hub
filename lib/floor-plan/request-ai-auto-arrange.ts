@@ -33,7 +33,11 @@ import {
 } from '@/src/utils/layoutMergeEngine'
 import {
   autoArrangeVendorUnifiedInRoom,
+  applyPackedBoothsToDoc,
+  PackBooths,
+  vendorBoothsInRoom,
 } from '@/components/coordinator/floor-plan-v2/engine/BoothArrangementEngine'
+import { LayoutMode, parseLayoutMode } from '@/lib/layout-strategies'
 
 export interface RunAutoArrangeWithAiResult extends AutoArrangeInRoomResult {
   /** True when Gemini returned placements (deterministic engine skipped). */
@@ -218,6 +222,36 @@ function deterministicFallback(
 ): AutoArrangeInRoomResult | null {
   const mode = options.mode ?? 'grid'
   const scope = options.scope ?? 'vendor'
+  const vendorLayoutMode = parseLayoutMode(doc.vendorLayoutMode ?? null)
+
+  if (
+    vendorLayoutMode === LayoutMode.FAIRNESS_FIRST &&
+    scope !== 'patron'
+  ) {
+    const booths = vendorBoothsInRoom(doc, roomId)
+    if (booths.length === 0 && scope === 'vendor') return null
+    const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
+    const packResult = PackBooths(doc, roomId, cleared, {
+      vendorLayoutMode: LayoutMode.FAIRNESS_FIRST,
+      eventCategoryNames: options.eventCategoryNames,
+      snapFt: doc.snapFt ?? 1,
+    })
+    const packedDoc = applyPackedBoothsToDoc(doc, roomId, packResult.booths)
+    return {
+      doc: {
+        ...packedDoc,
+        vendorLayoutMode: LayoutMode.FAIRNESS_FIRST,
+        lastFairnessScore: packResult.fairnessScore,
+      },
+      placedCount: packResult.placedCount,
+      droppedCount: packResult.droppedCount,
+      unsatisfiedCategoryCount: 0,
+      overflowCount: 0,
+      removedOverlapCount: 0,
+      roomId,
+    }
+  }
+
   const useUnified =
     options.layoutSolver === 'unified' ||
     (mode !== 'grid' && scope !== 'patron')

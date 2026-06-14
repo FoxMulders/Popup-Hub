@@ -11,7 +11,10 @@ import {
   trafficAwareStrategy,
   computeFairnessScore,
   type LayoutRequest,
+  type BoothPlacement,
 } from '../lib/layout-strategies'
+import { allPointsInRoom } from '../lib/vendor-fairness-layout/geometry/polygon'
+import { boothRotatedCorners } from '../lib/layout-strategies/fairness-engine/placement-validator'
 
 let pass = 0
 let fail = 0
@@ -41,6 +44,55 @@ function placementsMatch(
       Math.abs(p.rotation - other.rotation) < 1e-6
     )
   })
+}
+
+function assertFairnessConstraints(
+  label: string,
+  request: LayoutRequest,
+  placements: BoothPlacement[],
+  minScoreWhenPlaced = 1
+) {
+  const boothById = new Map(request.booths.map((b) => [b.id, b]))
+  for (const p of placements) {
+    const booth = boothById.get(p.boothId)
+    assert(Boolean(booth), `${label}: booth ${p.boothId} resolved`)
+    if (!booth) continue
+    const corners = boothRotatedCorners(p.x, p.y, booth, p.rotation)
+    assert(
+      corners.every((c) => pointInRoom(c, request.room.boundary)),
+      `${label}: ${p.boothId} inside room polygon`
+    )
+  }
+
+  for (let i = 0; i < placements.length; i++) {
+    for (let j = i + 1; j < placements.length; j++) {
+      const a = placements[i]!
+      const b = placements[j]!
+      const boothA = boothById.get(a.boothId)!
+      const boothB = boothById.get(b.boothId)!
+      const aabbA = boothRotatedCorners(a.x, a.y, boothA, a.rotation)
+      const aabbB = boothRotatedCorners(b.x, b.y, boothB, b.rotation)
+      const minAx = Math.min(...aabbA.map((c) => c.x))
+      const maxAx = Math.max(...aabbA.map((c) => c.x))
+      const minAy = Math.min(...aabbA.map((c) => c.y))
+      const maxAy = Math.max(...aabbA.map((c) => c.y))
+      const minBx = Math.min(...aabbB.map((c) => c.x))
+      const maxBx = Math.max(...aabbB.map((c) => c.x))
+      const minBy = Math.min(...aabbB.map((c) => c.y))
+      const maxBy = Math.max(...aabbB.map((c) => c.y))
+      const aisle = request.aisleFt ?? 3
+      const overlap =
+        minAx - aisle < maxBx &&
+        maxAx + aisle > minBx &&
+        minAy - aisle < maxBy &&
+        maxAy + aisle > minBy
+      assert(!overlap, `${label}: ${a.boothId} vs ${b.boothId} clearance`)
+    }
+  }
+}
+
+function pointInRoom(p: { x: number; y: number }, boundary: LayoutRequest['room']['boundary']) {
+  return allPointsInRoom([p], boundary)
 }
 
 const rectangleRequest: LayoutRequest = {
@@ -104,9 +156,10 @@ assert(
 
 const fairRect = generateFairLayout(rectangleRequest)
 assert(fairRect.placements.length >= 4, `Fairness rectangle places booths (${fairRect.placements.length})`)
+assertFairnessConstraints('Fairness rectangle', rectangleRequest, fairRect.placements)
 assert(
-  fairRect.fairnessScore >= 0 && fairRect.fairnessScore <= 100,
-  `Fairness score valid (${fairRect.fairnessScore})`
+  fairRect.fairnessScore >= 1 && fairRect.fairnessScore <= 100,
+  `Fairness score valid when placed (${fairRect.fairnessScore})`
 )
 
 const lShapeRequest: LayoutRequest = {
@@ -129,6 +182,11 @@ const lShapeRequest: LayoutRequest = {
 
 const fairL = generateFairLayout(lShapeRequest)
 assert(fairL.placements.length >= 2, `Fairness L-shape places booths (${fairL.placements.length})`)
+assertFairnessConstraints('Fairness L-shape', lShapeRequest, fairL.placements)
+assert(
+  fairL.fairnessScore >= 1,
+  `Fairness L-shape score non-zero (${fairL.fairnessScore})`
+)
 
 const tenBooths: LayoutRequest = {
   ...rectangleRequest,
@@ -141,6 +199,7 @@ const tenBooths: LayoutRequest = {
 
 const fair10 = generateFairLayout(tenBooths)
 assert(fair10.placements.length >= 6, `Fairness 10-booth room (${fair10.placements.length} placed)`)
+assertFairnessConstraints('Fairness 10-booth', tenBooths, fair10.placements)
 
 const fiftyBooths: LayoutRequest = {
   ...rectangleRequest,
@@ -168,6 +227,7 @@ assert(
   fair50.placements.length >= 8,
   `Fairness 50-booth stress (${fair50.placements.length} placed, score ${fair50.fairnessScore})`
 )
+assertFairnessConstraints('Fairness 50-booth', fiftyBooths, fair50.placements)
 
 const equalScores = new Map([
   ['a', 0.5],

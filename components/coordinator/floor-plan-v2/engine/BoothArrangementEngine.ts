@@ -317,6 +317,7 @@ export function PackBooths(
       : applyPlacementsToBooths(booths, packResult)
   ).map((b) => {
     if (b.x < -900) return b
+    if (fairResult) return b
     return orientBoothToNearestWall(b, doc, roomId, surface)
   })
 

@@ -1,5 +1,9 @@
 import { rotatedAabb, type Rect } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-import { pointInRoom, roomBoundingBox } from '@/lib/vendor-fairness-layout/geometry/polygon'
+import {
+  allPointsInRoom,
+  insetBoundary,
+  roomBoundingBox,
+} from '@/lib/vendor-fairness-layout/geometry/polygon'
 import type { Booth, Point, Room } from '../types'
 
 function expandRect(rect: Rect, margin: number): Rect {
@@ -18,6 +22,34 @@ function aabbOverlap(a: Rect, b: Rect): boolean {
     a.y < b.y + b.height &&
     a.y + a.height > b.y
   )
+}
+
+/** Actual rotated booth footprint corners (room-local ft). */
+export function boothRotatedCorners(
+  x: number,
+  y: number,
+  booth: Booth,
+  rotation: number
+): Point[] {
+  const center = { x: x + booth.width / 2, y: y + booth.height / 2 }
+  const raw: Point[] = [
+    { x, y },
+    { x: x + booth.width, y },
+    { x: x + booth.width, y: y + booth.height },
+    { x, y: y + booth.height },
+  ]
+  if (!rotation) return raw
+  const rad = (rotation * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  return raw.map((c) => {
+    const dx = c.x - center.x
+    const dy = c.y - center.y
+    return {
+      x: center.x + dx * cos - dy * sin,
+      y: center.y + dx * sin + dy * cos,
+    }
+  })
 }
 
 export function boothFootprintRect(
@@ -50,25 +82,16 @@ export function placementIsValid(
   const boundary = room.boundary
   if (boundary.length < 3) return false
 
-  const aabb = boothFootprintRect(x, y, booth, rotation)
-  const corners: Point[] = [
-    { x: aabb.x, y: aabb.y },
-    { x: aabb.x + aabb.width, y: aabb.y },
-    { x: aabb.x + aabb.width, y: aabb.y + aabb.height },
-    { x: aabb.x, y: aabb.y + aabb.height },
-  ]
-  if (!corners.every((c) => pointInRoom(c, boundary))) return false
+  const corners = boothRotatedCorners(x, y, booth, rotation)
+  if (!allPointsInRoom(corners, boundary)) return false
 
-  const bbox = roomBoundingBox(boundary)
-  const padded = expandRect(aabb, aisleFt)
-  if (
-    padded.x < bbox.x + aisleFt - 1e-6 ||
-    padded.y < bbox.y + aisleFt - 1e-6 ||
-    padded.x + padded.width > bbox.x + bbox.width - aisleFt + 1e-6 ||
-    padded.y + padded.height > bbox.y + bbox.height - aisleFt + 1e-6
-  ) {
+  const wallInset = insetBoundary(boundary, aisleFt)
+  if (wallInset.length >= 3 && !allPointsInRoom(corners, wallInset)) {
     return false
   }
+
+  const aabb = boothFootprintRect(x, y, booth, rotation)
+  const padded = expandRect(aabb, aisleFt)
 
   for (const obs of obstacles) {
     if (aabbOverlap(padded, expandRect(obs, aisleFt * 0.5))) return false
@@ -86,4 +109,71 @@ export function placementIsValid(
   }
 
   return true
+}
+
+export function validateAllPlacements(
+  placed: Array<{ booth: Booth; x: number; y: number; rotation: number }>,
+  room: Room,
+  aisleFt: number,
+  obstacles: Rect[]
+): boolean {
+  for (let k = 0; k < placed.length; k++) {
+    const cur = placed[k]!
+    const others = placed.filter((_, idx) => idx !== k)
+    if (
+      !placementIsValid(
+        cur.x,
+        cur.y,
+        cur.booth,
+        cur.rotation,
+        room,
+        aisleFt,
+        obstacles,
+        others
+      )
+    ) {
+      return false
+    }
+  }
+  return true
+}
+
+/** Keep only valid booths; drop the rest to unplaced. */
+export function sanitizePlacements(
+  placed: Array<{ booth: Booth; x: number; y: number; rotation: number }>,
+  room: Room,
+  aisleFt: number,
+  obstacles: Rect[]
+): {
+  valid: Array<{ booth: Booth; x: number; y: number; rotation: number }>
+  droppedIds: string[]
+} {
+  const valid: Array<{ booth: Booth; x: number; y: number; rotation: number }> =
+    []
+  const droppedIds: string[] = []
+
+  for (const p of placed) {
+    if (
+      placementIsValid(
+        p.x,
+        p.y,
+        p.booth,
+        p.rotation,
+        room,
+        aisleFt,
+        obstacles,
+        valid
+      )
+    ) {
+      valid.push(p)
+    } else {
+      droppedIds.push(p.booth.id)
+    }
+  }
+
+  return { valid, droppedIds }
+}
+
+export function roomExtent(boundary: Point[]): Rect {
+  return roomBoundingBox(boundary)
 }

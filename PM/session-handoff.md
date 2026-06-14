@@ -4,6 +4,17 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Fairness-first layout polygon fix (local, not deployed)
+- **Issue:** Fairness-first + Auto-Arrange on irregular (L-shaped) rooms placed booths outside the green dashed boundary, with overlaps, random orientations, and fairness score **0/100**.
+- **Root causes:**
+  1. `generateFairLayout` seeded from bbox-only `packBoothsTrafficAware` — filled the bounding rectangle, ignoring the room polygon notch.
+  2. `placementIsValid` checked AABB corners (not rotated footprint corners) and used bbox wall inset instead of polygon inset.
+  3. Annealing accepted/reported invalid initial seeds; no final sanitize pass.
+  4. `orientBoothToNearestWall` ran after fairness pack and overwrote aisle-facing rotations.
+  5. AI Auto-Arrange deterministic fallback ignored `vendorLayoutMode: fairness_first` (Gemini path only; fairness UI path already used `PackBooths` directly).
+- **Fix:** Polygon-aware serpentine seed (`fairness-seed.ts`), rotated-corner validation + `sanitizePlacements`, merged snake + filtered traffic fill, annealing only on valid states, skip wall re-orient for fairness results, AI fallback routes to `PackBooths` fairness when mode set. Traffic-aware path unchanged.
+- **Verify:** `npx tsx scripts/verify-layout-strategies.ts` — 1455/1455 PASS (includes L-shape in-polygon + clearance checks). `npx tsc --noEmit` — PASS. Smoke: Blueprint Studio → Engine **Fairness** → draw irregular room + entry/exit doors → Auto-Arrange → booths inside boundary, snake circulation overlay, score > 0.
+
 ## Active work — Traffic-aware auto-arrange greyed out fix (local, not deployed)
 - **Issue:** AI Auto-Arrange **Traffic-aware** / **Perimeter** controls stayed disabled in Blueprint Studio even when the canvas showed many table-like blocks; tooltip said “draw at least one vendor booth or patron table”.
 - **Root cause (dual):**
