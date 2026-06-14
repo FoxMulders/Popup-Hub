@@ -1,1 +1,1 @@
-feat: ship 69 session updates (layout help tour step 1 clarity; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)
+feat: ship 69 session updates (booth label vertical alignment; Supabase security linter fixes; community league hall venue verification; application board status UX; +65 more)

@@ -42,7 +42,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
     summary:
       'You do not need every toolbar button on day one. Follow this order, then search help for anything else.',
     steps: [
-      'Start with a room — use the room tabs to add or switch zones (Main Hall, Patio, etc.).',
+      'Start with a room — follow the green outline in the left panel; click a room name or use + Add room to switch or add zones (Main Hall, Patio, etc.).',
       'Sketch the venue — Draw walls, doors, and exits on the perimeter before placing booths.',
       'Place vendor booths — under Vendor Booths, pick a table length, then click the canvas to add booths.',
       'Navigate easily — H pans the canvas, V selects and moves objects, Ctrl+Z undoes mistakes.',

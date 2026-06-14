@@ -805,6 +805,18 @@ function guestPlacementBounds(booths: BoothObject[]): Rect | null {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 }
 
+/** Fill-room / seed passes park tables off-canvas before auto-arrange runs. */
+const OFF_CANVAS_PATRON_SEED_THRESHOLD_FT = -50
+
+function patronTablesAreOffCanvasSeeds(booths: BoothObject[]): boolean {
+  if (booths.length === 0) return false
+  return booths.every(
+    (booth) =>
+      booth.x < OFF_CANVAS_PATRON_SEED_THRESHOLD_FT ||
+      booth.y < OFF_CANVAS_PATRON_SEED_THRESHOLD_FT
+  )
+}
+
 /** Imaginary sub-box around existing patron tables plus perimeter padding. */
 export function guestActiveBoundingBox(
   booths: BoothObject[],
@@ -812,6 +824,7 @@ export function guestActiveBoundingBox(
 ): Rect | null {
   const bounds = guestPlacementBounds(booths)
   if (!bounds) return null
+  if (patronTablesAreOffCanvasSeeds(booths)) return null
   return {
     x: bounds.x - paddingFt,
     y: bounds.y - paddingFt,

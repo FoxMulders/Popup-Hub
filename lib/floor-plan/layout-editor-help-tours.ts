@@ -22,7 +22,7 @@ export const QUICK_START_TOUR_STEPS: LayoutHelpTourStep[] = [
     target: 'rooms',
     title: 'Step 1 — Choose a room',
     body:
-      'Markets can have multiple zones (Main Hall, Patio, Annex). Use these tabs to switch rooms, or click Add room to create another zone. Each room keeps its own walls and booth layout.',
+      'Follow the green outline in the left panel. Click a room name (e.g. Main Hall) to switch which zone you edit — each room keeps its own walls and booth layout. Use + Add room in that same panel to add Patio, Annex, or another hall.',
   },
   {
     id: 'qs-draw',
@@ -64,7 +64,7 @@ export const TOUR_STEPS_BY_TOPIC_ID: Record<string, LayoutHelpTourStep[]> = {
       target: 'rooms',
       title: 'Room tabs',
       body:
-        'Click a tab to edit that zone. Use Add room for patios, annexes, or overflow halls. Saving stores every room together.',
+        'Follow the green outline. Click a room name to edit that zone; use + Add room in the same panel for patios, annexes, or overflow halls. Saving stores every room together.',
     },
   ],
   'tools-walls-doors': [

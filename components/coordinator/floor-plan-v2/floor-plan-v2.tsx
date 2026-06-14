@@ -1853,8 +1853,10 @@ function FloorPlanV2Workspace({
       label: string
     ) => {
       if (result.placedCount <= 0) {
+        const patronBlocked = result.arrange?.patronArrangeAborted
         toast.error(
-          `Could not fit any ${label} inside ${frameName} — try a smaller count or larger room.`
+          patronBlocked ??
+            `Could not fit any ${label} inside ${frameName} — try a smaller count or larger room.`
         )
         return
       }

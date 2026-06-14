@@ -1085,17 +1085,21 @@ function renderObjectLabel(
       </g>
     )
   }
+  const padX = 4
+  const padY = 2
   const baseFontSize = Math.min(14, Math.max(8, w * 0.18))
   const labelHeight = Math.max(8, h - reserveBottomPx)
   const wrapped = wrapTextInContainer(labelText, w, labelHeight, {
     baseFontSize,
     minFontSize: 6,
-    padX: 4,
-    padY: 2,
+    padX,
+    padY,
   })
   const labelBlockHeight = wrapped.lines.length * wrapped.lineHeight
-  const startY =
-    y + (labelHeight - labelBlockHeight) / 2 + wrapped.fontSize * 0.35
+  const availH = Math.max(1, labelHeight - padY * 2)
+  const blockTop = y + padY + (availH - labelBlockHeight) / 2
+  // SVG `y` is the alphabetic baseline — offset ~cap height so glyphs stay inside padY.
+  const startY = blockTop + wrapped.fontSize * 0.75
   return (
     <text
       x={x + w / 2}

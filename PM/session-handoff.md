@@ -4,7 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Active work — layout help tour step 1 clarity (local, not deployed)
+## Active work — booth label vertical alignment (local, not deployed)
+- **Issue:** Booth labels (e.g. "Booth 1") overlapped the top stroke — SVG baseline offset was too small and ignored padY.
+- **Fix:** `canvas-objects.tsx` `renderObjectLabel` centers wrapped text with padY inset and ~0.75em baseline offset so cap height stays inside the box.
+- **Verify:** Event layout or dashboard floor plan — vendor booths with short labels render fully inside the green rect, not clipped on the top border.
+
 - **Issue:** Quick-start Step 1 said "Use these tabs" while the tour card sat on top of the room picker — unclear what it referred to.
 - **Fix:** Step 1 copy now points at the green outline, room name buttons, and + Add room in the left panel. Tour card moves beside left-rail targets (into the canvas area) instead of below them so the highlighted controls stay visible.
 - **Verify:** `/coordinator/events/{id}/layout` → start quick-start tour → Step 1 card sits to the right of the green outline; Main Hall tab and + Add room remain visible.

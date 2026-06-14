@@ -86,9 +86,27 @@ function computeCardPosition(box: HighlightBox | null, cardHeight: number) {
     }
   }
 
+  const spaceRight = window.innerWidth - (box.left + box.width) - margin
   const spaceBelow = window.innerHeight - (box.top + box.height) - margin
   const spaceAbove = box.top - margin
   const targetNearTop = box.top < window.innerHeight * 0.38
+  const isLeftRailTarget =
+    box.left < window.innerWidth * 0.42 &&
+    box.width <= window.innerWidth * 0.45
+
+  // Keep left-rail controls visible — park the card in the canvas area beside them.
+  if (isLeftRailTarget && spaceRight >= cardWidth + margin) {
+    let top = box.top + box.height / 2 - effectiveHeight / 2
+    top = Math.max(
+      margin,
+      Math.min(top, window.innerHeight - effectiveHeight - margin)
+    )
+    return {
+      top,
+      left: box.left + box.width + margin,
+      width: cardWidth,
+    }
+  }
 
   let top: number
   if (targetNearTop || spaceBelow >= effectiveHeight) {
