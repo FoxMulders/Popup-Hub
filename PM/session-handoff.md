@@ -999,9 +999,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `ba6b2b1` (pushed to `origin/master`)
-- Last deploy commit: `ba6b2b1` - feat: ship 82 session updates (CI master lint fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; floor plan empty-grid marquee + crosshair; +78 more)
-- Production: https://popuphub.ca - **v1.0.0 build 143** | commit `a662315` (handoff updated 2026-06-14 16:34)
+- Branch: `master` @ `82e3d46` (pushed to `origin/master`)
+- Last deploy commit: `82e3d46` - feat: ship 83 session updates (Fairness-first auto-arrange verification; CI + Windows production build fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; +79 more)
+- Production: https://popuphub.ca - **v1.0.0 build 144** | commit `a69841e` (handoff updated 2026-06-14 17:33)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1378,7 +1378,7 @@
 
 
 ## Last deploy
-- 2026-06-14 16:34 - Deploy via deploy-popuphub.ps1 - `feat: ship 82 session updates (CI master lint fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; floor plan empty-grid marquee + crosshair; +78 more)` (ba6b2b1)
+- 2026-06-14 17:33 - Deploy via deploy-popuphub.ps1 - `feat: ship 83 session updates (Fairness-first auto-arrange verification; CI + Windows production build fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; +79 more)` (82e3d46)
 
 
 ## Goal
