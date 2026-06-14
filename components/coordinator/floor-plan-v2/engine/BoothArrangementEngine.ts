@@ -34,6 +34,8 @@ import {
 
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '../state/types'
 
+import { resolveObjectRoomId } from '../geometry/is-point-in-room'
+
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 
 import {
@@ -354,7 +356,29 @@ export function vendorBoothsInRoom(
 
 ): BoothObject[] {
 
-  const objectRoom = doc.objectRoom ?? {}
+  return doc.objects.filter(
+
+    (o): o is BoothObject =>
+
+      o.kind === 'booth' &&
+
+      !isGuestTableBooth(o) &&
+
+      resolveObjectRoomId(doc, o, roomId) === roomId
+
+  )
+
+}
+
+/** Patron / guest seating tables in a room. */
+
+export function patronTablesInRoom(
+
+  doc: FloorPlanDoc,
+
+  roomId: string
+
+): BoothObject[] {
 
   return doc.objects.filter(
 
@@ -362,9 +386,9 @@ export function vendorBoothsInRoom(
 
       o.kind === 'booth' &&
 
-      objectRoom[o.id] === roomId &&
+      isGuestTableBooth(o) &&
 
-      !isGuestTableBooth(o)
+      resolveObjectRoomId(doc, o, roomId) === roomId
 
   )
 

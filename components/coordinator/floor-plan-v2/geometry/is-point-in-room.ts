@@ -241,3 +241,26 @@ export function isValidObjectPlacement(
   if (!frame) return false
   return objectFrameOverlapsOrTouches(joinablePlacementProbe(obj), frame)
 }
+
+/**
+ * Resolve which room owns an object — sidecar tag first, then geometry
+ * (same fallback `legacyRoomsFromDoc` uses when persisting).
+ */
+export function resolveObjectRoomId(
+  doc: FloorPlanDoc,
+  obj: PlacedObject,
+  preferredRoomId?: string | null
+): string | null {
+  const tagged = doc.objectRoom?.[obj.id]
+  if (tagged) return tagged
+  return resolvePlacementRoomIdForObject(doc, obj, preferredRoomId ?? null)
+}
+
+export function isObjectInRoom(
+  doc: FloorPlanDoc,
+  obj: PlacedObject,
+  roomId: string,
+  preferredRoomId?: string | null
+): boolean {
+  return resolveObjectRoomId(doc, obj, preferredRoomId) === roomId
+}

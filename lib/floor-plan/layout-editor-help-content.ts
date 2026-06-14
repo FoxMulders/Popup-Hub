@@ -298,7 +298,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
     summary:
       'Automatically position vendor booths and patron tables inside the active room.',
     steps: [
-      'Draw at least one vendor booth or patron table before optimizing.',
+      'Place tables with Vendor Booths or Patron Tables before optimizing — generic Shapes do not count.',
       'Grid mode works without doors; Perimeter and other modes need entry + exit on walls.',
       'Choose a mode: Grid (interior rows), Perimeter (ring along walls), or Outdoor rows.',
       'Click Optimize / Auto-arrange — existing objects in the room are repositioned.',

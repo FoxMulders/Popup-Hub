@@ -47,7 +47,7 @@ import {
   layoutModeLabel,
 } from '@/lib/layout-strategies'
 import {
-  AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
+  AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP,
 } from '../engine/traffic-flow-prerequisites'
 import type { DrawShape, ToolState } from './types'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
@@ -198,10 +198,13 @@ function FloorPlanOptimizeControl({
   topBarLayout?: boolean
 }) {
   if (!onRun) return null
-  const tooltip =
-    canRun
-      ? 'Optimize vendor booths and patron seating together in one pass'
-      : (disabledReason ?? AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP)
+  const canConfigure = canRun ?? false
+  const canExecute = canConfigure && !disabledReason
+  const tooltip = !canConfigure
+    ? (disabledReason ?? AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP)
+    : disabledReason
+      ? disabledReason
+      : 'Optimize vendor booths and patron seating together in one pass'
 
   const content = (
     <div
@@ -227,7 +230,7 @@ function FloorPlanOptimizeControl({
                 <button
                   key={id}
                   type="button"
-                  disabled={!canRun}
+                  disabled={!canConfigure}
                   onClick={() => onModeChange(id)}
                   aria-pressed={mode === id}
                   className={cn(
@@ -248,7 +251,7 @@ function FloorPlanOptimizeControl({
             onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
             title="Floor plan placement mode"
             aria-label="Floor plan placement mode"
-            disabled={!canRun}
+            disabled={!canConfigure}
             className={cn(
               'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700 disabled:opacity-50',
               toolbarControlHeight(compact ?? false)
@@ -274,7 +277,7 @@ function FloorPlanOptimizeControl({
                 <button
                   key={id}
                   type="button"
-                  disabled={!canRun}
+                  disabled={!canConfigure}
                   onClick={() => onVendorLayoutModeChange(id)}
                   aria-pressed={vendorLayoutMode === id}
                   className={cn(
@@ -297,7 +300,7 @@ function FloorPlanOptimizeControl({
             }
             title="Vendor layout engine"
             aria-label="Vendor layout engine"
-            disabled={!canRun}
+            disabled={!canConfigure}
             className={cn(
               'rounded-md border border-violet-200 bg-violet-50/80 px-2 text-[11px] font-semibold text-violet-900 disabled:opacity-50',
               toolbarControlHeight(compact ?? false)
@@ -329,7 +332,7 @@ function FloorPlanOptimizeControl({
           <button
             type="button"
             onClick={onRun}
-            disabled={!canRun}
+            disabled={!canExecute}
             title={tooltip}
             className={cn(
               'inline-flex w-32 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-600 bg-emerald-700 px-3 text-[11px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-50',
@@ -343,7 +346,7 @@ function FloorPlanOptimizeControl({
       ) : (
         <CommandButton
           onClick={onRun}
-          disabled={!canRun}
+          disabled={!canExecute}
           title={tooltip}
           className={cn(
             'gap-1.5 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 disabled:opacity-50',

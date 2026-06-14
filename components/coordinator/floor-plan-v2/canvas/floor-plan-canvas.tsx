@@ -814,14 +814,13 @@ export function FloorPlanCanvas({
       ? 'grabbing'
       : viewport.isPanning
         ? 'grabbing'
-        : pointer.roomVertexHover != null
+        : pointer.roomEdgeHover != null
+          ? 'crosshair'
+          : pointer.roomVertexHover != null
           ? 'grab'
-          : pointer.roomEdgeHover != null
+          : toolState.tool === 'select' && pointer.emptyCanvasHover
             ? 'crosshair'
-            : cursorForTool(
-                viewport.isPanning ? 'pan' : toolState.tool,
-                commandCenterViewport
-              )
+            : cursorForTool(viewport.isPanning ? 'pan' : toolState.tool)
 
   const ftAtClient = useCallback(
     (clientX: number, clientY: number) => {
@@ -1004,6 +1003,7 @@ export function FloorPlanCanvas({
           onPointerMove={viewOnly ? undefined : pointer.onPointerMove}
           onPointerUp={viewOnly ? undefined : pointer.onPointerUp}
           onPointerCancel={viewOnly ? undefined : pointer.onPointerUp}
+          onPointerLeave={viewOnly ? undefined : pointer.onPointerLeave}
           onContextMenu={viewOnly ? undefined : pointer.onContextMenu}
           onDoubleClick={viewOnly ? undefined : handleDoubleClick}
         >
@@ -1168,10 +1168,7 @@ export function FloorPlanCanvas({
   )
 }
 
-function cursorForTool(
-  tool: 'hand' | 'select' | 'draw' | 'pan',
-  commandCenter?: boolean
-): string {
+function cursorForTool(tool: 'hand' | 'select' | 'draw' | 'pan'): string {
   switch (tool) {
     case 'pan':
       return 'grabbing'
@@ -1181,6 +1178,6 @@ function cursorForTool(
       return 'crosshair'
     case 'select':
     default:
-      return commandCenter ? 'grab' : 'default'
+      return 'default'
   }
 }

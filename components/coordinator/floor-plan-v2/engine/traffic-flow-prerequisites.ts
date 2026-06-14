@@ -2,6 +2,7 @@
  * Validates entry/exit doors on perimeter walls before unified auto-arrange.
  */
 
+import { isObjectInRoom } from '../geometry/is-point-in-room'
 import { rotatedAabb } from '../interactions/geometry'
 import { resolveRoomPlacementSurface } from '../state/placement-surface'
 import type {
@@ -13,8 +14,14 @@ import type {
 /** Max distance (ft) from a room edge for a door/exit to count as perimeter-snapped. */
 export const PERIMETER_DOOR_SNAP_TOLERANCE_FT = 1.5
 
+export const AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP =
+  'Place tables with Vendor Booths or Patron Tables — generic Shapes (walls, stages, labels) are not auto-arranged.'
+
+export const AUTO_ARRANGE_WRONG_ROOM_TOOLTIP =
+  'Switch to the room tab that contains your vendor booths or patron tables.'
+
 export const AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP =
-  'Please place at least one Entry and one Exit door on your perimeter walls to optimize traffic flow.'
+  'Place at least one Entry and one Exit door on perimeter walls before Perimeter or Traffic-aware auto-arrange.'
 
 export interface TrafficFlowDoorSnapshot {
   id: string
@@ -136,8 +143,7 @@ export function evaluateTrafficFlowPrerequisites(
     ? Math.max(1, surface.maxY - surface.minY)
     : frame.lengthFt
 
-  const objectRoom = doc.objectRoom ?? {}
-  const inRoom = doc.objects.filter((o) => objectRoom[o.id] === roomId)
+  const inRoom = doc.objects.filter((o) => isObjectInRoom(doc, o, roomId, roomId))
 
   const entryDoors: TrafficFlowDoorSnapshot[] = []
   const exitDoors: TrafficFlowDoorSnapshot[] = []

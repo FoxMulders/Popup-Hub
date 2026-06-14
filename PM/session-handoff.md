@@ -4,6 +4,27 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Traffic-aware auto-arrange greyed out fix (local, not deployed)
+- **Issue:** AI Auto-Arrange **Traffic-aware** / **Perimeter** controls stayed disabled in Blueprint Studio even when the canvas showed many table-like blocks; tooltip said “draw at least one vendor booth or patron table”.
+- **Root cause (dual):**
+  1. **Counting bug:** `vendorBoothsInRoom` / patron counts used strict `doc.objectRoom[id] === roomId` while placement and save use geometry fallback when the sidecar tag is missing (common on localStorage drafts and legacy hydration). Booths rendered on canvas but counted as zero.
+  2. **UX coupling:** Pattern + Engine dropdowns shared the same `disabled` gate as the Run button, so missing prerequisites (or zero count) greyed out **Traffic-aware** even when the user only needed to pick Grid or add doors.
+- **Fix:** `resolveObjectRoomId()` in `geometry/is-point-in-room.ts` — sidecar tag first, else geometry (matches `legacyRoomsFromDoc`). Wired through `vendorBoothsInRoom`, `patronTablesInRoom`, `autoArrangeInRoom`, traffic-flow prerequisites. `FloorPlanOptimizeControl` — dropdowns enabled when arrangeable booths exist; Run button disabled separately with prerequisite tooltip. Clearer tooltips (`AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP`, wrong-room hint, entry/exit door requirement).
+- **User guidance:** Auto-arrange only sees objects placed via **Vendor Booths** or **Patron Tables** toolbar sections (`kind: 'booth'`). Generic **Shapes** (walls, stages, labels, food trucks) do not count.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: dashboard Blueprint Studio → place vendor booths (Vendor Booths tool) → Perimeter + Traffic-aware dropdowns enabled; without entry/exit doors Run shows door tooltip but engine selector stays active; Grid mode runs without doors.
+
+## Active work — floor plan empty-grid marquee + crosshair (local, not deployed)
+- **Issue:** Select tool on the floor plan canvas did not show crosshair over empty grid cells, and drag on empty interior started room drag instead of marquee multi-select.
+- **Root cause:** `use-canvas-pointer` treated any click inside a room frame (not just the perimeter stroke) as a room-drag gesture, so marquee never started. Command-center select mode also forced a `grab` cursor instead of crosshair on empty canvas.
+- **Fix:** Select tool — room drag only from explicit `data-room-stroke` hits; empty interior falls through to marquee. Track `emptyCanvasHover` for crosshair cursor on empty grid (edit mode only; `viewOnly` unchanged). `onPointerLeave` clears hover chrome.
+- **Verify:** Dashboard Blueprint Studio or setup Step 3 → **Select** tool → hover empty grid shows crosshair; drag a box over multiple booths selects them (blue dashed marquee preview). Click room perimeter stroke still selects/moves the room. Preview / view-only surfaces unchanged.
+
+## Active work — test suite seed redirect fix (local, not deployed)
+- **Issue:** After **Test suite** / vendor seed during setup Step 3 or Command center, UI bounced to **Set up your floor plan** (50×50 empty-state form) instead of staying in Blueprint Studio with toolbar.
+- **Root cause:** `TestSuitePopulateButton` called `router.refresh()` after canvas populate; `MarketManagementProvider` re-synced `layoutRooms` from server on every refresh — when the layout was still in-memory only (no `booth_layouts` row yet), rooms were wiped and `DashboardNoRoomEmptyState` replaced the canvas. Setup wizard had no `populateTestSuiteOnCanvas` hook, so seed only refreshed and never placed booths on the wizard canvas.
+- **Fix:** Drop post-populate `router.refresh()` when canvas populate succeeds (approved pool already refreshed client-side). Preserve in-memory rooms when same-event server bundle is empty. Wire wizard Step 3 `populateTestSuiteOnCanvas` via `WizardStepFloorPlan` store ref → `LayoutPlannerHeader` → `TestSuitePopulateButton`.
+- **Verify:** Draft market → setup Step 3 (`?step=4`) or dashboard with first room created → **Test suite** → vendors seeded, booths placed, canvas + toolbar remain visible (no empty-state form). Switch markets still loads saved layouts from server.
+
 ## Active work — Vendor Fairness Layout Engine (local, not deployed)
 - **Goal:** Fairness-first booth layout module — minimize exposure variance across vendors (not shortest walking distance).
 - **Shipped:** `lib/vendor-fairness-layout/` — geometry (turf polygon, SAT overlap, serpentine aisle), nav graph, route (A* + Dijkstra + NN/2-opt; fast snake path for 80+ booths), exposure simulator (1000 attendees), simulated annealing optimizer, fairness score 0–100. Adapter `adapters/floor-plan-v2.ts`. React SVG components in `components/vendor-fairness-layout/`. Demo at `/dev/fairness-layout`.

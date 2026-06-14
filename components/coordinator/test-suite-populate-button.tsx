@@ -25,16 +25,30 @@ const STAGE_LABEL: Record<Exclude<PopulateStage, 'idle'>, string> = {
   assigning: 'Assigning vendors to booths…',
 }
 
+export interface TestSuitePopulateResult {
+  vendors: number
+  tableSlots: number
+  boothsFilled: number
+  boothsAssigned: number
+  boothsRequested: number
+  canvasReady: boolean
+  roomName: string | null
+  error?: string
+}
+
 export interface TestSuitePopulateButtonProps {
   eventId: string
   compact?: boolean
   className?: string
+  /** Setup wizard / spatial editor — populate booths on the live canvas without router.refresh(). */
+  populateTestSuiteOnCanvas?: (eventId: string) => Promise<TestSuitePopulateResult>
 }
 
 export function TestSuitePopulateButton({
   eventId,
   compact = false,
   className,
+  populateTestSuiteOnCanvas: populateTestSuiteOnCanvasProp,
 }: TestSuitePopulateButtonProps) {
   const router = useRouter()
   const market = useOptionalMarketManagement()
@@ -76,7 +90,10 @@ export function TestSuitePopulateButton({
           ? ` (${body.skippedForCapacity} skipped at category caps)`
           : ''
 
-      if (!market?.populateTestSuiteOnCanvas) {
+      const populateOnCanvas =
+        populateTestSuiteOnCanvasProp ?? market?.populateTestSuiteOnCanvas
+
+      if (!populateOnCanvas) {
         await market?.refreshApprovedPool(eventId)
         router.refresh()
         toast.success(
@@ -87,9 +104,8 @@ export function TestSuitePopulateButton({
       }
 
       showStageProgress('placing')
-      const layout = await market.populateTestSuiteOnCanvas(eventId)
+      const layout = await populateOnCanvas(eventId)
       showStageProgress('assigning')
-      router.refresh()
 
       const vendorLine = `${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}`
       const tableTarget = body.tableSlots ?? layout.tableSlots

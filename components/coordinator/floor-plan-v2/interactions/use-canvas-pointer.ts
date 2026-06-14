@@ -424,9 +424,12 @@ export interface CanvasPointerApi {
   objectGestureActive: boolean
   /** True while actively dragging booths across the canvas. */
   boothLayoutGestureActive: boolean
+  /** Select tool — pointer over empty canvas (no object hit). */
+  emptyCanvasHover: boolean
   onPointerDown: (e: ReactPointerEvent<SVGSVGElement>) => boolean
   onPointerMove: (e: ReactPointerEvent<SVGSVGElement>) => void
   onPointerUp: (e: ReactPointerEvent<SVGSVGElement>) => void
+  onPointerLeave: () => void
   onContextMenu: (e: React.MouseEvent<SVGSVGElement>) => void
 }
 
@@ -538,6 +541,7 @@ export function useCanvasPointer(
   const objectResizeRef = useRef<ObjectResizeState>(null)
   const [objectGestureActive, setObjectGestureActive] = useState(false)
   const [boothLayoutGestureActive, setBoothLayoutGestureActive] = useState(false)
+  const [emptyCanvasHover, setEmptyCanvasHover] = useState(false)
   const onRoomCanvasLimitBlockedRef = useRef(
     options.onRoomCanvasLimitBlocked
   )
@@ -906,69 +910,102 @@ export function useCanvasPointer(
         return true
       }
 
-      // Room perimeter stroke, or empty interior when no object was hit.
+      // Room perimeter stroke — or empty interior for hand tool only.
+      // Select tool uses empty interior for marquee multi-select (Figma-style).
       if (allowRoomGestures) {
-        if (activeTool.tool === 'hand') {
-          const objectUnderPointer =
-            target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
-            hitTest(store.doc.objects, ft)?.id ??
-            null
-          if (objectUnderPointer) return false
-        }
         const roomStroke = target?.closest('[data-room-stroke="true"]')
         let roomId = roomStroke?.getAttribute('data-room-id') ?? null
-        if (!roomId) {
-          const frames = store.doc.rooms ?? []
-          const activeId = activeRoomIdRef.current
-          const activeFrame = activeId
-            ? frames.find((f) => f.id === activeId)
-            : null
-          if (
-            activeFrame &&
-            !activeFrame.mergedIntoObjectId &&
-            (pointInsideRoomPlacement(activeFrame, ft, store.doc, activeFrame.id) ||
-              hitTestRoomStroke(frames, ft, 0.75) === activeFrame.id)
-          ) {
-            roomId = activeFrame.id
+
+        if (activeTool.tool === 'select') {
+          if (!roomId) {
+            // Fall through to marquee below.
           } else {
-            roomId = hitTestRoomStroke(frames, ft, 0.75)
-            if (!roomId) {
-              for (let i = frames.length - 1; i >= 0; i--) {
-                const f = frames[i]!
-                if (f.mergedIntoObjectId) continue
-                if (pointInsideRoomPlacement(f, ft, store.doc, f.id)) {
-                  roomId = f.id
-                  break
+            const frames = store.doc.rooms ?? []
+            const resolvedFrame = frames.find((f) => f.id === roomId)
+            if (!resolvedFrame) {
+              const viaMerge = frames.find((f) => f.mergedIntoObjectId === roomId)
+              if (viaMerge) roomId = viaMerge.id
+            }
+            const additive = e.shiftKey || e.metaKey || e.ctrlKey
+            store.clearSelection()
+            onRoomFrameClickRef.current?.(roomId, { additive })
+            if (additive) {
+              return true
+            }
+            capturePointer(e.currentTarget, e.pointerId)
+            setRoomGestureActive(true)
+            roomDragRef.current = {
+              pointerId: e.pointerId,
+              roomId,
+              origin: ft,
+              lastDx: 0,
+              lastDy: 0,
+              moved: false,
+              limitNotified: false,
+            }
+            return true
+          }
+        } else {
+          if (activeTool.tool === 'hand') {
+            const objectUnderPointer =
+              target?.closest('[data-object-id]')?.getAttribute('data-object-id') ??
+              hitTest(store.doc.objects, ft)?.id ??
+              null
+            if (objectUnderPointer) return false
+          }
+          if (!roomId) {
+            const frames = store.doc.rooms ?? []
+            const activeId = activeRoomIdRef.current
+            const activeFrame = activeId
+              ? frames.find((f) => f.id === activeId)
+              : null
+            if (
+              activeFrame &&
+              !activeFrame.mergedIntoObjectId &&
+              (pointInsideRoomPlacement(activeFrame, ft, store.doc, activeFrame.id) ||
+                hitTestRoomStroke(frames, ft, 0.75) === activeFrame.id)
+            ) {
+              roomId = activeFrame.id
+            } else {
+              roomId = hitTestRoomStroke(frames, ft, 0.75)
+              if (!roomId) {
+                for (let i = frames.length - 1; i >= 0; i--) {
+                  const f = frames[i]!
+                  if (f.mergedIntoObjectId) continue
+                  if (pointInsideRoomPlacement(f, ft, store.doc, f.id)) {
+                    roomId = f.id
+                    break
+                  }
                 }
               }
             }
           }
-        }
-        if (roomId) {
-          const frames = store.doc.rooms ?? []
-          const resolvedFrame = frames.find((f) => f.id === roomId)
-          if (!resolvedFrame) {
-            const viaMerge = frames.find((f) => f.mergedIntoObjectId === roomId)
-            if (viaMerge) roomId = viaMerge.id
-          }
-          const additive = e.shiftKey || e.metaKey || e.ctrlKey
-          store.clearSelection()
-          onRoomFrameClickRef.current?.(roomId, { additive })
-          if (additive) {
+          if (roomId) {
+            const frames = store.doc.rooms ?? []
+            const resolvedFrame = frames.find((f) => f.id === roomId)
+            if (!resolvedFrame) {
+              const viaMerge = frames.find((f) => f.mergedIntoObjectId === roomId)
+              if (viaMerge) roomId = viaMerge.id
+            }
+            const additive = e.shiftKey || e.metaKey || e.ctrlKey
+            store.clearSelection()
+            onRoomFrameClickRef.current?.(roomId, { additive })
+            if (additive) {
+              return true
+            }
+            capturePointer(e.currentTarget, e.pointerId)
+            setRoomGestureActive(true)
+            roomDragRef.current = {
+              pointerId: e.pointerId,
+              roomId,
+              origin: ft,
+              lastDx: 0,
+              lastDy: 0,
+              moved: false,
+              limitNotified: false,
+            }
             return true
           }
-          capturePointer(e.currentTarget, e.pointerId)
-          setRoomGestureActive(true)
-          roomDragRef.current = {
-            pointerId: e.pointerId,
-            roomId,
-            origin: ft,
-            lastDx: 0,
-            lastDy: 0,
-            moved: false,
-            limitNotified: false,
-          }
-          return true
         }
       }
 
@@ -1395,6 +1432,7 @@ export function useCanvasPointer(
           if (vertHit != null) {
             setRoomVertexHover(vertHit)
             setRoomEdgeHover(null)
+            setEmptyCanvasHover(false)
             return
           }
           const edgeHit = nearestEdgeHit(ft, ring, edgeTol)
@@ -1404,11 +1442,18 @@ export function useCanvasPointer(
               edgeIndex: edgeHit.edgeIndex,
             })
             setRoomVertexHover(null)
+            setEmptyCanvasHover(false)
             return
           }
         }
         setRoomEdgeHover(null)
         setRoomVertexHover(null)
+        const objectHit =
+          hitTest(store.doc.objects, ft)?.id ??
+          null
+        setEmptyCanvasHover(objectHit == null)
+      } else {
+        setEmptyCanvasHover(false)
       }
     },
     [
@@ -1791,6 +1836,12 @@ export function useCanvasPointer(
     []
   )
 
+  const onPointerLeave = useCallback(() => {
+    setEmptyCanvasHover(false)
+    setRoomEdgeHover(null)
+    setRoomVertexHover(null)
+  }, [])
+
   const onContextMenu = useCallback(
     (e: React.MouseEvent<SVGSVGElement>) => {
       e.preventDefault()
@@ -1814,9 +1865,11 @@ export function useCanvasPointer(
     roomVertexHover,
     objectGestureActive,
     boothLayoutGestureActive,
+    emptyCanvasHover,
     onPointerDown,
     onPointerMove,
     onPointerUp,
+    onPointerLeave,
     onContextMenu,
   }
 }

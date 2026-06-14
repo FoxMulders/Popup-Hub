@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SavedLayoutPicker } from '@/components/coordinator/saved-layout-picker'
-import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
+import { TestSuitePopulateButton, type TestSuitePopulateResult } from '@/components/coordinator/test-suite-populate-button'
 import { cn } from '@/lib/utils'
 import { WIZARD_DRAFT_BADGE } from '@/lib/wizard/wizard-panel-styles'
 import type { LayoutRoom } from '@/types/database'
@@ -33,6 +33,7 @@ export interface LayoutPlannerHeaderProps {
   getLayoutSnapshot?: () => { rooms: LayoutRoom[]; activeRoomId: string } | null
   onApplySavedLayout?: (rooms: LayoutRoom[], activeRoomId: string) => void
   savedLayoutDisabled?: boolean
+  populateTestSuiteOnCanvas?: (eventId: string) => Promise<TestSuitePopulateResult>
   className?: string
 }
 
@@ -58,6 +59,7 @@ export function LayoutPlannerHeader({
   getLayoutSnapshot,
   onApplySavedLayout,
   savedLayoutDisabled = false,
+  populateTestSuiteOnCanvas,
   className,
 }: LayoutPlannerHeaderProps) {
   const resolvedBackHref = backHref ?? (eventId ? `/coordinator/events/${eventId}` : '/coordinator/events')
@@ -143,7 +145,13 @@ export function LayoutPlannerHeader({
             Full editor
           </Link>
         ) : null}
-        {eventId ? <TestSuitePopulateButton eventId={eventId} compact /> : null}
+        {eventId ? (
+          <TestSuitePopulateButton
+            eventId={eventId}
+            compact
+            populateTestSuiteOnCanvas={populateTestSuiteOnCanvas}
+          />
+        ) : null}
         {coordinatorId && getLayoutSnapshot && onApplySavedLayout ? (
           <SavedLayoutPicker
             coordinatorId={coordinatorId}

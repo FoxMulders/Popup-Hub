@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -151,15 +152,31 @@ export function MarketManagementProvider({
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [vipHoldIds, setVipHoldIds] = useState<Set<string>>(() => new Set())
   const [docRevision, setDocRevision] = useState(0)
+  const prevSelectedEventIdRef = useRef(selectedEventId)
 
   useEffect(() => {
     if (!selectedEventId) return
     const bundle = layoutsByEventId[selectedEventId]
     if (!bundle) return
-    setLayoutRoomsState(bundle.rooms)
-    setLayoutActiveRoomId(bundle.activeRoomId)
-    setSelectedBoothId(null)
-    setFloorPlanStore(null)
+
+    const eventChanged = prevSelectedEventIdRef.current !== selectedEventId
+    prevSelectedEventIdRef.current = selectedEventId
+
+    setLayoutRoomsState((prev) => {
+      // router.refresh() after test-suite seed can re-fetch an empty server
+      // layout while the coordinator already created a room in memory — keep
+      // the live canvas footprint instead of bouncing to "Set up your floor plan".
+      if (!eventChanged && bundle.rooms.length === 0 && prev.length > 0) {
+        return prev
+      }
+      return bundle.rooms
+    })
+
+    if (eventChanged || bundle.rooms.length > 0) {
+      setLayoutActiveRoomId(bundle.activeRoomId)
+      setSelectedBoothId(null)
+      setFloorPlanStore(null)
+    }
   }, [layoutsByEventId, selectedEventId])
 
   const approvedPool = useMemo(

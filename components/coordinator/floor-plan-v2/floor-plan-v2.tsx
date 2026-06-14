@@ -73,12 +73,15 @@ import type { AutoArrangeMode } from './engine/auto-arrange'
 import { autoArrangeInRoom } from './engine/auto-arrange'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
 import {
+  AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP,
   AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
+  AUTO_ARRANGE_WRONG_ROOM_TOOLTIP,
   evaluateTrafficFlowPrerequisites,
 } from './engine/traffic-flow-prerequisites'
 import {
   applyPackedBoothsToDoc,
   PackBooths,
+  patronTablesInRoom,
   vendorBoothsInRoom,
 } from './engine/BoothArrangementEngine'
 import {
@@ -1799,15 +1802,10 @@ function FloorPlanV2Workspace({
    * doc), then translate the result back to global coords and merge
    * into the unified doc with a single history step.
    */
-  const patronTableCount = useMemo(() => {
-    const objectRoom = store.doc.objectRoom ?? {}
-    return store.doc.objects.filter(
-      (o) =>
-        o.kind === 'booth' &&
-        objectRoom[o.id] === activeRoomId &&
-        isGuestTableBooth(o)
-    ).length
-  }, [activeRoomId, store.doc.objects, store.doc.objectRoom])
+  const patronTableCount = useMemo(
+    () => patronTablesInRoom(store.doc, activeRoomId).length,
+    [activeRoomId, store.doc]
+  )
 
   const vendorTableMetaByKey = useMemo(() => {
     if (!applications?.length) return undefined
@@ -1821,7 +1819,11 @@ function FloorPlanV2Workspace({
 
   const autoArrangeDisabledReason = useMemo(() => {
     if (vendorBoothCount === 0 && patronTableCount === 0) {
-      return 'Draw at least one vendor booth or patron table to auto-arrange.'
+      const hasBoothsElsewhere = store.doc.objects.some((o) => o.kind === 'booth')
+      if (hasBoothsElsewhere) {
+        return AUTO_ARRANGE_WRONG_ROOM_TOOLTIP
+      }
+      return AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP
     }
     if (
       autoArrangeMode !== 'grid' &&
@@ -1833,6 +1835,7 @@ function FloorPlanV2Workspace({
   }, [
     autoArrangeMode,
     patronTableCount,
+    store.doc.objects,
     trafficFlowPrerequisites.satisfied,
     vendorBoothCount,
   ])
@@ -2232,16 +2235,10 @@ function FloorPlanV2Workspace({
     [store]
   )
 
-  const canArrangeLayout = useMemo(() => {
-    if (!activeRoomId) return false
-    const objectRoom = store.doc.objectRoom ?? {}
-    return store.doc.objects.some(
-      (o) =>
-        o.kind === 'booth' &&
-        !isGuestTableBooth(o) &&
-        objectRoom[o.id] === activeRoomId
-    )
-  }, [activeRoomId, store.doc.objectRoom, store.doc.objects])
+  const canArrangeLayout = useMemo(
+    () => vendorBoothsInRoom(store.doc, activeRoomId).length > 0,
+    [activeRoomId, store.doc]
+  )
 
   const handleArrangeLayoutInRoom = useCallback(() => {
     if (!activeRoomId) {

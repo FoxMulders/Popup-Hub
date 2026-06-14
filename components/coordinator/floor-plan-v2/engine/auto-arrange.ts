@@ -19,6 +19,7 @@ import type {
   PlacedObject,
   RoomFrame,
 } from '../state/types'
+import { resolveObjectRoomId } from '../geometry/is-point-in-room'
 import {
   collisionProbeForObject,
   placedObjectsClearanceOverlap,
@@ -1826,7 +1827,8 @@ export function boothWithinRoomFrame(
 /**
  * Run auto-arrange for a single room on a unified multi-room doc.
  *
- * Only objects tagged via `doc.objectRoom[id] === roomId` participate
+ * Only objects in the active room participate — sidecar tag or geometry
+ * (`resolveObjectRoomId`) when the tag is missing.
  * in the pass; every other object is left untouched at its global
  * position. Booths are laid out in room-local coordinates bounded by
  * `[0, frame.widthFt] × [0, frame.lengthFt]`, then translated back
@@ -1841,8 +1843,12 @@ export function autoArrangeInRoom(
   if (!frame) return null
 
   const objectRoom = doc.objectRoom ?? {}
-  const inRoom = doc.objects.filter((o) => objectRoom[o.id] === roomId)
-  const others = doc.objects.filter((o) => objectRoom[o.id] !== roomId)
+  const inRoom = doc.objects.filter(
+    (o) => resolveObjectRoomId(doc, o, roomId) === roomId
+  )
+  const others = doc.objects.filter(
+    (o) => resolveObjectRoomId(doc, o, roomId) !== roomId
+  )
 
   const scope = options.scope ?? 'all'
   const vendorBoothCount = inRoom.filter(
@@ -2048,7 +2054,7 @@ export function packVendorBoothsInRoomGrid(
     (o): o is BoothObject =>
       o.kind === 'booth' &&
       !isGuestTableBooth(o as BoothObject) &&
-      objectRoom[o.id] === roomId
+      resolveObjectRoomId(doc, o, roomId) === roomId
   )
 
   const selectedVendor = vendorInRoom.filter((b) =>
