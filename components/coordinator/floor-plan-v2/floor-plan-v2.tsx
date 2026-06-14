@@ -1826,7 +1826,9 @@ function FloorPlanV2Workspace({
       return AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP
     }
     if (
-      autoArrangeMode !== 'grid' &&
+      vendorBoothCount > 0 &&
+      (autoArrangeMode !== 'grid' ||
+        vendorLayoutMode === LayoutMode.FAIRNESS_FIRST) &&
       !trafficFlowPrerequisites.satisfied
     ) {
       return AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP
@@ -1838,6 +1840,7 @@ function FloorPlanV2Workspace({
     store.doc.objects,
     trafficFlowPrerequisites.satisfied,
     vendorBoothCount,
+    vendorLayoutMode,
   ])
 
   const canAutoArrangeFloorPlan =

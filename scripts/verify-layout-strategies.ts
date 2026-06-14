@@ -188,6 +188,44 @@ assert(
   `Fairness L-shape score non-zero (${fairL.fairnessScore})`
 )
 
+/** Irregular 6-vertex room (notched wing) — mimics hand-drawn merged zones. */
+const irregularRequest: LayoutRequest = {
+  ...rectangleRequest,
+  room: {
+    boundary: [
+      { x: 0, y: 20 },
+      { x: 40, y: 0 },
+      { x: 80, y: 10 },
+      { x: 70, y: 50 },
+      { x: 30, y: 60 },
+      { x: 0, y: 40 },
+    ],
+  },
+  roomWidthFt: 80,
+  roomHeightFt: 60,
+  entrance: { x: 40, y: 4 },
+  exit: { x: 15, y: 55 },
+}
+
+const fairIrregular = generateFairLayout(irregularRequest)
+assert(
+  fairIrregular.placements.length >= 2,
+  `Fairness irregular polygon places booths (${fairIrregular.placements.length})`
+)
+assertFairnessConstraints(
+  'Fairness irregular',
+  irregularRequest,
+  fairIrregular.placements
+)
+assert(
+  fairIrregular.fairnessScore >= 1,
+  `Fairness irregular score non-zero (${fairIrregular.fairnessScore})`
+)
+assert(
+  fairIrregular.route.length >= 2,
+  `Fairness irregular returns snake route (${fairIrregular.route.length} pts)`
+)
+
 const tenBooths: LayoutRequest = {
   ...rectangleRequest,
   booths: Array.from({ length: 10 }, (_, i) => ({

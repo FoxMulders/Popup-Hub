@@ -4,6 +4,18 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Fairness-first auto-arrange verification (local, not deployed)
+- **Goal:** Confirm Engine **Fairness** + **AI Auto-Arrange** bypasses Gemini, uses `PackBooths` → `generateFairLayout`, requires entry/exit doors, and yields snake circulation + non-zero fairness score on irregular rooms.
+- **Trace (verified):**
+  1. `floor-plan-v2.tsx` `handleAutoArrangeFloorPlan` — when `vendorLayoutMode === fairness_first` and vendor booths exist, returns early after local `PackBooths` (no `runAutoArrangeWithAi` / Gemini).
+  2. `BoothArrangementEngine.PackBooths` — fairness mode calls `layoutRequestFromDocRoom` + `generateFairLayout` (polygon serpentine seed → filtered traffic fill → annealing → sanitize).
+  3. `request-ai-auto-arrange.ts` `deterministicFallback` — also routes fairness_first to `PackBooths` if Gemini path is ever hit (UI path does not).
+  4. Doors: `evaluateTrafficFlowPrerequisites` — entry (`doorType: entrance`) + exit (`doorType: exit` or `emergency_exit`) on perimeter (≤1.5′ from wall). Missing → Run disabled + toast `AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP`. `layoutRequestFromDocRoom` falls back to room-center entrance/exit only if prereqs fail (UI blocks before pack).
+- **Fix this session:** `autoArrangeDisabledReason` now matches handler — Fairness-first + Grid still requires entry/exit (Run button disabled with door tooltip, not enabled-then-toast).
+- **Regression:** `npx tsx scripts/verify-layout-strategies.ts` — **1485/1485 PASS** (added irregular 6-vertex polygon fixture + L-shape/rectangle/stress). Production baseline `a69841e` (prior fairness polygon fix in `ba6b2b1`).
+- **User steps (Blueprint Studio):** Draw irregular room (merged zone or `perimeterRing`) → **Vendor Booths** tool place tables → **Shapes → Door** entry on wall (`entrance`) + exit (`exit` or emergency exit) snapped to perimeter → Optimize toolbar → Engine **Fairness** → **AI Auto-Arrange** → booths inside green boundary in snake rows along circulation overlay; toast + badge `Fairness N/100` with N ≥ 1.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — CI + Windows production build fix (local, not deployed)
 - **Issue:** Local deploy (`PM\Deploy-popuphub.bat`) failed build 143→144 on commit `a662315` with `TurbopackInternalError: failed to write` to `.next\server\app\coordinator\events\[id]\print\page\next-font-manifest.json` (Windows os error 3). GitHub Actions **CI / build** also failed on `f679cb0` / `a662315` (lint step; build skipped).
 - **Root causes:**
