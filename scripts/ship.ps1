@@ -38,6 +38,12 @@ function Write-Step($text) {
 }
 
 try {
+    $nextDir = Join-Path $ProjectRoot '.next'
+    if (Test-Path -LiteralPath $nextDir) {
+        Remove-Item -LiteralPath $nextDir -Recurse -Force
+        Write-Host "Removed stale .next build output before build" -ForegroundColor Yellow
+    }
+
     Write-Step "Building (next build)"
     $env:BUMP_BUILD_NUMBER = "1"
     if ((Invoke-NativeCommand -FilePath 'npm' -ArgumentList @('run', 'build')) -ne 0) { throw "Build failed" }

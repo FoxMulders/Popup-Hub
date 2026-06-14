@@ -112,7 +112,7 @@ export function generateFairLayout(request: LayoutRequest): LayoutResult {
     corridorWidthFt: DEFAULT_CORRIDOR_WIDTH_FT,
     obstacles,
   })
-  let route = snakeSeed.route
+  const route = snakeSeed.route
 
   const trafficSeed = packBoothsTrafficAware(
     roomW,

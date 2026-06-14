@@ -120,10 +120,10 @@ try {
     }
 
     if (-not $SkipBuild) {
-        $nextBuildLock = Join-Path $ProjectRoot '.next\lock'
-        if (Test-Path -LiteralPath $nextBuildLock) {
-            Remove-Item -LiteralPath $nextBuildLock -Force
-            Write-Host "Removed stale Next.js build lock: $nextBuildLock" -ForegroundColor Yellow
+        $nextDir = Join-Path $ProjectRoot '.next'
+        if (Test-Path -LiteralPath $nextDir) {
+            Remove-Item -LiteralPath $nextDir -Recurse -Force
+            Write-Host "Removed stale .next build output before build" -ForegroundColor Yellow
         }
 
         Write-Step 'Building (next build)'

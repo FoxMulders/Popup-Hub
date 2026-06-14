@@ -4,6 +4,19 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — CI + Windows production build fix (local, not deployed)
+- **Issue:** Local deploy (`PM\Deploy-popuphub.bat`) failed build 143→144 on commit `a662315` with `TurbopackInternalError: failed to write` to `.next\server\app\coordinator\events\[id]\print\page\next-font-manifest.json` (Windows os error 3). GitHub Actions **CI / build** also failed on `f679cb0` / `a662315` (lint step; build skipped).
+- **Root causes:**
+  1. **CI:** ESLint `prefer-const` error — `let route = snakeSeed.route` in `lib/layout-strategies/fairness-engine/generate-fair-layout.ts:115` (`route` never reassigned). CI runs `npm run lint` before `npm run build`.
+  2. **Local Windows deploy:** Turbopack production build intermittently fails writing manifest files under dynamic-route paths (`[id]`) when `.next` is stale/locked (dev server, interrupted build, or Windows path/bracket handling). Panic log path was empty/expired.
+- **Fix:**
+  - `const route = snakeSeed.route` (CI lint).
+  - `package.json` — `build`: `next build --webpack`; `prebuild`: `scripts/clean-next-build.mjs` then bump build number.
+  - `scripts/clean-next-build.mjs` — removes `.next` before every production build.
+  - `scripts/deploy-popuphub.ps1` + `scripts/ship.ps1` — remove full `.next` before local build (not just lock file).
+- **Verify:** `npm run lint -- --quiet` — 0 errors. `npm run build` — PASS (webpack, clean `.next`). `app/coordinator/events/[id]/print/page.tsx` — no code issues.
+- **Next:** Commit + push to unblock master CI and local deploy (not committed this session per user request).
+
 ## Active work — Fairness-first layout polygon fix (local, not deployed)
 - **Issue:** Fairness-first + Auto-Arrange on irregular (L-shaped) rooms placed booths outside the green dashed boundary, with overlaps, random orientations, and fairness score **0/100**.
 - **Root causes:**
@@ -1533,7 +1546,7 @@
 - **`canvas-toolbar-static_qa.tsx`:** Accordion headers → **ROOM CONTROLS**, **PATRON LAYOUT**, **VENDOR BOOTHS**, **DESIGNER TOOLS** (row icon badges removed; uppercase `h3` titles).
 - **`Canvas_qa.tsx` + `floor-plan-canvas_dashboard_qa.tsx`:** Stage `fill="none"` single perimeter; `pointerEvents="all"` + `cursor: move`; `SelectionOverlayQa` skips duplicate dashed outline on selected stages; stage stays visible after merge join.
 - **`toolbar-tooltip-copy_qa.ts` + command-bar blocks:** Micro-tooltip copy wired across toolbar/object brushes.
-- **Build:** Local `npm run build` passes — **build 142** (uncommitted; `build-number.json` bumped by prebuild).
+- **Build:** Local `npm run build` passes (webpack, clean `.next`) — **build 143** uncommitted; CI lint 0 errors with `prefer-const` fix.
 
 ## Shipped this session (QA staging, deployed 2026-06-09)
 - **`toolbar-tooltip-copy_qa.ts`:** Centralized micro-tooltip strings (e.g. `Clear all`, `Auto-arrange`, `Merge rooms`, `Space H`) — replaces long descriptive sentences across command-bar blocks.
@@ -1818,6 +1831,8 @@ Patron (guest) seating is non-vendor (`tablePurpose: 'guest'`). Round and banque
 - Interactive coordinator smoke-test requires user credentials
 - Markets with **only** `venue_elements` and no cells open **blank** by design
 - ~~Deploy blocked by TS build failure~~ — fixed locally (pointer return type + verify script)
+- ~~CI master blocked by ESLint prefer-const~~ — fixed locally (`generate-fair-layout.ts` `const route`; lint 0 errors)
+- ~~Local Windows deploy Turbopack build 143→144~~ — fixed locally (`next build --webpack` + clean `.next` in prebuild/deploy scripts)
 - ~~Apple Developer account~~ — enrolled 2026-06-08
 
 ## Decisions

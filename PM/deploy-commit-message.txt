@@ -1,1 +1,1 @@
-feat: ship 81 session updates (Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; floor plan empty-grid marquee + crosshair; test suite seed redirect fix; +77 more)
+feat: ship 82 session updates (CI master lint fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; floor plan empty-grid marquee + crosshair; +78 more)
