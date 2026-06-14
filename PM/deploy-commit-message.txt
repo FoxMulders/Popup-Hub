@@ -1,1 +1,1 @@
-feat: ship 67 session updates (community league hall venue verification; application board status UX; sticky vendor/patron table placement; vendor booth light green; +63 more)
+feat: ship 68 session updates (Supabase security linter fixes; community league hall venue verification; application board status UX; sticky vendor/patron table placement; +64 more)
