@@ -33,6 +33,8 @@
         "qa:workflow": "powershell -ExecutionPolicy Bypass -File ./scripts/qa-full-workflow.ps1",
         "qa:workflow:staging": "powershell -ExecutionPolicy Bypass -File ./scripts/qa-full-workflow.ps1 -StagingSmoke",
         "qa:workflow:walkthrough": "npx tsx scripts/qa-full-workflow-walkthrough.ts",
+        "test:fairness-layout": "npx tsx lib/vendor-fairness-layout/geometry/geometry.test.ts && npx tsx lib/vendor-fairness-layout/integration.test.ts",
+        "test:fairness-layout:stress": "npx tsx scripts/verify-vendor-fairness-layout.ts",
         "test:shopper-routing": "npx tsx lib/shopper/qa-pathfinding.ts",
         "test:shopper-routing:live": "npx tsx lib/shopper/qa-live-layout.ts",
         "test:rbac-signup": "npx tsx lib/auth/qa-rbac-signup.ts",

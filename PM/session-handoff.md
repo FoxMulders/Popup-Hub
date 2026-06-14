@@ -4,6 +4,22 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Vendor Fairness Layout Engine (local, not deployed)
+- **Goal:** Fairness-first booth layout module — minimize exposure variance across vendors (not shortest walking distance).
+- **Shipped:** `lib/vendor-fairness-layout/` — geometry (turf polygon, SAT overlap, serpentine aisle), nav graph, route (A* + Dijkstra + NN/2-opt; fast snake path for 80+ booths), exposure simulator (1000 attendees), simulated annealing optimizer, fairness score 0–100. Adapter `adapters/floor-plan-v2.ts`. React SVG components in `components/vendor-fairness-layout/`. Demo at `/dev/fairness-layout`.
+- **Tests:** `npm run test:fairness-layout` (geometry + integration); `npm run test:fairness-layout:stress` — 200 booths ~1.6s layout, route recalc ~2ms.
+- **Integration:** Parallel to existing auto-arrange — wire as `fairness-first` mode in floor-plan-v2 later (not done this session).
+- **Verify:** `npm run test:fairness-layout` — all PASS. Open `/dev/fairness-layout` → Generate fair layout → SVG floor plan with route overlay and fairness score.
+
+## Active work — Vendor Fairness Layout Engine (strategy-based, local, not deployed)
+- **Architecture:** Option A strategy pattern in `lib/layout-strategies/` — `LayoutStrategy`, `LayoutMode` (`traffic_aware` | `fairness_first`), `AutoArrangeEngine` orchestrator (`AutoArrangeOrchestrator.ts`). Full tree in `lib/layout-strategies/README.md`.
+- **Phase A:** `TrafficAwareStrategy` wraps existing `packBoothsTrafficAware` — regression-verified identical placements for fixed fixtures.
+- **Phase B:** `FairnessFirstStrategy` + `fairness-engine/` (snake circulation, exposure sim, simulated annealing, fairness scorer 0–100).
+- **Phase C:** `BoothArrangementEngine.PackBooths` delegates to fairness pipeline when `vendorLayoutMode: fairness_first`; default unchanged traffic-aware / unified paths.
+- **Phase D:** UI engine toggle (Traffic / Fairness) on Optimize control; `FloorPlanDoc.vendorLayoutMode` + `LayoutRoom.vendor_layout_mode` persisted via legacy bridge; fairness score badge + toast after run.
+- **Phase E:** `npx tsx scripts/verify-layout-strategies.ts` — 10/10 PASS; `verify-auto-arrange-engine.ts` unchanged PASS.
+- **Verify:** Command center → Optimize → Engine **Fairness** → Auto-Arrange with entry/exit doors → toast shows score; badge shows `Fairness N/100`.
+
 ## Active work — Deploy bat cmd.exe %DE parse fix (local, not deployed)
 - **Issue:** `PM\Deploy-popuphub.bat` failed with `'PLOY_PS1"' is not recognized` (exit 9009) — cmd.exe parsed `%DE` inside `%DEPLOY_PS1%` before the full variable name.
 - **Fix:** Renamed bat vars to `DPL_*` (`DPL_SCRIPT`, `DPL_PS_ARGS`, `DPL_NO_PAUSE`); path/script invocations use delayed expansion (`!VAR!`). Template in `get-deploy-commit-message.ps1` updated so regenerated `.bat` stays safe.

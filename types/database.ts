@@ -762,6 +762,12 @@ export interface LayoutRoom {
    */
   canvas_origin_x?: number
   canvas_origin_y?: number
+  /**
+   * Vendor layout engine for auto-arrange in this room.
+   * `traffic_aware` (default) preserves legacy path optimization;
+   * `fairness_first` runs exposure-equity optimization.
+   */
+  vendor_layout_mode?: 'traffic_aware' | 'fairness_first' | null
 }
 
 export interface BoothLayout {

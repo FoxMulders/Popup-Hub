@@ -43,6 +43,10 @@ import {
 } from '@/lib/booth-planner/layout-table-size'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import {
+  LayoutMode,
+  layoutModeLabel,
+} from '@/lib/layout-strategies'
+import {
   AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
 } from '../engine/traffic-flow-prerequisites'
 import type { DrawShape, ToolState } from './types'
@@ -171,6 +175,9 @@ function DualScreenLaunchButtons({
 function FloorPlanOptimizeControl({
   mode,
   onModeChange,
+  vendorLayoutMode,
+  onVendorLayoutModeChange,
+  lastFairnessScore,
   onRun,
   canRun,
   disabledReason,
@@ -180,6 +187,9 @@ function FloorPlanOptimizeControl({
 }: {
   mode: AutoArrangeMode
   onModeChange?: (mode: AutoArrangeMode) => void
+  vendorLayoutMode?: LayoutMode
+  onVendorLayoutModeChange?: (mode: LayoutMode) => void
+  lastFairnessScore?: number | null
   onRun?: () => void
   canRun?: boolean
   disabledReason?: string | null
@@ -249,6 +259,70 @@ function FloorPlanOptimizeControl({
             <option value="perimeter-only">Perimeter</option>
           </select>
         )
+      ) : null}
+      {onVendorLayoutModeChange ? (
+        sidebarLayout ? (
+          <div className="flex items-center justify-between gap-1 text-xs text-slate-500">
+            <span className="shrink-0 font-medium">Engine:</span>
+            <div className="flex min-w-0 flex-wrap justify-end gap-1">
+              {(
+                [
+                  { id: LayoutMode.TRAFFIC_AWARE, label: 'Traffic' },
+                  { id: LayoutMode.FAIRNESS_FIRST, label: 'Fairness' },
+                ] as const
+              ).map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  disabled={!canRun}
+                  onClick={() => onVendorLayoutModeChange(id)}
+                  aria-pressed={vendorLayoutMode === id}
+                  className={cn(
+                    'rounded px-2 py-0.5 text-[11px] font-semibold transition-colors disabled:opacity-50',
+                    vendorLayoutMode === id
+                      ? 'bg-violet-200 text-violet-950'
+                      : 'bg-violet-50 text-violet-700 hover:bg-violet-100'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <select
+            value={vendorLayoutMode ?? LayoutMode.TRAFFIC_AWARE}
+            onChange={(e) =>
+              onVendorLayoutModeChange(e.target.value as LayoutMode)
+            }
+            title="Vendor layout engine"
+            aria-label="Vendor layout engine"
+            disabled={!canRun}
+            className={cn(
+              'rounded-md border border-violet-200 bg-violet-50/80 px-2 text-[11px] font-semibold text-violet-900 disabled:opacity-50',
+              toolbarControlHeight(compact ?? false)
+            )}
+          >
+            <option value={LayoutMode.TRAFFIC_AWARE}>
+              {layoutModeLabel(LayoutMode.TRAFFIC_AWARE)}
+            </option>
+            <option value={LayoutMode.FAIRNESS_FIRST}>
+              {layoutModeLabel(LayoutMode.FAIRNESS_FIRST)}
+            </option>
+          </select>
+        )
+      ) : null}
+      {vendorLayoutMode === LayoutMode.FAIRNESS_FIRST &&
+      typeof lastFairnessScore === 'number' ? (
+        <span
+          className={cn(
+            'shrink-0 rounded-md border border-violet-200/90 bg-violet-50/90 px-2 text-[10px] font-semibold tabular-nums text-violet-900',
+            sidebarLayout ? 'self-start' : ''
+          )}
+          aria-live="polite"
+        >
+          Fairness {lastFairnessScore}/100
+        </span>
       ) : null}
       {topBarLayout ? (
         <TooltipWrapper text={tooltip}>
@@ -362,6 +436,9 @@ export interface CanvasCommandBarBlockContext {
   autoArrangeDisabledReason?: string | null
   autoArrangeMode?: AutoArrangeMode
   onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  vendorLayoutMode?: LayoutMode
+  onVendorLayoutModeChange?: (mode: LayoutMode) => void
+  lastFairnessScore?: number | null
   onArrangeLayout?: () => void
   canArrangeLayout?: boolean
   arrangeLayoutDisabledReason?: string | null
@@ -1076,6 +1153,9 @@ export function renderCanvasCommandBarBlock(
           <FloorPlanOptimizeControl
             mode={ctx.autoArrangeMode ?? 'grid'}
             onModeChange={ctx.onAutoArrangeModeChange}
+            vendorLayoutMode={ctx.vendorLayoutMode}
+            onVendorLayoutModeChange={ctx.onVendorLayoutModeChange}
+            lastFairnessScore={ctx.lastFairnessScore}
             onRun={ctx.onAutoArrangeFloorPlan}
             canRun={ctx.canAutoArrangeFloorPlan}
             disabledReason={ctx.autoArrangeDisabledReason}

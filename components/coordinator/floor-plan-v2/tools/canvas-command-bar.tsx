@@ -6,6 +6,7 @@ import type { CanvasToolHostProps } from './canvas-tool-types'
 import { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
 import type { AddLayoutRoomOptions } from '@/lib/coordinator/add-layout-room'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
+import type { LayoutMode } from '@/lib/layout-strategies'
 import {
   getVisibleToolbarBlockIds,
   renderCanvasCommandBarBlock,
@@ -70,6 +71,9 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   autoArrangeDisabledReason?: string | null
   autoArrangeMode?: AutoArrangeMode
   onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
+  vendorLayoutMode?: LayoutMode
+  onVendorLayoutModeChange?: (mode: LayoutMode) => void
+  lastFairnessScore?: number | null
   onArrangeLayout?: () => void
   canArrangeLayout?: boolean
   arrangeLayoutDisabledReason?: string | null
@@ -136,6 +140,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     autoArrangeDisabledReason,
     autoArrangeMode,
     onAutoArrangeModeChange,
+    vendorLayoutMode,
+    onVendorLayoutModeChange,
+    lastFairnessScore,
     onArrangeLayout,
     canArrangeLayout,
     arrangeLayoutDisabledReason,
@@ -252,6 +259,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       autoArrangeMode: autoArrangeMode ?? vendorAutoArrangeMode,
       onAutoArrangeModeChange:
         onAutoArrangeModeChange ?? onVendorAutoArrangeModeChange,
+      vendorLayoutMode,
+      onVendorLayoutModeChange,
+      lastFairnessScore,
       onArrangeLayout,
       canArrangeLayout,
       arrangeLayoutDisabledReason,
@@ -344,6 +354,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       autoArrangeDisabledReason,
       autoArrangeMode,
       onAutoArrangeModeChange,
+      vendorLayoutMode,
+      onVendorLayoutModeChange,
+      lastFairnessScore,
       onArrangeLayout,
       canArrangeLayout,
       arrangeLayoutDisabledReason,

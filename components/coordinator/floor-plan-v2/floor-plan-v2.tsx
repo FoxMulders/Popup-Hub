@@ -81,6 +81,10 @@ import {
   PackBooths,
   vendorBoothsInRoom,
 } from './engine/BoothArrangementEngine'
+import {
+  LayoutMode,
+  parseLayoutMode,
+} from '@/lib/layout-strategies'
 import type { UnifiedSolverMeta } from './engine/UnifiedLayoutSolver'
 import { CalculateOptimalPath } from './engine/PathfindingService'
 import { usePathfinding } from './hooks/use-pathfinding'
@@ -91,6 +95,7 @@ import {
 } from './hooks/use-layout-spring'
 import { legacyRoomsFromDoc } from './state/legacy-bridge'
 import { hydrateFloorPlanDoc } from './state/layout-hydration'
+import { resolveRoomPlacementSurface } from './state/placement-surface'
 import {
   activeRoomFramingBounds,
   reconcileCanvasExtents,
@@ -435,6 +440,9 @@ function FloorPlanV2Workspace({
   )
   const [autoArrangeMode, setAutoArrangeMode] =
     useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
+  const [vendorLayoutMode, setVendorLayoutMode] = useState<LayoutMode>(() =>
+    parseLayoutMode(initialDoc.vendorLayoutMode)
+  )
   const [rightInspectorOpen, setRightInspectorOpen] = useState(!isDashboard)
   const [showLabels, setShowLabels] = useState(true)
   const [boothMapLabelMode, setBoothMapLabelMode] = useState<BoothMapLabelMode>(
@@ -1989,7 +1997,9 @@ function FloorPlanV2Workspace({
       return
     }
     if (
-      autoArrangeMode !== 'grid' &&
+      vendorBoothCount > 0 &&
+      (autoArrangeMode !== 'grid' ||
+        vendorLayoutMode === LayoutMode.FAIRNESS_FIRST) &&
       !trafficFlowPrerequisites.satisfied
     ) {
       toast.message(AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP, { duration: 4500 })
@@ -1999,6 +2009,82 @@ function FloorPlanV2Workspace({
     const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
     if (!frame) {
       toast.error('Select a room on the canvas before auto-arranging.')
+      return
+    }
+
+    if (
+      vendorLayoutMode === LayoutMode.FAIRNESS_FIRST &&
+      vendorBoothCount > 0
+    ) {
+      const cleared = vendorBoothsInRoom(store.doc, activeRoomId).map((b) => ({
+        ...b,
+        x: 0,
+        y: 0,
+        rotation: 0,
+      }))
+      const packResult = PackBooths(store.doc, activeRoomId, cleared, {
+        vendorLayoutMode: LayoutMode.FAIRNESS_FIRST,
+        eventCategoryNames,
+        snapFt: store.doc.snapFt,
+      })
+      let nextDoc = applyPackedBoothsToDoc(
+        store.doc,
+        activeRoomId,
+        packResult.booths
+      )
+      let placedCount = packResult.placedCount
+
+      if (patronTableCount > 0) {
+        const patronPass = autoArrangeInRoom(nextDoc, activeRoomId, {
+          scope: 'patron',
+          mode: autoArrangeMode,
+          eventCategoryNames,
+          baselineTableLengthFt: safeTableSizeFt,
+          vendorTableMetaByKey,
+        })
+        if (patronPass) {
+          nextDoc = patronPass.doc
+          placedCount += patronPass.placedCount
+        }
+      }
+
+      store.patchDoc({
+        vendorLayoutMode,
+        lastFairnessScore: packResult.fairnessScore,
+      })
+      store.replaceObjects(nextDoc.objects)
+
+      const surface = resolveRoomPlacementSurface(store.doc, activeRoomId)
+      const originX = surface?.minX ?? frame.originX
+      const originY = surface?.minY ?? frame.originY
+      if (packResult.fairnessRoute?.length) {
+        setUnifiedLayoutOverlay({
+          spinePath: packResult.fairnessRoute.map((p) => ({
+            x: p.x + originX,
+            y: p.y + originY,
+          })),
+          clearanceField: [],
+        })
+      }
+
+      if (placedCount === 0) {
+        toast.error(
+          `Fairness layout could not fit any objects inside ${frame.name}.`
+        )
+        return
+      }
+
+      const score = packResult.fairnessScore ?? 0
+      if (packResult.droppedCount > 0) {
+        toast.warning(
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'} (score ${score}/100). ${packResult.droppedCount} could not fit.`,
+          { duration: 5000 }
+        )
+      } else {
+        toast.success(
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'} · fairness score ${score}/100.`
+        )
+      }
       return
     }
 
@@ -2134,8 +2220,17 @@ function FloorPlanV2Workspace({
     store,
     trafficFlowPrerequisites.satisfied,
     vendorBoothCount,
+    vendorLayoutMode,
     vendorTableMetaByKey,
   ])
+
+  const handleVendorLayoutModeChange = useCallback(
+    (mode: LayoutMode) => {
+      setVendorLayoutMode(mode)
+      store.patchDoc({ vendorLayoutMode: mode })
+    },
+    [store]
+  )
 
   const canArrangeLayout = useMemo(() => {
     if (!activeRoomId) return false
@@ -2467,6 +2562,9 @@ function FloorPlanV2Workspace({
     autoArrangeDisabledReason,
     autoArrangeMode,
     onAutoArrangeModeChange: setAutoArrangeMode,
+    vendorLayoutMode,
+    onVendorLayoutModeChange: handleVendorLayoutModeChange,
+    lastFairnessScore: store.doc.lastFairnessScore ?? null,
     onArrangeLayout: handleArrangeLayoutInRoom,
     canArrangeLayout,
     tableSizeFt: tableSizePillValue,
@@ -2786,6 +2884,9 @@ function FloorPlanV2Workspace({
                 autoArrangeDisabledReason={autoArrangeDisabledReason}
                 autoArrangeMode={autoArrangeMode}
                 onAutoArrangeModeChange={setAutoArrangeMode}
+                vendorLayoutMode={vendorLayoutMode}
+                onVendorLayoutModeChange={handleVendorLayoutModeChange}
+                lastFairnessScore={store.doc.lastFairnessScore ?? null}
                 onArrangeLayout={handleArrangeLayoutInRoom}
                 canArrangeLayout={canArrangeLayout}
                 tableSizeFt={tableSizePillValue}

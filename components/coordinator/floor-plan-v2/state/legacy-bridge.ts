@@ -410,6 +410,8 @@ export function docFromLegacyRooms(
   }
 
   const extents = unifiedCanvasExtents(frames)
+  const vendorLayoutMode =
+    rooms.find((r) => r.vendor_layout_mode)?.vendor_layout_mode ?? undefined
   return stripMacroPerimeterWallsFromDoc({
     canvasWidthFt: extents.width,
     canvasLengthFt: extents.length,
@@ -418,6 +420,7 @@ export function docFromLegacyRooms(
     objects,
     rooms: frames,
     objectRoom,
+    ...(vendorLayoutMode ? { vendorLayoutMode } : {}),
   })
 }
 
@@ -482,6 +485,8 @@ export function legacyRoomsFromDoc(
       ...projected,
       canvas_origin_x: ox,
       canvas_origin_y: oy,
+      vendor_layout_mode:
+        doc.vendorLayoutMode ?? room.vendor_layout_mode ?? 'traffic_aware',
     }
   })
 }

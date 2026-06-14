@@ -70,6 +70,9 @@ export interface PackBoothsOptions {
   /** `unified` runs coupled booth+spine solver; default traffic-aware path pack. */
   layoutSolver?: 'traffic-aware' | 'unified'
 
+  /** Vendor layout engine — defaults to traffic-aware when unset. */
+  vendorLayoutMode?: LayoutMode
+
   eventCategoryNames?: ReadonlyArray<string>
 
 }
@@ -86,6 +89,11 @@ export interface PackBoothsResult {
 
   /** Present when `layoutSolver: 'unified'` produced overlay meta. */
   unifiedMeta?: UnifiedPackResult['unifiedMeta']
+
+  /** Set when `vendorLayoutMode: fairness_first` ran. */
+  fairnessScore?: number
+
+  fairnessRoute?: Array<{ x: number; y: number }>
 
 }
 
@@ -254,19 +262,60 @@ export function PackBooths(
     eventCategoryNames: options.eventCategoryNames,
   }
 
-  const packResult =
-    options.layoutSolver === 'unified'
-      ? packBoothsUnifiedForRoom(doc, roomId, packInput, packOpts)
-      : packBoothsForRoom(doc, roomId, packInput, packOpts)
+  const vendorLayoutMode =
+    options.vendorLayoutMode ??
+    parseLayoutMode(doc.vendorLayoutMode ?? null)
 
+  let fairnessScore: number | undefined
+  let fairnessRoute: LayoutResult['route'] | undefined
+  let fairResult: LayoutResult | null = null
+  let packResult:
+    | Awaited<ReturnType<typeof packBoothsForRoom>>
+    | UnifiedPackResult
 
+  if (
+    vendorLayoutMode === LayoutMode.FAIRNESS_FIRST &&
+    options.layoutSolver !== 'unified'
+  ) {
+    const request = layoutRequestFromDocRoom(doc, roomId, packInput, {
+      vendorLayoutMode,
+      eventCategoryNames: options.eventCategoryNames,
+      aisleFt,
+      stepFt: snapFt,
+    })
+    if (request) {
+      fairResult = generateFairLayout(request)
+      fairnessScore = fairResult.fairnessScore
+      fairnessRoute = fairResult.route
+      packResult = {
+        placed: fairResult.placements.map((p) => ({
+          id: p.boothId,
+          x: p.x + surface.minX,
+          y: p.y + surface.minY,
+          rotation: p.rotation,
+        })),
+        unplaced: fairResult.unplacedBoothIds ?? [],
+      }
+    } else {
+      packResult = packBoothsForRoom(doc, roomId, packInput, packOpts)
+    }
+  } else {
+    packResult =
+      options.layoutSolver === 'unified'
+        ? packBoothsUnifiedForRoom(doc, roomId, packInput, packOpts)
+        : packBoothsForRoom(doc, roomId, packInput, packOpts)
+  }
 
-  const packed = applyPlacementsToBooths(booths, packResult).map((b) => {
-
+  const packed = (
+    fairResult
+      ? applyLayoutResultToBooths(booths, fairResult, {
+          originX: surface.minX,
+          originY: surface.minY,
+        })
+      : applyPlacementsToBooths(booths, packResult)
+  ).map((b) => {
     if (b.x < -900) return b
-
     return orientBoothToNearestWall(b, doc, roomId, surface)
-
   })
 
 
@@ -285,6 +334,9 @@ export function PackBooths(
       options.layoutSolver === 'unified'
         ? (packResult as UnifiedPackResult).unifiedMeta
         : undefined,
+
+    fairnessScore,
+    fairnessRoute,
 
   }
 
@@ -413,6 +465,14 @@ export type {
 } from './AutoArrangeEngine'
 
 import type { AutoArrangeInRoomResult, AutoArrangeOptions } from './auto-arrange'
+import {
+  LayoutMode,
+  generateFairLayout,
+  layoutRequestFromDocRoom,
+  applyLayoutResultToBooths,
+  parseLayoutMode,
+  type LayoutResult,
+} from '@/lib/layout-strategies'
 
 /**
  * Auto-arrange vendor booths via the unified booth+spine solver.

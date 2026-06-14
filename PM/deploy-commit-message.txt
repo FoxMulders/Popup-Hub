@@ -1,1 +1,1 @@
-feat: ship 76 session updates (Deploy bat cmd.exe %DE parse fix; 1′ grid lines restored; category proximity edge gaps + Arrange layout in header; patron path overlay pathfinding fix; +72 more)
+feat: ship 77 session updates (Vendor Fairness Layout Engine; Deploy bat cmd.exe %DE parse fix; 1′ grid lines restored; category proximity edge gaps + Arrange layout in header; +73 more)

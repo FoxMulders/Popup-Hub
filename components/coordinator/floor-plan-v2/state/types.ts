@@ -263,6 +263,13 @@ export interface FloorPlanDoc {
    * `objects[]`; unjoin deletes only this map entry and member tags.
    */
   objectGroups?: Record<string, CanvasObjectGroup>
+  /**
+   * Vendor booth layout engine mode (`traffic_aware` default).
+   * Persisted via `LayoutRoom.vendor_layout_mode` on save.
+   */
+  vendorLayoutMode?: 'traffic_aware' | 'fairness_first'
+  /** Last fairness-first run score (0–100) for results panel / toasts. */
+  lastFairnessScore?: number
 }
 
 export const DEFAULT_GRID_SPACING_FT = 1
