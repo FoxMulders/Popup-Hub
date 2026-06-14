@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
 import {
   LAYOUT_ROOM_PRESETS,
@@ -9,6 +9,11 @@ import {
 import type { AddLayoutRoomOptions } from '@/lib/coordinator/add-layout-room'
 import { MIN_ROOM_DIMENSION_FT } from '@/components/coordinator/floor-plan-v2/state/room-canvas'
 import { Button } from '@/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { Plus, Pencil, Trash2, Check, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -70,6 +75,149 @@ interface LayoutRoomBarProps {
 
 const DEFAULT_FIRST_ROOM_WIDTH_FT = 50
 const DEFAULT_FIRST_ROOM_LENGTH_FT = 50
+
+function RoomPresetMenu({
+  onSelectPreset,
+}: {
+  onSelectPreset: (presetId: LayoutRoomPresetId) => void
+}) {
+  return (
+    <>
+      {LAYOUT_ROOM_PRESETS.map((preset) => (
+        <button
+          key={preset.id}
+          type="button"
+          role="menuitem"
+          onClick={() => onSelectPreset(preset.id)}
+          className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
+        >
+          <span className="text-sm font-semibold text-foreground">
+            {preset.name}
+          </span>
+          <span className="text-[11px] leading-tight text-muted-foreground">
+            {preset.description}
+          </span>
+        </button>
+      ))}
+    </>
+  )
+}
+
+type RoomPresetPickerVariant = 'panel' | 'toolbar' | 'sidebar'
+
+function RoomPresetPicker({
+  onAddRoom,
+  variant,
+  slim = false,
+  headerBar = false,
+}: {
+  onAddRoom: (options?: AddLayoutRoomOptions) => void
+  variant: RoomPresetPickerVariant
+  slim?: boolean
+  headerBar?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+
+  function handleSelectPreset(presetId: LayoutRoomPresetId) {
+    setOpen(false)
+    onAddRoom({ presetId })
+  }
+
+  const borderClass =
+    variant === 'panel'
+      ? cn('border-2 border-stone-200', slim ? 'border' : 'border-2')
+      : 'border border-stone-200'
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <div
+        className={cn(
+          'flex items-stretch overflow-hidden rounded-md',
+          borderClass,
+          variant === 'sidebar' && 'w-full'
+        )}
+      >
+        {variant === 'toolbar' ? (
+          <TooltipWrapper text="Add room">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'gap-0 rounded-none border-0 p-0',
+                headerBar
+                  ? 'h-[var(--dashboard-toolbar-height,1.75rem)] min-h-0 w-[var(--dashboard-toolbar-height,1.75rem)]'
+                  : 'h-7 min-h-0 w-7 text-xs'
+              )}
+              onClick={() => onAddRoom({ presetId: 'blank' })}
+              aria-label="Add room"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </TooltipWrapper>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'gap-1 rounded-none border-0',
+              variant === 'sidebar'
+                ? 'h-7 min-h-0 flex-1 px-2 text-xs'
+                : slim
+                  ? 'h-8 min-h-0 px-2 text-xs'
+                  : 'min-h-11'
+            )}
+            onClick={() => onAddRoom({ presetId: 'blank' })}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add room
+          </Button>
+        )}
+        <PopoverTrigger
+          aria-label="Choose room preset"
+          aria-haspopup="menu"
+          className={cn(
+            'flex items-center justify-center text-stone-600 hover:bg-canvas',
+            variant === 'panel'
+              ? cn(
+                  'border-l-2 border-stone-200 px-2',
+                  slim ? 'h-8 min-h-0' : 'min-h-11'
+                )
+              : variant === 'sidebar'
+                ? 'h-7 min-h-0 w-8 border-l border-stone-200'
+                : cn(
+                    'border-l border-stone-200 px-0',
+                    headerBar
+                      ? 'h-[var(--dashboard-toolbar-height,1.75rem)] min-h-0 w-5'
+                      : 'h-7 min-h-0 w-6'
+                  )
+          )}
+        >
+          <ChevronDown
+            className={cn(
+              'h-3.5 w-3.5 transition-transform',
+              open ? 'rotate-180' : ''
+            )}
+          />
+        </PopoverTrigger>
+      </div>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        sideOffset={4}
+        className={cn(
+          'w-64 max-w-[min(16rem,calc(100vw-1rem))] border-stone-200 p-1 shadow-[var(--shadow-market)] ring-0',
+          variant === 'panel' ? 'border-2' : 'border'
+        )}
+      >
+        <div role="menu" aria-label="Add room from preset">
+          <RoomPresetMenu onSelectPreset={handleSelectPreset} />
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 function FirstRoomAddPanel({
   onAddRoom,
@@ -310,14 +458,6 @@ export function LayoutRoomBar({
   const [units] = useTableSizeUnits()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
-  /**
-   * Preset menu visibility. We show the list of structural presets
-   * (Kitchen / Outdoor Stage / Annex) below the "Add room" button as
-   * a small popover so the existing one-click flow stays identical
-   * for users who just want a blank room.
-   */
-  const [presetMenuOpen, setPresetMenuOpen] = useState(false)
-  const presetMenuRef = useRef<HTMLDivElement | null>(null)
 
   const roomMetricsLabel = highlightedRoomMetrics
     ? `${highlightedRoomMetrics.name}: ${formatFootprintDisplay(
@@ -330,27 +470,6 @@ export function LayoutRoomBar({
     highlightedRoomMetrics != null &&
     highlightedRoomId != null &&
     onPatchRoomDimensions != null
-
-  // Close the preset menu on outside-click / Escape so it behaves like
-  // a real popover, not a sticky dropdown.
-  useEffect(() => {
-    if (!presetMenuOpen) return
-    function handleDown(e: MouseEvent) {
-      const root = presetMenuRef.current
-      if (root && !root.contains(e.target as Node)) {
-        setPresetMenuOpen(false)
-      }
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setPresetMenuOpen(false)
-    }
-    document.addEventListener('mousedown', handleDown)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handleDown)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [presetMenuOpen])
 
   function startRename(room: LayoutRoom) {
     setEditingId(room.id)
@@ -438,73 +557,7 @@ export function LayoutRoomBar({
             {roomMetricsLabel}
           </span>
         ) : null}
-        <div className="relative" ref={presetMenuRef}>
-          <div
-            className={cn(
-              'flex items-stretch overflow-hidden rounded-md border-2 border-stone-200',
-              slim ? 'border' : 'border-2'
-            )}
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'gap-1 rounded-none border-0',
-                slim ? 'h-8 min-h-0 px-2 text-xs' : 'min-h-11'
-              )}
-              onClick={() => onAddRoom({ presetId: 'blank' })}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add room
-            </Button>
-            <button
-              type="button"
-              aria-label="Choose room preset"
-              aria-expanded={presetMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => setPresetMenuOpen((v) => !v)}
-              className={cn(
-                'flex items-center justify-center border-l-2 border-stone-200 px-2 text-stone-600 hover:bg-canvas',
-                slim ? 'h-8 min-h-0' : 'min-h-11'
-              )}
-            >
-              <ChevronDown
-                className={cn(
-                  'h-3.5 w-3.5 transition-transform',
-                  presetMenuOpen ? 'rotate-180' : ''
-                )}
-              />
-            </button>
-          </div>
-          {presetMenuOpen ? (
-            <div
-              role="menu"
-              aria-label="Add room from preset"
-              className="absolute right-0 z-20 mt-1 w-64 rounded-lg border-2 border-stone-200 bg-card p-1 shadow-[var(--shadow-market)]"
-            >
-              {LAYOUT_ROOM_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setPresetMenuOpen(false)
-                    onAddRoom({ presetId: preset.id })
-                  }}
-                  className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
-                >
-                  <span className="text-sm font-semibold text-foreground">
-                    {preset.name}
-                  </span>
-                  <span className="text-[11px] leading-tight text-muted-foreground">
-                    {preset.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <RoomPresetPicker onAddRoom={onAddRoom} variant="panel" slim={slim} />
       </div>
       ) : (
         <>
@@ -525,74 +578,13 @@ export function LayoutRoomBar({
             </span>
           ) : null}
           {!sidebar ? (
-          <div className="relative shrink-0" ref={presetMenuRef}>
-          <div className="flex items-stretch overflow-hidden rounded-md border border-stone-200">
-            <TooltipWrapper text="Add room">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'gap-0 rounded-none border-0 p-0',
-                  headerToolbar
-                    ? 'h-[var(--dashboard-toolbar-height,1.75rem)] min-h-0 w-[var(--dashboard-toolbar-height,1.75rem)]'
-                    : 'h-7 min-h-0 w-7 text-xs'
-                )}
-                onClick={() => onAddRoom({ presetId: 'blank' })}
-                aria-label="Add room"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipWrapper>
-            <button
-              type="button"
-              aria-label="Choose room preset"
-              aria-expanded={presetMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => setPresetMenuOpen((v) => !v)}
-              className={cn(
-                'flex items-center justify-center border-l border-stone-200 px-0 text-stone-600 hover:bg-canvas',
-                headerToolbar
-                  ? 'h-[var(--dashboard-toolbar-height,1.75rem)] min-h-0 w-5'
-                  : 'h-7 min-h-0 w-6'
-              )}
-            >
-              <ChevronDown
-                className={cn(
-                  'h-3.5 w-3.5 transition-transform',
-                  presetMenuOpen ? 'rotate-180' : ''
-                )}
-              />
-            </button>
+          <div className="shrink-0">
+            <RoomPresetPicker
+              onAddRoom={onAddRoom}
+              variant="toolbar"
+              headerBar={headerToolbar}
+            />
           </div>
-          {presetMenuOpen ? (
-            <div
-              role="menu"
-              aria-label="Add room from preset"
-              className="absolute left-0 z-20 mt-1 w-64 rounded-lg border border-stone-200 bg-card p-1 shadow-[var(--shadow-market)]"
-            >
-              {LAYOUT_ROOM_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setPresetMenuOpen(false)
-                    onAddRoom({ presetId: preset.id })
-                  }}
-                  className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
-                >
-                  <span className="text-sm font-semibold text-foreground">
-                    {preset.name}
-                  </span>
-                  <span className="text-[11px] leading-tight text-muted-foreground">
-                    {preset.description}
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
           ) : null}
         </>
       )}
@@ -753,62 +745,7 @@ export function LayoutRoomBar({
               {roomMetricsLabel}
             </span>
           ) : null}
-          <div className="relative w-full" ref={presetMenuRef}>
-            <div className="flex w-full items-stretch overflow-hidden rounded-md border border-stone-200">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 min-h-0 flex-1 gap-1 rounded-none border-0 px-2 text-xs"
-                onClick={() => onAddRoom({ presetId: 'blank' })}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Add room
-              </Button>
-              <button
-                type="button"
-                aria-label="Choose room preset"
-                aria-expanded={presetMenuOpen}
-                aria-haspopup="menu"
-                onClick={() => setPresetMenuOpen((v) => !v)}
-                className="flex h-7 min-h-0 w-8 items-center justify-center border-l border-stone-200 text-stone-600 hover:bg-canvas"
-              >
-                <ChevronDown
-                  className={cn(
-                    'h-3.5 w-3.5 transition-transform',
-                    presetMenuOpen ? 'rotate-180' : ''
-                  )}
-                />
-              </button>
-            </div>
-            {presetMenuOpen ? (
-              <div
-                role="menu"
-                aria-label="Add room from preset"
-                className="absolute left-0 z-20 mt-1 w-full rounded-lg border border-stone-200 bg-card p-1 shadow-[var(--shadow-market)]"
-              >
-                {LAYOUT_ROOM_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setPresetMenuOpen(false)
-                      onAddRoom({ presetId: preset.id })
-                    }}
-                    className="flex w-full flex-col items-start gap-0.5 rounded-md px-3 py-2 text-left hover:bg-canvas"
-                  >
-                    <span className="text-sm font-semibold text-foreground">
-                      {preset.name}
-                    </span>
-                    <span className="text-[11px] leading-tight text-muted-foreground">
-                      {preset.description}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          <RoomPresetPicker onAddRoom={onAddRoom} variant="sidebar" />
         </>
       ) : null}
     </div>
