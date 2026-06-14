@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Supabase security linter fixes (local, not deployed)
+- **Issues:** `coordinator_escrow_holds` had no RLS; `transaction_log` view ran as SECURITY DEFINER (bypassed wallet RLS).
+- **Fix:** `110_escrow_holds_rls_transaction_log_invoker.sql` — RLS on escrow holds (coordinator + vendor read-only, mirrors `platform_transactions`); recreate `transaction_log` with `security_invoker = true`.
+- **Verify:** Apply migration on Supabase; re-run Database Linter — both findings should clear. Backend escrow cron/webhooks unchanged (service role bypasses RLS).
+
 ## Active work — community league hall venue verification (local, not deployed)
 - **Issue:** Publish failed with “Coordinates point to a street address only” for community league halls — Google reverse geocode often returns only `street_address` + `route` for these buildings.
 - **Fix:** `verify-venue-coordinates.ts` now scans all geocode results (not just the first), accepts known Edmonton hall registry matches, and accepts named public venues (community league/hall, recreation centre, legion, etc.) when a pin is dropped with a complete address. `locationName` is passed through verify API + publish toggle.
