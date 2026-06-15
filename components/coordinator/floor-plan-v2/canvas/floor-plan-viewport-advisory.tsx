@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
-import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import { useOptionalMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
   isPocketSizedViewport,
   useFloorPlanViewportDimensions,
@@ -74,10 +74,27 @@ export function FloorPlanViewportLayoutProvider({ children }: { children: ReactN
 const BLUEPRINT_GRID_CLASS =
   'bg-slate-950 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]'
 
+export const FLOOR_PLAN_DESKTOP_REQUIRED_TITLE =
+  'Floor plan matrix needs a desktop-sized screen'
+
+export const FLOOR_PLAN_DESKTOP_REQUIRED_MESSAGE =
+  'The floor plan matrix is not optimized for small screens. Reopen Blueprint Studio on a desktop-sized viewport (at least 1024px wide and 550px tall) to edit the layout safely.'
+
+export interface DesktopScreenRequiredOverlayProps {
+  exitHref?: string
+  exitLabel?: string
+  message?: string
+}
+
 /** Full-screen iron-dome gate — canvas unmounted; cyber-arcade fallback UI. */
-export function DesktopScreenRequiredOverlay() {
+export function DesktopScreenRequiredOverlay({
+  exitHref,
+  exitLabel = 'Abort Mission & Go Back 🚀',
+  message = FLOOR_PLAN_DESKTOP_REQUIRED_MESSAGE,
+}: DesktopScreenRequiredOverlayProps = {}) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
-  const { selectedEventId } = useMarketManagement()
+  const marketManagement = useOptionalMarketManagement()
+  const selectedEventId = marketManagement?.selectedEventId
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -96,11 +113,12 @@ export function DesktopScreenRequiredOverlay() {
 
   const handleAbortMission = useCallback(() => {
     router.push(
-      selectedEventId
-        ? `/coordinator/events/${selectedEventId}`
-        : '/coordinator/dashboard'
+      exitHref ??
+        (selectedEventId
+          ? `/coordinator/events/${selectedEventId}`
+          : '/coordinator/dashboard')
     )
-  }, [router, selectedEventId])
+  }, [exitHref, router, selectedEventId])
 
   if (!showDesktopRequired || !mounted) return null
 
@@ -139,8 +157,11 @@ export function DesktopScreenRequiredOverlay() {
           Whoa there, Ant-Man! 🐜
         </h2>
 
-        <p className="mt-2 text-sm font-semibold text-amber-200/90 sm:text-base">
-          This layout canvas is way too massive for a pocket-sized screen.
+        <p
+          className="mt-2 text-sm font-semibold text-amber-200/90 sm:text-base"
+          data-testid="floor-plan-desktop-required-message"
+        >
+          {message}
         </p>
 
         <p className="mt-4 text-sm leading-relaxed text-slate-300">
@@ -167,13 +188,65 @@ export function DesktopScreenRequiredOverlay() {
           )}
           data-testid="floor-plan-desktop-required-exit"
         >
-          Abort Mission &amp; Go Back 🚀
+          {exitLabel}
         </Button>
       </div>
     </div>
   )
 
   return createPortal(overlay, document.body)
+}
+
+export function FloorPlanDesktopRequiredNotice({
+  className,
+  message = FLOOR_PLAN_DESKTOP_REQUIRED_MESSAGE,
+}: {
+  className?: string
+  message?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex h-full min-h-[40vh] items-center justify-center p-6 text-center',
+        className
+      )}
+      data-testid="floor-plan-desktop-required-notice"
+    >
+      <div className="max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+        <p className="text-sm font-bold uppercase tracking-wide">
+          {FLOOR_PLAN_DESKTOP_REQUIRED_TITLE}
+        </p>
+        <p className="mt-2 text-sm leading-relaxed">{message}</p>
+      </div>
+    </div>
+  )
+}
+
+export interface FloorPlanDesktopRequiredGateProps
+  extends DesktopScreenRequiredOverlayProps {
+  children: ReactNode
+  fallback?: ReactNode
+  fallbackClassName?: string
+}
+
+export function FloorPlanDesktopRequiredGate({
+  children,
+  fallback,
+  fallbackClassName,
+  ...overlayProps
+}: FloorPlanDesktopRequiredGateProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
+
+  return (
+    <>
+      <DesktopScreenRequiredOverlay {...overlayProps} />
+      {showDesktopRequired ? (
+        fallback ?? <FloorPlanDesktopRequiredNotice className={fallbackClassName} />
+      ) : (
+        children
+      )}
+    </>
+  )
 }
 
 /** @deprecated Iron dome blocks all sub-desktop viewports — banner is no longer shown. */

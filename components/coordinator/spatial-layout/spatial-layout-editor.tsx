@@ -9,6 +9,10 @@ import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-cli
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { setupWizardStepHref } from '@/lib/wizard/setup-step-url'
 import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
+import {
+  FloorPlanDesktopRequiredGate,
+  FloorPlanViewportLayoutProvider,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import type { BoothLayout, Event, LayoutRoom } from '@/types/database'
 import { SpatialLayoutShell } from './spatial-layout-shell'
 import { SpatialLayoutToolbar } from './spatial-layout-toolbar'
@@ -164,64 +168,71 @@ export function SpatialLayoutEditor({
   const isDraft = event.status === 'draft'
 
   return (
-    <SpatialLayoutShell
-      toolbar={
-        <SpatialLayoutToolbar
-          eventId={eventId}
-          eventName={eventName}
-          coordinatorId={event.coordinator_id}
-          locationName={event.location_name}
-          address={event.address}
-          placedCount={placedCount}
-          layoutCapacity={layoutCapacity}
-          hasOverlap={hasOverlap}
-          isDraft={isDraft}
-          saving={saving}
-          savingDraft={savingDraft}
-          onSave={handleSave}
-          onSaveDraft={handleSaveDraft}
-          saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
-          onReloadFromServer={handleReloadFromServer}
-          getLayoutSnapshot={getLayoutSnapshot}
-          onApplySavedLayout={handleApplySavedLayout}
-        />
-      }
-    >
-      <FloorPlanV2
-        key={layoutGeneration}
-        eventId={eventId}
-        designerExitHref={
-          isDraft ? setupWizardStepHref(eventId, 3) : `/coordinator/events/${eventId}`
-        }
-        designerExitLabel={isDraft ? 'Back to Event Setup' : 'Event overview'}
-        designerExitEventStatus={event.status}
-        designerExitEventName={eventName}
-        layoutRooms={rooms}
-        layoutActiveRoomId={activeRoomId}
-        onLayoutRoomsChange={handleLayoutRoomsChange}
-        saveLayoutRef={saveLayoutRef}
-        layoutSnapshotRef={layoutSnapshotRef}
-        eventCategoryNames={eventCategoryNames}
-        onAddRoom={handleAddRoom}
-        onRenameRoom={handleRenameRoom}
-        onDeleteRoom={handleDeleteRoom}
-        baselineTableLengthFt={baselineTableLengthFt}
-        onBaselineTableLengthChange={handleBaselineTableLengthChange}
-        layoutCapacity={layoutCapacity}
-        applications={applications}
-        onOverlapChange={setHasOverlap}
-        onPlacedCountChange={setPlacedCount}
-        onSaveMarket={handleSave}
-        onSaveDraft={handleSaveDraft}
-        saveMarketDisabled={hasOverlap || saving || savingDraft}
-        saveMarketLoading={saving}
-        saveDraftDisabled={hasOverlap || saving || savingDraft}
-        saveDraftLoading={savingDraft}
-        chrome="spatial"
-        preferServerLayout
-        debugGeometry={false}
-        className="h-full min-h-0"
-      />
-    </SpatialLayoutShell>
+    <FloorPlanViewportLayoutProvider>
+      <FloorPlanDesktopRequiredGate
+        exitHref={`/coordinator/events/${eventId}`}
+        exitLabel="Back to event overview"
+      >
+        <SpatialLayoutShell
+          toolbar={
+            <SpatialLayoutToolbar
+              eventId={eventId}
+              eventName={eventName}
+              coordinatorId={event.coordinator_id}
+              locationName={event.location_name}
+              address={event.address}
+              placedCount={placedCount}
+              layoutCapacity={layoutCapacity}
+              hasOverlap={hasOverlap}
+              isDraft={isDraft}
+              saving={saving}
+              savingDraft={savingDraft}
+              onSave={handleSave}
+              onSaveDraft={handleSaveDraft}
+              saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
+              onReloadFromServer={handleReloadFromServer}
+              getLayoutSnapshot={getLayoutSnapshot}
+              onApplySavedLayout={handleApplySavedLayout}
+            />
+          }
+        >
+          <FloorPlanV2
+            key={layoutGeneration}
+            eventId={eventId}
+            designerExitHref={
+              isDraft ? setupWizardStepHref(eventId, 3) : `/coordinator/events/${eventId}`
+            }
+            designerExitLabel={isDraft ? 'Back to Event Setup' : 'Event overview'}
+            designerExitEventStatus={event.status}
+            designerExitEventName={eventName}
+            layoutRooms={rooms}
+            layoutActiveRoomId={activeRoomId}
+            onLayoutRoomsChange={handleLayoutRoomsChange}
+            saveLayoutRef={saveLayoutRef}
+            layoutSnapshotRef={layoutSnapshotRef}
+            eventCategoryNames={eventCategoryNames}
+            onAddRoom={handleAddRoom}
+            onRenameRoom={handleRenameRoom}
+            onDeleteRoom={handleDeleteRoom}
+            baselineTableLengthFt={baselineTableLengthFt}
+            onBaselineTableLengthChange={handleBaselineTableLengthChange}
+            layoutCapacity={layoutCapacity}
+            applications={applications}
+            onOverlapChange={setHasOverlap}
+            onPlacedCountChange={setPlacedCount}
+            onSaveMarket={handleSave}
+            onSaveDraft={handleSaveDraft}
+            saveMarketDisabled={hasOverlap || saving || savingDraft}
+            saveMarketLoading={saving}
+            saveDraftDisabled={hasOverlap || saving || savingDraft}
+            saveDraftLoading={savingDraft}
+            chrome="spatial"
+            preferServerLayout
+            debugGeometry={false}
+            className="h-full min-h-0"
+          />
+        </SpatialLayoutShell>
+      </FloorPlanDesktopRequiredGate>
+    </FloorPlanViewportLayoutProvider>
   )
 }

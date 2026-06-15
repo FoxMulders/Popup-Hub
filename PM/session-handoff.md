@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Blueprint Studio small-screen defensive guards (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-733d`, base `master`, starting HEAD `c9918cc`.
+- **Issue:** QA scan found Blueprint Studio / dashboard floor-plan surfaces that either relied on the QA dashboard wrapper or could open outside it, allowing the canvas or booth matrix to render on sub-desktop viewports.
+- **Fix:** Shared `floor-plan-viewport-advisory.tsx` now exposes a reusable desktop-required gate/notice with the regression copy: "The floor plan matrix is not optimized for small screens..." The regular dashboard bootstrap, setup wizard floor-plan step, standalone spatial layout editor, and dual-screen booth matrix window now block or prefix undersized viewports before mounting the floor-plan matrix/canvas.
+- **Verify:** `npm run lint -- --quiet` — PASS. `npx tsc --noEmit` — PASS. Initial attempts failed before `npm ci` because local `node_modules` lacked `eslint` / `typescript`; `npm ci` restored the lockfile toolchain.
+- **Next:** Open/update PR for review; no production deploy requested.
+
 ## Active work — CI lint fix simulated-annealing (local, not deployed)
 - **Issue:** CI lint failed — `prefer-const` on `activeRoute` and `activeCoveragePct` in `simulated-annealing.ts` (lines 170–171); pipeline stops before build even though `next build` passes.
 - **Fix:** `let` → `const` for both (set once from `initialCoverage`, never reassigned).
