@@ -18,6 +18,7 @@ import { buildCategoryCapacityRows } from '@/lib/coordinator/category-capacity-r
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { LayoutDashboard, ClipboardCheck, Printer, Gauge, Gavel } from 'lucide-react'
+import { coordinatorStudioHref } from '@/lib/coordinator/coordinator-routes'
 import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reasons'
 import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
@@ -135,11 +136,11 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
             {!isCancelled && (
               <>
                 <Link
-                  href={`/coordinator/dashboard?event=${id}`}
+                  href={coordinatorStudioHref(id)}
                   className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
                 >
                   <LayoutDashboard className="h-4 w-4" />
-                  Command center
+                  Blueprint Studio
                 </Link>
                 <Link
                   href={`/coordinator/events/${id}/checkin`}

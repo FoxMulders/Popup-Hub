@@ -13,10 +13,14 @@ import {
   coordinatorNavBackHref,
   isCoordinatorEventHubPath,
 } from '@/lib/coordinator/coordinator-event-route'
+import {
+  coordinatorStudioHref,
+  isCoordinatorStudioPath,
+} from '@/lib/coordinator/coordinator-routes'
 
 export function CoordinatorContextPanel() {
   const pathname = usePathname() ?? ''
-  const onCommandCenter = pathname === '/coordinator/dashboard'
+  const onStudio = isCoordinatorStudioPath(pathname)
   const eventIdFromRoute = coordinatorEventIdFromPath(pathname)
   const onEventHub = isCoordinatorEventHubPath(pathname)
 
@@ -25,11 +29,11 @@ export function CoordinatorContextPanel() {
       className="flex h-full min-h-0 flex-col gap-3 p-3"
       aria-label="Coordinator context and telemetry"
     >
-      {eventIdFromRoute && !onCommandCenter ? (
+      {eventIdFromRoute && !onStudio ? (
         onEventHub ? (
           <CommandCenterExitLink
             eventId={eventIdFromRoute}
-            target="dashboard"
+            target="studio"
             compact
             className="w-full"
           />
@@ -48,28 +52,27 @@ export function CoordinatorContextPanel() {
           <Radio className="h-3.5 w-3.5 text-sky-500" aria-hidden />
           Telemetry desk
         </p>
-        {onCommandCenter ? (
+        {onStudio ? (
           <p className="mt-2 text-[0.6875rem] leading-snug text-muted-foreground">
-            Live booth revenue and Square sync appear in this column on the
-            command center.
+            Live booth revenue and Square sync appear in this column in Blueprint Studio.
           </p>
         ) : (
           <>
             <p className="mt-2 text-[0.6875rem] leading-snug text-muted-foreground">
-              Booth assignments, payment status, and fill-rate metrics update in
-              real time from the command center canvas.
+              Booth assignments, payment status, and fill-rate metrics update in real time from
+              the studio canvas.
             </p>
             <Link
               href={
                 eventIdFromRoute
-                  ? `/coordinator/dashboard?event=${eventIdFromRoute}`
+                  ? coordinatorStudioHref(eventIdFromRoute)
                   : coordinatorNavBackHref(pathname)
               }
               className="mt-3 block"
             >
               <Button variant="outline" size="sm" className="w-full gap-1 text-xs">
                 <Activity className="h-3.5 w-3.5" aria-hidden />
-                {eventIdFromRoute ? 'Command center telemetry' : 'View live telemetry'}
+                {eventIdFromRoute ? 'Blueprint Studio telemetry' : 'Open Blueprint Studio'}
                 <ArrowRight className="h-3 w-3" aria-hidden />
               </Button>
             </Link>
@@ -80,8 +83,8 @@ export function CoordinatorContextPanel() {
       <div className="ecosystem-panel-inner rounded-xl border border-stone-200/60 bg-canvas/80 p-3 text-[0.6875rem] text-muted-foreground">
         <p className="font-semibold text-foreground">Square sync</p>
         <p className="mt-1 leading-snug">
-          Connect Square to reflect paid booths on the floor plan (green) and
-          pending balances in telemetry.
+          Connect Square to reflect paid booths on the floor plan (green) and pending balances in
+          telemetry.
         </p>
         <Link
           href="/coordinator/payment-methods"

@@ -1,22 +1,17 @@
-import { Suspense } from 'react'
-import { DashboardLedgerWindowClient } from '@/components/coordinator/dashboard/dashboard-ledger-window-client'
+import { redirect } from 'next/navigation'
 
-export const metadata = {
-  title: 'Booth Matrix — Dual-Screen — Popup Hub',
+interface LedgerRedirectProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-export default function CoordinatorDashboardLedgerPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex h-screen items-center justify-center text-sm text-stone-600">
-          Loading booth matrix…
-        </div>
-      }
-    >
-      <div className="h-screen min-h-0 overflow-hidden">
-        <DashboardLedgerWindowClient />
-      </div>
-    </Suspense>
-  )
+/** Legacy dual-screen ledger URL. */
+export default async function CoordinatorDashboardLedgerRedirect({ searchParams }: LedgerRedirectProps) {
+  const params = await searchParams
+  const qs = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string') qs.set(key, value)
+    else if (Array.isArray(value) && value[0]) qs.set(key, value[0])
+  }
+  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  redirect(`/coordinator/studio/ledger${suffix}`)
 }

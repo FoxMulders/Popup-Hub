@@ -45,7 +45,7 @@ assert(
 
 assert(
   'vendor-only account cannot resolve coordinator from path',
-  resolveActivePortal('vendor', { role: 'vendor' } as Profile, '/coordinator/dashboard') === 'vendor'
+  resolveActivePortal('vendor', { role: 'vendor' } as Profile, '/coordinator/studio') === 'vendor'
 )
 
 console.log('active-portal QA passed')

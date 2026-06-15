@@ -1,10 +1,13 @@
-import { VendorSuppliesSection } from '@/components/vendor/vendor-supplies-section'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
-export const metadata = {
-  title: 'Market Supplies | PopUp Hub',
+export const metadata = buildPublicMetadata({
+  title: 'Market Supplies — Popup Hub',
   description:
-    'Search Amazon.ca for market booth gear, displays, and packaging with curated affiliate suggestions.',
-}
+    'Curated Amazon.ca affiliate picks for market booth gear, displays, tents, and packaging — search supplies for your next pop-up market.',
+  path: '/supplies',
+})
+
+import { VendorSuppliesSection } from '@/components/vendor/vendor-supplies-section'
 
 export default function MarketSuppliesPage() {
   return (

@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { hasAdminAccess } from '@/lib/auth/require-admin'
 import { accessDeniedRedirect } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
+import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const allowed = await hasAdminAccess()
@@ -29,11 +30,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <h1 className="font-heading text-lg font-semibold text-foreground">Operations Console</h1>
           </div>
           <Link
-            href="/coordinator/dashboard"
+            href={COORDINATOR_STUDIO_PATH}
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
           >
             <ArrowLeft className="size-4" aria-hidden />
-            Coordinator dashboard
+            Blueprint Studio
           </Link>
         </div>
       </header>

@@ -1,4 +1,5 @@
 import type { Role } from '@/types/database'
+import { COORDINATOR_MARKETS_PATH, COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
 import { getAvailablePortals, PORTAL_LABELS, type ActivePortal } from '@/lib/portals/active-portal'
 import { hasAccess, isPlatformAdmin, normalizeRole, type AccessProfile } from '@/lib/auth/rbac'
 
@@ -51,14 +52,14 @@ export const ACCOUNT_CAPABILITIES: AccountCapability[] = [
     label: 'Review vendor applications',
     description: 'Approve, decline, or waitlist juried booth applications',
     requiredRole: 'coordinator',
-    href: '/coordinator/dashboard',
+    href: COORDINATOR_MARKETS_PATH,
   },
   {
     id: 'manage_layout',
     label: 'Manage booth layout & market day ops',
     description: 'Spatial planner, check-in, and live operations',
     requiredRole: 'coordinator',
-    href: '/coordinator/dashboard',
+    href: COORDINATOR_STUDIO_PATH,
   },
   {
     id: 'square_payouts',

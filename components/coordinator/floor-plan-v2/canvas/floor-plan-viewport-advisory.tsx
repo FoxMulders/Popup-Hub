@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
+import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
   isPocketSizedViewport,
@@ -98,7 +99,7 @@ export function DesktopScreenRequiredOverlay() {
     router.push(
       selectedEventId
         ? `/coordinator/events/${selectedEventId}`
-        : '/coordinator/dashboard'
+        : COORDINATOR_STUDIO_PATH
     )
   }, [router, selectedEventId])
 

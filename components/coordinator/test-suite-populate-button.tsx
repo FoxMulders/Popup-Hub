@@ -97,7 +97,7 @@ export function TestSuitePopulateButton({
         await market?.refreshApprovedPool(eventId)
         router.refresh()
         toast.success(
-          `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}. Open Command center to place booths on the grid.`,
+          `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}. Open Blueprint Studio to place booths on the grid.`,
           { id: TEST_SUITE_TOAST_ID, duration: 9000 }
         )
         return
@@ -112,7 +112,7 @@ export function TestSuitePopulateButton({
 
       if (layout.boothsFilled <= 0) {
         toast.warning(
-          `Test suite seeded ${vendorLine}, but no booths were placed on the grid. ${layout.error ?? 'Open Command center with Main Hall visible and try again.'}`,
+          `Test suite seeded ${vendorLine}, but no booths were placed on the grid. ${layout.error ?? 'Open Blueprint Studio with Main Hall visible and try again.'}`,
           { id: TEST_SUITE_TOAST_ID, duration: 10000 }
         )
         return

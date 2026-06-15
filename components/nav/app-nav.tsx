@@ -19,6 +19,12 @@ import { useFeatureRequest } from '@/components/feedback/feature-request-context
 import { LayoutEditorHelpButton } from '@/components/coordinator/floor-plan-v2/tools/layout-editor-help'
 import { Badge } from '@/components/ui/badge'
 import { isCoordinatorLayoutHelpNavRoute } from '@/lib/nav/coordinator-layout-help-nav'
+import {
+  COORDINATOR_HOME_PATH,
+  COORDINATOR_MARKETS_PATH,
+  COORDINATOR_STUDIO_PATH,
+  isCoordinatorStudioPath,
+} from '@/lib/coordinator/coordinator-routes'
 import { cn } from '@/lib/utils'
 
 interface AppNavProps {
@@ -45,8 +51,9 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
     { href: '/wallet', label: 'Wallet' },
   ],
   coordinator: [
-    { href: '/coordinator', label: 'Home' },
-    { href: '/coordinator/dashboard', label: 'Command center' },
+    { href: COORDINATOR_HOME_PATH, label: 'Home' },
+    { href: COORDINATOR_MARKETS_PATH, label: 'Markets' },
+    { href: COORDINATOR_STUDIO_PATH, label: 'Blueprint Studio' },
     { href: '/coordinator/events/new', label: 'New Event' },
     { href: '/wallet', label: 'Wallet' },
   ],
@@ -122,9 +129,11 @@ export function AppNav({
                 <div className="hidden min-w-0 flex-wrap items-center justify-center gap-0.5 overflow-x-hidden md:flex lg:gap-1">
                   {links.map(({ href, label }) => {
                     const active =
-                      href === '/coordinator' || href === '/coordinator/dashboard'
-                        ? pathname === href
-                        : pathname === href || pathname.startsWith(`${href}/`)
+                      href === COORDINATOR_HOME_PATH
+                        ? pathname === COORDINATOR_HOME_PATH
+                        : href === COORDINATOR_STUDIO_PATH
+                          ? isCoordinatorStudioPath(pathname)
+                          : pathname === href || pathname.startsWith(`${href}/`)
                     return (
                       <Link
                         key={href}

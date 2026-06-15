@@ -451,7 +451,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'Recover server state or understand when changes are written automatically.',
     steps: [
       'Reload saved layout — discards local merge overlays and fetches server layout.',
-      'Command center autosaves layout edits while you work on the dashboard.',
+      'Blueprint Studio autosaves layout edits while you work on the canvas.',
       'Room tabs keep unsaved work in the browser session until you save or reload.',
       'Always save before switching devices or closing the browser for long sessions.',
     ],

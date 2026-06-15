@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import type { LayoutTelemetrySummary } from '@/lib/coordinator/layout-telemetry-summary'
+import { coordinatorStudioHref } from '@/lib/coordinator/coordinator-routes'
 import { applyUnifiedBoothFeeToCategoryLimits } from '@/lib/monetization/booth-pricing'
 import { PET_POLICY_LABELS } from '@/lib/shopper/layout'
 import {
@@ -88,7 +89,7 @@ export function PreFlightReviewClient({
   const [savingPricing, setSavingPricing] = useState(false)
   const [publishing, setPublishing] = useState(false)
 
-  const blueprintStudioHref = `/coordinator/dashboard?event=${event.id}`
+  const blueprintStudioHref = coordinatorStudioHref(event.id)
 
   const patronSpaceLines = useMemo(() => {
     const { patronSpaces } = layoutTelemetry

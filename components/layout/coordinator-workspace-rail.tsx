@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Plus,
   Settings,
+  Store,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
@@ -20,10 +21,18 @@ import {
   coordinatorEventIdFromPath,
   isCoordinatorEventHubPath,
 } from '@/lib/coordinator/coordinator-event-route'
+import {
+  COORDINATOR_HOME_PATH,
+  COORDINATOR_MARKETS_PATH,
+  COORDINATOR_STUDIO_PATH,
+  coordinatorStudioHref,
+  isCoordinatorStudioPath,
+} from '@/lib/coordinator/coordinator-routes'
 
 const RAIL_LINKS = [
-  { href: '/coordinator', label: 'Home', icon: Calendar },
-  { href: '/coordinator/dashboard', label: 'Command center', icon: LayoutDashboard },
+  { href: COORDINATOR_HOME_PATH, label: 'Home', icon: Calendar },
+  { href: COORDINATOR_MARKETS_PATH, label: 'Markets', icon: Store },
+  { href: COORDINATOR_STUDIO_PATH, label: 'Blueprint Studio', icon: LayoutDashboard },
   { href: '/coordinator/events/new', label: 'New market', icon: Plus },
   { href: '/coordinator/payment-methods', label: 'Payments', icon: CreditCard },
   { href: '/wallet', label: 'Wallet', icon: Settings },
@@ -32,7 +41,7 @@ const RAIL_LINKS = [
 export function CoordinatorWorkspaceRail() {
   const pathname = usePathname() ?? ''
   const eventIdFromRoute = coordinatorEventIdFromPath(pathname)
-  const onCommandCenter = pathname === '/coordinator/dashboard'
+  const onStudio = isCoordinatorStudioPath(pathname)
   const onEventHub = isCoordinatorEventHubPath(pathname)
 
   return (
@@ -40,11 +49,11 @@ export function CoordinatorWorkspaceRail() {
       className="flex h-full min-h-0 flex-col gap-3 p-3"
       aria-label="Coordinator workspace"
     >
-      {eventIdFromRoute && !onCommandCenter ? (
+      {eventIdFromRoute && !onStudio ? (
         onEventHub ? (
           <CommandCenterExitLink
             eventId={eventIdFromRoute}
-            target="dashboard"
+            target="studio"
             compact
             className="w-full"
           />
@@ -73,10 +82,10 @@ export function CoordinatorWorkspaceRail() {
       <ul className="flex flex-col gap-1" role="list">
         {RAIL_LINKS.map(({ href, label, icon: Icon }) => {
           const active =
-            href === '/coordinator'
-              ? pathname === '/coordinator'
-              : href === '/coordinator/dashboard'
-                ? pathname === '/coordinator/dashboard'
+            href === COORDINATOR_HOME_PATH
+              ? pathname === COORDINATOR_HOME_PATH
+              : href === COORDINATOR_STUDIO_PATH
+                ? isCoordinatorStudioPath(pathname)
                 : pathname === href || pathname.startsWith(`${href}/`)
           return (
             <li key={href}>
@@ -110,9 +119,9 @@ export function CoordinatorWorkspaceRail() {
         <p className="mt-1 text-[0.6875rem] leading-snug text-sky-800/90">
           {eventIdFromRoute
             ? onEventHub
-              ? 'Open the command center for CAD booth design and live payment telemetry.'
-              : 'Return to this market’s overview, or open the command center for CAD and payments.'
-            : 'Open the command center for the CAD booth designer and live financial desk.'}
+              ? 'Open Blueprint Studio for CAD booth design and live payment telemetry.'
+              : 'Return to this market’s overview, or open Blueprint Studio for CAD and payments.'
+            : 'Open Blueprint Studio for the booth designer and live financial desk.'}
         </p>
         {eventIdFromRoute && !onEventHub ? (
           <CommandCenterExitButton
@@ -128,8 +137,8 @@ export function CoordinatorWorkspaceRail() {
         <Link
           href={
             eventIdFromRoute
-              ? `/coordinator/dashboard?event=${eventIdFromRoute}`
-              : '/coordinator/dashboard'
+              ? coordinatorStudioHref(eventIdFromRoute)
+              : COORDINATOR_STUDIO_PATH
           }
           className={cn(
             buttonVariants({ size: 'sm' }),
@@ -137,7 +146,7 @@ export function CoordinatorWorkspaceRail() {
             eventIdFromRoute ? 'mt-1.5' : 'mt-2'
           )}
         >
-          Open command center
+          Open Blueprint Studio
         </Link>
       </motion.div>
     </nav>

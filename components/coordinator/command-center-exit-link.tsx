@@ -4,18 +4,31 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
+import { COORDINATOR_STUDIO_PATH, coordinatorStudioHref } from '@/lib/coordinator/coordinator-routes'
 import { cn } from '@/lib/utils'
 import { setupWizardStepHref } from '@/lib/wizard/setup-step-url'
 
-export type DesignerExitTarget = 'auto' | 'event-setup' | 'event-overview' | 'dashboard'
+export type DesignerExitTarget =
+  | 'auto'
+  | 'event-setup'
+  | 'event-overview'
+  | 'studio'
+  /** @deprecated Use `studio`. */
+  | 'dashboard'
+
+function isStudioExitTarget(target: DesignerExitTarget): boolean {
+  return target === 'studio' || target === 'dashboard'
+}
 
 export function resolveDesignerExitHref(
   eventId: string | null | undefined,
   eventStatus?: string | null,
   target: DesignerExitTarget = 'auto'
 ): string {
-  if (target === 'dashboard') return '/coordinator/dashboard'
-  if (!eventId) return '/coordinator/dashboard'
+  if (isStudioExitTarget(target)) {
+    return eventId ? coordinatorStudioHref(eventId) : COORDINATOR_STUDIO_PATH
+  }
+  if (!eventId) return COORDINATOR_STUDIO_PATH
   if (target === 'event-setup') {
     return setupWizardStepHref(eventId, 3)
   }
@@ -34,7 +47,9 @@ export function resolveDesignerExitLabel(
   target: DesignerExitTarget = 'auto',
   compact = false
 ): string {
-  if (target === 'dashboard') return 'Command center'
+  if (isStudioExitTarget(target)) {
+    return compact ? 'Blueprint Studio' : 'Open Blueprint Studio'
+  }
   const useSetup =
     target === 'event-setup' || (target === 'auto' && eventStatus === 'draft')
   if (useSetup) {

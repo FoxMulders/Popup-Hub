@@ -1,5 +1,4 @@
 import type { MetadataRoute } from 'next'
-import { EXPERIENCE_THEME_CATALOG, experienceDesignerPath } from '@/lib/seo/experience-theme-metadata'
 import { createPublicSupabaseClient, hasPublicSupabaseConfig } from '@/lib/supabase/public'
 import { publicAppUrl } from '@/lib/url/public-app-url'
 
@@ -9,6 +8,8 @@ const STATIC_PUBLIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['
   [
     { path: '/', changeFrequency: 'weekly', priority: 1 },
     { path: '/discover', changeFrequency: 'hourly', priority: 0.9 },
+    { path: '/supplies', changeFrequency: 'weekly', priority: 0.6 },
+    { path: '/legal/about', changeFrequency: 'monthly', priority: 0.5 },
     { path: '/legal/terms', changeFrequency: 'monthly', priority: 0.3 },
     { path: '/legal/privacy', changeFrequency: 'monthly', priority: 0.3 },
     { path: '/legal/faq', changeFrequency: 'monthly', priority: 0.4 },
@@ -36,15 +37,6 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
     entry(path, { changeFrequency, priority }),
   )
 
-  for (const theme of EXPERIENCE_THEME_CATALOG) {
-    entries.push(
-      entry(experienceDesignerPath(theme.theme), {
-        changeFrequency: 'weekly',
-        priority: 0.6,
-      }),
-    )
-  }
-
   if (!hasPublicSupabaseConfig()) {
     return entries
   }
@@ -53,8 +45,8 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
 
   const { data: events } = await supabase
     .from('events')
-    .select('id, updated_at, start_at')
-    .in('status', ['published', 'active', 'completed'])
+    .select('id, updated_at, start_at, status')
+    .in('status', ['published', 'active'])
     .order('start_at', { ascending: false })
     .limit(500)
 
@@ -64,7 +56,7 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
       entry(`/events/${event.id}`, {
         lastModified,
         changeFrequency: 'daily',
-        priority: 0.8,
+        priority: event.status === 'active' ? 0.85 : 0.75,
       }),
     )
   }

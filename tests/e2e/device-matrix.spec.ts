@@ -4,7 +4,7 @@ const smokeEventName = process.env.PLAYWRIGHT_SMOKE_EVENT_NAME ?? 'Market Test 3
 
 test.describe('Popup Hub Multi-Platform Rendering Verification', () => {
   test('validate dashboard core frame components', async ({ coordinatorPage: page }) => {
-    await page.goto('/coordinator/dashboard')
+    await page.goto('/coordinator/studio')
 
     const mainHeader = page.getByRole('heading', { name: 'Coordinator Dashboard', level: 1 })
     await expect(mainHeader).toBeVisible()

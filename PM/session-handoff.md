@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — coordinator IA: Markets + Blueprint Studio (local, not deployed)
+- **Issue:** Nav **Command center** landed on layout at `/coordinator/dashboard` while UI/URL used conflicting names (command center vs dashboard vs Blueprint Studio).
+- **Fix:** Canonical route **`/coordinator/studio`** (+ `/studio/ledger`); legacy `/coordinator/dashboard` redirects with query preserved. Nav + workspace rail: **Markets** (`/coordinator/markets`) and **Blueprint Studio**. User-visible “dashboard/command center” strings → Blueprint Studio where they mean the layout workspace.
+- **Verify:** `npx tsc --noEmit` — PASS. `npx tsx scripts/verify-document-scroll-routes.ts` — PASS. Smoke: nav **Markets** → list; **Blueprint Studio** → layout; old `/coordinator/dashboard` redirects.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — coordinator markets list route (local, not deployed)
 - **Issue:** **View your markets** on `/coordinator` linked to `/coordinator/dashboard`, which auto-opened Blueprint Studio for one market — not a list of all markets despite the `(N)` count.
 - **Fix:** New `/coordinator/markets` page + `CoordinatorMarketsList` — upcoming/active and past sections, event hub links, per-market **Command center** buttons (`?event=`), global **Open command center** CTA. Home card now links there with **Browse all markets (N)**. Mobile command center redirects to `/coordinator/markets`; post-login layout redirect on phones → markets.

@@ -12,9 +12,11 @@ import { InstallPrompt } from '@/components/navigation/install-prompt'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { SiteJsonLd } from '@/components/seo/site-json-ld'
 import { getSessionRoleForTitle } from '@/lib/auth/session-role-for-title'
 import { roleDocumentTitle } from '@/lib/auth/document-title'
-import { rootLayoutMetadata } from '@/lib/seo/public-metadata'
+import { buildPrivatePortalMetadata, rootLayoutMetadata } from '@/lib/seo/public-metadata'
+import { DEFAULT_SITE_DESCRIPTION, DEFAULT_SITE_TITLE } from '@/lib/seo/site-config'
 
 const display = Lora({
   variable: '--font-display',
@@ -62,9 +64,21 @@ const baseMetadata = {
 export async function generateMetadata(): Promise<Metadata> {
   const role = await getSessionRoleForTitle()
 
+  if (role) {
+    return {
+      ...baseMetadata,
+      ...buildPrivatePortalMetadata(roleDocumentTitle(role)),
+    }
+  }
+
   return {
     ...baseMetadata,
-    title: roleDocumentTitle(role),
+    title: {
+      default: DEFAULT_SITE_TITLE,
+      template: '%s | Popup Hub',
+    },
+    description: DEFAULT_SITE_DESCRIPTION,
+    robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   }
 }
 
@@ -88,6 +102,7 @@ export default async function RootLayout({
       className={`${display.variable} ${body.variable} ${geistMono.variable} h-full`}
     >
       <body className="flex min-h-dvh flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
+        <SiteJsonLd />
         <PopupLoaderProvider>
           <DocumentTitleSync initialRole={sessionRole} />
           <AuthSessionGuard />

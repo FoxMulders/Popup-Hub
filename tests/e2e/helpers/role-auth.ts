@@ -41,7 +41,7 @@ async function loginViaPassword(page: Page, role: DevMockRole) {
 export async function loginAsCoordinator(page: Page) {
   if (REAL_LOGIN) {
     await loginViaPassword(page, 'coordinator')
-    await page.goto('/coordinator/dashboard')
+    await page.goto('/coordinator/studio')
     await expect(page).toHaveURL(/\/coordinator/)
     return
   }

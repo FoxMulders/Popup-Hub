@@ -11,7 +11,7 @@ test.describe('Workflow prerequisites @workflow', () => {
 
   test('coordinator mock-login lands on coordinator portal', async ({ coordinatorPage: page }) => {
     await expect(page).toHaveURL(/\/coordinator/)
-    await expect(page.locator('#site-app-nav').getByRole('link', { name: 'Command center' })).toBeVisible({
+    await expect(page.locator('#site-app-nav').getByRole('link', { name: 'Blueprint Studio' })).toBeVisible({
       timeout: 15_000,
     })
   })

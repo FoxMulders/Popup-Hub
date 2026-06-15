@@ -8,6 +8,7 @@ import { CoordinatorWorkspaceRail } from './coordinator-workspace-rail'
 import { CoordinatorContextPanel } from './coordinator-context-panel'
 import { VendorWorkspaceRail } from './vendor-workspace-rail'
 import { VendorContextPanel } from './vendor-context-panel'
+import { isCoordinatorStudioPath } from '@/lib/coordinator/coordinator-routes'
 
 export type WorkspacePortal = 'coordinator' | 'vendor'
 
@@ -18,7 +19,7 @@ interface PortalWorkspaceLayoutProps {
 
 /** Routes that ship their own full 3-column command center (CAD + telemetry). */
 function isFullCommandCenterRoute(pathname: string): boolean {
-  return pathname === '/coordinator/dashboard'
+  return isCoordinatorStudioPath(pathname)
 }
 
 /** Event layout editor, setup wizard, and other full-viewport coordinator tools. */

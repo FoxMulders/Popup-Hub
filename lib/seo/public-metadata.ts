@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import {
+  DEFAULT_KEYWORDS,
   DEFAULT_OG_IMAGE_PATH,
   DEFAULT_SITE_DESCRIPTION,
+  DEFAULT_SITE_TITLE,
   SITE_NAME,
   defaultOpenGraphImages,
   siteMetadataBase,
@@ -15,6 +17,7 @@ export function buildPublicMetadata({
   imageUrl,
   type = 'website',
   noIndex = false,
+  keywords,
 }: {
   title: string
   description: string
@@ -22,15 +25,18 @@ export function buildPublicMetadata({
   imageUrl?: string | null
   type?: 'website' | 'article'
   noIndex?: boolean
+  keywords?: string[]
 }): Metadata {
   const url = publicAppUrl(path)
   const imagePath = imageUrl?.trim() || DEFAULT_OG_IMAGE_PATH
   const image = imagePath.startsWith('http') ? imagePath : publicAppUrl(imagePath)
+  const resolvedKeywords = keywords ?? DEFAULT_KEYWORDS
 
   return {
     metadataBase: siteMetadataBase(),
     title,
     description,
+    keywords: resolvedKeywords,
     alternates: { canonical: url },
     robots: noIndex
       ? { index: false, follow: false }
@@ -57,13 +63,25 @@ export function buildPublicMetadata({
 export const rootLayoutMetadata: Omit<Metadata, 'title'> = {
   metadataBase: siteMetadataBase(),
   description: DEFAULT_SITE_DESCRIPTION,
+  keywords: DEFAULT_KEYWORDS,
   openGraph: {
     siteName: SITE_NAME,
     type: 'website',
     locale: 'en_CA',
+    title: DEFAULT_SITE_TITLE,
+    description: DEFAULT_SITE_DESCRIPTION,
     images: defaultOpenGraphImages(SITE_NAME),
   },
   twitter: {
     card: 'summary_large_image',
+    title: DEFAULT_SITE_TITLE,
+    description: DEFAULT_SITE_DESCRIPTION,
   },
+}
+
+export function buildPrivatePortalMetadata(title: string): Metadata {
+  return {
+    title,
+    robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
+  }
 }

@@ -20,7 +20,7 @@ function assert(cond: unknown, msg: string): void {
 }
 
 const viewportLocked = [
-  '/coordinator/dashboard',
+  '/coordinator/studio',
   '/coordinator/events/new',
   '/coordinator/events/abc/layout',
   '/coordinator/events/abc/setup',

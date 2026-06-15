@@ -6,7 +6,15 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/discover', '/events/', '/coordinators/', '/patrons/', '/legal/'],
+        allow: [
+          '/',
+          '/discover',
+          '/supplies',
+          '/events/',
+          '/coordinators/',
+          '/patrons/',
+          '/legal/',
+        ],
         disallow: [
           '/api/',
           '/coordinator/',
@@ -17,6 +25,8 @@ export default function robots(): MetadataRoute.Robots {
           '/notifications/',
           '/checkin/',
           '/shared/',
+          '/admin/',
+          '/login',
         ],
       },
     ],

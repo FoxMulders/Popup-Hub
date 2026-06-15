@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { Loader2, Trash2 } from 'lucide-react'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
+import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
 
 const CONFIRM_WORD = 'DELETE'
 
@@ -30,7 +31,7 @@ interface DeleteDraftMarketDialogProps {
 export function DeleteDraftMarketDialog({
   eventId,
   eventName,
-  redirectTo = '/coordinator/dashboard',
+  redirectTo = COORDINATOR_STUDIO_PATH,
   triggerClassName,
 }: DeleteDraftMarketDialogProps) {
   const router = useRouter()

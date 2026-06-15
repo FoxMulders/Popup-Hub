@@ -4,6 +4,7 @@
  */
 
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
+import { coordinatorStudioLedgerHref } from '@/lib/coordinator/coordinator-routes'
 
 export const FLOORPLAN_SYNC_CHANNEL = 'floorplan_sync'
 
@@ -86,10 +87,10 @@ export function openDualScreenWindow(
   mode: DualScreenMode
 ): Window | null {
   if (typeof window === 'undefined') return null
-  const params = new URLSearchParams()
-  if (eventId) params.set('event', eventId)
-  params.set('screen', mode)
-  const url = `/coordinator/dashboard/ledger?${params}`
+  const url = coordinatorStudioLedgerHref({
+    ...(eventId ? { event: eventId } : {}),
+    screen: mode,
+  })
   const features =
     mode === 'wall-cast'
       ? 'noopener,noreferrer,width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no'

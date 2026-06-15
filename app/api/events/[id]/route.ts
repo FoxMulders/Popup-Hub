@@ -1,8 +1,9 @@
+import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { deleteDraftEvent } from '@/lib/events/delete-draft-event'
-import { revalidatePath } from 'next/cache'
+import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -44,6 +45,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: result.error }, { status: result.status })
   }
 
+  revalidatePath(COORDINATOR_STUDIO_PATH)
   revalidatePath('/coordinator/dashboard')
   revalidatePath('/coordinator/events/new')
 

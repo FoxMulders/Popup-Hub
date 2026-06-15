@@ -1,3 +1,5 @@
+import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
+
 /** Event id from `/coordinator/events/[id]/…`, excluding `new`. */
 export function coordinatorEventIdFromPath(pathname: string): string | null {
   const match = pathname.match(/^\/coordinator\/events\/([^/]+)/)
@@ -20,10 +22,10 @@ export function isCoordinatorEventHubPath(pathname: string): boolean {
 
 /**
  * Logo / back navigation for coordinator chrome: return to the active
- * event hub when the user is inside an event route, otherwise command center.
+ * event hub when the user is inside an event route, otherwise Blueprint Studio.
  */
 export function coordinatorNavBackHref(pathname: string): string {
   const eventId = coordinatorEventIdFromPath(pathname)
   if (eventId) return `/coordinator/events/${eventId}`
-  return '/coordinator/dashboard'
+  return COORDINATOR_STUDIO_PATH
 }

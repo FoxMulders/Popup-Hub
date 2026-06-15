@@ -9,6 +9,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
+import {
+  coordinatorStudioHref,
+} from '@/lib/coordinator/coordinator-routes'
 import { cn } from '@/lib/utils'
 
 export interface CoordinatorMarketSummary {
@@ -75,14 +78,14 @@ function MarketRow({
         </Link>
         {showCommandCenterLink ? (
           <Link
-            href={`/coordinator/dashboard?event=${market.id}`}
+            href={coordinatorStudioHref(market.id)}
             className={cn(
               buttonVariants({ variant: 'outline', size: 'sm' }),
               'hidden shrink-0 gap-1.5 sm:inline-flex'
             )}
           >
             <LayoutDashboard className="h-3.5 w-3.5" aria-hidden />
-            Command center
+            Blueprint Studio
           </Link>
         ) : null}
       </div>
@@ -139,7 +142,7 @@ export function CoordinatorMarketsList({
         <p className="mt-2 text-sm text-muted-foreground">
           {mobileIntro
             ? 'Use a tablet or desktop for the full booth layout designer. On this device you can review events, applications, and day-of operations.'
-            : 'Browse every market, open event hubs, or jump into the command center layout designer for a specific market.'}
+            : 'Browse every market, open event hubs, or jump into Blueprint Studio for a specific market.'}
         </p>
       </div>
 
@@ -163,11 +166,11 @@ export function CoordinatorMarketsList({
         </Link>
         {activeMarkets.length > 0 ? (
           <Link
-            href={`/coordinator/dashboard?event=${activeMarkets[0]!.id}`}
+            href={coordinatorStudioHref(activeMarkets[0]!.id)}
             className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}
           >
             <LayoutDashboard className="h-4 w-4" aria-hidden />
-            Open command center
+            Open Blueprint Studio
           </Link>
         ) : null}
         <Link

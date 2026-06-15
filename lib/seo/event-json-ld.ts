@@ -8,8 +8,16 @@ type EventJsonLdInput = {
   endAt?: string | null
   locationName?: string | null
   address?: string | null
+  city?: string | null
   coverImageUrl?: string | null
   vendorCount?: number
+  status?: string | null
+  organizerName?: string | null
+}
+
+function eventStatusSchema(status?: string | null): string {
+  if (status === 'cancelled') return 'https://schema.org/EventCancelled'
+  return 'https://schema.org/EventScheduled'
 }
 
 export function buildEventJsonLd(event: EventJsonLdInput) {
@@ -21,11 +29,17 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
     name: event.locationName ?? 'Market venue',
   }
 
+  const addressParts: Record<string, string> = {}
   if (event.address?.trim()) {
-    location.address = {
-      '@type': 'PostalAddress',
-      streetAddress: event.address,
-    }
+    addressParts.streetAddress = event.address.trim()
+  }
+  if (event.city?.trim()) {
+    addressParts.addressLocality = event.city.trim()
+  }
+  if (Object.keys(addressParts).length > 0) {
+    addressParts['@type'] = 'PostalAddress'
+    addressParts.addressCountry = 'CA'
+    location.address = addressParts
   }
 
   const jsonLd: Record<string, unknown> = {
@@ -34,8 +48,9 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
     name: event.name,
     url,
     image,
+    isAccessibleForFree: true,
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    eventStatus: 'https://schema.org/EventScheduled',
+    eventStatus: eventStatusSchema(event.status),
     location,
   }
 
@@ -51,10 +66,19 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
     jsonLd.endDate = event.endAt
   }
 
+  if (event.organizerName?.trim()) {
+    jsonLd.organizer = {
+      '@type': 'Person',
+      name: event.organizerName.trim(),
+    }
+  }
+
   if (event.vendorCount != null && event.vendorCount > 0) {
     jsonLd.offers = {
       '@type': 'Offer',
       url,
+      price: 0,
+      priceCurrency: 'CAD',
       availability: 'https://schema.org/InStock',
       description: `${event.vendorCount} confirmed vendor${event.vendorCount === 1 ? '' : 's'}`,
     }
