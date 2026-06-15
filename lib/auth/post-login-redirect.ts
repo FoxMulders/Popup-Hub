@@ -28,7 +28,7 @@ export function resolvePostLoginPath(input: {
   const mobile = isMobileUserAgent(input.userAgent)
 
   if (mobile && isCoordinatorLayoutPath(redirectTo)) {
-    return '/coordinator/dashboard?overview=mobile'
+    return '/coordinator/markets'
   }
 
   if (role === 'coordinator' && mobile) {

@@ -21,7 +21,7 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
         </h1>
         <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
           {marketCount > 0
-            ? `You have ${marketCount} market${marketCount === 1 ? '' : 's'}. Start a new one or open your command center.`
+            ? `You have ${marketCount} market${marketCount === 1 ? '' : 's'}. Start a new one or browse them all.`
             : 'Create your first market or return here anytime to pick up where you left off.'}
         </p>
       </div>
@@ -44,7 +44,7 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
         </Link>
 
         <Link
-          href="/coordinator/dashboard"
+          href="/coordinator/markets"
           className="market-panel group flex flex-col rounded-2xl border border-stone-200/80 p-6 text-left transition-colors hover:border-forest/30 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
         >
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-forest/10 text-forest transition-colors group-hover:bg-forest/15">
@@ -58,7 +58,7 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
           </span>
           <span className={cn(buttonVariants({ variant: 'outline' }), 'mt-5 w-full gap-1.5 sm:w-auto')}>
             <CalendarDays className="h-4 w-4" aria-hidden />
-            {marketCount > 0 ? `Open command center (${marketCount})` : 'Open command center'}
+            {marketCount > 0 ? `Browse all markets (${marketCount})` : 'Browse markets'}
           </span>
         </Link>
       </div>

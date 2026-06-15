@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — coordinator markets list route (local, not deployed)
+- **Issue:** **View your markets** on `/coordinator` linked to `/coordinator/dashboard`, which auto-opened Blueprint Studio for one market — not a list of all markets despite the `(N)` count.
+- **Fix:** New `/coordinator/markets` page + `CoordinatorMarketsList` — upcoming/active and past sections, event hub links, per-market **Command center** buttons (`?event=`), global **Open command center** CTA. Home card now links there with **Browse all markets (N)**. Mobile command center redirects to `/coordinator/markets`; post-login layout redirect on phones → markets.
+- **Verify:** `npx tsc --noEmit` — PASS. `npx tsx scripts/verify-document-scroll-routes.ts` — PASS. Smoke: `/coordinator` → **Browse all markets** → `/coordinator/markets` lists all events; **Command center** nav → layout designer for selected market.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — auto-arrange button feedback (local, not deployed)
 - **Issue:** Coordinators could not tell if/when **AI Auto-Arrange** was pressed or finished.
 - **Fix:** Running state on button (spinner, **Arranging…**, disabled); green status pill with placed count + timestamp after run; loading toast for all arrange modes (grid, fairness, AI).

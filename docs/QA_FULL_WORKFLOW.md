@@ -81,7 +81,7 @@ DEV_MOCK_SHOPPER_PASSWORD=testing
 
 - [ ] `/signup?role=coordinator` — Coordinator role selected
 - [ ] Post-login lands on `/coordinator` (home) or `/coordinator/dashboard` from nav
-- [ ] **View your markets** → command center at `/coordinator/dashboard`
+- [ ] **View your markets** → markets list at `/coordinator/markets`
 
 ### Regression (automated)
 

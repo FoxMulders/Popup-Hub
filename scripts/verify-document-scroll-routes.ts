@@ -29,6 +29,7 @@ const viewportLocked = [
 
 const documentScroll = [
   '/coordinator',
+  '/coordinator/markets',
   '/coordinator/payment-methods',
   '/coordinator/events/abc',
   '/coordinator/events/abc/applications',

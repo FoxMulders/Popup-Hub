@@ -1,1 +1,1 @@
-feat: ship 98 session updates (auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; CI lint fix simulated-annealing; +94 more)
+feat: ship 99 session updates (coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; +95 more)

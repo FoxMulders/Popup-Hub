@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
@@ -19,7 +20,6 @@ import { DashboardWorkspaceViewProvider } from './dashboard-workspace-view-conte
 import { FloorplanSyncBridge } from './floorplan-sync-bridge'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
-import { CoordinatorMobileOverview } from './coordinator-mobile-overview'
 import { CoordinatorVerificationBanner } from '@/components/coordinator/coordinator-verification-banner'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
@@ -38,6 +38,20 @@ export interface MarketDashboardClientProps {
   publishBlockReason?: string | null
   paymentCollectionBlockReason?: string | null
   paymentTrustComplete?: boolean
+}
+
+function MobileMarketsRedirect() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.replace('/coordinator/markets')
+  }, [router])
+
+  return (
+    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+      Loading your markets…
+    </div>
+  )
 }
 
 export function MarketDashboardClient({
@@ -80,14 +94,7 @@ export function MarketDashboardClient({
   }
 
   if (useMobileOverview) {
-    return (
-      <CoordinatorMobileOverview
-        events={events}
-        totalRevenueCents={totalRevenueCents}
-        squareConnected={squareConnected}
-        stripeConnected={stripeConnected}
-      />
-    )
+    return <MobileMarketsRedirect />
   }
 
   return (
