@@ -8,8 +8,8 @@
 - **Baseline:** Branch `cursor/blueprint-layout-responsiveness-733d`, base `master`, starting HEAD `c9918cc`.
 - **Issue:** QA scan found Blueprint Studio / dashboard floor-plan surfaces that either relied on the QA dashboard wrapper or could open outside it, allowing the canvas or booth matrix to render on sub-desktop viewports.
 - **Fix:** Shared `floor-plan-viewport-advisory.tsx` now exposes a reusable desktop-required gate/notice with the regression copy: "The floor plan matrix is not optimized for small screens..." The regular dashboard bootstrap, setup wizard floor-plan step, standalone spatial layout editor, and dual-screen booth matrix window now block or prefix undersized viewports before mounting the floor-plan matrix/canvas.
-- **Verify:** Pending local lint/type checks.
-- **Next:** Run lint/type checks, then commit/push this branch and open/update PR.
+- **Verify:** `npm run lint -- --quiet` — PASS. `npx tsc --noEmit` — PASS. Initial attempts failed before `npm ci` because local `node_modules` lacked `eslint` / `typescript`; `npm ci` restored the lockfile toolchain.
+- **Next:** Open/update PR for review; no production deploy requested.
 
 ## Active work — CI lint fix simulated-annealing (local, not deployed)
 - **Issue:** CI lint failed — `prefer-const` on `activeRoute` and `activeCoveragePct` in `simulated-annealing.ts` (lines 170–171); pipeline stops before build even though `next build` passes.
