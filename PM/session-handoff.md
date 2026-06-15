@@ -1126,9 +1126,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `70161b9` (pushed to `origin/master`)
-- Last deploy commit: `70161b9` - feat: ship 98 session updates (auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; CI lint fix simulated-annealing; +94 more)
-- Production: https://popuphub.ca - **v1.0.0 build 171** | commit `5d4caf9` (handoff updated 2026-06-15 10:05)
+- Branch: `master` @ `0a338c0` (pushed to `origin/master`)
+- Last deploy commit: `0a338c0` - feat: ship 99 session updates (coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; +95 more)
+- Production: https://popuphub.ca - **v1.0.0 build 172** | commit `5da7c38` (handoff updated 2026-06-15 10:46)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1505,7 +1505,7 @@
 
 
 ## Last deploy
-- 2026-06-15 10:05 - Deploy via deploy-popuphub.ps1 - `feat: ship 98 session updates (auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; CI lint fix simulated-annealing; +94 more)` (70161b9)
+- 2026-06-15 10:46 - Deploy via deploy-popuphub.ps1 - `feat: ship 99 session updates (coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; +95 more)` (0a338c0)
 
 
 ## Goal
