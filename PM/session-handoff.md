@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — fairness auto-arrange hang fix (local, not deployed)
+- **Bug:** Fairness-first **AI Auto-Arrange** could freeze the command center for 1–7+ minutes (10 booths, multi-scenario).
+- **Root cause:** `coverage-aware-placement` (c9918cc) ran full `PathfindingService` coverage on every booth candidate; `generateFairLayoutCandidates` launched all scenarios without wall-clock budget enforcement.
+- **Fix (branch `cursor/critical-bug-investigation-5c15`, commit `40bd854`):** cap placement probes, coarse grid for trial coverage, dedupe annealing pathfinding, enforce 12s default multi-scenario wall clock for interactive runs.
+- **Validation:** `npx tsx scripts/verify-layout-strategies.ts` — 166 passed, 0 failed; 10-booth rectangle single ~16s (was ~73s); default multi-scenario returns 1 candidate ~15s (was 7×50s+).
+- **Next:** Merge PR; smoke fairness-first auto-arrange on command center with 10+ booths.
+
 ## Active work — auto-arrange button feedback (local, not deployed)
 - **Issue:** Coordinators could not tell if/when **AI Auto-Arrange** was pressed or finished.
 - **Fix:** Running state on button (spinner, **Arranging…**, disabled); green status pill with placed count + timestamp after run; loading toast for all arrange modes (grid, fairness, AI).
