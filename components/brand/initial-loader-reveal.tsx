@@ -42,9 +42,32 @@ type BoothRect = {
   y: number
   w: number
   h: number
-  delay: number
   /** Left/right perimeter columns — scale-in anchors on the inner edge of each square cell. */
   wall?: 'left' | 'right'
+}
+
+/** Angle from room center with 12 o'clock = 0, increasing clockwise (SVG y-down). */
+function clockwiseAngleFromTop(cx: number, cy: number, bx: number, by: number): number {
+  const angle = Math.atan2(by - cy, bx - cx)
+  let ordered = angle + Math.PI / 2
+  if (ordered < 0) ordered += 2 * Math.PI
+  return ordered
+}
+
+function easeOutCubic(value: number) {
+  return 1 - (1 - value) ** 3
+}
+
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value))
+}
+
+/** One stall per slot — each completes before the next begins. */
+function sequentialReveal(t: number, index: number, total: number): number {
+  if (total <= 0) return 1
+  const slot = 1 / total
+  const local = (t - index * slot) / slot
+  return easeOutCubic(clamp01(local))
 }
 
 type PerimeterRing = {
@@ -92,7 +115,6 @@ function buildPerimeterRing(): PerimeterRing {
   const topShift = BOOTH_W + GAP
 
   const booths: BoothRect[] = []
-  let delayStep = 0
 
   for (let i = 0; i < topCount; i++) {
     booths.push({
@@ -100,7 +122,6 @@ function buildPerimeterRing(): PerimeterRing {
       y: topY,
       w: BOOTH_W,
       h: BOOTH_H,
-      delay: delayStep++ * 0.05,
     })
   }
   for (let i = 0; i < sideCount; i++) {
@@ -112,7 +133,6 @@ function buildPerimeterRing(): PerimeterRing {
         y,
         w: BOOTH_W,
         h: BOOTH_H,
-        delay: delayStep++ * 0.05,
         wall: 'left',
       })
     }
@@ -122,7 +142,6 @@ function buildPerimeterRing(): PerimeterRing {
         y,
         w: BOOTH_W,
         h: BOOTH_H,
-        delay: delayStep++ * 0.05,
         wall: 'right',
       })
     }
@@ -133,7 +152,6 @@ function buildPerimeterRing(): PerimeterRing {
       y: bottomY,
       w: BOOTH_W,
       h: BOOTH_H,
-      delay: delayStep++ * 0.05,
     })
   }
 
@@ -146,7 +164,19 @@ function buildPerimeterRing(): PerimeterRing {
     cy: (topY + BOOTH_H + bottomY) / 2,
   }
 
-  return { booths, inner }
+  const sortedBooths = booths
+    .map((booth) => {
+      const bcx = booth.x + booth.w / 2
+      const bcy = booth.y + booth.h / 2
+      return {
+        booth,
+        angle: clockwiseAngleFromTop(inner.cx, inner.cy, bcx, bcy),
+      }
+    })
+    .sort((a, b) => a.angle - b.angle)
+    .map(({ booth }) => booth)
+
+  return { booths: sortedBooths, inner }
 }
 
 const BRAND = {
@@ -163,6 +193,7 @@ const BRAND = {
 const SVG_WIDTH = 480
 const SVG_HEIGHT = 448
 const TAGLINE = 'Markets Made Easy'
+const TAGLINE_WORDS = TAGLINE.split(' ')
 const TAGLINE_Y = 392
 const PROGRESS_Y = 410
 const PROGRESS_X = 90
@@ -174,19 +205,24 @@ function drawProgress(value: number, start: number, end: number) {
   return (value - start) / (end - start)
 }
 
-function clamp01(value: number) {
-  return Math.min(1, Math.max(0, value))
-}
+/** Ordered reveal phases — stalls, logo, tagline words, progress bar. */
+const LOADER_PHASE = {
+  booths: { start: 0.06, end: 0.48 },
+  logo: { start: 0.48, end: 0.72 },
+  tagline: { start: 0.72, end: 0.92 },
+  bar: { start: 0.88, end: 1 },
+} as const
 
 function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const { progress, phase, globalFrame } = frame
   const breathe = 1 + Math.sin(globalFrame * 0.06) * 0.012
 
-  const boothT = drawProgress(progress, 0.1, 0.55)
-  /** Logo waits until the perimeter ring has finished appearing. */
-  const logoT = drawProgress(progress, 0.58, 0.86)
-  const tagT = drawProgress(progress, 0.72, 0.96)
-  const barT = drawProgress(progress, 0.85, 1)
+  const boothT = drawProgress(progress, LOADER_PHASE.booths.start, LOADER_PHASE.booths.end)
+  /** Logo fades in only after the last stall is placed. */
+  const logoT = drawProgress(progress, LOADER_PHASE.logo.start, LOADER_PHASE.logo.end)
+  /** Tagline words appear one at a time after the logo. */
+  const tagT = drawProgress(progress, LOADER_PHASE.tagline.start, LOADER_PHASE.tagline.end)
+  const barT = drawProgress(progress, LOADER_PHASE.bar.start, LOADER_PHASE.bar.end)
 
   const outroFade =
     phase === 'outro' || phase === 'complete'
@@ -241,7 +277,7 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill={BRAND.cream} />
 
         {booths.map((booth, index) => {
-          const t = clamp01((boothT - booth.delay) / (1 - booth.delay))
+          const t = sequentialReveal(boothT, index, booths.length)
           const scale = 0.88 + t * 0.12
           const anchorX =
             booth.wall === 'left' || booth.wall === 'right'
@@ -294,14 +330,21 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           fontSize="12"
           fontWeight="500"
           fill={BRAND.ink}
-          opacity={tagT * 0.55}
           style={{
             letterSpacing: '0.14em',
             fontFamily:
               'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
           }}
         >
-          {TAGLINE}
+          {TAGLINE_WORDS.map((word, index) => {
+            const wordT = sequentialReveal(tagT, index, TAGLINE_WORDS.length)
+            return (
+              <tspan key={word} opacity={wordT * 0.85}>
+                {index > 0 ? '\u00a0' : ''}
+                {word}
+              </tspan>
+            )
+          })}
         </text>
 
         <rect

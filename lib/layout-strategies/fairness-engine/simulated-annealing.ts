@@ -167,8 +167,8 @@ export function optimizeFairnessAnnealing(
   }
 
   let current = cloneState(initial)
-  let activeRoute = initialCoverage.route
-  let activeCoveragePct = initialCoverage.coveragePercentage
+  const activeRoute = initialCoverage.route
+  const activeCoveragePct = initialCoverage.coveragePercentage
   let currentScore = scoreExposureOnRoute(
     activeRoute,
     current,

@@ -4,6 +4,20 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — CI lint fix simulated-annealing (local, not deployed)
+- **Issue:** CI lint failed — `prefer-const` on `activeRoute` and `activeCoveragePct` in `simulated-annealing.ts` (lines 170–171); pipeline stops before build even though `next build` passes.
+- **Fix:** `let` → `const` for both (set once from `initialCoverage`, never reassigned).
+- **Verify:** `npm run lint -- --quiet` PASS; `npm run build` PASS.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — initial loader clockwise stall reveal (local, not deployed)
+- **Goal:** Convey order and organization in the first-visit loader — stalls placed one at a time clockwise from 12 o'clock, then logo fade-in, then tagline word-by-word.
+- **Component:** `components/brand/initial-loader-reveal.tsx` (not floor-plan auto-arrange / presenter).
+- **Clockwise order:** After building the perimeter ring, each stall center is sorted by `clockwiseAngleFromTop(inner.cx, inner.cy, bcx, bcy)` — `atan2` rotated so top = 0, increasing clockwise in SVG y-down space.
+- **Sequence (progress 0–1):** stalls **0.06–0.48** (one per equal slot via `sequentialReveal` + easeOutCubic) → logo **0.48–0.72** → tagline words **0.72–0.92** ("Markets", "Made", "Easy" one at a time) → progress bar **0.88–1.0**.
+- **Verify:** Hard refresh with cleared `popup-hub-initial-loader-shown` localStorage (or incognito) — stalls appear in clockwise order from top, logo only after last stall, tagline words stagger in.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — patron table flush wall placement (local, not deployed)
 - **Issue:** Patron / guest tables could not be dragged or placed flush against room walls during manual layout editing — they stopped ~6′ from the perimeter.
 - **Root cause:** `wallInsetClearanceFt` in `lib/floor-plan/boundary-constraints.ts` applied `ROOM_PLACEMENT_CLEARANCE_FT` (6′ = 2× `BOOTH_SAFETY_BUFFER_FT`) to guest tables while vendor booths used `VENDOR_WALL_INSET_FT` (0). That inset fed `footprintClampDeltaForRoom` (live drag via `boothLayoutMovePatch`) and `footprintWithinBounds` (draw commit via `isValidObjectPlacement`).
