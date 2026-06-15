@@ -440,8 +440,8 @@
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: vendor with existing application → `/vendor/events` card shows Applied badge + status action (no Apply Now); declined/cancelled markets show status link + “Additional applications are not accepted.”
 
 ## Active work — initial loader booth ring layout (local, not deployed)
-- **`components/brand/initial-loader-reveal.tsx`:** Top row shifted one booth cell right; side columns trimmed to alternating tiles (left keeps 1st/3rd/5th, right keeps 2nd/4th/6th) for 3×3 symmetry with top/bottom rows.
-- **Verify:** Reload app — initial loader shows 3 booths per side, top row offset right of bottom row.
+- **`components/brand/initial-loader-reveal.tsx`:** Top row shifted one booth cell right; bottom row mirrors with the same offset left. Left column uses lower stagger rows (2nd/4th/6th) with inward offset; right column uses upper rows (1st/3rd/5th) — brick pattern mirrors across the ring.
+- **Verify:** Reload app (clear `popup-hub-initial-loader-shown` in sessionStorage if needed) — left side booths sit one half-cell lower than before; bottom row is left-shifted opposite the top row.
 
 ## Active work — coordinator login home (local, not deployed)
 - **`app/coordinator/page.tsx` + `components/coordinator/coordinator-home.tsx`:** Post-login coordinator landing with **Create a new market** and **View your markets** cards.

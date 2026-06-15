@@ -111,7 +111,7 @@ function buildPerimeterRing(): PerimeterRing {
       Math.floor((sideUsable - (CELL - BOOTH_H)) / halfStep) + 1,
     ),
   )
-  /** Top row sits one booth cell right of the centred slot so it lines up with the logo. */
+  /** Top row shifts one booth cell right; bottom row mirrors with the same offset left. */
   const topShift = BOOTH_W + GAP
 
   const booths: BoothRect[] = []
@@ -127,7 +127,8 @@ function buildPerimeterRing(): PerimeterRing {
   for (let i = 0; i < sideCount; i++) {
     const stagger = i % 2 === 1 ? halfStep : 0
     const y = sideStartY + i * halfStep + (CELL - BOOTH_H)
-    if (i % 2 === 0) {
+    // Left column sits on the lower stagger rows (2nd/4th/6th) to mirror the right.
+    if (i % 2 === 1) {
       booths.push({
         x: leftX + stagger,
         y,
@@ -136,7 +137,8 @@ function buildPerimeterRing(): PerimeterRing {
         wall: 'left',
       })
     }
-    if (i % 2 === 1) {
+    // Right column sits on the upper stagger rows (1st/3rd/5th).
+    if (i % 2 === 0) {
       booths.push({
         x: rightX - stagger,
         y,
@@ -148,7 +150,7 @@ function buildPerimeterRing(): PerimeterRing {
   }
   for (let i = 0; i < topCount; i++) {
     booths.push({
-      x: topRowX + i * (BOOTH_W + GAP),
+      x: topRowX - topShift + i * (BOOTH_W + GAP),
       y: bottomY,
       w: BOOTH_W,
       h: BOOTH_H,
