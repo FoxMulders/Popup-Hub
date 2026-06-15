@@ -3,6 +3,7 @@
  */
 
 import { frameToRing } from './placement-surface'
+import { ensureDefaultTrafficDoors } from './ensure-default-traffic-doors'
 import type { FloorPlanDoc, RoomFrame } from './types'
 
 export const MAIN_HALL_ROOM_ID = 'main-hall'
@@ -31,15 +32,15 @@ export const makeDefaultMainHall = makeDefaultMainHallFrame
 
 export function ensureCanvasHasPlaceableRoom(doc: FloorPlanDoc): FloorPlanDoc {
   const rooms = (doc.rooms ?? []).filter((r) => !r.mergedIntoObjectId)
-  if (rooms.length > 0) return doc
+  if (rooms.length > 0) return ensureDefaultTrafficDoors(doc)
   const hall = makeDefaultMainHallFrame()
-  return {
+  return ensureDefaultTrafficDoors({
     ...doc,
     canvasWidthFt: Math.max(doc.canvasWidthFt, DEFAULT_MAIN_HALL_SIZE_FT),
     canvasLengthFt: Math.max(doc.canvasLengthFt, DEFAULT_MAIN_HALL_SIZE_FT),
     rooms: [hall],
     objectRoom: { ...(doc.objectRoom ?? {}) },
-  }
+  })
 }
 
 export const ensureLayoutNotVoid = ensureCanvasHasPlaceableRoom

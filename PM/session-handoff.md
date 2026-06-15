@@ -62,10 +62,11 @@
 
 ## Active work — initial loader disorganized-to-organized reveal (local, not deployed)
 - **Goal:** Convey PopUp Hub's value in the first-visit loader — fanned deck in center, then deal tables one-by-one to an organized perimeter ring, then logo and tagline.
-- **Component:** `components/brand/initial-loader-reveal.tsx` (not floor-plan auto-arrange / presenter).
-- **Sequence (progress 0–1):** fanned deck hold **0.03–0.26** (subtle pile wobble) → card deal **0.26–0.68** (`dealCardProgress` + sequential slots, one table at a time) → logo **0.68–0.84** → tagline **0.84–0.95** → progress bar **0.91–1.0**.
-- **Layout:** 3×3 ring — top/bottom rows centred between side columns; side rows paired so **R0↔L1** and **L0↔R1** share the same Y (first on one wall aligns with middle on the opposite).
-- **Verify:** Hard refresh with cleared `popup-hub-initial-loader-shown` localStorage (or incognito) — deck holds longer, tables deal out sequentially, side pairs line up horizontally, logo after last card.
+- **Component:** `components/brand/initial-loader-reveal.tsx` + `lib/brand/initial-loader-controller.ts`.
+- **Timing:** 2× duration (`holdFrame` 420, `totalFrames` 540 @ 60fps ≈ 7s reveal + 2s outro).
+- **Sequence (progress 0–1):** fanned deck hold **0.03–0.26** → card deal **0.26–0.68** → logo **0.68–0.84** → tagline **0.84–0.95** → progress bar **0.91–1.0**.
+- **Layout:** 3×3 ring; side rows paired **R0↔L1** / **L0↔R1**; logo lockup centered on ring interior (`cx`/`cy` + image `height/2` anchor).
+- **Verify:** Hard refresh with cleared `popup-hub-initial-loader-shown` — slower deal, logo centered in stall ring at end.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — patron table flush wall placement (local, not deployed)

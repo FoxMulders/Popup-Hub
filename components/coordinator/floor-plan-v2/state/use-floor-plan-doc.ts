@@ -34,6 +34,7 @@ import {
   destructiveMergeInDoc,
 } from './destructive-merge'
 import { ensureCanvasHasPlaceableRoom } from './canvas-init'
+import { ensureDefaultTrafficDoors } from './ensure-default-traffic-doors'
 import { getSuppressAutoMainHall } from './canvas-session-guards'
 import {
   closeRing,
@@ -472,6 +473,7 @@ export function useFloorPlanDoc(
       }
       if (patch.rooms !== undefined) {
         next = forceRecomputeGeometry(next)
+        next = ensureDefaultTrafficDoors(next)
       }
       commit(next, pushHistory)
     },

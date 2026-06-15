@@ -16,12 +16,13 @@ const STATIC_PUBLIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['
     { path: '/legal/accessibility', changeFrequency: 'monthly', priority: 0.3 },
   ]
 
-function entry(
+function makeEntry(
+  origin: string | undefined,
   path: string,
   opts: { lastModified?: Date; changeFrequency?: SitemapEntry['changeFrequency']; priority?: number } = {},
 ): SitemapEntry {
   return {
-    url: publicAppUrl(path),
+    url: publicAppUrl(path, origin),
     lastModified: opts.lastModified ?? new Date(),
     changeFrequency: opts.changeFrequency,
     priority: opts.priority,
@@ -31,10 +32,13 @@ function entry(
 /**
  * Collects all indexable public URLs for sitemap.xml generation.
  * Used by `app/sitemap.ts` and `scripts/generate-sitemap.mjs`.
+ *
+ * Pass `origin` from {@link getRequestPublicOrigin} so custom domains (e.g. popuphub.ca)
+ * emit correct absolute URLs instead of the Vercel default hostname.
  */
-export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
+export async function collectSitemapEntries(origin?: string): Promise<SitemapEntry[]> {
   const entries: SitemapEntry[] = STATIC_PUBLIC_PATHS.map(({ path, changeFrequency, priority }) =>
-    entry(path, { changeFrequency, priority }),
+    makeEntry(origin, path, { changeFrequency, priority }),
   )
 
   if (!hasPublicSupabaseConfig()) {
@@ -53,7 +57,7 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
   for (const event of events ?? []) {
     const lastModified = event.updated_at ? new Date(event.updated_at) : undefined
     entries.push(
-      entry(`/events/${event.id}`, {
+      makeEntry(origin, `/events/${event.id}`, {
         lastModified,
         changeFrequency: 'daily',
         priority: event.status === 'active' ? 0.85 : 0.75,
@@ -69,7 +73,7 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
 
   for (const profile of coordinators ?? []) {
     entries.push(
-      entry(`/coordinators/${profile.id}`, {
+      makeEntry(origin, `/coordinators/${profile.id}`, {
         lastModified: profile.created_at ? new Date(profile.created_at) : undefined,
         changeFrequency: 'weekly',
         priority: 0.5,
@@ -85,7 +89,7 @@ export async function collectSitemapEntries(): Promise<SitemapEntry[]> {
 
   for (const profile of patrons ?? []) {
     entries.push(
-      entry(`/patrons/${profile.id}`, {
+      makeEntry(origin, `/patrons/${profile.id}`, {
         lastModified: profile.created_at ? new Date(profile.created_at) : undefined,
         changeFrequency: 'weekly',
         priority: 0.4,

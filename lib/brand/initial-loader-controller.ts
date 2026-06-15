@@ -3,9 +3,11 @@ import { POPUP_LOADER } from '@/lib/brand/popup-loader-config'
 export const INITIAL_LOADER = {
   fps: 60,
   /** Main reveal completes; hold here until the page finishes loading. */
-  holdFrame: 210,
+  holdFrame: 420,
   /** Full sequence length before dismiss is allowed. */
-  totalFrames: 270,
+  totalFrames: 540,
+  /** Outro fade length in frames (after hold). */
+  outroFrames: 90,
 } as const
 
 export type InitialLoaderPhase = 'intro' | 'hold' | 'outro' | 'complete'

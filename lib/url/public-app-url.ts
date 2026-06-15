@@ -35,8 +35,30 @@ export function resolvePublicAppOrigin(): string {
   return getURL()
 }
 
+/**
+ * Prefer the incoming request host (custom domain) for sitemap/robots/canonical URLs.
+ * Falls back to env-based {@link getURL} for scripts and non-request contexts.
+ */
+export async function getRequestPublicOrigin(): Promise<string> {
+  try {
+    const { headers } = await import('next/headers')
+    const headerStore = await headers()
+    const host =
+      headerStore.get('x-forwarded-host')?.split(',')[0]?.trim() ??
+      headerStore.get('host')?.trim()
+    if (host && !host.includes('localhost') && !host.startsWith('127.0.0.1')) {
+      const proto = headerStore.get('x-forwarded-proto')?.split(',')[0]?.trim() ?? 'https'
+      return normalizeSiteUrl(`${proto}://${host}`)
+    }
+  } catch {
+    // Not in a request context (CLI scripts, etc.)
+  }
+  return getURL()
+}
+
 /** Absolute public URL when origin is known; otherwise a stable relative path. */
-export function publicAppUrl(path: string): string {
+export function publicAppUrl(path: string, origin?: string): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${getURL()}${normalizedPath}`
+  const base = origin ?? getURL()
+  return `${base}${normalizedPath}`
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   createInitialLoaderController,
+  INITIAL_LOADER,
   initialLoaderFrame,
   type InitialLoaderFrame,
 } from '@/lib/brand/initial-loader-controller'
@@ -161,13 +162,18 @@ function buildPerimeterRing(): PerimeterRing {
     })
   }
 
+  const ringInnerLeft = leftX + BOOTH_W
+  const ringInnerRight = rightX
+  const ringInnerTop = topY + BOOTH_H
+  const ringInnerBottom = bottomY
+
   const inner = {
-    left: innerLeft,
-    right: innerRight - BOOTH_W,
-    top: topY + BOOTH_H,
-    bottom: bottomY,
-    cx: (innerLeft + innerRight - BOOTH_W) / 2,
-    cy: (topY + BOOTH_H + bottomY) / 2,
+    left: ringInnerLeft + GAP,
+    right: ringInnerRight - GAP,
+    top: ringInnerTop,
+    bottom: ringInnerBottom,
+    cx: (ringInnerLeft + ringInnerRight) / 2,
+    cy: (ringInnerTop + ringInnerBottom) / 2,
   }
 
   return { booths, inner }
@@ -224,7 +230,9 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
 
   const outroFade =
     phase === 'outro' || phase === 'complete'
-      ? clamp01((globalFrame - 210) / 45)
+      ? clamp01(
+          (globalFrame - INITIAL_LOADER.holdFrame) / INITIAL_LOADER.outroFrames,
+        )
       : 0
   const masterOpacity = 1 - outroFade * 0.35
   const masterScale = 1 - outroFade * 0.04
@@ -328,7 +336,7 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
             <image
               href={LOGO_SRC}
               x={-logoDims.width / 2}
-              y={-logoDims.anchorY}
+              y={-logoDims.height / 2}
               width={logoDims.width}
               height={logoDims.height}
               preserveAspectRatio="xMidYMid meet"

@@ -8,6 +8,7 @@
 import { docFromLegacyRooms, frameListFromRooms } from './legacy-bridge'
 import { clearMultiRoomDraft, loadMultiRoomDraft } from './local-draft'
 import { forceRecomputeGeometry } from './geometry-sanitize'
+import { ensureDefaultTrafficDoors } from './ensure-default-traffic-doors'
 import { reconcileCanvasExtents } from './room-canvas'
 import { makeEmptyDoc } from './types'
 import type { FloorPlanDoc } from './types'
@@ -91,12 +92,14 @@ export function hydrateFloorPlanDoc(
   if (layoutRooms.length > 0) {
     const frames = frameListFromRooms(layoutRooms)
     return reconcileDocExtents(
-      forceRecomputeGeometry({
-        ...makeEmptyDoc(50, 50),
-        rooms: frames,
-        objects: [],
-        objectRoom: {},
-      })
+      ensureDefaultTrafficDoors(
+        forceRecomputeGeometry({
+          ...makeEmptyDoc(50, 50),
+          rooms: frames,
+          objects: [],
+          objectRoom: {},
+        })
+      )
     )
   }
 

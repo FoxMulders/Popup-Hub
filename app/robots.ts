@@ -1,7 +1,9 @@
 import type { MetadataRoute } from 'next'
-import { publicAppUrl } from '@/lib/url/public-app-url'
+import { getRequestPublicOrigin, publicAppUrl } from '@/lib/url/public-app-url'
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const origin = await getRequestPublicOrigin()
+
   return {
     rules: [
       {
@@ -30,7 +32,7 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: publicAppUrl('/sitemap.xml'),
-    host: publicAppUrl('/'),
+    sitemap: publicAppUrl('/sitemap.xml', origin),
+    host: publicAppUrl('/', origin),
   }
 }
