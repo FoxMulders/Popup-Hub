@@ -74,6 +74,7 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   vendorLayoutMode?: LayoutMode
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
+  lastFairnessCoverage?: number | null
   onArrangeLayout?: () => void
   canArrangeLayout?: boolean
   arrangeLayoutDisabledReason?: string | null
@@ -99,7 +100,7 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
 }
 
 /**
- * Unified top ribbon with draggable tool groups (framer-motion Reorder).
+ * Unified top ribbon with fixed tool groups in default order.
  * Dashboard `staticLayout` uses stacked collapsible rows instead.
  * Drop handlers into `canvas-command-bar-blocks.tsx` per block id.
  */
@@ -143,6 +144,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     vendorLayoutMode,
     onVendorLayoutModeChange,
     lastFairnessScore,
+    lastFairnessCoverage,
     onArrangeLayout,
     canArrangeLayout,
     arrangeLayoutDisabledReason,
@@ -455,6 +457,12 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
           'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
           staticLayout ? 'py-0.5' : 'py-1',
           !staticLayout && !sidebarLayout && !topBarLayout && !headerBarLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
+          !staticLayout &&
+            !sidebarLayout &&
+            !topBarLayout &&
+            !headerBarLayout &&
+            canvasFullscreen &&
+            'max-h-[min(40vh,220px)] flex-wrap overflow-y-auto',
           staticLayout &&
             !sidebarLayout &&
             !topBarLayout &&

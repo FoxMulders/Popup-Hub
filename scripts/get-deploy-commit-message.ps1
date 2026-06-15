@@ -194,7 +194,7 @@ if /i "%~1"=="-SkipCommit" set "DPL_PS_ARGS=!DPL_PS_ARGS! -SkipCommit" & shift &
 if /i "%~1"=="-SkipDeploy" set "DPL_PS_ARGS=!DPL_PS_ARGS! -SkipDeploy" & shift & goto :parseBatFlags
 if /i "%~1"=="-SkipHandoff" set "DPL_PS_ARGS=!DPL_PS_ARGS! -SkipHandoff" & shift & goto :parseBatFlags
 echo Unknown flag: %~1
-set "EXITCODE=1"
+set "DPL_EXIT=1"
 goto :fail
 
 :afterBatFlags
@@ -203,14 +203,14 @@ cd /d "!REPO_ROOT!"
 if errorlevel 1 (
     echo Could not change to repo root:
     echo   !REPO_ROOT!
-    set "EXITCODE=1"
+    set "DPL_EXIT=1"
     goto :fail
 )
 
 if not exist "!REPO_ROOT!\.git\" (
     echo Not a git repository:
     echo   !REPO_ROOT!
-    set "EXITCODE=1"
+    set "DPL_EXIT=1"
     goto :fail
 )
 
@@ -219,7 +219,7 @@ set "DPL_SCRIPT=!REPO_ROOT!\scripts\deploy-popuphub.ps1"
 if not exist "!DPL_SCRIPT!" (
     echo Missing deploy script:
     echo   !DPL_SCRIPT!
-    set "EXITCODE=1"
+    set "DPL_EXIT=1"
     goto :fail
 )
 
@@ -237,30 +237,30 @@ if defined DPL_PS_ARGS (
 ) else (
     "!PS_EXE!" -NoProfile -ExecutionPolicy Bypass -File "!DPL_SCRIPT!"
 )
-set "EXITCODE=!ERRORLEVEL!"
+set "DPL_EXIT=!ERRORLEVEL!"
 
-if "!EXITCODE!"=="2" (
+if "!DPL_EXIT!"=="2" (
     echo.
     echo Nothing to deploy. See messages above.
-    set "EXITCODE=0"
+    set "DPL_EXIT=0"
     goto :done
 )
 
-if not "!EXITCODE!"=="0" goto :fail
+if not "!DPL_EXIT!"=="0" goto :fail
 
 echo.
 echo Deploy finished successfully.
 goto :done
 
 :fail
-if not defined EXITCODE set "EXITCODE=1"
+if not defined DPL_EXIT set "DPL_EXIT=1"
 echo.
-echo Deploy failed. Exit code: !EXITCODE!
+echo Deploy failed. Exit code: !DPL_EXIT!
 echo See messages above.
 
 :done
 call :maybe_pause
-exit /b !EXITCODE!
+exit /b !DPL_EXIT!
 
 :maybe_pause
 if defined DPL_NO_PAUSE exit /b 0

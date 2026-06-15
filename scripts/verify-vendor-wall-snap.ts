@@ -175,4 +175,38 @@ assert(
   'Interior booth keeps long edge in width after orient'
 )
 
+// Patron / guest tables must also approach walls flush (was 6′ ROOM_PLACEMENT_CLEARANCE_FT inset).
+function guestTable(x: number, y: number): BoothObject {
+  return {
+    id: 'gt-1',
+    kind: 'booth',
+    x,
+    y,
+    width: 3,
+    height: 3,
+    rotation: 0,
+    label: 'Patron',
+    tablePurpose: 'guest',
+    tableShape: 'round',
+    tableLengthFt: 3,
+  }
+}
+
+const guestNearWest = guestTable(10 + 0.5, 18)
+guestNearWest.id = 'gt-west'
+doc.objectRoom = { 'gt-west': roomId }
+const guestWestClamp = boothClampDeltaForRoom(guestNearWest, doc, roomId)
+assert(
+  guestWestClamp.dx === 0 && guestWestClamp.dy === 0,
+  `Patron table west clamp should allow flush approach, got dx=${guestWestClamp.dx} dy=${guestWestClamp.dy}`
+)
+
+const guestFlushWest = guestTable(10, 18)
+guestFlushWest.id = 'gt-flush-west'
+doc.objectRoom = { 'gt-flush-west': roomId }
+assert(
+  footprintWithinBounds(guestFlushWest, bounds),
+  'Patron table flush to west wall must pass footprintWithinBounds'
+)
+
 console.log('verify-vendor-wall-snap: all checks passed')

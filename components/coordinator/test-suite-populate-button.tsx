@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { FlaskConical } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Progress, ProgressLabel } from '@/components/ui/progress'
+import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import { useOptionalMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 
@@ -170,11 +170,7 @@ export function TestSuitePopulateButton({
             : 'Populate test suite'}
       </Button>
       {running ? (
-        <Progress value={STAGE_PROGRESS[stage]} className="w-full min-w-[8rem]">
-          <ProgressLabel className="text-[10px] text-violet-800">
-            {STAGE_LABEL[stage]}
-          </ProgressLabel>
-        </Progress>
+        <Progress value={STAGE_PROGRESS[stage]} className="w-full min-w-[8rem]" />
       ) : null}
     </div>
   )

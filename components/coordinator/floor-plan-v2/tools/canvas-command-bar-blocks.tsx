@@ -178,6 +178,7 @@ function FloorPlanOptimizeControl({
   vendorLayoutMode,
   onVendorLayoutModeChange,
   lastFairnessScore,
+  lastFairnessCoverage,
   onRun,
   canRun,
   disabledReason,
@@ -190,6 +191,7 @@ function FloorPlanOptimizeControl({
   vendorLayoutMode?: LayoutMode
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
+  lastFairnessCoverage?: number | null
   onRun?: () => void
   canRun?: boolean
   disabledReason?: string | null
@@ -325,6 +327,9 @@ function FloorPlanOptimizeControl({
           aria-live="polite"
         >
           Fairness {lastFairnessScore}/100
+          {typeof lastFairnessCoverage === 'number'
+            ? ` · ${lastFairnessCoverage.toFixed(0)}% cov`
+            : ''}
         </span>
       ) : null}
       {topBarLayout ? (
@@ -442,6 +447,7 @@ export interface CanvasCommandBarBlockContext {
   vendorLayoutMode?: LayoutMode
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
+  lastFairnessCoverage?: number | null
   onArrangeLayout?: () => void
   canArrangeLayout?: boolean
   arrangeLayoutDisabledReason?: string | null
@@ -1159,6 +1165,7 @@ export function renderCanvasCommandBarBlock(
             vendorLayoutMode={ctx.vendorLayoutMode}
             onVendorLayoutModeChange={ctx.onVendorLayoutModeChange}
             lastFairnessScore={ctx.lastFairnessScore}
+            lastFairnessCoverage={ctx.lastFairnessCoverage}
             onRun={ctx.onAutoArrangeFloorPlan}
             canRun={ctx.canAutoArrangeFloorPlan}
             disabledReason={ctx.autoArrangeDisabledReason}
@@ -1460,7 +1467,7 @@ export function renderCanvasCommandBarBlock(
               onClick={() => ctx.onToggleCanvasFullscreen?.()}
               title={
                 ctx.canvasFullscreen
-                  ? 'Exit full screen (Esc)'
+                  ? 'Exit Fullscreen (Esc)'
                   : 'Expand canvas to fill the monitor'
               }
               className={lightGreenToolbarButtonClass(compact, ctx.canvasFullscreen)}
@@ -1470,7 +1477,7 @@ export function renderCanvasCommandBarBlock(
               ) : (
                 <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
               )}
-              {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+              {ctx.canvasFullscreen ? 'Exit Fullscreen' : 'Full screen'}
             </button>
           ) : null}
         </>
@@ -1612,7 +1619,7 @@ export function renderCanvasCommandBarBlock(
                   onClick={() => ctx.onToggleCanvasFullscreen?.()}
                   title={
                     ctx.canvasFullscreen
-                      ? 'Exit full screen (Esc)'
+                      ? 'Exit Fullscreen (Esc)'
                       : 'Expand canvas to fill the monitor'
                   }
                   className={cn(
@@ -1627,7 +1634,7 @@ export function renderCanvasCommandBarBlock(
                   ) : (
                     <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   )}
-                  {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+                  {ctx.canvasFullscreen ? 'Exit Fullscreen' : 'Full screen'}
                 </button>
               ) : null}
             </div>
@@ -1919,7 +1926,7 @@ export function renderCanvasCommandBarBlock(
                   onClick={() => ctx.onToggleCanvasFullscreen?.()}
                   title={
                     ctx.canvasFullscreen
-                      ? 'Exit full screen (Esc)'
+                      ? 'Exit Fullscreen (Esc)'
                       : 'Expand canvas to fill the monitor'
                   }
                   className={cn(
@@ -1933,7 +1940,7 @@ export function renderCanvasCommandBarBlock(
                   ) : (
                     <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   )}
-                  {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+                  {ctx.canvasFullscreen ? 'Exit Fullscreen' : 'Full screen'}
                 </button>
               ) : null}
               <span
@@ -2081,7 +2088,7 @@ export function renderCanvasCommandBarBlock(
               onClick={() => ctx.onToggleCanvasFullscreen?.()}
               title={
                 ctx.canvasFullscreen
-                  ? 'Exit full screen (Esc)'
+                  ? 'Exit Fullscreen (Esc)'
                   : 'Expand canvas to fill the monitor'
               }
               className={cn(
@@ -2095,7 +2102,7 @@ export function renderCanvasCommandBarBlock(
               ) : (
                 <Expand className="h-3.5 w-3.5 shrink-0" aria-hidden />
               )}
-              {ctx.canvasFullscreen ? 'Exit full screen' : 'Full screen'}
+              {ctx.canvasFullscreen ? 'Exit Fullscreen' : 'Full screen'}
             </button>
           ) : null}
           <div

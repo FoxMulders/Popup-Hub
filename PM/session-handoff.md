@@ -4,6 +4,94 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — patron table flush wall placement (local, not deployed)
+- **Issue:** Patron / guest tables could not be dragged or placed flush against room walls during manual layout editing — they stopped ~6′ from the perimeter.
+- **Root cause:** `wallInsetClearanceFt` in `lib/floor-plan/boundary-constraints.ts` applied `ROOM_PLACEMENT_CLEARANCE_FT` (6′ = 2× `BOOTH_SAFETY_BUFFER_FT`) to guest tables while vendor booths used `VENDOR_WALL_INSET_FT` (0). That inset fed `footprintClampDeltaForRoom` (live drag via `boothLayoutMovePatch`) and `footprintWithinBounds` (draw commit via `isValidObjectPlacement`).
+- **Fix:** All `kind === 'booth'` objects (vendor + patron) now use `VENDOR_WALL_INSET_FT` (0) for manual drag clamp and boundary validation. Physical overlap checks unchanged (`placedObjectsOverlap` — edge-touch allowed, positive-area overlap blocked).
+- **Verify:** `npx tsx scripts/verify-vendor-wall-snap.ts` — PASS (added patron table flush + near-wall clamp cases).
+- **Remaining constraints:** Table center must stay inside room polygon; rotated AABB must fit room bounds; true overlaps with other objects still block; auto-arrange / AI paths may still apply separate `WALL_BUFFER_FT` insets; vendor booths still get 3′ clearance probes vs other booths.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — ClearanceHeatCell build fix (local, not deployed)
+- **Issue:** Production build failed — `exposureHeatmapToClearanceField` return type missing `clearanceFt`, not assignable to `ClearanceHeatCell[]` (`floor-plan-v2.tsx` lines 2050/2184).
+- **Fix:** `lib/layout-strategies/fairness-engine/fairness-report.ts` — `exposureHeatmapToClearanceField` maps exposure heatmap cells to clearance overlay cells with `clearanceFt: Math.max(0, cell.value) * BOOTH_VIEWING_DISTANCE_FT` (8 ft viewing distance) plus band (`critical` / `tight` / `good`). Matches `UnifiedLayoutSolver.ClearanceHeatCell` shape.
+- **Usages:** Only `floor-plan-v2.tsx` (fairness scenario preview + apply paths); unified-solver paths use `unifiedMeta.clearanceField` directly (already has `clearanceFt`).
+- **Verify:** `npx next build --webpack` — **PASS** (build 164). `npx tsc --noEmit` — **PASS**.
+- **Next:** Commit + deploy when user asks (includes untracked `fairness-report.ts` + related fairness WIP).
+
+## Active work — fixed canvas toolbar layout (local, not deployed)
+- **Goal:** Remove user ability to drag/reorder layout editor toolbars; tool groups stay in default positions.
+- **Fix:** `canvas-toolbar-reorder.tsx` — dropped framer-motion `Reorder` drag handles, chevron nudge buttons, reset-order control, and localStorage order persistence; blocks render in `DEFAULT_CANVAS_TOOLBAR_ORDER`. `canvas-toolbar-static.tsx` — removed row up/down move buttons and saved row-order state; rows use `DEFAULT_STATIC_ROW_ORDER` (collapse state still persisted). Comment updates in `canvas-command-bar.tsx`, `toolbar-order.ts`.
+- **Verify:** Wizard/spatial layout editor — toolbar groups no longer show ⋮⋮ drag handles or left/right reorder; static stacked rows no longer show up/down move chevrons. Dashboard top/header strips unchanged (already fixed section order).
+- **Next:** Commit + deploy when user asks.
+
+## Active work — fullscreen layout editor toolbar parity (local, not deployed)
+- **Issue:** Fullscreen mode showed only a subset of layout tools (utilities / zoom / dual-screen) while normal mode had the full command ribbon (select/hand, shapes, undo/redo, copy/paste, rotate, alignment, table sizes, etc.).
+- **Root cause:** (1) Command-center **Full canvas** still portaled the main tool strip into the left rail even when immersive mode hid that panel — only header utilities remained visible. (2) Native wizard/spatial fullscreen pinned the canvas to `100vh` with a fixed exit-only overlay that covered the inline toolbar; coordinators saw a clipped/wrapped tail of the ribbon.
+- **Fix:** `floor-plan-v2.tsx` — skip left-rail portal when `dashboardImmersive`; render the full wizard command bar in the native fullscreen toolbar slot; extract shared `wizardCommandBarSharedProps`. `dashboard-bootstrap.tsx` — omit left panel in immersive mode. `fullscreen-layout.tsx` + `globals.css` — toolbar in flex flow above canvas (fixed root, not overlapping overlay). `canvas-command-bar.tsx` — allow wrap/scroll for fullscreen ribbon. `canvas-command-bar-blocks.tsx` — unify **Exit Fullscreen** label.
+- **Verify:** `/coordinator/dashboard` → **Full canvas** — full tool strip above canvas (shapes, history, alignment, vendor/patron sizes). `/coordinator/events/[id]/layout` or setup Step 3 → **Full screen** — full ribbon under exit row; Esc exits. Labels read **Exit Fullscreen** everywhere.
+- **Intentionally fullscreen-only:** Presenter, Wall Cast, Layout help, zoom, eye/labels toggle remain in utilities; exit fail-safe row stays at top of native fullscreen shell.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — test suite populate duplicate loading label (local, not deployed)
+- **Issue:** "Populate test suite" running state showed "Seeding vendors…" twice — once in the violet pill button (flask icon) and again as `ProgressLabel` text below the progress bar.
+- **Fix:** `test-suite-populate-button.tsx` — removed `ProgressLabel` child from `Progress`; progress bar only. Stage text remains on the button pill.
+- **Verify:** Click **Populate test suite** / compact **Test suite** — single stage label on button; bar below with no duplicate text.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — FairnessFirst route-based exposure refactor (local, not deployed)
+- **Goal:** Vendor fairness = equal probability a patron passes each booth (not serpentine spine proximity).
+- **Primary metric:** PathfindingService booth tour (`route-coverage.ts` → `CalculateOptimalPath`) + 1000-patron pass-by simulation (`exposure-simulator.ts`).
+- **Score:** `fairnessScore = round(100 × (1 − normalizedVariance))` on per-booth pass-by %; **score 0 when coverage < 100%**; `layoutValid` requires 100% route coverage. 80% relative exposure rule is diagnostic only.
+- **Pipeline:** serpentine seed (placement only) → traffic fill → **100% coverage gate** → annealing (≤20 booths) → `buildFairnessReport` with histogram, heatmap, extrema, coverage %.
+- **Ranking:** `generate-fair-layout-candidates.ts` — coverage first, then fairness score, then variance.
+- **UI:** fairness badge `Fairness N/100 · X% cov`; scenario bar shows coverage + invalid flag + report summary; floor-plan overlay uses PathfindingService route + exposure heatmap.
+- **Tests:** `npx tsx scripts/verify-layout-strategies.ts` — **200/200 PASS** (~135s). `npm run build` — **PASS** (build **163**, commit `9a302d3`, local uncommitted).
+- **Perf note:** PathfindingService is slow for 10+ booths; annealing skipped for >20 booths; adaptive grid cell size in route-coverage.
+- **Next:** Commit + deploy when user asks; consider loading indicator for large booth counts during auto-arrange.
+
+## Active work — exposure-simulator export build fix (local, not deployed)
+- **Issue:** Vercel/local production build failed on commit `9a302d3` — `exposure-simulator.ts` line 193 re-exported `boothFootprintRect` / `boothFacadeCenter` that were never defined in that module (`boothFootprintRect` lives in `placement-validator.ts`; `boothFacadeCenter` was file-private).
+- **Fix:** Removed erroneous `export { boothFootprintRect, boothFacadeCenter }`; added missing `import type { Booth, Point } from '../types'`. Renamed deploy bat exit var `EXITCODE` → `DPL_EXIT` in `PM/Deploy-popuphub.bat` + `scripts/get-deploy-commit-message.ps1` template (avoids `'EXITCODE' is not recognized` when cmd misparses after PS deploy failure).
+- **Verify:** `npm run build` — PASS (webpack). `npm run lint -- --quiet` — 0 errors. No layout-strategies imports needed those re-exports.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Fairness snake seed + score fix (local, not deployed)
+- **Issue:** Fairness-first auto-arrange on irregular rooms showed **Fairness ~24/100**, scattered booths (left-edge stack + random center), green route visible but booths not flanking it. Perimeter pattern irrelevant to fairness engine but user expected tight snake rows + score 60+.
+- **Root causes:**
+  1. **Degenerate serpentine** — co-located bottom entry/exit (same wall band) produced a 2-point route (door-to-door), so exposure sim scored almost nothing.
+  2. **Wrong flow direction** — seed forced `reverseFlow: false`, breaking top-entry rooms; bbox-edge legs clipped outside irregular polygons.
+  3. **Narrow visibility cone** — 60° forward-only cone ignored booths flanking aisle margins (lateral booths got 0 impressions → high variance → low score).
+  4. **Bad seeding** — sparse vertex-only slots + unrestricted traffic-fill merged bbox-scattered booths over snake seed.
+  5. **Annealing** — 1.8s budget too short for 20–50 booths; no rotation moves; objective didn't penalize distance from route.
+- **Fix:**
+  - `aisle-skeleton.ts` — same-wall-band circulation turnaround, polygon `horizontalSpanAtY`, auto flow/axis inference, improved clip.
+  - `fairness-seed.ts` — arc-length aisle slots both sides, booth-sized margins, route-biased fallback, traffic fill only for unplaced + route-proximity filter.
+  - `exposure-simulator.ts` — forward half-plane visibility (±90°) + route-distance gate for aisle-margin booths.
+  - `simulated-annealing.ts` — scaled budget (up to 12s), rotate/swap/nudge, variance + route-distance objective, fast 250-patron eval during search.
+  - `generate-fair-layout.ts` — always return serpentine route (not traffic pathway); traffic fill only when snake leaves gaps.
+- **Verify:** `npx tsx scripts/verify-layout-strategies.ts` — **2847/2847 PASS**. Fixture scores: rectangle 6-booth **79**, irregular 6-booth (bottom doors) **90**, 50-booth **55**, multi-scenario 50-booth best **55** (~10s).
+- **User retest:** Blueprint Studio → irregular room + bottom entry/exit doors → Engine **Fairness** → **AI Auto-Arrange** → booths in rows flanking green serpentine; badge **Fairness 60–90+** on well-filled rooms (depends on booth count vs polygon area).
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Fairness path vs patron overlay gap (local, not deployed)
+- **User question:** Why does the patron/green path not visit every booth in fairness scenarios? What does fairness score 0–100 mean?
+- **Finding (confirmed gap):** Production fairness (`lib/layout-strategies/fairness-engine/`) scores booths against a **fixed serpentine circulation centerline** (`buildSerpentineAisle` → `aisle.centerline`), **not** a booth-by-booth tour. The green dashed spine after Fairness auto-arrange (`UnifiedLayoutFlowOverlay`, `#059669`) is that serpentine — it is **not** the TSP path and is **not** expected to pass every table.
+- **Fairness score:** `computeFairnessScore` in `fairness-scorer.ts` = `100 × (1 − normalizedVariance)` on per-booth **normalized impression counts** from `exposure-simulator.ts` (1000 virtual patrons sampled along the serpentine; 8′ viewing distance + forward half-plane visibility). **100 = equal impressions across booths**; does **not** require route to visit every booth. Test targets only: rectangle ≥40, irregular ≥30 (no UI “good” threshold).
+- **Separate overlay:** Toolbar **Route / patron path** (`PatronTrafficPathOverlay`, blue `#0284c7` or orange if partial) uses `PathfindingService.CalculateOptimalPath` — A* + nearest-neighbor + 2-opt **does** aim to visit every booth; shows `missedBoothIds` toast when aisles block approach. **Not wired into fairness scoring.**
+- **Dead code path:** Standalone `lib/vendor-fairness-layout/` has TSP route (`generateRoute`) + alternate scoring formula (`fairness-score.ts`, max variance 0.25) — demo module; floor-plan fairness engine does not call it.
+- **Other gaps:** Route frozen at seed time while annealing moves booths; traffic-fill booths far from spine get low/zero exposure but still affect score denominator; scenario variants change serpentine axis/bias so path looks “erratic” across compares.
+- **Recommended fix (when prioritized):** (1) UX — label spine vs booth-tour overlays; (2) score using post-layout booth tour (`PathfindingService` or wire `vendor-fairness-layout/generateRoute`); (3) optionally recalc route after annealing. No code change this session (investigation only).
+
+## Active work — Multi-scenario fairness auto-arrange (local, not deployed)
+- **Goal:** Fairness-first **AI Auto-Arrange** evaluates multiple layout scenarios (serpentine axis, aisle bias, anneal seeds), auto-applies the best fairness score, and lets coordinators compare alternates on canvas.
+- **Engine:** `generateFairLayoutCandidates` in `lib/layout-strategies/fairness-engine/` — scenario library (up to 8 variants), booth-count caps (7→3 scenarios for 200+ booths), shared 3.6s budget with per-scenario annealing slices; alternate scenarios skip traffic fill for speed. `buildSerpentineAisle` supports horizontal/vertical + reverse flow. `LayoutResult` carries optional `scenarioId` / `scenarioLabel`.
+- **Wiring:** `PackBooths` fairness path runs multi-scenario by default (`fairnessCandidates` ranked best-first). Traffic-aware / unified paths unchanged.
+- **UI:** `fairness-scenario-bar.tsx` — after run, best applied + toast “best of N scenarios”; **Compare N scenarios** chip on canvas opens stepper (Prev/Next, Apply, dismiss reverts to committed).
+- **Tests:** `npx tsx scripts/verify-layout-strategies.ts` — **2846/2846 PASS** (multi-scenario ranking + 50-booth × 5 ~12s).
+- **Verify:** Blueprint Studio → Engine **Fairness** → entry/exit doors → **AI Auto-Arrange** → toast shows best-of-N; click **Compare scenarios** to preview alternates and **Apply** to commit.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Fairness-first auto-arrange verification (local, not deployed)
 - **Goal:** Confirm Engine **Fairness** + **AI Auto-Arrange** bypasses Gemini, uses `PackBooths` → `generateFairLayout`, requires entry/exit doors, and yields snake circulation + non-zero fairness score on irregular rooms.
 - **Trace (verified):**
@@ -999,8 +1087,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `82e3d46` (pushed to `origin/master`)
+- Branch: `master` @ `9a302d3` (local; FairnessFirst route-exposure refactor uncommitted)
 - Last deploy commit: `82e3d46` - feat: ship 83 session updates (Fairness-first auto-arrange verification; CI + Windows production build fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; +79 more)
+- Local build: **v1.0.0 build 163** | `npm run build` PASS | `verify-layout-strategies.ts` **200/200 PASS** (not deployed)
 - Production: https://popuphub.ca - **v1.0.0 build 144** | commit `a69841e` (handoff updated 2026-06-14 17:33)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)

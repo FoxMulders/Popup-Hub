@@ -1,12 +1,8 @@
 import {
   BOOTH_VIEWING_DISTANCE_FT,
   DEFAULT_ATTENDEE_COUNT,
-  VISIBILITY_CONE_DEG,
 } from '@/lib/vendor-fairness-layout/constants'
 import type { Booth, Point } from '../types'
-import { boothFootprintRect } from './placement-validator'
-
-const HALF_VISION_COS = Math.cos((VISIBILITY_CONE_DEG / 2) * (Math.PI / 180))
 
 function distPointToSegment(
   px: number,
@@ -35,28 +31,6 @@ function distToRoute(px: number, py: number, route: Point[]): number {
   return best
 }
 
-function routeTangentAt(
-  px: number,
-  py: number,
-  route: Point[]
-): { x: number; y: number } {
-  let bestIdx = 0
-  let bestDist = Infinity
-  for (let i = 0; i < route.length - 1; i++) {
-    const a = route[i]!
-    const b = route[i + 1]!
-    const d = distPointToSegment(px, py, a.x, a.y, b.x, b.y)
-    if (d < bestDist) {
-      bestDist = d
-      bestIdx = i
-    }
-  }
-  const a = route[bestIdx]!
-  const b = route[Math.min(bestIdx + 1, route.length - 1)]!
-  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1
-  return { x: (b.x - a.x) / len, y: (b.y - a.y) / len }
-}
-
 function boothFacadeCenter(
   x: number,
   y: number,
@@ -72,25 +46,6 @@ function boothFacadeCenter(
   }
 }
 
-function visibleFromPatron(
-  patron: Point,
-  facade: Point,
-  route: Point[]
-): boolean {
-  const dist = Math.hypot(patron.x - facade.x, patron.y - facade.y)
-  if (dist > BOOTH_VIEWING_DISTANCE_FT) return false
-  const tangent = routeTangentAt(patron.x, patron.y, route)
-  const toFacade = {
-    x: facade.x - patron.x,
-    y: facade.y - patron.y,
-  }
-  const len = Math.hypot(toFacade.x, toFacade.y) || 1
-  toFacade.x /= len
-  toFacade.y /= len
-  const dot = tangent.x * toFacade.x + tangent.y * toFacade.y
-  return dot >= HALF_VISION_COS
-}
-
 export interface PlacedBoothState {
   booth: Booth
   x: number
@@ -98,29 +53,103 @@ export interface PlacedBoothState {
   rotation: number
 }
 
-export interface ExposureSimResult {
-  scores: Map<string, number>
-  impressions: Map<string, number>
-  passBys: Map<string, number>
+export interface ExposureSimOptions {
+  attendeeCount?: number
+  /** Lateral jitter (ft) applied to patron positions along the route. */
+  randomnessFt?: number
+  /** Deterministic seed for patron jitter (optional). */
+  randomSeed?: number
 }
 
-/** Sample virtual attendees along the route and score booth visibility. */
+export interface ExposureSimResult {
+  /** Normalized 0–100 percentages — pass-bys / attendeeCount × 100. */
+  exposurePercentages: Map<string, number>
+  passBys: Map<string, number>
+  /** Legacy alias — same as exposurePercentages for scoring. */
+  scores: Map<string, number>
+}
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state |= 0
+    state = (state + 0x6d2b79f5) | 0
+    let t = Math.imul(state ^ (state >>> 15), 1 | state)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function samplePatronOnRoute(
+  route: Point[],
+  routeLen: number,
+  t: number,
+  randomnessFt: number,
+  rng: () => number
+): Point {
+  const target = t * routeLen
+  let acc = 0
+  let patron: Point = route[0]!
+  let segIdx = 0
+
+  for (let i = 0; i < route.length - 1; i++) {
+    const a = route[i]!
+    const b = route[i + 1]!
+    const seg = Math.hypot(b.x - a.x, b.y - a.y)
+    if (acc + seg >= target) {
+      const u = seg > 0 ? (target - acc) / seg : 0
+      patron = { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u }
+      segIdx = i
+      break
+    }
+    acc += seg
+  }
+
+  if (randomnessFt <= 0) return patron
+
+  const a = route[segIdx]!
+  const b = route[Math.min(segIdx + 1, route.length - 1)]!
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len = Math.hypot(dx, dy) || 1
+  const nx = -dy / len
+  const ny = dx / len
+  const along = (rng() * 2 - 1) * randomnessFt
+  const lateral = (rng() * 2 - 1) * randomnessFt
+  return {
+    x: patron.x + (dx / len) * along + nx * lateral,
+    y: patron.y + (dy / len) * along + ny * lateral,
+  }
+}
+
+/**
+ * Simulate patrons walking the PathfindingService route.
+ * boothExposure = percentage of patrons passing within visibility distance.
+ */
 export function simulateExposure(
   route: Point[],
   placed: PlacedBoothState[],
-  attendeeCount = DEFAULT_ATTENDEE_COUNT
+  options: ExposureSimOptions = {}
 ): ExposureSimResult {
-  const impressions = new Map<string, number>()
+  const attendeeCount = options.attendeeCount ?? DEFAULT_ATTENDEE_COUNT
+  const randomnessFt = options.randomnessFt ?? 0.75
+  const rng =
+    options.randomSeed != null
+      ? mulberry32(options.randomSeed)
+      : Math.random
+
   const passBys = new Map<string, number>()
+  const exposurePercentages = new Map<string, number>()
   const scores = new Map<string, number>()
 
   for (const p of placed) {
-    impressions.set(p.booth.id, 0)
     passBys.set(p.booth.id, 0)
+    exposurePercentages.set(p.booth.id, 0)
+    scores.set(p.booth.id, 0)
   }
 
   if (route.length < 2 || placed.length === 0) {
-    return { scores, impressions, passBys }
+    return { exposurePercentages, passBys, scores }
   }
 
   let routeLen = 0
@@ -129,63 +158,47 @@ export function simulateExposure(
     const b = route[i + 1]!
     routeLen += Math.hypot(b.x - a.x, b.y - a.y)
   }
-  if (routeLen < 1e-6) return { scores, impressions, passBys }
+  if (routeLen < 1e-6) return { exposurePercentages, passBys, scores }
 
   for (let s = 0; s < attendeeCount; s++) {
     const t = (s + 0.5) / attendeeCount
-    const target = t * routeLen
-    let acc = 0
-    let patron: Point = route[0]!
-    for (let i = 0; i < route.length - 1; i++) {
-      const a = route[i]!
-      const b = route[i + 1]!
-      const seg = Math.hypot(b.x - a.x, b.y - a.y)
-      if (acc + seg >= target) {
-        const u = seg > 0 ? (target - acc) / seg : 0
-        patron = { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u }
-        break
-      }
-      acc += seg
-    }
+    const patron = samplePatronOnRoute(route, routeLen, t, randomnessFt, rng)
 
     for (const p of placed) {
       const facade = boothFacadeCenter(p.x, p.y, p.booth, p.rotation)
-      const dist = distToRoute(facade.x, facade.y, route)
+      const dist = Math.hypot(patron.x - facade.x, patron.y - facade.y)
       if (dist <= BOOTH_VIEWING_DISTANCE_FT + 2) {
         passBys.set(p.booth.id, (passBys.get(p.booth.id) ?? 0) + 1)
-      }
-      if (visibleFromPatron(patron, facade, route)) {
-        impressions.set(
-          p.booth.id,
-          (impressions.get(p.booth.id) ?? 0) + 1
-        )
       }
     }
   }
 
-  const maxImp = Math.max(1, ...impressions.values())
   for (const p of placed) {
-    scores.set(p.booth.id, (impressions.get(p.booth.id) ?? 0) / maxImp)
+    const pct = ((passBys.get(p.booth.id) ?? 0) / attendeeCount) * 100
+    exposurePercentages.set(p.booth.id, pct)
+    scores.set(p.booth.id, pct)
   }
 
-  return { scores, impressions, passBys }
+  return { exposurePercentages, passBys, scores }
 }
 
 export function exposureScoresFromPlacements(
   route: Point[],
-  placed: PlacedBoothState[]
+  placed: PlacedBoothState[],
+  attendeeCount = DEFAULT_ATTENDEE_COUNT,
+  options?: Omit<ExposureSimOptions, 'attendeeCount'>
 ): Map<string, number> {
-  return simulateExposure(route, placed).scores
+  return simulateExposure(route, placed, { ...options, attendeeCount }).scores
 }
 
+/** Distance from booth facade to nearest route segment (used for seed placement only). */
 export function meanExposureDistance(
   x: number,
   y: number,
   booth: Booth,
-  route: Point[]
+  route: Point[],
+  rotation = 0
 ): number {
-  const facade = boothFacadeCenter(x, y, booth, 0)
+  const facade = boothFacadeCenter(x, y, booth, rotation)
   return distToRoute(facade.x, facade.y, route)
 }
-
-export { boothFootprintRect, boothFacadeCenter }

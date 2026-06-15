@@ -7,20 +7,19 @@ import { objectFootprintAabb } from '@/components/coordinator/floor-plan-v2/stat
 import type { BoothObject, FloorPlanDoc, PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan-v2/state/placement-surface'
 import { BOOTH_SAFETY_BUFFER_FT } from '@/lib/booth-planner/layout-clearance-constants'
-import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 
-/** Minimum inset from room walls for patron tables (ft). */
+/** Default wall inset for non-booth placement (ft) — AI clip helpers, etc. */
 export const ROOM_PLACEMENT_CLEARANCE_FT = BOOTH_SAFETY_BUFFER_FT * 2
 
 /**
- * Vendor booth drag/placement inset from the room frame edge (ft).
- * 0 = flush to west (min X) and east (max X) room bounds — no 4′ patron buffer.
+ * Booth drag/placement inset from the room perimeter (ft).
+ * 0 = flush against walls during manual edit (vendor booths and patron tables).
  */
 export const VENDOR_WALL_INSET_FT = 0
 
 /** Wall inset used for drag clamp + boundary validation. */
 export function wallInsetClearanceFt(obj: PlacedObject): number {
-  if (obj.kind === 'booth' && !isGuestTableBooth(obj as BoothObject)) {
+  if (obj.kind === 'booth') {
     return VENDOR_WALL_INSET_FT
   }
   return ROOM_PLACEMENT_CLEARANCE_FT

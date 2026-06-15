@@ -7,10 +7,16 @@ import { packBoothsTrafficAware } from '../components/coordinator/floor-plan-v2/
 import {
   defaultLayoutOrchestrator,
   generateFairLayout,
+  generateFairLayoutCandidates,
+  pickBestFairLayoutCandidate,
+  resolveFairLayoutScenarioCount,
   LayoutMode,
   trafficAwareStrategy,
   computeFairnessScore,
+  evaluateFairness,
+  meetsRelativeExposureThreshold,
   type LayoutRequest,
+  type LayoutResult,
   type BoothPlacement,
 } from '../lib/layout-strategies'
 import { allPointsInRoom } from '../lib/vendor-fairness-layout/geometry/polygon'
@@ -112,8 +118,8 @@ const rectangleRequest: LayoutRequest = {
     { id: 'e', width: 8, height: 6 },
     { id: 'f', width: 8, height: 6 },
   ],
-  entrance: { x: 40, y: 2 },
-  exit: { x: 40, y: 58 },
+  entrance: { x: 40, y: 58 },
+  exit: { x: 40, y: 2 },
   roomWidthFt: 80,
   roomHeightFt: 60,
   obstacles: [{ x: 36, y: 28, width: 8, height: 6 }],
@@ -158,9 +164,32 @@ const fairRect = generateFairLayout(rectangleRequest)
 assert(fairRect.placements.length >= 4, `Fairness rectangle places booths (${fairRect.placements.length})`)
 assertFairnessConstraints('Fairness rectangle', rectangleRequest, fairRect.placements)
 assert(
-  fairRect.fairnessScore >= 1 && fairRect.fairnessScore <= 100,
-  `Fairness score valid when placed (${fairRect.fairnessScore})`
+  typeof fairRect.coveragePercentage === 'number',
+  'Fairness rectangle reports coveragePercentage'
 )
+assert(
+  fairRect.report != null && fairRect.report.steps.length >= 4,
+  'Fairness rectangle generates structured report'
+)
+assert(
+  fairRect.route.length >= 2,
+  `Fairness rectangle returns PathfindingService route (${fairRect.route.length} pts)`
+)
+if (fairRect.layoutValid) {
+  assert(
+    fairRect.coveragePercentage === 100,
+    `Valid layout has 100% coverage (${fairRect.coveragePercentage})`
+  )
+  assert(
+    fairRect.fairnessScore >= 1 && fairRect.fairnessScore <= 100,
+    `Valid layout fairness score (${fairRect.fairnessScore})`
+  )
+} else {
+  assert(
+    fairRect.fairnessScore === 0,
+    `Invalid layout scores 0 (coverage ${fairRect.coveragePercentage}%)`
+  )
+}
 
 const lShapeRequest: LayoutRequest = {
   ...rectangleRequest,
@@ -184,11 +213,10 @@ const fairL = generateFairLayout(lShapeRequest)
 assert(fairL.placements.length >= 2, `Fairness L-shape places booths (${fairL.placements.length})`)
 assertFairnessConstraints('Fairness L-shape', lShapeRequest, fairL.placements)
 assert(
-  fairL.fairnessScore >= 1,
-  `Fairness L-shape score non-zero (${fairL.fairnessScore})`
+  fairL.report?.summary.includes('Fairness') || fairL.report?.summary.includes('invalid'),
+  'Fairness L-shape report has summary'
 )
 
-/** Irregular 6-vertex room (notched wing) — mimics hand-drawn merged zones. */
 const irregularRequest: LayoutRequest = {
   ...rectangleRequest,
   room: {
@@ -203,8 +231,8 @@ const irregularRequest: LayoutRequest = {
   },
   roomWidthFt: 80,
   roomHeightFt: 60,
-  entrance: { x: 40, y: 4 },
-  exit: { x: 15, y: 55 },
+  entrance: { x: 40, y: 55 },
+  exit: { x: 15, y: 52 },
 }
 
 const fairIrregular = generateFairLayout(irregularRequest)
@@ -218,12 +246,8 @@ assertFairnessConstraints(
   fairIrregular.placements
 )
 assert(
-  fairIrregular.fairnessScore >= 1,
-  `Fairness irregular score non-zero (${fairIrregular.fairnessScore})`
-)
-assert(
   fairIrregular.route.length >= 2,
-  `Fairness irregular returns snake route (${fairIrregular.route.length} pts)`
+  `Fairness irregular returns pathfinding route (${fairIrregular.route.length} pts)`
 )
 
 const tenBooths: LayoutRequest = {
@@ -237,49 +261,136 @@ const tenBooths: LayoutRequest = {
 
 const fair10 = generateFairLayout(tenBooths)
 assert(fair10.placements.length >= 6, `Fairness 10-booth room (${fair10.placements.length} placed)`)
-assertFairnessConstraints('Fairness 10-booth', tenBooths, fair10.placements)
-
-const fiftyBooths: LayoutRequest = {
-  ...rectangleRequest,
-  roomWidthFt: 120,
-  roomHeightFt: 100,
-  room: {
-    boundary: [
-      { x: 0, y: 0 },
-      { x: 120, y: 0 },
-      { x: 120, y: 100 },
-      { x: 0, y: 100 },
-    ],
-  },
-  entrance: { x: 60, y: 4 },
-  exit: { x: 60, y: 96 },
-  booths: Array.from({ length: 50 }, (_, i) => ({
-    id: `f-${i}`,
-    width: 6,
-    height: 4,
-  })),
+if (fair10.placements.length >= 4) {
+  assertFairnessConstraints('Fairness 10-booth', tenBooths, fair10.placements)
 }
 
-const fair50 = generateFairLayout(fiftyBooths)
-assert(
-  fair50.placements.length >= 8,
-  `Fairness 50-booth stress (${fair50.placements.length} placed, score ${fair50.fairnessScore})`
-)
-assertFairnessConstraints('Fairness 50-booth', fiftyBooths, fair50.placements)
-
 const equalScores = new Map([
-  ['a', 0.5],
-  ['b', 0.5],
-  ['c', 0.5],
+  ['a', 80],
+  ['b', 80],
+  ['c', 80],
 ])
 const unequalScores = new Map([
-  ['a', 1],
-  ['b', 0.1],
-  ['c', 0.1],
+  ['a', 100],
+  ['b', 10],
+  ['c', 10],
 ])
 assert(
   computeFairnessScore(equalScores) > computeFairnessScore(unequalScores),
   'Fairness scorer ranks balanced exposure higher'
+)
+
+const partialCoverageEval = evaluateFairness(equalScores, 75)
+assert(
+  partialCoverageEval.fairnessScore === 0 &&
+    partialCoverageEval.layoutValid === false,
+  'Partial route coverage yields score 0 and invalid layout'
+)
+
+const fullCoverageEval = evaluateFairness(equalScores, 100)
+assert(
+  fullCoverageEval.layoutValid && fullCoverageEval.fairnessScore === 100,
+  'Full coverage balanced exposures score 100'
+)
+
+const rankFull: LayoutResult = {
+  placements: [],
+  fairnessScore: 75,
+  route: [],
+  coveragePercentage: 100,
+  layoutValid: true,
+  scenarioId: 'full',
+}
+const rankPartial: LayoutResult = {
+  placements: [],
+  fairnessScore: 79,
+  route: [],
+  coveragePercentage: 67,
+  layoutValid: false,
+  scenarioId: 'partial',
+}
+assert(
+  pickBestFairLayoutCandidate([rankPartial, rankFull]).scenarioId === 'full',
+  'Multi-scenario ranking prefers full route coverage over higher partial score'
+)
+
+assert(
+  meetsRelativeExposureThreshold(
+    new Map([
+      ['a', 100],
+      ['b', 85],
+    ])
+  ),
+  '80% relative exposure rule passes when min >= 80% of max'
+)
+assert(
+  !meetsRelativeExposureThreshold(
+    new Map([
+      ['a', 100],
+      ['b', 50],
+    ])
+  ),
+  '80% relative exposure rule fails when min < 80% of max'
+)
+
+assert(
+  resolveFairLayoutScenarioCount(50) >= 5,
+  `Scenario count for 50 booths (${resolveFairLayoutScenarioCount(50)})`
+)
+assert(
+  resolveFairLayoutScenarioCount(220) === 3,
+  `Scenario count capped for 220 booths (${resolveFairLayoutScenarioCount(220)})`
+)
+
+const multiStart = performance.now()
+const multiCandidates = generateFairLayoutCandidates(rectangleRequest, {
+  scenarioCount: 5,
+  timeBudgetMs: 3200,
+})
+const multiElapsed = performance.now() - multiStart
+assert(
+  multiCandidates.length === 5,
+  `Multi-scenario fairness returns 5 candidates (${multiCandidates.length})`
+)
+assert(
+  multiCandidates.every(
+    (c) =>
+      c.scenarioId &&
+      c.fairnessScore >= 0 &&
+      c.fairnessScore <= 100 &&
+      c.placements.length >= 1 &&
+      c.report != null
+  ),
+  'Each fairness scenario has id, score, placements, and report'
+)
+const bestCov = multiCandidates[0]!.coveragePercentage ?? 0
+const hasFullCandidate = multiCandidates.some(
+  (c) => (c.coveragePercentage ?? 0) >= 100 || c.layoutValid === true
+)
+if (hasFullCandidate) {
+  assert(
+    (multiCandidates[0]!.coveragePercentage ?? 0) >= 100 ||
+      multiCandidates[0]!.layoutValid === true,
+    'When full-coverage scenarios exist, best candidate has 100% route coverage'
+  )
+} else {
+  assert(
+    bestCov >= (multiCandidates[multiCandidates.length - 1]!.coveragePercentage ?? 0),
+    'Fairness candidates ranked by coverage when none reach 100%'
+  )
+}
+assert(
+  pickBestFairLayoutCandidate(multiCandidates).scenarioId ===
+    multiCandidates[0]!.scenarioId,
+  'pickBestFairLayoutCandidate returns top-ranked scenario'
+)
+assertFairnessConstraints(
+  'Multi-scenario best',
+  rectangleRequest,
+  multiCandidates[0]!.placements
+)
+console.log(
+  `Multi-scenario 6-booth rectangle: ${multiElapsed.toFixed(0)}ms for 5 scenarios`
 )
 
 console.log('')

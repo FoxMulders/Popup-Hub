@@ -1,5 +1,5 @@
 /**
- * Draggable canvas toolbar block ids and persisted order.
+ * Canvas toolbar block ids and default layout order.
  */
 
 export type CanvasToolbarBlockId =

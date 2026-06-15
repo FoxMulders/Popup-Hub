@@ -66,6 +66,10 @@ import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
+import {
+  FairnessScenarioBar,
+  FairnessScenarioCompareButton,
+} from './tools/fairness-scenario-bar'
 import { LayoutEditorHelpBanner, LayoutEditorHelpHost } from './tools/layout-editor-help'
 import { FloorPlanDualScreenBridge } from './floor-plan-dual-screen-bridge'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
@@ -87,6 +91,9 @@ import {
 import {
   LayoutMode,
   parseLayoutMode,
+  applyLayoutResultToBooths,
+  exposureHeatmapToClearanceField,
+  type LayoutResult,
 } from '@/lib/layout-strategies'
 import type { UnifiedSolverMeta } from './engine/UnifiedLayoutSolver'
 import { CalculateOptimalPath } from './engine/PathfindingService'
@@ -469,6 +476,15 @@ function FloorPlanV2Workspace({
     spinePath: ReadonlyArray<{ x: number; y: number }>
     clearanceField: UnifiedSolverMeta['clearanceField']
   } | null>(null)
+  const [fairnessScenarios, setFairnessScenarios] = useState<LayoutResult[] | null>(
+    null
+  )
+  const [fairnessScenarioPreviewIndex, setFairnessScenarioPreviewIndex] =
+    useState(0)
+  const [fairnessScenarioAppliedIndex, setFairnessScenarioAppliedIndex] =
+    useState(0)
+  const [fairnessScenarioComparing, setFairnessScenarioComparing] =
+    useState(false)
 
   useEffect(() => {
     if (!isDashboard) return
@@ -1855,6 +1871,11 @@ function FloorPlanV2Workspace({
     return null
   }, [activeRoomId, store.doc.rooms])
 
+  useEffect(() => {
+    setFairnessScenarios(null)
+    setFairnessScenarioComparing(false)
+  }, [activeRoomId])
+
   const vendorFillTableSpec = useMemo((): TableSizeSpec => {
     if (defaultPlacementSpec.purpose === 'vendor') return defaultPlacementSpec
     return vendorTableSpec(safeTableSizeFt)
@@ -1997,6 +2018,83 @@ function FloorPlanV2Workspace({
     ]
   )
 
+  const applyFairnessScenarioToCanvas = useCallback(
+    (candidate: LayoutResult, options?: { commitScore?: boolean }) => {
+      const surface = resolveRoomPlacementSurface(store.doc, activeRoomId)
+      if (!surface) return
+      const vendorBooths = vendorBoothsInRoom(store.doc, activeRoomId)
+      const cleared = vendorBooths.map((b) => ({
+        ...b,
+        x: 0,
+        y: 0,
+        rotation: 0,
+      }))
+      const packed = applyLayoutResultToBooths(cleared, candidate, {
+        originX: surface.minX,
+        originY: surface.minY,
+      })
+      const nextDoc = applyPackedBoothsToDoc(store.doc, activeRoomId, packed)
+      store.replaceObjects(nextDoc.objects)
+      if (options?.commitScore) {
+        store.patchDoc({
+          lastFairnessScore: candidate.fairnessScore,
+          lastFairnessCoverage: candidate.coveragePercentage,
+        })
+      }
+      if (candidate.route?.length) {
+        setUnifiedLayoutOverlay({
+          spinePath: candidate.route.map((p) => ({
+            x: p.x + surface.minX,
+            y: p.y + surface.minY,
+          })),
+          clearanceField: exposureHeatmapToClearanceField(
+            candidate.exposureHeatmap,
+            surface.minX,
+            surface.minY
+          ),
+        })
+      }
+    },
+    [activeRoomId, store]
+  )
+
+  const handleFairnessScenarioPreviewChange = useCallback(
+    (index: number) => {
+      if (!fairnessScenarios?.[index]) return
+      setFairnessScenarioPreviewIndex(index)
+      applyFairnessScenarioToCanvas(fairnessScenarios[index]!)
+    },
+    [applyFairnessScenarioToCanvas, fairnessScenarios]
+  )
+
+  const handleFairnessScenarioApply = useCallback(() => {
+    const candidate = fairnessScenarios?.[fairnessScenarioPreviewIndex]
+    if (!candidate) return
+    applyFairnessScenarioToCanvas(candidate, { commitScore: true })
+    setFairnessScenarioAppliedIndex(fairnessScenarioPreviewIndex)
+    setFairnessScenarioComparing(false)
+    toast.success(
+      `Applied scenario ${fairnessScenarioPreviewIndex + 1} · fairness ${candidate.fairnessScore}/100 · ${(candidate.coveragePercentage ?? 0).toFixed(0)}% route coverage`
+    )
+  }, [
+    applyFairnessScenarioToCanvas,
+    fairnessScenarioPreviewIndex,
+    fairnessScenarios,
+  ])
+
+  const handleFairnessScenarioDismiss = useCallback(() => {
+    const candidate = fairnessScenarios?.[fairnessScenarioAppliedIndex]
+    if (candidate) {
+      applyFairnessScenarioToCanvas(candidate, { commitScore: true })
+      setFairnessScenarioPreviewIndex(fairnessScenarioAppliedIndex)
+    }
+    setFairnessScenarioComparing(false)
+  }, [
+    applyFairnessScenarioToCanvas,
+    fairnessScenarioAppliedIndex,
+    fairnessScenarios,
+  ])
+
   const handleAutoArrangeFloorPlan = useCallback(async () => {
     if (vendorBoothCount === 0 && patronTableCount === 0) {
       toast.message('Nothing to arrange — draw at least one vendor booth or patron table first.')
@@ -2054,22 +2152,40 @@ function FloorPlanV2Workspace({
         }
       }
 
+      const candidates = packResult.fairnessCandidates ?? []
+
       store.patchDoc({
         vendorLayoutMode,
         lastFairnessScore: packResult.fairnessScore,
+        lastFairnessCoverage: candidates[0]?.coveragePercentage,
       })
       store.replaceObjects(nextDoc.objects)
+
+      if (candidates.length > 1) {
+        setFairnessScenarios(candidates)
+        setFairnessScenarioPreviewIndex(0)
+        setFairnessScenarioAppliedIndex(0)
+        setFairnessScenarioComparing(false)
+      } else {
+        setFairnessScenarios(null)
+        setFairnessScenarioComparing(false)
+      }
 
       const surface = resolveRoomPlacementSurface(store.doc, activeRoomId)
       const originX = surface?.minX ?? frame.originX
       const originY = surface?.minY ?? frame.originY
       if (packResult.fairnessRoute?.length) {
+        const bestCandidate = candidates[0]
         setUnifiedLayoutOverlay({
           spinePath: packResult.fairnessRoute.map((p) => ({
             x: p.x + originX,
             y: p.y + originY,
           })),
-          clearanceField: [],
+          clearanceField: exposureHeatmapToClearanceField(
+            bestCandidate?.exposureHeatmap,
+            originX,
+            originY
+          ),
         })
       }
 
@@ -2081,14 +2197,36 @@ function FloorPlanV2Workspace({
       }
 
       const score = packResult.fairnessScore ?? 0
+      const bestCandidate = candidates[0]
+      const coveragePct = bestCandidate?.coveragePercentage
+      const coverageNote =
+        typeof coveragePct === 'number'
+          ? ` · ${coveragePct.toFixed(0)}% route coverage`
+          : ''
+      const invalidNote =
+        bestCandidate?.layoutValid === false
+          ? ' — layout invalid (route must pass every booth)'
+          : ''
+      const scenarioNote =
+        candidates.length > 1
+          ? ` (best of ${candidates.length} scenarios)`
+          : ''
       if (packResult.droppedCount > 0) {
         toast.warning(
-          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'} (score ${score}/100). ${packResult.droppedCount} could not fit.`,
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · score ${score}/100${coverageNote}${invalidNote}. ${packResult.droppedCount} could not fit.`,
           { duration: 5000 }
+        )
+      } else if (bestCandidate?.layoutValid === false) {
+        toast.warning(
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · score ${score}/100${coverageNote}${invalidNote}.`,
+          {
+            duration: 5500,
+            description: bestCandidate.report?.summary,
+          }
         )
       } else {
         toast.success(
-          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'} · fairness score ${score}/100.`
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · fairness score ${score}/100${coverageNote}.`
         )
       }
       return
@@ -2495,6 +2633,7 @@ function FloorPlanV2Workspace({
 
   const portalToolbarToTop =
     isDashboard &&
+    !dashboardImmersive &&
     Boolean(toolbarPortal?.topBarActive && toolbarPortal.target)
 
   const portalHeaderToolbarToHeader =
@@ -2528,8 +2667,102 @@ function FloorPlanV2Workspace({
     setCanvasFullscreen,
   ])
 
+  const handleToggleCanvasFullscreen = useCallback(() => {
+    setCanvasFullscreen((v) => {
+      const next = !v
+      if (next) {
+        requestAnimationFrame(() => {
+          viewportApiRef.current?.resetViewport()
+          recoverCanvasFocus()
+        })
+      }
+      return next
+    })
+  }, [recoverCanvasFocus, setCanvasFullscreen])
+
   const dashboardCommandBarSharedProps = {
     staticLayout: true as const,
+    toolState: { tool, drawShape },
+    onToolChange: handleToolChange,
+    onDrawShapeChange: handleDrawShapeChange,
+    canUndo: store.canUndo,
+    canRedo: store.canRedo,
+    onUndo: store.undo,
+    onRedo: store.redo,
+    onClearAll: handleClearAll,
+    selectedCount,
+    onDeleteSelected: handleDeleteSelected,
+    onCopy: handleCopy,
+    onPaste: handlePaste,
+    clipboardHasContents,
+    onRotateLeft: handleRotateLeft,
+    onRotateRight: handleRotateRight,
+    onRotateRoomLeft: handleRotateRoomLeft,
+    onRotateRoomRight: handleRotateRoomRight,
+    selectedRoomId,
+    onAlignVertical: handleAlignVertical,
+    onAlignHorizontal: handleAlignHorizontal,
+    onDistributeVertical: handleDistributeVertical,
+    onDistributeHorizontal: handleDistributeHorizontal,
+    zoom: currentZoom,
+    onZoomIn: handleZoomIn,
+    onZoomOut: handleZoomOut,
+    onZoomReset: handleZoomReset,
+    onCenterView: handleCenterView,
+    onAutoArrangeFloorPlan: handleAutoArrangeFloorPlan,
+    canAutoArrangeFloorPlan,
+    autoArrangeDisabledReason,
+    autoArrangeMode,
+    onAutoArrangeModeChange: setAutoArrangeMode,
+    vendorLayoutMode,
+    onVendorLayoutModeChange: handleVendorLayoutModeChange,
+    lastFairnessScore: store.doc.lastFairnessScore ?? null,
+    lastFairnessCoverage: store.doc.lastFairnessCoverage ?? null,
+    onArrangeLayout: handleArrangeLayoutInRoom,
+    canArrangeLayout,
+    tableSizeFt: tableSizePillValue,
+    onTableSizeChange: handleTableSizeChange,
+    onPrepareTableDraw: handlePrepareTableDraw,
+    rooms: showToolbarRoomControls ? layoutRooms : undefined,
+    activeRoomId: selectedRoomId ?? activeRoomId,
+    onSelectRoom: showToolbarRoomControls ? handleSelectRoom : undefined,
+    onAddRoom: showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined,
+    onRenameRoom: showToolbarRoomControls ? onRenameRoom : undefined,
+    onDeleteRoom: showToolbarRoomControls ? onDeleteRoom : undefined,
+    highlightedRoomMetrics,
+    highlightedRoomId: highlightedRoomId,
+    onPatchRoomDimensions: handlePatchRoomDimensions,
+    highlightedSelectionMetrics,
+    showLabels,
+    onShowLabelsChange: setShowLabels,
+    boothMapLabelMode,
+    onBoothMapLabelModeChange: setBoothMapLabelMode,
+    canvasFullscreen: dashboardImmersive,
+    onToggleCanvasFullscreen: handleToggleCanvasFullscreen,
+    onLaunchDualScreen: handleLaunchDualScreen,
+    dualScreenActive,
+    designerExitHref: resolvedDesignerExitHref,
+    designerExitLabel: resolvedDesignerExitLabel,
+    onDesignerExit: handleDesignerExit,
+    onSaveMarket,
+    saveMarketDisabled,
+    saveMarketLoading,
+    onSaveDraft,
+    saveDraftDisabled,
+    saveDraftLoading,
+    patronPathEnabled,
+    onPatronPathToggle: handlePatronPathToggle,
+    showClearanceWarnings,
+    onClearanceWarningsToggle: handleClearanceWarningsToggle,
+    eventId,
+    vendorFillMaxCapacity,
+    patronFillMaxCapacity,
+    onFillVendorTables: handleFillVendorTables,
+    onFillPatronTables: handleFillPatronTables,
+    fillRoomDisabledReason,
+  }
+
+  const wizardCommandBarSharedProps = {
     toolState: { tool, drawShape },
     onToolChange: handleToolChange,
     onDrawShapeChange: handleDrawShapeChange,
@@ -2577,26 +2810,11 @@ function FloorPlanV2Workspace({
     onRenameRoom: showToolbarRoomControls ? onRenameRoom : undefined,
     onDeleteRoom: showToolbarRoomControls ? onDeleteRoom : undefined,
     highlightedRoomMetrics,
-    highlightedRoomId: highlightedRoomId,
-    onPatchRoomDimensions: handlePatchRoomDimensions,
     highlightedSelectionMetrics,
     showLabels,
     onShowLabelsChange: setShowLabels,
-    boothMapLabelMode,
-    onBoothMapLabelModeChange: setBoothMapLabelMode,
-    canvasFullscreen: dashboardImmersive,
-    onToggleCanvasFullscreen: () => {
-      setCanvasFullscreen((v) => {
-        const next = !v
-        if (next) {
-          requestAnimationFrame(() => {
-            viewportApiRef.current?.resetViewport()
-            recoverCanvasFocus()
-          })
-        }
-        return next
-      })
-    },
+    canvasFullscreen: layoutNativeFullscreen,
+    onToggleCanvasFullscreen: handleToggleCanvasFullscreen,
     onLaunchDualScreen: handleLaunchDualScreen,
     dualScreenActive,
     designerExitHref: resolvedDesignerExitHref,
@@ -2612,7 +2830,6 @@ function FloorPlanV2Workspace({
     onPatronPathToggle: handlePatronPathToggle,
     showClearanceWarnings,
     onClearanceWarningsToggle: handleClearanceWarningsToggle,
-    eventId,
     vendorFillMaxCapacity,
     patronFillMaxCapacity,
     onFillVendorTables: handleFillVendorTables,
@@ -2675,7 +2892,7 @@ function FloorPlanV2Workspace({
       </header>
     ) : null
 
-  const fullscreenExitToolbar = (
+  const fullscreenExitRow = (
     <div className="flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
       {resolvedDesignerExitHref ? (
         <CommandCenterExitButton
@@ -2703,6 +2920,19 @@ function FloorPlanV2Workspace({
     </div>
   )
 
+  /** Native fullscreen — pin the full command ribbon below the exit fail-safe row. */
+  const nativeFullscreenToolbar = (
+    <div className="pointer-events-auto flex w-full max-w-[100vw] flex-col items-stretch gap-1.5 px-2 pb-1">
+      {fullscreenExitRow}
+      <CanvasCommandBar
+        {...wizardCommandBarSharedProps}
+        className="canvas-fullscreen-command-bar w-full shrink-0 shadow-md"
+      />
+    </div>
+  )
+
+  const fullscreenToolbar = nativeFullscreenToolbar
+
   return (
     <div
       id="floor-plan-workspace"
@@ -2720,7 +2950,7 @@ function FloorPlanV2Workspace({
         active={layoutNativeFullscreen}
         onActiveChange={(next) => setCanvasFullscreen(next)}
         header={layoutHeader}
-        fullscreenToolbar={fullscreenExitToolbar}
+        fullscreenToolbar={fullscreenToolbar}
         className="min-h-0 min-w-0 flex-1"
       >
         <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
@@ -2850,92 +3080,12 @@ function FloorPlanV2Workspace({
             )}
           >
             <div className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden">
-              <CanvasCommandBar
-                className="shrink-0"
-                toolState={{ tool, drawShape }}
-                onToolChange={handleToolChange}
-                onDrawShapeChange={handleDrawShapeChange}
-                canUndo={store.canUndo}
-                canRedo={store.canRedo}
-                onUndo={store.undo}
-                onRedo={store.redo}
-                onClearAll={handleClearAll}
-                selectedCount={selectedCount}
-                onDeleteSelected={handleDeleteSelected}
-                onCopy={handleCopy}
-                onPaste={handlePaste}
-                clipboardHasContents={clipboardHasContents}
-                onRotateLeft={handleRotateLeft}
-                onRotateRight={handleRotateRight}
-                onRotateRoomLeft={handleRotateRoomLeft}
-                onRotateRoomRight={handleRotateRoomRight}
-                selectedRoomId={selectedRoomId}
-                onAlignVertical={handleAlignVertical}
-                onAlignHorizontal={handleAlignHorizontal}
-                onDistributeVertical={handleDistributeVertical}
-                onDistributeHorizontal={handleDistributeHorizontal}
-                zoom={currentZoom}
-                onZoomIn={handleZoomIn}
-                onZoomOut={handleZoomOut}
-                onZoomReset={handleZoomReset}
-                onCenterView={handleCenterView}
-                onAutoArrangeFloorPlan={handleAutoArrangeFloorPlan}
-                canAutoArrangeFloorPlan={canAutoArrangeFloorPlan}
-                autoArrangeDisabledReason={autoArrangeDisabledReason}
-                autoArrangeMode={autoArrangeMode}
-                onAutoArrangeModeChange={setAutoArrangeMode}
-                vendorLayoutMode={vendorLayoutMode}
-                onVendorLayoutModeChange={handleVendorLayoutModeChange}
-                lastFairnessScore={store.doc.lastFairnessScore ?? null}
-                onArrangeLayout={handleArrangeLayoutInRoom}
-                canArrangeLayout={canArrangeLayout}
-                tableSizeFt={tableSizePillValue}
-                onTableSizeChange={handleTableSizeChange}
-                onPrepareTableDraw={handlePrepareTableDraw}
-                rooms={showToolbarRoomControls ? layoutRooms : undefined}
-                activeRoomId={selectedRoomId ?? activeRoomId}
-                onSelectRoom={showToolbarRoomControls ? handleSelectRoom : undefined}
-                onAddRoom={showToolbarRoomControls ? handleAddRoomWithSelectTool : undefined}
-                onRenameRoom={showToolbarRoomControls ? onRenameRoom : undefined}
-                onDeleteRoom={showToolbarRoomControls ? onDeleteRoom : undefined}
-                highlightedRoomMetrics={highlightedRoomMetrics}
-                highlightedSelectionMetrics={highlightedSelectionMetrics}
-                showLabels={showLabels}
-                onShowLabelsChange={setShowLabels}
-                canvasFullscreen={layoutNativeFullscreen}
-                onToggleCanvasFullscreen={() => {
-                  setCanvasFullscreen((v) => {
-                    const next = !v
-                    if (next) {
-                      requestAnimationFrame(() => {
-                        viewportApiRef.current?.resetViewport()
-                        recoverCanvasFocus()
-                      })
-                    }
-                    return next
-                  })
-                }}
-                onLaunchDualScreen={handleLaunchDualScreen}
-                dualScreenActive={dualScreenActive}
-                designerExitHref={resolvedDesignerExitHref}
-                designerExitLabel={resolvedDesignerExitLabel}
-                onDesignerExit={handleDesignerExit}
-                onSaveMarket={onSaveMarket}
-                saveMarketDisabled={saveMarketDisabled}
-                saveMarketLoading={saveMarketLoading}
-                onSaveDraft={onSaveDraft}
-                saveDraftDisabled={saveDraftDisabled}
-                saveDraftLoading={saveDraftLoading}
-                patronPathEnabled={patronPathEnabled}
-                onPatronPathToggle={handlePatronPathToggle}
-                showClearanceWarnings={showClearanceWarnings}
-                onClearanceWarningsToggle={handleClearanceWarningsToggle}
-                vendorFillMaxCapacity={vendorFillMaxCapacity}
-                patronFillMaxCapacity={patronFillMaxCapacity}
-                onFillVendorTables={handleFillVendorTables}
-                onFillPatronTables={handleFillPatronTables}
-                fillRoomDisabledReason={fillRoomDisabledReason}
-              />
+              {!layoutNativeFullscreen ? (
+                <CanvasCommandBar
+                  {...wizardCommandBarSharedProps}
+                  className="shrink-0"
+                />
+              ) : null}
               <div
                 data-layout-help="canvas"
                 className={cn(
@@ -2945,6 +3095,34 @@ function FloorPlanV2Workspace({
                     : 'h-full flex-1 overflow-auto'
                 )}
               >
+                {(fairnessScenarioComparing && fairnessScenarios) ||
+                (fairnessScenarios &&
+                  fairnessScenarios.length > 1 &&
+                  !fairnessScenarioComparing) ? (
+                  <div
+                    className="pointer-events-none absolute left-3 right-3 top-3 z-20 flex justify-center"
+                  >
+                    {fairnessScenarioComparing && fairnessScenarios ? (
+                      <FairnessScenarioBar
+                        candidates={fairnessScenarios}
+                        activeIndex={fairnessScenarioPreviewIndex}
+                        onActiveIndexChange={handleFairnessScenarioPreviewChange}
+                        onApply={handleFairnessScenarioApply}
+                        onDismiss={handleFairnessScenarioDismiss}
+                      />
+                    ) : fairnessScenarios ? (
+                      <FairnessScenarioCompareButton
+                        scenarioCount={fairnessScenarios.length}
+                        onClick={() => {
+                          setFairnessScenarioComparing(true)
+                          setFairnessScenarioPreviewIndex(
+                            fairnessScenarioAppliedIndex
+                          )
+                        }}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
                 <CanvasRootErrorBoundary
                   onReset={() => {
                     logState('Canvas error boundary: reset triggered')

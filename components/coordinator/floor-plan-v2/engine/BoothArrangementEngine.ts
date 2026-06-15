@@ -75,11 +75,12 @@ export interface PackBoothsOptions {
   /** Vendor layout engine — defaults to traffic-aware when unset. */
   vendorLayoutMode?: LayoutMode
 
+  /** When true (default for fairness mode), evaluate multiple layout scenarios. */
+  fairnessMultiScenario?: boolean
+
   eventCategoryNames?: ReadonlyArray<string>
 
 }
-
-
 
 export interface PackBoothsResult {
 
@@ -96,6 +97,9 @@ export interface PackBoothsResult {
   fairnessScore?: number
 
   fairnessRoute?: Array<{ x: number; y: number }>
+
+  /** Ranked fairness scenarios when multi-scenario optimization ran (best first). */
+  fairnessCandidates?: LayoutResult[]
 
 }
 
@@ -270,6 +274,7 @@ export function PackBooths(
 
   let fairnessScore: number | undefined
   let fairnessRoute: LayoutResult['route'] | undefined
+  let fairnessCandidates: LayoutResult[] | undefined
   let fairResult: LayoutResult | null = null
   let packResult:
     | Awaited<ReturnType<typeof packBoothsForRoom>>
@@ -286,17 +291,27 @@ export function PackBooths(
       stepFt: snapFt,
     })
     if (request) {
-      fairResult = generateFairLayout(request)
-      fairnessScore = fairResult.fairnessScore
-      fairnessRoute = fairResult.route
-      packResult = {
-        placed: fairResult.placements.map((p) => ({
-          id: p.boothId,
-          x: p.x + surface.minX,
-          y: p.y + surface.minY,
-          rotation: p.rotation,
-        })),
-        unplaced: fairResult.unplacedBoothIds ?? [],
+      const useMultiScenario = options.fairnessMultiScenario ?? true
+      if (useMultiScenario) {
+        fairnessCandidates = generateFairLayoutCandidates(request)
+        fairResult = fairnessCandidates[0] ?? null
+      } else {
+        fairResult = generateFairLayout(request)
+      }
+      if (fairResult) {
+        fairnessScore = fairResult.fairnessScore
+        fairnessRoute = fairResult.route
+        packResult = {
+          placed: fairResult.placements.map((p) => ({
+            id: p.boothId,
+            x: p.x + surface.minX,
+            y: p.y + surface.minY,
+            rotation: p.rotation,
+          })),
+          unplaced: fairResult.unplacedBoothIds ?? [],
+        }
+      } else {
+        packResult = packBoothsForRoom(doc, roomId, packInput, packOpts)
       }
     } else {
       packResult = packBoothsForRoom(doc, roomId, packInput, packOpts)
@@ -340,6 +355,7 @@ export function PackBooths(
 
     fairnessScore,
     fairnessRoute,
+    fairnessCandidates,
 
   }
 
@@ -493,6 +509,7 @@ import type { AutoArrangeInRoomResult, AutoArrangeOptions } from './auto-arrange
 import {
   LayoutMode,
   generateFairLayout,
+  generateFairLayoutCandidates,
   layoutRequestFromDocRoom,
   applyLayoutResultToBooths,
   parseLayoutMode,

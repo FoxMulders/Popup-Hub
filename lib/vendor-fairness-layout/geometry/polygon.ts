@@ -58,3 +58,30 @@ export function insetBoundary(boundary: Point[], insetFt: number): Point[] {
 export function allPointsInRoom(points: Point[], boundary: Point[]): boolean {
   return points.every((p) => pointInRoom(p, boundary))
 }
+
+/** Horizontal chord inside a simple polygon at y (inset from walls). */
+export function horizontalSpanAtY(
+  boundary: Point[],
+  y: number,
+  insetFt: number
+): { left: number; right: number } | null {
+  if (boundary.length < 3) return null
+  const xs: number[] = []
+  const n = boundary.length
+  for (let i = 0; i < n; i++) {
+    const a = boundary[i]!
+    const b = boundary[(i + 1) % n]!
+    const dy = b.y - a.y
+    if (Math.abs(dy) < 1e-9) continue
+    if ((a.y <= y && b.y > y) || (b.y <= y && a.y > y)) {
+      const t = (y - a.y) / dy
+      xs.push(a.x + t * (b.x - a.x))
+    }
+  }
+  if (xs.length < 2) return null
+  xs.sort((a, b) => a - b)
+  const left = xs[0]! + insetFt
+  const right = xs[xs.length - 1]! - insetFt
+  if (right - left < insetFt * 2) return null
+  return { left, right }
+}

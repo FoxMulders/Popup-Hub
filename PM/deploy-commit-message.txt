@@ -1,1 +1,1 @@
-feat: ship 83 session updates (Fairness-first auto-arrange verification; CI + Windows production build fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; +79 more)
+feat: ship 93 session updates (patron table flush wall placement; ClearanceHeatCell build fix; fixed canvas toolbar layout; fullscreen layout editor toolbar parity; +89 more)

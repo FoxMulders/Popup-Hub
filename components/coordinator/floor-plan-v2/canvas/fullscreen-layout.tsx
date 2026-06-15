@@ -88,19 +88,19 @@ export function FullscreenLayout({
           </header>
         ) : null}
 
-        <div className="canvas-container pointer-events-auto relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {children}
-        </div>
-
         {active && fullscreenToolbar ? (
           <div
-            className="canvas-fullscreen-toolbar pointer-events-none fixed inset-x-0 top-0 z-[10000] flex justify-center pt-2"
+            className="canvas-fullscreen-toolbar shrink-0 border-b border-stone-200/80 bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur-sm"
             role="toolbar"
             aria-label="Fullscreen canvas controls"
           >
-            <div className="pointer-events-auto">{fullscreenToolbar}</div>
+            {fullscreenToolbar}
           </div>
         ) : null}
+
+        <div className="canvas-container pointer-events-auto relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {children}
+        </div>
       </div>
     </FullscreenLayoutContext.Provider>
   )

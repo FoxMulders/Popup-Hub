@@ -7,6 +7,7 @@ import { resolveRoomPlacementSurface } from '@/components/coordinator/floor-plan
 import type { BoothObject, FloorPlanDoc } from '@/components/coordinator/floor-plan-v2/state/types'
 import { parseLayoutMode } from '../LayoutMode'
 import type { LayoutRequest, LayoutResult, Point } from '../types'
+import { buildPathfindingDocFromLayout } from '../fairness-engine/route-coverage'
 
 function ringToBoundary(
   ring: ReadonlyArray<readonly [number, number]>,
@@ -98,11 +99,29 @@ export function applyLayoutResultToBooths(
 
 export function layoutResultMeta(result: LayoutResult): {
   fairnessScore: number
+  coveragePercentage: number | undefined
+  layoutValid: boolean | undefined
   routeGlobal: (origin: { x: number; y: number }) => Point[]
 } {
   return {
     fairnessScore: result.fairnessScore,
+    coveragePercentage: result.coveragePercentage,
+    layoutValid: result.layoutValid,
     routeGlobal: (origin) =>
       result.route.map((p) => ({ x: p.x + origin.x, y: p.y + origin.y })),
   }
+}
+
+/** Build a PathfindingService-ready doc from a layout request + placements. */
+export function pathfindingDocFromLayoutRequest(
+  request: LayoutRequest,
+  placements: LayoutResult['placements'],
+  options: { snapFt?: number } = {}
+) {
+  const placed = placements.map((p) => {
+    const booth = request.booths.find((b) => b.id === p.boothId)
+    if (!booth) throw new Error(`Unknown booth ${p.boothId}`)
+    return { booth, x: p.x, y: p.y, rotation: p.rotation }
+  })
+  return buildPathfindingDocFromLayout(request, placed, options)
 }

@@ -270,6 +270,8 @@ export interface FloorPlanDoc {
   vendorLayoutMode?: 'traffic_aware' | 'fairness_first'
   /** Last fairness-first run score (0–100) for results panel / toasts. */
   lastFairnessScore?: number
+  /** Last fairness-first route coverage (0–100). */
+  lastFairnessCoverage?: number
 }
 
 export const DEFAULT_GRID_SPACING_FT = 1

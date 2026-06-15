@@ -3,7 +3,6 @@
 import {
   ChevronDown,
   ChevronRight,
-  ChevronUp,
   Circle,
   LayoutGrid,
   MousePointer2,
@@ -23,9 +22,7 @@ import {
   getStaticRowSegments,
   getVisibleSidebarSections,
   loadStaticRowCollapsed,
-  loadStaticRowOrder,
   saveStaticRowCollapsed,
-  saveStaticRowOrder,
   STATIC_ROW_HEADERS,
   STATIC_ROW_LABELS,
   type CanvasToolbarStaticRowId,
@@ -317,30 +314,24 @@ function MergedToolbarRow({
   label,
   leftHeader,
   rightHeader,
-  index,
-  total,
   expanded,
   compact,
   sidebarLayout,
   showLeft,
   showRight,
   onToggle,
-  onMove,
   renderBlock,
 }: {
   rowId: CanvasToolbarStaticRowId
   label: string
   leftHeader: string
   rightHeader: string
-  index: number
-  total: number
   expanded: boolean
   compact?: boolean
   sidebarLayout?: boolean
   showLeft: boolean
   showRight: boolean
   onToggle: (rowId: CanvasToolbarStaticRowId) => void
-  onMove: (rowId: CanvasToolbarStaticRowId, direction: -1 | 1) => void
   renderBlock: (id: CanvasToolbarBlockId) => React.ReactNode
 }) {
   const segments = getStaticRowSegments(rowId, Boolean(sidebarLayout))
@@ -416,32 +407,6 @@ function MergedToolbarRow({
             <span className="min-w-0 flex-1" aria-hidden />
           </>
         )}
-        <button
-          type="button"
-          disabled={index === 0}
-          onClick={() => onMove(rowId, -1)}
-          title={`Move ${label} up`}
-          aria-label={`Move ${label} up`}
-          className={cn(
-            'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
-            compact ? 'h-6 w-6' : 'h-7 w-7'
-          )}
-        >
-          <ChevronUp className="h-3.5 w-3.5" aria-hidden />
-        </button>
-        <button
-          type="button"
-          disabled={index >= total - 1}
-          onClick={() => onMove(rowId, 1)}
-          title={`Move ${label} down`}
-          aria-label={`Move ${label} down`}
-          className={cn(
-            'inline-flex shrink-0 items-center justify-center rounded-sm text-stone-500 hover:bg-stone-100 disabled:opacity-30',
-            compact ? 'h-6 w-6' : 'h-7 w-7'
-          )}
-        >
-          <ChevronDown className="h-3.5 w-3.5" aria-hidden />
-        </button>
       </div>
       {expanded ? (
         sidebarLayout && showLeft && showRight ? (
@@ -513,7 +478,7 @@ function MergedToolbarRow({
   )
 }
 
-/** Stacked dashboard ribbon — two merged rows, collapsible with persisted layout. */
+/** Stacked dashboard ribbon — two merged rows, collapsible with persisted collapse state. */
 export function CanvasToolbarStatic({
   visibleRowIds,
   renderBlock,
@@ -525,72 +490,18 @@ export function CanvasToolbarStatic({
   sectionsFilter,
   eventId,
 }: CanvasToolbarStaticProps) {
-  const visibleKey = useMemo(() => visibleRowIds.join(','), [visibleRowIds])
-
-  const [order, setOrder] = useState<CanvasToolbarStaticRowId[]>(() =>
-    loadStaticRowOrder(visibleRowIds)
-  )
   const [collapsed, setCollapsed] = useState<StaticRowCollapsedState>(() =>
     loadStaticRowCollapsed()
   )
 
-  useEffect(() => {
-    setOrder(loadStaticRowOrder(visibleRowIds))
-  }, [visibleKey, visibleRowIds])
-
   const displayOrder = useMemo(() => {
     const visibleSet = new Set(visibleRowIds)
-    const seen = new Set<CanvasToolbarStaticRowId>()
-    const out: CanvasToolbarStaticRowId[] = []
-    for (const id of order) {
-      if (!visibleSet.has(id) || seen.has(id)) continue
-      seen.add(id)
-      out.push(id)
-    }
-    for (const id of visibleRowIds) {
-      if (!seen.has(id)) out.push(id)
-    }
-    return out
-  }, [order, visibleRowIds])
-
-  useEffect(() => {
-    saveStaticRowOrder(order)
-  }, [order])
+    return DEFAULT_STATIC_ROW_ORDER.filter((id) => visibleSet.has(id))
+  }, [visibleRowIds])
 
   useEffect(() => {
     saveStaticRowCollapsed(collapsed)
   }, [collapsed])
-
-  const mergeVisibleOrder = useCallback(
-    (nextVisible: CanvasToolbarStaticRowId[]) => {
-      const visibleSet = new Set(visibleRowIds)
-      const queue = [...nextVisible]
-      const merged = order.map((id) => {
-        if (!visibleSet.has(id)) return id
-        return queue.shift()!
-      })
-      for (const id of queue) {
-        if (!merged.includes(id)) merged.push(id)
-      }
-      setOrder(merged)
-    },
-    [order, visibleRowIds]
-  )
-
-  const handleMove = useCallback(
-    (rowId: CanvasToolbarStaticRowId, direction: -1 | 1) => {
-      const idx = displayOrder.indexOf(rowId)
-      if (idx < 0) return
-      const target = idx + direction
-      if (target < 0 || target >= displayOrder.length) return
-      const next = [...displayOrder]
-      const tmp = next[idx]!
-      next[idx] = next[target]!
-      next[target] = tmp
-      mergeVisibleOrder(next)
-    },
-    [displayOrder, mergeVisibleOrder]
-  )
 
   const handleToggle = useCallback((rowId: CanvasToolbarStaticRowId) => {
     setCollapsed((prev) => ({ ...prev, [rowId]: !prev[rowId] }))
@@ -598,7 +509,6 @@ export function CanvasToolbarStatic({
 
   const resetLayout = useCallback(() => {
     clearSavedStaticToolbarLayout()
-    setOrder([...DEFAULT_STATIC_ROW_ORDER])
     setCollapsed({
       'room-tools': false,
       placement: false,
@@ -735,7 +645,7 @@ export function CanvasToolbarStatic({
           </button>
         </TooltipWrapper>
       </div>
-      {displayOrder.map((rowId, index) => {
+      {displayOrder.map((rowId) => {
         const headers = STATIC_ROW_HEADERS[rowId]
         const expanded = !collapsed[rowId]
         const { left: showLeft, right: showRight } = getStaticRowSegmentVisibility(
@@ -749,15 +659,12 @@ export function CanvasToolbarStatic({
             label={STATIC_ROW_LABELS[rowId]}
             leftHeader={headers.left}
             rightHeader={headers.right}
-            index={index}
-            total={displayOrder.length}
             expanded={expanded}
             compact={compact}
             sidebarLayout={sidebarLayout}
             showLeft={showLeft}
             showRight={showRight}
             onToggle={handleToggle}
-            onMove={handleMove}
             renderBlock={renderBlock}
           />
         )

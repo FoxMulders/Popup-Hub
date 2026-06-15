@@ -1209,7 +1209,7 @@
 
   html.popup-hub-canvas-fullscreen:not(.command-center-canvas-fullscreen)
     #floor-plan-workspace
-    .canvas-container {
+    .canvas-editor-root--fullscreen {
     position: fixed;
     top: 0;
     left: 0;
@@ -1217,6 +1217,20 @@
     height: 100vh;
     z-index: 9998;
     max-height: 100vh;
+  }
+
+  html.popup-hub-canvas-fullscreen:not(.command-center-canvas-fullscreen)
+    #floor-plan-workspace
+    .canvas-fullscreen-toolbar {
+    z-index: 10000;
+  }
+
+  html.popup-hub-canvas-fullscreen:not(.command-center-canvas-fullscreen)
+    #floor-plan-workspace
+    .canvas-fullscreen-command-bar {
+    max-height: min(40vh, 220px);
+    overflow-x: auto;
+    overflow-y: auto;
   }
 
   html.popup-hub-canvas-fullscreen .canvas-editor-header {

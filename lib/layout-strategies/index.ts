@@ -42,4 +42,31 @@ export {
 } from './adapters/floor-plan-doc-adapter'
 
 export { generateFairLayout } from './fairness-engine/generate-fair-layout'
-export { computeFairnessScore } from './fairness-engine/fairness-scorer'
+export {
+  generateFairLayoutCandidates,
+  pickBestFairLayoutCandidate,
+} from './fairness-engine/generate-fair-layout-candidates'
+export {
+  resolveFairLayoutScenarioCount,
+  buildFairLayoutScenarioConfigs,
+  DEFAULT_MULTI_SCENARIO_BUDGET_MS,
+} from './fairness-engine/fair-layout-scenarios'
+export {
+  computeFairnessScore,
+  evaluateFairness,
+  meetsRelativeExposureThreshold,
+  exposureVariance,
+  applyRouteCoverageScoreCap,
+  MAX_FAIRNESS_SCORE_PARTIAL_ROUTE,
+} from './fairness-engine/fairness-scorer'
+export {
+  computeRouteCoverage,
+  hasFullRouteCoverage,
+  buildPathfindingDocFromLayout,
+} from './fairness-engine/route-coverage'
+export {
+  buildFairnessReport,
+  exposureHeatmapGrid,
+  exposureHeatmapToClearanceField,
+} from './fairness-engine/fairness-report'
+export type { FairnessDiagnostics, FairnessReport } from './types'

@@ -62,7 +62,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
         ariaBusy={ariaBusy}
         leftLabel="Layout tools"
         leftClassName="flex w-[300px] min-w-[300px] flex-shrink-0 flex-col justify-start overflow-hidden border-r border-gray-200 bg-white lg:h-[calc(100vh-64px)]"
-        left={<DashboardLeftPanel />}
+        left={immersive ? null : <DashboardLeftPanel />}
         center={
           showNoRoomEmpty ? (
             <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />

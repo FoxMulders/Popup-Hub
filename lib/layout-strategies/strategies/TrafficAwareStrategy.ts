@@ -29,16 +29,15 @@ function toPlacedStates(
 function toBoothPlacements(
   placed: TrafficPlacement[],
   request: LayoutRequest,
-  route: Point[]
+  scores: Map<string, number>,
+  maxScore: number
 ): BoothPlacement[] {
-  const states = toPlacedStates(placed, request)
-  const scores = exposureScoresFromPlacements(route, states)
   return placed.map((p) => ({
     boothId: p.id,
     x: p.x,
     y: p.y,
     rotation: p.rotation,
-    exposureScore: scores.get(p.id) ?? 0,
+    exposureScore: (scores.get(p.id) ?? 0) / maxScore,
   }))
 }
 
@@ -74,13 +73,13 @@ export class TrafficAwareStrategy implements LayoutStrategy {
       request.entrance,
       request.exit,
     ]
-    const states = toPlacedStates(traffic.placed, request)
-    const fairnessScore = computeFairnessScore(
-      exposureScoresFromPlacements(route, states)
-    )
+  const states = toPlacedStates(traffic.placed, request)
+  const rawScores = exposureScoresFromPlacements(route, states)
+  const maxScore = Math.max(1, ...rawScores.values())
+  const fairnessScore = computeFairnessScore(rawScores)
 
-    return {
-      placements: toBoothPlacements(traffic.placed, request, route),
+  return {
+    placements: toBoothPlacements(traffic.placed, request, rawScores, maxScore),
       fairnessScore,
       route,
       unplacedBoothIds: traffic.unplaced,
