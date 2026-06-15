@@ -11,7 +11,6 @@ import {
 } from './exposure-simulator'
 import { evaluateFairness } from './fairness-scorer'
 import { computeRouteCoverage } from './route-coverage'
-import { maintainsFullRouteCoverage } from './coverage-aware-placement'
 import {
   placementIsValid,
   validateAllPlacements,
@@ -223,12 +222,12 @@ export function optimizeFairnessAnnealing(
       continue
     }
 
-    if (!maintainsFullRouteCoverage(request, candidate)) {
+    const candidateCoverage = computeRouteCoverage(request, candidate)
+    if (!candidateCoverage.isFullCoverage) {
       temperature *= cooling
       continue
     }
 
-    const candidateCoverage = computeRouteCoverage(request, candidate)
     const candidateScore = scoreExposureOnRoute(
       candidateCoverage.route,
       candidate,

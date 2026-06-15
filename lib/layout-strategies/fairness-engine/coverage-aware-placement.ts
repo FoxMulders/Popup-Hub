@@ -25,6 +25,15 @@ export interface PlacementCandidate {
   rotation: number
 }
 
+/** Cap expensive PathfindingService coverage probes per booth placement. */
+const MAX_ROUTE_COVERAGE_TRIALS = 16
+
+/** Coarser grid for placement trials — finalize still uses full precision. */
+const PLACEMENT_COVERAGE_PROBE_CELL_FT = 1.5
+
+/** Cap walkable slot enumeration along the serpentine route. */
+const MAX_WALKABLE_ROUTE_SLOTS = 48
+
 function coverageCellFt(request: LayoutRequest, placedCount: number): number {
   if (placedCount > 12) return 1
   if (placedCount > 8) return 0.75
@@ -240,6 +249,9 @@ export function buildWalkableRouteSlotCandidates(
           if (seen.has(key)) continue
           seen.add(key)
           candidates.push(placement)
+          if (candidates.length >= MAX_WALKABLE_ROUTE_SLOTS) {
+            return candidates
+          }
         }
       }
     }
@@ -260,7 +272,6 @@ export function tryPlaceWithFullCoverage(
   obstacles: Rect[],
   placed: PlacedBoothState[]
 ): PlacedBoothState | null {
-  const cellFt = coverageCellFt(request, placed.length + 1)
   const scored: Array<{ c: PlacementCandidate; dist: number }> = []
 
   for (const c of candidates) {
@@ -282,6 +293,7 @@ export function tryPlaceWithFullCoverage(
       c,
       dist: meanExposureDistance(c.x, c.y, booth, route, c.rotation),
     })
+    if (scored.length >= MAX_ROUTE_COVERAGE_TRIALS) break
   }
 
   scored.sort((a, b) => a.dist - b.dist)
@@ -291,7 +303,7 @@ export function tryPlaceWithFullCoverage(
       ...placed,
       { booth, x: c.x, y: c.y, rotation: c.rotation },
     ]
-    if (maintainsFullRouteCoverage(request, trial, cellFt)) {
+    if (maintainsFullRouteCoverage(request, trial, PLACEMENT_COVERAGE_PROBE_CELL_FT)) {
       return { booth, x: c.x, y: c.y, rotation: c.rotation }
     }
   }
