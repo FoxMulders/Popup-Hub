@@ -11,7 +11,12 @@
 - **Verify:** `npm run lint` — PASS. `npx tsc --noEmit` — PASS. `npm run build` — PASS (build 177, webpack, `webpackBuildWorker` disabled on Windows). Turbopack not used — prior Windows Turbopack manifest failures on `[id]` routes.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — search engine optimization (local, not deployed)
+## Active work — sitemap canonical domain (local, not deployed)
+- **Issue:** GSC shows sitemap submitted at `popuphub.ca` but `<loc>` URLs and `robots.txt` Host/Sitemap still use `popup-hub.vercel.app` when `NEXT_PUBLIC_SITE_URL` is unset at build time.
+- **Fix:** `getRequestPublicOrigin()` reads `x-forwarded-host` on each request; `app/sitemap.ts` and `app/robots.ts` pass that origin into URL generation so `https://popuphub.ca/sitemap.xml` emits `popuphub.ca` links (works for any Vercel custom domain without per-domain env).
+- **Verify:** After deploy, fetch `https://popuphub.ca/sitemap.xml` — first `<loc>` should be `https://popuphub.ca/`; `robots.txt` Sitemap/Host should match. Re-submit sitemap in GSC (old "1 error / Unknown" may be stale from login HTML redirect).
+- **Next:** Commit + deploy when user asks; optionally set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca` for OG/canonical metadata site-wide.
+
 - **Structured data:** Global Organization + WebSite JSON-LD in root layout; FAQPage on `/legal/faq`; richer Event schema (organizer, address, free admission).
 - **Metadata:** `buildPublicMetadata` now sets keywords, canonical URLs, OG/Twitter defaults; legal + supplies pages migrated; authenticated portals (`/coordinator`, `/vendor`, `/login`) marked `noindex`.
 - **Sitemap / robots:** Added `/supplies`, `/legal/about`; removed auth-only experience-designer URLs; sitemap lists active/published events only.
@@ -1146,9 +1151,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `dff2ca7` (pushed to `origin/master`)
-- Last deploy commit: `dff2ca7` - feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)
-- Production: https://popuphub.ca - **v1.0.0 build 178** | commit `690e276` (handoff updated 2026-06-15 12:59)
+- Branch: `master` @ `c9b7ce7` (pushed to `origin/master`)
+- Last deploy commit: `c9b7ce7` - feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)
+- Production: https://popuphub.ca - **v1.0.0 build 179** | commit `e0fa459` (handoff updated 2026-06-15 14:48)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1525,7 +1530,7 @@
 
 
 ## Last deploy
-- 2026-06-15 12:59 - Deploy via deploy-popuphub.ps1 - `feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)` (dff2ca7)
+- 2026-06-15 14:48 - Deploy via deploy-popuphub.ps1 - `feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)` (c9b7ce7)
 
 
 ## Goal

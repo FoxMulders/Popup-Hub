@@ -1,1 +1,1 @@
-feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)
+feat: ship 102 session updates (Windows webpack build worker crash; sitemap canonical domain; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)
