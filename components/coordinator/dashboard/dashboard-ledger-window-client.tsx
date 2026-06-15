@@ -8,6 +8,11 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import {
+  FloorPlanDesktopRequiredNotice,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -36,6 +41,15 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DashboardLedgerWindowClientInner />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowClientInner() {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
@@ -86,6 +100,20 @@ export function DashboardLedgerWindowClient() {
     postFloorplanSync({ type: 'focus_booth', source: 'ledger', boothId })
     postFloorplanSync({ type: 'selection', source: 'ledger', boothId })
   }, [])
+
+  if (showDesktopRequired) {
+    return (
+      <div
+        className={cn(
+          'dashboard-ledger-window flex h-full min-h-0 flex-col overflow-hidden',
+          isWallCast ? 'bg-stone-950 text-stone-50' : 'bg-stone-50'
+        )}
+        data-dual-screen-mode={screenMode}
+      >
+        <FloorPlanDesktopRequiredNotice className="min-h-full flex-1" />
+      </div>
+    )
+  }
 
   if (isWallCast) {
     return (

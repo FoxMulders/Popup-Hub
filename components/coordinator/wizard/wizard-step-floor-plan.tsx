@@ -11,6 +11,10 @@ import { LayoutPlannerStats } from '@/components/coordinator/layout-planner/layo
 import { WizardNav } from '@/components/coordinator/wizard/wizard-nav'
 import type { TestSuitePopulateResult } from '@/components/coordinator/test-suite-populate-button'
 import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
+import {
+  FloorPlanDesktopRequiredGate,
+  FloorPlanViewportLayoutProvider,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { populateTestSuiteCanvas } from '@/lib/coordinator/populate-test-suite-canvas'
 import type { SummaryVenueSelection } from '@/components/coordinator/wizard/wizard-summary-rail'
 import type { LayoutRoom } from '@/types/database'
@@ -163,77 +167,84 @@ export function WizardStepFloorPlan({
     ) : null
 
   return (
-    <LayoutPlannerShell
-      mode={mode}
-      className="min-h-0 flex-1"
-      header={
-        <LayoutPlannerHeader
-          mode="wizard"
-          eventId={eventId ?? undefined}
-          eventName={eventDisplayName}
-          stepLabel="Step 3"
-          title="Design your floor plan"
-          hasOverlap={plannerOverlap}
-          showDraftBadge
-          onBack={onBack}
-          onSave={onSaveMarket}
-          saveDisabled={saveMarketDisabled || layoutStepBlocked}
-          saveLoading={saveMarketLoading}
-          saveLabel="Save market"
-          fullEditorHref={
-            eventId ? `/coordinator/events/${eventId}/layout` : undefined
+    <FloorPlanViewportLayoutProvider>
+      <FloorPlanDesktopRequiredGate
+        exitHref={eventId ? `/coordinator/events/${eventId}/setup?step=2` : '/coordinator/dashboard'}
+        exitLabel="Back to setup"
+      >
+        <LayoutPlannerShell
+          mode={mode}
+          className="min-h-0 flex-1"
+          header={
+            <LayoutPlannerHeader
+              mode="wizard"
+              eventId={eventId ?? undefined}
+              eventName={eventDisplayName}
+              stepLabel="Step 3"
+              title="Design your floor plan"
+              hasOverlap={plannerOverlap}
+              showDraftBadge
+              onBack={onBack}
+              onSave={onSaveMarket}
+              saveDisabled={saveMarketDisabled || layoutStepBlocked}
+              saveLoading={saveMarketLoading}
+              saveLabel="Save market"
+              fullEditorHref={
+                eventId ? `/coordinator/events/${eventId}/layout` : undefined
+              }
+              coordinatorId={coordinatorId}
+              locationName={locationName}
+              address={address}
+              getLayoutSnapshot={getLayoutSnapshot}
+              onApplySavedLayout={handleApplySavedLayout}
+              savedLayoutDisabled={saveMarketDisabled || saveMarketLoading}
+              populateTestSuiteOnCanvas={populateTestSuiteOnCanvas}
+            />
           }
-          coordinatorId={coordinatorId}
-          locationName={locationName}
-          address={address}
-          getLayoutSnapshot={getLayoutSnapshot}
-          onApplySavedLayout={handleApplySavedLayout}
-          savedLayoutDisabled={saveMarketDisabled || saveMarketLoading}
-          populateTestSuiteOnCanvas={populateTestSuiteOnCanvas}
-        />
-      }
-      leftRail={roomBar}
-      stats={
-        <LayoutPlannerStats
-          placedCount={placedCount}
-          layoutCapacity={layoutCapacity}
-          hasOverlap={plannerOverlap}
-        />
-      }
-      footer={
-        <div className="px-3 py-1 sm:px-4">
-          <WizardNav
-            step={3}
-            onBack={onBack}
-            onNext={onSaveMarket}
-            nextDisabled={navDisabled || saveMarketDisabled || layoutStepBlocked}
-            nextLabel="Save market"
+          leftRail={roomBar}
+          stats={
+            <LayoutPlannerStats
+              placedCount={placedCount}
+              layoutCapacity={layoutCapacity}
+              hasOverlap={plannerOverlap}
+            />
+          }
+          footer={
+            <div className="px-3 py-1 sm:px-4">
+              <WizardNav
+                step={3}
+                onBack={onBack}
+                onNext={onSaveMarket}
+                nextDisabled={navDisabled || saveMarketDisabled || layoutStepBlocked}
+                nextLabel="Save market"
+              />
+            </div>
+          }
+        >
+          <FloorPlanV2
+            key={layoutGeneration}
+            {...floorPlanProps}
+            eventId={eventId}
+            layoutRooms={layoutRooms}
+            layoutActiveRoomId={layoutActiveRoomId}
+            onLayoutRoomsChange={onLayoutRoomsChange}
+            onAddRoom={onAddRoom}
+            onRenameRoom={onRenameRoom}
+            onDeleteRoom={onDeleteRoom}
+            configuredCategorySlots={configuredCategorySlots}
+            layoutCapacity={layoutCapacity}
+            onPlacedCountChange={handlePlacedCountChange}
+            onSaveMarket={onSaveMarket}
+            saveMarketDisabled={saveMarketDisabled || layoutStepBlocked}
+            saveMarketLoading={saveMarketLoading}
+            saveLayoutRef={saveLayoutRef}
+            layoutSnapshotRef={layoutSnapshotRef}
+            onStoreReady={handleStoreReady}
+            chrome="embedded"
+            className="h-full min-h-0"
           />
-        </div>
-      }
-    >
-      <FloorPlanV2
-        key={layoutGeneration}
-        {...floorPlanProps}
-        eventId={eventId}
-        layoutRooms={layoutRooms}
-        layoutActiveRoomId={layoutActiveRoomId}
-        onLayoutRoomsChange={onLayoutRoomsChange}
-        onAddRoom={onAddRoom}
-        onRenameRoom={onRenameRoom}
-        onDeleteRoom={onDeleteRoom}
-        configuredCategorySlots={configuredCategorySlots}
-        layoutCapacity={layoutCapacity}
-        onPlacedCountChange={handlePlacedCountChange}
-        onSaveMarket={onSaveMarket}
-        saveMarketDisabled={saveMarketDisabled || layoutStepBlocked}
-        saveMarketLoading={saveMarketLoading}
-        saveLayoutRef={saveLayoutRef}
-        layoutSnapshotRef={layoutSnapshotRef}
-        onStoreReady={handleStoreReady}
-        chrome="embedded"
-        className="h-full min-h-0"
-      />
-    </LayoutPlannerShell>
+        </LayoutPlannerShell>
+      </FloorPlanDesktopRequiredGate>
+    </FloorPlanViewportLayoutProvider>
   )
 }
