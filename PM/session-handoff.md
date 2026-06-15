@@ -1146,9 +1146,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `dba4551` (pushed to `origin/master`)
-- Last deploy commit: `dba4551` - feat: ship 100 session updates (coordinator IA: Markets + Blueprint Studio; coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; +96 more)
-- Production: https://popuphub.ca - **v1.0.0 build 174** | commit `e1209f7` (handoff updated 2026-06-15 12:05)
+- Branch: `master` @ `dff2ca7` (pushed to `origin/master`)
+- Last deploy commit: `dff2ca7` - feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)
+- Production: https://popuphub.ca - **v1.0.0 build 178** | commit `690e276` (handoff updated 2026-06-15 12:59)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1525,7 +1525,7 @@
 
 
 ## Last deploy
-- 2026-06-15 12:05 - Deploy via deploy-popuphub.ps1 - `feat: ship 100 session updates (coordinator IA: Markets + Blueprint Studio; coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; +96 more)` (dba4551)
+- 2026-06-15 12:59 - Deploy via deploy-popuphub.ps1 - `feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)` (dff2ca7)
 
 
 ## Goal
