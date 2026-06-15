@@ -221,7 +221,6 @@ export function getVisibleSidebarSections(
 
   const alignmentBlocks: CanvasToolbarBlockId[] = [
     'view-align',
-    'arrange-layout',
     'optimize',
     'test-suite',
   ]

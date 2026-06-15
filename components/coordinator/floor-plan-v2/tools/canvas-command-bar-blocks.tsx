@@ -13,6 +13,7 @@ import {
   Expand,
   Hand,
   LayoutGrid,
+  Loader2,
   Locate,
   Minimize2,
   Minus,
@@ -172,6 +173,15 @@ function DualScreenLaunchButtons({
   )
 }
 
+export interface AutoArrangeFeedback {
+  at: number
+  summary: string
+}
+
+function formatAutoArrangeTimestamp(ms: number): string {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
 function FloorPlanOptimizeControl({
   mode,
   onModeChange,
@@ -182,6 +192,8 @@ function FloorPlanOptimizeControl({
   onRun,
   canRun,
   disabledReason,
+  autoArrangeRunning = false,
+  lastAutoArrangeFeedback = null,
   compact,
   sidebarLayout,
   topBarLayout,
@@ -195,18 +207,27 @@ function FloorPlanOptimizeControl({
   onRun?: () => void
   canRun?: boolean
   disabledReason?: string | null
+  autoArrangeRunning?: boolean
+  lastAutoArrangeFeedback?: AutoArrangeFeedback | null
   compact?: boolean
   sidebarLayout?: boolean
   topBarLayout?: boolean
 }) {
   if (!onRun) return null
   const canConfigure = canRun ?? false
-  const canExecute = canConfigure && !disabledReason
-  const tooltip = !canConfigure
-    ? (disabledReason ?? AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP)
-    : disabledReason
-      ? disabledReason
-      : 'Optimize vendor booths and patron seating together in one pass'
+  const canExecute = canConfigure && !disabledReason && !autoArrangeRunning
+  const runLabel = autoArrangeRunning
+    ? 'Arranging…'
+    : sidebarLayout
+      ? 'Auto-Arrange Floor Plan'
+      : 'Auto-Arrange'
+  const tooltip = autoArrangeRunning
+    ? 'Auto-arrange is running — booths and tables are being repositioned'
+    : !canConfigure
+      ? (disabledReason ?? AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP)
+      : disabledReason
+        ? disabledReason
+        : 'Optimize vendor booths and patron seating together in one pass'
 
   const content = (
     <div
@@ -232,7 +253,7 @@ function FloorPlanOptimizeControl({
                 <button
                   key={id}
                   type="button"
-                  disabled={!canConfigure}
+                  disabled={!canConfigure || autoArrangeRunning}
                   onClick={() => onModeChange(id)}
                   aria-pressed={mode === id}
                   className={cn(
@@ -253,7 +274,7 @@ function FloorPlanOptimizeControl({
             onChange={(e) => onModeChange(e.target.value as AutoArrangeMode)}
             title="Floor plan placement mode"
             aria-label="Floor plan placement mode"
-            disabled={!canConfigure}
+            disabled={!canConfigure || autoArrangeRunning}
             className={cn(
               'rounded-md border border-stone-200 bg-white px-2 text-[11px] font-semibold text-stone-700 disabled:opacity-50',
               toolbarControlHeight(compact ?? false)
@@ -279,7 +300,7 @@ function FloorPlanOptimizeControl({
                 <button
                   key={id}
                   type="button"
-                  disabled={!canConfigure}
+                  disabled={!canConfigure || autoArrangeRunning}
                   onClick={() => onVendorLayoutModeChange(id)}
                   aria-pressed={vendorLayoutMode === id}
                   className={cn(
@@ -302,7 +323,7 @@ function FloorPlanOptimizeControl({
             }
             title="Vendor layout engine"
             aria-label="Vendor layout engine"
-            disabled={!canConfigure}
+            disabled={!canConfigure || autoArrangeRunning}
             className={cn(
               'rounded-md border border-violet-200 bg-violet-50/80 px-2 text-[11px] font-semibold text-violet-900 disabled:opacity-50',
               toolbarControlHeight(compact ?? false)
@@ -339,13 +360,21 @@ function FloorPlanOptimizeControl({
             onClick={onRun}
             disabled={!canExecute}
             title={tooltip}
+            aria-busy={autoArrangeRunning}
             className={cn(
-              'inline-flex w-32 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-600 bg-emerald-700 px-3 text-[11px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-50',
+              'inline-flex w-32 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-[11px] font-semibold text-white disabled:opacity-50',
+              autoArrangeRunning
+                ? 'border-emerald-500 bg-emerald-600'
+                : 'border-emerald-600 bg-emerald-700 hover:bg-emerald-800',
               toolbarControlHeight(compact ?? false)
             )}
           >
-            <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            AI Auto-Arrange
+            {autoArrangeRunning ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <LayoutGrid className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            )}
+            {autoArrangeRunning ? 'Arranging…' : 'AI Auto-Arrange'}
           </button>
         </TooltipWrapper>
       ) : (
@@ -353,19 +382,45 @@ function FloorPlanOptimizeControl({
           onClick={onRun}
           disabled={!canExecute}
           title={tooltip}
+          aria-busy={autoArrangeRunning}
           className={cn(
             'gap-1.5 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 disabled:opacity-50',
+            autoArrangeRunning && 'bg-emerald-100',
             sidebarLayout && 'w-full justify-center px-3'
           )}
         >
-          <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
-          {sidebarLayout ? (
-            <span className="text-[11px] font-semibold">Auto-Arrange Floor Plan</span>
+          {autoArrangeRunning ? (
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
           ) : (
-            <span className="text-[11px] font-semibold">Auto-Arrange</span>
+            <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
           )}
+          <span className="text-[11px] font-semibold">{runLabel}</span>
         </CommandButton>
       )}
+      {autoArrangeRunning ? (
+        <span
+          className={cn(
+            'shrink-0 rounded-md border border-emerald-200/90 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-900',
+            sidebarLayout ? 'w-full text-center' : ''
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          Arranging…
+        </span>
+      ) : lastAutoArrangeFeedback ? (
+        <span
+          className={cn(
+            'shrink-0 rounded-md border border-emerald-200/90 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-900',
+            sidebarLayout ? 'w-full text-center' : ''
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          Arranged {lastAutoArrangeFeedback.summary} at{' '}
+          {formatAutoArrangeTimestamp(lastAutoArrangeFeedback.at)}
+        </span>
+      ) : null}
     </div>
   )
 
@@ -442,15 +497,14 @@ export interface CanvasCommandBarBlockContext {
   onAutoArrangeFloorPlan?: () => void
   canAutoArrangeFloorPlan?: boolean
   autoArrangeDisabledReason?: string | null
+  autoArrangeRunning?: boolean
+  lastAutoArrangeFeedback?: AutoArrangeFeedback | null
   autoArrangeMode?: AutoArrangeMode
   onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   vendorLayoutMode?: LayoutMode
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
   lastFairnessCoverage?: number | null
-  onArrangeLayout?: () => void
-  canArrangeLayout?: boolean
-  arrangeLayoutDisabledReason?: string | null
   onVendorAutoArrange?: () => void
   canVendorAutoArrange?: boolean
   vendorAutoArrangeMode?: AutoArrangeMode
@@ -1129,33 +1183,6 @@ export function renderCanvasCommandBarBlock(
         </div>
       )
 
-    case 'arrange-layout':
-      if (!ctx.onArrangeLayout) return null
-      return (
-        <button
-          type="button"
-          onClick={ctx.onArrangeLayout}
-          disabled={!ctx.canArrangeLayout}
-          title={
-            ctx.canArrangeLayout
-              ? 'Arrange vendor booths row-by-row inside the room grid with category spacing'
-              : ctx.arrangeLayoutDisabledReason ??
-                'Draw vendor booths in the active room first'
-          }
-          aria-label="Arrange vendor booths in room grid"
-          className={cn(
-            'inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-[0.6875rem] font-semibold transition-colors',
-            toolbarControlHeight(compact),
-            ctx.canArrangeLayout
-              ? 'border-emerald-300 bg-white text-emerald-900 hover:bg-emerald-50'
-              : 'cursor-not-allowed border-stone-200 bg-white/80 text-stone-400'
-          )}
-        >
-          <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-          Arrange layout
-        </button>
-      )
-
     case 'optimize':
       return (
         <div data-layout-help="optimize" className="inline-flex min-w-0">
@@ -1169,6 +1196,8 @@ export function renderCanvasCommandBarBlock(
             onRun={ctx.onAutoArrangeFloorPlan}
             canRun={ctx.canAutoArrangeFloorPlan}
             disabledReason={ctx.autoArrangeDisabledReason}
+            autoArrangeRunning={ctx.autoArrangeRunning}
+            lastAutoArrangeFeedback={ctx.lastAutoArrangeFeedback}
             compact={compact}
             sidebarLayout={sidebarLayout}
             topBarLayout={topBarLayout}
@@ -1557,8 +1586,12 @@ export function renderCanvasCommandBarBlock(
                 </CommandButton>
               </>
             ) : null}
-            <div className={toolbarDividerClass(compact)} aria-hidden />
-            <LayoutToolbarHelpTrigger compact={compact} />
+            {ctx.canvasFullscreen ? (
+              <>
+                <div className={toolbarDividerClass(compact)} aria-hidden />
+                <LayoutToolbarHelpTrigger compact={compact} />
+              </>
+            ) : null}
             <div
               className={cn(
                 'inline-flex shrink-0 items-center overflow-hidden rounded-md border border-stone-200',
@@ -1638,8 +1671,12 @@ export function renderCanvasCommandBarBlock(
                 </button>
               ) : null}
             </div>
-            {topBarDivider}
-            <LayoutToolbarHelpTrigger compact={compact} />
+            {ctx.canvasFullscreen ? (
+              <>
+                {topBarDivider}
+                <LayoutToolbarHelpTrigger compact={compact} />
+              </>
+            ) : null}
             {ctx.onBoothMapLabelModeChange ? (
               <label
                 className={cn(

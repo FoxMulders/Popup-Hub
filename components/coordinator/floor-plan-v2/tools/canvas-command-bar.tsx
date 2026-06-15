@@ -69,15 +69,14 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onAutoArrangeFloorPlan?: () => void
   canAutoArrangeFloorPlan?: boolean
   autoArrangeDisabledReason?: string | null
+  autoArrangeRunning?: boolean
+  lastAutoArrangeFeedback?: import('./canvas-command-bar-blocks').AutoArrangeFeedback | null
   autoArrangeMode?: AutoArrangeMode
   onAutoArrangeModeChange?: (mode: AutoArrangeMode) => void
   vendorLayoutMode?: LayoutMode
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
   lastFairnessCoverage?: number | null
-  onArrangeLayout?: () => void
-  canArrangeLayout?: boolean
-  arrangeLayoutDisabledReason?: string | null
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
@@ -139,15 +138,14 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onAutoArrangeFloorPlan,
     canAutoArrangeFloorPlan,
     autoArrangeDisabledReason,
+    autoArrangeRunning,
+    lastAutoArrangeFeedback,
     autoArrangeMode,
     onAutoArrangeModeChange,
     vendorLayoutMode,
     onVendorLayoutModeChange,
     lastFairnessScore,
     lastFairnessCoverage,
-    onArrangeLayout,
-    canArrangeLayout,
-    arrangeLayoutDisabledReason,
     onClearAll,
     onDeleteSelected,
     tableSizeFt,
@@ -258,15 +256,14 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onAutoArrangeFloorPlan,
       canAutoArrangeFloorPlan,
       autoArrangeDisabledReason,
+      autoArrangeRunning,
+      lastAutoArrangeFeedback,
       autoArrangeMode: autoArrangeMode ?? vendorAutoArrangeMode,
       onAutoArrangeModeChange:
         onAutoArrangeModeChange ?? onVendorAutoArrangeModeChange,
       vendorLayoutMode,
       onVendorLayoutModeChange,
       lastFairnessScore,
-      onArrangeLayout,
-      canArrangeLayout,
-      arrangeLayoutDisabledReason,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,
@@ -354,14 +351,13 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       onAutoArrangeFloorPlan,
       canAutoArrangeFloorPlan,
       autoArrangeDisabledReason,
+      autoArrangeRunning,
+      lastAutoArrangeFeedback,
       autoArrangeMode,
       onAutoArrangeModeChange,
       vendorLayoutMode,
       onVendorLayoutModeChange,
       lastFairnessScore,
-      onArrangeLayout,
-      canArrangeLayout,
-      arrangeLayoutDisabledReason,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,

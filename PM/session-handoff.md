@@ -4,6 +4,25 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — auto-arrange button feedback (local, not deployed)
+- **Issue:** Coordinators could not tell if/when **AI Auto-Arrange** was pressed or finished.
+- **Fix:** Running state on button (spinner, **Arranging…**, disabled); green status pill with placed count + timestamp after run; loading toast for all arrange modes (grid, fairness, AI).
+- **Verify:** Click **AI Auto-Arrange** → spinner + toast + pill; after finish → **Arranged N placed at 2:34 PM** beside button.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — remove Arrange layout buttons (local, not deployed)
+- **Goal:** Drop redundant **Arrange layout** toolbar buttons; coordinators use Optimize / auto-arrange instead.
+- **Fix:** Removed `arrange-layout` block, header-bar slot, `handleArrangeLayoutInRoom` wiring, and toolbar order entries.
+- **Verify:** Command center + wizard/spatial layout editors — no **Arrange layout** button in header or alignment section.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — layout help in site nav (local, not deployed)
+- **Goal:** Move green **Layout help** button into main site header on command center — between Wallet nav link and notification bell (per coordinator UX).
+- **Fix:** `app-nav.tsx` — `LayoutEditorHelpButton` when coordinator on `/coordinator/dashboard`. `coordinator-layout-help-nav.ts` route helper. `canvas-command-bar-blocks.tsx` — hide dashboard toolbar help unless fullscreen (nav hidden). `floor-plan-v2.tsx` — `showFloatingFab={false}` (nav/toolbar entry points).
+- **Fullscreen:** Layout help stays in canvas utilities when `#site-app-nav` is hidden.
+- **Verify:** Command center → green **Layout help** in top header right of Wallet; fullscreen → help in canvas utilities; wizard/spatial unchanged.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — CI lint fix simulated-annealing (local, not deployed)
 - **Issue:** CI lint failed — `prefer-const` on `activeRoute` and `activeCoveragePct` in `simulated-annealing.ts` (lines 170–171); pipeline stops before build even though `next build` passes.
 - **Fix:** `let` → `const` for both (set once from `initialCoverage`, never reassigned).
@@ -11,10 +30,11 @@
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — initial loader disorganized-to-organized reveal (local, not deployed)
-- **Goal:** Convey PopUp Hub's value in the first-visit loader — messy scattered stalls snap into an organized perimeter ring, then logo and tagline.
+- **Goal:** Convey PopUp Hub's value in the first-visit loader — fanned deck in center, then deal tables one-by-one to an organized perimeter ring, then logo and tagline.
 - **Component:** `components/brand/initial-loader-reveal.tsx` (not floor-plan auto-arrange / presenter).
-- **Sequence (progress 0–1):** stalls start piled in the inner ring (offset + slight rotation) → **0.04–0.52** staggered snap to perimeter slots (`organizeProgress` + easeInOutCubic) → logo **0.52–0.72** → tagline words **0.72–0.92** → progress bar **0.88–1.0**.
-- **Verify:** Hard refresh with cleared `popup-hub-initial-loader-shown` localStorage (or incognito) — stalls begin scattered, wave into ring, logo only after settle, tagline words stagger in.
+- **Sequence (progress 0–1):** fanned deck hold **0.03–0.26** (subtle pile wobble) → card deal **0.26–0.68** (`dealCardProgress` + sequential slots, one table at a time) → logo **0.68–0.84** → tagline **0.84–0.95** → progress bar **0.91–1.0**.
+- **Layout:** 3×3 ring — top/bottom rows centred between side columns; side rows paired so **R0↔L1** and **L0↔R1** share the same Y (first on one wall aligns with middle on the opposite).
+- **Verify:** Hard refresh with cleared `popup-hub-initial-loader-shown` localStorage (or incognito) — deck holds longer, tables deal out sequentially, side pairs line up horizontally, logo after last card.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — patron table flush wall placement (local, not deployed)

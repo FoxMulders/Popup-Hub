@@ -5,7 +5,6 @@
 export type CanvasToolbarBlockId =
   | 'test-suite'
   | 'optimize'
-  | 'arrange-layout'
   | 'primitives'
   | 'history-clipboard'
   | 'view-align'
@@ -19,7 +18,6 @@ export type CanvasToolbarBlockId =
 export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
   'test-suite',
   'optimize',
-  'arrange-layout',
   'primitives',
   'history-clipboard',
   'view-align',

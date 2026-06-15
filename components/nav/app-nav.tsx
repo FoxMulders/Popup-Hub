@@ -16,7 +16,9 @@ import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
 import { useFeatureRequest } from '@/components/feedback/feature-request-context'
+import { LayoutEditorHelpButton } from '@/components/coordinator/floor-plan-v2/tools/layout-editor-help'
 import { Badge } from '@/components/ui/badge'
+import { isCoordinatorLayoutHelpNavRoute } from '@/lib/nav/coordinator-layout-help-nav'
 import { cn } from '@/lib/utils'
 
 interface AppNavProps {
@@ -69,6 +71,8 @@ export function AppNav({
         ? 'vendor'
         : 'patron'
   const links = NAV_LINKS[navRole] ?? []
+  const showLayoutHelpInNav =
+    navRole === 'coordinator' && isCoordinatorLayoutHelpNavRoute(pathname)
   const homeHref = '/'
 
   async function handleSignOut() {
@@ -144,6 +148,14 @@ export function AppNav({
           }
           right={
             <>
+              {showLayoutHelpInNav ? (
+                <LayoutEditorHelpButton
+                  variant="prominent"
+                  size="sm"
+                  className="h-8 shrink-0 px-2.5 text-xs shadow-sm sm:px-3"
+                />
+              ) : null}
+
               <Link
                 href="/notifications"
                 className="relative app-tap-target inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-stone-200 bg-white text-muted-foreground hover:bg-canvas hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"

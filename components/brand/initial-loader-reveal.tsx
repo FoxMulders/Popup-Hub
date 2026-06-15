@@ -42,16 +42,13 @@ type BoothRect = {
   y: number
   w: number
   h: number
-  /** Left/right perimeter columns — scale-in anchors on the inner edge of each square cell. */
+  /** Order in the deck deal (0 = first card out). */
+  dealOrder: number
   wall?: 'left' | 'right'
 }
 
 function easeOutCubic(value: number) {
   return 1 - (1 - value) ** 3
-}
-
-function easeInOutCubic(value: number) {
-  return value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2
 }
 
 function clamp01(value: number) {
@@ -60,12 +57,6 @@ function clamp01(value: number) {
 
 function lerp(from: number, to: number, t: number) {
   return from + (to - from) * t
-}
-
-/** Deterministic 0–1 value from booth index (stable across frames). */
-function hash01(index: number, salt = 0) {
-  const n = Math.sin((index + 1) * 12.9898 + salt * 78.233) * 43758.5453
-  return n - Math.floor(n)
 }
 
 /** One item per slot — each completes before the next begins. */
@@ -78,28 +69,27 @@ function sequentialReveal(t: number, index: number, total: number): number {
 
 type ScatterPose = { x: number; y: number; rot: number }
 
-/** Disorganized pile in the inner ring — each stall offset and slightly rotated. */
-function scatterPose(booth: BoothRect, index: number, inner: PerimeterRing['inner']): ScatterPose {
-  const innerW = inner.right - inner.left
-  const innerH = inner.bottom - inner.top
-  const spreadX = innerW * (0.22 + hash01(index, 1) * 0.38)
-  const spreadY = innerH * (0.18 + hash01(index, 2) * 0.34)
-  const cx = inner.cx + (hash01(index, 3) - 0.5) * spreadX
-  const cy = inner.cy + (hash01(index, 4) - 0.5) * spreadY
+/** Tight deck pile in the ring center — each card slightly fanned. */
+function deckPose(
+  booth: BoothRect,
+  stackIndex: number,
+  deck: { cx: number; cy: number },
+): ScatterPose {
+  const fan = stackIndex * 1.35
   return {
-    x: cx - booth.w / 2,
-    y: cy - booth.h / 2,
-    rot: (hash01(index, 5) - 0.5) * 32,
+    x: deck.cx - booth.w / 2 + fan * 0.55,
+    y: deck.cy - booth.h / 2 - fan * 0.42,
+    rot: stackIndex * 2.4 - 4,
   }
 }
 
-/** Staggered snap from scatter → perimeter slot (wave of organization). */
-function organizeProgress(t: number, index: number, total: number): number {
+/** One card at a time — each finishes before the next leaves the deck. */
+function dealCardProgress(t: number, dealOrder: number, total: number): number {
   if (total <= 0) return 1
-  const stagger = 0.55
-  const delay = (index / Math.max(1, total - 1)) * stagger
-  const local = (t - delay) / (1 - stagger)
-  return easeInOutCubic(clamp01(local))
+  const slot = 1 / total
+  const overlap = slot * 0.08
+  const local = (t - dealOrder * (slot - overlap)) / slot
+  return easeOutCubic(clamp01(local))
 }
 
 type PerimeterRing = {
@@ -107,79 +97,63 @@ type PerimeterRing = {
   inner: { left: number; right: number; top: number; bottom: number; cx: number; cy: number }
 }
 
-/** Place stalls on four sides with corner gaps so adjacent sides never overlap. */
+/** Place stalls on four sides — 3 per edge, sides paired so L0↔R1 and R0↔L1 share a row. */
 function buildPerimeterRing(): PerimeterRing {
   const BOOTH_W = 48
   const BOOTH_H = 36
   const MARGIN = 44
   const GAP = 12
   const RING_BOTTOM = 368
+  const SIDE_COUNT = 3
 
   const leftX = MARGIN
   const rightX = 480 - MARGIN - BOOTH_W
   const topY = MARGIN
   const bottomY = RING_BOTTOM - BOOTH_H
 
-  const topStartX = leftX + BOOTH_W + GAP
-  const topMaxX = rightX - GAP - BOOTH_W
-  const topUsable = topMaxX - topStartX
-  const topCount = Math.max(
-    1,
-    Math.floor((topUsable + GAP) / (BOOTH_W + GAP)),
-  )
-  const topSpan = topCount * BOOTH_W + (topCount - 1) * GAP
-  const topRowX = topStartX + (topUsable - topSpan) / 2
+  const innerLeft = leftX + BOOTH_W + GAP
+  const innerRight = rightX - GAP
+  const rowSpan = SIDE_COUNT * BOOTH_W + (SIDE_COUNT - 1) * GAP
+  const topRowX = innerLeft + (innerRight - innerLeft - rowSpan) / 2
 
   const CELL = BOOTH_H + GAP
-  const halfStep = CELL / 2
-
   const sideStartY = topY + BOOTH_H + GAP
   const sideEndY = bottomY - GAP - BOOTH_H
-  const sideUsable = sideEndY - sideStartY
-  const sideCount = Math.min(
-    6,
-    Math.max(
-      1,
-      Math.floor((sideUsable - (CELL - BOOTH_H)) / halfStep) + 1,
-    ),
-  )
-  /** Top row sits one booth cell right of the centred slot so it lines up with the logo. */
-  const topShift = BOOTH_W + GAP
+  const sideSpan = (SIDE_COUNT - 1) * CELL
+  const sideRow0Y = sideStartY + (sideEndY - sideStartY - sideSpan) / 2
+
+  const rowY = [
+    sideRow0Y,
+    sideRow0Y + CELL,
+    sideRow0Y + 2 * CELL,
+  ] as const
 
   const booths: BoothRect[] = []
+  let dealOrder = 0
 
-  for (let i = 0; i < topCount; i++) {
-    booths.push({
-      x: topRowX + topShift + i * (BOOTH_W + GAP),
+  const push = (booth: Omit<BoothRect, 'dealOrder'>) => {
+    booths.push({ ...booth, dealOrder: dealOrder++ })
+  }
+
+  for (let i = 0; i < SIDE_COUNT; i++) {
+    push({
+      x: topRowX + i * (BOOTH_W + GAP),
       y: topY,
       w: BOOTH_W,
       h: BOOTH_H,
     })
   }
-  for (let i = 0; i < sideCount; i++) {
-    const stagger = i % 2 === 1 ? halfStep : 0
-    const y = sideStartY + i * halfStep + (CELL - BOOTH_H)
-    if (i % 2 === 0) {
-      booths.push({
-        x: leftX + stagger,
-        y,
-        w: BOOTH_W,
-        h: BOOTH_H,
-        wall: 'left',
-      })
-    }
-    if (i % 2 === 1) {
-      booths.push({
-        x: rightX - stagger,
-        y,
-        w: BOOTH_W,
-        h: BOOTH_H,
-        wall: 'right',
-      })
-    }
-  }
-  for (let i = 0; i < topCount; i++) {
-    booths.push({
+
+  // Row 0: R0 + L1; row 1: L0 + R1; row 2: L2 + R2.
+  push({ x: rightX, y: rowY[0], w: BOOTH_W, h: BOOTH_H, wall: 'right' })
+  push({ x: leftX, y: rowY[0], w: BOOTH_W, h: BOOTH_H, wall: 'left' })
+  push({ x: leftX, y: rowY[1], w: BOOTH_W, h: BOOTH_H, wall: 'left' })
+  push({ x: rightX, y: rowY[1], w: BOOTH_W, h: BOOTH_H, wall: 'right' })
+  push({ x: leftX, y: rowY[2], w: BOOTH_W, h: BOOTH_H, wall: 'left' })
+  push({ x: rightX, y: rowY[2], w: BOOTH_W, h: BOOTH_H, wall: 'right' })
+
+  for (let i = SIDE_COUNT - 1; i >= 0; i--) {
+    push({
       x: topRowX + i * (BOOTH_W + GAP),
       y: bottomY,
       w: BOOTH_W,
@@ -188,11 +162,11 @@ function buildPerimeterRing(): PerimeterRing {
   }
 
   const inner = {
-    left: leftX + BOOTH_W + halfStep,
-    right: rightX - halfStep,
+    left: innerLeft,
+    right: innerRight - BOOTH_W,
     top: topY + BOOTH_H,
     bottom: bottomY,
-    cx: (leftX + BOOTH_W + halfStep + rightX - halfStep) / 2,
+    cx: (innerLeft + innerRight - BOOTH_W) / 2,
     cy: (topY + BOOTH_H + bottomY) / 2,
   }
 
@@ -225,20 +199,24 @@ function drawProgress(value: number, start: number, end: number) {
   return (value - start) / (end - start)
 }
 
-/** Disorganized → organized: scatter, snap to ring, logo, tagline, progress bar. */
+/** Disorganized deck → card deal → logo → tagline → progress bar. */
 const LOADER_PHASE = {
-  booths: { start: 0.04, end: 0.52 },
-  logo: { start: 0.52, end: 0.72 },
-  tagline: { start: 0.72, end: 0.92 },
-  bar: { start: 0.88, end: 1 },
+  /** Hold the fanned deck in the center before dealing. */
+  chaos: { start: 0.03, end: 0.26 },
+  /** Deal one table at a time from the deck to its perimeter slot. */
+  deal: { start: 0.26, end: 0.68 },
+  logo: { start: 0.68, end: 0.84 },
+  tagline: { start: 0.84, end: 0.95 },
+  bar: { start: 0.91, end: 1 },
 } as const
 
 function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const { progress, phase, globalFrame } = frame
   const breathe = 1 + Math.sin(globalFrame * 0.06) * 0.012
 
-  const boothT = drawProgress(progress, LOADER_PHASE.booths.start, LOADER_PHASE.booths.end)
-  /** Logo fades in after stalls settle into the perimeter ring. */
+  const chaosT = drawProgress(progress, LOADER_PHASE.chaos.start, LOADER_PHASE.chaos.end)
+  const dealT = drawProgress(progress, LOADER_PHASE.deal.start, LOADER_PHASE.deal.end)
+  /** Logo fades in after the last card is dealt. */
   const logoT = drawProgress(progress, LOADER_PHASE.logo.start, LOADER_PHASE.logo.end)
   /** Tagline words appear one at a time after the logo. */
   const tagT = drawProgress(progress, LOADER_PHASE.tagline.start, LOADER_PHASE.tagline.end)
@@ -297,13 +275,26 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill={BRAND.cream} />
 
         {booths.map((booth, index) => {
-          const scatter = scatterPose(booth, index, inner)
-          const t = organizeProgress(boothT, index, booths.length)
-          const x = lerp(scatter.x, booth.x, t)
-          const y = lerp(scatter.y, booth.y, t)
-          const rot = lerp(scatter.rot, 0, t)
-          const scale = lerp(0.82, 1, t)
-          const opacity = lerp(0.45, 0.9, t)
+          const flyT = dealCardProgress(dealT, booth.dealOrder, booths.length)
+          const stackIndex = booths.length - 1 - booth.dealOrder
+          const deck = deckPose(booth, stackIndex, inner)
+          const pileWobble =
+            flyT < 1 && dealT <= 0
+              ? Math.sin(globalFrame * 0.09 + booth.dealOrder * 0.4) * 1.8
+              : 0
+
+          const x = flyT >= 1 ? booth.x : lerp(deck.x, booth.x, flyT)
+          const y =
+            flyT >= 1 ? booth.y : lerp(deck.y + pileWobble, booth.y, flyT)
+          const rot = flyT >= 1 ? 0 : lerp(deck.rot, 0, flyT)
+          const scale = flyT >= 1 ? 1 : lerp(0.88, 1, flyT)
+          const settled = flyT >= 1
+          const inDeck = dealT <= 0 || flyT <= 0
+          const opacity = inDeck
+            ? lerp(0.5, 0.72, chaosT)
+            : settled
+              ? 0.9
+              : lerp(0.72, 0.9, flyT)
           const cx = x + booth.w / 2
           const cy = y + booth.h / 2
           return (
@@ -321,7 +312,7 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
                 fill={BRAND.sageMuted}
                 stroke={BRAND.sage}
                 strokeWidth="1.5"
-                strokeOpacity={lerp(0.35, 0.65, t)}
+                strokeOpacity={settled ? 0.65 : lerp(0.35, 0.65, flyT)}
               />
             </g>
           )

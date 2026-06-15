@@ -566,9 +566,6 @@ export function CanvasToolbarStatic({
           }
           return null
         })}
-        <div className="ml-auto flex min-w-0 shrink-0 items-center">
-          {renderBlock('arrange-layout')}
-        </div>
       </div>
     )
   }

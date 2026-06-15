@@ -450,6 +450,11 @@ function FloorPlanV2Workspace({
   )
   const [autoArrangeMode, setAutoArrangeMode] =
     useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
+  const [autoArrangeRunning, setAutoArrangeRunning] = useState(false)
+  const [lastAutoArrangeFeedback, setLastAutoArrangeFeedback] = useState<{
+    at: number
+    summary: string
+  } | null>(null)
   const [vendorLayoutMode, setVendorLayoutMode] = useState<LayoutMode>(() =>
     parseLayoutMode(initialDoc.vendorLayoutMode)
   )
@@ -1874,6 +1879,7 @@ function FloorPlanV2Workspace({
   useEffect(() => {
     setFairnessScenarios(null)
     setFairnessScenarioComparing(false)
+    setLastAutoArrangeFeedback(null)
   }, [activeRoomId])
 
   const vendorFillTableSpec = useMemo((): TableSizeSpec => {
@@ -2096,6 +2102,7 @@ function FloorPlanV2Workspace({
   ])
 
   const handleAutoArrangeFloorPlan = useCallback(async () => {
+    if (autoArrangeRunning) return
     if (vendorBoothCount === 0 && patronTableCount === 0) {
       toast.message('Nothing to arrange — draw at least one vendor booth or patron table first.')
       return
@@ -2116,10 +2123,17 @@ function FloorPlanV2Workspace({
       return
     }
 
-    if (
-      vendorLayoutMode === LayoutMode.FAIRNESS_FIRST &&
-      vendorBoothCount > 0
-    ) {
+    setAutoArrangeRunning(true)
+    const loadingToast = toast.loading('Arranging floor plan…')
+    const recordFeedback = (summary: string) => {
+      setLastAutoArrangeFeedback({ at: Date.now(), summary })
+    }
+
+    try {
+      if (
+        vendorLayoutMode === LayoutMode.FAIRNESS_FIRST &&
+        vendorBoothCount > 0
+      ) {
       const cleared = vendorBoothsInRoom(store.doc, activeRoomId).map((b) => ({
         ...b,
         x: 0,
@@ -2211,6 +2225,7 @@ function FloorPlanV2Workspace({
         candidates.length > 1
           ? ` (best of ${candidates.length} scenarios)`
           : ''
+      recordFeedback(`${placedCount} placed · fairness ${score}/100`)
       if (packResult.droppedCount > 0) {
         toast.warning(
           `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · score ${score}/100${coverageNote}${invalidNote}. ${packResult.droppedCount} could not fit.`,
@@ -2269,6 +2284,7 @@ function FloorPlanV2Workspace({
       }
       const removed = result.removedOverlapCount
       const overflow = result.overflowCount + result.droppedCount
+      recordFeedback(`${result.placedCount} placed`)
       if (removed > 0) {
         toast.warning(
           `Could only fit ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} safely. Removed ${removed} overlapping item${removed === 1 ? '' : 's'}.`,
@@ -2303,60 +2319,65 @@ function FloorPlanV2Workspace({
         ? { maxBooths: layoutCapacity }
         : {}),
     }
-    const loading = toast.loading('Optimizing floor plan…')
-    try {
-      const result = await runAutoArrangeWithAi(
-        store.doc,
-        activeRoomId,
-        arrangeOptions
+    const result = await runAutoArrangeWithAi(
+      store.doc,
+      activeRoomId,
+      arrangeOptions
+    )
+    if (!result) return
+    if (result.perimeterCapacityError) {
+      toast.error(result.perimeterCapacityError, { duration: 6000 })
+      return
+    }
+    if (result.patronArrangeAborted) {
+      toast.warning(result.patronArrangeAborted, { duration: 5000 })
+      return
+    }
+    if (result.placedCount === 0) {
+      toast.error('Auto-arrange could not fit any booths or tables inside the room.')
+      return
+    }
+    store.replaceObjects(result.doc.objects)
+    if (result.unifiedMeta) {
+      setUnifiedLayoutOverlay({
+        spinePath: result.unifiedMeta.pathway,
+        clearanceField: result.unifiedMeta.clearanceField,
+      })
+      setPatronPathEnabled(true)
+    }
+    recordFeedback(
+      result.aiOptimized
+        ? `AI · ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'}`
+        : `${result.placedCount} placed`
+    )
+    const spaceOverflow = result.overflowCount + result.droppedCount
+    if (spaceOverflow > 0) {
+      toast.warning(
+        `Could not reposition ${spaceOverflow} asset${spaceOverflow === 1 ? '' : 's'} due to space restrictions (left in place).`,
+        { duration: 5000 }
       )
-      if (!result) return
-      if (result.perimeterCapacityError) {
-        toast.error(result.perimeterCapacityError, { duration: 6000 })
-        return
-      }
-      if (result.patronArrangeAborted) {
-        toast.warning(result.patronArrangeAborted, { duration: 5000 })
-        return
-      }
-      if (result.placedCount === 0) {
-        toast.error('Auto-arrange could not fit any booths or tables inside the room.')
-        return
-      }
-      store.replaceObjects(result.doc.objects)
-      if (result.unifiedMeta) {
-        setUnifiedLayoutOverlay({
-          spinePath: result.unifiedMeta.pathway,
-          clearanceField: result.unifiedMeta.clearanceField,
-        })
-        setPatronPathEnabled(true)
-      }
-      const spaceOverflow = result.overflowCount + result.droppedCount
-      if (spaceOverflow > 0) {
-        toast.warning(
-          `Could not reposition ${spaceOverflow} asset${spaceOverflow === 1 ? '' : 's'} due to space restrictions (left in place).`,
-          { duration: 5000 }
-        )
-      } else if (result.unsatisfiedCategoryCount > 0) {
-        toast.warning(
-          `Auto-arrange complete. ${result.unsatisfiedCategoryCount} vendor booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
-          { duration: 4500 }
-        )
-      } else if (result.aiOptimized) {
-        toast.success(
-          `AI arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} (${result.aiModel ?? 'Gemini'}).`
-        )
-      } else {
-        toast.success(
-          `Auto-arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} with traffic-flow clearance.`
-        )
-      }
+    } else if (result.unsatisfiedCategoryCount > 0) {
+      toast.warning(
+        `Auto-arrange complete. ${result.unsatisfiedCategoryCount} vendor booth${result.unsatisfiedCategoryCount === 1 ? '' : 's'} could not meet the 5-space / 2-row separation rule due to space constraints.`,
+        { duration: 4500 }
+      )
+    } else if (result.aiOptimized) {
+      toast.success(
+        `AI arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} (${result.aiModel ?? 'Gemini'}).`
+      )
+    } else {
+      toast.success(
+        `Auto-arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} with traffic-flow clearance.`
+      )
+    }
     } finally {
-      toast.dismiss(loading)
+      setAutoArrangeRunning(false)
+      toast.dismiss(loadingToast)
     }
   }, [
     activeRoomId,
     autoArrangeMode,
+    autoArrangeRunning,
     eventCategoryNames,
     layoutCapacity,
     patronTableCount,
@@ -2375,57 +2396,6 @@ function FloorPlanV2Workspace({
     },
     [store]
   )
-
-  const canArrangeLayout = useMemo(
-    () => vendorBoothsInRoom(store.doc, activeRoomId).length > 0,
-    [activeRoomId, store.doc]
-  )
-
-  const handleArrangeLayoutInRoom = useCallback(() => {
-    if (!activeRoomId) {
-      toast.message('Select a room before arranging booths.')
-      return
-    }
-    const result = autoArrangeInRoom(store.doc, activeRoomId, {
-      scope: 'vendor',
-      mode: 'grid',
-      eventCategoryNames,
-      baselineTableLengthFt: safeTableSizeFt,
-      dropUnplacedBooths: true,
-      ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
-        ? { maxBooths: layoutCapacity }
-        : {}),
-    })
-    if (!result) {
-      toast.error('Could not read the active room grid.')
-      return
-    }
-    if (result.placedCount === 0) {
-      toast.error('No vendor booths fit inside the room under spacing rules.')
-      return
-    }
-    store.replaceObjects(result.doc.objects, { pushHistory: true })
-    scheduleLayoutAutosave()
-    const omitted =
-      result.overflowCount + result.droppedCount + result.removedOverlapCount
-    if (omitted > 0) {
-      toast.warning(
-        `Arranged ${result.placedCount} booth${result.placedCount === 1 ? '' : 's'} safely; ${omitted} could not fit and ${omitted === 1 ? 'was' : 'were'} omitted.`,
-        { duration: 4500 }
-      )
-    } else {
-      toast.success(
-        `Arranged ${result.placedCount} vendor booth${result.placedCount === 1 ? '' : 's'} in the room grid.`
-      )
-    }
-  }, [
-    activeRoomId,
-    eventCategoryNames,
-    layoutCapacity,
-    safeTableSizeFt,
-    scheduleLayoutAutosave,
-    store,
-  ])
 
   useEffect(() => {
     if (!onLayoutActionsReady) return
@@ -2712,14 +2682,14 @@ function FloorPlanV2Workspace({
     onAutoArrangeFloorPlan: handleAutoArrangeFloorPlan,
     canAutoArrangeFloorPlan,
     autoArrangeDisabledReason,
+    autoArrangeRunning,
+    lastAutoArrangeFeedback,
     autoArrangeMode,
     onAutoArrangeModeChange: setAutoArrangeMode,
     vendorLayoutMode,
     onVendorLayoutModeChange: handleVendorLayoutModeChange,
     lastFairnessScore: store.doc.lastFairnessScore ?? null,
     lastFairnessCoverage: store.doc.lastFairnessCoverage ?? null,
-    onArrangeLayout: handleArrangeLayoutInRoom,
-    canArrangeLayout,
     tableSizeFt: tableSizePillValue,
     onTableSizeChange: handleTableSizeChange,
     onPrepareTableDraw: handlePrepareTableDraw,
@@ -2793,13 +2763,13 @@ function FloorPlanV2Workspace({
     onAutoArrangeFloorPlan: handleAutoArrangeFloorPlan,
     canAutoArrangeFloorPlan,
     autoArrangeDisabledReason,
+    autoArrangeRunning,
+    lastAutoArrangeFeedback,
     autoArrangeMode,
     onAutoArrangeModeChange: setAutoArrangeMode,
     vendorLayoutMode,
     onVendorLayoutModeChange: handleVendorLayoutModeChange,
     lastFairnessScore: store.doc.lastFairnessScore ?? null,
-    onArrangeLayout: handleArrangeLayoutInRoom,
-    canArrangeLayout,
     tableSizeFt: tableSizePillValue,
     onTableSizeChange: handleTableSizeChange,
     onPrepareTableDraw: handlePrepareTableDraw,
@@ -3264,7 +3234,7 @@ function FloorPlanV2Workspace({
         )}
         </div>
       </FullscreenLayout>
-      <LayoutEditorHelpHost showFloatingFab={isDashboard} />
+      <LayoutEditorHelpHost showFloatingFab={false} />
       {!isDashboard ? (
         <FloorPlanDualScreenBridge
           eventId={eventId ?? null}
