@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — search engine optimization (local, not deployed)
+- **Structured data:** Global Organization + WebSite JSON-LD in root layout; FAQPage on `/legal/faq`; richer Event schema (organizer, address, free admission).
+- **Metadata:** `buildPublicMetadata` now sets keywords, canonical URLs, OG/Twitter defaults; legal + supplies pages migrated; authenticated portals (`/coordinator`, `/vendor`, `/login`) marked `noindex`.
+- **Sitemap / robots:** Added `/supplies`, `/legal/about`; removed auth-only experience-designer URLs; sitemap lists active/published events only.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: view-source on `/`, `/discover`, `/events/{id}`, `/legal/faq` for meta + JSON-LD; fetch `/robots.txt` and `/sitemap.xml`.
+- **Next:** Commit + deploy; submit sitemap in Google Search Console for https://popuphub.ca.
+
 ## Active work — coordinator IA: Markets + Blueprint Studio (local, not deployed)
 - **Issue:** Nav **Command center** landed on layout at `/coordinator/dashboard` while UI/URL used conflicting names (command center vs dashboard vs Blueprint Studio).
 - **Fix:** Canonical route **`/coordinator/studio`** (+ `/studio/ledger`); legacy `/coordinator/dashboard` redirects with query preserved. Nav + workspace rail: **Markets** (`/coordinator/markets`) and **Blueprint Studio**. User-visible “dashboard/command center” strings → Blueprint Studio where they mean the layout workspace.
@@ -1132,9 +1139,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `6cc52d1` (pushed to `origin/master`)
-- Last deploy commit: `6cc52d1` - feat: ship 99 session updates (coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; +95 more)
-- Production: https://popuphub.ca - **v1.0.0 build 173** | commit `5ffb913` (handoff updated 2026-06-15 11:22)
+- Branch: `master` @ `dba4551` (pushed to `origin/master`)
+- Last deploy commit: `dba4551` - feat: ship 100 session updates (coordinator IA: Markets + Blueprint Studio; coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; +96 more)
+- Production: https://popuphub.ca - **v1.0.0 build 174** | commit `e1209f7` (handoff updated 2026-06-15 12:05)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1511,7 +1518,7 @@
 
 
 ## Last deploy
-- 2026-06-15 11:22 - Deploy via deploy-popuphub.ps1 - `feat: ship 99 session updates (coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; +95 more)` (6cc52d1)
+- 2026-06-15 12:05 - Deploy via deploy-popuphub.ps1 - `feat: ship 100 session updates (coordinator IA: Markets + Blueprint Studio; coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; +96 more)` (dba4551)
 
 
 ## Goal

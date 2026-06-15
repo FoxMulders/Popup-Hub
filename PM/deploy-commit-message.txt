@@ -1,1 +1,1 @@
-feat: ship 100 session updates (coordinator IA: Markets + Blueprint Studio; coordinator markets list route; auto-arrange button feedback; remove Arrange layout buttons; +96 more)
+feat: ship 101 session updates (search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; auto-arrange button feedback; +97 more)
