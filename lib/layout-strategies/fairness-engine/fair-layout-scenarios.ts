@@ -4,7 +4,7 @@ import type {
 } from '../types'
 
 /** Shared wall-clock budget for multi-scenario fairness runs (ms). */
-export const DEFAULT_MULTI_SCENARIO_BUDGET_MS = 3600
+export const DEFAULT_MULTI_SCENARIO_BUDGET_MS = 12_000
 
 const SCENARIO_LIBRARY: ReadonlyArray<
   Omit<FairLayoutScenarioOptions, 'annealingTimeBudgetMs'>

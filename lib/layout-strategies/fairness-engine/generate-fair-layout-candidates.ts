@@ -63,6 +63,8 @@ export function generateFairLayoutCandidates(
   options: FairLayoutCandidatesOptions = {}
 ): LayoutResult[] {
   const totalBudget = options.timeBudgetMs ?? DEFAULT_MULTI_SCENARIO_BUDGET_MS
+  const enforceWallClock = options.scenarioCount == null
+  const deadline = Date.now() + totalBudget
   const scenarioConfigs = fairLayoutScenarioConfigsForRequest(
     request,
     options.scenarioCount
@@ -71,18 +73,31 @@ export function generateFairLayoutCandidates(
     return [generateFairLayout(request)]
   }
 
-  const perScenarioBudget = Math.max(
-    350,
-    Math.floor(totalBudget / scenarioConfigs.length)
-  )
+  const candidates: LayoutResult[] = []
+  for (const [index, scenario] of scenarioConfigs.entries()) {
+    if (enforceWallClock && index > 0 && Date.now() >= deadline) break
 
-  const candidates = scenarioConfigs.map((scenario, index) =>
-    generateFairLayout(request, {
-      ...scenario,
-      annealingTimeBudgetMs: perScenarioBudget,
-      skipTrafficSeed: index > 0,
-    })
-  )
+    const remaining = Math.max(0, deadline - Date.now())
+    const perScenarioBudget = Math.max(
+      250,
+      Math.min(
+        Math.floor(totalBudget / scenarioConfigs.length),
+        remaining
+      )
+    )
+
+    candidates.push(
+      generateFairLayout(request, {
+        ...scenario,
+        annealingTimeBudgetMs: perScenarioBudget,
+        skipTrafficSeed: index > 0,
+      })
+    )
+  }
+
+  if (candidates.length === 0) {
+    candidates.push(generateFairLayout(request))
+  }
 
   return rankCandidates(candidates)
 }
