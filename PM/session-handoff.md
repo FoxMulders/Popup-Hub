@@ -1120,9 +1120,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `c9918cc` (pushed to `origin/master`)
-- Last deploy commit: `c9918cc` - feat: ship 95 session updates (CI lint fix simulated-annealing; initial loader disorganized-to-organized reveal; patron table flush wall placement; ClearanceHeatCell build fix; +91 more)
-- Production: https://popuphub.ca - **v1.0.0 build 169** | commit `d4694bf` (handoff updated 2026-06-15 09:23)
+- Branch: `master` @ `8d306fa` (pushed to `origin/master`)
+- Last deploy commit: `8d306fa` - feat: ship 98 session updates (auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; CI lint fix simulated-annealing; +94 more)
+- Production: https://popuphub.ca - **v1.0.0 build 170** | commit `773f820` (handoff updated 2026-06-15 09:51)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1499,7 +1499,7 @@
 
 
 ## Last deploy
-- 2026-06-15 09:23 - Deploy via deploy-popuphub.ps1 - `feat: ship 95 session updates (CI lint fix simulated-annealing; initial loader disorganized-to-organized reveal; patron table flush wall placement; ClearanceHeatCell build fix; +91 more)` (c9918cc)
+- 2026-06-15 09:51 - Deploy via deploy-popuphub.ps1 - `feat: ship 98 session updates (auto-arrange button feedback; remove Arrange layout buttons; layout help in site nav; CI lint fix simulated-annealing; +94 more)` (8d306fa)
 
 
 ## Goal
