@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -10,6 +11,9 @@ import {
   parseActivePortal,
   portalFromAccessiblePath,
 } from '@/lib/portals/active-portal'
+import { buildPrivatePortalMetadata } from '@/lib/seo/public-metadata'
+
+export const metadata: Metadata = buildPrivatePortalMetadata('Popup Hub — Coordinator')
 
 export default async function CoordinatorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()

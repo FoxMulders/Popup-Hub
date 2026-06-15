@@ -1,3 +1,4 @@
+import { VendorSuppliesSection } from '@/components/vendor/vendor-supplies-section'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
@@ -6,8 +7,6 @@ export const metadata = buildPublicMetadata({
     'Curated Amazon.ca affiliate picks for market booth gear, displays, tents, and packaging — search supplies for your next pop-up market.',
   path: '/supplies',
 })
-
-import { VendorSuppliesSection } from '@/components/vendor/vendor-supplies-section'
 
 export default function MarketSuppliesPage() {
   return (

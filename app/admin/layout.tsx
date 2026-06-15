@@ -6,6 +6,11 @@ import { accessDeniedRedirect } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
 
+import type { Metadata } from 'next'
+import { buildPrivatePortalMetadata } from '@/lib/seo/public-metadata'
+
+export const metadata: Metadata = buildPrivatePortalMetadata('Popup Hub — Admin')
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const allowed = await hasAdminAccess()
   if (!allowed) {

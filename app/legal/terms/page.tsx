@@ -1,10 +1,11 @@
-import type { Metadata } from 'next'
 import { LegalDocument } from '@/components/legal/legal-document'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
-export const metadata: Metadata = {
+export const metadata = buildPublicMetadata({
   title: 'Terms of Service — Popup Hub',
   description: 'Terms governing use of the Popup Hub marketplace platform in Canada.',
-}
+  path: '/legal/terms',
+})
 
 const LAST_UPDATED = 'May 22, 2026'
 

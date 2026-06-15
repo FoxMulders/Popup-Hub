@@ -4,12 +4,19 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Windows webpack build worker crash (local, not deployed)
+- **Issue:** Local deploy (`PM\Deploy-popuphub.bat`) failed build 174→175 on commit `690e276` with `Next.js build worker exited with code: 3221226505` (Windows `0xC0000409` / stack buffer overrun) during webpack compile — not a TypeScript error.
+- **Root causes:** (1) Stale/partial `.next` cache when prebuild clean hit `ENOTEMPTY` (dev server or prior build locking files). (2) Webpack build worker subprocess crash on Windows under memory pressure on this large app.
+- **Fix:** `scripts/clean-next-build.mjs` — retries + rename-aside fallback + `--strict` for deploy scripts. `package.json` — `node --max-old-space-size=8192` for build. `next.config.ts` — `experimental.webpackMemoryOptimizations: true`; `webpackBuildWorker: false` on `win32` only. `deploy-popuphub.ps1` / `ship.ps1` — strict clean + `NODE_OPTIONS` before build.
+- **Verify:** `npm run lint` — PASS. `npx tsc --noEmit` — PASS. `npm run build` — PASS (build 177, webpack, `webpackBuildWorker` disabled on Windows). Turbopack not used — prior Windows Turbopack manifest failures on `[id]` routes.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — search engine optimization (local, not deployed)
 - **Structured data:** Global Organization + WebSite JSON-LD in root layout; FAQPage on `/legal/faq`; richer Event schema (organizer, address, free admission).
 - **Metadata:** `buildPublicMetadata` now sets keywords, canonical URLs, OG/Twitter defaults; legal + supplies pages migrated; authenticated portals (`/coordinator`, `/vendor`, `/login`) marked `noindex`.
 - **Sitemap / robots:** Added `/supplies`, `/legal/about`; removed auth-only experience-designer URLs; sitemap lists active/published events only.
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: view-source on `/`, `/discover`, `/events/{id}`, `/legal/faq` for meta + JSON-LD; fetch `/robots.txt` and `/sitemap.xml`.
-- **Next:** Commit + deploy; submit sitemap in Google Search Console for https://popuphub.ca.
+- **Next:** Commit + deploy; re-submit sitemap in GSC after deploy (`/sitemap.xml` was redirecting to login HTML — fixed in `lib/auth/public-paths.ts`).
 
 ## Active work — coordinator IA: Markets + Blueprint Studio (local, not deployed)
 - **Issue:** Nav **Command center** landed on layout at `/coordinator/dashboard` while UI/URL used conflicting names (command center vs dashboard vs Blueprint Studio).

@@ -51,6 +51,11 @@ function resolvePublicAppUrlEnv(): string {
 const nextConfig: NextConfig = {
   // All pages are dynamic — no static prerendering for an auth-protected marketplace
   output: 'standalone',
+  experimental: {
+    webpackMemoryOptimizations: true,
+    // Webpack build worker subprocess can crash on Windows (0xC0000409) with stale .next or high memory.
+    ...(process.platform === 'win32' ? { webpackBuildWorker: false } : {}),
+  },
   serverExternalPackages: ['square', 'twilio'],
   // Allow phone/tablet on LAN to load dev HMR (e.g. https://192.168.x.x:3000)
   allowedDevOrigins: ['192.168.1.113', '127.0.0.1', 'localhost'],

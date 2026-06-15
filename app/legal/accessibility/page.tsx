@@ -1,10 +1,11 @@
-import type { Metadata } from 'next'
 import { LegalDocument } from '@/components/legal/legal-document'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
-export const metadata: Metadata = {
+export const metadata = buildPublicMetadata({
   title: 'Accessibility Statement — Popup Hub',
   description: 'Popup Hub commitment to digital accessibility and WCAG 2.1 Level AA in Canada.',
-}
+  path: '/legal/accessibility',
+})
 
 const LAST_UPDATED = 'May 22, 2026'
 

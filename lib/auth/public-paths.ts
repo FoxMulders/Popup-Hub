@@ -13,6 +13,7 @@ export function isPublicPath(pathname: string): boolean {
 
   return (
     pathname.startsWith('/discover') ||
+    pathname.startsWith('/supplies') ||
     pathname.startsWith('/favorites') ||
     pathname.startsWith('/events/') ||
     pathname.startsWith('/auctions/') ||
@@ -28,6 +29,8 @@ export function isPublicPath(pathname: string): boolean {
     pathname === '/sw.js' ||
     pathname === '/manifest.json' ||
     pathname === '/site.webmanifest' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/robots.txt' ||
     pathname === '/version' ||
     pathname === '/api/build-info' ||
     pathname.startsWith('/icons/') ||

@@ -38,10 +38,10 @@ function Write-Step($text) {
 }
 
 try {
-    $nextDir = Join-Path $ProjectRoot '.next'
-    if (Test-Path -LiteralPath $nextDir) {
-        Remove-Item -LiteralPath $nextDir -Recurse -Force
-        Write-Host "Removed stale .next build output before build" -ForegroundColor Yellow
+    Write-Step 'Cleaning stale .next output'
+    $env:NODE_OPTIONS = '--max-old-space-size=8192'
+    if ((Invoke-NativeCommand -FilePath 'node' -ArgumentList @('scripts/clean-next-build.mjs', '--strict')) -ne 0) {
+        throw 'Could not remove stale .next build output'
     }
 
     Write-Step "Building (next build)"

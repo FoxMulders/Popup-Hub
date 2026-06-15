@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
@@ -9,6 +10,9 @@ import {
 } from '@/lib/portals/active-portal'
 
 import type { Profile } from '@/types/database'
+import { buildPrivatePortalMetadata } from '@/lib/seo/public-metadata'
+
+export const metadata: Metadata = buildPrivatePortalMetadata('Popup Hub — Vendor')
 
 export default async function VendorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()

@@ -1,1 +1,1 @@
-feat: ship 101 session updates (search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; auto-arrange button feedback; +97 more)
+feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)

@@ -1,5 +1,5 @@
-import type { Metadata } from 'next'
 import { LegalDocument } from '@/components/legal/legal-document'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import {
   ABOUT_CLOSING,
   ABOUT_DISCOVERY,
@@ -12,11 +12,12 @@ import {
   ABOUT_TRUST,
 } from '@/lib/legal/about-content'
 
-export const metadata: Metadata = {
+export const metadata = buildPublicMetadata({
   title: 'About Us — Popup Hub',
   description:
     'Why Popup Hub exists, how our fees work, and the story behind the platform from Brad and Sonia at The Tipsy Fox.',
-}
+  path: '/legal/about',
+})
 
 export default function AboutPage() {
   return (

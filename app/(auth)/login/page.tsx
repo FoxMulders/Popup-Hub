@@ -2,6 +2,14 @@ export const dynamic = 'force-dynamic'
 
 import { Suspense } from 'react'
 import LoginForm from './login-form'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
+
+export const metadata = buildPublicMetadata({
+  title: 'Sign In — Popup Hub',
+  description: 'Sign in to Popup Hub to discover markets, manage vendor applications, or run your event.',
+  path: '/login',
+  noIndex: true,
+})
 
 export default function LoginPage() {
   return (

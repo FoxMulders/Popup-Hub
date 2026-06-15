@@ -49,7 +49,9 @@ export default async function PublicEventPage({ params }: Props) {
   const [{ data: event }, { count: vendorCount }] = await Promise.all([
     supabase
       .from('events')
-      .select('id, name, description, start_at, end_at, location_name, address, cover_image_url')
+      .select(
+        'id, name, description, start_at, end_at, location_name, address, city, cover_image_url, status, coordinator:profiles!events_coordinator_id_fkey(full_name)'
+      )
       .eq('id', id)
       .in('status', ['published', 'active', 'completed'])
       .maybeSingle(),
