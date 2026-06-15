@@ -46,28 +46,60 @@ type BoothRect = {
   wall?: 'left' | 'right'
 }
 
-/** Angle from room center with 12 o'clock = 0, increasing clockwise (SVG y-down). */
-function clockwiseAngleFromTop(cx: number, cy: number, bx: number, by: number): number {
-  const angle = Math.atan2(by - cy, bx - cx)
-  let ordered = angle + Math.PI / 2
-  if (ordered < 0) ordered += 2 * Math.PI
-  return ordered
-}
-
 function easeOutCubic(value: number) {
   return 1 - (1 - value) ** 3
+}
+
+function easeInOutCubic(value: number) {
+  return value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2
 }
 
 function clamp01(value: number) {
   return Math.min(1, Math.max(0, value))
 }
 
-/** One stall per slot — each completes before the next begins. */
+function lerp(from: number, to: number, t: number) {
+  return from + (to - from) * t
+}
+
+/** Deterministic 0–1 value from booth index (stable across frames). */
+function hash01(index: number, salt = 0) {
+  const n = Math.sin((index + 1) * 12.9898 + salt * 78.233) * 43758.5453
+  return n - Math.floor(n)
+}
+
+/** One item per slot — each completes before the next begins. */
 function sequentialReveal(t: number, index: number, total: number): number {
   if (total <= 0) return 1
   const slot = 1 / total
   const local = (t - index * slot) / slot
   return easeOutCubic(clamp01(local))
+}
+
+type ScatterPose = { x: number; y: number; rot: number }
+
+/** Disorganized pile in the inner ring — each stall offset and slightly rotated. */
+function scatterPose(booth: BoothRect, index: number, inner: PerimeterRing['inner']): ScatterPose {
+  const innerW = inner.right - inner.left
+  const innerH = inner.bottom - inner.top
+  const spreadX = innerW * (0.22 + hash01(index, 1) * 0.38)
+  const spreadY = innerH * (0.18 + hash01(index, 2) * 0.34)
+  const cx = inner.cx + (hash01(index, 3) - 0.5) * spreadX
+  const cy = inner.cy + (hash01(index, 4) - 0.5) * spreadY
+  return {
+    x: cx - booth.w / 2,
+    y: cy - booth.h / 2,
+    rot: (hash01(index, 5) - 0.5) * 32,
+  }
+}
+
+/** Staggered snap from scatter → perimeter slot (wave of organization). */
+function organizeProgress(t: number, index: number, total: number): number {
+  if (total <= 0) return 1
+  const stagger = 0.55
+  const delay = (index / Math.max(1, total - 1)) * stagger
+  const local = (t - delay) / (1 - stagger)
+  return easeInOutCubic(clamp01(local))
 }
 
 type PerimeterRing = {
@@ -164,19 +196,7 @@ function buildPerimeterRing(): PerimeterRing {
     cy: (topY + BOOTH_H + bottomY) / 2,
   }
 
-  const sortedBooths = booths
-    .map((booth) => {
-      const bcx = booth.x + booth.w / 2
-      const bcy = booth.y + booth.h / 2
-      return {
-        booth,
-        angle: clockwiseAngleFromTop(inner.cx, inner.cy, bcx, bcy),
-      }
-    })
-    .sort((a, b) => a.angle - b.angle)
-    .map(({ booth }) => booth)
-
-  return { booths: sortedBooths, inner }
+  return { booths, inner }
 }
 
 const BRAND = {
@@ -205,10 +225,10 @@ function drawProgress(value: number, start: number, end: number) {
   return (value - start) / (end - start)
 }
 
-/** Ordered reveal phases — stalls, logo, tagline words, progress bar. */
+/** Disorganized → organized: scatter, snap to ring, logo, tagline, progress bar. */
 const LOADER_PHASE = {
-  booths: { start: 0.06, end: 0.48 },
-  logo: { start: 0.48, end: 0.72 },
+  booths: { start: 0.04, end: 0.52 },
+  logo: { start: 0.52, end: 0.72 },
   tagline: { start: 0.72, end: 0.92 },
   bar: { start: 0.88, end: 1 },
 } as const
@@ -218,7 +238,7 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const breathe = 1 + Math.sin(globalFrame * 0.06) * 0.012
 
   const boothT = drawProgress(progress, LOADER_PHASE.booths.start, LOADER_PHASE.booths.end)
-  /** Logo fades in only after the last stall is placed. */
+  /** Logo fades in after stalls settle into the perimeter ring. */
   const logoT = drawProgress(progress, LOADER_PHASE.logo.start, LOADER_PHASE.logo.end)
   /** Tagline words appear one at a time after the logo. */
   const tagT = drawProgress(progress, LOADER_PHASE.tagline.start, LOADER_PHASE.tagline.end)
@@ -277,29 +297,31 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
         <rect width={SVG_WIDTH} height={SVG_HEIGHT} fill={BRAND.cream} />
 
         {booths.map((booth, index) => {
-          const t = sequentialReveal(boothT, index, booths.length)
-          const scale = 0.88 + t * 0.12
-          const anchorX =
-            booth.wall === 'left' || booth.wall === 'right'
-              ? booth.x + booth.w
-              : booth.x + booth.w / 2
-          const anchorY = booth.y + booth.h / 2
+          const scatter = scatterPose(booth, index, inner)
+          const t = organizeProgress(boothT, index, booths.length)
+          const x = lerp(scatter.x, booth.x, t)
+          const y = lerp(scatter.y, booth.y, t)
+          const rot = lerp(scatter.rot, 0, t)
+          const scale = lerp(0.82, 1, t)
+          const opacity = lerp(0.45, 0.9, t)
+          const cx = x + booth.w / 2
+          const cy = y + booth.h / 2
           return (
             <g
               key={index}
-              opacity={t * 0.9}
-              transform={`translate(${anchorX}, ${anchorY}) scale(${scale}) translate(${-anchorX}, ${-anchorY})`}
+              opacity={opacity}
+              transform={`translate(${cx}, ${cy}) rotate(${rot}) scale(${scale}) translate(${-cx}, ${-cy})`}
             >
               <rect
-                x={booth.x}
-                y={booth.y}
+                x={x}
+                y={y}
                 width={booth.w}
                 height={booth.h}
                 rx="5"
                 fill={BRAND.sageMuted}
                 stroke={BRAND.sage}
                 strokeWidth="1.5"
-                strokeOpacity={0.65}
+                strokeOpacity={lerp(0.35, 0.65, t)}
               />
             </g>
           )

@@ -10,12 +10,11 @@
 - **Verify:** `npm run lint -- --quiet` PASS; `npm run build` PASS.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — initial loader clockwise stall reveal (local, not deployed)
-- **Goal:** Convey order and organization in the first-visit loader — stalls placed one at a time clockwise from 12 o'clock, then logo fade-in, then tagline word-by-word.
+## Active work — initial loader disorganized-to-organized reveal (local, not deployed)
+- **Goal:** Convey PopUp Hub's value in the first-visit loader — messy scattered stalls snap into an organized perimeter ring, then logo and tagline.
 - **Component:** `components/brand/initial-loader-reveal.tsx` (not floor-plan auto-arrange / presenter).
-- **Clockwise order:** After building the perimeter ring, each stall center is sorted by `clockwiseAngleFromTop(inner.cx, inner.cy, bcx, bcy)` — `atan2` rotated so top = 0, increasing clockwise in SVG y-down space.
-- **Sequence (progress 0–1):** stalls **0.06–0.48** (one per equal slot via `sequentialReveal` + easeOutCubic) → logo **0.48–0.72** → tagline words **0.72–0.92** ("Markets", "Made", "Easy" one at a time) → progress bar **0.88–1.0**.
-- **Verify:** Hard refresh with cleared `popup-hub-initial-loader-shown` localStorage (or incognito) — stalls appear in clockwise order from top, logo only after last stall, tagline words stagger in.
+- **Sequence (progress 0–1):** stalls start piled in the inner ring (offset + slight rotation) → **0.04–0.52** staggered snap to perimeter slots (`organizeProgress` + easeInOutCubic) → logo **0.52–0.72** → tagline words **0.72–0.92** → progress bar **0.88–1.0**.
+- **Verify:** Hard refresh with cleared `popup-hub-initial-loader-shown` localStorage (or incognito) — stalls begin scattered, wave into ring, logo only after settle, tagline words stagger in.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — patron table flush wall placement (local, not deployed)

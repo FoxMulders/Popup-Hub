@@ -26,11 +26,14 @@ import { evaluateFairness } from './fairness-scorer'
 import { filterTrafficSeed, seedFairnessPlacements } from './fairness-seed'
 import { optimizeFairnessAnnealing } from './simulated-annealing'
 import {
-  placementIsValid,
   sanitizePlacements,
   validateAllPlacements,
 } from './placement-validator'
 import { computeRouteCoverage } from './route-coverage'
+import {
+  pruneToFullRouteCoverage,
+  tryPlaceWithFullCoverage,
+} from './coverage-aware-placement'
 
 const PATRON_RANDOMNESS_FT = 0.75
 
@@ -82,7 +85,8 @@ function mergeSeedResults(
   extra: PlacedBoothState[],
   request: LayoutRequest,
   aisleFt: number,
-  obstacles: Rect[]
+  obstacles: Rect[],
+  seedRoute: Point[]
 ): { placed: PlacedBoothState[]; unplaced: string[] } {
   const placed = [...snake]
   const placedIds = new Set(placed.map((p) => p.booth.id))
@@ -91,19 +95,17 @@ function mergeSeedResults(
   for (const p of extra) {
     if (placedIds.has(p.booth.id)) continue
     if (!unplaced.has(p.booth.id)) continue
-    if (
-      placementIsValid(
-        p.x,
-        p.y,
-        p.booth,
-        p.rotation,
-        request.room,
-        aisleFt,
-        obstacles,
-        placed
-      )
-    ) {
-      placed.push(p)
+    const accepted = tryPlaceWithFullCoverage(
+      p.booth,
+      [{ x: p.x, y: p.y, rotation: p.rotation }],
+      request,
+      seedRoute,
+      aisleFt,
+      obstacles,
+      placed
+    )
+    if (accepted) {
+      placed.push(accepted)
       placedIds.add(p.booth.id)
       unplaced.delete(p.booth.id)
     }
@@ -126,7 +128,8 @@ function runTrafficFill(
   stepFt: number,
   obstacles: Rect[],
   seedRoute: Point[],
-  boothIds: string[]
+  boothIds: string[],
+  existingPlaced: PlacedBoothState[] = []
 ): { placed: PlacedBoothState[]; unplaced: string[] } {
   if (boothIds.length === 0) {
     return { placed: [], unplaced: [] }
@@ -154,7 +157,8 @@ function runTrafficFill(
     request,
     aisleFt,
     obstacles,
-    seedRoute
+    seedRoute,
+    existingPlaced
   )
 }
 
@@ -240,7 +244,8 @@ export function generateFairLayout(
       stepFt,
       obstacles,
       seedRoute,
-      unplaced
+      unplaced,
+      placed
     )
 
     const merged = mergeSeedResults(
@@ -249,7 +254,8 @@ export function generateFairLayout(
       filteredTraffic.placed,
       request,
       aisleFt,
-      obstacles
+      obstacles,
+      seedRoute
     )
     placed = merged.placed
     unplaced = merged.unplaced
@@ -264,7 +270,8 @@ export function generateFairLayout(
       stepFt,
       obstacles,
       seedRoute,
-      request.booths.map((b) => b.id)
+      request.booths.map((b) => b.id),
+      []
     )
     placed = filteredTraffic.placed
     unplaced = filteredTraffic.unplaced
@@ -275,6 +282,14 @@ export function generateFairLayout(
   unplaced = [
     ...new Set([...unplaced, ...sanitized.droppedIds]),
   ].filter((id) => !placed.some((p) => p.booth.id === id))
+
+  const pruned = pruneToFullRouteCoverage(request, placed)
+  if (pruned.droppedIds.length > 0) {
+    placed = pruned.placed
+    unplaced = [
+      ...new Set([...unplaced, ...pruned.droppedIds]),
+    ].filter((id) => !placed.some((p) => p.booth.id === id))
+  }
 
   const preAnnealCoverage = computeRouteCoverage(request, placed)
   const placementKeyBeforeAnneal = JSON.stringify(

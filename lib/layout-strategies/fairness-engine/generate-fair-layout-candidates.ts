@@ -11,15 +11,22 @@ import { generateFairLayout } from './generate-fair-layout'
 
 function isFullRouteCoverage(candidate: LayoutResult): boolean {
   const pct = candidate.coveragePercentage ?? candidate.diagnostics?.coveragePercentage ?? 0
-  return pct >= 100 || candidate.layoutValid === true
+  return pct >= 100 - 1e-6 || candidate.layoutValid === true
 }
 
 function rankCandidates(candidates: LayoutResult[]): LayoutResult[] {
   return [...candidates].sort((a, b) => {
-    const fullA = isFullRouteCoverage(a)
-    const fullB = isFullRouteCoverage(b)
+    const covA = a.coveragePercentage ?? a.diagnostics?.coveragePercentage ?? 0
+    const covB = b.coveragePercentage ?? b.diagnostics?.coveragePercentage ?? 0
+    const fullA = covA >= 100 - 1e-6 || a.layoutValid === true
+    const fullB = covB >= 100 - 1e-6 || b.layoutValid === true
     if (fullA !== fullB) {
       return Number(fullB) - Number(fullA)
+    }
+
+    if (!fullA) {
+      if (Math.abs(covB - covA) > 1e-6) return covB - covA
+      return a.placements.length - b.placements.length
     }
 
     if (b.fairnessScore !== a.fairnessScore) {
@@ -35,6 +42,16 @@ function rankCandidates(candidates: LayoutResult[]): LayoutResult[] {
     if (placedB !== placedA) return placedB - placedA
     return (a.scenarioId ?? '').localeCompare(b.scenarioId ?? '')
   })
+}
+
+/** True when any candidate achieves 100% PathfindingService route coverage. */
+export function anyCandidateHasFullCoverage(
+  candidates: LayoutResult[]
+): boolean {
+  return candidates.some(
+    (c) =>
+      (c.coveragePercentage ?? 0) >= 100 - 1e-6 || c.layoutValid === true
+  )
 }
 
 /**

@@ -17,7 +17,11 @@ import type {
 } from '../types'
 import type { PlacedBoothState } from './exposure-simulator'
 import { meanExposureDistance } from './exposure-simulator'
-import { placementIsValid, roomExtent } from './placement-validator'
+import {
+  buildWalkableRouteSlotCandidates,
+  marginGridRouteFacingCandidates,
+  tryPlaceWithFullCoverage,
+} from './coverage-aware-placement'
 
 interface AisleSlot {
   x: number
@@ -182,82 +186,31 @@ function buildAisleSlotsForBooth(
   return slots
 }
 
-function* marginGridCandidates(
-  request: LayoutRequest,
+function* serpentineAisleCandidates(
   route: Point[],
-  stepFt: number,
-  wallInsetFt: number
-): Generator<{ x: number; y: number; rotation: number }> {
-  const slots = buildAisleSlots(
-    route,
-    DEFAULT_CORRIDOR_WIDTH_FT,
-    request.aisleFt ?? 3,
-    request.booths
-  )
-  for (const s of slots) {
-    yield { x: s.x, y: s.y, rotation: s.rotation }
-    yield { x: s.x, y: s.y, rotation: (s.rotation + 90) % 360 }
-  }
-
-  const bbox = roomExtent(request.room.boundary)
-  const booths = request.booths
-  if (booths.length === 0) return
-
-  const avgW = booths.reduce((s, b) => s + b.width, 0) / booths.length
-  const avgH = booths.reduce((s, b) => s + b.height, 0) / booths.length
-  const pitchX = Math.max(stepFt, avgW * 0.35)
-  const pitchY = Math.max(stepFt, avgH * 0.35)
-
-  for (
-    let y = bbox.y + wallInsetFt;
-    y <= bbox.y + bbox.height - wallInsetFt - avgH;
-    y += pitchY
-  ) {
-    for (
-      let x = bbox.x + wallInsetFt;
-      x <= bbox.x + bbox.width - wallInsetFt - avgW;
-      x += pitchX
-    ) {
-      yield { x, y, rotation: 0 }
-      yield { x, y, rotation: 90 }
-    }
-  }
-}
-
-function tryPlaceBooth(
-  booth: Booth,
-  candidates: Iterable<{ x: number; y: number; rotation: number }>,
-  request: LayoutRequest,
-  route: Point[],
+  corridorWidthFt: number,
   aisleFt: number,
-  obstacles: Rect[],
-  placed: PlacedBoothState[]
-): PlacedBoothState | null {
-  let best: PlacedBoothState | null = null
-  let bestDist = Infinity
-
-  for (const c of candidates) {
-    if (
-      !placementIsValid(
-        c.x,
-        c.y,
-        booth,
-        c.rotation,
-        request.room,
-        aisleFt,
-        obstacles,
-        placed
-      )
-    ) {
-      continue
-    }
-    const dist = meanExposureDistance(c.x, c.y, booth, route, c.rotation)
-    if (dist < bestDist) {
-      bestDist = dist
-      best = { booth, x: c.x, y: c.y, rotation: c.rotation }
-    }
+  booth: Booth,
+  aisleSideBias: FairLayoutAisleSideBias
+): Generator<{ x: number; y: number; rotation: number }> {
+  for (const s of buildAisleSlotsForBooth(
+    route,
+    corridorWidthFt,
+    aisleFt,
+    booth,
+    aisleSideBias
+  )) {
+    yield { x: s.x, y: s.y, rotation: s.rotation }
   }
-  return best
+  for (const s of buildAisleSlots(
+    route,
+    corridorWidthFt,
+    aisleFt,
+    [booth],
+    aisleSideBias
+  )) {
+    yield { x: s.x, y: s.y, rotation: s.rotation }
+  }
 }
 
 /**
@@ -317,30 +270,40 @@ export function seedFairnessPlacements(
   const unplaced: string[] = []
 
   for (const booth of booths) {
-    const boothSlots = buildAisleSlotsForBooth(
+    const walkableSlots = buildWalkableRouteSlotCandidates(
+      request,
       route,
-      corridorWidthFt,
-      aisleFt,
+      placed,
       booth,
-      aisleSideBias
+      { aisleFt, corridorWidthFt, aisleSideBias }
     )
-    const aisleCandidates = boothSlots.map((s) => ({
-      x: s.x,
-      y: s.y,
-      rotation: s.rotation,
-    }))
 
     const state =
-      tryPlaceBooth(
+      tryPlaceWithFullCoverage(
         booth,
-        aisleCandidates,
+        walkableSlots,
         request,
         route,
         aisleFt,
         obstacles,
         placed
       ) ??
-      tryPlaceBooth(
+      tryPlaceWithFullCoverage(
+        booth,
+        serpentineAisleCandidates(
+          route,
+          corridorWidthFt,
+          aisleFt,
+          booth,
+          aisleSideBias
+        ),
+        request,
+        route,
+        aisleFt,
+        obstacles,
+        placed
+      ) ??
+      tryPlaceWithFullCoverage(
         booth,
         baseSlots.map((s) => ({ x: s.x, y: s.y, rotation: s.rotation })),
         request,
@@ -349,9 +312,15 @@ export function seedFairnessPlacements(
         obstacles,
         placed
       ) ??
-      tryPlaceBooth(
+      tryPlaceWithFullCoverage(
         booth,
-        marginGridCandidates(request, route, stepFt, wallInsetFt),
+        marginGridRouteFacingCandidates(
+          request,
+          route,
+          stepFt,
+          wallInsetFt,
+          booth
+        ),
         request,
         route,
         aisleFt,
@@ -369,7 +338,7 @@ export function seedFairnessPlacements(
   return { placed, unplaced, route }
 }
 
-/** Greedily accept traffic-aware seed placements near the circulation route. */
+/** Greedily accept traffic-aware placements that preserve 100% route coverage. */
 export function filterTrafficSeed(
   trafficPlaced: Array<{
     id: string
@@ -381,22 +350,27 @@ export function filterTrafficSeed(
   request: LayoutRequest,
   aisleFt: number,
   obstacles: Rect[],
-  route: Point[]
+  route: Point[],
+  existingPlaced: PlacedBoothState[] = []
 ): { placed: PlacedBoothState[]; unplaced: string[] } {
   const byId = new Map(booths.map((b) => [b.id, b]))
-  const placed: PlacedBoothState[] = []
+  const working: PlacedBoothState[] = [...existingPlaced]
+  const placedIds = new Set(working.map((p) => p.booth.id))
+  const newFromTraffic: PlacedBoothState[] = []
   const unplaced: string[] = []
   const maxRouteDist = aisleFt * 4 + maxBoothDepth(booths)
 
-  const sorted = [...trafficPlaced].sort((a, b) => {
-    const ba = byId.get(a.id)
-    const bb = byId.get(b.id)
-    if (!ba || !bb) return 0
-    return (
-      meanExposureDistance(a.x, a.y, ba, route, a.rotation) -
-      meanExposureDistance(b.x, b.y, bb, route, b.rotation)
-    )
-  })
+  const sorted = [...trafficPlaced]
+    .filter((p) => !placedIds.has(p.id))
+    .sort((a, b) => {
+      const ba = byId.get(a.id)
+      const bb = byId.get(b.id)
+      if (!ba || !bb) return 0
+      return (
+        meanExposureDistance(a.x, a.y, ba, route, a.rotation) -
+        meanExposureDistance(b.x, b.y, bb, route, b.rotation)
+      )
+    })
 
   for (const p of sorted) {
     const booth = byId.get(p.id)
@@ -405,29 +379,30 @@ export function filterTrafficSeed(
       unplaced.push(p.id)
       continue
     }
-    if (
-      placementIsValid(
-        p.x,
-        p.y,
-        booth,
-        p.rotation,
-        request.room,
-        aisleFt,
-        obstacles,
-        placed
-      )
-    ) {
-      placed.push({ booth, x: p.x, y: p.y, rotation: p.rotation })
+
+    const accepted = tryPlaceWithFullCoverage(
+      booth,
+      [{ x: p.x, y: p.y, rotation: p.rotation }],
+      request,
+      route,
+      aisleFt,
+      obstacles,
+      working
+    )
+    if (accepted) {
+      working.push(accepted)
+      newFromTraffic.push(accepted)
+      placedIds.add(p.id)
     } else {
       unplaced.push(p.id)
     }
   }
 
   for (const b of booths) {
-    if (!placed.some((p) => p.booth.id === b.id) && !unplaced.includes(b.id)) {
+    if (!placedIds.has(b.id) && !unplaced.includes(b.id)) {
       unplaced.push(b.id)
     }
   }
 
-  return { placed, unplaced }
+  return { placed: newFromTraffic, unplaced }
 }

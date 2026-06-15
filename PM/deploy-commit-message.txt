@@ -1,1 +1,1 @@
-feat: ship 95 session updates (CI lint fix simulated-annealing; initial loader clockwise stall reveal; patron table flush wall placement; ClearanceHeatCell build fix; +91 more)
+feat: ship 95 session updates (CI lint fix simulated-annealing; initial loader disorganized-to-organized reveal; patron table flush wall placement; ClearanceHeatCell build fix; +91 more)
