@@ -1087,10 +1087,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `9a302d3` (local; FairnessFirst route-exposure refactor uncommitted)
-- Last deploy commit: `82e3d46` - feat: ship 83 session updates (Fairness-first auto-arrange verification; CI + Windows production build fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; +79 more)
-- Local build: **v1.0.0 build 163** | `npm run build` PASS | `verify-layout-strategies.ts` **200/200 PASS** (not deployed)
-- Production: https://popuphub.ca - **v1.0.0 build 144** | commit `a69841e` (handoff updated 2026-06-14 17:33)
+- Branch: `master` @ `385c44d` (pushed to `origin/master`)
+- Last deploy commit: `385c44d` - feat: ship 93 session updates (patron table flush wall placement; ClearanceHeatCell build fix; fixed canvas toolbar layout; fullscreen layout editor toolbar parity; +89 more)
+- Production: https://popuphub.ca - **v1.0.0 build 165** | commit `9a302d3` (handoff updated 2026-06-14 19:11)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1467,7 +1466,7 @@
 
 
 ## Last deploy
-- 2026-06-14 17:33 - Deploy via deploy-popuphub.ps1 - `feat: ship 83 session updates (Fairness-first auto-arrange verification; CI + Windows production build fix; Fairness-first layout polygon fix; Traffic-aware auto-arrange greyed out fix; +79 more)` (82e3d46)
+- 2026-06-14 19:11 - Deploy via deploy-popuphub.ps1 - `feat: ship 93 session updates (patron table flush wall placement; ClearanceHeatCell build fix; fixed canvas toolbar layout; fullscreen layout editor toolbar parity; +89 more)` (385c44d)
 
 
 ## Goal
