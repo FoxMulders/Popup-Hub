@@ -1248,9 +1248,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `2759c88` (pushed to `origin/master`)
-- Last deploy commit: `2759c88` - feat: ship 113 session updates (layout tutorial room shape step; share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; +109 more)
-- Production: https://popuphub.ca - **v1.0.0 build 192** | commit `3c3270f` (handoff updated 2026-06-16 11:13)
+- Branch: `master` @ `3468b86` (pushed to `origin/master`)
+- Last deploy commit: `3468b86` - feat: ship 115 session updates (layout tutorial room shape step; patron table fill capacity; layout auto-tour opt-out; share contact with vendors label; +111 more)
+- Production: https://popuphub.ca - **v1.0.0 build 193** | commit `ebb5367` (handoff updated 2026-06-16 11:27)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1627,7 +1627,7 @@
 
 
 ## Last deploy
-- 2026-06-16 11:13 - Deploy via deploy-popuphub.ps1 - `feat: ship 113 session updates (layout tutorial room shape step; share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; +109 more)` (2759c88)
+- 2026-06-16 11:27 - Deploy via deploy-popuphub.ps1 - `feat: ship 115 session updates (layout tutorial room shape step; patron table fill capacity; layout auto-tour opt-out; share contact with vendors label; +111 more)` (3468b86)
 
 
 ## Goal
