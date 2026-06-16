@@ -1,0 +1,32 @@
+import Link from 'next/link'
+import { MapPin } from 'lucide-react'
+import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
+import { MarketingHeroActions } from '@/components/public/marketing/marketing-hero-actions'
+
+export function MarketingHero() {
+  return (
+    <section className="relative overflow-hidden marketing-hero-mesh text-white">
+      <MarketingHeroBackdrop />
+      <div className="relative mx-auto max-w-6xl px-4 py-20 sm:py-28 lg:py-32">
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm">
+            <MapPin className="h-3.5 w-3.5 text-harvest-200" aria-hidden />
+            Canadian pop-up &amp; makers markets
+          </p>
+          <h1 className="mt-6 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+            Discover markets. Run them better.
+          </h1>
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg">
+            Popup Hub connects shoppers, vendors, and organizers — see confirmed lineups before you
+            go, apply to booths online, and manage layouts, check-in, and payouts from one hub.
+          </p>
+          <MarketingHeroActions />
+        </div>
+        <p className="mt-10 text-center text-xs font-medium tracking-wide text-white/60">
+          Built in Canada by people who vend at weekend markets and organize them too
+        </p>
+      </div>
+      <div className="marketing-section-divider" aria-hidden />
+    </section>
+  )
+}

@@ -346,7 +346,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
       ) : null}
 
       <div>
-        <Card className={embedded ? 'border-0 shadow-none' : 'shadow-sm'}>
+        <Card className={embedded ? 'border-0 shadow-none' : 'relative z-[1] marketing-glass-card shadow-[var(--shadow-market-md)]'}>
           {!embedded ? (
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Sign in</CardTitle>

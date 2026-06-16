@@ -1,1 +1,1 @@
-feat: ship 106 session updates (AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; Windows webpack build worker crash; +102 more)
+feat: ship 107 session updates (modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; +103 more)

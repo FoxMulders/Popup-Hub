@@ -19,11 +19,11 @@ export const marketTheme = {
   /** Secondary hint copy */
   hint: 'text-[10px] text-muted-foreground',
   /** Tactile segmented control track */
-  segmentTrack: 'flex rounded-xl border-2 border-stone-200 overflow-hidden bg-card',
+  segmentTrack: 'flex rounded-xl border border-stone-200/70 overflow-hidden bg-card',
   segmentActive: 'bg-forest text-primary-foreground',
-  segmentIdle: 'text-foreground hover:bg-canvas transition-all duration-200 active:translate-y-0.5',
+  segmentIdle: 'text-foreground hover:bg-canvas transition-colors duration-200',
   /** Primary CTA (prefer Button default when possible) */
-  cta: 'btn-tactile bg-forest text-primary-foreground shadow-[var(--shadow-market-lift)] hover:bg-forest-deep hover:scale-[1.02] active:translate-y-0.5 active:shadow-none transition-all duration-200',
+  cta: 'bg-forest text-primary-foreground shadow-[var(--shadow-market-lift)] hover:bg-forest-deep hover:shadow-[var(--shadow-market-md)] transition-all duration-200',
 } as const
 
 /** Semantic status badge classes (approved / pending / cancelled). */

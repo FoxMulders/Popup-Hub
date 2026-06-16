@@ -7,10 +7,13 @@ test.describe('Public discovery and routing smoke', () => {
   test('landing and discover pages load', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveURL('/')
+    await expect(
+      page.getByRole('heading', { name: 'Discover markets. Run them better.' })
+    ).toBeVisible()
 
     await page.goto('/discover')
     await expect(
-      page.getByRole('heading', { name: 'Discover Community Markets' })
+      page.getByRole('heading', { name: 'Community markets near you' })
     ).toBeVisible({ timeout: 15_000 })
   })
 

@@ -77,12 +77,12 @@ export function EventCard({
         appliedLabel ? ' ring-2 ring-harvest-300/70' : ''
       }`}
     >
-      <div className="relative h-48 w-full overflow-hidden rounded-t-xl border-b border-stone-200 bg-canvas">
+      <div className="relative h-52 w-full overflow-hidden rounded-t-2xl border-b border-stone-200/60 bg-gradient-to-br from-sage-50 to-canvas">
         {event.cover_image_url ? (
           <ExpandableImage
             src={event.cover_image_url}
             alt={event.name}
-            className="h-full w-full object-contain bg-canvas transition-transform duration-300 group-hover:scale-[1.02]"
+            className="h-full w-full object-cover bg-canvas transition-transform duration-300 group-hover:scale-[1.03]"
             containerClassName="h-full"
           />
         ) : (

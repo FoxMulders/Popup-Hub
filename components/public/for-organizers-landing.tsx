@@ -1,53 +1,9 @@
 import Link from 'next/link'
-import {
-  CalendarDays,
-  ClipboardCheck,
-  LayoutGrid,
-  MapPin,
-  ShieldCheck,
-  Store,
-  Wallet,
-} from 'lucide-react'
+import { CalendarDays } from 'lucide-react'
 import { ForOrganizersJsonLd } from '@/components/seo/for-organizers-json-ld'
-
-const FEATURES = [
-  {
-    icon: ClipboardCheck,
-    title: 'Vendor applications & approvals',
-    description:
-      'Collect applications, review vendor passports, approve booth categories, and manage waitlists without email threads.',
-  },
-  {
-    icon: LayoutGrid,
-    title: 'Booth layout & floor plans',
-    description:
-      'Auto-arrange vendor booths with traffic-aware or fairness-first layouts, live spatial planner, and printable maps.',
-  },
-  {
-    icon: MapPin,
-    title: 'Patron discovery',
-    description:
-      'Published markets appear on Popup Hub discovery maps so shoppers see dates, locations, and confirmed vendors before they arrive.',
-  },
-  {
-    icon: Wallet,
-    title: 'Booth fees & payouts',
-    description:
-      'Collect booth payments, track escrow holds, and choose whether platform fees pass through to vendors or stay on your payout.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Trust & verification',
-    description:
-      'Community vouching, reliability ratings, and transparent transaction history protect vendors and organizers alike.',
-  },
-  {
-    icon: Store,
-    title: 'Market day operations',
-    description:
-      'Check-in, live operations, quarter auctions, and coordinator tools built for recurring pop-up and makers markets.',
-  },
-] as const
+import { MarketingCtaBand } from '@/components/public/marketing/marketing-cta-band'
+import { MarketingFeatures } from '@/components/public/marketing/marketing-features'
+import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
 
 const STEPS = [
   {
@@ -90,112 +46,86 @@ export function ForOrganizersLanding() {
     <>
       <ForOrganizersJsonLd />
       <main className="flex flex-1 flex-col">
-        <section className="border-b border-stone-200 bg-gradient-to-b from-violet-50 to-cream">
-          <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-24">
-            <p className="text-xs font-bold uppercase tracking-widest text-violet-800">
+        <section className="relative overflow-hidden marketing-hero-mesh text-white">
+          <MarketingHeroBackdrop />
+          <div className="relative mx-auto max-w-5xl px-4 py-16 text-center sm:py-24">
+            <p className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/90 backdrop-blur-sm">
               For market organizers
             </p>
-            <h1 className="mt-3 font-heading text-4xl font-semibold text-foreground sm:text-5xl">
+            <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
               Market organizer software for pop-up &amp; makers markets
             </h1>
-            <p className="mx-auto mt-4 max-w-3xl text-base text-muted-foreground sm:text-lg">
-              Popup Hub replaces spreadsheets and DMs with one coordinator hub — vendor
-              applications, booth layouts, check-in, payouts, and a discovery map that drives
-              foot traffic to your event.
+            <p className="mx-auto mt-4 max-w-3xl text-base leading-relaxed text-white/80 sm:text-lg">
+              Replace spreadsheets and DMs with one coordinator hub — vendor applications, booth
+              layouts, check-in, payouts, and a discovery map that drives foot traffic to your event.
             </p>
             <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
               <Link
                 href="/signup?role=coordinator"
-                className="btn-tactile inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-forest px-8 py-3 text-base font-semibold text-white shadow-[var(--shadow-market-lift)] hover:bg-forest-deep touch-manipulation sm:w-auto"
+                className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
               >
                 <CalendarDays className="h-4 w-4" aria-hidden />
                 Start hosting a market
               </Link>
               <Link
                 href="/legal/faq"
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border-2 border-stone-200 bg-white px-8 py-3 text-base font-semibold text-foreground hover:bg-canvas touch-manipulation sm:w-auto"
+                className="marketing-pill min-h-12 w-full border border-white/30 bg-white/10 text-white hover:bg-white/20 sm:w-auto"
               >
                 Read organizer FAQ
               </Link>
             </div>
-            <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground">
+            <p className="mx-auto mt-4 max-w-2xl text-sm text-white/65">
               Built in Canada by market operators who also vend at weekend markets — not a generic
               event ticketing tool.
             </p>
           </div>
+          <div className="marketing-section-divider" aria-hidden />
         </section>
 
-        <section className="mx-auto grid max-w-5xl gap-6 px-4 py-14 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, description }) => (
-            <article
-              key={title}
-              className="rounded-2xl border bg-white p-6 shadow-sm"
-            >
-              <Icon className="h-8 w-8 text-violet-700" aria-hidden />
-              <h2 className="mt-3 font-heading text-lg font-semibold text-foreground">{title}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-            </article>
-          ))}
-        </section>
+        <MarketingFeatures />
 
-        <section className="border-y border-stone-200 bg-white">
-          <div className="mx-auto max-w-5xl px-4 py-14">
-            <h2 className="text-center font-heading text-2xl font-semibold text-foreground sm:text-3xl">
+        <section className="bg-cream px-4 py-16 sm:py-20">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-center text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               How market organizers use Popup Hub
             </h2>
             <ol className="mt-10 grid gap-8 sm:grid-cols-3">
               {STEPS.map(({ step, title, description }) => (
-                <li key={step} className="text-center">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-900">
+                <li key={step} className="marketing-glass-card p-6 text-center">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-forest text-sm font-bold text-primary-foreground">
                     {step}
                   </span>
-                  <h3 className="mt-4 font-heading text-lg font-semibold text-foreground">{title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+                  <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
                 </li>
               ))}
             </ol>
           </div>
         </section>
 
-        <section className="mx-auto max-w-3xl px-4 py-14">
-          <h2 className="font-heading text-2xl font-semibold text-foreground">
-            Market organizer FAQ
-          </h2>
-          <dl className="mt-6 space-y-6">
-            {FAQ.map(({ question, answer }) => (
-              <div key={question}>
-                <dt className="font-semibold text-foreground">{question}</dt>
-                <dd className="mt-2 text-sm text-muted-foreground">{answer}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-8 text-sm text-muted-foreground">
-            Shoppers discover your published markets on{' '}
-            <Link href="/discover" className="font-semibold text-forest hover:underline">
-              Popup Hub discovery
-            </Link>
-            . Vendors apply through your market listing — you stay in control of approvals and booth
-            fees.
-          </p>
-        </section>
-
-        <section className="border-t border-stone-200 bg-violet-50/60">
-          <div className="mx-auto max-w-5xl px-4 py-14 text-center">
-            <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
-              Ready to organize your next market?
-            </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
-              Create a coordinator account, publish your first event, and replace manual vendor
-              spreadsheets with market management software built for recurring pop-up markets.
+        <section className="border-t border-stone-200/60 bg-linen px-4 py-16">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">Market organizer FAQ</h2>
+            <dl className="mt-6 space-y-6">
+              {FAQ.map(({ question, answer }) => (
+                <div key={question} className="marketing-glass-card p-5">
+                  <dt className="font-semibold text-foreground">{question}</dt>
+                  <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">{answer}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-8 text-sm text-muted-foreground">
+              Shoppers discover your published markets on{' '}
+              <Link href="/discover" className="font-semibold text-forest hover:underline">
+                Popup Hub discovery
+              </Link>
+              . Vendors apply through your market listing — you stay in control of approvals and booth
+              fees.
             </p>
-            <Link
-              href="/signup?role=coordinator"
-              className="mt-6 inline-flex min-h-12 items-center justify-center rounded-lg bg-forest px-8 py-3 text-base font-semibold text-white hover:bg-forest-deep"
-            >
-              Create coordinator account
-            </Link>
           </div>
         </section>
+
+        <MarketingCtaBand />
       </main>
     </>
   )

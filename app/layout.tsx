@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
-import { Lora, Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
+import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
 import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
@@ -18,16 +18,10 @@ import { roleDocumentTitle } from '@/lib/auth/document-title'
 import { buildPrivatePortalMetadata, rootLayoutMetadata } from '@/lib/seo/public-metadata'
 import { DEFAULT_SITE_DESCRIPTION, DEFAULT_SITE_TITLE } from '@/lib/seo/site-config'
 
-const display = Lora({
-  variable: '--font-display',
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
-})
-
 const body = Plus_Jakarta_Sans({
   variable: '--font-body',
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700', '800'],
 })
 
 const geistMono = Geist_Mono({
@@ -99,7 +93,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${body.variable} ${geistMono.variable} h-full`}
+      className={`${body.variable} ${geistMono.variable} h-full`}
     >
       <body className="flex min-h-dvh flex-col bg-background text-foreground font-sans max-w-full overflow-x-hidden">
         <SiteJsonLd />

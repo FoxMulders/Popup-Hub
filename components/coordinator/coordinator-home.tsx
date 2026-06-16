@@ -13,10 +13,10 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
   const greeting = displayName?.trim() ? `Welcome back, ${displayName.trim()}` : 'Welcome back'
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10 sm:py-14">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-4 py-10 sm:py-14">
       <div className="text-center">
         <PortalRoleBadge portal="coordinator" />
-        <h1 className="mt-3 font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           {greeting}
         </h1>
         <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
@@ -29,12 +29,12 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
       <div className="grid gap-4 sm:grid-cols-2">
         <Link
           href="/coordinator/events/new"
-          className="market-panel group flex flex-col rounded-2xl border border-stone-200/80 p-6 text-left transition-colors hover:border-sky-300/80 hover:bg-sky-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2"
+          className="marketing-glass-card group flex flex-col p-6 text-left transition-all hover:shadow-[var(--shadow-market-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 focus-visible:ring-offset-2"
         >
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-900 transition-colors group-hover:bg-sky-200/80">
             <Plus className="h-5 w-5" aria-hidden />
           </span>
-          <span className="mt-4 font-heading text-lg font-semibold text-foreground">
+          <span className="mt-4 text-lg font-bold text-foreground">
             Create a new market
           </span>
           <span className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -45,12 +45,12 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
 
         <Link
           href="/coordinator/markets"
-          className="market-panel group flex flex-col rounded-2xl border border-stone-200/80 p-6 text-left transition-colors hover:border-forest/30 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
+          className="marketing-glass-card group flex flex-col p-6 text-left transition-all hover:shadow-[var(--shadow-market-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2"
         >
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-forest/10 text-forest transition-colors group-hover:bg-forest/15">
             <LayoutDashboard className="h-5 w-5" aria-hidden />
           </span>
-          <span className="mt-4 font-heading text-lg font-semibold text-foreground">
+          <span className="mt-4 text-lg font-bold text-foreground">
             View your markets
           </span>
           <span className="mt-1 text-sm leading-relaxed text-muted-foreground">

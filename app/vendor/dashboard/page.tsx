@@ -116,13 +116,14 @@ export default async function VendorDashboard() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Vendor Dashboard</h1>
-          <p className="mt-1 text-muted-foreground">Manage your bookings and passport</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-sage-700">Vendor portal</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Dashboard</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Manage your passport, applications, and bookings</p>
         </div>
         <Link href="/vendor/events">
-          <Button className="">
+          <Button size="pill" className="">
             Apply for open markets
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>

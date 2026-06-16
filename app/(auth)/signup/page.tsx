@@ -132,7 +132,7 @@ function SignupForm() {
 
   if (submitted) {
     return (
-      <Card className="w-full max-w-md shadow-sm text-center">
+      <Card className="relative z-[1] w-full max-w-md marketing-glass-card shadow-[var(--shadow-market-md)] text-center">
         <CardContent className="pt-10 pb-8 px-8">
           <div className="mx-auto mb-4 flex justify-center">
             <BrandLogoMark size="auth" />
@@ -162,7 +162,7 @@ function SignupForm() {
   }
 
   return (
-    <Card className="flex w-full max-w-lg flex-col shadow-sm">
+    <Card className="relative z-[1] flex w-full max-w-lg flex-col marketing-glass-card shadow-[var(--shadow-market-md)]">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex justify-center">
           <BrandLogoMark size="auth" />
@@ -210,10 +210,10 @@ function SignupForm() {
                 return (
                   <label
                     key={id}
-                    className={`flex min-h-[4.5rem] cursor-pointer touch-manipulation flex-col items-center rounded-xl border-2 p-3 text-center transition ${
+                    className={`flex min-h-[4.5rem] cursor-pointer touch-manipulation flex-col items-center rounded-xl border p-3 text-center transition ${
                       selected
-                        ? 'border-harvest-500 bg-harvest-50 ring-2 ring-harvest-200'
-                        : 'border-stone-200 hover:border-harvest-400'
+                        ? 'border-harvest-500 bg-harvest-50 ring-2 ring-harvest-200/80'
+                        : 'border-stone-200/80 hover:border-harvest-400/60 hover:bg-canvas/50'
                     }`}
                   >
                     <input
@@ -335,9 +335,15 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <div className="relative flex min-h-0 flex-1 items-center justify-center bg-gradient-to-br from-linen via-canvas to-harvest-50 p-4 py-10">
-      <Suspense fallback={<div className="w-full max-w-lg h-[32rem] animate-pulse market-panel rounded-2xl" />}>
-        <SignupForm />
+    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-gradient-to-br from-linen via-canvas to-sage-50 p-4 py-10">
+      <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden>
+        <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-sage-200/50 blur-3xl" />
+        <div className="absolute -right-16 bottom-10 h-72 w-72 rounded-full bg-harvest-100/60 blur-3xl" />
+      </div>
+      <Suspense fallback={<div className="relative z-[1] w-full max-w-lg h-[32rem] animate-pulse marketing-glass-card rounded-2xl" />}>
+        <div className="relative z-[1]">
+          <SignupForm />
+        </div>
       </Suspense>
     </div>
   )

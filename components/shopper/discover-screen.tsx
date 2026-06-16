@@ -133,26 +133,25 @@ export function DiscoverScreen({
   return (
     <div className="mx-auto w-full max-w-full overflow-x-hidden px-4 py-6 sm:max-w-7xl sm:py-8">
       <div>
-        <h1 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
-          {liveAuctionsOnly ? 'Quarter Auctions (QAs)' : 'Popup Hub Community Markets'}
+        <p className="text-xs font-semibold uppercase tracking-widest text-sage-700">Discover</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          {liveAuctionsOnly ? 'Quarter auctions near you' : 'Community markets near you'}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           {liveAuctionsOnly
-            ? 'Find live quarter auction markets near you — drop quarters and win vendor prizes'
-            : 'Find popup markets near you — discover vendors before you go'}
+            ? 'Live quarter auction markets — drop quarters and win vendor prizes'
+            : 'See confirmed vendors and plan your weekend before you go'}
         </p>
       </div>
 
-      <div className="mt-4 space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          When
-        </p>
+      <div className="mt-6 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">When</p>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
             size="sm"
             variant={datePreset === 'today' ? 'default' : 'outline'}
-            className="min-h-11 touch-manipulation"
+            className="min-h-10 touch-manipulation rounded-full px-4"
             onClick={() => setDatePreset('today')}
           >
             Today
@@ -161,7 +160,7 @@ export function DiscoverScreen({
             type="button"
             size="sm"
             variant={datePreset === 'tomorrow' ? 'default' : 'outline'}
-            className="min-h-11 touch-manipulation"
+            className="min-h-10 touch-manipulation rounded-full px-4"
             onClick={() => setDatePreset('tomorrow')}
           >
             Tomorrow
@@ -170,7 +169,7 @@ export function DiscoverScreen({
             type="button"
             size="sm"
             variant={datePreset === 'weekend' ? 'default' : 'outline'}
-            className="min-h-11 touch-manipulation"
+            className="min-h-10 touch-manipulation rounded-full px-4"
             onClick={() => setDatePreset('weekend')}
           >
             This Weekend
@@ -179,7 +178,7 @@ export function DiscoverScreen({
             type="button"
             size="sm"
             variant={datePreset === 'next_weekend' ? 'default' : 'outline'}
-            className="min-h-11 touch-manipulation"
+            className="min-h-10 touch-manipulation rounded-full px-4"
             onClick={() => setDatePreset('next_weekend')}
           >
             Next Weekend
@@ -188,7 +187,7 @@ export function DiscoverScreen({
             type="button"
             size="sm"
             variant={datePreset === 'this_week' ? 'default' : 'outline'}
-            className="min-h-11 touch-manipulation"
+            className="min-h-10 touch-manipulation rounded-full px-4"
             onClick={() => setDatePreset('this_week')}
           >
             This Week
@@ -197,14 +196,14 @@ export function DiscoverScreen({
             type="button"
             size="sm"
             variant={datePreset === 'this_month' ? 'default' : 'outline'}
-            className="min-h-11 touch-manipulation"
+            className="min-h-10 touch-manipulation rounded-full px-4"
             onClick={() => setDatePreset('this_month')}
           >
             This Month
           </Button>
           <label
             className={cn(
-              'inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg border px-3 text-sm',
+              'inline-flex min-h-10 touch-manipulation items-center gap-2 rounded-full border px-4 text-sm',
               datePreset === 'custom'
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-input bg-transparent'
@@ -263,7 +262,7 @@ export function DiscoverScreen({
       </div>
 
       <div
-        className="mt-4 inline-flex w-full max-w-xs rounded-lg border border-input bg-muted p-1"
+        className="mt-6 inline-flex w-full max-w-xs rounded-full border border-stone-200/70 bg-muted/60 p-1"
         role="tablist"
         aria-label="Discover view"
       >
@@ -273,7 +272,7 @@ export function DiscoverScreen({
           aria-selected={view === 'list'}
           variant={view === 'list' ? 'default' : 'ghost'}
           className={cn(
-            'min-h-11 flex-1 touch-manipulation rounded-md shadow-none',
+            'min-h-10 flex-1 touch-manipulation rounded-full shadow-none',
             view === 'list' && 'shadow-sm'
           )}
           onClick={() => setViewMode('list')}
@@ -286,7 +285,7 @@ export function DiscoverScreen({
           aria-selected={view === 'map'}
           variant={view === 'map' ? 'default' : 'ghost'}
           className={cn(
-            'min-h-11 flex-1 touch-manipulation rounded-md shadow-none',
+            'min-h-10 flex-1 touch-manipulation rounded-full shadow-none',
             view === 'map' && 'shadow-sm'
           )}
           onClick={() => setViewMode('map')}

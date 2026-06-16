@@ -69,8 +69,8 @@ export function ShopperTopBar({
   )
 
   return (
-    <header className="sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top">
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3 sm:max-w-7xl sm:px-6">
+    <header className="sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top">
+      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 sm:max-w-7xl sm:px-6">
         <CenteredHeaderRow
           left={
             <BrandLogoLockup className="shrink-0" href="/discover" />
@@ -125,12 +125,12 @@ export function ShopperTopBar({
 
                 <div className="hidden items-center gap-2 md:flex">
                   <Link href="/login">
-                    <Button variant="outline" size="sm" className="min-h-9">
+                    <Button variant="outline" size="sm" className="min-h-9 rounded-full px-4">
                       Sign in
                     </Button>
                   </Link>
                   <Link href="/signup">
-                    <Button size="sm" className="min-h-9">
+                    <Button size="sm" className="min-h-9 rounded-full px-5">
                       Get started
                     </Button>
                   </Link>

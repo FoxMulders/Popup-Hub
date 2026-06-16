@@ -4,6 +4,19 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — modern brand refresh (local, not deployed)
+- **Goal:** Modernize Popup Hub visual system (Market Scout–inspired energy, unique Popup Hub identity) across marketing, browse, auth, and portal entry points — keep forest/sage/cream palette.
+- **Shipped locally:**
+  - **Tokens:** Sans-serif headings (removed Lora); softer borders/shadows; `--radius` 1rem; marketing utility classes (`marketing-glass-card`, `marketing-hero-mesh`, pill CTAs).
+  - **Primitives:** `Button` / `Card` / `market.ts` — flat modern buttons, lighter card borders.
+  - **Marketing:** Rebuilt `/` with forest mesh hero, booth-grid backdrop, 3-path cards, features, split story, testimonial, CTA band. `/for-organizers` aligned to same system.
+  - **Chrome:** Lighter nav (pill CTAs), footer hides build hash (sr-only + title tooltip).
+  - **Browse:** Discover pill filters + updated headings; taller event card images with `object-cover`.
+  - **Auth:** Glass cards on login/signup with ambient blobs.
+  - **Portals:** Coordinator home + vendor dashboard header polish.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/`, `/for-organizers`, `/discover`, `/login`, `/coordinator`, `/vendor/dashboard`.
+- **Next:** Commit + deploy when user asks; optional real market photography for hero/story sections later.
+
 ## Active work — AI Auto-Arrange UI freeze fix (local, not deployed)
 - **Issue:** Layout editor became unresponsive during **AI Auto-Arrange** — fairness multi-scenario packing blocked the main thread for several seconds before React could paint the loading state.
 - **Fix:** `generateFairLayoutCandidatesAsync` yields between fairness scenarios via `nextAnimationFrame`; new `PackBoothsAsync` used from `handleAutoArrangeFloorPlan` (fairness path); double rAF after `autoArrangeRunning` so “Arranging…” paints; yields before grid/patron passes and before deterministic AI fallback.
