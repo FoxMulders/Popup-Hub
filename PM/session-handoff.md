@@ -4,6 +4,13 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — favicon icon mark only (local, not deployed)
+- **Goal:** Browser tab favicon shows the **icon mark** (stall+pin) only — no wordmark — as large as possible.
+- **Change:** `scripts/process-logo.mjs` favicons use `extractIconMark()` (`iconMark`) via `faviconSource`, not `fullLockup`. `FAVICON_PADDING = 0.03` (3% per edge; was `0.10`). PWA / apple-touch / `app/icon.png` still use full lockup.
+- **Files:** `scripts/process-logo.mjs`; regenerated `public/favicon-16x16.png`, `public/favicon-32x32.png`, `public/favicon.ico` via `npm run assets:logo`.
+- **Verify:** Hard-refresh browser tab — cream square with large green stall+pin, no “Popup Hub” text; `app/layout.tsx` still links `/favicon.ico`, `/favicon-16x16.png`, `/favicon-32x32.png`.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — passport niche tags + MLM gating (local, not deployed)
 - **Change:** MLM brand tags (Norwex, Scentsy, etc.) only appear in passport “Specific tags” when primary category is **Multi Level Marketer (MLM)**; switching primary away clears MLM tags. Added niche discovery tags (Hot Sauce, BBQ Sauces, Knitting, Birdhouses, Beef Jerky, and more) via migration `111_passport_niche_tags.sql`.
 - **Files:** `lib/vendor/passport-categories.ts`, `components/passport/passport-wizard.tsx`, `lib/categories/mlm-constraints.ts`, `supabase/migrations/111_passport_niche_tags.sql`.

@@ -282,13 +282,18 @@ async function writeIcons(fullLockup, iconMark) {
   await sharp(appleTouch).toFile(path.join(iconsDir, 'apple-touch-icon.png'))
   console.log('Wrote apple-touch-icon:', path.join(iconsDir, 'apple-touch-icon.png'))
 
+  // Browser tab favicons: icon mark (stall+pin), not full lockup — wordmark is illegible at 16–32px.
+  // Minimal padding (~3%) maximizes mark size while leaving anti-alias breathing room.
+  const FAVICON_PADDING = 0.03
+  const faviconSource = iconMark
+
   for (const size of [16, 32]) {
-    const favicon = await iconOnBackground(iconMark, size, CREAM, 0.1)
+    const favicon = await iconOnBackground(faviconSource, size, CREAM, FAVICON_PADDING)
     await sharp(favicon).toFile(path.join(root, 'public', `favicon-${size}x${size}.png`))
     console.log('Wrote favicon:', path.join(root, 'public', `favicon-${size}x${size}.png`))
   }
 
-  const favicon32 = await iconOnBackground(iconMark, 32, CREAM, 0.1)
+  const favicon32 = await iconOnBackground(faviconSource, 32, CREAM, FAVICON_PADDING)
   await sharp(favicon32).toFile(path.join(root, 'public', 'favicon.ico'))
   console.log('Wrote favicon.ico')
 
