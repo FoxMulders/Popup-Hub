@@ -46,10 +46,13 @@ export function FairnessScenarioBar({
           {isBest ? ' · Best' : ''}
         </span>
         <span className="truncate text-[10px] text-violet-800/90">
-          {label} · Fairness {active.fairnessScore}/100 ·{' '}
-          {(active.coveragePercentage ?? 0).toFixed(0)}% route ·{' '}
-          {active.placements.length} placed
-          {active.layoutValid === false ? ' · invalid' : ''}
+          {label} · Cap {active.scores?.capacityScore ?? 100} · Cov{' '}
+          {active.scores?.coverageScore ?? active.coveragePercentage ?? 0} · Fair{' '}
+          {active.fairnessScore}/100 · {active.placements.length} placed
+          {active.capacityReport?.isPartialLayout ? ' · partial' : ''}
+          {active.layoutValid === false && !active.capacityReport?.isPartialLayout
+            ? ' · invalid'
+            : ''}
         </span>
         {active.report?.summary ? (
           <span

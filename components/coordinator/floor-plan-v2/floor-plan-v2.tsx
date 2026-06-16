@@ -2044,7 +2044,8 @@ function FloorPlanV2Workspace({
       if (options?.commitScore) {
         store.patchDoc({
           lastFairnessScore: candidate.fairnessScore,
-          lastFairnessCoverage: candidate.coveragePercentage,
+          lastFairnessCoverage: candidate.scores?.coverageScore ?? candidate.coveragePercentage,
+          lastCapacityScore: candidate.scores?.capacityScore,
         })
       }
       if (candidate.route?.length) {
@@ -2080,7 +2081,7 @@ function FloorPlanV2Workspace({
     setFairnessScenarioAppliedIndex(fairnessScenarioPreviewIndex)
     setFairnessScenarioComparing(false)
     toast.success(
-      `Applied scenario ${fairnessScenarioPreviewIndex + 1} · fairness ${candidate.fairnessScore}/100 · ${(candidate.coveragePercentage ?? 0).toFixed(0)}% route coverage`
+      `Applied scenario ${fairnessScenarioPreviewIndex + 1} · Cap ${candidate.scores?.capacityScore ?? 100} · Cov ${candidate.scores?.coverageScore ?? candidate.coveragePercentage ?? 0} · Fair ${candidate.fairnessScore}/100`
     )
   }, [
     applyFairnessScenarioToCanvas,
@@ -2171,7 +2172,9 @@ function FloorPlanV2Workspace({
       store.patchDoc({
         vendorLayoutMode,
         lastFairnessScore: packResult.fairnessScore,
-        lastFairnessCoverage: candidates[0]?.coveragePercentage,
+        lastFairnessCoverage:
+          candidates[0]?.scores?.coverageScore ?? candidates[0]?.coveragePercentage,
+        lastCapacityScore: candidates[0]?.scores?.capacityScore,
       })
       store.replaceObjects(nextDoc.objects)
 
@@ -2212,28 +2215,30 @@ function FloorPlanV2Workspace({
 
       const score = packResult.fairnessScore ?? 0
       const bestCandidate = candidates[0]
-      const coveragePct = bestCandidate?.coveragePercentage
-      const coverageNote =
-        typeof coveragePct === 'number'
-          ? ` · ${coveragePct.toFixed(0)}% route coverage`
-          : ''
+      const capScore = bestCandidate?.scores?.capacityScore ?? 100
+      const covScore =
+        bestCandidate?.scores?.coverageScore ?? bestCandidate?.coveragePercentage
+      const scoreSummary = `Cap ${capScore} · Cov ${typeof covScore === 'number' ? covScore.toFixed(0) : '—'} · Fair ${score}`
+      const partialNote = bestCandidate?.capacityReport?.isPartialLayout
+        ? ' — capacity-limited partial layout'
+        : ''
       const invalidNote =
-        bestCandidate?.layoutValid === false
+        bestCandidate?.layoutValid === false && !bestCandidate?.capacityReport?.isPartialLayout
           ? ' — layout invalid (route must pass every booth)'
           : ''
       const scenarioNote =
         candidates.length > 1
           ? ` (best of ${candidates.length} scenarios)`
           : ''
-      recordFeedback(`${placedCount} placed · fairness ${score}/100`)
+      recordFeedback(`${placedCount} placed · ${scoreSummary}`)
       if (packResult.droppedCount > 0) {
         toast.warning(
-          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · score ${score}/100${coverageNote}${invalidNote}. ${packResult.droppedCount} could not fit.`,
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · ${scoreSummary}${partialNote}${invalidNote}. ${packResult.droppedCount} could not fit.`,
           { duration: 5000 }
         )
       } else if (bestCandidate?.layoutValid === false) {
         toast.warning(
-          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · score ${score}/100${coverageNote}${invalidNote}.`,
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · ${scoreSummary}${partialNote}${invalidNote}.`,
           {
             duration: 5500,
             description: bestCandidate.report?.summary,
@@ -2241,7 +2246,7 @@ function FloorPlanV2Workspace({
         )
       } else {
         toast.success(
-          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · fairness score ${score}/100${coverageNote}.`
+          `Fairness layout placed ${placedCount} object${placedCount === 1 ? '' : 's'}${scenarioNote} · ${scoreSummary}${partialNote}.`
         )
       }
       return
@@ -2690,6 +2695,7 @@ function FloorPlanV2Workspace({
     onVendorLayoutModeChange: handleVendorLayoutModeChange,
     lastFairnessScore: store.doc.lastFairnessScore ?? null,
     lastFairnessCoverage: store.doc.lastFairnessCoverage ?? null,
+    lastCapacityScore: store.doc.lastCapacityScore ?? null,
     tableSizeFt: tableSizePillValue,
     onTableSizeChange: handleTableSizeChange,
     onPrepareTableDraw: handlePrepareTableDraw,
@@ -2770,6 +2776,8 @@ function FloorPlanV2Workspace({
     vendorLayoutMode,
     onVendorLayoutModeChange: handleVendorLayoutModeChange,
     lastFairnessScore: store.doc.lastFairnessScore ?? null,
+    lastFairnessCoverage: store.doc.lastFairnessCoverage ?? null,
+    lastCapacityScore: store.doc.lastCapacityScore ?? null,
     tableSizeFt: tableSizePillValue,
     onTableSizeChange: handleTableSizeChange,
     onPrepareTableDraw: handlePrepareTableDraw,

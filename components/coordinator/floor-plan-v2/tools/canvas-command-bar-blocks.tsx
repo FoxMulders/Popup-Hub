@@ -189,6 +189,7 @@ function FloorPlanOptimizeControl({
   onVendorLayoutModeChange,
   lastFairnessScore,
   lastFairnessCoverage,
+  lastCapacityScore,
   onRun,
   canRun,
   disabledReason,
@@ -204,6 +205,7 @@ function FloorPlanOptimizeControl({
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
   lastFairnessCoverage?: number | null
+  lastCapacityScore?: number | null
   onRun?: () => void
   canRun?: boolean
   disabledReason?: string | null
@@ -347,9 +349,9 @@ function FloorPlanOptimizeControl({
           )}
           aria-live="polite"
         >
-          Fairness {lastFairnessScore}/100
+          Cap {lastCapacityScore ?? 100}/100 · Fair {lastFairnessScore}/100
           {typeof lastFairnessCoverage === 'number'
-            ? ` · ${lastFairnessCoverage.toFixed(0)}% cov`
+            ? ` · Cov ${lastFairnessCoverage.toFixed(0)}`
             : ''}
         </span>
       ) : null}
@@ -505,6 +507,7 @@ export interface CanvasCommandBarBlockContext {
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
   lastFairnessCoverage?: number | null
+  lastCapacityScore?: number | null
   onVendorAutoArrange?: () => void
   canVendorAutoArrange?: boolean
   vendorAutoArrangeMode?: AutoArrangeMode
@@ -1193,6 +1196,7 @@ export function renderCanvasCommandBarBlock(
             onVendorLayoutModeChange={ctx.onVendorLayoutModeChange}
             lastFairnessScore={ctx.lastFairnessScore}
             lastFairnessCoverage={ctx.lastFairnessCoverage}
+            lastCapacityScore={ctx.lastCapacityScore}
             onRun={ctx.onAutoArrangeFloorPlan}
             canRun={ctx.canAutoArrangeFloorPlan}
             disabledReason={ctx.autoArrangeDisabledReason}

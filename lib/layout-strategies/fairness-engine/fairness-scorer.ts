@@ -94,9 +94,56 @@ export function meetsRelativeExposureThreshold(
   return values.every((v) => v >= minRequired - 1e-6)
 }
 
+export function computeCapacityScore(
+  originalBoothCount: number,
+  maximumFairCapacity: number
+): number {
+  if (originalBoothCount <= 0) return 100
+  return Math.round(
+    Math.max(0, Math.min(100, (100 * maximumFairCapacity) / originalBoothCount))
+  )
+}
+
+export function computeCoverageScore(coveragePercentage: number): number {
+  return Math.round(Math.max(0, Math.min(100, coveragePercentage)))
+}
+
+/** Exposure balance only — no route cap (use coverageScore separately). */
+export function computeExposureFairnessScore(
+  boothExposures: Map<string, number>,
+  coverageScore: number
+): number {
+  if (coverageScore < 100 - 1e-6 || boothExposures.size === 0) return 0
+  return computeFairnessScore(boothExposures)
+}
+
+export function buildLayoutScores(input: {
+  originalBoothCount: number
+  maximumFairCapacity: number
+  coveragePercentage: number
+  boothExposures: Map<string, number>
+}): {
+  capacityScore: number
+  coverageScore: number
+  fairnessScore: number
+  rawFairnessScore: number
+} {
+  const capacityScore = computeCapacityScore(
+    input.originalBoothCount,
+    input.maximumFairCapacity
+  )
+  const coverageScore = computeCoverageScore(input.coveragePercentage)
+  const rawFairnessScore = computeFairnessScore(input.boothExposures)
+  const fairnessScore = computeExposureFairnessScore(
+    input.boothExposures,
+    coverageScore
+  )
+  return { capacityScore, coverageScore, fairnessScore, rawFairnessScore }
+}
+
 /**
  * Evaluate fairness from per-booth exposure percentages (0–100).
- * Incomplete route coverage yields score 0; only 100% coverage is valid.
+ * Legacy combined evaluation — prefer buildLayoutScores for new code.
  */
 export function evaluateFairness(
   boothExposures: Map<string, number>,

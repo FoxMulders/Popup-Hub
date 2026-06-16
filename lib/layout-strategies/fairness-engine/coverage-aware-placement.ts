@@ -301,7 +301,7 @@ export function tryPlaceWithFullCoverage(
 
 /**
  * Drop booths unreachable by the patron tour until coverage is 100% or empty.
- * Prefers fewer booths with full coverage over more with partial coverage.
+ * Not used by the main fairness pipeline — removal is only allowed for proven physical capacity.
  */
 export function pruneToFullRouteCoverage(
   request: LayoutRequest,

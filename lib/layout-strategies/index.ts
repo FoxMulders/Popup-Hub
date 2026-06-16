@@ -7,6 +7,9 @@ export type {
   LayoutRequest,
   BoothPlacement,
   LayoutResult,
+  LayoutOutcomeReason,
+  LayoutCapacityReport,
+  LayoutScores,
 } from './types'
 
 export {
@@ -58,7 +61,17 @@ export {
   exposureVariance,
   applyRouteCoverageScoreCap,
   MAX_FAIRNESS_SCORE_PARTIAL_ROUTE,
+  computeCapacityScore,
+  computeCoverageScore,
+  computeExposureFairnessScore,
+  buildLayoutScores,
 } from './fairness-engine/fairness-scorer'
+export {
+  classifyLayoutOutcome,
+  isCompleteOutcome,
+} from './fairness-engine/layout-outcome'
+export { reduceToMaximumFairCapacity } from './fairness-engine/capacity-reducer'
+export { runFairnessPlacementPipeline } from './fairness-engine/fairness-placement-pipeline'
 export {
   computeRouteCoverage,
   hasFullRouteCoverage,

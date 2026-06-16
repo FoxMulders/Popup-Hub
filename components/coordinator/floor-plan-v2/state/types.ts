@@ -272,6 +272,8 @@ export interface FloorPlanDoc {
   lastFairnessScore?: number
   /** Last fairness-first route coverage (0–100). */
   lastFairnessCoverage?: number
+  /** Last fairness-first capacity score (0–100). */
+  lastCapacityScore?: number
 }
 
 export const DEFAULT_GRID_SPACING_FT = 1

@@ -4,11 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Active work — SEO: sitemap, canonical domain, organizer landing (local, not deployed)
+## Shipped this session — SEO: sitemap, canonical domain, organizer landing (deployed 2026-06-16)
 - **Issue:** Google search for "market organizer" did not surface Popup Hub; production `/sitemap.xml` returned 500; `robots.txt` Host/Sitemap pointed at `popup-hub.vercel.app`.
 - **Fix:** Hardened `collectSitemapEntries` (try/catch, safe dates); `sitemap.ts`/`robots.ts` force dynamic Node runtime; production canonical fallback `https://popuphub.ca` in `getURL()`; new public `/for-organizers` landing page with FAQ + SoftwareApplication JSON-LD; expanded default keywords; homepage organizer card links to landing page.
-- **Verify:** `npm run build` — PASS (build 182). After deploy: fetch `https://popuphub.ca/sitemap.xml` (200), `robots.txt` Host/Sitemap on popuphub.ca, submit sitemap in GSC.
-- **Next:** Set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca` in Vercel prod env; build backlinks; re-test `site:popuphub.ca` in 1–2 weeks.
+- **Verify:** `npm run build` — PASS. Production: `robots.txt` Host/Sitemap → popuphub.ca; `/sitemap.xml` → 200; `/for-organizers` live.
+- **Next:** Submit `https://popuphub.ca/sitemap.xml` in Google Search Console; set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca` in Vercel prod env; re-test `site:popuphub.ca` in 1–2 weeks.
 
 ## Active work — fairness capacity / coverage / fairness split (local, not deployed)
 - **Goal:** Classify layout outcomes (complete, physical capacity, routing failure, optimization failure, algorithm limitation); remove routing-driven booth prune from main pipeline; split Cap · Cov · Fair scores; capacity reducer only after physical capacity proof.
@@ -1172,9 +1172,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `c9b7ce7` (pushed to `origin/master`)
-- Last deploy commit: `c9b7ce7` - feat: ship 102 session updates (Windows webpack build worker crash; search engine optimization; coordinator IA: Markets + Blueprint Studio; coordinator markets list route; +98 more)
-- Production: https://popuphub.ca - **v1.0.0 build 179** | commit `e0fa459` (handoff updated 2026-06-15 14:48)
+- Branch: `master` @ `ffab56f` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.0.0 build 183** | commit `7c19be0` (handoff updated 2026-06-15 18:40)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 

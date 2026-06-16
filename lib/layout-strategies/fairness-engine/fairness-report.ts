@@ -2,11 +2,35 @@ import {
   BOOTH_VIEWING_DISTANCE_FT,
   DEFAULT_ATTENDEE_COUNT,
 } from '@/lib/vendor-fairness-layout/constants'
-import type { FairnessDiagnostics, FairnessReport, Point } from '../types'
+import type {
+  FairnessDiagnostics,
+  FairnessReport,
+  LayoutCapacityReport,
+  LayoutOutcomeReason,
+  LayoutScores,
+  Point,
+} from '../types'
 import type { PlacedBoothState } from './exposure-simulator'
 import type { ExposureSimResult } from './exposure-simulator'
 import { evaluateFairness, exposureVariance } from './fairness-scorer'
 import type { RouteCoverageResult } from './route-coverage'
+
+function outcomeReasonLabel(reason: LayoutOutcomeReason): string {
+  switch (reason) {
+    case 'complete':
+      return 'Complete — full roster, 100% route coverage'
+    case 'physical_capacity_exceeded':
+      return 'Physical capacity exceeded — vendors removed after proof'
+    case 'routing_failure':
+      return 'Routing failure — geometry fits but patron tour incomplete'
+    case 'optimization_failure':
+      return 'Optimization failure — anneal broke route coverage (reverted)'
+    case 'algorithm_limitation':
+      return 'Algorithm limitation — booth count or time budget exceeded'
+    default:
+      return reason
+  }
+}
 
 function exposureHistogram(
   exposures: Map<string, number>
@@ -54,8 +78,12 @@ export function buildFairnessDiagnostics(input: {
   simulation: ExposureSimResult
   routeCoverage: RouteCoverageResult
   placed: PlacedBoothState[]
+  scores: LayoutScores
+  outcomeReason?: LayoutOutcomeReason
+  capacityReport?: LayoutCapacityReport
 }): FairnessDiagnostics {
-  const { simulation, routeCoverage, placed } = input
+  const { simulation, routeCoverage, placed, scores, outcomeReason, capacityReport } =
+    input
   const exposures = simulation.exposurePercentages
   const evaluation = evaluateFairness(
     exposures,
@@ -66,6 +94,8 @@ export function buildFairnessDiagnostics(input: {
 
   return {
     coveragePercentage: routeCoverage.coveragePercentage,
+    capacityScore: scores.capacityScore,
+    coverageScore: scores.coverageScore,
     exposureVariance: evaluation.exposureVariance,
     lowestExposureBoothId: lowest,
     highestExposureBoothId: highest,
@@ -78,7 +108,9 @@ export function buildFairnessDiagnostics(input: {
     })),
     missedBoothIds: routeCoverage.missedBoothIds,
     meets80PercentRule: evaluation.meets80PercentRule,
-    layoutValid: evaluation.layoutValid,
+    layoutValid: outcomeReason === 'complete',
+    outcomeReason,
+    capacityReport,
   }
 }
 
@@ -90,29 +122,45 @@ export function buildFairnessReport(input: {
   evaluation: ReturnType<typeof evaluateFairness>
   attendeeCount: number
   randomnessFt: number
+  scores: LayoutScores
+  outcomeReason: LayoutOutcomeReason
+  capacityReport: LayoutCapacityReport
 }): FairnessReport {
   const diagnostics = buildFairnessDiagnostics({
     simulation: input.simulation,
     routeCoverage: input.routeCoverage,
     placed: input.placed,
+    scores: input.scores,
+    outcomeReason: input.outcomeReason,
+    capacityReport: input.capacityReport,
   })
 
   const scoreFormula =
-    'fairnessScore = round(100 × (1 − normalizedVariance)) on per-booth pass-by %; score is 0 when route coverage < 100%.'
+    'Capacity = placed÷requested×100; Coverage = PathfindingService tour %; Fairness = exposure variance score (0 when coverage < 100%).'
 
   const steps: FairnessReport['steps'] = [
     {
-      label: 'Patron route',
-      value: `${input.route.length} path points`,
-      detail: 'PathfindingService A* booth tour (entry → every booth → exit).',
+      label: 'Outcome',
+      value: input.outcomeReason,
+      detail: outcomeReasonLabel(input.outcomeReason),
     },
     {
-      label: 'Route coverage',
-      value: `${diagnostics.coveragePercentage.toFixed(1)}%`,
+      label: 'Capacity score',
+      value: input.scores.capacityScore,
+      detail: `${input.capacityReport.maximumFairCapacity}/${input.capacityReport.originalBoothCount} vendors placed at maximum fair capacity.`,
+    },
+    {
+      label: 'Coverage score',
+      value: input.scores.coverageScore,
       detail:
         diagnostics.missedBoothIds.length > 0
           ? `${input.routeCoverage.boothsPassedByRoute}/${input.routeCoverage.totalBooths} booths passed — missed: ${diagnostics.missedBoothIds.join(', ')}`
           : `All ${input.placed.length} placed booth(s) visited by the tour.`,
+    },
+    {
+      label: 'Patron route',
+      value: `${input.route.length} path points`,
+      detail: 'PathfindingService A* booth tour (entry → every booth → exit).',
     },
     {
       label: 'Patron simulation',
@@ -136,22 +184,30 @@ export function buildFairnessReport(input: {
     },
     {
       label: 'Fairness score',
-      value: input.evaluation.fairnessScore,
+      value: input.scores.fairnessScore,
       detail: input.evaluation.scoreCappedDueToRoute
         ? `Score 0 (raw ${input.evaluation.rawFairnessScore}) — patron tour must pass every booth.`
-        : input.evaluation.layoutValid
+        : input.outcomeReason === 'complete'
           ? 'Valid layout — score reflects exposure balance.'
-          : 'Partial route coverage — fairness score is 0.',
+          : 'Incomplete outcome — fairness score is 0.',
     },
   ]
 
+  if (input.capacityReport.removedBoothIds.length > 0) {
+    steps.splice(2, 0, {
+      label: 'Removed vendors',
+      value: input.capacityReport.removedBoothIds.length,
+      detail: input.capacityReport.removedBoothIds.join(', '),
+    })
+  }
+
   if (input.evaluation.scoreCappedDueToRoute) {
-    steps.splice(steps.length - 1, 0, {
+    steps.push({
       label: 'Coverage gate',
-      value: 'Score 0',
+      value: 'Fairness 0',
       detail:
         input.evaluation.scoreCapReason ??
-        'Score is 0 because the patron tour does not pass every booth.',
+        'Fairness score is 0 because the patron tour does not pass every booth.',
     })
   }
 
@@ -170,11 +226,15 @@ export function buildFairnessReport(input: {
     })
   }
 
-  const summary = input.evaluation.layoutValid
-    ? `Fairness ${input.evaluation.fairnessScore}/100 — 100% route coverage, variance ${input.evaluation.exposureVariance.toFixed(2)}${diagnostics.meets80PercentRule ? '' : ' (80% rule failed)'}.`
-    : input.evaluation.scoreCappedDueToRoute
-      ? `Invalid layout — route covers ${diagnostics.coveragePercentage.toFixed(0)}% of booths (${diagnostics.missedBoothIds.length} missed); fairness score 0 (raw ${input.evaluation.rawFairnessScore}).`
-      : `Partial route coverage (${diagnostics.coveragePercentage.toFixed(0)}%) — fairness score 0.`
+  const cap = input.scores.capacityScore
+  const cov = input.scores.coverageScore
+  const fair = input.scores.fairnessScore
+  const summary =
+    input.outcomeReason === 'complete'
+      ? `Cap ${cap} · Cov ${cov} · Fair ${fair} — full roster, variance ${input.evaluation.exposureVariance.toFixed(2)}${diagnostics.meets80PercentRule ? '' : ' (80% rule failed)'}.`
+      : input.outcomeReason === 'physical_capacity_exceeded'
+        ? `Cap ${cap} · Cov ${cov} · Fair ${fair} — capacity-limited (${input.capacityReport.removedBoothIds.length} vendor${input.capacityReport.removedBoothIds.length === 1 ? '' : 's'} removed).`
+        : `Cap ${cap} · Cov ${cov} · Fair ${fair} — ${outcomeReasonLabel(input.outcomeReason)}.`
 
   return { summary, scoreFormula, steps, diagnostics }
 }

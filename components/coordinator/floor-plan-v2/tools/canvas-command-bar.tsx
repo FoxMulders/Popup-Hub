@@ -77,6 +77,7 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   onVendorLayoutModeChange?: (mode: LayoutMode) => void
   lastFairnessScore?: number | null
   lastFairnessCoverage?: number | null
+  lastCapacityScore?: number | null
   onSaveMarket?: () => void
   saveMarketDisabled?: boolean
   saveMarketLoading?: boolean
@@ -146,6 +147,7 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     onVendorLayoutModeChange,
     lastFairnessScore,
     lastFairnessCoverage,
+    lastCapacityScore,
     onClearAll,
     onDeleteSelected,
     tableSizeFt,
@@ -264,6 +266,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       vendorLayoutMode,
       onVendorLayoutModeChange,
       lastFairnessScore,
+      lastFairnessCoverage,
+      lastCapacityScore,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,
@@ -358,6 +362,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       vendorLayoutMode,
       onVendorLayoutModeChange,
       lastFairnessScore,
+      lastFairnessCoverage,
+      lastCapacityScore,
       onClearAll,
       onDeleteSelected,
       tableSizeFt,

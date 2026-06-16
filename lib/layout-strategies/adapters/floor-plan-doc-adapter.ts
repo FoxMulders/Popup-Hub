@@ -100,13 +100,17 @@ export function applyLayoutResultToBooths(
 export function layoutResultMeta(result: LayoutResult): {
   fairnessScore: number
   coveragePercentage: number | undefined
+  capacityScore: number | undefined
   layoutValid: boolean | undefined
+  outcomeReason: LayoutResult['outcomeReason']
   routeGlobal: (origin: { x: number; y: number }) => Point[]
 } {
   return {
     fairnessScore: result.fairnessScore,
-    coveragePercentage: result.coveragePercentage,
+    coveragePercentage: result.scores?.coverageScore ?? result.coveragePercentage,
+    capacityScore: result.scores?.capacityScore,
     layoutValid: result.layoutValid,
+    outcomeReason: result.outcomeReason,
     routeGlobal: (origin) =>
       result.route.map((p) => ({ x: p.x + origin.x, y: p.y + origin.y })),
   }

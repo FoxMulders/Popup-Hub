@@ -9,25 +9,29 @@ import {
 } from './fair-layout-scenarios'
 import { generateFairLayout } from './generate-fair-layout'
 
-function isFullRouteCoverage(candidate: LayoutResult): boolean {
-  const pct = candidate.coveragePercentage ?? candidate.diagnostics?.coveragePercentage ?? 0
-  return pct >= 100 - 1e-6 || candidate.layoutValid === true
+function isFullRosterComplete(candidate: LayoutResult): boolean {
+  return (
+    candidate.outcomeReason === 'complete' &&
+    candidate.capacityReport?.isPartialLayout !== true &&
+    (candidate.scores?.capacityScore ?? 100) >= 100 - 1e-6
+  )
 }
 
 function rankCandidates(candidates: LayoutResult[]): LayoutResult[] {
   return [...candidates].sort((a, b) => {
-    const covA = a.coveragePercentage ?? a.diagnostics?.coveragePercentage ?? 0
-    const covB = b.coveragePercentage ?? b.diagnostics?.coveragePercentage ?? 0
-    const fullA = covA >= 100 - 1e-6 || a.layoutValid === true
-    const fullB = covB >= 100 - 1e-6 || b.layoutValid === true
+    const fullA = isFullRosterComplete(a)
+    const fullB = isFullRosterComplete(b)
     if (fullA !== fullB) {
       return Number(fullB) - Number(fullA)
     }
 
-    if (!fullA) {
-      if (Math.abs(covB - covA) > 1e-6) return covB - covA
-      return a.placements.length - b.placements.length
-    }
+    const capA = a.scores?.capacityScore ?? (fullA ? 100 : 0)
+    const capB = b.scores?.capacityScore ?? (fullB ? 100 : 0)
+    if (capA !== capB) return capB - capA
+
+    const covA = a.scores?.coverageScore ?? a.coveragePercentage ?? 0
+    const covB = b.scores?.coverageScore ?? b.coveragePercentage ?? 0
+    if (covA !== covB) return covB - covA
 
     if (b.fairnessScore !== a.fairnessScore) {
       return b.fairnessScore - a.fairnessScore
@@ -44,19 +48,16 @@ function rankCandidates(candidates: LayoutResult[]): LayoutResult[] {
   })
 }
 
-/** True when any candidate achieves 100% PathfindingService route coverage. */
+/** True when any candidate achieves a complete full-roster layout. */
 export function anyCandidateHasFullCoverage(
   candidates: LayoutResult[]
 ): boolean {
-  return candidates.some(
-    (c) =>
-      (c.coveragePercentage ?? 0) >= 100 - 1e-6 || c.layoutValid === true
-  )
+  return candidates.some(isFullRosterComplete)
 }
 
 /**
  * Run multiple fairness layout scenarios (serpentine axis, aisle bias, anneal seeds)
- * and return ranked candidates — full route coverage first, then fairness score.
+ * and return ranked candidates — full roster complete first, then capacity, coverage, fairness.
  */
 export function generateFairLayoutCandidates(
   request: LayoutRequest,

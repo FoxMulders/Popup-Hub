@@ -359,24 +359,28 @@ assert(
       c.fairnessScore >= 0 &&
       c.fairnessScore <= 100 &&
       c.placements.length >= 1 &&
-      c.report != null
+      c.report != null &&
+      c.scores != null &&
+      c.outcomeReason != null &&
+      c.capacityReport != null
   ),
-  'Each fairness scenario has id, score, placements, and report'
+  'Each fairness scenario has id, scores, outcome, capacity report, and report'
 )
-const bestCov = multiCandidates[0]!.coveragePercentage ?? 0
+const bestCov = multiCandidates[0]!.scores?.coverageScore ?? multiCandidates[0]!.coveragePercentage ?? 0
 const hasFullCandidate = multiCandidates.some(
-  (c) => (c.coveragePercentage ?? 0) >= 100 || c.layoutValid === true
+  (c) => c.outcomeReason === 'complete' && c.capacityReport?.isPartialLayout !== true
 )
 if (hasFullCandidate) {
   assert(
-    (multiCandidates[0]!.coveragePercentage ?? 0) >= 100 ||
-      multiCandidates[0]!.layoutValid === true,
-    'When full-coverage scenarios exist, best candidate has 100% route coverage'
+    multiCandidates[0]!.outcomeReason === 'complete',
+    'When complete full-roster scenarios exist, best candidate is complete'
   )
 } else {
   assert(
-    bestCov >= (multiCandidates[multiCandidates.length - 1]!.coveragePercentage ?? 0),
-    'Fairness candidates ranked by coverage when none reach 100%'
+    bestCov >= (multiCandidates[multiCandidates.length - 1]!.scores?.coverageScore ??
+      multiCandidates[multiCandidates.length - 1]!.coveragePercentage ??
+      0),
+    'Fairness candidates ranked by coverage when none are complete'
   )
 }
 assert(
