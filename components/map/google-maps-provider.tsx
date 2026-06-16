@@ -78,11 +78,11 @@ function MapsApiLoadGuard({
 
   if (authError || timedOut) return <>{fallback}</>
   if (!apiLoaded) return <>{loading}</>
-  return <>{children}</>
+  return <div className="h-full w-full">{children}</div>
 }
 
 const defaultLoading = (
-  <div className="flex h-full min-h-[12rem] items-center justify-center gap-2 text-sm text-muted-foreground">
+  <div className="flex h-full min-h-[280px] items-center justify-center gap-2 text-sm text-muted-foreground">
     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
     Loading map…
   </div>

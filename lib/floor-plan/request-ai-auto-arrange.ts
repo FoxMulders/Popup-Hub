@@ -2,6 +2,7 @@
  * Client orchestration: Gemini auto-arrange with deterministic fallback.
  */
 
+import { nextAnimationFrame } from '@/lib/booth-planner/placement-guard'
 import {
   autoArrangeInRoom,
   type AutoArrangeInRoomResult,
@@ -324,7 +325,11 @@ export async function runAutoArrangeWithAi(
     )
 
   const payload = buildAiPayload(doc, roomId, localW, localL, localObjects, options)
-  if (!payload) return deterministicFallback(doc, roomId, options)
+  if (!payload) {
+    await nextAnimationFrame()
+    const fallback = deterministicFallback(doc, roomId, options)
+    return fallback ? { ...fallback, aiOptimized: false } : null
+  }
 
   let aiResult: AiAutoArrangeResponse | null = null
   try {
@@ -341,6 +346,7 @@ export async function runAutoArrangeWithAi(
   }
 
   if (!aiResult?.placements?.length) {
+    await nextAnimationFrame()
     const fallback = deterministicFallback(doc, roomId, options)
     return fallback ? { ...fallback, aiOptimized: false } : null
   }

@@ -363,6 +363,234 @@ export function PackBooths(
 
 
 
+/**
+
+ * Async variant of {@link PackBooths} — yields between fairness scenarios
+
+ * so the canvas UI can paint loading state and stay interactive.
+
+ */
+
+export async function PackBoothsAsync(
+
+  doc: FloorPlanDoc,
+
+  roomId: string,
+
+  booths: BoothObject[],
+
+  options: PackBoothsOptions = {}
+
+): Promise<PackBoothsResult> {
+
+  const { nextAnimationFrame } = await import('@/lib/booth-planner/placement-guard')
+
+  await nextAnimationFrame()
+
+  const aisleFt = options.aisleFt ?? PACK_BOOTH_AISLE_FT
+
+  const wallInsetFt = options.wallInsetFt ?? PERIMETER_WALL_THICKNESS_FT + 0.5
+
+  const snapFt = options.snapFt ?? doc.snapFt ?? 1
+
+
+
+  const surface = resolveRoomPlacementSurface(doc, roomId)
+
+  if (!surface || booths.length === 0) {
+
+    return { booths, placedCount: 0, droppedCount: booths.length }
+
+  }
+
+
+
+  const packInput = booths.map((b) => ({ id: b.id, width: b.width, height: b.height }))
+
+  const packOpts = {
+
+    aisleWidth: aisleFt,
+
+    wallInsetFt,
+
+    stepFt: snapFt,
+
+    eventCategoryNames: options.eventCategoryNames,
+
+  }
+
+
+
+  const vendorLayoutMode =
+
+    options.vendorLayoutMode ??
+
+    parseLayoutMode(doc.vendorLayoutMode ?? null)
+
+
+
+  let fairnessScore: number | undefined
+
+  let fairnessRoute: LayoutResult['route'] | undefined
+
+  let fairnessCandidates: LayoutResult[] | undefined
+
+  let fairResult: LayoutResult | null = null
+
+  let packResult:
+
+    | Awaited<ReturnType<typeof packBoothsForRoom>>
+
+    | UnifiedPackResult
+
+
+
+  if (
+
+    vendorLayoutMode === LayoutMode.FAIRNESS_FIRST &&
+
+    options.layoutSolver !== 'unified'
+
+  ) {
+
+    const request = layoutRequestFromDocRoom(doc, roomId, packInput, {
+
+      vendorLayoutMode,
+
+      eventCategoryNames: options.eventCategoryNames,
+
+      aisleFt,
+
+      stepFt: snapFt,
+
+    })
+
+    if (request) {
+
+      const useMultiScenario = options.fairnessMultiScenario ?? true
+
+      const { generateFairLayoutCandidatesAsync } = await import('@/lib/layout-strategies')
+
+      if (useMultiScenario) {
+
+        fairnessCandidates = await generateFairLayoutCandidatesAsync(request)
+
+        fairResult = fairnessCandidates[0] ?? null
+
+      } else {
+
+        fairResult = generateFairLayout(request)
+
+      }
+
+      if (fairResult) {
+
+        fairnessScore = fairResult.fairnessScore
+
+        fairnessRoute = fairResult.route
+
+        packResult = {
+
+          placed: fairResult.placements.map((p) => ({
+
+            id: p.boothId,
+
+            x: p.x + surface.minX,
+
+            y: p.y + surface.minY,
+
+            rotation: p.rotation,
+
+          })),
+
+          unplaced: fairResult.unplacedBoothIds ?? [],
+
+        }
+
+      } else {
+
+        packResult = packBoothsForRoom(doc, roomId, packInput, packOpts)
+
+      }
+
+    } else {
+
+      packResult = packBoothsForRoom(doc, roomId, packInput, packOpts)
+
+    }
+
+  } else {
+
+    packResult =
+
+      options.layoutSolver === 'unified'
+
+        ? packBoothsUnifiedForRoom(doc, roomId, packInput, packOpts)
+
+        : packBoothsForRoom(doc, roomId, packInput, packOpts)
+
+  }
+
+
+
+  const packed = (
+
+    fairResult
+
+      ? applyLayoutResultToBooths(booths, fairResult, {
+
+          originX: surface.minX,
+
+          originY: surface.minY,
+
+        })
+
+      : applyPlacementsToBooths(booths, packResult)
+
+  ).map((b) => {
+
+    if (b.x < -900) return b
+
+    if (fairResult) return b
+
+    return orientBoothToNearestWall(b, doc, roomId, surface)
+
+  })
+
+
+
+  const placedCount = packResult.placed.length
+
+
+
+  return {
+
+    booths: packed,
+
+    placedCount,
+
+    droppedCount: packResult.unplaced.length,
+
+    unifiedMeta:
+
+      options.layoutSolver === 'unified'
+
+        ? (packResult as UnifiedPackResult).unifiedMeta
+
+        : undefined,
+
+    fairnessScore,
+
+    fairnessRoute,
+
+    fairnessCandidates,
+
+  }
+
+}
+
+
+
 /** Vendor booths tagged to a room — excludes guest/patron tables. */
 
 export function vendorBoothsInRoom(

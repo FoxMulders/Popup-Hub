@@ -47,6 +47,7 @@ export {
 export { generateFairLayout } from './fairness-engine/generate-fair-layout'
 export {
   generateFairLayoutCandidates,
+  generateFairLayoutCandidatesAsync,
   pickBestFairLayoutCandidate,
 } from './fairness-engine/generate-fair-layout-candidates'
 export {

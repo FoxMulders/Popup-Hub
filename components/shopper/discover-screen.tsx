@@ -304,7 +304,7 @@ export function DiscoverScreen({
         <div
           className={cn(
             'relative isolate z-0 mt-4 overflow-hidden rounded-2xl border shadow-sm [touch-action:auto]',
-            'h-[min(70vh,520px)] md:h-[480px]'
+            'h-[min(70dvh,520px)] md:h-[480px]'
           )}
         >
           <EventMap events={filtered} center={origin} radiusKm={radiusKm} />

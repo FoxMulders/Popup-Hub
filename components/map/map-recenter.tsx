@@ -32,6 +32,40 @@ function applyMapView(
   })
 }
 
+/** Keep map tiles/markers in sync when the container size changes (common on mobile). */
+export function MapResize() {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!map) return
+
+    const triggerResize = () => {
+      google.maps.event.trigger(map, 'resize')
+    }
+
+    triggerResize()
+    window.requestAnimationFrame(triggerResize)
+
+    const mapDiv = map.getDiv()
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => triggerResize())
+        : null
+    resizeObserver?.observe(mapDiv)
+
+    window.addEventListener('resize', triggerResize)
+    window.addEventListener('orientationchange', triggerResize)
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', triggerResize)
+      window.removeEventListener('orientationchange', triggerResize)
+    }
+  }, [map])
+
+  return null
+}
+
 /** Pan the map when coordinates change externally — without locking drag/pan via a controlled center. */
 export function MapRecenter({
   lat,

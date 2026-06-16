@@ -1,3 +1,4 @@
+import { nextAnimationFrame } from '@/lib/booth-planner/placement-guard'
 import type {
   FairLayoutCandidatesOptions,
   LayoutRequest,
@@ -84,6 +85,46 @@ export function generateFairLayoutCandidates(
       skipTrafficSeed: index > 0,
     })
   )
+
+  return rankCandidates(candidates)
+}
+
+/**
+ * Multi-scenario fairness run that yields between scenarios so the layout
+ * editor stays responsive while AI Auto-Arrange evaluates alternates.
+ */
+export async function generateFairLayoutCandidatesAsync(
+  request: LayoutRequest,
+  options: FairLayoutCandidatesOptions = {}
+): Promise<LayoutResult[]> {
+  const totalBudget = options.timeBudgetMs ?? DEFAULT_MULTI_SCENARIO_BUDGET_MS
+  const scenarioConfigs = fairLayoutScenarioConfigsForRequest(
+    request,
+    options.scenarioCount
+  )
+  if (scenarioConfigs.length === 0) {
+    return [generateFairLayout(request)]
+  }
+
+  const perScenarioBudget = Math.max(
+    350,
+    Math.floor(totalBudget / scenarioConfigs.length)
+  )
+
+  const candidates: LayoutResult[] = []
+  for (let index = 0; index < scenarioConfigs.length; index++) {
+    if (index > 0) {
+      await nextAnimationFrame()
+    }
+    const scenario = scenarioConfigs[index]!
+    candidates.push(
+      generateFairLayout(request, {
+        ...scenario,
+        annealingTimeBudgetMs: perScenarioBudget,
+        skipTrafficSeed: index > 0,
+      })
+    )
+  }
 
   return rankCandidates(candidates)
 }

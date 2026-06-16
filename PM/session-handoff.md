@@ -4,6 +4,18 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — AI Auto-Arrange UI freeze fix (local, not deployed)
+- **Issue:** Layout editor became unresponsive during **AI Auto-Arrange** — fairness multi-scenario packing blocked the main thread for several seconds before React could paint the loading state.
+- **Fix:** `generateFairLayoutCandidatesAsync` yields between fairness scenarios via `nextAnimationFrame`; new `PackBoothsAsync` used from `handleAutoArrangeFloorPlan` (fairness path); double rAF after `autoArrangeRunning` so “Arranging…” paints; yields before grid/patron passes and before deterministic AI fallback.
+- **Verify:** Blueprint Studio → place booths → **AI Auto-Arrange** (Fairness engine) — toolbar shows “Arranging…” and canvas stays scrollable/zoomable between scenario ticks; completes with toast as before.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — mobile maps + Google directions (local, not deployed)
+- **Issue:** Discover map blank on mobile; **Directions** opened Apple Maps on iOS instead of Google Maps.
+- **Fix:** `openDirections` always uses Google Maps dir URL (`/maps/dir/?api=1&destination=…`); removed iOS Apple Maps branch. `MapResize` triggers `resize` on mount, container resize, orientation change; `EventMap` loads `marker` library for Advanced Markers; map containers use `70dvh`; provider wraps loaded map in `h-full`.
+- **Verify:** On phone: `/discover` → Map tab shows tiles + pins; **Directions** on event card/detail opens Google Maps. `npx tsc --noEmit` — PASS.
+- **Next:** Commit + deploy when user asks.
+
 ## Shipped this session — SEO: sitemap, canonical domain, organizer landing (deployed 2026-06-16)
 - **Issue:** Google search for "market organizer" did not surface Popup Hub; production `/sitemap.xml` returned 500; `robots.txt` Host/Sitemap pointed at `popup-hub.vercel.app`.
 - **Fix:** Hardened `collectSitemapEntries` (try/catch, safe dates); `sitemap.ts`/`robots.ts` force dynamic Node runtime; production canonical fallback `https://popuphub.ca` in `getURL()`; new public `/for-organizers` landing page with FAQ + SoftwareApplication JSON-LD; expanded default keywords; homepage organizer card links to landing page.

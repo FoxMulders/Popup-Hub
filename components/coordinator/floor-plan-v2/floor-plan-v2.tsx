@@ -85,9 +85,11 @@ import {
 import {
   applyPackedBoothsToDoc,
   PackBooths,
+  PackBoothsAsync,
   patronTablesInRoom,
   vendorBoothsInRoom,
 } from './engine/BoothArrangementEngine'
+import { nextAnimationFrame } from '@/lib/booth-planner/placement-guard'
 import {
   LayoutMode,
   parseLayoutMode,
@@ -2126,6 +2128,8 @@ function FloorPlanV2Workspace({
 
     setAutoArrangeRunning(true)
     const loadingToast = toast.loading('Arranging floor plan…')
+    await nextAnimationFrame()
+    await nextAnimationFrame()
     const recordFeedback = (summary: string) => {
       setLastAutoArrangeFeedback({ at: Date.now(), summary })
     }
@@ -2141,7 +2145,7 @@ function FloorPlanV2Workspace({
         y: 0,
         rotation: 0,
       }))
-      const packResult = PackBooths(store.doc, activeRoomId, cleared, {
+      const packResult = await PackBoothsAsync(store.doc, activeRoomId, cleared, {
         vendorLayoutMode: LayoutMode.FAIRNESS_FIRST,
         eventCategoryNames,
         snapFt: store.doc.snapFt,
@@ -2154,6 +2158,7 @@ function FloorPlanV2Workspace({
       let placedCount = packResult.placedCount
 
       if (patronTableCount > 0) {
+        await nextAnimationFrame()
         const patronPass = autoArrangeInRoom(nextDoc, activeRoomId, {
           scope: 'patron',
           mode: autoArrangeMode,
@@ -2253,6 +2258,7 @@ function FloorPlanV2Workspace({
     }
 
     if (autoArrangeMode === 'grid') {
+      await nextAnimationFrame()
       const result = autoArrangeInRoom(store.doc, activeRoomId, {
         scope: 'all',
         mode: autoArrangeMode,

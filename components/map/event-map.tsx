@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import { MapPin, Clock, Calendar, Navigation, Map as MapIcon } from 'lucide-react'
+import { MapResize } from '@/components/map/map-recenter'
 import { openDirections, type LatLng } from '@/lib/shopper/geo'
 import { DEFAULT_REGION } from '@/lib/shopper/geo'
 import {
@@ -43,10 +44,16 @@ function MapRadiusFraming({ center, radiusKm }: { center: LatLng; radiusKm: Dist
   const map = useMap()
   useEffect(() => {
     if (!map) return
-    map.panTo({ lat: center.lat, lng: center.lng })
+    const target = { lat: center.lat, lng: center.lng }
+    map.panTo(target)
     if (radiusKm !== undefined) {
       map.setZoom(zoomForRadiusKm(radiusKm))
     }
+    // Advanced Markers may not paint until the map gets a resize/idle cycle.
+    window.requestAnimationFrame(() => {
+      google.maps.event.trigger(map, 'resize')
+      map.panTo(target)
+    })
   }, [map, center.lat, center.lng, radiusKm])
   return null
 }
@@ -161,12 +168,13 @@ function GoogleEventMap({
 
   return (
     <Map
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: '100%', height: '100%', minHeight: '280px' }}
       defaultCenter={center}
       defaultZoom={initialZoom}
       mapId="popup-hub-map"
       gestureHandling="greedy"
     >
+      <MapResize />
       <MapRadiusFraming center={center} radiusKm={radiusKm} />
       {events.map((event) => {
         const style = markerStyle(event)
@@ -267,6 +275,7 @@ export function EventMap({ events, center: centerProp, radiusKm }: EventMapProps
       ) : (
         <GoogleMapsProvider
           apiKey={apiKey}
+          libraries={['marker']}
           fallback={<EventMapFallback events={events} />}
         >
           <GoogleEventMap events={events} center={center} radiusKm={radiusKm} />
