@@ -1,6 +1,9 @@
 import type { MetadataRoute } from 'next'
 import { getRequestPublicOrigin, publicAppUrl } from '@/lib/url/public-app-url'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const origin = await getRequestPublicOrigin()
 
@@ -10,6 +13,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         userAgent: '*',
         allow: [
           '/',
+          '/for-organizers',
           '/discover',
           '/supplies',
           '/events/',

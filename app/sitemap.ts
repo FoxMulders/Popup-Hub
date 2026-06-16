@@ -1,10 +1,16 @@
 import type { MetadataRoute } from 'next'
-import { getRequestPublicOrigin, publicAppUrl } from '@/lib/url/public-app-url'
 import { collectSitemapEntries } from '@/lib/seo/collect-sitemap-entries'
+import { getRequestPublicOrigin } from '@/lib/url/public-app-url'
 
-export const revalidate = 3600
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const origin = await getRequestPublicOrigin()
-  return collectSitemapEntries(origin)
+  try {
+    const origin = await getRequestPublicOrigin()
+    return await collectSitemapEntries(origin)
+  } catch (error) {
+    console.error('[sitemap] generation failed:', error)
+    return collectSitemapEntries()
+  }
 }

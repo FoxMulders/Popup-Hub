@@ -4,6 +4,19 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — SEO: sitemap, canonical domain, organizer landing (local, not deployed)
+- **Issue:** Google search for "market organizer" did not surface Popup Hub; production `/sitemap.xml` returned 500; `robots.txt` Host/Sitemap pointed at `popup-hub.vercel.app`.
+- **Fix:** Hardened `collectSitemapEntries` (try/catch, safe dates); `sitemap.ts`/`robots.ts` force dynamic Node runtime; production canonical fallback `https://popuphub.ca` in `getURL()`; new public `/for-organizers` landing page with FAQ + SoftwareApplication JSON-LD; expanded default keywords; homepage organizer card links to landing page.
+- **Verify:** `npm run build` — PASS (build 182). After deploy: fetch `https://popuphub.ca/sitemap.xml` (200), `robots.txt` Host/Sitemap on popuphub.ca, submit sitemap in GSC.
+- **Next:** Set `NEXT_PUBLIC_SITE_URL=https://popuphub.ca` in Vercel prod env; build backlinks; re-test `site:popuphub.ca` in 1–2 weeks.
+
+## Active work — fairness capacity / coverage / fairness split (local, not deployed)
+- **Goal:** Classify layout outcomes (complete, physical capacity, routing failure, optimization failure, algorithm limitation); remove routing-driven booth prune from main pipeline; split Cap · Cov · Fair scores; capacity reducer only after physical capacity proof.
+- **Engine:** `layout-outcome.ts`, `capacity-reducer.ts`, `fairness-placement-pipeline.ts`; refactored `generate-fair-layout.ts` (no `pruneToFullRouteCoverage`); updated `fairness-scorer.ts`, `fairness-report.ts`, `generate-fair-layout-candidates.ts` ranking (partial never beats full roster complete).
+- **UI:** Scenario bar + optimize toolbar + toasts show Cap · Cov · Fair; `FloorPlanDoc.lastCapacityScore` persisted.
+- **Verify:** `npx tsx scripts/verify-fairness-outcome-rules.ts` — 49 PASS (~77s). Extended `verify-layout-strategies.ts` score/outcome assertions (full suite still ~25 min).
+- **Next:** Commit + deploy when user asks; smoke fairness-first auto-arrange on a tight room to confirm capacity-limited toast + partial label.
+
 ## Active work — Windows webpack build worker crash (local, not deployed)
 - **Issue:** Local deploy (`PM\Deploy-popuphub.bat`) failed build 174→175 on commit `690e276` with `Next.js build worker exited with code: 3221226505` (Windows `0xC0000409` / stack buffer overrun) during webpack compile — not a TypeScript error.
 - **Root causes:** (1) Stale/partial `.next` cache when prebuild clean hit `ENOTEMPTY` (dev server or prior build locking files). (2) Webpack build worker subprocess crash on Windows under memory pressure on this large app.
@@ -58,6 +71,13 @@
 - **Issue:** CI lint failed — `prefer-const` on `activeRoute` and `activeCoveragePct` in `simulated-annealing.ts` (lines 170–171); pipeline stops before build even though `next build` passes.
 - **Fix:** `let` → `const` for both (set once from `initialCoverage`, never reassigned).
 - **Verify:** `npm run lint -- --quiet` PASS; `npm run build` PASS.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — auto-populate movable entrance/exit (local, not deployed)
+- **Goal:** New floor-plan rooms start with one entry door and one emergency exit on perimeter walls, draggable like manually placed fixtures.
+- **Module:** `components/coordinator/floor-plan-v2/state/ensure-default-traffic-doors.ts` — `ensureDefaultTrafficDoors()` adds missing doors (`locked: false`), snapped to bottom (entry) and top (exit) center via `snapStructuralAssetToLocalPerimeter`.
+- **Wired:** `canvas-init.ts` (Main Hall bootstrap + existing rooms), `layout-hydration.ts` (wizard room open), `use-floor-plan-doc.ts` (room frame patches / add-room).
+- **Verify:** `npx tsx scripts/verify-default-traffic-doors.ts` — PASS.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — initial loader disorganized-to-organized reveal (local, not deployed)

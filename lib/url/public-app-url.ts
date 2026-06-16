@@ -1,3 +1,6 @@
+/** Production custom domain when NEXT_PUBLIC_SITE_URL is unset on Vercel. */
+const PRODUCTION_CANONICAL_ORIGIN = 'https://popuphub.ca'
+
 function normalizeSiteUrl(value: string): string {
   let url = value.trim()
   url = url.includes('http') ? url : `https://${url}`
@@ -12,6 +15,10 @@ export function getURL(): string {
 
   if (configured?.trim()) {
     return normalizeSiteUrl(configured)
+  }
+
+  if (process.env.VERCEL_ENV === 'production') {
+    return PRODUCTION_CANONICAL_ORIGIN
   }
 
   const vercelHost =
@@ -62,3 +69,5 @@ export function publicAppUrl(path: string, origin?: string): string {
   const base = origin ?? getURL()
   return `${base}${normalizedPath}`
 }
+
+export { PRODUCTION_CANONICAL_ORIGIN }

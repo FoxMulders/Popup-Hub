@@ -7,6 +7,7 @@ type SitemapEntry = MetadataRoute.Sitemap[number]
 const STATIC_PUBLIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['changeFrequency']; priority: number }> =
   [
     { path: '/', changeFrequency: 'weekly', priority: 1 },
+    { path: '/for-organizers', changeFrequency: 'weekly', priority: 0.95 },
     { path: '/discover', changeFrequency: 'hourly', priority: 0.9 },
     { path: '/supplies', changeFrequency: 'weekly', priority: 0.6 },
     { path: '/legal/about', changeFrequency: 'monthly', priority: 0.5 },
@@ -15,6 +16,12 @@ const STATIC_PUBLIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['
     { path: '/legal/faq', changeFrequency: 'monthly', priority: 0.4 },
     { path: '/legal/accessibility', changeFrequency: 'monthly', priority: 0.3 },
   ]
+
+function safeDate(value: string | null | undefined): Date | undefined {
+  if (!value) return undefined
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+}
 
 function makeEntry(
   origin: string | undefined,
@@ -29,73 +36,87 @@ function makeEntry(
   }
 }
 
+async function appendDynamicEntries(origin: string | undefined, entries: SitemapEntry[]) {
+  if (!hasPublicSupabaseConfig()) return
+
+  try {
+    const supabase = createPublicSupabaseClient()
+
+    const { data: events, error: eventsError } = await supabase
+      .from('events')
+      .select('id, updated_at, start_at, status')
+      .in('status', ['published', 'active'])
+      .order('start_at', { ascending: false })
+      .limit(500)
+
+    if (eventsError) {
+      console.error('[sitemap] events query failed:', eventsError.message)
+    }
+
+    for (const event of events ?? []) {
+      entries.push(
+        makeEntry(origin, `/events/${event.id}`, {
+          lastModified: safeDate(event.updated_at),
+          changeFrequency: 'daily',
+          priority: event.status === 'active' ? 0.85 : 0.75,
+        }),
+      )
+    }
+
+    const { data: coordinators, error: coordinatorsError } = await supabase
+      .from('profiles')
+      .select('id, created_at')
+      .eq('role', 'coordinator')
+      .limit(200)
+
+    if (coordinatorsError) {
+      console.error('[sitemap] coordinators query failed:', coordinatorsError.message)
+    }
+
+    for (const profile of coordinators ?? []) {
+      entries.push(
+        makeEntry(origin, `/coordinators/${profile.id}`, {
+          lastModified: safeDate(profile.created_at),
+          changeFrequency: 'weekly',
+          priority: 0.5,
+        }),
+      )
+    }
+
+    const { data: patrons, error: patronsError } = await supabase
+      .from('profiles')
+      .select('id, created_at')
+      .eq('role', 'shopper')
+      .limit(200)
+
+    if (patronsError) {
+      console.error('[sitemap] patrons query failed:', patronsError.message)
+    }
+
+    for (const profile of patrons ?? []) {
+      entries.push(
+        makeEntry(origin, `/patrons/${profile.id}`, {
+          lastModified: safeDate(profile.created_at),
+          changeFrequency: 'weekly',
+          priority: 0.4,
+        }),
+      )
+    }
+  } catch (error) {
+    console.error('[sitemap] dynamic entry collection failed:', error)
+  }
+}
+
 /**
  * Collects all indexable public URLs for sitemap.xml generation.
- * Used by `app/sitemap.ts` and `scripts/generate-sitemap.mjs`.
- *
- * Pass `origin` from {@link getRequestPublicOrigin} so custom domains (e.g. popuphub.ca)
- * emit correct absolute URLs instead of the Vercel default hostname.
+ * Always returns static marketing URLs even when Supabase reads fail.
  */
 export async function collectSitemapEntries(origin?: string): Promise<SitemapEntry[]> {
   const entries: SitemapEntry[] = STATIC_PUBLIC_PATHS.map(({ path, changeFrequency, priority }) =>
     makeEntry(origin, path, { changeFrequency, priority }),
   )
 
-  if (!hasPublicSupabaseConfig()) {
-    return entries
-  }
-
-  const supabase = createPublicSupabaseClient()
-
-  const { data: events } = await supabase
-    .from('events')
-    .select('id, updated_at, start_at, status')
-    .in('status', ['published', 'active'])
-    .order('start_at', { ascending: false })
-    .limit(500)
-
-  for (const event of events ?? []) {
-    const lastModified = event.updated_at ? new Date(event.updated_at) : undefined
-    entries.push(
-      makeEntry(origin, `/events/${event.id}`, {
-        lastModified,
-        changeFrequency: 'daily',
-        priority: event.status === 'active' ? 0.85 : 0.75,
-      }),
-    )
-  }
-
-  const { data: coordinators } = await supabase
-    .from('profiles')
-    .select('id, created_at')
-    .eq('role', 'coordinator')
-    .limit(200)
-
-  for (const profile of coordinators ?? []) {
-    entries.push(
-      makeEntry(origin, `/coordinators/${profile.id}`, {
-        lastModified: profile.created_at ? new Date(profile.created_at) : undefined,
-        changeFrequency: 'weekly',
-        priority: 0.5,
-      }),
-    )
-  }
-
-  const { data: patrons } = await supabase
-    .from('profiles')
-    .select('id, created_at')
-    .eq('role', 'shopper')
-    .limit(200)
-
-  for (const profile of patrons ?? []) {
-    entries.push(
-      makeEntry(origin, `/patrons/${profile.id}`, {
-        lastModified: profile.created_at ? new Date(profile.created_at) : undefined,
-        changeFrequency: 'weekly',
-        priority: 0.4,
-      }),
-    )
-  }
+  await appendDynamicEntries(origin, entries)
 
   return entries
 }

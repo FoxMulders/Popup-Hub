@@ -23,11 +23,11 @@ const AUDIENCE_CARDS = [
     cta: 'Sign up as a vendor',
   },
   {
-    href: '/signup?role=coordinator',
+    href: '/for-organizers',
     icon: CalendarDays,
     title: 'For organizers',
     description: 'Run applications, layouts, check-in, and payouts from one coordinator hub.',
-    cta: 'Host a market',
+    cta: 'Market organizer software',
   },
 ] as const
 

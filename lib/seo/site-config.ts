@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
-import { resolvePublicAppOrigin } from '@/lib/url/public-app-url'
+import { resolvePublicAppOrigin, PRODUCTION_CANONICAL_ORIGIN } from '@/lib/url/public-app-url'
+
+export { PRODUCTION_CANONICAL_ORIGIN }
 
 export const SITE_NAME = 'Popup Hub'
 
@@ -8,13 +10,23 @@ export const DEFAULT_SITE_TITLE = 'Popup Hub — Discover Local Makers Markets'
 export const DEFAULT_SITE_DESCRIPTION =
   'Discover local pop-up markets, browse confirmed vendors before you go, and run booth layout and day-of operations with Popup Hub.'
 
+export const ORGANIZERS_PAGE_TITLE =
+  'Market Organizer Software — Popup Hub'
+
+export const ORGANIZERS_PAGE_DESCRIPTION =
+  'Run pop-up and makers markets from one hub — vendor applications, booth layouts, check-in, payouts, and patron discovery. Built by market operators in Canada.'
+
 export const DEFAULT_KEYWORDS = [
   'popup market',
   'makers market',
   'farmers market',
   'vendor market',
   'local markets Canada',
+  'market organizer',
   'market coordinator',
+  'market management software',
+  'popup market software',
+  'vendor market software',
   'booth layout',
   'quarter auction',
 ]
