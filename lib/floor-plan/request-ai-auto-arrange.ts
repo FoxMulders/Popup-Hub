@@ -4,7 +4,7 @@
 
 import { nextAnimationFrame } from '@/lib/booth-planner/placement-guard'
 import {
-  autoArrangeInRoom,
+  autoArrangeInRoomAsync,
   type AutoArrangeInRoomResult,
   type AutoArrangeMode,
   type AutoArrangeOptions,
@@ -35,7 +35,7 @@ import {
 import {
   autoArrangeVendorUnifiedInRoom,
   applyPackedBoothsToDoc,
-  PackBooths,
+  PackBoothsAsync,
   vendorBoothsInRoom,
 } from '@/components/coordinator/floor-plan-v2/engine/BoothArrangementEngine'
 import { LayoutMode, parseLayoutMode } from '@/lib/layout-strategies'
@@ -216,11 +216,11 @@ function mergeAiBoothsIntoDoc(
   }
 }
 
-function deterministicFallback(
+async function deterministicFallback(
   doc: FloorPlanDoc,
   roomId: string,
   options: AutoArrangeOptions
-): AutoArrangeInRoomResult | null {
+): Promise<AutoArrangeInRoomResult | null> {
   const mode = options.mode ?? 'grid'
   const scope = options.scope ?? 'vendor'
   const vendorLayoutMode = parseLayoutMode(doc.vendorLayoutMode ?? null)
@@ -232,7 +232,8 @@ function deterministicFallback(
     const booths = vendorBoothsInRoom(doc, roomId)
     if (booths.length === 0 && scope === 'vendor') return null
     const cleared = booths.map((b) => ({ ...b, x: 0, y: 0, rotation: 0 }))
-    const packResult = PackBooths(doc, roomId, cleared, {
+    await nextAnimationFrame()
+    const packResult = await PackBoothsAsync(doc, roomId, cleared, {
       vendorLayoutMode: LayoutMode.FAIRNESS_FIRST,
       eventCategoryNames: options.eventCategoryNames,
       snapFt: doc.snapFt ?? 1,
@@ -260,13 +261,14 @@ function deterministicFallback(
   if (useUnified) {
     const traffic = evaluateTrafficFlowPrerequisites(doc, roomId)
     if (traffic.satisfied || options.layoutSolver === 'unified') {
+      await nextAnimationFrame()
       const unified = autoArrangeVendorUnifiedInRoom(doc, roomId, {
         ...options,
         layoutSolver: 'unified',
       })
       if (unified && unified.placedCount > 0) {
         if (scope === 'all') {
-          const patronPass = autoArrangeInRoom(unified.doc, roomId, {
+          const patronPass = await autoArrangeInRoomAsync(unified.doc, roomId, {
             ...options,
             scope: 'patron',
             layoutSolver: 'traffic-aware',
@@ -290,7 +292,7 @@ function deterministicFallback(
       ? runPatronPerimeterLayout(doc, roomId, options)
       : runVendorPerimeterLayout(doc, roomId, options)
   }
-  return autoArrangeInRoom(doc, roomId, options)
+  return autoArrangeInRoomAsync(doc, roomId, options)
 }
 
 /**
@@ -327,7 +329,7 @@ export async function runAutoArrangeWithAi(
   const payload = buildAiPayload(doc, roomId, localW, localL, localObjects, options)
   if (!payload) {
     await nextAnimationFrame()
-    const fallback = deterministicFallback(doc, roomId, options)
+    const fallback = await deterministicFallback(doc, roomId, options)
     return fallback ? { ...fallback, aiOptimized: false } : null
   }
 
@@ -347,7 +349,7 @@ export async function runAutoArrangeWithAi(
 
   if (!aiResult?.placements?.length) {
     await nextAnimationFrame()
-    const fallback = deterministicFallback(doc, roomId, options)
+    const fallback = await deterministicFallback(doc, roomId, options)
     return fallback ? { ...fallback, aiOptimized: false } : null
   }
 

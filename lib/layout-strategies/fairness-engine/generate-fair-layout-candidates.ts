@@ -113,9 +113,7 @@ export async function generateFairLayoutCandidatesAsync(
 
   const candidates: LayoutResult[] = []
   for (let index = 0; index < scenarioConfigs.length; index++) {
-    if (index > 0) {
-      await nextAnimationFrame()
-    }
+    await nextAnimationFrame()
     const scenario = scenarioConfigs[index]!
     candidates.push(
       generateFairLayout(request, {
@@ -124,6 +122,11 @@ export async function generateFairLayoutCandidatesAsync(
         skipTrafficSeed: index > 0,
       })
     )
+    if (index > 0 && index % 2 === 0) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0)
+      })
+    }
   }
 
   return rankCandidates(candidates)

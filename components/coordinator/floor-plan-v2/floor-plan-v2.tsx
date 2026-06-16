@@ -74,7 +74,7 @@ import { LayoutEditorHelpBanner, LayoutEditorHelpHost } from './tools/layout-edi
 import { FloorPlanDualScreenBridge } from './floor-plan-dual-screen-bridge'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import type { AutoArrangeMode } from './engine/auto-arrange'
-import { autoArrangeInRoom } from './engine/auto-arrange'
+import { autoArrangeInRoomAsync } from './engine/auto-arrange'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
 import {
   AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP,
@@ -2159,7 +2159,7 @@ function FloorPlanV2Workspace({
 
       if (patronTableCount > 0) {
         await nextAnimationFrame()
-        const patronPass = autoArrangeInRoom(nextDoc, activeRoomId, {
+        const patronPass = await autoArrangeInRoomAsync(nextDoc, activeRoomId, {
           scope: 'patron',
           mode: autoArrangeMode,
           eventCategoryNames,
@@ -2259,7 +2259,7 @@ function FloorPlanV2Workspace({
 
     if (autoArrangeMode === 'grid') {
       await nextAnimationFrame()
-      const result = autoArrangeInRoom(store.doc, activeRoomId, {
+      const result = await autoArrangeInRoomAsync(store.doc, activeRoomId, {
         scope: 'all',
         mode: autoArrangeMode,
         eventCategoryNames,

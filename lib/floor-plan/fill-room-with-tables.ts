@@ -196,9 +196,9 @@ export function estimateRoomFillCapacity(
   return physicalMax
 }
 
-const PATRON_CAPACITY_PROBE_COUNT = 512
+const PATRON_CAPACITY_PROBE_COUNT = 96
 
-/** Obstacle-aware patron table capacity — matches dense shelf-pack used by Fill. */
+/** Obstacle-aware patron table capacity — bounded dense pack (matches Fill). */
 function estimatePatronPackCapacity(
   doc: FloorPlanDoc,
   roomId: string,

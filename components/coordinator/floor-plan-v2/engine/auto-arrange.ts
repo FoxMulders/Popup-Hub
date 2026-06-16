@@ -39,6 +39,7 @@ import {
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
+import { nextAnimationFrame } from '@/lib/booth-planner/placement-guard'
 import {
   consolidateBoothsForAutoArrange,
   type VendorTableMeta,
@@ -210,6 +211,8 @@ export interface AutoArrangeOptions {
    * so a patron walking loop can exist. Defaults to true.
    */
   autoScaleRoomForPatronPath?: boolean
+  /** Active room id when running inside `autoArrangeInRoom` (enables dense patron pack). */
+  roomId?: string
 }
 
 export interface AutoArrangeResult {
@@ -553,6 +556,41 @@ function restrictedZonesFromObstacles(obstacles: Rect[]): Array<{
     width: r.width,
     height: r.height,
   }))
+}
+
+/** Structural fixtures in room-local coordinates for capacity probes. */
+export function obstacleRectsInRoomLocal(
+  doc: FloorPlanDoc,
+  roomId: string
+): Array<{ x: number; y: number; width: number; height: number }> {
+  const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
+  if (!frame) return []
+
+  const surface = resolveRoomPlacementSurface(doc, roomId)
+  const originX = surface?.minX ?? frame.originX
+  const originY = surface?.minY ?? frame.originY
+  const objectRoom = doc.objectRoom ?? {}
+  const inRoom = doc.objects.filter(
+    (o) =>
+      resolveObjectRoomId(doc, o, roomId) === roomId &&
+      o.kind !== 'booth' &&
+      o.kind !== 'merged_zone'
+  )
+
+  const localDoc: FloorPlanDoc = {
+    ...doc,
+    objects: inRoom.map(
+      (o) =>
+        ({
+          ...o,
+          x: o.x - originX,
+          y: o.y - originY,
+        }) as PlacedObject
+    ),
+  }
+
+  void objectRoom
+  return restrictedZonesFromObstacles(obstacleRectsFor(localDoc))
 }
 
 /** True when a booth can stay put after a failed reposition attempt. */
@@ -1142,6 +1180,48 @@ function finalizeGuestArrange(
   return { placed: merged, dropped }
 }
 
+function shouldUseDenseGuestArrange(
+  guestBooths: BoothObject[],
+  activeBoundingBox: Rect | null
+): boolean {
+  if (guestBooths.length === 0) return false
+  if (patronTablesAreOffCanvasSeeds(guestBooths)) return true
+  if (activeBoundingBox == null) return true
+  // Sightline-aware pass is too slow for bulk auto-arrange sets.
+  return guestBooths.length >= 6
+}
+
+function denseGuestArrangePass(
+  doc: FloorPlanDoc,
+  roomId: string,
+  guestBooths: BoothObject[],
+  options: { localCoordinates?: boolean } = {}
+): GuestAutoArrangePassResult {
+  if (guestBooths.length === 0) {
+    return { placed: [], dropped: [] }
+  }
+
+  const pack = packVendorBoothsInRoomGrid(doc, roomId, {
+    scope: 'patron',
+    localCoordinates: options.localCoordinates,
+  })
+  if (!pack) {
+    return { placed: [], dropped: guestBooths }
+  }
+
+  const placed = pack.doc.objects.filter(
+    (o): o is BoothObject =>
+      o.kind === 'booth' &&
+      isGuestTableBooth(o) &&
+      resolveObjectRoomId(pack.doc, o, roomId) === roomId
+  )
+  const placedIds = new Set(placed.map((b) => b.id))
+  return {
+    placed,
+    dropped: guestBooths.filter((b) => !placedIds.has(b.id)),
+  }
+}
+
 /**
  * Pack patron / guest tables separately from vendor booths — preserves
  * each table's laid size (round tables stay circular) and sorts them
@@ -1683,7 +1763,8 @@ export function autoArrange(
     const layoutMode = autoArrangeModeToMarketLayout(mode)
     const gridProbeMode = layoutMode === 'perimeter' ? 'grid' : layoutMode
     let probeAttempts = 0
-    while (probeAttempts < 300) {
+    let lastCapacity = -1
+    while (probeAttempts < 80) {
       const capacity = maxDeterministicGridSlotCount({
         marketWidthFt: arrangeWidthFt,
         marketHeightFt: arrangeLengthFt,
@@ -1696,6 +1777,8 @@ export function autoArrange(
         entrance: entrancePoint,
       })
       if (capacity >= sourceBooths.length) break
+      if (capacity === lastCapacity && probeAttempts >= 8) break
+      lastCapacity = capacity
       arrangeLengthFt += 2
       if (probeAttempts % 6 === 5) arrangeWidthFt += 2
       roomScaledForPatronPath = true
@@ -1759,23 +1842,36 @@ export function autoArrange(
       ? vendorRawBooths.map((b) => objectFootprintAabb(b))
       : vendorPass.newVendorBooths.map((b) => objectFootprintAabb(b))
 
+  const patronBoundingBox =
+    scope === 'patron' && !patronTablesAreOffCanvasSeeds(guestBooths)
+      ? guestActiveBoundingBox(guestBooths)
+      : null
+
+  const packDoc: FloorPlanDoc = {
+    ...arrangeDoc,
+    objects: [...otherObjects, ...vendorPass.newVendorBooths, ...guestBooths],
+  }
+
+  const arrangeRoomId = options.roomId
+
   const guestPass =
     scope === 'vendor'
       ? { placed: guestBooths, dropped: [] as BoothObject[] }
-      : arrangeGuestTables(guestBooths, {
-          cw,
-          cl,
-          obstacles: structuralObstacles,
-          vendorRects,
-          mode,
-          aisleWidthFt,
-          snapFt: doc.snapFt > 0 ? doc.snapFt : 0.5,
-          localRing,
-          activeBoundingBox:
-            scope === 'patron' && !patronTablesAreOffCanvasSeeds(guestBooths)
-              ? guestActiveBoundingBox(guestBooths)
-              : null,
-        })
+      : arrangeRoomId && shouldUseDenseGuestArrange(guestBooths, patronBoundingBox)
+        ? denseGuestArrangePass(packDoc, arrangeRoomId, guestBooths, {
+            localCoordinates: true,
+          })
+        : arrangeGuestTables(guestBooths, {
+            cw,
+            cl,
+            obstacles: structuralObstacles,
+            vendorRects,
+            mode,
+            aisleWidthFt,
+            snapFt: doc.snapFt > 0 ? doc.snapFt : 0.5,
+            localRing,
+            activeBoundingBox: patronBoundingBox,
+          })
 
   const merged = mergeAutoArrangeResult(
     arrangeDoc,
@@ -1902,10 +1998,13 @@ export function autoArrangeInRoom(
     gridSpacingFt: doc.gridSpacingFt,
     snapFt: doc.snapFt,
     objects: localObjects,
+    rooms: doc.rooms,
+    objectRoom: doc.objectRoom,
   }
 
   const arrangeOptions: AutoArrangeOptions = {
     ...options,
+    roomId,
     placementOrigin: { x: originX, y: originY },
     placementOuterRing: surface?.outerRings[0],
   }
@@ -1982,6 +2081,16 @@ export function autoArrangeInRoom(
   }
 }
 
+/** Yield to the browser before running a potentially heavy in-room arrange pass. */
+export async function autoArrangeInRoomAsync(
+  doc: FloorPlanDoc,
+  roomId: string,
+  options: AutoArrangeOptions = {}
+): Promise<AutoArrangeInRoomResult | null> {
+  await nextAnimationFrame()
+  return autoArrangeInRoom(doc, roomId, options)
+}
+
 /**
  * Run auto-arrange independently inside every room frame. Each pass
  * only repositions booths owned by that room; proximity checks never
@@ -2010,6 +2119,8 @@ export interface PackVendorBoothsInGridOptions {
   snapFt?: number
   /** Vendor booths vs patron/guest tables — defaults to vendor. */
   scope?: AutoArrangeScope
+  /** Booth/obstacle positions are room-local (auto-arrange pass), not canvas-global. */
+  localCoordinates?: boolean
 }
 
 export interface PackVendorBoothsInGridResult {
@@ -2091,10 +2202,17 @@ export function packVendorBoothsInRoomGrid(
   })
 
   const surface = resolveRoomPlacementSurface(doc, roomId)
-  const originX = surface?.minX ?? frame.originX
-  const originY = surface?.minY ?? frame.originY
-  const maxX = surface?.maxX ?? frame.originX + frame.widthFt
-  const maxY = surface?.maxY ?? frame.originY + frame.lengthFt
+  const localCoordinates = options.localCoordinates ?? false
+  const localW = surface
+    ? Math.max(1, surface.maxX - surface.minX)
+    : frame.widthFt
+  const localL = surface
+    ? Math.max(1, surface.maxY - surface.minY)
+    : frame.lengthFt
+  const originX = localCoordinates ? 0 : (surface?.minX ?? frame.originX)
+  const originY = localCoordinates ? 0 : (surface?.minY ?? frame.originY)
+  const maxX = localCoordinates ? localW : (surface?.maxX ?? frame.originX + frame.widthFt)
+  const maxY = localCoordinates ? localL : (surface?.maxY ?? frame.originY + frame.lengthFt)
 
   const sorted = [...toArrange].sort(
     (a, b) => b.width * b.height - a.width * a.height || a.id.localeCompare(b.id)

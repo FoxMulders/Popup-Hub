@@ -10,6 +10,12 @@
 - **Verify:** Blueprint Studio → Layout help → Start quick-start tour — Step 5 spotlights canvas and explains resize/reshape/rotate; Step 6 covers save.
 - **Next:** Commit + deploy when user asks.
 
+## Active work — AI auto-arrange page freeze (local, not deployed)
+- **Issue:** AI Auto-Arrange triggered browser “Page Unresponsive” — patron capacity probe packed 512 tables on every render; auto-arrange ran heavy sync work on the main thread.
+- **Fix:** Fast obstacle-aware patron capacity estimate; bulk patron auto-arrange uses dense shelf-pack; `autoArrangeInRoomAsync` + async fairness fallback; capped room-expansion probe loop; extra yields between fairness scenarios.
+- **Verify:** Blueprint Studio with ~20 patron tables → AI Auto-Arrange shows “Arranging…” without freezing; canvas stays scrollable between fairness scenario ticks.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — patron table fill capacity (local, not deployed)
 - **Issue:** Fill with 20 patron tables only placed 4 — capacity estimate ignored walls/doors; patron fill used strict auto-arrange instead of dense shelf-pack.
 - **Fix:** Patron fill uses `packVendorBoothsInRoomGrid` with `scope: 'patron'` (obstacle-aware row pack). Capacity estimate probes the same packer. Auto-arrange skips patron bounding box when tables are off-canvas fill seeds.
