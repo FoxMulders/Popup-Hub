@@ -1,5 +1,6 @@
 export type LayoutHelpTargetId =
   | 'rooms'
+  | 'room-shape'
   | 'draw-tools'
   | 'navigation'
   | 'vendor-booths'
@@ -48,9 +49,17 @@ export const QUICK_START_TOUR_STEPS: LayoutHelpTourStep[] = [
       'Use Hand (H) to pan — drag the canvas to explore. Select (V) clicks booths and walls to move them. Click empty space on the grid to place objects when a draw tool is active. Ctrl+Z undoes mistakes.',
   },
   {
+    id: 'qs-room-shape',
+    target: 'room-shape',
+    fallbackTargets: ['canvas'],
+    title: 'Step 5 — Change room shape',
+    body:
+      'With Select (V), click the room outline on the canvas (not a booth inside it). Drag corner or edge handles to resize, or drag vertex handles to reshape a custom perimeter. You can also type width and length in the room bar, or use the rotate buttons to turn the whole room 90°.',
+  },
+  {
     id: 'qs-save',
     target: 'save-actions',
-    title: 'Step 5 — Save your layout',
+    title: 'Step 6 — Save your layout',
     body:
       'Save draft writes your layout without publishing. Save layout / Save & deploy also publishes draft markets when you are ready. Fix any overlap badge before saving.',
   },
@@ -65,6 +74,16 @@ export const TOUR_STEPS_BY_TOPIC_ID: Record<string, LayoutHelpTourStep[]> = {
       title: 'Room tabs',
       body:
         'Follow the green outline. Click a room name to edit that zone; use + Add room in the same panel for patios, annexes, or overflow halls. Saving stores every room together.',
+    },
+  ],
+  'rooms-resize-rotate': [
+    {
+      id: 'rooms-resize',
+      target: 'room-shape',
+      fallbackTargets: ['canvas'],
+      title: 'Resize and rotate a room',
+      body:
+        'Click the room frame on the canvas, then drag handles to resize or reshape. Width/length fields and rotate buttons in the room bar apply the same changes.',
     },
   ],
   'tools-walls-doors': [

@@ -38,7 +38,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
   {
     id: 'quick-start',
     category: 'basics',
-    title: 'New here? Quick start in 5 steps',
+    title: 'New here? Quick start in 6 steps',
     summary:
       'You do not need every toolbar button on day one. Follow this order, then search help for anything else.',
     steps: [
@@ -46,6 +46,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'Sketch the venue — Draw walls, doors, and exits on the perimeter before placing booths.',
       'Place vendor booths — under Vendor Booths, pick a table length, then click the canvas to add booths.',
       'Navigate easily — H pans the canvas, V selects and moves objects, Ctrl+Z undoes mistakes.',
+      'Change room shape — select the room outline on the canvas and drag handles, or use width/length and rotate in the room bar.',
       'Save when ready — Save draft keeps your work; fix any overlap warnings before saving.',
     ],
     keywords: [

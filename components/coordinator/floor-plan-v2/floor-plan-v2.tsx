@@ -2956,6 +2956,10 @@ function FloorPlanV2Workspace({
         {isDashboard ? (
             <div className="flex min-h-0 min-w-0 flex-1 basis-0 items-stretch overflow-hidden">
               <div
+                data-layout-help="room-shape"
+                className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+              >
+              <div
                 data-layout-help="canvas"
                 className="floor-plan-canvas-host floor-plan-canvas-host--dashboard relative flex h-full min-h-0 min-w-0 flex-1 flex-row overflow-hidden bg-stone-50"
               >
@@ -3055,6 +3059,7 @@ function FloorPlanV2Workspace({
                 </div>
                 {!dashboardPreview ? <CanvasLedger /> : null}
               </div>
+              </div>
             </div>
         ) : (
           <div
@@ -3070,6 +3075,10 @@ function FloorPlanV2Workspace({
                   className="shrink-0"
                 />
               ) : null}
+              <div
+                data-layout-help="room-shape"
+                className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+              >
               <div
                 data-layout-help="canvas"
                 className={cn(
@@ -3202,6 +3211,7 @@ function FloorPlanV2Workspace({
                     showClearanceWarnings={showClearanceWarnings}
                   />
                 ) : null}
+              </div>
               </div>
             </div>
 

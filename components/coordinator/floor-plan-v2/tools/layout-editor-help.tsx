@@ -145,7 +145,7 @@ export function LayoutEditorHelpBanner({ className }: { className?: string }) {
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground sm:text-sm">
             There are a lot of tools here — that&apos;s normal. Open{' '}
             <strong className="font-semibold text-foreground">Layout help</strong>{' '}
-            for a 5-step quick start and searchable guides for everything on this
+            for a 6-step quick start and searchable guides for everything on this
             page.
           </p>
         </div>
