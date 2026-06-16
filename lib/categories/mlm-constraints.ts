@@ -10,6 +10,8 @@ export const SINGLE_SLOT_MLM_BRAND_NAMES = [
   'Color Street',
   'doTERRA',
   'Norwex',
+  'Scentsy',
+  'The Super Patch Company',
 ] as const
 
 export const DEFAULT_GLOBAL_MLM_CAP = 3

@@ -13,17 +13,21 @@ import {
   canAddFeaturedProduct,
   FREE_TIER_FEATURED_PRODUCT_LIMIT,
 } from '@/lib/profile/premium-access'
+import { cn } from '@/lib/utils'
 
 interface VendorProductManagerProps {
   userId: string
   products: VendorProduct[]
   isBetaTester?: boolean
+  /** Inside passport wizard card vs standalone section on the page. */
+  variant?: 'standalone' | 'embedded'
 }
 
 export function VendorProductManager({
   userId,
   products: initial,
   isBetaTester = false,
+  variant = 'standalone',
 }: VendorProductManagerProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -105,7 +109,13 @@ export function VendorProductManager({
   }
 
   return (
-    <div className="mt-8 rounded-2xl border bg-white p-6">
+    <div
+      className={cn(
+        variant === 'embedded'
+          ? 'space-y-4'
+          : 'mt-8 rounded-2xl border bg-white p-6'
+      )}
+    >
       <h2 className="text-lg font-semibold">Featured products</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Shoppers see these on market pages before they visit your booth.

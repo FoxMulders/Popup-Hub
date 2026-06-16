@@ -4,10 +4,23 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — passport niche tags + MLM gating (local, not deployed)
+- **Change:** MLM brand tags (Norwex, Scentsy, etc.) only appear in passport “Specific tags” when primary category is **Multi Level Marketer (MLM)**; switching primary away clears MLM tags. Added niche discovery tags (Hot Sauce, BBQ Sauces, Knitting, Birdhouses, Beef Jerky, and more) via migration `111_passport_niche_tags.sql`.
+- **Files:** `lib/vendor/passport-categories.ts`, `components/passport/passport-wizard.tsx`, `lib/categories/mlm-constraints.ts`, `supabase/migrations/111_passport_niche_tags.sql`.
+- **Verify:** `/vendor/passport` → Category step — MLM brands hidden unless MLM primary selected; food/craft tags visible for all; run migration on Supabase for new tags in prod.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — layout tutorial room shape step (local, not deployed)
 - **Change:** Quick-start layout help tour now has 6 steps — new Step 5 demos changing room shape (canvas handles, W/L fields, rotate); save moved to Step 6.
 - **Files:** `lib/floor-plan/layout-editor-help-tours.ts`, `layout-editor-help-content.ts`, `layout-editor-help.tsx`, `floor-plan-v2.tsx` (`data-layout-help="room-shape"` on canvas wrapper).
 - **Verify:** Blueprint Studio → Layout help → Start quick-start tour — Step 5 spotlights canvas and explains resize/reshape/rotate; Step 6 covers save.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — passport featured products nav (local, not deployed)
+- **Issue:** After adding featured products on vendor passport, users had to scroll back up to reach Next.
+- **Fix:** Featured products embedded in wizard card; Back/Next/Save in a fixed bottom bar that stays visible while scrolling.
+- **Files:** `passport-wizard.tsx`, `passport-page-view.tsx`, `vendor-product-manager.tsx`.
+- **Verify:** `/vendor/passport` with existing passport → add featured product → Next remains visible at bottom of screen.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — AI auto-arrange page freeze (local, not deployed)

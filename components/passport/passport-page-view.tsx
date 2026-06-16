@@ -31,7 +31,7 @@ export function PassportPageView({
 
   if (showVendorWizard) {
     return (
-      <div className="mx-auto w-full max-w-[1100px] px-4 py-8 sm:px-6 xl:px-10">
+      <div className="mx-auto w-full max-w-[1100px] px-4 py-8 pb-24 sm:px-6 xl:px-10">
         <div className="mb-8 space-y-3">
           <Link
             href={passportRoute === 'vendor' ? '/vendor/dashboard' : '/profile'}
@@ -61,14 +61,17 @@ export function PassportPageView({
           existing={passport}
           userId={profile.id}
           redirectAfterSave="/vendor/events"
+          featuredProductsSlot={
+            passport ? (
+              <VendorProductManager
+                userId={profile.id}
+                products={products}
+                isBetaTester={profile.is_beta_tester ?? false}
+                variant="embedded"
+              />
+            ) : null
+          }
         />
-        {passport ? (
-          <VendorProductManager
-            userId={profile.id}
-            products={products}
-            isBetaTester={profile.is_beta_tester ?? false}
-          />
-        ) : null}
         <div className="mt-8">
           <PassportStoriesManager ownerId={profile.id} role="vendor" />
         </div>

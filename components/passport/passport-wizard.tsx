@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -15,7 +15,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { Category, VendorPassport } from '@/types/database'
 import { sortCategoriesByName } from '@/lib/categories'
 import { normalizeUrl, normalizeTikTokUrl } from '@/lib/vendor/normalize-url'
-import { resolvePassportCategoryIds, toggleCategoryId } from '@/lib/vendor/passport-categories'
+import {
+  filterPassportNicheCategories,
+  isPassportMlmBroadCategory,
+  resolvePassportCategoryIds,
+  stripMlmNicheCategoryIds,
+  toggleCategoryId,
+} from '@/lib/vendor/passport-categories'
 import { buildPassportSavePayload, formatSupabaseError } from '@/lib/vendor/passport-payload'
 import { evaluateAndScoreVendorPassport } from '@/lib/vendor/verification'
 import { uploadVendorAsset } from '@/lib/vendor/upload-vendor-asset'
@@ -29,6 +35,8 @@ interface PassportWizardProps {
   existing?: VendorPassport | null
   userId: string
   redirectAfterSave?: string
+  /** Rendered inside the wizard card (e.g. featured products) above navigation. */
+  featuredProductsSlot?: ReactNode
 }
 
 const STEPS = ['Business Info', 'Category', 'Photos']
@@ -38,6 +46,7 @@ export function PassportWizard({
   existing,
   userId,
   redirectAfterSave = '/vendor/events',
+  featuredProductsSlot,
 }: PassportWizardProps) {
   const sortedCategories = sortCategoriesByName(categories)
   const router = useRouter()
@@ -64,10 +73,23 @@ export function PassportWizard({
     }
     return ''
   })
-  const [categoryIds, setCategoryIds] = useState<string[]>(() =>
-    resolvePassportCategoryIds(existing ?? {}).filter(
-      (id) => id !== (existing?.primary_category_id ?? '')
-    )
+  const [categoryIds, setCategoryIds] = useState<string[]>(() => {
+    const primaryId = existing?.primary_category_id ?? ''
+    const primary =
+      primaryId ? sortedCategories.find((c) => c.id === primaryId) : undefined
+    const tags = resolvePassportCategoryIds(existing ?? {}).filter((id) => id !== primaryId)
+    if (!isPassportMlmBroadCategory(primary)) {
+      return stripMlmNicheCategoryIds(tags, sortedCategories)
+    }
+    return tags
+  })
+  const primaryCategory = useMemo(
+    () => sortedCategories.find((c) => c.id === primaryCategoryId),
+    [sortedCategories, primaryCategoryId]
+  )
+  const visibleNicheCategories = useMemo(
+    () => filterPassportNicheCategories(nicheCategories, primaryCategory),
+    [nicheCategories, primaryCategory]
   )
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState(existing?.logo_url ?? '')
@@ -179,7 +201,7 @@ export function PassportWizard({
   const progress = ((step + 1) / STEPS.length) * 100
 
   return (
-    <div className="mx-auto max-w-xl">
+    <div className="mx-auto max-w-xl pb-24">
       {/* Step indicators */}
       <div className="mb-6">
         <div className="mb-2 flex justify-between text-xs text-muted-foreground">
@@ -337,7 +359,14 @@ export function PassportWizard({
                       <button
                         key={cat.id}
                         type="button"
-                        onClick={() => setPrimaryCategoryId(cat.id)}
+                        onClick={() => {
+                          setPrimaryCategoryId(cat.id)
+                          if (!isPassportMlmBroadCategory(cat)) {
+                            setCategoryIds((prev) =>
+                              stripMlmNicheCategoryIds(prev, sortedCategories)
+                            )
+                          }
+                        }}
                         className={cn(
                           'rounded-lg border px-3 py-2 text-left text-sm transition',
                           selected
@@ -358,7 +387,7 @@ export function PassportWizard({
                 )}
               </div>
 
-              {nicheCategories.length > 0 ? (
+              {visibleNicheCategories.length > 0 ? (
                 <div className="space-y-2 border-t pt-4">
                   <div className="flex items-center gap-1.5">
                     <Label>Specific tags (optional)</Label>
@@ -371,9 +400,12 @@ export function PassportWizard({
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Help shoppers discover you. These are search tags and do not consume a category slot.
+                    {isPassportMlmBroadCategory(primaryCategory)
+                      ? ' MLM brand tags are shown because your primary category is Multi Level Marketer (MLM).'
+                      : null}
                   </p>
-                  <div className="grid max-h-60 grid-cols-1 gap-2 overflow-y-auto rounded-xl border p-3 sm:grid-cols-2">
-                    {nicheCategories.map((cat) => {
+                  <div className="grid max-h-80 grid-cols-1 gap-2 overflow-y-auto rounded-xl border p-3 sm:grid-cols-2">
+                    {visibleNicheCategories.map((cat) => {
                       const selected = categoryIds.includes(cat.id)
                       return (
                         <button
@@ -495,51 +527,65 @@ export function PassportWizard({
             </div>
           )}
 
-          {/* Navigation */}
-          <div className="flex justify-between pt-4">
+          {featuredProductsSlot ? (
+            <div className="border-t border-stone-200 pt-6">{featuredProductsSlot}</div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      {/* Fixed nav — stays visible while scrolling featured products / stories below */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-200 bg-white/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        aria-label="Passport wizard navigation"
+      >
+        <div className="mx-auto flex max-w-xl justify-between gap-3">
+          <Button
+            variant="outline"
+            className="min-h-11"
+            onClick={() => {
+              const next = step - 1
+              if (next < 0) return
+              setStep(next)
+              resetWizardScrollAnchor()
+            }}
+            disabled={step === 0}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+
+          {step < STEPS.length - 1 ? (
             <Button
-              variant="outline"
+              className="min-h-11"
               onClick={() => {
-                const next = step - 1
-                if (next < 0) return
+                const next = step + 1
                 setStep(next)
                 resetWizardScrollAnchor()
               }}
-              disabled={step === 0}
+              disabled={
+                (step === 0 && !businessName.trim()) ||
+                (step === 1 && !primaryCategoryId)
+              }
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              Next
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-
-            {step < STEPS.length - 1 ? (
-              <Button
-                onClick={() => {
-                  const next = step + 1
-                  setStep(next)
-                  resetWizardScrollAnchor()
-                }}
-                className=""
-                disabled={
-                  (step === 0 && !businessName.trim()) ||
-                  (step === 1 && !primaryCategoryId)
-                }
-              >
-                Next
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmit}
-                className=""
-                disabled={loading || !businessName.trim()}
-              >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                Save Passport
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+          ) : (
+            <Button
+              className="min-h-11"
+              onClick={handleSubmit}
+              disabled={loading || !businessName.trim()}
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="mr-2 h-4 w-4" />
+              )}
+              Save Passport
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

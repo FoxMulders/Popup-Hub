@@ -1,1 +1,1 @@
-feat: ship 116 session updates (layout tutorial room shape step; AI auto-arrange page freeze; patron table fill capacity; layout auto-tour opt-out; +112 more)
+feat: ship 117 session updates (layout tutorial room shape step; passport featured products nav; AI auto-arrange page freeze; patron table fill capacity; +113 more)
