@@ -10,6 +10,12 @@
 - **Verify:** Blueprint Studio → Layout help → Start quick-start tour — Step 5 spotlights canvas and explains resize/reshape/rotate; Step 6 covers save.
 - **Next:** Commit + deploy when user asks.
 
+## Active work — layout auto-tour opt-out (local, not deployed)
+- **Change:** "Don't show again" on the guided tour overlay and getting-started banner; persists `popuphub.layout-editor-help.auto-tour-dismissed` so the first-visit auto tour does not re-run. Manual tour from Layout help still works.
+- **Files:** `lib/floor-plan/layout-editor-help-prefs.ts`, `layout-editor-help.tsx`, `layout-editor-help-tour.tsx`.
+- **Verify:** Clear localStorage key → open layout editor → auto tour starts → click Don't show again → reload → tour does not auto-start; Layout help → Start interactive tour still works.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — share contact with vendors label (local, not deployed)
 - **Change:** Removed "(Quarter Auctions only)" from shopper share-contact checkbox on signup and profile settings.
 - **Files:** `app/(auth)/signup/page.tsx`, `app/profile/profile-form.tsx`.
@@ -1236,9 +1242,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `e22b37b` (pushed to `origin/master`)
-- Last deploy commit: `e22b37b` - feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)
-- Production: https://popuphub.ca - **v1.0.0 build 191** | commit `e59aaab` (handoff updated 2026-06-16 11:06)
+- Branch: `master` @ `2759c88` (pushed to `origin/master`)
+- Last deploy commit: `2759c88` - feat: ship 113 session updates (layout tutorial room shape step; share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; +109 more)
+- Production: https://popuphub.ca - **v1.0.0 build 192** | commit `3c3270f` (handoff updated 2026-06-16 11:13)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1615,7 +1621,7 @@
 
 
 ## Last deploy
-- 2026-06-16 11:06 - Deploy via deploy-popuphub.ps1 - `feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)` (e22b37b)
+- 2026-06-16 11:13 - Deploy via deploy-popuphub.ps1 - `feat: ship 113 session updates (layout tutorial room shape step; share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; +109 more)` (2759c88)
 
 
 ## Goal
