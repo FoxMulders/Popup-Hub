@@ -1230,9 +1230,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `df27879` (pushed to `origin/master`)
-- Last deploy commit: `df27879` - feat: ship 108 session updates (app icon full logo restore; modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; +104 more)
-- Production: https://popuphub.ca - **v1.0.0 build 187** | commit `79dd71a` (handoff updated 2026-06-16 09:43)
+- Branch: `master` @ `628c9de` (pushed to `origin/master`)
+- Last deploy commit: `628c9de` - feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)
+- Production: https://popuphub.ca - **v1.0.0 build 190** | commit `d081b4f` (handoff updated 2026-06-16 10:54)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1609,7 +1609,7 @@
 
 
 ## Last deploy
-- 2026-06-16 09:43 - Deploy via deploy-popuphub.ps1 - `feat: ship 108 session updates (app icon full logo restore; modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; +104 more)` (df27879)
+- 2026-06-16 10:54 - Deploy via deploy-popuphub.ps1 - `feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)` (628c9de)
 
 
 ## Goal
