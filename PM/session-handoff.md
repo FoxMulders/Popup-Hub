@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — FAQ and help copy refresh (local, not deployed)
+- **Goal:** Align all FAQ and in-app help with current product naming (Blueprint Studio, Markets, AI Auto-Arrange, Layout help in nav).
+- **Updated:** `lib/legal/faq-content.tsx`, `lib/market-day/help-content.ts`, `lib/floor-plan/layout-editor-help-content.ts`, layout help tours, operations FCFS blurb, account capabilities, event readiness checklist, market-day shell tab, for-organizers landing, payment-methods back link, FAQ last-updated date.
+- **Verify:** `/legal/faq`, `/for-organizers`, Market Day Operations → How to Use & FAQ tab, Blueprint Studio → Layout help search topics.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — app icon full logo restore (local, not deployed)
 - **Issue:** Rounded-square app icon cropped the storefront awning (top) and wordmark because `process-logo.mjs` used optical centering that shifted the tall lockup upward and clipped pixels.
 - **Fix:** Replaced optical centering with geometric centering and explicit per-edge padding ratios in `iconOnBackground` / `transparentIcon`; removed clipping from `trimToSquare`. Regenerated `app/icon.png`, `app/apple-icon.png`, PWA icons, favicons, iOS AppIcon set, and `mobile/resources/icon-only.png` via `npm run assets:logo` + `npm run mobile:assets`.
@@ -1203,9 +1209,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `2d2df2f` (pushed to `origin/master`)
-- Last deploy commit: `2d2df2f` - feat: ship 107 session updates (modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; +103 more)
-- Production: https://popuphub.ca - **v1.0.0 build 186** | commit `4c1bac0` (handoff updated 2026-06-16 09:25)
+- Branch: `master` @ `df27879` (pushed to `origin/master`)
+- Last deploy commit: `df27879` - feat: ship 108 session updates (app icon full logo restore; modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; +104 more)
+- Production: https://popuphub.ca - **v1.0.0 build 187** | commit `79dd71a` (handoff updated 2026-06-16 09:43)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1582,7 +1588,7 @@
 
 
 ## Last deploy
-- 2026-06-16 09:25 - Deploy via deploy-popuphub.ps1 - `feat: ship 107 session updates (modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; +103 more)` (2d2df2f)
+- 2026-06-16 09:43 - Deploy via deploy-popuphub.ps1 - `feat: ship 108 session updates (app icon full logo restore; modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; +104 more)` (df27879)
 
 
 ## Goal
