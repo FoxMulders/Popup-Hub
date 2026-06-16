@@ -232,22 +232,61 @@ export function LayoutEditorHelpTourOverlay({
       aria-modal="true"
       aria-labelledby="layout-help-tour-title"
     >
-      <div
-        className="fixed inset-0 z-[251] bg-slate-900/75 pointer-events-none"
-        aria-hidden
-      />
       {box ? (
+        <>
+          {/* Dim everything except the spotlight hole so the target stays fully visible. */}
+          <div
+            className="fixed z-[251] bg-slate-900/75 pointer-events-auto"
+            style={{ top: 0, left: 0, right: 0, height: box.top }}
+            aria-hidden
+          />
+          <div
+            className="fixed z-[251] bg-slate-900/75 pointer-events-auto"
+            style={{
+              top: box.top,
+              left: 0,
+              width: box.left,
+              height: box.height,
+            }}
+            aria-hidden
+          />
+          <div
+            className="fixed z-[251] bg-slate-900/75 pointer-events-auto"
+            style={{
+              top: box.top,
+              left: box.left + box.width,
+              right: 0,
+              height: box.height,
+            }}
+            aria-hidden
+          />
+          <div
+            className="fixed z-[251] bg-slate-900/75 pointer-events-auto"
+            style={{
+              top: box.top + box.height,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none fixed z-[252] rounded-lg ring-2 ring-emerald-400 ring-offset-2 ring-offset-transparent"
+            style={{
+              top: box.top,
+              left: box.left,
+              width: box.width,
+              height: box.height,
+            }}
+            aria-hidden
+          />
+        </>
+      ) : (
         <div
-          className="pointer-events-none fixed z-[252] rounded-lg ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-900"
-          style={{
-            top: box.top,
-            left: box.left,
-            width: box.width,
-            height: box.height,
-          }}
+          className="fixed inset-0 z-[251] bg-slate-900/75 pointer-events-auto"
           aria-hidden
         />
-      ) : null}
+      )}
 
       <div
         ref={cardRef}

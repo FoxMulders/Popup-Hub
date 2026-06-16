@@ -1,4 +1,44 @@
 import Link from 'next/link'
+import { ClipboardCheck, LayoutGrid, MapPin, Store, Users, Wallet } from 'lucide-react'
+
+const PLATFORM_TILES = [
+  {
+    icon: MapPin,
+    label: 'Discover',
+    detail: 'Patrons browse markets & maps',
+    className: 'bg-sage-100/90 text-sage-800',
+  },
+  {
+    icon: Store,
+    label: 'Passport',
+    detail: 'Vendors apply with one profile',
+    className: 'bg-harvest-100/90 text-harvest-800',
+  },
+  {
+    icon: LayoutGrid,
+    label: 'Layout',
+    detail: 'Organizers plan booth grids',
+    className: 'bg-forest/10 text-forest',
+  },
+  {
+    icon: ClipboardCheck,
+    label: 'Applications',
+    detail: 'Review & approve vendors',
+    className: 'bg-sage-50 text-sage-700',
+  },
+  {
+    icon: Users,
+    label: 'Check-in',
+    detail: 'Market day on the ground',
+    className: 'bg-canvas text-foreground',
+  },
+  {
+    icon: Wallet,
+    label: 'Payouts',
+    detail: 'Booth fees in one flow',
+    className: 'bg-harvest-50 text-harvest-700',
+  },
+] as const
 
 export function MarketingSplitStory() {
   return (
@@ -6,7 +46,7 @@ export function MarketingSplitStory() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
         <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-stone-200/60 bg-gradient-to-br from-sage-100 via-canvas to-harvest-50 shadow-[var(--shadow-market-md)]">
           <div
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-25"
             style={{
               backgroundImage:
                 'radial-gradient(circle at 2px 2px, rgb(45 90 39 / 0.35) 1px, transparent 0)',
@@ -14,16 +54,23 @@ export function MarketingSplitStory() {
             }}
             aria-hidden
           />
-          <div className="absolute inset-6 grid grid-cols-3 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="absolute inset-5 grid grid-cols-3 gap-2.5 sm:inset-6 sm:gap-3">
+            {PLATFORM_TILES.map(({ icon: Icon, label, detail, className }) => (
               <div
-                key={i}
-                className="rounded-xl border border-forest/15 bg-white/60 backdrop-blur-sm"
-                style={{ minHeight: i % 2 === 0 ? '4.5rem' : '3.5rem' }}
-              />
+                key={label}
+                className={`flex flex-col items-center justify-center rounded-xl border border-white/60 px-1 py-3 text-center shadow-sm backdrop-blur-sm sm:px-2 sm:py-4 ${className}`}
+              >
+                <Icon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
+                <span className="mt-1.5 text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
+                  {label}
+                </span>
+                <span className="mt-0.5 hidden text-[9px] leading-tight opacity-80 sm:block">
+                  {detail}
+                </span>
+              </div>
             ))}
           </div>
-          <p className="absolute bottom-6 left-6 right-6 rounded-xl bg-forest/90 px-4 py-3 text-sm font-medium text-white backdrop-blur-sm">
+          <p className="absolute bottom-4 left-4 right-4 rounded-xl bg-forest/90 px-4 py-3 text-sm font-medium text-white backdrop-blur-sm sm:bottom-6 sm:left-6 sm:right-6">
             Booth layouts, vendor passports, and patron maps — connected in one platform.
           </p>
         </div>
@@ -48,7 +95,7 @@ export function MarketingSplitStory() {
             </li>
             <li className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-forest" aria-hidden />
-              Organizers run applications, layouts, and market day from Blueprint Studio and Markets
+              Organizers run applications, layouts, and market day from one dashboard
             </li>
           </ul>
           <Link
