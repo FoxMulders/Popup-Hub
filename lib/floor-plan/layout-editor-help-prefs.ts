@@ -1,4 +1,5 @@
 const BANNER_DISMISSED_KEY = 'popuphub.layout-editor-help.banner-dismissed'
+const AUTO_TOUR_DISMISSED_KEY = 'popuphub.layout-editor-help.auto-tour-dismissed'
 const ENGAGED_KEY = 'popuphub.layout-editor-help.engaged'
 
 function readFlag(key: string): boolean {
@@ -25,6 +26,16 @@ export function isLayoutHelpBannerDismissed(): boolean {
 
 export function dismissLayoutHelpBanner() {
   writeFlag(BANNER_DISMISSED_KEY, true)
+}
+
+export function isLayoutHelpAutoTourDismissed(): boolean {
+  return readFlag(AUTO_TOUR_DISMISSED_KEY)
+}
+
+/** Opt out of the first-visit guided tour that starts automatically. Manual tours still work. */
+export function dismissLayoutHelpAutoTour() {
+  writeFlag(AUTO_TOUR_DISMISSED_KEY, true)
+  markLayoutHelpEngaged()
 }
 
 export function hasEngagedWithLayoutHelp(): boolean {

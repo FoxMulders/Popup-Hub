@@ -10,6 +10,12 @@
 - **Verify:** Blueprint Studio → Layout help → Start quick-start tour — Step 5 spotlights canvas and explains resize/reshape/rotate; Step 6 covers save.
 - **Next:** Commit + deploy when user asks.
 
+## Active work — patron table fill capacity (local, not deployed)
+- **Issue:** Fill with 20 patron tables only placed 4 — capacity estimate ignored walls/doors; patron fill used strict auto-arrange instead of dense shelf-pack.
+- **Fix:** Patron fill uses `packVendorBoothsInRoomGrid` with `scope: 'patron'` (obstacle-aware row pack). Capacity estimate probes the same packer. Auto-arrange skips patron bounding box when tables are off-canvas fill seeds.
+- **Verify:** Layout editor → patron tables → enter count ≤ max → Fill — placed count matches request (toast warns if room cannot fit all).
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — layout auto-tour opt-out (local, not deployed)
 - **Change:** "Don't show again" on the guided tour overlay and getting-started banner; persists `popuphub.layout-editor-help.auto-tour-dismissed` so the first-visit auto tour does not re-run. Manual tour from Layout help still works.
 - **Files:** `lib/floor-plan/layout-editor-help-prefs.ts`, `layout-editor-help.tsx`, `layout-editor-help-tour.tsx`.

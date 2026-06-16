@@ -158,6 +158,10 @@ export function estimateRoomFillCapacity(
   const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
   if (!frame) return 0
 
+  if (tableSpec.purpose === 'guest') {
+    return estimatePatronPackCapacity(doc, roomId, tableSpec)
+  }
+
   const surface = resolveRoomPlacementSurface(doc, roomId)
   const localW = surface
     ? Math.max(1, surface.maxX - surface.minX)
@@ -190,6 +194,21 @@ export function estimateRoomFillCapacity(
   }
 
   return physicalMax
+}
+
+const PATRON_CAPACITY_PROBE_COUNT = 512
+
+/** Obstacle-aware patron table capacity — matches dense shelf-pack used by Fill. */
+function estimatePatronPackCapacity(
+  doc: FloorPlanDoc,
+  roomId: string,
+  tableSpec: TableSizeSpec
+): number {
+  const clearedDoc = removeRoomBoothsByScope(doc, roomId, 'patron')
+  const booths = buildFillBooths(PATRON_CAPACITY_PROBE_COUNT, tableSpec)
+  const seededDoc = attachBoothsToRoom(clearedDoc, roomId, booths)
+  const pack = packVendorBoothsInRoomGrid(seededDoc, roomId, { scope: 'patron' })
+  return pack?.placedCount ?? 0
 }
 
 /**
@@ -245,8 +264,10 @@ export function fillRoomWithTables(
   const booths = buildFillBooths(targetCount, tableSpec, eventCategoryNames)
   const seededDoc = attachBoothsToRoom(clearedDoc, roomId, booths)
 
-  if (packMode === 'dense' && scope === 'vendor') {
-    const pack = packVendorBoothsInRoomGrid(seededDoc, roomId)
+  if (packMode === 'dense' || scope === 'patron') {
+    const pack = packVendorBoothsInRoomGrid(seededDoc, roomId, {
+      scope: scope === 'patron' ? 'patron' : 'vendor',
+    })
     if (!pack) {
       return {
         doc: seededDoc,

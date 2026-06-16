@@ -133,11 +133,14 @@ export function LayoutEditorHelpTourOverlay({
   stepIndex,
   onStepIndexChange,
   onClose,
+  onDismissAutoTour,
 }: {
   steps: LayoutHelpTourStep[]
   stepIndex: number
   onStepIndexChange: (index: number) => void
   onClose: () => void
+  /** Persist opt-out for the first-visit auto tour; manual starts remain available. */
+  onDismissAutoTour?: () => void
 }) {
   const step = steps[stepIndex]
   const [box, setBox] = useState<HighlightBox | null>(null)
@@ -330,17 +333,30 @@ export function LayoutEditorHelpTourOverlay({
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8"
-            disabled={isFirst}
-            onClick={() => onStepIndexChange(stepIndex - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
+          <div className="flex flex-wrap items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8"
+              disabled={isFirst}
+              onClick={() => onStepIndexChange(stepIndex - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+            {onDismissAutoTour ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-muted-foreground hover:text-foreground"
+                onClick={onDismissAutoTour}
+              >
+                Don&apos;t show again
+              </Button>
+            ) : null}
+          </div>
           <div className="flex items-center gap-2">
             {!isLast ? (
               <Button

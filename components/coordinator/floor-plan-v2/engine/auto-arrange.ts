@@ -1772,7 +1772,9 @@ export function autoArrange(
           snapFt: doc.snapFt > 0 ? doc.snapFt : 0.5,
           localRing,
           activeBoundingBox:
-            scope === 'patron' ? guestActiveBoundingBox(guestBooths) : null,
+            scope === 'patron' && !patronTablesAreOffCanvasSeeds(guestBooths)
+              ? guestActiveBoundingBox(guestBooths)
+              : null,
         })
 
   const merged = mergeAutoArrangeResult(
@@ -2001,11 +2003,13 @@ export function autoArrangeAllRooms(
 }
 
 export interface PackVendorBoothsInGridOptions {
-  /** When set, only reposition these vendor booth ids. */
+  /** When set, only reposition these booth ids. */
   boothIds?: ReadonlySet<string>
   /** Selected ids take precedence over the unplaced fallback. */
   selectedIds?: ReadonlySet<string>
   snapFt?: number
+  /** Vendor booths vs patron/guest tables — defaults to vendor. */
+  scope?: AutoArrangeScope
 }
 
 export interface PackVendorBoothsInGridResult {
@@ -2016,6 +2020,7 @@ export interface PackVendorBoothsInGridResult {
 }
 
 function boothLooksUnplaced(booth: BoothObject, frame: RoomFrame): boolean {
+  if (booth.x < OFF_CANVAS_PATRON_SEED_THRESHOLD_FT) return true
   if (booth.x === 0 && booth.y === 0 && (booth.rotation ?? 0) === 0) {
     return true
   }
@@ -2030,15 +2035,20 @@ function boothLooksUnplaced(booth: BoothObject, frame: RoomFrame): boolean {
 }
 
 /**
- * Shelf-pack vendor booths row-by-row inside a room grid using exact W×H
- * footprints (no clearance buffer in the collision loop). Targets selected
- * vendor booths first, otherwise unplaced booths in the room.
+ * Shelf-pack booths row-by-row inside a room grid using exact W×H
+ * footprints. Targets selected booths first, otherwise unplaced booths
+ * in the room. Respects walls, doors, and other fixtures as obstacles.
  */
 export function packVendorBoothsInRoomGrid(
   doc: FloorPlanDoc,
   roomId: string,
   options: PackVendorBoothsInGridOptions = {}
 ): PackVendorBoothsInGridResult | null {
+  const scope = options.scope ?? 'vendor'
+  if (scope === 'all') {
+    throw new Error('packVendorBoothsInRoomGrid requires scope vendor or patron')
+  }
+  const guestScope = scope === 'patron'
   const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
   if (!frame) return null
 
@@ -2053,7 +2063,7 @@ export function packVendorBoothsInRoomGrid(
   const vendorInRoom = doc.objects.filter(
     (o): o is BoothObject =>
       o.kind === 'booth' &&
-      !isGuestTableBooth(o as BoothObject) &&
+      isGuestTableBooth(o as BoothObject) === guestScope &&
       resolveObjectRoomId(doc, o, roomId) === roomId
   )
 
@@ -2094,6 +2104,7 @@ export function packVendorBoothsInRoomGrid(
   let cursorX = originX
   let cursorY = originY
   let rowHeight = 0
+  const rowGapFt = guestScope ? PATRON_TABLE_GAP_FT : snapFt
 
   for (const src of sorted) {
     const w = roundHalf(src.width)
@@ -2136,20 +2147,20 @@ export function packVendorBoothsInRoomGrid(
       }
 
       if (fitsHorizontally && insideOrigin) {
-        cursorX = x + w + snapFt
+        cursorX = x + w + rowGapFt
         rowHeight = Math.max(rowHeight, h)
         continue
       }
 
       cursorX = originX
-      cursorY = snapToGrid(cursorY + Math.max(rowHeight, h) + snapFt, snapFt)
+      cursorY = snapToGrid(cursorY + Math.max(rowHeight, h) + rowGapFt, snapFt)
       rowHeight = 0
       if (cursorY + h > maxY + 1e-6) break
     }
 
     if (!packed) continue
     placed.push(packed)
-    cursorX = packed.x + packed.width + snapFt
+    cursorX = packed.x + packed.width + rowGapFt
     rowHeight = Math.max(rowHeight, packed.height)
   }
 

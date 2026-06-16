@@ -23,8 +23,10 @@ import {
   type LayoutEditorHelpTopic,
 } from '@/lib/floor-plan/layout-editor-help-content'
 import {
+  dismissLayoutHelpAutoTour,
   dismissLayoutHelpBanner,
   hasEngagedWithLayoutHelp,
+  isLayoutHelpAutoTourDismissed,
   isLayoutHelpBannerDismissed,
   markLayoutHelpEngaged,
 } from '@/lib/floor-plan/layout-editor-help-prefs'
@@ -165,6 +167,19 @@ export function LayoutEditorHelpBanner({ className }: { className?: string }) {
           type="button"
           variant="ghost"
           size="sm"
+          className="h-8 shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            dismissLayoutHelpAutoTour()
+            dismissLayoutHelpBanner()
+            setVisible(false)
+          }}
+        >
+          Don&apos;t show tour again
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           className="h-8 shrink-0 px-2 text-muted-foreground hover:text-foreground"
           onClick={() => {
             dismissLayoutHelpBanner()
@@ -272,6 +287,11 @@ function LayoutEditorHelpHostInner({
     setTourStepIndex(0)
   }, [])
 
+  const dismissAutoTour = useCallback(() => {
+    dismissLayoutHelpAutoTour()
+    closeTour()
+  }, [closeTour])
+
   const openHelp = useCallback(() => {
     markLayoutHelpEngaged()
     setSelectedId(QUICK_START_TOPIC_ID)
@@ -292,9 +312,9 @@ function LayoutEditorHelpHostInner({
   }, [openHelp, startTourForTopic])
 
   useEffect(() => {
-    if (hasEngagedWithLayoutHelp()) return
+    if (hasEngagedWithLayoutHelp() || isLayoutHelpAutoTourDismissed()) return
     const timer = window.setTimeout(() => {
-      if (hasEngagedWithLayoutHelp()) return
+      if (hasEngagedWithLayoutHelp() || isLayoutHelpAutoTourDismissed()) return
       startTourForTopic('quick-start')
     }, 1200)
     return () => window.clearTimeout(timer)
@@ -341,6 +361,7 @@ function LayoutEditorHelpHostInner({
           stepIndex={tourStepIndex}
           onStepIndexChange={setTourStepIndex}
           onClose={closeTour}
+          onDismissAutoTour={dismissAutoTour}
         />
       ) : null}
       <CommandDialog
