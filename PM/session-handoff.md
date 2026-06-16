@@ -1197,9 +1197,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `35b0f51` (pushed to `origin/master`)
-- Last deploy commit: `35b0f51` - feat: ship 106 session updates (AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; Windows webpack build worker crash; +102 more)
-- Production: https://popuphub.ca - **v1.0.0 build 185** | commit `3bba2bf` (handoff updated 2026-06-16 08:43)
+- Branch: `master` @ `2d2df2f` (pushed to `origin/master`)
+- Last deploy commit: `2d2df2f` - feat: ship 107 session updates (modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; +103 more)
+- Production: https://popuphub.ca - **v1.0.0 build 186** | commit `4c1bac0` (handoff updated 2026-06-16 09:25)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1576,7 +1576,7 @@
 
 
 ## Last deploy
-- 2026-06-16 08:43 - Deploy via deploy-popuphub.ps1 - `feat: ship 106 session updates (AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; Windows webpack build worker crash; +102 more)` (35b0f51)
+- 2026-06-16 09:25 - Deploy via deploy-popuphub.ps1 - `feat: ship 107 session updates (modern brand refresh; AI Auto-Arrange UI freeze fix; mobile maps + Google directions; fairness capacity / coverage / fairness split; +103 more)` (2d2df2f)
 
 
 ## Goal
