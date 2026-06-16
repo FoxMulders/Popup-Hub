@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — app icon full logo restore (local, not deployed)
+- **Issue:** Rounded-square app icon cropped the storefront awning (top) and wordmark because `process-logo.mjs` used optical centering that shifted the tall lockup upward and clipped pixels.
+- **Fix:** Replaced optical centering with geometric centering and explicit per-edge padding ratios in `iconOnBackground` / `transparentIcon`; removed clipping from `trimToSquare`. Regenerated `app/icon.png`, `app/apple-icon.png`, PWA icons, favicons, iOS AppIcon set, and `mobile/resources/icon-only.png` via `npm run assets:logo` + `npm run mobile:assets`.
+- **Verify:** Inspect `app/icon.png` — full awning scallops + "Popup Hub" text visible with even cream margins; no edge clipping.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — modern brand refresh (local, not deployed)
 - **Goal:** Modernize Popup Hub visual system (Market Scout–inspired energy, unique Popup Hub identity) across marketing, browse, auth, and portal entry points — keep forest/sage/cream palette.
 - **Shipped locally:**
