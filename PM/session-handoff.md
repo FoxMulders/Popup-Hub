@@ -1267,9 +1267,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `fdccef4` (pushed to `origin/master`)
-- Last deploy commit: `fdccef4` - feat: ship 116 session updates (layout tutorial room shape step; AI auto-arrange page freeze; patron table fill capacity; layout auto-tour opt-out; +112 more)
-- Production: https://popuphub.ca - **v1.0.0 build 195** | commit `40176ea` (handoff updated 2026-06-16 15:52)
+- Branch: `master` @ `199b88c` (pushed to `origin/master`)
+- Last deploy commit: `199b88c` - feat: ship 117 session updates (layout tutorial room shape step; passport featured products nav; AI auto-arrange page freeze; patron table fill capacity; +113 more)
+- Production: https://popuphub.ca - **v1.0.0 build 196** | commit `f118185` (handoff updated 2026-06-16 16:04)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1646,7 +1646,7 @@
 
 
 ## Last deploy
-- 2026-06-16 15:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 116 session updates (layout tutorial room shape step; AI auto-arrange page freeze; patron table fill capacity; layout auto-tour opt-out; +112 more)` (fdccef4)
+- 2026-06-16 16:04 - Deploy via deploy-popuphub.ps1 - `feat: ship 117 session updates (layout tutorial room shape step; passport featured products nav; AI auto-arrange page freeze; patron table fill capacity; +113 more)` (199b88c)
 
 
 ## Goal

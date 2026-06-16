@@ -1,1 +1,1 @@
-feat: ship 117 session updates (layout tutorial room shape step; passport featured products nav; AI auto-arrange page freeze; patron table fill capacity; +113 more)
+feat: ship 118 session updates (passport niche tags + MLM gating; layout tutorial room shape step; passport featured products nav; AI auto-arrange page freeze; +114 more)
