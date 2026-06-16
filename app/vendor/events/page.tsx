@@ -1,3 +1,4 @@
+import { PageIntro } from '@/components/layout/page-intro'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -59,13 +60,13 @@ export default async function VendorEventsPage() {
   if (!user) redirect('/login')
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Apply for open markets</h1>
-        <p className="mt-1 text-muted-foreground">
-          Discover every published market and apply directly — no organizer pre-approval required.
-        </p>
-      </div>
+    <div className="mx-auto max-w-7xl">
+      <PageIntro
+        eyebrow="Vendor portal"
+        title="Apply for open markets"
+        description="Discover every published market and apply directly — no organizer pre-approval required."
+        className="mb-6"
+      />
       <Suspense
         fallback={
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

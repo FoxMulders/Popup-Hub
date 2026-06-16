@@ -190,7 +190,7 @@ type BrandLogoMarkSize = 'nav' | 'auth'
 
 const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
   nav: 'h-[5.5rem] w-auto sm:h-[6.2rem]',
-  auth: 'h-44 w-auto sm:h-48',
+  auth: 'h-28 w-auto sm:h-32',
 }
 
 interface BrandLogoMarkProps {

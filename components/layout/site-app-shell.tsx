@@ -35,7 +35,7 @@ export function SiteAppShell({
     >
       <div
         className={cn(
-          'market-page site-app-shell flex max-w-full flex-col overflow-x-hidden',
+          'market-page site-app-shell site-surface flex max-w-full flex-col overflow-x-hidden',
           viewportFill ? 'h-[100dvh] max-h-[100dvh] min-h-0 overflow-hidden' : 'min-h-0 flex-1'
         )}
       >

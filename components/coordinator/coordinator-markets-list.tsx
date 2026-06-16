@@ -9,6 +9,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
+import { PageIntro } from '@/components/layout/page-intro'
 import {
   coordinatorStudioHref,
 } from '@/lib/coordinator/coordinator-routes'
@@ -56,7 +57,7 @@ function MarketRow({
   showCommandCenterLink: boolean
 }) {
   return (
-    <li className="rounded-xl border bg-card transition-colors hover:border-forest/30 hover:bg-canvas">
+    <li className="marketing-glass-card transition-colors hover:border-forest/30 hover:shadow-[var(--shadow-market-md)]">
       <div className="flex items-center gap-3 p-4">
         <Link
           href={`/coordinator/events/${market.id}`}
@@ -133,25 +134,24 @@ export function CoordinatorMarketsList({
   const totalCount = activeMarkets.length + archivedMarkets.length
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6 sm:py-10">
-      <div>
-        <PortalRoleBadge portal="coordinator" />
-        <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground sm:text-3xl">
-          Your markets
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {mobileIntro
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <PageIntro
+        eyebrow="Coordinator portal"
+        title="Your markets"
+        description={
+          mobileIntro
             ? 'Use a tablet or desktop for the full booth layout designer. On this device you can review events, applications, and day-of operations.'
-            : 'Browse every market, open event hubs, or jump into Blueprint Studio for a specific market.'}
-        </p>
-      </div>
+            : 'Browse every market, open event hubs, or jump into Blueprint Studio for a specific market.'
+        }
+        actions={<PortalRoleBadge portal="coordinator" />}
+      />
 
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl border bg-card p-3">
+        <div className="marketing-glass-card p-3">
           <p className="text-xs text-muted-foreground">Lifetime payout</p>
           <p className="mt-1 font-semibold tabular-nums">{formatRevenue(totalRevenueCents)}</p>
         </div>
-        <div className="rounded-xl border bg-card p-3">
+        <div className="marketing-glass-card p-3">
           <p className="text-xs text-muted-foreground">Payments</p>
           <p className="mt-1 font-medium">
             {squareConnected || stripeConnected ? 'Connected' : 'Setup needed'}

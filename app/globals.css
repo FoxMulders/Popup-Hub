@@ -215,12 +215,27 @@
 @layer components {
   /* Page shell */
   .market-page {
-    @apply bg-canvas text-foreground;
-    background-image: radial-gradient(
-      ellipse 100% 60% at 50% 0%,
-      rgb(250 248 247 / 0.9),
-      transparent 70%
-    );
+    @apply bg-cream text-foreground;
+    background-image:
+      radial-gradient(ellipse 100% 60% at 50% 0%, rgb(244 248 244 / 0.55), transparent 70%),
+      radial-gradient(ellipse 80% 50% at 100% 20%, rgb(249 232 200 / 0.2), transparent 55%);
+  }
+
+  .site-surface {
+    @apply bg-cream text-foreground;
+    background-image:
+      radial-gradient(ellipse 90% 55% at 0% 0%, rgb(228 239 228 / 0.45), transparent 50%),
+      radial-gradient(ellipse 70% 45% at 100% 10%, rgb(249 232 200 / 0.18), transparent 45%),
+      radial-gradient(ellipse 100% 60% at 50% 100%, rgb(250 248 247 / 0.9), transparent 70%);
+  }
+
+  .site-panel {
+    @apply rounded-2xl border border-stone-200/70 bg-card/90 shadow-[var(--shadow-market)] backdrop-blur-sm;
+  }
+
+  .site-panel--glass {
+    @apply rounded-2xl border border-white/40 bg-white/75 text-card-foreground backdrop-blur-md;
+    box-shadow: var(--shadow-market-md);
   }
 
   .site-app-shell #site-main {

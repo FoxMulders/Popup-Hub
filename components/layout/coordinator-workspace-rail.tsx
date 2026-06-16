@@ -67,11 +67,11 @@ export function CoordinatorWorkspaceRail() {
         )
       ) : null}
 
-      <div className="ecosystem-panel-inner rounded-xl border border-stone-200/80 bg-card/80 p-3">
+      <div className="marketing-glass-card rounded-xl p-3">
         <p className="text-[0.625rem] font-bold uppercase tracking-wider text-muted-foreground">
           Market ops
         </p>
-        <p className="mt-0.5 font-heading text-sm font-semibold text-foreground">
+        <p className="mt-0.5 text-sm font-bold text-foreground">
           Popup Hub
         </p>
         <p className="mt-1 text-[0.6875rem] leading-snug text-muted-foreground">

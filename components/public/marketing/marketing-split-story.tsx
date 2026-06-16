@@ -48,7 +48,7 @@ export function MarketingSplitStory() {
             </li>
             <li className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-forest" aria-hidden />
-              Organizers run applications, layouts, and market day from one dashboard
+              Organizers run applications, layouts, and market day from Blueprint Studio and Markets
             </li>
           </ul>
           <Link

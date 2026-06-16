@@ -38,7 +38,7 @@ export function CommandCenterShell({
   return (
     <div
       className={cn(
-        'flex flex-col bg-canvas',
+        'flex flex-col bg-cream site-surface',
         documentScroll ? 'w-full' : 'h-full min-h-0 overflow-hidden',
         className
       )}

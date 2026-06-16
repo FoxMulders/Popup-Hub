@@ -1,3 +1,4 @@
+import { PageIntro } from '@/components/layout/page-intro'
 import Link from 'next/link'
 import { CalendarDays, LayoutDashboard, Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
@@ -13,18 +14,17 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
   const greeting = displayName?.trim() ? `Welcome back, ${displayName.trim()}` : 'Welcome back'
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10 px-4 py-10 sm:py-14">
-      <div className="text-center">
-        <PortalRoleBadge portal="coordinator" />
-        <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          {greeting}
-        </h1>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground sm:text-base">
-          {marketCount > 0
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
+      <PageIntro
+        eyebrow="Coordinator portal"
+        title={greeting}
+        description={
+          marketCount > 0
             ? `You have ${marketCount} market${marketCount === 1 ? '' : 's'}. Start a new one or browse them all.`
-            : 'Create your first market or return here anytime to pick up where you left off.'}
-        </p>
-      </div>
+            : 'Create your first market or return here anytime to pick up where you left off.'
+        }
+        actions={<PortalRoleBadge portal="coordinator" />}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link

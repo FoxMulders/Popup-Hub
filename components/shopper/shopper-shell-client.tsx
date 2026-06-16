@@ -24,7 +24,7 @@ function ShopperShellInner({
   const { open } = useFeatureRequest()
 
   return (
-    <div className="site-app-shell market-page flex min-h-0 flex-1 flex-col bg-cream max-w-full overflow-x-hidden">
+    <div className="site-app-shell market-page site-surface flex min-h-0 flex-1 flex-col max-w-full overflow-x-hidden">
       <ShopperTopBar
         profile={profile}
         availablePortals={availablePortals}
@@ -51,7 +51,7 @@ export function ShopperShellClient({
 }: ShopperShellClientProps) {
   if (!profile) {
     return (
-      <div className="site-app-shell market-page flex min-h-0 flex-1 flex-col bg-cream max-w-full overflow-x-hidden">
+      <div className="site-app-shell market-page site-surface flex min-h-0 flex-1 flex-col max-w-full overflow-x-hidden">
         <ShopperTopBar
           profile={profile}
           availablePortals={availablePortals}

@@ -28,8 +28,9 @@ import {
   type EventWithMeta,
 } from '@/lib/shopper/events'
 import type { Event } from '@/types/database'
-import { cn } from '@/lib/utils'
+import { SitePageBand } from '@/components/layout/site-page-band'
 import { Gavel } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface DiscoverScreenProps {
   events: Event[]
@@ -131,20 +132,19 @@ export function DiscoverScreen({
   }, [datePreset, filterDate])
 
   return (
-    <div className="mx-auto w-full max-w-full overflow-x-hidden px-4 py-6 sm:max-w-7xl sm:py-8">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-sage-700">Discover</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          {liveAuctionsOnly ? 'Quarter auctions near you' : 'Community markets near you'}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {liveAuctionsOnly
+    <>
+      <SitePageBand
+        eyebrow="Discover"
+        title={liveAuctionsOnly ? 'Quarter auctions near you' : 'Community markets near you'}
+        description={
+          liveAuctionsOnly
             ? 'Live quarter auction markets — drop quarters and win vendor prizes'
-            : 'See confirmed vendors and plan your weekend before you go'}
-        </p>
-      </div>
+            : 'See confirmed vendors and plan your weekend before you go'
+        }
+      />
 
-      <div className="mt-6 space-y-2">
+      <div className="mx-auto w-full max-w-full overflow-x-hidden px-4 py-6 sm:max-w-7xl sm:py-8">
+      <div className="mt-0 space-y-2">
         <p className="text-xs font-medium text-muted-foreground">When</p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -318,7 +318,7 @@ export function DiscoverScreen({
           ) : null}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="mt-4 rounded-2xl border bg-white py-16 text-center">
+        <div className="mt-4 rounded-2xl marketing-glass-card py-16 text-center">
           <p className="text-muted-foreground">
             {liveAuctionsOnly
               ? 'No quarter auctions on this day within your area. Try another date or turn off the Quarter auctions filter.'
@@ -333,6 +333,7 @@ export function DiscoverScreen({
           activeAuctionByEventId={activeAuctionByEventId}
         />
       )}
-    </div>
+      </div>
+    </>
   )
 }

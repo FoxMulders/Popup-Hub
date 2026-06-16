@@ -97,10 +97,10 @@ export function AppNav({
   return (
     <nav
       id="site-app-nav"
-      className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b-2 border-stone-200 bg-cream/95 backdrop-blur-md shadow-[var(--shadow-market)] safe-top"
+      className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top"
       style={{ minHeight: 'var(--app-nav-height, 3.625rem)' }}
     >
-      <div className="mx-auto flex max-w-full flex-col gap-1 overflow-x-hidden px-3 py-2 sm:px-4 xl:max-w-[1600px] xl:px-8">
+      <div className="mx-auto flex max-w-full flex-col gap-1 overflow-x-hidden px-4 py-3.5 sm:px-6 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
           left={
             <BrandLogoLockup

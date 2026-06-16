@@ -98,7 +98,7 @@ export const TOUR_STEPS_BY_TOPIC_ID: Record<string, LayoutHelpTourStep[]> = {
       target: 'optimize',
       title: 'Optimize floor plan',
       body:
-        'After you have booths or tables drawn, pick a mode (Grid, Perimeter, etc.) and run Optimize to reposition objects in the active room.',
+        'After you have booths or tables drawn, pick Grid, Staggered, or Perimeter, then run AI Auto-Arrange to reposition objects in the active room.',
     },
   ],
   'save-draft-deploy': [

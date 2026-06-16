@@ -141,7 +141,7 @@ export function EventReadinessChecklist({
       layout: {
         type: 'link',
         href: `/coordinator/events/${eventId}/layout`,
-        label: 'Open spatial planner',
+        label: 'Open Blueprint Studio',
       },
       auction: {
         type: 'link',

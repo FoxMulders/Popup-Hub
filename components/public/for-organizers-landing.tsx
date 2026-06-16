@@ -14,7 +14,7 @@ const STEPS = [
   {
     step: '2',
     title: 'Approve vendors',
-    description: 'Review applications, collect documents, and confirm booth assignments from one dashboard.',
+    description: 'Review applications, collect documents, and confirm booth assignments from Markets and Blueprint Studio.',
   },
   {
     step: '3',
@@ -61,7 +61,7 @@ export function ForOrganizersLanding() {
             </p>
             <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
               <Link
-                href="/signup?role=coordinator"
+                href="/signup?role=coordinator&next=/coordinator/events/new"
                 className="marketing-pill marketing-pill--secondary inline-flex min-h-12 w-full items-center justify-center gap-2 sm:w-auto"
               >
                 <CalendarDays className="h-4 w-4" aria-hidden />

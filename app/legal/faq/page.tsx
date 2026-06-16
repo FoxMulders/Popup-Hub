@@ -11,7 +11,7 @@ export const metadata = buildPublicMetadata({
   path: '/legal/faq',
 })
 
-const LAST_UPDATED = 'June 10, 2026'
+const LAST_UPDATED = 'June 16, 2026'
 
 const faqStructuredData = PLATFORM_FAQ.filter(
   (item): item is { question: string; answer: string } => typeof item.answer === 'string',

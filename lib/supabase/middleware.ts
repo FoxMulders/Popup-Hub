@@ -97,8 +97,14 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublicPathMatch) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    url.searchParams.set('redirectTo', pathname)
+    if (pathname === '/coordinator/events/new') {
+      url.pathname = '/signup'
+      url.searchParams.set('role', 'coordinator')
+      url.searchParams.set('next', pathname)
+    } else {
+      url.pathname = '/login'
+      url.searchParams.set('redirectTo', pathname)
+    }
     return NextResponse.redirect(url)
   }
 

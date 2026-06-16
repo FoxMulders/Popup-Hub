@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { MapPin, Calendar, Clock, Users, Map } from 'lucide-react'
+import { SitePageBand } from '@/components/layout/site-page-band'
 import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Badge } from '@/components/ui/badge'
 import { marketStatusBadge } from '@/lib/theme/market'
@@ -99,48 +100,31 @@ export function EventDetailClient({
 
   return (
     <>
-      {/*
-        Outer column already constrains width via `max-w-5xl` + `px-4`,
-        but we add `min-w-0` + `w-full` defensively so any flex/grid
-        parent (the shopper shell, vendor shell, etc.) can't allow a
-        long market name (e.g. "Tipsy Fox …") to push the hero card
-        past the viewport on mobile. `overflow-x-hidden` on the hero
-        wrap is a hard backstop.
-      */}
+      <SitePageBand
+        eyebrow="Market detail"
+        title={event.name}
+        description={event.description ?? undefined}
+        tone="subtle"
+      />
+
       <div className="mx-auto w-full min-w-0 max-w-5xl space-y-8 px-4 py-8 pb-32">
-        <div className="w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm">
+        <div className="marketing-glass-card w-full min-w-0 overflow-hidden">
           {event.cover_image_url ? (
             <ExpandableImage
               src={event.cover_image_url}
               alt={event.name}
-              className="h-56 w-full object-contain bg-canvas sm:h-64"
+              className="h-56 w-full object-cover bg-canvas sm:h-72"
             />
           ) : (
-            <div className="flex h-40 items-center justify-center bg-gradient-to-br from-harvest-100 to-harvest-50">
-              <MapPin className="h-16 w-16 text-harvest-400" />
+            <div className="flex h-44 items-center justify-center bg-gradient-to-br from-sage-100 via-canvas to-harvest-50 sm:h-56">
+              <MapPin className="h-16 w-16 text-harvest-400" aria-hidden />
             </div>
           )}
           <div className="p-4 sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
-              {/*
-                `min-w-0` on the title column is the critical fix —
-                without it, a flex item refuses to shrink below its
-                intrinsic content width, so a very long market name
-                forces the parent flex container to overflow horizontally.
-                `break-words` lets long unbreakable strings wrap.
-              */}
-              <div className="min-w-0 flex-1 basis-full sm:basis-auto">
-                <h1 className="font-heading text-2xl font-bold text-foreground break-words sm:text-3xl">
-                  {event.name}
-                </h1>
-                {event.description && (
-                  <p className="mt-2 max-w-2xl text-muted-foreground break-words">
-                    {event.description}
-                  </p>
-                )}
-              </div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-sage-700">When &amp; where</p>
               <Badge
-                className={`capitalize self-start shrink-0 ${
+                className={`capitalize shrink-0 ${
                   event.status === 'active' ? marketStatusBadge.success : marketStatusBadge.warning
                 }`}
               >
@@ -148,25 +132,27 @@ export function EventDetailClient({
               </Badge>
             </div>
 
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-3">
               <p className="flex items-start gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4 shrink-0 text-harvest-500 mt-0.5" />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-harvest-500" aria-hidden />
                 <span className="min-w-0 break-words">
                   {event.location_name}
                   {event.address ? ` · ${event.address}` : ''}
                 </span>
               </p>
-              <div className="rounded-lg border bg-canvas p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Schedule</p>
+              <div className="rounded-xl border border-stone-200/60 bg-canvas/80 p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Schedule
+                </p>
                 <ul className="space-y-1">
                   {scheduleLines.map((line) => (
                     <li key={line.label} className="flex flex-wrap gap-x-3 text-sm text-foreground">
                       <span className="flex items-center gap-1 font-medium">
-                        <Calendar className="h-3.5 w-3.5 text-harvest-500" />
+                        <Calendar className="h-3.5 w-3.5 text-harvest-500" aria-hidden />
                         {line.label}
                       </span>
                       <span className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-3.5 w-3.5" />
+                        <Clock className="h-3.5 w-3.5" aria-hidden />
                         {line.hours}
                       </span>
                     </li>
@@ -174,7 +160,7 @@ export function EventDetailClient({
                 </ul>
               </div>
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4 shrink-0 text-harvest-500" />
+                <Users className="h-4 w-4 shrink-0 text-harvest-500" aria-hidden />
                 {vendorCount} vendor{vendorCount !== 1 ? 's' : ''} confirmed
               </p>
             </div>
@@ -231,7 +217,7 @@ export function EventDetailClient({
 
         <section>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-heading text-lg font-semibold">Who&apos;s going</h2>
+            <h2 className="text-lg font-bold text-foreground">Who&apos;s going</h2>
             {layout && (
               <Link
                 href={`/events/${event.id}/map`}
@@ -246,8 +232,8 @@ export function EventDetailClient({
         </section>
 
         {layout && (
-          <section className="rounded-2xl border bg-white p-5">
-            <h2 className="mb-4 font-heading text-lg font-semibold">Venue map</h2>
+          <section className="marketing-glass-card p-5">
+            <h2 className="mb-4 text-lg font-bold text-foreground">Venue map</h2>
             <PublicFloorplan layout={layout} />
           </section>
         )}
@@ -282,7 +268,7 @@ export function EventDetailClient({
         )}
 
         {userRole === 'shopper' && userId && event.status !== 'completed' ? (
-          <div className="rounded-xl border bg-white p-4">
+          <div className="marketing-glass-card p-4">
             <p className="text-sm font-medium">Want to sell at this market?</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Sign up as a vendor or enable vendor access on your profile, then apply from the vendor

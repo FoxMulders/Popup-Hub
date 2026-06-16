@@ -429,7 +429,7 @@ function LayoutEditorHelpHostInner({
           </div>
           <div className="border-t border-stone-200/80 px-3 py-2 text-[11px] text-muted-foreground">
             Green <strong className="font-semibold text-forest">Layout help</strong>{' '}
-            button stays on screen · Press{' '}
+            in the site header or toolbar · Press{' '}
             <kbd className="rounded border border-stone-300 bg-white px-1 font-semibold">
               ?
             </kbd>{' '}

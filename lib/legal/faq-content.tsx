@@ -54,7 +54,7 @@ export const PLATFORM_FAQ: FaqItem[] = [
           <strong>For Vendors:</strong> Applying to markets is free; you only pay the specific booth fees set by the market coordinators. If a coordinator has enabled processing fee pass-through, you will pay a small 3% + $1 transaction tax at checkout to secure your 75% escrow refund protection.
         </p>
         <p>
-          <strong>For Coordinators:</strong> There are no monthly subscriptions. Popup Hub takes a flat platform fee of 3% + $1 per booth transaction. Best of all, you have a toggle switch on your dashboard to pass this entire fee directly onto the vendor at checkout so you keep 100% of your listed booth price.
+          <strong>For Coordinators:</strong> There are no monthly subscriptions. Popup Hub takes a flat platform fee of 3% + $1 per booth transaction. Best of all, you can pass that fee through to vendors at checkout so you keep 100% of your listed booth price.
         </p>
         <p>
           <strong>A Note on Trust & Offline Payments:</strong> If an unverified coordinator processes transactions off the platform (like manual e-Transfers or cash), those transactions cannot clear the 75% escrow hold or count toward your community-trusted status. Attempting to bypass tracking to avoid fees breaks community trust and will result in an immediate reliability rating penalty for both the host and the vendor. Keeping transactions transparent directly protects the community, automates your verification, and funds our upcoming patron mobile app to drive foot traffic straight to your events.
@@ -99,7 +99,7 @@ export const PLATFORM_FAQ: FaqItem[] = [
   {
     question: 'How do I host a market as a coordinator?',
     answer:
-      'Sign up as a Coordinator, create an event from your dashboard, configure booth categories and fees, approve vendor applications, and use the Spatial Planner and Live Operations tools on market day.',
+      'Sign up as a Coordinator, create a market from your Markets page, configure booth categories and fees, approve vendor applications, design your floor plan in Blueprint Studio, and run check-in and live operations on market day.',
   },
   {
     question: 'What are quarter auctions?',

@@ -41,14 +41,25 @@ const ROLE_OPTIONS = [
   },
 ] as const
 
+function defaultPostSignupPath(role: SignupRole): string | undefined {
+  if (role === 'coordinator') return '/coordinator/events/new'
+  if (role === 'vendor') return '/vendor/dashboard'
+  return undefined
+}
+
+function isSignupRole(value: string | null): value is SignupRole {
+  return value === 'shopper' || value === 'vendor' || value === 'coordinator'
+}
+
 function SignupForm() {
   const params = useSearchParams()
   const supabase = createClient()
 
   const paramRole = params.get('role')
   const paramMode = params.get('mode')
-  const defaultRole: SignupRole =
-    paramRole === 'coordinator' ? 'coordinator' : paramRole === 'vendor' ? 'vendor' : 'shopper'
+  const paramNext = params.get('next') ?? params.get('redirectTo')
+  const roleLocked = isSignupRole(paramRole)
+  const defaultRole: SignupRole = roleLocked ? paramRole : 'shopper'
 
   const [authMode, setAuthMode] = useState<'signup' | 'login'>(
     paramMode === 'login' ? 'login' : 'signup'
@@ -74,6 +85,8 @@ function SignupForm() {
     window.location.replace(`/api/auth/callback?${search.toString()}`)
   }, [params])
 
+  const postSignupPath = paramNext ?? defaultPostSignupPath(role)
+
   async function handleGoogleSignUp() {
     if (!termsAccepted) {
       toast.error('Please accept the terms and conditions first.')
@@ -87,7 +100,10 @@ function SignupForm() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), { role }),
+        redirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), {
+          role,
+          ...(postSignupPath ? { next: postSignupPath } : {}),
+        }),
         queryParams: {
           prompt: 'select_account',
         },
@@ -116,7 +132,10 @@ function SignupForm() {
             ? { share_contact_with_vendors: shareContactWithVendors }
             : {}),
         },
-        emailRedirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), { role }),
+        emailRedirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), {
+          role,
+          ...(postSignupPath ? { next: postSignupPath } : {}),
+        }),
       },
     })
     if (error) {
@@ -129,6 +148,18 @@ function SignupForm() {
   }
 
   const selectedLabel = ROLE_OPTIONS.find((option) => option.id === role)?.label ?? role
+  const signupTitle =
+    roleLocked && role === 'coordinator'
+      ? 'Start hosting your market'
+      : roleLocked && role === 'vendor'
+        ? 'Create your vendor account'
+        : 'Create your account'
+  const signupDescription =
+    roleLocked && role === 'coordinator'
+      ? 'Set up events, review applications, and run market day from one hub.'
+      : roleLocked && role === 'vendor'
+        ? 'Apply to open markets and manage your vendor passport.'
+        : 'Choose how you\'ll use Popup Hub'
 
   if (submitted) {
     return (
@@ -164,9 +195,6 @@ function SignupForm() {
   return (
     <Card className="relative z-[1] flex w-full max-w-lg flex-col marketing-glass-card shadow-[var(--shadow-market-md)]">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex justify-center">
-          <BrandLogoMark size="auth" />
-        </div>
         <div className="mb-4 grid grid-cols-2 gap-2">
           <Button
             type="button"
@@ -185,10 +213,13 @@ function SignupForm() {
             Sign in
           </Button>
         </div>
+        <div className="mx-auto mb-5 flex justify-center overflow-hidden">
+          <BrandLogoMark size="auth" />
+        </div>
         {authMode === 'signup' ? (
           <>
-            <CardTitle className="font-heading text-2xl">Create your account</CardTitle>
-            <CardDescription>Choose how you&apos;ll use Popup Hub</CardDescription>
+            <CardTitle className="font-heading text-2xl">{signupTitle}</CardTitle>
+            <CardDescription>{signupDescription}</CardDescription>
           </>
         ) : (
           <>
@@ -202,43 +233,58 @@ function SignupForm() {
           <LoginForm embedded />
         ) : (
           <>
-          <fieldset className="mb-6">
-            <legend className="mb-2 block text-sm font-medium">I am a… *</legend>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {ROLE_OPTIONS.map(({ id, label, desc, icon: Icon }) => {
-                const selected = role === id
-                return (
-                  <label
-                    key={id}
-                    className={`flex min-h-[4.5rem] cursor-pointer touch-manipulation flex-col items-center rounded-xl border p-3 text-center transition ${
-                      selected
-                        ? 'border-harvest-500 bg-harvest-50 ring-2 ring-harvest-200/80'
-                        : 'border-stone-200/80 hover:border-harvest-400/60 hover:bg-canvas/50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="signup-role"
-                      value={id}
-                      checked={selected}
-                      onChange={() => setRole(id)}
-                      className="sr-only"
-                      required
-                    />
-                    <Icon
-                      className={`mb-1.5 h-5 w-5 ${selected ? 'text-harvest-600' : 'text-muted-foreground'}`}
-                    />
-                    <span className="text-xs font-semibold">{label}</span>
-                    <span className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{desc}</span>
-                  </label>
-                )
-              })}
+          {!roleLocked ? (
+            <fieldset className="mb-6">
+              <legend className="mb-2 block text-sm font-medium">I am a… *</legend>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {ROLE_OPTIONS.map(({ id, label, desc, icon: Icon }) => {
+                  const selected = role === id
+                  return (
+                    <label
+                      key={id}
+                      className={`flex min-h-[4.5rem] cursor-pointer touch-manipulation flex-col items-center rounded-xl border p-3 text-center transition ${
+                        selected
+                          ? 'border-harvest-500 bg-harvest-50 ring-2 ring-harvest-200/80'
+                          : 'border-stone-200/80 hover:border-harvest-400/60 hover:bg-canvas/50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="signup-role"
+                        value={id}
+                        checked={selected}
+                        onChange={() => setRole(id)}
+                        className="sr-only"
+                        required
+                      />
+                      <Icon
+                        className={`mb-1.5 h-5 w-5 ${selected ? 'text-harvest-600' : 'text-muted-foreground'}`}
+                      />
+                      <span className="text-xs font-semibold">{label}</span>
+                      <span className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{desc}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
+          ) : (
+            <div className="mb-6 flex justify-center">
+              <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 text-sm">
+                {role === 'coordinator' ? (
+                  <Calendar className="h-4 w-4" aria-hidden />
+                ) : (
+                  <Store className="h-4 w-4" aria-hidden />
+                )}
+                Signing up as {selectedLabel}
+              </Badge>
             </div>
-          </fieldset>
-          <p className="mb-4 text-xs text-muted-foreground leading-snug">
-            Vendors can sign up directly and apply to open markets. Organizers only review applications
-            for <strong>juried</strong> events — instant-book markets approve automatically.
-          </p>
+          )}
+          {!roleLocked ? (
+            <p className="mb-4 text-xs text-muted-foreground leading-snug">
+              Vendors can sign up directly and apply to open markets. Organizers only review applications
+              for <strong>juried</strong> events — instant-book markets approve automatically.
+            </p>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -302,7 +348,7 @@ function SignupForm() {
                   onChange={(e) => setShareContactWithVendors(e.target.checked)}
                 />
                 <span>
-                  <span className="font-medium">Share contact info with vendors (Quarter Auctions only)</span>
+                  <span className="font-medium">Share contact info with vendors</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
                     When enabled, donating vendors can see your name, email, and phone after you win a quarter auction item.
                   </span>

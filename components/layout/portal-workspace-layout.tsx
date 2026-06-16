@@ -109,11 +109,11 @@ export function PortalWorkspaceLayout({
       left={left}
       center={
         viewportLocked ? (
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-canvas p-4 [-webkit-overflow-scrolling:touch] lg:p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain site-surface p-4 [-webkit-overflow-scrolling:touch] lg:p-6">
             {children}
           </div>
         ) : (
-          <div className="w-full bg-canvas p-4 lg:p-6">{children}</div>
+          <div className="w-full site-surface p-4 lg:p-6">{children}</div>
         )
       }
       right={right}

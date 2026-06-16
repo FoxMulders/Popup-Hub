@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 const NAV_LINKS = [
   { href: '/discover', label: 'Discover Markets' },
   { href: '/vendor/events', label: 'For Vendors' },
-  { href: '/coordinator/events/new', label: 'Host a Market' },
+  { href: '/signup?role=coordinator&next=/coordinator/events/new', label: 'Host a Market' },
 ]
 
 export function GuestNav() {

@@ -27,11 +27,11 @@ export function VendorWorkspaceRail() {
       className="flex h-full min-h-0 flex-col gap-3 p-3"
       aria-label="Vendor workspace"
     >
-      <div className="ecosystem-panel-inner rounded-xl border border-stone-200/80 bg-card/80 p-3">
+      <div className="marketing-glass-card rounded-xl p-3">
         <p className="text-[0.625rem] font-bold uppercase tracking-wider text-muted-foreground">
           Vendor desk
         </p>
-        <p className="mt-0.5 font-heading text-sm font-semibold">Your markets</p>
+        <p className="mt-0.5 text-sm font-bold text-foreground">Your markets</p>
         <p className="mt-1 text-[0.6875rem] leading-snug text-muted-foreground">
           Bookings, payments, and passport — synced across Popup Hub.
         </p>

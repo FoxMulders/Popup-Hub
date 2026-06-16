@@ -445,7 +445,7 @@ export function PaymentMethodsForm({
         </Button>
         <Link href={backHref}>
           <Button type="button" variant="ghost">
-            {backOnEvent ? '← Back to event' : '← Back to command center'}
+            {backOnEvent ? '← Back to event' : '← Back to Blueprint Studio'}
           </Button>
         </Link>
       </div>

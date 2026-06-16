@@ -4,6 +4,17 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — share contact with vendors label (local, not deployed)
+- **Change:** Removed "(Quarter Auctions only)" from shopper share-contact checkbox on signup and profile settings.
+- **Files:** `app/(auth)/signup/page.tsx`, `app/profile/profile-form.tsx`.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — coordinator signup from Host a Market (local, not deployed)
+- **Issue:** "Host a market" showed generic signup with oversized logo overlapping Create account/Sign in tabs; full role picker despite coordinator intent; post-signup did not land on market setup.
+- **Fix:** Smaller auth wordmark; tabs above logo; coordinator-focused copy when `?role=coordinator`; hide role picker when role locked; pass `next=/coordinator/events/new` through OAuth/email callback; guest nav + marketing CTAs + middleware aligned.
+- **Verify:** `/signup?role=coordinator&next=/coordinator/events/new` — title "Start hosting your market", badge "Signing up as Coordinator", no role cards; after signup lands on `/coordinator/events/new`.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — FAQ and help copy refresh (local, not deployed)
 - **Goal:** Align all FAQ and in-app help with current product naming (Blueprint Studio, Markets, AI Auto-Arrange, Layout help in nav).
 - **Updated:** `lib/legal/faq-content.tsx`, `lib/market-day/help-content.ts`, `lib/floor-plan/layout-editor-help-content.ts`, layout help tours, operations FCFS blurb, account capabilities, event readiness checklist, market-day shell tab, for-organizers landing, payment-methods back link, FAQ last-updated date.
@@ -15,6 +26,16 @@
 - **Fix:** Replaced optical centering with geometric centering and explicit per-edge padding ratios in `iconOnBackground` / `transparentIcon`; removed clipping from `trimToSquare`. Regenerated `app/icon.png`, `app/apple-icon.png`, PWA icons, favicons, iOS AppIcon set, and `mobile/resources/icon-only.png` via `npm run assets:logo` + `npm run mobile:assets`.
 - **Verify:** Inspect `app/icon.png` — full awning scallops + "Popup Hub" text visible with even cream margins; no edge clipping.
 - **Next:** Commit + deploy when user asks.
+
+## Active work — site-wide modern brand system (local, not deployed)
+- **Goal:** Carry homepage modernization through the whole site — not just `/`.
+- **Shared system:** `SitePageBand`, `SiteContentShell`, `SiteAmbientBackdrop`, `PageIntro`, `.site-surface`, `.site-panel` utilities in [`app/globals.css`](app/globals.css).
+- **Browse (patron):** `/discover`, `/favorites`, `/supplies`, event detail — forest/subtle page bands + glass panels.
+- **Legal:** glass document card + sage header strip; layout uses ambient shell.
+- **Portals:** `AppNav` matches guest nav; coordinator/vendor workspace centers use `site-surface`; rails use glass cards; `PageIntro` on coordinator home, markets list, vendor dashboard/events.
+- **Shells:** `shopper-shell`, `site-app-shell`, `shared-layout-chrome`, `command-center-shell` all on `site-surface`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover`, `/favorites`, `/supplies`, `/events/{id}`, `/legal/about`, `/vendor/dashboard`, `/coordinator/markets`.
+- **Next:** Commit + deploy when user asks; optional pass on remaining deep coordinator event-hub pages.
 
 ## Active work — modern brand refresh (local, not deployed)
 - **Goal:** Modernize Popup Hub visual system (Market Scout–inspired energy, unique Popup Hub identity) across marketing, browse, auth, and portal entry points — keep forest/sage/cream palette.

@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { PageIntro } from '@/components/layout/page-intro'
 import Link from 'next/link'
-import { Store, CheckCircle, Clock, AlertTriangle, ArrowRight, CreditCard } from 'lucide-react'
+import { ArrowRight, Store, CheckCircle, Clock, AlertTriangle, CreditCard } from 'lucide-react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
 import { VendorMeetTheMakerPanel } from '@/components/market-feed/vendor-meet-the-maker-panel'
 import { PassportStoriesManager } from '@/components/passport/passport-stories-manager'
@@ -116,19 +117,19 @@ export default async function VendorDashboard() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-sage-700">Vendor portal</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Dashboard</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Manage your passport, applications, and bookings</p>
-        </div>
-        <Link href="/vendor/events">
-          <Button size="pill" className="">
-            Apply for open markets
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
-      </div>
+      <PageIntro
+        eyebrow="Vendor portal"
+        title="Dashboard"
+        description="Manage your passport, applications, and bookings"
+        actions={
+          <Link href="/vendor/events">
+            <Button size="pill">
+              Apply for open markets
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+            </Button>
+          </Link>
+        }
+      />
 
       {(liveAuctionSummary.active || liveAuctionSummary.upcoming) && (
         <LiveAuctionBanner

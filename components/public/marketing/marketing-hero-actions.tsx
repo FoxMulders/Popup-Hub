@@ -33,7 +33,7 @@ export function MarketingHeroActions() {
         Browse markets near you
       </button>
       <Link
-        href="/signup?role=coordinator"
+        href="/signup?role=coordinator&next=/coordinator/events/new"
         className="marketing-pill marketing-pill--primary min-h-12 w-full sm:w-auto"
       >
         Host a market

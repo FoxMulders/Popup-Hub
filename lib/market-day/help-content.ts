@@ -16,22 +16,21 @@ export const MARKET_DAY_HOW_TO: HowToStep[] = [
     title: '1. Set up your event (before market day)',
     summary: 'Configure categories, fees, clearance rules, and optional raffle donations.',
     steps: [
-      'Create or edit the event from your coordinator dashboard — set dates, location, and category slot limits.',
+      'Create or edit the event from Markets or your event hub — set dates, location, and category slot limits.',
       'Connect Square if you charge booth fees, so payments and refunds run automatically.',
       'Choose a booth clearance policy (leave venue furniture vs. pack everything) and optionally describe the raffle item vendors must donate.',
       'Approve vendor applications from the event page. FCFS order is based on when each application was approved.',
     ],
   },
   {
-    title: '2. Build the spatial layout',
-    summary: 'Use the Spatial Planner to design booths, aisles, and doors across multiple rooms.',
+    title: '2. Build the floor plan in Blueprint Studio',
+    summary: 'Design booths, aisles, and doors across multiple rooms in Blueprint Studio.',
     steps: [
-      'Open Spatial Planner from this dashboard (or the event page).',
-      'Add rooms/zones (Main Hall, Annex, Patio, etc.) — each keeps its own grid until you save.',
-      'Paint aisles, entrances, exits, restrooms, and other fixtures. Drag entrance/exit doors along outer walls.',
-      'Place vendors manually (Move Vendors tool) or run Auto-Plan Booths for FCFS placement.',
-      'Watch for amber bottleneck warnings — walkways must stay at least 8ft wide for stroller traffic.',
-      'Violet highlights show adjacent cells where “Stand Beside” neighbor matches can snap together.',
+      'Open Blueprint Studio from the site nav, Markets, or your event hub (desktop required for the full canvas).',
+      'Add rooms/zones (Main Hall, Annex, Patio, etc.) — each keeps its own walls and placements until you save.',
+      'Sketch walls, doors, and exits on the perimeter. Entry and exit doors can be dragged along outer walls.',
+      'Place vendor booths manually, drag approved vendors from the Available pool onto booths, or run AI Auto-Arrange.',
+      'Watch clearance warnings — walkways should stay at least 8′ wide for stroller traffic.',
       'Save the layout when finished. Booth numbers sync to applications and check-in maps.',
     ],
   },
@@ -61,7 +60,7 @@ export const MARKET_DAY_HOW_TO: HowToStep[] = [
     steps: [
       'Open the FCFS Queue tab — vendors are sorted by approval time.',
       'Rows highlighted in violet have a matching “Stand Beside” preference with another vendor in the queue.',
-      'Return to Spatial Planner to place paired vendors in adjacent violet-highlighted cells when space allows.',
+      'Return to Blueprint Studio to place paired vendors in adjacent booths when space allows.',
     ],
   },
   {
@@ -88,22 +87,22 @@ export const MARKET_DAY_HOW_TO: HowToStep[] = [
 export const MARKET_DAY_FAQ: FaqItem[] = [
   {
     question: 'What is the stroller-safe aisle rule?',
-    answer: `Walkways between booths and painted aisles must maintain at least ${MIN_STROLLER_AISLE_WIDTH_FT} feet of clearance — the ergonomic minimum for two double-strollers to pass while shoppers are stopped at booths. The planner highlights conflicting cells in amber and shows a warning card when bottlenecks are detected.`,
+    answer: `Walkways between booths must maintain at least ${MIN_STROLLER_AISLE_WIDTH_FT} feet of clearance — the ergonomic minimum for two double-strollers to pass while shoppers are stopped at booths. Blueprint Studio highlights tight aisles and shows clearance warnings when bottlenecks are detected.`,
   },
   {
-    question: 'How does Auto-Plan Booths (FCFS) work?',
+    question: 'How does AI Auto-Arrange work?',
     answer:
-      'Auto-Plan places approved vendors in first-come, first-served order based on application approval time (not application submit time for pending apps). Booth type requests (wall, power, inside) and table-provided spacing are respected where possible. Use Standard for mixed interior layout, Outside Only for an indoor perimeter ring, or Outdoor rows for street-fair / parking-lot markets without walls.',
+      'AI Auto-Arrange repositions vendor booths and patron tables in the active room. Choose a pattern — Grid, Staggered, or Perimeter — then run Auto-Arrange from the toolbar. Perimeter modes need at least one entry and one exit on outer walls. The fairness engine respects approval order where applicable; review Cap · Cov · Fair scores and clearance warnings after each run.',
   },
   {
     question: 'What is “Stand Beside” and how do violet highlights work?',
     answer:
-      'Vendors can enter a neighbor preference when applying (business or vendor name). The FCFS queue flags matching pairs. In the Spatial Planner, violet cells mark empty spots adjacent to a placed vendor where their matched neighbor could snap in — placement is still manual or via auto-plan; highlights are guides, not automatic pairing.',
+      'Vendors can enter a neighbor preference when applying (business or vendor name). The FCFS Queue tab flags matching pairs with violet highlights. Placement is still manual in Blueprint Studio or via AI Auto-Arrange — the queue highlights are guides, not automatic pairing.',
   },
   {
     question: 'Can I have multiple rooms or zones?',
     answer:
-      'Yes. Use the room tabs at the top of the Spatial Planner to add or switch zones (e.g. Main Hall vs. Patio). Each room has its own dimensions, fixtures, and vendor cells. Saving writes all rooms to the layout record; the active room is used for legacy single-room views like check-in maps until those are fully multi-room.',
+      'Yes. Use the room tabs in Blueprint Studio to add or switch zones (e.g. Main Hall vs. Patio). Each room has its own dimensions, fixtures, and booth placements. Saving writes all rooms to the layout record in one pass.',
   },
   {
     question: 'How do vendor reliability scores work?',
@@ -138,6 +137,6 @@ export const MARKET_DAY_FAQ: FaqItem[] = [
   {
     question: 'Do I need to save the layout after every change?',
     answer:
-      'Room tabs keep unsaved work in the browser session while you edit, but you should click Save on the Spatial Planner before leaving or switching devices. Market-day check-in and operations read from the last saved layout in the database.',
+      'Blueprint Studio autosaves layout edits while you work, but click Save draft or Save layout before switching devices or closing a long session. Market-day check-in and operations read from the last saved layout in the database.',
   },
 ]
