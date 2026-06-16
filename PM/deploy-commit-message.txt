@@ -1,1 +1,1 @@
-feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)
+feat: ship 113 session updates (layout tutorial room shape step; share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; +109 more)

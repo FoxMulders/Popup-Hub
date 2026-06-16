@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — layout tutorial room shape step (local, not deployed)
+- **Change:** Quick-start layout help tour now has 6 steps — new Step 5 demos changing room shape (canvas handles, W/L fields, rotate); save moved to Step 6.
+- **Files:** `lib/floor-plan/layout-editor-help-tours.ts`, `layout-editor-help-content.ts`, `layout-editor-help.tsx`, `floor-plan-v2.tsx` (`data-layout-help="room-shape"` on canvas wrapper).
+- **Verify:** Blueprint Studio → Layout help → Start quick-start tour — Step 5 spotlights canvas and explains resize/reshape/rotate; Step 6 covers save.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — share contact with vendors label (local, not deployed)
 - **Change:** Removed "(Quarter Auctions only)" from shopper share-contact checkbox on signup and profile settings.
 - **Files:** `app/(auth)/signup/page.tsx`, `app/profile/profile-form.tsx`.
@@ -1230,9 +1236,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `628c9de` (pushed to `origin/master`)
-- Last deploy commit: `628c9de` - feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)
-- Production: https://popuphub.ca - **v1.0.0 build 190** | commit `d081b4f` (handoff updated 2026-06-16 10:54)
+- Branch: `master` @ `e22b37b` (pushed to `origin/master`)
+- Last deploy commit: `e22b37b` - feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)
+- Production: https://popuphub.ca - **v1.0.0 build 191** | commit `e59aaab` (handoff updated 2026-06-16 11:06)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1609,7 +1615,7 @@
 
 
 ## Last deploy
-- 2026-06-16 10:54 - Deploy via deploy-popuphub.ps1 - `feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)` (628c9de)
+- 2026-06-16 11:06 - Deploy via deploy-popuphub.ps1 - `feat: ship 112 session updates (share contact with vendors label; coordinator signup from Host a Market; FAQ and help copy refresh; app icon full logo restore; +108 more)` (e22b37b)
 
 
 ## Goal
