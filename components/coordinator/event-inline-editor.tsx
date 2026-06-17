@@ -15,8 +15,11 @@ import {
 } from '@/components/ui/select'
 import { EventStatusToggle } from '@/components/coordinator/event-status-toggle'
 import { MapPin, Calendar, Clock, Pencil, Loader2, CheckCircle } from 'lucide-react'
-import { format } from 'date-fns'
 import type { Event } from '@/types/database'
+import {
+  safeFormatMarketDate,
+  safeFormatMarketTimeRange,
+} from '@/lib/format/safe-event-date'
 
 const TIME_OPTIONS: { value: string; label: string }[] = (() => {
   const opts: { value: string; label: string }[] = []
@@ -55,10 +58,12 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
   const [descValue, setDescValue] = useState(event.description ?? '')
   const [locationName, setLocationName] = useState(event.location_name)
   const [address, setAddress] = useState(event.address)
-  const [startDate, setStartDate] = useState(event.start_at.slice(0, 10))
-  const [startTime, setStartTime] = useState(event.start_at.slice(11, 16))
-  const [endDate, setEndDate] = useState(event.end_at.slice(0, 10))
-  const [endTime, setEndTime] = useState(event.end_at.slice(11, 16))
+  const startIso = event.start_at ?? ''
+  const endIso = event.end_at ?? event.start_at ?? ''
+  const [startDate, setStartDate] = useState(startIso.slice(0, 10))
+  const [startTime, setStartTime] = useState(startIso.length >= 16 ? startIso.slice(11, 16) : '09:00')
+  const [endDate, setEndDate] = useState(endIso.slice(0, 10))
+  const [endTime, setEndTime] = useState(endIso.length >= 16 ? endIso.slice(11, 16) : '17:00')
   const [dateWarningConfirmed, setDateWarningConfirmed] = useState(false)
 
   function startEditing(field: EditingField) {
@@ -71,10 +76,12 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
       setAddress(event.address)
     }
     if (field === 'dates') {
-      setStartDate(event.start_at.slice(0, 10))
-      setStartTime(event.start_at.slice(11, 16))
-      setEndDate(event.end_at.slice(0, 10))
-      setEndTime(event.end_at.slice(11, 16))
+      const start = event.start_at ?? ''
+      const end = event.end_at ?? event.start_at ?? ''
+      setStartDate(start.slice(0, 10))
+      setStartTime(start.length >= 16 ? start.slice(11, 16) : '09:00')
+      setEndDate(end.slice(0, 10))
+      setEndTime(end.length >= 16 ? end.slice(11, 16) : '17:00')
       setDateWarningConfirmed(false)
     }
   }
@@ -309,14 +316,13 @@ export function EventInlineEditor({ event }: EventInlineEditorProps) {
             <>
               <div className="group flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5 text-harvest-500" />
-                <span>{format(new Date(event.start_at), 'EEE, MMM d, yyyy')}</span>
+                <span>{safeFormatMarketDate(event.start_at)}</span>
                 {pencilButton('dates', 'dates')}
                 {savedCheck('dates')}
               </div>
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5 text-harvest-500" />
-                {format(new Date(event.start_at), 'h:mm a')} –{' '}
-                {format(new Date(event.end_at), 'h:mm a')}
+                {safeFormatMarketTimeRange(event.start_at, event.end_at)}
               </span>
             </>
           )}

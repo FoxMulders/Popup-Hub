@@ -1,4 +1,5 @@
 import type { Event, EventStatus } from '@/types/database'
+import { safeEventTimestamp } from '@/lib/format/safe-event-date'
 
 export const OPEN_EVENT_STATUSES = ['published', 'active'] as const satisfies readonly EventStatus[]
 
@@ -84,13 +85,13 @@ export function filterVendorParticipatedArchivedEvents<T extends { id: string }>
 
 export function sortEventsByStartAsc<T extends Pick<Event, 'start_at'>>(events: T[]): T[] {
   return [...events].sort(
-    (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+    (a, b) => safeEventTimestamp(a.start_at) - safeEventTimestamp(b.start_at)
   )
 }
 
 export function sortEventsByStartDesc<T extends Pick<Event, 'start_at'>>(events: T[]): T[] {
   return [...events].sort(
-    (a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime()
+    (a, b) => safeEventTimestamp(b.start_at) - safeEventTimestamp(a.start_at)
   )
 }
 

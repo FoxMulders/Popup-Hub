@@ -30,13 +30,8 @@ export default async function VendorLayout({ children }: { children: React.React
 
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
-  if (parseActivePortal(portalCookie) !== 'vendor') {
-    cookieStore.set(ACTIVE_PORTAL_COOKIE, 'vendor', {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-    })
-  }
+
+  // Portal cookie is synced in middleware — do not call cookies().set() here (Next.js 16).
 
   return (
     <VendorShell profile={profile as Profile}>

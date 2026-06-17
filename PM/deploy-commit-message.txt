@@ -1,1 +1,1 @@
-feat: ship 122 session updates (dynamic tessellation + clearance auto-correction; tiered OpenRouter spatial AI; ecosystem rules + ledger sync audit; Blueprint Studio ledger & layout fixes; +118 more)
+feat: ship 124 session updates (unit test inventory + gaps; coordinator markets access fix; dynamic tessellation + clearance auto-correction; tiered OpenRouter spatial AI; +120 more)

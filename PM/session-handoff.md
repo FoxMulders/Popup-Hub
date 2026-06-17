@@ -4,6 +4,32 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — unit test inventory + gaps (local, not deployed)
+- **Goal:** Catalog QA/unit coverage; add colocated tests for floor-plan rules missing `.test.ts` files.
+- **Added:** `lib/floor-plan/door-clearance-zones.test.ts`, `components/coordinator/floor-plan-v2/interactions/category-rules.test.ts`, `npm run test:unit` (geometry, integration, polygon-edit, category-rules, door zones, active-portal).
+- **Verify:** `npm run test:unit` — all PASS.
+- **Next:** Wire high-value `scripts/verify-*.ts` into `test:unit` or `qa:launch` when prioritized; add `clearance-auto-correction.test.ts` colocated with module.
+
+## Active work — coordinator markets access fix (local, not deployed)
+- **Issue:** Coordinator cannot open **current or past** markets — Next.js "This page couldn't load" error on `/coordinator/markets` and event hubs.
+- **Root causes addressed:**
+  - **`cookies().set()` in coordinator layout** — illegal in Next.js 16 Server Components; crashed the entire coordinator segment on load. Removed (middleware syncs portal cookie). Same fix applied to vendor layout.
+  - **Unsafe `date-fns` formatting** on market rows when `start_at` is missing/invalid — SSR crash on both Active and Past sections.
+  - Blueprint Studio excluded archived events — `?event=<past-id>` fell back to wrong market.
+  - Profile query used `.single()` — switched to `.maybeSingle()` with error logging.
+- **Shipped locally:**
+  - `lib/format/safe-event-date.ts` — crash-safe market date formatting + sort timestamps.
+  - `coordinator-markets-list.tsx` — safe dates + **View layout** link on past markets → studio.
+  - `app/coordinator/studio/page.tsx` — includes archived events for read-only blueprint access.
+  - `app/coordinator/markets/page.tsx` — resilient query error logging.
+  - `app/coordinator/markets/loading.tsx` — skeleton while markets load.
+  - `app/coordinator/layout.tsx` — removed illegal cookie write.
+  - `app/coordinator/error.tsx` — segment error boundary with reload + markets link.
+  - `event-inline-editor.tsx` — safe dates in display + edit state init.
+  - `lib/queries/events.ts` — safe sort via `safeEventTimestamp`.
+- **Verify:** `/coordinator/markets` → Active + Past sections render; click current event hub + past **View layout**.
+- **Next:** **Commit + deploy** — production still has the layout cookie bug until shipped.
+
 ## Active work — dynamic tessellation + clearance auto-correction (local, not deployed)
 - **Goal:** Multi-pattern floor-plan tessellation (perimeter loop, structured grid, staggered offset) with valid-booth-yield + flow-fairness optimization; push-back/prune until every vendor booth is green (≥4′).
 - **Shipped locally:**

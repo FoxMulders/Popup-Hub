@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { format } from 'date-fns'
 import {
   CalendarDays,
   ChevronRight,
@@ -13,6 +12,7 @@ import { PageIntro } from '@/components/layout/page-intro'
 import {
   coordinatorStudioHref,
 } from '@/lib/coordinator/coordinator-routes'
+import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
 import { cn } from '@/lib/utils'
 
 export interface CoordinatorMarketSummary {
@@ -69,7 +69,7 @@ function MarketRow({
           <span className="min-w-0 flex-1">
             <span className="line-clamp-1 font-medium text-foreground">{market.name}</span>
             <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>{format(new Date(market.start_at), 'EEE, MMM d, yyyy')}</span>
+              <span>{safeFormatMarketDate(market.start_at)}</span>
               <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-medium">
                 {statusLabel(market.status)}
               </Badge>
@@ -88,7 +88,18 @@ function MarketRow({
             <LayoutDashboard className="h-3.5 w-3.5" aria-hidden />
             Blueprint Studio
           </Link>
-        ) : null}
+        ) : (
+          <Link
+            href={coordinatorStudioHref(market.id)}
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'hidden shrink-0 gap-1.5 sm:inline-flex'
+            )}
+          >
+            <LayoutDashboard className="h-3.5 w-3.5" aria-hidden />
+            View layout
+          </Link>
+        )}
       </div>
     </li>
   )

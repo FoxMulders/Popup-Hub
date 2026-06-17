@@ -8,7 +8,6 @@ import {
   ACTIVE_PORTAL_COOKIE,
   getAvailablePortals,
   getDefaultDashboard,
-  parseActivePortal,
   portalFromAccessiblePath,
 } from '@/lib/portals/active-portal'
 import { buildPrivatePortalMetadata } from '@/lib/seo/public-metadata'
@@ -21,12 +20,15 @@ export default async function CoordinatorLayout({ children }: { children: React.
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
+  if (profileError) {
+    console.error('[coordinator/layout] profile query failed', profileError.message)
+  }
   if (!profile) redirect('/login')
   if (!hasAccessForProfile(profile, 'coordinator')) {
     redirect(getDefaultDashboard(profile.role, 0, undefined, { isAdmin: profile.is_admin }))
@@ -34,7 +36,6 @@ export default async function CoordinatorLayout({ children }: { children: React.
 
   const cookieStore = await cookies()
   const portalCookie = cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value
-  const availablePortals = getAvailablePortals(profile.role)
 
   const requiredPortal = portalFromAccessiblePath('/coordinator', profile.role, {
     isAdmin: profile.is_admin,
@@ -43,13 +44,9 @@ export default async function CoordinatorLayout({ children }: { children: React.
     redirect(getDefaultDashboard(profile.role, 0))
   }
 
-  if (parseActivePortal(portalCookie) !== 'coordinator') {
-    cookieStore.set(ACTIVE_PORTAL_COOKIE, 'coordinator', {
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-      sameSite: 'lax',
-    })
-  }
+  // Portal cookie is synced in middleware — do not call cookies().set() here (Next.js 16).
+
+  const availablePortals = getAvailablePortals(profile.role)
 
   return (
     <PortalSiteChrome

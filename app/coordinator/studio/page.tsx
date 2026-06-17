@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { redirect } from 'next/navigation'
-import { partitionEventsByPhase, sortEventsByStartAsc } from '@/lib/queries/events'
+import { partitionEventsByPhase, sortEventsByStartAsc, sortEventsByStartDesc } from '@/lib/queries/events'
 import type { Event } from '@/types/database'
 import { roomsFromBoothLayoutForEditor } from '@/lib/booth-planner/layout-rooms'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
@@ -93,8 +93,12 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
       : Promise.resolve({ data: [] }),
   ])
 
-  const { active } = partitionEventsByPhase((eventRows ?? []) as Event[])
-  const events: DashboardEventSummary[] = sortEventsByStartAsc(active).map((e) => ({
+  const { active, archived } = partitionEventsByPhase((eventRows ?? []) as Event[])
+  const activeSorted = sortEventsByStartAsc(active)
+  const archivedSorted = sortEventsByStartDesc(archived)
+  const allStudioEvents = [...activeSorted, ...archivedSorted]
+
+  const events: DashboardEventSummary[] = allStudioEvents.map((e) => ({
     id: e.id,
     name: e.name,
     start_at: e.start_at,
@@ -247,9 +251,9 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
   const paymentTrustComplete = coordinatorHasPaymentTrustPath(fraudGate)
 
   const initialEventId =
-    eventQuery && events.some((e) => e.id === eventQuery)
+    eventQuery && allStudioEvents.some((e) => e.id === eventQuery)
       ? eventQuery
-      : events[0]?.id ?? null
+      : activeSorted[0]?.id ?? archivedSorted[0]?.id ?? null
 
   return (
     <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading Blueprint Studio…</div>}>

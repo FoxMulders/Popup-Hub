@@ -31,14 +31,14 @@ export default async function CoordinatorMarketsPage() {
     .select('id, name, start_at, status')
     .order('start_at', { ascending: false })
 
-  const [{ data: profile }, { data: eventRows }, { data: revenueRows }] = await Promise.all([
+  const [{ data: profile }, eventsResult, revenueResult] = await Promise.all([
     supabase
       .from('profiles')
       .select(
         'payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete'
       )
       .eq('id', user.id)
-      .single(),
+      .maybeSingle(),
     scope.isAdmin ? eventsQuery : eventsQuery.eq('coordinator_id', user.id),
     (scope.isAdmin
       ? supabase.from('platform_transactions').select('organizer_payout_amount').eq('status', 'completed')
@@ -49,12 +49,20 @@ export default async function CoordinatorMarketsPage() {
           .eq('coordinator_id', user.id)),
   ])
 
+  const eventRows = eventsResult.data ?? []
+  if (eventsResult.error) {
+    console.error('[coordinator/markets] events query failed', eventsResult.error.message)
+  }
+  if (revenueResult.error) {
+    console.error('[coordinator/markets] revenue query failed', revenueResult.error.message)
+  }
+
   const { active, archived } = partitionEventsByPhase((eventRows ?? []) as Event[])
   const activeMarkets = sortEventsByStartAsc(active).map(toMarketSummary)
   const archivedMarkets = sortEventsByStartDesc(archived).map(toMarketSummary)
 
   const totalRevenueCents =
-    revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
+    revenueResult.data?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
 
   const squareConnected =
     profile?.payout_onboarding_status === 'complete' && !!profile.payout_account_id
