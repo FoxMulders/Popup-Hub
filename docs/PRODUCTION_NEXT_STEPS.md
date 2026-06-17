@@ -16,12 +16,12 @@ Use this checklist after pushing code to GitHub. Live site: [popup-hub.vercel.ap
 
 ## 1. Environment variables (Vercel)
 
-**Status:** Only `CRON_SECRET` is set on Vercel today. The app needs Supabase + payment keys before auth and checkout work in production.
+**Status (2026-06-17):** Core production keys are set on Vercel (Supabase, Square, Maps, cron, OpenRouter). Run `npm run env:vercel:dry` to compare `.env.local` with what would sync.
 
 1. Ensure `.env.local` has real values (copy from `.env.local.example`).
 2. Set production app URL in `.env.local` before sync:
    ```
-   NEXT_PUBLIC_APP_URL=https://popup-hub.vercel.app
+   NEXT_PUBLIC_APP_URL=https://popuphub.ca
    ```
 3. Run:
    ```powershell
@@ -31,10 +31,20 @@ Use this checklist after pushing code to GitHub. Live site: [popup-hub.vercel.ap
    ```powershell
    .\scripts\sync-vercel-env.ps1 -DryRun
    ```
-4. Redeploy so functions pick up new vars:
+4. Redeploy so functions pick up changed vars:
    ```powershell
-   npx vercel deploy --prod
+   npx vercel deploy --prod --yes
    ```
+
+### Gaps to verify manually
+
+| Item | Action |
+|------|--------|
+| `SQUARE_CLIENT_SECRET` | Confirm on Vercel if OAuth token exchange fails (`npm run env:vercel`) |
+| `NEXT_PUBLIC_APP_URL` | Should be `https://popuphub.ca` (not localhost) |
+| `NEXT_PUBLIC_SITE_URL` | Optional — set to `https://popuphub.ca` for OG/canonical metadata |
+| `RESEND_API_KEY` / `TWILIO_*` | Optional — email/SMS skip gracefully when unset |
+| `STRIPE_*` | Optional — quarter-auction charity flow only |
 
 ### Required for production boot
 
@@ -79,15 +89,16 @@ npx supabase link --project-ref ensbggtbgabogvynqsqt
 npm run db:push
 ```
 
-Migrations run through `052_quarter_auction_notifications.sql` as of this doc.
+Migrations run through `111_passport_niche_tags.sql` as of this doc.
 
 ### Post-migration dashboard tasks
 
 - **Storage buckets:** `booth-clearance-photos`, `avatars`, `vendor-assets` (if not created by migrations)
 - **Realtime:** enable for `notifications`, `auctions`, `auction_drops` (Database → Replication)
 - **Auth URL configuration** (Supabase → Authentication → [URL Configuration](https://supabase.com/dashboard/project/ensbggtbgabogvynqsqt/auth/url-configuration)):
-  - **Site URL:** `https://popup-hub.vercel.app` (must NOT be `http://localhost:3000` — that causes Google sign-in to redirect users to localhost)
+  - **Site URL:** `https://popuphub.ca` (must NOT be `http://localhost:3000` — that causes Google sign-in to redirect users to localhost)
   - **Redirect URLs** (add all):
+    - `https://popuphub.ca/**`
     - `https://popup-hub.vercel.app/**`
     - `http://localhost:3000/**`
     - `https://localhost:3000/**`
@@ -118,6 +129,8 @@ Skip commit when you only want build + deploy:
 ```powershell
 npm run verify:prod
 ```
+
+Checks both `https://popuphub.ca` and `https://popup-hub.vercel.app` (landing, auth, discover, PWA, build-info, sitemap). Use `-BaseUrl` or `-VercelOnly` in `scripts/verify-production.ps1` for a single origin.
 
 Manual checklist: [COORDINATOR_QA.md](./COORDINATOR_QA.md)
 

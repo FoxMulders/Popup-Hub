@@ -8,11 +8,11 @@
 # Prerequisites:
 #   - .env.local with real values
 #   - Vercel CLI linked (npx vercel link) or .vercel/project.json present
-#   - NEXT_PUBLIC_APP_URL should be https://popup-hub.vercel.app for production
+#   - NEXT_PUBLIC_APP_URL should be https://popuphub.ca for production (OAuth + Square webhooks)
 
 param(
     [switch]$DryRun,
-    [string]$ProductionAppUrl = 'https://popup-hub.vercel.app',
+    [string]$ProductionAppUrl = 'https://popuphub.ca',
     [ValidateSet('production', 'preview', 'development', 'all')]
     [string[]]$Environments = @('production')
 )
@@ -55,7 +55,8 @@ $SyncKeys = @(
     'FLYER_GEMINI_MODEL_ID',
     'GROQ_API_KEY',
     'POPUPHUB_API_KEY',
-    'GROQ_MODEL_ID'
+    'GROQ_MODEL_ID',
+    'OPENROUTER_API_KEY'
 )
 
 $SkipPrefixes = @('DEV_MOCK_')

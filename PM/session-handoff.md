@@ -4,6 +4,21 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Windows production build: next-font-manifest (local, not deployed)
+- **Issue:** Local deploy failed during `Collecting page data` with `Cannot find module '.next/server/next-font-manifest.json'` — stale/corrupt `.next` while multiple `next dev` processes held locks on the same output directory.
+- **Root cause:** Eight concurrent `next dev` instances for popup-hub were writing dev artifacts into `.next` while production `next build` ran; webpack emitted manifests then dev/build races deleted or overwrote them before static workers loaded them.
+- **Fix:** `scripts/clean-next-build.mjs` — detect popup-hub `next dev` / `start-server.js` processes; `--stop-dev` uses `taskkill /T /F` on Windows (retry up to 3×); `--strict` fails fast if dev servers or `.next` cannot be cleared. `package.json` prebuild + `deploy-popuphub.ps1` / `ship.ps1` now pass `--strict --stop-dev`.
+- **Verify:** `npm run build` — PASS (build 204, webpack). Deploy should succeed after rerun of `PM\Deploy-popuphub.bat`.
+- **Next:** Commit + deploy when user asks.
+
+## Shipped this session — deploy + production hygiene (deployed 2026-06-17)
+- **Deploy 1 (`0b7a8d7`, build 204):** Past markets access fix — safe date formatting, archived events in Blueprint Studio, coordinator/vendor layout cookie fix (Next.js 16), error boundary, markets loading skeleton, `npm run test:unit`.
+- **Deploy 2 (build 205):** Env sync — `SQUARE_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL=https://popuphub.ca`, 15 keys refreshed on Vercel.
+- **DB:** Migration `111_passport_niche_tags.sql` applied via `npm run db:push`.
+- **Hygiene:** `sync-vercel-env.ps1` default app URL → popuphub.ca; `OPENROUTER_API_KEY` in sync list; `verify-production.ps1` checks both domains + build-info + sitemap; `PRODUCTION_NEXT_STEPS.md` updated.
+- **Prod smoke:** `npm run verify:prod` — all PASS on popuphub.ca and popup-hub.vercel.app.
+- **Manual follow-up:** Supabase Auth dashboard — Site URL `https://popuphub.ca`, redirect URLs include `ca.popuphub.app://auth/callback` for iOS; Google Search Console sitemap submit.
+
 ## Active work — unit test inventory + gaps (local, not deployed)
 - **Goal:** Catalog QA/unit coverage; add colocated tests for floor-plan rules missing `.test.ts` files.
 - **Added:** `lib/floor-plan/door-clearance-zones.test.ts`, `components/coordinator/floor-plan-v2/interactions/category-rules.test.ts`, `npm run test:unit` (geometry, integration, polygon-edit, category-rules, door zones, active-portal).
@@ -1353,9 +1368,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8d68c19` (pushed to `origin/master`)
-- Last deploy commit: `8d68c19` - feat: ship 122 session updates (dynamic tessellation + clearance auto-correction; tiered OpenRouter spatial AI; ecosystem rules + ledger sync audit; Blueprint Studio ledger & layout fixes; +118 more)
-- Production: https://popuphub.ca - **v1.0.0 build 198** | commit `831479c` (handoff updated 2026-06-17 14:38)
+- Branch: `master` @ `0b7a8d7` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.0.0 build 204** | commit `0b7a8d7` (handoff updated 2026-06-17 15:40)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
