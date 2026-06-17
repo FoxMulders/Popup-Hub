@@ -52,8 +52,9 @@ export function useBoothEntities(): BoothEntity[] {
           : null
         const vendorName =
           app?.vendorName ?? (booth.vendorId ? 'Assigned vendor' : '—')
-        const productCategory =
-          booth.categoryName ?? app?.categoryName ?? '—'
+        const productCategory = booth.vendorId
+          ? (app?.categoryName ?? booth.categoryName ?? '—')
+          : 'Unassigned'
         const minFt = minVendorBoothClearanceFt(
           booth,
           doc.objects,

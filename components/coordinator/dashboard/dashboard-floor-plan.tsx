@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
@@ -41,22 +41,11 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     assignVendorToBooth,
     setSelectedBoothId,
     approvedPool,
+    eventCategoryNames,
   } = useMarketManagement()
   const selectedEvent = events.find((event) => event.id === selectedEventId)
 
   const storeRef = useRef<FloorPlanDocStore | null>(null)
-  const [categoryNames, setCategoryNames] = useState<string[]>([])
-
-  useEffect(() => {
-    const names = [
-      ...new Set(
-        approvedPool
-          .map((a) => a.categoryName)
-          .filter((n): n is string => Boolean(n))
-      ),
-    ].sort()
-    setCategoryNames(names)
-  }, [approvedPool])
 
   const handleStoreReady = useCallback(
     (store: FloorPlanDocStore | null) => {
@@ -212,7 +201,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         onAddRoom={handleAddRoom}
         onRenameRoom={handleRenameRoom}
         onDeleteRoom={handleDeleteRoom}
-        eventCategoryNames={categoryNames}
+        eventCategoryNames={eventCategoryNames}
         applications={approvedPool}
         boothPlacementStatusByObjectId={boothStatusMap}
         boothMapLabelByObjectId={boothMapLabelByObjectId}

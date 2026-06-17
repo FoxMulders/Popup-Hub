@@ -4,6 +4,56 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — dynamic tessellation + clearance auto-correction (local, not deployed)
+- **Goal:** Multi-pattern floor-plan tessellation (perimeter loop, structured grid, staggered offset) with valid-booth-yield + flow-fairness optimization; push-back/prune until every vendor booth is green (≥4′).
+- **Shipped locally:**
+  - **`lib/floor-plan/layout-tessellation-optimizer.ts`** — evaluates all three patterns per W×L canvas; ranks by valid booth yield → flow fairness → placed count; returns winning pattern + scores.
+  - **`lib/floor-plan/clearance-auto-correction.ts`** — iterative push-back then lowest-priority prune (unassigned first) until all vendor booths ≥4′ green clearance.
+  - **`lib/floor-plan/request-ai-auto-arrange.ts`** — tessellation fallback before unified/perimeter paths; clearance correction on AI placements.
+  - **`floor-plan-v2.tsx`** — grid auto-arrange now runs tessellation optimizer (best of 3 patterns).
+  - **`lib/floor-plan/ai-auto-arrange.ts`** — prompt notes tessellation context + storefront-on-flow requirement.
+  - **`scripts/verify-layout-tessellation.ts`** — smoke tests for patterns + clearance correction.
+- **Integration:** Canvas mutations → `floorPlanStore` → ledger via `useBoothEntities` unchanged; tessellation runs on auto-arrange with **progressive `onProgress` canvas preview** per pattern evaluation.
+- **Verify:** `npx tsx scripts/verify-layout-tessellation.ts` PASS; Blueprint Studio auto-arrange toast shows winning pattern; clearance bands all green post-arrange when physically possible.
+- **Next:** Commit + deploy when user asks; optional tessellation candidate picker UI (like fairness scenarios).
+
+## Active work — tiered OpenRouter spatial AI (local, not deployed)
+- **Goal:** Tiered multi-model OpenRouter architecture for Blueprint Studio floor-plan parsing, layout geometry, and spatial awareness — never default to premium frontier models for routine coordinate math.
+- **Shipped locally:**
+  - **`lib/ai/spatial/`** — central spatial module: tier router (`vision` → qwen/qwen3.7-plus, `draft` → nex-agi/nex-n2-pro:free, `geometry` → mistral-7b-instruct:floor, `advisor` → claude-3.5-sonnet), `max_price` guardrails, layout compressor (`[x,y,w,h]` JSON + lightweight SVG), advisor escalation on collision errors, streaming SSE handler.
+  - **`lib/ai/openrouter.ts`** — centralized `buildOpenRouterPayload` with `provider.max_price` + streaming support.
+  - **`lib/ai/tasks.ts`** — spatial tier tasks; `auto_arrange_layout` → mistral:floor; `layout_recommend` → nex-n2-pro:free.
+  - **`lib/floor-plan/ai-auto-arrange.ts`**, **`ai-layout-recommend.ts`** — compressed prompts + advisor on overlap/collision.
+  - **`app/api/coordinator/spatial-layout/stream/route.ts`** — coordinator-gated SSE layout generation.
+  - **`lib/floor-plan/request-spatial-layout-stream.ts`** — client helper with `onPartial` progressive render hook.
+  - **`scripts/verify-spatial-ai.ts`** — 12 checks for routing, compression, guardrails.
+- **Integration:** Auto-arrange + Ask AI layout feedback wired through tiered tasks + compressor + advisor. Blueprint Studio progressive render wired — grid tessellation previews best-so-far per pattern; perimeter/staggered AI streams placements via SSE.
+- **Blockers:** Requires `OPENROUTER_API_KEY` in `.env.local`/Vercel; `nex-agi/nex-n2-pro:free` availability varies on OpenRouter.
+- **Verify:** `npx tsc --noEmit` PASS; `npx tsx scripts/verify-ai-provider-fallback.ts` (41/41); `npx tsx scripts/verify-spatial-ai.ts` (12/12).
+- **Next:** Commit + deploy when user asks; blueprint image upload → `spatial_vision` task.
+
+## Active work — ecosystem rules + ledger sync audit (local, not deployed)
+- **Goal:** Persist Popup Hub master Cursor rules; audit canvas ↔ Allocation Ledger zero-desync; fix critical sync gaps; spec compliance pass on floor-plan v2 work.
+- **Shipped locally:**
+  - **Rules:** `.cursor/rules/popup-hub-ecosystem.mdc` — personas (Coordinator/Vendor/Patron), zero-desync policy, ft/grid units, RBAC, clearance bands (<3′ critical · 3–4′ tight · ≥4′ good), category freeze (4 col / 2 row), agent prompting protocol, key file map.
+  - **Sync audit:** In-tab ledger derives from `useBoothEntities` → live `floorPlanStore.doc` (instant when store mounted). **Gap found:** switching to full-page Ledger tab unmounted canvas → `onStoreReady(null)` wiped `floorPlanStore` → empty ledger.
+  - **Fixes:** `registerFloorPlanStore` ignores null unmount (store cleared only on event switch); `docRevision` effect watches full `floorPlanStore.doc` (room/fixture edits bump telemetry/clearance); Ledger tab keeps hidden canvas mounted (`Dashboard_qa`) so direct `?view=ledger` loads doc.
+- **Spec compliance (uncommitted floor-plan v2):** Pass — clearance engine, category separation, door egress zones, `useBoothEntities` single source, dual-screen BroadcastChannel. Partial — ledger matrix omits per-row clearance column; server persist still async on save (by design).
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: Blueprint Studio place booths → docked ledger updates; switch to Allocation Ledger tab → rows persist; drag booth → matrix label/position updates without refresh.
+- **Next:** Commit + deploy when user asks; optional ledger clearance column; consider lifting doc snapshot for ledger-only SSR.
+
+## Active work — Blueprint Studio ledger & layout fixes (local, not deployed)
+- **Goal:** Fix six coordinator-reported Blueprint Studio issues — ledger help, category display, test suite, door clearance, category separation.
+- **Shipped locally:**
+  - **Help (#1–2):** New `ledger` help category (allocation overview, vendor-to-booth workflow, category separation topic). `LayoutEditorHelpHost` mounted on Ledger tab so `?` / nav Layout help works without the canvas mounted.
+  - **Ledger categories (#4):** Unassigned booths show `Unassigned` in Category column (not placement slot tag). Event category cap names load from `event_category_limits` for booth tagging palette.
+  - **Test suite (#5):** `populateTestSuiteCanvas` assigns seeded vendors to existing canvas booths only — no `fillRoomWithTables` wipe. Button disabled until ≥1 vendor booth on canvas; 2-step toast (seed + assign).
+  - **Door radius (#6):** Door/exit clearance warnings and auto-arrange obstacles scoped to 5′ egress zones (`door-clearance-zones.ts`) — booths far along the same row are not penalized.
+  - **Category separation (#3):** Production `use-canvas-pointer` enforces proximity rule on draw/drag; toolbar Shuffle toggle (View/utilities) with localStorage pref.
+- **Files:** `layout-editor-help-content.ts`, `search-layout-editor-help.ts`, `Dashboard_qa.tsx`, `use-booth-entities.ts`, `market-management-context.tsx`, `studio/page.tsx`, `populate-test-suite-canvas.ts`, `test-suite-populate-button.tsx`, `door-clearance-zones.ts`, `booth-clearance-visual.ts`, `auto-arrange.ts`, `use-canvas-pointer.ts`, `category-separation-prefs.ts`, `floor-plan-v2.tsx`, `canvas-command-bar-blocks.tsx`, `floor-plan-canvas.tsx`.
+- **Verify:** `npx tsc --noEmit` passes. Blueprint Studio — place booths → Ledger shows Unassigned categories; run test suite assigns all canvas booths; place door — only nearby booths show clearance warnings; toggle category separation; open Layout help on Ledger tab and search "ledger allocate".
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — favicon icon mark only (local, not deployed)
 - **Goal:** Browser tab favicon shows the **icon mark** (stall+pin) only — no wordmark — as large as possible.
 - **Change:** `scripts/process-logo.mjs` favicons use `extractIconMark()` (`iconMark`) via `faviconSource`, not `fullLockup`. `FAVICON_PADDING = 0.03` (3% per edge; was `0.10`). PWA / apple-touch / `app/icon.png` still use full lockup.
@@ -404,10 +454,13 @@
 - **Fix:** `layout-room-bar.tsx` — preset picker now uses portaled `Popover` (`RoomPresetPicker`) so the menu renders above scroll/overflow containers with viewport-aware positioning.
 - **Verify:** Setup Step 3 or `/coordinator/events/{id}/layout` left rail → click chevron on **Add room** → full preset list visible (Empty room, Kitchen Area, etc.).
 
-## Active work — Supabase security linter fixes (local, not deployed)
-- **Issues:** `coordinator_escrow_holds` had no RLS; `transaction_log` view ran as SECURITY DEFINER (bypassed wallet RLS).
-- **Fix:** `110_escrow_holds_rls_transaction_log_invoker.sql` — RLS on escrow holds (coordinator + vendor read-only, mirrors `platform_transactions`); recreate `transaction_log` with `security_invoker = true`.
-- **Verify:** Apply migration on Supabase; re-run Database Linter — both findings should clear. Backend escrow cron/webhooks unchanged (service role bypasses RLS).
+## Shipped — Supabase RLS security audit (2026-06-17, Popup Hub prod verified)
+- **Alert context:** Supabase `rls_disabled_in_public` email listed Popup Hub (`ensbggtbgabogvynqsqt`) and Tipsy Fox Escapes (`joimnchtgxhhzoeopxdv`). This repo only uses Popup Hub (`supabase/config.toml`, `scripts/push-migrations.ps1`). Tipsy Fox Escapes is a **separate Supabase project** — not referenced in this codebase (Tipsy Fox here is the vendor/Square operator brand only).
+- **Popup Hub finding:** `coordinator_escrow_holds` was created in `101_coordinator_escrow_vouch.sql` without RLS; `transaction_log` view used SECURITY DEFINER.
+- **Fix (already applied on remote):** `110_escrow_holds_rls_transaction_log_invoker.sql` — RLS on `coordinator_escrow_holds` with read-only policies (`escrow_holds: coordinator read own`, `escrow_holds: vendor read own transactions`); `transaction_log` recreated with `security_invoker = true`. Migration `110` shows applied on remote via `npx supabase migration list`.
+- **Live audit (2026-06-17):** All 52 `public` tables on `ensbggtbgabogvynqsqt` have `relrowsecurity = true`. Only `audit_security_logs` has RLS with zero policies (intentional — service-role append-only). No new migration needed for Popup Hub.
+- **Tipsy Fox Escapes:** Fix in that project's repo/dashboard — enable RLS + policies on any exposed tables there; not actionable from popup-hub.
+- **Verify:** Supabase Dashboard → Popup Hub → Database → Linter — `rls_disabled_in_public` should be clear. Re-run linter on Tipsy Fox Escapes project separately.
 
 ## Active work — community league hall venue verification (local, not deployed)
 - **Issue:** Publish failed with “Coordinates point to a street address only” for community league halls — Google reverse geocode often returns only `street_address` + `route` for these buildings.

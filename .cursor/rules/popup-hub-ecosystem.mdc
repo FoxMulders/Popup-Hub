@@ -1,0 +1,84 @@
+---
+description: Popup Hub ecosystem personas, zero-desync policy, clearance, and agent protocol
+alwaysApply: true
+---
+
+# Popup Hub ecosystem
+
+## Personas and surfaces
+
+| Persona | Primary surfaces | Core jobs |
+|---------|------------------|-----------|
+| **Coordinator** | Blueprint Studio (`/coordinator/studio`), Allocation Ledger, Markets list, event setup | Auth/onboarding, create markets, draw rooms, place booths, assign vendors, publish |
+| **Vendor** | Vendor portal (`/vendor/*`), passport, applications | Apply to markets, complete booth payment, manage passport |
+| **Patron** | Discover map, patron portal, notifications | Find markets, browse vendors on map |
+
+When working on a feature, **state the active persona and surface** in your first response (e.g. "Coordinator · Blueprint Studio canvas").
+
+## Zero desync policy
+
+Canvas and Allocation Ledger must reflect the same booth truth **in the same session** without manual refresh.
+
+- **Single source:** `MarketManagementProvider` holds `floorPlanStore` (live `FloorPlanDoc`). `useBoothEntities` → `useBoothMatrixRows` derives ledger rows from `floorPlanStore.doc`.
+- **Never wipe store on canvas unmount** — switching Blueprint ↔ Ledger tabs must keep `floorPlanStore` alive (hidden canvas mount on Ledger tab if needed).
+- **Mutations flow:** canvas gesture → `FloorPlanDocStore.commit` → context `floorPlanStore` updates → ledger/matrix re-renders. Vendor assign/unassign must call `updateObject` on the store, not a parallel booth list.
+- **Dual-screen:** `FloorplanSyncBridge` publishes matrix rows via `BroadcastChannel` (`lib/coordinator/floorplan-sync.ts`) for presenter/ledger windows; in-tab split uses shared React context.
+- **Persist separately:** layout save (`syncEventBoothSlots`) is async/server — do not assume ledger reads DB; it reads live doc until save completes.
+
+## Unit transforms
+
+- **Canonical unit:** feet (`ft`) from canvas top-left origin. All `PlacedObject` / `RoomFrame` geometry is in ft.
+- **Screen space:** `pxToFt` / `ftToPx` in `interactions/geometry.ts` via viewport transform — never mix px into doc state.
+- **Grid spaces:** category proximity and snap use `doc.gridSpacingFt` (typically 1′). Column/row distances are **edge-to-edge** booth gaps divided by grid spacing.
+
+## RBAC
+
+- Coordinators: scoped by `coordinator_id` on events (admins bypass). Server routes use `getCoordinatorScope`.
+- Vendors: own applications, passport, payments — never coordinator layout APIs.
+- Patrons: read-only market discovery; no booth assignment or layout mutation.
+- Do not expose coordinator-only tools (auto-arrange, test suite seed, ledger assign) on vendor/patron routes.
+
+## Clearance engine
+
+Bands (`lib/coordinator/booth-clearance-visual.ts`):
+
+| Band | Edge clearance | Visual |
+|------|----------------|--------|
+| **good** | ≥ 4′ | green |
+| **tight** | ≥ 3′ and < 4′ | yellow |
+| **critical** | < 3′ | red |
+
+`minVendorBoothClearanceFt` measures edge-to-edge gaps to vendor neighbours, room walls, doors (5′ egress zones), and structural fixtures (walls, stage, food truck). Use `clearanceBand()` for coloring; `docHasUnresolvedClearanceIssues` blocks publish CTAs when any vendor booth is not `good`.
+
+## Category freeze rule
+
+Same-category vendor booths must stay **≥ 4 grid columns OR ≥ 2 grid rows** apart (edge-to-edge, both axes must be tight to violate). Enforced in:
+
+- `category-rules.ts` — `sameCategoryProximityViolated`
+- `use-canvas-pointer.ts` — draw/drag when `enforceCategorySeparation` is true
+- `auto-arrange.ts` — packing kernel
+- Toggle: `category-separation-prefs.ts` (localStorage); toolbar shuffle in Blueprint Studio
+
+Legend copy: 4-column / 2-row same-category freeze; overlaps barriers; emergency corridor blocks.
+
+## Active prompting protocol
+
+At the start of coordinator layout work:
+
+1. **State persona + context** (Coordinator · Blueprint Studio / Ledger / dual-screen).
+2. **Confirm sync path** — canvas mutation should update ledger via `useBoothEntities`; call out if editing server-only or stale snapshot.
+3. **Legend adherence** — clearance bands, category separation, door egress zones, patron vs vendor booth kinds (`isGuestTableBooth`, `isVendorBoothObject`).
+4. **After substantive canvas edits** — mention whether ledger/matrix would update instantly and if save is required for persistence.
+
+## Key file map
+
+| Concern | Location |
+|---------|----------|
+| Canvas store | `floor-plan-v2/state/use-floor-plan-doc.ts` |
+| Dashboard context | `dashboard/market-management-context.tsx` |
+| Ledger rows | `dashboard/use-booth-entities.ts`, `use-booth-matrix-rows.ts` |
+| Side-rail ledger | `floor-plan-v2/canvas/canvas-ledger.tsx` |
+| Dual-window sync | `dashboard/floorplan-sync-bridge.tsx` |
+| Clearance | `lib/coordinator/booth-clearance-visual.ts` |
+| Category proximity | `floor-plan-v2/interactions/category-rules.ts` |
+| Door egress | `lib/floor-plan/door-clearance-zones.ts` |

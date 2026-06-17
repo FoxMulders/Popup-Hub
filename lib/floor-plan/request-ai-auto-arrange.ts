@@ -38,6 +38,11 @@ import {
   PackBoothsAsync,
   vendorBoothsInRoom,
 } from '@/components/coordinator/floor-plan-v2/engine/BoothArrangementEngine'
+import {
+  applyClearanceAutoCorrection,
+} from '@/lib/floor-plan/clearance-auto-correction'
+import { optimizeTessellatedLayoutAsync } from '@/lib/floor-plan/layout-tessellation-optimizer'
+import { requestSpatialLayoutStream } from '@/lib/floor-plan/request-spatial-layout-stream'
 import { LayoutMode, parseLayoutMode } from '@/lib/layout-strategies'
 
 export interface RunAutoArrangeWithAiResult extends AutoArrangeInRoomResult {
@@ -45,6 +50,37 @@ export interface RunAutoArrangeWithAiResult extends AutoArrangeInRoomResult {
   aiOptimized?: boolean
   aiRationale?: string
   aiModel?: string
+  /** True when placements arrived via geometry-tier SSE stream. */
+  streamed?: boolean
+  /** True when multi-pattern tessellation optimizer selected the layout. */
+  tessellationOptimized?: boolean
+  winningPattern?: import('@/lib/floor-plan/layout-tessellation-optimizer').TessellationPatternId
+}
+
+export interface RunAutoArrangeWithAiOptions extends AutoArrangeOptions {
+  /** Progressive canvas updates while the geometry worker streams placements. */
+  onPartialLayout?: (doc: FloorPlanDoc, placedSoFar: number) => void
+}
+
+function buildSpatialStreamInstructions(payload: AiAutoArrangeRequest): string {
+  const vendors = payload.items.filter((i) => !i.isPatron).length
+  const patrons = payload.items.filter((i) => i.isPatron).length
+  const obstacleNote =
+    payload.obstacles.length > 0
+      ? `${payload.obstacles.length} fixed obstacles — maintain clearance, no overlaps.`
+      : 'No fixed obstacles.'
+  const trafficNote = payload.trafficFlow
+    ? 'Route patrons Entry → vendor aisles → Exit; orient every vendor storefront toward the primary flow line.'
+    : 'Route high-traffic flow through entry/exit fixtures; avoid dead-ends.'
+
+  return [
+    `Place ${payload.items.length} objects (${vendors} vendor, ${patrons} patron).`,
+    `Scope: ${payload.scope}. Mode: ${payload.mode}.`,
+    `Room ${payload.roomWidthFt}'×${payload.roomLengthFt}' with ${payload.aisleWidthFt}' aisles.`,
+    obstacleNote,
+    trafficNote,
+    'Return exactly one placement per item id in feet (top-left origin).',
+  ].join(' ')
 }
 
 function boothsForScope(
@@ -254,6 +290,18 @@ async function deterministicFallback(
     }
   }
 
+  if (scope !== 'patron') {
+    await nextAnimationFrame()
+    const tessellated = await optimizeTessellatedLayoutAsync(doc, roomId, {
+      ...options,
+      scope: scope === 'all' ? 'all' : 'vendor',
+      dropUnplacedBooths: options.dropUnplacedBooths ?? true,
+    })
+    if (tessellated && tessellated.placedCount > 0) {
+      return tessellated
+    }
+  }
+
   const useUnified =
     options.layoutSolver === 'unified' ||
     (mode !== 'grid' && scope !== 'patron')
@@ -302,7 +350,7 @@ async function deterministicFallback(
 export async function runAutoArrangeWithAi(
   doc: FloorPlanDoc,
   roomId: string,
-  options: AutoArrangeOptions = {}
+  options: RunAutoArrangeWithAiOptions = {}
 ): Promise<RunAutoArrangeWithAiResult | null> {
   const frame = (doc.rooms ?? []).find((f) => f.id === roomId)
   if (!frame) return null
@@ -334,26 +382,87 @@ export async function runAutoArrangeWithAi(
   }
 
   let aiResult: AiAutoArrangeResponse | null = null
+  let streamed = false
+
+  const scope = options.scope ?? 'vendor'
+  const applyPartialToDoc = (placements: AiAutoArrangeResponse['placements']) => {
+    const sourceBooths = boothsForScope(localObjects, scope)
+    const { booths: placed } = applyAiPlacementsToBooths(
+      sourceBooths,
+      placements,
+      localW,
+      localL
+    )
+    return mergeAiBoothsIntoDoc(
+      doc,
+      roomId,
+      localObjects,
+      placed,
+      scope,
+      originX,
+      originY
+    )
+  }
+
   try {
-    const res = await fetch('/api/coordinator/auto-arrange', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const streamedLayout = await requestSpatialLayoutStream({
+      roomName: payload.roomName,
+      roomWidthFt: localW,
+      roomLengthFt: localL,
+      roomId,
+      doc,
+      mode: payload.mode,
+      instructions: buildSpatialStreamInstructions(payload),
+      onPartial: (partialPlacements) => {
+        if (!options.onPartialLayout || partialPlacements.length === 0) return
+        const merged = applyPartialToDoc(partialPlacements)
+        options.onPartialLayout(merged, partialPlacements.length)
+      },
     })
-    if (res.ok) {
-      aiResult = (await res.json()) as AiAutoArrangeResponse
+    if (streamedLayout.placements.length > 0) {
+      aiResult = {
+        placements: streamedLayout.placements,
+        rationale: streamedLayout.rationale,
+        model: 'mistralai/mistral-7b-instruct:floor (stream)',
+      }
+      streamed = true
     }
   } catch {
     aiResult = null
   }
 
   if (!aiResult?.placements?.length) {
-    await nextAnimationFrame()
-    const fallback = await deterministicFallback(doc, roomId, options)
-    return fallback ? { ...fallback, aiOptimized: false } : null
+    try {
+      const res = await fetch('/api/coordinator/auto-arrange', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (res.ok) {
+        aiResult = (await res.json()) as AiAutoArrangeResponse
+      }
+    } catch {
+      aiResult = null
+    }
   }
 
-  const scope = options.scope ?? 'vendor'
+  if (!aiResult?.placements?.length) {
+    await nextAnimationFrame()
+    const fallback = await deterministicFallback(doc, roomId, options)
+    if (!fallback) return null
+    return {
+      ...fallback,
+      aiOptimized: false,
+      tessellationOptimized:
+        'tessellationOptimized' in fallback && fallback.tessellationOptimized === true,
+      winningPattern:
+        'winningPattern' in fallback
+          ? (fallback as { winningPattern?: RunAutoArrangeWithAiResult['winningPattern'] })
+              .winningPattern
+          : undefined,
+    }
+  }
+
   const sourceBooths = boothsForScope(localObjects, scope)
   const { booths: placed } = applyAiPlacementsToBooths(
     sourceBooths,
@@ -372,17 +481,25 @@ export async function runAutoArrangeWithAi(
     originY
   )
 
+  const corrected = applyClearanceAutoCorrection(mergedDoc, { roomId })
+  const prunedCount = corrected.prunedIds.length
+
   return {
-    doc: mergedDoc,
-    placedCount: placed.length,
-    droppedCount: Math.max(0, sourceBooths.length - placed.length),
+    doc: corrected.doc,
+    placedCount: Math.max(0, placed.length - prunedCount),
+    droppedCount:
+      Math.max(0, sourceBooths.length - placed.length) + prunedCount,
     unsatisfiedCategoryCount: 0,
     overflowCount: 0,
-    removedOverlapCount: 0,
+    removedOverlapCount: prunedCount,
     roomId,
     aiOptimized: true,
+    streamed,
     aiRationale: aiResult.rationale,
     aiModel: aiResult.model,
-    layoutExplanation: aiResult.rationale,
+    layoutExplanation:
+      prunedCount > 0
+        ? `${aiResult.rationale ?? 'AI layout'} · pruned ${prunedCount} booth${prunedCount === 1 ? '' : 's'} for ≥4′ clearance`
+        : aiResult.rationale,
   }
 }

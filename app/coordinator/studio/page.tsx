@@ -134,13 +134,45 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
   }
 
   const uniqueEventIdsForLimits = [...new Set([...categoryPriceKeys].map((k) => k.split(':')[0]!))]
+  const coordinatorEventIdsForLimits =
+    coordinatorEventIds.length > 0 ? coordinatorEventIds : []
   const { data: limits } =
     uniqueEventIdsForLimits.length > 0
       ? await supabase
           .from('event_category_limits')
-          .select('event_id, category_id, price_per_booth')
+          .select('event_id, category_id, price_per_booth, category:categories(name)')
           .in('event_id', uniqueEventIdsForLimits)
-      : { data: [] as { event_id: string; category_id: string; price_per_booth: number | null }[] }
+      : { data: [] as Array<{
+          event_id: string
+          category_id: string
+          price_per_booth: number | null
+          category?: { name?: string | null } | { name?: string | null }[] | null
+        }> }
+
+  const { data: allCategoryLimits } =
+    coordinatorEventIdsForLimits.length > 0
+      ? await supabase
+          .from('event_category_limits')
+          .select('event_id, category:categories(name)')
+          .in('event_id', coordinatorEventIdsForLimits)
+      : { data: [] as Array<{
+          event_id: string
+          category?: { name?: string | null } | { name?: string | null }[] | null
+        }> }
+
+  const eventCategoryNamesByEventId: Record<string, string[]> = {}
+  for (const row of allCategoryLimits ?? []) {
+    if (!eventIds.has(row.event_id)) continue
+    const category = Array.isArray(row.category) ? row.category[0] : row.category
+    const name = category?.name?.trim()
+    if (!name) continue
+    const list = eventCategoryNamesByEventId[row.event_id] ?? []
+    if (!list.includes(name)) list.push(name)
+    eventCategoryNamesByEventId[row.event_id] = list
+  }
+  for (const eventId of Object.keys(eventCategoryNamesByEventId)) {
+    eventCategoryNamesByEventId[eventId]!.sort()
+  }
 
   const priceByKey = new Map(
     (limits ?? []).map((row) => [`${row.event_id}:${row.category_id}`, row.price_per_booth ?? 0])
@@ -228,6 +260,7 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
         approvedByEventId={approvedByEventId}
         pendingByEventId={pendingByEventId}
         boothPriceByEventAndApplicationId={boothPriceByEventAndApplicationId}
+        eventCategoryNamesByEventId={eventCategoryNamesByEventId}
         squareConnected={squareConnected}
         stripeConnected={stripeConnected}
         totalRevenueCents={totalRevenueCents}

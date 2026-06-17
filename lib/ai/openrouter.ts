@@ -6,6 +6,7 @@ import {
   resolveModelForTask,
   type AiTask,
 } from '@/lib/ai/tasks'
+import type { OpenRouterMaxPrice } from '@/lib/ai/spatial/max-price'
 
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const OPENROUTER_APP_NAME = 'Popup Hub'
@@ -24,6 +25,20 @@ export type OpenRouterMessageContent =
 export interface OpenRouterMessage {
   role: 'system' | 'user' | 'assistant'
   content: OpenRouterMessageContent
+}
+
+export interface OpenRouterProviderConfig {
+  sort?: 'price' | 'throughput' | 'latency'
+  max_price?: OpenRouterMaxPrice
+}
+
+export interface OpenRouterChatOptions {
+  model: string
+  messages: OpenRouterMessage[]
+  temperature?: number
+  jsonMode?: boolean
+  stream?: boolean
+  provider?: OpenRouterProviderConfig
 }
 
 export class OpenRouterConfigError extends Error {
@@ -54,12 +69,27 @@ function openRouterHeaders(apiKey: string): HeadersInit {
   }
 }
 
-async function callOpenRouterChat(input: {
-  model: string
-  messages: OpenRouterMessage[]
-  temperature?: number
-  jsonMode?: boolean
-}): Promise<string> {
+/** Centralized payload builder — all OpenRouter requests flow through here. */
+export function buildOpenRouterPayload(input: OpenRouterChatOptions): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model: input.model,
+    messages: input.messages,
+    temperature: input.temperature ?? 0.1,
+    stream: input.stream ?? false,
+  }
+
+  if (input.jsonMode) {
+    body.response_format = { type: 'json_object' }
+  }
+
+  if (input.provider) {
+    body.provider = input.provider
+  }
+
+  return body
+}
+
+async function callOpenRouterChat(input: OpenRouterChatOptions): Promise<string> {
   const apiKey = resolveOpenRouterApiKey()
   if (!apiKey) {
     if (process.env.NODE_ENV === 'development') {
@@ -73,12 +103,7 @@ async function callOpenRouterChat(input: {
   const response = await fetch(OPENROUTER_CHAT_URL, {
     method: 'POST',
     headers: openRouterHeaders(apiKey),
-    body: JSON.stringify({
-      model: input.model,
-      messages: input.messages,
-      temperature: input.temperature ?? 0.1,
-      ...(input.jsonMode ? { response_format: { type: 'json_object' } } : {}),
-    }),
+    body: JSON.stringify(buildOpenRouterPayload(input)),
   })
 
   const detail = await response.text()
@@ -107,6 +132,38 @@ async function callOpenRouterChat(input: {
   return content
 }
 
+/** Streaming chat — returns raw OpenRouter SSE body for spatial layout generation. */
+export async function openRouterChatStream(
+  input: Omit<OpenRouterChatOptions, 'stream'>
+): Promise<Response> {
+  const apiKey = resolveOpenRouterApiKey()
+  if (!apiKey) {
+    throw new OpenRouterConfigError('OPENROUTER_API_KEY is not configured')
+  }
+
+  const response = await fetch(OPENROUTER_CHAT_URL, {
+    method: 'POST',
+    headers: openRouterHeaders(apiKey),
+    body: JSON.stringify(buildOpenRouterPayload({ ...input, stream: true })),
+  })
+
+  if (!response.ok) {
+    const detail = await response.text()
+    throw new OpenRouterRequestError(
+      'OpenRouter stream request failed',
+      response.status,
+      detail,
+      input.model
+    )
+  }
+
+  if (!response.body) {
+    throw new OpenRouterRequestError('OpenRouter stream missing body', 502, '', input.model)
+  }
+
+  return response
+}
+
 export interface OpenRouterChatResult {
   content: string
   model: string
@@ -123,17 +180,21 @@ export async function openRouterChatForTask(input: {
   messages: OpenRouterMessage[]
   temperature?: number
   jsonMode?: boolean
+  provider?: OpenRouterProviderConfig
 }): Promise<OpenRouterChatResult> {
   const primaryModel = resolveModelForTask(input.task)
   const fallbackModel = resolveFallbackModelForTask(input.task)
 
+  const chatOpts: OpenRouterChatOptions = {
+    model: primaryModel,
+    messages: input.messages,
+    temperature: input.temperature,
+    jsonMode: input.jsonMode,
+    provider: input.provider,
+  }
+
   try {
-    const content = await callOpenRouterChat({
-      model: primaryModel,
-      messages: input.messages,
-      temperature: input.temperature,
-      jsonMode: input.jsonMode,
-    })
+    const content = await callOpenRouterChat(chatOpts)
     return { content, model: primaryModel, task: input.task, usedFallback: false }
   } catch (err) {
     const shouldFallback =
@@ -150,12 +211,7 @@ export async function openRouterChatForTask(input: {
       err.detail.slice(0, 240)
     )
 
-    const content = await callOpenRouterChat({
-      model: fallbackModel,
-      messages: input.messages,
-      temperature: input.temperature,
-      jsonMode: input.jsonMode,
-    })
+    const content = await callOpenRouterChat({ ...chatOpts, model: fallbackModel })
     return { content, model: fallbackModel, task: input.task, usedFallback: true }
   }
 }

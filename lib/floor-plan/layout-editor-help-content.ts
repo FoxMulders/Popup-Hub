@@ -5,6 +5,7 @@ export type LayoutEditorHelpCategory =
   | 'rooms'
   | 'tools'
   | 'vendors'
+  | 'ledger'
   | 'patrons'
   | 'optimize'
   | 'view'
@@ -28,6 +29,7 @@ export const LAYOUT_EDITOR_HELP_CATEGORY_LABELS: Record<
   rooms: 'Rooms & zones',
   tools: 'Tools & drawing',
   vendors: 'Vendor booths',
+  ledger: 'Ledger & allocation',
   patrons: 'Patron seating',
   optimize: 'Optimize & align',
   view: 'View & display',
@@ -224,6 +226,79 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'footprint',
       'assign',
       'drop vendor',
+    ],
+  },
+  {
+    id: 'ledger-allocation-overview',
+    category: 'ledger',
+    title: 'Allocation ledger & booth matrix',
+    summary:
+      'The ledger lists every vendor booth on the saved layout with assignment, category, and payment status.',
+    steps: [
+      'Open the Ledger tab in Blueprint Studio or expand the right-side Ledger rail on the canvas.',
+      'Each row is one booth — click the booth label to focus it on the floor plan.',
+      'Unassigned booths show Unassigned in the Category column until a vendor is seated.',
+      'Use the vendor dropdown on each row to assign approved applications without dragging on the canvas.',
+      'Payment status pills (Unassigned, Assigned unpaid, Paid, VIP hold) update live as you work.',
+    ],
+    keywords: [
+      'ledger',
+      'allocation',
+      'booth matrix',
+      'assign',
+      'vendor',
+      'payment',
+      'status',
+      'audit',
+    ],
+  },
+  {
+    id: 'ledger-vendor-to-booth',
+    category: 'ledger',
+    title: 'Allocate vendors from the ledger',
+    summary:
+      'Seat approved vendors onto open booths using the matrix, the Available pool, or drag-and-drop on the canvas.',
+    steps: [
+      'Seed or approve vendors first — Applications and the test suite populate the Available pool.',
+      'Place empty vendor booths on the canvas (or load a saved layout with booth footprints).',
+      'Drag a vendor card from Available pool onto a booth, or pick a vendor in the ledger row dropdown.',
+      'Multi-table applications consume multiple open booths — table count comes from the application.',
+      'Save draft after seating so booth numbers sync to check-in and vendor notifications.',
+    ],
+    keywords: [
+      'allocate',
+      'assign vendor',
+      'seat',
+      'ledger',
+      'dropdown',
+      'available pool',
+      'drag drop',
+      'booth number',
+    ],
+  },
+  {
+    id: 'vendors-category-separation',
+    category: 'vendors',
+    title: 'Keep similar categories apart',
+    summary:
+      'Prevent duplicate vendor categories from sitting too close — manual placement, drag, and AI Auto-Arrange all respect the rule when enabled.',
+    steps: [
+      'Toggle Separate similar categories in the toolbar View section (on by default).',
+      'While enabled, two booths with the same category cannot sit within 4 grid columns AND 2 rows of each other.',
+      'Violations show red placement feedback on the canvas; drag snaps back if the move would break the rule.',
+      'AI Auto-Arrange spreads categories when extra slots remain after the grid pass.',
+      'Turn the toggle off only when you intentionally want adjacent same-category booths.',
+    ],
+    keywords: [
+      'category',
+      'separation',
+      'similar',
+      'duplicate',
+      'proximity',
+      'spacing',
+      'same category',
+      'mix',
+      'diversify',
     ],
   },
   {

@@ -24,6 +24,7 @@ import {
   RotateCcw,
   RotateCw,
   Save,
+  Shuffle,
   Siren,
   Square,
   Tag,
@@ -576,6 +577,12 @@ export interface CanvasCommandBarBlockContext {
   onFillPatronTables?: (count: number) => void
   fillRoomDisabledReason?: string | null
   eventId?: string | null
+  canvasVendorBoothCount?: number
+  populateTestSuiteOnCanvas?: (
+    eventId: string
+  ) => Promise<import('@/components/coordinator/test-suite-populate-button').TestSuitePopulateResult>
+  categorySeparationEnabled?: boolean
+  onCategorySeparationToggle?: () => void
   /** Static dashboard ribbon — tighter control heights (~10% shorter). */
   compact?: boolean
   /** Left-rail layout designer sidebar — stacked columns and split headers. */
@@ -1211,7 +1218,14 @@ export function renderCanvasCommandBarBlock(
 
     case 'test-suite':
       if (!ctx.eventId) return null
-      return <TestSuitePopulateButton eventId={ctx.eventId} compact={compact} />
+      return (
+        <TestSuitePopulateButton
+          eventId={ctx.eventId}
+          compact={compact}
+          canvasVendorBoothCount={ctx.canvasVendorBoothCount}
+          populateTestSuiteOnCanvas={ctx.populateTestSuiteOnCanvas}
+        />
+      )
 
     case 'room':
       if (sidebarLayout) {
@@ -1587,6 +1601,27 @@ export function renderCanvasCommandBarBlock(
                   }
                 >
                   <AlertTriangle className="h-3.5 w-3.5" />
+                </CommandButton>
+              </>
+            ) : null}
+            {ctx.onCategorySeparationToggle ? (
+              <>
+                <div className={toolbarDividerClass(compact)} aria-hidden />
+                <CommandButton
+                  onClick={ctx.onCategorySeparationToggle}
+                  title={
+                    ctx.categorySeparationEnabled
+                      ? 'Category separation on — same categories must stay ≥4 columns and ≥2 rows apart'
+                      : 'Category separation off — allow adjacent same-category booths'
+                  }
+                  active={ctx.categorySeparationEnabled}
+                  className={
+                    ctx.categorySeparationEnabled
+                      ? 'bg-violet-200 text-violet-950 hover:bg-violet-200'
+                      : 'text-violet-800 hover:bg-violet-50'
+                  }
+                >
+                  <Shuffle className="h-3.5 w-3.5" />
                 </CommandButton>
               </>
             ) : null}

@@ -37,7 +37,7 @@ export async function generateJsonFromVision(input: {
   userPrompt: string
   dataUrl: string
   mimeType: string
-  /** Defaults to vision_json; flyer parse should pass flyer_vision. */
+  /** Defaults to vision_json; flyer parse should pass flyer_vision; floor-plan images should pass spatial_vision. */
   task?: AiTask
 }): Promise<{ content: string; provider: VisionJsonProvider; model: string }> {
   if (!resolveOpenRouterApiKey()) {

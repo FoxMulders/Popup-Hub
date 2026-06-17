@@ -5,6 +5,15 @@
  */
 
 import { openRouterChatForTask } from '@/lib/ai/openrouter'
+import {
+  compressedLayoutToJson,
+  type CompressedLayout,
+} from '@/lib/ai/spatial/compress'
+import {
+  consultSpatialAdvisor,
+  shouldEscalateToAdvisor,
+  type SpatialCollisionIssue,
+} from '@/lib/ai/spatial/advisor'
 import { detectPlacedObjectOverlaps } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import type { PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import {
@@ -50,7 +59,10 @@ export interface LayoutRecommendResponse {
   overlapWarning?: boolean
 }
 
-function buildLayoutRecommendPrompt(input: LayoutRecommendRequest): string {
+function buildLayoutRecommendPrompt(
+  input: LayoutRecommendRequest,
+  compressed?: CompressedLayout
+): string {
   const aisleWidthFt = input.aisleWidthFt ?? 8
 
   const trafficSection = input.trafficFlow
@@ -67,9 +79,16 @@ TRAFFIC RULES:
 DOORS / EXITS (route high-traffic flow through these — avoid bottlenecks):
 ${JSON.stringify(input.fixtures, null, 2)}`
 
+  const compressedSection = compressed
+    ? `
+COMPRESSED LAYOUT (ft, [x,y,w,h]):
+${compressedLayoutToJson(compressed)}`
+    : ''
+
   return `You are a venue safety and traffic-flow assessor for indoor pop-up markets.
 
 ROOM: "${input.roomName}" — ${input.roomWidthFt}' wide × ${input.roomLengthFt}' long (origin top-left, x→right, y→down, feet).
+${compressedSection}
 
 CURRENT LAYOUT (${input.objects.length} objects — evaluate overlaps, egress, and sightlines):
 ${JSON.stringify(input.objects, null, 2)}
@@ -202,10 +221,26 @@ export function applyRecommendedCoordinates(
 }
 
 export async function recommendLayoutWithAi(
-  input: LayoutRecommendRequest
+  input: LayoutRecommendRequest,
+  options?: { compressedLayout?: CompressedLayout }
 ): Promise<LayoutRecommendResponse> {
   const aisleWidthFt = input.aisleWidthFt ?? 8
   const payload: LayoutRecommendRequest = { ...input, aisleWidthFt }
+
+  const compressed =
+    options?.compressedLayout ??
+    ({
+      canvas: [input.roomWidthFt, input.roomLengthFt],
+      gridFt: 1,
+      rooms: [{ i: 'room', n: input.roomName, b: [0, 0, input.roomWidthFt, input.roomLengthFt] }],
+      objects: input.objects.map((o) => ({
+        i: o.id,
+        k: o.kind,
+        b: [o.x, o.y, o.width, o.height] as [number, number, number, number],
+        r: o.rotation !== 0 ? o.rotation : undefined,
+        c: o.categoryName ?? o.label,
+      })),
+    } satisfies CompressedLayout)
 
   const result = await openRouterChatForTask({
     task: 'layout_recommend',
@@ -217,17 +252,55 @@ export async function recommendLayoutWithAi(
         content:
           'You assess indoor market floor plans for safety and traffic flow. Output strict JSON with recommendedObjects (full object list), changelog, and rationale. Coordinates in feet, top-left origin.',
       },
-      { role: 'user', content: buildLayoutRecommendPrompt(payload) },
+      { role: 'user', content: buildLayoutRecommendPrompt(payload, compressed) },
     ],
   })
 
-  const parsed = parseLayoutRecommendResponse(result.content, input.objects)
-  const { objects, overlapWarning } = applyRecommendedCoordinates(
+  let parsed = parseLayoutRecommendResponse(result.content, input.objects)
+  let { objects, overlapWarning } = applyRecommendedCoordinates(
     input.objects,
     parsed.recommendedObjects,
     input.roomWidthFt,
     input.roomLengthFt
   )
+
+  if (overlapWarning) {
+    const issues: SpatialCollisionIssue[] = [
+      {
+        code: 'overlap',
+        message: 'Recommended layout still contains overlapping objects',
+      },
+    ]
+
+    if (shouldEscalateToAdvisor(issues)) {
+      const advisor = await consultSpatialAdvisor({
+        layoutJson: compressedLayoutToJson(compressed),
+        draftOutput: result.content,
+        issues,
+        taskContext: `Layout recommend for ${input.roomName}`,
+      })
+      parsed = parseLayoutRecommendResponse(advisor.correction, input.objects)
+      const corrected = applyRecommendedCoordinates(
+        input.objects,
+        parsed.recommendedObjects,
+        input.roomWidthFt,
+        input.roomLengthFt
+      )
+      objects = corrected.objects
+      overlapWarning = corrected.overlapWarning
+      return {
+        recommendedObjects: objects,
+        changelog: [
+          ...parsed.changelog,
+          'Advisor corrected overlapping placements',
+        ],
+        rationale: parsed.rationale,
+        model: advisor.model,
+        usedFallback: advisor.usedFallback,
+        overlapWarning,
+      }
+    }
+  }
 
   return {
     recommendedObjects: objects,

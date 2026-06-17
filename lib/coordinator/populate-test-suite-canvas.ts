@@ -2,9 +2,7 @@ import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/s
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import type { VendorApplicationSnapshot } from '@/components/coordinator/dashboard/booth-placement-status'
 import { seatApplicationsOnOpenBooths } from '@/lib/coordinator/dashboard-vendor-placement'
-import { DEFAULT_TABLE_SIZE } from '@/lib/booth-planner/layout-table-size'
-import { isGuestTableBooth, vendorTableSpec } from '@/lib/booth-planner/table-shape'
-import { fillRoomWithTables } from '@/lib/floor-plan/fill-room-with-tables'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 
 export interface PopulateTestSuiteCanvasResult {
   canvasReady: boolean
@@ -32,9 +30,23 @@ function resolvePopulateRoomId(
   return { roomId, roomName: frame?.name ?? null }
 }
 
+function vendorBoothsInRoom(
+  store: FloorPlanDocStore,
+  roomId: string
+): BoothObject[] {
+  const doc = store.readDoc()
+  const objectRoom = doc.objectRoom ?? {}
+  return doc.objects.filter(
+    (object): object is BoothObject =>
+      object.kind === 'booth' &&
+      !isGuestTableBooth(object) &&
+      objectRoom[object.id] === roomId
+  )
+}
+
 /**
- * Fill the active canvas room with vendor booths and assign seeded applications.
- * Uses live room geometry — not category caps or saved layout DB rows.
+ * Assign seeded test-suite vendors onto vendor booths already on the canvas.
+ * Does not erase or replace booth footprints — only fills open slots.
  */
 export function populateTestSuiteCanvas(input: {
   store: FloorPlanDocStore
@@ -63,8 +75,8 @@ export function populateTestSuiteCanvas(input: {
     }
   }
 
-  const tableSpec = vendorTableSpec(DEFAULT_TABLE_SIZE)
-  const boothsRequested = tableSlots
+  const vendorBooths = vendorBoothsInRoom(store, roomId)
+  const boothsRequested = vendorBooths.length
 
   if (boothsRequested <= 0) {
     return {
@@ -76,20 +88,12 @@ export function populateTestSuiteCanvas(input: {
       boothsRequested: 0,
       boothsPlaced: 0,
       boothsAssigned: 0,
-      error: 'No vendor table slots to place.',
+      error:
+        'Place at least one vendor booth on the canvas before running the test suite.',
     }
   }
 
-  const fillResult = fillRoomWithTables({
-    doc: store.doc,
-    roomId,
-    count: boothsRequested,
-    tableSpec,
-    scope: 'vendor',
-    packMode: 'dense',
-  })
-
-  if (fillResult.placedCount <= 0) {
+  if (tableSlots <= 0) {
     return {
       canvasReady: true,
       roomId,
@@ -97,39 +101,26 @@ export function populateTestSuiteCanvas(input: {
       vendors: approved.length,
       tableSlots,
       boothsRequested,
-      boothsPlaced: 0,
+      boothsPlaced: boothsRequested,
       boothsAssigned: 0,
-      error: `Could not place vendor booths inside ${roomName ?? 'the room'}.`,
+      error: 'No vendor table slots to assign.',
     }
   }
 
-  if (fillResult.arrange?.roomScaledForPatronPath) {
-    store.patchDoc(
+  for (const booth of vendorBooths) {
+    if (!booth.vendorId && !booth.categoryName) continue
+    store.updateObject(
+      booth.id,
       {
-        rooms: fillResult.doc.rooms,
-        canvasWidthFt: fillResult.doc.canvasWidthFt,
-        canvasLengthFt: fillResult.doc.canvasLengthFt,
-      },
+        vendorId: null,
+        categoryName: null,
+      } as Partial<BoothObject>,
       { pushHistory: true }
     )
   }
 
-  store.patchDoc(
-    { objectRoom: fillResult.doc.objectRoom ?? {} },
-    { pushHistory: false }
-  )
-  store.replaceObjects(fillResult.doc.objects, { pushHistory: true })
-
-  const doc = store.readDoc()
-  const objectRoom = doc.objectRoom ?? {}
-  const vendorBooths = doc.objects.filter(
-    (object): object is BoothObject =>
-      object.kind === 'booth' &&
-      !isGuestTableBooth(object) &&
-      objectRoom[object.id] === roomId
-  )
-
-  const patches = seatApplicationsOnOpenBooths(approved, vendorBooths)
+  const openBooths = vendorBoothsInRoom(store, roomId)
+  const patches = seatApplicationsOnOpenBooths(approved, openBooths)
   for (const patch of patches) {
     store.updateObject(
       patch.boothId,
@@ -149,7 +140,7 @@ export function populateTestSuiteCanvas(input: {
     vendors: approved.length,
     tableSlots,
     boothsRequested,
-    boothsPlaced: fillResult.placedCount,
+    boothsPlaced: boothsRequested,
     boothsAssigned: patches.length,
   }
 }

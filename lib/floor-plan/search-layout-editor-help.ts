@@ -87,6 +87,7 @@ export function groupHelpTopicsByCategory(
     'rooms',
     'tools',
     'vendors',
+    'ledger',
     'patrons',
     'optimize',
     'view',

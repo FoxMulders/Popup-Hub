@@ -13,6 +13,7 @@ import { DashboardCanvasColumn } from '@/components/coordinator/dashboard/dashbo
 import { DashboardToolbarPortalProvider } from '@/components/coordinator/dashboard/dashboard-toolbar-portal'
 import { DashboardTopToolbarStrip } from '@/components/coordinator/dashboard/dashboard-top-toolbar-strip'
 import { DashboardWorkspaceFooter } from '@/components/coordinator/dashboard/dashboard-workspace-footer'
+import { LayoutEditorHelpHost } from '@/components/coordinator/floor-plan-v2/tools/layout-editor-help'
 import { DashboardNoRoomEmptyState } from '@/components/coordinator/dashboard/dashboard-no-room-empty-state'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
@@ -129,7 +130,23 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
                   aria-hidden
                 />
               ) : isLedger ? (
-                <DashboardAllocationLedger />
+                <>
+                  <DashboardAllocationLedger />
+                  {mountCanvas ? (
+                    <div className="sr-only" aria-hidden inert>
+                      <DashboardSplitWorkspace
+                        blueprint={
+                          <DashboardCanvasColumn
+                            showBlueprint={showBlueprint}
+                            mountCanvas={mountCanvas}
+                            reducedMotion={reducedMotion}
+                            onCanvasInteractive={handleCanvasInteractive}
+                          />
+                        }
+                      />
+                    </div>
+                  ) : null}
+                </>
               ) : showNoRoomEmpty ? (
                 <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
               ) : (
@@ -149,6 +166,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
           </div>
         }
       />
+      <LayoutEditorHelpHost showFloatingFab={isLedger} />
     </DashboardToolbarPortalProvider>
   )
 }

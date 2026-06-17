@@ -4,6 +4,12 @@
  */
 
 import { openRouterChatForTask } from '@/lib/ai/openrouter'
+import { compressedLayoutToJson, type CompressedLayout } from '@/lib/ai/spatial/compress'
+import {
+  consultSpatialAdvisor,
+  shouldEscalateToAdvisor,
+  type SpatialCollisionIssue,
+} from '@/lib/ai/spatial/advisor'
 import type { AutoArrangeMode, AutoArrangeScope } from '@/components/coordinator/floor-plan-v2/engine/auto-arrange'
 import {
   clipBoothToLocalRoom,
@@ -92,10 +98,13 @@ const MODE_GUIDANCE: Record<AutoArrangeMode, string> = {
   staggered:
     'Use alternating half-row offsets (brick pattern) so patron sightlines peek between vendor rows.',
   'perimeter-only':
-    'Place booths flush along the room perimeter loop (top → right → bottom → left), backs to walls, openings inward.',
+    'Place booths flush along the room perimeter loop (top → right → bottom → left), backs to walls, openings inward toward a central walking track.',
 }
 
-function buildOptimizationPrompt(input: AiAutoArrangeRequest): string {
+const MULTI_PATTERN_NOTE = `
+TESSellation CONTEXT: The deterministic engine evaluates perimeter-loop, structured-grid, and staggered-offset patterns for this W×L canvas. Your placement should maximize valid booth yield while orienting every vendor storefront toward the primary patron flow line — no booths in visual blind spots.`
+
+function buildOptimizationPrompt(input: AiAutoArrangeRequest, compressed?: CompressedLayout): string {
   const patronNote =
     input.scope === 'patron'
       ? 'These are PATRON seating tables — keep them grouped away from vendor zones with walking buffers.'
@@ -126,11 +135,19 @@ CROSS-AISLE HIGHWAY (mandatory for dense grids):
 - The cross-aisle must connect the entry threshold to the exit threshold for a continuous walking loop.`
       : ''
 
+  const compressedSection = compressed
+    ? `
+COMPRESSED LAYOUT (ft, [x,y,w,h]):
+${compressedLayoutToJson(compressed)}`
+    : ''
+
   return `You are a venue layout optimizer for indoor pop-up markets.
 
 ROOM: "${input.roomName}" — ${input.roomWidthFt}' wide × ${input.roomLengthFt}' long (origin top-left, x→right, y→down, feet).
 MODE: ${input.mode} — ${MODE_GUIDANCE[input.mode]}
 SCOPE: ${input.scope}. ${patronNote}
+${MULTI_PATTERN_NOTE}
+${compressedSection}
 
 OBJECTS TO PLACE (${input.items.length}):
 ${JSON.stringify(input.items, null, 2)}
@@ -185,8 +202,23 @@ export function parseAiLayoutResponse(raw: string): AiAutoArrangeResponse {
 }
 
 export async function optimizeLayoutWithAi(
-  input: AiAutoArrangeRequest
+  input: AiAutoArrangeRequest,
+  options?: { compressedLayout?: CompressedLayout }
 ): Promise<AiAutoArrangeResponse> {
+  const compressed: CompressedLayout = options?.compressedLayout ?? {
+    canvas: [input.roomWidthFt, input.roomLengthFt],
+    gridFt: 1,
+    rooms: [{ i: 'room', n: input.roomName, b: [0, 0, input.roomWidthFt, input.roomLengthFt] }],
+    objects: input.items.map((item) => ({
+      i: item.id,
+      k: item.isPatron ? 'b-p' : 'b-v',
+      b: [0, 0, item.width, item.height] as [number, number, number, number],
+      c: item.category,
+    })),
+  }
+
+  const prompt = buildOptimizationPrompt(input, compressed)
+
   const result = await openRouterChatForTask({
     task: 'auto_arrange_layout',
     jsonMode: true,
@@ -195,13 +227,56 @@ export async function optimizeLayoutWithAi(
       {
         role: 'system',
         content:
-          'You optimize indoor market floor plans. Output strict JSON with a placements array. All coordinates in feet, top-left origin.',
+          'You optimize indoor market floor plans. Output strict JSON with a placements array. All coordinates in feet, top-left origin. Use geometry math only — no vision reasoning.',
       },
-      { role: 'user', content: buildOptimizationPrompt(input) },
+      { role: 'user', content: prompt },
     ],
   })
 
-  const parsed = parseAiLayoutResponse(result.content)
+  let parsed = parseAiLayoutResponse(result.content)
+
+  const { rejectedCount } = applyAiPlacementsToBooths(
+    input.items.map((item) => ({
+      id: item.id,
+      kind: 'booth' as const,
+      x: 0,
+      y: 0,
+      width: item.width,
+      height: item.height,
+      rotation: 0,
+      tablePurpose: item.isPatron ? ('guest' as const) : ('vendor' as const),
+    })),
+    parsed.placements,
+    input.roomWidthFt,
+    input.roomLengthFt
+  )
+
+  const issues: SpatialCollisionIssue[] = []
+  if (rejectedCount > 0) {
+    issues.push({
+      code: 'overlap',
+      message: `${rejectedCount} placement(s) rejected due to overlap or out-of-bounds`,
+    })
+  }
+
+  if (shouldEscalateToAdvisor(issues)) {
+    const advisor = await consultSpatialAdvisor({
+      layoutJson: compressedLayoutToJson(compressed),
+      draftOutput: result.content,
+      issues,
+      taskContext: `Auto-arrange ${input.mode} for ${input.roomName}`,
+    })
+    parsed = parseAiLayoutResponse(advisor.correction)
+    return {
+      ...parsed,
+      model: advisor.model,
+      usedFallback: advisor.usedFallback,
+      rationale: parsed.rationale
+        ? `${parsed.rationale} (advisor corrected ${rejectedCount} collision(s))`
+        : `Advisor corrected ${rejectedCount} collision(s)`,
+    }
+  }
+
   return {
     ...parsed,
     model: result.model,

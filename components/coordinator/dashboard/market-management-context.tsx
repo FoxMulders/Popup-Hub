@@ -90,6 +90,10 @@ export interface MarketManagementState {
   totalRevenueCents: number
   /** True when any vendor booth violates the 3′ clearance baseline. */
   hasClearanceIssues: boolean
+  /** Vendor booths on the live canvas (all rooms). */
+  canvasVendorBoothCount: number
+  /** Event category cap names for booth tagging and palette rotation. */
+  eventCategoryNames: string[]
 }
 
 const MarketManagementContext = createContext<MarketManagementState | null>(null)
@@ -114,6 +118,7 @@ interface MarketManagementProviderProps {
   approvedByEventId: Record<string, VendorApplicationSnapshot[]>
   pendingByEventId: Record<string, VendorApplicationSnapshot[]>
   boothPriceByEventAndApplicationId: Record<string, Record<string, number>>
+  eventCategoryNamesByEventId?: Record<string, string[]>
   squareConnected: boolean
   stripeConnected?: boolean
   totalRevenueCents: number
@@ -127,6 +132,7 @@ export function MarketManagementProvider({
   approvedByEventId,
   pendingByEventId,
   boothPriceByEventAndApplicationId,
+  eventCategoryNamesByEventId = {},
   squareConnected,
   stripeConnected = false,
   totalRevenueCents,
@@ -279,7 +285,12 @@ export function MarketManagementProvider({
 
   const registerFloorPlanStore = useCallback(
     (store: FloorPlanDocStore | null) => {
-      if (store && approvedPool.length > 0) {
+      if (!store) {
+        // Canvas unmount (e.g. Ledger tab) must not wipe live doc — event
+        // switch clears store in the selectedEventId effect below.
+        return
+      }
+      if (approvedPool.length > 0) {
         const booths = store.doc.objects.filter(
           (o): o is BoothObject => o.kind === 'booth'
         )
@@ -307,7 +318,7 @@ export function MarketManagementProvider({
   useEffect(() => {
     if (!floorPlanStore) return
     setDocRevision((n) => n + 1)
-  }, [floorPlanStore?.doc.objects, floorPlanStore?.selectedIds])
+  }, [floorPlanStore?.doc, floorPlanStore?.selectedIds])
 
   const boothStatusByObjectId = useMemo(() => {
     void docRevision
@@ -500,6 +511,27 @@ export function MarketManagementProvider({
     return docHasUnresolvedClearanceIssues(floorPlanStore.doc)
   }, [docRevision, floorPlanStore])
 
+  const canvasVendorBoothCount = useMemo(() => {
+    void docRevision
+    if (!floorPlanStore) return 0
+    return floorPlanStore.doc.objects.filter(
+      (o): o is BoothObject => o.kind === 'booth' && !isGuestTableBooth(o)
+    ).length
+  }, [docRevision, floorPlanStore])
+
+  const eventCategoryNames = useMemo(() => {
+    if (!selectedEventId) return []
+    const fromLimits = eventCategoryNamesByEventId[selectedEventId] ?? []
+    if (fromLimits.length > 0) return fromLimits
+    return [
+      ...new Set(
+        approvedPool
+          .map((app) => app.categoryName)
+          .filter((name): name is string => Boolean(name?.trim()))
+      ),
+    ].sort()
+  }, [approvedPool, eventCategoryNamesByEventId, selectedEventId])
+
   const value = useMemo(
     (): MarketManagementState => ({
       events,
@@ -528,6 +560,8 @@ export function MarketManagementProvider({
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,
+      canvasVendorBoothCount,
+      eventCategoryNames,
     }),
     [
       events,
@@ -554,6 +588,8 @@ export function MarketManagementProvider({
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,
+      canvasVendorBoothCount,
+      eventCategoryNames,
     ]
   )
 

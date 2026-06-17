@@ -49,6 +49,10 @@ import {
   readClearanceWarningsEnabled,
   writeClearanceWarningsEnabled,
 } from '@/lib/coordinator/booth-clearance-warnings-pref'
+import {
+  isCategorySeparationEnabled,
+  setCategorySeparationEnabled,
+} from '@/lib/floor-plan/category-separation-prefs'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridDocPatch } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
@@ -75,6 +79,7 @@ import { FloorPlanDualScreenBridge } from './floor-plan-dual-screen-bridge'
 import { DEFAULT_TOOL_STATE, type DrawShape, type ToolId } from './tools/types'
 import type { AutoArrangeMode } from './engine/auto-arrange'
 import { autoArrangeInRoomAsync } from './engine/auto-arrange'
+import { optimizeTessellatedLayoutAsync } from '@/lib/floor-plan/layout-tessellation-optimizer'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
 import {
   AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP,
@@ -478,6 +483,8 @@ function FloorPlanV2Workspace({
   const [showClearanceWarnings, setShowClearanceWarnings] = useState(() =>
     readClearanceWarningsEnabled()
   )
+  const [categorySeparationEnabled, setCategorySeparationEnabledState] =
+    useState(() => isCategorySeparationEnabled())
   const clearanceIssueToastRef = useRef(false)
   const [unifiedLayoutOverlay, setUnifiedLayoutOverlay] = useState<{
     spinePath: ReadonlyArray<{ x: number; y: number }>
@@ -2259,9 +2266,8 @@ function FloorPlanV2Workspace({
 
     if (autoArrangeMode === 'grid') {
       await nextAnimationFrame()
-      const result = await autoArrangeInRoomAsync(store.doc, activeRoomId, {
+      const result = await optimizeTessellatedLayoutAsync(store.doc, activeRoomId, {
         scope: 'all',
-        mode: autoArrangeMode,
         eventCategoryNames,
         baselineTableLengthFt: safeTableSizeFt,
         vendorTableMetaByKey,
@@ -2269,6 +2275,12 @@ function FloorPlanV2Workspace({
         ...(typeof layoutCapacity === 'number' && layoutCapacity > 0
           ? { maxBooths: layoutCapacity }
           : {}),
+        onProgress: (previewDoc, bestPattern) => {
+          store.replaceObjects(previewDoc.objects, { pushHistory: false })
+          toast.loading(`Evaluating layouts… (${bestPattern.replace(/-/g, ' ')})`, {
+            id: loadingToast,
+          })
+        },
       })
       if (!result) {
         toast.error('Auto-arrange failed — room dimensions could not be read.')
@@ -2312,8 +2324,11 @@ function FloorPlanV2Workspace({
           { duration: 4500 }
         )
       } else {
+        const patternNote = result.tessellationOptimized
+          ? ` (${result.winningPattern?.replace(/-/g, ' ') ?? 'best pattern'})`
+          : ''
         toast.success(
-          `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'} in ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′).`
+          `Auto-arranged ${result.placedCount} object${result.placedCount === 1 ? '' : 's'} in ${frame.name} (${frame.widthFt}′ × ${frame.lengthFt}′)${patternNote}.`
         )
       }
       return
@@ -2333,7 +2348,15 @@ function FloorPlanV2Workspace({
     const result = await runAutoArrangeWithAi(
       store.doc,
       activeRoomId,
-      arrangeOptions
+      {
+        ...arrangeOptions,
+        onPartialLayout: (previewDoc, placedSoFar) => {
+          store.replaceObjects(previewDoc.objects, { pushHistory: false })
+          toast.loading(`Arranging floor plan… (${placedSoFar} placed)`, {
+            id: loadingToast,
+          })
+        },
+      }
     )
     if (!result) return
     if (result.perimeterCapacityError) {
@@ -2374,7 +2397,9 @@ function FloorPlanV2Workspace({
       )
     } else if (result.aiOptimized) {
       toast.success(
-        `AI arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} (${result.aiModel ?? 'Gemini'}).`
+        result.streamed
+          ? `AI arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} (streaming geometry).`
+          : `AI arranged ${result.placedCount} asset${result.placedCount === 1 ? '' : 's'} (${result.aiModel ?? 'Gemini'}).`
       )
     } else {
       toast.success(
@@ -2570,6 +2595,20 @@ function FloorPlanV2Workspace({
     })
   }, [])
 
+  const handleCategorySeparationToggle = useCallback(() => {
+    setCategorySeparationEnabledState((enabled) => {
+      const next = !enabled
+      setCategorySeparationEnabled(next)
+      toast.message(
+        next
+          ? 'Category separation on — identical categories must stay ≥4 columns and ≥2 rows apart.'
+          : 'Category separation off — you can place same-category booths adjacent.',
+        { duration: 4200 }
+      )
+      return next
+    })
+  }, [])
+
   const handleAddRoomWithSelectTool = useCallback(
     (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
       onAddRoom?.(options)
@@ -2736,6 +2775,8 @@ function FloorPlanV2Workspace({
     onPatronPathToggle: handlePatronPathToggle,
     showClearanceWarnings,
     onClearanceWarningsToggle: handleClearanceWarningsToggle,
+    categorySeparationEnabled,
+    onCategorySeparationToggle: handleCategorySeparationToggle,
     eventId,
     vendorFillMaxCapacity,
     patronFillMaxCapacity,
@@ -2814,6 +2855,8 @@ function FloorPlanV2Workspace({
     onPatronPathToggle: handlePatronPathToggle,
     showClearanceWarnings,
     onClearanceWarningsToggle: handleClearanceWarningsToggle,
+    categorySeparationEnabled,
+    onCategorySeparationToggle: handleCategorySeparationToggle,
     vendorFillMaxCapacity,
     patronFillMaxCapacity,
     onFillVendorTables: handleFillVendorTables,
@@ -3054,6 +3097,7 @@ function FloorPlanV2Workspace({
                     showLabels={showLabels}
                     viewOnly={dashboardPreview}
                     showClearanceWarnings={showClearanceWarnings}
+                    enforceCategorySeparation={categorySeparationEnabled}
                   />
                 </CanvasRootErrorBoundary>
                 </div>
@@ -3202,6 +3246,7 @@ function FloorPlanV2Workspace({
                     layoutCapacity={layoutCapacity}
                     baselineTableLengthFt={safeTableSizeFt}
                     showClearanceWarnings={showClearanceWarnings}
+                    enforceCategorySeparation={categorySeparationEnabled}
                   />
                 </CanvasRootErrorBoundary>
                 {!isDashboard ? (

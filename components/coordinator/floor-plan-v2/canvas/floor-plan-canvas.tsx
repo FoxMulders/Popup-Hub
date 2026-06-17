@@ -185,6 +185,8 @@ export interface FloorPlanCanvasProps {
   viewOnly?: boolean
   /** Yellow/red aisle bands on vendor booths (dashboard toggle). */
   showClearanceWarnings?: boolean
+  /** Enforce same-category proximity spacing on draw and drag. */
+  enforceCategorySeparation?: boolean
 }
 
 const DEFAULT_BASE_PX_PER_FT = 12
@@ -249,6 +251,7 @@ export function FloorPlanCanvas({
   layoutSpringPoses = null,
   viewOnly = false,
   showClearanceWarnings = true,
+  enforceCategorySeparation = true,
 }: FloorPlanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const clipViewportRef = useRef<HTMLDivElement>(null)
@@ -524,6 +527,7 @@ export function FloorPlanCanvas({
     commandCenterViewport,
     stickyDrawPlacement,
     onLayoutCommit,
+    enforceCategorySeparation,
   })
 
   useSelectionKeyboardNudge(store, {

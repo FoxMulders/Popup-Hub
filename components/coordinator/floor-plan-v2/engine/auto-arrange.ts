@@ -118,6 +118,10 @@ import {
   resolveRoomPlacementSurface,
   type PlacementRing,
 } from '../state/placement-surface'
+import {
+  doorClearanceObstacleRects,
+  isDoorOrExitObject,
+} from '@/lib/floor-plan/door-clearance-zones'
 
 /** Standard chair = 1.75 ft on a side. */
 export const CHAIR_LENGTH_FT = 1.75
@@ -308,17 +312,20 @@ function boothsCloserThan(
  *
  */
 function obstacleRectsFor(doc: FloorPlanDoc): Rect[] {
-  const out: Rect[] = []
+  const structural: PlacedObject[] = []
+  const doors: PlacedObject[] = []
   for (const obj of doc.objects) {
     if (obj.kind === 'booth' || obj.kind === 'merged_zone') continue
-    const base = rotatedAabb(obj)
-    if (obj.kind === 'door' || obj.kind === 'emergency_exit') {
-      out.push(expandRectForClearance(base, PERIMETER_WALL_CLEARANCE_FT))
+    if (isDoorOrExitObject(obj)) {
+      doors.push(obj)
     } else {
-      out.push(base)
+      structural.push(obj)
     }
   }
-  return out
+  return [
+    ...structural.map((obj) => rotatedAabb(obj)),
+    ...doorClearanceObstacleRects(doors),
+  ]
 }
 
 /** Fixed booth footprints (patron or vendor) as no-go zones with edge clearance. */

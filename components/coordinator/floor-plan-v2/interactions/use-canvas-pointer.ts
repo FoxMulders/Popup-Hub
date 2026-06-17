@@ -65,6 +65,10 @@ import {
 } from '../state/room-canvas'
 import { hitTestRoomStroke } from '../state/room-joins'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
+import {
+  findBoothProximityViolation,
+  findFirstViolationInMove,
+} from './category-rules'
 import { isVendorBoothObject } from './vendor-booth-placement'
 import {
   defaultStructuralDoorFootprintFt,
@@ -166,6 +170,8 @@ interface UseCanvasPointerOptions {
   autoArrangeMode?: AutoArrangeMode
   /** Dashboard command center: damp room drag/resize and raise zoom floor. */
   commandCenterViewport?: boolean
+  /** When false, same-category proximity spacing is not enforced on draw/drag. */
+  enforceCategorySeparation?: boolean
 }
 
 type DrawDraft =
@@ -458,6 +464,11 @@ export function useCanvasPointer(
   }, [stickyDrawPlacement])
   const eventCategoryNames = options.eventCategoryNames
   const commandCenterViewport = options.commandCenterViewport ?? false
+  const enforceCategorySeparation = options.enforceCategorySeparation ?? true
+  const enforceCategorySeparationRef = useRef(enforceCategorySeparation)
+  useEffect(() => {
+    enforceCategorySeparationRef.current = enforceCategorySeparation
+  }, [enforceCategorySeparation])
   const onProximityViolation = options.onProximityViolation
   const onProximityViolationRef = useRef(onProximityViolation)
   useEffect(() => {
@@ -1723,7 +1734,8 @@ export function useCanvasPointer(
           onProximityViolationRef.current,
           onOverlapViolationRef.current,
           readDefaultBoothTableSpec(),
-          (msg) => addLogRef.current(msg)
+          (msg) => addLogRef.current(msg),
+          enforceCategorySeparationRef.current
         )
         onAfterDrawCommit?.()
         onLayoutCommitRef.current?.()
@@ -1760,6 +1772,46 @@ export function useCanvasPointer(
                 )
               )
             )
+
+          if (enforceCategorySeparationRef.current) {
+            const movedBooths = movedResolved.filter(
+              (o): o is BoothObject =>
+                o.kind === 'booth' && !isGuestTableBooth(o as BoothObject)
+            )
+            const others = store.doc.objects.filter((o) => !movedIdSet.has(o.id))
+            const violation = findFirstViolationInMove(
+              movedBooths,
+              others,
+              store.doc.gridSpacingFt || 1
+            )
+            if (violation) {
+              const revertPatches: Array<{
+                id: string
+                patch: Partial<PlacedObject>
+              }> = []
+              for (const id of drag.ids) {
+                const orig = drag.originals.get(id)
+                if (orig) {
+                  revertPatches.push({
+                    id,
+                    patch: { x: orig.x, y: orig.y },
+                  })
+                }
+              }
+              if (revertPatches.length > 0) {
+                store.updateObjects(revertPatches, { pushHistory: false })
+              }
+              onProximityViolationRef.current?.({
+                category: violation.category,
+                dxColumns: violation.dxColumns,
+                dyRows: violation.dyRows,
+              })
+              dragRef.current = null
+              setBoothLayoutGestureActive(false)
+              return
+            }
+          }
+
           const finalPatches: Array<{
             id: string
             patch: Partial<PlacedObject>
@@ -1919,7 +1971,8 @@ function commitDraft(
   }) => void,
   onOverlapViolation?: () => void,
   defaultBoothTableSpec?: TableSizeSpec,
-  debugLog?: (message: string) => void
+  debugLog?: (message: string) => void,
+  enforceCategorySeparation = true
 ): void {
   const log = debugLog ?? (() => {})
   const resolved = resolveDrawCommitRect(
@@ -2016,6 +2069,28 @@ function commitDraft(
     )
     onOverlapViolation?.()
     return
+  }
+  if (
+    enforceCategorySeparation &&
+    obj.kind === 'booth' &&
+    !isGuestTableBooth(obj as BoothObject)
+  ) {
+    const violation = findBoothProximityViolation(
+      obj as BoothObject,
+      store.doc.objects,
+      store.doc.gridSpacingFt || 1
+    )
+    if (violation) {
+      log(
+        `Placement rejected (${obj.kind}): proximity category=${violation.category}`
+      )
+      onProximityViolation?.({
+        category: violation.category,
+        dxColumns: violation.dxColumns,
+        dyRows: violation.dyRows,
+      })
+      return
+    }
   }
   log(
     `Placement committed (${obj.kind}): ${formatPlacementProbe(obj)} room=${placementRoomId ?? 'open-canvas'}`

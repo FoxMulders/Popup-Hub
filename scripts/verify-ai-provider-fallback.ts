@@ -55,8 +55,9 @@ assert(
 )
 
 assert(
-  'auto_arrange_layout uses gemini 2.5 pro',
-  resolveModelForTask('auto_arrange_layout').includes('gemini-2.5-pro')
+  'auto_arrange_layout uses mistral floor geometry worker',
+  resolveModelForTask('auto_arrange_layout').includes('mistral') &&
+    resolveModelForTask('auto_arrange_layout').includes(':floor')
 )
 assert(
   'auto_arrange_layout fallback differs from primary',
@@ -64,13 +65,27 @@ assert(
     resolveFallbackModelForTask('auto_arrange_layout')
 )
 assert(
-  'layout_recommend uses claude 3.5 sonnet',
-  resolveModelForTask('layout_recommend').includes('claude-3.5-sonnet')
+  'layout_recommend uses draft/free tier',
+  resolveModelForTask('layout_recommend').includes('nex-n2-pro') ||
+    resolveModelForTask('layout_recommend').includes(':free')
 )
 assert(
   'layout_recommend fallback differs from primary',
   resolveModelForTask('layout_recommend') !==
     resolveFallbackModelForTask('layout_recommend')
+)
+assert(
+  'spatial_vision uses qwen',
+  resolveModelForTask('spatial_vision').includes('qwen')
+)
+assert(
+  'spatial_geometry uses mistral floor',
+  resolveModelForTask('spatial_geometry').includes('mistral') &&
+    resolveModelForTask('spatial_geometry').includes(':floor')
+)
+assert(
+  'spatial_advisor uses claude sonnet family',
+  resolveModelForTask('spatial_advisor').includes('claude')
 )
 
 for (const task of Object.keys(AI_TASKS) as AiTask[]) {

@@ -12,7 +12,7 @@ export const AI_TASKS = {
   /** Generic image → strict JSON extraction. */
   vision_json: {
     model: 'google/gemini-2.5-flash',
-    fallbackModel: 'meta-llama/llama-3.2-90b-vision-instruct',
+    fallbackModel: 'qwen/qwen3.7-plus',
   },
   /** Text-only structured JSON (no image). */
   chat_json: {
@@ -24,13 +24,33 @@ export const AI_TASKS = {
     model: 'anthropic/claude-3.5-sonnet',
     fallbackModel: 'openai/gpt-4o',
   },
-  /** Floor-plan auto-arrange — vendor visibility, walkways, traffic flow. */
+  /** Floor-plan auto-arrange — coordinate math via floor-tier geometry worker. */
   auto_arrange_layout: {
-    model: 'google/gemini-2.5-pro',
+    model: 'mistralai/mistral-7b-instruct:floor',
+    fallbackModel: 'nex-agi/nex-n2-pro:free',
+  },
+  /** Layout safety + traffic-flow recommendations (draft / evaluation tier). */
+  layout_recommend: {
+    model: 'nex-agi/nex-n2-pro:free',
     fallbackModel: 'anthropic/claude-3.5-sonnet',
   },
-  /** Layout safety + traffic-flow recommendations (active room assessment). */
-  layout_recommend: {
+  /** Blueprint / image floor plan parsing — multimodal vision (1M context). */
+  spatial_vision: {
+    model: 'qwen/qwen3.7-plus',
+    fallbackModel: 'google/gemini-2.5-flash',
+  },
+  /** Draft / evaluation phase — free tier when available. */
+  spatial_draft: {
+    model: 'nex-agi/nex-n2-pro:free',
+    fallbackModel: 'openai/gpt-4o-mini',
+  },
+  /** Layout geometry, bounding boxes, grid positions — lowest-cost provider. */
+  spatial_geometry: {
+    model: 'mistralai/mistral-7b-instruct:floor',
+    fallbackModel: 'mistralai/mistral-7b-instruct',
+  },
+  /** Advisor — stronger reasoning for spatial collision / logic corrections only. */
+  spatial_advisor: {
     model: 'anthropic/claude-3.5-sonnet',
     fallbackModel: 'openai/gpt-4o',
   },

@@ -30,6 +30,7 @@ export interface MarketDashboardClientProps {
   approvedByEventId: Record<string, VendorApplicationSnapshot[]>
   pendingByEventId: Record<string, VendorApplicationSnapshot[]>
   boothPriceByEventAndApplicationId: Record<string, Record<string, number>>
+  eventCategoryNamesByEventId?: Record<string, string[]>
   squareConnected: boolean
   stripeConnected: boolean
   totalRevenueCents: number
@@ -61,6 +62,7 @@ export function MarketDashboardClient({
   approvedByEventId,
   pendingByEventId,
   boothPriceByEventAndApplicationId,
+  eventCategoryNamesByEventId,
   squareConnected,
   stripeConnected,
   totalRevenueCents,
@@ -106,6 +108,7 @@ export function MarketDashboardClient({
       approvedByEventId={approvedByEventId}
       pendingByEventId={pendingByEventId}
       boothPriceByEventAndApplicationId={boothPriceByEventAndApplicationId}
+      eventCategoryNamesByEventId={eventCategoryNamesByEventId}
       squareConnected={squareConnected}
       stripeConnected={stripeConnected}
       totalRevenueCents={totalRevenueCents}

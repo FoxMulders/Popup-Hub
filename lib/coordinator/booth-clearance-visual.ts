@@ -15,6 +15,10 @@ import type {
   PlacedObject,
   RoomFrame,
 } from '@/components/coordinator/floor-plan-v2/state/types'
+import {
+  boothWithinDoorClearanceZone,
+  isDoorOrExitObject,
+} from '@/lib/floor-plan/door-clearance-zones'
 
 /** Minimum edge-to-edge aisle for published layouts (ft). */
 export const BOOTH_CLEARANCE_TARGET_FT = 4
@@ -60,8 +64,6 @@ const CLEARANCE_OBSTACLE_KINDS: ReadonlySet<PlacedObject['kind']> = new Set([
   'open_wall',
   'stage',
   'food_truck',
-  'door',
-  'emergency_exit',
 ])
 
 /** Minimum positive edge-to-edge gap between two axis-aligned rects (ft). */
@@ -240,6 +242,10 @@ function obstacleClearanceFt(
   boothAabb: Rect,
   other: PlacedObject
 ): number | null {
+  if (isDoorOrExitObject(other)) {
+    if (!boothWithinDoorClearanceZone(boothAabb, other)) return null
+    return edgeClearanceBetweenRects(boothAabb, rotatedAabb(other))
+  }
   if (!CLEARANCE_OBSTACLE_KINDS.has(other.kind)) return null
   return edgeClearanceBetweenRects(boothAabb, rotatedAabb(other))
 }
