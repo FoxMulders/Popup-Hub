@@ -6,7 +6,8 @@ import { Check, Stamp, ArrowRight, Copy, ExternalLink, Pencil } from 'lucide-rea
 import { Button, buttonVariants } from '@/components/ui/button'
 import { MarketPanel, MarketPanelHeader, MarketPanelTitle } from '@/components/ui/market-panel'
 import { cn } from '@/lib/utils'
-import { publicAppUrl } from '@/lib/url/public-app-url'
+import { vendorMarketInviteUrl } from '@/lib/coordinator/vendor-outreach'
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { marketTheme } from '@/lib/theme/market'
 import { toast } from 'sonner'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
@@ -47,7 +48,7 @@ export function EventReadinessChecklist({
 }: EventReadinessChecklistProps) {
   const requiresSquare = (event.category_limits ?? []).some((cl) => cl.price_per_booth > 0)
   const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
-  const vendorListingUrl = publicAppUrl(`/events/${eventId}`)
+  const vendorInviteUrl = vendorMarketInviteUrl(eventId)
 
   const items: ChecklistItem[] = [
     { key: 'created', label: 'Event created', done: true },
@@ -127,8 +128,8 @@ export function EventReadinessChecklist({
       },
       applied: {
         type: 'copy',
-        getText: () => publicAppUrl(`/events/${eventId}`),
-        label: 'Copy public listing link',
+        getText: () => vendorInviteUrl,
+        label: 'Copy vendor invite link',
       },
       approved: {
         type: 'link',
@@ -149,7 +150,7 @@ export function EventReadinessChecklist({
         label: 'Set up quarter auction',
       },
     }
-  }, [eventId, pendingCount])
+  }, [eventId, pendingCount, vendorInviteUrl])
 
   const editStepActions = useMemo((): Record<string, StepAction> => {
     return {
@@ -180,8 +181,8 @@ export function EventReadinessChecklist({
       },
       applied: {
         type: 'copy',
-        getText: () => publicAppUrl(`/events/${eventId}`),
-        label: 'Copy listing link',
+        getText: () => vendorInviteUrl,
+        label: 'Copy vendor invite link',
       },
       approved: {
         type: 'link',
@@ -211,7 +212,8 @@ export function EventReadinessChecklist({
     square: requiresSquare
       ? 'Connect Square before accepting paid booth fees.'
       : 'Optional for free events — skip if you are not charging booth fees.',
-    applied: 'Share your public event listing link with vendors.',
+    applied:
+      'Share your vendor invite link on Facebook, email, or social — makers sign up and land on your market apply page in one step.',
     approved: 'Approve vendors from the applications board below.',
     layout: 'Place booths in the layout planner and save.',
     auction: 'Create at least one quarter auction for market day, or skip if you are not running one.',
@@ -429,9 +431,18 @@ export function EventReadinessChecklist({
           <p className="text-sm text-harvest-900/90 leading-relaxed">
             {nextStepHints[firstIncomplete.key] ?? firstIncomplete.label}
           </p>
-          <ContinueButton stepKey={firstIncomplete.key} />
-          {firstIncomplete.key === 'applied' && (
-            <p className="mt-2 text-[10px] text-harvest-700/80 break-all font-mono">{vendorListingUrl}</p>
+          {firstIncomplete.key === 'applied' ? (
+            <div className="mt-3">
+              <VendorRecruitmentCallout
+                variant="compact"
+                eventId={eventId}
+                eventName={event.name}
+                eventStatus={event.status}
+                className="border-harvest-300/80 bg-white/70"
+              />
+            </div>
+          ) : (
+            <ContinueButton stepKey={firstIncomplete.key} />
           )}
         </div>
       )}

@@ -27,6 +27,7 @@ const VENDOR_TYPES = new Set<NotificationType>([
   'vendor_access_rejected',
   'payment_received',
   'coordinator_announcement',
+  'nearby_market_published',
   ...PLATFORM_ADMIN_TYPES,
 ])
 

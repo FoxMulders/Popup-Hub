@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { detectPortalFromPath } from '@/lib/portals/active-portal'
 import { CommandCenterShell } from './command-center-shell'
 import { CoordinatorWorkspaceRail } from './coordinator-workspace-rail'
@@ -46,7 +47,12 @@ function portalMatchesRoute(pathname: string, portal: WorkspacePortal): boolean 
   return routePortal !== 'patron' && routePortal === portal
 }
 
-function useWorkspaceMode(pathname: string, portal: WorkspacePortal): boolean {
+function computeWorkspaceMode(
+  pathname: string,
+  portal: WorkspacePortal,
+  vendorMobileSimple: boolean
+): boolean {
+  if (vendorMobileSimple) return false
   if (!portalMatchesRoute(pathname, portal)) return false
   if (bypassWorkspace(pathname)) return false
   if (isFullCommandCenterRoute(pathname)) return false
@@ -83,7 +89,19 @@ export function PortalWorkspaceLayout({
   children,
 }: PortalWorkspaceLayoutProps) {
   const pathname = usePathname() ?? ''
-  const workspace = useWorkspaceMode(pathname, portal)
+  const [mobile, setMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const update = () => setMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  const vendorMobileSimple =
+    mobile && portal === 'vendor' && pathname.startsWith('/vendor')
+  const workspace = computeWorkspaceMode(pathname, portal, vendorMobileSimple)
   const viewportLocked = routeUsesViewportFill(pathname)
 
   if (!workspace) {

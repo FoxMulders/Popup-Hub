@@ -5,10 +5,14 @@ import { GripVertical, Star, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { VendorApplicationSnapshot } from './booth-placement-status'
 
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
 
 interface VendorPoolShelfProps {
   vendors: VendorApplicationSnapshot[]
+  eventId?: string | null
+  eventName?: string | null
+  eventStatus?: string | null
 }
 
 function VendorPoolCard({ vendor }: { vendor: VendorApplicationSnapshot }) {
@@ -73,8 +77,40 @@ function VendorPoolCard({ vendor }: { vendor: VendorApplicationSnapshot }) {
   )
 }
 
-export function VendorPoolShelf({ vendors }: VendorPoolShelfProps) {
+export function VendorPoolShelf({
+  vendors,
+  eventId,
+  eventName,
+  eventStatus,
+}: VendorPoolShelfProps) {
   const unplaced = vendors.filter((v) => v.booth_number == null)
+
+  if (vendors.length === 0) {
+    return (
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-terracotta-700">
+            Available pool
+          </h3>
+          <span className="rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-900">
+            0
+          </span>
+        </div>
+        {eventId ? (
+          <VendorRecruitmentCallout
+            variant="compact"
+            eventId={eventId}
+            eventName={eventName ?? undefined}
+            eventStatus={eventStatus ?? undefined}
+          />
+        ) : (
+          <p className="rounded-lg border border-dashed border-stone-300 px-3 py-3 text-xs text-muted-foreground">
+            No approved vendors yet. Copy your vendor invite link to start receiving applications.
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>

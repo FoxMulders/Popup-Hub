@@ -1,7 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const productionOrigin = 'https://popuphub.ca'
-const serverUrl = process.env.CAPACITOR_SERVER_URL?.trim() || productionOrigin
+const serverUrl =
+  process.env.CAPACITOR_SERVER_URL?.trim() || `${productionOrigin}/discover`
 
 const config: CapacitorConfig = {
   appId: 'ca.popuphub.app',

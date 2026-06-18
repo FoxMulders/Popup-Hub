@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { EventCard } from '@/components/events/event-card'
 import { ApplyButton } from '@/components/events/apply-button'
+import { QuickApplyButton } from '@/components/vendor/quick-apply-button'
 import { MarketAreaFilter } from '@/components/markets/market-area-filter'
 import { EventMap } from '@/components/map/event-map'
 import { Input } from '@/components/ui/input'
@@ -105,13 +106,27 @@ function MarketGrid({
                 : undefined
             }
             actions={
-              <ApplyButton
-                event={event}
-                userId={userId}
-                applicationStatus={applicationsByEventId[event.id]?.status ?? null}
-                applicationId={applicationsByEventId[event.id]?.id ?? null}
-                applicationsOpen={applicationsOpen}
-              />
+              <>
+                <div className="md:hidden">
+                  <QuickApplyButton
+                    event={event}
+                    userId={userId}
+                    applicationStatus={applicationsByEventId[event.id]?.status ?? null}
+                    applicationId={applicationsByEventId[event.id]?.id ?? null}
+                    applicationsOpen={applicationsOpen}
+                    compact
+                  />
+                </div>
+                <div className="hidden md:block">
+                  <ApplyButton
+                    event={event}
+                    userId={userId}
+                    applicationStatus={applicationsByEventId[event.id]?.status ?? null}
+                    applicationId={applicationsByEventId[event.id]?.id ?? null}
+                    applicationsOpen={applicationsOpen}
+                  />
+                </div>
+              </>
             }
           />
         )

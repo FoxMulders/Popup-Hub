@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,6 +53,7 @@ function isSignupRole(value: string | null): value is SignupRole {
 
 function SignupForm() {
   const params = useSearchParams()
+  const router = useRouter()
   const supabase = createClient()
 
   const paramRole = params.get('role')
@@ -84,6 +85,16 @@ function SignupForm() {
     search.delete('redirectTo')
     window.location.replace(`/api/auth/callback?${search.toString()}`)
   }, [params])
+
+  useEffect(() => {
+    if (!paramNext) return
+
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        router.replace(paramNext)
+      }
+    })
+  }, [paramNext, router, supabase])
 
   const postSignupPath = paramNext ?? defaultPostSignupPath(role)
 
@@ -158,7 +169,9 @@ function SignupForm() {
     roleLocked && role === 'coordinator'
       ? 'Set up events, review applications, and run market day from one hub.'
       : roleLocked && role === 'vendor'
-        ? 'Apply to open markets and manage your vendor passport.'
+        ? paramNext
+          ? 'Sign up, then we’ll take you straight to the market to apply.'
+          : 'Apply to open markets and manage your vendor passport.'
         : 'Choose how you\'ll use Popup Hub'
 
   if (submitted) {

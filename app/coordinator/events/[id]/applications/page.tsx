@@ -11,6 +11,7 @@ import { format } from 'date-fns'
 import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import { isEventArchived } from '@/lib/queries/events'
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import type { BoothApplication, Event } from '@/types/database'
 
 interface Props {
@@ -100,6 +101,9 @@ export default async function ApplicationsPage({ params }: Props) {
         <ApplicationBoard
           applications={applications}
           bookingMode={(event as Event).booking_mode}
+          eventId={id}
+          eventName={event.name}
+          eventStatus={event.status}
           categoryNameById={Object.fromEntries(categoryNameById)}
           categoryLimits={(event.category_limits ?? []) as Event['category_limits']}
           marketInsuranceRequired={Boolean((event as Event).market_insurance_required)}
@@ -107,9 +111,11 @@ export default async function ApplicationsPage({ params }: Props) {
           marketEnded={marketEnded}
         />
       ) : (
-        <div className="rounded-xl border border-stone-200 bg-canvas px-4 py-8 text-center text-sm text-muted-foreground">
-          No applications for this market yet.
-        </div>
+        <VendorRecruitmentCallout
+          eventId={id}
+          eventName={event.name}
+          eventStatus={event.status}
+        />
       )}
     </div>
   )

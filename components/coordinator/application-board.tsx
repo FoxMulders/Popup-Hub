@@ -30,11 +30,15 @@ import {
   needsSquareCheckout,
 } from '@/lib/applications/payment-fields'
 import { VendorReviewDrawer } from '@/components/coordinator/vendor-review-drawer'
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import type { BoothApplication, ApplicationStatus, EventCategoryLimit } from '@/types/database'
 
 interface ApplicationBoardProps {
   applications: BoothApplication[]
   bookingMode: 'instant' | 'juried'
+  eventId?: string
+  eventName?: string
+  eventStatus?: string
   eventCancelled?: boolean
   /** Market day has passed or status is completed — still allow resolving pending apps. */
   marketEnded?: boolean
@@ -95,6 +99,9 @@ function columnDropStatus(columnStatus: ApplicationStatus): ApplicationStatus {
 export function ApplicationBoard({
   applications,
   bookingMode,
+  eventId,
+  eventName,
+  eventStatus,
   eventCancelled,
   marketEnded = false,
   categoryNameById,
@@ -360,6 +367,14 @@ export function ApplicationBoard({
           </Badge>
         )}
       </dl>
+
+      {totalApps === 0 && !eventCancelled && eventId ? (
+        <VendorRecruitmentCallout
+          eventId={eventId}
+          eventName={eventName}
+          eventStatus={eventStatus}
+        />
+      ) : null}
 
       {!eventCancelled ? (
         <p className="text-xs text-muted-foreground">

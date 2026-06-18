@@ -1,1 +1,1 @@
-feat: ship 124 session updates (unit test inventory + gaps; coordinator markets access fix; dynamic tessellation + clearance auto-correction; tiered OpenRouter spatial AI; +120 more)
+feat: ship 127 session updates (patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; unit test inventory + gaps; +123 more)

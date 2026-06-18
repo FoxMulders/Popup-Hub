@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { Notification } from '@/types/database'
 import { format } from 'date-fns'
-import { Bell, CheckCheck, Trophy, Store, Calendar, AlertCircle, Info, MessageSquare, Lightbulb } from 'lucide-react'
+import { Bell, CheckCheck, Trophy, Store, Calendar, AlertCircle, Info, MessageSquare, Lightbulb, MapPin } from 'lucide-react'
 import { dispatchNotificationsChanged } from '@/lib/notifications/sync'
 import { filterNotificationsForPortal } from '@/lib/notifications/portal-filter'
 import type { ActivePortal } from '@/lib/portals/active-portal'
@@ -61,6 +61,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   market_reminder: { icon: <Bell className="h-4 w-4" />, color: 'text-forest bg-sage-50' },
   vendor_flash_sale: { icon: <Store className="h-4 w-4" />, color: 'text-harvest-600 bg-harvest-50' },
   priority_booth_invite: { icon: <Store className="h-4 w-4" />, color: 'text-amber-700 bg-amber-50' },
+  nearby_market_published: { icon: <MapPin className="h-4 w-4" />, color: 'text-violet-700 bg-violet-50' },
   vendor_sold_out: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-terracotta-600 bg-terracotta-50' },
   vendor_access_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   vendor_access_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-600 bg-red-50' },
@@ -207,12 +208,21 @@ export function NotificationList({
 
       const metadata =
         notification.metadata && typeof notification.metadata === 'object'
-          ? (notification.metadata as { event_id?: unknown })
+          ? (notification.metadata as { event_id?: unknown; deep_link?: unknown })
           : null
       const eventId =
         metadata && typeof metadata.event_id === 'string'
           ? metadata.event_id
           : null
+      const deepLink =
+        metadata && typeof metadata.deep_link === 'string'
+          ? metadata.deep_link
+          : null
+
+      if (notification.type === 'nearby_market_published' && deepLink) {
+        router.push(deepLink)
+        return
+      }
       if (notification.type === 'feature_request_submitted') {
         router.push('/admin/feedback')
         return

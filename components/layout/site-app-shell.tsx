@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { AppNav } from '@/components/nav/app-nav'
 import { FeatureRequestProvider } from '@/components/feedback/feature-request-context'
+import { VendorBottomNav } from '@/components/vendor/vendor-bottom-nav'
 import { cn } from '@/lib/utils'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
@@ -50,11 +51,16 @@ export function SiteAppShell({
           className={
             viewportFill
               ? 'min-h-0 flex-1 overflow-hidden'
-              : 'w-full max-w-full flex-1 overflow-x-hidden'
+              : cn(
+                  'w-full max-w-full flex-1 overflow-x-hidden',
+                  vendorPortal &&
+                    'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0'
+                )
           }
         >
           {children}
         </main>
+        {vendorPortal ? <VendorBottomNav /> : null}
       </div>
     </FeatureRequestProvider>
   )

@@ -9,6 +9,7 @@ import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
 import { PopupLoaderProvider } from '@/components/brand/popup-loader-provider'
 import { BuildVersionFooter } from '@/components/brand/build-version-footer'
 import { InstallPrompt } from '@/components/navigation/install-prompt'
+import { CapacitorInit } from '@/components/mobile/capacitor-init'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -101,6 +102,7 @@ export default async function RootLayout({
           <DocumentTitleSync initialRole={sessionRole} />
           <AuthSessionGuard />
           <ServiceWorkerRegister />
+          <CapacitorInit />
           <div className="flex min-h-dvh flex-1 flex-col">
             <div id="site-layout-main" className="flex min-h-0 flex-1 flex-col">
               <TooltipProvider>{children}</TooltipProvider>

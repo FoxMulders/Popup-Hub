@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ClipboardList, ExternalLink } from 'lucide-react'
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import type { ApplicationStatus, BoothApplication } from '@/types/database'
 
 export type PendingBoothApplicationRow = BoothApplication & {
@@ -22,12 +23,18 @@ interface PendingBoothApplicationsPanelProps {
   applications: PendingBoothApplicationRow[]
   hasEvents: boolean
   firstEventApplicationsHref?: string | null
+  inviteEventId?: string | null
+  inviteEventName?: string | null
+  inviteEventStatus?: string | null
 }
 
 export function PendingBoothApplicationsPanel({
   applications,
   hasEvents,
   firstEventApplicationsHref,
+  inviteEventId,
+  inviteEventName,
+  inviteEventStatus,
 }: PendingBoothApplicationsPanelProps) {
   if (!hasEvents) {
     return null
@@ -35,14 +42,14 @@ export function PendingBoothApplicationsPanel({
 
   if (applications.length === 0) {
     return (
-      <div className="market-panel p-5">
+      <div className="market-panel space-y-4 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-heading font-semibold">Booth applications</h3>
-            <p className="mt-1 text-sm text-muted-foreground max-w-xl">
-              No booth applications awaiting review. When vendors apply to your{' '}
-              <strong>juried</strong> markets, they appear here for approve / decline / waitlist.
-              Instant-book markets approve vendors automatically on apply.
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              No booth applications yet. When vendors apply to your <strong>juried</strong> markets,
+              they appear here for approve / decline / waitlist. Instant-book markets approve vendors
+              automatically on apply.
             </p>
           </div>
           {firstEventApplicationsHref ? (
@@ -54,6 +61,13 @@ export function PendingBoothApplicationsPanel({
             </Link>
           ) : null}
         </div>
+        {inviteEventId ? (
+          <VendorRecruitmentCallout
+            eventId={inviteEventId}
+            eventName={inviteEventName ?? undefined}
+            eventStatus={inviteEventStatus ?? undefined}
+          />
+        ) : null}
       </div>
     )
   }

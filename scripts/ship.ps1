@@ -40,7 +40,7 @@ function Write-Step($text) {
 try {
     Write-Step 'Cleaning stale .next output'
     $env:NODE_OPTIONS = '--max-old-space-size=8192'
-    if ((Invoke-NativeCommand -FilePath 'node' -ArgumentList @('scripts/clean-next-build.mjs', '--strict')) -ne 0) {
+    if ((Invoke-NativeCommand -FilePath 'node' -ArgumentList @('scripts/clean-next-build.mjs', '--strict', '--stop-dev')) -ne 0) {
         throw 'Could not remove stale .next build output'
     }
 

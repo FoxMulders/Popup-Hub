@@ -75,6 +75,7 @@ export type NotificationType =
   | 'feedback_addressed'
   | 'feature_request_submitted'
   | 'priority_booth_invite'
+  | 'nearby_market_published'
 
 export type VendorAccessRequestStatus = 'pending' | 'approved' | 'rejected'
 

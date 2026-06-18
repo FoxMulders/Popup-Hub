@@ -4,6 +4,29 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — patron + vendor mobile app (local, not deployed)
+- **Goal:** Capacitor iOS/Android shell with patron discover + vendor markets, geo alerts, one-tap apply.
+- **Shipped locally:**
+  - **Native:** `lib/mobile/native-app.ts`, `components/mobile/capacitor-init.tsx`, launch URL `/discover` in `capacitor.config.ts`
+  - **Vendor mobile:** bottom nav (`vendor-bottom-nav.tsx`), skip 3-column workspace on phone, `QuickApplyButton`, `VendorEventApplySection`
+  - **Alerts:** migration `112_vendor_mobile_alerts.sql`, `lib/vendor/nearby-market-alerts.ts`, publish hook, prefs API + profile UI
+  - **Push scaffold:** `device_push_tokens`, `POST /api/mobile/push/register`
+  - **Deep links:** `.well-known/apple-app-site-association`, `assetlinks.json` (replace Android SHA256 before prod)
+  - **Docs:** `PM/mobile-emulator-setup.md`
+- **Verify:** `npx tsc --noEmit` — PASS. Apply migration `npm run db:push`. Android: follow `PM/mobile-emulator-setup.md`.
+- **Next:** `npm run mobile:android:add` + emulator smoke; commit + deploy when user asks; wire APNs/FCM for native push delivery.
+
+## Active work — coordinator vendor invite guidance (local, not deployed)
+- **Goal:** First coordinators on an empty platform need one shareable link for vendor outreach (Facebook, email, etc.).
+- **Shipped locally:**
+  - **`lib/coordinator/vendor-outreach.ts`** — `vendorMarketInviteUrl(eventId)` → `/signup?role=vendor&next=/vendor/events/[id]` (signup then straight to apply).
+  - **`components/coordinator/vendor-recruitment-callout.tsx`** — single “Vendor invite link” with Copy.
+  - **Signup:** already-authenticated users with `next` redirect immediately; vendor signup copy mentions market apply when `next` is set.
+  - **Vendor event page:** login redirect preserves `/vendor/events/[id]`.
+  - **Surfaces:** curation queue, vendor pool, applications board, event hub checklist, markets list, check-in.
+- **Verify:** Copy invite link from event hub → open in incognito → sign up as vendor → land on `/vendor/events/[id]` apply section.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Windows production build: next-font-manifest (local, not deployed)
 - **Issue:** Local deploy failed during `Collecting page data` with `Cannot find module '.next/server/next-font-manifest.json'` — stale/corrupt `.next` while multiple `next dev` processes held locks on the same output directory.
 - **Root cause:** Eight concurrent `next dev` instances for popup-hub were writing dev artifacts into `.next` while production `next build` ran; webpack emitted manifests then dev/build races deleted or overwrote them before static workers loaded them.

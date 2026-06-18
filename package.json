@@ -6,7 +6,7 @@
         "dev": "next dev",
         "dev:https": "next dev --experimental-https --experimental-https-key ./.cert/localhost-key.pem --experimental-https-cert ./.cert/localhost.pem",
         "dev:certs": "mkcert -install && mkcert -key-file .cert/localhost-key.pem -cert-file .cert/localhost.pem localhost 127.0.0.1 ::1",
-        "prebuild": "node scripts/clean-next-build.mjs && node scripts/bump-build-number.mjs",
+        "prebuild": "node scripts/clean-next-build.mjs --strict --stop-dev && node scripts/bump-build-number.mjs",
         "build": "node --max-old-space-size=8192 ./node_modules/next/dist/bin/next build --webpack",
         "release": "npm version patch && git push && git push --tags",
         "version:patch": "npm version patch --no-git-tag-version",
@@ -51,7 +51,10 @@
         "mobile:assets": "node scripts/mobile/generate-ios-resources.mjs",
         "mobile:sync": "powershell -ExecutionPolicy Bypass -File ./scripts/mobile/sync-ios.ps1",
         "mobile:ios:open": "npx cap open ios",
-        "mobile:ios:add": "npx cap add ios"
+        "mobile:ios:add": "npx cap add ios",
+        "mobile:android:add": "npx cap add android",
+        "mobile:android:open": "npx cap open android",
+        "mobile:android:run": "npx cap run android"
     },
     "dependencies": {
         "@base-ui/react": "^1.5.0",

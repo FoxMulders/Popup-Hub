@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { CheckinQR } from '@/components/vendor/checkin-qr'
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { toast } from 'sonner'
 import { CheckCircle2, Undo2, QrCode } from 'lucide-react'
 
@@ -199,8 +200,9 @@ export function VendorCheckin({ eventId, applications: initial }: VendorCheckinP
         })}
 
         {sorted.length === 0 && (
-          <div className="rounded-xl border border-dashed border-stone-200 py-12 text-center">
-            <p className="text-sm text-muted-foreground">No approved vendors yet.</p>
+          <div className="space-y-4 py-6">
+            <p className="text-center text-sm text-muted-foreground">No approved vendors yet.</p>
+            <VendorRecruitmentCallout variant="compact" eventId={eventId} />
           </div>
         )}
       </div>

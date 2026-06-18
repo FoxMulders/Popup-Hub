@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ApplyButton } from '@/components/events/apply-button'
+import { VendorEventApplySection } from '@/components/vendor/vendor-event-apply-section'
 import { MarketFeedbackWidget } from '@/components/coordinator/market-feedback-widget'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { formatCents } from '@/lib/square/client'
@@ -38,7 +38,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect(`/login?redirectTo=${encodeURIComponent(`/vendor/events/${id}`)}`)
 
   const [
     { data: event, error: eventError },
@@ -356,7 +356,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
             </p>
           </div>
         ) : null}
-        <ApplyButton
+        <VendorEventApplySection
           event={eventRecord as Event}
           userId={user.id}
           applicationStatus={existingApp?.status ?? null}

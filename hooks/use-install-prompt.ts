@@ -10,6 +10,7 @@ import {
   isMobileDevice,
   isStandaloneDisplayMode,
 } from '@/lib/pwa/platform'
+import { isNativeApp } from '@/lib/mobile/native-app'
 
 const DISMISS_KEY = 'popup-hub-pwa-install-dismissed-mobile'
 
@@ -29,11 +30,11 @@ export function useInstallPrompt() {
     setIsMobile(mobile)
     if (!mobile) return
 
-    setIsInstalled(isStandaloneDisplayMode())
+    setIsInstalled(isStandaloneDisplayMode() || isNativeApp())
 
     const dismissed = window.localStorage.getItem(DISMISS_KEY) === '1'
     setIsDismissed(dismissed)
-    if (dismissed || isStandaloneDisplayMode()) return
+    if (dismissed || isStandaloneDisplayMode() || isNativeApp()) return
 
     if (canShowIosInstallCoach()) {
       setShowIosCoach(true)

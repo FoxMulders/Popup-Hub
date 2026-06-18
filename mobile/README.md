@@ -40,6 +40,8 @@ In Xcode:
 
 Full TestFlight checklist: **`PM/ios-testflight.md`**.
 
+**Emulator / device testing (Android + iOS):** **`PM/mobile-emulator-setup.md`**.
+
 ## Local dev against staging
 
 Point the shell at a preview or local HTTPS dev server:

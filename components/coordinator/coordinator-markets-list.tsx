@@ -13,6 +13,7 @@ import {
   coordinatorStudioHref,
 } from '@/lib/coordinator/coordinator-routes'
 import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { cn } from '@/lib/utils'
 
 export interface CoordinatorMarketSummary {
@@ -191,6 +192,15 @@ export function CoordinatorMarketsList({
           Payment settings
         </Link>
       </div>
+
+      {totalCount > 0 && activeMarkets[0] ? (
+        <VendorRecruitmentCallout
+          variant="compact"
+          eventId={activeMarkets[0].id}
+          eventName={activeMarkets[0].name}
+          eventStatus={activeMarkets[0].status}
+        />
+      ) : null}
 
       {totalCount === 0 ? (
         <div className="rounded-xl border border-dashed bg-card p-8 text-center">

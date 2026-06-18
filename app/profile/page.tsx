@@ -11,6 +11,7 @@ import { PurchaseHistory } from '@/components/shopper/purchase-history'
 import { AccountAccessPanel } from '@/components/profile/account-access-panel'
 import { AccountSecurityCard } from '@/components/profile/account-security-card'
 import { NotificationPreferencesGrid } from '@/components/profile/notification-preferences-grid'
+import { VendorMarketAlertSettings } from '@/components/profile/vendor-market-alert-settings'
 import { passportCompletionSummary, passportPathForProfile } from '@/lib/passport/requirements'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -76,6 +77,9 @@ export default async function ProfilePage() {
               userId={profile.id}
               hasPhone={Boolean(profile.phone?.trim())}
             />
+            {profile.role === 'vendor' || profile.role === 'coordinator' ? (
+              <VendorMarketAlertSettings userId={profile.id} />
+            ) : null}
           </div>
 
           <aside className="space-y-6">

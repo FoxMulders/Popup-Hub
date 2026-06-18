@@ -7,6 +7,7 @@ import { ClipboardList, Filter } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
 import { useMarketManagement } from './market-management-context'
+import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { VendorPoolShelf } from './vendor-pool-shelf'
 import { DashboardToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { cn } from '@/lib/utils'
@@ -61,15 +62,25 @@ export function CurationQueueColumn() {
 
         <AnimatePresence mode="popLayout">
           {pendingApplications.length === 0 ? (
-            <motion.p
+            <motion.div
               key="empty-pending"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              className="rounded-xl border border-dashed border-stone-300 bg-stone-50/80 px-3 py-4 text-sm text-muted-foreground"
+              className="space-y-3"
             >
-              No applications awaiting review for this market.
-            </motion.p>
+              <p className="rounded-xl border border-dashed border-stone-300 bg-stone-50/80 px-3 py-3 text-sm text-muted-foreground">
+                No applications awaiting review for this market yet.
+              </p>
+              {selectedEventId ? (
+                <VendorRecruitmentCallout
+                  variant="compact"
+                  eventId={selectedEventId}
+                  eventName={selectedEvent?.name}
+                  eventStatus={selectedEvent?.status}
+                />
+              ) : null}
+            </motion.div>
           ) : (
             <motion.ul
               key="pending-list"
@@ -115,7 +126,12 @@ export function CurationQueueColumn() {
         ) : null}
 
         <div className="mt-5 border-t border-stone-200/80 pt-4">
-          <VendorPoolShelf vendors={approvedPool} />
+          <VendorPoolShelf
+            vendors={approvedPool}
+            eventId={selectedEventId}
+            eventName={selectedEvent?.name}
+            eventStatus={selectedEvent?.status}
+          />
         </div>
       </div>
     </div>

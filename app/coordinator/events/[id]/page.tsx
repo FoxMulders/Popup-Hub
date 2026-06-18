@@ -331,6 +331,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         <ApplicationBoard
           applications={applications}
           bookingMode={event.booking_mode}
+          eventId={id}
+          eventName={event.name}
+          eventStatus={event.status}
           eventCancelled={isCancelled}
           categoryNameById={Object.fromEntries(categoryNameById)}
           categoryLimits={sortedCategoryLimits}

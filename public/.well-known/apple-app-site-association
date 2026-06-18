@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAM_ID.ca.popuphub.app",
+        "paths": [
+          "/discover*",
+          "/events/*",
+          "/vendor/events/*",
+          "/favorites*",
+          "/login*"
+        ]
+      }
+    ]
+  }
+}
