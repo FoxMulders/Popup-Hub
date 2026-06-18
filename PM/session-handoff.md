@@ -1391,8 +1391,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `0b7a8d7` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.0.0 build 204** | commit `0b7a8d7` (handoff updated 2026-06-17 15:40)
+- Branch: `master` @ `6517c09` (pushed to `origin/master`)
+- Last deploy commit: `6517c09` - feat: ship 127 session updates (patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; unit test inventory + gaps; +123 more)
+- Production: https://popuphub.ca - **v1.0.0 build 205** | commit `10010aa` (handoff updated 2026-06-18 15:31)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1769,7 +1770,7 @@
 
 
 ## Last deploy
-- 2026-06-17 14:38 - Deploy via deploy-popuphub.ps1 - `feat: ship 122 session updates (dynamic tessellation + clearance auto-correction; tiered OpenRouter spatial AI; ecosystem rules + ledger sync audit; Blueprint Studio ledger & layout fixes; +118 more)` (8d68c19)
+- 2026-06-18 15:31 - Deploy via deploy-popuphub.ps1 - `feat: ship 127 session updates (patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; unit test inventory + gaps; +123 more)` (6517c09)
 
 
 ## Goal
