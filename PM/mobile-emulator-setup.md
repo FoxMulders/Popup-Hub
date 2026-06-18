@@ -52,7 +52,10 @@ npm run mobile:sync
 
 ### 2. Add the Android platform (once)
 
+Capacitor **Android must match the project's Capacitor major** (this repo uses **7.x**, same as `@capacitor/core` and `@capacitor/ios`). Do not run bare `npm install @capacitor/android` — npm may pull v8 and fail with `ERESOLVE`.
+
 ```powershell
+npm install
 npm run mobile:android:add
 npm run mobile:assets
 $env:CAPACITOR_SERVER_URL="https://popuphub.ca/discover"   # or your preview URL
