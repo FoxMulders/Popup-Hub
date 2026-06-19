@@ -1,1 +1,1 @@
-feat: ship 135 session updates (coordinator feature roadmap (8 items); patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)
+feat: ship 134 session updates (patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; relax venue type restriction for markets; +130 more)

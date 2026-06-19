@@ -4,7 +4,7 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Active work — coordinator feature roadmap (8 items) (local, not deployed)
+## Shipped this session (coordinator feature roadmap (8 items), deployed 2026-06-19)
 - **Goal:** Phase A–C coordinator enhancements from roadmap plan — saved layouts, paste cover, mobile layout gate, layout image import, league discount, venue admin approval, Google Docs contracts, for-organizers value calculator.
 - **Shipped locally:**
   - **Phase A:** `SavedLayoutPicker` in Blueprint Studio dashboard + edit-public toggle; `FlyerCoverUpload` paste/drop; mobile iron-dome on wizard step 3, event hub banner, production `dashboard-bootstrap`
@@ -21,7 +21,7 @@
   - **Ribbon:** `site-ribbon-links.ts` — Home, Discover, Check organizers, FAQ on browse + guest surfaces; desktop links on ShopperTopBar; GuestNav on login/signup; profile layout → patron `ShopperShell`; vendor bottom nav Home tab
   - **Location:** `HomeAddressPicker` + address field on Discover/vendor market grid + vendor alert prefs; geolocation error toasts
   - **Organizers:** `error.tsx` on `/check` and `/organizers/[slug]`; query helpers return empty/null on DB errors instead of 500
-  - **Auth:** Signup confirmation **link** copy + resend; login tab note on email confirm
+  - **Auth:** Signup confirmation **link** copy + resend; login tab note on email confirm; **Continue with Google** below terms checkbox on signup
   - **FAQ:** Coordinator cancellation item in `faq-content.tsx` + for-organizers landing
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/` path cards; logo from `/discover` → `/`; address on Discover; `/check` loads; signup resend button.
 - **Ops:** Confirm prod migrations **113–116** applied if organizer pages still fail (`npm run db:push`).
@@ -1495,9 +1495,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `a22a30f` (pushed to `origin/master`)
+- Branch: `master` @ `44c9738` (pushed to `origin/master`)
 - Last deploy commit: `a22a30f` - feat: ship 135 session updates (coordinator feature roadmap (8 items); patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)
-- Production: https://popuphub.ca - **v1.0.0 build 214** | commit `7d3ae7d` (handoff updated 2026-06-19 16:12)
+- Production: https://popuphub.ca - **v1.0.0 build 215** | commit ``a22a30f`` (handoff updated 2026-06-19 16:15)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1874,7 +1874,7 @@
 
 
 ## Last deploy
-- 2026-06-19 16:12 - Deploy via deploy-popuphub.ps1 - `feat: ship 135 session updates (coordinator feature roadmap (8 items); patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)` (a22a30f)
+- 2026-06-19 16:15 - Roadmap deploy verified (build 215, a22a30f) - `feat: ship 135 session updates (coordinator feature roadmap (8 items); ...)` (44c9738)
 
 
 ## Goal
