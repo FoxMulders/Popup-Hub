@@ -4,6 +4,19 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Blueprint layout small-screen guard (local, not deployed)
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-472e` @ `1955528`; production/build metadata unchanged in this session.
+- **Goal:** QA scan/fix for Blueprint Studio, Booth Matrix, spatial layout, and setup floor-plan views so small screens render the designated desktop-required warning instead of an unsupported floor-plan matrix/canvas.
+- **Shipped locally:**
+  - Shared viewport warning copy: “The floor plan matrix is not optimized for small screens. Recommended layout: desktop size or larger.”
+  - `DesktopScreenRequiredOverlay` no longer requires dashboard context; optional exit targets support standalone layout routes.
+  - Guarded active layout entry points: canonical Blueprint Studio bootstrap, standalone `/coordinator/studio/ledger` Booth Matrix, event spatial layout shell, setup wizard layout shell, and QA mirror shells.
+  - Removed the event layout phone-UA redirect so the client-side desktop-required warning can render.
+  - Blueprint Studio phone-class devices now reach the guard instead of auto-redirecting to Markets, while `?overview=mobile` still forces the overview path.
+  - Added `hooks/use-floor-plan-viewport-tier.test.ts` and included it in `npm run test:unit`.
+- **Verify:** `npx tsc --noEmit` — PASS. `npm run test:unit` — PASS. `git diff --check` — PASS.
+- **Next:** Commit/push this branch, open PR; deploy only if release workflow is requested/triggered.
+
 ## Shipped this session — Edmonton trust seed expansion (deployed 2026-06-18)
 - **Deploy:** `2caa4cc` → production build **207** @ https://popuphub.ca
 - **Shipped:**

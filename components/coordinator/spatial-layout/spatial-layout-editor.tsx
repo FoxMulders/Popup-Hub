@@ -165,6 +165,8 @@ export function SpatialLayoutEditor({
 
   return (
     <SpatialLayoutShell
+      desktopRequiredExitHref={`/coordinator/events/${eventId}`}
+      desktopRequiredExitLabel="Back to event overview"
       toolbar={
         <SpatialLayoutToolbar
           eventId={eventId}

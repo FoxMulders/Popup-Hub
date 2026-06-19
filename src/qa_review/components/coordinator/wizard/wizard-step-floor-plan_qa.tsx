@@ -66,6 +66,10 @@ export function WizardStepFloorPlan({
     <LayoutPlannerShellQa
       mode={mode}
       className="w-full flex-1"
+      desktopRequiredExitHref={
+        eventId ? `/coordinator/events/${eventId}` : '/coordinator/markets'
+      }
+      desktopRequiredExitLabel="Back to event overview"
       header={
         <LayoutPlannerHeader
           mode="wizard"

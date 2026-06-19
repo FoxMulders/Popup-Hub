@@ -2,6 +2,11 @@
 
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 
 export interface LayoutPlannerShellQaProps {
   mode: 'wizard' | 'standalone'
@@ -13,12 +18,30 @@ export interface LayoutPlannerShellQaProps {
   children: ReactNode
   footer?: ReactNode
   className?: string
+  desktopRequiredExitHref?: string
+  desktopRequiredExitLabel?: string
 }
 
 /**
  * QA layout planner shell — document scroll only (no viewport lock, no nested overflow).
  */
 export function LayoutPlannerShellQa({
+  desktopRequiredExitHref,
+  desktopRequiredExitLabel,
+  ...props
+}: LayoutPlannerShellQaProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <LayoutPlannerShellQaInner
+        {...props}
+        desktopRequiredExitHref={desktopRequiredExitHref}
+        desktopRequiredExitLabel={desktopRequiredExitLabel}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function LayoutPlannerShellQaInner({
   mode,
   header,
   leftRail,
@@ -26,7 +49,10 @@ export function LayoutPlannerShellQa({
   children,
   footer,
   className,
+  desktopRequiredExitHref,
+  desktopRequiredExitLabel,
 }: LayoutPlannerShellQaProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const showSideRail = Boolean(leftRail || stats)
 
   return (
@@ -37,6 +63,10 @@ export function LayoutPlannerShellQa({
         className
       )}
     >
+      <DesktopScreenRequiredOverlay
+        exitHref={desktopRequiredExitHref}
+        exitLabel={desktopRequiredExitLabel}
+      />
       {header}
 
       {showSideRail && leftRail ? (
@@ -76,7 +106,14 @@ export function LayoutPlannerShellQa({
           className="relative flex min-w-0 flex-1 flex-col"
           aria-label="Floor plan canvas"
         >
-          {children}
+          {showDesktopRequired ? (
+            <div
+              className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
+              aria-hidden
+            />
+          ) : (
+            children
+          )}
         </main>
       </div>
 

@@ -13,8 +13,9 @@ import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
-import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import { useOptionalMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
+  FLOOR_PLAN_DESKTOP_REQUIRED_MESSAGE,
   isPocketSizedViewport,
   useFloorPlanViewportDimensions,
   type FloorPlanViewportTier,
@@ -75,10 +76,18 @@ export function FloorPlanViewportLayoutProvider({ children }: { children: ReactN
 const BLUEPRINT_GRID_CLASS =
   'bg-slate-950 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]'
 
+export interface DesktopScreenRequiredOverlayProps {
+  exitHref?: string
+  exitLabel?: string
+}
+
 /** Full-screen iron-dome gate — canvas unmounted; cyber-arcade fallback UI. */
-export function DesktopScreenRequiredOverlay() {
+export function DesktopScreenRequiredOverlay({
+  exitHref,
+  exitLabel = 'Abort Mission & Go Back 🚀',
+}: DesktopScreenRequiredOverlayProps = {}) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
-  const { selectedEventId } = useMarketManagement()
+  const selectedEventId = useOptionalMarketManagement()?.selectedEventId
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -96,12 +105,11 @@ export function DesktopScreenRequiredOverlay() {
   }, [showDesktopRequired])
 
   const handleAbortMission = useCallback(() => {
-    router.push(
-      selectedEventId
-        ? `/coordinator/events/${selectedEventId}`
-        : COORDINATOR_STUDIO_PATH
-    )
-  }, [router, selectedEventId])
+    const fallbackHref = selectedEventId
+      ? `/coordinator/events/${selectedEventId}`
+      : COORDINATOR_STUDIO_PATH
+    router.push(exitHref ?? fallbackHref)
+  }, [exitHref, router, selectedEventId])
 
   if (!showDesktopRequired || !mounted) return null
 
@@ -144,6 +152,10 @@ export function DesktopScreenRequiredOverlay() {
           This layout canvas is way too massive for a pocket-sized screen.
         </p>
 
+        <p className="mt-3 rounded-lg border border-amber-400/25 bg-amber-950/30 px-3 py-2 text-sm font-semibold leading-relaxed text-amber-100">
+          {FLOOR_PLAN_DESKTOP_REQUIRED_MESSAGE}
+        </p>
+
         <p className="mt-4 text-sm leading-relaxed text-slate-300">
           You are trying to orchestrate an entire physical marketplace on a screen meant for
           checking text messages. To snap doors flat, give those yellow vendor tables their
@@ -168,7 +180,7 @@ export function DesktopScreenRequiredOverlay() {
           )}
           data-testid="floor-plan-desktop-required-exit"
         >
-          Abort Mission &amp; Go Back 🚀
+          {exitLabel}
         </Button>
       </div>
     </div>
