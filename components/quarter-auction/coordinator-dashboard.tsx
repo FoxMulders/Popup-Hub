@@ -86,6 +86,15 @@ export function CoordinatorQuarterAuction({
   }, [eventId])
 
   useEffect(() => {
+    if (!activeItem?.id) return
+    const preset =
+      activeItem.entry_cost_credits != null
+        ? activeItem.entry_cost_credits
+        : settings.default_entry_credits
+    setEntryCost(String(preset))
+  }, [activeItem?.id, activeItem?.entry_cost_credits, settings.default_entry_credits])
+
+  useEffect(() => {
     loadVendors()
   }, [loadVendors])
 
@@ -370,7 +379,7 @@ export function CoordinatorQuarterAuction({
               </p>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="default-entry">Default item entry (quarters)</Label>
+              <Label htmlFor="default-entry">Default starting amount (optional)</Label>
               <Input
                 id="default-entry"
                 type="number"
@@ -381,7 +390,8 @@ export function CoordinatorQuarterAuction({
                 }
               />
               <p className="text-xs text-muted-foreground">
-                Starting value when activating items — each item can be 1, 2, or more quarters.
+                Placeholder until each vendor&apos;s price is entered live. Most nights this changes
+                item by item when they&apos;re on stage.
               </p>
             </div>
             <div className="space-y-1 sm:col-span-2">
@@ -517,41 +527,57 @@ export function CoordinatorQuarterAuction({
             </div>
 
             {activeItem.status === 'active_price_setting' && (
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="entry-cost">Item entry (quarters per paddle)</Label>
-                  <Input
-                    id="entry-cost"
-                    type="number"
-                    min={1}
-                    value={entryCost}
-                    onChange={(e) => setEntryCost(e.target.value)}
-                    className="w-32"
-                  />
-                </div>
-                <Button
-                  onClick={() => setItemEntryCost(activeItem.id)}
-                  disabled={busy === `cost:${activeItem.id}`}
-                >
-                  Save entry cost
-                </Button>
-                <Button
-                  className="gap-1.5"
-                  disabled={!!busy || !canStartAuction}
-                  onClick={async () => {
-                    const credits = parseInt(entryCost, 10) || settings.default_entry_credits
-                    await setItemEntryCost(activeItem.id)
-                    await itemAction(activeItem.id, 'transition', { to_status: 'bidding_open' })
-                  }}
-                >
-                  <Play className="h-4 w-4" />
-                  Start bidding
-                </Button>
-                {!canStartAuction && (
-                  <p className="w-full text-xs text-harvest-800">
-                    Waiting for advertised start time before bidding can open.
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-forest">Vendor on stage — enter bid amount</p>
+                  <p className="text-xs text-muted-foreground">
+                    The vendor announces quarters per paddle. Type what you hear, then open bidding.
+                    {activeItem.entry_cost_credits != null ? (
+                      <>
+                        {' '}
+                        Vendor suggested{' '}
+                        {formatCredits(activeItem.entry_cost_credits)} — adjust if they announce
+                        something different.
+                      </>
+                    ) : null}
                   </p>
-                )}
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="entry-cost">Quarters per paddle</Label>
+                    <Input
+                      id="entry-cost"
+                      type="number"
+                      min={1}
+                      value={entryCost}
+                      onChange={(e) => setEntryCost(e.target.value)}
+                      className="w-32"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => setItemEntryCost(activeItem.id)}
+                    disabled={busy === `cost:${activeItem.id}`}
+                  >
+                    Save entry cost
+                  </Button>
+                  <Button
+                    className="gap-1.5"
+                    disabled={!!busy || !canStartAuction}
+                    onClick={async () => {
+                      const credits = parseInt(entryCost, 10) || settings.default_entry_credits
+                      await setItemEntryCost(activeItem.id)
+                      await itemAction(activeItem.id, 'transition', { to_status: 'bidding_open' })
+                    }}
+                  >
+                    <Play className="h-4 w-4" />
+                    Start bidding
+                  </Button>
+                  {!canStartAuction && (
+                    <p className="w-full text-xs text-harvest-800">
+                      Waiting for advertised start time before bidding can open.
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -692,7 +718,9 @@ export function CoordinatorQuarterAuction({
                     onClick={() =>
                       itemAction(item.id, 'transition', {
                         to_status: 'active_price_setting',
-                        entry_cost_credits: settings.default_entry_credits,
+                        ...(item.entry_cost_credits != null
+                          ? { entry_cost_credits: item.entry_cost_credits }
+                          : {}),
                       })
                     }
                   >
@@ -720,9 +748,9 @@ export function CoordinatorQuarterAuction({
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Paddles: {formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)} each · Pool:{' '}
-        {settings.paddle_pool_size ?? 200} numbers · Default item entry:{' '}
-        {formatCredits(settings.default_entry_credits)} (per item, per paddle at bid time)
+        Paddles: {formatCredits(settings.paddle_purchase_credits ?? DEFAULT_PADDLE_PURCHASE_CREDITS)} each ·
+        Pool: {settings.paddle_pool_size ?? 200} numbers · Bid amount is set per item when the vendor is
+        on stage (or optionally when they submit their item).
       </p>
     </div>
   )

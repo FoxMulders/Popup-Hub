@@ -27,13 +27,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
       <header className="safe-top shrink-0 border-b border-border bg-card/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4">
+          <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               Platform Admin
             </p>
             <h1 className="font-heading text-lg font-semibold text-foreground">Operations Console</h1>
           </div>
+          <nav className="flex flex-wrap items-center gap-2 text-sm">
+            <Link
+              href="/admin/feedback"
+              className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
+            >
+              Feature requests
+            </Link>
+            <Link
+              href="/admin/venues"
+              className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
+            >
+              Venue submissions
+            </Link>
+          </nav>
           <Link
             href={COORDINATOR_STUDIO_PATH}
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"

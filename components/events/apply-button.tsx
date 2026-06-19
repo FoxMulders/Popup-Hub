@@ -156,6 +156,7 @@ export function ApplyButton({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('SQUARE')
   const [permitFile, setPermitFile] = useState<File | null>(null)
   const [tableCount, setTableCount] = useState(1)
+  const [communityLeagueMemberClaim, setCommunityLeagueMemberClaim] = useState(false)
   const [boothAccess, setBoothAccess] = useState<{
     hasPriorityInvite: boolean
     hasPriorityExclusive: boolean
@@ -245,7 +246,11 @@ export function ApplyButton({
       ? computeApplicationBoothPriceCents(
           applySlot.pricePerBooth,
           event,
-          showTableCount ? tableCount : 1
+          showTableCount ? tableCount : 1,
+          {
+            communityLeagueMemberClaim:
+              communityLeagueMemberClaim && Boolean(event.community_league_discount_enabled),
+          }
         )
       : 0
   const requiresPayment = checkoutBoothPriceCents > 0 && !allCategoriesFull
@@ -522,6 +527,8 @@ export function ApplyButton({
         paymentMethod,
         applicableDocumentationUrl,
         tableCount: showTableCount ? tableCount : 1,
+        communityLeagueMemberClaim:
+          communityLeagueMemberClaim && Boolean(event.community_league_discount_enabled),
       }),
     })
 
@@ -1029,6 +1036,21 @@ export function ApplyButton({
                       }}
                     />
                   </div>
+                ) : null}
+                {event.community_league_discount_enabled &&
+                (event.community_league_discount_percent ?? 0) > 0 ? (
+                  <label className="flex items-start gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-stone-300"
+                      checked={communityLeagueMemberClaim}
+                      onChange={(e) => setCommunityLeagueMemberClaim(e.target.checked)}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      I am a community league member (
+                      {event.community_league_discount_percent}% booth discount)
+                    </span>
+                  </label>
                 ) : null}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Booth fee</span>

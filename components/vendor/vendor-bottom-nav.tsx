@@ -3,10 +3,12 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ClipboardList, Store, Ticket, User } from 'lucide-react'
+import { ClipboardList, Home, Store, Ticket, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SITE_HOME_PATH } from '@/lib/nav/site-home'
 
 const TABS = [
+  { href: SITE_HOME_PATH, label: 'Home', icon: Home },
   { href: '/vendor/events', label: 'Markets', icon: Store },
   { href: '/vendor/applications', label: 'Applications', icon: ClipboardList },
   { href: '/vendor/passport', label: 'Passport', icon: Ticket },

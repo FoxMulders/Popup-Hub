@@ -3,6 +3,7 @@ import { CalendarDays } from 'lucide-react'
 import { ForOrganizersJsonLd } from '@/components/seo/for-organizers-json-ld'
 import { MarketingCtaBand } from '@/components/public/marketing/marketing-cta-band'
 import { MarketingFeatures } from '@/components/public/marketing/marketing-features'
+import { EventValueCalculator } from '@/components/public/event-value-calculator'
 import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
 
 const STEPS = [
@@ -38,6 +39,11 @@ const FAQ = [
     question: 'Can I run juried vendor applications?',
     answer:
       'Yes. Configure categories, booth fees, insurance requirements, and approve or decline each vendor application before they pay.',
+  },
+  {
+    question: 'What if my market is cancelled or never happens?',
+    answer:
+      'Delete unpublished drafts anytime from your event setup. For published markets, open the event hub and use the status menu to cancel — you will record a reason, and vendors are handled per your refund policy. Late cancellations may affect your public reliability score.',
   },
 ] as const
 
@@ -81,6 +87,8 @@ export function ForOrganizersLanding() {
           </div>
           <div className="marketing-section-divider" aria-hidden />
         </section>
+
+        <EventValueCalculator />
 
         <MarketingFeatures />
 

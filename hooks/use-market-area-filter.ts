@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import {
   DEFAULT_DISTANCE_RADIUS_KM,
   MARKET_RADIUS_STORAGE_KEY,
@@ -29,6 +30,19 @@ function readStoredRadius(): number | null {
   return DEFAULT_DISTANCE_RADIUS_KM
 }
 
+function geolocationErrorMessage(code: number): string {
+  if (code === 1) {
+    return 'Location permission denied. Allow location in your browser settings or enter your home address.'
+  }
+  if (code === 2) {
+    return 'Could not determine your position. Try entering your home address instead.'
+  }
+  if (code === 3) {
+    return 'Location request timed out. Try again or enter your home address.'
+  }
+  return 'Could not read your location. Try entering your home address instead.'
+}
+
 export function useMarketAreaFilter() {
   const [origin, setOrigin] = useState<LatLng>(DEFAULT_REGION)
   const [radiusKm, setRadiusKmState] = useState<number | null>(DEFAULT_DISTANCE_RADIUS_KM)
@@ -53,8 +67,18 @@ export function useMarketAreaFilter() {
     }
   }, [])
 
+  const setOriginFromPlace = useCallback((lat: number, lng: number, label: string) => {
+    const next = { lat, lng }
+    setOrigin(next)
+    setLocationLabel(label)
+    storeUserLocation({ ...next, label })
+  }, [])
+
   const useMyLocation = useCallback(() => {
-    if (!navigator.geolocation) return
+    if (!navigator.geolocation) {
+      toast.error('Location is not available on this device. Enter your home address instead.')
+      return
+    }
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -64,8 +88,9 @@ export function useMarketAreaFilter() {
         storeUserLocation({ ...next, label: NEAR_YOU_LABEL })
         setLocating(false)
       },
-      () => {
+      (err) => {
         setLocating(false)
+        toast.error(geolocationErrorMessage(err.code))
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     )
@@ -78,5 +103,6 @@ export function useMarketAreaFilter() {
     locationLabel,
     locating,
     useMyLocation,
+    setOriginFromPlace,
   }
 }

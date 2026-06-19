@@ -1,13 +1,8 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { SiteContentShell } from '@/components/layout/site-content-shell'
-import {
-  ACTIVE_PORTAL_COOKIE,
-  getDefaultDashboard,
-  parseActivePortal,
-} from '@/lib/portals/active-portal'
-import { countCoordinatorApprovals } from '@/lib/vendor/access'
+import { ShopperShell } from '@/components/shopper/shopper-shell'
+import { PublicLanding } from '@/components/public/public-landing'
+import type { Profile } from '@/types/database'
 
 export default async function RootPage() {
   const supabase = await createClient()
@@ -17,7 +12,6 @@ export default async function RootPage() {
 
   if (!user) {
     const { GuestNav } = await import('@/components/nav/guest-nav')
-    const { PublicLanding } = await import('@/components/public/public-landing')
     return (
       <div className="flex min-h-0 flex-1 flex-col site-surface">
         <GuestNav />
@@ -28,14 +22,11 @@ export default async function RootPage() {
     )
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  const approvalCount = await countCoordinatorApprovals(supabase, user.id)
-  const cookieStore = await cookies()
-  const activePortal = parseActivePortal(cookieStore.get(ACTIVE_PORTAL_COOKIE)?.value)
-  redirect(getDefaultDashboard(profile?.role ?? 'shopper', approvalCount, activePortal))
+  const { data: profileRow } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+  const profile = profileRow as Profile | null
+  return (
+    <ShopperShell profile={profile} hideBottomNav>
+      <PublicLanding />
+    </ShopperShell>
+  )
 }

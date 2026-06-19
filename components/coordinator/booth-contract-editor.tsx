@@ -27,6 +27,7 @@ import {
 } from '@/lib/legal/booth-contract-templates'
 import { enabledContractClausesForStorage } from '@/lib/booth-contract/resolve-event-contract'
 import { uploadBoothContractPdf } from '@/lib/coordinator/upload-booth-contract-pdf'
+import { GoogleDocsContractImport } from '@/components/coordinator/google-docs-contract-import'
 import { buildBoothContractEnhancementPrefill } from '@/lib/feedback/booth-contract-enhancement-prefill'
 import { useFeatureRequest } from '@/components/feedback/feature-request-context'
 import type { BoothClearancePolicy, BoothContractClause } from '@/types/database'
@@ -277,10 +278,26 @@ export function BoothContractEditor({
             ))}
           </div>
 
-          <Button type="button" variant="outline" size="sm" onClick={addCustomClause}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Add custom clause
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={addCustomClause}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add custom clause
+            </Button>
+            <GoogleDocsContractImport
+              onImportClauses={(imported) => {
+                const baseOrder = clauses.length
+                onClausesChange([
+                  ...clauses,
+                  ...imported.map((clause, index) => ({
+                    ...clause,
+                    sort_order: baseOrder + index,
+                    source: 'custom' as const,
+                  })),
+                ])
+                onContractReviewedChange?.(false)
+              }}
+            />
+          </div>
 
           <div className="space-y-2 rounded-lg border border-dashed border-stone-200 p-3">
             <Label htmlFor="booth-contract-pdf" className="text-sm font-medium">

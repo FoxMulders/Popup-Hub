@@ -28,12 +28,20 @@ export const MARKET_WIZARD_STEPS_SHORT: WizardStepDefinition[] = [
   { id: 2, label: 'Capacity', hint: 'Categories & deploy' },
 ]
 
+/** 2-step wizard for quarter auctions — no floor plan, vendor spots instead of booth capacity. */
+export const QUARTER_AUCTION_WIZARD_STEPS: WizardStepDefinition[] = [
+  { id: 1, label: 'Event & Venue', hint: 'Name, schedule, location & map' },
+  { id: 2, label: 'Vendor spots', hint: 'Who can sell tonight' },
+]
+
 interface WizardStepStepperProps {
   steps: WizardStepDefinition[]
   currentStep: WizardStep
   maxReachedStep: WizardStep
   onStepChange?: (step: WizardStep) => void
   allowNavigation?: boolean
+  /** Accessible name for the progress nav (listing-aware). */
+  ariaLabel?: string
 }
 
 export function WizardStepStepper({
@@ -42,10 +50,11 @@ export function WizardStepStepper({
   maxReachedStep,
   onStepChange,
   allowNavigation = false,
+  ariaLabel = 'Market setup wizard progress',
 }: WizardStepStepperProps) {
   return (
     <nav
-      aria-label="Market setup wizard progress"
+      aria-label={ariaLabel}
       className={cn(WIZARD_PANEL, 'px-4 py-3')}
     >
       <ol className="flex flex-wrap items-center justify-between gap-2 sm:gap-0">

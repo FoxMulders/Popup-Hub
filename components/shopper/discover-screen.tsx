@@ -57,6 +57,7 @@ export function DiscoverScreen({
     locationLabel,
     locating,
     useMyLocation,
+    setOriginFromPlace,
   } = useMarketAreaFilter()
 
   const { preset: datePreset, date: filterDate } = useMemo(
@@ -258,6 +259,7 @@ export function DiscoverScreen({
           locationLabel={locationLabel}
           locating={locating}
           onUseMyLocation={useMyLocation}
+          onAddressSelect={setOriginFromPlace}
         />
       </div>
 

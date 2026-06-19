@@ -11,17 +11,56 @@ import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
+import {
+  GUEST_RIBBON_LINKS,
+  PATRON_RIBBON_LINKS,
+  SITE_HOME_PATH,
+} from '@/components/nav/site-ribbon-links'
 import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import { Button } from '@/components/ui/button'
 import type { Profile } from '@/types/database'
-import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
+import { cn } from '@/lib/utils'
 
 interface ShopperTopBarProps {
   profile: Profile | null
   availablePortals?: ActivePortal[]
   portalCookie?: string
   onSuggestImprovement?: () => void
+}
+
+function RibbonLinks({
+  links,
+  pathname,
+}: {
+  links: { href: string; label: string }[]
+  pathname: string
+}) {
+  return (
+    <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 overflow-x-hidden md:flex lg:gap-2">
+      {links.map(({ href, label }) => {
+        const active =
+          href === SITE_HOME_PATH
+            ? pathname === SITE_HOME_PATH
+            : pathname === href || pathname.startsWith(`${href}/`)
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={cn(
+              'shrink-0 rounded-full px-3 py-2 text-sm font-medium transition-colors lg:px-4',
+              active
+                ? 'bg-forest/10 text-forest font-semibold'
+                : 'text-foreground/90 hover:bg-canvas/80 hover:text-foreground'
+            )}
+            aria-current={active ? 'page' : undefined}
+          >
+            {label}
+          </Link>
+        )
+      })}
+    </div>
+  )
 }
 
 export function ShopperTopBar({
@@ -50,12 +89,7 @@ export function ShopperTopBar({
     await signOutAndRedirectToLogin(supabase)
   }
 
-  const navLinks = [
-    { href: '/discover', label: 'Discover Markets' },
-    { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label },
-    { href: '/favorites', label: 'Favorites' },
-    { href: '/wallet', label: 'Wallet' },
-  ]
+  const navLinks = profile ? PATRON_RIBBON_LINKS : GUEST_RIBBON_LINKS
 
   const guestFooter = (
     <>
@@ -71,20 +105,23 @@ export function ShopperTopBar({
   )
 
   return (
-    <header className="sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top">
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 sm:max-w-7xl sm:px-6">
+    <header className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top">
+      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 sm:max-w-7xl sm:px-6 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
           left={
-            <BrandLogoLockup className="shrink-0" href="/discover" />
+            <BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />
           }
           center={
-            profile && availablePortals.length > 1 ? (
-              <PortalTabs
-                availablePortals={availablePortals}
-                activePortal={activePortal}
-                className="hidden sm:inline-flex"
-              />
-            ) : null
+            <div className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-hidden sm:flex">
+              {profile && availablePortals.length > 1 ? (
+                <PortalTabs
+                  availablePortals={availablePortals}
+                  activePortal={activePortal}
+                  className="shrink-0"
+                />
+              ) : null}
+              <RibbonLinks links={navLinks} pathname={pathname} />
+            </div>
           }
           right={
             profile ? (

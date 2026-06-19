@@ -43,7 +43,8 @@ import {
   DEFAULT_TABLE_SIZE,
   isLayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
-import type { AutoArrangeMode } from '../engine/auto-arrange'
+import { LayoutImageImportButton } from './layout-image-import-button'
+import type { LayoutImageImportResult } from './layout-image-import-button'
 import {
   LayoutMode,
   layoutModeLabel,
@@ -51,6 +52,7 @@ import {
 import {
   AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP,
 } from '../engine/traffic-flow-prerequisites'
+import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { DrawShape, ToolState } from './types'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
@@ -576,6 +578,10 @@ export interface CanvasCommandBarBlockContext {
   onFillVendorTables?: (count: number) => void
   onFillPatronTables?: (count: number) => void
   fillRoomDisabledReason?: string | null
+  onImportLayoutImage?: (result: LayoutImageImportResult) => void | Promise<void>
+  importLayoutRoomWidthFt?: number
+  importLayoutRoomLengthFt?: number
+  importLayoutTableLengthFt?: number
   eventId?: string | null
   canvasVendorBoothCount?: number
   populateTestSuiteOnCanvas?: (
@@ -1530,10 +1536,26 @@ export function renderCanvasCommandBarBlock(
         </>
       )
 
-    case 'utilities':
+    case 'utilities': {
+      const layoutImportControl =
+        ctx.onImportLayoutImage ? (
+          <>
+            <div className={toolbarDividerClass(compact)} aria-hidden />
+            <LayoutImageImportButton
+              compact={compact}
+              roomWidthFt={ctx.importLayoutRoomWidthFt}
+              roomLengthFt={ctx.importLayoutRoomLengthFt}
+              tableLengthFt={ctx.importLayoutTableLengthFt}
+              disabled={Boolean(ctx.autoArrangeRunning)}
+              onImported={ctx.onImportLayoutImage}
+            />
+          </>
+        ) : null
+
       if (headerBarLayout) {
         return (
           <>
+            {layoutImportControl}
             {ctx.onBoothMapLabelModeChange ? (
               <>
                 <div className={toolbarDividerClass(compact)} aria-hidden />
@@ -1680,6 +1702,7 @@ export function renderCanvasCommandBarBlock(
         )
         return (
           <>
+            {layoutImportControl}
             <div
               className="flex items-center space-x-2"
               role="group"
@@ -2272,6 +2295,7 @@ export function renderCanvasCommandBarBlock(
           </span>
         </>
       )
+    }
 
     default:
       return null

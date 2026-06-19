@@ -21,7 +21,8 @@ interface EventReadinessChecklistProps {
   hasLayout: boolean
   hasSquare: boolean
   pendingCount: number
-  hasAuction?: boolean
+  /** For quarter-auction listings: catalog has items or vendors approved for auction. */
+  quarterAuctionCatalogReady?: boolean
 }
 
 interface ChecklistItem {
@@ -44,7 +45,7 @@ export function EventReadinessChecklist({
   hasLayout,
   hasSquare,
   pendingCount,
-  hasAuction = false,
+  quarterAuctionCatalogReady = false,
 }: EventReadinessChecklistProps) {
   const requiresSquare = (event.category_limits ?? []).some((cl) => cl.price_per_booth > 0)
   const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
@@ -54,7 +55,7 @@ export function EventReadinessChecklist({
     { key: 'created', label: 'Event created', done: true },
     {
       key: 'categories',
-      label: 'Categories & booth caps set',
+      label: isQuarterAuction ? 'Vendor spots configured' : 'Categories & booth caps set',
       done: (event.category_limits?.length ?? 0) > 0,
     },
     {
@@ -87,8 +88,8 @@ export function EventReadinessChecklist({
       ? [
           {
             key: 'auction',
-            label: 'Quarter auction configured',
-            done: hasAuction,
+            label: 'Auction catalog ready',
+            done: quarterAuctionCatalogReady,
             skippable: true,
           } satisfies ChecklistItem,
         ]
@@ -119,7 +120,7 @@ export function EventReadinessChecklist({
       categories: {
         type: 'link',
         href: `/coordinator/events/${eventId}/edit#categories`,
-        label: 'Add categories & caps',
+        label: isQuarterAuction ? 'Set vendor spots' : 'Add categories & caps',
       },
       square: {
         type: 'link',
@@ -147,10 +148,10 @@ export function EventReadinessChecklist({
       auction: {
         type: 'link',
         href: `/coordinator/events/${eventId}/auctions`,
-        label: 'Set up quarter auction',
+        label: 'Open auction control',
       },
     }
-  }, [eventId, pendingCount, vendorInviteUrl])
+  }, [eventId, pendingCount, vendorInviteUrl, isQuarterAuction])
 
   const editStepActions = useMemo((): Record<string, StepAction> => {
     return {
@@ -162,7 +163,7 @@ export function EventReadinessChecklist({
       categories: {
         type: 'link',
         href: `/coordinator/events/${eventId}/edit#categories`,
-        label: 'Edit categories & caps',
+        label: isQuarterAuction ? 'Edit vendor spots' : 'Edit categories & caps',
       },
       published: {
         type: 'scroll',
@@ -197,7 +198,7 @@ export function EventReadinessChecklist({
       auction: {
         type: 'link',
         href: `/coordinator/events/${eventId}/auctions`,
-        label: 'Manage quarter auction',
+        label: 'Manage auction catalog',
       },
     }
   }, [eventId])
@@ -207,8 +208,9 @@ export function EventReadinessChecklist({
       'Use the status dropdown at the top of this page and choose “Publish Event” so vendors can discover and apply.',
     contract:
       'Review the default digital booth contract, add custom clauses, or attach your PDF before vendors apply.',
-    categories:
-      'Add at least one vendor category with booth slot limits and pricing.',
+    categories: isQuarterAuction
+      ? 'Add at least one vendor type with spot limits so vendors can apply.'
+      : 'Add at least one vendor category with booth slot limits and pricing.',
     square: requiresSquare
       ? 'Connect Square before accepting paid booth fees.'
       : 'Optional for free events — skip if you are not charging booth fees.',
@@ -216,7 +218,8 @@ export function EventReadinessChecklist({
       'Share your vendor invite link on Facebook, email, or social — makers sign up and land on your market apply page in one step.',
     approved: 'Approve vendors from the applications board below.',
     layout: 'Place booths in the layout planner and save.',
-    auction: 'Create at least one quarter auction for market day, or skip if you are not running one.',
+    auction:
+      'Approve vendors and add catalog items on the auction control page — bid amounts are set per item at showtime.',
   }
 
   const runAction = useCallback((action: StepAction) => {

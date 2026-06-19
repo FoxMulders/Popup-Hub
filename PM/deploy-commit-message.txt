@@ -1,1 +1,1 @@
-feat: ship 131 session updates (relax venue type restriction for markets; trust directory navigation; organizer trust directory vet + Lauderdale; /check/review select dropdown width; +127 more)
+feat: ship 135 session updates (coordinator feature roadmap (8 items); patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)

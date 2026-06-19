@@ -11,9 +11,10 @@ import {
 } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
+import { Monitor, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
-import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
+import { useOptionalMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
   isPocketSizedViewport,
   useFloorPlanViewportDimensions,
@@ -72,15 +73,25 @@ export function FloorPlanViewportLayoutProvider({ children }: { children: ReactN
   )
 }
 
-const BLUEPRINT_GRID_CLASS =
-  'bg-slate-950 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]'
+export interface DesktopScreenRequiredOverlayProps {
+  eventId?: string | null
+  onSaveDraft?: () => void | Promise<void>
+  saveDraftLoading?: boolean
+}
 
-/** Full-screen iron-dome gate — canvas unmounted; cyber-arcade fallback UI. */
-export function DesktopScreenRequiredOverlay() {
+/** Full-screen gate — layout canvas unmounted on pocket-sized viewports. */
+export function DesktopScreenRequiredOverlay({
+  eventId: eventIdProp,
+  onSaveDraft,
+  saveDraftLoading = false,
+}: DesktopScreenRequiredOverlayProps = {}) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
-  const { selectedEventId } = useMarketManagement()
+  const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
 
   useEffect(() => {
     setMounted(true)
@@ -95,86 +106,105 @@ export function DesktopScreenRequiredOverlay() {
     }
   }, [showDesktopRequired])
 
-  const handleAbortMission = useCallback(() => {
-    router.push(
-      selectedEventId
-        ? `/coordinator/events/${selectedEventId}`
-        : COORDINATOR_STUDIO_PATH
-    )
-  }, [router, selectedEventId])
+  const navigateAway = useCallback(() => {
+    router.push(eventId ? `/coordinator/events/${eventId}` : COORDINATOR_STUDIO_PATH)
+  }, [eventId, router])
+
+  const handleSaveDraft = useCallback(async () => {
+    if (onSaveDraft) {
+      setSaving(true)
+      try {
+        await onSaveDraft()
+      } finally {
+        setSaving(false)
+      }
+      navigateAway()
+      return
+    }
+    navigateAway()
+  }, [navigateAway, onSaveDraft])
 
   if (!showDesktopRequired || !mounted) return null
 
   const overlay = (
     <div
-      className={cn(
-        'fixed inset-0 z-[10001] flex items-center justify-center overflow-y-auto p-4 sm:p-6 pointer-events-auto',
-        BLUEPRINT_GRID_CLASS
-      )}
+      className="fixed inset-0 z-[10001] flex items-center justify-center overflow-y-auto bg-stone-950/90 p-4 sm:p-6 pointer-events-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="pocket-viewport-title"
       data-testid="floor-plan-desktop-required"
     >
-      <div
-        className={cn(
-          'relative w-full max-w-lg rounded-2xl border border-amber-500/35 bg-slate-900/95 p-6 text-left shadow-[0_0_20px_rgba(234,179,8,0.15)] backdrop-blur-sm sm:p-8',
-          'animate-in fade-in zoom-in-95 duration-300'
-        )}
-      >
-        <p
-          className="mb-4 inline-flex gap-2 text-3xl motion-safe:animate-[spin_8s_linear_infinite]"
-          aria-hidden
-        >
-          <span className="inline-block motion-safe:animate-bounce">📐</span>
-          <span className="inline-block motion-safe:animate-pulse">🤖</span>
-          <span className="inline-block motion-safe:animate-bounce [animation-delay:150ms]">
-            🚧
-          </span>
-        </p>
+      <div className="relative w-full max-w-lg rounded-2xl border border-stone-700 bg-stone-900 p-6 text-left shadow-xl sm:p-8">
+        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-forest/15 text-forest">
+          <Monitor className="h-6 w-6" aria-hidden />
+        </div>
 
         <h2
           id="pocket-viewport-title"
-          className="font-heading text-xl font-bold tracking-tight text-amber-50 sm:text-2xl"
+          className="font-heading text-xl font-bold tracking-tight text-stone-50 sm:text-2xl"
         >
-          Whoa there, Ant-Man! 🐜
+          Layout needs a larger screen
         </h2>
 
-        <p className="mt-2 text-sm font-semibold text-amber-200/90 sm:text-base">
-          This layout canvas is way too massive for a pocket-sized screen.
+        <p className="mt-2 text-sm leading-relaxed text-stone-300">
+          The floor plan designer needs a tablet in landscape or a desktop monitor. Your market
+          details are safe — save a draft now and continue layout on a bigger screen.
         </p>
 
-        <p className="mt-4 text-sm leading-relaxed text-slate-300">
-          You are trying to orchestrate an entire physical marketplace on a screen meant for
-          checking text messages. To snap doors flat, give those yellow vendor tables their
-          mandatory 360-degree, 2-foot breathing rooms, and summon our Gemini-powered traffic
-          flow wizard, you are going to need a bigger boat. Or, you know... a regular desktop
-          monitor.
-        </p>
-
-        <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/50 p-4 text-sm leading-relaxed text-slate-300">
-          💡 Pro-Tip: Go find a laptop, grab a coffee, and orchestrate the ultimate floor plan
-          layout like the real operational mastermind you are.
+        <div className="mt-4 rounded-lg border border-stone-700 bg-stone-800/50 p-4 text-sm text-stone-400">
+          Minimum viewport: 1024px wide and 550px tall. Phones are blocked; most tablets in
+          landscape work fine.
         </div>
 
-        <Button
-          type="button"
-          size="lg"
-          onClick={handleAbortMission}
-          className={cn(
-            'touch-target mt-6 min-h-12 w-full touch-manipulation',
-            'bg-amber-500 font-semibold text-slate-950 hover:bg-amber-400',
-            'shadow-[0_0_16px_rgba(234,179,8,0.35)]'
-          )}
-          data-testid="floor-plan-desktop-required-exit"
-        >
-          Abort Mission &amp; Go Back 🚀
-        </Button>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          {onSaveDraft ? (
+            <Button
+              type="button"
+              size="lg"
+              disabled={saving || saveDraftLoading}
+              onClick={() => void handleSaveDraft()}
+              className="min-h-12 flex-1 touch-manipulation gap-2"
+              data-testid="floor-plan-save-draft-exit"
+            >
+              <Save className="h-4 w-4" aria-hidden />
+              {saving || saveDraftLoading ? 'Saving…' : 'Save draft & exit'}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            size="lg"
+            variant={onSaveDraft ? 'outline' : 'default'}
+            onClick={navigateAway}
+            className="min-h-12 flex-1 touch-manipulation border-stone-600 text-stone-100 hover:bg-stone-800"
+            data-testid="floor-plan-desktop-required-exit"
+          >
+            {onSaveDraft ? 'Exit without saving' : 'Back to event'}
+          </Button>
+        </div>
       </div>
     </div>
   )
 
   return createPortal(overlay, document.body)
+}
+
+/** Banner shown on event hub when redirected from mobile layout route. */
+export function DesktopLayoutRequiredBanner({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950',
+        className
+      )}
+      role="status"
+    >
+      <p className="font-semibold">Floor plan layout requires a tablet or desktop</p>
+      <p className="mt-1 text-amber-900/90">
+        Open this market on a larger screen to design booths in Blueprint Studio or the setup
+        wizard layout step.
+      </p>
+    </div>
+  )
 }
 
 /** @deprecated Iron dome blocks all sub-desktop viewports — banner is no longer shown. */

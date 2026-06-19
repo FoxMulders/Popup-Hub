@@ -13,7 +13,6 @@ import { EventScheduleEditor } from '@/components/coordinator/event-schedule-edi
 import { RefundExceptionsPanel } from '@/components/coordinator/refund-exceptions-panel'
 import { VendorAnnouncement } from '@/components/coordinator/vendor-announcement'
 import { CategoryCapacityMatrix } from '@/components/coordinator/category-capacity-matrix'
-import { AuctionCard } from '@/components/auction/auction-card'
 import { buildCategoryCapacityRows } from '@/lib/coordinator/category-capacity-rows'
 import { buttonVariants } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -23,7 +22,9 @@ import { getCancellationReasonLabel } from '@/lib/coordinator/cancellation-reaso
 import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
-import type { BoothApplication, Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
+import { EventHubLayoutNotice } from '@/components/coordinator/event-hub-layout-notice'
+import { Suspense } from 'react'
+import type { Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -61,7 +62,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   const categoryNameById = buildCategoryNameMap(allCategories ?? [])
 
-  const [{ data: layoutRow }, { data: squareLinked }, { data: scheduleItems }, { data: revenueRows }, { data: eventAuctions }] = await Promise.all([
+  const [{ data: layoutRow }, { data: squareLinked }, { data: scheduleItems }, { data: revenueRows }, { count: catalogItemCount }, { count: qaVendorApprovalCount }] = await Promise.all([
     supabase.from('booth_layouts').select('id').eq('event_id', id).maybeSingle(),
     supabase
       .from('events')
@@ -81,10 +82,13 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
       .eq('event_id', id)
       .eq('status', 'completed'),
     supabase
-      .from('auctions')
-      .select('id, title, item_name, status, pot_amount, winning_paddle_id')
-      .eq('event_id', id)
-      .order('created_at', { ascending: false }),
+      .from('auction_catalog_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', id),
+    supabase
+      .from('quarter_auction_vendor_approvals')
+      .select('vendor_id', { count: 'exact', head: true })
+      .eq('event_id', id),
   ])
 
   const hasSquare = !!event.square_merchant_id || !!squareLinked
@@ -104,6 +108,8 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
   const isCancelled = event.status === 'cancelled'
   const isDraft = event.status === 'draft'
   const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
+  const quarterAuctionCatalogReady =
+    (catalogItemCount ?? 0) > 0 || (qaVendorApprovalCount ?? 0) > 0
 
   const eventRevenueCents =
     revenueRows?.reduce((sum, row) => sum + (row.organizer_payout_amount ?? 0), 0) ?? 0
@@ -125,6 +131,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+      <Suspense fallback={null}>
+        <EventHubLayoutNotice />
+      </Suspense>
       <div className="market-panel p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <EventInlineEditor event={event as Event} />
@@ -265,7 +274,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         hasLayout={hasLayout}
         hasSquare={hasSquare}
         pendingCount={pendingCount}
-        hasAuction={(eventAuctions ?? []).length > 0}
+        quarterAuctionCatalogReady={quarterAuctionCatalogReady}
       />
 
       {!isCancelled && <MarketFeedbackAdminPanel marketId={id} variant="page" />}
@@ -283,35 +292,51 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         <div className="market-panel p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="market-section-title">Quarter Auctions</h2>
+              <h2 className="market-section-title">Auction control</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Run digital quarter auctions during market day.
+                Approve vendors, build the catalog, and run the live quarter auction. Bid amounts are
+                set per item when each vendor is on stage.
               </p>
             </div>
             <Link
               href={`/coordinator/events/${id}/auctions`}
-              className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
+              className={buttonVariants({ variant: 'default', size: 'sm' }) + ' gap-1.5'}
             >
               <Gavel className="h-4 w-4" />
-              Manage auctions
+              Open auction control
             </Link>
           </div>
-          {(eventAuctions ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No auctions yet.{' '}
-              <Link href={`/coordinator/auctions/new?eventId=${id}`} className="font-medium text-forest underline">
-                Create one
-              </Link>
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {(eventAuctions ?? []).slice(0, 5).map((a) => (
-                <li key={a.id}>
-                  <AuctionCard auction={a} eventId={id} href={`/coordinator/events/${id}/auctions`} />
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="text-sm text-muted-foreground">
+            {(catalogItemCount ?? 0) > 0 ? (
+              <>
+                <strong className="text-foreground">{catalogItemCount}</strong> catalog item
+                {(catalogItemCount ?? 0) === 1 ? '' : 's'}
+                {(qaVendorApprovalCount ?? 0) > 0 ? (
+                  <>
+                    {' '}
+                    · <strong className="text-foreground">{qaVendorApprovalCount}</strong> vendor
+                    {(qaVendorApprovalCount ?? 0) === 1 ? '' : 's'} approved for auction
+                  </>
+                ) : null}
+              </>
+            ) : (qaVendorApprovalCount ?? 0) > 0 ? (
+              <>
+                <strong className="text-foreground">{qaVendorApprovalCount}</strong> vendor
+                {(qaVendorApprovalCount ?? 0) === 1 ? '' : 's'} approved — add catalog items to get
+                started.
+              </>
+            ) : (
+              <>
+                No catalog items yet.{' '}
+                <Link
+                  href={`/coordinator/events/${id}/auctions`}
+                  className="font-medium text-forest underline"
+                >
+                  Set up the auction
+                </Link>
+              </>
+            )}
+          </p>
         </div>
       )}
 

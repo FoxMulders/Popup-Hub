@@ -102,6 +102,32 @@ export const PLATFORM_FAQ: FaqItem[] = [
       'Sign up as a Coordinator, create a market from your Markets page, configure booth categories and fees, approve vendor applications, design your floor plan in Blueprint Studio, and run check-in and live operations on market day.',
   },
   {
+    question: 'What if I need to cancel my market?',
+    answer: (
+      <div className="space-y-3">
+        <p>
+          Life happens — Popup Hub lets coordinators cancel or unwind a market without losing access
+          to your account.
+        </p>
+        <p>
+          <strong>Draft markets:</strong> If you started setup but never published, open your event
+          hub or setup wizard and delete the draft. No vendors are charged and nothing is listed
+          publicly.
+        </p>
+        <p>
+          <strong>Published markets:</strong> Open the event hub, use the status menu, and choose{' '}
+          <strong>Cancel Event</strong>. You will confirm the cancellation reason. Cancellations
+          with less than 7 days&apos; notice before the event may affect your coordinator reliability
+          score; documented force-majeure reasons are handled separately.
+        </p>
+        <p>
+          Vendors with paid booths are notified according to your published refund policy and
+          platform payment rules.
+        </p>
+      </div>
+    ),
+  },
+  {
     question: 'What are quarter auctions?',
     answer:
       'Some markets run digital quarter auctions where patrons bid on donated vendor items using quarters in their Popup Hub wallet. Availability depends on the event — check the market page for auction details.',

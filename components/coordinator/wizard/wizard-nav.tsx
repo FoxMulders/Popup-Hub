@@ -22,14 +22,32 @@ interface WizardNavProps {
   nextLabel?: string
   /** Step 1 only — enables proceed CTA pulse when validation passes. */
   stepReady?: boolean
+  /** Quarter-auction listing uses vendor-spots copy instead of market capacity/floor plan. */
+  isQuarterAuction?: boolean
+  /** When true, step 2 finishes the wizard (skip venue layout). */
+  skipVenueLayout?: boolean
 }
 
-export function WizardNav({ step, onBack, onNext, nextDisabled, nextLabel, stepReady }: WizardNavProps) {
-  const defaultNext =
-    step === 1
+export function WizardNav({
+  step,
+  onBack,
+  onNext,
+  nextDisabled,
+  nextLabel,
+  stepReady,
+  isQuarterAuction = false,
+  skipVenueLayout = false,
+}: WizardNavProps) {
+  const defaultNext = isQuarterAuction
+    ? step === 1
+      ? 'Proceed to vendor spots →'
+      : 'Save & open auction control →'
+    : step === 1
       ? 'Proceed to Capacity Settings →'
       : step === 2
-        ? 'Open Floor Plan Canvas →'
+        ? skipVenueLayout
+          ? 'Save market'
+          : 'Open Floor Plan Canvas →'
         : 'Save market'
 
   return (

@@ -29,10 +29,17 @@ export async function POST(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json()
-  const { title, description, image_url, retail_value_cents } = body
+  const { title, description, image_url, retail_value_cents, entry_cost_credits } = body
 
   if (!title?.trim()) {
     return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+  }
+
+  if (
+    entry_cost_credits != null &&
+    (!Number.isFinite(Number(entry_cost_credits)) || Number(entry_cost_credits) < 1)
+  ) {
+    return NextResponse.json({ error: 'Quarters per paddle must be at least 1' }, { status: 400 })
   }
 
   const service = await createServiceClient()
@@ -51,6 +58,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       description: description?.trim() || null,
       image_url: image_url || null,
       retail_value_cents: retail_value_cents ?? null,
+      entry_cost_credits: entry_cost_credits ?? null,
       queue_position: count ?? 0,
       status: 'draft',
     })

@@ -11,6 +11,10 @@ import type {
 const ORGANIZER_COLUMNS =
   'id, slug, display_name, primary_contact_name, city, province, region, website_url, facebook_url, instagram_handle, typical_season_or_dates, listing_status, source, admin_notes, claimed_by, claimed_at, popup_hub_coordinator_id'
 
+function logOrganizerQueryError(context: string, error: { message: string }) {
+  console.error(`[organizers] ${context}:`, error.message)
+}
+
 export async function searchPublishedOrganizers(query: string, region = 'edmonton-metro') {
   const supabase = await createClient()
   const trimmed = query.trim()
@@ -29,7 +33,10 @@ export async function searchPublishedOrganizers(query: string, region = 'edmonto
   }
 
   const { data, error } = await builder.limit(50)
-  if (error) throw error
+  if (error) {
+    logOrganizerQueryError('searchPublishedOrganizers', error)
+    return []
+  }
   return (data ?? []) as Organizer[]
 }
 
@@ -46,7 +53,10 @@ export async function getPublishedOrganizerBySlug(slug: string) {
     .eq('listing_status', 'published')
     .maybeSingle()
 
-  if (error) throw error
+  if (error) {
+    logOrganizerQueryError('getPublishedOrganizerBySlug', error)
+    return null
+  }
   return data as Organizer | null
 }
 
@@ -59,7 +69,10 @@ export async function getPublishedOrganizerEvents(organizerId: string) {
     .eq('listing_status', 'published')
     .order('name')
 
-  if (error) throw error
+  if (error) {
+    logOrganizerQueryError('getPublishedOrganizerEvents', error)
+    return []
+  }
   return (data ?? []) as OrganizerEvent[]
 }
 
@@ -71,7 +84,10 @@ export async function getPublishedScamAlerts(organizerId: string) {
     .eq('organizer_id', organizerId)
     .eq('published', true)
 
-  if (error) throw error
+  if (error) {
+    logOrganizerQueryError('getPublishedScamAlerts', error)
+    return []
+  }
   return (data ?? []) as OrganizerScamAlert[]
 }
 
@@ -87,7 +103,10 @@ export async function getPublishedCommunityMentions(organizerId: string) {
     .order('display_order', { ascending: true })
     .order('created_at', { ascending: true })
 
-  if (error) throw error
+  if (error) {
+    logOrganizerQueryError('getPublishedCommunityMentions', error)
+    return []
+  }
 
   const mentionIds = (data ?? []).map((m) => m.id)
   const responsesByMention = new Map<string, string>()
@@ -139,7 +158,10 @@ export async function getPublishedOrganizerReviews(organizerId: string) {
     .eq('published', true)
     .order('created_at', { ascending: false })
 
-  if (error) throw error
+  if (error) {
+    logOrganizerQueryError('getPublishedOrganizerReviews', error)
+    return []
+  }
 
   const reviewIds = (data ?? []).map((r) => r.id)
   const responsesByReview = new Map<string, { body: string; created_at: string }>()
@@ -181,7 +203,10 @@ export async function listPublishedScamWatchlist() {
     .eq('published', true)
     .order('display_name')
 
-  if (error) throw error
+  if (error) {
+    logOrganizerQueryError('listPublishedScamWatchlist', error)
+    return []
+  }
   return (data ?? []) as ScamWatchlistEntry[]
 }
 

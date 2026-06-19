@@ -15,6 +15,7 @@ export type WizardStep2ValidationInput = {
   skipVenueLayout: boolean
   requireBoothPrice: boolean
   boothPriceCents: number
+  isQuarterAuction?: boolean
 }
 
 export function getWizardStep2ValidationError(
@@ -24,7 +25,9 @@ export function getWizardStep2ValidationError(
 
   if (input.categoryLimits.length === 0 || totalCaps <= 0) {
     return {
-      message: 'Set at least one vendor category with a booth cap greater than zero',
+      message: input.isQuarterAuction
+        ? 'Add at least one vendor type with spots available'
+        : 'Set at least one vendor category with a booth cap greater than zero',
       fieldId: 'wizard-zone-capacity-categories',
     }
   }

@@ -23,6 +23,8 @@ export type Organizer = {
   listing_status: ListingStatus
   source: string
   admin_notes: string | null
+  submitted_by: string | null
+  submitted_at: string | null
   claimed_by: string | null
   claimed_at: string | null
   popup_hub_coordinator_id: string | null

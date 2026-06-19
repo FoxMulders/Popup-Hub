@@ -30,6 +30,8 @@ export interface EventDraftPayload {
   marketCity?: string
   boothPriceCents?: number
   multiTableDiscountPercent?: number
+  communityLeagueDiscountEnabled?: boolean
+  communityLeagueDiscountPercent?: number
   boothContractEnabled?: boolean
   boothContractClauses?: BoothContractClause[]
   boothContractPdfUrl?: string | null
@@ -215,6 +217,11 @@ export async function persistEventDraft(
     multi_table_discount_percent: Math.min(
       100,
       Math.max(0, Math.round(draft.multiTableDiscountPercent ?? 0))
+    ),
+    community_league_discount_enabled: draft.communityLeagueDiscountEnabled ?? false,
+    community_league_discount_percent: Math.min(
+      100,
+      Math.max(0, Math.round(draft.communityLeagueDiscountPercent ?? 0))
     ),
     booth_contract_enabled: draft.boothContractEnabled ?? true,
     booth_contract_clauses: draft.boothContractClauses ?? [],

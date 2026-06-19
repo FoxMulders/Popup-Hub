@@ -117,6 +117,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
   }
 
   const autoFilled = props.autoFilledFields ?? new Set<FlyerFieldKey>()
+  const isQuarterAuction = isQuarterAuctionListing(props.listingType)
 
   return (
     <div className="wizard-step1-deck space-y-4">
@@ -126,7 +127,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             Step 1
           </p>
           <h2 className="font-heading text-[clamp(1.25rem,1.2vw+1rem,1.75rem)] font-bold tracking-tight text-forest">
-            Launch your market
+            {isQuarterAuction ? 'Launch your quarter auction' : 'Launch your market'}
           </h2>
         </div>
         <span className={WIZARD_DRAFT_BADGE} aria-label="Event status">
@@ -167,7 +168,11 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
         <WizardZone
           id="wizard-zone-schedule"
           title="Schedule & booking"
-          subtitle="When the market runs and how vendors get approved."
+          subtitle={
+            isQuarterAuction
+              ? 'When the auction runs and how vendors get approved.'
+              : 'When the market runs and how vendors get approved.'
+          }
         >
           <div className="space-y-2">
             <Label className={WIZARD_FIELD_LABEL}>Listing type</Label>
@@ -196,7 +201,7 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             {props.listingType === 'garage_yard_sale' ? (
               <p className={WIZARD_INFO_BOX}>
                 Quarter auctions appear on the patron map when published. Vendor applications are required;
-                there is no floor-plan booth placement — set caps on step 2.
+                there is no floor plan — set vendor spots on step 2, then build the catalog.
               </p>
             ) : null}
           </div>
@@ -474,8 +479,12 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
 
       <WizardZone
         id="wizard-zone-rules"
-        title="Vendor rules & payments"
-        subtitle="Insurance, MLM policy, and checkout options vendors will see."
+        title={isQuarterAuction ? 'Vendor rules' : 'Vendor rules & payments'}
+        subtitle={
+          isQuarterAuction
+            ? 'Optional insurance and booking settings vendors will see when they apply.'
+            : 'Insurance, MLM policy, and checkout options vendors will see.'
+        }
         variant="wide"
       >
         <div className="space-y-4">
@@ -517,26 +526,35 @@ export function WizardStepEventDetails(props: WizardStepEventDetailsProps) {
             </>
           ) : null}
         </div>
-        <div className="wizard-glass-inset p-4">
-          <WizardPaymentPreviewStrip />
-        </div>
-        <BoothContractEditor
-          eventId={props.eventId}
-          coordinatorId={props.coordinatorId}
-          eventName={props.name}
-          enabled={props.boothContractEnabled}
-          onEnabledChange={props.onBoothContractEnabledChange}
-          clauses={props.boothContractClauses}
-          onClausesChange={props.onBoothContractClausesChange}
-          pdfUrl={props.boothContractPdfUrl}
-          onPdfUrlChange={props.onBoothContractPdfUrlChange}
-          requireFullAttendance={props.requireFullAttendance}
-          marketInsuranceRequired={props.marketInsuranceRequired}
-          boothClearancePolicy={props.boothClearancePolicy}
-          contractReviewed={props.boothContractReviewed}
-          onContractReviewedChange={props.onBoothContractReviewedChange}
-          compact
-        />
+        {isQuarterAuction ? (
+          <p className={WIZARD_INFO_BOX}>
+            Booth contracts and Square checkout are optional for charity auction nights — you can
+            configure them later from the event page if needed.
+          </p>
+        ) : (
+          <>
+            <div className="wizard-glass-inset p-4">
+              <WizardPaymentPreviewStrip />
+            </div>
+            <BoothContractEditor
+              eventId={props.eventId}
+              coordinatorId={props.coordinatorId}
+              eventName={props.name}
+              enabled={props.boothContractEnabled}
+              onEnabledChange={props.onBoothContractEnabledChange}
+              clauses={props.boothContractClauses}
+              onClausesChange={props.onBoothContractClausesChange}
+              pdfUrl={props.boothContractPdfUrl}
+              onPdfUrlChange={props.onBoothContractPdfUrlChange}
+              requireFullAttendance={props.requireFullAttendance}
+              marketInsuranceRequired={props.marketInsuranceRequired}
+              boothClearancePolicy={props.boothClearancePolicy}
+              contractReviewed={props.boothContractReviewed}
+              onContractReviewedChange={props.onBoothContractReviewedChange}
+              compact
+            />
+          </>
+        )}
       </WizardZone>
     </div>
   )

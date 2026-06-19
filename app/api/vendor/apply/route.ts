@@ -146,6 +146,7 @@ export async function POST(request: Request) {
     paymentMethod?: 'SQUARE' | 'STRIPE' | 'ETRANSFER' | 'CASH' | 'credit_card' | 'etransfer' | 'cash'
     applicableDocumentationUrl?: string | null
     tableCount?: number
+    communityLeagueMemberClaim?: boolean
   }
 
   const {
@@ -165,6 +166,7 @@ export async function POST(request: Request) {
     paymentMethod: rawPaymentMethod,
     applicableDocumentationUrl,
     tableCount: rawTableCount,
+    communityLeagueMemberClaim = false,
   } = body
   if (!eventId) {
     return NextResponse.json({ error: 'eventId is required' }, { status: 400 })
@@ -457,8 +459,14 @@ export async function POST(request: Request) {
       listing_type: event.listing_type,
       booth_price_cents: event.booth_price_cents,
       multi_table_discount_percent: event.multi_table_discount_percent,
+      community_league_discount_enabled: event.community_league_discount_enabled,
+      community_league_discount_percent: event.community_league_discount_percent,
     },
-    tableCount
+    tableCount,
+    {
+      communityLeagueMemberClaim:
+        communityLeagueMemberClaim && Boolean(event.community_league_discount_enabled),
+    }
   )
   const requiresPayment = boothPrice > 0
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
@@ -598,6 +606,8 @@ export async function POST(request: Request) {
         booth_contract_signature_method: boothContractSnapshot?.signature_method ?? null,
         applicable_documentation_url: applicableDocumentationUrl?.trim() || null,
         table_count: tableCount,
+        community_league_member_claim:
+          communityLeagueMemberClaim && Boolean(event.community_league_discount_enabled),
         ...(isReservedBoothStatus(status) ? { approved_at: now } : {}),
       })
       .select(
@@ -643,6 +653,8 @@ export async function POST(request: Request) {
           booth_contract_signed_at: boothContractSnapshot?.signed_at ?? null,
           booth_contract_signature_method: boothContractSnapshot?.signature_method ?? null,
           table_count: tableCount,
+          community_league_member_claim:
+            communityLeagueMemberClaim && Boolean(event.community_league_discount_enabled),
         })
         .select(
           'id, status, payment_status, payment_method, application_payment_status, waitlist_position, has_category_overflow, overflow_category_names, attending_dates'

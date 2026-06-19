@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useReducedMotion } from '@/hooks/use-reduced-motion'
 import { addLayoutRoomToList } from '@/lib/coordinator/dashboard-layout-rooms'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardAppShell } from './dashboard-app-shell'
 import { DashboardLeftPanel } from './dashboard-left-panel'
@@ -16,13 +21,23 @@ export interface DashboardBootstrapProps {
 }
 
 export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay />
+      <DashboardBootstrapInner header={header} />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardBootstrapInner({ header }: DashboardBootstrapProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const { fullscreen: immersive } = useCommandCenterFullscreen()
   const { selectedEventId, layoutRooms, setLayoutRooms } = useMarketManagement()
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
   const [liveMessage, setLiveMessage] = useState('Booth layout designer loading.')
   const hasInitialRoom = layoutRooms.length > 0
-  const showNoRoomEmpty = Boolean(selectedEventId && !hasInitialRoom)
+  const showNoRoomEmpty = Boolean(selectedEventId && !hasInitialRoom && !showDesktopRequired)
 
   useEffect(() => {
     if (showNoRoomEmpty) {
@@ -69,7 +84,7 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
           ) : (
             <DashboardCanvasColumn
               showBlueprint={showBlueprint}
-              mountCanvas={Boolean(selectedEventId && hasInitialRoom)}
+              mountCanvas={Boolean(selectedEventId && hasInitialRoom && !showDesktopRequired)}
               reducedMotion={reducedMotion}
               onCanvasInteractive={handleCanvasInteractive}
             />

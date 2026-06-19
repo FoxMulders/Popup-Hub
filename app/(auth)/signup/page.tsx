@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { BrandLogoMark } from '@/components/brand/popup-hub-logo'
+import { GuestNav } from '@/components/nav/guest-nav'
 import { Loader2, ShoppingBag, Calendar, Store } from 'lucide-react'
 import { toast } from 'sonner'
 import { type SignupRole } from '@/lib/auth/rbac'
@@ -72,6 +73,7 @@ function SignupForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [resending, setResending] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [shareContactWithVendors, setShareContactWithVendors] = useState(false)
 
@@ -158,6 +160,27 @@ function SignupForm() {
     setLoading(false)
   }
 
+  async function resendConfirmationEmail() {
+    if (!email.trim()) return
+    setResending(true)
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim(),
+      options: {
+        emailRedirectTo: buildOAuthCallbackUrl(getOAuthOrigin(), {
+          role,
+          ...(postSignupPath ? { next: postSignupPath } : {}),
+        }),
+      },
+    })
+    setResending(false)
+    if (error) {
+      toast.error(error.message)
+      return
+    }
+    toast.success('Confirmation link sent again — check your inbox.')
+  }
+
   const selectedLabel = ROLE_OPTIONS.find((option) => option.id === role)?.label ?? role
   const signupTitle =
     roleLocked && role === 'coordinator'
@@ -187,18 +210,35 @@ function SignupForm() {
           </p>
           <p className="font-semibold text-foreground mb-6">{email}</p>
           <p className="text-sm text-muted-foreground mb-6">
-            Click the link in the email to activate your Popup Hub account as a{' '}
-            <span className="font-medium text-foreground">{selectedLabel}</span>.
+            Open the confirmation link in that email to activate your Popup Hub account as a{' '}
+            <span className="font-medium text-foreground">{selectedLabel}</span>. This is a link in
+            the email, not a numeric code.
           </p>
-          <div className={`rounded-xl p-4 text-sm ${marketStatusBadge.warning}`}>
-            Can&apos;t find it? Check your spam folder or{' '}
-            <button
-              className="underline font-medium"
-              onClick={() => setSubmitted(false)}
-            >
-              try again
-            </button>
-            .
+          <div className={`rounded-xl p-4 text-sm space-y-3 ${marketStatusBadge.warning}`}>
+            <p>
+              Can&apos;t find it? Check your spam folder, wait a few minutes, or resend the link
+              below.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-10"
+                disabled={resending}
+                onClick={() => void resendConfirmationEmail()}
+              >
+                {resending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Resend confirmation link
+              </Button>
+              <button
+                type="button"
+                className="text-sm underline font-medium"
+                onClick={() => setSubmitted(false)}
+              >
+                Use a different email
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -243,7 +283,14 @@ function SignupForm() {
       </CardHeader>
       <CardContent className="flex flex-1 flex-col">
         {authMode === 'login' ? (
-          <LoginForm embedded />
+          <>
+            <LoginForm embedded />
+            <p className="mt-4 text-center text-xs text-muted-foreground leading-relaxed">
+              New here? Create an account first — we email a confirmation <strong>link</strong> (not
+              a code). If sign-in fails, check your inbox for that link or use Resend after signing
+              up.
+            </p>
+          </>
         ) : (
           <>
           {!roleLocked ? (
@@ -394,7 +441,9 @@ function SignupForm() {
 
 export default function SignupPage() {
   return (
-    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-gradient-to-br from-linen via-canvas to-sage-50 p-4 py-10">
+    <div className="flex min-h-0 flex-1 flex-col site-surface">
+      <GuestNav />
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-gradient-to-br from-linen via-canvas to-sage-50 p-4 py-10">
       <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden>
         <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-sage-200/50 blur-3xl" />
         <div className="absolute -right-16 bottom-10 h-72 w-72 rounded-full bg-harvest-100/60 blur-3xl" />
@@ -404,6 +453,7 @@ export default function SignupPage() {
           <SignupForm />
         </div>
       </Suspense>
+      </div>
     </div>
   )
 }

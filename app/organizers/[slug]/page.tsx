@@ -11,6 +11,10 @@ import {
 } from '@/lib/queries/organizers'
 import { Badge } from '@/components/ui/badge'
 import { OrganizerReviewList } from '@/components/check/organizer-review-list'
+import { OrganizerClaimButton } from '@/components/check/organizer-claim-button'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
+import { createClient } from '@/lib/supabase/server'
+import type { Profile } from '@/types/database'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -52,6 +56,24 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
     getPublishedCommunityMentions(organizer.id),
     getPublishedOrganizerReviews(organizer.id),
   ])
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let profile: Pick<Profile, 'role' | 'is_admin'> | null = null
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role, is_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    profile = data
+  }
+
+  const isClaimed = Boolean(organizer.claimed_by)
+  const canClaim = Boolean(user && canActAsCoordinator(profile) && !isClaimed)
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
@@ -102,6 +124,13 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
           </p>
         ) : null}
       </header>
+
+      <OrganizerClaimButton
+        organizerSlug={organizer.slug}
+        displayName={organizer.display_name}
+        isClaimed={isClaimed}
+        canClaim={canClaim}
+      />
 
       {scamAlerts.length > 0 ? (
         <section className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">

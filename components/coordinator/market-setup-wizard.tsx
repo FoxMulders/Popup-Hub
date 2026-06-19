@@ -26,6 +26,12 @@ import {
 } from '@/lib/booth-planner/smart-populate-booth-caps'
 import { hydrateVenuePreset, resolveTemplateAnchoredDimensions } from '@/lib/booth-planner/venue-presets'
 import {
+  findVenueSubmissionByAddress,
+  isCommunityLeagueVenueName,
+  shouldSubmitPlatformVenue,
+  submitPlatformVenue,
+} from '@/lib/venues/platform-venue-submissions'
+import {
   getEdmontonVenueById,
   isEdmontonVenueId,
   matchEdmontonVenuePreset,
@@ -70,6 +76,7 @@ import { WizardAmbientShell, WizardDivider } from '@/components/coordinator/wiza
 import {
   MARKET_WIZARD_STEPS_FULL,
   MARKET_WIZARD_STEPS_SHORT,
+  QUARTER_AUCTION_WIZARD_STEPS,
   WizardStepStepper,
 } from '@/components/coordinator/wizard/wizard-step-stepper'
 import { WizardStepCapacity } from '@/components/coordinator/wizard/wizard-step-capacity'
@@ -256,6 +263,7 @@ export function MarketSetupWizard({
   const [listingType, setListingType] = useState<EventListingType>(
     existing?.listing_type ?? 'community_market'
   )
+  const isQuarterAuction = isQuarterAuctionListing(listingType)
   const [requireFullAttendance, setRequireFullAttendance] = useState(
     existing?.require_full_attendance ?? true
   )
@@ -277,6 +285,12 @@ export function MarketSetupWizard({
   })
   const [multiTableDiscountPercent, setMultiTableDiscountPercent] = useState(
     existing?.multi_table_discount_percent ?? 0
+  )
+  const [communityLeagueDiscountEnabled, setCommunityLeagueDiscountEnabled] = useState(
+    existing?.community_league_discount_enabled ?? false
+  )
+  const [communityLeagueDiscountPercent, setCommunityLeagueDiscountPercent] = useState(
+    existing?.community_league_discount_percent ?? 0
   )
   const [boothClearancePolicy, setBoothClearancePolicy] = useState<BoothClearancePolicy>(
     existing?.booth_clearance_policy ?? 'leave_furniture'
@@ -312,8 +326,33 @@ export function MarketSetupWizard({
   const [pinDropped, setPinDropped] = useState(!!existing?.latitude)
   const [skipVenueLayout, setSkipVenueLayout] = useState(existing?.skip_venue_layout ?? false)
 
+  const [venueSubmissionPending, setVenueSubmissionPending] = useState(false)
+
+  useEffect(() => {
+    if (isCommunityLeagueVenueName(locationName) && !communityLeagueDiscountEnabled) {
+      setCommunityLeagueDiscountEnabled(true)
+      if (communityLeagueDiscountPercent <= 0) setCommunityLeagueDiscountPercent(10)
+    }
+  }, [locationName, communityLeagueDiscountEnabled, communityLeagueDiscountPercent])
+
+  useEffect(() => {
+    if (!locationName.trim() || !address.trim() || !pinDropped) return
+    void findVenueSubmissionByAddress(supabase, locationName, address).then((row) => {
+      setVenueSubmissionPending(row?.status === 'pending')
+    })
+  }, [address, locationName, pinDropped, supabase])
   const totalSteps = skipVenueLayout ? 2 : 3
-  const wizardSteps = skipVenueLayout ? MARKET_WIZARD_STEPS_SHORT : MARKET_WIZARD_STEPS_FULL
+  const wizardSteps = isQuarterAuction
+    ? QUARTER_AUCTION_WIZARD_STEPS
+    : skipVenueLayout
+      ? MARKET_WIZARD_STEPS_SHORT
+      : MARKET_WIZARD_STEPS_FULL
+
+  useEffect(() => {
+    if (isQuarterAuction && !skipVenueLayout) {
+      setSkipVenueLayout(true)
+    }
+  }, [isQuarterAuction, skipVenueLayout])
 
   function syncStepInUrl(step: WizardStep, resolvedEventId?: string | null) {
     const id = resolvedEventId ?? eventId
@@ -563,6 +602,13 @@ export function MarketSetupWizard({
           )
           return { ok: false as const, reason: 'fees' as const }
         }
+        const venueRow = await findVenueSubmissionByAddress(supabase, locationName, address)
+        if (venueRow?.status === 'pending') {
+          toast.error(
+            'This venue is pending admin approval. You can save a draft, but publishing is blocked until approved.'
+          )
+          return { ok: false as const, reason: 'venue' as const }
+        }
       }
 
       setAutosaveStatus('saving')
@@ -594,6 +640,8 @@ export function MarketSetupWizard({
             boothClearancePolicy,
             boothPriceCents,
             multiTableDiscountPercent,
+            communityLeagueDiscountEnabled,
+            communityLeagueDiscountPercent,
             raffleDonationRequirement,
             scheduleType,
             startAt: bounds.startAt,
@@ -613,6 +661,29 @@ export function MarketSetupWizard({
         if (!eventId && draftResult.eventId) {
           setEventId(draftResult.eventId)
           window.history.replaceState(null, '', `/coordinator/events/${draftResult.eventId}/setup`)
+        }
+
+        if (pinDropped && locationName.trim() && address.trim()) {
+          const shouldSubmit = await shouldSubmitPlatformVenue(supabase, coordinatorId, {
+            locationName,
+            address,
+            latitude: lat,
+            longitude: lng,
+            marketCity,
+          })
+          if (shouldSubmit) {
+            const { created } = await submitPlatformVenue(supabase, coordinatorId, {
+              locationName,
+              address,
+              latitude: lat,
+              longitude: lng,
+              marketCity,
+            })
+            if (created) {
+              setVenueSubmissionPending(true)
+              toast.message('New venue submitted for admin review')
+            }
+          }
         }
 
         const resolvedId = draftResult.eventId || eventId
@@ -673,6 +744,8 @@ export function MarketSetupWizard({
       boothPriceCents,
       categoryLimits,
       multiTableDiscountPercent,
+      communityLeagueDiscountEnabled,
+      communityLeagueDiscountPercent,
       coverFile,
       coverImageUrl,
       currentStep,
@@ -954,6 +1027,7 @@ export function MarketSetupWizard({
       skipVenueLayout,
       requireBoothPrice: !isQuarterAuctionListing(listingType),
       boothPriceCents,
+      isQuarterAuction: isQuarterAuctionListing(listingType),
     })
     if (!error) return true
     toast.error(error.message)
@@ -1008,12 +1082,20 @@ export function MarketSetupWizard({
         if (skipVenueLayout) {
           const result = await autosave({ publish: true })
           if (!result.ok || !result.eventId) {
-            toast.error('Failed to deploy market')
+            toast.error(
+              isQuarterAuction ? 'Failed to save quarter auction' : 'Failed to deploy market'
+            )
             return
           }
-          toast.success('Market saved and deployed!')
+          toast.success(
+            isQuarterAuction ? 'Quarter auction saved!' : 'Market saved and deployed!'
+          )
           await revalidateMarketsCacheClient()
-          router.push(`/coordinator/events/${result.eventId}`)
+          router.push(
+            isQuarterAuction
+              ? `/coordinator/events/${result.eventId}/auctions`
+              : `/coordinator/events/${result.eventId}`
+          )
           return
         }
         const result = await autosave()
@@ -1190,10 +1272,17 @@ export function MarketSetupWizard({
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <p className={WIZARD_PAGE_KICKER}>
-              Market Setup Wizard · Step {currentStep} of {totalSteps}
+              {isQuarterAuction ? 'Quarter Auction Setup' : 'Market Setup Wizard'} · Step{' '}
+              {currentStep} of {totalSteps}
             </p>
             <h1 className={WIZARD_PAGE_TITLE}>
-              {existing ? 'Edit Market' : 'Create New Market'}
+              {isQuarterAuction
+                ? existing
+                  ? 'Edit Quarter Auction'
+                  : 'Create Quarter Auction'
+                : existing
+                  ? 'Edit Market'
+                  : 'Create New Market'}
             </h1>
           </div>
           {isDraftMode && eventId ? (
@@ -1213,6 +1302,9 @@ export function MarketSetupWizard({
           maxReachedStep={maxReachedStep}
           allowNavigation
           onStepChange={(step) => void goToStep(step)}
+          ariaLabel={
+            isQuarterAuction ? 'Quarter auction setup progress' : 'Market setup wizard progress'
+          }
         />
       ) : null}
 
@@ -1227,7 +1319,13 @@ export function MarketSetupWizard({
       >
         {isWorkspaceStep && !isFloorPlanStep ? (
           <WizardContextStrip
-            stepLabel={currentStep === 2 ? 'Step 2 — Capacity' : 'Step 3 — Floor plan'}
+            stepLabel={
+              currentStep === 2
+                ? isQuarterAuction
+                  ? 'Step 2 — Vendor spots'
+                  : 'Step 2 — Capacity'
+                : 'Step 3 — Floor plan'
+            }
             eventName={name.trim() || null}
             scheduleLines={scheduleLines}
             selectedVenue={selectedVenue}
@@ -1336,11 +1434,18 @@ export function MarketSetupWizard({
                 venueLength={templateAnchor.length}
                 skipVenueLayout={skipVenueLayout}
                 onSkipVenueLayoutChange={setSkipVenueLayout}
+                lockSkipVenueLayout={isQuarterAuction}
                 coordinatorId={coordinatorId}
                 onApplySavedVenue={handleApplySavedVenue}
                 onPlaceSelect={handleGooglePlaceSelect}
               />
-              <WizardNav step={1} onNext={goNext} nextDisabled={transitioning} stepReady={step1Ready} />
+              <WizardNav
+                step={1}
+                onNext={goNext}
+                nextDisabled={transitioning}
+                stepReady={step1Ready}
+                isQuarterAuction={isQuarterAuction}
+              />
             </div>
           ) : null}
 
@@ -1367,18 +1472,32 @@ export function MarketSetupWizard({
                 venueElements={activeRoom.venue_elements}
                 entrance={activeRoom.entrance}
                 skipVenueLayout={skipVenueLayout}
-                showMarketPricing={!isQuarterAuctionListing(listingType)}
+                isQuarterAuction={isQuarterAuction}
+                showMarketPricing={!isQuarterAuction}
                 boothPriceCents={boothPriceCents}
-                onBoothPriceCentsChange={handleBoothPriceCentsChange}
+                onBoothPriceCentsChange={isQuarterAuction ? undefined : handleBoothPriceCentsChange}
                 multiTableDiscountPercent={multiTableDiscountPercent}
-                onMultiTableDiscountPercentChange={setMultiTableDiscountPercent}
+                onMultiTableDiscountPercentChange={
+                  isQuarterAuction ? undefined : setMultiTableDiscountPercent
+                }
+                communityLeagueDiscountEnabled={communityLeagueDiscountEnabled}
+                onCommunityLeagueDiscountEnabledChange={
+                  isQuarterAuction ? undefined : setCommunityLeagueDiscountEnabled
+                }
+                communityLeagueDiscountPercent={communityLeagueDiscountPercent}
+                onCommunityLeagueDiscountPercentChange={
+                  isQuarterAuction ? undefined : setCommunityLeagueDiscountPercent
+                }
+                suggestCommunityLeagueDiscount={isCommunityLeagueVenueName(locationName)}
+                venueSubmissionPending={venueSubmissionPending}
               />
               <WizardNav
                 step={2}
                 onBack={goBack}
                 onNext={goNext}
                 nextDisabled={transitioning}
-                nextLabel={skipVenueLayout ? 'Save market' : undefined}
+                isQuarterAuction={isQuarterAuction}
+                skipVenueLayout={skipVenueLayout}
               />
             </>
           ) : null}
@@ -1421,6 +1540,10 @@ export function MarketSetupWizard({
               onBack={goBack}
               navDisabled={transitioning}
               plannerOverlap={plannerOverlap}
+              onSaveDraft={async () => {
+                await autosave()
+              }}
+              saveDraftLoading={transitioning}
             />
           ) : null}
         </div>

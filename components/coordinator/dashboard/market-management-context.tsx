@@ -34,6 +34,8 @@ export interface DashboardEventSummary {
   name: string
   start_at: string
   status: string
+  location_name?: string | null
+  address?: string | null
 }
 
 export interface EventLayoutBundle {

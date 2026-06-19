@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import type { LayoutSnapshotGetter } from './dashboard-saved-layout-toolbar'
 import { Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
@@ -20,10 +21,15 @@ import { DashboardWorkspaceViewProvider } from './dashboard-workspace-view-conte
 import { FloorplanSyncBridge } from './floorplan-sync-bridge'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
+import {
+  DashboardSavedLayoutToolbar,
+  LayoutSnapshotRefProvider,
+} from './dashboard-saved-layout-toolbar'
 import { CoordinatorVerificationBanner } from '@/components/coordinator/coordinator-verification-banner'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
 export interface MarketDashboardClientProps {
+  coordinatorId: string
   events: DashboardEventSummary[]
   initialEventId: string | null
   layoutsByEventId: Record<string, EventLayoutBundle>
@@ -56,6 +62,7 @@ function MobileMarketsRedirect() {
 }
 
 export function MarketDashboardClient({
+  coordinatorId,
   events,
   initialEventId,
   layoutsByEventId,
@@ -75,6 +82,7 @@ export function MarketDashboardClient({
   const searchParams = useSearchParams()
   const forceMobileOverview = searchParams.get('overview') === 'mobile'
   const useMobileOverview = forceMobileOverview || isMobileDevice()
+  const layoutSnapshotRef = useRef<LayoutSnapshotGetter | null>(null)
 
   if (events.length === 0) {
     return (
@@ -116,6 +124,7 @@ export function MarketDashboardClient({
       <CommandCenterFullscreenProvider>
         <DashboardLayoutSaveProvider>
           <DashboardWorkspaceViewProvider>
+            <LayoutSnapshotRefProvider layoutSnapshotRef={layoutSnapshotRef}>
             <FloorplanSyncBridge />
             <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
               <div className="shrink-0 space-y-2 px-[var(--dashboard-gutter,1rem)] pt-3">
@@ -131,8 +140,11 @@ export function MarketDashboardClient({
                   />
                 )}
               </div>
-              <DashboardBootstrap header={<DashboardCommandCenterHeader />} />
+              <DashboardBootstrap
+                header={<DashboardCommandCenterHeader coordinatorId={coordinatorId} />}
+              />
             </div>
+            </LayoutSnapshotRefProvider>
           </DashboardWorkspaceViewProvider>
         </DashboardLayoutSaveProvider>
       </CommandCenterFullscreenProvider>

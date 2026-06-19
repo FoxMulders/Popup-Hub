@@ -7,15 +7,9 @@ import { Menu, User } from 'lucide-react'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
+import { GUEST_RIBBON_LINKS, SITE_HOME_PATH } from '@/components/nav/site-ribbon-links'
 import { Button } from '@/components/ui/button'
-import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
-
-const NAV_LINKS = [
-  { href: '/discover', label: 'Discover Markets' },
-  { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label },
-  { href: '/vendor/events', label: 'For Vendors' },
-  { href: '/signup?role=coordinator&next=/coordinator/events/new', label: 'Host a Market' },
-]
+import { cn } from '@/lib/utils'
 
 export function GuestNav() {
   const pathname = usePathname()
@@ -39,19 +33,31 @@ export function GuestNav() {
       <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
           left={
-            <BrandLogoLockup className="shrink-0" href="/discover" />
+            <BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />
           }
           center={
             <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 overflow-x-hidden md:flex lg:gap-2">
-              {NAV_LINKS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="shrink-0 rounded-full px-3 py-2 text-sm font-medium text-foreground/90 transition-colors hover:bg-canvas/80 hover:text-foreground lg:px-4"
-                >
-                  {label}
-                </Link>
-              ))}
+              {GUEST_RIBBON_LINKS.map(({ href, label }) => {
+                const active =
+                  href === SITE_HOME_PATH
+                    ? pathname === SITE_HOME_PATH
+                    : pathname === href || pathname.startsWith(`${href}/`)
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      'shrink-0 rounded-full px-3 py-2 text-sm font-medium transition-colors lg:px-4',
+                      active
+                        ? 'bg-forest/10 text-forest font-semibold'
+                        : 'text-foreground/90 hover:bg-canvas/80 hover:text-foreground'
+                    )}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
             </div>
           }
           right={
@@ -90,7 +96,7 @@ export function GuestNav() {
               <AppMenuSheet
                 open={menuOpen}
                 onOpenChange={setMenuOpen}
-                links={NAV_LINKS}
+                links={GUEST_RIBBON_LINKS}
                 pathname={pathname}
                 footer={footer}
               />

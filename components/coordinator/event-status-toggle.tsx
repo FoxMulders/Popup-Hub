@@ -163,6 +163,13 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
     if (error) {
       toast.error('Failed to update event status.')
     } else {
+      if (newStatus === 'published') {
+        void fetch(`/api/coordinator/events/${event.id}/trust-sync`, { method: 'POST' }).catch(
+          () => {
+            /* trust sync is best-effort */
+          }
+        )
+      }
       await revalidateMarketsCacheClient()
       toast.success(`Event is now ${newStatus}.`)
       startTransition(() => router.refresh())

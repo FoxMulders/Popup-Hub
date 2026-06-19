@@ -4,6 +4,51 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — coordinator feature roadmap (8 items) (local, not deployed)
+- **Goal:** Phase A–C coordinator enhancements from roadmap plan — saved layouts, paste cover, mobile layout gate, layout image import, league discount, venue admin approval, Google Docs contracts, for-organizers value calculator.
+- **Shipped locally:**
+  - **Phase A:** `SavedLayoutPicker` in Blueprint Studio dashboard + edit-public toggle; `FlyerCoverUpload` paste/drop; mobile iron-dome on wizard step 3, event hub banner, production `dashboard-bootstrap`
+  - **Phase B:** `POST /api/coordinator/layout/import-image` + vision parser + canvas import button (paste support); community league vendor discount (migration **117**, wizard, apply, checkout best-of); `platform_venue_submissions` + wizard submit gate + publish block + `/admin/venues`
+  - **Phase C:** Google OAuth routes + `GoogleDocsContractImport` in `BoothContractEditor`; `EventValueCalculator` on `/for-organizers`
+- **Verify:** `npx tsc --noEmit` — PASS. Apply migrations **108** (saved layouts) + **117** (roadmap) via `npm run db:push`. Google Docs needs `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`; layout import needs `OPENROUTER_API_KEY`.
+- **Smoke:** Studio save/load public layout; paste cover in wizard step 1; phone on wizard step 3 → save draft CTA; import layout photo; league discount on community league venue; new venue → pending → admin approve → publish; Google connect + doc import; for-organizers calculator.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — patron navigation, location, organizer UX (local, not deployed)
+- **Goal:** Tester feedback — real Home (`/` PublicLanding), unified top ribbon, home-address distance filter, organizer error hardening, auth copy, cancellation FAQ.
+- **Shipped locally:**
+  - **Home:** `/` always shows `PublicLanding` (guest + signed-in); logo → `/` via `SITE_HOME_PATH` in GuestNav, ShopperTopBar, AppNav
+  - **Ribbon:** `site-ribbon-links.ts` — Home, Discover, Check organizers, FAQ on browse + guest surfaces; desktop links on ShopperTopBar; GuestNav on login/signup; profile layout → patron `ShopperShell`; vendor bottom nav Home tab
+  - **Location:** `HomeAddressPicker` + address field on Discover/vendor market grid + vendor alert prefs; geolocation error toasts
+  - **Organizers:** `error.tsx` on `/check` and `/organizers/[slug]`; query helpers return empty/null on DB errors instead of 500
+  - **Auth:** Signup confirmation **link** copy + resend; login tab note on email confirm
+  - **FAQ:** Coordinator cancellation item in `faq-content.tsx` + for-organizers landing
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/` path cards; logo from `/discover` → `/`; address on Discover; `/check` loads; signup resend button.
+- **Ops:** Confirm prod migrations **113–116** applied if organizer pages still fail (`npm run db:push`).
+- **Next:** Commit + deploy when user asks.
+
+## Active work — quarter auction setup parity (local, not deployed)
+- **Goal:** Make quarter-auction wizard as clear as market setup for Monday demo (especially Step 2 vendor spots).
+- **Shipped locally:**
+  - **Wizard shell:** Listing-aware titles, stepper ("Vendor spots"), nav labels, post-save redirect → `/coordinator/events/{id}/auctions`
+  - **Step 2:** QA branch hides booth pricing/floor-plan copy; "Add common vendor types" quick-start + total-spot distribute; `CategoryLimitEditor` vendor-spot labels
+  - **Step 1:** "Launch your quarter auction"; hide booth contract/payment strip for QA; lock skip floor plan
+  - **Live pricing:** Coordinator "Vendor on stage — enter bid amount"; optional vendor `entry_cost_credits` on item submit
+  - **Checklist/event page:** Catalog + vendor-approval readiness; auction control panel (not legacy timer auctions)
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: create QA draft → step 2 quick-fill → save → lands on auction control.
+- **Next:** Commit + deploy when user asks; walk Monday demo through create → vendor spots → auction control → live item bid entry.
+
+## Active work — organizer list growth (local, not deployed)
+- **Goal:** Break chicken-and-egg — vendors can nominate unlisted organizers + submit review in one step; admin publishes via CLI; coordinators auto-sync on market publish.
+- **Shipped locally:**
+  - **Migration `116_organizer_vendor_submissions.sql`:** `submitted_by`, `submitted_at` on organizers
+  - **Vendor intake:** `/check/review` → “Organizer not listed” + nomination fields; API creates draft org (`vendor_submitted`) + unpublished review
+  - **Admin CLI:** `list-organizers.ts --pending`, `publish-organizer-submission.ts --slug|--all-vendor-submitted`
+  - **Coordinator sync:** `onMarketPublished` wired to publish API routes + `trust-sync` from status toggle; claim CTA on `/organizers/[slug]`
+  - **Copy:** `/check` empty state + `/check/review` moderation note
+- **Verify:** `npx tsx scripts/verify-organizer-submissions.ts` — PASS; `npx tsc --noEmit` — PASS. Apply migration `npm run db:push`.
+- **Next:** Commit + deploy when user asks; smoke vendor not-listed submission → `list-organizers --pending` → publish script.
+
 ## Active work — relax venue type restriction for markets (local, not deployed)
 - **Issue:** Publish blocked bars, gyms, and other non-commercial Google place types with “Location must be a commercial property, park, or public event space.”
 - **Fix:** `verify-venue-coordinates.ts` — dropped pin + complete address (≥10 chars) now verifies regardless of Google place types; user-facing copy updated in wizard, event form, status toggle, and `require-venue-verified.ts`.

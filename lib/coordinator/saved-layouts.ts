@@ -96,6 +96,22 @@ export async function touchCoordinatorSavedLayout(
     .eq('id', layoutId)
 }
 
+export async function updateCoordinatorSavedLayoutVisibility(
+  supabase: SupabaseClient,
+  layoutId: string,
+  isPublic: boolean
+): Promise<{ layout: CoordinatorSavedLayout | null; error: Error | null }> {
+  const { data, error } = await supabase
+    .from('coordinator_saved_layouts')
+    .update({ is_public: isPublic })
+    .eq('id', layoutId)
+    .select('*')
+    .single()
+
+  if (error) return { layout: null, error: new Error(error.message) }
+  return { layout: data as CoordinatorSavedLayout, error: null }
+}
+
 export async function deleteCoordinatorSavedLayout(
   supabase: SupabaseClient,
   layoutId: string

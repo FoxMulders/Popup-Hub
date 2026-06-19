@@ -20,6 +20,7 @@ import {
   listCoordinatorSavedLayouts,
   saveCoordinatorLayout,
   touchCoordinatorSavedLayout,
+  updateCoordinatorSavedLayoutVisibility,
 } from '@/lib/coordinator/saved-layouts'
 import { cloneLayoutRoomsForApply } from '@/lib/coordinator/saved-layout-snapshot'
 import { createClient } from '@/lib/supabase/client'
@@ -150,6 +151,25 @@ export function SavedLayoutPicker({
     )
   }
 
+  async function handleTogglePublic(layout: CoordinatorSavedLayout) {
+    const nextPublic = !layout.is_public
+    const { layout: updated, error } = await updateCoordinatorSavedLayoutVisibility(
+      supabase,
+      layout.id,
+      nextPublic
+    )
+    if (error || !updated) {
+      toast.error(error?.message ?? 'Could not update sharing')
+      return
+    }
+    await refreshLayouts()
+    toast.message(
+      nextPublic
+        ? `"${layout.name}" is now shared at this venue`
+        : `"${layout.name}" is now private`
+    )
+  }
+
   async function handleDeleteLayout(id: string) {
     const layout = ownLayouts.find((entry) => entry.id === id)
     if (!layout) return
@@ -262,6 +282,15 @@ export function SavedLayoutPicker({
               >
                 {layout.is_public ? '★ ' : ''}
                 {layout.name}
+              </button>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-forest opacity-60 group-hover:opacity-100"
+                aria-label={layout.is_public ? `Make ${layout.name} private` : `Share ${layout.name} at venue`}
+                title={layout.is_public ? 'Shared at venue — click to make private' : 'Make public at this venue'}
+                onClick={() => void handleTogglePublic(layout)}
+              >
+                <Globe2 className={cn('h-3 w-3', layout.is_public && 'text-forest')} />
               </button>
               <button
                 type="button"

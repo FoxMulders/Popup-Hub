@@ -32,44 +32,68 @@ export function computeBoothCheckoutCents(params: {
   tableCount: number
   multiTableDiscountPercent: number
   applyMultiTableDiscount: boolean
+  communityLeagueDiscountPercent?: number
+  applyCommunityLeagueDiscount?: boolean
 }): number {
   const tables = Math.max(1, Math.floor(params.tableCount))
   const unit = Math.max(0, params.unitPriceCents)
   const subtotal = unit * tables
 
-  if (
-    !params.applyMultiTableDiscount ||
-    tables < 2 ||
-    params.multiTableDiscountPercent <= 0
-  ) {
-    return subtotal
-  }
+  const multiTableTotal =
+    params.applyMultiTableDiscount &&
+    tables >= 2 &&
+    params.multiTableDiscountPercent > 0
+      ? (() => {
+          const pct = Math.min(100, Math.max(0, Math.round(params.multiTableDiscountPercent)))
+          return Math.max(0, subtotal - Math.round((subtotal * pct) / 100))
+        })()
+      : subtotal
 
-  const pct = Math.min(100, Math.max(0, Math.round(params.multiTableDiscountPercent)))
-  const discount = Math.round((subtotal * pct) / 100)
-  return Math.max(0, subtotal - discount)
+  const leagueTotal =
+    params.applyCommunityLeagueDiscount &&
+    (params.communityLeagueDiscountPercent ?? 0) > 0
+      ? (() => {
+          const pct = Math.min(
+            100,
+            Math.max(0, Math.round(params.communityLeagueDiscountPercent ?? 0))
+          )
+          return Math.max(0, subtotal - Math.round((subtotal * pct) / 100))
+        })()
+      : subtotal
+
+  return Math.min(subtotal, multiTableTotal, leagueTotal)
 }
 
 export type BoothPricingEventFields = {
   listing_type?: EventListingType | null
   booth_price_cents?: number | null
   multi_table_discount_percent?: number | null
+  community_league_discount_enabled?: boolean | null
+  community_league_discount_percent?: number | null
 }
 
 export function computeApplicationBoothPriceCents(
   categoryPricePerBooth: number | null | undefined,
   event: BoothPricingEventFields,
-  tableCount: number
+  tableCount: number,
+  options?: { communityLeagueMemberClaim?: boolean }
 ): number {
   const unit = resolveBoothUnitPriceCents(
     categoryPricePerBooth,
     event.booth_price_cents
   )
+  const applyLeague =
+    Boolean(options?.communityLeagueMemberClaim) &&
+    Boolean(event.community_league_discount_enabled) &&
+    (event.community_league_discount_percent ?? 0) > 0
+
   return computeBoothCheckoutCents({
     unitPriceCents: unit,
     tableCount,
     multiTableDiscountPercent: event.multi_table_discount_percent ?? 0,
     applyMultiTableDiscount: isCommunityMarketListing(event.listing_type),
+    communityLeagueDiscountPercent: event.community_league_discount_percent ?? 0,
+    applyCommunityLeagueDiscount: applyLeague,
   })
 }
 

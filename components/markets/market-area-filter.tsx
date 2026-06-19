@@ -3,6 +3,7 @@
 import { Loader2, MapPin, Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DistanceRadiusPicker } from '@/components/markets/distance-radius-picker'
+import { HomeAddressPicker } from '@/components/location/home-address-picker'
 import type { DistanceRadiusKm } from '@/lib/markets/distance-radius'
 
 interface MarketAreaFilterProps {
@@ -11,6 +12,7 @@ interface MarketAreaFilterProps {
   locationLabel: string
   locating: boolean
   onUseMyLocation: () => void
+  onAddressSelect: (lat: number, lng: number, label: string) => void
 }
 
 export function MarketAreaFilter({
@@ -19,6 +21,7 @@ export function MarketAreaFilter({
   locationLabel,
   locating,
   onUseMyLocation,
+  onAddressSelect,
 }: MarketAreaFilterProps) {
   return (
     <div className="space-y-3">
@@ -26,6 +29,12 @@ export function MarketAreaFilter({
         Distance
       </p>
       <DistanceRadiusPicker value={radiusKm} onChange={onRadiusChange} />
+      <HomeAddressPicker
+        id="market-area-home-address"
+        label="Home address"
+        placeholder="Enter your home address or postal code…"
+        onSelect={({ lat, lng, label }) => onAddressSelect(lat, lng, label)}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"

@@ -48,7 +48,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const isVendor = item.vendor_id === user.id
 
   if (isVendor && item.status === 'draft') {
-    const { title, description, image_url, retail_value_cents } = body
+    const { title, description, image_url, retail_value_cents, entry_cost_credits } = body
+    if (
+      entry_cost_credits != null &&
+      (!Number.isFinite(Number(entry_cost_credits)) || Number(entry_cost_credits) < 1)
+    ) {
+      return NextResponse.json({ error: 'Quarters per paddle must be at least 1' }, { status: 400 })
+    }
     const { data: updated, error } = await service
       .from('auction_catalog_items')
       .update({
@@ -56,6 +62,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         description: description?.trim() ?? item.description,
         image_url: image_url ?? item.image_url,
         retail_value_cents: retail_value_cents ?? item.retail_value_cents,
+        ...(entry_cost_credits !== undefined
+          ? { entry_cost_credits: entry_cost_credits ?? null }
+          : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', itemId)

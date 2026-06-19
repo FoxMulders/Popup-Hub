@@ -4,12 +4,18 @@ import { useEffect, useRef, useState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { formatCents } from '@/lib/square/client'
+import { Switch } from '@/components/ui/switch'
 
 export interface MarketBoothPricingFieldsProps {
   boothPriceCents: number
   onBoothPriceCentsChange: (cents: number) => void
   multiTableDiscountPercent?: number
   onMultiTableDiscountPercentChange?: (percent: number) => void
+  communityLeagueDiscountEnabled?: boolean
+  onCommunityLeagueDiscountEnabledChange?: (enabled: boolean) => void
+  communityLeagueDiscountPercent?: number
+  onCommunityLeagueDiscountPercentChange?: (percent: number) => void
+  suggestCommunityLeagueDiscount?: boolean
   passFeesToVendor?: boolean
   onPassFeesToVendorChange?: (value: boolean) => void
   /** Omit section heading when parent already labels the block. */
@@ -29,6 +35,11 @@ export function MarketBoothPricingFields({
   onBoothPriceCentsChange,
   multiTableDiscountPercent = 0,
   onMultiTableDiscountPercentChange,
+  communityLeagueDiscountEnabled = false,
+  onCommunityLeagueDiscountEnabledChange,
+  communityLeagueDiscountPercent = 0,
+  onCommunityLeagueDiscountPercentChange,
+  suggestCommunityLeagueDiscount = false,
   passFeesToVendor = false,
   onPassFeesToVendorChange,
   compact = false,
@@ -41,6 +52,10 @@ export function MarketBoothPricingFields({
   )
   const boothFocusedRef = useRef(false)
   const discountFocusedRef = useRef(false)
+  const [leagueDiscountInput, setLeagueDiscountInput] = useState(() =>
+    communityLeagueDiscountPercent > 0 ? String(communityLeagueDiscountPercent) : ''
+  )
+  const leagueDiscountFocusedRef = useRef(false)
 
   useEffect(() => {
     if (boothFocusedRef.current) return
@@ -52,9 +67,32 @@ export function MarketBoothPricingFields({
     setDiscountInput(multiTableDiscountPercent > 0 ? String(multiTableDiscountPercent) : '')
   }, [multiTableDiscountPercent])
 
+  useEffect(() => {
+    if (leagueDiscountFocusedRef.current) return
+    setLeagueDiscountInput(
+      communityLeagueDiscountPercent > 0 ? String(communityLeagueDiscountPercent) : ''
+    )
+  }, [communityLeagueDiscountPercent])
+
   const showMultiTable =
     onMultiTableDiscountPercentChange != null &&
     multiTableDiscountPercent !== undefined
+
+  const showCommunityLeague =
+    onCommunityLeagueDiscountEnabledChange != null &&
+    onCommunityLeagueDiscountPercentChange != null
+
+  function commitLeagueDiscount(raw: string) {
+    const trimmed = raw.trim()
+    if (trimmed === '') {
+      onCommunityLeagueDiscountPercentChange!(0)
+      return
+    }
+    const pct = Number.parseInt(trimmed, 10)
+    onCommunityLeagueDiscountPercentChange!(
+      Math.min(100, Math.max(0, Number.isFinite(pct) ? pct : 0))
+    )
+  }
 
   function commitBoothDollars(raw: string) {
     const trimmed = raw.trim()
@@ -150,6 +188,51 @@ export function MarketBoothPricingFields({
           </div>
         ) : null}
       </div>
+
+      {showCommunityLeague ? (
+        <div className="space-y-3 rounded-lg border border-stone-200 bg-white/60 p-3">
+          <label className="flex items-start gap-3">
+            <Switch
+              checked={communityLeagueDiscountEnabled}
+              onCheckedChange={onCommunityLeagueDiscountEnabledChange}
+              className="mt-0.5"
+              aria-label="Community league member vendor discount"
+            />
+            <span>
+              <span className="block text-sm font-medium text-forest">
+                Community league member discount
+              </span>
+              <span className="mt-1 block text-[11px] text-muted-foreground">
+                Vendors who attest they are league members get a booth fee discount at checkout.
+                {suggestCommunityLeagueDiscount
+                  ? ' Suggested for community league halls.'
+                  : ''}{' '}
+                Best discount wins — not stacked with multi-table pricing.
+              </span>
+            </span>
+          </label>
+          {communityLeagueDiscountEnabled ? (
+            <div className="max-w-xs space-y-1.5">
+              <Label htmlFor="market-league-discount">Member discount (%)</Label>
+              <Input
+                id="market-league-discount"
+                type="text"
+                inputMode="numeric"
+                placeholder="10"
+                value={leagueDiscountInput}
+                onChange={(e) => setLeagueDiscountInput(e.target.value)}
+                onFocus={() => {
+                  leagueDiscountFocusedRef.current = true
+                }}
+                onBlur={() => {
+                  leagueDiscountFocusedRef.current = false
+                  commitLeagueDiscount(leagueDiscountInput)
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {onPassFeesToVendorChange && boothPriceCents > 0 ? (
         <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-stone-200 bg-white/60 p-3">

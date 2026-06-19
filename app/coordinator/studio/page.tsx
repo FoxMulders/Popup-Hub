@@ -45,7 +45,7 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
 
   const eventsQuery = supabase
     .from('events')
-    .select('id, name, start_at, end_at, status, listing_type, booth_price_cents, multi_table_discount_percent')
+    .select('id, name, start_at, end_at, status, listing_type, booth_price_cents, multi_table_discount_percent, location_name, address')
     .order('start_at', { ascending: false })
 
   const { data: eventRows } = scope.isAdmin
@@ -103,6 +103,8 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
     name: e.name,
     start_at: e.start_at,
     status: e.status,
+    location_name: e.location_name,
+    address: e.address,
   }))
 
   const eventIds = new Set(events.map((e) => e.id))
@@ -258,6 +260,7 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
   return (
     <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading Blueprint Studio…</div>}>
       <MarketDashboardClient
+        coordinatorId={user.id}
         events={events}
         initialEventId={initialEventId}
         layoutsByEventId={layoutsByEventId}

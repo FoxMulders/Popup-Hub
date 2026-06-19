@@ -1,5 +1,4 @@
-export type OrganizerReviewPayload = {
-  organizerSlug: string
+export type OrganizerReviewFields = {
   eventName: string
   eventMonthYear: string
   eventAsAdvertised: 'yes' | 'partial' | 'no'
@@ -10,17 +9,23 @@ export type OrganizerReviewPayload = {
   optionalNotes?: string
 }
 
+export type OrganizerSuggestPayload = {
+  displayName: string
+  city: string
+  websiteUrl?: string
+  facebookUrl?: string
+  contactName?: string
+}
+
+export type OrganizerReviewPayload =
+  | ({ mode: 'existing'; organizerSlug: string } & OrganizerReviewFields)
+  | ({ mode: 'suggest'; suggestOrganizer: OrganizerSuggestPayload } & OrganizerReviewFields)
+
 const MONTH_YEAR = /^\d{4}-\d{2}$/
 
-export function parseOrganizerReviewPayload(body: unknown):
-  | { ok: true; data: OrganizerReviewPayload }
+function parseReviewFields(raw: Record<string, unknown>):
+  | { ok: true; fields: OrganizerReviewFields }
   | { ok: false; error: string } {
-  if (!body || typeof body !== 'object') {
-    return { ok: false, error: 'Invalid request body' }
-  }
-
-  const raw = body as Record<string, unknown>
-  const organizerSlug = String(raw.organizerSlug ?? '').trim()
   const eventName = String(raw.eventName ?? '').trim()
   const eventMonthYear = String(raw.eventMonthYear ?? '').trim()
   const eventAsAdvertised = raw.eventAsAdvertised
@@ -31,7 +36,6 @@ export function parseOrganizerReviewPayload(body: unknown):
   const optionalNotes =
     typeof raw.optionalNotes === 'string' ? raw.optionalNotes.trim().slice(0, 500) : undefined
 
-  if (!organizerSlug) return { ok: false, error: 'Select an organizer' }
   if (eventName.length < 2) return { ok: false, error: 'Enter the market or event name' }
   if (!MONTH_YEAR.test(eventMonthYear)) {
     return { ok: false, error: 'Select when you vended (month and year)' }
@@ -53,17 +57,90 @@ export function parseOrganizerReviewPayload(body: unknown):
 
   return {
     ok: true,
-    data: {
-      organizerSlug,
+    fields: {
       eventName,
       eventMonthYear,
-      eventAsAdvertised: eventAsAdvertised as OrganizerReviewPayload['eventAsAdvertised'],
+      eventAsAdvertised: eventAsAdvertised as OrganizerReviewFields['eventAsAdvertised'],
       wouldReturn,
       attendanceVsExpectations:
-        attendanceVsExpectations as OrganizerReviewPayload['attendanceVsExpectations'],
+        attendanceVsExpectations as OrganizerReviewFields['attendanceVsExpectations'],
       communicationRating,
-      refundExperience: refundExperience as OrganizerReviewPayload['refundExperience'],
+      refundExperience: refundExperience as OrganizerReviewFields['refundExperience'],
       optionalNotes: optionalNotes || undefined,
+    },
+  }
+}
+
+function parseSuggestOrganizer(raw: unknown):
+  | { ok: true; suggest: OrganizerSuggestPayload }
+  | { ok: false; error: string } {
+  if (!raw || typeof raw !== 'object') {
+    return { ok: false, error: 'Enter organizer name and city' }
+  }
+
+  const obj = raw as Record<string, unknown>
+  const displayName = String(obj.displayName ?? '').trim()
+  const city = String(obj.city ?? '').trim()
+  const websiteUrl = String(obj.websiteUrl ?? '').trim() || undefined
+  const facebookUrl = String(obj.facebookUrl ?? '').trim() || undefined
+  const contactName = String(obj.contactName ?? '').trim() || undefined
+
+  if (displayName.length < 2) {
+    return { ok: false, error: 'Enter the organizer or business name' }
+  }
+  if (city.length < 2) {
+    return { ok: false, error: 'Enter the city where this organizer runs markets' }
+  }
+
+  return {
+    ok: true,
+    suggest: {
+      displayName,
+      city,
+      websiteUrl,
+      facebookUrl,
+      contactName,
+    },
+  }
+}
+
+export function parseOrganizerReviewPayload(body: unknown):
+  | { ok: true; data: OrganizerReviewPayload }
+  | { ok: false; error: string } {
+  if (!body || typeof body !== 'object') {
+    return { ok: false, error: 'Invalid request body' }
+  }
+
+  const raw = body as Record<string, unknown>
+  const fieldsResult = parseReviewFields(raw)
+  if (!fieldsResult.ok) return fieldsResult
+
+  const suggestRaw = raw.suggestOrganizer
+  const organizerSlug = String(raw.organizerSlug ?? '').trim()
+  const notListed = raw.notListed === true || suggestRaw != null
+
+  if (notListed) {
+    const suggestResult = parseSuggestOrganizer(suggestRaw ?? raw)
+    if (!suggestResult.ok) return suggestResult
+
+    return {
+      ok: true,
+      data: {
+        mode: 'suggest',
+        suggestOrganizer: suggestResult.suggest,
+        ...fieldsResult.fields,
+      },
+    }
+  }
+
+  if (!organizerSlug) return { ok: false, error: 'Select an organizer' }
+
+  return {
+    ok: true,
+    data: {
+      mode: 'existing',
+      organizerSlug,
+      ...fieldsResult.fields,
     },
   }
 }

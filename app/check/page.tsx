@@ -48,10 +48,22 @@ export default async function CheckPage({ searchParams }: Props) {
         </h2>
 
         {organizers.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-canvas px-4 py-8 text-center text-sm text-muted-foreground">
-            {q.trim()
-              ? 'No published organizers match that search yet.'
-              : 'No organizers published yet. Listings appear here after seed import and admin publish.'}
+          <div className="rounded-xl border border-dashed bg-canvas px-4 py-8 text-center text-sm text-muted-foreground space-y-3">
+            <p>
+              {q.trim()
+                ? 'No published organizers match that search yet.'
+                : 'No organizers published yet. Listings appear here after verification.'}
+            </p>
+            <p>
+              Organizer not listed?{' '}
+              <Link
+                href="/check/review"
+                className="font-medium text-harvest-800 hover:underline underline-offset-2"
+              >
+                Submit a review
+              </Link>{' '}
+              and we&apos;ll add them after verification.
+            </p>
           </div>
         ) : (
           <ul className="space-y-2">

@@ -142,6 +142,8 @@ export interface WizardStepVenueProps {
   venueLength: number
   skipVenueLayout: boolean
   onSkipVenueLayoutChange: (v: boolean) => void
+  /** Quarter auctions always skip floor plan — hide the toggle. */
+  lockSkipVenueLayout?: boolean
   coordinatorId: string
   onApplySavedVenue: (venue: CoordinatorSavedVenue) => void
   onPlaceSelect: (place: PlaceResult) => void
@@ -165,6 +167,7 @@ export function WizardStepVenue({
   venueLength,
   skipVenueLayout,
   onSkipVenueLayoutChange,
+  lockSkipVenueLayout = false,
   coordinatorId,
   onApplySavedVenue,
   onPlaceSelect,
@@ -389,16 +392,27 @@ export function WizardStepVenue({
         label="No venue space planning required"
         description="Skip the floor plan editor. Pick a venue from the registry to auto-fill name and address, or enter them manually."
         control={
-          <Switch
-            id="wizard-skip-layout"
-            checked={skipVenueLayout}
-            onCheckedChange={onSkipVenueLayoutChange}
-            aria-label="Skip venue space planning"
-          />
+          lockSkipVenueLayout ? (
+            <span className="text-xs font-medium text-forest">Always on for quarter auctions</span>
+          ) : (
+            <Switch
+              id="wizard-skip-layout"
+              checked={skipVenueLayout}
+              onCheckedChange={onSkipVenueLayoutChange}
+              aria-label="Skip venue space planning"
+            />
+          )
         }
       />
 
-      {skipVenueLayout ? (
+      {lockSkipVenueLayout ? (
+        <p className={WIZARD_INFO_BOX}>
+          Quarter auctions don&apos;t use a floor plan — vendor spots are set on step 2. Pick a venue
+          and drop a map pin so patrons can find you.
+        </p>
+      ) : null}
+
+      {!lockSkipVenueLayout && skipVenueLayout ? (
         <p className={WIZARD_INFO_BOX}>
           {isEdmontonMarketCity(city)
             ? 'Choose an Edmonton venue below to auto-fill the name and address, or type them in and drop a map pin.'
@@ -498,6 +512,7 @@ function WizardStepVenueFallback({
   cityLabel,
   skipVenueLayout,
   onSkipVenueLayoutChange,
+  lockSkipVenueLayout = false,
 }: {
   locationName: string
   onLocationNameChange: (v: string) => void
@@ -507,6 +522,7 @@ function WizardStepVenueFallback({
   cityLabel: string
   skipVenueLayout: boolean
   onSkipVenueLayoutChange: (v: boolean) => void
+  lockSkipVenueLayout?: boolean
 }) {
   return (
     <WizardZone
@@ -522,14 +538,23 @@ function WizardStepVenueFallback({
         label="No venue space planning required"
         description="Skip the floor plan editor. Enter the venue name and address manually."
         control={
-          <Switch
-            id="wizard-skip-layout"
-            checked={skipVenueLayout}
-            onCheckedChange={onSkipVenueLayoutChange}
-            aria-label="Skip venue space planning"
-          />
+          lockSkipVenueLayout ? (
+            <span className="text-xs font-medium text-forest">Always on for quarter auctions</span>
+          ) : (
+            <Switch
+              id="wizard-skip-layout"
+              checked={skipVenueLayout}
+              onCheckedChange={onSkipVenueLayoutChange}
+              aria-label="Skip venue space planning"
+            />
+          )
         }
       />
+      {lockSkipVenueLayout ? (
+        <p className={WIZARD_INFO_BOX}>
+          Quarter auctions don&apos;t use a floor plan — vendor spots are set on step 2.
+        </p>
+      ) : null}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <WizardFloatingInput
           id="wizard-loc-name"
@@ -565,6 +590,7 @@ export function WizardStepVenueWithMapsProvider(props: WizardStepVenueProps) {
         cityLabel={cityLabel}
         skipVenueLayout={props.skipVenueLayout}
         onSkipVenueLayoutChange={props.onSkipVenueLayoutChange}
+        lockSkipVenueLayout={props.lockSkipVenueLayout}
       />
     )
   }

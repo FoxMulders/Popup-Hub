@@ -151,6 +151,7 @@ export function VendorMarketGrid({
     locationLabel,
     locating,
     useMyLocation,
+    setOriginFromPlace,
   } = useMarketAreaFilter()
 
   const withDistance = useMemo(() => {
@@ -181,6 +182,7 @@ export function VendorMarketGrid({
         locationLabel={locationLabel}
         locating={locating}
         onUseMyLocation={useMyLocation}
+        onAddressSelect={setOriginFromPlace}
       />
 
       <div className="relative max-w-md">

@@ -27,6 +27,7 @@ import {
 } from '@/lib/coordinator/coordinator-routes'
 import { cn } from '@/lib/utils'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
+import { SITE_HOME_PATH } from '@/lib/nav/site-home'
 
 interface AppNavProps {
   profile: Profile
@@ -38,12 +39,14 @@ interface AppNavProps {
 
 const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
   patron: [
+    { href: SITE_HOME_PATH, label: 'Home' },
     { href: '/discover', label: 'Discover Markets' },
     { href: '/favorites', label: 'Favorites' },
     { href: '/supplies', label: 'Market Supplies' },
     { href: '/wallet', label: 'Wallet' },
   ],
   vendor: [
+    { href: SITE_HOME_PATH, label: 'Home' },
     { href: '/vendor/dashboard', label: 'Dashboard' },
     { href: '/vendor/passport', label: 'My Passport' },
     { href: '/vendor/supplies', label: 'Vendor Supplies' },
@@ -82,7 +85,7 @@ export function AppNav({
   const links = NAV_LINKS[navRole] ?? []
   const showLayoutHelpInNav =
     navRole === 'coordinator' && isCoordinatorLayoutHelpNavRoute(pathname)
-  const homeHref = '/'
+  const homeHref = SITE_HOME_PATH
 
   async function handleSignOut() {
     await signOutAndRedirectToLogin(supabase)
@@ -131,11 +134,13 @@ export function AppNav({
                 <div className="hidden min-w-0 flex-wrap items-center justify-center gap-0.5 overflow-x-hidden md:flex lg:gap-1">
                   {links.map(({ href, label }) => {
                     const active =
-                      href === COORDINATOR_HOME_PATH
-                        ? pathname === COORDINATOR_HOME_PATH
-                        : href === COORDINATOR_STUDIO_PATH
-                          ? isCoordinatorStudioPath(pathname)
-                          : pathname === href || pathname.startsWith(`${href}/`)
+                      href === SITE_HOME_PATH
+                        ? pathname === SITE_HOME_PATH
+                        : href === COORDINATOR_HOME_PATH
+                          ? pathname === COORDINATOR_HOME_PATH
+                          : href === COORDINATOR_STUDIO_PATH
+                            ? isCoordinatorStudioPath(pathname)
+                            : pathname === href || pathname.startsWith(`${href}/`)
                     return (
                       <Link
                         key={href}

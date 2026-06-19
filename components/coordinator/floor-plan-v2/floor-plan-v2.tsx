@@ -81,6 +81,7 @@ import type { AutoArrangeMode } from './engine/auto-arrange'
 import { autoArrangeInRoomAsync } from './engine/auto-arrange'
 import { optimizeTessellatedLayoutAsync } from '@/lib/floor-plan/layout-tessellation-optimizer'
 import { runAutoArrangeWithAi } from '@/lib/floor-plan/request-ai-auto-arrange'
+import type { LayoutImageImportResult } from '@/components/coordinator/floor-plan-v2/tools/layout-image-import-button'
 import {
   AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP,
   AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP,
@@ -2433,6 +2434,34 @@ function FloorPlanV2Workspace({
     [store]
   )
 
+  const handleImportLayoutImage = useCallback(
+    async (result: LayoutImageImportResult) => {
+      const frame = (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)
+      if (!frame) {
+        toast.error('Select a room before importing a layout photo')
+        return
+      }
+      if (result.objects.length === 0) return
+
+      store.addObjects(result.objects, {
+        roomId: activeRoomId,
+        select: true,
+        pushHistory: true,
+      })
+
+      if (result.boothCount > 0) {
+        toast.message('Running auto-arrange on imported booths…')
+        await handleAutoArrangeFloorPlan()
+      }
+    },
+    [activeRoomId, handleAutoArrangeFloorPlan, store]
+  )
+
+  const importLayoutRoomWidthFt =
+    (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)?.widthFt ?? undefined
+  const importLayoutRoomLengthFt =
+    (store.doc.rooms ?? []).find((r) => r.id === activeRoomId)?.lengthFt ?? undefined
+
   useEffect(() => {
     if (!onLayoutActionsReady) return
     onLayoutActionsReady({
@@ -2783,6 +2812,10 @@ function FloorPlanV2Workspace({
     onFillVendorTables: handleFillVendorTables,
     onFillPatronTables: handleFillPatronTables,
     fillRoomDisabledReason,
+    onImportLayoutImage: handleImportLayoutImage,
+    importLayoutRoomWidthFt,
+    importLayoutRoomLengthFt,
+    importLayoutTableLengthFt: tableSizePillValue,
   }
 
   const wizardCommandBarSharedProps = {
@@ -2862,6 +2895,10 @@ function FloorPlanV2Workspace({
     onFillVendorTables: handleFillVendorTables,
     onFillPatronTables: handleFillPatronTables,
     fillRoomDisabledReason,
+    onImportLayoutImage: handleImportLayoutImage,
+    importLayoutRoomWidthFt,
+    importLayoutRoomLengthFt,
+    importLayoutTableLengthFt: tableSizePillValue,
   }
 
   const dashboardCommandBar = isDashboard ? (

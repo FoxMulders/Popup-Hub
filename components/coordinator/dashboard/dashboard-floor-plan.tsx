@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
@@ -20,6 +20,7 @@ import {
   resolveDesignerExitHref,
   resolveDesignerExitLabel,
 } from '@/components/coordinator/command-center-exit-link'
+import { LayoutSnapshotRefContext } from './dashboard-saved-layout-toolbar'
 import { useMarketManagement } from './market-management-context'
 import { useBoothEntities } from './use-booth-entities'
 
@@ -46,6 +47,18 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
   const selectedEvent = events.find((event) => event.id === selectedEventId)
 
   const storeRef = useRef<FloorPlanDocStore | null>(null)
+  const layoutSnapshotRef = useContext(LayoutSnapshotRefContext)
+  const localSnapshotRef = useRef<
+    (() => { rooms: import('@/types/database').LayoutRoom[]; activeRoomId: string } | null) | null
+  >(null)
+
+  useEffect(() => {
+    if (!layoutSnapshotRef) return
+    layoutSnapshotRef.current = () => localSnapshotRef.current?.() ?? null
+    return () => {
+      if (layoutSnapshotRef) layoutSnapshotRef.current = null
+    }
+  }, [layoutSnapshotRef])
 
   const handleStoreReady = useCallback(
     (store: FloorPlanDocStore | null) => {
@@ -209,6 +222,8 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         onLayoutActionsReady={registerFloorPlanLayoutActions}
         onSelectionChange={handleSelectionChange}
         onVendorDrop={handleVendorDrop}
+        saveLayoutRef={undefined}
+        layoutSnapshotRef={localSnapshotRef}
         className="min-h-0 flex-1"
       />
     </div>

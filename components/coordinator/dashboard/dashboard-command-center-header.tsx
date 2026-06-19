@@ -1,11 +1,12 @@
 'use client'
 
 import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { cn } from '@/lib/utils'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardHeaderToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
+import { DashboardSavedLayoutToolbar } from './dashboard-saved-layout-toolbar'
 import { useMarketManagement } from './market-management-context'
-import { cn } from '@/lib/utils'
 
 function WorkspaceTabs() {
   const { view, setView, isBlueprint, isLedger } = useDashboardWorkspaceView()
@@ -91,7 +92,11 @@ function EventSetupExitLink() {
   )
 }
 
-export function DashboardCommandCenterHeader() {
+export function DashboardCommandCenterHeader({
+  coordinatorId,
+}: {
+  coordinatorId: string
+}) {
   const { previewMode } = useCommandCenterFullscreen()
   const { isBlueprint } = useDashboardWorkspaceView()
   const { selectedEventId } = useMarketManagement()
@@ -114,7 +119,10 @@ export function DashboardCommandCenterHeader() {
       ) : null}
       <WorkspaceTabs />
       {isBlueprint ? (
-        <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 items-center overflow-hidden" />
+        <>
+          <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 items-center overflow-hidden" />
+          <DashboardSavedLayoutToolbar coordinatorId={coordinatorId} />
+        </>
       ) : null}
       {isBlueprint ? (
         <div className="ml-auto shrink-0">

@@ -283,6 +283,8 @@ export interface Event {
   raffle_donation_requirement: string | null
   booth_price_cents: number
   multi_table_discount_percent: number
+  community_league_discount_enabled?: boolean
+  community_league_discount_percent?: number
   passport_vendors_required: number | null
   parking_notes: string | null
   wheelchair_access_notes: string | null
@@ -389,6 +391,7 @@ export interface BoothApplication {
   market_insurance_url: string | null
   coordinator_review_notes?: string | null
   coordinator_decline_message?: string | null
+  community_league_member_claim?: boolean
   event?: Event
   vendor?: Profile
   passport?: VendorPassport

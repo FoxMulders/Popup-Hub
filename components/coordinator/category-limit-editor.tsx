@@ -46,6 +46,8 @@ interface CategoryLimitEditorProps {
   unifiedBoothFeeCents?: number
   /** Group configured limits into collapsible broad-type sections. */
   grouped?: boolean
+  /** Quarter auctions use vendor-spot copy instead of booth/slot language. */
+  variant?: 'market' | 'quarter_auction'
 }
 
 const DEFAULT_NEW_SLOTS = 1
@@ -82,7 +84,11 @@ export function CategoryLimitEditor({
   globalMlmCap = DEFAULT_GLOBAL_MLM_CAP,
   unifiedBoothFeeCents,
   grouped = false,
+  variant = 'market',
 }: CategoryLimitEditorProps) {
+  const isQuarterAuction = variant === 'quarter_auction'
+  const slotsLabel = isQuarterAuction ? 'Vendor spots' : 'Max slots'
+  const addCategoryLabel = isQuarterAuction ? 'Add vendor type' : 'Add category slot'
   const useUnifiedFee = unifiedBoothFeeCents !== undefined
   const unifiedCents = Math.max(0, Math.round(unifiedBoothFeeCents ?? 0))
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
@@ -296,7 +302,7 @@ export function CategoryLimitEditor({
             singleSlotLocked && 'cursor-not-allowed bg-muted text-muted-foreground opacity-70'
           )}
           title={singleSlotLocked ? 'MLM brands are locked to 1 slot each' : undefined}
-          aria-label={`Max slots for ${limit.categoryName}`}
+          aria-label={`${slotsLabel} for ${limit.categoryName}`}
         />
         {useUnifiedFee ? null : (
           <div className="relative w-full">
@@ -340,13 +346,15 @@ export function CategoryLimitEditor({
         <span>Category</span>
         <span className="text-center">
           <span className="inline-flex items-center justify-center gap-1">
-            Max slots
+            {slotsLabel}
             <Tooltip>
               <TooltipTrigger type="button">
                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
-                The maximum number of vendors allowed in this category at this event.
+                {isQuarterAuction
+                  ? 'How many vendors in this category can apply and bring donation items to auction.'
+                  : 'The maximum number of vendors allowed in this category at this event.'}
               </TooltipContent>
             </Tooltip>
           </span>
@@ -392,7 +400,8 @@ export function CategoryLimitEditor({
                   <span className="truncate text-sm font-semibold text-foreground">{group.label}</span>
                 </span>
                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                  {group.slotSum} / {group.slotSum} slots assigned
+                  {group.slotSum} / {group.slotSum}{' '}
+                  {isQuarterAuction ? 'spots' : 'slots'} assigned
                   <span className="hidden sm:inline">
                     {' '}
                     · {group.limits.length} categor{group.limits.length === 1 ? 'y' : 'ies'}
@@ -411,7 +420,9 @@ export function CategoryLimitEditor({
             <span className="text-muted-foreground">
               {value.length} {value.length === 1 ? 'category' : 'categories'}
             </span>
-            <span className="font-bold tabular-nums text-foreground">{totalSlots} total slots</span>
+            <span className="font-bold tabular-nums text-foreground">
+              {totalSlots} total {isQuarterAuction ? 'spots' : 'slots'}
+            </span>
           </div>
         </div>
       )
@@ -491,7 +502,7 @@ export function CategoryLimitEditor({
         <div className="rounded-xl border-2 border-dashed border-stone-200 bg-canvas p-4">
           <div className="mb-3 flex items-center gap-1.5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Add category slot
+              {addCategoryLabel}
             </p>
             <Tooltip>
               <TooltipTrigger type="button">
@@ -549,7 +560,7 @@ export function CategoryLimitEditor({
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Max slots</Label>
+              <Label className="text-xs">{slotsLabel}</Label>
               <Input
                 type="number"
                 min={1}

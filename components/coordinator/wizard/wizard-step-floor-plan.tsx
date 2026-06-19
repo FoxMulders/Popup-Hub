@@ -1,9 +1,14 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
-import { FloorPlanV2, type FloorPlanV2Props } from '@/components/coordinator/floor-plan-v2/floor-plan-v2'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
+import { FloorPlanV2, type FloorPlanV2Props } from '@/components/coordinator/floor-plan-v2/floor-plan-v2'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import { LayoutPlannerHeader } from '@/components/coordinator/layout-planner/layout-planner-header'
 import { LayoutPlannerShell } from '@/components/coordinator/layout-planner/layout-planner-shell'
@@ -32,6 +37,8 @@ export interface WizardStepFloorPlanProps extends FloorPlanV2Props {
   onBack: () => void
   navDisabled?: boolean
   plannerOverlap?: boolean
+  onSaveDraft?: () => void | Promise<void>
+  saveDraftLoading?: boolean
   onPlacedCountChange?: (count: number) => void
 }
 
@@ -45,6 +52,8 @@ export function WizardStepFloorPlan({
   onBack,
   navDisabled = false,
   plannerOverlap = false,
+  onSaveDraft,
+  saveDraftLoading = false,
   totalCategoryCaps = 0,
   onPlacedCountChange: onPlacedCountChangeExternal,
   eventId,
@@ -61,6 +70,122 @@ export function WizardStepFloorPlan({
   saveLayoutRef,
   ...floorPlanProps
 }: WizardStepFloorPlanProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay
+        eventId={eventId ?? undefined}
+        onSaveDraft={onSaveDraft}
+        saveDraftLoading={saveDraftLoading}
+      />
+      <WizardStepFloorPlanInner
+        mode={mode}
+        layoutCapacity={layoutCapacity}
+        eventDisplayName={eventDisplayName}
+        coordinatorId={coordinatorId}
+        locationName={locationName}
+        address={address}
+        onBack={onBack}
+        navDisabled={navDisabled}
+        plannerOverlap={plannerOverlap}
+        onPlacedCountChangeExternal={onPlacedCountChangeExternal}
+        eventId={eventId ?? undefined}
+        layoutRooms={layoutRooms}
+        layoutActiveRoomId={layoutActiveRoomId}
+        onLayoutRoomsChange={onLayoutRoomsChange}
+        onAddRoom={onAddRoom}
+        onRenameRoom={onRenameRoom}
+        onDeleteRoom={onDeleteRoom}
+        configuredCategorySlots={configuredCategorySlots}
+        onSaveMarket={onSaveMarket}
+        saveMarketDisabled={saveMarketDisabled}
+        saveMarketLoading={saveMarketLoading}
+        saveLayoutRef={saveLayoutRef}
+        floorPlanProps={floorPlanProps}
+        totalCategoryCaps={totalCategoryCaps}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function WizardStepFloorPlanInner({
+  mode,
+  layoutCapacity,
+  eventDisplayName,
+  coordinatorId,
+  locationName,
+  address,
+  onBack,
+  navDisabled,
+  plannerOverlap,
+  onPlacedCountChangeExternal,
+  eventId,
+  layoutRooms,
+  layoutActiveRoomId,
+  onLayoutRoomsChange,
+  onAddRoom,
+  onRenameRoom,
+  onDeleteRoom,
+  configuredCategorySlots,
+  onSaveMarket,
+  saveMarketDisabled,
+  saveMarketLoading,
+  saveLayoutRef,
+  floorPlanProps,
+  totalCategoryCaps,
+}: {
+  mode: 'wizard' | 'standalone'
+  layoutCapacity: number
+  eventDisplayName: string
+  coordinatorId: string
+  locationName: string
+  address: string
+  onBack: () => void
+  navDisabled: boolean
+  plannerOverlap: boolean
+  onPlacedCountChangeExternal?: (count: number) => void
+  eventId?: string
+  layoutRooms: WizardStepFloorPlanProps['layoutRooms']
+  layoutActiveRoomId: string
+  onLayoutRoomsChange: WizardStepFloorPlanProps['onLayoutRoomsChange']
+  onAddRoom?: WizardStepFloorPlanProps['onAddRoom']
+  onRenameRoom?: WizardStepFloorPlanProps['onRenameRoom']
+  onDeleteRoom?: WizardStepFloorPlanProps['onDeleteRoom']
+  configuredCategorySlots?: WizardStepFloorPlanProps['configuredCategorySlots']
+  onSaveMarket?: WizardStepFloorPlanProps['onSaveMarket']
+  saveMarketDisabled?: boolean
+  saveMarketLoading?: boolean
+  saveLayoutRef?: WizardStepFloorPlanProps['saveLayoutRef']
+  floorPlanProps: Omit<
+    WizardStepFloorPlanProps,
+    | 'mode'
+    | 'layoutCapacity'
+    | 'eventDisplayName'
+    | 'coordinatorId'
+    | 'locationName'
+    | 'address'
+    | 'onBack'
+    | 'navDisabled'
+    | 'plannerOverlap'
+    | 'onSaveDraft'
+    | 'saveDraftLoading'
+    | 'eventId'
+    | 'layoutRooms'
+    | 'layoutActiveRoomId'
+    | 'onLayoutRoomsChange'
+    | 'onAddRoom'
+    | 'onRenameRoom'
+    | 'onDeleteRoom'
+    | 'onSaveMarket'
+    | 'saveMarketDisabled'
+    | 'saveMarketLoading'
+    | 'saveLayoutRef'
+    | 'configuredCategorySlots'
+    | 'totalCategoryCaps'
+    | 'onPlacedCountChange'
+  >
+  totalCategoryCaps: number
+}) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const [placedCount, setPlacedCount] = useState(0)
   const [layoutGeneration, setLayoutGeneration] = useState(0)
   const floorPlanStoreRef = useRef<FloorPlanDocStore | null>(null)
@@ -212,6 +337,11 @@ export function WizardStepFloorPlan({
         </div>
       }
     >
+      {showDesktopRequired ? (
+        <div className="flex min-h-[40vh] items-center justify-center p-6 text-center text-sm text-muted-foreground">
+          Open on a tablet or desktop to design your floor plan.
+        </div>
+      ) : (
       <FloorPlanV2
         key={layoutGeneration}
         {...floorPlanProps}
@@ -234,6 +364,7 @@ export function WizardStepFloorPlan({
         chrome="embedded"
         className="h-full min-h-0"
       />
+      )}
     </LayoutPlannerShell>
   )
 }

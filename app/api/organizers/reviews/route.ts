@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { canActAsVendor } from '@/lib/auth/rbac'
+import { submitOrganizerReview } from '@/lib/organizers/submit-organizer-review'
 import { parseOrganizerReviewPayload } from '@/lib/organizers/validate-review-payload'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -34,53 +35,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 })
   }
 
-  const { data: organizer } = await supabase
-    .from('organizers')
-    .select('id, slug, display_name')
-    .eq('slug', parsed.data.organizerSlug)
-    .eq('listing_status', 'published')
-    .maybeSingle()
+  const service = await createServiceClient()
+  const result = await submitOrganizerReview(service, user.id, parsed.data)
 
-  if (!organizer) {
-    return NextResponse.json({ error: 'Organizer not found' }, { status: 404 })
+  if (!result.ok) {
+    return NextResponse.json(
+      { error: result.error, code: result.code },
+      { status: result.status }
+    )
   }
 
-  const { data: review, error } = await supabase
-    .from('organizer_reviews')
-    .insert({
-      organizer_id: organizer.id,
-      vendor_id: user.id,
-      event_name: parsed.data.eventName,
-      event_month_year: parsed.data.eventMonthYear,
-      event_as_advertised: parsed.data.eventAsAdvertised,
-      would_return: parsed.data.wouldReturn,
-      attendance_vs_expectations: parsed.data.attendanceVsExpectations,
-      communication_rating: parsed.data.communicationRating,
-      refund_experience: parsed.data.refundExperience,
-      optional_notes: parsed.data.optionalNotes ?? null,
-      verification_tier: 'unverified',
-      published: true,
+  if (result.status === 'pending_moderation') {
+    return NextResponse.json({
+      ok: true,
+      status: 'pending_moderation',
+      reviewId: result.reviewId,
+      organizerSlug: result.organizerSlug,
+      organizerName: result.organizerName,
     })
-    .select('id')
-    .single()
-
-  if (error) {
-    if (error.code === '23505') {
-      return NextResponse.json(
-        {
-          error: 'You already reviewed this organizer for that event and month.',
-          code: 'duplicate',
-        },
-        { status: 409 }
-      )
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
   return NextResponse.json({
     ok: true,
-    reviewId: review.id,
-    organizerSlug: organizer.slug,
-    organizerName: organizer.display_name,
+    status: 'published',
+    reviewId: result.reviewId,
+    organizerSlug: result.organizerSlug,
+    organizerName: result.organizerName,
   })
 }

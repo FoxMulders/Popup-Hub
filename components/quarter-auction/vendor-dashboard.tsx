@@ -42,6 +42,7 @@ export function VendorQuarterAuction({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [retailDollars, setRetailDollars] = useState('')
+  const [entryQuarters, setEntryQuarters] = useState('')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -105,6 +106,11 @@ export function VendorQuarterAuction({
     }
     setSubmitting(true)
     try {
+      const parsedEntry = entryQuarters.trim() ? parseInt(entryQuarters, 10) : null
+      if (parsedEntry != null && (!Number.isFinite(parsedEntry) || parsedEntry < 1)) {
+        toast.error('Quarters per paddle must be at least 1')
+        return
+      }
       const res = await fetch(`/api/quarter-auction/${eventId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -115,6 +121,7 @@ export function VendorQuarterAuction({
           retail_value_cents: retailDollars
             ? Math.round(parseFloat(retailDollars) * 100)
             : null,
+          ...(parsedEntry != null ? { entry_cost_credits: parsedEntry } : {}),
         }),
       })
       const json = await res.json()
@@ -126,6 +133,7 @@ export function VendorQuarterAuction({
       setTitle('')
       setDescription('')
       setRetailDollars('')
+      setEntryQuarters('')
       setImageUrl(null)
       toast.success('Item submitted for coordinator approval')
     } finally {
@@ -274,6 +282,21 @@ export function VendorQuarterAuction({
                 value={retailDollars}
                 onChange={(e) => setRetailDollars(e.target.value)}
               />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="entry-quarters">Quarters per paddle (optional)</Label>
+              <Input
+                id="entry-quarters"
+                type="number"
+                min={1}
+                placeholder="Leave blank if you’ll announce on stage"
+                value={entryQuarters}
+                onChange={(e) => setEntryQuarters(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                If you already know your bid amount, enter it here. Otherwise leave blank and announce
+                it live — the coordinator will enter it when you&apos;re on stage.
+              </p>
             </div>
             <div className="space-y-1">
               <Label htmlFor="item-image">Image</Label>
