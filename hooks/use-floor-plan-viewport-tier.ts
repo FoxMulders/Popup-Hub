@@ -8,6 +8,9 @@ export const FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX = 1024
 /** Squished viewports (landscape phones, short windows) fall below this height. */
 export const FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX = 550
 
+export const FLOOR_PLAN_DESKTOP_REQUIRED_MESSAGE =
+  'The floor plan matrix is not optimized for small screens. Recommended layout: desktop size or larger.'
+
 /** @deprecated Iron dome uses {@link FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX} minus one. */
 export const TABLET_VIEWPORT_MAX_PX = FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX - 1
 

@@ -3,6 +3,11 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { useLayoutCanvasViewportLock } from './use-layout-canvas-viewport-lock'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 
 export interface LayoutPlannerShellProps {
   mode: 'wizard' | 'standalone'
@@ -14,6 +19,8 @@ export interface LayoutPlannerShellProps {
   children: ReactNode
   footer?: ReactNode
   className?: string
+  desktopRequiredExitHref?: string
+  desktopRequiredExitLabel?: string
 }
 
 /**
@@ -21,6 +28,22 @@ export interface LayoutPlannerShellProps {
  * Top status strip + optional left rail | canvas | inspector (via FloorPlanV2).
  */
 export function LayoutPlannerShell({
+  desktopRequiredExitHref,
+  desktopRequiredExitLabel,
+  ...props
+}: LayoutPlannerShellProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <LayoutPlannerShellInner
+        {...props}
+        desktopRequiredExitHref={desktopRequiredExitHref}
+        desktopRequiredExitLabel={desktopRequiredExitLabel}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function LayoutPlannerShellInner({
   mode,
   header,
   leftRail,
@@ -28,8 +51,11 @@ export function LayoutPlannerShell({
   children,
   footer,
   className,
+  desktopRequiredExitHref,
+  desktopRequiredExitLabel,
 }: LayoutPlannerShellProps) {
   useLayoutCanvasViewportLock(true)
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const showSideRail = Boolean(leftRail || stats)
 
   return (
@@ -40,6 +66,10 @@ export function LayoutPlannerShell({
         className
       )}
     >
+      <DesktopScreenRequiredOverlay
+        exitHref={desktopRequiredExitHref}
+        exitLabel={desktopRequiredExitLabel}
+      />
       {header}
 
       {showSideRail && leftRail ? (
@@ -81,7 +111,14 @@ export function LayoutPlannerShell({
           className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
           aria-label="Floor plan canvas"
         >
-          {children}
+          {showDesktopRequired ? (
+            <div
+              className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
+              aria-hidden
+            />
+          ) : (
+            children
+          )}
         </main>
       </div>
 

@@ -10,19 +10,36 @@ import { DashboardCanvasColumn } from './dashboard-canvas-column'
 import { DashboardNoRoomEmptyState } from './dashboard-no-room-empty-state'
 import { DashboardToolbarPortalProvider } from './dashboard-toolbar-portal'
 import { useMarketManagement } from './market-management-context'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 
 export interface DashboardBootstrapProps {
   header: ReactNode
 }
 
 export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay />
+      <DashboardBootstrapInner header={header} />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardBootstrapInner({ header }: DashboardBootstrapProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const { fullscreen: immersive } = useCommandCenterFullscreen()
   const { selectedEventId, layoutRooms, setLayoutRooms } = useMarketManagement()
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
   const [liveMessage, setLiveMessage] = useState('Booth layout designer loading.')
   const hasInitialRoom = layoutRooms.length > 0
-  const showNoRoomEmpty = Boolean(selectedEventId && !hasInitialRoom)
+  const showNoRoomEmpty = Boolean(
+    selectedEventId && !hasInitialRoom && !showDesktopRequired
+  )
 
   useEffect(() => {
     if (showNoRoomEmpty) {
@@ -64,12 +81,19 @@ export function DashboardBootstrap({ header }: DashboardBootstrapProps) {
         leftClassName="flex w-[300px] min-w-[300px] flex-shrink-0 flex-col justify-start overflow-hidden border-r border-gray-200 bg-white lg:h-[calc(100vh-64px)]"
         left={immersive ? null : <DashboardLeftPanel />}
         center={
-          showNoRoomEmpty ? (
+          showDesktopRequired ? (
+            <div
+              className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
+              aria-hidden
+            />
+          ) : showNoRoomEmpty ? (
             <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
           ) : (
             <DashboardCanvasColumn
               showBlueprint={showBlueprint}
-              mountCanvas={Boolean(selectedEventId && hasInitialRoom)}
+              mountCanvas={Boolean(
+                selectedEventId && hasInitialRoom && !showDesktopRequired
+              )}
               reducedMotion={reducedMotion}
               onCanvasInteractive={handleCanvasInteractive}
             />

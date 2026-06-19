@@ -9,6 +9,11 @@ import {
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
 import { cn } from '@/lib/utils'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 
 const STATUS_PILL_CLASS: Record<
   keyof typeof BOOTH_STATUS_THEME,
@@ -36,6 +41,33 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay
+        exitHref="/coordinator/studio"
+        exitLabel="Back to Blueprint Studio"
+      />
+      <DashboardLedgerWindowContent />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowContent() {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
+
+  if (showDesktopRequired) {
+    return (
+      <div
+        className="flex h-full min-h-screen items-center justify-center bg-stone-950 p-6"
+        aria-hidden
+      />
+    )
+  }
+
+  return <DashboardLedgerWindowReady />
+}
+
+function DashboardLedgerWindowReady() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
