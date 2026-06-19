@@ -104,26 +104,31 @@ async function main() {
 
   for (const row of table1) {
     const slug = organizerSlugFromName(row.display_name)
+    const { data: existing } = await supabase
+      .from('organizers')
+      .select('id, listing_status')
+      .eq('slug', slug)
+      .maybeSingle()
+
+    const organizerPayload = {
+      slug,
+      display_name: row.display_name,
+      primary_contact_name: row.primary_contact_name ?? null,
+      city: row.city,
+      province: 'AB',
+      region: 'edmonton-metro',
+      website_url: row.website_url ?? null,
+      facebook_url: row.facebook_url ?? null,
+      instagram_handle: row.instagram_handle ?? null,
+      typical_season_or_dates: row.typical_season_or_dates ?? null,
+      listing_status: existing?.listing_status ?? 'draft',
+      source: 'fb_extract',
+      admin_notes: row.admin_notes ?? null,
+    }
+
     const { data: org, error } = await supabase
       .from('organizers')
-      .upsert(
-        {
-          slug,
-          display_name: row.display_name,
-          primary_contact_name: row.primary_contact_name ?? null,
-          city: row.city,
-          province: 'AB',
-          region: 'edmonton-metro',
-          website_url: row.website_url ?? null,
-          facebook_url: row.facebook_url ?? null,
-          instagram_handle: row.instagram_handle ?? null,
-          typical_season_or_dates: row.typical_season_or_dates ?? null,
-          listing_status: 'draft',
-          source: 'fb_extract',
-          admin_notes: row.admin_notes ?? null,
-        },
-        { onConflict: 'slug' }
-      )
+      .upsert(organizerPayload, { onConflict: 'slug' })
       .select('id, slug')
       .single()
 

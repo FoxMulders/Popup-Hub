@@ -10,12 +10,6 @@
     "admin_notes": "Discard FB-extracted email/IG until verified on official site. Kailey Green = poster not org name."
   },
   {
-    "display_name": "Garden Valley Community Centre",
-    "city": "Spruce Grove",
-    "event_name": "Christmas Market",
-    "source_snippet": "Follow our page and watch for the Google forms link to be posted so you can apply for this market in July."
-  },
-  {
     "display_name": "Decimate Metalfest",
     "city": "Millet",
     "event_name": "Decimate Metalfest 2026",
@@ -38,7 +32,8 @@
     "city": "Sherwood Park",
     "event_name": "Little Big Town Western Market",
     "typical_season_or_dates": "June 14-15",
-    "source_snippet": "Little Big Town Western Market June 14-15 at The Agora Sherwood Park."
+    "source_snippet": "Little Big Town Western Market June 14-15 at The Agora Sherwood Park.",
+    "admin_notes": "Organizer is Linda Morley-Jossy. The Agora Sherwood Park is the venue."
   },
   {
     "display_name": "Agora Markets",
@@ -47,27 +42,12 @@
     "source_snippet": "Golden Hour at the Parks: Agora Market"
   },
   {
-    "display_name": "St. Paul Rec Center",
-    "city": "St. Paul",
-    "event_name": "UFO Market / St. Paul UFO Days",
-    "typical_season_or_dates": "Jul 10 - Jul 12",
-    "source_snippet": "UFO Market St. Paul Rec Center"
-  },
-  {
-    "display_name": "The Craft Vault",
-    "city": "Edmonton",
-    "website_url": "https://thecraftvault.ca",
-    "instagram_handle": "@thecraftvault.ca",
-    "event_name": "The Craft Vault",
-    "typical_season_or_dates": "September store opening",
-    "source_snippet": "We are looking for vendors for our new store opening in September."
-  },
-  {
-    "display_name": "STM CWL Christmas Market",
+    "display_name": "STM Catholic Women's League",
     "primary_contact_name": "Heather MacPherson Craig",
     "city": "Edmonton",
     "event_name": "STM CWL Christmas Market",
-    "source_snippet": "Please email if interested. Vendors are still needed but spots/tables are filling up."
+    "source_snippet": "Please email if interested. Vendors are still needed but spots/tables are filling up.",
+    "admin_notes": "Renamed from FB event title. CWL chapter organizes parish Christmas market."
   },
   {
     "display_name": "Central Occasion Events",
@@ -88,13 +68,12 @@
     "admin_notes": "vendor_call (positive). source_permalink NOT_PROVIDED. $2 CAD = patron quarter-auction participation fee, NOT vendor booth fee. Vendor table fee not listed. Monitor FB group for charity payout validation and schedule updates."
   },
   {
-    "display_name": "The Venue of New Hope & Dezzigner Scrunchies",
-    "city": "Coalhurst",
-    "facebook_url": "https://www.facebook.com/groups/352987814777796",
-    "event_name": "Hope & Holly Christmas in July Market",
-    "typical_season_or_dates": "July 18, 2026, 10am–4pm",
-    "source_snippet": "On the hunt for a few more vendors!! Hope & Holly July 18, 2026 10am-4pm",
-    "source_permalink": "https://www.facebook.com/groups/352987814777796/posts/27227841860199027/",
-    "admin_notes": "vendor_call. permalink_verified. Coalhurst (southern AB). FB group: Trade shows, Events and Markets in Alberta (352987814777796)."
+    "display_name": "Lauderdale Community League",
+    "city": "Edmonton",
+    "website_url": "https://lauderdalecl.ca/",
+    "event_name": "Lauderdale Community events",
+    "typical_season_or_dates": "Year-round community programs; seasonal markets and hall events",
+    "source_snippet": "Community league programs, hall rentals, and seasonal neighbourhood events.",
+    "admin_notes": "LEGITIMATE organizer. Edmonton community league (est. 1956). Verified official site lauderdalecl.ca."
   }
 ]

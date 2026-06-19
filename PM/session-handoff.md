@@ -4,6 +4,17 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — organizer trust directory vet + Lauderdale (local, not deployed)
+- **Issue:** `/check` and `/check/review` listed venues (rec centres, community centres, retail stores) mistaken for organizers during FB extract.
+- **Vet (DB applied via `patch-organizer-list-vet.ts`):**
+  - **Archived (4):** Garden Valley Community Centre, St. Paul Rec Center, The Craft Vault, Venue of New Hope & Dezzigner Scrunchies
+  - **Renamed:** `stm-cwl-christmas-market` display → **STM Catholic Women's League**
+  - **Added:** **Lauderdale Community League** (lauderdalecl.ca) — published
+  - **Published list now (9):** Agora Markets, Beaumont Farmers Market, Caribou Exchange, Central Occasion Events, Decimate Metalfest, Lauderdale CL, Little Big Town Western Market, Morinville District Chamber, STM Catholic Women's League
+- **Seed:** `edmonton-fb-table1-batch1.json` trimmed; import preserves `listing_status` on re-run (won't resurrect archived rows).
+- **Scripts:** `scripts/patch-organizer-list-vet.ts`, `scripts/list-organizers.ts`
+- **Next:** Commit + deploy when user asks; identify Hope & Holly market organizer if vendor reports exist.
+
 ## Active work — /check/review select dropdown width (local, not deployed)
 - **Issue:** Organizer review form dropdowns clipped option text — popup locked to narrow `w-fit` trigger via `w-(--anchor-width)` + `overflow-x-hidden`.
 - **Fix:** `SelectContent` uses `min-w-(--anchor-width) w-max max-w-(--available-width)`; all review form `SelectTrigger` set to `w-full`.

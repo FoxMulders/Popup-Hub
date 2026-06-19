@@ -1,1 +1,1 @@
-feat: ship 128 session updates (/check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; +124 more)
+feat: ship 129 session updates (organizer trust directory vet + Lauderdale; /check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; +125 more)
