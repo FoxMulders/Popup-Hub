@@ -1432,9 +1432,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `7439c0e` (pushed to `origin/master`)
-- Last deploy commit: `7439c0e` - feat: ship 128 session updates (/check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; +124 more)
-- Production: https://popuphub.ca - **v1.0.0 build 210** | commit `1955528` (handoff updated 2026-06-18 20:56)
+- Branch: `master` @ `94ba182` (pushed to `origin/master`)
+- Last deploy commit: `94ba182` - feat: ship 129 session updates (organizer trust directory vet + Lauderdale; /check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; +125 more)
+- Production: https://popuphub.ca - **v1.0.0 build 211** | commit `1c16dd9` (handoff updated 2026-06-19 11:04)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1811,7 +1811,7 @@
 
 
 ## Last deploy
-- 2026-06-18 20:56 - Deploy via deploy-popuphub.ps1 - `feat: ship 128 session updates (/check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; +124 more)` (7439c0e)
+- 2026-06-19 11:04 - Deploy via deploy-popuphub.ps1 - `feat: ship 129 session updates (organizer trust directory vet + Lauderdale; /check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; +125 more)` (94ba182)
 
 
 ## Goal
