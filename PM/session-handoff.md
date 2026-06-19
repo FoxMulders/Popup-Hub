@@ -4,6 +4,11 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — organizer claim RLS fix (local, not deployed)
+- **Bug:** `POST /api/organizers/[slug]/claim` used user-scoped Supabase client; `organizers` table has SELECT-only RLS → update no-ops while API returned `{ ok: true }`.
+- **Fix:** `claimOrganizerProfile` writes via `createAdminClient()` after coordinator auth; atomic `claimed_by` guard + verify row updated.
+- **Verify:** `npx tsx lib/organizers/claim-organizer.test.ts` — PASS.
+
 ## Shipped this session — Edmonton trust seed expansion (deployed 2026-06-18)
 - **Deploy:** `2caa4cc` → production build **207** @ https://popuphub.ca
 - **Shipped:**
