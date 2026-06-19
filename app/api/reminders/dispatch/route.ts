@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/twilio'
 import { authorizeCronRequest } from '@/lib/cron/authorize-cron'
+import { dispatchNativePushToUsers } from '@/lib/mobile/push-dispatch'
 
-/** Cron: dispatch due market reminders (in-app + optional SMS). */
+/** Cron: dispatch due market reminders (in-app + optional SMS + native push). */
 export async function POST(request: Request) {
   const denied = authorizeCronRequest(request)
   if (denied) return denied
@@ -30,6 +31,15 @@ export async function POST(request: Request) {
       type: 'market_reminder',
       message,
       metadata: { event_id: row.event_id, reminder_id: row.id },
+    })
+
+    void dispatchNativePushToUsers(supabase, {
+      userIds: [row.user_id],
+      title: 'Market reminder',
+      body: message,
+      deepLink: `/events/${row.event_id}`,
+    }).catch((err) => {
+      console.error('[reminders/dispatch] native push failed', err)
     })
 
     const { data: profile } = await supabase

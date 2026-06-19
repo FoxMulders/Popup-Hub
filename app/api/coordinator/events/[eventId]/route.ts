@@ -7,7 +7,7 @@ import {
 } from '@/lib/coordinator/verification'
 import { assertEventVenueVerifiedForPublish } from '@/lib/venues/persist-event-venue-verification'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { notifyVendorsOfNearbyPublishedMarket } from '@/lib/vendor/nearby-market-alerts'
+import { dispatchPublishMarketAlerts } from '@/lib/vendor/dispatch-publish-market-alerts'
 
 type PatchBody = {
   status?: 'published'
@@ -154,17 +154,9 @@ export async function PATCH(
   }
 
   const service = await createServiceClient()
-  const { data: publishedEvent } = await service
-    .from('events')
-    .select('id, name, start_at, latitude, longitude, city')
-    .eq('id', eventId)
-    .single()
-
-  if (publishedEvent) {
-    void notifyVendorsOfNearbyPublishedMarket(service, publishedEvent).catch((err) => {
-      console.error('[publish] nearby vendor alerts failed', err)
-    })
-  }
+  void dispatchPublishMarketAlerts(service, eventId).catch((err) => {
+    console.error('[publish] nearby vendor alerts failed', err)
+  })
 
   return NextResponse.json({ ok: true, status: 'published' })
 }

@@ -43,7 +43,9 @@ export function resolvePostLoginPath(input: {
   }
 
   if (role === 'vendor') {
-    return redirectTo.startsWith('/vendor') ? redirectTo : '/vendor/dashboard'
+    if (redirectTo.startsWith('/vendor')) return redirectTo
+    if (input.activePortal === 'patron') return '/discover'
+    return '/vendor/events'
   }
 
   if (input.activePortal) {

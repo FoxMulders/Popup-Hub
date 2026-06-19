@@ -15,7 +15,7 @@ export function getPortalHome(portal: ActivePortal): string {
     case 'coordinator':
       return '/coordinator'
     case 'vendor':
-      return '/vendor/dashboard'
+      return '/vendor/events'
     case 'patron':
       return '/discover'
   }

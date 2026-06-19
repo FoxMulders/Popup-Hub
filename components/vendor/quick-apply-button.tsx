@@ -12,6 +12,7 @@ import { parseAvailableSlots } from '@/lib/queries/event-capacity'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
 import { evaluateQuickApplyEligibility } from '@/lib/vendor/quick-apply-eligibility'
 import { readVendorApplyDefaults, writeVendorApplyDefaults } from '@/lib/vendor/apply-defaults'
+import { triggerSuccessHaptic } from '@/lib/mobile/haptics'
 import { hasExistingVendorApplication } from '@/lib/vendor/application-status-ui'
 import type { ApplicationStatus, Event, EventCategoryLimit, PaymentMethod } from '@/types/database'
 import type { CategorySlotInfo } from '@/lib/vendor/application-category-match'
@@ -139,6 +140,7 @@ export function QuickApplyButton({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId: event.id,
+          express: true,
           joinWaitlist: false,
           attendanceTermsAcknowledged: true,
           attendingEventDayIds,
@@ -166,6 +168,7 @@ export function QuickApplyButton({
       }
 
       writeVendorApplyDefaults(userId, { paymentMethod, termsAcknowledged: true })
+      void triggerSuccessHaptic()
 
       if (data.waitlisted) {
         toast.success('Added to the waitlist — we will notify you if a spot opens.')

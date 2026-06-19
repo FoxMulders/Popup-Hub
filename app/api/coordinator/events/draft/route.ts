@@ -4,7 +4,8 @@ import {
   COORDINATOR_FRAUD_PROFILE_SELECT,
   coordinatorPublishBlockReason,
 } from '@/lib/coordinator/verification'
-import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient, createServiceClient } from '@/lib/supabase/server'
+import { dispatchPublishMarketAlerts } from '@/lib/vendor/dispatch-publish-market-alerts'
 import {
   persistEventDraft,
   type DayRowPayload,
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient()
   const eventId = body.eventId ?? null
+  let wasPublished = false
 
   const publishing = body.draft?.status === 'published'
 
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
   if (eventId) {
     const { data: existing, error: existingError } = await admin
       .from('events')
-      .select('coordinator_id')
+      .select('coordinator_id, status')
       .eq('id', eventId)
       .maybeSingle()
 
@@ -101,6 +103,8 @@ export async function POST(request: Request) {
     if (existing.coordinator_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+
+    wasPublished = existing.status === 'published'
   }
 
   const result = await persistEventDraft(
@@ -122,6 +126,15 @@ export async function POST(request: Request) {
       { error: isRls ? RLS_DENIED_MESSAGE : message },
       { status: isRls ? 403 : 500 }
     )
+  }
+
+  if (publishing && result.eventId) {
+    void (async () => {
+      const service = await createServiceClient()
+      await dispatchPublishMarketAlerts(service, result.eventId, { wasPublished })
+    })().catch((err) => {
+      console.error('[draft publish] nearby vendor alerts failed', err)
+    })
   }
 
   return NextResponse.json({ eventId: result.eventId })

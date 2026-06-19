@@ -1,0 +1,91 @@
+{
+  "thread_permalink": "https://www.facebook.com/groups/148936038475481/posts/24907452735530468/",
+  "scam_alerts": [
+    {
+      "organizer_slug": "central-occasion-events",
+      "alert_title": "No business partners — pay Tracy / Central Occasion Events only",
+      "alert_body": "Tracy Detta-Fehr states Central Occasion Events has had NO business partners in 11 years. Anyone else collecting vendor fees in her name — including people claiming to be her assistant — is not authorized. DM the organizer who posted the event directly; do not pay third parties from comment-thread outreach.",
+      "source_snippet": "Tracy Detta-Fehr & Central Occasion Events Do NOT HAVE BUSINESS PARTNERS. NOT IN 11 YEARS!",
+      "source_permalink": "https://www.facebook.com/groups/148936038475481/posts/24907452735530468/",
+      "verification_status": "permalink_verified",
+      "published": false
+    },
+    {
+      "organizer_slug": "central-occasion-events",
+      "alert_title": "Impersonators target vendors who comment on posts",
+      "alert_body": "Scammers watch vendor comments on market posts, then DM vendors with fake payment details claiming to be Tracy's assistant or another organizer. Do not reply in comments looking for booth info — message the verified poster directly.",
+      "source_snippet": "THEY WILL REACH OUT AND SAY THEY ARE MY ASSISTANT OR HELPING ANOTHER ORGANIZER.",
+      "source_permalink": "https://www.facebook.com/groups/148936038475481/posts/24907452735530468/",
+      "verification_status": "permalink_verified",
+      "published": false
+    },
+    {
+      "organizer_slug": "beaumont-alberta-farmers-market",
+      "alert_title": "Impersonation reported (vendor group)",
+      "alert_body": "Vendors reported lookalike websites or emails that are nearly correct but may be missing an \"s\" in \"farmers\" (or similar typos). Always confirm beaumontalbertafarmersmarket.com before paying booth fees.",
+      "source_snippet": "The email and website is nearly correct, it's just missing an \"s\" after the farmer.",
+      "verification_status": "ai_extract_unverified",
+      "published": false
+    }
+  ],
+  "watchlist": [
+    {
+      "slug": "kallans-legacy-of-love",
+      "display_name": "Kallans legacy of love (legacyoflove)",
+      "warning_title": "Reported fraud — named by Central Occasion Events",
+      "warning_body": "First-party fraud warning from Tracy Detta-Fehr (Central Occasion Events). Reported scam identity: \"Kallans legacyoflove\". Reported contact email: legacyoflovekallans@gmail.com — do not send booth fees to this address. Scammers may also DM vendors after they comment on legitimate market posts.",
+      "source_snippet": "Kallans legacyoflove — SCAMMER. legacyoflovekallans@gmail.com",
+      "source_permalink": "https://www.facebook.com/groups/148936038475481/posts/24907452735530468/",
+      "admin_notes": "Fraud poster screenshot + Facebook thread permalink on file.",
+      "verification_status": "permalink_verified",
+      "published": false
+    }
+  ],
+  "community_mentions": [
+    {
+      "organizer_slug": "morinville-district-chamber",
+      "coordinator_person_name": null,
+      "quote": "$580 for a market in Morinville? Are you insane?",
+      "sentiment": "negative",
+      "mention_type": "vendor_question",
+      "source_snippet": "Vendor confused tradeshow booth pricing with market stall pricing.",
+      "source_permalink": "https://www.facebook.com/groups/148936038475481/posts/25792587627016970/",
+      "verification_status": "permalink_verified",
+      "published": true
+    },
+    {
+      "organizer_slug": "morinville-district-chamber",
+      "coordinator_person_name": "Morinville District Chamber",
+      "quote": "You're looking at the tradeshow booths. Market stalls are $150 and are very reasonably priced.",
+      "sentiment": "neutral",
+      "mention_type": "organizer_clarification",
+      "source_snippet": "Official chamber reply on vendor group thread.",
+      "source_permalink": "https://www.facebook.com/groups/148936038475481/posts/25792587627016970/",
+      "verification_status": "permalink_verified",
+      "published": true
+    },
+    {
+      "organizer_slug": "central-occasion-events",
+      "coordinator_person_name": "Tracy Detta-Fehr",
+      "quote": "PLEASE DO YOUR HOMEWORK! After hosting markets for 11 years we have not seen the amount of SCAMMERS as we do now!!",
+      "sentiment": "neutral",
+      "mention_type": "vendor_protection",
+      "source_snippet": "First-party organizer fraud-awareness poster and group post.",
+      "source_permalink": "https://www.facebook.com/groups/148936038475481/posts/24907452735530468/",
+      "verification_status": "permalink_verified",
+      "published": false
+    },
+    {
+      "organizer_slug": "central-occasion-events",
+      "coordinator_person_name": null,
+      "quote": "Yup, I was scammed. 😞 Luckily I caught on.",
+      "sentiment": "negative",
+      "mention_type": "vendor_scam_experience",
+      "author_descriptor": "Bite Me All Natural Organic Dog Treats (vendor)",
+      "source_snippet": "Comment on Tracy Detta-Fehr vendor-protection thread.",
+      "source_permalink": "https://www.facebook.com/groups/148936038475481/posts/24907452735530468/",
+      "verification_status": "permalink_verified",
+      "published": false
+    }
+  ]
+}

@@ -6,6 +6,7 @@ export type NotificationEvent =
   | 'application_approvals'
   | 'wallet_payouts'
   | 'waitlist_updates'
+  | 'nearby_markets'
 
 export type NotificationChannel = 'email' | 'sms' | 'push'
 
@@ -34,6 +35,11 @@ export const NOTIFICATION_EVENTS: {
     label: 'Waitlist updates',
     description: 'Waitlist promotions and spot availability changes.',
   },
+  {
+    id: 'nearby_markets',
+    label: 'New markets nearby',
+    description: 'When organizers publish markets within your vendor alert radius.',
+  },
 ]
 
 export const NOTIFICATION_CHANNELS: {
@@ -51,6 +57,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   application_approvals: { email: true, sms: true, push: true },
   wallet_payouts: { email: true, sms: false, push: true },
   waitlist_updates: { email: true, sms: true, push: true },
+  nearby_markets: { email: true, sms: false, push: true },
 }
 
 function storageKey(userId: string) {

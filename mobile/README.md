@@ -5,7 +5,7 @@ Native iOS wrapper for the production web app at [https://popuphub.ca](https://p
 ## Architecture
 
 - **Bundle ID:** `ca.popuphub.app`
-- **Launch URL:** `https://popuphub.ca/discover`
+- **Launch URL:** `https://popuphub.ca/discover` (vendors with active vendor portal redirect to `/vendor/events` on native cold launch)
 - **Web assets:** `mobile/www/` is a minimal offline fallback; production builds load the hosted site via `server.url` in `capacitor.config.ts`.
 - **Auth / checkout:** OAuth and payment domains are listed in `server.allowNavigation` so redirects stay inside the WKWebView.
 
@@ -39,6 +39,8 @@ In Xcode:
 3. Product → Archive → Distribute App → App Store Connect → Upload.
 
 Full TestFlight checklist: **`PM/ios-testflight.md`**.
+
+**Android Play Console:** **`PM/android-play-console.md`**.
 
 **Emulator / device testing (Android + iOS):** **`PM/mobile-emulator-setup.md`**.
 

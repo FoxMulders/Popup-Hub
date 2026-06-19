@@ -4,17 +4,31 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session — Edmonton trust directory /check (local, not deployed)
+- **Goal:** Trust-first wedge — vendors check organizers before paying booth fees; Edmonton metro seed data live in DB.
+- **Shipped:**
+  - **Migration `113_organizer_trust_directory.sql`** — organizers, events, scam alerts, watchlist, community mentions
+  - **`/check`** search + **`/organizers/[slug]`** trust reports (scam alerts, mentions, source permalinks)
+  - **Homepage hero** repositioned — “Before you pay for a booth, check the organizer”
+  - **Seed scripts:** `import-edmonton-seed.ts`, `publish-edmonton-organizers.ts`, `patch-morinville-thread.ts`, `scripts/seed/edmonton-fb-*.json`
+  - **DB seeded:** 10 Edmonton organizers published; Central Occasion Events scam alerts + Kallans watchlist + Tracy/Bite Me mentions (permalink verified); Morinville $150 vs $580 clarification
+- **Also in commit:** Capacitor mobile shell, vendor geo alerts (112), coordinator vendor invite links, build clean script
+- **Verify:** `npm run db:push` + `seed:edmonton:import` + `seed:edmonton:publish -- --include-verified-alerts` — DONE. `npx tsc --noEmit` — PASS.
+- **Next:** Beaumont scam alert permalink; vendor review submission form; `/check/scam-alerts` watchlist page; deploy smoke `/check` on popuphub.ca
+
 ## Active work — patron + vendor mobile app (local, not deployed)
 - **Goal:** Capacitor iOS/Android shell with patron discover + vendor markets, geo alerts, one-tap apply.
 - **Shipped locally:**
-  - **Native:** `lib/mobile/native-app.ts`, `components/mobile/capacitor-init.tsx`, launch URL `/discover` in `capacitor.config.ts`
-  - **Vendor mobile:** bottom nav (`vendor-bottom-nav.tsx`), skip 3-column workspace on phone, `QuickApplyButton`, `VendorEventApplySection`
-  - **Alerts:** migration `112_vendor_mobile_alerts.sql`, `lib/vendor/nearby-market-alerts.ts`, publish hook, prefs API + profile UI
-  - **Push scaffold:** `device_push_tokens`, `POST /api/mobile/push/register`
-  - **Deep links:** `.well-known/apple-app-site-association`, `assetlinks.json` (replace Android SHA256 before prod)
-  - **Docs:** `PM/mobile-emulator-setup.md`
-- **Verify:** `npx tsc --noEmit` — PASS. Apply migration `npm run db:push`. Android: follow `PM/mobile-emulator-setup.md`.
-- **Next:** `npm run mobile:android:add` + emulator smoke; commit + deploy when user asks; wire APNs/FCM for native push delivery.
+  - **Native:** `lib/mobile/native-app.ts`, `components/mobile/capacitor-init.tsx`, launch URL `/discover` in `capacitor.config.ts`, role-aware bootstrap → `/vendor/events` for vendors
+  - **Vendor mobile:** bottom nav, skip 3-column workspace on phone, `QuickApplyButton` (`express: true` API guard), `VendorAlertOnboarding` on first `/vendor/events` visit
+  - **Alerts:** migration `112_vendor_mobile_alerts.sql`, publish hooks, prefs API + profile UI, push dispatch scaffold
+  - **Patron push:** reminder cron wires `dispatchNativePushToUsers` per saved market
+  - **Deep links:** `.well-known/apple-app-site-association` (replace `TEAM_ID` — see `.well-known/README.md`), `assetlinks.json`
+  - **Haptics:** `@capacitor/haptics` on quick-apply success (native only)
+  - **Docs:** `PM/mobile-emulator-setup.md`, `PM/ios-testflight.md`, `PM/android-play-console.md`
+  - **Tests:** `tests/e2e/patron-mobile-chrome`, `vendor-mobile-chrome`, `vendor-quick-apply`
+- **Verify:** `npx tsc --noEmit` — PASS. Run `npm run test:e2e:mobile` before deploy. Apply migration `npm run db:push`.
+- **Next:** Android SDK + `npm run mobile:android:add`; replace AASA Team ID + Android SHA256; wire APNs/FCM env keys; commit + deploy when user asks.
 
 ## Active work — coordinator vendor invite guidance (local, not deployed)
 - **Goal:** First coordinators on an empty platform need one shareable link for vendor outreach (Facebook, email, etc.).

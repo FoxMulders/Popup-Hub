@@ -79,6 +79,9 @@ Processing in App Store Connect usually takes 5–30 minutes.
 | 5 | Safe area | Notch/home indicator do not clip footer or bottom nav |
 | 6 | External link | Legal/privacy opens in-app or Safari per product rules |
 | 7 | Background | Resume app → session persists (Supabase cookies) |
+| 8 | Vendor launch | Vendor account cold launch → `/vendor/events` + bottom nav |
+| 9 | Market alerts | Profile → set nearby alert radius; publish test market → in-app notification |
+| 10 | Quick apply | Open market from notification → apply in one tap (instant-book) |
 
 File issues with device model + iOS version + build number.
 
@@ -86,15 +89,15 @@ File issues with device model + iOS version + build number.
 
 Apple Guideline **4.7** allows apps that run web content if they use standard WebKit and add native value. Draft review notes:
 
-> Popup Hub is a market-operations tool for event coordinators and vendors. The iOS app wraps our authenticated web application served from https://popuphub.ca. Native shell provides App Store distribution, splash screen, status bar integration, and deep-link auth (`ca.popuphub.app://`). Primary users manage floor plans, vendor booths, and market-day workflows. No gambling or HTML5 game catalog.
+> Popup Hub connects market-goers and vendors to local popup markets. The iOS app wraps https://popuphub.ca with native splash, status bar, push notifications, geolocation for market discovery, and deep-link auth (`ca.popuphub.app://`). Patrons discover markets and interactive venue maps; vendors receive geo-matched alerts and apply for booths with passport-on-file instant book.
 
 Avoid describing the app as “just a website wrapper.” Emphasize coordinator/vendor tooling and authenticated workflows.
 
 ## 7. Known limitations (v1)
 
 - **Remote URL:** Updates ship with web deploys; offline mode is limited to the fallback page in `mobile/www/`.
-- **Capacitor plugins:** Only used for splash/status bar in v1; most UI is standard WKWebView.
-- **Universal links:** Not configured yet — add `apple-app-site-association` on `popuphub.ca` before relying on HTTPS OAuth return without custom scheme.
+- **Capacitor plugins:** Splash, status bar, app URL open, geolocation, push token registration.
+- **Universal links:** `public/.well-known/apple-app-site-association` — replace `TEAM_ID` before production; deploy to popuphub.ca.
 - **Windows CI:** Cannot archive iOS builds; use Mac locally or macOS CI (e.g. GitHub Actions + `macos-latest` + `fastlane` later).
 
 ## 8. Troubleshooting

@@ -18,6 +18,7 @@ import {
   type CategorySlotInfo,
 } from '@/lib/vendor/application-category-match'
 import { resolvePassportCategoryIds } from '@/lib/vendor/passport-categories'
+import { validateExpressVendorApply } from '@/lib/vendor/express-apply-validation'
 import {
   resolveEventScheduleDays,
   normalizeAttendanceSelection,
@@ -130,6 +131,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     eventId?: string
+    express?: boolean
     categoryId?: string
     neighborPreference?: string | null
     joinWaitlist?: boolean
@@ -148,6 +150,7 @@ export async function POST(request: Request) {
 
   const {
     eventId,
+    express,
     categoryId: requestedCategoryId,
     neighborPreference,
     joinWaitlist,
@@ -238,6 +241,21 @@ export async function POST(request: Request) {
 
   if (!isEventOpenForApplications(event)) {
     return NextResponse.json({ error: 'Applications are closed for this market' }, { status: 400 })
+  }
+
+  const expressGate = validateExpressVendorApply(event, {
+    express,
+    neighborPreference,
+    joinWaitlist,
+    categoryId: requestedCategoryId,
+    applicableDocumentationUrl,
+    boothContractAcknowledged,
+    tableCount: rawTableCount,
+    attendingEventDayIds,
+    attendingDates,
+  })
+  if (!expressGate.ok) {
+    return NextResponse.json({ error: expressGate.error }, { status: 400 })
   }
 
   const venueGate = requireVenueVerified(event)
