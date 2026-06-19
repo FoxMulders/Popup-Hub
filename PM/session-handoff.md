@@ -1495,9 +1495,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `c1df98f` (pushed to `origin/master`)
-- Last deploy commit: `c1df98f` - feat: ship 131 session updates (relax venue type restriction for markets; trust directory navigation; organizer trust directory vet + Lauderdale; /check/review select dropdown width; +127 more)
-- Production: https://popuphub.ca - **v1.0.0 build 212** | commit `72ae05d` (handoff updated 2026-06-19 11:52)
+- Branch: `master` @ `a22a30f` (pushed to `origin/master`)
+- Last deploy commit: `a22a30f` - feat: ship 135 session updates (coordinator feature roadmap (8 items); patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)
+- Production: https://popuphub.ca - **v1.0.0 build 214** | commit `7d3ae7d` (handoff updated 2026-06-19 16:12)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1874,7 +1874,7 @@
 
 
 ## Last deploy
-- 2026-06-19 11:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 131 session updates (relax venue type restriction for markets; trust directory navigation; organizer trust directory vet + Lauderdale; /check/review select dropdown width; +127 more)` (c1df98f)
+- 2026-06-19 16:12 - Deploy via deploy-popuphub.ps1 - `feat: ship 135 session updates (coordinator feature roadmap (8 items); patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)` (a22a30f)
 
 
 ## Goal
