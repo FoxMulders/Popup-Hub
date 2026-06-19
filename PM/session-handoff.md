@@ -1450,9 +1450,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `94ba182` (pushed to `origin/master`)
-- Last deploy commit: `94ba182` - feat: ship 129 session updates (organizer trust directory vet + Lauderdale; /check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; +125 more)
-- Production: https://popuphub.ca - **v1.0.0 build 211** | commit `1c16dd9` (handoff updated 2026-06-19 11:04)
+- Branch: `master` @ `c1df98f` (pushed to `origin/master`)
+- Last deploy commit: `c1df98f` - feat: ship 131 session updates (relax venue type restriction for markets; trust directory navigation; organizer trust directory vet + Lauderdale; /check/review select dropdown width; +127 more)
+- Production: https://popuphub.ca - **v1.0.0 build 212** | commit `72ae05d` (handoff updated 2026-06-19 11:52)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1829,7 +1829,7 @@
 
 
 ## Last deploy
-- 2026-06-19 11:04 - Deploy via deploy-popuphub.ps1 - `feat: ship 129 session updates (organizer trust directory vet + Lauderdale; /check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; +125 more)` (94ba182)
+- 2026-06-19 11:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 131 session updates (relax venue type restriction for markets; trust directory navigation; organizer trust directory vet + Lauderdale; /check/review select dropdown width; +127 more)` (c1df98f)
 
 
 ## Goal
