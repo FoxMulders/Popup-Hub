@@ -4,6 +4,16 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — Canopy trust directory rebrand (local, not deployed)
+- **Goal:** Rebrand trust directory nav from "Check organizers" to **Canopy** with tagline **Popup Hub security & fraud prevention**.
+- **Shipped locally:**
+  - **`lib/nav/trust-directory-nav.ts`:** `label: Canopy`, `tagline`, `ctaOpen: Open Canopy`
+  - **Nav:** Guest/patron ribbon + vendor app nav show **Canopy** with `title` tooltip; mobile menu passes tagline
+  - **`/check`:** Metadata + eyebrow use Canopy branding; footer CTA references Canopy
+  - **Marketing:** Hero CTA, features tile, path card, CTA band; error page button uses constant
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: ribbon hover tooltip, `/check` eyebrow, homepage Open Canopy CTA.
+- **Next:** Commit + deploy when user asks.
+
 ## Shipped this session (coordinator feature roadmap (8 items), deployed 2026-06-19)
 - **Goal:** Phase A–C coordinator enhancements from roadmap plan — saved layouts, paste cover, mobile layout gate, layout image import, league discount, venue admin approval, Google Docs contracts, for-organizers value calculator.
 - **Shipped locally:**
@@ -18,7 +28,7 @@
 - **Goal:** Tester feedback — real Home (`/` PublicLanding), unified top ribbon, home-address distance filter, organizer error hardening, auth copy, cancellation FAQ.
 - **Shipped locally:**
   - **Home:** `/` always shows `PublicLanding` (guest + signed-in); logo → `/` via `SITE_HOME_PATH` in GuestNav, ShopperTopBar, AppNav
-  - **Ribbon:** `site-ribbon-links.ts` — Home, Discover, Check organizers, FAQ on browse + guest surfaces; desktop links on ShopperTopBar; GuestNav on login/signup; profile layout → patron `ShopperShell`; vendor bottom nav Home tab
+  - **Ribbon:** `site-ribbon-links.ts` — Home, Discover, Canopy, FAQ on browse + guest surfaces; desktop links on ShopperTopBar; GuestNav on login/signup; profile layout → patron `ShopperShell`; vendor bottom nav Home tab
   - **Location:** `HomeAddressPicker` + address field on Discover/vendor market grid + vendor alert prefs; geolocation error toasts
   - **Organizers:** `error.tsx` on `/check` and `/organizers/[slug]`; query helpers return empty/null on DB errors instead of 500
   - **Auth:** Signup confirmation **link** copy + resend; login tab note on email confirm; **Continue with Google** below terms checkbox on signup
@@ -59,7 +69,7 @@
 - **Goal:** Make `/check` and `/check/review` discoverable without typing URLs; fix guest login redirect on trust pages.
 - **Shipped locally:**
   - **Public access:** `/check`, `/check/review`, `/organizers/*` in `public-paths.ts`; patron portal prefixes updated
-  - **Nav:** Guest nav, shopper top bar, vendor app nav → "Check organizers"; hamburger → "Review an organizer" (vendors/coordinators)
+  - **Nav:** Guest nav, shopper top bar, vendor app nav → **Canopy** (tooltip: Popup Hub security & fraud prevention); hamburger → "Review an organizer" (vendors/coordinators)
   - **Vendor CTA:** `VendorCheckOrganizerCallout` on `/vendor/events`
   - **Marketing:** Vendor path card trust copy + secondary link; Trust & verification tile → `/check`; CTA band link
   - **SEO:** Sitemap static `/check`, `/check/review`; dynamic published `/organizers/[slug]`
@@ -1495,9 +1505,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `44c9738` (pushed to `origin/master`)
-- Last deploy commit: `a22a30f` - feat: ship 135 session updates (coordinator feature roadmap (8 items); patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)
-- Production: https://popuphub.ca - **v1.0.0 build 215** | commit ``a22a30f`` (handoff updated 2026-06-19 16:15)
+- Branch: `master` @ `fe47ff8` (pushed to `origin/master`)
+- Last deploy commit: `fe47ff8` - feat: ship 134 session updates (patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; relax venue type restriction for markets; +130 more)
+- Production: https://popuphub.ca - **v1.0.0 build 215** | commit `44c9738` (handoff updated 2026-06-19 16:24)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1874,7 +1884,7 @@
 
 
 ## Last deploy
-- 2026-06-19 16:15 - Roadmap deploy verified (build 215, a22a30f) - `feat: ship 135 session updates (coordinator feature roadmap (8 items); ...)` (44c9738)
+- 2026-06-19 16:24 - Deploy via deploy-popuphub.ps1 - `feat: ship 134 session updates (patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; relax venue type restriction for markets; +130 more)` (fe47ff8)
 
 
 ## Goal
