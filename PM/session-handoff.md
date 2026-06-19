@@ -1505,9 +1505,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `fe47ff8` (pushed to `origin/master`)
-- Last deploy commit: `fe47ff8` - feat: ship 134 session updates (patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; relax venue type restriction for markets; +130 more)
-- Production: https://popuphub.ca - **v1.0.0 build 215** | commit `44c9738` (handoff updated 2026-06-19 16:24)
+- Branch: `master` @ `e831436` (pushed to `origin/master`)
+- Last deploy commit: `e831436` - feat: ship 135 session updates (Canopy trust directory rebrand; patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)
+- Production: https://popuphub.ca - **v1.0.0 build 216** | commit `f6cdd47` (handoff updated 2026-06-19 16:36)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1884,7 +1884,7 @@
 
 
 ## Last deploy
-- 2026-06-19 16:24 - Deploy via deploy-popuphub.ps1 - `feat: ship 134 session updates (patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; relax venue type restriction for markets; +130 more)` (fe47ff8)
+- 2026-06-19 16:36 - Deploy via deploy-popuphub.ps1 - `feat: ship 135 session updates (Canopy trust directory rebrand; patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)` (e831436)
 
 
 ## Goal
