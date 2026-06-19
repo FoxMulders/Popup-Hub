@@ -4,8 +4,9 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
-## Shipped this session — Edmonton trust directory /check (local, not deployed)
+## Shipped this session — Edmonton trust directory /check (deployed 2026-06-18)
 - **Goal:** Trust-first wedge — vendors check organizers before paying booth fees; Edmonton metro seed data live in DB.
+- **Deploy:** `12dad28` → production build **207** @ https://popuphub.ca (alias confirmed). `npm run verify:prod` — PASS.
 - **Shipped:**
   - **Migration `113_organizer_trust_directory.sql`** — organizers, events, scam alerts, watchlist, community mentions
   - **`/check`** search + **`/organizers/[slug]`** trust reports (scam alerts, mentions, source permalinks)
@@ -13,8 +14,8 @@
   - **Seed scripts:** `import-edmonton-seed.ts`, `publish-edmonton-organizers.ts`, `patch-morinville-thread.ts`, `scripts/seed/edmonton-fb-*.json`
   - **DB seeded:** 10 Edmonton organizers published; Central Occasion Events scam alerts + Kallans watchlist + Tracy/Bite Me mentions (permalink verified); Morinville $150 vs $580 clarification
 - **Also in commit:** Capacitor mobile shell, vendor geo alerts (112), coordinator vendor invite links, build clean script
-- **Verify:** `npm run db:push` + `seed:edmonton:import` + `seed:edmonton:publish -- --include-verified-alerts` — DONE. `npx tsc --noEmit` — PASS.
-- **Next:** Beaumont scam alert permalink; vendor review submission form; `/check/scam-alerts` watchlist page; deploy smoke `/check` on popuphub.ca
+- **Verify:** `npm run db:push` + `seed:edmonton:import` + `seed:edmonton:publish -- --include-verified-alerts` — DONE. `npx tsc --noEmit` — PASS. Prod smoke `/check` + `/organizers/central-occasion-events` — live on popuphub.ca.
+- **Next:** Beaumont scam alert — find FB permalink before publish; vendor review submission form (`/check/review`); public watchlist page (`/check/scam-alerts`); Nicole Skinner praise thread extract (Table 2 re-run)
 
 ## Active work — patron + vendor mobile app (local, not deployed)
 - **Goal:** Capacitor iOS/Android shell with patron discover + vendor markets, geo alerts, one-tap apply.
@@ -1405,9 +1406,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `2be00fa` (pushed to `origin/master`)
-- Last deploy commit: `2be00fa` - feat: ship 127 session updates (patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; unit test inventory + gaps; +123 more)
-- Production: https://popuphub.ca - **v1.0.0 build 206** | commit `33ae774` (handoff updated 2026-06-18 16:27)
+- Branch: `master` @ `12dad28` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.0.0 build 207** | commit `12dad28` (handoff updated 2026-06-18)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 

@@ -41,6 +41,8 @@ type Table1Row = {
   primary_contact_name?: string | null
   city: string
   website_url?: string
+  facebook_url?: string
+  instagram_handle?: string
   typical_season_or_dates?: string
   event_name?: string
   booth_fee_cad?: number
@@ -113,6 +115,8 @@ async function main() {
           province: 'AB',
           region: 'edmonton-metro',
           website_url: row.website_url ?? null,
+          facebook_url: row.facebook_url ?? null,
+          instagram_handle: row.instagram_handle ?? null,
           typical_season_or_dates: row.typical_season_or_dates ?? null,
           listing_status: 'draft',
           source: 'fb_extract',

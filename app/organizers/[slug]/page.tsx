@@ -14,6 +14,14 @@ type Props = {
   params: Promise<{ slug: string }>
 }
 
+function externalHref(url: string): string {
+  return url.startsWith('http') ? url : `https://${url}`
+}
+
+function facebookLinkLabel(url: string): string {
+  return url.includes('/groups/') ? 'Official Facebook group' : 'Facebook'
+}
+
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params
   const org = await getPublishedOrganizerBySlug(slug)
@@ -63,7 +71,7 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
         ) : null}
         {organizer.website_url ? (
           <a
-            href={organizer.website_url.startsWith('http') ? organizer.website_url : `https://${organizer.website_url}`}
+            href={externalHref(organizer.website_url)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-sm text-harvest-700 hover:underline"
@@ -72,6 +80,23 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
             Official website
             <ExternalLink className="h-3 w-3" aria-hidden />
           </a>
+        ) : null}
+        {organizer.facebook_url ? (
+          <a
+            href={externalHref(organizer.facebook_url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-harvest-700 hover:underline"
+          >
+            <Globe className="h-4 w-4" aria-hidden />
+            {facebookLinkLabel(organizer.facebook_url)}
+            <ExternalLink className="h-3 w-3" aria-hidden />
+          </a>
+        ) : null}
+        {organizer.instagram_handle ? (
+          <p className="text-sm text-muted-foreground">
+            Instagram: {organizer.instagram_handle.replace(/^@/, '')}
+          </p>
         ) : null}
       </header>
 
