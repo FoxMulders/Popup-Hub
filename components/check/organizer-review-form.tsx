@@ -161,7 +161,7 @@ export function OrganizerReviewForm({
           onValueChange={(value) => setOrganizerSlug(value ?? '')}
           required
         >
-          <SelectTrigger id="organizer">
+          <SelectTrigger id="organizer" className="w-full">
             <SelectValue placeholder="Select organizer…" />
           </SelectTrigger>
           <SelectContent>
@@ -199,7 +199,7 @@ export function OrganizerReviewForm({
       <div className="space-y-2">
         <Label>Event as advertised?</Label>
         <Select value={eventAsAdvertised} onValueChange={(v) => setEventAsAdvertised(v ?? '')} required>
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select…" />
           </SelectTrigger>
           <SelectContent>
@@ -213,7 +213,7 @@ export function OrganizerReviewForm({
       <div className="space-y-2">
         <Label>Would you return?</Label>
         <Select value={wouldReturn} onValueChange={(v) => setWouldReturn(v ?? '')} required>
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select…" />
           </SelectTrigger>
           <SelectContent>
@@ -226,7 +226,7 @@ export function OrganizerReviewForm({
       <div className="space-y-2">
         <Label>Foot traffic vs your expectations</Label>
         <Select value={attendance} onValueChange={(v) => setAttendance(v ?? '')} required>
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select…" />
           </SelectTrigger>
           <SelectContent>
@@ -245,7 +245,7 @@ export function OrganizerReviewForm({
           onValueChange={(v) => setCommunicationRating(v ?? '')}
           required
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select…" />
           </SelectTrigger>
           <SelectContent>
@@ -261,7 +261,7 @@ export function OrganizerReviewForm({
       <div className="space-y-2">
         <Label>Refund experience (if applicable)</Label>
         <Select value={refundExperience} onValueChange={(v) => setRefundExperience(v ?? 'na')}>
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

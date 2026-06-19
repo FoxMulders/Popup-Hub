@@ -1,1 +1,1 @@
-feat: ship 127 session updates (patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; unit test inventory + gaps; +123 more)
+feat: ship 128 session updates (/check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; Windows production build: next-font-manifest; +124 more)

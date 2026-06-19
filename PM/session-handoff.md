@@ -4,6 +4,12 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — /check/review select dropdown width (local, not deployed)
+- **Issue:** Organizer review form dropdowns clipped option text — popup locked to narrow `w-fit` trigger via `w-(--anchor-width)` + `overflow-x-hidden`.
+- **Fix:** `SelectContent` uses `min-w-(--anchor-width) w-max max-w-(--available-width)`; all review form `SelectTrigger` set to `w-full`.
+- **Verify:** Open `/check/review` → Organizer dropdown shows full names (e.g. "Agora Markets · Edmonton").
+- **Next:** Commit + deploy when user asks.
+
 ## Shipped this session — Edmonton trust seed expansion (deployed 2026-06-18)
 - **Deploy:** `2caa4cc` → production build **207** @ https://popuphub.ca
 - **Shipped:**
