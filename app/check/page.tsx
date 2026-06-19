@@ -73,13 +73,18 @@ export default async function CheckPage({ searchParams }: Props) {
         )}
       </section>
 
-      <p className="text-xs text-muted-foreground">
-        Vended at a market?{' '}
-        <Link href="/signup?role=vendor" className="underline underline-offset-2">
-          Sign up to leave a verified review
-        </Link>{' '}
-        (coming soon).
-      </p>
+      <div className="rounded-xl border border-harvest-200 bg-harvest-50/50 px-4 py-4 text-sm">
+        <p className="font-medium text-foreground">Vended at a market recently?</p>
+        <p className="mt-1 text-muted-foreground">
+          Help other vendors check organizers before paying booth fees.
+        </p>
+        <Link
+          href="/check/review"
+          className="mt-3 inline-flex text-sm font-medium text-harvest-800 hover:underline underline-offset-2"
+        >
+          Leave a vendor review →
+        </Link>
+      </div>
     </div>
   )
 }

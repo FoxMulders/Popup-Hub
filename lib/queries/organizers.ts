@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Organizer, OrganizerEvent, OrganizerScamAlert } from '@/types/organizers'
+import type { Organizer, OrganizerEvent, OrganizerReviewPublic, OrganizerScamAlert } from '@/types/organizers'
 
 const ORGANIZER_COLUMNS =
   'id, slug, display_name, primary_contact_name, city, province, region, website_url, facebook_url, instagram_handle, typical_season_or_dates, listing_status, source, admin_notes'
@@ -79,4 +79,43 @@ export async function getPublishedCommunityMentions(organizerId: string) {
 
   if (error) throw error
   return data ?? []
+}
+
+export async function getPublishedOrganizerReviews(organizerId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('organizer_reviews')
+    .select(
+      `
+      id,
+      organizer_id,
+      vendor_id,
+      event_name,
+      event_month_year,
+      event_as_advertised,
+      would_return,
+      attendance_vs_expectations,
+      communication_rating,
+      refund_experience,
+      optional_notes,
+      verification_tier,
+      published,
+      created_at,
+      profiles:vendor_id ( full_name )
+    `
+    )
+    .eq('organizer_id', organizerId)
+    .eq('published', true)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return (data ?? []).map((row) => {
+    const profile = row.profiles as { full_name?: string } | null
+    const { profiles: _profiles, ...review } = row
+    return {
+      ...review,
+      vendor_display_name: profile?.full_name ?? null,
+    } as OrganizerReviewPublic
+  })
 }

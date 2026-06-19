@@ -55,3 +55,24 @@ export type ScamWatchlistEntry = {
   verification_status: VerificationStatus
   published: boolean
 }
+
+export type OrganizerReview = {
+  id: string
+  organizer_id: string
+  vendor_id: string
+  event_name: string
+  event_month_year: string
+  event_as_advertised: 'yes' | 'partial' | 'no'
+  would_return: boolean
+  attendance_vs_expectations: 'much_lower' | 'lower' | 'about_right' | 'higher'
+  communication_rating: number
+  refund_experience: 'na' | 'fast' | 'slow' | 'never_received'
+  optional_notes: string | null
+  verification_tier: 'unverified' | 'receipt_verified' | 'invited_verified' | 'platform_verified'
+  published: boolean
+  created_at: string
+}
+
+export type OrganizerReviewPublic = OrganizerReview & {
+  vendor_display_name: string | null
+}

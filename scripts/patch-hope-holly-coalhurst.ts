@@ -54,7 +54,7 @@ async function main() {
         listing_status: 'published',
         source: 'fb_extract',
         admin_notes:
-          'vendor_call. permalink_verified. Coalhurst (southern AB). Monitor Alberta trade show directory FB group for vendor updates.',
+          'vendor_call. permalink_verified. Coalhurst (southern AB). FB group: Trade shows, Events and Markets in Alberta (352987814777796).',
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'slug' }

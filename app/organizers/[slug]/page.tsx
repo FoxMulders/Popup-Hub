@@ -6,9 +6,11 @@ import {
   getPublishedCommunityMentions,
   getPublishedOrganizerBySlug,
   getPublishedOrganizerEvents,
+  getPublishedOrganizerReviews,
   getPublishedScamAlerts,
 } from '@/lib/queries/organizers'
 import { Badge } from '@/components/ui/badge'
+import { OrganizerReviewList } from '@/components/check/organizer-review-list'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -44,10 +46,11 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
   const organizer = await getPublishedOrganizerBySlug(slug)
   if (!organizer) notFound()
 
-  const [events, scamAlerts, mentions] = await Promise.all([
+  const [events, scamAlerts, mentions, reviews] = await Promise.all([
     getPublishedOrganizerEvents(organizer.id),
     getPublishedScamAlerts(organizer.id),
     getPublishedCommunityMentions(organizer.id),
+    getPublishedOrganizerReviews(organizer.id),
   ])
 
   return (
@@ -186,9 +189,20 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
         )}
       </section>
 
-      <section className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-        <p className="font-medium text-foreground">Formal vendor reviews</p>
-        <p className="mt-1">No verified reviews yet. Be the first after you vend here.</p>
+      <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Vendor reviews</h2>
+          <Link
+            href={`/check/review?organizer=${organizer.slug}`}
+            className="text-xs font-medium text-harvest-700 hover:underline underline-offset-2"
+          >
+            Vended here? Leave a review
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Structured reviews from vendors who vended at this organizer&apos;s markets.
+        </p>
+        <OrganizerReviewList reviews={reviews} />
       </section>
     </div>
   )

@@ -50,7 +50,7 @@ async function main() {
         listing_status: 'published',
         source: 'fb_extract',
         admin_notes:
-          'vendor_call (positive). source_permalink NOT_PROVIDED — listing only until permalink. booth_fee_cad $2 likely quarter/table fee not traditional booth. Monitor FB group for charity payout validation and schedule updates.',
+          'vendor_call (positive). source_permalink NOT_PROVIDED. $2 CAD = patron quarter-auction participation fee, NOT vendor booth fee. Vendor table fee not listed. Monitor FB group for charity payout validation and schedule updates.',
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'slug' }
@@ -72,9 +72,9 @@ async function main() {
     name: EVENT_NAME,
     city: 'Edmonton',
     typical_dates: 'Quarter auction series — first 2026 event announced',
-    booth_fee_cad: 2,
+    booth_fee_cad: null,
     source_snippet:
-      "ARE YOU READY??? WE'RE BACK!!! Join us for the first quarter auction of 2026!",
+      "ARE YOU READY??? WE'RE BACK!!! Join us for the first quarter auction of 2026! ($2 is patron quarter participation — not vendor booth fee.)",
     listing_status: 'published' as const,
   }
 

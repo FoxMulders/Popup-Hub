@@ -1,0 +1,67 @@
+import Link from 'next/link'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
+import { canActAsVendor } from '@/lib/auth/rbac'
+import { listPublishedOrganizers } from '@/lib/queries/organizers'
+import { createClient } from '@/lib/supabase/server'
+import { OrganizerReviewForm } from '@/components/check/organizer-review-form'
+import type { Profile } from '@/types/database'
+
+export const metadata = buildPublicMetadata({
+  title: 'Review an organizer — Popup Hub',
+  description:
+    'Share your experience vending at an Edmonton-area market. Help other vendors check organizers before paying booth fees.',
+  path: '/check/review',
+})
+
+type Props = {
+  searchParams: Promise<{ organizer?: string }>
+}
+
+export default async function CheckReviewPage({ searchParams }: Props) {
+  const { organizer: organizerSlug } = await searchParams
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let profile: Pick<Profile, 'role' | 'is_admin'> | null = null
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role, is_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    profile = data
+  }
+
+  const organizers = await listPublishedOrganizers()
+  const returnPath = organizerSlug
+    ? `/check/review?organizer=${encodeURIComponent(organizerSlug)}`
+    : '/check/review'
+
+  return (
+    <div className="mx-auto max-w-xl px-4 py-10 space-y-6">
+      <div className="space-y-2">
+        <Link
+          href="/check"
+          className="text-sm text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+        >
+          ← Back to organizer search
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight">Review an organizer</h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Vended at a market in the last year or two? Leave a structured review — about 90 seconds.
+          Your review helps other vendors before they send booth fees. One review per event month.
+        </p>
+      </div>
+
+      <OrganizerReviewForm
+        organizers={organizers}
+        initialOrganizerSlug={organizerSlug}
+        canSubmit={canActAsVendor(profile)}
+        isSignedIn={Boolean(user)}
+        returnPath={returnPath}
+      />
+    </div>
+  )
+}

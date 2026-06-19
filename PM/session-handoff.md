@@ -4,6 +4,15 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Shipped this session — Edmonton trust seed expansion (deployed 2026-06-18)
+- **Deploy:** `2caa4cc` → production build **207** @ https://popuphub.ca
+- **Shipped:**
+  - **Seed:** Caribou Exchange (Tanya Hillmer, quarter auction, FB group) + Hope & Holly Christmas in July (Coalhurst, permalink verified vendor call)
+  - **Scripts:** `patch-caribou-exchange.ts`, `patch-hope-holly-coalhurst.ts`; import supports `facebook_url` / `instagram_handle`
+  - **Trust report UI:** Official Facebook group + Instagram on `/organizers/[slug]`
+- **DB (already applied via patch scripts):** 12 organizers published in trust directory
+- **Next:** Caribou vendor-call post permalink; Beaumont scam permalink; thread-linked mentions UI (Morinville); `/check/review`
+
 ## Shipped this session — Edmonton trust directory /check (deployed 2026-06-18)
 - **Goal:** Trust-first wedge — vendors check organizers before paying booth fees; Edmonton metro seed data live in DB.
 - **Deploy:** `12dad28` → production build **207** @ https://popuphub.ca (alias confirmed). `npm run verify:prod` — PASS.
@@ -1406,8 +1415,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `12dad28` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.0.0 build 207** | commit `12dad28` (handoff updated 2026-06-18)
+- Branch: `master` @ `2caa4cc` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.0.0 build 207** | commit `2caa4cc` (handoff updated 2026-06-18)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
