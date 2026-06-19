@@ -1,1 +1,1 @@
-feat: ship 129 session updates (organizer trust directory vet + Lauderdale; /check/review select dropdown width; patron + vendor mobile app; coordinator vendor invite guidance; +125 more)
+feat: ship 131 session updates (relax venue type restriction for markets; trust directory navigation; organizer trust directory vet + Lauderdale; /check/review select dropdown width; +127 more)

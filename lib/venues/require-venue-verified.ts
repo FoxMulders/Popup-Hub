@@ -18,7 +18,7 @@ export function requireVenueVerified(event: VenueGateEvent): { ok: true } | { ok
     ok: false,
     reason:
       event.venue_verification_reason?.trim() ||
-      'Venue location must be verified before this action. Drop a pin on a valid commercial venue, park, or public space.',
+      'Venue location must be verified before this action. Drop a pin on the venue and enter a complete address.',
   }
 }
 

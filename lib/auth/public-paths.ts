@@ -13,6 +13,8 @@ export function isPublicPath(pathname: string): boolean {
 
   return (
     pathname.startsWith('/discover') ||
+    pathname.startsWith('/check') ||
+    pathname.startsWith('/organizers/') ||
     pathname.startsWith('/for-organizers') ||
     pathname.startsWith('/supplies') ||
     pathname.startsWith('/favorites') ||

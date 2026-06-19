@@ -108,7 +108,7 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
         if (!verifyRes.ok || !verifyData.verified) {
           toast.error(
             verifyData.reason ??
-              'Venue must be verified at a valid commercial property, park, or public space before publishing.'
+              'Venue must be verified on the map with a complete address before publishing.'
           )
           return
         }

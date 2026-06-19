@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 export function MarketingCtaBand() {
   return (
@@ -19,6 +20,12 @@ export function MarketingCtaBand() {
             Create free account
           </Link>
         </div>
+        <Link
+          href={TRUST_DIRECTORY_LINKS.check.href}
+          className="mt-5 inline-flex text-sm font-medium text-white/80 hover:text-white hover:underline underline-offset-2"
+        >
+          Check an organizer before you pay →
+        </Link>
       </div>
     </section>
   )

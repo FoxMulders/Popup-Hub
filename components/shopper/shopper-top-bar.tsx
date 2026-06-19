@@ -15,6 +15,7 @@ import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import { Button } from '@/components/ui/button'
 import type { Profile } from '@/types/database'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 interface ShopperTopBarProps {
   profile: Profile | null
@@ -51,6 +52,7 @@ export function ShopperTopBar({
 
   const navLinks = [
     { href: '/discover', label: 'Discover Markets' },
+    { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label },
     { href: '/favorites', label: 'Favorites' },
     { href: '/wallet', label: 'Wallet' },
   ]

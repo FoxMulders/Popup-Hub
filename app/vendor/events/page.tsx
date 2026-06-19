@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Skeleton } from '@/components/ui/skeleton'
 import { VendorMarketGrid } from '@/components/vendor/vendor-market-grid'
 import { VendorAlertOnboarding } from '@/components/vendor/vendor-alert-onboarding'
+import { VendorCheckOrganizerCallout } from '@/components/check/vendor-check-organizer-callout'
 import {
   filterVendorParticipatedArchivedEvents,
   partitionEventsByPhase,
@@ -68,6 +69,7 @@ export default async function VendorEventsPage() {
         description="Discover every published market and apply directly — no organizer pre-approval required."
         className="mb-6"
       />
+      <VendorCheckOrganizerCallout />
       <VendorAlertOnboarding />
       <Suspense
         fallback={

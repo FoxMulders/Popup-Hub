@@ -8,9 +8,11 @@ import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
 import { Button } from '@/components/ui/button'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 const NAV_LINKS = [
   { href: '/discover', label: 'Discover Markets' },
+  { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label },
   { href: '/vendor/events', label: 'For Vendors' },
   { href: '/signup?role=coordinator&next=/coordinator/events/new', label: 'Host a Market' },
 ]

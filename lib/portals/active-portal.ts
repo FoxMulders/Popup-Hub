@@ -68,6 +68,8 @@ const PATRON_PORTAL_PATH_PREFIXES = [
   '/discover',
   '/favorites',
   '/supplies',
+  '/check',
+  '/organizers/',
   '/events/',
   '/auctions/',
 ] as const

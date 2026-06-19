@@ -4,6 +4,24 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — relax venue type restriction for markets (local, not deployed)
+- **Issue:** Publish blocked bars, gyms, and other non-commercial Google place types with “Location must be a commercial property, park, or public event space.”
+- **Fix:** `verify-venue-coordinates.ts` — dropped pin + complete address (≥10 chars) now verifies regardless of Google place types; user-facing copy updated in wizard, event form, status toggle, and `require-venue-verified.ts`.
+- **Verify:** `npx tsx scripts/verify-venue-coordinates.ts` — PASS.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — trust directory navigation (local, not deployed)
+- **Goal:** Make `/check` and `/check/review` discoverable without typing URLs; fix guest login redirect on trust pages.
+- **Shipped locally:**
+  - **Public access:** `/check`, `/check/review`, `/organizers/*` in `public-paths.ts`; patron portal prefixes updated
+  - **Nav:** Guest nav, shopper top bar, vendor app nav → "Check organizers"; hamburger → "Review an organizer" (vendors/coordinators)
+  - **Vendor CTA:** `VendorCheckOrganizerCallout` on `/vendor/events`
+  - **Marketing:** Vendor path card trust copy + secondary link; Trust & verification tile → `/check`; CTA band link
+  - **SEO:** Sitemap static `/check`, `/check/review`; dynamic published `/organizers/[slug]`
+  - **Shared:** `lib/nav/trust-directory-nav.ts`
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: guest homepage → `/check` (no login); vendor nav + banner; guest `/check/review` sign-in gate.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — organizer trust directory vet + Lauderdale (local, not deployed)
 - **Issue:** `/check` and `/check/review` listed venues (rec centres, community centres, retail stores) mistaken for organizers during FB extract.
 - **Vet (DB applied via `patch-organizer-list-vet.ts`):**

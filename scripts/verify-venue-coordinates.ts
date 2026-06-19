@@ -1,6 +1,7 @@
 import {
   evaluateVenuePlaceTypes,
   evaluateVenueCoordinatesLocally,
+  hasCompleteVenuePin,
   verifyVenueCoordinates,
   isNamedPublicEventSpace,
 } from '../lib/venues/verify-venue-coordinates'
@@ -18,7 +19,17 @@ async function main() {
   assert('public park verifies', park.verified)
 
   const streetOnly = evaluateVenuePlaceTypes(['street_address', 'route'])
-  assert('street only rejects', !streetOnly.verified)
+  assert('street only rejects without pin context', !streetOnly.verified)
+
+  assert(
+    'pin and address accepts street-only geocode types',
+    hasCompleteVenuePin({
+      latitude: 53.5,
+      longitude: -113.5,
+      address: '123 Main Street NW, Edmonton, AB',
+      pinDropped: true,
+    })
+  )
 
   assert(
     'community league name detected',

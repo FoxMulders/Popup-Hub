@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, Loader2, MapPin, Store } from 'lucide-react'
 import { requestUserLocation } from '@/lib/markets/user-location'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 import { cn } from '@/lib/utils'
 
 const PATHS = [
@@ -26,8 +27,10 @@ const PATHS = [
     eyebrow: 'Vendors',
     title: 'Apply with your passport',
     description:
-      'Build a vendor profile once, then apply to open or juried markets. Track applications and booth payments in one place.',
+      'Check organizers before paying booth fees, then build a vendor profile once and apply to open or juried markets.',
     cta: 'Create vendor account',
+    secondaryHref: TRUST_DIRECTORY_LINKS.check.href,
+    secondaryLabel: 'Or check an organizer first',
     accent: 'from-harvest-50/80 to-cream border-harvest-200/70 hover:border-harvest-400/50',
     iconClass: 'bg-harvest-100 text-harvest-800',
     needsLocation: false,
@@ -57,6 +60,8 @@ function PathCardContent({
   cta,
   iconClass,
   loading,
+  secondaryHref,
+  secondaryLabel,
 }: {
   eyebrow: string
   icon: typeof MapPin
@@ -65,6 +70,8 @@ function PathCardContent({
   cta: string
   iconClass: string
   loading: boolean
+  secondaryHref?: string
+  secondaryLabel?: string
 }) {
   return (
     <>
@@ -85,9 +92,20 @@ function PathCardContent({
       </span>
       <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
-      <span className="mt-5 inline-flex items-center text-sm font-semibold text-forest group-hover:underline">
-        {loading ? 'Loading…' : `${cta} →`}
-      </span>
+      <div className="mt-5 space-y-2">
+        <span className="inline-flex items-center text-sm font-semibold text-forest group-hover:underline">
+          {loading ? 'Loading…' : `${cta} →`}
+        </span>
+        {secondaryHref && secondaryLabel ? (
+          <Link
+            href={secondaryHref}
+            className="block text-xs font-medium text-muted-foreground hover:text-forest hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {secondaryLabel} →
+          </Link>
+        ) : null}
+      </div>
     </>
   )
 }

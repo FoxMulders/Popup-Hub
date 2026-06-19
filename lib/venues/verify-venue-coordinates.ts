@@ -50,6 +50,21 @@ const POLITICAL_TYPES = new Set(['locality', 'political', 'administrative_area_l
 
 const REJECT_ONLY_TYPES = new Set(['route', 'street_address', 'plus_code', 'postal_code'])
 
+/** Pin dropped with a complete street address — sufficient for markets and quarter auctions. */
+export function hasCompleteVenuePin(input: VenueVerificationInput): boolean {
+  if (input.pinDropped === false) return false
+  return (input.address?.trim().length ?? 0) >= 10
+}
+
+function verifiedVenueResult(placeTypes: string[]): VenueVerificationResult {
+  return {
+    verified: true,
+    status: 'verified',
+    reason: null,
+    placeTypes: placeTypes.length ? placeTypes : ['pin_and_address'],
+  }
+}
+
 function isInvalidCoordinates(lat: number, lng: number): boolean {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return true
   if (lat === 0 && lng === 0) return true
@@ -80,7 +95,7 @@ function classifyPlaceTypes(types: string[]): {
     return {
       verified: false,
       status: 'rejected',
-      reason: 'Coordinates point to a street address only — select a commercial venue, park, or public space.',
+      reason: 'Coordinates point to a street address only — drop a pin on the venue and enter a complete address.',
     }
   }
 
@@ -99,7 +114,7 @@ function classifyPlaceTypes(types: string[]): {
   return {
     verified: false,
     status: 'rejected',
-    reason: 'Location must be a commercial property, park, or public event space.',
+    reason: 'Could not confirm this location — drop a pin on the venue and enter a complete address.',
   }
 }
 
@@ -253,7 +268,7 @@ export async function verifyVenueCoordinates(
       /not authorized|referer|referrer|ip.*not authorized/i.test(googleMessage)
         ? 'Venue verification failed: the server Maps API key is missing or uses browser-only website restrictions. In Google Cloud Console, create a separate key with Geocoding API enabled and no website referrer restrictions, then set GOOGLE_MAPS_SERVER_API_KEY on Vercel and redeploy.'
         : (googleMessage ??
-          'Could not verify this location. Choose a named venue, park, or public space.')
+          'Could not verify this location. Drop a pin on the venue and enter a complete address.')
     return {
       verified: false,
       status: 'rejected',
@@ -263,6 +278,11 @@ export async function verifyVenueCoordinates(
   }
 
   const types = pickGeocodeTypesFromResults(data.results)
+
+  if (hasCompleteVenuePin(input)) {
+    return verifiedVenueResult(types)
+  }
+
   const result = evaluateVenuePlaceTypes(types)
   if (result.verified) return result
 

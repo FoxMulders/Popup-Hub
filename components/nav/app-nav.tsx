@@ -26,6 +26,7 @@ import {
   isCoordinatorStudioPath,
 } from '@/lib/coordinator/coordinator-routes'
 import { cn } from '@/lib/utils'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 interface AppNavProps {
   profile: Profile
@@ -47,6 +48,7 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
     { href: '/vendor/passport', label: 'My Passport' },
     { href: '/vendor/supplies', label: 'Vendor Supplies' },
     { href: '/vendor/events', label: 'Apply for open markets' },
+    { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label },
     { href: '/vendor/applications', label: 'My Applications' },
     { href: '/wallet', label: 'Wallet' },
   ],

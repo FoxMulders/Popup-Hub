@@ -9,6 +9,8 @@ const STATIC_PUBLIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['
     { path: '/', changeFrequency: 'weekly', priority: 1 },
     { path: '/for-organizers', changeFrequency: 'weekly', priority: 0.95 },
     { path: '/discover', changeFrequency: 'hourly', priority: 0.9 },
+    { path: '/check', changeFrequency: 'weekly', priority: 0.9 },
+    { path: '/check/review', changeFrequency: 'weekly', priority: 0.7 },
     { path: '/supplies', changeFrequency: 'weekly', priority: 0.6 },
     { path: '/legal/about', changeFrequency: 'monthly', priority: 0.5 },
     { path: '/legal/terms', changeFrequency: 'monthly', priority: 0.3 },
@@ -99,6 +101,26 @@ async function appendDynamicEntries(origin: string | undefined, entries: Sitemap
           lastModified: safeDate(profile.created_at),
           changeFrequency: 'weekly',
           priority: 0.4,
+        }),
+      )
+    }
+
+    const { data: organizers, error: organizersError } = await supabase
+      .from('organizers')
+      .select('slug, updated_at')
+      .eq('listing_status', 'published')
+      .limit(500)
+
+    if (organizersError) {
+      console.error('[sitemap] organizers query failed:', organizersError.message)
+    }
+
+    for (const organizer of organizers ?? []) {
+      entries.push(
+        makeEntry(origin, `/organizers/${organizer.slug}`, {
+          lastModified: safeDate(organizer.updated_at),
+          changeFrequency: 'weekly',
+          priority: 0.75,
         }),
       )
     }
