@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SITE_HOME_PATH } from '@/lib/nav/site-home'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 interface TrustDirectoryErrorProps {
   title?: string
@@ -24,7 +25,7 @@ export function TrustDirectoryError({
           <Button>Go to Home</Button>
         </Link>
         <Link href="/check">
-          <Button variant="outline">Check organizers</Button>
+          <Button variant="outline">{TRUST_DIRECTORY_LINKS.check.label}</Button>
         </Link>
       </div>
     </div>

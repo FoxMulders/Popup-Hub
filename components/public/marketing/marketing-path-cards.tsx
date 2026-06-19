@@ -27,10 +27,10 @@ const PATHS = [
     eyebrow: 'Vendors',
     title: 'Apply with your passport',
     description:
-      'Check organizers before paying booth fees, then build a vendor profile once and apply to open or juried markets.',
+      'Use Canopy to check organizers before paying booth fees, then build a vendor profile once and apply to open or juried markets.',
     cta: 'Create vendor account',
     secondaryHref: TRUST_DIRECTORY_LINKS.check.href,
-    secondaryLabel: 'Or check an organizer first',
+    secondaryLabel: `Or open ${TRUST_DIRECTORY_LINKS.check.label} first`,
     accent: 'from-harvest-50/80 to-cream border-harvest-200/70 hover:border-harvest-400/50',
     iconClass: 'bg-harvest-100 text-harvest-800',
     needsLocation: false,

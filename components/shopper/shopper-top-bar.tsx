@@ -33,12 +33,12 @@ function RibbonLinks({
   links,
   pathname,
 }: {
-  links: { href: string; label: string }[]
+  links: { href: string; label: string; title?: string }[]
   pathname: string
 }) {
   return (
     <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 overflow-x-hidden md:flex lg:gap-2">
-      {links.map(({ href, label }) => {
+      {links.map(({ href, label, title }) => {
         const active =
           href === SITE_HOME_PATH
             ? pathname === SITE_HOME_PATH
@@ -47,6 +47,7 @@ function RibbonLinks({
           <Link
             key={href}
             href={href}
+            title={title}
             className={cn(
               'shrink-0 rounded-full px-3 py-2 text-sm font-medium transition-colors lg:px-4',
               active

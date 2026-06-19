@@ -9,7 +9,7 @@ import type { Profile } from '@/types/database'
 export const metadata = buildPublicMetadata({
   title: 'Review an organizer — Popup Hub',
   description:
-    'Share your experience vending at an Edmonton-area market. Help other vendors check organizers before paying booth fees.',
+    'Share your experience vending at an Edmonton-area market. Help other vendors through Canopy before paying booth fees.',
   path: '/check/review',
 })
 

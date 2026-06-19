@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 export interface AppMenuLink {
   href: string
   label: string
+  title?: string
 }
 
 interface AppMenuProfile {
@@ -213,7 +214,7 @@ export function AppMenuSheet({
               title={links.length > 1 ? 'Navigate' : undefined}
               listClassName={useDenseGrid ? 'grid-cols-2' : undefined}
             >
-              {links.map(({ href, label }) => {
+              {links.map(({ href, label, title }) => {
                 const active = isActivePath(pathname, href)
                 const spanFull = useDenseGrid && label.length > 14
 
@@ -222,6 +223,7 @@ export function AppMenuSheet({
                     <Link
                       href={href}
                       onClick={close}
+                      title={title}
                       className={menuItemClass(active)}
                       aria-current={active ? 'page' : undefined}
                     >

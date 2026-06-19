@@ -37,7 +37,7 @@ interface AppNavProps {
   vendorPortal?: boolean
 }
 
-const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
+const NAV_LINKS: Record<string, { href: string; label: string; title?: string }[]> = {
   patron: [
     { href: SITE_HOME_PATH, label: 'Home' },
     { href: '/discover', label: 'Discover Markets' },
@@ -51,7 +51,7 @@ const NAV_LINKS: Record<string, { href: string; label: string }[]> = {
     { href: '/vendor/passport', label: 'My Passport' },
     { href: '/vendor/supplies', label: 'Vendor Supplies' },
     { href: '/vendor/events', label: 'Apply for open markets' },
-    { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label },
+    { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label, title: TRUST_DIRECTORY_LINKS.check.tagline },
     { href: '/vendor/applications', label: 'My Applications' },
     { href: '/wallet', label: 'Wallet' },
   ],
@@ -132,7 +132,7 @@ export function AppNav({
 
               {links.length > 0 ? (
                 <div className="hidden min-w-0 flex-wrap items-center justify-center gap-0.5 overflow-x-hidden md:flex lg:gap-1">
-                  {links.map(({ href, label }) => {
+                  {links.map(({ href, label, title }) => {
                     const active =
                       href === SITE_HOME_PATH
                         ? pathname === SITE_HOME_PATH
@@ -145,6 +145,7 @@ export function AppNav({
                       <Link
                         key={href}
                         href={href}
+                        title={title}
                         className={cn(
                           'shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold transition-colors lg:px-3.5',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',

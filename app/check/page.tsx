@@ -3,9 +3,10 @@ import { ShieldAlert, Search } from 'lucide-react'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { listPublishedOrganizers, searchPublishedOrganizers } from '@/lib/queries/organizers'
 import { CheckSearchForm } from '@/components/check/check-search-form'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 export const metadata = buildPublicMetadata({
-  title: 'Check an organizer before you pay — Popup Hub',
+  title: 'Canopy — Popup Hub security & fraud prevention',
   description:
     'Search Edmonton-area market organizers. See official links, vendor discussions, and scam alerts before you send booth fees.',
   path: '/check',
@@ -27,7 +28,7 @@ export default async function CheckPage({ searchParams }: Props) {
       <div className="space-y-3">
         <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-harvest-700">
           <ShieldAlert className="h-4 w-4" aria-hidden />
-          Vendor protection
+          {TRUST_DIRECTORY_LINKS.check.label} · {TRUST_DIRECTORY_LINKS.check.tagline}
         </p>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Before you pay for a booth, check the organizer
@@ -88,7 +89,7 @@ export default async function CheckPage({ searchParams }: Props) {
       <div className="rounded-xl border border-harvest-200 bg-harvest-50/50 px-4 py-4 text-sm">
         <p className="font-medium text-foreground">Vended at a market recently?</p>
         <p className="mt-1 text-muted-foreground">
-          Help other vendors check organizers before paying booth fees.
+          Help other vendors through Canopy before paying booth fees.
         </p>
         <Link
           href="/check/review"

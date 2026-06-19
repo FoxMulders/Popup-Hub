@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Loader2, ShieldCheck, MapPin } from 'lucide-react'
 import { requestUserLocation } from '@/lib/markets/user-location'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 export function MarketingHeroActions() {
   const router = useRouter()
@@ -20,11 +21,12 @@ export function MarketingHeroActions() {
   return (
     <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
       <Link
-        href="/check"
+        href={TRUST_DIRECTORY_LINKS.check.href}
         className="marketing-pill marketing-pill--primary inline-flex min-h-12 w-full gap-2 sm:w-auto justify-center"
+        title={TRUST_DIRECTORY_LINKS.check.tagline}
       >
         <ShieldCheck className="h-4 w-4" aria-hidden />
-        Check an organizer
+        {TRUST_DIRECTORY_LINKS.check.ctaOpen}
       </Link>
       <button
         type="button"

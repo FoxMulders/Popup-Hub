@@ -29,9 +29,9 @@ const FEATURES = [
   },
   {
     icon: ShieldCheck,
-    title: 'Trust & verification',
+    title: TRUST_DIRECTORY_LINKS.check.label,
     description:
-      'Check organizers before paying booth fees — vendor reviews, scam alerts, and community mentions in one place.',
+      'Popup Hub security & fraud prevention — vendor reviews, scam alerts, and community mentions before you pay booth fees.',
     href: TRUST_DIRECTORY_LINKS.check.href,
   },
   {
@@ -68,7 +68,7 @@ export function MarketingFeatures() {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>
                 {href ? (
                   <span className="mt-3 inline-flex text-sm font-semibold text-forest group-hover:underline">
-                    Check organizers →
+                    {TRUST_DIRECTORY_LINKS.check.label} →
                   </span>
                 ) : null}
               </>
