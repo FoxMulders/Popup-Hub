@@ -23,6 +23,9 @@ export type Organizer = {
   listing_status: ListingStatus
   source: string
   admin_notes: string | null
+  claimed_by: string | null
+  claimed_at: string | null
+  popup_hub_coordinator_id: string | null
 }
 
 export type OrganizerEvent = {
@@ -75,4 +78,20 @@ export type OrganizerReview = {
 
 export type OrganizerReviewPublic = OrganizerReview & {
   vendor_display_name: string | null
+  response_body: string | null
+  response_created_at: string | null
+}
+
+export type CommunityMention = {
+  id: string
+  quote: string
+  sentiment: string | null
+  mention_type: string
+  coordinator_person_name: string | null
+  verification_status: VerificationStatus
+  source_permalink: string | null
+  source_snippet: string | null
+  responds_to_mention_id: string | null
+  display_order: number
+  response_body: string | null
 }
