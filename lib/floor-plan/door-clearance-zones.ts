@@ -42,7 +42,8 @@ export function boothWithinDoorClearanceZone(
     Math.min(boothRect.y + boothRect.height, zone.y + zone.height) -
     Math.max(boothRect.y, zone.y)
   if (overlapX > 0 && overlapY > 0) return true
-  return edgeClearanceBetweenRects(boothRect, zone) < clearanceFt + 1e-6
+  // Flush against the padded zone edge counts; do not extend another full egress band.
+  return edgeClearanceBetweenRects(boothRect, zone) <= 1e-6
 }
 
 /** Obstacle rects for auto-arrange — only doors/exits, localized to 5′ zones. */

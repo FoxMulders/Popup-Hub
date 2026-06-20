@@ -1,1 +1,1 @@
-feat: ship 145 session updates (coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; create market single scroll; +141 more)
+feat: ship 147 session updates (HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; +143 more)

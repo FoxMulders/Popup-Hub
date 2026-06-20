@@ -69,15 +69,23 @@ export function CommandCenterFullscreenProvider({ children }: { children: ReactN
   }, [])
 
   const setFullscreen = useCallback(async (value: boolean) => {
-    const root = dashboardFullscreenTarget() ?? document.documentElement
     if (value) {
       applyDashboardFullscreenClasses(true)
       try {
         if (!document.fullscreenElement) {
-          await root.requestFullscreen()
+          // Full-document fullscreen keeps the site-main flex chain intact; targeting
+          // #coordinator-dashboard-root alone leaves a black letterbox below the shell.
+          await document.documentElement.requestFullscreen()
         }
       } catch {
-        // CSS-only fallback when Fullscreen API is blocked
+        const root = dashboardFullscreenTarget()
+        try {
+          if (root && !document.fullscreenElement) {
+            await root.requestFullscreen()
+          }
+        } catch {
+          // CSS-only fallback when Fullscreen API is blocked
+        }
       }
       setFullscreenState(true)
       return

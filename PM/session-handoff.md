@@ -11,6 +11,29 @@
 - **Automated (dev):** `npm run qa:automation` (CI-safe static) | `npm run qa:automation:prod` (prod Playwright smoke) | `npm run test:e2e:smoke`
 - **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
 
+## Active work — HubGrid canvas INP (local, not deployed)
+- **Goal:** Fix ~319ms INP on `svg.floor-plan-canvas-surface` — pointer handlers blocked UI updates on large layouts.
+- **Root cause:** Every pointer-driven re-render ran O(n²) overlap detection and called `vendorBoothClearanceWarningBand` per vendor booth inside the `CanvasObjects` map loop.
+- **Fix:**
+  - **`floor-plan-canvas.tsx`:** `useDeferredValue` for overlap + clearance bands; live `store.doc.objects` still drives booth positions.
+  - **`booth-clearance-visual.ts`:** `vendorBoothClearanceBandsByObjectId` bulk precompute.
+  - **`canvas-objects.tsx`:** Lookup precomputed band map instead of per-object clearance in render.
+  - **`use-canvas-pointer.ts`:** `startTransition` for hover-only state (placement ghost, room edge/vertex, empty canvas).
+- **Verify:** `npx tsc --noEmit` — PASS. Chrome Performance → interact with HubGrid canvas; INP on `floor-plan-canvas-surface` should drop below 200ms on large markets.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — HubGrid minimal footer + fullscreen viewport + clearance tint fix (local, not deployed)
+- **Goal:** Reduce footer chrome on HubGrid canvas; fix black letterbox in Full screen; stop corner booth from falsely tinting distant rows/columns yellow/red.
+- **Shipped locally:**
+  - **`dashboard-workspace-footer.tsx`:** Hidden on HubGrid (blueprint) tab and preview; only shows on Allocation Ledger when a market is selected.
+  - **`dashboard-next-step-cta.tsx`:** Inline footer uses a single compact row (muted status + text link) instead of full-width green button.
+  - **`command-center-fullscreen-context.tsx`:** Full screen uses `document.documentElement.requestFullscreen()` so the site-main flex chain fills the monitor (fallback: dashboard root).
+  - **`globals.css`:** `:fullscreen` rules for command center — canvas cream background + flex height chain through floor plan host.
+  - **`perimeter-booth-orientation.ts` + `booth-clearance-visual.ts`:** Corner/perimeter booths ignore every flush wall (not just nearest) so manual corner placement stays green.
+  - **`door-clearance-zones.ts`:** Door egress zone no longer double-expands (touch/overlap only, not +5′ beyond padded zone).
+- **Verify:** `npx tsx scripts/verify-booth-clearance-visual.ts` — PASS. Smoke: `/coordinator/studio?event=…` — corner booth no longer tints opposite corner red; column above only yellow when vertical aisle is actually tight.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — coordinator market load crash (local, not deployed)
 - **Issue:** Opening a created market (event hub `/coordinator/events/[id]`) showed the coordinator error boundary — "We couldn't load this coordinator page." Markets list (`/coordinator/markets`) still loaded.
 - **Root cause:** Circular module import — `layout-density.ts` → `booth-clearance-visual.ts` → `door-clearance-zones.ts` → back to `booth-clearance-visual` before `BOOTH_CLEARANCE_GOOD_FT` initialized. Event hub pulls floor-plan modules via `ApplicationBoard` client bundle.
@@ -57,6 +80,17 @@
 - **Goal:** Search and other typable fields read as editable (white surface on cream/canvas backgrounds).
 - **Shipped locally:** Base `Input`, `Textarea`, `Select`, and `InputGroup` use `bg-white` in light mode.
 - **Verify:** Smoke `/check` organizer search, `/discover` address, vendor market search, HubGuard review form fields.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — HubGrid market-first gate (local, not deployed)
+- **Goal:** Coordinators must pick a market before HubGrid loads — no auto-open of the first market.
+- **Shipped locally:**
+  - **`app/coordinator/studio/page.tsx`:** `initialEventId` only from `?event=` query (valid id)
+  - **`market-management-context.tsx`:** No `events[0]` fallback; selection syncs URL via `coordinatorStudioHref`
+  - **`hub-grid-market-picker.tsx`:** Full-screen market picker + header market switcher
+  - **`Dashboard_qa.tsx`:** Blocks canvas/toolbar until market selected
+  - **`coordinator-markets-list.tsx`:** “Open HubGrid” → `/coordinator/studio` (picker)
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: nav **HubGrid** without `?event=` → picker; pick market → canvas loads with `?event=` in URL; event hub **HubGrid** link still opens that market directly.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — Games + Woodworking booth capacity (local, not deployed)

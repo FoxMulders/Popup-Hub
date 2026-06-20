@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  startTransition,
   useCallback,
   useEffect,
   useRef,
@@ -1399,22 +1400,28 @@ export function useCanvasPointer(
             activeRoomIdRef.current
           )
           if (preview) {
-            setPlacementHover({
-              rect: {
-                x: preview.x,
-                y: preview.y,
-                width: preview.width,
-                height: preview.height,
-              },
-              kind: activeTool.drawShape,
-              rotation: preview.rotation,
+            startTransition(() => {
+              setPlacementHover({
+                rect: {
+                  x: preview.x,
+                  y: preview.y,
+                  width: preview.width,
+                  height: preview.height,
+                },
+                kind: activeTool.drawShape,
+                rotation: preview.rotation,
+              })
             })
             return
           }
-          setPlacementHover({ rect, kind: activeTool.drawShape, rotation: 0 })
+          startTransition(() => {
+            setPlacementHover({ rect, kind: activeTool.drawShape, rotation: 0 })
+          })
           return
         }
-        setPlacementHover(null)
+        startTransition(() => {
+          setPlacementHover(null)
+        })
       }
 
       if (activeTool.tool === 'select') {
@@ -1441,30 +1448,38 @@ export function useCanvasPointer(
           const vertTol = vertexHitToleranceFt()
           const vertHit = nearestVertexHit(ft, ring, vertTol)
           if (vertHit != null) {
-            setRoomVertexHover(vertHit)
-            setRoomEdgeHover(null)
-            setEmptyCanvasHover(false)
+            startTransition(() => {
+              setRoomVertexHover(vertHit)
+              setRoomEdgeHover(null)
+              setEmptyCanvasHover(false)
+            })
             return
           }
           const edgeHit = nearestEdgeHit(ft, ring, edgeTol)
           if (edgeHit) {
-            setRoomEdgeHover({
-              roomId: frame.id,
-              edgeIndex: edgeHit.edgeIndex,
+            startTransition(() => {
+              setRoomEdgeHover({
+                roomId: frame.id,
+                edgeIndex: edgeHit.edgeIndex,
+              })
+              setRoomVertexHover(null)
+              setEmptyCanvasHover(false)
             })
-            setRoomVertexHover(null)
-            setEmptyCanvasHover(false)
             return
           }
         }
-        setRoomEdgeHover(null)
-        setRoomVertexHover(null)
-        const objectHit =
-          hitTest(store.doc.objects, ft)?.id ??
-          null
-        setEmptyCanvasHover(objectHit == null)
+        startTransition(() => {
+          setRoomEdgeHover(null)
+          setRoomVertexHover(null)
+          const objectHit =
+            hitTest(store.doc.objects, ft)?.id ??
+            null
+          setEmptyCanvasHover(objectHit == null)
+        })
       } else {
-        setEmptyCanvasHover(false)
+        startTransition(() => {
+          setEmptyCanvasHover(false)
+        })
       }
     },
     [
@@ -1889,9 +1904,11 @@ export function useCanvasPointer(
   )
 
   const onPointerLeave = useCallback(() => {
-    setEmptyCanvasHover(false)
-    setRoomEdgeHover(null)
-    setRoomVertexHover(null)
+    startTransition(() => {
+      setEmptyCanvasHover(false)
+      setRoomEdgeHover(null)
+      setRoomVertexHover(null)
+    })
   }, [])
 
   const onContextMenu = useCallback(

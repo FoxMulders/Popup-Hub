@@ -11,6 +11,7 @@ import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
 import { PageIntro } from '@/components/layout/page-intro'
 import {
   coordinatorStudioHref,
+  COORDINATOR_STUDIO_PATH,
 } from '@/lib/coordinator/coordinator-routes'
 import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
 import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
@@ -178,7 +179,7 @@ export function CoordinatorMarketsList({
         </Link>
         {activeMarkets.length > 0 ? (
           <Link
-            href={coordinatorStudioHref(activeMarkets[0]!.id)}
+            href={COORDINATOR_STUDIO_PATH}
             className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}
           >
             <LayoutDashboard className="h-4 w-4" aria-hidden />

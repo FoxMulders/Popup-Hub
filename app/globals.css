@@ -294,6 +294,66 @@
     min-height: 0;
   }
 
+  /* Native fullscreen — fill viewport (document or dashboard root fallback) */
+  html.command-center-canvas-fullscreen:fullscreen,
+  html.command-center-canvas-fullscreen:fullscreen body {
+    width: 100%;
+    height: 100%;
+    max-height: 100dvh;
+    overflow: hidden;
+    background: var(--canvas);
+  }
+
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 100dvh;
+    max-height: none;
+    overflow: hidden;
+    background: var(--canvas);
+  }
+
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen .dashboard-app-shell__grid,
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen .dashboard-app-shell__center,
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen .dashboard-canvas-column,
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen #floor-plan-workspace,
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen .canvas-editor-root,
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen .canvas-container,
+  html.command-center-canvas-fullscreen #coordinator-dashboard-root:fullscreen .floor-plan-canvas-host--dashboard {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+
+  html.command-center-canvas-fullscreen:fullscreen .coordinator-dashboard-workspace,
+  html.command-center-canvas-fullscreen:fullscreen #site-main,
+  html.command-center-canvas-fullscreen:fullscreen #coordinator-dashboard-root,
+  html.command-center-canvas-fullscreen:fullscreen .dashboard-app-shell__grid,
+  html.command-center-canvas-fullscreen:fullscreen .dashboard-app-shell__center,
+  html.command-center-canvas-fullscreen:fullscreen .dashboard-canvas-column,
+  html.command-center-canvas-fullscreen:fullscreen #floor-plan-workspace,
+  html.command-center-canvas-fullscreen:fullscreen .canvas-editor-root,
+  html.command-center-canvas-fullscreen:fullscreen .canvas-container,
+  html.command-center-canvas-fullscreen:fullscreen .floor-plan-canvas-host--dashboard {
+    min-height: 0;
+    height: 100%;
+  }
+
+  html.command-center-canvas-fullscreen:fullscreen .coordinator-dashboard-workspace,
+  html.command-center-canvas-fullscreen:fullscreen #coordinator-dashboard-root,
+  html.command-center-canvas-fullscreen:fullscreen .dashboard-app-shell__center,
+  html.command-center-canvas-fullscreen:fullscreen .dashboard-canvas-column,
+  html.command-center-canvas-fullscreen:fullscreen #floor-plan-workspace,
+  html.command-center-canvas-fullscreen:fullscreen .canvas-editor-root {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
   /* Coordinator dashboard — fill viewport (immersive + Panels mode) */
   body[data-dashboard-command-center='true'],
   body:has(.coordinator-dashboard-workspace) {

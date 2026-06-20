@@ -253,9 +253,7 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
   const paymentTrustComplete = coordinatorHasPaymentTrustPath(fraudGate)
 
   const initialEventId =
-    eventQuery && allStudioEvents.some((e) => e.id === eventQuery)
-      ? eventQuery
-      : activeSorted[0]?.id ?? archivedSorted[0]?.id ?? null
+    eventQuery && allStudioEvents.some((e) => e.id === eventQuery) ? eventQuery : null
 
   return (
     <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading HubGrid…</div>}>

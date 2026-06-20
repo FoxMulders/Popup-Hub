@@ -32,7 +32,7 @@ import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { fitTextInContainer, wrapTextInContainer } from './canvas-label-text'
 import {
   BOOTH_CLEARANCE_THEMES,
-  vendorBoothClearanceWarningBand,
+  type BoothClearanceBand,
 } from '@/lib/coordinator/booth-clearance-visual'
 import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 import type { FloorPlanDoc } from '../state/types'
@@ -77,6 +77,8 @@ interface CanvasObjectsProps {
   objectRoom?: FloorPlanDoc['objectRoom']
   /** Highlight clearance bands while dragging booths. */
   emphasizeClearance?: boolean
+  /** Precomputed vendor booth clearance bands (deferred by the host for INP). */
+  boothClearanceBandByObjectId?: ReadonlyMap<string, BoothClearanceBand>
   /** When false, vendor booths use payment/status fill instead of aisle bands. */
   showClearanceWarnings?: boolean
   /** Stage ids whose inner wall is dissolved into a room union perimeter. */
@@ -477,11 +479,13 @@ function CanvasObjectsBase({
   eventCategoryNames,
   rooms,
   objectRoom,
-  emphasizeClearance = false,
+  emphasizeClearance: _emphasizeClearance = false,
+  boothClearanceBandByObjectId,
   showClearanceWarnings = true,
   dissolvedStageIds,
   renderLayer = 'all',
 }: CanvasObjectsProps) {
+  void _emphasizeClearance
   const dissolvedJoinGroupIds = useMemo(() => {
     const counts = new Map<string, number>()
     for (const r of rooms ?? []) {
@@ -576,12 +580,7 @@ function CanvasObjectsBase({
           isVendorBoothObject(obj) &&
           !isOverlapping
         ) {
-          const band = vendorBoothClearanceWarningBand(
-            obj as BoothObject,
-            objects,
-            rooms,
-            objectRoom
-          )
+          const band = boothClearanceBandByObjectId?.get(obj.id) ?? 'good'
           const theme = BOOTH_CLEARANCE_THEMES[band]
           fill = theme.fill
           clearanceStroke = theme.stroke

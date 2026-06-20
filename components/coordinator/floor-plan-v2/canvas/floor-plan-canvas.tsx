@@ -2,6 +2,7 @@
 
 import {
   useCallback,
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -57,7 +58,10 @@ import { VENDOR_DRAG_MIME } from '@/lib/coordinator/booth-placement-status'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { dissolvedStageIdsForDoc } from '@/src/utils/layoutMergeEngine'
 import { boothPatchForTableSize } from '@/lib/booth-planner/table-booth-consolidation'
-import { vendorBoothClearanceThemeForProbe } from '@/lib/coordinator/booth-clearance-visual'
+import {
+  vendorBoothClearanceBandsByObjectId,
+  vendorBoothClearanceThemeForProbe,
+} from '@/lib/coordinator/booth-clearance-visual'
 import type { BoothObject } from '../state/types'
 import {
   editableRingForFrame,
@@ -537,18 +541,36 @@ export function FloorPlanCanvas({
 
   useCanvasObjectKeyboard(store, { enabled: commandCenterViewport && !viewOnly })
 
-  const mergeOverlapCtx = useMemo(
+  const deferredObjects = useDeferredValue(store.doc.objects)
+  const deferredRooms = useDeferredValue(store.doc.rooms)
+  const deferredObjectRoom = useDeferredValue(store.doc.objectRoom)
+  const deferredOverlapCtx = useMemo(
     () => ({
-      rooms: store.doc.rooms ?? [],
-      objectRoom: store.doc.objectRoom,
-      doc: store.doc,
+      rooms: deferredRooms ?? [],
+      objectRoom: deferredObjectRoom,
+      doc: {
+        ...store.doc,
+        objects: deferredObjects,
+        rooms: deferredRooms,
+        objectRoom: deferredObjectRoom,
+      },
     }),
-    [store.doc]
+    [deferredObjectRoom, deferredObjects, deferredRooms, store.doc]
   )
 
   const overlappingIds = useMemo(
-    () => detectPlacedObjectOverlaps(store.doc.objects, mergeOverlapCtx),
-    [mergeOverlapCtx, store.doc.objects]
+    () => detectPlacedObjectOverlaps(deferredObjects, deferredOverlapCtx),
+    [deferredObjects, deferredOverlapCtx]
+  )
+
+  const boothClearanceBandByObjectId = useMemo(
+    () =>
+      vendorBoothClearanceBandsByObjectId(
+        deferredObjects,
+        deferredRooms,
+        deferredObjectRoom
+      ),
+    [deferredObjectRoom, deferredObjects, deferredRooms]
   )
 
   const dissolvedStageIds = useMemo(
@@ -615,9 +637,9 @@ export function FloorPlanCanvas({
     if (draftPreviewProbe) {
       return placedObjectOverlapsAny(
         draftPreviewProbe,
-        store.doc.objects,
+        deferredObjects,
         undefined,
-        mergeOverlapCtx
+        deferredOverlapCtx
       )
     }
     const rect = resolveDrawCommitRect(
@@ -644,18 +666,23 @@ export function FloorPlanCanvas({
       height: preview?.height ?? rect.height,
       rotation: preview?.rotation ?? rotation,
     } as PlacedObject
-    return placedObjectOverlapsAny(probe, store.doc.objects, undefined, mergeOverlapCtx)
+    return placedObjectOverlapsAny(
+      probe,
+      deferredObjects,
+      undefined,
+      deferredOverlapCtx
+    )
   }, [
     activeRoomId,
     defaultBoothTableSpec,
+    deferredObjects,
+    deferredOverlapCtx,
     draftPreviewProbe,
-    mergeOverlapCtx,
     pointer.draftRect,
     pointer.placementHoverRotation,
     previewSourceKind,
     previewSourceRect,
     store.doc,
-    store.doc.objects,
     store.doc.snapFt,
   ])
 
@@ -663,23 +690,23 @@ export function FloorPlanCanvas({
     if (!showClearanceWarnings) return null
     if (!draftPreviewProbe || draftOverlaps) return null
     if (defaultBoothTableSpec?.purpose === 'guest') return null
-    const previewRoomId = activeRoomId ?? store.doc.rooms?.[0]?.id ?? null
+    const previewRoomId = activeRoomId ?? deferredRooms?.[0]?.id ?? null
     return vendorBoothClearanceThemeForProbe(
       draftPreviewProbe,
-      store.doc.objects,
-      store.doc.rooms,
-      store.doc.objectRoom,
+      deferredObjects,
+      deferredRooms,
+      deferredObjectRoom,
       previewRoomId
     )
   }, [
     showClearanceWarnings,
     activeRoomId,
     defaultBoothTableSpec?.purpose,
+    deferredObjectRoom,
+    deferredObjects,
+    deferredRooms,
     draftOverlaps,
     draftPreviewProbe,
-    store.doc.objectRoom,
-    store.doc.objects,
-    store.doc.rooms,
   ])
 
   const draftPreviewRect = useMemo(() => {
@@ -1051,6 +1078,7 @@ export function FloorPlanCanvas({
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
             boothMapLabelMode={boothMapLabelMode}
             boothMapLabelByObjectId={boothMapLabelByObjectId}
+            boothClearanceBandByObjectId={boothClearanceBandByObjectId}
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }
@@ -1083,6 +1111,7 @@ export function FloorPlanCanvas({
             boothPlacementStatusByObjectId={boothPlacementStatusByObjectId}
             boothMapLabelMode={boothMapLabelMode}
             boothMapLabelByObjectId={boothMapLabelByObjectId}
+            boothClearanceBandByObjectId={boothClearanceBandByObjectId}
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }

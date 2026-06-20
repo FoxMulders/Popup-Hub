@@ -6,6 +6,7 @@ import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 import { DashboardHeaderToolbarPortalTarget } from './dashboard-toolbar-portal'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { DashboardSavedLayoutToolbar } from './dashboard-saved-layout-toolbar'
+import { HubGridMarketSelect } from './hub-grid-market-picker'
 import { useMarketManagement } from './market-management-context'
 
 function WorkspaceTabs() {
@@ -99,7 +100,7 @@ export function DashboardCommandCenterHeader({
 }) {
   const { previewMode } = useCommandCenterFullscreen()
   const { isBlueprint } = useDashboardWorkspaceView()
-  const { selectedEventId } = useMarketManagement()
+  const { selectedEventId, events, setSelectedEventId } = useMarketManagement()
 
   if (previewMode) {
     return (
@@ -113,6 +114,12 @@ export function DashboardCommandCenterHeader({
     <div className="dashboard-command-center-header flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden px-3 py-1 sm:gap-2 sm:px-4">
       {selectedEventId ? (
         <>
+          <HubGridMarketSelect
+            events={events}
+            selectedEventId={selectedEventId}
+            onSelect={setSelectedEventId}
+            className="hidden shrink-0 sm:flex"
+          />
           <EventSetupExitLink />
           <div className="h-4 w-px shrink-0 bg-stone-200" aria-hidden />
         </>

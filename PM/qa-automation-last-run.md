@@ -1,13 +1,14 @@
 ﻿# QA automation last run
 
-**When:** 2026-06-20 10:40:49
-**Build:** v1.0.0 build 219 @ 80dfa1e
+**When:** 2026-06-20 11:37:34
+**Build:** v1.0.0 build 224 @ c0b4a10
 **Result:** FAILED
 
-**Error:** C:\Users\bradm\Projects\popup-hub\lib\booth-planner\qa-scenarios.ts:198
+**Error:** [WebServer] ΓÜá Self-signed certificates are currently an experimental feature, use with caution.
 
 | Step | Result |
 |------|--------|
 | TypeScript | PASS |
 | Unit tests | PASS |
+| Signup RBAC | PASS |
 

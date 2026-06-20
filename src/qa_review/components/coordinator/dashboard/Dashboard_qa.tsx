@@ -15,6 +15,7 @@ import { DashboardTopToolbarStrip } from '@/components/coordinator/dashboard/das
 import { DashboardWorkspaceFooter } from '@/components/coordinator/dashboard/dashboard-workspace-footer'
 import { LayoutEditorHelpHost } from '@/components/coordinator/floor-plan-v2/tools/layout-editor-help'
 import { DashboardNoRoomEmptyState } from '@/components/coordinator/dashboard/dashboard-no-room-empty-state'
+import { HubGridMarketPicker } from '@/components/coordinator/dashboard/hub-grid-market-picker'
 import { useMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
   DesktopScreenRequiredOverlay,
@@ -66,7 +67,8 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const { fullscreen: immersive, previewMode } = useCommandCenterFullscreen()
   const { isBlueprint, isLedger } = useDashboardWorkspaceView()
-  const { selectedEventId, layoutRooms, setLayoutRooms } = useMarketManagement()
+  const { selectedEventId, events, setSelectedEventId, layoutRooms, setLayoutRooms } =
+    useMarketManagement()
   const reducedMotion = useReducedMotion()
   const [ariaBusy, setAriaBusy] = useState(true)
   const [liveMessage, setLiveMessage] = useState('Booth layout designer loading.')
@@ -102,6 +104,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
 
   const showBlueprint = false
   const mountCanvas = Boolean(selectedEventId && hasInitialRoom && !showDesktopRequired)
+  const showMarketPicker = !selectedEventId && !showDesktopRequired
 
   return (
     <DashboardToolbarPortalProvider>
@@ -112,7 +115,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
         header={header}
         toolbarStrip={
           <DashboardTopToolbarStrip
-            hidden={previewMode || immersive || !isBlueprint}
+            hidden={previewMode || immersive || !isBlueprint || showMarketPicker}
           />
         }
         immersive={immersive || previewMode}
@@ -129,6 +132,8 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
                   className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center"
                   aria-hidden
                 />
+              ) : showMarketPicker ? (
+                <HubGridMarketPicker events={events} onSelect={setSelectedEventId} />
               ) : isLedger ? (
                 <>
                   <DashboardAllocationLedger />
@@ -166,7 +171,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
           </div>
         }
       />
-      <LayoutEditorHelpHost showFloatingFab={isLedger} />
+      {!showMarketPicker ? <LayoutEditorHelpHost showFloatingFab={isLedger} /> : null}
     </DashboardToolbarPortalProvider>
   )
 }

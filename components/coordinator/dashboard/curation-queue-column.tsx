@@ -44,9 +44,15 @@ export function CurationQueueColumn() {
           <select
             id="market-profile-select"
             value={selectedEventId ?? ''}
-            onChange={(e) => setSelectedEventId(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value
+              if (next) setSelectedEventId(next)
+            }}
             className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
           >
+            <option value="" disabled>
+              Select a market…
+            </option>
             {events.map((event) => (
               <option key={event.id} value={event.id}>
                 {event.name}

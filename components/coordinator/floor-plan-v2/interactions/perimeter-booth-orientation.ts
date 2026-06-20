@@ -313,6 +313,17 @@ export function isBoothSnappedToRoomPerimeter(
   return nearestRoomEdge(booth, frame).distanceFt < tolFt
 }
 
+/** Every room edge the booth is flush to (corner booths may touch two walls). */
+export function perimeterFlushRoomEdges(
+  booth: BoothObject,
+  frame: RoomFrame,
+  tolFt = PERIMETER_BOOTH_SNAP_FT + 0.25
+): ReadonlyArray<RoomEdgeSide> {
+  return roomEdgeDistanceCandidates(booth, frame)
+    .filter((c) => c.distanceFt <= tolFt + 1e-6)
+    .map((c) => c.edge)
+}
+
 /**
  * Snap a booth to the nearest perimeter edge and orient inward.
  * `alongCoord` is the leading-edge position along the wall (local to edge axis).

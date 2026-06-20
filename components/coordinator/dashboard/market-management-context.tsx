@@ -10,6 +10,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useRouter } from 'next/navigation'
+import { coordinatorStudioHref } from '@/lib/coordinator/coordinator-routes'
 import type { LayoutRoom } from '@/types/database'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
@@ -139,7 +141,19 @@ export function MarketManagementProvider({
   stripeConnected = false,
   totalRevenueCents,
 }: MarketManagementProviderProps) {
-  const [selectedEventId, setSelectedEventId] = useState(initialEventId ?? events[0]?.id ?? null)
+  const router = useRouter()
+  const resolvedInitialEventId =
+    initialEventId && events.some((event) => event.id === initialEventId) ? initialEventId : null
+  const [selectedEventId, setSelectedEventIdState] = useState(resolvedInitialEventId)
+
+  const setSelectedEventId = useCallback(
+    (id: string) => {
+      if (!events.some((event) => event.id === id)) return
+      setSelectedEventIdState(id)
+      router.replace(coordinatorStudioHref(id), { scroll: false })
+    },
+    [events, router]
+  )
   const [approvedByEventIdState, setApprovedByEventIdState] =
     useState(approvedByEventId)
 

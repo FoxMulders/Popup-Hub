@@ -5,17 +5,16 @@ import {
   BOOTH_CLEARANCE_TARGET_FT,
   BOOTH_CLEARANCE_TIGHT_FT,
 } from '@/lib/coordinator/booth-clearance-constants'
-import { edgeClearanceBetweenRects } from '@/lib/floor-plan/rect-edge-clearance'
+import {
+  edgeClearanceBetweenRects,
+  vendorBoothAisleClearanceFt,
+} from '@/lib/floor-plan/rect-edge-clearance'
 import {
   rotatedAabb,
   type Rect,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-import { nearestRoomEdge } from '@/components/coordinator/floor-plan-v2/interactions/perimeter-booth-orientation'
-import {
-  isVendorBoothObject,
-  isVendorBoothWallSnappedForCollision,
-  type VendorCollisionContext,
-} from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
+import { perimeterFlushRoomEdges } from '@/components/coordinator/floor-plan-v2/interactions/perimeter-booth-orientation'
+import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
 import type {
   BoothObject,
   FloorPlanDoc,
@@ -33,7 +32,10 @@ export {
   BOOTH_CLEARANCE_TARGET_FT,
   BOOTH_CLEARANCE_TIGHT_FT,
 } from '@/lib/coordinator/booth-clearance-constants'
-export { edgeClearanceBetweenRects } from '@/lib/floor-plan/rect-edge-clearance'
+export {
+  edgeClearanceBetweenRects,
+  vendorBoothAisleClearanceFt,
+} from '@/lib/floor-plan/rect-edge-clearance'
 
 export type BoothClearanceBand = 'critical' | 'tight' | 'good'
 
@@ -91,7 +93,6 @@ export function clearanceToRoomWallsFt(
   room: RoomFrame,
   options?: {
     booth?: BoothObject
-    collisionCtx?: VendorCollisionContext
   }
 ): number {
   const interior = roomInteriorRect(room)
@@ -103,10 +104,10 @@ export function clearanceToRoomWallsFt(
   ]
 
   const booth = options?.booth
-  const collisionCtx = options?.collisionCtx
-  if (booth && collisionCtx && isVendorBoothWallSnappedForCollision(booth, collisionCtx)) {
-    const { edge } = nearestRoomEdge(booth, room)
-    gaps[ROOM_EDGE_GAP_INDEX[edge]] = Number.POSITIVE_INFINITY
+  if (booth) {
+    for (const edge of perimeterFlushRoomEdges(booth, room)) {
+      gaps[ROOM_EDGE_GAP_INDEX[edge]] = Number.POSITIVE_INFINITY
+    }
   }
 
   return Math.min(...gaps)
@@ -144,21 +145,7 @@ export function minVendorBoothBoundaryClearanceFt(
   const roomId = objectRoom?.[booth.id]
   const room = roomId ? rooms?.find((r) => r.id === roomId) : undefined
   if (room) {
-    const collisionCtx: VendorCollisionContext | undefined = rooms
-      ? {
-          canvasWidthFt: 0,
-          canvasLengthFt: 0,
-          gridSpacingFt: 1,
-          snapFt: 1,
-          objects: [...objects],
-          rooms: [...rooms],
-          objectRoom,
-        }
-      : undefined
-    const wallGap = clearanceToRoomWallsFt(boothAabb, room, {
-      booth,
-      collisionCtx,
-    })
+    const wallGap = clearanceToRoomWallsFt(boothAabb, room, { booth })
     if (wallGap < minGap) minGap = wallGap
   }
 
@@ -249,7 +236,7 @@ export function minVendorBoothClearanceFt(
     if (other.id === booth.id) continue
     if (other.kind === 'booth') {
       if (!isVendorBoothObject(other)) continue
-      const gap = edgeClearanceBetweenRects(
+      const gap = vendorBoothAisleClearanceFt(
         boothAabb,
         boothPlacementRect(other as BoothObject)
       )
@@ -263,26 +250,37 @@ export function minVendorBoothClearanceFt(
   const roomId = objectRoom?.[booth.id]
   const room = roomId ? rooms?.find((r) => r.id === roomId) : undefined
   if (room) {
-    const collisionCtx: VendorCollisionContext | undefined = rooms
-      ? {
-          canvasWidthFt: 0,
-          canvasLengthFt: 0,
-          gridSpacingFt: 1,
-          snapFt: 1,
-          objects: [...objects],
-          rooms: [...rooms],
-          objectRoom,
-        }
-      : undefined
-    const wallGap = clearanceToRoomWallsFt(boothAabb, room, {
-      booth,
-      collisionCtx,
-    })
+    const wallGap = clearanceToRoomWallsFt(boothAabb, room, { booth })
     if (wallGap < minGap) minGap = wallGap
   }
 
   if (!Number.isFinite(minGap)) return BOOTH_CLEARANCE_GOOD_FT
   return Math.max(0, minGap)
+}
+
+/**
+ * Precompute clearance bands for every vendor booth in one pass.
+ * HubGrid passes this map into `CanvasObjects` so the render loop
+ * does not call `vendorBoothClearanceWarningBand` per object (INP).
+ */
+export function vendorBoothClearanceBandsByObjectId(
+  objects: ReadonlyArray<PlacedObject>,
+  rooms: ReadonlyArray<RoomFrame> | undefined,
+  objectRoom: FloorPlanDoc['objectRoom']
+): Map<string, BoothClearanceBand> {
+  const bands = new Map<string, BoothClearanceBand>()
+  for (const obj of objects) {
+    if (obj.kind !== 'booth') continue
+    const booth = obj as BoothObject
+    if (isGuestTableBooth(booth) || !isVendorBoothObject(booth)) continue
+    bands.set(
+      obj.id,
+      clearanceBand(
+        minVendorBoothClearanceFt(booth, objects, rooms, objectRoom)
+      )
+    )
+  }
+  return bands
 }
 
 export function docHasUnresolvedClearanceIssues(doc: FloorPlanDoc): boolean {
