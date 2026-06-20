@@ -1601,9 +1601,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `db0ff81` (pushed to `origin/master`)
-- Last deploy commit: `db0ff81` - feat: ship 141 session updates (flyer cover upload click regression; patron UX + coordinator polish; white form fields on canvas; logo icon-only (no wordmark); +137 more)
-- Production: https://popuphub.ca - **v1.0.0 build 223** | commit `1e48b69` (handoff updated 2026-06-20 11:16)
+- Branch: `master` @ `4f4721f` (pushed to `origin/master`)
+- Last deploy commit: `4f4721f` - feat: ship 145 session updates (coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; create market single scroll; +141 more)
+- Production: https://popuphub.ca - **v1.0.0 build 224** | commit `c0b4a10` (handoff updated 2026-06-20 11:31)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1980,7 +1980,7 @@
 
 
 ## Last deploy
-- 2026-06-20 11:16 - Deploy via deploy-popuphub.ps1 - `feat: ship 141 session updates (flyer cover upload click regression; patron UX + coordinator polish; white form fields on canvas; logo icon-only (no wordmark); +137 more)` (db0ff81)
+- 2026-06-20 11:31 - Deploy via deploy-popuphub.ps1 - `feat: ship 145 session updates (coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; create market single scroll; +141 more)` (4f4721f)
 
 
 ## Goal
