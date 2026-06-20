@@ -8,11 +8,11 @@ import {
   type InitialLoaderFrame,
 } from '@/lib/brand/initial-loader-controller'
 
-/** Full lockup (storefront + wordmark) — transparent PNG from process-logo.mjs. */
+/** Storefront icon (stall + pin) — transparent PNG from process-logo.mjs. */
 const LOGO_SRC = '/popup-hub-brand.png'
-const LOGO_ASPECT = 994 / 1024
-/** Storefront pin sits ~28% from the top of the lockup (see process-logo.mjs). */
-const LOGO_ICON_ANCHOR_Y = 0.28
+const LOGO_ASPECT = 1
+/** Storefront pin sits ~49% from the top of the square icon. */
+const LOGO_ICON_ANCHOR_Y = 0.49
 const LOGO_MAX_SCALE = 1.012
 
 function fitLogoInRing(
@@ -58,14 +58,6 @@ function clamp01(value: number) {
 
 function lerp(from: number, to: number, t: number) {
   return from + (to - from) * t
-}
-
-/** One item per slot — each completes before the next begins. */
-function sequentialReveal(t: number, index: number, total: number): number {
-  if (total <= 0) return 1
-  const slot = 1 / total
-  const local = (t - index * slot) / slot
-  return easeOutCubic(clamp01(local))
 }
 
 type ScatterPose = { x: number; y: number; rot: number }
@@ -189,13 +181,10 @@ const BRAND = {
   cream: '#fffdf9',
 } as const
 
-/** Extended below the booth ring so the tagline + progress bar are never clipped. */
+/** Extended below the booth ring so the progress bar is never clipped. */
 const SVG_WIDTH = 480
-const SVG_HEIGHT = 448
-const TAGLINE = 'Markets Made Easy'
-const TAGLINE_WORDS = TAGLINE.split(' ')
-const TAGLINE_Y = 392
-const PROGRESS_Y = 410
+const SVG_HEIGHT = 400
+const PROGRESS_Y = 372
 const PROGRESS_X = 90
 const PROGRESS_W = 300
 
@@ -205,15 +194,14 @@ function drawProgress(value: number, start: number, end: number) {
   return (value - start) / (end - start)
 }
 
-/** Disorganized deck → card deal → logo → tagline → progress bar. */
+/** Disorganized deck → card deal → logo → progress bar. */
 const LOADER_PHASE = {
   /** Hold the fanned deck in the center before dealing. */
   chaos: { start: 0.03, end: 0.26 },
   /** Deal one table at a time from the deck to its perimeter slot. */
   deal: { start: 0.26, end: 0.68 },
-  logo: { start: 0.68, end: 0.84 },
-  tagline: { start: 0.84, end: 0.95 },
-  bar: { start: 0.91, end: 1 },
+  logo: { start: 0.68, end: 0.88 },
+  bar: { start: 0.85, end: 1 },
 } as const
 
 function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
@@ -224,8 +212,6 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
   const dealT = drawProgress(progress, LOADER_PHASE.deal.start, LOADER_PHASE.deal.end)
   /** Logo fades in after the last card is dealt. */
   const logoT = drawProgress(progress, LOADER_PHASE.logo.start, LOADER_PHASE.logo.end)
-  /** Tagline words appear one at a time after the logo. */
-  const tagT = drawProgress(progress, LOADER_PHASE.tagline.start, LOADER_PHASE.tagline.end)
   const barT = drawProgress(progress, LOADER_PHASE.bar.start, LOADER_PHASE.bar.end)
 
   const outroFade =
@@ -343,30 +329,6 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
             />
           </g>
         </g>
-
-        <text
-          x={SVG_WIDTH / 2}
-          y={TAGLINE_Y}
-          textAnchor="middle"
-          fontSize="12"
-          fontWeight="500"
-          fill={BRAND.ink}
-          style={{
-            letterSpacing: '0.14em',
-            fontFamily:
-              'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-          }}
-        >
-          {TAGLINE_WORDS.map((word, index) => {
-            const wordT = sequentialReveal(tagT, index, TAGLINE_WORDS.length)
-            return (
-              <tspan key={word} opacity={wordT * 0.85}>
-                {index > 0 ? '\u00a0' : ''}
-                {word}
-              </tspan>
-            )
-          })}
-        </text>
 
         <rect
           x={PROGRESS_X}

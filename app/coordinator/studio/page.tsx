@@ -74,7 +74,7 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
         'payout_onboarding_status, payout_account_id, stripe_connected_id, stripe_onboarding_complete, square_access_token, coordinator_verification_status, coordinator_organization_name, coordinator_business_number, coordinator_risk_score, coordinator_account_status, coordinator_is_verified, coordinator_successful_events_count'
       )
       .eq('id', user.id)
-      .single(),
+      .maybeSingle(),
     revenueQuery,
     coordinatorEventIds.length > 0
       ? supabase.from('booth_layouts').select('*').in('event_id', coordinatorEventIds)

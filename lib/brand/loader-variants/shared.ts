@@ -3,14 +3,9 @@
  *
  * Asset notes
  * ===========
- * The market storefront uses the icon-only PNG (`/popup-hub-icon.png`,
- * 994 × 994) so the brand wordmark "Popup Hub" can be rendered as
- * separate SVG `<text>` ABOVE the walking canvas instead of riding
- * underneath the storefront and crashing into the sidewalk. Keeping
- * the icon square also means we can sit its bottom edge flush with
- * the sidewalk surface — the previous wordmark PNG had ~30% empty
- * space below the storefront art that visually lifted it off the
- * ground.
+ * The market storefront uses the square icon PNG (`/popup-hub-brand.png`)
+ * so the stall + pin sit flush on the sidewalk with no wordmark band
+ * below the artwork.
  */
 export const ICON_NATURAL_SIZE = 994
 

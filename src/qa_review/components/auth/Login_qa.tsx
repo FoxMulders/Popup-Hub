@@ -334,7 +334,7 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
       {!embedded ? (
         <div className="text-center">
           <img
-            src="/popup-hub-logo.png"
+            src="/popup-hub-brand.png"
             alt="Popup Hub"
             className="w-44 h-auto object-contain mx-auto mb-4"
           />

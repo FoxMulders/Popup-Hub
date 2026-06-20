@@ -1,12 +1,20 @@
-/** Actionable message when hosted Supabase is missing migration 086/088 columns. */
+/** Actionable message when hosted Supabase schema is behind app code. */
 export const EVENTS_SCHEMA_MIGRATION_MESSAGE =
-  'Database migration required — run `supabase db push` or apply migration 088 in the Supabase SQL Editor.'
+  'Database migration required — run `npm run db:push` or apply pending migrations in the Supabase SQL Editor.'
 
 type PostgrestErrorShape = {
   code?: string | null
   message?: string | null
   details?: string | null
   hint?: string | null
+}
+
+function missingColumnFromError(error: PostgrestErrorShape): string | null {
+  const msg = error.message ?? ''
+  const match =
+    msg.match(/Could not find the '([^']+)' column/i) ??
+    msg.match(/column\s+[\w.]+\.(\w+)\s+does not exist/i)
+  return match?.[1] ?? null
 }
 
 export function isPostgrestSchemaCacheError(error: PostgrestErrorShape): boolean {
@@ -17,6 +25,10 @@ export function isPostgrestSchemaCacheError(error: PostgrestErrorShape): boolean
 
 export function formatSupabaseClientError(error: PostgrestErrorShape): string {
   if (isPostgrestSchemaCacheError(error)) {
+    const column = missingColumnFromError(error)
+    if (column) {
+      return `${EVENTS_SCHEMA_MIGRATION_MESSAGE} (missing column: ${column})`
+    }
     return EVENTS_SCHEMA_MIGRATION_MESSAGE
   }
   return [error.message, error.details, error.hint, error.code].filter(Boolean).join(' — ')

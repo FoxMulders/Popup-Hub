@@ -1,5 +1,12 @@
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import {
+  BOOTH_CLEARANCE_CRITICAL_FT,
+  BOOTH_CLEARANCE_GOOD_FT,
+  BOOTH_CLEARANCE_TARGET_FT,
+  BOOTH_CLEARANCE_TIGHT_FT,
+} from '@/lib/coordinator/booth-clearance-constants'
+import { edgeClearanceBetweenRects } from '@/lib/floor-plan/rect-edge-clearance'
+import {
   rotatedAabb,
   type Rect,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
@@ -20,17 +27,13 @@ import {
   isDoorOrExitObject,
 } from '@/lib/floor-plan/door-clearance-zones'
 
-/** Minimum edge-to-edge aisle for published layouts (ft). */
-export const BOOTH_CLEARANCE_TARGET_FT = 4
-
-/** Red band — critical violation (ft). */
-export const BOOTH_CLEARANCE_CRITICAL_FT = 2
-
-/** Yellow band lower bound — tight clearance begins at this (ft). */
-export const BOOTH_CLEARANCE_TIGHT_FT = 3
-
-/** Green band — clean clearance at or above this (ft). */
-export const BOOTH_CLEARANCE_GOOD_FT = 4
+export {
+  BOOTH_CLEARANCE_CRITICAL_FT,
+  BOOTH_CLEARANCE_GOOD_FT,
+  BOOTH_CLEARANCE_TARGET_FT,
+  BOOTH_CLEARANCE_TIGHT_FT,
+} from '@/lib/coordinator/booth-clearance-constants'
+export { edgeClearanceBetweenRects } from '@/lib/floor-plan/rect-edge-clearance'
 
 export type BoothClearanceBand = 'critical' | 'tight' | 'good'
 
@@ -65,23 +68,6 @@ const CLEARANCE_OBSTACLE_KINDS: ReadonlySet<PlacedObject['kind']> = new Set([
   'stage',
   'food_truck',
 ])
-
-/** Minimum positive edge-to-edge gap between two axis-aligned rects (ft). */
-export function edgeClearanceBetweenRects(a: Rect, b: Rect): number {
-  const overlapX =
-    Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
-  const overlapY =
-    Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
-  if (overlapX > 0 && overlapY > 0) return 0
-
-  const gapX = Math.max(a.x - (b.x + b.width), b.x - (a.x + a.width), 0)
-  const gapY = Math.max(a.y - (b.y + b.height), b.y - (a.y + a.height), 0)
-
-  if (gapX > 0 && gapY > 0) return Math.min(gapX, gapY)
-  if (gapX > 0) return gapX
-  if (gapY > 0) return gapY
-  return 0
-}
 
 function roomInteriorRect(room: RoomFrame): Rect {
   return {

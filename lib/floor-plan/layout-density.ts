@@ -3,7 +3,7 @@
  * and minimum room sizing for walkable loops.
  */
 
-import { BOOTH_CLEARANCE_GOOD_FT } from '@/lib/coordinator/booth-clearance-visual'
+import { BOOTH_CLEARANCE_GOOD_FT } from '@/lib/coordinator/booth-clearance-constants'
 import {
   BOOTH_PAIR_MIN_EDGE_GAP_FT,
   PATRON_AISLE_MIN_FT,

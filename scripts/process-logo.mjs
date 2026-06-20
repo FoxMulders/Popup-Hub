@@ -138,12 +138,11 @@ async function makeTransparentLogo() {
     .toBuffer()
 
   await writePngAtomically(outputLogo, transparent)
-  await writePngAtomically(path.join(root, 'public', 'popup-hub-brand.png'), transparent)
   // Legacy Lottie JSON references `logo.png` at the site root.
   await writePngAtomically(path.join(root, 'public', 'logo.png'), transparent)
 
   const meta = await sharp(transparent).metadata()
-  console.log('Wrote transparent logo:', outputLogo, `${meta.width}x${meta.height}`, `alpha=${meta.hasAlpha}`)
+  console.log('Wrote transparent source logo:', outputLogo, `${meta.width}x${meta.height}`, `alpha=${meta.hasAlpha}`)
 }
 
 async function trimToSquare(buffer) {
@@ -167,13 +166,13 @@ async function trimToSquare(buffer) {
     .toBuffer()
 }
 
-/** Full vertical lockup (icon + wordmark) for app icons. */
+/** Full vertical lockup (icon + wordmark) — archived in popup-hub-logo.png source only. */
 async function extractFullLockup() {
   const trimmed = await sharp(outputLogo).trim().png().toBuffer()
   return trimToSquare(trimmed)
 }
 
-/** Stall + pin mark for compact favicons. */
+/** Stall + pin mark for UI, animations, and compact favicons. */
 async function extractIconMark() {
   const trimmed = await sharp(outputLogo).trim().png().toBuffer()
   const meta = await sharp(trimmed).metadata()
@@ -189,6 +188,21 @@ async function extractIconMark() {
   const out = path.join(root, 'public', 'popup-hub-icon.png')
   await sharp(square).toFile(out)
   console.log('Wrote icon mark:', out)
+
+  const brandOut = path.join(root, 'public', 'popup-hub-brand.png')
+  const brandSquare = await sharp(square)
+    .resize(994, 994, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      kernel: sharp.kernel.lanczos3,
+    })
+    .png()
+    .toBuffer()
+  await writePngAtomically(brandOut, brandSquare)
+  console.log('Wrote UI brand icon (no wordmark):', brandOut)
+
+  // Icon-only legacy paths — Lottie demo and runtime swap target icon mark.
+  await writePngAtomically(path.join(root, 'public', 'logo.png'), brandSquare)
 
   return square
 }
@@ -263,22 +277,22 @@ async function transparentIcon(iconBuffer, size, paddingRatio = 0.1) {
     .toBuffer()
 }
 
-async function writeIcons(fullLockup, iconMark) {
+async function writeIcons(iconMark) {
   await mkdir(iconsDir, { recursive: true })
   await mkdir(appDir, { recursive: true })
 
   for (const size of [192, 512]) {
-    const transparent = await transparentIcon(fullLockup, size, 0.1)
+    const transparent = await transparentIcon(iconMark, size, 0.1)
     const out = path.join(iconsDir, `icon-${size}x${size}.png`)
     await sharp(transparent).toFile(out)
     console.log('Wrote icon:', out)
   }
 
-  const maskable512 = await iconOnBackground(fullLockup, 512, CREAM, 0.14)
+  const maskable512 = await iconOnBackground(iconMark, 512, CREAM, 0.14)
   await sharp(maskable512).toFile(path.join(iconsDir, 'icon-maskable-512x512.png'))
   console.log('Wrote maskable icon:', path.join(iconsDir, 'icon-maskable-512x512.png'))
 
-  const appleTouch = await iconOnBackground(fullLockup, 180, CREAM, 0.12)
+  const appleTouch = await iconOnBackground(iconMark, 180, CREAM, 0.12)
   await sharp(appleTouch).toFile(path.join(iconsDir, 'apple-touch-icon.png'))
   console.log('Wrote apple-touch-icon:', path.join(iconsDir, 'apple-touch-icon.png'))
 
@@ -297,7 +311,7 @@ async function writeIcons(fullLockup, iconMark) {
   await sharp(favicon32).toFile(path.join(root, 'public', 'favicon.ico'))
   console.log('Wrote favicon.ico')
 
-  const nextIcon = await iconOnBackground(fullLockup, 512, CREAM, 0.12)
+  const nextIcon = await iconOnBackground(iconMark, 512, CREAM, 0.12)
   await sharp(nextIcon).toFile(path.join(appDir, 'icon.png'))
   console.log('Wrote Next.js app icon:', path.join(appDir, 'icon.png'))
 
@@ -306,6 +320,5 @@ async function writeIcons(fullLockup, iconMark) {
 }
 
 await makeTransparentLogo()
-const fullLockup = await extractFullLockup()
 const iconMark = await extractIconMark()
-await writeIcons(fullLockup, iconMark)
+await writeIcons(iconMark)

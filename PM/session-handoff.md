@@ -11,6 +11,21 @@
 - **Automated (dev):** `npm run qa:automation` (CI-safe static) | `npm run qa:automation:prod` (prod Playwright smoke) | `npm run test:e2e:smoke`
 - **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
 
+## Active work — market save migration fix (local, not deployed)
+- **Goal:** Fix "Database migration required" when saving a new market.
+- **Root cause:** Hosted Supabase was missing migration **117** (`community_league_discount_*` columns). Error text incorrectly pointed at migration 088.
+- **Applied:** `npm run db:push` — migrations **115**, **116**, **117** on `ensbggtbgabogvynqsqt`.
+- **Code:** Clearer schema-migration error (names missing column); expanded `verify-events-schema.ts`.
+- **Verify:** `npx tsx scripts/verify-events-schema.ts` — PASS. Retry saving a new market in wizard step 1.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — flyer cover upload click regression (local, not deployed)
+- **Goal:** Restore file picker when clicking "Upload cover or flyer" on web.
+- **Root cause:** `FlyerCoverUpload` `<label>` was replaced with `<div role="button">` for paste/drop; native label click-to-open was lost.
+- **Fix:** Restored `<label>` wrapper; kept paste, drag-drop, and keyboard handlers.
+- **Verify:** `/coordinator/events/new` or wizard step 1 — click upload zone → OS file explorer opens; paste/drop still work.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — patron UX + coordinator polish (local, not deployed)
 - **Goal:** Tester feedback batch — footer, discover location, venue approval, league pricing, mobile layout gate, HubGuard nav naming.
 - **Shipped locally:**
@@ -26,6 +41,26 @@
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover` footer at bottom, location pin on map, `/check` nav vs page titles, coordinator new venue → admin queue, league discount on event edit.
 - **Next:** Commit + deploy when user asks.
 
+## Active work — white form fields on canvas (local, not deployed)
+- **Goal:** Search and other typable fields read as editable (white surface on cream/canvas backgrounds).
+- **Shipped locally:** Base `Input`, `Textarea`, `Select`, and `InputGroup` use `bg-white` in light mode.
+- **Verify:** Smoke `/check` organizer search, `/discover` address, vendor market search, HubGuard review form fields.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — logo icon-only (no wordmark) (local, not deployed)
+- **Goal:** Remove “Popup Hub” text band below the storefront icon everywhere — nav, footer, loaders, PWA icons.
+- **Shipped locally:**
+  - **`scripts/process-logo.mjs`:** `popup-hub-brand.png`, `logo.png`, PWA/app icons use cropped stall+pin mark (994×994); source lockup kept in `popup-hub-logo.png`
+  - **Loaders:** Initial loader drops “Markets Made Easy” tagline; walking-market scene uses square icon asset
+  - **`popup-hub-logo.tsx`:** Square 994×994 dimensions
+- **Verify:** `npm run assets:logo` + `npx tsc --noEmit` — PASS. Smoke: header logo has no text band; splash loader shows icon only.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — HubGuard booth-fee headline (local, not deployed)
+- **Goal:** Trust directory hero/callout copy names **HubGuard** explicitly.
+- **Shipped locally:** `TRUST_DIRECTORY_LINKS.check.boothFeeHeadline` — “Before you pay for a booth, use HubGuard to check the organizer”; wired in homepage hero, `/check` h1, vendor events callout.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — HubGuard rebrand (local, not deployed)
 - **Goal:** Rebrand trust directory from **Canopy** / **Check organizers** to **HubGuard** with tagline **Popup Hub security & fraud prevention**.
 - **Shipped locally:**
@@ -34,11 +69,6 @@
   - **`/check`:** Metadata + footer copy; review page metadata
   - **Tests/QA:** `canopy-trust.spec.ts`, `QA_TEST_REQUEST.md`, verify-production script labels
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: ribbon link **HubGuard**, `/check` eyebrow, homepage Open HubGuard CTA.
-- **Next:** Commit + deploy when user asks.
-
-## Active work — HubGuard booth-fee headline (local, not deployed)
-- **Goal:** Trust directory hero/callout copy names **HubGuard** explicitly.
-- **Shipped locally:** `TRUST_DIRECTORY_LINKS.check.boothFeeHeadline` — “Before you pay for a booth, use HubGuard to check the organizer”; wired in homepage hero, `/check` h1, vendor events callout.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — mobile discover UX polish (local, not deployed)

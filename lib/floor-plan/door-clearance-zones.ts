@@ -1,7 +1,7 @@
 import { rotatedAabb, type Rect } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import type { PlacedObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { PERIMETER_WALL_CLEARANCE_FT } from '@/lib/booth-planner/layout-clearance-constants'
-import { edgeClearanceBetweenRects } from '@/lib/coordinator/booth-clearance-visual'
+import { edgeClearanceBetweenRects } from '@/lib/floor-plan/rect-edge-clearance'
 
 export const DOOR_EGRESS_CLEARANCE_FT = PERIMETER_WALL_CLEARANCE_FT
 

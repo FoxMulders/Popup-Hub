@@ -13,14 +13,15 @@ const LOGO_VERSION =
   process.env.NEXT_PUBLIC_BUILD_COMMIT ??
   '1'
 const LOGO_SRC = `/popup-hub-brand.png?v=${LOGO_VERSION}`
+/** Square storefront icon (stall + pin) — no wordmark text. */
 const LOGO_WIDTH = 994
-const LOGO_HEIGHT = 1024
+const LOGO_HEIGHT = 994
 
 interface PopupHubLogoProps {
   className?: string
   title?: string
   priority?: boolean
-  /** Footer wordmark at ~1″ tall with a comfortable tap target. */
+  /** Footer icon at ~1″ tall with a comfortable tap target. */
   compact?: boolean
   /** When set, the logo navigates instead of playing the market animation. */
   href?: string
@@ -64,8 +65,7 @@ function LogoAnimationButton({
       className={cn(
         // We deliberately *do not* set `overflow-hidden` here.
         // The inline replay scene mounts an SVG whose content
-        // (market tent peak, wordmark) needs to be allowed to
-        // breathe past the static button rectangle so the peak
+        // breathe past the static button rectangle so the tent peak
         // is never cut off by the rounded button shell. The SVG
         // itself uses `preserveAspectRatio` to stay centred and
         // proportional, so visually it still reads as contained.
@@ -130,7 +130,7 @@ function LogoShell({
   )
 }
 
-/** Footer wordmark — physical 1″ height for consistent cross-browser sizing. */
+/** Footer icon — physical 1″ height for consistent cross-browser sizing. */
 const FOOTER_LOGO_HEIGHT_IN = 0.67
 const FOOTER_LOGO_DISPLAY_HEIGHT_PX = 96
 const FOOTER_LOGO_DISPLAY_WIDTH_PX = Math.round(
@@ -181,7 +181,7 @@ export function PopupHubLogo({
   )
 }
 
-/** @deprecated Use PopupHubLogo / BrandLogoLockup — full wordmark only. */
+/** @deprecated Use PopupHubLogo / BrandLogoLockup — storefront icon only. */
 export function PopupHubIcon(props: PopupHubLogoProps) {
   return <PopupHubLogo {...props} />
 }
@@ -202,7 +202,7 @@ interface BrandLogoMarkProps {
   href?: string
 }
 
-/** Full wordmark for nav headers and auth screens. */
+/** Storefront icon for nav headers and auth screens. */
 export function BrandLogoLockup({
   className,
   href,

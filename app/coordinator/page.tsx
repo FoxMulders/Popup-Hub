@@ -13,7 +13,7 @@ export default async function CoordinatorHomePage() {
   const scope = await getCoordinatorScope(supabase, user.id)
 
   const [{ data: profile }, eventsQuery] = await Promise.all([
-    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
     scope.isAdmin
       ? supabase.from('events').select('id', { count: 'exact', head: true })
       : supabase

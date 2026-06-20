@@ -1,5 +1,5 @@
 /**
- * Verify events/booth_applications columns from migrations 086/088 exist in the linked DB.
+ * Verify events/booth_applications columns used by wizard autosave exist in the linked DB.
  * Run: npx tsx scripts/verify-events-schema.ts
  */
 import fs from 'node:fs'
@@ -45,7 +45,24 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  const eventColumns = ['booth_price_cents', 'multi_table_discount_percent'] as const
+  const eventColumns = [
+    'booth_price_cents',
+    'multi_table_discount_percent',
+    'community_league_discount_enabled',
+    'community_league_discount_percent',
+    'skip_venue_layout',
+    'booth_contract_enabled',
+    'booth_contract_clauses',
+    'booth_contract_pdf_url',
+    'booth_contract_updated_at',
+    'market_city',
+    'booth_clearance_policy',
+    'market_insurance_required',
+    'require_full_attendance',
+    'listing_type',
+    'allow_mlm',
+    'is_multi_day',
+  ] as const
   for (const column of eventColumns) {
     const { error } = await supabase.from('events').select(column).limit(1)
     results.push({
@@ -72,11 +89,12 @@ async function main() {
   }
 
   if (fail > 0) {
-    console.log('\nApply migration 088 in Supabase SQL Editor or run: supabase db push')
+    console.log('\nRun: npm run db:push')
+    console.log('Or apply pending migrations in Supabase SQL Editor (see supabase/migrations/)')
     process.exit(1)
   }
 
-  console.log('\nAll booth-pricing schema columns are present.')
+  console.log('\nAll wizard autosave schema columns are present.')
 }
 
 main().catch((err) => {

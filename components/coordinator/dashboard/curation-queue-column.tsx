@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
+import { safeFormatDistanceToNow } from '@/lib/format/safe-event-date'
 import { ClipboardList, Filter } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
@@ -55,7 +55,7 @@ export function CurationQueueColumn() {
           </select>
           {selectedEvent ? (
             <p className="text-[11px] text-muted-foreground">
-              Starts {formatDistanceToNow(new Date(selectedEvent.start_at), { addSuffix: true })}
+              Starts {safeFormatDistanceToNow(selectedEvent.start_at, 'soon')}
             </p>
           ) : null}
         </div>

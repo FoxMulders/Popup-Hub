@@ -66,9 +66,8 @@ export function FlyerCoverUpload({
   return (
     <div className={cn('space-y-1', className)}>
       <Label className="text-sm font-medium">{label}</Label>
-      <div
+      <label
         tabIndex={0}
-        role="button"
         onPaste={handlePaste}
         onDragOver={(event) => {
           event.preventDefault()
@@ -109,7 +108,7 @@ export function FlyerCoverUpload({
           disabled={parsing}
           onChange={(e) => handleFile(e.target.files?.[0])}
         />
-      </div>
+      </label>
       {parsing ? (
         <div
           className="flex items-center gap-2 rounded-lg border border-harvest-200 bg-harvest-50/90 px-3 py-2 text-sm text-harvest-800"

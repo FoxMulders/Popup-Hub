@@ -25,16 +25,11 @@ function frameForMode(frame: LoaderSceneFrame, mode: LoaderControllerMode): Load
 }
 
 /**
- * Storefront-only artwork. The wordmark used to be baked into the same
- * PNG (`/popup-hub-logo.png`) which forced the "Popup Hub" text into
- * the bottom 30 % of the rendered logo box, lifting the market icon
- * off the sidewalk and crashing the typography into the walking
- * characters. Switching to the square icon decouples the two so the
- * market sits flush on the ground and the wordmark renders separately
- * as SVG `<text>` above the canvas.
+ * Storefront icon artwork (`/popup-hub-brand.png`) — square stall + pin mark
+ * with no wordmark text so the market sits flush on the sidewalk.
  */
 const LOGO_SRC = '/popup-hub-brand.png'
-const LOGO_ASPECT = 1024 / 994
+const LOGO_ASPECT = 1
 
 /** Full lockup width/height derived from shared storefront footprint. */
 const STOREFRONT_LOGO_HEIGHT = LOADER_LAYOUT.logoHeight
@@ -295,8 +290,8 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
 
   return (
     // viewBox is extended *upward* by 80 units (min-y = -80, height = 680)
-    // so the wordmark and the tent peak both have guaranteed headroom
-    // above the original 0..600 design grid. Combined with the parent
+    // so the tent peak has guaranteed headroom above the original 0..600
+    // design grid. Combined with the parent
     // `.loader-screen__lottie { overflow: visible }` rule this keeps the
     // peak of the market tent from being clipped on shorter containers
     // (mobile portrait, inline replay button, etc.).
@@ -367,9 +362,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
         </mask>
       </defs>
 
-      {/* Sky covers the full extended viewBox (-80..600) so the
-          headroom above the wordmark stays consistent with the rest
-          of the scene background. */}
+      {/* Sky covers the full extended viewBox (-80..600). */}
       <rect x="0" y="-80" width="800" height="680" fill="url(#premium-loader-sky)" />
 
       {/* Distant buildings — warm canvas tan to harmonize with the linen sky. */}
