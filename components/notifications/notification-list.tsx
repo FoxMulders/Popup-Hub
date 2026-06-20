@@ -62,6 +62,7 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   vendor_flash_sale: { icon: <Store className="h-4 w-4" />, color: 'text-harvest-600 bg-harvest-50' },
   priority_booth_invite: { icon: <Store className="h-4 w-4" />, color: 'text-amber-700 bg-amber-50' },
   nearby_market_published: { icon: <MapPin className="h-4 w-4" />, color: 'text-violet-700 bg-violet-50' },
+  coordinator_market_published: { icon: <Bell className="h-4 w-4" />, color: 'text-forest bg-sage-50' },
   vendor_sold_out: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-terracotta-600 bg-terracotta-50' },
   vendor_access_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   vendor_access_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-600 bg-red-50' },
@@ -220,6 +221,10 @@ export function NotificationList({
           : null
 
       if (notification.type === 'nearby_market_published' && deepLink) {
+        router.push(deepLink)
+        return
+      }
+      if (notification.type === 'coordinator_market_published' && deepLink) {
         router.push(deepLink)
         return
       }

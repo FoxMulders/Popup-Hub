@@ -12,6 +12,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { OrganizerReviewList } from '@/components/check/organizer-review-list'
 import { OrganizerClaimButton } from '@/components/check/organizer-claim-button'
+import { JsonLdScript } from '@/components/seo/json-ld-script'
+import { buildBreadcrumbJsonLd } from '@/lib/seo/breadcrumb-json-ld'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import type { Profile } from '@/types/database'
@@ -76,7 +78,15 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
   const canClaim = Boolean(user && canActAsCoordinator(profile) && !isClaimed)
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
+    <>
+      <JsonLdScript
+        data={buildBreadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'HubGuard', path: '/check' },
+          { name: organizer.display_name, path: `/organizers/${organizer.slug}` },
+        ])}
+      />
+      <div className="mx-auto max-w-3xl px-4 py-8 space-y-8">
       <Link
         href="/check"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -234,5 +244,6 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
         <OrganizerReviewList reviews={reviews} />
       </section>
     </div>
+    </>
   )
 }

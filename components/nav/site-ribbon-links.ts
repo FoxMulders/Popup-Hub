@@ -16,7 +16,7 @@ export const GUEST_RIBBON_LINKS: SiteRibbonLink[] = [
     label: TRUST_DIRECTORY_LINKS.check.navLabel,
     title: `${TRUST_DIRECTORY_LINKS.check.label} — ${TRUST_DIRECTORY_LINKS.check.tagline}`,
   },
-  { href: '/signup?role=vendor', label: 'For Vendors' },
+  { href: '/for-vendors', label: 'For Vendors' },
   { href: '/signup?role=coordinator&next=/coordinator/events/new', label: 'Host a Market' },
   { href: '/legal/faq', label: 'FAQ' },
 ]

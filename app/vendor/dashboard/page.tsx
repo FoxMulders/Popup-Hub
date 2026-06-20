@@ -9,6 +9,7 @@ import { PageIntro } from '@/components/layout/page-intro'
 import Link from 'next/link'
 import { ArrowRight, Store, CheckCircle, Clock, AlertTriangle, CreditCard } from 'lucide-react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
+import { VendorAlertOnboarding } from '@/components/vendor/vendor-alert-onboarding'
 import { VendorActionRequiredBanner } from '@/components/vendor/vendor-action-required-banner'
 import { VendorPassportCompletionCard } from '@/components/vendor/vendor-passport-completion-card'
 import { vendorPassportCompletionMeter } from '@/lib/passport/vendor-passport-completion'
@@ -135,6 +136,8 @@ export default async function VendorDashboard() {
           </Link>
         }
       />
+
+      <VendorAlertOnboarding />
 
       <VendorPassportCompletionCard
         meter={passportMeter}

@@ -21,10 +21,19 @@ export function buildWebSiteJsonLd() {
     url: publicAppUrl('/'),
     description:
       'Discover local pop-up markets, meet vendors, and manage booth operations across Canada.',
+    inLanguage: 'en-CA',
     publisher: {
       '@type': 'Organization',
       name: ORGANIZATION.name,
       url: ORGANIZATION.url,
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${publicAppUrl('/check')}?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
     },
   }
 }

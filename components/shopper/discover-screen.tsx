@@ -38,6 +38,7 @@ interface DiscoverScreenProps {
   vendorCounts: Record<string, number>
   favoriteIds: string[]
   activeAuctionByEventId?: Record<string, string>
+  marketAlertsHref?: string
 }
 
 export function DiscoverScreen({
@@ -45,6 +46,7 @@ export function DiscoverScreen({
   vendorCounts,
   favoriteIds,
   activeAuctionByEventId = {},
+  marketAlertsHref,
 }: DiscoverScreenProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -260,6 +262,7 @@ export function DiscoverScreen({
                 onWidenRadius={widenRadius}
                 onShowEverywhere={() => setRadiusKm(null)}
                 onClearLiveAuctionFilter={() => replaceParams({ live: null })}
+                marketAlertsHref={marketAlertsHref}
                 className="pointer-events-auto sm:max-w-lg"
               />
             </div>
@@ -276,6 +279,7 @@ export function DiscoverScreen({
           onWidenRadius={widenRadius}
           onShowEverywhere={() => setRadiusKm(null)}
           onClearLiveAuctionFilter={() => replaceParams({ live: null })}
+          marketAlertsHref={marketAlertsHref}
         />
       ) : (
         <DiscoverEventCards

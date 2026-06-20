@@ -11,6 +11,8 @@ type EventJsonLdProps = {
     location_name?: string | null
     address?: string | null
     city?: string | null
+    latitude?: number | null
+    longitude?: number | null
     cover_image_url?: string | null
     status?: string | null
     coordinator?: { full_name?: string | null } | { full_name?: string | null }[] | null
@@ -30,6 +32,8 @@ export function EventJsonLd({ event, vendorCount }: EventJsonLdProps) {
     locationName: event.location_name,
     address: event.address,
     city: event.city,
+    latitude: event.latitude,
+    longitude: event.longitude,
     coverImageUrl: event.cover_image_url,
     vendorCount,
     status: event.status,

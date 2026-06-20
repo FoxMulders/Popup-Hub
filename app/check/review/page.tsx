@@ -14,11 +14,12 @@ export const metadata = buildPublicMetadata({
 })
 
 type Props = {
-  searchParams: Promise<{ organizer?: string }>
+  searchParams: Promise<{ organizer?: string; event?: string; month?: string }>
 }
 
 export default async function CheckReviewPage({ searchParams }: Props) {
-  const { organizer: organizerSlug } = await searchParams
+  const { organizer: organizerSlug, event: initialEventName, month: initialEventMonthYear } =
+    await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -60,6 +61,8 @@ export default async function CheckReviewPage({ searchParams }: Props) {
       <OrganizerReviewForm
         organizers={organizers}
         initialOrganizerSlug={organizerSlug}
+        initialEventName={initialEventName}
+        initialEventMonthYear={initialEventMonthYear}
         canSubmit={canActAsVendor(profile)}
         isSignedIn={Boolean(user)}
         returnPath={returnPath}

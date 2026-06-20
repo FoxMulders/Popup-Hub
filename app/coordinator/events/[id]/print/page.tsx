@@ -2,6 +2,8 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { PrintTrigger } from './print-trigger'
+import { PatronMapQrPoster } from '@/components/coordinator/patron-map-qr-poster'
+import { publicAppUrl, getURL } from '@/lib/url/public-app-url'
 import { extractNestedPassport } from '@/lib/applications/extract-nested-passport'
 
 interface Props {
@@ -26,6 +28,16 @@ export default async function PrintRosterPage({ params }: Props) {
   ).single()
 
   if (!event) notFound()
+
+  const { data: layoutRow } = await supabase
+    .from('booth_layouts')
+    .select('id')
+    .eq('event_id', id)
+    .maybeSingle()
+
+  const hasFloorPlan = layoutRow != null
+  const patronMapPath = hasFloorPlan ? `/events/${id}/map` : `/events/${id}`
+  const patronMapUrl = publicAppUrl(patronMapPath, getURL())
 
   const { data: applications } = await supabase
     .from('booth_applications')
@@ -73,7 +85,13 @@ export default async function PrintRosterPage({ params }: Props) {
         body { font-family: system-ui, sans-serif; }
       `}</style>
 
-      <div className="max-w-5xl mx-auto px-6 py-8 print:p-4">
+      <div className="max-w-5xl mx-auto px-6 py-8 print:p-4 space-y-8">
+        <PatronMapQrPoster
+          mapUrl={patronMapUrl}
+          eventName={event.name}
+          hasFloorPlan={hasFloorPlan}
+        />
+
         {/* Header */}
         <div className="mb-6 border-b pb-4">
           <h1 className="font-heading text-2xl font-semibold text-foreground">{event.name}</h1>

@@ -6,6 +6,7 @@ import { MapPin, Calendar, Clock, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { getEventDateLabel } from '@/lib/shopper/events'
 import { marketStatusBadge } from '@/lib/theme/market'
+import { CoordinatorTrustChip } from '@/components/coordinator/coordinator-reliability-badge'
 import { vendorApplicationCardBadgeLabel } from '@/lib/vendor/application-status-ui'
 import type { ApplicationStatus, Event } from '@/types/database'
 import type { EventDisplayStatus } from '@/lib/queries/events'
@@ -23,6 +24,7 @@ interface EventCardProps {
   selectedDate?: Date
   liveAuctionId?: string
   showMarketOwner?: boolean
+  showCoordinatorTrust?: boolean
   vendorApplicationStatus?: ApplicationStatus | null
   vendorApplicationsOpen?: boolean
 }
@@ -55,6 +57,7 @@ export function EventCard({
   selectedDate,
   liveAuctionId,
   showMarketOwner = false,
+  showCoordinatorTrust = false,
   vendorApplicationStatus = null,
   vendorApplicationsOpen = true,
 }: EventCardProps) {
@@ -64,6 +67,10 @@ export function EventCard({
       ? vendorApplicationCardBadgeLabel(vendorApplicationStatus, vendorApplicationsOpen)
       : null
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
+  const coordinatorTrustScore =
+    showCoordinatorTrust && coordinator?.reliability_score != null
+      ? coordinator.reliability_score
+      : null
   const hours =
     hoursLabel ??
     `${format(new Date(event.start_at), 'h:mm a')} – ${format(new Date(event.end_at), 'h:mm a')}`
@@ -122,6 +129,11 @@ export function EventCard({
       <div className="flex flex-1 flex-col">
         <Link href={href} className="block flex-1">
           <CardContent className="p-4 pb-2">
+            {coordinatorTrustScore != null ? (
+              <div className="mb-2">
+                <CoordinatorTrustChip score={coordinatorTrustScore} />
+              </div>
+            ) : null}
             <h3 className="line-clamp-2 font-heading text-base font-semibold leading-snug text-foreground sm:text-lg">
               {event.name}
             </h3>

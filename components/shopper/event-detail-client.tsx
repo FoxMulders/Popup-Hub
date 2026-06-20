@@ -9,6 +9,7 @@ import { ExpandableImage } from '@/components/ui/expandable-image'
 import { Badge } from '@/components/ui/badge'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
+import { CoordinatorFollowButton } from '@/components/shopper/coordinator-follow-button'
 import { EventActionBar } from '@/components/shopper/event-action-bar'
 import { VendorLineup } from '@/components/shopper/vendor-lineup'
 import { VendorSheet } from '@/components/shopper/vendor-sheet'
@@ -46,6 +47,7 @@ interface EventDetailClientProps {
   userId: string | null
   reminderOffsets: string[]
   followVendorIds: string[]
+  followingCoordinator?: boolean
   products: (VendorProduct & { vendor_name?: string; vendor_id: string })[]
   scheduleItems: EventScheduleItem[]
   activeAuction: Auction | null
@@ -67,6 +69,7 @@ export function EventDetailClient({
   userId,
   reminderOffsets,
   followVendorIds,
+  followingCoordinator = false,
   products,
   scheduleItems,
   activeAuction,
@@ -183,6 +186,16 @@ export function EventDetailClient({
                     size="sm"
                   />
                 </div>
+                {userId && userId !== coordinator.id ? (
+                  <div className="mt-3">
+                    <CoordinatorFollowButton
+                      coordinatorId={coordinator.id}
+                      coordinatorName={coordinator.full_name}
+                      initialFollowing={followingCoordinator}
+                      size="sm"
+                    />
+                  </div>
+                ) : null}
                 <div className="mt-3">
                   <PassportStoriesPublicStrip
                     ownerId={coordinator.id}

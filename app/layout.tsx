@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic'
-
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
@@ -17,7 +15,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { SiteJsonLd } from '@/components/seo/site-json-ld'
 import { getSessionRoleForTitle } from '@/lib/auth/session-role-for-title'
 import { roleDocumentTitle } from '@/lib/auth/document-title'
-import { buildPrivatePortalMetadata, rootLayoutMetadata } from '@/lib/seo/public-metadata'
+import { buildPrivatePortalMetadata, buildPublicMetadata, rootLayoutMetadata } from '@/lib/seo/public-metadata'
 import { DEFAULT_SITE_DESCRIPTION, DEFAULT_SITE_TITLE } from '@/lib/seo/site-config'
 
 const body = Plus_Jakarta_Sans({
@@ -69,12 +67,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     ...baseMetadata,
+    ...buildPublicMetadata({
+      title: DEFAULT_SITE_TITLE,
+      description: DEFAULT_SITE_DESCRIPTION,
+      path: '/',
+    }),
     title: {
       default: DEFAULT_SITE_TITLE,
       template: '%s | Popup Hub',
     },
-    description: DEFAULT_SITE_DESCRIPTION,
-    robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
   }
 }
 

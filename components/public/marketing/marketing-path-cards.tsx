@@ -22,13 +22,13 @@ const PATHS = [
     useDiscoverNav: true,
   },
   {
-    href: '/signup?role=vendor',
+    href: '/for-vendors',
     icon: Store,
     eyebrow: 'Vendors',
     title: 'Apply with your passport',
     description:
       'Use HubGuard before paying booth fees, then build a vendor profile once and apply to open or juried markets.',
-    cta: 'Create vendor account',
+    cta: 'Vendor hub',
     secondaryHref: TRUST_DIRECTORY_LINKS.check.href,
     secondaryLabel: `Or open ${TRUST_DIRECTORY_LINKS.check.label} first`,
     tertiaryHref: VENDOR_OPEN_MARKETS_HREF,

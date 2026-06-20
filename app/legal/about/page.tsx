@@ -1,5 +1,6 @@
 import { LegalDocument } from '@/components/legal/legal-document'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
+import { ABOUT_ORIGIN_SECTIONS } from '@/lib/marketing/origin-story'
 import {
   ABOUT_CLOSING,
   ABOUT_DISCOVERY,
@@ -15,13 +16,23 @@ import {
 export const metadata = buildPublicMetadata({
   title: 'About Us — Popup Hub',
   description:
-    'Why Popup Hub exists, how our fees work, and the story behind the platform from Brad and Sonia at The Tipsy Fox.',
+    'The Tipsy Fox origin story, why Popup Hub exists, and how our fees work — from Brad and Sonia, makers who became market-builders.',
   path: '/legal/about',
 })
 
 export default function AboutPage() {
   return (
     <LegalDocument title="About Popup Hub" lastUpdated={ABOUT_LAST_UPDATED}>
+      {ABOUT_ORIGIN_SECTIONS.map(({ heading, paragraphs }) => (
+        <section key={heading}>
+          <h2>{heading}</h2>
+          {paragraphs.map((paragraph) => (
+            <p key={paragraph.slice(0, 48)}>{paragraph}</p>
+          ))}
+        </section>
+      ))}
+
+      <h2>How Popup Hub works</h2>
       <p className="lead">{ABOUT_INTRO}</p>
 
       <p>{ABOUT_FOUNDERS}</p>

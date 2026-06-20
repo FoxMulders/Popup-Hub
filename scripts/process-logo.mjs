@@ -2,6 +2,7 @@ import sharp from 'sharp'
 import { access, mkdir, rename, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { trimToLogoArtwork } from './logo-artwork-trim.mjs'
 
 async function writePngAtomically(targetPath, buffer) {
   const tempPath = `${targetPath}.tmp`
@@ -194,7 +195,7 @@ async function iconMarkFromSource(sourcePath, label) {
   try {
     await access(sourcePath)
     iconOnly = await makeTransparentBuffer(sourcePath)
-    iconOnly = await sharp(iconOnly).trim().png().toBuffer()
+    iconOnly = await trimToLogoArtwork(iconOnly)
     console.log(`Using canonical icon source (${label}):`, sourcePath)
   } catch {
     return null
@@ -226,7 +227,7 @@ async function extractIconMark() {
   try {
     await access(iconSource)
     iconOnly = await makeTransparentBuffer(iconSource)
-    iconOnly = await sharp(iconOnly).trim().png().toBuffer()
+    iconOnly = await trimToLogoArtwork(iconOnly)
     console.log('Using canonical icon source:', iconSource)
   } catch {
     iconOnly = await iconMarkFromLockupCrop()

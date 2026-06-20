@@ -17,7 +17,9 @@ async function fetchDiscoverMarkets(): Promise<Event[]> {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('events')
-    .select('*, event_days(*)')
+    .select(
+      '*, event_days(*), coordinator:profiles!events_coordinator_id_fkey(id, full_name, reliability_score, recent_late_cancellation_at, coordinator_is_verified)'
+    )
     .in('status', OPEN_MARKET_STATUSES)
     .order('start_at', { ascending: true })
 

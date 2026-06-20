@@ -6,6 +6,7 @@ import {
 } from '@/lib/coordinator/verification'
 import { createAdminClient, createClient, createServiceClient } from '@/lib/supabase/server'
 import { dispatchPublishMarketAlerts } from '@/lib/vendor/dispatch-publish-market-alerts'
+import { dispatchCoordinatorFollowerAlerts } from '@/lib/shopper/dispatch-coordinator-follower-alerts'
 import { onMarketPublished } from '@/lib/organizers/on-market-published'
 import {
   persistEventDraft,
@@ -133,6 +134,7 @@ export async function POST(request: Request) {
     void (async () => {
       const service = await createServiceClient()
       await dispatchPublishMarketAlerts(service, result.eventId, { wasPublished })
+      await dispatchCoordinatorFollowerAlerts(service, result.eventId, { wasPublished })
       await onMarketPublished(service, result.eventId)
     })().catch((err) => {
       console.error('[draft publish] post-publish hooks failed', err)

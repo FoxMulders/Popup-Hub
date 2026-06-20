@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getBuildInfo } from '@/lib/build-info'
 import { LEGAL_LINKS } from '@/lib/legal/links'
+import { SITE_FOOTER_MARKETING_LINKS } from '@/lib/nav/site-footer-links'
 import { cn } from '@/lib/utils'
 
 interface BuildVersionFooterProps {
@@ -28,13 +29,23 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
           'pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]'
         )}
       >
-        <nav aria-label="Legal and help" className="min-w-0 flex-1">
+        <nav aria-label="Site links" className="min-w-0 flex-1">
           <ul className="m-0 flex list-none flex-row flex-wrap items-center justify-center gap-x-4 gap-y-1 p-0 sm:justify-start">
-            {LEGAL_LINKS.map(({ href, label }) => (
+            {SITE_FOOTER_MARKETING_LINKS.map(({ href, label }) => (
               <li key={href} className="m-0">
                 <Link
                   href={href}
                   className="inline-flex min-h-8 items-center text-xs font-medium text-foreground/75 transition-colors hover:text-forest hover:underline touch-manipulation sm:text-sm"
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
+            {LEGAL_LINKS.filter((link) => link.href !== '/legal/about').map(({ href, label }) => (
+              <li key={href} className="m-0 hidden sm:list-item">
+                <Link
+                  href={href}
+                  className="inline-flex min-h-8 items-center text-xs font-medium text-foreground/60 transition-colors hover:text-forest hover:underline touch-manipulation sm:text-sm"
                 >
                   {label}
                 </Link>

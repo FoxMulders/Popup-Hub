@@ -9,6 +9,7 @@ import { assertEventVenueVerifiedForPublish } from '@/lib/venues/persist-event-v
 import { onMarketPublished } from '@/lib/organizers/on-market-published'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { dispatchPublishMarketAlerts } from '@/lib/vendor/dispatch-publish-market-alerts'
+import { dispatchCoordinatorFollowerAlerts } from '@/lib/shopper/dispatch-coordinator-follower-alerts'
 
 type PatchBody = {
   status?: 'published'
@@ -157,6 +158,9 @@ export async function PATCH(
   const service = await createServiceClient()
   void dispatchPublishMarketAlerts(service, eventId).catch((err) => {
     console.error('[publish] nearby vendor alerts failed', err)
+  })
+  void dispatchCoordinatorFollowerAlerts(service, eventId).catch((err) => {
+    console.error('[publish] coordinator follower alerts failed', err)
   })
   void onMarketPublished(service, eventId).catch((err) => {
     console.error('[publish] trust directory sync failed', err)

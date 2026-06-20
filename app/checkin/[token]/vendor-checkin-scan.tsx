@@ -8,6 +8,7 @@ import { resolveGridConfig } from '@/lib/booth-planner/grid-config'
 import { buildVenueElementMap, isElementOrigin } from '@/lib/booth-planner/venue-elements'
 import { ELEMENT_STYLES } from '@/lib/booth-planner/venue-elements'
 import type { BoothLayout, BoothCell } from '@/types/database'
+import { VendorCheckinHubguardPrompt } from '@/components/vendor/vendor-checkin-hubguard-prompt'
 
 interface VendorCheckinScanProps {
   application: {
@@ -20,11 +21,17 @@ interface VendorCheckinScanProps {
     event: { id: string; name: string; location_name: string; start_at: string }
   }
   layout: BoothLayout | null
+  hubGuardReview?: {
+    reviewHref: string
+    organizerName: string | null
+    eventName: string
+    alreadyReviewed?: boolean
+  }
 }
 
 type State = 'checking-in' | 'success' | 'already-checked-in' | 'error'
 
-export function VendorCheckinScan({ application, layout }: VendorCheckinScanProps) {
+export function VendorCheckinScan({ application, layout, hubGuardReview }: VendorCheckinScanProps) {
   const supabase = createClient()
   const [state, setState] = useState<State>(
     application.checked_in ? 'already-checked-in' : 'checking-in'
@@ -149,6 +156,15 @@ export function VendorCheckinScan({ application, layout }: VendorCheckinScanProp
             <MiniBoothMap layout={layout} highlightBoothNumber={application.booth_number} />
           </section>
         )}
+
+        {isSuccess && hubGuardReview ? (
+          <VendorCheckinHubguardPrompt
+            reviewHref={hubGuardReview.reviewHref}
+            organizerName={hubGuardReview.organizerName}
+            eventName={hubGuardReview.eventName}
+            alreadyReviewed={hubGuardReview.alreadyReviewed}
+          />
+        ) : null}
       </article>
     </main>
   )

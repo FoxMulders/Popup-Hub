@@ -50,6 +50,7 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
     favResult,
     remindersResult,
     followsResult,
+    coordinatorFollowResult,
     reviewResult,
   ] = await Promise.all([
     supabase
@@ -96,6 +97,14 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
     user
       ? supabase.from('vendor_follows').select('vendor_id').eq('user_id', user.id)
       : Promise.resolve({ data: [] }),
+    user && event.coordinator_id
+      ? supabase
+          .from('coordinator_follows')
+          .select('coordinator_id')
+          .eq('user_id', user.id)
+          .eq('coordinator_id', event.coordinator_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     user
       ? supabase
           .from('event_reviews')
@@ -162,6 +171,7 @@ export async function PublicEventDetail({ eventId }: PublicEventDetailProps) {
           (r: { reminder_offset: string }) => r.reminder_offset
         )}
         followVendorIds={(followsResult.data ?? []).map((f: { vendor_id: string }) => f.vendor_id)}
+        followingCoordinator={!!coordinatorFollowResult.data}
         products={products}
         scheduleItems={(scheduleItems ?? []) as EventScheduleItem[]}
         activeAuction={auctionSummary.active}

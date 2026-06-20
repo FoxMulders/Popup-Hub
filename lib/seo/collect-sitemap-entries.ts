@@ -8,7 +8,10 @@ const STATIC_PUBLIC_PATHS: Array<{ path: string; changeFrequency: SitemapEntry['
   [
     { path: '/', changeFrequency: 'weekly', priority: 1 },
     { path: '/for-organizers', changeFrequency: 'weekly', priority: 0.95 },
+    { path: '/for-vendors', changeFrequency: 'weekly', priority: 0.95 },
     { path: '/discover', changeFrequency: 'hourly', priority: 0.9 },
+    { path: '/markets/edmonton', changeFrequency: 'daily', priority: 0.85 },
+    { path: '/markets/calgary', changeFrequency: 'daily', priority: 0.85 },
     { path: '/check', changeFrequency: 'weekly', priority: 0.9 },
     { path: '/check/review', changeFrequency: 'weekly', priority: 0.7 },
     { path: '/supplies', changeFrequency: 'weekly', priority: 0.6 },
@@ -61,46 +64,6 @@ async function appendDynamicEntries(origin: string | undefined, entries: Sitemap
           lastModified: safeDate(event.updated_at),
           changeFrequency: 'daily',
           priority: event.status === 'active' ? 0.85 : 0.75,
-        }),
-      )
-    }
-
-    const { data: coordinators, error: coordinatorsError } = await supabase
-      .from('profiles')
-      .select('id, created_at')
-      .eq('role', 'coordinator')
-      .limit(200)
-
-    if (coordinatorsError) {
-      console.error('[sitemap] coordinators query failed:', coordinatorsError.message)
-    }
-
-    for (const profile of coordinators ?? []) {
-      entries.push(
-        makeEntry(origin, `/coordinators/${profile.id}`, {
-          lastModified: safeDate(profile.created_at),
-          changeFrequency: 'weekly',
-          priority: 0.5,
-        }),
-      )
-    }
-
-    const { data: patrons, error: patronsError } = await supabase
-      .from('profiles')
-      .select('id, created_at')
-      .eq('role', 'shopper')
-      .limit(200)
-
-    if (patronsError) {
-      console.error('[sitemap] patrons query failed:', patronsError.message)
-    }
-
-    for (const profile of patrons ?? []) {
-      entries.push(
-        makeEntry(origin, `/patrons/${profile.id}`, {
-          lastModified: safeDate(profile.created_at),
-          changeFrequency: 'weekly',
-          priority: 0.4,
         }),
       )
     }

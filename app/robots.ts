@@ -14,9 +14,12 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         allow: [
           '/',
           '/for-organizers',
+          '/for-vendors',
           '/discover',
+          '/markets/',
           '/supplies',
           '/events/',
+          '/organizers/',
           '/coordinators/',
           '/patrons/',
           '/legal/',

@@ -15,6 +15,7 @@ import {
 } from '@/lib/coordinator/coordinator-routes'
 import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
 import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
+import { CloneMarketButton } from '@/components/coordinator/clone-market-button'
 import { cn } from '@/lib/utils'
 
 export interface CoordinatorMarketSummary {
@@ -49,6 +50,10 @@ function statusLabel(status: string): string {
   if (status === 'completed') return 'Completed'
   if (status === 'cancelled') return 'Cancelled'
   return status
+}
+
+function showCloneAction(status: string): boolean {
+  return status === 'published' || status === 'active' || status === 'completed' || status === 'cancelled'
 }
 
 function MarketRow({
@@ -102,6 +107,9 @@ function MarketRow({
             View layout
           </Link>
         )}
+        {showCloneAction(market.status) ? (
+          <CloneMarketButton eventId={market.id} variant="ghost" />
+        ) : null}
       </div>
     </li>
   )

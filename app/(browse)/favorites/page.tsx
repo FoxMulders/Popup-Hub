@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { EventCard } from '@/components/events/event-card'
 import { FavoriteButton } from '@/components/shopper/favorite-button'
 import { VendorFollowButton } from '@/components/shopper/vendor-follow-button'
+import { CoordinatorFollowButton } from '@/components/shopper/coordinator-follow-button'
 import { SitePageBand } from '@/components/layout/site-page-band'
 import { Button } from '@/components/ui/button'
 import type { Event, Profile } from '@/types/database'
@@ -43,7 +44,7 @@ export default async function FavoritesPage() {
 
   const nowIso = new Date().toISOString()
 
-  const [{ data: favRows }, { data: followRows }] = await Promise.all([
+  const [{ data: favRows }, { data: followRows }, { data: coordinatorFollowRows }] = await Promise.all([
     supabase
       .from('shopper_favorites')
       .select('event_id, events(*, event_days(*))')
@@ -52,6 +53,11 @@ export default async function FavoritesPage() {
     supabase
       .from('vendor_follows')
       .select('vendor_id, profiles:vendor_id(id, full_name, avatar_url)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('coordinator_follows')
+      .select('coordinator_id, profiles:coordinator_id(id, full_name, avatar_url)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false }),
   ])
@@ -69,17 +75,15 @@ export default async function FavoritesPage() {
 
   const pastCount = allEvents.length - upcomingEvents.length
 
-  const coordinatorIds = [
-    ...new Set(upcomingEvents.map((e) => e.coordinator_id).filter(Boolean)),
-  ] as string[]
+  const followedCoordinatorIds = (coordinatorFollowRows ?? []).map((r) => r.coordinator_id)
 
   let coordinatorRecs: Event[] = []
-  if (coordinatorIds.length > 0) {
+  if (followedCoordinatorIds.length > 0) {
     const favoritedIds = new Set(upcomingEvents.map((e) => e.id))
     const { data: recRows } = await supabase
       .from('events')
       .select('*, event_days(*)')
-      .in('coordinator_id', coordinatorIds)
+      .in('coordinator_id', followedCoordinatorIds)
       .in('status', ['published', 'active'])
       .gte('end_at', nowIso)
       .order('start_at', { ascending: true })
@@ -189,7 +193,7 @@ export default async function FavoritesPage() {
           <section className="mt-10">
             <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
               <Sparkles className="h-5 w-5 text-harvest-600" aria-hidden />
-              More from organizers you follow
+              New from organizers you follow
             </h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {coordinatorRecs.slice(0, 6).map((event) => (
@@ -198,6 +202,44 @@ export default async function FavoritesPage() {
             </div>
           </section>
         )}
+
+        <section className="mt-10">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
+            <Sparkles className="h-5 w-5 text-harvest-600" aria-hidden />
+            Organizers you follow
+          </h2>
+          {(coordinatorFollowRows ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Follow an organizer from a market page to get notified when they publish new dates.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {(coordinatorFollowRows ?? []).map((row) => {
+                const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+                const p = profile as Profile | null
+                if (!p) return null
+                return (
+                  <li key={row.coordinator_id} className="marketing-glass-card px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <Link
+                        href={`/coordinators/${row.coordinator_id}`}
+                        className="font-medium text-forest hover:underline"
+                      >
+                        {p.full_name}
+                      </Link>
+                      <CoordinatorFollowButton
+                        coordinatorId={row.coordinator_id}
+                        coordinatorName={p.full_name}
+                        initialFollowing
+                        size="sm"
+                      />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
 
         <section className="mt-10">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">

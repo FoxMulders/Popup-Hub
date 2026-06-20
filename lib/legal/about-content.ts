@@ -1,5 +1,5 @@
 /** Section copy for the public About Us page (/legal/about). */
-export const ABOUT_LAST_UPDATED = 'June 8, 2026'
+export const ABOUT_LAST_UPDATED = 'June 20, 2026'
 
 export const ABOUT_INTRO = `Hey everyone,
 

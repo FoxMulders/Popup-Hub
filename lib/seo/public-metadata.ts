@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import {
   DEFAULT_KEYWORDS,
+  DEFAULT_OG_IMAGE_HEIGHT,
   DEFAULT_OG_IMAGE_PATH,
+  DEFAULT_OG_IMAGE_WIDTH,
   DEFAULT_SITE_DESCRIPTION,
   DEFAULT_SITE_TITLE,
   SITE_NAME,
@@ -30,7 +32,9 @@ export function buildPublicMetadata({
   const url = publicAppUrl(path)
   const imagePath = imageUrl?.trim() || DEFAULT_OG_IMAGE_PATH
   const image = imagePath.startsWith('http') ? imagePath : publicAppUrl(imagePath)
+  const isDefaultOg = !imageUrl?.trim() || imagePath === DEFAULT_OG_IMAGE_PATH
   const resolvedKeywords = keywords ?? DEFAULT_KEYWORDS
+  const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim()
 
   return {
     metadataBase: siteMetadataBase(),
@@ -41,6 +45,9 @@ export function buildPublicMetadata({
     robots: noIndex
       ? { index: false, follow: false }
       : { index: true, follow: true, googleBot: { index: true, follow: true } },
+    ...(googleVerification
+      ? { verification: { google: googleVerification } }
+      : {}),
     openGraph: {
       title,
       description,
@@ -48,7 +55,15 @@ export function buildPublicMetadata({
       siteName: SITE_NAME,
       type,
       locale: 'en_CA',
-      images: [{ url: image, alt: title }],
+      images: [
+        {
+          url: image,
+          alt: title,
+          ...(isDefaultOg
+            ? { width: DEFAULT_OG_IMAGE_WIDTH, height: DEFAULT_OG_IMAGE_HEIGHT }
+            : {}),
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',

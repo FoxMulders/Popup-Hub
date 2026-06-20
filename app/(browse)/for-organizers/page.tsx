@@ -21,6 +21,8 @@ export const metadata = buildPublicMetadata({
   ],
 })
 
+export const revalidate = 60
+
 export default function ForOrganizersPage() {
   return <ForOrganizersLanding />
 }

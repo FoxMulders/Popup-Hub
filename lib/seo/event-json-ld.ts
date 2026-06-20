@@ -9,6 +9,8 @@ type EventJsonLdInput = {
   locationName?: string | null
   address?: string | null
   city?: string | null
+  latitude?: number | null
+  longitude?: number | null
   coverImageUrl?: string | null
   vendorCount?: number
   status?: string | null
@@ -40,6 +42,19 @@ export function buildEventJsonLd(event: EventJsonLdInput) {
     addressParts['@type'] = 'PostalAddress'
     addressParts.addressCountry = 'CA'
     location.address = addressParts
+  }
+
+  if (
+    event.latitude != null &&
+    event.longitude != null &&
+    Number.isFinite(event.latitude) &&
+    Number.isFinite(event.longitude)
+  ) {
+    location.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: event.latitude,
+      longitude: event.longitude,
+    }
   }
 
   const jsonLd: Record<string, unknown> = {

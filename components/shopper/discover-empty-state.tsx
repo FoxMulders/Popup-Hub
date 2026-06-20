@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { clampSliderRadiusKm, DISTANCE_RADIUS_MAX_KM } from '@/lib/markets/distance-radius'
 import type { DateFilterPreset } from '@/lib/shopper/discover-date'
@@ -25,6 +27,7 @@ interface DiscoverEmptyStateProps {
   onWidenRadius: () => void
   onShowEverywhere: () => void
   onClearLiveAuctionFilter?: () => void
+  marketAlertsHref?: string
   className?: string
   compact?: boolean
 }
@@ -38,6 +41,7 @@ export function DiscoverEmptyState({
   onWidenRadius,
   onShowEverywhere,
   onClearLiveAuctionFilter,
+  marketAlertsHref,
   className,
   compact = false,
 }: DiscoverEmptyStateProps) {
@@ -120,6 +124,17 @@ export function DiscoverEmptyState({
           </Button>
         ) : null}
       </div>
+      {marketAlertsHref ? (
+        <p className={cn('text-muted-foreground', compact ? 'mt-2 text-xs' : 'mt-4 text-sm')}>
+          <Link
+            href={marketAlertsHref}
+            className="inline-flex items-center gap-1.5 font-medium text-forest hover:underline underline-offset-2"
+          >
+            <Bell className="h-3.5 w-3.5" aria-hidden />
+            Get notified when new markets publish near you
+          </Link>
+        </p>
+      ) : null}
     </div>
   )
 }

@@ -41,3 +41,26 @@ export function CoordinatorReliabilityBadge({
     </div>
   )
 }
+
+/** Compact trust label for discover cards and list rows. */
+export function CoordinatorTrustChip({
+  score,
+  className,
+}: {
+  score: number
+  className?: string
+}) {
+  const tone =
+    score >= 85 ? 'bg-sage-100 text-sage-800 border-sage-200' : score >= 70
+      ? 'bg-harvest-50 text-harvest-800 border-harvest-200'
+      : 'bg-red-50 text-red-800 border-red-200'
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tone} ${className ?? ''}`}
+    >
+      <Shield className="h-3 w-3" aria-hidden />
+      {score}% trusted
+    </span>
+  )
+}

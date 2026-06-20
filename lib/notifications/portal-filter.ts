@@ -12,6 +12,7 @@ const PATRON_TYPES = new Set<NotificationType>([
   'vendor_flash_sale',
   'priority_booth_invite',
   'vendor_sold_out',
+  'coordinator_market_published',
   'auction_won',
   'auction_starting',
   ...PLATFORM_ADMIN_TYPES,

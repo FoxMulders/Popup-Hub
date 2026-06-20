@@ -27,6 +27,8 @@ function organizerOptionLabel(org: OrganizerOption) {
 type Props = {
   organizers: OrganizerOption[]
   initialOrganizerSlug?: string
+  initialEventName?: string
+  initialEventMonthYear?: string
   canSubmit: boolean
   isSignedIn: boolean
   returnPath: string
@@ -35,6 +37,8 @@ type Props = {
 export function OrganizerReviewForm({
   organizers,
   initialOrganizerSlug,
+  initialEventName,
+  initialEventMonthYear,
   canSubmit,
   isSignedIn,
   returnPath,
@@ -49,8 +53,8 @@ export function OrganizerReviewForm({
   const [suggestWebsiteUrl, setSuggestWebsiteUrl] = useState('')
   const [suggestFacebookUrl, setSuggestFacebookUrl] = useState('')
   const [suggestContactName, setSuggestContactName] = useState('')
-  const [eventName, setEventName] = useState('')
-  const [eventMonthYear, setEventMonthYear] = useState('')
+  const [eventName, setEventName] = useState(initialEventName ?? '')
+  const [eventMonthYear, setEventMonthYear] = useState(initialEventMonthYear ?? '')
   const [eventAsAdvertised, setEventAsAdvertised] = useState('')
   const [wouldReturn, setWouldReturn] = useState('')
   const [attendance, setAttendance] = useState('')

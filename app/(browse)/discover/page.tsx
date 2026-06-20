@@ -44,6 +44,9 @@ async function DiscoverContent() {
       vendorCounts={vendorCounts}
       favoriteIds={favoriteIds}
       activeAuctionByEventId={activeAuctionByEventId}
+      marketAlertsHref={
+        user ? '/profile' : '/signup?role=vendor&next=%2Fprofile'
+      }
     />
   )
 }

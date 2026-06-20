@@ -9,6 +9,7 @@ import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { Badge } from '@/components/ui/badge'
 import { CoordinatorReliabilityBadge } from '@/components/coordinator/coordinator-reliability-badge'
 import { CoordinatorPeerVouchButton } from '@/components/coordinator/coordinator-community-trust'
+import { CoordinatorFollowButton } from '@/components/shopper/coordinator-follow-button'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { format } from 'date-fns'
 import { Calendar, MapPin, ArrowLeft } from 'lucide-react'
@@ -71,6 +72,7 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
 
   let canPeerVouch = false
   let alreadyPeerVouched = false
+  let followingCoordinator = false
 
   if (user && user.id !== id) {
     const { data: viewer } = await supabase
@@ -89,6 +91,14 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
         .maybeSingle()
       alreadyPeerVouched = !!existingVouch
     }
+
+    const { data: followRow } = await supabase
+      .from('coordinator_follows')
+      .select('coordinator_id')
+      .eq('user_id', user.id)
+      .eq('coordinator_id', id)
+      .maybeSingle()
+    followingCoordinator = !!followRow
   }
 
   const [displayAvatarUrl, publicPassport] = await Promise.all([
@@ -142,6 +152,14 @@ export default async function CoordinatorPublicProfilePage({ params }: Props) {
             coordinatorName={displayName}
             canVouch
             alreadyVouched={alreadyPeerVouched}
+          />
+        ) : null}
+
+        {user && user.id !== id ? (
+          <CoordinatorFollowButton
+            coordinatorId={profile.id}
+            coordinatorName={displayName}
+            initialFollowing={followingCoordinator}
           />
         ) : null}
 

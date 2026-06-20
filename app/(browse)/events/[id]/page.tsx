@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { PublicEventDetail } from '@/components/public/public-event-detail'
 import { EventJsonLd } from '@/components/seo/event-json-ld'
+import { JsonLdScript } from '@/components/seo/json-ld-script'
+import { buildBreadcrumbJsonLd } from '@/lib/seo/breadcrumb-json-ld'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { format } from 'date-fns'
 
@@ -50,7 +52,7 @@ export default async function PublicEventPage({ params }: Props) {
     supabase
       .from('events')
       .select(
-        'id, name, description, start_at, end_at, location_name, address, city, cover_image_url, status, coordinator:profiles!events_coordinator_id_fkey(full_name)'
+        'id, name, description, start_at, end_at, location_name, address, city, latitude, longitude, cover_image_url, status, coordinator:profiles!events_coordinator_id_fkey(full_name)'
       )
       .eq('id', id)
       .in('status', ['published', 'active', 'completed'])
@@ -64,7 +66,18 @@ export default async function PublicEventPage({ params }: Props) {
 
   return (
     <>
-      {event ? <EventJsonLd event={event} vendorCount={vendorCount ?? 0} /> : null}
+      {event ? (
+        <>
+          <EventJsonLd event={event} vendorCount={vendorCount ?? 0} />
+          <JsonLdScript
+            data={buildBreadcrumbJsonLd([
+              { name: 'Home', path: '/' },
+              { name: 'Discover Markets', path: '/discover' },
+              { name: event.name, path: `/events/${event.id}` },
+            ])}
+          />
+        </>
+      ) : null}
       <PublicEventDetail eventId={id} />
     </>
   )

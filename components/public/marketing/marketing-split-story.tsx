@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ClipboardCheck, LayoutGrid, MapPin, Store, Users, Wallet } from 'lucide-react'
+import { HOME_ORIGIN_STORY } from '@/lib/marketing/origin-story'
 
 const PLATFORM_TILES = [
   {
@@ -75,15 +76,18 @@ export function MarketingSplitStory() {
           </p>
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-harvest-700">Why Popup Hub</p>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Built by market people, not a generic events app
-          </h2>
-          <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
-            We organize and vend at weekend markets. Popup Hub replaces the email threads,
-            spreadsheets, and DMs that eat your prep time — while giving shoppers a reason to plan
-            ahead instead of showing up blind.
+          <p className="text-xs font-bold uppercase tracking-widest text-harvest-700">
+            {HOME_ORIGIN_STORY.eyebrow}
           </p>
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            {HOME_ORIGIN_STORY.headline}
+          </h2>
+          {HOME_ORIGIN_STORY.paragraphs.map((paragraph) => (
+            <p key={paragraph.slice(0, 48)} className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              {paragraph}
+            </p>
+          ))}
+          <p className="mt-4 text-sm font-medium text-foreground sm:text-base">{HOME_ORIGIN_STORY.tagline}</p>
           <ul className="mt-6 space-y-3 text-sm text-muted-foreground">
             <li className="flex gap-2">
               <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-forest" aria-hidden />

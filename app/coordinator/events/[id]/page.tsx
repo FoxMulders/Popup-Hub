@@ -7,6 +7,9 @@ import { EventInlineEditor } from '@/components/coordinator/event-inline-editor'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
 import { EventReadinessChecklist } from '@/components/coordinator/event-readiness-checklist'
+import { CloneMarketButton } from '@/components/coordinator/clone-market-button'
+import { SaveVenuePrompt } from '@/components/coordinator/save-venue-prompt'
+import { listCoordinatorSavedVenues } from '@/lib/coordinator/saved-venues'
 import { MarketFeedbackAdminPanel } from '@/components/coordinator/market-feedback-admin-panel'
 import { EventLogisticsEditor } from '@/components/coordinator/event-logistics-editor'
 import { EventScheduleEditor } from '@/components/coordinator/event-schedule-editor'
@@ -132,11 +135,34 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   const categoryCapacityRows = buildCategoryCapacityRows(sortedCategoryLimits, applications ?? [])
 
+  const { venues: savedVenues } = await listCoordinatorSavedVenues(supabase, event.coordinator_id)
+  const venueAlreadySaved = savedVenues.some(
+    (venue) =>
+      venue.location_name.trim().toLowerCase() === event.location_name.trim().toLowerCase() &&
+      venue.address.trim().toLowerCase() === event.address.trim().toLowerCase()
+  )
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
       <Suspense fallback={null}>
         <EventHubLayoutNotice />
       </Suspense>
+
+      {!isCancelled ? (
+        <div className="sticky top-16 z-20">
+          <EventReadinessChecklist
+            eventId={id}
+            event={event as Event & { category_limits?: import('@/types/database').EventCategoryLimit[] }}
+            applicationCount={applicationCount}
+            approvedCount={approvedCount}
+            hasLayout={hasLayout}
+            hasSquare={hasSquare}
+            pendingCount={pendingCount}
+            quarterAuctionCatalogReady={quarterAuctionCatalogReady}
+          />
+        </div>
+      ) : null}
+
       <div className="market-panel p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <EventInlineEditor event={event as Event} />
@@ -145,6 +171,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
             {isDraft ? (
               <DeleteDraftMarketDialog eventId={id} eventName={event.name} />
             ) : null}
+            {!isCancelled && !isDraft ? <CloneMarketButton eventId={id} /> : null}
             {!isCancelled && (
               <>
                 <Link
@@ -235,6 +262,21 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         {categoryCapacityRows.length > 0 && (
           <CategoryCapacityMatrix rows={categoryCapacityRows} applications={applications ?? []} />
         )}
+
+        {!isCancelled ? (
+          <div className="mt-4">
+            <SaveVenuePrompt
+            coordinatorId={event.coordinator_id}
+            locationName={event.location_name}
+            address={event.address}
+            latitude={event.latitude}
+            longitude={event.longitude}
+            marketCity={event.market_city ?? 'edmonton'}
+            skipVenueLayout={Boolean(event.skip_venue_layout)}
+            initiallySaved={venueAlreadySaved}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -268,17 +310,6 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
           )
         })}
       </div>
-
-      <EventReadinessChecklist
-        eventId={id}
-        event={event as Event & { category_limits?: import('@/types/database').EventCategoryLimit[] }}
-        applicationCount={applicationCount}
-        approvedCount={approvedCount}
-        hasLayout={hasLayout}
-        hasSquare={hasSquare}
-        pendingCount={pendingCount}
-        quarterAuctionCatalogReady={quarterAuctionCatalogReady}
-      />
 
       {!isCancelled && <MarketFeedbackAdminPanel marketId={id} variant="page" />}
 

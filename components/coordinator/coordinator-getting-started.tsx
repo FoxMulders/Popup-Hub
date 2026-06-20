@@ -7,25 +7,29 @@ import { cn } from '@/lib/utils'
 const STEPS = [
   {
     title: 'Create your first market',
-    detail: 'Dates, venue pin, booth fees, and application settings — about 15 minutes in the setup wizard.',
+    detail: 'Dates, venue pin, booth fees, and application settings in the setup wizard.',
+    estimate: '~15 min',
     href: '/coordinator/events/new',
     icon: CalendarDays,
   },
   {
     title: 'Connect booth payouts',
     detail: 'Link Square or Stripe for card payments — or add your organization name to publish with offline fees.',
+    estimate: '~5 min',
     href: '/coordinator/payment-methods',
     icon: CreditCard,
   },
   {
     title: 'Place booths on HubGrid',
     detail: 'Draw your floor plan or start from a blank canvas, then assign vendors.',
+    estimate: '~10 min',
     href: '/coordinator/studio',
     icon: LayoutGrid,
   },
   {
     title: 'Publish for patron discovery',
     detail: 'When your lineup is ready, publish so shoppers and vendors find you on Popup Hub.',
+    estimate: '~2 min',
     href: '/coordinator/markets',
     icon: Rocket,
   },
@@ -61,6 +65,9 @@ export function CoordinatorGettingStarted({ className }: { className?: string })
                   <span className="flex items-center gap-2 text-sm font-semibold text-foreground group-hover:text-forest">
                     <Icon className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                     {step.title}
+                    <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      {step.estimate}
+                    </span>
                   </span>
                   <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
                     {step.detail}

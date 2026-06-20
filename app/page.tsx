@@ -2,7 +2,17 @@ import { createClient } from '@/lib/supabase/server'
 import { SiteContentShell } from '@/components/layout/site-content-shell'
 import { ShopperShell } from '@/components/shopper/shopper-shell'
 import { PublicLanding } from '@/components/public/public-landing'
+import { buildPublicMetadata } from '@/lib/seo/public-metadata'
+import { DEFAULT_SITE_DESCRIPTION, DEFAULT_SITE_TITLE } from '@/lib/seo/site-config'
 import type { Profile } from '@/types/database'
+
+export const metadata = buildPublicMetadata({
+  title: DEFAULT_SITE_TITLE,
+  description: DEFAULT_SITE_DESCRIPTION,
+  path: '/',
+})
+
+export const revalidate = 60
 
 export default async function RootPage() {
   const supabase = await createClient()

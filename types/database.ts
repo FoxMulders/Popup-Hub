@@ -76,6 +76,7 @@ export type NotificationType =
   | 'feature_request_submitted'
   | 'priority_booth_invite'
   | 'nearby_market_published'
+  | 'coordinator_market_published'
 
 export type VendorAccessRequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -850,6 +851,12 @@ export interface EventScheduleItem {
 export interface VendorFollow {
   user_id: string
   vendor_id: string
+  created_at: string
+}
+
+export interface CoordinatorFollow {
+  user_id: string
+  coordinator_id: string
   created_at: string
 }
 
