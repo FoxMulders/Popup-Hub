@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, MapPin } from 'lucide-react'
-import { format } from 'date-fns'
+import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
 import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coordinator-applications'
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import { isEventArchived } from '@/lib/queries/events'
@@ -65,7 +65,7 @@ export default async function ApplicationsPage({ params }: Props) {
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
-                {format(new Date(event.start_at), 'EEE, MMM d, yyyy')}
+                {safeFormatMarketDate(event.start_at)}
               </div>
               <div className="flex items-center gap-1.5">
                 <MapPin className="h-4 w-4" />

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
+import { safeFormatMarketDate } from '@/lib/format/safe-event-date'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -91,8 +91,10 @@ export function EventScheduleEditor({ event, items: initial }: EventScheduleEdit
               <div>
                 <p className="font-medium">{item.title}</p>
                 <p className="text-xs text-muted-foreground">
-                  {format(new Date(item.starts_at), 'MMM d · h:mm a')}
-                  {item.ends_at ? ` – ${format(new Date(item.ends_at), 'h:mm a')}` : ''}
+                  {safeFormatMarketDate(item.starts_at, 'MMM d · h:mm a', 'Time TBD')}
+                  {item.ends_at
+                    ? ` – ${safeFormatMarketDate(item.ends_at, 'h:mm a', '')}`
+                    : ''}
                   {item.location_label ? ` · ${item.location_label}` : ''}
                 </p>
               </div>

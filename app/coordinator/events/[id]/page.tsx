@@ -38,7 +38,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
   const scope = await getCoordinatorScope(supabase, user.id)
 
-  const { data: event } = await applyCoordinatorEventScope(
+  const { data: event, error: eventLoadError } = await applyCoordinatorEventScope(
     supabase
       .from('events')
       .select('*, category_limits:event_category_limits(*, category:categories(name))')
@@ -47,6 +47,9 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
     scope.isAdmin
   ).single()
 
+  if (eventLoadError) {
+    console.error('[coordinator/event hub] event query failed', eventLoadError.message)
+  }
   if (!event) notFound()
 
   const sortedCategoryLimits = [...(event.category_limits ?? [])].sort(
@@ -354,7 +357,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
           </div>
         ) : null}
         <ApplicationBoard
-          applications={applications}
+          applications={applications ?? []}
           bookingMode={event.booking_mode}
           eventId={id}
           eventName={event.name}

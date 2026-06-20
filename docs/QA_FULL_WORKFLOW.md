@@ -2,6 +2,8 @@
 
 End-to-end checklist for coordinator, vendor, and patron flows: signup, market creation, passport build, applications, booth assignment, publish, and public discovery.
 
+**Current QA handoff:** [QA_TEST_REQUEST.md](./QA_TEST_REQUEST.md) — sprint test request with P0/P1 priorities, sign-off template, and pending-preview appendix (updated 2026-06-20).
+
 **Related:** Coordinator-only deep dive — [COORDINATOR_QA.md](./COORDINATOR_QA.md)
 
 ## Run commands (cheat sheet)
@@ -14,6 +16,7 @@ End-to-end checklist for coordinator, vendor, and patron flows: signup, market c
 | API/DB walkthrough (no browser) | `npx tsx scripts/qa-full-workflow-walkthrough.ts` |
 | Pre-ship regression | `npm run qa:launch` |
 | Staging/prod HTTP smoke | `npm run verify:prod` (set `PLAYWRIGHT_SMOKE_EVENT_ID` for event pages) |
+| Send checklist to QA (Linear) | `npm run qa:handoff` — prod smoke + Linear [POP-5](https://linear.app/popuphub/issue/POP-5) links |
 
 ---
 

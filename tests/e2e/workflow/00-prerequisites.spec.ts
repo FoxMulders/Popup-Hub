@@ -27,7 +27,7 @@ test.describe('Workflow prerequisites @workflow', () => {
   test('patron mock-login lands on discover', async ({ patronPage: page }) => {
     await expect(page).toHaveURL(/\/discover/)
     await expect(
-      page.getByRole('heading', { name: 'Popup Hub Community Markets' })
+      page.getByRole('heading', { name: 'Community markets near you' })
     ).toBeVisible({ timeout: 15_000 })
   })
 })

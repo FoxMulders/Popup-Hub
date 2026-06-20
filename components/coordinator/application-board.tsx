@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { CheckCircle, XCircle, Clock, Users, Eye, AlertTriangle, FileText, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatDistanceToNow } from 'date-fns'
+import { safeFormatDistanceToNow } from '@/lib/format/safe-event-date'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
 import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-match'
@@ -627,7 +627,7 @@ function ApplicationCard({
         </div>
 
         <p className="text-[10px] text-muted-foreground">
-          Applied {formatDistanceToNow(new Date(app.applied_at), { addSuffix: true })}
+          Applied {safeFormatDistanceToNow(app.applied_at, 'recently')}
         </p>
         {app.attending_dates?.length ? (
           <p className="text-[10px] text-muted-foreground">

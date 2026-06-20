@@ -56,7 +56,8 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
   const [isPending, startTransition] = useTransition()
   const [cancelOpen, setCancelOpen] = useState(false)
   const currentStatus = event.status as EventStatus
-  const transitions = TRANSITIONS[currentStatus]
+  const transitions = TRANSITIONS[currentStatus] ?? []
+  const statusBadgeClass = STATUS_BADGE[currentStatus] ?? STATUS_BADGE.draft
 
   async function changeStatus(newStatus: EventStatus) {
     /*
@@ -187,7 +188,7 @@ export function EventStatusToggle({ event }: EventStatusToggleProps) {
   return (
     <>
       <div className="flex items-center gap-2">
-        <Badge className={`capitalize text-sm border ${STATUS_BADGE[currentStatus]}`}>
+        <Badge className={`capitalize text-sm border ${statusBadgeClass}`}>
           {currentStatus}
         </Badge>
         {transitions.length > 0 && (

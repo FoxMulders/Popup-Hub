@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TRUST_DIRECTORY_LINKS } from '../../lib/nav/trust-directory-nav'
 
 const smokeEventId =
   process.env.PLAYWRIGHT_SMOKE_EVENT_ID ?? '4e87e086-da8e-4e46-af11-b1e7322f4e65'
@@ -8,7 +9,7 @@ test.describe('Public discovery and routing smoke', () => {
     await page.goto('/')
     await expect(page).toHaveURL('/')
     await expect(
-      page.getByRole('heading', { name: 'Discover markets. Run them better.' })
+      page.getByRole('heading', { name: TRUST_DIRECTORY_LINKS.check.boothFeeHeadline })
     ).toBeVisible()
 
     await page.goto('/discover')

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { requireWorkflowFixtures, readWorkflowState } from './workflow-state'
 
-const DISCOVER_HEADING = 'Popup Hub Community Markets'
+const DISCOVER_HEADING = 'Community markets near you'
 
 test.describe('Patron public discovery @workflow', () => {
   test('public event detail loads for workflow market', async ({ page }) => {

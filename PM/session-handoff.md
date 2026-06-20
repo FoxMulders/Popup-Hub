@@ -4,12 +4,21 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## QA handoff — full workflow test request (2026-06-20)
+- **Checklist:** `docs/QA_TEST_REQUEST.md` — P0 core E2E (Phases 1–7), P1 recent production (Canopy, discover UX, coordinator roadmap, Blueprint Studio), D pending-preview appendix, sign-off template.
+- **Baseline workflow:** `docs/QA_FULL_WORKFLOW.md` (Phases 0–8).
+- **Target:** Production https://popuphub.ca — build **217** @ commit `4cae286`.
+- **Pre-flight:** `npm run verify:prod` — PASS (2026-06-20).
+- **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
+
 ## Active work — patron UX + coordinator polish (local, not deployed)
 - **Goal:** Tester feedback batch — footer, discover location, venue approval, league pricing, mobile layout gate, Canopy nav naming.
 - **Shipped locally:**
   - **Footer:** Removed year from copyright; moved `BuildVersionFooter` inside `#site-layout-main` with `mt-auto`; dropped `flex-1` on `#site-main` to remove content/footer gap; mobile padding above bottom nav; `ComplianceFooter` delegates to shared footer
   - **Canopy nav:** Ribbon/menu use **Check organizers**; `/check` page keeps **Canopy** branding
   - **Canopy review form:** Organizer dropdown keeps proper-cased display name after selection (was showing lowercase slug)
+  - **CI lint:** Renamed `useMyLocation` → `requestMyLocation` in market area filter (hook naming rule)
+  - **Coordinator event hub crash:** Safe date formatting on schedule items + application cards; guard unknown event status in status toggle
   - **Venues:** `shouldSubmitPlatformVenue` no longer skips coordinator saved venues; submit on wizard autosave, event form save, and "Save for future" venue action
   - **League discount:** Wired in `EventForm` (wizard already had it)
   - **Mobile layout:** Wizard step 3 shows save-and-continue CTA; full-screen overlay unchanged on studio

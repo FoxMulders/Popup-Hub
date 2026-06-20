@@ -151,7 +151,7 @@ export function VendorMarketGrid({
     locationLabel,
     locating,
     showDeviceLocationPin,
-    useMyLocation,
+    requestMyLocation,
     setOriginFromPlace,
   } = useMarketAreaFilter()
 
@@ -183,7 +183,7 @@ export function VendorMarketGrid({
         locationLabel={locationLabel}
         locating={locating}
         onUseMyLocation={() => {
-          useMyLocation()
+          requestMyLocation()
           setView('map')
         }}
         onAddressSelect={setOriginFromPlace}

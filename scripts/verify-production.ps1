@@ -21,11 +21,17 @@ $paths = @(
     @{ Path = '/login'; Name = 'Login' },
     @{ Path = '/signup'; Name = 'Signup' },
     @{ Path = '/discover'; Name = 'Discover' },
+    @{ Path = '/check'; Name = 'Canopy trust directory' },
+    @{ Path = '/for-organizers'; Name = 'For organizers' },
     @{ Path = '/manifest.json'; Name = 'PWA manifest' },
     @{ Path = '/sw.js'; Name = 'Service worker' },
     @{ Path = '/api/build-info'; Name = 'Build info API' },
     @{ Path = '/sitemap.xml'; Name = 'Sitemap' }
 )
+
+$trustOrganizerSlug = $env:PLAYWRIGHT_TRUST_ORGANIZER_SLUG
+if (-not $trustOrganizerSlug) { $trustOrganizerSlug = 'lauderdale-community-league' }
+$paths += @{ Path = "/organizers/$trustOrganizerSlug"; Name = 'Organizer trust report' }
 
 $eventId = $env:PLAYWRIGHT_SMOKE_EVENT_ID
 if ($eventId) {
@@ -86,6 +92,37 @@ foreach ($origin in $baseUrls) {
                 $failures++
             }
         }
+    }
+}
+
+Write-Host ""
+if ($failures -eq 0) {
+    $primaryOrigin = $baseUrls[0]
+    try {
+        $buildParams = @{
+            Uri = "$primaryOrigin/api/build-info"
+            Method = 'Get'
+            TimeoutSec = 30
+            UseBasicParsing = $true
+        }
+        if ($primaryOrigin -match '^https://localhost') {
+            $buildParams.SkipCertificateCheck = $true
+        }
+        $buildRaw = (Invoke-WebRequest @buildParams).Content
+        $build = $buildRaw | ConvertFrom-Json
+        $repoBuildPath = Join-Path $PSScriptRoot '..' 'build-number.json'
+        $repoBuild = Get-Content $repoBuildPath -Raw | ConvertFrom-Json
+        if ($build.buildNumber -lt 1) {
+            Write-Host "  FAIL Build number invalid ($($build.buildNumber))" -ForegroundColor Red
+            $failures++
+        } elseif ($build.buildNumber -lt $repoBuild.build) {
+            Write-Host "  WARN Production build $($build.buildNumber) behind repo build $($repoBuild.build)" -ForegroundColor Yellow
+        } else {
+            Write-Host "  OK   Build info v$($build.version) build $($build.buildNumber) commit $($build.commit)" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "  FAIL Build info validation - $($_.Exception.Message)" -ForegroundColor Red
+        $failures++
     }
 }
 

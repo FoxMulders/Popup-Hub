@@ -77,7 +77,7 @@ export function useMarketAreaFilter() {
     storeUserLocation({ ...next, label })
   }, [])
 
-  const useMyLocation = useCallback(() => {
+  const requestMyLocation = useCallback(() => {
     if (!navigator.geolocation) {
       toast.error('Location is not available on this device. Enter your home address instead.')
       return
@@ -107,7 +107,7 @@ export function useMarketAreaFilter() {
     locationLabel,
     locating,
     showDeviceLocationPin,
-    useMyLocation,
+    requestMyLocation,
     setOriginFromPlace,
   }
 }

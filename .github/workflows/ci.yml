@@ -5,6 +5,9 @@ on:
     branches: [master, main]
   pull_request:
     branches: [master, main]
+  schedule:
+    # Daily production smoke (UTC noon)
+    - cron: '0 12 * * *'
 
 jobs:
   build:
@@ -23,6 +26,21 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: TypeScript
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Layout QA
+        run: npm run qa:layout
+
+      - name: Signup RBAC
+        run: npm run test:rbac-signup
+
+      - name: Shopper routing
+        run: npm run test:shopper-routing
+
       - name: Production build
         run: npm run build
         env:
@@ -30,5 +48,24 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           NEXT_PUBLIC_APP_URL: http://localhost:3000
 
-  # Run locally with real Supabase + dev server:
-  # PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e:matrix
+  prod-smoke:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Production HTTP smoke
+        run: npm run verify:prod
+
+  # Full Playwright workflow (local dev + Supabase secrets):
+  # PLAYWRIGHT_SKIP_WEBSERVER=1 npm run test:e2e:workflow
+  # Prod browser smoke:
+  # PLAYWRIGHT_BASE_URL=https://popuphub.ca PLAYWRIGHT_SKIP_WEBSERVER=1 npm run qa:automation:prod

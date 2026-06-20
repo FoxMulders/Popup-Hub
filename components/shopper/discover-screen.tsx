@@ -57,7 +57,7 @@ export function DiscoverScreen({
     locationLabel,
     locating,
     showDeviceLocationPin,
-    useMyLocation,
+    requestMyLocation,
     setOriginFromPlace,
   } = useMarketAreaFilter()
 
@@ -97,9 +97,9 @@ export function DiscoverScreen({
   )
 
   const handleUseMyLocation = useCallback(() => {
-    useMyLocation()
+    requestMyLocation()
     setViewMode('map')
-  }, [useMyLocation, setViewMode])
+  }, [requestMyLocation, setViewMode])
 
   const filtered = useMemo(() => {
     const scoped = filterEventsByListingType(events, 'community_market')
