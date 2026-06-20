@@ -1715,9 +1715,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` â€” PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `785a709` (pushed to `origin/master`)
-- Last deploy commit: `785a709` - feat: ship 148 session updates (UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)
-- Production: https://popuphub.ca - **v1.100.0 build 228** | commit `785a709` (handoff updated 2026-06-20; semver synced locally, not deployed)
+- Branch: `master` @ `9a61066` (pushed to `origin/master`)
+- Last deploy commit: `9a61066` - feat: ship 153 session updates (Location Tent brand logo refresh; semver sync from release history; HubGuard claim matching + Visual/UI §3; CRO user journeys §2; +149 more)
+- Production: https://popuphub.ca - **v1.102.0 build 1** | commit `d7dc379` (handoff updated 2026-06-20 16:27)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2094,7 +2094,7 @@
 
 
 ## Last deploy
-- 2026-06-20 15:48 - Deploy via deploy-popuphub.ps1 - `feat: ship 148 session updates (UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)` (785a709)
+- 2026-06-20 16:27 - Deploy via deploy-popuphub.ps1 - `feat: ship 153 session updates (Location Tent brand logo refresh; semver sync from release history; HubGuard claim matching + Visual/UI §3; CRO user journeys §2; +149 more)` (9a61066)
 
 
 ## Goal

@@ -1,1 +1,1 @@
-feat: ship 153 session updates (Location Tent brand logo refresh; semver sync from release history; HubGuard claim matching + Visual/UI §3; CRO user journeys §2; +149 more)
+feat: ship 154 session updates (Location Tent brand logo refresh; semver sync from release history; CRO performance & friction §4; HubGuard claim matching + Visual/UI §3; +150 more)
