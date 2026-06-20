@@ -8,7 +8,7 @@ export const SITE_NAME = 'Popup Hub'
 export const DEFAULT_SITE_TITLE = 'Popup Hub — Discover Local Makers Markets'
 
 export const DEFAULT_SITE_DESCRIPTION =
-  'Discover local pop-up markets, browse confirmed vendors before you go, and run booth layout and day-of operations with Popup Hub.'
+  'Discover local pop-up markets across Canada, browse confirmed vendors before you go, and run booth layout and day-of operations with Popup Hub.'
 
 export const ORGANIZERS_PAGE_TITLE =
   'Market Organizer Software — Popup Hub'

@@ -2,7 +2,30 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Location Tent brand logo refresh (local, not deployed)
+- **Goal:** Replace all Popup Hub logo instances (static + loader animation) with the new glossy green stall + blue pin artwork.
+- **Shipped locally:**
+  - **`scripts/import-location-tent-logo.mjs`:** Auto-picks the largest icon from composite sheets (1024 PNG side preferred); removes black backdrop; writes `popup-hub-icon-source.png` + `popup-hub-logo.png`.
+  - **`npm run assets:logo`:** Regenerated light + **dark** marks: `popup-hub-brand.png`, `popup-hub-brand-dark.png`, icons, favicons, PWA, `app/icon.png`.
+  - **Theme-aware logos:** `lib/brand/brand-logo-paths.ts`, `hooks/use-brand-logo-src.ts` — swaps on `.dark` class or `prefers-color-scheme: dark`; wired into nav logo, initial loader, market animation replay.
+  - **Loader animation:** Pin overlay + glow blue (`#105fc1`); `pinOffsetY` / `LOGO_ICON_ANCHOR_Y` → **0.57**.
+  - **`public/sw.js`:** Cache bumped to `v16` (includes dark PNGs).
+- **Verify:** Hard refresh; toggle OS dark mode (or add `class="dark"` on `<html>`) — nav logo + loader animation use dark variant.
+- **Next:** Commit + deploy when user asks. Optional: wire `ThemeProvider` for in-app dark toggle; drop lossless dark SVG/1024 PNG into `popup-hub-icon-source-dark.png` for sharper upscaling.
+
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
+
+**Semver:** Footer `vX.Y.Z` tracks conventional commits since the 1.0.0 baseline (`8aea984`). Deploy/ship bumps `major:` → major, `feat:` → minor, `fix:` → patch (`docs:`/`chore:` unchanged). Build counter stays separate. Retroactive sync: `npm run version:sync-history`.
+
+## Active work — semver sync from release history (local, not deployed)
+- **Goal:** Align `package.json` semver with shipped `feat`/`fix`/`major` commits; auto-bump on every deploy going forward.
+- **Shipped locally:**
+  - **`scripts/bump-package-version.mjs`:** Infers bump from commit message; `--from-history` replays log since `8aea984`.
+  - **`deploy-popuphub.ps1` / `ship.ps1`:** Bump semver before build when committing (skipped on `-SkipCommit`).
+  - **`package.json` / `build-number.json` / `package-lock.json`:** `1.0.0` → **`1.100.0`** (100 `feat` since baseline, 4 `fix` absorbed by later minors).
+  - **`PM/ios-testflight.md`:** Version table updated.
+- **Verify:** `node scripts/bump-package-version.mjs --message "feat: x" --dry-run` → `1.101.0`; `fix:` → `1.100.1`; `docs:` unchanged.
+- **Next:** Commit + deploy when user asks.
 
 ## QA handoff — full workflow test request (2026-06-20)
 - **Checklist:** `docs/QA_TEST_REQUEST.md` — P0 core E2E (Phases 1–7), P1 recent production (HubGuard, discover UX, coordinator roadmap, HubGrid), D pending-preview appendix, sign-off template.
@@ -11,15 +34,50 @@
 - **Automated (dev):** `npm run qa:automation` (CI-safe static) | `npm run qa:automation:prod` (prod Playwright smoke) | `npm run test:e2e:smoke`
 - **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
 
-## Active work — dual-audience homepage hero (local, not deployed)
-- **Goal:** CRO review item #1 — platform value prop + organizer CTA above the fold without dropping HubGuard vendor wedge.
+## Active work — CRO performance & friction §4 (local, not deployed)
+- **Goal:** Reduce technical/workflow friction from UX review §4 — Discover maps blocking, payment publish confusion, vendor passport/insurance gates.
 - **Shipped locally:**
-  - **`lib/marketing/home-hero.ts`:** Platform headline/subhead constants.
-  - **`marketing-hero.tsx`:** H1 explains patrons, vendors, coordinators in one line; subhead covers all three journeys.
-  - **`marketing-hero-pathways.tsx`:** Three above-fold pathway cards — Start hosting (coordinator signup), Open HubGuard, Browse markets; organizer card emphasized; secondary links to `/for-organizers` and vendor signup.
-  - HubGuard booth-fee headline remains on `/check` and vendor callouts only.
-  - **`public-discovery.spec.ts`:** Asserts new H1 + organizer/HubGuard CTAs.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke `/` — three pathway CTAs visible above fold on desktop; HubGuard trust note below cards.
+  - **Discover location (non-blocking):** `HomeAddressPicker` shows input while Maps API loads; `MarketAreaFilter` puts radius + geolocation + Edmonton/Calgary quick picks before address autocomplete.
+  - **Coordinator payouts:** `CoordinatorPaymentReadinessCallout` on `/coordinator` when publish blocked for missing Square/Stripe/org; checklist copy clarifies offline publish path.
+  - **Vendor friction:** `VendorPassportCompletionCard` (% meter + missing fields); `VendorActionRequiredBanner` for insurance upload + payment due; `pending_insurance` applications filter.
+- **Already shipped earlier (same review):** HubGrid INP deferrals, route scroll-to-top, wizard step scroll reset, Simple HubGrid mode, discover empty states.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover` use location without waiting for Places; `/coordinator` payment callout; `/vendor/dashboard` passport meter + insurance banner.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — HubGuard claim matching + Visual/UI §3 (local, not deployed)
+- **Goal:** Auto-suggest unclaimed HubGuard profiles for new coordinators; CRO review §3 visual polish (Discover density, marketing→app bridge, card scannability).
+- **Shipped locally:**
+  - **Claim matching:** `match-coordinator-organizers.ts` scores unclaimed organizers vs profile org name, contact name, email domain, and existing event names; `fetch-coordinator-claim-suggestions.ts`; `CoordinatorOrganizerClaimSuggestions` on `/coordinator` with claim + dismiss.
+  - **Discover filters:** `DiscoverWhenFilter` — mobile shows Today/Tomorrow/Weekend + “More dates”; filters wrapped in white card panel for hierarchy.
+  - **Coordinator welcome:** `CoordinatorPortalWelcome` strip for new coordinators (`marketCount === 0`).
+  - **Event cards:** Two-line titles + slightly larger meta text on Discover grid.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator` with org name similar to unclaimed HubGuard listing; `/discover` mobile filter collapse.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — CRO user journeys §2 (local, not deployed)
+- **Goal:** Shopper, vendor, and organizer journey friction from UX review — including demo market, HubGuard claim surfacing, HubGrid Simple mode.
+- **Shipped locally:**
+  - **Discover:** `DiscoverEmptyState` with Try next preset, Widen radius, Show everywhere; upcoming market count; map overlay + list modes.
+  - **Browse CTAs:** `goToDiscover()` — navigates immediately, requests location in background (hero pathways + path cards).
+  - **Vendor:** Apply-once 3-step loop on hero/path cards; `VendorSignupPassportPreview` on vendor signup; "See open markets" → `/discover`.
+  - **Organizer checklist:** `CoordinatorGettingStarted` on home when `marketCount === 0`.
+  - **Demo market (~10 min):** `POST /api/coordinator/demo-market` + `DemoMarketLauncher` on coordinator home/getting-started; `DemoMarketGuideBanner` on setup wizard when `?demo=1`.
+  - **HubGuard claim:** `CheckOrganizerList` (Unclaimed/Claimed badges + claim link); `HubGuardCoordinatorClaimCallout` for signed-in coordinators on `/check`.
+  - **HubGrid Simple mode:** `hubgrid-layout-mode.ts` — default Simple (booth IDs, no clearance/category rules); Simple/Pro toggle in dashboard toolbar; publish clearance gate skipped in Simple via `MarketManagementProvider`.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/check` as coordinator (claim callout + badges); `/coordinator` demo market button; `/coordinator/studio` Simple/Pro toggle; demo wizard banner at setup step 3.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — dual-audience hero + Canada positioning (local, not deployed)
+- **Goal:** CRO item #1 + broaden marketing beyond Alberta (Canada + origin proof).
+- **Shipped locally:**
+  - **`lib/marketing/home-hero.ts`:** Eyebrow *Built in Canada · strong in Alberta today*; H1 *One hub for local makers markets*; national subhead; human footer line (no duplicate origin).
+  - **`marketing-hero-pathways.tsx`:** Three pathway cards (organizer / HubGuard / discover).
+  - **`marketing-testimonial.tsx`:** Canadian pop-up market attribution.
+  - **`lib/seo/site-config.ts`:** Default description mentions Canada.
+  - **`/check`:** Directory heading *Organizers in our directory (Alberta today, expanding)*; body copy still Edmonton-area honest.
+  - **`/check/review`:** Metadata de-regionalized.
+  - **E2E:** `public-discovery.spec.ts`, `canopy-trust.spec.ts` updated.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke `/` national H1 + Alberta proof eyebrow; `/check` honest directory label.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — UX polish batch + CRO review (local, not deployed)
@@ -1659,7 +1717,7 @@
 ## Baseline
 - Branch: `master` @ `785a709` (pushed to `origin/master`)
 - Last deploy commit: `785a709` - feat: ship 148 session updates (UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)
-- Production: https://popuphub.ca - **v1.0.0 build 227** | commit `d21eee9` (handoff updated 2026-06-20 15:48)
+- Production: https://popuphub.ca - **v1.100.0 build 228** | commit `785a709` (handoff updated 2026-06-20; semver synced locally, not deployed)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 

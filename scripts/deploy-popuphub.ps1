@@ -120,6 +120,14 @@ try {
     }
 
     if (-not $SkipBuild) {
+        if (-not $SkipCommit -and $Message) {
+            Write-Step 'Bumping semver from deploy commit message'
+            $versionArgs = @('scripts/bump-package-version.mjs', '--message', $Message)
+            if ((Invoke-NativeCommand -FilePath 'node' -ArgumentList $versionArgs) -ne 0) {
+                throw 'Semver bump failed'
+            }
+        }
+
         Write-Step 'Cleaning stale .next output'
         $env:NODE_OPTIONS = '--max-old-space-size=8192'
         if ((Invoke-NativeCommand -FilePath 'node' -ArgumentList @('scripts/clean-next-build.mjs', '--strict', '--stop-dev')) -ne 0) {

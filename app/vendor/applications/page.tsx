@@ -10,6 +10,7 @@ const VALID_FILTERS = new Set<VendorApplicationFilter>([
   'all',
   'active',
   'pending',
+  'pending_insurance',
   'approved',
   'waitlisted',
   'closed',

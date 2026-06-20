@@ -258,10 +258,13 @@ export function HomeAddressPicker(props: HomeAddressPickerProps) {
       apiKey={apiKey}
       libraries={['places']}
       loading={
-        <div className="text-sm text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Loading address search…
-        </div>
+        <>
+          <HomeAddressPickerInner {...props} id={pickerId} />
+          <p className="text-xs text-muted-foreground flex items-center gap-2">
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+            Loading address suggestions — you can still type and press Enter.
+          </p>
+        </>
       }
       fallback={
         <div className="space-y-2">

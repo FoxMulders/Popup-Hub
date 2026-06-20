@@ -6,16 +6,12 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { PopupLoaderScene } from '@/components/brand/popup-loader-scene'
 import { pickRandomLoaderVariant, type LoaderVariantId } from '@/lib/brand/loader-variants'
+import { BRAND_LOGO } from '@/lib/brand/brand-logo-paths'
+import { useBrandLogoSrc } from '@/hooks/use-brand-logo-src'
 
-const LOGO_VERSION =
-  process.env.NEXT_PUBLIC_BUILD_NUMBER ??
-  process.env.NEXT_PUBLIC_GIT_HASH ??
-  process.env.NEXT_PUBLIC_BUILD_COMMIT ??
-  '1'
-const LOGO_SRC = `/popup-hub-brand.png?v=${LOGO_VERSION}`
 /** Square storefront icon (stall + pin) — no wordmark text. */
-const LOGO_WIDTH = 994
-const LOGO_HEIGHT = 994
+const LOGO_WIDTH = BRAND_LOGO.width
+const LOGO_HEIGHT = BRAND_LOGO.height
 
 interface PopupHubLogoProps {
   className?: string
@@ -144,10 +140,12 @@ export function PopupHubLogo({
   compact = false,
   href,
 }: PopupHubLogoProps) {
+  const logoSrc = useBrandLogoSrc()
+
   const image = compact ? (
     // Plain img avoids Next/Image intrinsic-size fights in Firefox/Edge.
     <img
-      src={LOGO_SRC}
+      src={logoSrc}
       alt={title}
       width={FOOTER_LOGO_DISPLAY_WIDTH_PX}
       height={FOOTER_LOGO_DISPLAY_HEIGHT_PX}
@@ -163,7 +161,7 @@ export function PopupHubLogo({
     />
   ) : (
     <Image
-      src={LOGO_SRC}
+      src={logoSrc}
       alt={title}
       width={LOGO_WIDTH}
       height={LOGO_HEIGHT}

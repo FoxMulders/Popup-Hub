@@ -7,12 +7,11 @@ import {
   initialLoaderFrame,
   type InitialLoaderFrame,
 } from '@/lib/brand/initial-loader-controller'
+import { useBrandLogoSrc } from '@/hooks/use-brand-logo-src'
 
-/** Storefront icon (stall + pin) — transparent PNG from process-logo.mjs. */
-const LOGO_SRC = '/popup-hub-brand.png'
 const LOGO_ASPECT = 1
-/** Storefront pin sits ~49% from the top of the square icon. */
-const LOGO_ICON_ANCHOR_Y = 0.49
+/** Storefront pin sits ~57% from the top of the square icon. */
+const LOGO_ICON_ANCHOR_Y = 0.57
 const LOGO_MAX_SCALE = 1.012
 
 function fitLogoInRing(
@@ -205,6 +204,7 @@ const LOADER_PHASE = {
 } as const
 
 function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
+  const logoSrc = useBrandLogoSrc()
   const { progress, phase, globalFrame } = frame
   const breathe = 1 + Math.sin(globalFrame * 0.06) * 0.012
 
@@ -320,7 +320,7 @@ function InitialLoaderSvg({ frame }: { frame: InitialLoaderFrame }) {
           />
           <g opacity={logoOpacity} transform={`scale(${logoScale})`}>
             <image
-              href={LOGO_SRC}
+              href={logoSrc}
               x={-logoDims.width / 2}
               y={-logoDims.height / 2}
               width={logoDims.width}

@@ -337,7 +337,7 @@ const ELEMENT_ICONS: Partial<Record<VenueElementType, React.ComponentType<{ clas
   custom_label: Tag,
 }
 
-interface ApplicationInput {
+export interface ApplicationInput {
   id: string
   vendor_id?: string
   category_id: string

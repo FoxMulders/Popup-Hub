@@ -9,6 +9,9 @@ import { PageIntro } from '@/components/layout/page-intro'
 import Link from 'next/link'
 import { ArrowRight, Store, CheckCircle, Clock, AlertTriangle, CreditCard } from 'lucide-react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
+import { VendorActionRequiredBanner } from '@/components/vendor/vendor-action-required-banner'
+import { VendorPassportCompletionCard } from '@/components/vendor/vendor-passport-completion-card'
+import { vendorPassportCompletionMeter } from '@/lib/passport/vendor-passport-completion'
 import { VendorMeetTheMakerPanel } from '@/components/market-feed/vendor-meet-the-maker-panel'
 import { PassportStoriesManager } from '@/components/passport/passport-stories-manager'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
@@ -62,13 +65,14 @@ export default async function VendorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: passport }, { count: approvedCount }, { count: pendingCount }, { count: pendingInsuranceCount }, { data: approvedApps }, { data: wallet }, { data: paymentDueApps }] =
+  const [{ data: passport }, { data: profile }, { count: approvedCount }, { count: pendingCount }, { count: pendingInsuranceCount }, { data: approvedApps }, { data: wallet }, { data: paymentDueApps }] =
     await Promise.all([
       supabase
         .from('vendor_passports')
-        .select('id, business_name, is_verified')
+        .select('id, business_name, is_verified, primary_category_id, category_ids, logo_url, bio')
         .eq('user_id', user.id)
         .maybeSingle(),
+      supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
       supabase
         .from('booth_applications')
         .select('id', { count: 'exact', head: true })
@@ -100,6 +104,7 @@ export default async function VendorDashboard() {
 
   const paymentDueCount = paymentDueApps?.length ?? 0
   const awaitingReviewCount = (pendingCount ?? 0) + (pendingInsuranceCount ?? 0)
+  const passportMeter = vendorPassportCompletionMeter(passport, profile?.full_name ?? null)
 
   const approvedEventIds = [...new Set((approvedApps ?? []).map((a) => a.event_id))]
   let liveAuctionSummary = { active: null as Auction | null, upcoming: null as Auction | null, lastEnded: null as Auction | null }
@@ -129,6 +134,16 @@ export default async function VendorDashboard() {
             </Button>
           </Link>
         }
+      />
+
+      <VendorPassportCompletionCard
+        meter={passportMeter}
+        businessName={passport?.business_name ?? profile?.full_name ?? null}
+      />
+
+      <VendorActionRequiredBanner
+        pendingInsuranceCount={pendingInsuranceCount ?? 0}
+        paymentDueCount={paymentDueCount}
       />
 
       {(liveAuctionSummary.active || liveAuctionSummary.upcoming) && (

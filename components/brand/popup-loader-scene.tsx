@@ -14,6 +14,7 @@ import {
   type LoaderProp,
   type LoaderSceneFrame,
 } from '@/lib/brand/loader-variants/shared'
+import { useBrandLogoSrc } from '@/hooks/use-brand-logo-src'
 
 function frameForMode(frame: LoaderSceneFrame, mode: LoaderControllerMode): LoaderSceneFrame {
   if (mode !== 'replay') return frame
@@ -25,10 +26,9 @@ function frameForMode(frame: LoaderSceneFrame, mode: LoaderControllerMode): Load
 }
 
 /**
- * Storefront icon artwork (`/popup-hub-brand.png`) — square stall + pin mark
- * with no wordmark text so the market sits flush on the sidewalk.
+ * Storefront icon artwork — square stall + pin mark with no wordmark text
+ * so the market sits flush on the sidewalk. Light/dark PNGs swap via hook.
  */
-const LOGO_SRC = '/popup-hub-brand.png'
 const LOGO_ASPECT = 1
 
 /** Full lockup width/height derived from shared storefront footprint. */
@@ -275,6 +275,7 @@ function MarketLights({
 }
 
 function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
+  const logoSrc = useBrandLogoSrc()
   const { hubX, logoWidth, logoHeight, sidewalkY, logoBottomY, pinScale } = LOADER_LAYOUT
   const { logoTop, pinCenterX, pinCenterY } = LOADER_LAYOUT_COMPUTED
   const pinOpenAngle = frame.doorOpen * -28
@@ -342,9 +343,9 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
           </feMerge>
         </filter>
         <radialGradient id="premium-loader-pin-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#fde68a" stopOpacity="0.7" />
-          <stop offset="40%" stopColor="#c4892e" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="#2d5a27" stopOpacity="0" />
+          <stop offset="0%" stopColor="#bfdbfe" stopOpacity="0.7" />
+          <stop offset="40%" stopColor="#105fc1" stopOpacity="0.45" />
+          <stop offset="100%" stopColor="#105fc1" stopOpacity="0" />
         </radialGradient>
         <radialGradient id="premium-loader-market-warmth" cx="50%" cy="80%" r="55%">
           <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.22" />
@@ -435,7 +436,7 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
             />
           ) : null}
           <image
-            href={LOGO_SRC}
+            href={logoSrc}
             x={hubX - STOREFRONT_LOGO_WIDTH / 2}
             y={logoTop - (STOREFRONT_LOGO_HEIGHT - logoHeight) * 0.35}
             width={STOREFRONT_LOGO_WIDTH}
@@ -459,8 +460,8 @@ function LoaderSceneSvg({ frame }: { frame: LoaderSceneFrame }) {
                 <path
                   d={PIN_PATH}
                   transform={`translate(0, ${-42 * pinScale}) scale(${pinScale})`}
-                  fill="#2d5a27"
-                  stroke="#1e3f20"
+                  fill="#105fc1"
+                  stroke="#0d4a99"
                   strokeWidth="2.5"
                   opacity={1 - frame.doorOpen * 0.85}
                 />

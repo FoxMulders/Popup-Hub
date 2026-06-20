@@ -1,9 +1,11 @@
-const CACHE_NAME = 'popup-hub-shell-v13'
+const CACHE_NAME = 'popup-hub-shell-v16'
 const STATIC_ASSETS = [
   '/manifest.json',
   '/site.webmanifest',
   '/popup-hub-brand.png',
+  '/popup-hub-brand-dark.png',
   '/popup-hub-icon.png',
+  '/popup-hub-icon-dark.png',
   '/popup-hub-logo.png',
   '/logo.png',
   '/favicon.ico',

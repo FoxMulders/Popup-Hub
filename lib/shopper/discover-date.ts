@@ -64,3 +64,11 @@ export function discoverDateSearchParams(
     date: formatDateParam(date),
   }
 }
+
+/** Suggest the next broader date preset when the current filter returns nothing. */
+export function suggestDiscoverFallbackPreset(preset: DateFilterPreset): DateFilterPreset | null {
+  if (preset === 'today' || preset === 'tomorrow') return 'weekend'
+  if (preset === 'weekend') return 'next_weekend'
+  if (preset === 'next_weekend' || preset === 'this_week') return 'this_month'
+  return null
+}

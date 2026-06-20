@@ -3,6 +3,10 @@ import { ShieldAlert, Search } from 'lucide-react'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { listPublishedOrganizers, searchPublishedOrganizers } from '@/lib/queries/organizers'
 import { CheckSearchForm } from '@/components/check/check-search-form'
+import { CheckOrganizerList } from '@/components/check/check-organizer-list'
+import { HubGuardCoordinatorClaimCallout } from '@/components/check/hubguard-coordinator-claim-callout'
+import { canActAsCoordinator } from '@/lib/auth/rbac'
+import { createClient } from '@/lib/supabase/server'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 export const metadata = buildPublicMetadata({
@@ -23,6 +27,21 @@ export default async function CheckPage({ searchParams }: Props) {
       ? await searchPublishedOrganizers(q, region)
       : await listPublishedOrganizers(region)
 
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let canClaim = false
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, is_admin')
+      .eq('id', user.id)
+      .maybeSingle()
+    canClaim = canActAsCoordinator(profile)
+  }
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
       <div className="space-y-3">
@@ -41,49 +60,16 @@ export default async function CheckPage({ searchParams }: Props) {
 
       <CheckSearchForm initialQuery={q} region={region} />
 
+      {canClaim ? <HubGuardCoordinatorClaimCallout /> : null}
+
       <section>
         <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <Search className="h-4 w-4" aria-hidden />
-          {q.trim() ? `Results for “${q.trim()}”` : 'Edmonton metro organizers'}
+          {q.trim() ? `Results for “${q.trim()}”` : 'Organizers in our directory (Alberta today, expanding)'}
           <span className="text-muted-foreground font-normal">({organizers.length})</span>
         </h2>
 
-        {organizers.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-canvas px-4 py-8 text-center text-sm text-muted-foreground space-y-3">
-            <p>
-              {q.trim()
-                ? 'No published organizers match that search yet.'
-                : 'No organizers published yet. Listings appear here after verification.'}
-            </p>
-            <p>
-              Organizer not listed?{' '}
-              <Link
-                href="/check/review"
-                className="font-medium text-harvest-800 hover:underline underline-offset-2"
-              >
-                Submit a review
-              </Link>{' '}
-              and we&apos;ll add them after verification.
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {organizers.map((org) => (
-              <li key={org.id}>
-                <Link
-                  href={`/organizers/${org.slug}`}
-                  className="block rounded-xl border bg-white px-4 py-3 hover:bg-harvest-50/40 transition-colors"
-                >
-                  <p className="font-medium text-foreground">{org.display_name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {org.city}, {org.province}
-                    {org.typical_season_or_dates ? ` · ${org.typical_season_or_dates}` : null}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <CheckOrganizerList organizers={organizers} query={q} canClaim={canClaim} />
       </section>
 
       <div className="rounded-xl border border-harvest-200 bg-harvest-50/50 px-4 py-4 text-sm">

@@ -205,3 +205,21 @@ export function buildCalendarLinks(event: Event): { google: string; icsDataUrl: 
 function formatIcsUtc(d: Date): string {
   return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
+
+/** Count published markets within radius over the next N days (ignores a single-day filter). */
+export function countUpcomingEventsInRadius(
+  events: Event[],
+  origin: LatLng,
+  radiusKm: number | null,
+  fromDate: Date = startOfDay(new Date()),
+  horizonDays = 60
+): number {
+  const rangeEnd = addDays(startOfDay(fromDate), horizonDays)
+  const scoped = filterEventsByListingType(events, 'community_market')
+  const withMeta: EventWithMeta[] = scoped.map((e) => ({
+    ...e,
+    distance_km: distanceKm(origin, { lat: e.latitude, lng: e.longitude }),
+  }))
+  const inRadius = filterEventsByRadius(withMeta, radiusKm)
+  return inRadius.filter((e) => eventOccursInDateRange(e, fromDate, rangeEnd)).length
+}

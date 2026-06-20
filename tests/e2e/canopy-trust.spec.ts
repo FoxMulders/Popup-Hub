@@ -7,7 +7,7 @@ test.describe('HubGuard trust directory @prod-smoke', () => {
     await expect(
       page.getByRole('heading', { name: TRUST_DIRECTORY_LINKS.check.boothFeeHeadline })
     ).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText(/Edmonton metro organizers/i)).toBeVisible()
+    await expect(page.getByText(/Organizers in our directory/i)).toBeVisible()
 
     const organizerLink = page
       .getByRole('link', { name: /Central Occasion|Agora Markets|Lauderdale/i })

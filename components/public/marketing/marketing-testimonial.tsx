@@ -14,7 +14,7 @@ export function MarketingTestimonial() {
           <span className="mx-2 text-stone-300" aria-hidden>
             ·
           </span>
-          <span>Alberta pop-up market</span>
+          <span>Canadian pop-up market</span>
         </footer>
       </div>
     </section>

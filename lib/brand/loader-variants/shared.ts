@@ -29,12 +29,11 @@ export const LOADER_LAYOUT = {
   logoWidth: 200,
   logoHeight: 200,
   /**
-   * Pin center as a fraction of rendered icon height. The new
-   * `popup-hub-icon.png` artwork places the storefront pin/circle at
-   * roughly 49 % from the top of the icon, so the green door overlay
-   * and the masked cutout line up with it.
+   * Pin center as a fraction of rendered icon height. Location Tent artwork
+   * places the blue pin at roughly 57 % from the top of the square icon so
+   * the door overlay and masked cutout line up with it.
    */
-  pinOffsetY: 0.49,
+  pinOffsetY: 0.57,
   pinScale: 200 / 250,
   /** All variants use the slowest timing (sleepy-stroll). */
   approachFrames: 420,

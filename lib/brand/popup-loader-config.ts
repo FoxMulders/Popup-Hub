@@ -1,9 +1,12 @@
 /** Popup Hub full-screen loader configuration. */
+import { BRAND_LOGO } from '@/lib/brand/brand-logo-paths'
+
 export const POPUP_LOADER = {
   /** Legacy Lottie JSON path (kept for loader-demo.html). Premium loader uses SVG runtime. */
   animationPath: '/popup-loader.json',
   /** Maps placeholder asset filenames inside the Lottie JSON to this logo. */
-  logoPath: '/popup-hub-brand.png',
+  logoPath: BRAND_LOGO.light,
+  logoPathDark: BRAND_LOGO.dark,
   logoAssetNames: ['logo.png', 'logo', 'Logo.png', 'company-logo.png'],
   /** Marker name in AE export — frame to hold on while the page is still loading. */
   holdMarkerNames: ['pre_door', 'pre-door', 'hold', 'door_closed'],

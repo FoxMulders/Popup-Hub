@@ -22,6 +22,7 @@ const input = path.join(root, 'public', 'popup-hub-logo.png')
 const outputLogo = path.join(root, 'public', 'popup-hub-logo.png')
 /** Canonical stall+pin artwork — preferred over lockup crop when present. */
 const iconSource = path.join(root, 'public', 'popup-hub-icon-source.png')
+const iconSourceDark = path.join(root, 'public', 'popup-hub-icon-source-dark.png')
 const iconsDir = path.join(root, 'public', 'icons')
 const appDir = path.join(root, 'app')
 
@@ -188,6 +189,38 @@ async function iconMarkFromLockupCrop() {
 }
 
 /** Stall + pin mark for UI, animations, and compact favicons. */
+async function iconMarkFromSource(sourcePath, label) {
+  let iconOnly
+  try {
+    await access(sourcePath)
+    iconOnly = await makeTransparentBuffer(sourcePath)
+    iconOnly = await sharp(iconOnly).trim().png().toBuffer()
+    console.log(`Using canonical icon source (${label}):`, sourcePath)
+  } catch {
+    return null
+  }
+
+  return trimToSquare(iconOnly)
+}
+
+async function writeBrandMark(square, { iconOut, brandOut, label }) {
+  await sharp(square).toFile(iconOut)
+  console.log(`Wrote icon mark (${label}):`, iconOut)
+
+  const brandSquare = await sharp(square)
+    .resize(994, 994, {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      kernel: sharp.kernel.lanczos3,
+    })
+    .png()
+    .toBuffer()
+  await writePngAtomically(brandOut, brandSquare)
+  console.log(`Wrote UI brand icon (${label}):`, brandOut)
+
+  return brandSquare
+}
+
 async function extractIconMark() {
   let iconOnly
   try {
@@ -201,24 +234,31 @@ async function extractIconMark() {
   }
 
   const square = await trimToSquare(iconOnly)
-  const out = path.join(root, 'public', 'popup-hub-icon.png')
-  await sharp(square).toFile(out)
-  console.log('Wrote icon mark:', out)
-
-  const brandOut = path.join(root, 'public', 'popup-hub-brand.png')
-  const brandSquare = await sharp(square)
-    .resize(994, 994, {
-      fit: 'contain',
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-      kernel: sharp.kernel.lanczos3,
-    })
-    .png()
-    .toBuffer()
-  await writePngAtomically(brandOut, brandSquare)
-  console.log('Wrote UI brand icon (no wordmark):', brandOut)
+  const brandSquare = await writeBrandMark(square, {
+    iconOut: path.join(root, 'public', 'popup-hub-icon.png'),
+    brandOut: path.join(root, 'public', 'popup-hub-brand.png'),
+    label: 'light',
+  })
 
   // Icon-only legacy paths — Lottie demo and runtime swap target icon mark.
   await writePngAtomically(path.join(root, 'public', 'logo.png'), brandSquare)
+  await writePngAtomically(path.join(root, 'public', 'placeholder-logo.png'), brandSquare)
+
+  return square
+}
+
+async function extractDarkIconMark() {
+  const square = await iconMarkFromSource(iconSourceDark, 'dark')
+  if (!square) {
+    console.log('No dark icon source — skipping popup-hub-brand-dark.png')
+    return null
+  }
+
+  await writeBrandMark(square, {
+    iconOut: path.join(root, 'public', 'popup-hub-icon-dark.png'),
+    brandOut: path.join(root, 'public', 'popup-hub-brand-dark.png'),
+    label: 'dark',
+  })
 
   return square
 }
@@ -337,4 +377,5 @@ async function writeIcons(iconMark) {
 
 await makeTransparentLogo()
 const iconMark = await extractIconMark()
+await extractDarkIconMark()
 await writeIcons(iconMark)

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, Loader2, MapPin, Store } from 'lucide-react'
-import { requestUserLocation } from '@/lib/markets/user-location'
+import { CalendarDays, MapPin, Store } from 'lucide-react'
+import { goToDiscover } from '@/lib/marketing/browse-discover'
+import { VENDOR_OPEN_MARKETS_HREF, VENDOR_PASSPORT_SIGNUP_PREVIEW } from '@/lib/marketing/vendor-journey'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 import { cn } from '@/lib/utils'
 
@@ -19,7 +19,7 @@ const PATHS = [
     cta: 'Discover markets',
     accent: 'from-sage-50 to-cream border-sage-200/80 hover:border-sage-400/50',
     iconClass: 'bg-sage-100 text-sage-800',
-    needsLocation: true,
+    useDiscoverNav: true,
   },
   {
     href: '/signup?role=vendor',
@@ -31,9 +31,11 @@ const PATHS = [
     cta: 'Create vendor account',
     secondaryHref: TRUST_DIRECTORY_LINKS.check.href,
     secondaryLabel: `Or open ${TRUST_DIRECTORY_LINKS.check.label} first`,
+    tertiaryHref: VENDOR_OPEN_MARKETS_HREF,
+    tertiaryLabel: 'See open markets without signing up',
     accent: 'from-harvest-50/80 to-cream border-harvest-200/70 hover:border-harvest-400/50',
     iconClass: 'bg-harvest-100 text-harvest-800',
-    needsLocation: false,
+    showVendorSteps: true,
   },
   {
     href: '/for-organizers',
@@ -45,7 +47,6 @@ const PATHS = [
     cta: 'Organizer software',
     accent: 'from-canvas to-cream border-stone-200/80 hover:border-forest/30',
     iconClass: 'bg-forest/10 text-forest',
-    needsLocation: false,
   },
 ] as const
 
@@ -59,9 +60,11 @@ function PathCardContent({
   description,
   cta,
   iconClass,
-  loading,
   secondaryHref,
   secondaryLabel,
+  tertiaryHref,
+  tertiaryLabel,
+  showVendorSteps,
 }: {
   eyebrow: string
   icon: typeof MapPin
@@ -69,9 +72,11 @@ function PathCardContent({
   description: string
   cta: string
   iconClass: string
-  loading: boolean
   secondaryHref?: string
   secondaryLabel?: string
+  tertiaryHref?: string
+  tertiaryLabel?: string
+  showVendorSteps?: boolean
 }) {
   return (
     <>
@@ -84,17 +89,26 @@ function PathCardContent({
           iconClass
         )}
       >
-        {loading ? (
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-        ) : (
-          <Icon className="h-5 w-5" aria-hidden />
-        )}
+        <Icon className="h-5 w-5" aria-hidden />
       </span>
       <h3 className="mt-4 text-lg font-bold text-foreground">{title}</h3>
       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+      {showVendorSteps ? (
+        <ol className="mt-3 space-y-1 text-xs text-muted-foreground">
+          {VENDOR_PASSPORT_SIGNUP_PREVIEW.steps.map((step, index) => (
+            <li key={step.title}>
+              <span className="font-medium text-foreground">
+                {index + 1}. {step.title}
+              </span>
+              {' — '}
+              {step.detail}
+            </li>
+          ))}
+        </ol>
+      ) : null}
       <div className="mt-5 space-y-2">
         <span className="inline-flex items-center text-sm font-semibold text-forest group-hover:underline">
-          {loading ? 'Loading…' : `${cta} →`}
+          {`${cta} →`}
         </span>
         {secondaryHref && secondaryLabel ? (
           <Link
@@ -105,6 +119,15 @@ function PathCardContent({
             {secondaryLabel} →
           </Link>
         ) : null}
+        {tertiaryHref && tertiaryLabel ? (
+          <Link
+            href={tertiaryHref}
+            className="block text-xs font-medium text-muted-foreground hover:text-forest hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {tertiaryLabel} →
+          </Link>
+        ) : null}
       </div>
     </>
   )
@@ -112,14 +135,6 @@ function PathCardContent({
 
 export function MarketingPathCards() {
   const router = useRouter()
-  const [loadingHref, setLoadingHref] = useState<string | null>(null)
-
-  async function navigate(href: string) {
-    setLoadingHref(href)
-    await requestUserLocation()
-    router.push(href)
-    setLoadingHref(null)
-  }
 
   return (
     <section className="bg-cream px-4 pb-16 pt-4 sm:pb-20">
@@ -134,26 +149,24 @@ export function MarketingPathCards() {
         </div>
         <div className="mt-10 grid gap-5 lg:grid-cols-3">
           {PATHS.map((path) => {
-            const loading = loadingHref === path.href
             const className = cn(cardClass, path.accent)
 
-            if (path.needsLocation) {
+            if ('useDiscoverNav' in path && path.useDiscoverNav) {
               return (
                 <button
                   key={path.href}
                   type="button"
-                  disabled={loadingHref !== null}
-                  onClick={() => void navigate(path.href)}
-                  className={cn(className, 'disabled:opacity-70')}
+                  onClick={() => goToDiscover(router)}
+                  className={className}
                 >
-                  <PathCardContent {...path} loading={loading} />
+                  <PathCardContent {...path} />
                 </button>
               )
             }
 
             return (
               <Link key={path.href} href={path.href} className={className}>
-                <PathCardContent {...path} loading={false} />
+                <PathCardContent {...path} />
               </Link>
             )
           })}

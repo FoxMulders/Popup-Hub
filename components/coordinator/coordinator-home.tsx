@@ -3,14 +3,33 @@ import Link from 'next/link'
 import { CalendarDays, LayoutDashboard, Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { PortalRoleBadge } from '@/components/nav/portal-role-badge'
+import { CoordinatorGettingStarted } from '@/components/coordinator/coordinator-getting-started'
+import { CoordinatorOrganizerClaimSuggestions } from '@/components/coordinator/coordinator-organizer-claim-suggestions'
+import { CoordinatorPaymentReadinessCallout } from '@/components/coordinator/coordinator-payment-readiness-callout'
+import { CoordinatorPortalWelcome } from '@/components/coordinator/coordinator-portal-welcome'
+import { DemoMarketLauncher } from '@/components/coordinator/demo-market-launcher'
+import type { OrganizerClaimSuggestion } from '@/lib/organizers/match-coordinator-organizers'
 import { cn } from '@/lib/utils'
 
 interface CoordinatorHomeProps {
   displayName: string | null
   marketCount: number
+  claimSuggestions?: OrganizerClaimSuggestion[]
+  showPaymentReadiness?: boolean
+  organizationName?: string | null
+  squareConnected?: boolean
+  stripeConnected?: boolean
 }
 
-export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomeProps) {
+export function CoordinatorHome({
+  displayName,
+  marketCount,
+  claimSuggestions = [],
+  showPaymentReadiness = false,
+  organizationName = null,
+  squareConnected = false,
+  stripeConnected = false,
+}: CoordinatorHomeProps) {
   const greeting = displayName?.trim() ? `Welcome back, ${displayName.trim()}` : 'Welcome back'
 
   return (
@@ -23,8 +42,29 @@ export function CoordinatorHome({ displayName, marketCount }: CoordinatorHomePro
             ? `You have ${marketCount} market${marketCount === 1 ? '' : 's'}. Start a new one or browse them all.`
             : 'Create your first market or return here anytime to pick up where you left off.'
         }
-        actions={<PortalRoleBadge portal="coordinator" />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <PortalRoleBadge portal="coordinator" />
+            {marketCount > 0 ? <DemoMarketLauncher size="sm" variant="outline" /> : null}
+          </div>
+        }
       />
+
+      {marketCount === 0 ? <CoordinatorPortalWelcome /> : null}
+
+      {claimSuggestions.length > 0 ? (
+        <CoordinatorOrganizerClaimSuggestions suggestions={claimSuggestions} />
+      ) : null}
+
+      {showPaymentReadiness ? (
+        <CoordinatorPaymentReadinessCallout
+          organizationName={organizationName}
+          squareConnected={squareConnected}
+          stripeConnected={stripeConnected}
+        />
+      ) : null}
+
+      {marketCount === 0 ? <CoordinatorGettingStarted /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Link

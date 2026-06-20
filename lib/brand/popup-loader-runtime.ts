@@ -3,6 +3,7 @@ import {
   type LottieAnimationItem,
   type LottiePlayer,
 } from '@/lib/brand/popup-loader-config'
+import { resolveBrandLogoPath } from '@/lib/brand/brand-logo-paths'
 
 type LottieAsset = {
   id?: string
@@ -73,7 +74,7 @@ export function loadLottiePlayer(): Promise<LottiePlayer> {
 
 export function patchLoaderLogoAssets(
   animationData: LottieDocument,
-  logoPath = POPUP_LOADER.logoPath,
+  logoPath: string = POPUP_LOADER.logoPath,
 ): LottieDocument {
   const cloned = structuredClone(animationData)
   const fileName = logoPath.split('/').pop() ?? 'popup-hub-logo.png'
@@ -112,7 +113,7 @@ export async function fetchLoaderAnimation(): Promise<LottieDocument> {
     throw new Error(`Failed to fetch ${POPUP_LOADER.animationPath}`)
   }
   const json = (await response.json()) as LottieDocument
-  return patchLoaderLogoAssets(json)
+  return patchLoaderLogoAssets(json, resolveBrandLogoPath())
 }
 
 export type LoaderController = {

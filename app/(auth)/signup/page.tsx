@@ -19,6 +19,7 @@ import { type SignupRole } from '@/lib/auth/rbac'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
 import { marketStatusBadge } from '@/lib/theme/market'
 import { LoginForm } from '@/app/(auth)/login/login-form'
+import { VendorSignupPassportPreview } from '@/components/marketing/vendor-signup-passport-preview'
 
 const ROLE_OPTIONS = [
   {
@@ -344,6 +345,7 @@ function SignupForm() {
               for <strong>juried</strong> events — instant-book markets approve automatically.
             </p>
           ) : null}
+          {role === 'vendor' ? <VendorSignupPassportPreview /> : null}
           <form onSubmit={handleSignup} className="flex flex-col space-y-4">
             <div className="space-y-1">
               <Label htmlFor="name">Full name</Label>

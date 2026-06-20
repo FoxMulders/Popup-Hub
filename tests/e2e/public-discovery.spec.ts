@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { HOME_HERO } from '../../lib/marketing/home-hero'
 import { TRUST_DIRECTORY_LINKS } from '../../lib/nav/trust-directory-nav'
 
 const smokeEventId =
@@ -8,8 +9,12 @@ test.describe('Public discovery and routing smoke', () => {
   test('landing and discover pages load', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveURL('/')
+    await expect(page.getByRole('heading', { level: 1, name: HOME_HERO.headline })).toBeVisible()
     await expect(
-      page.getByRole('heading', { name: TRUST_DIRECTORY_LINKS.check.boothFeeHeadline })
+      page.getByRole('link', { name: 'Start hosting a market' }).first()
+    ).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: TRUST_DIRECTORY_LINKS.check.ctaOpen }).first()
     ).toBeVisible()
 
     await page.goto('/discover')

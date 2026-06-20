@@ -47,7 +47,14 @@ export const VENDOR_APPLICATION_STATUS_UI: Record<ApplicationStatus, VendorAppli
   },
 }
 
-export type VendorApplicationFilter = 'all' | 'active' | 'pending' | 'approved' | 'waitlisted' | 'closed'
+export type VendorApplicationFilter =
+  | 'all'
+  | 'active'
+  | 'pending'
+  | 'pending_insurance'
+  | 'approved'
+  | 'waitlisted'
+  | 'closed'
 
 /** Vendor already has a booth application — show its status even when the market is closed to new applicants. */
 export function hasExistingVendorApplication(
@@ -112,6 +119,8 @@ export function filterVendorApplications<T extends { status: ApplicationStatus; 
       return applications.filter(
         (app) => app.status === 'pending' || app.status === 'pending_insurance',
       )
+    case 'pending_insurance':
+      return applications.filter((app) => app.status === 'pending_insurance')
     case 'approved':
       return applications.filter((app) => app.status === 'approved')
     case 'waitlisted':

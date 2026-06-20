@@ -19,17 +19,18 @@ import {
   filterEventsByListingType,
   filterEventsByRadius,
   filterEventsByWeekend,
-  formatDateParam,
   getThisMonthEndDate,
   getThisWeekEndDate,
   getWeekendDates,
-  parseDateParam,
   sortEventsByDistance,
+  countUpcomingEventsInRadius,
   type EventWithMeta,
 } from '@/lib/shopper/events'
 import type { Event } from '@/types/database'
+import { DiscoverEmptyState } from '@/components/shopper/discover-empty-state'
+import { DiscoverWhenFilter } from '@/components/shopper/discover-when-filter'
 import { SitePageBand } from '@/components/layout/site-page-band'
-import { Gavel } from 'lucide-react'
+import { clampSliderRadiusKm } from '@/lib/markets/distance-radius'
 import { cn } from '@/lib/utils'
 
 interface DiscoverScreenProps {
@@ -121,6 +122,16 @@ export function DiscoverScreen({
     return inRadius.filter((e) => activeAuctionByEventId[e.id] != null)
   }, [events, datePreset, filterDate, origin, radiusKm, vendorCounts, liveAuctionsOnly, activeAuctionByEventId])
 
+  const upcomingInAreaCount = useMemo(
+    () => countUpcomingEventsInRadius(events, origin, radiusKm),
+    [events, origin, radiusKm]
+  )
+
+  const widenRadius = useCallback(() => {
+    if (radiusKm == null) return
+    setRadiusKm(clampSliderRadiusKm(radiusKm + 25))
+  }, [radiusKm, setRadiusKm])
+
   const dateSummary = useMemo(() => {
     if (datePreset === 'weekend' || datePreset === 'next_weekend') {
       const [sat, sun] = getWeekendDates(filterDate)
@@ -151,98 +162,15 @@ export function DiscoverScreen({
       />
 
       <div className="mx-auto w-full max-w-full overflow-x-hidden px-4 py-6 sm:max-w-7xl sm:py-8">
-      <div className="mt-0 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">When</p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={datePreset === 'today' ? 'default' : 'outline'}
-            className="min-h-10 touch-manipulation rounded-full px-4"
-            onClick={() => setDatePreset('today')}
-          >
-            Today
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={datePreset === 'tomorrow' ? 'default' : 'outline'}
-            className="min-h-10 touch-manipulation rounded-full px-4"
-            onClick={() => setDatePreset('tomorrow')}
-          >
-            Tomorrow
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={datePreset === 'weekend' ? 'default' : 'outline'}
-            className="min-h-10 touch-manipulation rounded-full px-4"
-            onClick={() => setDatePreset('weekend')}
-          >
-            This Weekend
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={datePreset === 'next_weekend' ? 'default' : 'outline'}
-            className="min-h-10 touch-manipulation rounded-full px-4"
-            onClick={() => setDatePreset('next_weekend')}
-          >
-            Next Weekend
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={datePreset === 'this_week' ? 'default' : 'outline'}
-            className="min-h-10 touch-manipulation rounded-full px-4"
-            onClick={() => setDatePreset('this_week')}
-          >
-            This Week
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={datePreset === 'this_month' ? 'default' : 'outline'}
-            className="min-h-10 touch-manipulation rounded-full px-4"
-            onClick={() => setDatePreset('this_month')}
-          >
-            This Month
-          </Button>
-          <label
-            className={cn(
-              'inline-flex min-h-10 touch-manipulation items-center gap-2 rounded-full border px-4 text-sm',
-              datePreset === 'custom'
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-input bg-transparent'
-            )}
-          >
-            <span>Select Date</span>
-            <input
-              type="date"
-              className={cn(
-                'min-h-9 border-0 bg-transparent outline-none touch-manipulation',
-                datePreset === 'custom' ? 'text-primary-foreground' : ''
-              )}
-              value={formatDateParam(filterDate)}
-              onChange={(e) => {
-                if (e.target.value) {
-                  setDatePreset('custom', parseDateParam(e.target.value))
-                }
-              }}
-            />
-          </label>
-          <Button
-            type="button"
-            size="sm"
-            variant={liveAuctionsOnly ? 'default' : 'outline'}
-            className="min-h-11 touch-manipulation gap-1.5"
-            onClick={() => replaceParams({ live: liveAuctionsOnly ? null : 'auctions' })}
-          >
-            <Gavel className="h-3.5 w-3.5" aria-hidden />
-            Quarter auctions
-          </Button>
-        </div>
-        <p className="text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-stone-200/70 bg-white/90 p-4 shadow-sm sm:p-5">
+        <DiscoverWhenFilter
+          datePreset={datePreset}
+          filterDate={filterDate}
+          liveAuctionsOnly={liveAuctionsOnly}
+          onPresetChange={setDatePreset}
+          onLiveAuctionsToggle={() => replaceParams({ live: liveAuctionsOnly ? null : 'auctions' })}
+        />
+        <p className="mt-3 text-sm text-muted-foreground">
           {liveAuctionsOnly ? (
             <>
               Showing{' '}
@@ -256,17 +184,17 @@ export function DiscoverScreen({
             </>
           )}
         </p>
-      </div>
 
-      <div className="mt-4">
-        <MarketAreaFilter
-          radiusKm={radiusKm}
-          onRadiusChange={setRadiusKm}
-          locationLabel={locationLabel}
-          locating={locating}
-          onUseMyLocation={handleUseMyLocation}
-          onAddressSelect={setOriginFromPlace}
-        />
+        <div className="mt-4 border-t border-stone-200/70 pt-4">
+          <MarketAreaFilter
+            radiusKm={radiusKm}
+            onRadiusChange={setRadiusKm}
+            locationLabel={locationLabel}
+            locating={locating}
+            onUseMyLocation={handleUseMyLocation}
+            onAddressSelect={setOriginFromPlace}
+          />
+        </div>
       </div>
 
       <div
@@ -321,23 +249,34 @@ export function DiscoverScreen({
             showUserOriginPin={showDeviceLocationPin}
           />
           {filtered.length === 0 ? (
-            <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center">
-              <div className="pointer-events-auto rounded-xl border border-stone-200 bg-white/95 px-4 py-2 text-center text-xs font-medium shadow-sm backdrop-blur-sm sm:max-w-md">
-                {liveAuctionsOnly
-                  ? 'No quarter auctions on this day within your area — pan the map, try another date, or turn off the Quarter auctions filter.'
-                  : 'No community markets on this day within your area — pan the map, widen the radius, or try another date.'}
-              </div>
+            <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center sm:inset-x-6">
+              <DiscoverEmptyState
+                compact
+                liveAuctionsOnly={liveAuctionsOnly}
+                datePreset={datePreset}
+                radiusKm={radiusKm}
+                upcomingInAreaCount={upcomingInAreaCount}
+                onTryPreset={setDatePreset}
+                onWidenRadius={widenRadius}
+                onShowEverywhere={() => setRadiusKm(null)}
+                onClearLiveAuctionFilter={() => replaceParams({ live: null })}
+                className="pointer-events-auto sm:max-w-lg"
+              />
             </div>
           ) : null}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="mt-4 rounded-2xl marketing-glass-card py-16 text-center">
-          <p className="text-muted-foreground">
-            {liveAuctionsOnly
-              ? 'No quarter auctions on this day within your area. Try another date or turn off the Quarter auctions filter.'
-              : 'No community markets on this day within your area. Try another date or widen the radius.'}
-          </p>
-        </div>
+        <DiscoverEmptyState
+          className="mt-4"
+          liveAuctionsOnly={liveAuctionsOnly}
+          datePreset={datePreset}
+          radiusKm={radiusKm}
+          upcomingInAreaCount={upcomingInAreaCount}
+          onTryPreset={setDatePreset}
+          onWidenRadius={widenRadius}
+          onShowEverywhere={() => setRadiusKm(null)}
+          onClearLiveAuctionFilter={() => replaceParams({ live: null })}
+        />
       ) : (
         <DiscoverEventCards
           events={filtered}

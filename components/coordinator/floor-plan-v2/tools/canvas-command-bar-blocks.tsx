@@ -61,6 +61,10 @@ import { VENDOR_BOOTH_TOOLBAR } from '@/components/coordinator/floor-plan-v2/can
 import { formatDiscreteZoomPercent } from '@/lib/floor-plan/discrete-zoom'
 import { BOOTH_MAP_LABEL_OPTIONS } from '@/lib/coordinator/booth-map-label'
 import {
+  hubGridLayoutModeLabel,
+  type HubGridLayoutMode,
+} from '@/lib/floor-plan/hubgrid-layout-mode'
+import {
   CommandButton,
   toolbarControlHeight,
   toolbarDividerClass,
@@ -568,6 +572,8 @@ export interface CanvasCommandBarBlockContext {
   saveDraftLoading?: boolean
   patronPathEnabled?: boolean
   onPatronPathToggle?: () => void
+  hubGridLayoutMode?: HubGridLayoutMode
+  onHubGridLayoutModeToggle?: () => void
   showClearanceWarnings?: boolean
   onClearanceWarningsToggle?: () => void
   onRequestAiLayoutFeedback?: () => void
@@ -597,6 +603,40 @@ export interface CanvasCommandBarBlockContext {
   topBarLayout?: boolean
   /** Dashboard header row — view/setup + hall management. */
   headerBarLayout?: boolean
+}
+
+function proLayoutControlsEnabled(ctx: CanvasCommandBarBlockContext): boolean {
+  return ctx.hubGridLayoutMode !== 'simple'
+}
+
+function renderHubGridLayoutModeToggle(
+  ctx: CanvasCommandBarBlockContext,
+  compact: boolean
+): React.ReactNode {
+  if (!ctx.onHubGridLayoutModeToggle || !ctx.hubGridLayoutMode) return null
+  const mode = ctx.hubGridLayoutMode
+  const isPro = mode === 'pro'
+  return (
+    <>
+      <div className={toolbarDividerClass(compact)} aria-hidden />
+      <CommandButton
+        onClick={ctx.onHubGridLayoutModeToggle}
+        title={
+          isPro
+            ? 'Pro mode — clearance, category rules, vendor labels'
+            : 'Simple mode — booth numbers only; switch to Pro for full aisle checks'
+        }
+        active={isPro}
+        className={
+          isPro
+            ? 'bg-stone-200 text-stone-950 hover:bg-stone-200 font-semibold text-[10px] px-2 min-w-[2.75rem]'
+            : 'text-stone-700 hover:bg-stone-100 font-semibold text-[10px] px-2 min-w-[2.75rem]'
+        }
+      >
+        {hubGridLayoutModeLabel(mode)}
+      </CommandButton>
+    </>
+  )
 }
 
 export function renderCanvasCommandBarBlock(
@@ -1605,7 +1645,8 @@ export function renderCanvasCommandBarBlock(
                 </CommandButton>
               </>
             ) : null}
-            {ctx.onClearanceWarningsToggle ? (
+            {renderHubGridLayoutModeToggle(ctx, compact)}
+            {ctx.onClearanceWarningsToggle && proLayoutControlsEnabled(ctx) ? (
               <>
                 <div className={toolbarDividerClass(compact)} aria-hidden />
                 <CommandButton
@@ -1626,7 +1667,7 @@ export function renderCanvasCommandBarBlock(
                 </CommandButton>
               </>
             ) : null}
-            {ctx.onCategorySeparationToggle ? (
+            {ctx.onCategorySeparationToggle && proLayoutControlsEnabled(ctx) ? (
               <>
                 <div className={toolbarDividerClass(compact)} aria-hidden />
                 <CommandButton
@@ -1783,7 +1824,8 @@ export function renderCanvasCommandBarBlock(
                 <Route className="h-3.5 w-3.5" />
               </CommandButton>
             ) : null}
-            {ctx.onClearanceWarningsToggle ? (
+            {renderHubGridLayoutModeToggle(ctx, compact)}
+            {ctx.onClearanceWarningsToggle && proLayoutControlsEnabled(ctx) ? (
               <CommandButton
                 onClick={ctx.onClearanceWarningsToggle}
                 title={
@@ -1947,7 +1989,8 @@ export function renderCanvasCommandBarBlock(
                   <Route className="h-3.5 w-3.5" />
                 </CommandButton>
               ) : null}
-              {ctx.onClearanceWarningsToggle ? (
+              {renderHubGridLayoutModeToggle(ctx, compact)}
+              {ctx.onClearanceWarningsToggle && proLayoutControlsEnabled(ctx) ? (
                 <CommandButton
                   onClick={ctx.onClearanceWarningsToggle}
                   title={

@@ -50,9 +50,16 @@ import {
   writeClearanceWarningsEnabled,
 } from '@/lib/coordinator/booth-clearance-warnings-pref'
 import {
-  isCategorySeparationEnabled,
   setCategorySeparationEnabled,
 } from '@/lib/floor-plan/category-separation-prefs'
+import {
+  applyHubGridLayoutMode,
+  readHubGridLayoutMode,
+  settingsForHubGridLayoutMode,
+  writeHubGridLayoutMode,
+  type HubGridLayoutMode,
+} from '@/lib/floor-plan/hubgrid-layout-mode'
+import { useOptionalMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import { LayoutCanvas } from './canvas/floor-plan-canvas'
 import { canvasGridDocPatch } from './canvas/canvas-grid-spacing'
 import { CanvasLegend } from './canvas/canvas-legend'
@@ -420,6 +427,7 @@ function FloorPlanV2Workspace({
     addLog('Geometry debug console ready.')
   }, [addLog])
   const isDashboard = variant === 'dashboard'
+  const marketMgmt = useOptionalMarketManagement()
   const isEmbedded = chrome === 'embedded'
   const isSpatialChrome = chrome === 'spatial'
   const hideLayoutToolsHeader = isEmbedded || isSpatialChrome
@@ -470,22 +478,23 @@ function FloorPlanV2Workspace({
   const [showLabels, setShowLabels] = useState(true)
   const [boothMapLabelMode, setBoothMapLabelMode] = useState<BoothMapLabelMode>(
     () => {
-      if (!isDashboard || typeof window === 'undefined') return 'vendor'
-      try {
-        const raw = window.localStorage.getItem('popup-hub:booth-map-label-mode')
-        if (raw === 'category' || raw === 'boothId' || raw === 'vendor') return raw
-      } catch {
-        // ignore
-      }
-      return 'vendor'
+      if (!isDashboard || typeof window === 'undefined') return 'boothId'
+      return settingsForHubGridLayoutMode(readHubGridLayoutMode()).boothMapLabelMode
     }
   )
   const [patronPathEnabled, setPatronPathEnabled] = useState(false)
-  const [showClearanceWarnings, setShowClearanceWarnings] = useState(() =>
-    readClearanceWarningsEnabled()
+  const [hubGridLayoutMode, setHubGridLayoutMode] = useState<HubGridLayoutMode>(() =>
+    isDashboard && typeof window !== 'undefined' ? readHubGridLayoutMode() : 'simple'
   )
+  const [showClearanceWarnings, setShowClearanceWarnings] = useState(() => {
+    if (!isDashboard || typeof window === 'undefined') return false
+    return settingsForHubGridLayoutMode(readHubGridLayoutMode()).showClearanceWarnings
+  })
   const [categorySeparationEnabled, setCategorySeparationEnabledState] =
-    useState(() => isCategorySeparationEnabled())
+    useState(() => {
+      if (!isDashboard || typeof window === 'undefined') return false
+      return settingsForHubGridLayoutMode(readHubGridLayoutMode()).categorySeparationEnabled
+    })
   const clearanceIssueToastRef = useRef(false)
   const [unifiedLayoutOverlay, setUnifiedLayoutOverlay] = useState<{
     spinePath: ReadonlyArray<{ x: number; y: number }>
@@ -2609,6 +2618,12 @@ function FloorPlanV2Workspace({
   const handleClearanceWarningsToggle = useCallback(() => {
     setShowClearanceWarnings((enabled) => {
       const next = !enabled
+      writeClearanceWarningsEnabled(next)
+      if (next) {
+        setHubGridLayoutMode('pro')
+        writeHubGridLayoutMode('pro')
+        marketMgmt?.setHubGridLayoutMode('pro')
+      }
       if (next) {
         toast.message(
           'Clearance warnings on — yellow when a booth may be too close to another vendor, table, wall, or fixture; red when it is too close.',
@@ -2622,12 +2637,15 @@ function FloorPlanV2Workspace({
       }
       return next
     })
-  }, [])
+  }, [marketMgmt])
 
   const handleCategorySeparationToggle = useCallback(() => {
     setCategorySeparationEnabledState((enabled) => {
       const next = !enabled
       setCategorySeparationEnabled(next)
+      setHubGridLayoutMode('pro')
+      writeHubGridLayoutMode('pro')
+      marketMgmt?.setHubGridLayoutMode('pro')
       toast.message(
         next
           ? 'Category separation on — identical categories must stay ≥4 columns and ≥2 rows apart.'
@@ -2636,7 +2654,25 @@ function FloorPlanV2Workspace({
       )
       return next
     })
-  }, [])
+  }, [marketMgmt])
+
+  const handleHubGridLayoutModeToggle = useCallback(() => {
+    setHubGridLayoutMode((mode) => {
+      const next: HubGridLayoutMode = mode === 'simple' ? 'pro' : 'simple'
+      const settings = applyHubGridLayoutMode(next)
+      setShowClearanceWarnings(settings.showClearanceWarnings)
+      setCategorySeparationEnabledState(settings.categorySeparationEnabled)
+      setBoothMapLabelMode(settings.boothMapLabelMode)
+      marketMgmt?.setHubGridLayoutMode(next)
+      toast.message(
+        next === 'simple'
+          ? 'Simple mode — booth numbers, no clearance or category rules. Switch to Pro when you need full aisle checks.'
+          : 'Pro mode — clearance bands, category separation, and vendor labels enabled.',
+        { duration: 4800 }
+      )
+      return next
+    })
+  }, [marketMgmt])
 
   const handleAddRoomWithSelectTool = useCallback(
     (options?: import('@/lib/coordinator/add-layout-room').AddLayoutRoomOptions) => {
@@ -2802,6 +2838,8 @@ function FloorPlanV2Workspace({
     saveDraftLoading,
     patronPathEnabled,
     onPatronPathToggle: handlePatronPathToggle,
+    hubGridLayoutMode,
+    onHubGridLayoutModeToggle: handleHubGridLayoutModeToggle,
     showClearanceWarnings,
     onClearanceWarningsToggle: handleClearanceWarningsToggle,
     categorySeparationEnabled,

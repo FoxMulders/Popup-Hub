@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { createClient } from '@/lib/supabase/client'
-import { BoothPlanner } from '@/components/coordinator/booth-planner'
+import { DemoMarketGuideBanner } from '@/components/coordinator/demo-market-guide-banner'
+import type { ApplicationInput } from '@/components/coordinator/booth-planner'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 import {
   getActiveRoom,
@@ -104,8 +105,6 @@ import type {
   EventListingType,
 } from '@/types/database'
 
-type ApplicationInput = Parameters<typeof BoothPlanner>[0]['applications']
-
 type AutosaveResult =
   | { ok: true; eventId: string | null }
   | { ok: false; reason: 'schedule'; scheduleReason: ScheduleBoundsFailureReason }
@@ -132,8 +131,10 @@ export interface MarketSetupWizardProps {
   categories: Category[]
   existing?: Event | null
   existingLayout?: BoothLayout | null
-  applications?: ApplicationInput
+  applications?: ApplicationInput[]
   initialStep?: WizardStep
+  /** Show guided copy after creating a demo market draft. */
+  demoMode?: boolean
 }
 
 function buildCategoryLimitsFromEvent(
@@ -224,6 +225,7 @@ export function MarketSetupWizard({
   existingLayout,
   applications = [],
   initialStep = 1,
+  demoMode = false,
 }: MarketSetupWizardProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -1307,6 +1309,8 @@ export function MarketSetupWizard({
           }
         />
       ) : null}
+
+      {isDraftMode && demoMode ? <DemoMarketGuideBanner active /> : null}
 
       <div
         className={cn(

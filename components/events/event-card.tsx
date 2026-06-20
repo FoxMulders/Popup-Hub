@@ -122,19 +122,19 @@ export function EventCard({
       <div className="flex flex-1 flex-col">
         <Link href={href} className="block flex-1">
           <CardContent className="p-4 pb-2">
-            <h3 className="line-clamp-1 font-heading font-semibold leading-tight text-foreground">
+            <h3 className="line-clamp-2 font-heading text-base font-semibold leading-snug text-foreground sm:text-lg">
               {event.name}
             </h3>
-            <div className="mt-2 space-y-1">
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="mt-2.5 space-y-1.5">
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
                 <span className="truncate">{event.location_name}</span>
               </p>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
                 <Calendar className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
                 {dateLabel}
               </p>
-              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
                 <Clock className="h-3.5 w-3.5 shrink-0 text-harvest-500" />
                 {hours}
               </p>

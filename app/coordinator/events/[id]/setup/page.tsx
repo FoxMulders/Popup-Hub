@@ -10,12 +10,12 @@ import type { BoothLayout, Category, Event } from '@/types/database'
 
 interface Props {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ step?: string }>
+  searchParams: Promise<{ step?: string; demo?: string }>
 }
 
 export default async function EventSetupPage({ params, searchParams }: Props) {
   const { id } = await params
-  const { step } = await searchParams
+  const { step, demo } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -89,6 +89,7 @@ export default async function EventSetupPage({ params, searchParams }: Props) {
         existingLayout={layoutData as BoothLayout | null}
         applications={(applications ?? []) as unknown as Parameters<typeof MarketSetupWizard>[0]['applications']}
         initialStep={parseSetupWizardStepFromUrl(step, Boolean((event as Event).skip_venue_layout))}
+        demoMode={demo === '1'}
       />
       </div>
     </div>

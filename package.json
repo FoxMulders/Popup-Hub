@@ -1,6 +1,6 @@
 {
     "name": "popup-hub",
-    "version": "1.0.0",
+    "version": "1.102.0",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -12,6 +12,8 @@
         "version:patch": "npm version patch --no-git-tag-version",
         "version:minor": "npm version minor --no-git-tag-version",
         "version:major": "npm version major --no-git-tag-version",
+        "version:sync-history": "node scripts/bump-package-version.mjs --from-history",
+        "version:from-commit": "node scripts/bump-package-version.mjs --message",
         "start": "next start",
         "lint": "eslint",
         "db:push": "npx supabase db push",

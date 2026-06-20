@@ -30,6 +30,10 @@ import { populateTestSuiteCanvas } from '@/lib/coordinator/populate-test-suite-c
 import { formatCadCurrency } from '@/lib/coordinator/booth-placement-status'
 import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import { docHasUnresolvedClearanceIssues } from '@/lib/coordinator/booth-clearance-visual'
+import {
+  readHubGridLayoutMode,
+  type HubGridLayoutMode,
+} from '@/lib/floor-plan/hubgrid-layout-mode'
 
 export interface DashboardEventSummary {
   id: string
@@ -92,8 +96,10 @@ export interface MarketManagementState {
   }>
   focusBooth: (boothId: string) => void
   totalRevenueCents: number
-  /** True when any vendor booth violates the 3′ clearance baseline. */
+  /** True when any vendor booth violates the 3′ clearance baseline (Pro mode only). */
   hasClearanceIssues: boolean
+  hubGridLayoutMode: HubGridLayoutMode
+  setHubGridLayoutMode: (mode: HubGridLayoutMode) => void
   /** Vendor booths on the live canvas (all rooms). */
   canvasVendorBoothCount: number
   /** Event category cap names for booth tagging and palette rotation. */
@@ -174,6 +180,12 @@ export function MarketManagementProvider({
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [vipHoldIds, setVipHoldIds] = useState<Set<string>>(() => new Set())
   const [docRevision, setDocRevision] = useState(0)
+  const [hubGridLayoutMode, setHubGridLayoutModeState] = useState<HubGridLayoutMode>(() =>
+    typeof window !== 'undefined' ? readHubGridLayoutMode() : 'simple'
+  )
+  const setHubGridLayoutMode = useCallback((mode: HubGridLayoutMode) => {
+    setHubGridLayoutModeState(mode)
+  }, [])
   const prevSelectedEventIdRef = useRef(selectedEventId)
 
   useEffect(() => {
@@ -522,10 +534,11 @@ export function MarketManagementProvider({
   )
 
   const hasClearanceIssues = useMemo(() => {
+    if (hubGridLayoutMode === 'simple') return false
     void docRevision
     if (!floorPlanStore) return false
     return docHasUnresolvedClearanceIssues(floorPlanStore.doc)
-  }, [docRevision, floorPlanStore])
+  }, [docRevision, floorPlanStore, hubGridLayoutMode])
 
   const canvasVendorBoothCount = useMemo(() => {
     void docRevision
@@ -576,6 +589,8 @@ export function MarketManagementProvider({
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,
+      hubGridLayoutMode,
+      setHubGridLayoutMode,
       canvasVendorBoothCount,
       eventCategoryNames,
     }),
@@ -604,6 +619,8 @@ export function MarketManagementProvider({
       focusBooth,
       totalRevenueCents,
       hasClearanceIssues,
+      hubGridLayoutMode,
+      setHubGridLayoutMode,
       canvasVendorBoothCount,
       eventCategoryNames,
     ]
