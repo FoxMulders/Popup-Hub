@@ -5,13 +5,19 @@
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
 ## QA handoff — full workflow test request (2026-06-20)
-- **Checklist:** `docs/QA_TEST_REQUEST.md` — P0 core E2E (Phases 1–7), P1 recent production (HubGuard, discover UX, coordinator roadmap, Blueprint Studio), D pending-preview appendix, sign-off template.
+- **Checklist:** `docs/QA_TEST_REQUEST.md` — P0 core E2E (Phases 1–7), P1 recent production (HubGuard, discover UX, coordinator roadmap, HubGrid), D pending-preview appendix, sign-off template.
 - **Baseline workflow:** `docs/QA_FULL_WORKFLOW.md` (Phases 0–8).
 - **Target:** Production https://popuphub.ca — build **217** @ commit `4cae286`.
 - **Automated (dev):** `npm run qa:automation` (CI-safe static) | `npm run qa:automation:prod` (prod Playwright smoke) | `npm run test:e2e:smoke`
 - **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
 
-## Active work — market save migration fix (local, not deployed)
+## Active work — coordinator market load crash (local, not deployed)
+- **Issue:** Opening a created market (event hub `/coordinator/events/[id]`) showed the coordinator error boundary — "We couldn't load this coordinator page." Markets list (`/coordinator/markets`) still loaded.
+- **Root cause:** Circular module import — `layout-density.ts` → `booth-clearance-visual.ts` → `door-clearance-zones.ts` → back to `booth-clearance-visual` before `BOOTH_CLEARANCE_GOOD_FT` initialized. Event hub pulls floor-plan modules via `ApplicationBoard` client bundle.
+- **Fix:** Extracted clearance constants to `lib/coordinator/booth-clearance-constants.ts` and `edgeClearanceBetweenRects` to `lib/floor-plan/rect-edge-clearance.ts`; hardened studio curation queue date display + profile `.maybeSingle()`.
+- **Verify:** Dev mock-login → `/coordinator/events/4e87e086-…` HTTP **200** (was 500); `/coordinator/markets` HTTP **200**; `npx tsc --noEmit` PASS.
+- **Next:** Commit + deploy when user asks.
+
 - **Goal:** Fix "Database migration required" when saving a new market.
 - **Root cause:** Hosted Supabase was missing migration **117** (`community_league_discount_*` columns). Error text incorrectly pointed at migration 088.
 - **Applied:** `npm run db:push` — migrations **115**, **116**, **117** on `ensbggtbgabogvynqsqt`.
@@ -41,19 +47,33 @@
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover` footer at bottom, location pin on map, `/check` nav vs page titles, coordinator new venue → admin queue, league discount on event edit.
 - **Next:** Commit + deploy when user asks.
 
+## Active work — create market single scroll (local, not deployed)
+- **Goal:** `/coordinator/events/new` — one scrollbar (wizard body only, not page + body).
+- **Shipped locally:** Match setup page shell — `overflow-hidden` on `.coordinator-setup-page`, `min-h-0` + `overscroll-y-contain` on `.setup-wizard-body`.
+- **Verify:** Smoke Create New Market — only inner content scrolls below nav.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — white form fields on canvas (local, not deployed)
 - **Goal:** Search and other typable fields read as editable (white surface on cream/canvas backgrounds).
 - **Shipped locally:** Base `Input`, `Textarea`, `Select`, and `InputGroup` use `bg-white` in light mode.
 - **Verify:** Smoke `/check` organizer search, `/discover` address, vendor market search, HubGuard review form fields.
 - **Next:** Commit + deploy when user asks.
 
+## Active work — HubGrid rename (local, not deployed)
+- **Goal:** Rename user-facing **Blueprint Studio** → **HubGrid** across coordinator nav, workspace tabs, help/FAQ, and E2E prerequisites.
+- **Shipped locally:** 35 files — nav (`app-nav`, workspace rail), studio header/tabs, markets list CTAs, layout help search keywords, FAQ, QA checklist, `.cursor/rules/popup-hub-ecosystem.mdc`.
+- **Unchanged:** Route `/coordinator/studio`; internal view id `blueprint` in workspace context.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: nav link **HubGrid**; studio tab label **HubGrid**; Layout help search `hubgrid`.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — logo icon-only (no wordmark) (local, not deployed)
-- **Goal:** Remove “Popup Hub” text band below the storefront icon everywhere — nav, footer, loaders, PWA icons.
+- **Goal:** Remove “Popup Hub” text band below the storefront icon everywhere — nav, footer, loaders, PWA icons. Icon artwork must stay the canonical stall + location pin (not the broken lockup crop).
 - **Shipped locally:**
-  - **`scripts/process-logo.mjs`:** `popup-hub-brand.png`, `logo.png`, PWA/app icons use cropped stall+pin mark (994×994); source lockup kept in `popup-hub-logo.png`
+  - **`public/popup-hub-icon-source.png`:** Canonical stall+pin artwork restored from official reference
+  - **`scripts/process-logo.mjs`:** Prefers `popup-hub-icon-source.png` over lockup crop; regenerates `popup-hub-brand.png`, `logo.png`, PWA/app icons at 994×994
   - **Loaders:** Initial loader drops “Markets Made Easy” tagline; walking-market scene uses square icon asset
   - **`popup-hub-logo.tsx`:** Square 994×994 dimensions
-- **Verify:** `npm run assets:logo` + `npx tsc --noEmit` — PASS. Smoke: header logo has no text band; splash loader shows icon only.
+- **Verify:** `npm run assets:logo` + `npx tsc --noEmit` — PASS. Smoke: header logo shows teardrop pin (not concentric circles); no text band below icon.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — HubGuard booth-fee headline (local, not deployed)
@@ -83,7 +103,7 @@
 ## Shipped this session (coordinator feature roadmap (8 items), deployed 2026-06-19)
 - **Goal:** Phase A–C coordinator enhancements from roadmap plan — saved layouts, paste cover, mobile layout gate, layout image import, league discount, venue admin approval, Google Docs contracts, for-organizers value calculator.
 - **Shipped locally:**
-  - **Phase A:** `SavedLayoutPicker` in Blueprint Studio dashboard + edit-public toggle; `FlyerCoverUpload` paste/drop; mobile iron-dome on wizard step 3, event hub banner, production `dashboard-bootstrap`
+  - **Phase A:** `SavedLayoutPicker` in HubGrid dashboard + edit-public toggle; `FlyerCoverUpload` paste/drop; mobile iron-dome on wizard step 3, event hub banner, production `dashboard-bootstrap`
   - **Phase B:** `POST /api/coordinator/layout/import-image` + vision parser + canvas import button (paste support); community league vendor discount (migration **117**, wizard, apply, checkout best-of); `platform_venue_submissions` + wizard submit gate + publish block + `/admin/venues`
   - **Phase C:** Google OAuth routes + `GoogleDocsContractImport` in `BoothContractEditor`; `EventValueCalculator` on `/for-organizers`
 - **Verify:** `npx tsc --noEmit` — PASS. Apply migrations **108** (saved layouts) + **117** (roadmap) via `npm run db:push`. Google Docs needs `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`; layout import needs `OPENROUTER_API_KEY`.
@@ -215,7 +235,7 @@
 - **Next:** Commit + deploy when user asks.
 
 ## Shipped this session — deploy + production hygiene (deployed 2026-06-17)
-- **Deploy 1 (`0b7a8d7`, build 204):** Past markets access fix — safe date formatting, archived events in Blueprint Studio, coordinator/vendor layout cookie fix (Next.js 16), error boundary, markets loading skeleton, `npm run test:unit`.
+- **Deploy 1 (`0b7a8d7`, build 204):** Past markets access fix — safe date formatting, archived events in HubGrid, coordinator/vendor layout cookie fix (Next.js 16), error boundary, markets loading skeleton, `npm run test:unit`.
 - **Deploy 2 (build 205):** Env sync — `SQUARE_CLIENT_SECRET`, `NEXT_PUBLIC_APP_URL=https://popuphub.ca`, 15 keys refreshed on Vercel.
 - **DB:** Migration `111_passport_niche_tags.sql` applied via `npm run db:push`.
 - **Hygiene:** `sync-vercel-env.ps1` default app URL → popuphub.ca; `OPENROUTER_API_KEY` in sync list; `verify-production.ps1` checks both domains + build-info + sitemap; `PRODUCTION_NEXT_STEPS.md` updated.
@@ -233,7 +253,7 @@
 - **Root causes addressed:**
   - **`cookies().set()` in coordinator layout** — illegal in Next.js 16 Server Components; crashed the entire coordinator segment on load. Removed (middleware syncs portal cookie). Same fix applied to vendor layout.
   - **Unsafe `date-fns` formatting** on market rows when `start_at` is missing/invalid — SSR crash on both Active and Past sections.
-  - Blueprint Studio excluded archived events — `?event=<past-id>` fell back to wrong market.
+  - HubGrid excluded archived events — `?event=<past-id>` fell back to wrong market.
   - Profile query used `.single()` — switched to `.maybeSingle()` with error logging.
 - **Shipped locally:**
   - `lib/format/safe-event-date.ts` — crash-safe market date formatting + sort timestamps.
@@ -258,11 +278,11 @@
   - **`lib/floor-plan/ai-auto-arrange.ts`** — prompt notes tessellation context + storefront-on-flow requirement.
   - **`scripts/verify-layout-tessellation.ts`** — smoke tests for patterns + clearance correction.
 - **Integration:** Canvas mutations → `floorPlanStore` → ledger via `useBoothEntities` unchanged; tessellation runs on auto-arrange with **progressive `onProgress` canvas preview** per pattern evaluation.
-- **Verify:** `npx tsx scripts/verify-layout-tessellation.ts` PASS; Blueprint Studio auto-arrange toast shows winning pattern; clearance bands all green post-arrange when physically possible.
+- **Verify:** `npx tsx scripts/verify-layout-tessellation.ts` PASS; HubGrid auto-arrange toast shows winning pattern; clearance bands all green post-arrange when physically possible.
 - **Next:** Commit + deploy when user asks; optional tessellation candidate picker UI (like fairness scenarios).
 
 ## Active work — tiered OpenRouter spatial AI (local, not deployed)
-- **Goal:** Tiered multi-model OpenRouter architecture for Blueprint Studio floor-plan parsing, layout geometry, and spatial awareness — never default to premium frontier models for routine coordinate math.
+- **Goal:** Tiered multi-model OpenRouter architecture for HubGrid floor-plan parsing, layout geometry, and spatial awareness — never default to premium frontier models for routine coordinate math.
 - **Shipped locally:**
   - **`lib/ai/spatial/`** — central spatial module: tier router (`vision` → qwen/qwen3.7-plus, `draft` → nex-agi/nex-n2-pro:free, `geometry` → mistral-7b-instruct:floor, `advisor` → claude-3.5-sonnet), `max_price` guardrails, layout compressor (`[x,y,w,h]` JSON + lightweight SVG), advisor escalation on collision errors, streaming SSE handler.
   - **`lib/ai/openrouter.ts`** — centralized `buildOpenRouterPayload` with `provider.max_price` + streaming support.
@@ -271,7 +291,7 @@
   - **`app/api/coordinator/spatial-layout/stream/route.ts`** — coordinator-gated SSE layout generation.
   - **`lib/floor-plan/request-spatial-layout-stream.ts`** — client helper with `onPartial` progressive render hook.
   - **`scripts/verify-spatial-ai.ts`** — 12 checks for routing, compression, guardrails.
-- **Integration:** Auto-arrange + Ask AI layout feedback wired through tiered tasks + compressor + advisor. Blueprint Studio progressive render wired — grid tessellation previews best-so-far per pattern; perimeter/staggered AI streams placements via SSE.
+- **Integration:** Auto-arrange + Ask AI layout feedback wired through tiered tasks + compressor + advisor. HubGrid progressive render wired — grid tessellation previews best-so-far per pattern; perimeter/staggered AI streams placements via SSE.
 - **Blockers:** Requires `OPENROUTER_API_KEY` in `.env.local`/Vercel; `nex-agi/nex-n2-pro:free` availability varies on OpenRouter.
 - **Verify:** `npx tsc --noEmit` PASS; `npx tsx scripts/verify-ai-provider-fallback.ts` (41/41); `npx tsx scripts/verify-spatial-ai.ts` (12/12).
 - **Next:** Commit + deploy when user asks; blueprint image upload → `spatial_vision` task.
@@ -283,11 +303,11 @@
   - **Sync audit:** In-tab ledger derives from `useBoothEntities` → live `floorPlanStore.doc` (instant when store mounted). **Gap found:** switching to full-page Ledger tab unmounted canvas → `onStoreReady(null)` wiped `floorPlanStore` → empty ledger.
   - **Fixes:** `registerFloorPlanStore` ignores null unmount (store cleared only on event switch); `docRevision` effect watches full `floorPlanStore.doc` (room/fixture edits bump telemetry/clearance); Ledger tab keeps hidden canvas mounted (`Dashboard_qa`) so direct `?view=ledger` loads doc.
 - **Spec compliance (uncommitted floor-plan v2):** Pass — clearance engine, category separation, door egress zones, `useBoothEntities` single source, dual-screen BroadcastChannel. Partial — ledger matrix omits per-row clearance column; server persist still async on save (by design).
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: Blueprint Studio place booths → docked ledger updates; switch to Allocation Ledger tab → rows persist; drag booth → matrix label/position updates without refresh.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: HubGrid place booths → docked ledger updates; switch to Allocation Ledger tab → rows persist; drag booth → matrix label/position updates without refresh.
 - **Next:** Commit + deploy when user asks; optional ledger clearance column; consider lifting doc snapshot for ledger-only SSR.
 
-## Active work — Blueprint Studio ledger & layout fixes (local, not deployed)
-- **Goal:** Fix six coordinator-reported Blueprint Studio issues — ledger help, category display, test suite, door clearance, category separation.
+## Active work — HubGrid ledger & layout fixes (local, not deployed)
+- **Goal:** Fix six coordinator-reported HubGrid issues — ledger help, category display, test suite, door clearance, category separation.
 - **Shipped locally:**
   - **Help (#1–2):** New `ledger` help category (allocation overview, vendor-to-booth workflow, category separation topic). `LayoutEditorHelpHost` mounted on Ledger tab so `?` / nav Layout help works without the canvas mounted.
   - **Ledger categories (#4):** Unassigned booths show `Unassigned` in Category column (not placement slot tag). Event category cap names load from `event_category_limits` for booth tagging palette.
@@ -295,7 +315,7 @@
   - **Door radius (#6):** Door/exit clearance warnings and auto-arrange obstacles scoped to 5′ egress zones (`door-clearance-zones.ts`) — booths far along the same row are not penalized.
   - **Category separation (#3):** Production `use-canvas-pointer` enforces proximity rule on draw/drag; toolbar Shuffle toggle (View/utilities) with localStorage pref.
 - **Files:** `layout-editor-help-content.ts`, `search-layout-editor-help.ts`, `Dashboard_qa.tsx`, `use-booth-entities.ts`, `market-management-context.tsx`, `studio/page.tsx`, `populate-test-suite-canvas.ts`, `test-suite-populate-button.tsx`, `door-clearance-zones.ts`, `booth-clearance-visual.ts`, `auto-arrange.ts`, `use-canvas-pointer.ts`, `category-separation-prefs.ts`, `floor-plan-v2.tsx`, `canvas-command-bar-blocks.tsx`, `floor-plan-canvas.tsx`.
-- **Verify:** `npx tsc --noEmit` passes. Blueprint Studio — place booths → Ledger shows Unassigned categories; run test suite assigns all canvas booths; place door — only nearby booths show clearance warnings; toggle category separation; open Layout help on Ledger tab and search "ledger allocate".
+- **Verify:** `npx tsc --noEmit` passes. HubGrid — place booths → Ledger shows Unassigned categories; run test suite assigns all canvas booths; place door — only nearby booths show clearance warnings; toggle category separation; open Layout help on Ledger tab and search "ledger allocate".
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — favicon icon mark only (local, not deployed)
@@ -314,7 +334,7 @@
 ## Active work — layout tutorial room shape step (local, not deployed)
 - **Change:** Quick-start layout help tour now has 6 steps — new Step 5 demos changing room shape (canvas handles, W/L fields, rotate); save moved to Step 6.
 - **Files:** `lib/floor-plan/layout-editor-help-tours.ts`, `layout-editor-help-content.ts`, `layout-editor-help.tsx`, `floor-plan-v2.tsx` (`data-layout-help="room-shape"` on canvas wrapper).
-- **Verify:** Blueprint Studio → Layout help → Start quick-start tour — Step 5 spotlights canvas and explains resize/reshape/rotate; Step 6 covers save.
+- **Verify:** HubGrid → Layout help → Start quick-start tour — Step 5 spotlights canvas and explains resize/reshape/rotate; Step 6 covers save.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — passport featured products nav (local, not deployed)
@@ -327,7 +347,7 @@
 ## Active work — AI auto-arrange page freeze (local, not deployed)
 - **Issue:** AI Auto-Arrange triggered browser “Page Unresponsive” — patron capacity probe packed 512 tables on every render; auto-arrange ran heavy sync work on the main thread.
 - **Fix:** Fast obstacle-aware patron capacity estimate; bulk patron auto-arrange uses dense shelf-pack; `autoArrangeInRoomAsync` + async fairness fallback; capped room-expansion probe loop; extra yields between fairness scenarios.
-- **Verify:** Blueprint Studio with ~20 patron tables → AI Auto-Arrange shows “Arranging…” without freezing; canvas stays scrollable between fairness scenario ticks.
+- **Verify:** HubGrid with ~20 patron tables → AI Auto-Arrange shows “Arranging…” without freezing; canvas stays scrollable between fairness scenario ticks.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — patron table fill capacity (local, not deployed)
@@ -354,9 +374,9 @@
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — FAQ and help copy refresh (local, not deployed)
-- **Goal:** Align all FAQ and in-app help with current product naming (Blueprint Studio, Markets, AI Auto-Arrange, Layout help in nav).
+- **Goal:** Align all FAQ and in-app help with current product naming (HubGrid, Markets, AI Auto-Arrange, Layout help in nav).
 - **Updated:** `lib/legal/faq-content.tsx`, `lib/market-day/help-content.ts`, `lib/floor-plan/layout-editor-help-content.ts`, layout help tours, operations FCFS blurb, account capabilities, event readiness checklist, market-day shell tab, for-organizers landing, payment-methods back link, FAQ last-updated date.
-- **Verify:** `/legal/faq`, `/for-organizers`, Market Day Operations → How to Use & FAQ tab, Blueprint Studio → Layout help search topics.
+- **Verify:** `/legal/faq`, `/for-organizers`, Market Day Operations → How to Use & FAQ tab, HubGrid → Layout help search topics.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — app icon full logo restore (local, not deployed)
@@ -391,7 +411,7 @@
 ## Active work — AI Auto-Arrange UI freeze fix (local, not deployed)
 - **Issue:** Layout editor became unresponsive during **AI Auto-Arrange** — fairness multi-scenario packing blocked the main thread for several seconds before React could paint the loading state.
 - **Fix:** `generateFairLayoutCandidatesAsync` yields between fairness scenarios via `nextAnimationFrame`; new `PackBoothsAsync` used from `handleAutoArrangeFloorPlan` (fairness path); double rAF after `autoArrangeRunning` so “Arranging…” paints; yields before grid/patron passes and before deterministic AI fallback.
-- **Verify:** Blueprint Studio → place booths → **AI Auto-Arrange** (Fairness engine) — toolbar shows “Arranging…” and canvas stays scrollable/zoomable between scenario ticks; completes with toast as before.
+- **Verify:** HubGrid → place booths → **AI Auto-Arrange** (Fairness engine) — toolbar shows “Arranging…” and canvas stays scrollable/zoomable between scenario ticks; completes with toast as before.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — mobile maps + Google directions (local, not deployed)
@@ -432,14 +452,14 @@
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: view-source on `/`, `/discover`, `/events/{id}`, `/legal/faq` for meta + JSON-LD; fetch `/robots.txt` and `/sitemap.xml`.
 - **Next:** Commit + deploy; re-submit sitemap in GSC after deploy (`/sitemap.xml` was redirecting to login HTML — fixed in `lib/auth/public-paths.ts`).
 
-## Active work — coordinator IA: Markets + Blueprint Studio (local, not deployed)
-- **Issue:** Nav **Command center** landed on layout at `/coordinator/dashboard` while UI/URL used conflicting names (command center vs dashboard vs Blueprint Studio).
-- **Fix:** Canonical route **`/coordinator/studio`** (+ `/studio/ledger`); legacy `/coordinator/dashboard` redirects with query preserved. Nav + workspace rail: **Markets** (`/coordinator/markets`) and **Blueprint Studio**. User-visible “dashboard/command center” strings → Blueprint Studio where they mean the layout workspace.
-- **Verify:** `npx tsc --noEmit` — PASS. `npx tsx scripts/verify-document-scroll-routes.ts` — PASS. Smoke: nav **Markets** → list; **Blueprint Studio** → layout; old `/coordinator/dashboard` redirects.
+## Active work — coordinator IA: Markets + HubGrid (local, not deployed)
+- **Issue:** Nav **Command center** landed on layout at `/coordinator/dashboard` while UI/URL used conflicting names (command center vs dashboard vs HubGrid).
+- **Fix:** Canonical route **`/coordinator/studio`** (+ `/studio/ledger`); legacy `/coordinator/dashboard` redirects with query preserved. Nav + workspace rail: **Markets** (`/coordinator/markets`) and **HubGrid**. User-visible “dashboard/command center” strings → HubGrid where they mean the layout workspace.
+- **Verify:** `npx tsc --noEmit` — PASS. `npx tsx scripts/verify-document-scroll-routes.ts` — PASS. Smoke: nav **Markets** → list; **HubGrid** → layout; old `/coordinator/dashboard` redirects.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — coordinator markets list route (local, not deployed)
-- **Issue:** **View your markets** on `/coordinator` linked to `/coordinator/dashboard`, which auto-opened Blueprint Studio for one market — not a list of all markets despite the `(N)` count.
+- **Issue:** **View your markets** on `/coordinator` linked to `/coordinator/dashboard`, which auto-opened HubGrid for one market — not a list of all markets despite the `(N)` count.
 - **Fix:** New `/coordinator/markets` page + `CoordinatorMarketsList` — upcoming/active and past sections, event hub links, per-market **Command center** buttons (`?event=`), global **Open command center** CTA. Home card now links there with **Browse all markets (N)**. Mobile command center redirects to `/coordinator/markets`; post-login layout redirect on phones → markets.
 - **Verify:** `npx tsc --noEmit` — PASS. `npx tsx scripts/verify-document-scroll-routes.ts` — PASS. Smoke: `/coordinator` → **Browse all markets** → `/coordinator/markets` lists all events; **Command center** nav → layout designer for selected market.
 - **Next:** Commit + deploy when user asks.
@@ -552,7 +572,7 @@
   - `simulated-annealing.ts` — scaled budget (up to 12s), rotate/swap/nudge, variance + route-distance objective, fast 250-patron eval during search.
   - `generate-fair-layout.ts` — always return serpentine route (not traffic pathway); traffic fill only when snake leaves gaps.
 - **Verify:** `npx tsx scripts/verify-layout-strategies.ts` — **2847/2847 PASS**. Fixture scores: rectangle 6-booth **79**, irregular 6-booth (bottom doors) **90**, 50-booth **55**, multi-scenario 50-booth best **55** (~10s).
-- **User retest:** Blueprint Studio → irregular room + bottom entry/exit doors → Engine **Fairness** → **AI Auto-Arrange** → booths in rows flanking green serpentine; badge **Fairness 60–90+** on well-filled rooms (depends on booth count vs polygon area).
+- **User retest:** HubGrid → irregular room + bottom entry/exit doors → Engine **Fairness** → **AI Auto-Arrange** → booths in rows flanking green serpentine; badge **Fairness 60–90+** on well-filled rooms (depends on booth count vs polygon area).
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — Fairness path vs patron overlay gap (local, not deployed)
@@ -570,7 +590,7 @@
 - **Wiring:** `PackBooths` fairness path runs multi-scenario by default (`fairnessCandidates` ranked best-first). Traffic-aware / unified paths unchanged.
 - **UI:** `fairness-scenario-bar.tsx` — after run, best applied + toast “best of N scenarios”; **Compare N scenarios** chip on canvas opens stepper (Prev/Next, Apply, dismiss reverts to committed).
 - **Tests:** `npx tsx scripts/verify-layout-strategies.ts` — **2846/2846 PASS** (multi-scenario ranking + 50-booth × 5 ~12s).
-- **Verify:** Blueprint Studio → Engine **Fairness** → entry/exit doors → **AI Auto-Arrange** → toast shows best-of-N; click **Compare scenarios** to preview alternates and **Apply** to commit.
+- **Verify:** HubGrid → Engine **Fairness** → entry/exit doors → **AI Auto-Arrange** → toast shows best-of-N; click **Compare scenarios** to preview alternates and **Apply** to commit.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — Fairness-first auto-arrange verification (local, not deployed)
@@ -582,7 +602,7 @@
   4. Doors: `evaluateTrafficFlowPrerequisites` — entry (`doorType: entrance`) + exit (`doorType: exit` or `emergency_exit`) on perimeter (≤1.5′ from wall). Missing → Run disabled + toast `AUTO_ARRANGE_TRAFFIC_PREREQ_TOOLTIP`. `layoutRequestFromDocRoom` falls back to room-center entrance/exit only if prereqs fail (UI blocks before pack).
 - **Fix this session:** `autoArrangeDisabledReason` now matches handler — Fairness-first + Grid still requires entry/exit (Run button disabled with door tooltip, not enabled-then-toast).
 - **Regression:** `npx tsx scripts/verify-layout-strategies.ts` — **1485/1485 PASS** (added irregular 6-vertex polygon fixture + L-shape/rectangle/stress). Production baseline `a69841e` (prior fairness polygon fix in `ba6b2b1`).
-- **User steps (Blueprint Studio):** Draw irregular room (merged zone or `perimeterRing`) → **Vendor Booths** tool place tables → **Shapes → Door** entry on wall (`entrance`) + exit (`exit` or emergency exit) snapped to perimeter → Optimize toolbar → Engine **Fairness** → **AI Auto-Arrange** → booths inside green boundary in snake rows along circulation overlay; toast + badge `Fairness N/100` with N ≥ 1.
+- **User steps (HubGrid):** Draw irregular room (merged zone or `perimeterRing`) → **Vendor Booths** tool place tables → **Shapes → Door** entry on wall (`entrance`) + exit (`exit` or emergency exit) snapped to perimeter → Optimize toolbar → Engine **Fairness** → **AI Auto-Arrange** → booths inside green boundary in snake rows along circulation overlay; toast + badge `Fairness N/100` with N ≥ 1.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — CI + Windows production build fix (local, not deployed)
@@ -607,25 +627,25 @@
   4. `orientBoothToNearestWall` ran after fairness pack and overwrote aisle-facing rotations.
   5. AI Auto-Arrange deterministic fallback ignored `vendorLayoutMode: fairness_first` (Gemini path only; fairness UI path already used `PackBooths` directly).
 - **Fix:** Polygon-aware serpentine seed (`fairness-seed.ts`), rotated-corner validation + `sanitizePlacements`, merged snake + filtered traffic fill, annealing only on valid states, skip wall re-orient for fairness results, AI fallback routes to `PackBooths` fairness when mode set. Traffic-aware path unchanged.
-- **Verify:** `npx tsx scripts/verify-layout-strategies.ts` — 1455/1455 PASS (includes L-shape in-polygon + clearance checks). `npx tsc --noEmit` — PASS. Smoke: Blueprint Studio → Engine **Fairness** → draw irregular room + entry/exit doors → Auto-Arrange → booths inside boundary, snake circulation overlay, score > 0.
+- **Verify:** `npx tsx scripts/verify-layout-strategies.ts` — 1455/1455 PASS (includes L-shape in-polygon + clearance checks). `npx tsc --noEmit` — PASS. Smoke: HubGrid → Engine **Fairness** → draw irregular room + entry/exit doors → Auto-Arrange → booths inside boundary, snake circulation overlay, score > 0.
 
 ## Active work — Traffic-aware auto-arrange greyed out fix (local, not deployed)
-- **Issue:** AI Auto-Arrange **Traffic-aware** / **Perimeter** controls stayed disabled in Blueprint Studio even when the canvas showed many table-like blocks; tooltip said “draw at least one vendor booth or patron table”.
+- **Issue:** AI Auto-Arrange **Traffic-aware** / **Perimeter** controls stayed disabled in HubGrid even when the canvas showed many table-like blocks; tooltip said “draw at least one vendor booth or patron table”.
 - **Root cause (dual):**
   1. **Counting bug:** `vendorBoothsInRoom` / patron counts used strict `doc.objectRoom[id] === roomId` while placement and save use geometry fallback when the sidecar tag is missing (common on localStorage drafts and legacy hydration). Booths rendered on canvas but counted as zero.
   2. **UX coupling:** Pattern + Engine dropdowns shared the same `disabled` gate as the Run button, so missing prerequisites (or zero count) greyed out **Traffic-aware** even when the user only needed to pick Grid or add doors.
 - **Fix:** `resolveObjectRoomId()` in `geometry/is-point-in-room.ts` — sidecar tag first, else geometry (matches `legacyRoomsFromDoc`). Wired through `vendorBoothsInRoom`, `patronTablesInRoom`, `autoArrangeInRoom`, traffic-flow prerequisites. `FloorPlanOptimizeControl` — dropdowns enabled when arrangeable booths exist; Run button disabled separately with prerequisite tooltip. Clearer tooltips (`AUTO_ARRANGE_NEEDS_BOOTHS_TOOLTIP`, wrong-room hint, entry/exit door requirement).
 - **User guidance:** Auto-arrange only sees objects placed via **Vendor Booths** or **Patron Tables** toolbar sections (`kind: 'booth'`). Generic **Shapes** (walls, stages, labels, food trucks) do not count.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: dashboard Blueprint Studio → place vendor booths (Vendor Booths tool) → Perimeter + Traffic-aware dropdowns enabled; without entry/exit doors Run shows door tooltip but engine selector stays active; Grid mode runs without doors.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: dashboard HubGrid → place vendor booths (Vendor Booths tool) → Perimeter + Traffic-aware dropdowns enabled; without entry/exit doors Run shows door tooltip but engine selector stays active; Grid mode runs without doors.
 
 ## Active work — floor plan empty-grid marquee + crosshair (local, not deployed)
 - **Issue:** Select tool on the floor plan canvas did not show crosshair over empty grid cells, and drag on empty interior started room drag instead of marquee multi-select.
 - **Root cause:** `use-canvas-pointer` treated any click inside a room frame (not just the perimeter stroke) as a room-drag gesture, so marquee never started. Command-center select mode also forced a `grab` cursor instead of crosshair on empty canvas.
 - **Fix:** Select tool — room drag only from explicit `data-room-stroke` hits; empty interior falls through to marquee. Track `emptyCanvasHover` for crosshair cursor on empty grid (edit mode only; `viewOnly` unchanged). `onPointerLeave` clears hover chrome.
-- **Verify:** Dashboard Blueprint Studio or setup Step 3 → **Select** tool → hover empty grid shows crosshair; drag a box over multiple booths selects them (blue dashed marquee preview). Click room perimeter stroke still selects/moves the room. Preview / view-only surfaces unchanged.
+- **Verify:** Dashboard HubGrid or setup Step 3 → **Select** tool → hover empty grid shows crosshair; drag a box over multiple booths selects them (blue dashed marquee preview). Click room perimeter stroke still selects/moves the room. Preview / view-only surfaces unchanged.
 
 ## Active work — test suite seed redirect fix (local, not deployed)
-- **Issue:** After **Test suite** / vendor seed during setup Step 3 or Command center, UI bounced to **Set up your floor plan** (50×50 empty-state form) instead of staying in Blueprint Studio with toolbar.
+- **Issue:** After **Test suite** / vendor seed during setup Step 3 or Command center, UI bounced to **Set up your floor plan** (50×50 empty-state form) instead of staying in HubGrid with toolbar.
 - **Root cause:** `TestSuitePopulateButton` called `router.refresh()` after canvas populate; `MarketManagementProvider` re-synced `layoutRooms` from server on every refresh — when the layout was still in-memory only (no `booth_layouts` row yet), rooms were wiped and `DashboardNoRoomEmptyState` replaced the canvas. Setup wizard had no `populateTestSuiteOnCanvas` hook, so seed only refreshed and never placed booths on the wizard canvas.
 - **Fix:** Drop post-populate `router.refresh()` when canvas populate succeeds (approved pool already refreshed client-side). Preserve in-memory rooms when same-event server bundle is empty. Wire wizard Step 3 `populateTestSuiteOnCanvas` via `WizardStepFloorPlan` store ref → `LayoutPlannerHeader` → `TestSuitePopulateButton`.
 - **Verify:** Draft market → setup Step 3 (`?step=4`) or dashboard with first room created → **Test suite** → vendors seeded, booths placed, canvas + toolbar remain visible (no empty-state form). Switch markets still loads saved layouts from server.
@@ -660,7 +680,7 @@
 ## Active work — category proximity edge gaps + Arrange layout in header (local, not deployed)
 - **Issue:** Same-category booths (color) could sit flush adjacent after **Arrange layout** — proximity used center-to-center distance, so large booths cleared the 4-col / 2-row rule while touching. **Arrange layout** floated over the canvas instead of the dashboard header bar.
 - **Fix:** `category-rules.ts` — `boothEdgeGapsInGridSpaces` measures edge-to-edge gaps; auto-arrange, patron-centric layout, and unified solver updated. **Arrange layout** moved to header bar blank space (`ml-auto` in `canvas-toolbar-static.tsx`); wired via `handleArrangeLayoutInRoom` in `floor-plan-v2.tsx`; removed canvas overlay button.
-- **Verify:** `npx tsx scripts/verify-category-rules.ts` — PASS. `npx tsx scripts/verify-auto-arrange.ts` — 31/31 PASS. Smoke: dashboard Blueprint Studio → **Arrange layout** in top header (right of hall tools) → grid packs with no same-color neighbors touching.
+- **Verify:** `npx tsx scripts/verify-category-rules.ts` — PASS. `npx tsx scripts/verify-auto-arrange.ts` — 31/31 PASS. Smoke: dashboard HubGrid → **Arrange layout** in top header (right of hall tools) → grid packs with no same-color neighbors touching.
 
 ## Active work — patron path overlay pathfinding fix (local, not deployed)
 - **`PathfindingService.ts`:** Door threshold terminals via `evaluateTrafficFlowPrerequisites` + inward projection; booth **approach nodes** (not centers); A*-distance TSP + 2-opt; LOS string-pull smoothing; segment routing without phantom chords; `missedBoothIds` / `missingDoors` flags; fixed `ftToGrid` ↔ `gridToFt` consistency.
@@ -824,7 +844,7 @@
 ## Active work — test suite populate button (local, not deployed)
 - **`persist-test-suite-applications.ts`:** Seeds diverse vendor suite as real auth users + passports + `booth_applications` with `approved` + paid (`CASH` / `COMPLETED`). Clears prior `@popuphub.seed` applications on the event before re-run.
 - **API:** `POST /api/coordinator/events/[eventId]/seed-test-suite` — coordinator-scoped; uses `createAdminClient()` for profile/passport writes (SSR service client still hit RLS). Set `DISABLE_COORDINATOR_TEST_SUITE=true` to block on a deploy.
-- **UI:** Violet **Test suite** button in Blueprint Studio **ALIGNMENT & SPACING** toolbar (Command center dashboard), plus event hub and Applications page headers. Also on spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 (`/coordinator/events/{id}/setup?step=3`).
+- **UI:** Violet **Test suite** button in HubGrid **ALIGNMENT & SPACING** toolbar (Command center dashboard), plus event hub and Applications page headers. Also on spatial layout toolbar (`/coordinator/events/{id}/layout`) and setup Step 3 (`/coordinator/events/{id}/setup?step=3`).
 - **Seed logic:** Fills up to **sum of category `max_slots`** (market capacity). Then **fills the live canvas room** from FloorPlanV2 dimensions, auto-arranges booths, and assigns approved vendors (paid). Not capped by stale `booth_layouts` DB dimensions.
 - **Verify:** Command center → **Test suite** → toast reports grid placement (`N vendor booths placed`) or a clear warning if canvas not ready. Uses `populateTestSuiteCanvas` on the live floor-plan store (not toolbar callbacks).
 
@@ -840,7 +860,7 @@
 
 ## Active work — map labels dropdown width (local, not deployed)
 - **`canvas-command-bar-blocks.tsx`:** Map labels `<select>` widened from `max-w-[4.5rem]` / `max-w-[7.5rem]` to `w-[9.5rem]` so **Vendor name**, **Product category**, and **Booth ID / number** display without truncation.
-- **Verify:** Coordinator dashboard → Blueprint Studio toolbar → Map labels dropdown shows full option text for all three modes.
+- **Verify:** Coordinator dashboard → HubGrid toolbar → Map labels dropdown shows full option text for all three modes.
 
 ## Active work — booth payment read-only in matrix (local, not deployed)
 - **Rule:** Booths cannot be marked paid/unpaid from the floor-plan booth matrix. Payment is applicant-only (Applications board, offline confirm, Square/Stripe checkout); booth color/status reflects the assigned vendor's application.
@@ -882,7 +902,7 @@
 - **`canvas/floor-plan-canvas.tsx`:** Cursor overrides (`crosshair` on edge, `grab` on vertex); double-click on room edge inserts vertex.
 - **Data model:** Authoritative shape is existing `RoomFrame.perimeterRing` (`[x,y][]` in canvas feet); `widthFt`/`lengthFt` remain derived AABB cache. Default Main Hall still 50×50′ via `frameToRing`.
 - **Limitation:** Legacy save (`legacyRoomsFromDoc`) still writes AABB `venue_width`/`venue_length` only — full polygon persists in `FloorPlanDoc` / local multi-room draft.
-- **Verify:** `npx tsx components/coordinator/floor-plan-v2/geometry/polygon-edit.test.ts` — PASS; `npx tsc --noEmit` — PASS. Smoke: Blueprint Studio → select room → drag vertex / double-click edge → placement still respects polygon interior.
+- **Verify:** `npx tsx components/coordinator/floor-plan-v2/geometry/polygon-edit.test.ts` — PASS; `npx tsc --noEmit` — PASS. Smoke: HubGrid → select room → drag vertex / double-click edge → placement still respects polygon interior.
 
 ## Active work — vendor apply event not found fix (local, not deployed)
 - **Root cause:** `/api/vendor/apply` used an explicit `events` column list (including booth-contract fields from migration `105`) while the vendor detail page uses `VENDOR_EVENT_SELECT` (`*`). When optional columns are missing or the select fails, Supabase returns `data: null` and the route surfaced **Event not found** even for published markets.
@@ -1091,7 +1111,7 @@
 - **`canvas-command-bar-blocks.tsx`:** Header-specific compact view/setup (icon fullscreen, narrow map labels, square zoom); dual-screen icon-only; hall history undo/redo only; room rotate/join hidden in header.
 - **`layout-room-bar.tsx`:** `headerBar` mode — inline W/L fields, truncated room tabs, no horizontal scroll.
 - **`command-button.tsx`:** Toolbar icon/control heights use `--dashboard-toolbar-height`.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — Blueprint Studio header row fits without horizontal scrollbar; all controls same height.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — HubGrid header row fits without horizontal scrollbar; all controls same height.
 
 ## Active work — canvas delete INP / deferred pathfinding (local, not deployed)
 - **`hooks/use-pathfinding.ts`:** Replaced synchronous `useMemo` + `CalculateOptimalPath` with `useDeferredValue` + `setTimeout(0)` + `startTransition` so booth delete paints before A*/TSP runs.
@@ -1105,7 +1125,7 @@
 - **`toolbar-static-layout.ts` / `canvas-toolbar-static.tsx`:** New header section **DUAL-SCREEN** with grouped **Presenter** + **Wall Cast** buttons (`HeaderBarDualScreenCluster`); view/setup cluster keeps fullscreen, map labels, patron path, zoom, save.
 - **`canvas-command-bar-blocks.tsx` / `toolbar-order.ts`:** New `dual-screen` toolbar block; removed duplicate Event setup + prefixed dual-screen buttons from utilities strip; dropped generic **Launch Dual-Screen Mode** in favor of paired Presenter/Wall Cast controls.
 - **`globals.css`:** `.dashboard-header-dual-screen` min-width guard.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — header row shows ← Event setup | Blueprint Studio | Allocation Ledger | view/setup tools | **DUAL-SCREEN** (Presenter + Wall Cast grouped) | hall management; no standalone Launch Dual-Screen button.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — header row shows ← Event setup | HubGrid | Allocation Ledger | view/setup tools | **DUAL-SCREEN** (Presenter + Wall Cast grouped) | hall management; no standalone Launch Dual-Screen button.
 
 ## Active work — vendor/patron size chips only highlight when armed (local, not deployed)
 - **`table-size-pill.tsx`:** Vendor and patron size buttons no longer show forest/violet active fill from the default placement template alone; chips highlight only when the corresponding draw tool is armed (`vendorPlacementActive`, `roundPlacementActive`, `rectPlacementActive` / `placementActive`).
@@ -1120,7 +1140,7 @@
 - **`scripts/verify-structural-wall-snap.ts`:** Horizontal + vertical long-edge orientation + placement regression.
 - **Verify:** `npx tsx scripts/verify-structural-wall-snap.ts` — PASS. Smoke: `/coordinator/dashboard` — draw Door near each wall; long edge runs along wall; move door — stays wall-snapped; no booth clearance bands on doors.
 
-## Active work — Blueprint Studio preview fullscreen (local, not deployed)
+## Active work — HubGrid preview fullscreen (local, not deployed)
 - **`command-center-fullscreen-context.tsx`:** Preview mode enters native fullscreen (`command-center-canvas-fullscreen` + browser FS); Esc exits preview; `data-dashboard-preview` on `<html>`.
 - **`dashboard-command-center-header.tsx`:** Restored Edit/Preview pill toggle — preview shows only the toggle (fixed top-right overlay).
 - **`floor-plan-v2.tsx` / `floor-plan-canvas.tsx`:** `viewOnly` disables draw/select/drop/keyboard edits; pan/zoom still works.
@@ -1166,7 +1186,7 @@
 - **`scripts/verify-booth-clearance-visual.ts`:** Regression tests for diagonal separation and scatter layout.
 
 ## Active work — dashboard header trim (local, not deployed)
-- **`dashboard-command-center-header.tsx`:** Edit/Preview toggle restored at header right (Blueprint Studio only); workspace tabs + portaled room/canvas toolbar use `overflow-hidden` (no horizontal scrollbar). +New market removed from header row.
+- **`dashboard-command-center-header.tsx`:** Edit/Preview toggle restored at header right (HubGrid only); workspace tabs + portaled room/canvas toolbar use `overflow-hidden` (no horizontal scrollbar). +New market removed from header row.
 - **`canvas-command-bar.tsx` / `canvas-toolbar-static.tsx` / `globals.css`:** Header bar layout no longer scrolls horizontally.
 
 ## Shipped this session (dashboard and floor-plan editor polish, deployed 2026-06-11)
@@ -1177,8 +1197,8 @@
 - **Nav/footer:** Bell badge only when unread; Next step CTA single-line footer layout.
 - **Verify:** `npx tsc --noEmit` — PASS; `npx tsx scripts/verify-booth-clearance-visual.ts` + `verify-structural-wall-snap.ts` + `verify-food-truck-placement.ts` — PASS. Smoke: `/coordinator/dashboard` — header fits one row; legend/ledger rails; preview toggle; patron path delete feels instant.
 
-## Shipped this session (Blueprint Studio two-row dashboard layout, deployed 2026-06-11)
-- **Row 1 (header):** `dashboard-command-center-header.tsx` — Blueprint Studio | Allocation Ledger tabs, then portaled view/setup cluster (labels, Event setup, dual-screen, fullscreen, zoom) + hall management (Main Hall bar, undo/redo); no market title row.
+## Shipped this session (HubGrid two-row dashboard layout, deployed 2026-06-11)
+- **Row 1 (header):** `dashboard-command-center-header.tsx` — HubGrid | Allocation Ledger tabs, then portaled view/setup cluster (labels, Event setup, dual-screen, fullscreen, zoom) + hall management (Main Hall bar, undo/redo); no market title row.
 - **Row 2 (tool strip):** `toolbar-static-layout.ts` + `canvas-toolbar-static.tsx` — four labeled sections: SHAPES & BOOTHS (primitives only), VENDOR BOOTHS, PATRON TABLES (renamed), ALIGNMENT & SPACING; vendor/patron each own section with one horizontal icon row.
 - **Portal split:** `canvas-command-bar.tsx` — `headerBarLayout` → `view-setup` + `hall-management`; `topBarLayout` → tool-strip sections only (`DASHBOARD_HEADER_SECTION_IDS` / `DASHBOARD_TOOLSTRIP_SECTION_IDS`).
 - **Payout banner:** removed from `market-dashboard-client.tsx` / `app/coordinator/dashboard/page.tsx`; `CoordinatorCommunityTrustBanner` on coordinator `app/profile/page.tsx` via `loadCoordinatorEscrowContext`.
@@ -1186,8 +1206,8 @@
 
 ## Shipped this session (dashboard layout toolbar compaction + shared footer, deployed 2026-06-11)
 - **SHAPES & BOOTHS single row:** `canvas-toolbar-static.tsx` + `globals.css` — primitives, vendor booths, and patron elements render in one horizontal row to maximize canvas height.
-- **ROOM & CANVAS in header:** Room/canvas controls portaled into Blueprint Studio header via `DashboardHeaderToolbarPortalTarget`; top toolbar strip now shows Shapes & Booths + Alignment only (`toolbar-static-layout.ts` section filter, `floor-plan-v2.tsx` dual command-bar portals).
-- **Shared footer:** `dashboard-workspace-footer.tsx` — same `DashboardNextStepCta` footer on Blueprint Studio and Allocation Ledger views (`Dashboard_qa.tsx`); removed duplicate ledger-pane footers.
+- **ROOM & CANVAS in header:** Room/canvas controls portaled into HubGrid header via `DashboardHeaderToolbarPortalTarget`; top toolbar strip now shows Shapes & Booths + Alignment only (`toolbar-static-layout.ts` section filter, `floor-plan-v2.tsx` dual command-bar portals).
+- **Shared footer:** `dashboard-workspace-footer.tsx` — same `DashboardNextStepCta` footer on HubGrid and Allocation Ledger views (`Dashboard_qa.tsx`); removed duplicate ledger-pane footers.
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — room tools in header row; shapes/booths one row; footer visible on both workspace tabs.
 
 ## Active work — Next step CTA single-line layout (local, not deployed)
@@ -1216,7 +1236,7 @@
 
 ## Shipped this session (coordinator pre-flight review & publish page, deployed 2026-06-10)
 - **Route:** `/coordinator/events/[id]/review` — Pre-Flight Review & Publish for draft markets after floor plan work.
-- **Layout snapshot:** `lib/coordinator/layout-telemetry-summary.ts` — vendor booth totals, category breakdown, patron seating/amenities from saved layout; link back to Blueprint Studio (`/coordinator/dashboard?event=`).
+- **Layout snapshot:** `lib/coordinator/layout-telemetry-summary.ts` — vendor booth totals, category breakdown, patron seating/amenities from saved layout; link back to HubGrid (`/coordinator/dashboard?event=`).
 - **Review cards:** Inline save for event logistics, shopper details (parking, wheelchair toggle + notes, pet policy), pricing & category waitlist caps (`CategoryLimitEditor` + unified booth fee).
 - **Publish:** `PATCH /api/coordinator/events/[eventId]` with `{ status: 'published' }` — publish gate, venue verify, booth-fee checks; client button disabled while publishing; success toast + redirect to event overview.
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: draft market with layout → `/coordinator/events/{id}/review` → edit cards save → Publish → lands on event hub with live toast.
@@ -1226,11 +1246,11 @@
 - **`app/legal/faq/page.tsx`:** Updated last-modified date to June 10, 2026.
 - **Verify:** `/legal/faq` — new “Why should I choose Popup Hub…” entry visible; pricing and fee answers show structured multi-paragraph copy.
 
-## Shipped this session (Blueprint Studio toolbar element panel entry animation, deployed 2026-06-10)
+## Shipped this session (HubGrid toolbar element panel entry animation, deployed 2026-06-10)
 - **Motion config:** `toolbar-element-panels-motion.ts` — shared Framer Motion variants with `x: 0` start/end so vendor and patron asset tables animate on a strict vertical center axis (`y` spring only).
 - **SHAPES & BOOTHS:** `canvas-toolbar-static.tsx` — VENDOR BOOTHS (top) and PATRON ELEMENTS (bottom) stacked in `flex flex-col items-center justify-center`; `TopBarAssetTablePanel` + staggered container entry; `useReducedMotion` bypass.
 - **CSS:** `globals.css` — `data-toolbar-section='shapes-booths'` and `.toolbar-element-panel(s)` centering rules.
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — reload Blueprint Studio toolbar; vendor booth size row and patron element row fade/slide in centered (no horizontal drift); reduced-motion shows panels instantly.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/coordinator/dashboard` — reload HubGrid toolbar; vendor booth size row and patron element row fade/slide in centered (no horizontal drift); reduced-motion shows panels instantly.
 
 ## Shipped this session (dashboard toolbar layout refactor, deployed 2026-06-10)
 - **ROOM & CANVAS:** Removed duplicate Full screen from `dashboard-command-center-header.tsx`; primary control lives in top toolbar next to ← Event setup with `Dual-Screen: Presenter` / `Dual-Screen: Wall Cast` (`launchDualScreen('presenter'|'wall-cast')` via `openDualScreenWindow` in `floorplan-sync.ts`).
@@ -1316,7 +1336,7 @@
 - **Verify:** `/coordinator/dashboard` — drag booth shows clearance colors; Saving… after drag release; Next step disabled when orange/red clearance; valid layout opens Allocation Ledger tab.
 
 ## Shipped this session (virtual split-pane + native dual-screen workspace, deployed 2026-06-10)
-- **Virtual split-pane:** `dashboard-split-workspace.tsx` — Blueprint Studio ~65% + Allocation Ledger ~35%; collapse toggle on ledger header (`dashboard-workspace-view-context.tsx` persisted state); wired in `Dashboard_qa.tsx`.
+- **Virtual split-pane:** `dashboard-split-workspace.tsx` — HubGrid ~65% + Allocation Ledger ~35%; collapse toggle on ledger header (`dashboard-workspace-view-context.tsx` persisted state); wired in `Dashboard_qa.tsx`.
 - **Dual-screen engine:** `lib/coordinator/floorplan-sync.ts` + `floorplan-sync-bridge.tsx` — `BroadcastChannel('floorplan_sync')`; toolbar **Launch Dual-Screen Mode** (`canvas-command-bar-blocks.tsx`, `floor-plan-v2.tsx`); secondary window `/coordinator/dashboard/ledger` (`dashboard-ledger-window-client.tsx`).
 - **Density + layout:** `--dashboard-gutter` tightened; split-pane CSS in `globals.css`; **Full screen** labeled button (browser fullscreen via `command-center-fullscreen-context.tsx`); reactive autosave chip (yellow Saving… → green Saved to cloud).
 - **Booth matrix:** Coordinates column removed; even 25% columns; semantic status badges; `aria-live` on table region; **Next step** CTA anchored in static footer (`dashboard-allocation-ledger.tsx`, split footer); VENDOR MATCHES removed from toolbar.
@@ -1571,9 +1591,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `2aacc14` (pushed to `origin/master`)
-- Last deploy commit: `2aacc14` - feat: ship 138 session updates (patron UX + coordinator polish; Canopy booth-fee headline; mobile discover UX polish; Canopy trust directory rebrand; +134 more)
-- Production: https://popuphub.ca - **v1.0.0 build 221** | commit `0e37d03` (handoff updated 2026-06-20 11:00)
+- Branch: `master` @ `db0ff81` (pushed to `origin/master`)
+- Last deploy commit: `db0ff81` - feat: ship 141 session updates (flyer cover upload click regression; patron UX + coordinator polish; white form fields on canvas; logo icon-only (no wordmark); +137 more)
+- Production: https://popuphub.ca - **v1.0.0 build 223** | commit `1e48b69` (handoff updated 2026-06-20 11:16)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -1950,7 +1970,7 @@
 
 
 ## Last deploy
-- 2026-06-20 11:00 - Deploy via deploy-popuphub.ps1 - `feat: ship 138 session updates (patron UX + coordinator polish; Canopy booth-fee headline; mobile discover UX polish; Canopy trust directory rebrand; +134 more)` (2aacc14)
+- 2026-06-20 11:16 - Deploy via deploy-popuphub.ps1 - `feat: ship 141 session updates (flyer cover upload click regression; patron UX + coordinator polish; white form fields on canvas; logo icon-only (no wordmark); +137 more)` (db0ff81)
 
 
 ## Goal

@@ -1,1 +1,1 @@
-feat: ship 141 session updates (flyer cover upload click regression; patron UX + coordinator polish; white form fields on canvas; logo icon-only (no wordmark); +137 more)
+feat: ship 144 session updates (coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; create market single scroll; +140 more)
