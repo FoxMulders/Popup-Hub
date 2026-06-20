@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { HubGuardLogo } from '@/components/brand/hubguard-logo'
 
 const DISMISS_KEY = 'popup-hub:hubguard-checkin-prompt-dismissed'
 
@@ -35,7 +35,7 @@ export function VendorCheckinHubguardPrompt({
   return (
     <section className="market-panel space-y-3 border border-sky-200/80 bg-sky-50/60 p-5">
       <div className="flex items-start gap-3">
-        <Shield className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" aria-hidden />
+        <HubGuardLogo variant="icon" size="sm" className="mt-0.5 shrink-0" />
         <div className="min-w-0 space-y-2">
           <p className="text-sm font-semibold text-foreground">Help vendors with HubGuard</p>
           <p className="text-xs leading-relaxed text-muted-foreground">

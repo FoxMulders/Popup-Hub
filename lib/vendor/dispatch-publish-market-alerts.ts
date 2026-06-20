@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { notifyVendorsOfNearbyPublishedMarket } from '@/lib/vendor/nearby-market-alerts'
+import { dispatchNearbyMarketAlertEmails } from '@/lib/vendor/dispatch-nearby-market-emails'
 import { dispatchNativePushToUsers } from '@/lib/mobile/push-dispatch'
 
 /** Fire nearby-vendor alerts when a market becomes published (idempotent if already published). */
@@ -18,7 +19,15 @@ export async function dispatchPublishMarketAlerts(
 
   if (!event || event.status !== 'published') return
 
-  const { notified } = await notifyVendorsOfNearbyPublishedMarket(supabase, event)
+  const { notified, emailRecipients } = await notifyVendorsOfNearbyPublishedMarket(supabase, event)
+
+  if (emailRecipients.length > 0) {
+    void dispatchNearbyMarketAlertEmails(supabase, { id: event.id, name: event.name }, emailRecipients).catch(
+      (err) => {
+        console.error('[publish] nearby vendor alert emails failed', err)
+      }
+    )
+  }
 
   if (notified > 0) {
     const { data: rows } = await supabase

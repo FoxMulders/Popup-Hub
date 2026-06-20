@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { ShieldAlert, Store } from 'lucide-react'
+import { Store } from 'lucide-react'
 import { ForVendorsJsonLd } from '@/components/seo/for-vendors-json-ld'
 import { MarketingCtaBand } from '@/components/public/marketing/marketing-cta-band'
 import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
 import { VendorSignupPassportPreview } from '@/components/marketing/vendor-signup-passport-preview'
+import { HubGuardLogo } from '@/components/brand/hubguard-logo'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 import { VENDOR_OPEN_MARKETS_HREF } from '@/lib/marketing/vendor-journey'
 
@@ -65,9 +66,9 @@ export function ForVendorsLanding() {
             </div>
             <Link
               href={TRUST_DIRECTORY_LINKS.check.href}
-              className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white hover:underline underline-offset-2"
+              className="mt-5 inline-flex items-center gap-3 text-sm font-medium text-white/80 hover:text-white hover:underline underline-offset-2"
             >
-              <ShieldAlert className="h-4 w-4" aria-hidden />
+              <HubGuardLogo variant="icon" size="sm" className="drop-shadow-sm" />
               {TRUST_DIRECTORY_LINKS.check.label} — verify organizers first →
             </Link>
           </div>

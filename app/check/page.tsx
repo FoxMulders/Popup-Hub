@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { ShieldAlert, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 import { listPublishedOrganizers, searchPublishedOrganizers } from '@/lib/queries/organizers'
 import { CheckSearchForm } from '@/components/check/check-search-form'
 import { CheckOrganizerList } from '@/components/check/check-organizer-list'
 import { HubGuardCoordinatorClaimCallout } from '@/components/check/hubguard-coordinator-claim-callout'
+import { HubGuardLogo } from '@/components/brand/hubguard-logo'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
@@ -44,10 +45,10 @@ export default async function CheckPage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
-      <div className="space-y-3">
-        <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-harvest-700">
-          <ShieldAlert className="h-4 w-4" aria-hidden />
-          {TRUST_DIRECTORY_LINKS.check.label} · {TRUST_DIRECTORY_LINKS.check.tagline}
+      <div className="space-y-4">
+        <HubGuardLogo variant="lockup" size="md" priority />
+        <p className="text-xs font-semibold uppercase tracking-wide text-harvest-700">
+          {TRUST_DIRECTORY_LINKS.check.tagline}
         </p>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           {TRUST_DIRECTORY_LINKS.check.boothFeeHeadline}

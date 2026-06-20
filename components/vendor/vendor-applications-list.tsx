@@ -35,6 +35,8 @@ import {
   type VendorApplicationFilter,
 } from '@/lib/vendor/application-status-ui'
 import { isEventOpenForApplications } from '@/lib/queries/events'
+import { VendorBookingProgressRail } from '@/components/vendor/vendor-booking-progress-rail'
+import { vendorBookingStepsActive } from '@/lib/vendor/vendor-booking-steps'
 import type { Event } from '@/types/database'
 
 interface VendorApplicationsListProps {
@@ -216,6 +218,9 @@ export function VendorApplicationsList({
                 key={app.id}
                 className={`rounded-xl border bg-white p-4 ${eventCancelled ? 'border-red-200' : ''}`}
               >
+                {vendorBookingStepsActive(app) ? (
+                  <VendorBookingProgressRail application={app} compact className="mb-4" />
+                ) : null}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1 space-y-3">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

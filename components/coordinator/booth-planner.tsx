@@ -260,6 +260,7 @@ import {
 } from '@/components/ui/dialog'
 import type { QuadrantBounds } from '@/lib/booth-planner/quadrant-grid'
 import { toast } from 'sonner'
+import { notifyVendorBoothAssigned } from '@/lib/applications/notify-vendor-booth-assigned'
 import {
   ArrowDown,
   ArrowUp,
@@ -3113,8 +3114,14 @@ export function BoothPlanner({
       if (error) throw error
 
       const placed = cells.filter((c) => c.col >= 0)
+      let eventNameForNotify = 'your market'
+      const { data: eventRow } = await supabase.from('events').select('name').eq('id', eventId).maybeSingle()
+      if (eventRow?.name) eventNameForNotify = eventRow.name
+
       for (const cell of placed) {
         if (isFakeVendorId(cell.id)) continue
+        const app = approvedApps.find((a) => a.id === cell.id)
+        const previousBooth = app?.booth_number ?? null
         const updates: { booth_number: number; table_length_ft?: number } = {
           booth_number: cell.boothNumber,
         }
@@ -3122,6 +3129,20 @@ export function BoothPlanner({
           updates.table_length_ft = cell.tableLengthFt
         }
         await supabase.from('booth_applications').update(updates).eq('id', cell.id)
+
+        if (
+          app?.vendor_id &&
+          previousBooth !== cell.boothNumber &&
+          cell.boothNumber != null
+        ) {
+          void notifyVendorBoothAssigned({
+            vendorId: app.vendor_id,
+            applicationId: app.id,
+            eventId,
+            eventName: eventNameForNotify,
+            boothNumber: cell.boothNumber,
+          })
+        }
       }
 
       if (usesTableUnits) {

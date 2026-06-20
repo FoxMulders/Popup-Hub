@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { Wand2, Users } from 'lucide-react'
 import { compareFcfsApplicationOrder } from '@/lib/applications/fcfs-sort'
+import { notifyVendorBoothAssigned } from '@/lib/applications/notify-vendor-booth-assigned'
 import { hasPriorityQueueAccess } from '@/lib/profile/premium-access'
 import { shouldDisableRankingPriorityForEvent } from '@/lib/engagement/booth-access'
 import { findNeighborPairKeys, isNeighborPair } from '@/lib/booth-planner/neighbor-matches'
@@ -26,6 +27,8 @@ interface FCFSApplication {
 interface FCFSQueueProps {
   applications: FCFSApplication[]
   boothCells: BoothCell[]
+  eventId?: string
+  eventName?: string
   onAssign?: (applicationId: string, boothCellId: string) => void
   vendorAccessEqualityUntil?: string | null
 }
@@ -50,6 +53,8 @@ function boothTypeBadge(type: string | null | undefined) {
 export function FCFSQueue({
   applications,
   boothCells,
+  eventId,
+  eventName = 'your market',
   onAssign,
   vendorAccessEqualityUntil,
 }: FCFSQueueProps) {
@@ -105,6 +110,8 @@ export function FCFSQueue({
   async function assignBooth(appId: string, cellId: string) {
     const cell = boothCells.find((c) => c.id === cellId)
     if (!cell) return
+    const app = localApps.find((a) => a.id === appId)
+    const previousBooth = app?.booth_number ?? null
 
     const { error } = await supabase
       .from('booth_applications')
@@ -121,6 +128,21 @@ export function FCFSQueue({
     )
     onAssign?.(appId, cellId)
     toast.success(`Booth #${cell.boothNumber} assigned ✓`)
+
+    if (
+      eventId &&
+      app?.vendor_id &&
+      previousBooth !== cell.boothNumber &&
+      cell.boothNumber != null
+    ) {
+      void notifyVendorBoothAssigned({
+        vendorId: app.vendor_id,
+        applicationId: appId,
+        eventId,
+        eventName,
+        boothNumber: cell.boothNumber,
+      })
+    }
   }
 
   async function autoAssignFCFS() {

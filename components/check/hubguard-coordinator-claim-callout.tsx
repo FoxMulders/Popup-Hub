@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { ShieldCheck } from 'lucide-react'
+import { HubGuardLogo } from '@/components/brand/hubguard-logo'
 
 export function HubGuardCoordinatorClaimCallout() {
   return (
     <div className="rounded-xl border border-forest/20 bg-sage-50/80 px-4 py-4 text-sm">
       <p className="inline-flex items-center gap-2 font-semibold text-foreground">
-        <ShieldCheck className="h-4 w-4 text-forest" aria-hidden />
+        <HubGuardLogo variant="icon" size="sm" className="shrink-0" />
         Market organizer on Popup Hub?
       </p>
       <p className="mt-1 text-muted-foreground leading-relaxed">

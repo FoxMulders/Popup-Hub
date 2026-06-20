@@ -4,6 +4,7 @@ import { canActAsVendor } from '@/lib/auth/rbac'
 import { listPublishedOrganizers } from '@/lib/queries/organizers'
 import { createClient } from '@/lib/supabase/server'
 import { OrganizerReviewForm } from '@/components/check/organizer-review-form'
+import { HubGuardLogo } from '@/components/brand/hubguard-logo'
 import type { Profile } from '@/types/database'
 
 export const metadata = buildPublicMetadata({
@@ -42,13 +43,14 @@ export default async function CheckReviewPage({ searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 space-y-6">
-      <div className="space-y-2">
+      <div className="space-y-3">
         <Link
           href="/check"
           className="text-sm text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
         >
           ← Back to organizer search
         </Link>
+        <HubGuardLogo variant="lockup" size="sm" />
         <h1 className="text-2xl font-bold tracking-tight">Review an organizer</h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
           Vended at a market in the last year or two? Leave a structured review — about 90 seconds.

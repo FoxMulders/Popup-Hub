@@ -89,6 +89,7 @@ export default async function OperationsPage({ params }: Props) {
     <MarketDayShell eventId={id} eventName={event.name} activeSection="operations">
       <OperationsWorkspace
         eventId={id}
+        eventName={event.name}
         applications={applications}
         boothCells={boothCells}
         raffleDonationRequirement={event.raffle_donation_requirement}

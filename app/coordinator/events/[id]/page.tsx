@@ -6,7 +6,7 @@ import { ApplicationBoard } from '@/components/coordinator/application-board'
 import { EventInlineEditor } from '@/components/coordinator/event-inline-editor'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { DeleteDraftMarketDialog } from '@/components/coordinator/delete-draft-market-dialog'
-import { EventReadinessChecklist } from '@/components/coordinator/event-readiness-checklist'
+import { EventHubTimeline } from '@/components/coordinator/event-hub-timeline'
 import { CloneMarketButton } from '@/components/coordinator/clone-market-button'
 import { SaveVenuePrompt } from '@/components/coordinator/save-venue-prompt'
 import { listCoordinatorSavedVenues } from '@/lib/coordinator/saved-venues'
@@ -106,6 +106,12 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
   const waitlistedCount = applications?.filter((a) => a.status === 'waitlisted').length ?? 0
   const applicationCount = applications?.length ?? 0
   const hasLayout = layoutRow != null
+  const assignedBoothCount =
+    applications?.filter(
+      (a) =>
+        (a.status === 'approved' || a.status === 'pending_insurance') &&
+        a.booth_number != null
+    ).length ?? 0
 
   const approvedVendorIds = (applications ?? [])
     .filter((a) => a.status === 'approved' && a.vendor_id)
@@ -150,15 +156,19 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
 
       {!isCancelled ? (
         <div className="sticky top-16 z-20">
-          <EventReadinessChecklist
+          <EventHubTimeline
             eventId={id}
             event={event as Event & { category_limits?: import('@/types/database').EventCategoryLimit[] }}
             applicationCount={applicationCount}
             approvedCount={approvedCount}
+            pendingCount={pendingCount}
+            waitlistedCount={waitlistedCount}
+            assignedBoothCount={assignedBoothCount}
             hasLayout={hasLayout}
             hasSquare={hasSquare}
-            pendingCount={pendingCount}
             quarterAuctionCatalogReady={quarterAuctionCatalogReady}
+            eventRevenueFormatted={eventRevenueFormatted}
+            isCancelled={isCancelled}
           />
         </div>
       ) : null}
@@ -277,38 +287,6 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
             />
           </div>
         ) : null}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          { label: 'Pending Review', count: pendingCount, color: 'text-harvest-600' },
-          { label: 'Approved', count: approvedCount, color: 'text-sage-700' },
-          { label: 'Waitlisted', count: waitlistedCount, color: 'text-muted-foreground' },
-          { label: 'Booth Revenue', count: eventRevenueFormatted, color: 'text-forest' },
-        ].map(({ label, count, color }) => {
-          const panel = (
-            <>
-              <p className={`font-heading text-2xl font-bold ${color}`}>{count}</p>
-              <p className="text-xs text-muted-foreground">{label}</p>
-            </>
-          )
-          if (label === 'Pending Review' && pendingCount > 0) {
-            return (
-              <Link
-                key={label}
-                href={`/coordinator/events/${id}/applications`}
-                className="market-panel rounded-xl p-4 text-center transition-colors hover:border-harvest-300 hover:bg-harvest-50/50"
-              >
-                {panel}
-              </Link>
-            )
-          }
-          return (
-            <div key={label} className="market-panel rounded-xl p-4 text-center">
-              {panel}
-            </div>
-          )
-        })}
       </div>
 
       {!isCancelled && <MarketFeedbackAdminPanel marketId={id} variant="page" />}

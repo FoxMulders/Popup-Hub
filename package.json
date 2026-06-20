@@ -1,6 +1,6 @@
 {
     "name": "popup-hub",
-    "version": "1.106.0",
+    "version": "1.107.0",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -27,6 +27,7 @@
         "verify:local-https": "powershell -ExecutionPolicy Bypass -File ./scripts/verify-production.ps1 -BaseUrl https://localhost:3000",
         "ship": "powershell -ExecutionPolicy Bypass -File ./scripts/ship.ps1 -Message",
         "assets:logo": "node scripts/process-logo.mjs",
+        "assets:hubguard": "node scripts/process-hubguard-logo.mjs",
         "qa:layout": "npx tsx lib/booth-planner/qa-scenarios.ts",
         "qa:regression": "npx tsx lib/booth-planner/qa-regression-100.ts",
         "qa:launch": "powershell -ExecutionPolicy Bypass -File ./scripts/launch-qa.ps1",

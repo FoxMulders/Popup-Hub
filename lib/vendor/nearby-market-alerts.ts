@@ -53,12 +53,19 @@ function prefsMatchCategories(
   return prefs.category_ids.some((id) => openCategoryIds.includes(id))
 }
 
+export type NearbyAlertRecipient = {
+  userId: string
+  radiusKm: number
+  distanceKm: number
+  deepLink: string
+}
+
 export async function notifyVendorsOfNearbyPublishedMarket(
   supabase: SupabaseClient,
   event: PublishedEventForAlerts
-): Promise<{ notified: number }> {
+): Promise<{ notified: number; emailRecipients: NearbyAlertRecipient[] }> {
   if (!eventHasCoords(event)) {
-    return { notified: 0 }
+    return { notified: 0, emailRecipients: [] }
   }
 
   const eventPoint: LatLng = { lat: event.latitude, lng: event.longitude }
@@ -84,10 +91,10 @@ export async function notifyVendorsOfNearbyPublishedMarket(
     message: string
     metadata: Record<string, unknown>
   }[] = []
+  const emailRecipients: NearbyAlertRecipient[] = []
 
   for (const row of prefsRows ?? []) {
     const prefs = row as VendorMarketAlertPrefs
-    if (!prefs.notify_in_app) continue
     if (alreadyApplied.has(prefs.user_id)) continue
     if (!prefsMatchCategories(prefs, openCategoryIds)) continue
 
@@ -96,28 +103,42 @@ export async function notifyVendorsOfNearbyPublishedMarket(
 
     const distLabel = formatDistance(km)
     const location = event.city?.trim() ? `${event.city} · ${distLabel}` : distLabel
+    const deepLink = `/vendor/events/${event.id}?apply=1`
 
-    notifications.push({
-      user_id: prefs.user_id,
-      type: 'nearby_market_published',
-      message: `New market nearby: "${event.name}" on ${dateLabel} (${location}). Tap to apply.`,
-      metadata: {
-        event_id: event.id,
-        distance_km: Math.round(km * 10) / 10,
-        deep_link: `/vendor/events/${event.id}?apply=1`,
-      },
-    })
+    if (prefs.notify_in_app) {
+      notifications.push({
+        user_id: prefs.user_id,
+        type: 'nearby_market_published',
+        message: `New market nearby: "${event.name}" on ${dateLabel} (${location}). Tap to apply.`,
+        metadata: {
+          event_id: event.id,
+          distance_km: Math.round(km * 10) / 10,
+          deep_link: deepLink,
+        },
+      })
+    }
+
+    if (prefs.notify_email) {
+      emailRecipients.push({
+        userId: prefs.user_id,
+        radiusKm: prefs.radius_km,
+        distanceKm: km,
+        deepLink,
+      })
+    }
   }
 
-  if (notifications.length === 0) {
-    return { notified: 0 }
+  if (notifications.length === 0 && emailRecipients.length === 0) {
+    return { notified: 0, emailRecipients: [] }
   }
 
-  const { error } = await supabase.from('notifications').insert(notifications)
-  if (error) {
-    console.error('[nearby-market-alerts] insert failed', error)
-    return { notified: 0 }
+  if (notifications.length > 0) {
+    const { error } = await supabase.from('notifications').insert(notifications)
+    if (error) {
+      console.error('[nearby-market-alerts] insert failed', error)
+      return { notified: 0, emailRecipients: [] }
+    }
   }
 
-  return { notified: notifications.length }
+  return { notified: notifications.length, emailRecipients }
 }

@@ -22,6 +22,7 @@ export type OperationsApplication = Omit<BoothApplication, 'vendor' | 'passport'
 
 interface OperationsWorkspaceProps {
   eventId: string
+  eventName: string
   applications: OperationsApplication[]
   boothCells: BoothCell[]
   raffleDonationRequirement: string | null
@@ -30,6 +31,7 @@ interface OperationsWorkspaceProps {
 
 export function OperationsWorkspace({
   eventId,
+  eventName,
   applications,
   boothCells,
   raffleDonationRequirement,
@@ -107,7 +109,12 @@ export function OperationsWorkspace({
             preferences are highlighted — use HubGrid to place paired vendors in adjacent
             booths when chronologically viable.
           </div>
-          <FCFSQueue applications={fcfsApplications} boothCells={boothCells} />
+          <FCFSQueue
+            applications={fcfsApplications}
+            boothCells={boothCells}
+            eventId={eventId}
+            eventName={eventName}
+          />
         </article>
       </TabsContent>
 
