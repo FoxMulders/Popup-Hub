@@ -1,1 +1,1 @@
-feat: ship 148 session updates (UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)
+feat: ship 149 session updates (dual-audience homepage hero; UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; +145 more)

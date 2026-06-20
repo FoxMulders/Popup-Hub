@@ -11,6 +11,17 @@
 - **Automated (dev):** `npm run qa:automation` (CI-safe static) | `npm run qa:automation:prod` (prod Playwright smoke) | `npm run test:e2e:smoke`
 - **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
 
+## Active work — dual-audience homepage hero (local, not deployed)
+- **Goal:** CRO review item #1 — platform value prop + organizer CTA above the fold without dropping HubGuard vendor wedge.
+- **Shipped locally:**
+  - **`lib/marketing/home-hero.ts`:** Platform headline/subhead constants.
+  - **`marketing-hero.tsx`:** H1 explains patrons, vendors, coordinators in one line; subhead covers all three journeys.
+  - **`marketing-hero-pathways.tsx`:** Three above-fold pathway cards — Start hosting (coordinator signup), Open HubGuard, Browse markets; organizer card emphasized; secondary links to `/for-organizers` and vendor signup.
+  - HubGuard booth-fee headline remains on `/check` and vendor callouts only.
+  - **`public-discovery.spec.ts`:** Asserts new H1 + organizer/HubGuard CTAs.
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke `/` — three pathway CTAs visible above fold on desktop; HubGuard trust note below cards.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — UX polish batch + CRO review (local, not deployed)
 - **Goal:** Field contrast, scroll-to-top on navigation, hide inaccurate venue presets (keep field), menu cleanup, professional UX/CRO review delivered in chat.
 - **Shipped locally:**
@@ -1646,9 +1657,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `75682f2` (pushed to `origin/master`)
-- Last deploy commit: `75682f2` - feat: ship 148 session updates (HubGrid canvas INP; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)
-- Production: https://popuphub.ca - **v1.0.0 build 226** | commit `e673131` (handoff updated 2026-06-20 12:52)
+- Branch: `master` @ `785a709` (pushed to `origin/master`)
+- Last deploy commit: `785a709` - feat: ship 148 session updates (UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)
+- Production: https://popuphub.ca - **v1.0.0 build 227** | commit `d21eee9` (handoff updated 2026-06-20 15:48)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2025,7 +2036,7 @@
 
 
 ## Last deploy
-- 2026-06-20 12:52 - Deploy via deploy-popuphub.ps1 - `feat: ship 148 session updates (HubGrid canvas INP; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)` (75682f2)
+- 2026-06-20 15:48 - Deploy via deploy-popuphub.ps1 - `feat: ship 148 session updates (UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)` (785a709)
 
 
 ## Goal
