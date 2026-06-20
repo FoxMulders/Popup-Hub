@@ -22,7 +22,7 @@ export function isCoordinatorEventHubPath(pathname: string): boolean {
 
 /**
  * Logo / back navigation for coordinator chrome: return to the active
- * event hub when the user is inside an event route, otherwise Blueprint Studio.
+ * event hub when the user is inside an event route, otherwise HubGrid.
  */
 export function coordinatorNavBackHref(pathname: string): string {
   const eventId = coordinatorEventIdFromPath(pathname)

@@ -57,7 +57,7 @@ export const ACCOUNT_CAPABILITIES: AccountCapability[] = [
   {
     id: 'manage_layout',
     label: 'Manage booth layout & market day ops',
-    description: 'Blueprint Studio, check-in, and live operations',
+    description: 'HubGrid, check-in, and live operations',
     requiredRole: 'coordinator',
     href: COORDINATOR_STUDIO_PATH,
   },

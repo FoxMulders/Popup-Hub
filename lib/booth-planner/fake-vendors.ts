@@ -25,6 +25,7 @@ export const TEST_CATEGORY_PRESETS = [
   'Uncategorized',
   'Vintage & Antiques',
   'Woodworking',
+  'Games',
 ] as const
 
 export interface FakeVendorInput {

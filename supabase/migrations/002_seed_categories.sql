@@ -14,5 +14,6 @@ insert into public.categories (name, sort_order) values
   ('Woodworking',       12),
   ('Health & Wellness', 13),
   ('Books & Art',       14),
-  ('Kids & Toys',       15)
+  ('Kids & Toys',       15),
+  ('Games',             16)
 on conflict (name) do nothing;

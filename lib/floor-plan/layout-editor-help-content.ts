@@ -79,7 +79,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'start',
       'introduction',
       'what is',
-      'blueprint studio',
+      'HubGrid',
       'floor plan',
       'workflow',
       'layout help',
@@ -98,7 +98,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'Delete / Backspace — Remove selected objects',
       'Shift+H / Shift+V — Align horizontal / vertical centers (2+ selected)',
       '] — Toggle right inspector panel',
-      '? — Open Layout help search (also in the site header on Blueprint Studio)',
+      '? — Open Layout help search (also in the site header on HubGrid)',
       'Esc — Exit fullscreen, clear selection, or return to Select',
     ],
     keywords: ['hotkeys', 'keys', 'shortcut', 'undo', 'copy', 'paste'],
@@ -216,7 +216,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'In Vendor Booths, pick a table length (6′, 8′, 10′, etc.).',
       'Click the vendor booth tool — cursor draws booth rectangles on the canvas.',
       'Each booth gets a number that syncs to applications and check-in after save.',
-      'In Blueprint Studio, drag approved vendors from the Available pool onto open booths.',
+      'In HubGrid, drag approved vendors from the Available pool onto open booths.',
     ],
     keywords: [
       'vendor',
@@ -235,7 +235,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
     summary:
       'The ledger lists every vendor booth on the saved layout with assignment, category, and payment status.',
     steps: [
-      'Open the Ledger tab in Blueprint Studio or expand the right-side Ledger rail on the canvas.',
+      'Open the Ledger tab in HubGrid or expand the right-side Ledger rail on the canvas.',
       'Each row is one booth — click the booth label to focus it on the floor plan.',
       'Unassigned booths show Unassigned in the Category column until a vendor is seated.',
       'Use the vendor dropdown on each row to assign approved applications without dragging on the canvas.',
@@ -469,7 +469,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'Presenter — interactive booth matrix you can drive from a laptop.',
       'Wall Cast — read-only matrix for a projector or TV.',
       'Both views sync with the saved layout and live booth assignments.',
-      'Use Presenter / Wall Cast in the toolbar (wizard Step 3, Blueprint Studio, or Allocation Ledger).',
+      'Use Presenter / Wall Cast in the toolbar (wizard Step 3, HubGrid, or Allocation Ledger).',
     ],
     keywords: [
       'dual screen',
@@ -531,7 +531,7 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
       'Recover server state or understand when changes are written automatically.',
     steps: [
       'Reload saved layout — discards local merge overlays and fetches server layout.',
-      'Blueprint Studio autosaves layout edits while you work on the canvas.',
+      'HubGrid autosaves layout edits while you work on the canvas.',
       'Room tabs keep unsaved work in the browser session until you save or reload.',
       'Always save before switching devices or closing the browser for long sessions.',
     ],

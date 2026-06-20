@@ -25,7 +25,7 @@ function WorkspaceTabs() {
         aria-current={isBlueprint ? 'page' : undefined}
         onClick={() => setView('blueprint')}
       >
-        Blueprint Studio
+        HubGrid
       </button>
       <button
         type="button"

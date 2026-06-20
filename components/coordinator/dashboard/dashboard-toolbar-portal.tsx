@@ -88,7 +88,7 @@ export function DashboardToolbarPortalTarget({ className }: { className?: string
   )
 }
 
-/** Mount point for room/canvas controls in the Blueprint Studio header row. */
+/** Mount point for room/canvas controls in the HubGrid header row. */
 export function DashboardHeaderToolbarPortalTarget({ className }: { className?: string }) {
   const setHeaderTarget = useDashboardToolbarPortal()?.setHeaderTarget
   const hostRef = useRef<HTMLDivElement | null>(null)

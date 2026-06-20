@@ -59,6 +59,16 @@
 - **Verify:** Smoke `/check` organizer search, `/discover` address, vendor market search, HubGuard review form fields.
 - **Next:** Commit + deploy when user asks.
 
+## Active work — Games + Woodworking booth capacity (local, not deployed)
+- **Goal:** Add **Games** and ensure **Woodworking** appear in Booth capacity by category (wizard Step 2, event hub matrix, suggested caps).
+- **Shipped locally:**
+  - **`118_games_broad_category.sql`:** Inserts broad **Games** category; reaffirms **Woodworking** `is_broad`
+  - **`119_coordinator_booth_capacity_categories.sql`:** 16 broad maker categories (Candles & Wax Melts, Ceramics & Pottery, Woodworking & Furniture, Pet Accessories & Treats, Toys & Children's Items, Paper Goods & Stickers, Upcycled & Reclaimed Goods, Jewelry & Accessories, Glass & Stained Glass, Textiles & Quilting, Leather Goods, Soaps & Body Care, Seasonal & Holiday Decor, Metalwork & Blacksmithing, Knitted & Woven Goods, Plant & Floral Crafts)
+  - **`002_seed_categories.sql`:** Seeds **Games** on fresh installs
+  - **`smart-populate-booth-caps.ts`:** Suggested caps use broad categories only (excludes niche passport tags)
+- **Verify:** `npm run db:push` then coordinator event hub — new names in category picker / capacity matrix after limits configured.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — HubGrid rename (local, not deployed)
 - **Goal:** Rename user-facing **Blueprint Studio** → **HubGrid** across coordinator nav, workspace tabs, help/FAQ, and E2E prerequisites.
 - **Shipped locally:** 35 files — nav (`app-nav`, workspace rail), studio header/tabs, markets list CTAs, layout help search keywords, FAQ, QA checklist, `.cursor/rules/popup-hub-ecosystem.mdc`.

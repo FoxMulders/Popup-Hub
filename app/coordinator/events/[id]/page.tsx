@@ -152,7 +152,7 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
                   className={buttonVariants({ variant: 'outline', size: 'sm' }) + ' gap-1.5'}
                 >
                   <LayoutDashboard className="h-4 w-4" />
-                  Blueprint Studio
+                  HubGrid
                 </Link>
                 <Link
                   href={`/coordinator/events/${id}/checkin`}

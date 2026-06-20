@@ -19,7 +19,7 @@ const SECTIONS = [
   { id: 'operations' as const, label: 'Operations', href: (id: string) => `/coordinator/events/${id}/operations`, icon: ClipboardList },
   { id: 'wallet' as const, label: 'Wallet top-up', href: (id: string) => `/coordinator/events/${id}/wallet-topup`, icon: Wallet },
   { id: 'auctions' as const, label: 'Auctions', href: (id: string) => `/coordinator/events/${id}/auctions`, icon: Gavel },
-  { id: 'layout' as const, label: 'Blueprint Studio', href: (id: string) => `/coordinator/events/${id}/layout`, icon: LayoutDashboard },
+  { id: 'layout' as const, label: 'HubGrid', href: (id: string) => `/coordinator/events/${id}/layout`, icon: LayoutDashboard },
   { id: 'checkin' as const, label: 'Check-In QR', href: (id: string) => `/coordinator/events/${id}/checkin`, icon: QrCode },
 ]
 

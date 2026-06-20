@@ -53,7 +53,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
           >
             <ArrowLeft className="size-4" aria-hidden />
-            Blueprint Studio
+            HubGrid
           </Link>
         </div>
       </header>

@@ -19,7 +19,7 @@ export const PLATFORM_FAQ: FaqItem[] = [
           Operating a pop-up market through Instagram DMs, email threads, and manual spreadsheets wastes hours of administrative time and exposes your business to massive fraud risks. Popup Hub brings the entire artisan community into a single, unified ecosystem built by vendors, for organizers:
         </p>
         <p>
-          <strong>Zero-Spreadsheet Management:</strong> Say goodbye to administrative chaos. Instantly review juried applications, manage accepted makers, and map out your venue layout visually using our drag-and-drop Blueprint Studio.
+          <strong>Zero-Spreadsheet Management:</strong> Say goodbye to administrative chaos. Instantly review juried applications, manage accepted makers, and map out your venue layout visually using our drag-and-drop HubGrid.
         </p>
         <p>
           <strong>Community-Driven Trust:</strong> Our built-in verification network balances vendor safety with coordinator cash flow. New organizers get a 25% advance immediately to secure their venue, while the remaining 75% is held safely by the platform until the event successfully completes. You can bypass this hold by earning community trust — either 3 vouches from verified organizers or 10 vouches from verified vendors who have worked your markets.
@@ -99,7 +99,7 @@ export const PLATFORM_FAQ: FaqItem[] = [
   {
     question: 'How do I host a market as a coordinator?',
     answer:
-      'Sign up as a Coordinator, create a market from your Markets page, configure booth categories and fees, approve vendor applications, design your floor plan in Blueprint Studio, and run check-in and live operations on market day.',
+      'Sign up as a Coordinator, create a market from your Markets page, configure booth categories and fees, approve vendor applications, design your floor plan in HubGrid, and run check-in and live operations on market day.',
   },
   {
     question: 'What if I need to cancel my market?',

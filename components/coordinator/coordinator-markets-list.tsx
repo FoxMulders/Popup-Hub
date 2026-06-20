@@ -87,7 +87,7 @@ function MarketRow({
             )}
           >
             <LayoutDashboard className="h-3.5 w-3.5" aria-hidden />
-            Blueprint Studio
+            HubGrid
           </Link>
         ) : (
           <Link
@@ -153,7 +153,7 @@ export function CoordinatorMarketsList({
         description={
           mobileIntro
             ? 'Use a tablet or desktop for the full booth layout designer. On this device you can review events, applications, and day-of operations.'
-            : 'Browse every market, open event hubs, or jump into Blueprint Studio for a specific market.'
+            : 'Browse every market, open event hubs, or jump into HubGrid for a specific market.'
         }
         actions={<PortalRoleBadge portal="coordinator" />}
       />
@@ -182,7 +182,7 @@ export function CoordinatorMarketsList({
             className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}
           >
             <LayoutDashboard className="h-4 w-4" aria-hidden />
-            Open Blueprint Studio
+            Open HubGrid
           </Link>
         ) : null}
         <Link

@@ -99,7 +99,7 @@ export function DashboardLedgerWindowClient() {
               Booth assignments
             </h1>
             <p className="text-sm font-medium text-stone-400">
-              {connected ? 'Live · read-only wall display' : 'Waiting for Blueprint Studio…'}
+              {connected ? 'Live · read-only wall display' : 'Waiting for HubGrid…'}
             </p>
           </div>
         </header>
@@ -176,7 +176,7 @@ export function DashboardLedgerWindowClient() {
         </h1>
         <p className="text-xs text-stone-600">
           {connected
-            ? 'Click a booth to focus it on the Blueprint Studio canvas'
+            ? 'Click a booth to focus it on the HubGrid canvas'
             : 'Waiting for canvas window…'}
         </p>
       </header>

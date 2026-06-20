@@ -104,7 +104,7 @@ export function OperationsWorkspace({
         <article aria-label="FCFS vendor queue">
           <div className="market-card p-4 mb-4 text-sm text-sage-800 bg-sage-50/50">
             Vendors are ordered by application approval time. Matching &quot;Stand Beside&quot;
-            preferences are highlighted — use Blueprint Studio to place paired vendors in adjacent
+            preferences are highlighted — use HubGrid to place paired vendors in adjacent
             booths when chronologically viable.
           </div>
           <FCFSQueue applications={fcfsApplications} boothCells={boothCells} />

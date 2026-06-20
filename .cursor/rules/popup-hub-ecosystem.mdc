@@ -9,11 +9,11 @@ alwaysApply: true
 
 | Persona | Primary surfaces | Core jobs |
 |---------|------------------|-----------|
-| **Coordinator** | Blueprint Studio (`/coordinator/studio`), Allocation Ledger, Markets list, event setup | Auth/onboarding, create markets, draw rooms, place booths, assign vendors, publish |
+| **Coordinator** | HubGrid (`/coordinator/studio`), Allocation Ledger, Markets list, event setup | Auth/onboarding, create markets, draw rooms, place booths, assign vendors, publish |
 | **Vendor** | Vendor portal (`/vendor/*`), passport, applications | Apply to markets, complete booth payment, manage passport |
 | **Patron** | Discover map, patron portal, notifications | Find markets, browse vendors on map |
 
-When working on a feature, **state the active persona and surface** in your first response (e.g. "Coordinator · Blueprint Studio canvas").
+When working on a feature, **state the active persona and surface** in your first response (e.g. "Coordinator · HubGrid canvas").
 
 ## Zero desync policy
 
@@ -57,7 +57,7 @@ Same-category vendor booths must stay **≥ 4 grid columns OR ≥ 2 grid rows** 
 - `category-rules.ts` — `sameCategoryProximityViolated`
 - `use-canvas-pointer.ts` — draw/drag when `enforceCategorySeparation` is true
 - `auto-arrange.ts` — packing kernel
-- Toggle: `category-separation-prefs.ts` (localStorage); toolbar shuffle in Blueprint Studio
+- Toggle: `category-separation-prefs.ts` (localStorage); toolbar shuffle in HubGrid
 
 Legend copy: 4-column / 2-row same-category freeze; overlaps barriers; emergency corridor blocks.
 
@@ -65,7 +65,7 @@ Legend copy: 4-column / 2-row same-category freeze; overlaps barriers; emergency
 
 At the start of coordinator layout work:
 
-1. **State persona + context** (Coordinator · Blueprint Studio / Ledger / dual-screen).
+1. **State persona + context** (Coordinator · HubGrid / Ledger / dual-screen).
 2. **Confirm sync path** — canvas mutation should update ledger via `useBoothEntities`; call out if editing server-only or stale snapshot.
 3. **Legend adherence** — clearance bands, category separation, door egress zones, patron vs vendor booth kinds (`isGuestTableBooth`, `isVendorBoothObject`).
 4. **After substantive canvas edits** — mention whether ledger/matrix would update instantly and if save is required for persistence.

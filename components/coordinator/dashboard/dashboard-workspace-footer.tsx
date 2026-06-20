@@ -4,7 +4,7 @@ import { DashboardNextStepCta } from './dashboard-next-step-cta'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
 
 /**
- * Shared workflow footer for Blueprint Studio and Allocation Ledger views.
+ * Shared workflow footer for HubGrid and Allocation Ledger views.
  */
 export function DashboardWorkspaceFooter() {
   const { previewMode } = useCommandCenterFullscreen()

@@ -258,7 +258,7 @@ export default async function CoordinatorStudioPage({ searchParams }: StudioPage
       : activeSorted[0]?.id ?? archivedSorted[0]?.id ?? null
 
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading Blueprint Studio…</div>}>
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading HubGrid…</div>}>
       <MarketDashboardClient
         coordinatorId={user.id}
         events={events}

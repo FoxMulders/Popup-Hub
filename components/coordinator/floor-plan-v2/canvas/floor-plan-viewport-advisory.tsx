@@ -200,7 +200,7 @@ export function DesktopLayoutRequiredBanner({ className }: { className?: string 
     >
       <p className="font-semibold">Floor plan layout requires a tablet or desktop</p>
       <p className="mt-1 text-amber-900/90">
-        Open this market on a larger screen to design booths in Blueprint Studio or the setup
+        Open this market on a larger screen to design booths in HubGrid or the setup
         wizard layout step.
       </p>
     </div>

@@ -4,7 +4,7 @@ export const COORDINATOR_HOME_PATH = '/coordinator'
 /** All-markets list — browse hubs, payments, and studio entry points. */
 export const COORDINATOR_MARKETS_PATH = '/coordinator/markets'
 
-/** Blueprint Studio — full-screen floor plan + allocation ledger workspace. */
+/** HubGrid — full-screen floor plan + allocation ledger workspace. */
 export const COORDINATOR_STUDIO_PATH = '/coordinator/studio'
 
 /** Dual-screen booth matrix window (presenter / wall cast). */

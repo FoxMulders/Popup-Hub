@@ -4,7 +4,7 @@ interface DashboardRedirectProps {
   searchParams: Promise<{ event?: string; view?: string; overview?: string }>
 }
 
-/** Legacy URL — canonical Blueprint Studio lives at `/coordinator/studio`. */
+/** Legacy URL — canonical HubGrid lives at `/coordinator/studio`. */
 export default async function CoordinatorDashboardRedirect({ searchParams }: DashboardRedirectProps) {
   const params = await searchParams
   const qs = new URLSearchParams()

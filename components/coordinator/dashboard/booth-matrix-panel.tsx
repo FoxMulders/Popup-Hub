@@ -87,7 +87,7 @@ export function BoothMatrixPanel({
       return (
         <div className="dashboard-allocation-ledger__empty flex flex-1 items-center justify-center p-6 text-center">
           <p className="text-sm text-stone-600">
-            No booths on the floor plan yet. Switch to Blueprint Studio to place booths.
+            No booths on the floor plan yet. Switch to HubGrid to place booths.
           </p>
         </div>
       )

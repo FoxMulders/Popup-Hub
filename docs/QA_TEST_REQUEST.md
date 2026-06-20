@@ -152,16 +152,16 @@ Use real accounts on https://popuphub.ca (no mock-login). Complete [QA_FULL_WORK
 
 ### C5 — Coordinator feature roadmap (deployed 2026-06-19)
 
-- [ ] Blueprint Studio: **Saved layouts** picker — save, load, edit-public toggle
+- [ ] HubGrid: **Saved layouts** picker — save, load, edit-public toggle
 - [ ] Wizard Step 1: paste/drop flyer cover image
 - [ ] Mobile wizard Step 3: save-and-continue CTA (no full-screen canvas trap)
-- [ ] Blueprint Studio: import layout from photo (paste or upload)
+- [ ] HubGrid: import layout from photo (paste or upload)
 - [ ] Community league venue: league discount field on event form
 - [ ] New venue submission → pending in `/admin/venues` → approve → publish unblocks
 - [ ] Booth contract editor: Google Docs import (requires Google OAuth connected)
 - [ ] `/for-organizers` — event value calculator renders and accepts inputs
 
-### C6 — Coordinator Blueprint Studio (layout)
+### C6 — Coordinator HubGrid (layout)
 
 - [ ] `/coordinator/events/[id]/studio` — canvas + Allocation Ledger split pane
 - [ ] Canvas mutation updates ledger rows without manual refresh

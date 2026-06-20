@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import { mkdir, rename, unlink } from 'node:fs/promises'
+import { access, mkdir, rename, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -20,6 +20,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const input = path.join(root, 'public', 'popup-hub-logo.png')
 const outputLogo = path.join(root, 'public', 'popup-hub-logo.png')
+/** Canonical stall+pin artwork — preferred over lockup crop when present. */
+const iconSource = path.join(root, 'public', 'popup-hub-icon-source.png')
 const iconsDir = path.join(root, 'public', 'icons')
 const appDir = path.join(root, 'app')
 
@@ -108,8 +110,8 @@ function floodFillBackgroundMask(data, width, height, channels) {
   return mask
 }
 
-async function makeTransparentLogo() {
-  const source = await sharp(input).ensureAlpha().png().toBuffer()
+async function makeTransparentBuffer(filePath) {
+  const source = await sharp(filePath).ensureAlpha().png().toBuffer()
   const { data, info } = await sharp(source)
     .raw()
     .toBuffer({ resolveWithObject: true })
@@ -131,15 +133,16 @@ async function makeTransparentLogo() {
     out[o + 3] = isBackdrop ? 0 : sourceAlpha
   }
 
-  const transparent = await sharp(out, {
+  return sharp(out, {
     raw: { width: info.width, height: info.height, channels: 4 },
   })
     .png()
     .toBuffer()
+}
 
+async function makeTransparentLogo() {
+  const transparent = await makeTransparentBuffer(input)
   await writePngAtomically(outputLogo, transparent)
-  // Legacy Lottie JSON references `logo.png` at the site root.
-  await writePngAtomically(path.join(root, 'public', 'logo.png'), transparent)
 
   const meta = await sharp(transparent).metadata()
   console.log('Wrote transparent source logo:', outputLogo, `${meta.width}x${meta.height}`, `alpha=${meta.hasAlpha}`)
@@ -172,17 +175,30 @@ async function extractFullLockup() {
   return trimToSquare(trimmed)
 }
 
-/** Stall + pin mark for UI, animations, and compact favicons. */
-async function extractIconMark() {
+async function iconMarkFromLockupCrop() {
   const trimmed = await sharp(outputLogo).trim().png().toBuffer()
   const meta = await sharp(trimmed).metadata()
   const iconHeight = Math.round(meta.height * 0.56)
 
-  const iconOnly = await sharp(trimmed)
+  return sharp(trimmed)
     .extract({ left: 0, top: 0, width: meta.width, height: iconHeight })
     .trim()
     .png()
     .toBuffer()
+}
+
+/** Stall + pin mark for UI, animations, and compact favicons. */
+async function extractIconMark() {
+  let iconOnly
+  try {
+    await access(iconSource)
+    iconOnly = await makeTransparentBuffer(iconSource)
+    iconOnly = await sharp(iconOnly).trim().png().toBuffer()
+    console.log('Using canonical icon source:', iconSource)
+  } catch {
+    iconOnly = await iconMarkFromLockupCrop()
+    console.log('Using lockup crop (no popup-hub-icon-source.png)')
+  }
 
   const square = await trimToSquare(iconOnly)
   const out = path.join(root, 'public', 'popup-hub-icon.png')

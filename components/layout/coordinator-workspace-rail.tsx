@@ -32,7 +32,7 @@ import {
 const RAIL_LINKS = [
   { href: COORDINATOR_HOME_PATH, label: 'Home', icon: Calendar },
   { href: COORDINATOR_MARKETS_PATH, label: 'Markets', icon: Store },
-  { href: COORDINATOR_STUDIO_PATH, label: 'Blueprint Studio', icon: LayoutDashboard },
+  { href: COORDINATOR_STUDIO_PATH, label: 'HubGrid', icon: LayoutDashboard },
   { href: '/coordinator/events/new', label: 'New market', icon: Plus },
   { href: '/coordinator/payment-methods', label: 'Payments', icon: CreditCard },
   { href: '/wallet', label: 'Wallet', icon: Settings },
@@ -119,9 +119,9 @@ export function CoordinatorWorkspaceRail() {
         <p className="mt-1 text-[0.6875rem] leading-snug text-sky-800/90">
           {eventIdFromRoute
             ? onEventHub
-              ? 'Open Blueprint Studio for CAD booth design and live payment telemetry.'
-              : 'Return to this market’s overview, or open Blueprint Studio for CAD and payments.'
-            : 'Open Blueprint Studio for the booth designer and live financial desk.'}
+              ? 'Open HubGrid for CAD booth design and live payment telemetry.'
+              : 'Return to this market’s overview, or open HubGrid for CAD and payments.'
+            : 'Open HubGrid for the booth designer and live financial desk.'}
         </p>
         {eventIdFromRoute && !onEventHub ? (
           <CommandCenterExitButton
@@ -146,7 +146,7 @@ export function CoordinatorWorkspaceRail() {
             eventIdFromRoute ? 'mt-1.5' : 'mt-2'
           )}
         >
-          Open Blueprint Studio
+          Open HubGrid
         </Link>
       </motion.div>
     </nav>

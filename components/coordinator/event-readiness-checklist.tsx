@@ -143,7 +143,7 @@ export function EventReadinessChecklist({
       layout: {
         type: 'link',
         href: `/coordinator/events/${eventId}/layout`,
-        label: 'Open Blueprint Studio',
+        label: 'Open HubGrid',
       },
       auction: {
         type: 'link',

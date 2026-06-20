@@ -88,7 +88,7 @@ export function MarketDashboardClient({
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-16 text-center">
         <PortalRoleBadge portal="coordinator" />
-        <h1 className="mt-2 font-heading text-2xl font-semibold sm:text-3xl">Blueprint Studio</h1>
+        <h1 className="mt-2 font-heading text-2xl font-semibold sm:text-3xl">HubGrid</h1>
         <p className="mt-2 text-muted-foreground">
           Create your first market to unlock the full-screen booth layout designer.
         </p>

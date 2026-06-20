@@ -15,7 +15,7 @@ const STEPS = [
   {
     step: '2',
     title: 'Approve vendors',
-    description: 'Review applications, collect documents, and confirm booth assignments from Markets and Blueprint Studio.',
+    description: 'Review applications, collect documents, and confirm booth assignments from Markets and HubGrid.',
   },
   {
     step: '3',

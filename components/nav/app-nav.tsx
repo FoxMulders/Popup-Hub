@@ -62,7 +62,7 @@ const NAV_LINKS: Record<string, { href: string; label: string; title?: string }[
   coordinator: [
     { href: COORDINATOR_HOME_PATH, label: 'Home' },
     { href: COORDINATOR_MARKETS_PATH, label: 'Markets' },
-    { href: COORDINATOR_STUDIO_PATH, label: 'Blueprint Studio' },
+    { href: COORDINATOR_STUDIO_PATH, label: 'HubGrid' },
     { href: '/coordinator/events/new', label: 'New Event' },
     { href: '/wallet', label: 'Wallet' },
   ],

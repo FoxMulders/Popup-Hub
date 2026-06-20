@@ -48,7 +48,7 @@ export function resolveDesignerExitLabel(
   compact = false
 ): string {
   if (isStudioExitTarget(target)) {
-    return compact ? 'Blueprint Studio' : 'Open Blueprint Studio'
+    return compact ? 'HubGrid' : 'Open HubGrid'
   }
   const useSetup =
     target === 'event-setup' || (target === 'auto' && eventStatus === 'draft')

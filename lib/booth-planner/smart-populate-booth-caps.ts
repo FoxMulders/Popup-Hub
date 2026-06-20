@@ -343,7 +343,9 @@ export function buildSmartPopulateLimits(
   })
   const cMax = calculateMaxBoothCapacity(floor.netUsableSqFt, footprint.sqFt)
 
-  const eligible = input.categories.filter((c) => input.allowMlm || !c.is_mlm)
+  const eligible = input.categories.filter(
+    (c) => (input.allowMlm || !c.is_mlm) && c.is_broad === true
+  )
   const byBucket = new Map<DistributionBucketKey, Category[]>()
   for (const key of CATEGORY_DISTRIBUTION_BUCKETS.map((b) => b.key)) {
     byBucket.set(key, [])

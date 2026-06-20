@@ -23,10 +23,10 @@ export const MARKET_DAY_HOW_TO: HowToStep[] = [
     ],
   },
   {
-    title: '2. Build the floor plan in Blueprint Studio',
-    summary: 'Design booths, aisles, and doors across multiple rooms in Blueprint Studio.',
+    title: '2. Build the floor plan in HubGrid',
+    summary: 'Design booths, aisles, and doors across multiple rooms in HubGrid.',
     steps: [
-      'Open Blueprint Studio from the site nav, Markets, or your event hub (desktop required for the full canvas).',
+      'Open HubGrid from the site nav, Markets, or your event hub (desktop required for the full canvas).',
       'Add rooms/zones (Main Hall, Annex, Patio, etc.) — each keeps its own walls and placements until you save.',
       'Sketch walls, doors, and exits on the perimeter. Entry and exit doors can be dragged along outer walls.',
       'Place vendor booths manually, drag approved vendors from the Available pool onto booths, or run AI Auto-Arrange.',
@@ -60,7 +60,7 @@ export const MARKET_DAY_HOW_TO: HowToStep[] = [
     steps: [
       'Open the FCFS Queue tab — vendors are sorted by approval time.',
       'Rows highlighted in violet have a matching “Stand Beside” preference with another vendor in the queue.',
-      'Return to Blueprint Studio to place paired vendors in adjacent booths when space allows.',
+      'Return to HubGrid to place paired vendors in adjacent booths when space allows.',
     ],
   },
   {
@@ -87,7 +87,7 @@ export const MARKET_DAY_HOW_TO: HowToStep[] = [
 export const MARKET_DAY_FAQ: FaqItem[] = [
   {
     question: 'What is the stroller-safe aisle rule?',
-    answer: `Walkways between booths must maintain at least ${MIN_STROLLER_AISLE_WIDTH_FT} feet of clearance — the ergonomic minimum for two double-strollers to pass while shoppers are stopped at booths. Blueprint Studio highlights tight aisles and shows clearance warnings when bottlenecks are detected.`,
+    answer: `Walkways between booths must maintain at least ${MIN_STROLLER_AISLE_WIDTH_FT} feet of clearance — the ergonomic minimum for two double-strollers to pass while shoppers are stopped at booths. HubGrid highlights tight aisles and shows clearance warnings when bottlenecks are detected.`,
   },
   {
     question: 'How does AI Auto-Arrange work?',
@@ -97,12 +97,12 @@ export const MARKET_DAY_FAQ: FaqItem[] = [
   {
     question: 'What is “Stand Beside” and how do violet highlights work?',
     answer:
-      'Vendors can enter a neighbor preference when applying (business or vendor name). The FCFS Queue tab flags matching pairs with violet highlights. Placement is still manual in Blueprint Studio or via AI Auto-Arrange — the queue highlights are guides, not automatic pairing.',
+      'Vendors can enter a neighbor preference when applying (business or vendor name). The FCFS Queue tab flags matching pairs with violet highlights. Placement is still manual in HubGrid or via AI Auto-Arrange — the queue highlights are guides, not automatic pairing.',
   },
   {
     question: 'Can I have multiple rooms or zones?',
     answer:
-      'Yes. Use the room tabs in Blueprint Studio to add or switch zones (e.g. Main Hall vs. Patio). Each room has its own dimensions, fixtures, and booth placements. Saving writes all rooms to the layout record in one pass.',
+      'Yes. Use the room tabs in HubGrid to add or switch zones (e.g. Main Hall vs. Patio). Each room has its own dimensions, fixtures, and booth placements. Saving writes all rooms to the layout record in one pass.',
   },
   {
     question: 'How do vendor reliability scores work?',
@@ -137,6 +137,6 @@ export const MARKET_DAY_FAQ: FaqItem[] = [
   {
     question: 'Do I need to save the layout after every change?',
     answer:
-      'Blueprint Studio autosaves layout edits while you work, but click Save draft or Save layout before switching devices or closing a long session. Market-day check-in and operations read from the last saved layout in the database.',
+      'HubGrid autosaves layout edits while you work, but click Save draft or Save layout before switching devices or closing a long session. Market-day check-in and operations read from the last saved layout in the database.',
   },
 ]

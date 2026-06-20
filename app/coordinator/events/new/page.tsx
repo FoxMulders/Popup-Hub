@@ -14,8 +14,8 @@ export default async function NewEventPage() {
     .order('name')
 
   return (
-    <div className="coordinator-setup-page flex flex-1 flex-col">
-      <div className="setup-wizard-body flex-1 overflow-x-hidden overflow-y-auto px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6 lg:px-8">
+    <div className="coordinator-setup-page flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="setup-wizard-body flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-6 sm:py-6 lg:px-8">
         <MarketSetupWizard
           categories={(categories as Category[]) ?? []}
           coordinatorId={user.id}

@@ -10,7 +10,7 @@ import { useMarketManagement } from './market-management-context'
 
 /**
  * Workflow CTA anchored beneath ledger panels — routes coordinators through
- * Blueprint Studio → Allocation Ledger → Event overview.
+ * HubGrid → Allocation Ledger → Event overview.
  */
 export function DashboardNextStepCta({
   className,

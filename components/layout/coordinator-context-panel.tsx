@@ -54,7 +54,7 @@ export function CoordinatorContextPanel() {
         </p>
         {onStudio ? (
           <p className="mt-2 text-[0.6875rem] leading-snug text-muted-foreground">
-            Live booth revenue and Square sync appear in this column in Blueprint Studio.
+            Live booth revenue and Square sync appear in this column in HubGrid.
           </p>
         ) : (
           <>
@@ -72,7 +72,7 @@ export function CoordinatorContextPanel() {
             >
               <Button variant="outline" size="sm" className="w-full gap-1 text-xs">
                 <Activity className="h-3.5 w-3.5" aria-hidden />
-                {eventIdFromRoute ? 'Blueprint Studio telemetry' : 'Open Blueprint Studio'}
+                {eventIdFromRoute ? 'HubGrid telemetry' : 'Open HubGrid'}
                 <ArrowRight className="h-3 w-3" aria-hidden />
               </Button>
             </Link>

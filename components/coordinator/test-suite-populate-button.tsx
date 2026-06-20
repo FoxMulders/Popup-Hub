@@ -108,7 +108,7 @@ export function TestSuitePopulateButton({
         await market?.refreshApprovedPool(eventId)
         router.refresh()
         toast.success(
-          `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}. Open Blueprint Studio to place booths on the grid.`,
+          `Test suite ready: ${body.applicationCount ?? 0} approved & paid vendors (${body.tableSlots ?? 0} tables)${skipped}. Open HubGrid to place booths on the grid.`,
           { id: TEST_SUITE_TOAST_ID, duration: 9000 }
         )
         return

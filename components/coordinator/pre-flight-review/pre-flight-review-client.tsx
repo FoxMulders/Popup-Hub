@@ -255,7 +255,7 @@ export function PreFlightReviewClient({
           </MarketPanelTitle>
         </MarketPanelHeader>
         <p className="mt-1 text-sm text-muted-foreground">
-          Read-only summary from Blueprint Studio — spatial changes happen only in the canvas.
+          Read-only summary from HubGrid — spatial changes happen only in the canvas.
         </p>
 
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -295,7 +295,7 @@ export function PreFlightReviewClient({
           </div>
         ) : (
           <p className="mt-4 text-sm text-muted-foreground">
-            No vendor booths placed yet — open Blueprint Studio to place booths before publishing.
+            No vendor booths placed yet — open HubGrid to place booths before publishing.
           </p>
         )}
 
@@ -323,7 +323,7 @@ export function PreFlightReviewClient({
           className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-forest hover:underline"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          Return to Blueprint Studio to change layout
+          Return to HubGrid to change layout
         </Link>
       </MarketPanel>
 
