@@ -13,8 +13,8 @@ export const GUEST_RIBBON_LINKS: SiteRibbonLink[] = [
   { href: '/discover', label: 'Discover Markets' },
   {
     href: TRUST_DIRECTORY_LINKS.check.href,
-    label: TRUST_DIRECTORY_LINKS.check.label,
-    title: TRUST_DIRECTORY_LINKS.check.tagline,
+    label: TRUST_DIRECTORY_LINKS.check.navLabel,
+    title: `${TRUST_DIRECTORY_LINKS.check.label} — ${TRUST_DIRECTORY_LINKS.check.tagline}`,
   },
   { href: '/signup?role=vendor', label: 'For Vendors' },
   { href: '/signup?role=coordinator&next=/coordinator/events/new', label: 'Host a Market' },
@@ -27,8 +27,8 @@ export const PATRON_RIBBON_LINKS: SiteRibbonLink[] = [
   { href: '/discover', label: 'Discover Markets' },
   {
     href: TRUST_DIRECTORY_LINKS.check.href,
-    label: TRUST_DIRECTORY_LINKS.check.label,
-    title: TRUST_DIRECTORY_LINKS.check.tagline,
+    label: TRUST_DIRECTORY_LINKS.check.navLabel,
+    title: `${TRUST_DIRECTORY_LINKS.check.label} — ${TRUST_DIRECTORY_LINKS.check.tagline}`,
   },
   { href: '/favorites', label: 'Favorites' },
   { href: '/wallet', label: 'Wallet' },

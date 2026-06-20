@@ -4,6 +4,33 @@
 
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
+## Active work — patron UX + coordinator polish (local, not deployed)
+- **Goal:** Tester feedback batch — footer, discover location, venue approval, league pricing, mobile layout gate, Canopy nav naming.
+- **Shipped locally:**
+  - **Footer:** Removed year from copyright; moved `BuildVersionFooter` inside `#site-layout-main` with `mt-auto`; dropped `flex-1` on `#site-main` to remove content/footer gap; mobile padding above bottom nav; `ComplianceFooter` delegates to shared footer
+  - **Canopy nav:** Ribbon/menu use **Check organizers**; `/check` page keeps **Canopy** branding
+  - **Canopy review form:** Organizer dropdown keeps proper-cased display name after selection (was showing lowercase slug)
+  - **Venues:** `shouldSubmitPlatformVenue` no longer skips coordinator saved venues; submit on wizard autosave, event form save, and "Save for future" venue action
+  - **League discount:** Wired in `EventForm` (wizard already had it)
+  - **Mobile layout:** Wizard step 3 shows save-and-continue CTA; full-screen overlay unchanged on studio
+  - **Discover:** Bright address input; **Use my location** switches to map + drops blue `#4285F4` pin
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover` footer at bottom, location pin on map, `/check` nav vs page titles, coordinator new venue → admin queue, league discount on event edit.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Canopy booth-fee headline (local, not deployed)
+- **Goal:** Trust directory hero/callout copy names **Canopy** explicitly.
+- **Shipped locally:** `TRUST_DIRECTORY_LINKS.check.boothFeeHeadline` — “Before you pay for a booth, use Canopy to check the organizer”; wired in homepage hero, `/check` h1, vendor events callout.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — mobile discover UX polish (local, not deployed)
+- **Goal:** Patron mobile feedback — compact single-row header, readable discover hero band, monotonic loader progress bar.
+- **Shipped locally:**
+  - **Header:** `BrandLogoLockup` default `header` size (~36px); logo + Patron/Vendor/Coordinator tabs + menu on one row (`AppNav`, `ShopperTopBar`, `GuestNav`); removed mobile second-row portal tabs; `--app-nav-height` 3.25rem
+  - **Discover band:** `SitePageBand` forest h1 explicit `text-white`; description `text-base text-white/95`; tighter mobile vertical padding
+  - **Loader:** `initialLoaderFrame` keeps progress at 1 during hold/outro so progress bar never rewinds
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover` on mobile width — single header row, white title on green band, splash loader bar fills forward only.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Canopy trust directory rebrand (local, not deployed)
 - **Goal:** Rebrand trust directory nav from "Check organizers" to **Canopy** with tagline **Popup Hub security & fraud prevention**.
 - **Shipped locally:**

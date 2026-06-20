@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ShieldCheck } from 'lucide-react'
 import { MarketingHeroBackdrop } from '@/components/public/marketing/marketing-hero-backdrop'
 import { MarketingHeroActions } from '@/components/public/marketing/marketing-hero-actions'
+import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 export function MarketingHero() {
   return (
@@ -14,7 +15,7 @@ export function MarketingHero() {
             Edmonton &amp; Alberta makers markets
           </p>
           <h1 className="mt-6 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-            Before you pay for a booth, check the organizer
+            {TRUST_DIRECTORY_LINKS.check.boothFeeHeadline}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg">
             Search market organizers in the Edmonton area — official links, verified scam alerts, and

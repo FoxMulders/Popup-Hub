@@ -18,8 +18,14 @@ import {
 } from '@/components/ui/select'
 import type { Organizer } from '@/types/organizers'
 
+type OrganizerOption = Pick<Organizer, 'slug' | 'display_name' | 'city'>
+
+function organizerOptionLabel(org: OrganizerOption) {
+  return `${org.display_name} · ${org.city}`
+}
+
 type Props = {
-  organizers: Pick<Organizer, 'slug' | 'display_name' | 'city'>[]
+  organizers: OrganizerOption[]
   initialOrganizerSlug?: string
   canSubmit: boolean
   isSignedIn: boolean
@@ -250,12 +256,18 @@ export function OrganizerReviewForm({
             required
           >
             <SelectTrigger id="organizer" className="w-full">
-              <SelectValue placeholder="Select organizer…" />
+              <SelectValue placeholder="Select organizer…">
+                {(value) => {
+                  if (!value) return 'Select organizer…'
+                  const org = sortedOrganizers.find((o) => o.slug === value)
+                  return org ? organizerOptionLabel(org) : value
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {sortedOrganizers.map((org) => (
                 <SelectItem key={org.slug} value={org.slug}>
-                  {org.display_name} · {org.city}
+                  {organizerOptionLabel(org)}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -27,6 +27,8 @@ import {
 interface EventMapProps {
   events: Event[]
   center?: LatLng
+  /** When true, show a standard blue pin at `center` (device / "near you" origin). */
+  showUserOriginPin?: boolean
   /**
    * Search radius (km) currently selected by the user. When provided the
    * map auto-rezooms so the visible viewport mirrors the radius the user
@@ -154,10 +156,12 @@ function GoogleEventMap({
   events,
   center,
   radiusKm,
+  showUserOriginPin = false,
 }: {
   events: Event[]
   center: LatLng
   radiusKm?: DistanceRadiusKm
+  showUserOriginPin?: boolean
 }) {
   const [selected, setSelected] = useState<Event | null>(null)
 
@@ -176,6 +180,11 @@ function GoogleEventMap({
     >
       <MapResize />
       <MapRadiusFraming center={center} radiusKm={radiusKm} />
+      {showUserOriginPin ? (
+        <AdvancedMarker position={{ lat: center.lat, lng: center.lng }} title="Your location">
+          <Pin background="#4285F4" borderColor="#ffffff" glyphColor="#ffffff" />
+        </AdvancedMarker>
+      ) : null}
       {events.map((event) => {
         const style = markerStyle(event)
         return (
@@ -255,7 +264,7 @@ function GoogleEventMap({
   )
 }
 
-export function EventMap({ events, center: centerProp, radiusKm }: EventMapProps) {
+export function EventMap({ events, center: centerProp, radiusKm, showUserOriginPin }: EventMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()
 
   // Always anchor the map on the user's selected origin (`centerProp`) when
@@ -278,7 +287,12 @@ export function EventMap({ events, center: centerProp, radiusKm }: EventMapProps
           libraries={['marker']}
           fallback={<EventMapFallback events={events} />}
         >
-          <GoogleEventMap events={events} center={center} radiusKm={radiusKm} />
+          <GoogleEventMap
+            events={events}
+            center={center}
+            radiusKm={radiusKm}
+            showUserOriginPin={showUserOriginPin}
+          />
         </GoogleMapsProvider>
       )}
     </div>

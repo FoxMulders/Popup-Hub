@@ -10,6 +10,8 @@ interface CenteredHeaderRowProps {
   center: ReactNode
   /** Profile, menu, and utility actions — aligned right. */
   right: ReactNode
+  /** When start, middle zone hugs the logo (single-row mobile chrome). */
+  centerAlign?: 'center' | 'start'
   className?: string
 }
 
@@ -20,6 +22,7 @@ export function CenteredHeaderRow({
   left,
   center,
   right,
+  centerAlign = 'center',
   className,
 }: CenteredHeaderRowProps) {
   return (
@@ -30,7 +33,12 @@ export function CenteredHeaderRow({
       )}
     >
       <div className="justify-self-start shrink-0">{left}</div>
-      <div className="flex min-w-0 items-center justify-center gap-2 overflow-x-hidden sm:gap-3">
+      <div
+        className={cn(
+          'flex min-w-0 items-center gap-2 overflow-x-hidden sm:gap-3',
+          centerAlign === 'start' ? 'justify-start' : 'justify-center'
+        )}
+      >
         {center}
       </div>
       <div className="flex shrink-0 items-center justify-end gap-2 overflow-x-hidden">

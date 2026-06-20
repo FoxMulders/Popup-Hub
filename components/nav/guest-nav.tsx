@@ -30,8 +30,9 @@ export function GuestNav() {
 
   return (
     <nav className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top">
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 xl:max-w-[1600px] xl:px-10">
+      <div className="mx-auto flex max-w-full overflow-x-hidden px-4 py-2 xl:max-w-[1600px] xl:px-10 sm:py-2.5">
         <CenteredHeaderRow
+          centerAlign="start"
           left={
             <BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />
           }

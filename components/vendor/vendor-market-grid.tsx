@@ -150,6 +150,7 @@ export function VendorMarketGrid({
     setRadiusKm,
     locationLabel,
     locating,
+    showDeviceLocationPin,
     useMyLocation,
     setOriginFromPlace,
   } = useMarketAreaFilter()
@@ -181,7 +182,10 @@ export function VendorMarketGrid({
         onRadiusChange={setRadiusKm}
         locationLabel={locationLabel}
         locating={locating}
-        onUseMyLocation={useMyLocation}
+        onUseMyLocation={() => {
+          useMyLocation()
+          setView('map')
+        }}
         onAddressSelect={setOriginFromPlace}
       />
 
@@ -235,6 +239,7 @@ export function VendorMarketGrid({
             events={filteredActive}
             center={origin}
             radiusKm={radiusKm}
+            showUserOriginPin={showDeviceLocationPin}
           />
           {filteredActive.length === 0 ? (
             <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center">

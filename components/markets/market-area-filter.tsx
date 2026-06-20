@@ -31,8 +31,8 @@ export function MarketAreaFilter({
       <DistanceRadiusPicker value={radiusKm} onChange={onRadiusChange} />
       <HomeAddressPicker
         id="market-area-home-address"
-        label="Home address"
-        placeholder="Enter your home address or postal code…"
+        label="Enter your address"
+        placeholder="Enter your address or postal code…"
         onSelect={({ lat, lng, label }) => onAddressSelect(lat, lng, label)}
       />
       <div className="flex flex-wrap items-center gap-2">

@@ -17,6 +17,10 @@ import {
   saveCoordinatorVenue,
   touchCoordinatorSavedVenue,
 } from '@/lib/coordinator/saved-venues'
+import {
+  shouldSubmitPlatformVenue,
+  submitPlatformVenue,
+} from '@/lib/venues/platform-venue-submissions'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { WIZARD_SELECT_TRIGGER } from '@/lib/wizard/wizard-panel-styles'
@@ -157,6 +161,29 @@ export function EdmontonVenueTemplateBar({
       toast.error(error?.message ?? 'Could not save venue')
       return
     }
+
+    const shouldSubmit = await shouldSubmitPlatformVenue(supabase, coordinatorId, {
+      locationName,
+      address,
+      latitude: lat,
+      longitude: lng,
+      marketCity: city,
+    })
+    if (shouldSubmit) {
+      const { created, error: submitError } = await submitPlatformVenue(supabase, coordinatorId, {
+        locationName,
+        address,
+        latitude: lat,
+        longitude: lng,
+        marketCity: city,
+      })
+      if (submitError) {
+        toast.error(submitError.message)
+      } else if (created) {
+        toast.message('New venue submitted for admin review')
+      }
+    }
+
     await refreshSavedVenues()
     toast.success('Venue saved for future events')
   }

@@ -52,7 +52,7 @@ export function SiteAppShell({
             viewportFill
               ? 'min-h-0 flex-1 overflow-hidden'
               : cn(
-                  'w-full max-w-full flex-1 overflow-x-hidden',
+                  'w-full max-w-full overflow-x-hidden',
                   vendorPortal &&
                     'pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:pb-0'
                 )

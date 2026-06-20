@@ -145,7 +145,7 @@ function HomeAddressPickerInner({
           value={input}
           disabled={disabled || geocoding}
           placeholder={placeholder}
-          className="pl-9 pr-10"
+          className="border-2 border-stone-300 bg-white pl-9 pr-10 text-base font-medium text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/25"
           autoComplete="street-address"
           role="combobox"
           aria-expanded={open}

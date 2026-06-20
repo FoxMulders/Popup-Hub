@@ -338,8 +338,21 @@ function WizardStepFloorPlanInner({
       }
     >
       {showDesktopRequired ? (
-        <div className="flex min-h-[40vh] items-center justify-center p-6 text-center text-sm text-muted-foreground">
-          Open on a tablet or desktop to design your floor plan.
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+            Booth layout needs a tablet or desktop. Save your market now and continue designing on a
+            larger screen.
+          </p>
+          {onSaveMarket ? (
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-forest px-5 text-sm font-semibold text-white hover:bg-forest-deep disabled:opacity-50"
+              disabled={saveMarketDisabled || saveMarketLoading}
+              onClick={() => void onSaveMarket()}
+            >
+              {saveMarketLoading ? 'Saving…' : 'Save market & pick up on desktop'}
+            </button>
+          ) : null}
         </div>
       ) : (
       <FloorPlanV2

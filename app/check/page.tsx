@@ -31,7 +31,7 @@ export default async function CheckPage({ searchParams }: Props) {
           {TRUST_DIRECTORY_LINKS.check.label} · {TRUST_DIRECTORY_LINKS.check.tagline}
         </p>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Before you pay for a booth, check the organizer
+          {TRUST_DIRECTORY_LINKS.check.boothFeeHeadline}
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
           Search Edmonton-area markets and organizers. Verify official websites before sending money.

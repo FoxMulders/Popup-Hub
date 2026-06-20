@@ -107,17 +107,19 @@ export function ShopperTopBar({
 
   return (
     <header className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top">
-      <div className="mx-auto flex max-w-full flex-col gap-2 overflow-x-hidden px-4 py-3.5 sm:max-w-7xl sm:px-6 xl:max-w-[1600px] xl:px-10">
+      <div className="mx-auto flex max-w-full overflow-x-hidden px-4 py-2 sm:max-w-7xl sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
+          centerAlign="start"
           left={
             <BrandLogoLockup className="shrink-0" href={SITE_HOME_PATH} />
           }
           center={
-            <div className="hidden min-w-0 flex-1 items-center gap-2 overflow-x-hidden sm:flex">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-hidden">
               {profile && availablePortals.length > 1 ? (
                 <PortalTabs
                   availablePortals={availablePortals}
                   activePortal={activePortal}
+                  compact
                   className="shrink-0"
                 />
               ) : null}
@@ -197,15 +199,6 @@ export function ShopperTopBar({
             )
           }
         />
-
-        {profile && availablePortals.length > 1 ? (
-          <PortalTabs
-            availablePortals={availablePortals}
-            activePortal={activePortal}
-            compact
-            className="w-full sm:hidden"
-          />
-        ) : null}
       </div>
     </header>
   )

@@ -141,7 +141,7 @@
   --sidebar-border: #e3ddd2;
   --sidebar-ring: #8fb892;
 
-  --app-nav-height: 3.625rem;
+  --app-nav-height: 3.25rem;
   --build-strip-height: 1.17rem;
   --command-center-left: 320px;
   --command-center-right: 360px;
@@ -1147,7 +1147,7 @@
 
     body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {
       margin-top: auto;
-      padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(3.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
     }
 
     body[data-mobile-bottom-nav='shopper'] .site-app-shell #site-main {

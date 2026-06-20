@@ -186,11 +186,14 @@ export function PopupHubIcon(props: PopupHubLogoProps) {
   return <PopupHubLogo {...props} />
 }
 
-type BrandLogoMarkSize = 'nav' | 'auth'
+type BrandLogoMarkSize = 'nav' | 'auth' | 'header'
 
 const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
+  /** Legacy marketing lockup — avoid in sticky app chrome. */
   nav: 'h-[5.5rem] w-auto sm:h-[6.2rem]',
   auth: 'h-14 w-auto sm:h-16',
+  /** Single-row sticky header: logo beside portal tabs. */
+  header: 'h-9 w-auto sm:h-10',
 }
 
 interface BrandLogoMarkProps {
@@ -203,13 +206,15 @@ interface BrandLogoMarkProps {
 export function BrandLogoLockup({
   className,
   href,
+  size = 'header',
 }: {
   className?: string
   href?: string
+  size?: BrandLogoMarkSize
 }) {
   return (
     <PopupHubLogo
-      className={cn(MARK_HEIGHTS.nav, className)}
+      className={cn(MARK_HEIGHTS[size], className)}
       title="Popup Hub"
       priority
       href={href}

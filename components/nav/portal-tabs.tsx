@@ -13,6 +13,7 @@ interface PortalTabsProps {
   availablePortals: ActivePortal[]
   activePortal: ActivePortal
   className?: string
+  /** Tighter padding for inline header row (logo + tabs + menu). */
   compact?: boolean
 }
 
@@ -68,8 +69,7 @@ export function PortalTabs({
       role="tablist"
       aria-label="Switch portal"
       className={cn(
-        'inline-flex max-w-full items-center gap-0.5 overflow-x-hidden rounded-full border border-stone-200/80 bg-stone-200/45 p-1 shadow-[inset_0_1px_2px_rgb(62_45_28_/_0.06)]',
-        compact && 'w-full',
+        'inline-flex max-w-full items-center gap-0.5 overflow-x-hidden rounded-full border border-stone-200/80 bg-stone-200/45 p-0.5 shadow-[inset_0_1px_2px_rgb(62_45_28_/_0.06)] sm:p-1',
         className
       )}
     >
@@ -84,9 +84,11 @@ export function PortalTabs({
             disabled={pending}
             onClick={() => void switchPortal(portal)}
             className={cn(
-              'shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition-all touch-manipulation min-h-11 sm:px-4 sm:text-sm',
+              'shrink-0 rounded-full font-semibold transition-all touch-manipulation',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/35 focus-visible:ring-offset-2',
-              compact && 'flex-1 text-center',
+              compact
+                ? 'min-h-9 px-2.5 py-1.5 text-[11px] sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-xs'
+                : 'min-h-11 px-3.5 py-2 text-xs sm:px-4 sm:text-sm',
               selected
                 ? 'bg-white text-forest shadow-[var(--shadow-market-md)] ring-1 ring-stone-200/70'
                 : 'text-stone-700 hover:bg-white/55 hover:text-stone-900',

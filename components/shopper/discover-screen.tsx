@@ -56,6 +56,7 @@ export function DiscoverScreen({
     setRadiusKm,
     locationLabel,
     locating,
+    showDeviceLocationPin,
     useMyLocation,
     setOriginFromPlace,
   } = useMarketAreaFilter()
@@ -94,6 +95,11 @@ export function DiscoverScreen({
     },
     [replaceParams]
   )
+
+  const handleUseMyLocation = useCallback(() => {
+    useMyLocation()
+    setViewMode('map')
+  }, [useMyLocation, setViewMode])
 
   const filtered = useMemo(() => {
     const scoped = filterEventsByListingType(events, 'community_market')
@@ -258,7 +264,7 @@ export function DiscoverScreen({
           onRadiusChange={setRadiusKm}
           locationLabel={locationLabel}
           locating={locating}
-          onUseMyLocation={useMyLocation}
+          onUseMyLocation={handleUseMyLocation}
           onAddressSelect={setOriginFromPlace}
         />
       </div>
@@ -308,7 +314,12 @@ export function DiscoverScreen({
             'h-[min(70dvh,520px)] md:h-[480px]'
           )}
         >
-          <EventMap events={filtered} center={origin} radiusKm={radiusKm} />
+          <EventMap
+            events={filtered}
+            center={origin}
+            radiusKm={radiusKm}
+            showUserOriginPin={showDeviceLocationPin}
+          />
           {filtered.length === 0 ? (
             <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex justify-center">
               <div className="pointer-events-auto rounded-xl border border-stone-200 bg-white/95 px-4 py-2 text-center text-xs font-medium shadow-sm backdrop-blur-sm sm:max-w-md">

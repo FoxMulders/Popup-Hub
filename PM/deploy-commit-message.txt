@@ -1,1 +1,1 @@
-feat: ship 135 session updates (Canopy trust directory rebrand; patron navigation, location, organizer UX; quarter auction setup parity; organizer list growth; +131 more)
+feat: ship 138 session updates (patron UX + coordinator polish; Canopy booth-fee headline; mobile discover UX polish; Canopy trust directory rebrand; +134 more)

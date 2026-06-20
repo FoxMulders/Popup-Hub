@@ -30,10 +30,6 @@ function easeOutCubic(value: number) {
   return 1 - (1 - value) ** 3
 }
 
-function easeInOutCubic(value: number) {
-  return value < 0.5 ? 4 * value ** 3 : 1 - (-2 * value + 2) ** 3 / 2
-}
-
 /** Map frame index to normalized animation progress (0–1) for the reveal sequence. */
 export function initialLoaderProgress(globalFrame: number): number {
   const revealEnd = INITIAL_LOADER.holdFrame
@@ -49,7 +45,7 @@ export function initialLoaderFrame(globalFrame: number): InitialLoaderFrame {
 
   const progress =
     globalFrame >= holdFrame
-      ? 1 - easeInOutCubic(clamp((globalFrame - holdFrame) / (totalFrames - holdFrame), 0, 1)) * 0.08
+      ? 1
       : initialLoaderProgress(globalFrame)
 
   return { globalFrame, progress, phase }

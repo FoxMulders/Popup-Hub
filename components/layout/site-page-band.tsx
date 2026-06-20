@@ -33,7 +33,7 @@ export function SitePageBand({
       {isForest ? <MarketingHeroBackdrop /> : null}
       <div
         className={cn(
-          'relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12',
+          'relative mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10',
           isForest ? '' : 'lg:py-14'
         )}
       >
@@ -41,7 +41,7 @@ export function SitePageBand({
           <p
             className={cn(
               'text-xs font-bold uppercase tracking-widest',
-              isForest ? 'text-white/70' : 'text-sage-700'
+              isForest ? 'text-white/90' : 'text-sage-700'
             )}
           >
             {eyebrow}
@@ -51,7 +51,9 @@ export function SitePageBand({
           className={cn(
             'font-bold tracking-tight',
             eyebrow ? 'mt-2' : '',
-            isForest ? 'text-3xl sm:text-4xl' : 'text-3xl text-foreground sm:text-4xl'
+            isForest
+              ? 'text-2xl text-white sm:text-3xl md:text-4xl'
+              : 'text-3xl text-foreground sm:text-4xl'
           )}
         >
           {title}
@@ -59,8 +61,10 @@ export function SitePageBand({
         {description ? (
           <p
             className={cn(
-              'mt-3 max-w-2xl text-sm leading-relaxed sm:text-base',
-              isForest ? 'text-white/80' : 'text-muted-foreground'
+              'mt-3 max-w-2xl leading-relaxed',
+              isForest
+                ? 'text-base text-white/95 sm:text-base'
+                : 'text-sm text-muted-foreground sm:text-base'
             )}
           >
             {description}

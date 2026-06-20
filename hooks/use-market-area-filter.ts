@@ -48,6 +48,7 @@ export function useMarketAreaFilter() {
   const [radiusKm, setRadiusKmState] = useState<number | null>(DEFAULT_DISTANCE_RADIUS_KM)
   const [locationLabel, setLocationLabel] = useState(DEFAULT_LOCATION_LABEL)
   const [locating, setLocating] = useState(false)
+  const [showDeviceLocationPin, setShowDeviceLocationPin] = useState(false)
 
   useEffect(() => {
     setRadiusKmState(readStoredRadius())
@@ -55,6 +56,7 @@ export function useMarketAreaFilter() {
     if (stored) {
       setOrigin({ lat: stored.lat, lng: stored.lng })
       setLocationLabel(stored.label ?? NEAR_YOU_LABEL)
+      setShowDeviceLocationPin(stored.label === NEAR_YOU_LABEL)
     }
   }, [])
 
@@ -71,6 +73,7 @@ export function useMarketAreaFilter() {
     const next = { lat, lng }
     setOrigin(next)
     setLocationLabel(label)
+    setShowDeviceLocationPin(false)
     storeUserLocation({ ...next, label })
   }, [])
 
@@ -85,6 +88,7 @@ export function useMarketAreaFilter() {
         const next = { lat: pos.coords.latitude, lng: pos.coords.longitude }
         setOrigin(next)
         setLocationLabel(NEAR_YOU_LABEL)
+        setShowDeviceLocationPin(true)
         storeUserLocation({ ...next, label: NEAR_YOU_LABEL })
         setLocating(false)
       },
@@ -102,6 +106,7 @@ export function useMarketAreaFilter() {
     setRadiusKm,
     locationLabel,
     locating,
+    showDeviceLocationPin,
     useMyLocation,
     setOriginFromPlace,
   }

@@ -106,8 +106,8 @@ export default async function RootLayout({
           <div className="flex min-h-dvh flex-1 flex-col">
             <div id="site-layout-main" className="flex min-h-0 flex-1 flex-col">
               <TooltipProvider>{children}</TooltipProvider>
+              <BuildVersionFooter />
             </div>
-            <BuildVersionFooter />
           </div>
           <InstallPrompt />
           <Toaster richColors position="top-right" />

@@ -51,7 +51,11 @@ const NAV_LINKS: Record<string, { href: string; label: string; title?: string }[
     { href: '/vendor/passport', label: 'My Passport' },
     { href: '/vendor/supplies', label: 'Vendor Supplies' },
     { href: '/vendor/events', label: 'Apply for open markets' },
-    { href: TRUST_DIRECTORY_LINKS.check.href, label: TRUST_DIRECTORY_LINKS.check.label, title: TRUST_DIRECTORY_LINKS.check.tagline },
+    {
+      href: TRUST_DIRECTORY_LINKS.check.href,
+      label: TRUST_DIRECTORY_LINKS.check.navLabel,
+      title: `${TRUST_DIRECTORY_LINKS.check.label} — ${TRUST_DIRECTORY_LINKS.check.tagline}`,
+    },
     { href: '/vendor/applications', label: 'My Applications' },
     { href: '/wallet', label: 'Wallet' },
   ],
@@ -103,10 +107,11 @@ export function AppNav({
     <nav
       id="site-app-nav"
       className="popup-hub-chrome-header sticky top-0 z-50 overflow-x-hidden border-b border-stone-200/70 bg-cream/80 backdrop-blur-lg safe-top"
-      style={{ minHeight: 'var(--app-nav-height, 3.625rem)' }}
+      style={{ minHeight: 'var(--app-nav-height, 3.25rem)' }}
     >
-      <div className="mx-auto flex max-w-full flex-col gap-1 overflow-x-hidden px-4 py-3.5 sm:px-6 xl:max-w-[1600px] xl:px-10">
+      <div className="mx-auto flex max-w-full overflow-x-hidden px-4 py-2 sm:px-6 sm:py-2.5 xl:max-w-[1600px] xl:px-10">
         <CenteredHeaderRow
+          centerAlign="start"
           left={
             <BrandLogoLockup
               className="shrink-0"
@@ -116,10 +121,11 @@ export function AppNav({
           center={
             <>
               {availablePortals.length > 1 ? (
-                <div className="hidden shrink-0 items-center gap-2 sm:flex md:gap-3">
+                <div className="flex shrink-0 items-center gap-2 md:gap-3">
                   <PortalTabs
                     availablePortals={availablePortals}
                     activePortal={activePortal}
+                    compact
                   />
                   {links.length > 0 ? (
                     <div
@@ -215,15 +221,6 @@ export function AppNav({
             </>
           }
         />
-
-        {availablePortals.length > 1 ? (
-          <PortalTabs
-            availablePortals={availablePortals}
-            activePortal={activePortal}
-            compact
-            className="w-full sm:hidden"
-          />
-        ) : null}
       </div>
     </nav>
   )

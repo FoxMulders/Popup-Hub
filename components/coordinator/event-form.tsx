@@ -40,6 +40,11 @@ import { CategoryLimitEditor, type CategoryLimit } from './category-limit-editor
 import { MarketBoothPricingFields } from '@/components/coordinator/wizard/market-booth-pricing-fields'
 import { applyUnifiedBoothFeeToCategoryLimits } from '@/lib/monetization/booth-pricing'
 import { SmartPopulateBoothCaps } from './smart-populate-booth-caps'
+import {
+  isCommunityLeagueVenueName,
+  shouldSubmitPlatformVenue,
+  submitPlatformVenue,
+} from '@/lib/venues/platform-venue-submissions'
 import { EdmontonHallSelector } from './edmonton-hall-selector'
 import { getEdmontonHallById } from '@/lib/data/edmonton-halls'
 import type { EdmontonHall } from '@/lib/data/edmonton-halls'
@@ -223,7 +228,20 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
   const [multiTableDiscountPercent, setMultiTableDiscountPercent] = useState(
     existing?.multi_table_discount_percent ?? 0
   )
+  const [communityLeagueDiscountEnabled, setCommunityLeagueDiscountEnabled] = useState(
+    existing?.community_league_discount_enabled ?? false
+  )
+  const [communityLeagueDiscountPercent, setCommunityLeagueDiscountPercent] = useState(
+    existing?.community_league_discount_percent ?? 0
+  )
   const [passFeesToVendor, setPassFeesToVendor] = useState(existing?.pass_fees_to_vendor ?? false)
+
+  useEffect(() => {
+    if (isCommunityLeagueVenueName(locationName) && !communityLeagueDiscountEnabled) {
+      setCommunityLeagueDiscountEnabled(true)
+      if (communityLeagueDiscountPercent <= 0) setCommunityLeagueDiscountPercent(10)
+    }
+  }, [locationName, communityLeagueDiscountEnabled, communityLeagueDiscountPercent])
 
   function handleBoothPriceCentsChange(cents: number) {
     setBoothPriceCents(cents)
@@ -426,6 +444,11 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
           100,
           Math.max(0, Math.round(multiTableDiscountPercent))
         ),
+        community_league_discount_enabled: communityLeagueDiscountEnabled,
+        community_league_discount_percent: Math.min(
+          100,
+          Math.max(0, Math.round(communityLeagueDiscountPercent))
+        ),
         pass_fees_to_vendor: passFeesToVendor,
         booth_contract_enabled: boothContractEnabled,
         booth_contract_clauses: enabledContractClausesForStorage(boothContractClauses),
@@ -480,6 +503,33 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
         )
       } else if (eventId) {
         await supabase.from('event_days').delete().eq('event_id', eventId)
+      }
+
+      if (
+        eventId &&
+        pinDropped &&
+        locationName.trim() &&
+        address.trim()
+      ) {
+        const shouldSubmit = await shouldSubmitPlatformVenue(supabase, userId, {
+          locationName,
+          address,
+          latitude: lat,
+          longitude: lng,
+        })
+        if (shouldSubmit) {
+          const { created, error: submitError } = await submitPlatformVenue(supabase, userId, {
+            locationName,
+            address,
+            latitude: lat,
+            longitude: lng,
+          })
+          if (submitError) {
+            toast.error(submitError.message)
+          } else if (created) {
+            toast.message('New venue submitted for admin review')
+          }
+        }
       }
 
       toast.success(
@@ -889,6 +939,11 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
               onBoothPriceCentsChange={handleBoothPriceCentsChange}
               multiTableDiscountPercent={multiTableDiscountPercent}
               onMultiTableDiscountPercentChange={setMultiTableDiscountPercent}
+              communityLeagueDiscountEnabled={communityLeagueDiscountEnabled}
+              onCommunityLeagueDiscountEnabledChange={setCommunityLeagueDiscountEnabled}
+              communityLeagueDiscountPercent={communityLeagueDiscountPercent}
+              onCommunityLeagueDiscountPercentChange={setCommunityLeagueDiscountPercent}
+              suggestCommunityLeagueDiscount={isCommunityLeagueVenueName(locationName)}
               passFeesToVendor={passFeesToVendor}
               onPassFeesToVendorChange={setPassFeesToVendor}
             />

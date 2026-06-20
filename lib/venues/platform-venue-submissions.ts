@@ -101,13 +101,5 @@ export async function shouldSubmitPlatformVenue(
     return false
   }
 
-  const { data: savedVenue } = await supabase
-    .from('coordinator_saved_venues')
-    .select('id')
-    .eq('coordinator_id', coordinatorId)
-    .ilike('location_name', key.locationName)
-    .ilike('address', key.address)
-    .maybeSingle()
-
-  return !savedVenue
+  return true
 }
