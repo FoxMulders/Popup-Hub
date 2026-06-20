@@ -36,7 +36,7 @@ export function EdmontonHallSelector({ onHallSelect, className }: EdmontonHallSe
             id="edmonton-hall-select"
             value={selectedHallId}
             onChange={handleChange}
-            className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 text-base transition-all duration-200 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-11 w-full rounded-lg border border-input bg-white px-2.5 text-base transition-all duration-200 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="">Select a hall...</option>
             {EDMONTON_HALLS.map((hall) => (

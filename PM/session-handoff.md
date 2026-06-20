@@ -11,7 +11,16 @@
 - **Automated (dev):** `npm run qa:automation` (CI-safe static) | `npm run qa:automation:prod` (prod Playwright smoke) | `npm run test:e2e:smoke`
 - **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
 
-## Active work — HubGrid canvas INP (local, not deployed)
+## Active work — UX polish batch + CRO review (local, not deployed)
+- **Goal:** Field contrast, scroll-to-top on navigation, hide inaccurate venue presets (keep field), menu cleanup, professional UX/CRO review delivered in chat.
+- **Shipped locally:**
+  - **Fields:** `WIZARD_INPUT` + venue template selects use `bg-white`; removed `bg-background` overrides on wizard Places inputs and hall selector.
+  - **Scroll:** `RouteScrollToTop` on pathname change; shared `resetScrollToTop()` for portal tab switches + wizard steps.
+  - **Venue presets:** Edmonton hall blueprints hidden from template dropdown — only Blank Canvas + saved venues; field retained.
+  - **Menu:** Removed "More" section; supplemental links merged into single vertical Navigate list (no 2-col grid).
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: switch nav routes + portal tabs land at top; menu sheet single column; wizard venue template shows blank only.
+- **Next:** Commit + deploy when user asks.
+
 - **Goal:** Fix ~319ms INP on `svg.floor-plan-canvas-surface` — pointer handlers blocked UI updates on large layouts.
 - **Root cause:** Every pointer-driven re-render ran O(n²) overlap detection and called `vendorBoothClearanceWarningBand` per vendor booth inside the `CanvasObjects` map loop.
 - **Fix:**

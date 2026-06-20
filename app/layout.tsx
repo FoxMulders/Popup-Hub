@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { DocumentTitleSync } from '@/components/auth/document-title-sync'
+import { RouteScrollToTop } from '@/components/navigation/route-scroll-to-top'
 import { AuthSessionGuard } from '@/components/auth/auth-session-guard'
 import { PopupLoaderProvider } from '@/components/brand/popup-loader-provider'
 import { BuildVersionFooter } from '@/components/brand/build-version-footer'
@@ -100,6 +101,7 @@ export default async function RootLayout({
         <SiteJsonLd />
         <PopupLoaderProvider>
           <DocumentTitleSync initialRole={sessionRole} />
+          <RouteScrollToTop />
           <AuthSessionGuard />
           <ServiceWorkerRegister />
           <CapacitorInit />

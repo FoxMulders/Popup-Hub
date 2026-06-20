@@ -4,12 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BookmarkPlus, Loader2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { filterEdmontonVenues } from '@/lib/booth-planner/edmonton-venue-registry'
 import { VENUE_PRESET_OPTIONS, type VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import {
   DEFAULT_MARKET_CITY_ID,
   MARKET_CITIES,
-  isEdmontonMarketCity,
 } from '@/lib/wizard/market-cities'
 import {
   deleteCoordinatorSavedVenue,
@@ -29,7 +27,7 @@ import type { CoordinatorSavedVenue } from '@/types/database'
 
 const selectClassName = cn(
   WIZARD_SELECT_TRIGGER,
-  'rounded-lg border-2 border-stone-200 bg-card px-3 text-sm font-medium text-foreground shadow-[var(--shadow-market)] transition-all duration-200 outline-none focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/30'
+  'rounded-lg border-2 border-stone-200 bg-white px-3 text-sm font-medium text-foreground shadow-[var(--shadow-market)] transition-all duration-200 outline-none focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/30'
 )
 
 /** Prefix used to encode saved-venue rows in the unified template <select>. */
@@ -75,7 +73,6 @@ export function EdmontonVenueTemplateBar({
 }: EdmontonVenueTemplateBarProps) {
   const supabase = createClient()
   const city = cityProp ?? DEFAULT_MARKET_CITY_ID
-  const showEdmontonTemplates = isEdmontonMarketCity(city)
 
   const savedVenuesEnabled = Boolean(coordinatorId && onApplySavedVenue)
   const [savedVenues, setSavedVenues] = useState<CoordinatorSavedVenue[]>([])
@@ -100,13 +97,9 @@ export function EdmontonVenueTemplateBar({
   }, [savedVenuesEnabled, refreshSavedVenues])
 
   const templateOptions = useMemo(() => {
-    const blank = VENUE_PRESET_OPTIONS.filter((o) => o.id === 'blank')
-    if (!showEdmontonTemplates) return blank
-
-    const edmontonVenues = filterEdmontonVenues('all', '')
-    const dynamic = edmontonVenues.map((v) => ({ id: v.id as VenuePresetId, label: v.label }))
-    return [...blank, ...dynamic]
-  }, [showEdmontonTemplates])
+    // Preset hall blueprints are hidden until dimensions are verified — keep the field for blank + saved venues.
+    return VENUE_PRESET_OPTIONS.filter((o) => o.id === 'blank')
+  }, [])
 
   const selectedStillVisible =
     value === 'blank' || templateOptions.some((option) => option.id === value)
@@ -207,7 +200,7 @@ export function EdmontonVenueTemplateBar({
         <WizardFilterTooltip
           label="City"
           htmlFor="market-city-select"
-          tooltip="Select the city for this market. Edmonton venue templates are available only for Edmonton."
+          tooltip="Select the city for this market."
         >
           <select
             id="market-city-select"
@@ -234,10 +227,8 @@ export function EdmontonVenueTemplateBar({
           htmlFor="edmonton-venue-template"
           tooltip={
             savedVenuesEnabled
-              ? 'Pick one of your saved venues to auto-fill name, address, and map pin — or load a pre-configured Edmonton hall profile. "Blank" leaves dimensions free for a custom venue.'
-              : showEdmontonTemplates
-                ? 'Loads a pre-configured Edmonton community hall profile, auto-populating layout matrix rules, physical wall constraints, and coordinates.'
-                : 'Edmonton venue templates are only available when Edmonton is selected. Use a blank template for other cities.'
+              ? 'Pick one of your saved venues to auto-fill name, address, and map pin. "Blank canvas" leaves dimensions free for a custom venue.'
+              : 'Choose blank canvas to set your own venue dimensions. Saved venue templates appear here once you save a location.'
           }
         >
           <select
@@ -259,7 +250,7 @@ export function EdmontonVenueTemplateBar({
                 ))}
               </optgroup>
             ) : null}
-            <optgroup label={showEdmontonTemplates ? 'Templates' : 'Custom'}>
+            <optgroup label="Template">
               {templateOptions.map((option) => (
                 <option
                   key={option.id}

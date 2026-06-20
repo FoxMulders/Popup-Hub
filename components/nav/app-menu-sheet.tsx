@@ -166,7 +166,13 @@ export function AppMenuSheet({
     (link) => !(menuProfile && link.href === '/profile')
   )
 
-  const useDenseGrid = links.length >= 4
+  const primaryLinks = links
+  const allNavLinks = [
+    ...primaryLinks,
+    ...supplementalLinks.filter(
+      (link) => !primaryLinks.some((primary) => primary.href === link.href)
+    ),
+  ]
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -209,17 +215,13 @@ export function AppMenuSheet({
           className="safe-bottom flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 pb-3 pt-2 [-webkit-overflow-scrolling:touch]"
           aria-label="App menu"
         >
-          {links.length > 0 ? (
-            <MenuSection
-              title={links.length > 1 ? 'Navigate' : undefined}
-              listClassName={useDenseGrid ? 'grid-cols-2' : undefined}
-            >
-              {links.map(({ href, label, title }) => {
+          {allNavLinks.length > 0 ? (
+            <MenuSection title={allNavLinks.length > 1 ? 'Navigate' : undefined}>
+              {allNavLinks.map(({ href, label, title }) => {
                 const active = isActivePath(pathname, href)
-                const spanFull = useDenseGrid && label.length > 14
 
                 return (
-                  <li key={href} className={spanFull ? 'col-span-2' : undefined}>
+                  <li key={`${href}-${label}`}>
                     <Link
                       href={href}
                       onClick={close}
@@ -232,20 +234,6 @@ export function AppMenuSheet({
                   </li>
                 )
               })}
-            </MenuSection>
-          ) : null}
-
-          {supplementalLinks.length > 0 ? (
-            <MenuSection title="More">
-              {supplementalLinks.map(({ href, label }) => (
-                <MenuLinkItem
-                  key={`${href}-${label}`}
-                  href={href}
-                  label={label}
-                  pathname={pathname}
-                  onNavigate={close}
-                />
-              ))}
             </MenuSection>
           ) : null}
 

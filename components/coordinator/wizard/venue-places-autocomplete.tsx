@@ -150,7 +150,7 @@ export function VenuePlacesAutocomplete({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={`Enter ${mode === 'venue' ? 'venue name' : 'address'} manually…`}
-          className={cn(WIZARD_INPUT, 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm')}
+          className={cn(WIZARD_INPUT, 'flex h-10 w-full rounded-md border border-input px-3 py-2 text-sm')}
         />
       </div>
     )
@@ -172,7 +172,7 @@ export function VenuePlacesAutocomplete({
           placeholder={placeholder}
           className={cn(
             WIZARD_INPUT,
-            'flex h-10 w-full min-w-[200px] rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors',
+            'flex h-10 w-full min-w-[200px] rounded-md border border-input px-3 py-2 text-sm shadow-sm transition-colors',
             'whitespace-normal break-words pr-9',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
           )}

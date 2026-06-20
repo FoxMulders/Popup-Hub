@@ -1,1 +1,1 @@
-feat: ship 148 session updates (HubGrid canvas INP; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)
+feat: ship 148 session updates (UX polish batch + CRO review; HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; +144 more)

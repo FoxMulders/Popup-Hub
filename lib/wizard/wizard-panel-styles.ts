@@ -26,7 +26,7 @@ export const WIZARD_FIELD_LABEL =
   'text-xs font-medium uppercase tracking-wide text-muted-foreground'
 
 export const WIZARD_INPUT =
-  'rounded-lg border-2 border-stone-200 bg-card px-2 py-1.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-forest/30'
+  'rounded-lg border-2 border-stone-200 bg-white px-2 py-1.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-forest/30'
 
 export const WIZARD_TEXTAREA = cn(WIZARD_INPUT, 'whitespace-normal break-words')
 
