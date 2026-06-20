@@ -29,7 +29,7 @@
   - **`dashboard-next-step-cta.tsx`:** Inline footer uses a single compact row (muted status + text link) instead of full-width green button.
   - **`command-center-fullscreen-context.tsx`:** Full screen uses `document.documentElement.requestFullscreen()` so the site-main flex chain fills the monitor (fallback: dashboard root).
   - **`globals.css`:** `:fullscreen` rules for command center — canvas cream background + flex height chain through floor plan host.
-  - **`perimeter-booth-orientation.ts` + `booth-clearance-visual.ts`:** Corner/perimeter booths ignore every flush wall (not just nearest) so manual corner placement stays green.
+  - **`booth-clearance-visual.ts`:** Corner/perimeter booths ignore every flush wall for distance math; corner pockets + backward-facing perimeter placements tint **critical** (no vendor rear access).
   - **`door-clearance-zones.ts`:** Door egress zone no longer double-expands (touch/overlap only, not +5′ beyond padded zone).
 - **Verify:** `npx tsx scripts/verify-booth-clearance-visual.ts` — PASS. Smoke: `/coordinator/studio?event=…` — corner booth no longer tints opposite corner red; column above only yellow when vertical aisle is actually tight.
 - **Next:** Commit + deploy when user asks.
@@ -1635,9 +1635,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` — PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `4f4721f` (pushed to `origin/master`)
-- Last deploy commit: `4f4721f` - feat: ship 145 session updates (coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; create market single scroll; +141 more)
-- Production: https://popuphub.ca - **v1.0.0 build 224** | commit `c0b4a10` (handoff updated 2026-06-20 11:31)
+- Branch: `master` @ `dc6bd8c` (pushed to `origin/master`)
+- Last deploy commit: `dc6bd8c` - feat: ship 147 session updates (HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; +143 more)
+- Production: https://popuphub.ca - **v1.0.0 build 225** | commit `3978028` (handoff updated 2026-06-20 11:46)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2014,7 +2014,7 @@
 
 
 ## Last deploy
-- 2026-06-20 11:31 - Deploy via deploy-popuphub.ps1 - `feat: ship 145 session updates (coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; create market single scroll; +141 more)` (4f4721f)
+- 2026-06-20 11:46 - Deploy via deploy-popuphub.ps1 - `feat: ship 147 session updates (HubGrid minimal footer + fullscreen viewport + clearance tint fix; coordinator market load crash; flyer cover upload click regression; patron UX + coordinator polish; +143 more)` (dc6bd8c)
 
 
 ## Goal
