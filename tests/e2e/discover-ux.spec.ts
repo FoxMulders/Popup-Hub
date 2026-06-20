@@ -6,10 +6,10 @@ test.describe('Discover UX @prod-smoke', () => {
     await expect(page.getByRole('heading', { name: 'Community markets near you' })).toBeVisible({
       timeout: 15_000,
     })
-    await expect(page.getByLabel('Enter your address')).toBeVisible()
+    await expect(page.getByPlaceholder(/address|postal code/i)).toBeVisible({ timeout: 20_000 })
     await expect(page.getByRole('button', { name: 'Use my location' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'List' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Map' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'List' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Map' })).toBeVisible()
   })
 
   test('Use my location switches to map view', async ({ page, context }) => {

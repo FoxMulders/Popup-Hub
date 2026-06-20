@@ -27,7 +27,7 @@ const PATHS = [
     eyebrow: 'Vendors',
     title: 'Apply with your passport',
     description:
-      'Use Canopy to check organizers before paying booth fees, then build a vendor profile once and apply to open or juried markets.',
+      'Use HubGuard before paying booth fees, then build a vendor profile once and apply to open or juried markets.',
     cta: 'Create vendor account',
     secondaryHref: TRUST_DIRECTORY_LINKS.check.href,
     secondaryLabel: `Or open ${TRUST_DIRECTORY_LINKS.check.label} first`,

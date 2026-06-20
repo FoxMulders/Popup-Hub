@@ -6,7 +6,7 @@ import { CheckSearchForm } from '@/components/check/check-search-form'
 import { TRUST_DIRECTORY_LINKS } from '@/lib/nav/trust-directory-nav'
 
 export const metadata = buildPublicMetadata({
-  title: 'Canopy — Popup Hub security & fraud prevention',
+  title: 'HubGuard — Popup Hub security & fraud prevention',
   description:
     'Search Edmonton-area market organizers. See official links, vendor discussions, and scam alerts before you send booth fees.',
   path: '/check',
@@ -89,7 +89,7 @@ export default async function CheckPage({ searchParams }: Props) {
       <div className="rounded-xl border border-harvest-200 bg-harvest-50/50 px-4 py-4 text-sm">
         <p className="font-medium text-foreground">Vended at a market recently?</p>
         <p className="mt-1 text-muted-foreground">
-          Help other vendors through Canopy before paying booth fees.
+          Help other vendors through HubGuard before paying booth fees.
         </p>
         <Link
           href="/check/review"

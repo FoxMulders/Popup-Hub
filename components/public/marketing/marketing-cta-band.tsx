@@ -25,7 +25,7 @@ export function MarketingCtaBand() {
           className="mt-5 inline-flex text-sm font-medium text-white/80 hover:text-white hover:underline underline-offset-2"
           title={TRUST_DIRECTORY_LINKS.check.tagline}
         >
-          {TRUST_DIRECTORY_LINKS.check.label} — check organizers before you pay →
+          {TRUST_DIRECTORY_LINKS.check.label} — {TRUST_DIRECTORY_LINKS.check.tagline} →
         </Link>
       </div>
     </section>

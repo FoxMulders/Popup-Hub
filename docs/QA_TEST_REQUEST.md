@@ -113,21 +113,21 @@ Use real accounts on https://popuphub.ca (no mock-login). Complete [QA_FULL_WORK
 
 ## Section C — P1 recent production features
 
-### C1 — Canopy trust directory (Patron + Vendor)
+### C1 — HubGuard trust directory (Patron + Vendor)
 
-- [ ] Nav ribbon shows **Canopy** with tooltip: *Popup Hub security & fraud prevention*
+- [ ] Nav ribbon shows **HubGuard** with tooltip: *Popup Hub security & fraud prevention*
 - [ ] `/check` loads without login; search returns Edmonton seed organizers
 - [ ] `/organizers/central-occasion-events` — trust report (scam alerts, mentions, permalinks)
 - [ ] `/organizers/lauderdale-community-league` — Lauderdale Community League published
-- [ ] Homepage hero CTA: booth-fee headline references Canopy
+- [ ] Homepage hero CTA: booth-fee headline references HubGuard
 - [ ] `/check/review` — organizer dropdown shows full names (not clipped)
-- [ ] Vendor: `/vendor/events` callout links to Canopy
+- [ ] Vendor: `/vendor/events` callout links to HubGuard
 - [ ] Guest `/check/review` — sign-in gate for submission
 
 ### C2 — Patron navigation and discover UX
 
 - [ ] Logo from any page → `/` (PublicLanding)
-- [ ] Top ribbon: Home, Discover, Canopy, FAQ on browse surfaces
+- [ ] Top ribbon: Home, Discover, HubGuard, FAQ on browse surfaces
 - [ ] `/discover` — home address field filters markets by distance
 - [ ] **Use my location** switches to map view; blue device pin appears
 - [ ] Footer sits at bottom of viewport (no gap above footer on short pages)

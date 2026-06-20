@@ -5,18 +5,18 @@
 **Deploy gate:** `PM\Deploy-popuphub.bat` ships when you have uncommitted changes or undeployed handoff sections. Commit messages auto-resolve from `## Shipped this session (title, not deployed)`, then `## Active work — title (local, not deployed)`, then `feat: ship local changes`. After deploy, matched sections flip to `deployed yyyy-MM-dd`. Clean tree with nothing undeployed → no-op (exit 0). Use `-SkipCommit` to redeploy production without a new commit.
 
 ## QA handoff — full workflow test request (2026-06-20)
-- **Checklist:** `docs/QA_TEST_REQUEST.md` — P0 core E2E (Phases 1–7), P1 recent production (Canopy, discover UX, coordinator roadmap, Blueprint Studio), D pending-preview appendix, sign-off template.
+- **Checklist:** `docs/QA_TEST_REQUEST.md` — P0 core E2E (Phases 1–7), P1 recent production (HubGuard, discover UX, coordinator roadmap, Blueprint Studio), D pending-preview appendix, sign-off template.
 - **Baseline workflow:** `docs/QA_FULL_WORKFLOW.md` (Phases 0–8).
 - **Target:** Production https://popuphub.ca — build **217** @ commit `4cae286`.
-- **Pre-flight:** `npm run verify:prod` — PASS (2026-06-20).
+- **Automated (dev):** `npm run qa:automation` (CI-safe static) | `npm run qa:automation:prod` (prod Playwright smoke) | `npm run test:e2e:smoke`
 - **Status:** Delivered to Linear — [POP-5](https://linear.app/popuphub/issue/POP-5/qa-full-workflow-test-request-build-217) (**In Progress**, build **218**). Checklist doc: [QA Test Checklist — build 217](https://linear.app/popuphub/document/qa-test-checklist-build-217-fff43e29c970). Handoff script: `npm run qa:handoff`.
 
 ## Active work — patron UX + coordinator polish (local, not deployed)
-- **Goal:** Tester feedback batch — footer, discover location, venue approval, league pricing, mobile layout gate, Canopy nav naming.
+- **Goal:** Tester feedback batch — footer, discover location, venue approval, league pricing, mobile layout gate, HubGuard nav naming.
 - **Shipped locally:**
   - **Footer:** Removed year from copyright; moved `BuildVersionFooter` inside `#site-layout-main` with `mt-auto`; dropped `flex-1` on `#site-main` to remove content/footer gap; mobile padding above bottom nav; `ComplianceFooter` delegates to shared footer
-  - **Canopy nav:** Ribbon/menu use **Check organizers**; `/check` page keeps **Canopy** branding
-  - **Canopy review form:** Organizer dropdown keeps proper-cased display name after selection (was showing lowercase slug)
+  - **HubGuard nav:** Ribbon/menu and `/check` page use **HubGuard** (replaced Canopy / Check organizers)
+  - **HubGuard review form:** Organizer dropdown keeps proper-cased display name after selection (was showing lowercase slug)
   - **CI lint:** Renamed `useMyLocation` → `requestMyLocation` in market area filter (hook naming rule)
   - **Coordinator event hub crash:** Safe date formatting on schedule items + application cards; guard unknown event status in status toggle
   - **Venues:** `shouldSubmitPlatformVenue` no longer skips coordinator saved venues; submit on wizard autosave, event form save, and "Save for future" venue action
@@ -26,9 +26,19 @@
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover` footer at bottom, location pin on map, `/check` nav vs page titles, coordinator new venue → admin queue, league discount on event edit.
 - **Next:** Commit + deploy when user asks.
 
-## Active work — Canopy booth-fee headline (local, not deployed)
-- **Goal:** Trust directory hero/callout copy names **Canopy** explicitly.
-- **Shipped locally:** `TRUST_DIRECTORY_LINKS.check.boothFeeHeadline` — “Before you pay for a booth, use Canopy to check the organizer”; wired in homepage hero, `/check` h1, vendor events callout.
+## Active work — HubGuard rebrand (local, not deployed)
+- **Goal:** Rebrand trust directory from **Canopy** / **Check organizers** to **HubGuard** with tagline **Popup Hub security & fraud prevention**.
+- **Shipped locally:**
+  - **`lib/nav/trust-directory-nav.ts`:** `label` + `navLabel: HubGuard`, `ctaOpen: Open HubGuard`, booth-fee headline names HubGuard
+  - **Nav:** Guest/patron ribbon + vendor app nav show **HubGuard** with tooltip; marketing CTA band uses tagline
+  - **`/check`:** Metadata + footer copy; review page metadata
+  - **Tests/QA:** `canopy-trust.spec.ts`, `QA_TEST_REQUEST.md`, verify-production script labels
+- **Verify:** `npx tsc --noEmit` — PASS. Smoke: ribbon link **HubGuard**, `/check` eyebrow, homepage Open HubGuard CTA.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — HubGuard booth-fee headline (local, not deployed)
+- **Goal:** Trust directory hero/callout copy names **HubGuard** explicitly.
+- **Shipped locally:** `TRUST_DIRECTORY_LINKS.check.boothFeeHeadline` — “Before you pay for a booth, use HubGuard to check the organizer”; wired in homepage hero, `/check` h1, vendor events callout.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — mobile discover UX polish (local, not deployed)
@@ -38,16 +48,6 @@
   - **Discover band:** `SitePageBand` forest h1 explicit `text-white`; description `text-base text-white/95`; tighter mobile vertical padding
   - **Loader:** `initialLoaderFrame` keeps progress at 1 during hold/outro so progress bar never rewinds
 - **Verify:** `npx tsc --noEmit` — PASS. Smoke: `/discover` on mobile width — single header row, white title on green band, splash loader bar fills forward only.
-- **Next:** Commit + deploy when user asks.
-
-## Active work — Canopy trust directory rebrand (local, not deployed)
-- **Goal:** Rebrand trust directory nav from "Check organizers" to **Canopy** with tagline **Popup Hub security & fraud prevention**.
-- **Shipped locally:**
-  - **`lib/nav/trust-directory-nav.ts`:** `label: Canopy`, `tagline`, `ctaOpen: Open Canopy`
-  - **Nav:** Guest/patron ribbon + vendor app nav show **Canopy** with `title` tooltip; mobile menu passes tagline
-  - **`/check`:** Metadata + eyebrow use Canopy branding; footer CTA references Canopy
-  - **Marketing:** Hero CTA, features tile, path card, CTA band; error page button uses constant
-- **Verify:** `npx tsc --noEmit` — PASS. Smoke: ribbon hover tooltip, `/check` eyebrow, homepage Open Canopy CTA.
 - **Next:** Commit + deploy when user asks.
 
 ## Shipped this session (coordinator feature roadmap (8 items), deployed 2026-06-19)
@@ -64,7 +64,7 @@
 - **Goal:** Tester feedback — real Home (`/` PublicLanding), unified top ribbon, home-address distance filter, organizer error hardening, auth copy, cancellation FAQ.
 - **Shipped locally:**
   - **Home:** `/` always shows `PublicLanding` (guest + signed-in); logo → `/` via `SITE_HOME_PATH` in GuestNav, ShopperTopBar, AppNav
-  - **Ribbon:** `site-ribbon-links.ts` — Home, Discover, Canopy, FAQ on browse + guest surfaces; desktop links on ShopperTopBar; GuestNav on login/signup; profile layout → patron `ShopperShell`; vendor bottom nav Home tab
+  - **Ribbon:** `site-ribbon-links.ts` — Home, Discover, HubGuard, FAQ on browse + guest surfaces; desktop links on ShopperTopBar; GuestNav on login/signup; profile layout → patron `ShopperShell`; vendor bottom nav Home tab
   - **Location:** `HomeAddressPicker` + address field on Discover/vendor market grid + vendor alert prefs; geolocation error toasts
   - **Organizers:** `error.tsx` on `/check` and `/organizers/[slug]`; query helpers return empty/null on DB errors instead of 500
   - **Auth:** Signup confirmation **link** copy + resend; login tab note on email confirm; **Continue with Google** below terms checkbox on signup

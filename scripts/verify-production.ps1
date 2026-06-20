@@ -21,7 +21,7 @@ $paths = @(
     @{ Path = '/login'; Name = 'Login' },
     @{ Path = '/signup'; Name = 'Signup' },
     @{ Path = '/discover'; Name = 'Discover' },
-    @{ Path = '/check'; Name = 'Canopy trust directory' },
+    @{ Path = '/check'; Name = 'HubGuard trust directory' },
     @{ Path = '/for-organizers'; Name = 'For organizers' },
     @{ Path = '/manifest.json'; Name = 'PWA manifest' },
     @{ Path = '/sw.js'; Name = 'Service worker' },
@@ -110,7 +110,7 @@ if ($failures -eq 0) {
         }
         $buildRaw = (Invoke-WebRequest @buildParams).Content
         $build = $buildRaw | ConvertFrom-Json
-        $repoBuildPath = Join-Path $PSScriptRoot '..' 'build-number.json'
+        $repoBuildPath = Join-Path (Join-Path $PSScriptRoot '..') 'build-number.json'
         $repoBuild = Get-Content $repoBuildPath -Raw | ConvertFrom-Json
         if ($build.buildNumber -lt 1) {
             Write-Host "  FAIL Build number invalid ($($build.buildNumber))" -ForegroundColor Red

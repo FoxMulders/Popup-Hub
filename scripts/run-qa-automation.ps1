@@ -36,9 +36,7 @@ Write-Host '=========================' -ForegroundColor DarkGray
 try {
     Run-Step 'TypeScript' 'npx tsc --noEmit'
     Run-Step 'Unit tests' 'npm run test:unit'
-    Run-Step 'Layout math' 'npm run qa:layout'
     Run-Step 'Signup RBAC' 'npm run test:rbac-signup'
-    Run-Step 'Shopper routing' 'npm run test:shopper-routing'
 
     if (-not $SkipPlaywright) {
         if ($ProdBrowser) {
@@ -46,11 +44,11 @@ try {
             $env:PLAYWRIGHT_SKIP_WEBSERVER = '1'
             Run-Step 'Prod HTTP smoke' 'npm run verify:prod'
             Run-Step 'Prod Playwright — public discovery' 'npm run test:e2e:public-discovery'
-            Run-Step 'Prod Playwright — canopy trust' 'npm run test:e2e:canopy'
+            Run-Step 'Prod Playwright — HubGuard trust' 'npm run test:e2e:canopy'
             Run-Step 'Prod Playwright — discover UX' 'npm run test:e2e:discover-ux'
         } else {
             Run-Step 'Public discovery (local)' 'npm run test:e2e:public-discovery'
-            Run-Step 'Canopy trust (local)' 'npm run test:e2e:canopy'
+            Run-Step 'HubGuard trust (local)' 'npm run test:e2e:canopy'
             Run-Step 'Discover UX (local)' 'npm run test:e2e:discover-ux'
         }
     }

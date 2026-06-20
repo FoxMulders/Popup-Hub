@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { TRUST_DIRECTORY_LINKS } from '../../lib/nav/trust-directory-nav'
 
-test.describe('Canopy trust directory @prod-smoke', () => {
+test.describe('HubGuard trust directory @prod-smoke', () => {
   test('/check loads without login and lists organizers', async ({ page }) => {
     await page.goto('/check')
     await expect(
@@ -26,17 +26,23 @@ test.describe('Canopy trust directory @prod-smoke', () => {
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 15_000 })
   })
 
-  test('guest /check/review redirects or gates sign-in', async ({ page }) => {
+  test('guest /check/review shows sign-in gate', async ({ page }) => {
     await page.goto('/check/review')
-    const signInGate = page.getByRole('link', { name: /Sign in|Log in/i }).first()
-    const reviewForm = page.getByRole('heading', { name: /Review an organizer/i })
-    await expect(signInGate.or(reviewForm)).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: 'Review an organizer' })).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(
+      page.locator('#site-main').getByRole('link', { name: 'Sign in' })
+    ).toBeVisible()
   })
 
-  test('homepage ribbon links to Canopy', async ({ page }) => {
+  test('homepage nav links to HubGuard trust directory', async ({ page }) => {
     await page.goto('/')
-    await expect(
-      page.getByRole('link', { name: TRUST_DIRECTORY_LINKS.check.navLabel })
-    ).toBeVisible()
+    const navLabel = TRUST_DIRECTORY_LINKS.check.navLabel
+    const viewport = page.viewportSize()
+    if (viewport && viewport.width < 768) {
+      await page.getByRole('button', { name: /Open navigation menu/i }).click()
+    }
+    await expect(page.getByRole('link', { name: navLabel }).first()).toBeVisible()
   })
 })
