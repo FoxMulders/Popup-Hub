@@ -2,7 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Shipped this session (origin story on homepage + About, deployed 2026-06-20)
+## Active work ? HubGuard brand logo (local, not deployed)
+- **Goal:** Process shield+stall+pin HubGuard lockup and replace generic shield icons on trust surfaces.
+- **Shipped locally:**
+  - **`scripts/import-hubguard-logo.mjs` / `process-hubguard-logo.mjs`:** Transparent PNGs ? full lockup (`hubguard-logo.png` 640×634) + emblem icon (`hubguard-icon.png` 512×512); splits wordmark from emblem via vertical gap detection.
+  - **`components/brand/hubguard-logo.tsx`:** `lockup` | `icon` variants, sm/md/lg sizes.
+  - **Wired:** `/check` hero, `/check/review`, vendor check-in prompt, vendor events callout, coordinator claim callout, `/for-vendors` hero link.
+  - **`npm run assets:hubguard`:** Regenerate from `hubguard-logo-source.png`.
+  - **`public/sw.js`:** Cache v18 includes HubGuard PNGs.
+- **Verify:** Hard refresh `/check` ? HubGuard lockup in hero; icon in vendor callouts. `npm run assets:hubguard` after replacing source PNG.
+- **Next:** Commit + deploy when user asks.
+
 - **Goal:** Wire Tipsy Fox ? Popup Hub origin narrative into marketing surfaces (CRO origin proof).
 - **Shipped:**
   - **`lib/marketing/origin-story.ts`:** Short homepage copy + full About sections (four beats).
@@ -1763,8 +1773,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `4e5e8cb` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.105.0 build 1** | commit `982b3c4` (handoff updated 2026-06-20 17:01)
+- Branch: `master` @ `25e42c9` (pushed to `origin/master`)
+- Last deploy commit: `25e42c9` - feat: ship local changes
+- Production: https://popuphub.ca - **v1.106.0 build 1** | commit `64e7670` (handoff updated 2026-06-20 17:11)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2141,7 +2152,7 @@
 
 
 ## Last deploy
-- 2026-06-20 16:27 - Deploy via deploy-popuphub.ps1 - `feat: ship 153 session updates (Location Tent brand logo refresh; semver sync from release history; HubGuard claim matching + Visual/UI ?3; CRO user journeys ?2; +149 more)` (9a61066)
+- 2026-06-20 17:11 - Deploy via deploy-popuphub.ps1 - `feat: ship local changes` (25e42c9)
 
 
 ## Goal
