@@ -2,16 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work ? origin story on homepage + About (local, not deployed)
+## Shipped this session (origin story on homepage + About, deployed 2026-06-20)
 - **Goal:** Wire Tipsy Fox ? Popup Hub origin narrative into marketing surfaces (CRO origin proof).
-- **Shipped locally:**
+- **Shipped:**
   - **`lib/marketing/origin-story.ts`:** Short homepage copy + full About sections (four beats).
   - **`marketing-split-story.tsx`:** Replaced generic ?built by market people? with punchy origin + kept platform benefit bullets.
   - **`/legal/about`:** Full origin story above existing fee/transparency sections; metadata updated.
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: `/` split-story section; `/legal/about` origin + fees flow.
-- **Next:** Commit + deploy when user asks. Optional: Tipsy Fox photography in split-story visual tile.
+- **Next:** Optional Tipsy Fox photography in split-story visual tile.
 
-## Active work ? SEO P0/P1 implementation (local, not deployed)
+## Active work ? SEO P0/P1 implementation (deployed 2026-06-20)
 - **Goal:** Implement audit recommendations ? metadata, schema, landing pages, sitemap/robots, performance hints.
 - **Shipped locally:**
   - **OG image:** `app/opengraph-image.tsx` (1200?630); `DEFAULT_OG_IMAGE_PATH` ? `/opengraph-image`.
@@ -26,7 +26,7 @@
   - **Footer:** marketing links (Discover, Organizers, Vendors, HubGuard, About).
   - **GSC hook:** `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`; social `NEXT_PUBLIC_ORG_SOCIAL_URLS` (comma-separated).
 - **Verify:** `npx tsc --noEmit` PASS. Smoke: `/`, `/for-vendors`, `/markets/edmonton`, `/opengraph-image`, `/sitemap.xml`, view-source canonical on `/`.
-- **Next:** Set env vars in Vercel; submit sitemap in GSC; commit + deploy when user asks. Deferred: event URL slugs, blog/content hub.
+- **Next:** Set env vars in Vercel; submit sitemap in GSC. Deferred: event URL slugs, blog/content hub.
 
 - **Goal:** Replace all Popup Hub logo instances (static + loader animation) with the new glossy green stall + blue pin artwork.
 - **Shipped locally:**
@@ -1763,9 +1763,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `9a61066` (pushed to `origin/master`)
-- Last deploy commit: `9a61066` - feat: ship 153 session updates (Location Tent brand logo refresh; semver sync from release history; HubGuard claim matching + Visual/UI ?3; CRO user journeys ?2; +149 more)
-- Production: https://popuphub.ca - **v1.102.0 build 1** | commit `d7dc379` (handoff updated 2026-06-20 16:27)
+- Branch: `master` @ `4e5e8cb` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.105.0 build 1** | commit `982b3c4` (handoff updated 2026-06-20 17:01)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
