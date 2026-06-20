@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { organizerSlugFromName } from '@/lib/organizers/slug'
+import { notifyOrganizerOfVendorReview } from '@/lib/organizers/notify-hubguard-review'
 import type {
   OrganizerReviewFields,
   OrganizerReviewPayload,
@@ -24,6 +25,36 @@ export type SubmitOrganizerReviewResult =
       organizerName: string
     }
   | { ok: false; status: number; error: string; code?: string }
+
+async function sendOrganizerReviewAlert(
+  supabase: SupabaseClient,
+  reviewId: string,
+  organizerId: string,
+  vendorId: string,
+  eventName: string
+): Promise<void> {
+  const [{ data: organizer }, { data: vendor }] = await Promise.all([
+    supabase
+      .from('organizers')
+      .select('id, slug, display_name, claimed_by, popup_hub_coordinator_id')
+      .eq('id', organizerId)
+      .maybeSingle(),
+    supabase.from('profiles').select('full_name').eq('id', vendorId).maybeSingle(),
+  ])
+
+  if (!organizer) return
+
+  try {
+    await notifyOrganizerOfVendorReview(supabase, {
+      reviewId,
+      organizer,
+      eventName,
+      vendorName: vendor?.full_name ?? null,
+    })
+  } catch (err) {
+    console.error('[hubguard] organizer review notification failed', err)
+  }
+}
 
 function reviewInsertFields(
   payload: OrganizerReviewFields,
@@ -107,6 +138,8 @@ export async function submitOrganizerReview(
       }
       return { ok: false, status: 500, error: error.message }
     }
+
+    await sendOrganizerReviewAlert(supabase, review.id, organizer.id, vendorId, payload.eventName)
 
     return {
       ok: true,

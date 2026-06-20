@@ -54,9 +54,10 @@ export default async function CheckReviewPage({ searchParams }: Props) {
         <h1 className="text-2xl font-bold tracking-tight">Review an organizer</h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
           Vended at a market in the last year or two? Leave a structured review — about 90 seconds.
-          Your review helps other vendors before they send booth fees. One review per event month.
-          If the organizer is not in our list yet, choose &ldquo;Organizer not listed&rdquo; — we
-          verify new names before they appear in search.
+          Your review is shared with the organizer (they can add their perspective) and helps other
+          vendors before they send booth fees. One review per event month. If the organizer is not in
+          our list yet, choose &ldquo;Organizer not listed&rdquo; — we verify new names before they
+          appear in search.
         </p>
       </div>
 

@@ -2,6 +2,23 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work ? HubGuard review organizer loop (local, not deployed)
+- **Goal:** Vendor event reviews notify the organizer; organizer can respond; past-event notes copy + grain-of-salt guidance for booth/neighbour complaints.
+- **Shipped locally:**
+  - **Notifications:** `hubguard_vendor_review` (coordinator) + `hubguard_review_response` (vendor); migration `121_hubguard_review_notifications.sql`.
+  - **Submit flow:** `notifyOrganizerOfVendorReview` on published review insert.
+  - **Respond API:** `POST /api/organizers/reviews/[reviewId]/respond` + `OrganizerReviewRespondForm` on trust report when claim holder.
+  - **Public list:** organizer responses on `/organizers/[slug]#vendor-reviews`.
+  - **Form copy:** optional notes reframed for post-event reflection; booth/neighbour grain-of-salt helper text.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: submit review ? coordinator notification; claim holder responds ? vendor notification + response on trust report.
+- **Next:** Commit + deploy when user asks. Run migration `121` on Supabase.
+
+## Active work ? /notifications build fix (local, not deployed)
+- **Goal:** Fix Next.js static generation error on `/notifications` (`cookies()` during prerender).
+- **Shipped locally:** `export const dynamic = 'force-dynamic'` on `app/notifications/layout.tsx` (layout + page both use Supabase auth cookies and active-portal cookie).
+- **Verify:** `npx next build` PASS ? `/notifications` shows as `?` (dynamic); no `[notifications] page setup failed` log.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work ? HubGuard brand logo (local, not deployed)
 - **Goal:** Process shield+stall+pin HubGuard lockup and replace generic shield icons on trust surfaces.
 - **Shipped locally:**

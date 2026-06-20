@@ -77,6 +77,8 @@ export type NotificationType =
   | 'priority_booth_invite'
   | 'nearby_market_published'
   | 'coordinator_market_published'
+  | 'hubguard_vendor_review'
+  | 'hubguard_review_response'
 
 export type VendorAccessRequestStatus = 'pending' | 'approved' | 'rejected'
 

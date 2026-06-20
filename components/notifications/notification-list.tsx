@@ -67,6 +67,8 @@ const TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string }> = {
   vendor_access_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   vendor_access_rejected: { icon: <AlertCircle className="h-4 w-4" />, color: 'text-red-600 bg-red-50' },
   market_feedback: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-violet-600 bg-violet-50' },
+  hubguard_vendor_review: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-forest bg-sage-50' },
+  hubguard_review_response: { icon: <MessageSquare className="h-4 w-4" />, color: 'text-harvest-700 bg-harvest-50' },
   feature_request_submitted: { icon: <Lightbulb className="h-4 w-4" />, color: 'text-amber-700 bg-amber-50' },
   feedback_addressed: { icon: <CheckCheck className="h-4 w-4" />, color: 'text-green-600 bg-sage-50' },
   application_approved: { icon: <Store className="h-4 w-4" />, color: 'text-green-500 bg-sage-50' },
@@ -225,6 +227,14 @@ export function NotificationList({
         return
       }
       if (notification.type === 'coordinator_market_published' && deepLink) {
+        router.push(deepLink)
+        return
+      }
+      if (
+        (notification.type === 'hubguard_vendor_review' ||
+          notification.type === 'hubguard_review_response') &&
+        deepLink
+      ) {
         router.push(deepLink)
         return
       }

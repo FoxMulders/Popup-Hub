@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PortalAwareShell } from '@/components/layout/portal-aware-shell'
 
+export const dynamic = 'force-dynamic'
+
 export default async function NotificationsLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const {

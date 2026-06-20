@@ -76,6 +76,11 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
 
   const isClaimed = Boolean(organizer.claimed_by)
   const canClaim = Boolean(user && canActAsCoordinator(profile) && !isClaimed)
+  const canRespondToReviews = Boolean(
+    user &&
+      canActAsCoordinator(profile) &&
+      (organizer.claimed_by === user.id || organizer.popup_hub_coordinator_id === user.id)
+  )
 
   return (
     <>
@@ -228,7 +233,7 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
         )}
       </section>
 
-      <section className="rounded-2xl border bg-white p-6 shadow-sm space-y-3">
+      <section id="vendor-reviews" className="rounded-2xl border bg-white p-6 shadow-sm space-y-3 scroll-mt-24">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Vendor reviews</h2>
           <Link
@@ -240,8 +245,11 @@ export default async function OrganizerTrustReportPage({ params }: Props) {
         </div>
         <p className="text-xs text-muted-foreground">
           Structured reviews from vendors who vended at this organizer&apos;s markets.
+          {canRespondToReviews
+            ? ' New reviews notify you in-app — add your perspective below each one.'
+            : null}
         </p>
-        <OrganizerReviewList reviews={reviews} />
+        <OrganizerReviewList reviews={reviews} canRespond={canRespondToReviews} />
       </section>
     </div>
     </>

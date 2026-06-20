@@ -6,6 +6,7 @@ import {
   VERIFICATION_TIER_LABELS,
 } from '@/lib/organizers/review-labels'
 import type { OrganizerReviewPublic } from '@/types/organizers'
+import { OrganizerReviewRespondForm } from '@/components/check/organizer-review-respond-form'
 
 function formatEventMonthYear(value: string): string {
   const [year, month] = value.split('-')
@@ -14,7 +15,12 @@ function formatEventMonthYear(value: string): string {
   return date.toLocaleDateString('en-CA', { month: 'long', year: 'numeric' })
 }
 
-export function OrganizerReviewList({ reviews }: { reviews: OrganizerReviewPublic[] }) {
+type Props = {
+  reviews: OrganizerReviewPublic[]
+  canRespond?: boolean
+}
+
+export function OrganizerReviewList({ reviews, canRespond = false }: Props) {
   if (reviews.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -72,6 +78,19 @@ export function OrganizerReviewList({ reviews }: { reviews: OrganizerReviewPubli
           </dl>
           {review.optional_notes ? (
             <p className="text-xs text-foreground/90 border-t pt-2">{review.optional_notes}</p>
+          ) : null}
+          {review.response_body && !canRespond ? (
+            <div className="rounded-md border bg-white px-3 py-2 text-xs border-l-2 border-forest/40">
+              <p className="font-medium text-foreground">Organizer response</p>
+              <p className="mt-1 text-muted-foreground">{review.response_body}</p>
+            </div>
+          ) : null}
+          {canRespond ? (
+            <OrganizerReviewRespondForm
+              reviewId={review.id}
+              eventName={review.event_name}
+              initialResponse={review.response_body}
+            />
           ) : null}
         </li>
       ))}

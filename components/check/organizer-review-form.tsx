@@ -146,15 +146,16 @@ export function OrganizerReviewForm({
         return
       }
 
+      toast.success(
+        data.status === 'pending_moderation'
+          ? 'Thanks — your review is saved and will appear after we verify this organizer.'
+          : `Review posted for ${data.organizerName ?? 'this organizer'}. The organizer can add their perspective on their trust report.`
+      )
       if (data.status === 'pending_moderation') {
         setSubmittedPending(true)
-        toast.success(
-          'Thanks — your review is saved and will appear after we verify this organizer.'
-        )
         return
       }
 
-      toast.success(`Review posted for ${data.organizerName ?? 'this organizer'}.`)
       router.push(`/organizers/${data.organizerSlug ?? organizerSlug}`)
       router.refresh()
     } finally {
@@ -435,12 +436,17 @@ export function OrganizerReviewForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Optional notes</Label>
+        <Label htmlFor="notes">Anything else about how the market ran?</Label>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          The event is over — share what stood out about the overall experience. Booth placement and
+          who you were beside are often luck of the draw; readers take those complaints with a grain
+          of salt unless they point to a pattern.
+        </p>
         <Textarea
           id="notes"
           value={optionalNotes}
           onChange={(e) => setOptionalNotes(e.target.value)}
-          placeholder="Anything else vendors should know before paying?"
+          placeholder="Load-in timing, crowd quality, organizer follow-through, surprises good or bad…"
           rows={3}
         />
       </div>
