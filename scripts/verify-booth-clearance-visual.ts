@@ -15,6 +15,8 @@ import {
   minVendorBoothClearanceFt,
   vendorBoothAisleClearanceFt,
   vendorBoothClearanceThemeForProbe,
+  vendorBoothClearanceWarningBand,
+  vendorBoothPerimeterLayoutBand,
 } from '../lib/coordinator/booth-clearance-visual'
 import type { BoothObject, FloorPlanDoc } from '../components/coordinator/floor-plan-v2/state/types'
 
@@ -313,8 +315,114 @@ doc.objectRoom = { a: roomId, b: roomId }
     { corner: roomId }
   )
   assert(
+    vendorBoothPerimeterLayoutBand(cornerBooth, room) === 'critical',
+    'corner perimeter booth has no vendor rear pocket'
+  )
+  assert(
+    vendorBoothClearanceWarningBand(
+      cornerBooth,
+      [cornerBooth],
+      [room],
+      { corner: roomId }
+    ) === 'critical',
+    'corner perimeter booth tints critical even when wall gaps are ignored'
+  )
+  assert(
     clearanceBand(gap) === 'good',
-    'corner perimeter booth ignores flush left and bottom walls'
+    'corner booth wall gaps are still ignored for distance math'
+  )
+}
+
+{
+  const roomId = 'bottom-wall-room'
+  const room = {
+    id: roomId,
+    name: 'Main',
+    originX: 0,
+    originY: 0,
+    widthFt: 74,
+    lengthFt: 74,
+  }
+  const misorientedBottom = {
+    id: 'mis-bottom',
+    kind: 'booth',
+    x: 20,
+    y: 72,
+    width: 6,
+    height: 2,
+    rotation: 0,
+    tablePurpose: 'vendor',
+  } as BoothObject
+  assert(
+    vendorBoothPerimeterLayoutBand(misorientedBottom, room) === 'critical',
+    'bottom-flush booth opening the wrong way is critical'
+  )
+  const orientedBottom = { ...misorientedBottom, rotation: 180 } as BoothObject
+  assert(
+    vendorBoothPerimeterLayoutBand(orientedBottom, room) === null,
+    'bottom-flush booth with inward rotation passes layout check'
+  )
+}
+
+// Perpendicular perimeter booth must not tint parallel rows via aisle math.
+{
+  const roomId = 'perimeter-row-room'
+  const room = {
+    id: roomId,
+    name: 'Main',
+    originX: 0,
+    originY: 0,
+    widthFt: 42,
+    lengthFt: 36,
+  }
+  const mk = (
+    id: string,
+    x: number,
+    y: number,
+    rotation = 0
+  ): BoothObject =>
+    ({
+      id,
+      kind: 'booth',
+      x,
+      y,
+      width: 6,
+      height: 2,
+      rotation,
+      tablePurpose: 'vendor',
+    }) as BoothObject
+
+  const objects: BoothObject[] = []
+  const stepX = 12
+  const stepY = 8
+  const inset = 5
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      objects.push(mk(`r${row}c${col}`, inset + col * stepX, inset + row * stepY))
+    }
+  }
+  objects.push(mk('vertical', 33, 13, 90))
+  const objectRoom = Object.fromEntries(objects.map((o) => [o.id, roomId]))
+
+  for (const booth of objects) {
+    if (!booth.id.startsWith('r2')) continue
+    const band = vendorBoothClearanceWarningBand(
+      booth,
+      objects,
+      [room],
+      objectRoom
+    )
+    assert(
+      band === 'good',
+      `${booth.id} must stay green beside a perpendicular perimeter booth`
+    )
+  }
+
+  const vertical = objects.find((o) => o.id === 'vertical')!
+  assert(
+    vendorBoothClearanceWarningBand(vertical, objects, [room], objectRoom) ===
+      'good',
+    'right-wall perimeter booth ignores flush wall in clearance distance math'
   )
 }
 

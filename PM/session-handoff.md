@@ -30,8 +30,10 @@
   - **`command-center-fullscreen-context.tsx`:** Full screen uses `document.documentElement.requestFullscreen()` so the site-main flex chain fills the monitor (fallback: dashboard root).
   - **`globals.css`:** `:fullscreen` rules for command center — canvas cream background + flex height chain through floor plan host.
   - **`booth-clearance-visual.ts`:** Corner/perimeter booths ignore every flush wall for distance math; corner pockets + backward-facing perimeter placements tint **critical** (no vendor rear access).
+  - **`rect-edge-clearance.ts`:** Perpendicular vendor booths (0° row vs 90° perimeter) no longer cross-tint via shared-row/column aisle math — only parallel neighbors count.
+  - **`perimeter-booth-orientation.ts`:** Rotated perimeter flush detection extends tolerance by half the long-minus-short span so right-wall vertical booths are not falsely read as 0′ from the room edge.
   - **`door-clearance-zones.ts`:** Door egress zone no longer double-expands (touch/overlap only, not +5′ beyond padded zone).
-- **Verify:** `npx tsx scripts/verify-booth-clearance-visual.ts` — PASS. Smoke: `/coordinator/studio?event=…` — corner booth no longer tints opposite corner red; column above only yellow when vertical aisle is actually tight.
+- **Verify:** `npx tsx scripts/verify-booth-clearance-visual.ts` — PASS (includes perpendicular perimeter row case). Smoke: `/coordinator/studio?event=…` — corner booth no longer tints opposite corner red; vertical perimeter booth beside horizontal rows stays green when aisles are clear.
 - **Next:** Commit + deploy when user asks.
 
 ## Active work — coordinator market load crash (local, not deployed)

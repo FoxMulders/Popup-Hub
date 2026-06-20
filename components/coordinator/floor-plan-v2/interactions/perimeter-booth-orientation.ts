@@ -319,8 +319,19 @@ export function perimeterFlushRoomEdges(
   frame: RoomFrame,
   tolFt = PERIMETER_BOOTH_SNAP_FT + 0.25
 ): ReadonlyArray<RoomEdgeSide> {
+  const rotation = booth.rotation ?? 0
+  const { span, depth } = boothSpanAndDepth(
+    booth.width,
+    booth.height,
+    booth.tableLengthFt
+  )
+  // Rotated perimeter booths use a wider AABB than the back face; extend
+  // tolerance by half the long-minus-short span so flush walls are ignored.
+  const rotOffset =
+    Math.abs(rotation % 180) > 0.5 ? Math.max(0, (span - depth) / 2) : 0
+  const effectiveTol = tolFt + rotOffset
   return roomEdgeDistanceCandidates(booth, frame)
-    .filter((c) => c.distanceFt <= tolFt + 1e-6)
+    .filter((c) => c.distanceFt <= effectiveTol + 1e-6)
     .map((c) => c.edge)
 }
 

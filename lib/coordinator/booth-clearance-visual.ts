@@ -13,7 +13,11 @@ import {
   rotatedAabb,
   type Rect,
 } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
-import { perimeterFlushRoomEdges } from '@/components/coordinator/floor-plan-v2/interactions/perimeter-booth-orientation'
+import {
+  perimeterFlushRoomEdges,
+  rotationForPerimeterEdge,
+  type RoomEdgeSide,
+} from '@/components/coordinator/floor-plan-v2/interactions/perimeter-booth-orientation'
 import { isVendorBoothObject } from '@/components/coordinator/floor-plan-v2/interactions/vendor-booth-placement'
 import type {
   BoothObject,
@@ -122,6 +126,78 @@ export function clearanceBand(clearanceFt: number): BoothClearanceBand {
   return 'critical'
 }
 
+const BAND_SEVERITY: Record<BoothClearanceBand, number> = {
+  critical: 0,
+  tight: 1,
+  good: 2,
+}
+
+function worseClearanceBand(
+  a: BoothClearanceBand,
+  b: BoothClearanceBand
+): BoothClearanceBand {
+  return BAND_SEVERITY[a] <= BAND_SEVERITY[b] ? a : b
+}
+
+function normalizeRotationDeg(rotation: number): number {
+  return ((rotation % 360) + 360) % 360
+}
+
+function rotationMatchesPerimeterEdge(
+  booth: BoothObject,
+  edge: RoomEdgeSide
+): boolean {
+  const rot = normalizeRotationDeg(booth.rotation ?? 0)
+  const expected = rotationForPerimeterEdge(edge)
+  return Math.abs(rot - expected) < 0.5
+}
+
+/**
+ * Perimeter layout violations — corner pockets with no vendor rear access,
+ * or a booth flush to a wall but facing the wrong way (opening into the wall).
+ */
+export function vendorBoothPerimeterLayoutBand(
+  booth: BoothObject,
+  room: RoomFrame
+): BoothClearanceBand | null {
+  const flush = perimeterFlushRoomEdges(booth, room)
+  if (flush.length === 0) return null
+
+  const touchesHorizontal = flush.includes('left') || flush.includes('right')
+  const touchesVertical = flush.includes('top') || flush.includes('bottom')
+  if (touchesHorizontal && touchesVertical) return 'critical'
+
+  if (!flush.some((edge) => rotationMatchesPerimeterEdge(booth, edge))) {
+    return 'critical'
+  }
+
+  return null
+}
+
+function roomForBooth(
+  booth: BoothObject,
+  rooms: ReadonlyArray<RoomFrame> | undefined,
+  objectRoom: FloorPlanDoc['objectRoom']
+): RoomFrame | undefined {
+  const roomId = objectRoom?.[booth.id]
+  return roomId ? rooms?.find((r) => r.id === roomId) : undefined
+}
+
+function combineClearanceAndLayoutBands(
+  booth: BoothObject,
+  objects: ReadonlyArray<PlacedObject>,
+  rooms: ReadonlyArray<RoomFrame> | undefined,
+  objectRoom: FloorPlanDoc['objectRoom']
+): BoothClearanceBand {
+  const band = clearanceBand(
+    minVendorBoothClearanceFt(booth, objects, rooms, objectRoom)
+  )
+  const room = roomForBooth(booth, rooms, objectRoom)
+  if (!room) return band
+  const layoutBand = vendorBoothPerimeterLayoutBand(booth, room)
+  return layoutBand ? worseClearanceBand(band, layoutBand) : band
+}
+
 /**
  * Shortest edge-to-edge gap to room walls and structural fixtures only.
  * Vendor-to-vendor spacing is intentionally excluded — aisle tightness
@@ -176,13 +252,7 @@ export function vendorBoothClearanceWarningBand(
   rooms: ReadonlyArray<RoomFrame> | undefined,
   objectRoom: FloorPlanDoc['objectRoom']
 ): BoothClearanceBand {
-  const minFt = minVendorBoothClearanceFt(
-    booth,
-    objects,
-    rooms,
-    objectRoom
-  )
-  return clearanceBand(minFt)
+  return combineClearanceAndLayoutBands(booth, objects, rooms, objectRoom)
 }
 
 /** Clearance theme for a vendor booth probe during draw/hover preview. */
@@ -236,9 +306,14 @@ export function minVendorBoothClearanceFt(
     if (other.id === booth.id) continue
     if (other.kind === 'booth') {
       if (!isVendorBoothObject(other)) continue
+      const otherBooth = other as BoothObject
       const gap = vendorBoothAisleClearanceFt(
         boothAabb,
-        boothPlacementRect(other as BoothObject)
+        boothPlacementRect(otherBooth),
+        {
+          rotationA: booth.rotation ?? 0,
+          rotationB: otherBooth.rotation ?? 0,
+        }
       )
       if (gap < minGap) minGap = gap
       continue
@@ -275,9 +350,7 @@ export function vendorBoothClearanceBandsByObjectId(
     if (isGuestTableBooth(booth) || !isVendorBoothObject(booth)) continue
     bands.set(
       obj.id,
-      clearanceBand(
-        minVendorBoothClearanceFt(booth, objects, rooms, objectRoom)
-      )
+      vendorBoothClearanceWarningBand(booth, objects, rooms, objectRoom)
     )
   }
   return bands
