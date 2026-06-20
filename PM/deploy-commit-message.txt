@@ -1,1 +1,1 @@
-feat: ship 138 session updates (patron UX + coordinator polish; Canopy booth-fee headline; mobile discover UX polish; Canopy trust directory rebrand; +134 more)
+feat: ship 138 session updates (patron UX + coordinator polish; HubGuard rebrand; HubGuard booth-fee headline; mobile discover UX polish; +134 more)
