@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint/HubGrid responsive floor-plan guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-ec21` from commit `f119b94` (`feat: ship local changes`). Production/build metadata unchanged by this QA patch.
+- **Goal:** QA scan Blueprint Studio / dashboard / layout views for missing small-screen defensive UI around floor-plan canvas and booth matrix surfaces.
+- **Shipped locally:**
+  - **Shared warning:** Added `FLOOR_PLAN_MATRIX_DESKTOP_REQUIRED_MESSAGE` + `FloorPlanMatrixDesktopRequiredNotice` with `data-testid="floor-plan-matrix-desktop-required"` for the designated floor-plan matrix small-screen regression copy.
+  - **Standalone matrix:** `/coordinator/studio/ledger` (`DashboardLedgerWindowClient`) now uses `FloorPlanViewportLayoutProvider`; sub-1024px/550px viewports render the matrix warning instead of mounting the presenter/wall-cast matrix.
+  - **Spatial layout editor:** `/coordinator/events/[id]/layout` now has a client-side viewport guard in addition to the server mobile UA redirect; the floor-plan canvas unmounts when `showDesktopRequired` is active.
+  - **QA mirrors:** `src/qa_review` and `qa_review/coordinator-site-recovery` floor-plan wizard/spatial components now use the same provider + desktop-required overlay pattern.
+- **Verify:** `git diff --check` PASS; focused `npm run lint -- <touched files>` PASS; `npx tsc --noEmit --pretty false` PASS.
+- **Blockers:** None. `node_modules/next/dist/docs` was not present in this workspace, so Next-specific docs could not be read locally before editing.
+- **Next:** PR review; optional browser smoke on `/coordinator/studio/ledger` and `/coordinator/events/[id]/layout` at 390x844 and >=1024x550 to visually confirm warning vs canvas/matrix behavior.
+
 ## Active work — HubGuard review organizer loop (deployed 2026-06-20)
 - **Goal:** Vendor event reviews notify the organizer; organizer can respond; past-event notes copy + grain-of-salt guidance for booth/neighbour complaints.
 - **Shipped:**

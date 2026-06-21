@@ -22,6 +22,9 @@ import {
 } from '@/hooks/use-floor-plan-viewport-tier'
 import { cn } from '@/lib/utils'
 
+export const FLOOR_PLAN_MATRIX_DESKTOP_REQUIRED_MESSAGE =
+  'The floor plan matrix is not optimized for small screens. Recommended layout: desktop size, at least 1024px wide and 550px tall.'
+
 export interface FloorPlanViewportLayoutContextValue {
   tier: FloorPlanViewportTier
   isMobile: boolean
@@ -88,14 +91,9 @@ export function DesktopScreenRequiredOverlay({
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!showDesktopRequired) return
@@ -124,7 +122,7 @@ export function DesktopScreenRequiredOverlay({
     navigateAway()
   }, [navigateAway, onSaveDraft])
 
-  if (!showDesktopRequired || !mounted) return null
+  if (!showDesktopRequired || typeof document === 'undefined') return null
 
   const overlay = (
     <div
@@ -203,6 +201,35 @@ export function DesktopLayoutRequiredBanner({ className }: { className?: string 
         Open this market on a larger screen to design booths in HubGrid or the setup
         wizard layout step.
       </p>
+    </div>
+  )
+}
+
+export function FloorPlanMatrixDesktopRequiredNotice({
+  className,
+}: {
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex h-full min-h-[40vh] items-center justify-center bg-stone-950 p-4 text-stone-50 sm:p-6',
+        className
+      )}
+      role="status"
+      data-testid="floor-plan-matrix-desktop-required"
+    >
+      <div className="w-full max-w-lg rounded-2xl border border-stone-700 bg-stone-900 p-6 text-left shadow-xl sm:p-8">
+        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-forest/15 text-forest">
+          <Monitor className="h-6 w-6" aria-hidden />
+        </div>
+        <p className="font-heading text-xl font-bold tracking-tight text-stone-50">
+          Floor plan matrix needs a larger screen
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-stone-300">
+          {FLOOR_PLAN_MATRIX_DESKTOP_REQUIRED_MESSAGE}
+        </p>
+      </div>
     </div>
   )
 }
