@@ -1,3 +1,16 @@
+/** True when a persisted booth number changed and the update succeeded. */
+export function shouldNotifyBoothAssignment(
+  previousBooth: number | null | undefined,
+  nextBooth: number | null | undefined,
+  updateSucceeded: boolean
+): boolean {
+  return (
+    updateSucceeded &&
+    nextBooth != null &&
+    previousBooth !== nextBooth
+  )
+}
+
 /** Notify vendor when a booth number is first assigned on the floor plan. */
 export async function notifyVendorBoothAssigned(params: {
   vendorId: string

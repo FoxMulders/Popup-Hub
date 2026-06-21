@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (2026-06-21)
+- **Goal:** Deep review of recent commits for high-severity correctness bugs.
+- **Found & fixed:** Booth-planner vendor notifications re-fired on every layout re-save (35843fd) because `previousBooth` read stale React props instead of persisted DB state; also notified when booth update failed. Secondary fix: nearby market email recipients no longer dropped when in-app notification insert fails.
+- **Branch:** `cursor/critical-bug-investigation-6c75` @ `8d9dde9`
+- **Verify:** `npx tsx lib/applications/notify-vendor-booth-assigned.test.ts` PASS.
+- **Next:** Merge PR; smoke coordinator layout save twice — vendor gets one booth-assigned notification only.
+
 ## Active work — HubGuard review organizer loop (deployed 2026-06-20)
 - **Goal:** Vendor event reviews notify the organizer; organizer can respond; past-event notes copy + grain-of-salt guidance for booth/neighbour complaints.
 - **Shipped:**

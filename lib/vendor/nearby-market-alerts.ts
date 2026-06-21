@@ -136,7 +136,7 @@ export async function notifyVendorsOfNearbyPublishedMarket(
     const { error } = await supabase.from('notifications').insert(notifications)
     if (error) {
       console.error('[nearby-market-alerts] insert failed', error)
-      return { notified: 0, emailRecipients: [] }
+      return { notified: 0, emailRecipients }
     }
   }
 

@@ -260,7 +260,10 @@ import {
 } from '@/components/ui/dialog'
 import type { QuadrantBounds } from '@/lib/booth-planner/quadrant-grid'
 import { toast } from 'sonner'
-import { notifyVendorBoothAssigned } from '@/lib/applications/notify-vendor-booth-assigned'
+import {
+  notifyVendorBoothAssigned,
+  shouldNotifyBoothAssignment,
+} from '@/lib/applications/notify-vendor-booth-assigned'
 import {
   ArrowDown,
   ArrowUp,
@@ -3114,6 +3117,20 @@ export function BoothPlanner({
       if (error) throw error
 
       const placed = cells.filter((c) => c.col >= 0)
+      const placedAppIds = placed.filter((c) => !isFakeVendorId(c.id)).map((c) => c.id)
+      const previousBoothByAppId = new Map<string, number | null>()
+
+      if (placedAppIds.length > 0) {
+        const { data: existingBoothRows } = await supabase
+          .from('booth_applications')
+          .select('id, booth_number')
+          .in('id', placedAppIds)
+
+        for (const row of existingBoothRows ?? []) {
+          previousBoothByAppId.set(row.id as string, (row.booth_number as number | null) ?? null)
+        }
+      }
+
       let eventNameForNotify = 'your market'
       const { data: eventRow } = await supabase.from('events').select('name').eq('id', eventId).maybeSingle()
       if (eventRow?.name) eventNameForNotify = eventRow.name
@@ -3121,19 +3138,21 @@ export function BoothPlanner({
       for (const cell of placed) {
         if (isFakeVendorId(cell.id)) continue
         const app = approvedApps.find((a) => a.id === cell.id)
-        const previousBooth = app?.booth_number ?? null
+        const previousBooth = previousBoothByAppId.get(cell.id) ?? null
         const updates: { booth_number: number; table_length_ft?: number } = {
           booth_number: cell.boothNumber,
         }
         if (usesTableUnits && cell.tableLengthFt != null) {
           updates.table_length_ft = cell.tableLengthFt
         }
-        await supabase.from('booth_applications').update(updates).eq('id', cell.id)
+        const { error: boothUpdateError } = await supabase
+          .from('booth_applications')
+          .update(updates)
+          .eq('id', cell.id)
 
         if (
-          app?.vendor_id &&
-          previousBooth !== cell.boothNumber &&
-          cell.boothNumber != null
+          shouldNotifyBoothAssignment(previousBooth, cell.boothNumber, !boothUpdateError) &&
+          app?.vendor_id
         ) {
           void notifyVendorBoothAssigned({
             vendorId: app.vendor_id,
@@ -3142,6 +3161,10 @@ export function BoothPlanner({
             eventName: eventNameForNotify,
             boothNumber: cell.boothNumber,
           })
+        }
+
+        if (!boothUpdateError) {
+          previousBoothByAppId.set(cell.id, cell.boothNumber)
         }
       }
 
