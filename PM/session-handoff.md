@@ -2,22 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work ? HubGuard review organizer loop (local, not deployed)
+## Active work — HubGuard review organizer loop (deployed 2026-06-20)
 - **Goal:** Vendor event reviews notify the organizer; organizer can respond; past-event notes copy + grain-of-salt guidance for booth/neighbour complaints.
-- **Shipped locally:**
-  - **Notifications:** `hubguard_vendor_review` (coordinator) + `hubguard_review_response` (vendor); migration `121_hubguard_review_notifications.sql`.
+- **Shipped:**
+  - **Notifications:** `hubguard_vendor_review` (coordinator) + `hubguard_review_response` (vendor); migration `121_hubguard_review_notifications.sql` applied on Supabase.
   - **Submit flow:** `notifyOrganizerOfVendorReview` on published review insert.
   - **Respond API:** `POST /api/organizers/reviews/[reviewId]/respond` + `OrganizerReviewRespondForm` on trust report when claim holder.
   - **Public list:** organizer responses on `/organizers/[slug]#vendor-reviews`.
   - **Form copy:** optional notes reframed for post-event reflection; booth/neighbour grain-of-salt helper text.
-- **Verify:** `npx tsc --noEmit` PASS. Smoke: submit review ? coordinator notification; claim holder responds ? vendor notification + response on trust report.
-- **Next:** Commit + deploy when user asks. Run migration `121` on Supabase.
-
-## Active work ? /notifications build fix (local, not deployed)
-- **Goal:** Fix Next.js static generation error on `/notifications` (`cookies()` during prerender).
-- **Shipped locally:** `export const dynamic = 'force-dynamic'` on `app/notifications/layout.tsx` (layout + page both use Supabase auth cookies and active-portal cookie).
-- **Verify:** `npx next build` PASS ? `/notifications` shows as `?` (dynamic); no `[notifications] page setup failed` log.
-- **Next:** Commit + deploy when user asks.
+  - **Build fix:** `export const dynamic = 'force-dynamic'` on `app/notifications/layout.tsx` (shipped in same commit).
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: submit review → coordinator notification; claim holder responds → vendor notification + response on trust report.
+- **Next:** Smoke on prod — submit review, respond as claim holder, confirm notifications deep-link.
 
 ## Active work ? HubGuard brand logo (local, not deployed)
 - **Goal:** Process shield+stall+pin HubGuard lockup and replace generic shield icons on trust surfaces.
@@ -1799,9 +1794,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `35843fd` (pushed to `origin/master`)
-- Last deploy commit: `35843fd` - feat: ship local changes
-- Production: https://popuphub.ca - **v1.107.0 build 1** | commit `19a2911` (handoff updated 2026-06-20 17:24)
+- Branch: `master` @ `1f12970` (pushed to `origin/master`)
+- Production: https://popuphub.ca - **v1.107.0 build 1** | commit `19a2911` (handoff updated 2026-06-20 18:03)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
