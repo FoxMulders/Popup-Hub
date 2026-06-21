@@ -11,7 +11,8 @@
   - **Spatial layout editor:** `/coordinator/events/[id]/layout` now has a client-side viewport guard in addition to the server mobile UA redirect; the floor-plan canvas unmounts when `showDesktopRequired` is active.
   - **QA mirrors:** `src/qa_review` and `qa_review/coordinator-site-recovery` floor-plan wizard/spatial components now use the same provider + desktop-required overlay pattern.
 - **Verify:** `git diff --check` PASS; focused `npm run lint -- <touched files>` PASS; `npx tsc --noEmit --pretty false` PASS.
-- **Blockers:** None. `node_modules/next/dist/docs` was not present in this workspace, so Next-specific docs could not be read locally before editing.
+- **Deploy:** `npx vercel deploy --prod --yes` attempted after commit/push but blocked because the CLI had no existing credentials and entered device-login flow; waiting process was stopped.
+- **Blockers:** Production deploy requires Vercel CLI authentication/token in the automation environment. `node_modules/next/dist/docs` was not present in this workspace, so Next-specific docs could not be read locally before editing.
 - **Next:** PR review; optional browser smoke on `/coordinator/studio/ledger` and `/coordinator/events/[id]/layout` at 390x844 and >=1024x550 to visually confirm warning vs canvas/matrix behavior.
 
 ## Active work — HubGuard review organizer loop (deployed 2026-06-20)
