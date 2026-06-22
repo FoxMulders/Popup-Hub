@@ -70,6 +70,8 @@ export function PatronQuarterAuctionLive({
   const [participated, setParticipated] = useState(false)
   const [bidSpinKeys, setBidSpinKeys] = useState<Record<string, number>>({})
   const [winnerRevealItem, setWinnerRevealItem] = useState<AuctionCatalogItem | null>(null)
+  /** Snapshot of the completed item the patron won — survives winner-reveal timeout. */
+  const [wonItem, setWonItem] = useState<AuctionCatalogItem | null>(null)
 
   useEffect(() => {
     void fetch(`/api/quarter-auction/${eventId}/participate`)
@@ -114,6 +116,7 @@ export function PatronQuarterAuctionLive({
     setEntries([])
     setSelectedPaddleIds(new Set())
     setShowWin(false)
+    setWonItem(null)
     setBidSpinKeys({})
   }, [inProgressItem?.id])
 
@@ -189,6 +192,8 @@ export function PatronQuarterAuctionLive({
     if (!liveItem || liveItem.status !== 'completed' || !liveItem.winner_user_id) return
     if (liveItem.winner_user_id !== userId) return
 
+    setWonItem(liveItem)
+
     async function loadVendor() {
       const { data: vendor } = await supabase
         .from('profiles')
@@ -251,11 +256,8 @@ export function PatronQuarterAuctionLive({
     (liveItem.status === 'completed' || winnerRevealItem?.id === liveItem.id)
   const showBiddingClosedOverlay = biddingFrozen && !showHoldScreen && !showWinnerReveal
 
-  const wonPaddle = liveItem?.winning_paddle_number
-  const iWon =
-    liveItem?.status === 'completed' &&
-    liveItem.winner_user_id === userId &&
-    wonPaddle != null
+  const wonPaddle = wonItem?.winning_paddle_number ?? null
+  const iWon = wonItem?.winner_user_id === userId && wonPaddle != null
 
   const biddingHeadline = liveItem ? patronStatusHeadline(liveItem.status) : null
 
@@ -466,7 +468,7 @@ export function PatronQuarterAuctionLive({
       <WinCelebration
         active={showWin && iWon}
         paddleNumber={wonPaddle ?? ''}
-        itemTitle={liveItem?.title ?? ''}
+        itemTitle={wonItem?.title ?? ''}
         vendorName={vendorInfo?.name}
         vendorContact={vendorInfo ?? undefined}
         onDismiss={() => setShowWin(false)}
