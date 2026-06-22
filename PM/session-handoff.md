@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio small-screen guard QA (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-851c`; pre-task HEAD `2a6a81f` (`docs: session handoff after deploy (f13af2c)`). No production deploy/build metadata changed in this scoped QA patch.
+- **Goal:** Scan Blueprint Studio/dashboard layout surfaces for the defensive responsive handler that blocks or warns users when dense floor-plan matrix/canvas UI is opened below the desktop layout breakpoint.
+- **Shipped locally:**
+  - **`floor-plan-viewport-advisory.tsx`:** Added reusable `FloorPlanMatrixViewportWarning` with the designated copy: "The floor plan matrix is not optimized for small screens" and the 1024px by 550px recommended layout breakpoint.
+  - **`dashboard-ledger-window-client.tsx`:** Wrapped standalone dual-screen booth matrix in `FloorPlanViewportLayoutProvider`; cramped viewports now render the matrix warning before subscribing to ledger sync or showing presenter/wall-cast tables.
+  - **`spatial-layout-editor.tsx`:** Wrapped the direct event layout editor in the shared viewport provider and desktop-required overlay so resized/cramped client viewports get the same defensive UI as Studio/wizard routes.
+- **Verified:**
+  - `npx eslint "components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory.tsx" "components/coordinator/dashboard/dashboard-ledger-window-client.tsx" "components/coordinator/spatial-layout/spatial-layout-editor.tsx"` — PASS with existing warnings only.
+  - `npx tsc --noEmit --pretty false` — PASS.
+- **Blockers:** None. `npm ci` reported 3 existing moderate advisories; no dependency changes were made.
+- **Next:** Browser smoke `/coordinator/studio`, `/coordinator/studio/ledger`, and `/coordinator/events/[id]/layout` at <1024px width or <550px height to confirm the warning/overlay appears and desktop sizes still render HubGrid normally.
+
 ## Active work — Admin console desktop access (local, not deployed)
 - **Goal:** Restore navigation to `/admin/*` after hamburger was hidden on `md+` in the vendor UX polish batch.
 - **Shipped locally:**
