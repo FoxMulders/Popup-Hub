@@ -8,6 +8,11 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -36,6 +41,16 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay />
+      <DashboardLedgerWindowContent />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowContent() {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
@@ -47,12 +62,14 @@ export function DashboardLedgerWindowClient() {
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
 
   useEffect(() => {
+    if (showDesktopRequired) return
     document.title = isWallCast
       ? 'Wall Cast — Booth Matrix — Popup Hub'
       : 'Presenter — Booth Matrix — Popup Hub'
-  }, [isWallCast])
+  }, [isWallCast, showDesktopRequired])
 
   useEffect(() => {
+    if (showDesktopRequired) return
     postFloorplanSync({ type: 'ledger_ready', source: 'ledger' })
     return subscribeFloorplanSync((message) => {
       if (message.source === 'ledger') return
@@ -66,26 +83,39 @@ export function DashboardLedgerWindowClient() {
         setSelectedBoothId(message.boothId)
       }
     })
-  }, [eventId])
+  }, [eventId, showDesktopRequired])
 
   useEffect(() => {
+    if (showDesktopRequired) return
     const row = rows.find((r) => r.id === selectedBoothId)
     if (!row) return
     setSelectionAnnouncement(
       `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
     )
-  }, [rows, selectedBoothId])
+  }, [rows, selectedBoothId, showDesktopRequired])
 
   useEffect(() => {
+    if (showDesktopRequired) return
     if (!isWallCast || !selectedRowRef.current) return
     selectedRowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-  }, [isWallCast, selectedBoothId, rows.length])
+  }, [isWallCast, selectedBoothId, rows.length, showDesktopRequired])
 
   const handleFocusBooth = useCallback((boothId: string) => {
     setSelectedBoothId(boothId)
     postFloorplanSync({ type: 'focus_booth', source: 'ledger', boothId })
     postFloorplanSync({ type: 'selection', source: 'ledger', boothId })
   }, [])
+
+  if (showDesktopRequired) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-stone-950 p-6 text-center text-stone-200">
+        <p className="max-w-md text-sm leading-relaxed">
+          The floor plan matrix is not optimized for small screens. Open the dual-screen ledger on
+          a desktop-sized viewport to keep booth assignments readable.
+        </p>
+      </div>
+    )
+  }
 
   if (isWallCast) {
     return (

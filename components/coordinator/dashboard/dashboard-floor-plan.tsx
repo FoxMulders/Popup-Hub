@@ -11,6 +11,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
+import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import {
   addLayoutRoomToList,
   deleteLayoutRoomFromList,
@@ -44,6 +45,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     approvedPool,
     eventCategoryNames,
   } = useMarketManagement()
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const selectedEvent = events.find((event) => event.id === selectedEventId)
 
   const storeRef = useRef<FloorPlanDocStore | null>(null)
@@ -182,6 +184,17 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
             Create market
           </Link>
         </div>
+      </div>
+    )
+  }
+
+  if (showDesktopRequired) {
+    return (
+      <div className="flex h-full items-center justify-center p-8 text-center">
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          Floor plan layout and matrix are not optimized for small screens. Use a tablet in
+          landscape or a desktop viewport to continue editing.
+        </p>
       </div>
     )
   }

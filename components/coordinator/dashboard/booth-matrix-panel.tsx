@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import {
   BOOTH_STATUS_THEME,
 } from '@/lib/coordinator/booth-placement-status'
+import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { useMarketManagement } from './market-management-context'
@@ -32,6 +33,7 @@ export function BoothMatrixPanel({
   variant?: 'embedded' | 'ledger' | 'split' | 'docked'
   defaultOpen?: boolean
 }) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const rows = useBoothMatrixRows()
   const { setView } = useDashboardWorkspaceView()
   const {
@@ -57,6 +59,7 @@ export function BoothMatrixPanel({
   const selectedRow = rows.find((row) => row.id === selectedBoothId)
 
   useEffect(() => {
+    if (showDesktopRequired) return
     if (isDensePane) return
     try {
       const raw = window.localStorage.getItem(MATRIX_STORAGE_KEY)
@@ -64,23 +67,36 @@ export function BoothMatrixPanel({
     } catch {
       // ignore
     }
-  }, [isDensePane])
+  }, [isDensePane, showDesktopRequired])
 
   useEffect(() => {
+    if (showDesktopRequired) return
     if (isDensePane) return
     try {
       window.localStorage.setItem(MATRIX_STORAGE_KEY, panelOpen ? '1' : '0')
     } catch {
       // ignore
     }
-  }, [panelOpen, isDensePane])
+  }, [panelOpen, isDensePane, showDesktopRequired])
 
   useEffect(() => {
+    if (showDesktopRequired) return
     if (!selectedRow) return
     setSelectionAnnouncement(
       `Selected booth ${selectedRow.label}, ${selectedRow.statusLabel}, vendor ${selectedRow.vendor}`
     )
-  }, [selectedRow])
+  }, [selectedRow, showDesktopRequired])
+
+  if (showDesktopRequired) {
+    return (
+      <div className="dashboard-booth-matrix-panel flex flex-1 items-center justify-center p-6 text-center">
+        <p className="max-w-md text-sm leading-relaxed text-stone-600">
+          The floor plan matrix is not optimized for small screens. Open HubGrid on a
+          desktop-sized viewport to review booth assignments.
+        </p>
+      </div>
+    )
+  }
 
   if (rows.length === 0) {
     if (isLedger) {
