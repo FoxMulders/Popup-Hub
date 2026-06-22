@@ -70,6 +70,8 @@ export function PatronQuarterAuctionLive({
   const [participated, setParticipated] = useState(false)
   const [bidSpinKeys, setBidSpinKeys] = useState<Record<string, number>>({})
   const [winnerRevealItem, setWinnerRevealItem] = useState<AuctionCatalogItem | null>(null)
+  /** Snapshot of the completed item the patron won — survives winner-reveal timeout. */
+  const [wonItem, setWonItem] = useState<AuctionCatalogItem | null>(null)
 
   useEffect(() => {
     void fetch(`/api/quarter-auction/${eventId}/participate`)
@@ -114,6 +116,8 @@ export function PatronQuarterAuctionLive({
     setEntries([])
     setSelectedPaddleIds(new Set())
     setShowWin(false)
+    setWonItem(null)
+    setVendorInfo(null)
     setBidSpinKeys({})
   }, [inProgressItem?.id])
 
@@ -145,6 +149,9 @@ export function PatronQuarterAuctionLive({
             prev?.status !== 'completed'
           ) {
             setWinnerRevealItem(row)
+            if (row.winner_user_id === userId) {
+              setWonItem(row)
+            }
             window.setTimeout(() => {
               setWinnerRevealItem((current) => (current?.id === row.id ? null : current))
             }, 5500)
@@ -186,15 +193,17 @@ export function PatronQuarterAuctionLive({
   }, [liveItem?.id, supabase])
 
   useEffect(() => {
-    if (!liveItem || liveItem.status !== 'completed' || !liveItem.winner_user_id) return
-    if (liveItem.winner_user_id !== userId) return
+    if (!wonItem?.vendor_id || wonItem.winner_user_id !== userId) return
+
+    let cancelled = false
 
     async function loadVendor() {
       const { data: vendor } = await supabase
         .from('profiles')
         .select('full_name, email, phone')
-        .eq('id', liveItem!.vendor_id)
+        .eq('id', wonItem!.vendor_id)
         .single()
+      if (cancelled) return
       if (vendor) {
         setVendorInfo({
           name: vendor.full_name,
@@ -204,8 +213,12 @@ export function PatronQuarterAuctionLive({
       }
       setShowWin(true)
     }
-    loadVendor()
-  }, [liveItem, userId, supabase])
+    void loadVendor()
+
+    return () => {
+      cancelled = true
+    }
+  }, [wonItem, userId, supabase])
 
   async function handlePaddlesPurchased(newPaddles: EventPaddle[], newBalanceCents: number) {
     setPaddles((prev) => [...prev, ...newPaddles])
@@ -251,11 +264,8 @@ export function PatronQuarterAuctionLive({
     (liveItem.status === 'completed' || winnerRevealItem?.id === liveItem.id)
   const showBiddingClosedOverlay = biddingFrozen && !showHoldScreen && !showWinnerReveal
 
-  const wonPaddle = liveItem?.winning_paddle_number
-  const iWon =
-    liveItem?.status === 'completed' &&
-    liveItem.winner_user_id === userId &&
-    wonPaddle != null
+  const wonPaddle = wonItem?.winning_paddle_number
+  const iWon = wonItem?.winner_user_id === userId && wonPaddle != null
 
   const biddingHeadline = liveItem ? patronStatusHeadline(liveItem.status) : null
 
@@ -466,7 +476,7 @@ export function PatronQuarterAuctionLive({
       <WinCelebration
         active={showWin && iWon}
         paddleNumber={wonPaddle ?? ''}
-        itemTitle={liveItem?.title ?? ''}
+        itemTitle={wonItem?.title ?? ''}
         vendorName={vendorInfo?.name}
         vendorContact={vendorInfo ?? undefined}
         onDismiss={() => setShowWin(false)}
