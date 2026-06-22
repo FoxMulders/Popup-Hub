@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint layout responsive guards (pushed, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-f490`; commit `2c2f13e` (`fix: guard blueprint layouts on small screens`) pushed to origin. Production not deployed from this task.
+- **Persona:** Coordinator · HubGrid / Blueprint Studio / Allocation Ledger / dual-screen Booth Matrix.
+- **Shipped:**
+  - **Spatial layout route:** Wrapped production `SpatialLayoutEditor` in `FloorPlanViewportLayoutProvider`, renders `DesktopScreenRequiredOverlay`, and skips `FloorPlanV2` below the 1024px × 550px floor-plan breakpoint.
+  - **Dashboard canvas/matrix:** Added local `useFloorPlanViewportLayout()` fallbacks to `DashboardFloorPlanViewport` and `BoothMatrixPanel` so reused dashboard views render the regression warning instead of the canvas/matrix on small screens.
+  - **Dual-screen ledger:** Wrapped `DashboardLedgerWindowClient` with the provider/overlay and paused BroadcastChannel title/sync/selection effects while the desktop-required guard is active.
+  - **QA mirrors:** Added the same guard to imported QA wizard/spatial Blueprint Studio fixtures and the excluded coordinator-site-recovery spatial snapshot for repository-wide scans.
+- **Verify:** `npm ci` PASS; `npx tsc --noEmit --pretty false` PASS; targeted `npx eslint ...` PASS with warnings only (pre-existing state-in-effect / unused / exhaustive-deps warnings in touched files).
+- **Blockers:** None for the responsive guard change. Existing npm audit reports 3 moderate vulnerabilities.
+- **Next:** Open/review PR, then decide whether to deploy. Optional cleanup: address existing lint warnings in dashboard matrix/floor-plan and spatial editor callbacks.
+
 ## Active work — Coordinator setup & admin queue polish (local, not deployed)
 - **Goal:** Eight coordinator/admin fixes — MLM caps, unified booth fee messaging, admin badges + email, Places false alarms, wizard CTA placement, vendor spot editing, quick-start floor cap, quarter auction visibility.
 - **Persona:** Coordinator · market setup wizard; Platform admin · `/admin/*`; Patron · quarter auction.
