@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Monitor } from 'lucide-react'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
+import {
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
+import {
+  FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX,
+  FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX,
+} from '@/hooks/use-floor-plan-viewport-tier'
 import {
   postFloorplanSync,
   subscribeFloorplanSync,
@@ -30,15 +39,90 @@ const WALL_CAST_ROW_CLASS: Record<
   vip_hold: 'bg-violet-900 text-violet-50',
 }
 
+export const FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING =
+  'The floor plan matrix is not optimized for small screens.'
+
 /**
  * Standalone booth matrix view for native dual-screen mode (secondary window).
  * Presenter — interactive; click a booth to focus it on the canvas.
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DashboardLedgerWindowViewportGate />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowViewportGate() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
+
+  if (showDesktopRequired) {
+    return <FloorPlanMatrixDesktopRequired eventId={eventId} screenMode={screenMode} />
+  }
+
+  return <DashboardLedgerWindowBody eventId={eventId} screenMode={screenMode} />
+}
+
+function FloorPlanMatrixDesktopRequired({
+  eventId,
+  screenMode,
+}: {
+  eventId: string | null
+  screenMode: 'presenter' | 'wall-cast'
+}) {
+  const hubGridHref = eventId
+    ? `/coordinator/studio?event=${encodeURIComponent(eventId)}`
+    : '/coordinator/studio'
+
+  return (
+    <div
+      className="flex h-full min-h-screen items-center justify-center bg-stone-950 p-4 text-stone-50 sm:p-6"
+      role="alert"
+      aria-labelledby="floor-plan-matrix-desktop-title"
+      data-testid="floor-plan-matrix-desktop-required"
+      data-dual-screen-mode={screenMode}
+    >
+      <div className="w-full max-w-lg rounded-2xl border border-stone-700 bg-stone-900 p-6 shadow-xl sm:p-8">
+        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-forest/15 text-forest">
+          <Monitor className="h-6 w-6" aria-hidden />
+        </div>
+        <h1
+          id="floor-plan-matrix-desktop-title"
+          className="font-heading text-xl font-bold tracking-tight sm:text-2xl"
+        >
+          Booth matrix needs a desktop-size layout
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-stone-300">
+          {FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING} Open the presenter or wall-cast
+          view on a larger display before reviewing booth assignments.
+        </p>
+        <p className="mt-4 rounded-lg border border-stone-700 bg-stone-800/60 p-4 text-sm text-stone-300">
+          Recommended layout breaker: at least {FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX}px
+          wide and {FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX}px tall.
+        </p>
+        <a
+          href={hubGridHref}
+          className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-forest px-4 py-2 text-sm font-semibold text-white transition hover:bg-forest/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 focus-visible:ring-offset-stone-900 sm:w-auto"
+        >
+          Back to HubGrid
+        </a>
+      </div>
+    </div>
+  )
+}
+
+function DashboardLedgerWindowBody({
+  eventId,
+  screenMode,
+}: {
+  eventId: string | null
+  screenMode: 'presenter' | 'wall-cast'
+}) {
   const isWallCast = screenMode === 'wall-cast'
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
