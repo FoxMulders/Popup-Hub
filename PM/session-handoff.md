@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (2026-06-22)
+- **Goal:** Deep review of recent `master` commits for high-severity correctness bugs.
+- **Found & fixed:** `claimOrganizerProfile` used user-scoped Supabase client against `organizers` (SELECT-only RLS). Updates affected zero rows while API returned `{ ok: true }`, breaking HubGuard profile claims and review responses.
+- **Fix:** `createAdminClient` + `claimed_by IS NULL` guard + fail when no row updates (`lib/organizers/claim-organizer.ts`).
+- **Validation:** `npx tsx lib/organizers/claim-organizer.test.ts` PASS.
+- **Next:** Merge PR; smoke coordinator claim flow on a published HubGuard organizer.
+
 ## Active work — Admin console desktop access (local, not deployed)
 - **Goal:** Restore navigation to `/admin/*` after hamburger was hidden on `md+` in the vendor UX polish batch.
 - **Shipped locally:**
