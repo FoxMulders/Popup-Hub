@@ -42,7 +42,7 @@
         "qa:automation": "powershell -ExecutionPolicy Bypass -File ./scripts/run-qa-automation.ps1",
         "qa:automation:static": "powershell -ExecutionPolicy Bypass -File ./scripts/run-qa-automation.ps1 -SkipPlaywright",
         "qa:automation:prod": "powershell -ExecutionPolicy Bypass -File ./scripts/run-qa-automation.ps1 -ProdBrowser",
-        "test:unit": "npx tsx lib/vendor-fairness-layout/geometry/geometry.test.ts && npx tsx lib/vendor-fairness-layout/integration.test.ts && npx tsx components/coordinator/floor-plan-v2/geometry/polygon-edit.test.ts && npx tsx components/coordinator/floor-plan-v2/interactions/category-rules.test.ts && npx tsx lib/floor-plan/door-clearance-zones.test.ts && npx tsx lib/portals/qa-active-portal.ts",
+        "test:unit": "npx tsx lib/vendor-fairness-layout/geometry/geometry.test.ts && npx tsx lib/vendor-fairness-layout/integration.test.ts && npx tsx components/coordinator/floor-plan-v2/geometry/polygon-edit.test.ts && npx tsx components/coordinator/floor-plan-v2/interactions/category-rules.test.ts && npx tsx lib/floor-plan/door-clearance-zones.test.ts && npx tsx lib/organizers/claim-organizer.test.ts && npx tsx lib/portals/qa-active-portal.ts",
         "test:fairness-layout": "npx tsx lib/vendor-fairness-layout/geometry/geometry.test.ts && npx tsx lib/vendor-fairness-layout/integration.test.ts",
         "test:fairness-layout:stress": "npx tsx scripts/verify-vendor-fairness-layout.ts",
         "test:shopper-routing": "npx tsx lib/shopper/qa-pathfinding.ts",
