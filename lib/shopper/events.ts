@@ -212,10 +212,11 @@ export function countUpcomingEventsInRadius(
   origin: LatLng,
   radiusKm: number | null,
   fromDate: Date = startOfDay(new Date()),
-  horizonDays = 60
+  horizonDays = 60,
+  listingType: EventListingType = 'community_market'
 ): number {
   const rangeEnd = addDays(startOfDay(fromDate), horizonDays)
-  const scoped = filterEventsByListingType(events, 'community_market')
+  const scoped = filterEventsByListingType(events, listingType)
   const withMeta: EventWithMeta[] = scoped.map((e) => ({
     ...e,
     distance_km: distanceKm(origin, { lat: e.latitude, lng: e.longitude }),

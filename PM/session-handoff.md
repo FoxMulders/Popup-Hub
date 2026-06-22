@@ -2,7 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Coordinator setup & admin queue polish (local, not deployed)
+## Active work — Discover quarter auction visibility fix (local, not deployed)
+- **Goal:** Patrons can find quarter auction events on Discover when toggling **Quarter auctions**.
+- **Persona:** Patron · `/discover`
+- **Root cause:** Discover always filtered `community_market` even with the quarter-auction toggle, then required legacy timer `auctions.status = active` — so `garage_yard_sale` events never appeared.
+- **Shipped locally:**
+  - **`discover-screen.tsx`:** Toggle now filters `garage_yard_sale`; removed erroneous live-timer gate for quarter listings.
+  - **`cached-public-markets.ts`:** Live badge map includes quarter catalog items in `bidding_open` / `bidding_closed` / `drawing`.
+  - **`event-card.tsx`:** **Quarter auction** badge on non-live quarter events; **Live auction** when catalog is active.
+  - **`events.ts`:** `countUpcomingEventsInRadius` accepts listing type for empty-state copy.
+  - **`scripts/verify-discover-quarter-auctions.ts`:** Listing-type filter smoke test.
+- **Verify:** `npx tsx scripts/verify-discover-quarter-auctions.ts` — 2/2 PASS; `npx tsc --noEmit` PASS. Smoke `/discover?live=auctions` → quarter auction events list + map pins.
+- **Next:** Commit + deploy when user asks.
+
 - **Goal:** Eight coordinator/admin fixes — MLM caps, unified booth fee messaging, admin badges + email, Places false alarms, wizard CTA placement, vendor spot editing, quick-start floor cap, quarter auction visibility.
 - **Persona:** Coordinator · market setup wizard; Platform admin · `/admin/*`; Patron · quarter auction.
 - **Shipped locally:**

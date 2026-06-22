@@ -1,1 +1,1 @@
-feat: ship 5 session updates (Coordinator setup & admin queue polish; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)
+feat: ship 5 session updates (Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)

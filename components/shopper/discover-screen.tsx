@@ -105,7 +105,8 @@ export function DiscoverScreen({
   }, [requestMyLocation, setViewMode])
 
   const filtered = useMemo(() => {
-    const scoped = filterEventsByListingType(events, 'community_market')
+    const listingType = liveAuctionsOnly ? 'garage_yard_sale' : 'community_market'
+    const scoped = filterEventsByListingType(events, listingType)
     const byDate =
       datePreset === 'weekend' || datePreset === 'next_weekend'
         ? filterEventsByWeekend(scoped, filterDate)
@@ -119,14 +120,20 @@ export function DiscoverScreen({
       vendor_count: vendorCounts[e.id] ?? 0,
     }))
     const sorted = sortEventsByDistance(withMeta, origin)
-    const inRadius = filterEventsByRadius(sorted, radiusKm)
-    if (!liveAuctionsOnly) return inRadius
-    return inRadius.filter((e) => activeAuctionByEventId[e.id] != null)
-  }, [events, datePreset, filterDate, origin, radiusKm, vendorCounts, liveAuctionsOnly, activeAuctionByEventId])
+    return filterEventsByRadius(sorted, radiusKm)
+  }, [events, datePreset, filterDate, origin, radiusKm, vendorCounts, liveAuctionsOnly])
 
   const upcomingInAreaCount = useMemo(
-    () => countUpcomingEventsInRadius(events, origin, radiusKm),
-    [events, origin, radiusKm]
+    () =>
+      countUpcomingEventsInRadius(
+        events,
+        origin,
+        radiusKm,
+        undefined,
+        60,
+        liveAuctionsOnly ? 'garage_yard_sale' : 'community_market'
+      ),
+    [events, origin, radiusKm, liveAuctionsOnly]
   )
 
   const widenRadius = useCallback(() => {

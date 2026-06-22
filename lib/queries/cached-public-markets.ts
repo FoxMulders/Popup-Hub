@@ -68,17 +68,30 @@ async function fetchApprovedVendorCounts(): Promise<Record<string, number>> {
 
 async function fetchActiveAuctionIdsByEvent(): Promise<Record<string, string>> {
   const supabase = createPublicSupabaseClient()
-  const { data, error } = await supabase
-    .from('auctions')
-    .select('id, event_id')
-    .eq('status', 'active')
-    .not('event_id', 'is', null)
+  const [{ data: timerAuctions, error: timerError }, { data: catalogLive, error: catalogError }] =
+    await Promise.all([
+      supabase
+        .from('auctions')
+        .select('id, event_id')
+        .eq('status', 'active')
+        .not('event_id', 'is', null),
+      supabase
+        .from('auction_catalog_items')
+        .select('id, event_id')
+        .in('status', ['bidding_open', 'bidding_closed', 'drawing']),
+    ])
 
-  if (error) throw new Error(`active auctions: ${error.message}`)
+  if (timerError) throw new Error(`active auctions: ${timerError.message}`)
+  if (catalogError) throw new Error(`active quarter auction catalog: ${catalogError.message}`)
 
   const byEvent: Record<string, string> = {}
-  for (const row of data ?? []) {
+  for (const row of timerAuctions ?? []) {
     if (row.event_id) byEvent[row.event_id] = row.id
+  }
+  for (const row of catalogLive ?? []) {
+    if (row.event_id && !byEvent[row.event_id]) {
+      byEvent[row.event_id] = row.id
+    }
   }
   return byEvent
 }

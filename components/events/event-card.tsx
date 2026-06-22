@@ -10,6 +10,7 @@ import { CoordinatorTrustChip } from '@/components/coordinator/coordinator-relia
 import { vendorApplicationCardBadgeLabel } from '@/lib/vendor/application-status-ui'
 import type { ApplicationStatus, Event } from '@/types/database'
 import type { EventDisplayStatus } from '@/lib/queries/events'
+import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 
 interface EventCardProps {
   event: Event
@@ -77,6 +78,7 @@ export function EventCard({
   const dateLabel = selectedDate
     ? getEventDateLabel(event, selectedDate)
     : format(new Date(event.start_at), 'EEE, MMM d, yyyy')
+  const isQuarterAuction = isQuarterAuctionListing(event.listing_type)
 
   return (
     <Card
@@ -123,6 +125,15 @@ export function EventCard({
             aria-label="Live quarter auction at this market"
           >
             Live auction
+          </span>
+        ) : isQuarterAuction ? (
+          <span
+            className={`absolute z-10 inline-flex items-center rounded-md border border-indigo-300 bg-indigo-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm ${
+              appliedLabel ? 'bottom-2 right-2' : 'bottom-2 left-2'
+            }`}
+            aria-label="Quarter auction event"
+          >
+            Quarter auction
           </span>
         ) : null}
       </div>
