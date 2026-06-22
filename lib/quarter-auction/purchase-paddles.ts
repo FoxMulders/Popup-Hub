@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { adjustWalletBalance } from '@/lib/wallet/adjust-balance'
 import { creditsToCents } from '@/lib/quarter-auction/credits'
 import {
   clampPoolSize,
@@ -109,10 +110,22 @@ export async function purchaseEventPaddles(
     .select('*')
 
   if (insertError || !inserted?.length) {
-    await supabase
-      .from('wallets')
-      .update({ balance: wallet.balance })
-      .eq('id', wallet.id)
+    const refund = await adjustWalletBalance(supabase, {
+      walletId: wallet.id,
+      deltaCents: totalCents,
+    })
+    if (!refund.ok) {
+      console.error('[purchaseEventPaddles] refund failed after paddle insert error', {
+        eventId: params.eventId,
+        userId: params.userId,
+        refundError: refund.error,
+        insertError: insertError?.message,
+      })
+      return {
+        ok: false,
+        error: 'Could not register paddles — refund pending, contact support if balance looks wrong',
+      }
+    }
 
     if (insertError?.code === '23505') {
       return { ok: false, error: 'One or more paddle numbers were just taken — refresh and try again' }
