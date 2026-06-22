@@ -1,1 +1,1 @@
-feat: ship 4 session updates (Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; Vendor & site UX polish batch)
+feat: ship 5 session updates (Coordinator setup & admin queue polish; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)

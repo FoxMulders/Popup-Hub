@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Coordinator setup & admin queue polish (local, not deployed)
+- **Goal:** Eight coordinator/admin fixes — MLM caps, unified booth fee messaging, admin badges + email, Places false alarms, wizard CTA placement, vendor spot editing, quick-start floor cap, quarter auction visibility.
+- **Persona:** Coordinator · market setup wizard; Platform admin · `/admin/*`; Patron · quarter auction.
+- **Shipped locally:**
+  - **MLM:** Per-brand slot lock only for niche MLM rows (Norwex, Scentsy, …); broad MLM parent editable; MLM brands visible in picker when MLM allowed; **Add all MLM brands** quick action.
+  - **Booth fee:** Publish errors reference market-wide fee; wizard already syncs unified fee to all category rows.
+  - **Admin queue:** `/api/admin/pending-counts`; badge on profile/menu avatar + Admin console link + profile button + admin header nav; email on feature request + venue submission (migration `122_venue_submission_admin_notification.sql`).
+  - **Places:** Stop treating incomplete place picks / zero-result as API fatal; auth errors still surface fallback copy.
+  - **Wizard:** Step 1 proceed CTA moved under **Your Selections** rail; quick-start capped to floor `layoutCapacity`.
+  - **Quarter auction:** Banner shows for `garage_yard_sale` events even before public catalog items; paddle picker explains participate gate.
+- **Verify:** `npx tsc --noEmit` PASS. Apply migration **122**. Smoke: allow MLM → add multiple brands; set one booth fee → publish; admin badge counts; venue submit → admin email; quarter auction event page → auction banner + room link.
+- **Next:** Commit + deploy when user asks. GCP: confirm `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` has Maps JS + Places + Geocoding enabled for popuphub.ca.
+
 ## Active work — Quarter auction paddle purchase & bid flow (local, not deployed)
 - **Goal:** Patron-facing paddle chip purchase, multi-paddle bidding, room-wide winner reveal, and winner celebration per auction spec.
 - **Persona:** Patron · `/events/[id]/quarter-auction`
@@ -1844,9 +1857,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `f13af2c` (pushed to `origin/master`)
-- Last deploy commit: `f13af2c` - feat: ship 3 session updates (Admin console desktop access; Split-story banner placement; Vendor & site UX polish batch)
-- Production: https://popuphub.ca - **v1.111.0 build 1** | commit `c735777` (handoff updated 2026-06-22 12:17)
+- Branch: `master` @ `a3adae3` (pushed to `origin/master`)
+- Last deploy commit: `a3adae3` - feat: ship 4 session updates (Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; Vendor & site UX polish batch)
+- Production: https://popuphub.ca - **v1.113.0 build 1** | commit `15a7cc5` (handoff updated 2026-06-22 13:44)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2223,7 +2236,7 @@
 
 
 ## Last deploy
-- 2026-06-22 12:17 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (Admin console desktop access; Split-story banner placement; Vendor & site UX polish batch)` (f13af2c)
+- 2026-06-22 13:44 - Deploy via deploy-popuphub.ps1 - `feat: ship 4 session updates (Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; Vendor & site UX polish batch)` (a3adae3)
 
 
 ## Goal
