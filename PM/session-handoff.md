@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fix: organizer claim RLS (branch `cursor/critical-bug-investigation-c5fa`)
+- **Issue:** `POST /api/organizers/[slug]/claim` returned success but never persisted `claimed_by` — `organizers` has RLS SELECT-only; user client UPDATE was silently dropped.
+- **Fix:** `claimOrganizerProfile` uses `createAdminClient()` after coordinator auth; guarded update (`claimed_by IS NULL OR same user`); 409 when no row updated. Test: `lib/organizers/claim-organizer.test.ts`.
+- **Impact:** HubGuard claim holder flow, review responses, and coordinator onboarding from trust directory were broken in production.
+- **Verify:** `npx tsx lib/organizers/claim-organizer.test.ts` PASS. Smoke: coordinator claims organizer → `claimed_by` set → can respond to reviews.
+- **Next:** Merge PR; smoke claim on prod.
+
 ## Active work — Vendor & site UX polish batch (local, not deployed)
 - **Goal:** Eight-item UX polish — vouch gating, vendor application status alerts, field contrast, scroll-to-top, venue preset cleanup, nav menu, logo-aligned brand tokens.
 - **Shipped locally:**
