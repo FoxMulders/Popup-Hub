@@ -96,7 +96,7 @@ export function ApplicationFollowUpDialog({
           {coordinatorEmail ? (
             <a
               href={`mailto:${coordinatorEmail}?subject=${encodeURIComponent(`Application follow-up — ${eventName}`)}`}
-              className="inline-flex h-9 w-full items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex h-9 w-full items-center justify-center rounded-md border border-input bg-white px-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
             >
               Email organizer directly
             </a>

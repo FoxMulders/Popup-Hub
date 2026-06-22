@@ -258,48 +258,6 @@ export function ApplicationBoard({
         void fetch(`/api/coordinator/etransfer-instructions/${appId}`, { method: 'POST' })
       }
 
-      // Send in-app + SMS notification to vendor
-      if (app.vendor_id && (newStatus === 'approved' || newStatus === 'rejected' || newStatus === 'waitlisted')) {
-        const resolvedStatus = (updates.status ?? newStatus) as ApplicationStatus
-        const notifMessages: Partial<Record<ApplicationStatus, string>> = {
-          approved:
-            updates.payment_status === 'payment_required'
-              ? '✅ Your booth application has been approved! Complete your payment to secure your spot.'
-              : updates.application_payment_status === 'PENDING_REVIEW'
-                ? '✅ Your booth application has been approved! Send your e-transfer — the coordinator will confirm payment.'
-                : '✅ Your booth application has been approved! See you at the event.',
-          pending_insurance:
-            '✅ Your booth application has been approved! Upload your market insurance proof to finalize your spot.',
-          rejected: declineMessage
-            ? declineMessage
-            : `Your booth application was not selected this time. Keep an eye out for future events!`,
-          waitlisted: `Your application has been waitlisted. We'll notify you if a spot opens up.`,
-        }
-        const message = notifMessages[resolvedStatus]
-        if (message) {
-          await fetch('/api/notifications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              user_id: app.vendor_id,
-              type:
-                resolvedStatus === 'approved' || resolvedStatus === 'pending_insurance'
-                  ? 'application_approved'
-                  : resolvedStatus === 'rejected'
-                    ? 'application_rejected'
-                    : 'waitlist_triggered',
-              message,
-              metadata: {
-                application_id: appId,
-                event_id: app.event_id,
-                payment_required: updates.payment_status === 'payment_required',
-              },
-              send_sms: true,
-            }),
-          })
-        }
-      }
-
       const resolvedLabel = (updates.status ?? newStatus) as ApplicationStatus
       const labels: Record<ApplicationStatus, string> = {
         approved: '✅ Application approved — vendor notified',

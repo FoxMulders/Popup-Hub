@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import { Analytics } from '@vercel/analytics/next'
 import { Plus_Jakarta_Sans, Geist_Mono } from 'next/font/google'
 import './globals.css'
@@ -102,7 +103,9 @@ export default async function RootLayout({
         <SiteJsonLd />
         <PopupLoaderProvider>
           <DocumentTitleSync initialRole={sessionRole} />
-          <RouteScrollToTop />
+          <Suspense fallback={null}>
+            <RouteScrollToTop />
+          </Suspense>
           <AuthSessionGuard />
           <ServiceWorkerRegister />
           <CapacitorInit />

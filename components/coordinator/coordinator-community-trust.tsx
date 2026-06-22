@@ -116,16 +116,22 @@ export function CoordinatorCommunityTrustBanner({
 type VendorCoordinatorVouchButtonProps = {
   coordinatorId: string
   coordinatorName?: string | null
+  canVouch?: boolean
   disabled?: boolean
 }
 
 export function VendorCoordinatorVouchButton({
   coordinatorId,
   coordinatorName,
+  canVouch = false,
   disabled = false,
 }: VendorCoordinatorVouchButtonProps) {
   const [loading, setLoading] = useState(false)
   const [vouched, setVouched] = useState(false)
+
+  if (!canVouch) {
+    return null
+  }
 
   async function handleVouch() {
     setLoading(true)

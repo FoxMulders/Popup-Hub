@@ -32,11 +32,7 @@ import {
   shouldSubmitPlatformVenue,
   submitPlatformVenue,
 } from '@/lib/venues/platform-venue-submissions'
-import {
-  getEdmontonVenueById,
-  isEdmontonVenueId,
-  matchEdmontonVenuePreset,
-} from '@/lib/booth-planner/edmonton-venue-registry'
+import { isEdmontonVenueId } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
 import { sortCategoriesByName } from '@/lib/categories'
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
@@ -877,50 +873,17 @@ export function MarketSetupWizard({
     cityId?: string | null
   }) {
     const cityForMatch = params.cityId ?? marketCity
-    if (!isEdmontonMarketCity(cityForMatch)) {
-      if (venuePresetId !== 'blank') {
-        applyVenuePresetToRoom('blank')
-      }
-      return
-    }
-
-    const matched = matchEdmontonVenuePreset({
-      venueName: params.venueName,
-      address: params.address,
-      lat: params.lat,
-      lng: params.lng,
-    })
-
-    if (matched) {
-      if (matched !== venuePresetId) {
-        applyVenuePresetToRoom(matched)
-      }
-      return
-    }
-
-    if (venuePresetId !== 'blank') {
+    if (!isEdmontonMarketCity(cityForMatch) && venuePresetId !== 'blank') {
       applyVenuePresetToRoom('blank')
     }
+    // Preset hall blueprints stay hidden — do not auto-apply from address or venue name.
   }
 
   function handleVenuePresetChange(
     presetId: VenuePresetId,
-    options?: { syncLocation?: boolean }
+    _options?: { syncLocation?: boolean }
   ) {
-    const syncLocation = options?.syncLocation !== false
     applyVenuePresetToRoom(presetId)
-
-    if (!syncLocation || presetId === 'blank') return
-
-    const blueprint = getEdmontonVenueById(presetId)
-    if (!blueprint) return
-
-    setLocationName(blueprint.label)
-    setAddress(blueprint.address)
-    setLat(blueprint.latitude)
-    setLng(blueprint.longitude)
-    setPinDropped(true)
-    setMarketCity(DEFAULT_MARKET_CITY_ID)
   }
 
   function handleMarketCityChange(cityId: string) {
@@ -932,12 +895,7 @@ export function MarketSetupWizard({
 
   function handleApplySavedVenue(venue: CoordinatorSavedVenue) {
     setSkipVenueLayout(venue.skip_venue_layout)
-
-    const presetId = venue.venue_preset_id
-    if (presetId && presetId !== 'blank' && isEdmontonVenueId(presetId)) {
-      handleVenuePresetChange(presetId as VenuePresetId)
-      return
-    }
+    applyVenuePresetToRoom('blank')
 
     setLocationName(venue.location_name)
     setAddress(venue.address)

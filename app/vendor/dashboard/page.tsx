@@ -11,6 +11,8 @@ import { ArrowRight, Store, CheckCircle, Clock, AlertTriangle, CreditCard } from
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
 import { VendorAlertOnboarding } from '@/components/vendor/vendor-alert-onboarding'
 import { VendorActionRequiredBanner } from '@/components/vendor/vendor-action-required-banner'
+import { VendorApplicationStatusBanner } from '@/components/vendor/vendor-application-status-banner'
+import { fetchUnreadVendorApplicationStatusNotifications } from '@/lib/vendor/fetch-application-status-notifications'
 import { VendorPassportCompletionCard } from '@/components/vendor/vendor-passport-completion-card'
 import { vendorPassportCompletionMeter } from '@/lib/passport/vendor-passport-completion'
 import { VendorMeetTheMakerPanel } from '@/components/market-feed/vendor-meet-the-maker-panel'
@@ -106,6 +108,10 @@ export default async function VendorDashboard() {
   const paymentDueCount = paymentDueApps?.length ?? 0
   const awaitingReviewCount = (pendingCount ?? 0) + (pendingInsuranceCount ?? 0)
   const passportMeter = vendorPassportCompletionMeter(passport, profile?.full_name ?? null)
+  const statusNotifications = await fetchUnreadVendorApplicationStatusNotifications(
+    supabase,
+    user.id
+  )
 
   const approvedEventIds = [...new Set((approvedApps ?? []).map((a) => a.event_id))]
   let liveAuctionSummary = { active: null as Auction | null, upcoming: null as Auction | null, lastEnded: null as Auction | null }
@@ -148,6 +154,8 @@ export default async function VendorDashboard() {
         pendingInsuranceCount={pendingInsuranceCount ?? 0}
         paymentDueCount={paymentDueCount}
       />
+
+      <VendorApplicationStatusBanner notifications={statusNotifications} />
 
       {(liveAuctionSummary.active || liveAuctionSummary.upcoming) && (
         <LiveAuctionBanner

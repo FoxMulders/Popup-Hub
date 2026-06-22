@@ -37,14 +37,14 @@ export function LayoutPresetPicker({
   if (inline) {
     return (
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <label className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-black">
+        <label className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
           Preset
         </label>
         <select
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value as LayoutPreset)}
-          className="min-w-[8.5rem] max-w-[11rem] rounded-lg border-2 border-black px-1.5 py-0.5 text-[11px] font-semibold text-black focus:outline-none focus:ring-2 focus:ring-harvest-400 disabled:opacity-60"
+          className="min-w-[8.5rem] max-w-[11rem] rounded-lg border-2 border-stone-200 bg-field-surface px-1.5 py-0.5 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-forest/30 disabled:opacity-60"
         >
           {options.map((opt) => (
             <option key={opt.id} value={opt.id}>
@@ -59,7 +59,7 @@ export function LayoutPresetPicker({
   return (
     <div className={cn('flex flex-col gap-2', compact ? 'min-w-0' : 'min-w-[180px]')}>
       <div>
-        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-black">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Layout preset
         </h3>
         <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">
@@ -88,7 +88,7 @@ export function LayoutPresetPicker({
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="text-xs font-semibold text-black">{opt.label}</span>
+                <span className="text-xs font-semibold text-foreground">{opt.label}</span>
                 {isSelected ? (
                   applying ? (
                     <span className="text-[10px] font-medium text-forest">Applying…</span>

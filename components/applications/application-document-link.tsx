@@ -20,7 +20,7 @@ export function ApplicationDocumentLink({ label, url }: ApplicationDocumentLinkP
         target="_blank"
         rel="noopener noreferrer"
         className={cn(
-          'inline-flex shrink-0 items-center gap-1.5 rounded-md border border-stone-200 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-canvas',
+          'inline-flex shrink-0 items-center gap-1.5 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-canvas',
         )}
       >
         View / download

@@ -131,7 +131,7 @@ export function ShopperTopBar({
               <>
                 <button
                   type="button"
-                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="app-tap-target flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
                   aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((open) => !open)}

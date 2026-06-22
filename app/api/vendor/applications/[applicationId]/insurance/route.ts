@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { resolvePaymentFieldsForPaidApplication } from '@/lib/applications/payment-fields'
 import { isFullyApprovedStatus } from '@/lib/applications/resolve-approval-status'
+import { notifyVendorInsuranceApproved } from '@/lib/applications/notify-vendor-application-status'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 
 export async function POST(
@@ -136,6 +137,14 @@ export async function POST(
         application_id: applicationId,
         vendor_id: user.id,
       },
+    })
+
+    await notifyVendorInsuranceApproved({
+      supabase: serviceSupabase,
+      vendorId: user.id,
+      applicationId,
+      eventId: application.event_id,
+      eventName: eventRow.name,
     })
   }
 

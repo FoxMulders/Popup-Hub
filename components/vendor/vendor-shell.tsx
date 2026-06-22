@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { PortalSiteChrome } from '@/components/layout/portal-site-chrome'
+import { VendorApplicationStatusToast } from '@/components/vendor/vendor-application-status-toast'
 import {
   ACTIVE_PORTAL_COOKIE,
   getAvailablePortals,
@@ -24,6 +25,7 @@ export async function VendorShell({ profile, children }: VendorShellProps) {
       portalCookie={portalCookie}
       vendorPortal
     >
+      <VendorApplicationStatusToast userId={profile.id} />
       {children}
     </PortalSiteChrome>
   )

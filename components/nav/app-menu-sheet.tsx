@@ -89,6 +89,7 @@ function MenuLinkItem({
   icon,
   trailing,
   destructive,
+  title,
 }: {
   href: string
   label: string
@@ -97,6 +98,7 @@ function MenuLinkItem({
   icon?: ReactNode
   trailing?: ReactNode
   destructive?: boolean
+  title?: string
 }) {
   const active = isActivePath(pathname, href)
 
@@ -105,6 +107,7 @@ function MenuLinkItem({
       <Link
         href={href}
         onClick={onNavigate}
+        title={title}
         className={menuItemClass(active, destructive)}
         aria-current={active ? 'page' : undefined}
       >
@@ -216,24 +219,17 @@ export function AppMenuSheet({
           aria-label="App menu"
         >
           {allNavLinks.length > 0 ? (
-            <MenuSection title={allNavLinks.length > 1 ? 'Navigate' : undefined}>
-              {allNavLinks.map(({ href, label, title }) => {
-                const active = isActivePath(pathname, href)
-
-                return (
-                  <li key={`${href}-${label}`}>
-                    <Link
-                      href={href}
-                      onClick={close}
-                      title={title}
-                      className={menuItemClass(active)}
-                      aria-current={active ? 'page' : undefined}
-                    >
-                      <span className="min-w-0 truncate">{label}</span>
-                    </Link>
-                  </li>
-                )
-              })}
+            <MenuSection title={allNavLinks.length > 1 ? 'Navigate' : undefined} listClassName="flex flex-col">
+              {allNavLinks.map(({ href, label, title }) => (
+                <MenuLinkItem
+                  key={`${href}-${label}`}
+                  href={href}
+                  label={label}
+                  title={title}
+                  pathname={pathname}
+                  onNavigate={close}
+                />
+              ))}
             </MenuSection>
           ) : null}
 

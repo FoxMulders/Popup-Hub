@@ -50,10 +50,10 @@ export function VendorBottomNav({ hide }: VendorBottomNavProps) {
               href={href}
               className={cn(
                 'flex min-h-[35px] min-w-[60px] flex-1 flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-[9px] font-semibold transition-colors',
-                active ? 'text-violet-900' : 'text-muted-foreground'
+                active ? 'text-forest' : 'text-muted-foreground'
               )}
             >
-              <Icon className={cn('h-4 w-4', active && 'text-violet-700')} aria-hidden />
+              <Icon className={cn('h-4 w-4', active && 'text-forest')} aria-hidden />
               {label}
             </Link>
           )

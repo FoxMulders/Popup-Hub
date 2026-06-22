@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Vendor & site UX polish batch (local, not deployed)
+- **Goal:** Eight-item UX polish — vouch gating, vendor application status alerts, field contrast, scroll-to-top, venue preset cleanup, nav menu, logo-aligned brand tokens.
+- **Shipped locally:**
+  - **Vouch:** `VendorCoordinatorVouchButton` hidden unless `vendorCanVouchForCoordinator(passport).ok`; threaded from vendor event page → `ApplyButton`.
+  - **Notifications:** `lib/applications/notify-vendor-application-status.ts`; server notify on coordinator status change, instant apply, insurance approval; migration `122` drops duplicate DB trigger; `waitlist_triggered` in vendor feed; `VendorApplicationStatusBanner` + realtime toast on vendor shell; decline message on applications list.
+  - **Venue presets:** Dropdown still blank + saved venues; disabled `matchEdmontonVenuePreset` auto-apply in wizard.
+  - **Fields:** `--field-surface` / `--pin-blue` tokens; base inputs use `bg-field-surface`; fixed form-like `bg-background` overrides.
+  - **Scroll:** `RouteScrollToTop` watches searchParams; vendor application filter tabs sync URL + reset scroll.
+  - **Menu:** Single-column Navigate list via `MenuLinkItem`; hamburger hidden on `md+` when ribbon links visible; desktop nav `flex-nowrap`.
+  - **Brand:** Vendor bottom nav active state forest green; layout preset picker stone/forest styling.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: unverified vendor sees no vouch button; coordinator status change → vendor banner + toast; wizard address does not auto-load Edmonton hall; nav route switches land at top.
+- **Next:** Apply migration `122` on Supabase; commit + deploy when user asks.
+
 ## Active work — HubGuard review organizer loop (deployed 2026-06-20)
 - **Goal:** Vendor event reviews notify the organizer; organizer can respond; past-event notes copy + grain-of-salt guidance for booth/neighbour complaints.
 - **Shipped:**

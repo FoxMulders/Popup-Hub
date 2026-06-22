@@ -94,6 +94,10 @@
   --color-terracotta-700: #8c4535;
   --color-terracotta-800: #73382c;
 
+  --color-field-surface: var(--field-surface);
+  --color-pin: var(--pin-blue);
+  --color-pin-blue: var(--pin-blue);
+
   --shadow-market: 0 1px 2px rgb(31 31 30 / 0.04), 0 1px 3px rgb(31 31 30 / 0.06);
   --shadow-market-md: 0 4px 16px rgb(31 31 30 / 0.08), 0 1px 3px rgb(31 31 30 / 0.05);
   --shadow-market-hover: 0 8px 28px rgb(45 90 39 / 0.12), 0 2px 6px rgb(31 31 30 / 0.06);
@@ -107,6 +111,8 @@
   --forest: #2d5a27;
   --forest-deep: #1e3f20;
   --espresso: #1f1f1e;
+  --field-surface: #ffffff;
+  --pin-blue: #105fc1;
 
   --background: var(--linen);
   --foreground: var(--espresso);

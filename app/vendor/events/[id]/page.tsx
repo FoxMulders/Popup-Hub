@@ -23,6 +23,7 @@ import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
 import { isPassportReadyForApplication } from '@/lib/vendor/passport-application'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
+import { vendorCanVouchForCoordinator } from '@/lib/coordinator/vouch'
 import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
 import { MarketApplicationLayoutView } from '@/components/events/market-application-layout-view'
 import { VendorEventVenueMap } from '@/components/vendor/vendor-event-venue-map'
@@ -72,7 +73,9 @@ export default async function VendorEventDetailPage({ params }: Props) {
     supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
     supabase
       .from('vendor_passports')
-      .select('business_name, primary_category_id, category_ids')
+      .select(
+        'business_name, primary_category_id, category_ids, verification_status, account_status, risk_score'
+      )
       .eq('user_id', user.id)
       .maybeSingle(),
   ])
@@ -140,6 +143,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
   const eventCapacityLabel = formatCapacityRemaining(capacity.totalAvailable, capacity.totalMaxSlots)
   const auctionSummary = summarizeEventAuctions((eventAuctions ?? []) as Auction[])
   const passportReady = isPassportReadyForApplication(passport)
+  const vendorCanVouch = vendorCanVouchForCoordinator(passport).ok
   const boothPriceCents = existingApp?.category_id
     ? computeApplicationBoothPriceCents(
         sortedLimits.find((cl) => cl.category_id === existingApp.category_id)?.price_per_booth,
@@ -364,6 +368,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
           existingApplication={existingApp ?? null}
           boothPriceCents={boothPriceCents}
           applicationsOpen={applicationsOpen}
+          vendorCanVouch={vendorCanVouch}
         />
       </div>
 

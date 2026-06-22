@@ -23,6 +23,7 @@ interface VendorEventApplySectionProps {
   existingApplication: ExistingApplication | null
   boothPriceCents: number
   applicationsOpen: boolean
+  vendorCanVouch?: boolean
 }
 
 export function VendorEventApplySection(props: VendorEventApplySectionProps) {

@@ -37,6 +37,7 @@ import {
 import { isEventOpenForApplications } from '@/lib/queries/events'
 import { VendorBookingProgressRail } from '@/components/vendor/vendor-booking-progress-rail'
 import { vendorBookingStepsActive } from '@/lib/vendor/vendor-booking-steps'
+import { resetScrollToTop } from '@/lib/navigation/scroll-to-top'
 import type { Event } from '@/types/database'
 
 interface VendorApplicationsListProps {
@@ -113,6 +114,14 @@ export function VendorApplicationsList({
     [applications],
   )
 
+  function handleFilterChange(value: VendorApplicationFilter) {
+    setFilter(value)
+    resetScrollToTop()
+    const href =
+      value === 'all' ? '/vendor/applications' : `/vendor/applications?filter=${value}`
+    router.replace(href, { scroll: false })
+  }
+
   if (applications.length === 0) {
     return (
       <div className="rounded-2xl border bg-white py-12 text-center">
@@ -135,7 +144,7 @@ export function VendorApplicationsList({
       {showFilters ? (
         <Tabs
           value={filter}
-          onValueChange={(value) => setFilter(value as VendorApplicationFilter)}
+          onValueChange={(value) => handleFilterChange(value as VendorApplicationFilter)}
           className="mb-4"
         >
           <TabsList className="flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
@@ -304,6 +313,15 @@ export function VendorApplicationsList({
                       <p className="text-xs leading-relaxed text-muted-foreground">
                         {followUpHint(app)}
                       </p>
+                    ) : null}
+
+                    {!eventCancelled &&
+                    app.status === 'rejected' &&
+                    app.coordinator_decline_message?.trim() ? (
+                      <div className="rounded-lg border border-terracotta-200 bg-terracotta-50 px-3 py-2 text-xs text-foreground">
+                        <p className="font-semibold text-terracotta-800">Organizer message</p>
+                        <p className="mt-1 leading-relaxed">{app.coordinator_decline_message.trim()}</p>
+                      </div>
                     ) : null}
 
                     {eventCancelled ? (

@@ -111,6 +111,7 @@ interface ApplyButtonProps {
   existingApplication?: ExistingApplication | null
   boothPriceCents?: number
   applicationsOpen?: boolean
+  vendorCanVouch?: boolean
 }
 
 export function ApplyButton({
@@ -121,6 +122,7 @@ export function ApplyButton({
   existingApplication = null,
   boothPriceCents = 0,
   applicationsOpen = true,
+  vendorCanVouch = false,
 }: ApplyButtonProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -842,6 +844,7 @@ export function ApplyButton({
         <VendorCoordinatorVouchButton
           coordinatorId={event.coordinator_id}
           coordinatorName={event.coordinator?.full_name}
+          canVouch={vendorCanVouch}
         />
       </div>
     )

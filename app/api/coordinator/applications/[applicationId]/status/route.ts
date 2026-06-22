@@ -16,6 +16,10 @@ import {
 
 import type { ApplicationStatus, BoothApplication } from '@/types/database'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
+import {
+  notifyVendorApplicationStatus,
+  shouldNotifyVendorApplicationStatus,
+} from '@/lib/applications/notify-vendor-application-status'
 
 const ALLOWED_STATUSES: ApplicationStatus[] = [
   'approved',
@@ -73,6 +77,7 @@ export async function POST(
       table_count,
       event:events(
         id,
+        name,
         coordinator_id,
         status,
         market_insurance_required,
@@ -236,6 +241,28 @@ export async function POST(
     const status =
       mutation.code === '42501' || mutation.code === 'P0002' ? 403 : 500
     return NextResponse.json({ error: mutation.error }, { status })
+  }
+
+  const finalApplication = mutation.application
+  const finalStatus = (finalApplication?.status ?? resolvedStatus) as ApplicationStatus
+
+  if (
+    application.vendor_id &&
+    shouldNotifyVendorApplicationStatus(finalStatus) &&
+    application.status !== finalStatus
+  ) {
+    await notifyVendorApplicationStatus({
+      supabase: serviceSupabase,
+      vendorId: application.vendor_id,
+      applicationId,
+      eventId: application.event_id,
+      eventName: eventRow.name,
+      status: finalStatus,
+      declineMessage: finalStatus === 'rejected' ? declineMessage : null,
+      paymentStatus: finalApplication?.payment_status ?? updates.payment_status,
+      applicationPaymentStatus:
+        finalApplication?.application_payment_status ?? updates.application_payment_status,
+    })
   }
 
   return NextResponse.json({

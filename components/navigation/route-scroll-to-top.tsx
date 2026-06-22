@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { resetScrollToTop } from '@/lib/navigation/scroll-to-top'
 
 /**
@@ -10,6 +10,8 @@ import { resetScrollToTop } from '@/lib/navigation/scroll-to-top'
  */
 export function RouteScrollToTop() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const searchKey = searchParams.toString()
   const isFirstRender = useRef(true)
 
   useEffect(() => {
@@ -18,7 +20,7 @@ export function RouteScrollToTop() {
       return
     }
     resetScrollToTop()
-  }, [pathname])
+  }, [pathname, searchKey])
 
   return null
 }

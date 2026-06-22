@@ -40,6 +40,10 @@ import {
   generateEtransferReferenceCode,
 } from '@/lib/applications/etransfer-reference'
 import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-instructions-service'
+import {
+  notifyVendorApplicationStatus,
+  shouldNotifyVendorApplicationStatus,
+} from '@/lib/applications/notify-vendor-application-status'
 import { isCategoryCapacityError } from '@/lib/applications/booth-payment-processing'
 import { resolvePostApprovalStatus, isReservedBoothStatus } from '@/lib/applications/resolve-approval-status'
 import { categoryRequiresDocumentation } from '@/lib/categories/regulated-categories'
@@ -50,7 +54,7 @@ import {
   isCommunityMarketListing,
   normalizeTableCount,
 } from '@/lib/monetization/booth-pricing'
-import type { Role } from '@/types/database'
+import type { ApplicationStatus, Role } from '@/types/database'
 import { assertVendorCanApplyToCategory, claimBoothSlotForApplication } from '@/lib/engagement/booth-access'
 import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
 
@@ -739,6 +743,23 @@ export async function POST(request: Request) {
       console.error('[etransfer] instruction email failed:', err, {
         applicationId: inserted.id,
       })
+    })
+  }
+
+  if (
+    inserted?.id &&
+    inserted.status &&
+    shouldNotifyVendorApplicationStatus(inserted.status as ApplicationStatus)
+  ) {
+    await notifyVendorApplicationStatus({
+      supabase: serviceSupabase,
+      vendorId,
+      applicationId: inserted.id,
+      eventId,
+      eventName: event.name,
+      status: inserted.status as ApplicationStatus,
+      paymentStatus: inserted.payment_status,
+      applicationPaymentStatus: inserted.application_payment_status,
     })
   }
 

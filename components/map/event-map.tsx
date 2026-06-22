@@ -96,7 +96,7 @@ function EventMapFallback({ events }: { events: Event[] }) {
 
   return (
     <div className="flex h-full flex-col bg-muted/20">
-      <div className="border-b bg-background/80 px-4 py-3">
+      <div className="border-b bg-white/90 px-4 py-3">
         <p className="text-sm font-medium text-foreground">Map unavailable</p>
         <p className="text-xs text-muted-foreground">
           Browse events below or open directions for each location.
@@ -106,7 +106,7 @@ function EventMapFallback({ events }: { events: Event[] }) {
         {events.map((event) => (
           <li
             key={event.id}
-            className="flex items-start justify-between gap-3 rounded-xl border bg-background p-3 shadow-sm"
+            className="flex items-start justify-between gap-3 rounded-xl border bg-white p-3 shadow-sm"
           >
             <div className="min-w-0 flex-1">
               <Link

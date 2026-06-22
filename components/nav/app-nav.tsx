@@ -137,7 +137,7 @@ export function AppNav({
               ) : null}
 
               {links.length > 0 ? (
-                <div className="hidden min-w-0 flex-wrap items-center justify-center gap-0.5 overflow-x-hidden md:flex lg:gap-1">
+                <div className="hidden min-w-0 flex-nowrap items-center justify-center gap-0.5 overflow-x-auto md:flex lg:gap-1">
                   {links.map(({ href, label, title }) => {
                     const active =
                       href === SITE_HOME_PATH
@@ -198,7 +198,7 @@ export function AppNav({
 
               <button
                 type="button"
-                className="app-tap-target flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="app-tap-target flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
                 aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((open) => !open)}

@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Suspense } from 'react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
+import { VendorApplicationStatusBanner } from '@/components/vendor/vendor-application-status-banner'
+import { fetchUnreadVendorApplicationStatusNotifications } from '@/lib/vendor/fetch-application-status-notifications'
 import type { VendorApplicationFilter } from '@/lib/vendor/application-status-ui'
 import type { BoothApplication } from '@/types/database'
 
@@ -76,6 +78,11 @@ export default async function VendorApplicationsPage({
     ? (params.filter as VendorApplicationFilter)
     : 'all'
 
+  const statusNotifications = await fetchUnreadVendorApplicationStatusNotifications(
+    supabase,
+    user.id
+  )
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 space-y-1">
@@ -84,6 +91,7 @@ export default async function VendorApplicationsPage({
           Track every market you applied to, see juried review status, and follow up with organizers.
         </p>
       </div>
+      <VendorApplicationStatusBanner notifications={statusNotifications} className="mb-6" />
       <Suspense
         fallback={
           <div className="space-y-3">

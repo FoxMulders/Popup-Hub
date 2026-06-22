@@ -23,6 +23,8 @@ const VENDOR_TYPES = new Set<NotificationType>([
   'application_approved',
   'application_rejected',
   'application_follow_up',
+  'waitlist_triggered',
+  'waitlist_promoted',
   'payment_failed',
   'vendor_access_approved',
   'vendor_access_rejected',
