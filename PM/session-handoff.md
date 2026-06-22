@@ -1824,9 +1824,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8e2f859` (pushed to `origin/master`)
-- Last deploy commit: `8e2f859` - feat: ship 2 session updates (Split-story banner placement; Vendor & site UX polish batch)
-- Production: https://popuphub.ca - **v1.110.0 build 1** | commit `d2c2d61` (handoff updated 2026-06-22 12:07)
+- Branch: `master` @ `f13af2c` (pushed to `origin/master`)
+- Last deploy commit: `f13af2c` - feat: ship 3 session updates (Admin console desktop access; Split-story banner placement; Vendor & site UX polish batch)
+- Production: https://popuphub.ca - **v1.111.0 build 1** | commit `c735777` (handoff updated 2026-06-22 12:17)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2203,7 +2203,7 @@
 
 
 ## Last deploy
-- 2026-06-22 12:07 - Deploy via deploy-popuphub.ps1 - `feat: ship 2 session updates (Split-story banner placement; Vendor & site UX polish batch)` (8e2f859)
+- 2026-06-22 12:17 - Deploy via deploy-popuphub.ps1 - `feat: ship 3 session updates (Admin console desktop access; Split-story banner placement; Vendor & site UX polish batch)` (f13af2c)
 
 
 ## Goal
