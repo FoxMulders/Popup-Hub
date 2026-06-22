@@ -2,7 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Discover quarter auction visibility fix (local, not deployed)
+## Active work — Critical bug investigation: quarter-auction wallet safety (branch `cursor/critical-bug-investigation-9b52`)
+- **Goal:** Deep review of recent master commits for high-severity correctness bugs.
+- **Found & fixed (PR pending):**
+  - **Paddle purchase refund:** Failed insert path blind-overwrote wallet balance with stale snapshot — could corrupt quarters on concurrent activity. Now uses `adjustWalletBalance` with failure surfacing.
+  - **Bid placement:** Unchecked refund after failed insert could charge patrons without entries; late bids accepted after coordinator closed bidding (TOCTOU). Re-check `bidding_open` before insert; verify refunds.
+  - **Draw race:** Concurrent `rollDraw` calls could pick different winners. Atomic `bidding_closed` → `drawing` lock.
+- **Verify:** `npx tsx scripts/verify-quarter-auction-wallet-safety.ts` — 5/5 PASS.
+- **Not fixed (reported):** Unauthenticated GET on bid entries leaks patron↔paddle mapping via RLS `aie: public count during live` (needs auth + RLS migration); MLM global cap not enforced at approval; venue submission publish bypass — pre-existing, lower confidence for minimal fix in this pass.
+- **Next:** Merge PR; smoke paddle purchase race + concurrent draw in staging.
+
 - **Goal:** Patrons can find quarter auction events on Discover when toggling **Quarter auctions**.
 - **Persona:** Patron · `/discover`
 - **Root cause:** Discover always filtered `community_market` even with the quarter-auction toggle, then required legacy timer `auctions.status = active` — so `garage_yard_sale` events never appeared.
