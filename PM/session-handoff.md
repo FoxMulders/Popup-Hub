@@ -1807,8 +1807,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `1f12970` (pushed to `origin/master`)
-- Production: https://popuphub.ca - **v1.107.0 build 1** | commit `19a2911` (handoff updated 2026-06-20 18:03)
+- Branch: `master` @ `b5c436e` (pushed to `origin/master`)
+- Last deploy commit: `b5c436e` - feat: Vendor & site UX polish batch
+- Production: https://popuphub.ca - **v1.109.0 build 1** | commit `f119b94` (handoff updated 2026-06-22 11:53)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2185,7 +2186,7 @@
 
 
 ## Last deploy
-- 2026-06-20 17:24 - Deploy via deploy-popuphub.ps1 - `feat: ship local changes` (35843fd)
+- 2026-06-22 11:53 - Deploy via deploy-popuphub.ps1 - `feat: Vendor & site UX polish batch` (b5c436e)
 
 
 ## Goal
