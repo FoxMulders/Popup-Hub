@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Split-story banner placement (local, not deployed)
+- **Goal:** Center the dark green platform banner vertically between the two feature-card rows in the "Two brands, one origin" graphic.
+- **Shipped locally:**
+  - **`marketing-split-story.tsx`:** Replaced bottom-absolute banner with flex column layout — top row (Discover/Passport/Layout), banner, bottom row (Applications/Check-in/Payouts); `gap-3`/`gap-4` spacing prevents overlap.
+- **Verify:** Smoke `/` split-story graphic — banner sits between card rows with clear spacing; text/colors unchanged.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Vendor & site UX polish batch (local, not deployed)
 - **Goal:** Eight-item UX polish — vouch gating, vendor application status alerts, field contrast, scroll-to-top, venue preset cleanup, nav menu, logo-aligned brand tokens.
 - **Shipped locally:**

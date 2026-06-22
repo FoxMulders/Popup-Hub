@@ -55,25 +55,43 @@ export function MarketingSplitStory() {
             }}
             aria-hidden
           />
-          <div className="absolute inset-5 grid grid-cols-3 gap-2.5 sm:inset-6 sm:gap-3">
-            {PLATFORM_TILES.map(({ icon: Icon, label, detail, className }) => (
-              <div
-                key={label}
-                className={`flex flex-col items-center justify-center rounded-xl border border-white/60 px-1 py-3 text-center shadow-sm backdrop-blur-sm sm:px-2 sm:py-4 ${className}`}
-              >
-                <Icon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
-                <span className="mt-1.5 text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
-                  {label}
-                </span>
-                <span className="mt-0.5 hidden text-[9px] leading-tight opacity-80 sm:block">
-                  {detail}
-                </span>
-              </div>
-            ))}
+          <div className="absolute inset-5 flex flex-col justify-center gap-3 sm:inset-6 sm:gap-4">
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+              {PLATFORM_TILES.slice(0, 3).map(({ icon: Icon, label, detail, className }) => (
+                <div
+                  key={label}
+                  className={`flex flex-col items-center justify-center rounded-xl border border-white/60 px-1 py-3 text-center shadow-sm backdrop-blur-sm sm:px-2 sm:py-4 ${className}`}
+                >
+                  <Icon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
+                  <span className="mt-1.5 text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
+                    {label}
+                  </span>
+                  <span className="mt-0.5 hidden text-[9px] leading-tight opacity-80 sm:block">
+                    {detail}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="rounded-xl bg-forest/90 px-4 py-3 text-sm font-medium text-white backdrop-blur-sm">
+              Booth layouts, vendor passports, and patron maps — connected in one platform.
+            </p>
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+              {PLATFORM_TILES.slice(3).map(({ icon: Icon, label, detail, className }) => (
+                <div
+                  key={label}
+                  className={`flex flex-col items-center justify-center rounded-xl border border-white/60 px-1 py-3 text-center shadow-sm backdrop-blur-sm sm:px-2 sm:py-4 ${className}`}
+                >
+                  <Icon className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
+                  <span className="mt-1.5 text-[10px] font-bold uppercase tracking-wide sm:text-[11px]">
+                    {label}
+                  </span>
+                  <span className="mt-0.5 hidden text-[9px] leading-tight opacity-80 sm:block">
+                    {detail}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="absolute bottom-4 left-4 right-4 rounded-xl bg-forest/90 px-4 py-3 text-sm font-medium text-white backdrop-blur-sm sm:bottom-6 sm:left-6 sm:right-6">
-            Booth layouts, vendor passports, and patron maps — connected in one platform.
-          </p>
         </div>
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-harvest-700">

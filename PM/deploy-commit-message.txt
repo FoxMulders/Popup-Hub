@@ -1,1 +1,1 @@
-feat: Vendor & site UX polish batch
+feat: ship 2 session updates (Split-story banner placement; Vendor & site UX polish batch)
