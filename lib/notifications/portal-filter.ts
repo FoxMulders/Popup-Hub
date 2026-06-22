@@ -2,7 +2,10 @@ import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Notification, NotificationType } from '@/types/database'
 
 /** Platform-admin alerts — shown in every portal feed (only admins receive these rows). */
-const PLATFORM_ADMIN_TYPES = new Set<NotificationType>(['feature_request_submitted'])
+const PLATFORM_ADMIN_TYPES = new Set<NotificationType>([
+  'feature_request_submitted',
+  'venue_submission_pending',
+])
 
 /** Notification types surfaced in the Patron portal feed. */
 const PATRON_TYPES = new Set<NotificationType>([

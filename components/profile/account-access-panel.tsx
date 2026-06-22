@@ -18,6 +18,7 @@ import { getPortalHome, PORTAL_LABELS } from '@/lib/portals/active-portal'
 import type { Role } from '@/types/database'
 import { CheckCircle2, Circle, Loader2, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAdminPendingCounts } from '@/hooks/use-admin-pending-counts'
 
 interface AccountAccessPanelProps {
   email: string
@@ -41,6 +42,7 @@ export function AccountAccessPanel({
   const portals = availablePortalLabels(accessProfile)
   const canEnableCoordinator = canSelfEnableCoordinator(localRole)
   const canEnableVendor = canSelfEnableVendor(localRole)
+  const { counts: adminPendingCounts } = useAdminPendingCounts(isAdmin)
 
   function enableVendorAccess() {
     startTransition(async () => {
@@ -186,8 +188,13 @@ export function AccountAccessPanel({
       {isAdmin ? (
         <div className="flex flex-wrap gap-2 border-t border-stone-100 pt-4">
           <Link href="/admin/feedback">
-            <Button size="sm" variant="outline" className="h-8 text-xs">
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-2">
               Open admin console
+              {adminPendingCounts.total > 0 ? (
+                <Badge className="h-5 min-w-5 px-1.5 text-[10px] leading-none">
+                  {adminPendingCounts.total > 9 ? '9+' : adminPendingCounts.total}
+                </Badge>
+              ) : null}
             </Button>
           </Link>
         </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { WizardScheduleLines } from '@/components/coordinator/wizard/wizard-context-strip'
 import {
@@ -28,6 +29,8 @@ export interface WizardSummaryRailProps {
   tableSizeLabel?: string | null
   autosaveStatus: 'idle' | 'saving' | 'saved' | 'error'
   className?: string
+  /** Primary step action (e.g. Proceed to vendor spots) rendered under selections. */
+  footerAction?: React.ReactNode
 }
 
 export function WizardSummaryRail({
@@ -38,6 +41,7 @@ export function WizardSummaryRail({
   tableSizeLabel,
   autosaveStatus,
   className,
+  footerAction,
 }: WizardSummaryRailProps) {
   const showEvent = Boolean(eventName?.trim())
   const showSchedule = scheduleLines.length > 0
@@ -118,6 +122,9 @@ export function WizardSummaryRail({
         <p className="text-xs text-muted-foreground whitespace-normal break-words">
           Selections appear here as you complete each wizard step.
         </p>
+      ) : null}
+      {footerAction ? (
+        <div className="border-t border-stone-200/80 pt-3">{footerAction}</div>
       ) : null}
       <p className="text-[10px] text-muted-foreground border-t border-stone-200/80 pt-2">
         {autosaveStatus === 'saving' && 'Saving…'}

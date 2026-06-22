@@ -211,6 +211,11 @@ export function PaddleChipPicker({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!canCheckout ? (
+          <p className="rounded-lg border border-harvest-200 bg-harvest-50/80 px-3 py-2 text-xs text-harvest-900">
+            Tap <strong>Participate at this event</strong> below before you can purchase paddle numbers.
+          </p>
+        ) : null}
         {loadingPool ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" />

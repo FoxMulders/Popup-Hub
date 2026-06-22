@@ -97,7 +97,13 @@ export function usePlacesAutocomplete({
               setPredictions([])
               setOpen(false)
               setHighlightIndex(-1)
-              onApiStatus?.(false)
+              if (
+                status === window.google.maps.places.PlacesServiceStatus.REQUEST_DENIED ||
+                status === window.google.maps.places.PlacesServiceStatus.INVALID_REQUEST
+              ) {
+                setApiUnavailable(true)
+                onApiStatus?.(false)
+              }
             }
           } catch {
             setApiUnavailable(true)

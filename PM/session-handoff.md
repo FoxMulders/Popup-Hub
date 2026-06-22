@@ -8,11 +8,11 @@
 - **Shipped locally:**
   - **MLM:** Per-brand slot lock only for niche MLM rows (Norwex, Scentsy, …); broad MLM parent editable; MLM brands visible in picker when MLM allowed; **Add all MLM brands** quick action.
   - **Booth fee:** Publish errors reference market-wide fee; wizard already syncs unified fee to all category rows.
-  - **Admin queue:** `/api/admin/pending-counts`; badge on profile/menu avatar + Admin console link + profile button + admin header nav; email on feature request + venue submission (migration `122_venue_submission_admin_notification.sql`).
+  - **Admin queue:** `/api/admin/pending-counts`; badge on profile/menu avatar + Admin console link + profile button + admin header nav; email on feature request + venue submission (migration `123_venue_submission_admin_notification.sql`).
   - **Places:** Stop treating incomplete place picks / zero-result as API fatal; auth errors still surface fallback copy.
   - **Wizard:** Step 1 proceed CTA moved under **Your Selections** rail; quick-start capped to floor `layoutCapacity`.
   - **Quarter auction:** Banner shows for `garage_yard_sale` events even before public catalog items; paddle picker explains participate gate.
-- **Verify:** `npx tsc --noEmit` PASS. Apply migration **122**. Smoke: allow MLM → add multiple brands; set one booth fee → publish; admin badge counts; venue submit → admin email; quarter auction event page → auction banner + room link.
+- **Verify:** `npx tsc --noEmit` PASS. Apply migration **123**. Smoke: allow MLM → add multiple brands; set one booth fee → publish; admin badge counts; venue submit → admin email; quarter auction event page → auction banner + room link.
 - **Next:** Commit + deploy when user asks. GCP: confirm `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` has Maps JS + Places + Geocoding enabled for popuphub.ca.
 
 ## Active work — Quarter auction paddle purchase & bid flow (local, not deployed)

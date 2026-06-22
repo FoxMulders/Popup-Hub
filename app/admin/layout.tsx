@@ -5,6 +5,7 @@ import { hasAdminAccess } from '@/lib/auth/require-admin'
 import { accessDeniedRedirect } from '@/lib/auth/rbac'
 import { createClient } from '@/lib/supabase/server'
 import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
+import { AdminQueueNav } from '@/components/admin/admin-queue-nav'
 
 import type { Metadata } from 'next'
 import { buildPrivatePortalMetadata } from '@/lib/seo/public-metadata'
@@ -34,20 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </p>
             <h1 className="font-heading text-lg font-semibold text-foreground">Operations Console</h1>
           </div>
-          <nav className="flex flex-wrap items-center gap-2 text-sm">
-            <Link
-              href="/admin/feedback"
-              className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
-            >
-              Feature requests
-            </Link>
-            <Link
-              href="/admin/venues"
-              className="rounded-lg border border-border bg-card px-3 py-1.5 font-medium text-foreground transition-colors hover:bg-muted/60"
-            >
-              Venue submissions
-            </Link>
-          </nav>
+          <AdminQueueNav />
           <Link
             href={COORDINATOR_STUDIO_PATH}
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"

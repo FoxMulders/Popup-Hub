@@ -138,10 +138,8 @@ export async function PATCH(
       row.price_per_booth < 0
   )
   if (missing) {
-    const cat = Array.isArray(missing.category) ? missing.category[0] : missing.category
-    const catName = cat?.name ?? 'one of your categories'
     return NextResponse.json(
-      { error: `Set a booth fee for ${catName} before publishing. Use $0 for free booths.` },
+      { error: 'Set the market-wide booth fee before publishing. Use $0 for free booths.' },
       { status: 400 }
     )
   }

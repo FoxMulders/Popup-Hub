@@ -18,6 +18,7 @@ import {
 import {
   shouldSubmitPlatformVenue,
   submitPlatformVenue,
+  alertAdminsOfVenueSubmission,
 } from '@/lib/venues/platform-venue-submissions'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -163,7 +164,7 @@ export function EdmontonVenueTemplateBar({
       marketCity: city,
     })
     if (shouldSubmit) {
-      const { created, error: submitError } = await submitPlatformVenue(supabase, coordinatorId, {
+      const { created, error: submitError, submissionId } = await submitPlatformVenue(supabase, coordinatorId, {
         locationName,
         address,
         latitude: lat,
@@ -174,6 +175,7 @@ export function EdmontonVenueTemplateBar({
         toast.error(submitError.message)
       } else if (created) {
         toast.message('New venue submitted for admin review')
+        if (submissionId) void alertAdminsOfVenueSubmission(submissionId)
       }
     }
 

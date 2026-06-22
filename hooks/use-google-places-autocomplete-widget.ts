@@ -70,10 +70,7 @@ export function useGooglePlacesAutocompleteWidget({
 
       listenerRef.current = autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace()
-        if (!place?.geometry?.location) {
-          onApiStatus?.(false)
-          return
-        }
+        if (!place?.geometry?.location) return
         onApiStatus?.(true)
         onPlaceChangedRef.current(place)
       })

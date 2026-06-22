@@ -15,11 +15,13 @@ import type { Category } from '@/types/database'
 import { formatCents } from '@/lib/square/client'
 import { selectValueOrNull } from '@/lib/wizard/wizard-autosave'
 import { WIZARD_BTN_PRIMARY } from '@/lib/wizard/wizard-panel-styles'
+import { toast } from 'sonner'
 import {
   applyMlmLimitRules,
   clampMlmMaxSlots,
   DEFAULT_GLOBAL_MLM_CAP,
   isMlmCategory,
+  isPerBrandMlmSlotLimit,
   isSingleSlotMlmLimit,
 } from '@/lib/categories/mlm-constraints'
 import {
@@ -44,6 +46,8 @@ interface CategoryLimitEditorProps {
   globalMlmCap?: number
   /** When set, per-category fee inputs are hidden; all rows use this cents value. */
   unifiedBoothFeeCents?: number
+  /** Cap quick-start adds so total slots do not exceed floor capacity. */
+  maxTotalSlots?: number
   /** Group configured limits into collapsible broad-type sections. */
   grouped?: boolean
   /** Quarter auctions use vendor-spot copy instead of booth/slot language. */
@@ -83,6 +87,7 @@ export function CategoryLimitEditor({
   allowMlm = false,
   globalMlmCap = DEFAULT_GLOBAL_MLM_CAP,
   unifiedBoothFeeCents,
+  maxTotalSlots,
   grouped = false,
   variant = 'market',
 }: CategoryLimitEditorProps) {
@@ -109,7 +114,7 @@ export function CategoryLimitEditor({
           (c) =>
             !usedCategoryIds.has(c.id) &&
             (allowMlm || !c.is_mlm) &&
-            (showNicheCaps || c.is_broad === true)
+            (showNicheCaps || c.is_broad === true || (allowMlm && c.is_mlm === true))
         )
         .sort((a, b) => compareCategoryNames(a.name, b.name)),
     [categories, value, allowMlm, showNicheCaps]
@@ -128,6 +133,19 @@ export function CategoryLimitEditor({
   const broadById = useMemo(
     () => new Map(categories.filter((c) => c.is_broad === true).map((c) => [c.id, c])),
     [categories]
+  )
+
+  const mlmBrandCategories = useMemo(
+    () =>
+      categories
+        .filter(
+          (c) =>
+            !usedCategoryIds.has(c.id) &&
+            allowMlm &&
+            isPerBrandMlmSlotLimit(c)
+        )
+        .sort((a, b) => compareCategoryNames(a.name, b.name)),
+    [categories, value, allowMlm]
   )
 
   const mlmCategoryIds = useMemo(
@@ -184,7 +202,7 @@ export function CategoryLimitEditor({
     const cat = categories.find((c) => c.id === selectedCategoryId)
     if (!cat || slots <= 0) return
 
-    const nextSlots = allowMlm && isMlmCategory(cat) ? 1 : slots
+    const nextSlots = allowMlm && isPerBrandMlmSlotLimit(cat) ? 1 : slots
 
     commitLimits([
       ...value,
@@ -202,7 +220,21 @@ export function CategoryLimitEditor({
   }
 
   function addOneOfEveryCategory() {
-    const additions: CategoryLimit[] = broadCategories.map((cat) => ({
+    const remainingCapacity =
+      maxTotalSlots != null && maxTotalSlots > 0
+        ? Math.max(0, maxTotalSlots - totalSlots)
+        : broadCategories.length
+
+    if (remainingCapacity <= 0) {
+      toast.error(
+        maxTotalSlots != null
+          ? `Quick start would exceed the max booth capacity (${maxTotalSlots}). Remove caps or raise floor capacity first.`
+          : 'All broad categories are already added.'
+      )
+      return
+    }
+
+    const additions: CategoryLimit[] = broadCategories.slice(0, remainingCapacity).map((cat) => ({
       categoryId: cat.id,
       categoryName: cat.name,
       maxSlots: 1,
@@ -210,6 +242,36 @@ export function CategoryLimitEditor({
       tableLengthFt: null,
     }))
     if (additions.length === 0) return
+    commitLimits([...value, ...additions])
+  }
+
+  function addAllMlmBrands() {
+    if (mlmBrandCategories.length === 0) {
+      toast.error('All MLM brands are already added')
+      return
+    }
+
+    const remainingCapacity =
+      maxTotalSlots != null && maxTotalSlots > 0
+        ? Math.max(0, maxTotalSlots - totalSlots)
+        : mlmBrandCategories.length
+
+    if (remainingCapacity <= 0) {
+      toast.error(
+        maxTotalSlots != null
+          ? `Cannot add MLM brands — total caps already at the floor maximum (${maxTotalSlots}).`
+          : 'Cannot add more MLM brands.'
+      )
+      return
+    }
+
+    const additions: CategoryLimit[] = mlmBrandCategories.slice(0, remainingCapacity).map((cat) => ({
+      categoryId: cat.id,
+      categoryName: cat.name,
+      maxSlots: 1,
+      pricePerBooth: useUnifiedFee ? unifiedCents : 0,
+      tableLengthFt: null,
+    }))
     commitLimits([...value, ...additions])
   }
 
@@ -223,7 +285,7 @@ export function CategoryLimitEditor({
     const nextSlots =
       limit && isSingleSlotMlmLimit(limit, categories)
         ? 1
-        : cat && allowMlm && isMlmCategory(cat)
+        : cat && allowMlm && isPerBrandMlmSlotLimit(cat)
           ? clampMlmMaxSlots(cat.name, cat, newSlots)
           : Math.max(1, newSlots)
 
@@ -239,7 +301,10 @@ export function CategoryLimitEditor({
 
   const totalSlots = value.reduce((sum, v) => sum + v.maxSlots, 0)
   const selectedCat = categories.find((c) => c.id === selectedCategoryId)
-  const addingMlmLocked = Boolean(selectedCat && allowMlm && isMlmCategory(selectedCat))
+  const addingMlmLocked = Boolean(selectedCat && allowMlm && isPerBrandMlmSlotLimit(selectedCat))
+  const quickStartDisabled =
+    broadCategories.length === 0 ||
+    (maxTotalSlots != null && maxTotalSlots > 0 && totalSlots >= maxTotalSlots)
 
   function renderLimitRow(limit: (typeof sortedLimits)[number], index: number) {
     const singleSlotLocked = allowMlm && isSingleSlotMlmLimit(limit, categories)
@@ -301,7 +366,7 @@ export function CategoryLimitEditor({
             'h-8 w-full text-center tabular-nums',
             singleSlotLocked && 'cursor-not-allowed bg-muted text-muted-foreground opacity-70'
           )}
-          title={singleSlotLocked ? 'MLM brands are locked to 1 slot each' : undefined}
+          title={singleSlotLocked ? 'Each MLM brand is limited to 1 booth slot' : undefined}
           aria-label={`${slotsLabel} for ${limit.categoryName}`}
         />
         {useUnifiedFee ? null : (
@@ -457,7 +522,11 @@ export function CategoryLimitEditor({
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-canvas/60 px-3 py-2">
           <p className="text-xs text-muted-foreground">
             <strong className="font-semibold text-foreground">Quick start:</strong> add one of every
-            broad category at 1 slot each.
+            broad category at 1 slot each
+            {maxTotalSlots != null && maxTotalSlots > 0
+              ? ` (max ${maxTotalSlots} total on this floor)`
+              : ''}
+            .
           </p>
           <Button
             type="button"
@@ -465,9 +534,32 @@ export function CategoryLimitEditor({
             variant="secondary"
             className="shrink-0 gap-1.5"
             onClick={addOneOfEveryCategory}
+            disabled={quickStartDisabled}
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Add all broad ({broadCategories.length})
+            Add all broad ({Math.min(broadCategories.length, Math.max(0, (maxTotalSlots ?? broadCategories.length) - totalSlots))})
+          </Button>
+        </div>
+      ) : null}
+
+      {allowMlm && mlmBrandCategories.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-purple-200/80 bg-purple-50/40 px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            <strong className="font-semibold text-foreground">MLM brands:</strong> add each direct-sales
+            brand at 1 booth slot (approval cap applies separately).
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="shrink-0 gap-1.5 border-purple-300"
+            onClick={addAllMlmBrands}
+            disabled={
+              maxTotalSlots != null && maxTotalSlots > 0 && totalSlots >= maxTotalSlots
+            }
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Add all MLM brands ({mlmBrandCategories.length})
           </Button>
         </div>
       ) : null}
@@ -531,7 +623,7 @@ export function CategoryLimitEditor({
                   if (!next) return
                   setSelectedCategoryId(next)
                   const cat = categories.find((c) => c.id === next)
-                  if (cat && allowMlm && isMlmCategory(cat)) setSlots(1)
+                  if (cat && allowMlm && isPerBrandMlmSlotLimit(cat)) setSlots(1)
                 }}
               >
                 <SelectTrigger className="h-9">
@@ -573,7 +665,7 @@ export function CategoryLimitEditor({
                   'h-9 tabular-nums',
                   addingMlmLocked && 'cursor-not-allowed bg-muted text-muted-foreground opacity-70'
                 )}
-                title={addingMlmLocked ? 'MLM brands are locked to 1 slot each' : undefined}
+                title={addingMlmLocked ? 'Each MLM brand is limited to 1 booth slot' : undefined}
               />
             </div>
             {useUnifiedFee ? null : (

@@ -10,6 +10,7 @@ import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
 import { AppMenuSheet } from '@/components/nav/app-menu-sheet'
 import { CenteredHeaderRow } from '@/components/nav/centered-header-row'
+import { useAdminPendingCounts } from '@/hooks/use-admin-pending-counts'
 import { buildAppMenuExtraLinks } from '@/components/nav/app-menu-extra-links'
 import { PortalTabs } from '@/components/nav/portal-tabs'
 import {
@@ -79,6 +80,8 @@ export function ShopperTopBar({
     ? resolveActivePortal(portalCookie, profile, pathname)
     : 'patron'
 
+  const { counts: adminPendingCounts } = useAdminPendingCounts(profile?.is_admin === true)
+
   const avatarProfile = profile
     ? {
         role: profile.role,
@@ -135,6 +138,7 @@ export function ShopperTopBar({
                   onToggle={() => setMenuOpen((open) => !open)}
                   userId={profile.id}
                   profile={avatarProfile!}
+                  adminPendingCount={adminPendingCounts.total}
                   mobileClassName="min-h-11 min-w-11"
                   desktopClassName="min-h-11 min-w-11"
                 />
@@ -151,7 +155,7 @@ export function ShopperTopBar({
                       : undefined
                   }
                   onSignOut={signOut}
-                  extraLinks={buildAppMenuExtraLinks(profile)}
+                  extraLinks={buildAppMenuExtraLinks(profile, adminPendingCounts)}
                   onSuggestImprovement={onSuggestImprovement}
                 />
               </>

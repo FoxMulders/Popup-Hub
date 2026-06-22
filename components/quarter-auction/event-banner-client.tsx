@@ -17,6 +17,8 @@ interface QuarterAuctionEventBannerClientProps {
   variant?: 'patron' | 'vendor'
   initialLive: { id: string; title: string; status: string } | null
   initialCount: number
+  /** Show the banner even before catalog items are public (draft items). */
+  alwaysVisible?: boolean
 }
 
 export function QuarterAuctionEventBannerClient({
@@ -26,6 +28,7 @@ export function QuarterAuctionEventBannerClient({
   variant = 'patron',
   initialLive,
   initialCount,
+  alwaysVisible = false,
 }: QuarterAuctionEventBannerClientProps) {
   const [live, setLive] = useState(initialLive)
   const [count, setCount] = useState(initialCount)
@@ -63,7 +66,7 @@ export function QuarterAuctionEventBannerClient({
     }
   }, [eventId])
 
-  if (!count && !live) return null
+  if (!alwaysVisible && !count && !live) return null
 
   const href =
     variant === 'vendor'
@@ -93,13 +96,17 @@ export function QuarterAuctionEventBannerClient({
                     ? patronStatusHeadline('bidding_open')
                     : statusLabel(live.status as AuctionItemStatus)}
                 </p>
-              ) : (
+              ) : count > 0 ? (
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   {count} item{count === 1 ? '' : 's'} in the lineup
                 </p>
+              ) : (
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Buy paddles and join when the coordinator opens the catalog.
+                </p>
               )}
               <Link href={href} className="mt-2 inline-block text-sm font-medium text-forest underline">
-                {variant === 'vendor' ? 'Vendor dashboard →' : 'Join live auction →'}
+                {variant === 'vendor' ? 'Vendor dashboard →' : 'Open auction room →'}
               </Link>
             </div>
             <AuctionStartCountdown

@@ -31,6 +31,7 @@ import {
   isCommunityLeagueVenueName,
   shouldSubmitPlatformVenue,
   submitPlatformVenue,
+  alertAdminsOfVenueSubmission,
 } from '@/lib/venues/platform-venue-submissions'
 import { isEdmontonVenueId } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
@@ -596,7 +597,7 @@ export function MarketSetupWizard({
         )
         if (missingFee) {
           toast.error(
-            `Set a booth fee for "${missingFee.categoryName}" before publishing. Use $0 for free booths.`
+            `Set the market-wide booth fee before publishing. Use $0 for free booths.`
           )
           return { ok: false as const, reason: 'fees' as const }
         }
@@ -670,7 +671,7 @@ export function MarketSetupWizard({
             marketCity,
           })
           if (shouldSubmit) {
-            const { created } = await submitPlatformVenue(supabase, coordinatorId, {
+            const { created, submissionId } = await submitPlatformVenue(supabase, coordinatorId, {
               locationName,
               address,
               latitude: lat,
@@ -680,6 +681,7 @@ export function MarketSetupWizard({
             if (created) {
               setVenueSubmissionPending(true)
               toast.message('New venue submitted for admin review')
+              if (submissionId) void alertAdminsOfVenueSubmission(submissionId)
             }
           }
         }
@@ -1401,13 +1403,6 @@ export function MarketSetupWizard({
                 onApplySavedVenue={handleApplySavedVenue}
                 onPlaceSelect={handleGooglePlaceSelect}
               />
-              <WizardNav
-                step={1}
-                onNext={goNext}
-                nextDisabled={transitioning}
-                stepReady={step1Ready}
-                isQuarterAuction={isQuarterAuction}
-              />
             </div>
           ) : null}
 
@@ -1518,6 +1513,17 @@ export function MarketSetupWizard({
             capacityLabel={summaryCapacityLabel}
             tableSizeLabel={currentStep >= 2 && !skipVenueLayout ? `Table size: ${baselineTableLengthFt} ft` : null}
             autosaveStatus={autosaveStatus}
+            footerAction={
+              currentStep === 1 ? (
+                <WizardNav
+                  step={1}
+                  onNext={goNext}
+                  nextDisabled={transitioning}
+                  stepReady={step1Ready}
+                  isQuarterAuction={isQuarterAuction}
+                />
+              ) : undefined
+            }
           />
         ) : null}
       </div>

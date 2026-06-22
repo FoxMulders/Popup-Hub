@@ -44,6 +44,7 @@ import {
   isCommunityLeagueVenueName,
   shouldSubmitPlatformVenue,
   submitPlatformVenue,
+  alertAdminsOfVenueSubmission,
 } from '@/lib/venues/platform-venue-submissions'
 import { EdmontonHallSelector } from './edmonton-hall-selector'
 import { getEdmontonHallById } from '@/lib/data/edmonton-halls'
@@ -518,7 +519,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
           longitude: lng,
         })
         if (shouldSubmit) {
-          const { created, error: submitError } = await submitPlatformVenue(supabase, userId, {
+          const { created, error: submitError, submissionId } = await submitPlatformVenue(supabase, userId, {
             locationName,
             address,
             latitude: lat,
@@ -528,6 +529,7 @@ export function EventForm({ categories, coordinatorId: userId, existing }: Event
             toast.error(submitError.message)
           } else if (created) {
             toast.message('New venue submitted for admin review')
+            if (submissionId) void alertAdminsOfVenueSubmission(submissionId)
           }
         }
       }

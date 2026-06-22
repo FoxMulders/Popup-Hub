@@ -345,6 +345,7 @@ export function WizardStepCapacity({
                 allowMlm={allowMlm}
                 globalMlmCap={globalMlmCap}
                 unifiedBoothFeeCents={onBoothPriceCentsChange ? boothPriceCents : undefined}
+                maxTotalSlots={skipVenueLayout ? undefined : layoutCapacity > 0 ? layoutCapacity : undefined}
                 grouped
               />
             </div>

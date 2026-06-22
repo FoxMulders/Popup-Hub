@@ -74,6 +74,7 @@ export type NotificationType =
   | 'market_feedback'
   | 'feedback_addressed'
   | 'feature_request_submitted'
+  | 'venue_submission_pending'
   | 'priority_booth_invite'
   | 'nearby_market_published'
   | 'coordinator_market_published'

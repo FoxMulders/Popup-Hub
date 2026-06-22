@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sendEmail } from '@/lib/email/send'
 import type { FeatureImpactLevel, FeatureSubmitterRole } from '@/lib/feedback/feature-request-config'
 
 interface NotifyAdminsFeatureRequestParams {
@@ -14,7 +15,10 @@ export async function notifyAdminsOfFeatureRequest(
   service: SupabaseClient,
   params: NotifyAdminsFeatureRequestParams
 ): Promise<void> {
-  const { data: admins } = await service.from('profiles').select('id').eq('is_admin', true)
+  const { data: admins } = await service
+    .from('profiles')
+    .select('id, email, full_name')
+    .eq('is_admin', true)
 
   if (!admins?.length) return
 
@@ -37,6 +41,7 @@ export async function notifyAdminsOfFeatureRequest(
         : 'New feature request'
 
   const message = `${urgencyPrefix} from ${reporterLabel} (${roleLabel}): "${titlePreview}"`
+  const adminUrl = 'https://popuphub.ca/admin/feedback'
 
   await service.from('notifications').insert(
     admins.map((admin) => ({
@@ -51,5 +56,21 @@ export async function notifyAdminsOfFeatureRequest(
         reporter_id: params.reporterId,
       },
     }))
+  )
+
+  const emailSubject = `[Popup Hub Admin] ${urgencyPrefix}: ${titlePreview}`
+  const emailText = `${message}\n\nReview in the admin console:\n${adminUrl}`
+
+  await Promise.all(
+    admins
+      .filter((admin) => admin.email?.trim())
+      .map((admin) =>
+        sendEmail({
+          to: admin.email!.trim(),
+          subject: emailSubject,
+          text: emailText,
+          html: `<p>${message}</p><p><a href="${adminUrl}">Open admin console</a></p>`,
+        })
+      )
   )
 }

@@ -14,6 +14,7 @@ export interface AppMenuLink {
   href: string
   label: string
   title?: string
+  badgeCount?: number
 }
 
 interface AppMenuProfile {
@@ -90,6 +91,7 @@ function MenuLinkItem({
   trailing,
   destructive,
   title,
+  badgeCount,
 }: {
   href: string
   label: string
@@ -99,6 +101,7 @@ function MenuLinkItem({
   trailing?: ReactNode
   destructive?: boolean
   title?: string
+  badgeCount?: number
 }) {
   const active = isActivePath(pathname, href)
 
@@ -114,6 +117,11 @@ function MenuLinkItem({
         {icon}
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {trailing}
+        {typeof badgeCount === 'number' && badgeCount > 0 ? (
+          <Badge className="ml-auto bg-red-500 text-white">
+            {badgeCount > 9 ? '9+' : badgeCount}
+          </Badge>
+        ) : null}
       </Link>
     </li>
   )
@@ -220,12 +228,13 @@ export function AppMenuSheet({
         >
           {allNavLinks.length > 0 ? (
             <MenuSection title={allNavLinks.length > 1 ? 'Navigate' : undefined} listClassName="flex flex-col">
-              {allNavLinks.map(({ href, label, title }) => (
+              {allNavLinks.map(({ href, label, title, badgeCount }) => (
                 <MenuLinkItem
                   key={`${href}-${label}`}
                   href={href}
                   label={label}
                   title={title}
+                  badgeCount={badgeCount}
                   pathname={pathname}
                   onNavigate={close}
                 />

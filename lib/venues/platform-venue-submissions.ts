@@ -41,7 +41,7 @@ export async function submitPlatformVenue(
   supabase: SupabaseClient,
   coordinatorId: string,
   input: VenueSubmissionInput
-): Promise<{ error: Error | null; created: boolean }> {
+): Promise<{ error: Error | null; created: boolean; submissionId?: string }> {
   const key = normalizeKey(input.locationName, input.address)
   if (!key.locationName || !key.address) {
     return { error: new Error('Venue name and address are required'), created: false }
@@ -55,21 +55,39 @@ export async function submitPlatformVenue(
     return { error: null, created: false }
   }
 
-  const { error } = await supabase.from('platform_venue_submissions').insert({
-    submitted_by: coordinatorId,
-    location_name: key.locationName,
-    address: key.address,
-    latitude: input.latitude,
-    longitude: input.longitude,
-    market_city: input.marketCity ?? null,
-    status: 'pending',
-  })
+  const { data: inserted, error } = await supabase
+    .from('platform_venue_submissions')
+    .insert({
+      submitted_by: coordinatorId,
+      location_name: key.locationName,
+      address: key.address,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      market_city: input.marketCity ?? null,
+      status: 'pending',
+    })
+    .select('id')
+    .single()
 
   if (error) {
     if (error.code === '23505') return { error: null, created: false }
     return { error: new Error(error.message), created: false }
   }
-  return { error: null, created: true }
+  return { error: null, created: true, submissionId: inserted?.id }
+}
+
+export async function alertAdminsOfVenueSubmission(submissionId: string): Promise<void> {
+  if (!submissionId.trim()) return
+  try {
+    await fetch('/api/admin/venue-submission-alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ submissionId }),
+    })
+  } catch {
+    /* non-blocking */
+  }
 }
 
 export function isCommunityLeagueVenueName(locationName: string): boolean {

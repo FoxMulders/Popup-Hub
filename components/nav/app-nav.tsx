@@ -16,6 +16,7 @@ import { resolveActivePortal } from '@/lib/portals/active-portal'
 import type { ActivePortal } from '@/lib/portals/active-portal'
 import type { Profile } from '@/types/database'
 import { useNotificationCount } from '@/hooks/use-notification-count'
+import { useAdminPendingCounts } from '@/hooks/use-admin-pending-counts'
 import { useFeatureRequest } from '@/components/feedback/feature-request-context'
 import { LayoutEditorHelpButton } from '@/components/coordinator/floor-plan-v2/tools/layout-editor-help'
 import { Badge } from '@/components/ui/badge'
@@ -80,6 +81,7 @@ export function AppNav({
   const [menuOpen, setMenuOpen] = useState(false)
   const activePortal = resolveActivePortal(portalCookie, profile, pathname)
   const unreadCount = useNotificationCount(profile.id, activePortal)
+  const { counts: adminPendingCounts } = useAdminPendingCounts(profile.is_admin === true)
   const { open: openFeatureRequest } = useFeatureRequest()
   const navRole =
     activePortal === 'coordinator'
@@ -102,7 +104,7 @@ export function AppNav({
     avatar_url: profile.avatar_url,
   }
 
-  const menuExtraLinks = buildAppMenuExtraLinks(profile)
+  const menuExtraLinks = buildAppMenuExtraLinks(profile, adminPendingCounts)
 
   return (
     <nav
@@ -202,6 +204,7 @@ export function AppNav({
                 onToggle={() => setMenuOpen((open) => !open)}
                 userId={profile.id}
                 profile={avatarProfile}
+                adminPendingCount={adminPendingCounts.total}
               />
 
               <AppMenuSheet
