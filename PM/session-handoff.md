@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Organizer claim RLS fix (local, not deployed)
+- **Bug:** `POST /api/organizers/[slug]/claim` used user-scoped Supabase client; `organizers` table has SELECT-only RLS → update no-ops while API returned `{ ok: true }`. Breaks HubGuard review respond for coordinators who believe they claimed a profile.
+- **Fix:** `claimOrganizerProfile` writes via `createAdminClient()` after coordinator auth; atomic `claimed_by` guard + verify row updated.
+- **Verify:** `npx tsx lib/organizers/claim-organizer.test.ts` — PASS.
+- **Next:** Merge PR + deploy; smoke claim on prod organizer trust page → respond to vendor review.
+
 ## Active work — Coordinator setup & admin queue polish (local, not deployed)
 - **Goal:** Eight coordinator/admin fixes — MLM caps, unified booth fee messaging, admin badges + email, Places false alarms, wizard CTA placement, vendor spot editing, quick-start floor cap, quarter auction visibility.
 - **Persona:** Coordinator · market setup wizard; Platform admin · `/admin/*`; Patron · quarter auction.
