@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio small-screen regression guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-94e5` @ `15a7cc5`.
+- **Persona:** Coordinator · HubGrid / direct event layout editor.
+- **Goal:** Automated QA scan for Blueprint Studio/dashboard layout surfaces and ensure small-screen defensive UI renders the floor-plan matrix regression warning.
+- **Shipped locally:**
+  - **`floor-plan-viewport-advisory.tsx`:** Added shared `FLOOR_PLAN_SMALL_SCREEN_REGRESSION_MESSAGE` copy: "The floor plan matrix is not optimized for small screens..." and renders it in both the desktop-required overlay and redirected event-hub banner. Removed the mount-only state effect and guards portal rendering on `document`.
+  - **`spatial-layout-editor.tsx`:** Wrapped `/coordinator/events/[id]/layout` editor in `FloorPlanViewportLayoutProvider` and mounts `DesktopScreenRequiredOverlay` with save-draft support, covering narrow desktop/tablet windows that bypass the server user-agent redirect.
+  - **`src/qa_review/.../spatial-layout-editor_qa.tsx`:** Mirrored the viewport provider/overlay for included QA fixtures.
+- **Scan:** Active dashboard/wizard/spatial FloorPlan entry points now route through `FloorPlanViewportLayoutProvider` / `DesktopScreenRequiredOverlay`; excluded archival `qa_review/` recovery snapshots remain unchanged.
+- **Verify:** `npx eslint components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory.tsx components/coordinator/spatial-layout/spatial-layout-editor.tsx src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa.tsx` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Commit/push via automation branch; no production deploy run in this scoped QA pass.
+
 ## Active work — Quarter auction paddle purchase & bid flow (local, not deployed)
 - **Goal:** Patron-facing paddle chip purchase, multi-paddle bidding, room-wide winner reveal, and winner celebration per auction spec.
 - **Persona:** Patron · `/events/[id]/quarter-auction`
