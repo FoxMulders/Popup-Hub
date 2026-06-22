@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fix: winner celebration dropped after reveal (local, not deployed)
+- **Goal:** Patron winners must keep full win celebration + vendor pickup info after the 5.5s room-wide winner reveal expires.
+- **Persona:** Patron · `/events/[id]/quarter-auction`
+- **Root cause:** `liveItem` fell back to `winnerRevealItem`, which clears after 5.5s; `iWon` and celebration props depended on `liveItem`, so winners lost the modal (especially when vendor profile fetch was slow).
+- **Shipped locally:**
+  - **`patron-live-view.tsx`:** Snapshot completed item in `wonItem` when patron wins; drive `iWon` / `WinCelebration` from snapshot; reset on next in-progress item.
+- **Verify:** Lint clean on touched file. Smoke: win an item → winner reveal → after 5.5s celebration stays until dismiss (9s timer) with vendor contact.
+- **Next:** Commit + deploy on branch `cursor/critical-bug-investigation-5348`.
+
 ## Active work — Quarter auction paddle purchase & bid flow (local, not deployed)
 - **Goal:** Patron-facing paddle chip purchase, multi-paddle bidding, room-wide winner reveal, and winner celebration per auction spec.
 - **Persona:** Patron · `/events/[id]/quarter-auction`
