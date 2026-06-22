@@ -1869,9 +1869,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `7b1173d` (pushed to `origin/master`)
-- Last deploy commit: `7b1173d` - feat: ship 5 session updates (Coordinator setup & admin queue polish; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)
-- Production: https://popuphub.ca - **v1.114.0 build 1** | commit `57966df` (handoff updated 2026-06-22 13:54)
+- Branch: `master` @ `84dcb88` (pushed to `origin/master`)
+- Last deploy commit: `84dcb88` - feat: ship 5 session updates (Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)
+- Production: https://popuphub.ca - **v1.115.0 build 1** | commit `ac1f5bc` (handoff updated 2026-06-22 14:44)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2248,7 +2248,7 @@
 
 
 ## Last deploy
-- 2026-06-22 13:54 - Deploy via deploy-popuphub.ps1 - `feat: ship 5 session updates (Coordinator setup & admin queue polish; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)` (7b1173d)
+- 2026-06-22 14:44 - Deploy via deploy-popuphub.ps1 - `feat: ship 5 session updates (Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)` (84dcb88)
 
 
 ## Goal
