@@ -1,5 +1,5 @@
 import { canActAsCoordinator } from '@/lib/auth/rbac'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export async function assertOrganizerClaimHolder(
   organizerSlug: string,
@@ -78,7 +78,8 @@ export async function claimOrganizerProfile(
     return { ok: false, status: 409, error: 'This profile has already been claimed.' }
   }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { data: updated, error } = await admin
     .from('organizers')
     .update({
       claimed_by: userId,
@@ -87,9 +88,16 @@ export async function claimOrganizerProfile(
       updated_at: new Date().toISOString(),
     })
     .eq('id', organizer.id)
+    .or(`claimed_by.is.null,claimed_by.eq.${userId}`)
+    .select('id')
+    .maybeSingle()
 
   if (error) {
     return { ok: false, status: 500, error: error.message }
+  }
+
+  if (!updated) {
+    return { ok: false, status: 409, error: 'This profile has already been claimed.' }
   }
 
   return { ok: true }
