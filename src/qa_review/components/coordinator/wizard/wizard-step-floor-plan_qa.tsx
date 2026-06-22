@@ -5,6 +5,11 @@ import {
   FloorPlanV2WizardQa,
   type FloorPlanV2Props,
 } from '@/src/qa_review/components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import { LayoutPlannerHeader } from '@/components/coordinator/layout-planner/layout-planner-header'
 import { LayoutPlannerShellQa } from '@/src/qa_review/components/coordinator/layout-planner/layout-planner-shell_qa'
@@ -43,6 +48,62 @@ export function WizardStepFloorPlan({
   onDeleteRoom,
   ...floorPlanProps
 }: WizardStepFloorPlanProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <WizardStepFloorPlanQaInner
+        mode={mode}
+        layoutCapacity={layoutCapacity}
+        eventDisplayName={eventDisplayName}
+        onBack={onBack}
+        navDisabled={navDisabled}
+        plannerOverlap={plannerOverlap}
+        eventId={eventId}
+        layoutRooms={layoutRooms}
+        layoutActiveRoomId={layoutActiveRoomId}
+        onLayoutRoomsChange={onLayoutRoomsChange}
+        onAddRoom={onAddRoom}
+        onRenameRoom={onRenameRoom}
+        onDeleteRoom={onDeleteRoom}
+        floorPlanProps={floorPlanProps}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function WizardStepFloorPlanQaInner({
+  mode = 'wizard',
+  layoutCapacity,
+  eventDisplayName,
+  onBack,
+  navDisabled = false,
+  plannerOverlap = false,
+  eventId,
+  layoutRooms,
+  layoutActiveRoomId,
+  onLayoutRoomsChange,
+  onAddRoom,
+  onRenameRoom,
+  onDeleteRoom,
+  floorPlanProps,
+}: WizardStepFloorPlanProps & {
+  floorPlanProps: Omit<
+    WizardStepFloorPlanProps,
+    | 'mode'
+    | 'layoutCapacity'
+    | 'eventDisplayName'
+    | 'onBack'
+    | 'navDisabled'
+    | 'plannerOverlap'
+    | 'eventId'
+    | 'layoutRooms'
+    | 'layoutActiveRoomId'
+    | 'onLayoutRoomsChange'
+    | 'onAddRoom'
+    | 'onRenameRoom'
+    | 'onDeleteRoom'
+  >
+}) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const [placedCount, setPlacedCount] = useState(0)
 
   function handleSelectRoom(roomId: string) {
@@ -63,52 +124,64 @@ export function WizardStepFloorPlan({
     ) : null
 
   return (
-    <LayoutPlannerShellQa
-      mode={mode}
-      className="w-full flex-1"
-      header={
-        <LayoutPlannerHeader
-          mode="wizard"
-          eventId={eventId ?? undefined}
-          eventName={eventDisplayName}
-          stepLabel="Step 3"
-          title="Design your floor plan"
-          hasOverlap={plannerOverlap}
-          showDraftBadge
-          onBack={onBack}
-          fullEditorHref={
-            eventId ? `/coordinator/events/${eventId}/layout` : undefined
-          }
-        />
-      }
-      leftRail={roomBar}
-      stats={
-        <LayoutPlannerStats
-          placedCount={placedCount}
-          layoutCapacity={layoutCapacity}
-          hasOverlap={plannerOverlap}
-        />
-      }
-      footer={
-        <div className="px-3 py-1 sm:px-4">
-          <WizardNav step={3} onBack={onBack} nextDisabled={navDisabled} />
-        </div>
-      }
-    >
-      <FloorPlanV2WizardQa
-        {...floorPlanProps}
-        eventId={eventId}
-        layoutRooms={layoutRooms}
-        layoutActiveRoomId={layoutActiveRoomId}
-        onLayoutRoomsChange={onLayoutRoomsChange}
-        onAddRoom={onAddRoom}
-        onRenameRoom={onRenameRoom}
-        onDeleteRoom={onDeleteRoom}
-        layoutCapacity={layoutCapacity}
-        onPlacedCountChange={setPlacedCount}
-        chrome="embedded"
+    <>
+      <DesktopScreenRequiredOverlay eventId={eventId ?? undefined} />
+      <LayoutPlannerShellQa
+        mode={mode}
         className="w-full flex-1"
-      />
-    </LayoutPlannerShellQa>
+        header={
+          <LayoutPlannerHeader
+            mode="wizard"
+            eventId={eventId ?? undefined}
+            eventName={eventDisplayName}
+            stepLabel="Step 3"
+            title="Design your floor plan"
+            hasOverlap={plannerOverlap}
+            showDraftBadge
+            onBack={onBack}
+            fullEditorHref={
+              eventId ? `/coordinator/events/${eventId}/layout` : undefined
+            }
+          />
+        }
+        leftRail={roomBar}
+        stats={
+          <LayoutPlannerStats
+            placedCount={placedCount}
+            layoutCapacity={layoutCapacity}
+            hasOverlap={plannerOverlap}
+          />
+        }
+        footer={
+          <div className="px-3 py-1 sm:px-4">
+            <WizardNav step={3} onBack={onBack} nextDisabled={navDisabled} />
+          </div>
+        }
+      >
+        {showDesktopRequired ? (
+          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-6 text-center">
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              Booth layout needs a tablet or desktop. Open this market on a larger
+              screen to design booths in HubGrid or the setup wizard layout step.
+            </p>
+          </div>
+        ) : (
+          <FloorPlanV2WizardQa
+            {...floorPlanProps}
+            eventId={eventId}
+            layoutRooms={layoutRooms}
+            layoutActiveRoomId={layoutActiveRoomId}
+            onLayoutRoomsChange={onLayoutRoomsChange}
+            onAddRoom={onAddRoom}
+            onRenameRoom={onRenameRoom}
+            onDeleteRoom={onDeleteRoom}
+            layoutCapacity={layoutCapacity}
+            onPlacedCountChange={setPlacedCount}
+            chrome="embedded"
+            className="w-full flex-1"
+          />
+        )}
+      </LayoutPlannerShellQa>
+    </>
   )
 }

@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint layout small-screen QA guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-e445`; HEAD `371f063` (`docs: session handoff after deploy (84dcb88)`). No production deploy/build changes in this session.
+- **Goal:** Automated QA scan for Blueprint Studio / floor-plan matrix layout views that lacked the desktop-size defensive handler.
+- **Persona / surface:** Coordinator · HubGrid Blueprint Studio, event layout editor, and dual-screen Booth Matrix.
+- **Sync path:** No canvas mutation, clearance, category separation, door egress, or ledger derivation logic changed. Desktop HubGrid still flows canvas gesture -> `FloorPlanDocStore.commit` -> `MarketManagementProvider` / `useBoothEntities`; standalone matrix still uses `FloorplanSyncBridge` / `BroadcastChannel` once the viewport guard allows it to mount.
+- **Shipped locally:**
+  - **`components/coordinator/spatial-layout/spatial-layout-editor.tsx`:** Wrapped the standalone event layout editor with `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; `FloorPlanV2` now stays unmounted on pocket-sized viewports and shows tablet/desktop fallback copy.
+  - **`components/coordinator/dashboard/dashboard-ledger-window-client.tsx`:** Added the same guard to `/coordinator/studio/ledger`; small screens now see the floor-plan matrix warning and skip matrix sync subscriptions until desktop-sized.
+  - **`src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa.tsx`** and **`src/qa_review/components/coordinator/wizard/wizard-step-floor-plan_qa.tsx`:** Mirrored the defensive handler in compiled QA layout views.
+- **Verify:** `npx tsc --noEmit` PASS; targeted `npx eslint` on the four changed TSX files PASS. Static scan shows active `FloorPlanV2` / matrix entry points now either own the viewport provider or inherit HubGrid / wizard protection; excluded `qa_review/` recovery snapshots are unchanged.
+- **Blockers:** None.
+- **Next:** Commit/push this branch and open PR. Optional browser smoke: `/coordinator/events/{id}/layout` and `/coordinator/studio/ledger` at <1024px width or <550px height should show `data-testid="floor-plan-desktop-required"`; desktop >=1024x550 should mount the canvas/matrix normally.
+
 ## Active work — Discover quarter auction visibility fix (local, not deployed)
 - **Goal:** Patrons can find quarter auction events on Discover when toggling **Quarter auctions**.
 - **Persona:** Patron · `/discover`

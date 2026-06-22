@@ -8,6 +8,11 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -36,15 +41,53 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DashboardLedgerWindowGate />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowGate() {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
+
+  return (
+    <>
+      <DesktopScreenRequiredOverlay eventId={eventId} />
+      {showDesktopRequired ? (
+        <div className="dashboard-ledger-window flex h-full min-h-0 items-center justify-center bg-stone-950 p-6 text-center text-stone-100">
+          <p className="max-w-md text-sm leading-relaxed text-stone-300">
+            The floor plan matrix is not optimized for small screens. Open this
+            presenter view on a tablet in landscape or desktop window at least
+            1024px wide and 550px tall.
+          </p>
+        </div>
+      ) : (
+        <DashboardLedgerWindowContent eventId={eventId} screenMode={screenMode} />
+      )}
+    </>
+  )
+}
+
+function DashboardLedgerWindowContent({
+  eventId,
+  screenMode,
+}: {
+  eventId: string | null
+  screenMode: 'presenter' | 'wall-cast'
+}) {
   const isWallCast = screenMode === 'wall-cast'
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const selectedAnnouncementRow = rows.find((row) => row.id === selectedBoothId)
+  const selectionAnnouncement = selectedAnnouncementRow
+    ? `Selected booth ${selectedAnnouncementRow.label}, ${selectedAnnouncementRow.statusLabel}, vendor ${selectedAnnouncementRow.vendor}`
+    : ''
 
   useEffect(() => {
     document.title = isWallCast
@@ -67,14 +110,6 @@ export function DashboardLedgerWindowClient() {
       }
     })
   }, [eventId])
-
-  useEffect(() => {
-    const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
-  }, [rows, selectedBoothId])
 
   useEffect(() => {
     if (!isWallCast || !selectedRowRef.current) return
