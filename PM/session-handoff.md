@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Admin console desktop access (local, not deployed)
+- **Goal:** Restore navigation to `/admin/*` after hamburger was hidden on `md+` in the vendor UX polish batch.
+- **Shipped locally:**
+  - **`app-account-menu-trigger.tsx`:** Mobile hamburger + desktop avatar both open the account menu sheet.
+  - **`app-nav.tsx` / `shopper-top-bar.tsx`:** Use shared trigger so desktop users can reach Admin console, profile, sign out.
+  - **`app-menu-extra-links.ts`:** Single "Admin console" link for `is_admin`.
+  - **`account-access-panel.tsx`:** "Open admin console" button on profile for admins.
+- **Verify:** Sign in as platform admin on desktop → click avatar in header → Admin console; or Profile → Open admin console.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Split-story banner placement (local, not deployed)
 - **Goal:** Center the dark green platform banner vertically between the two feature-card rows in the "Two brands, one origin" graphic.
 - **Shipped locally:**

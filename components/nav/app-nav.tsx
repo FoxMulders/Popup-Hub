@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Bell, Menu } from 'lucide-react'
+import { Bell } from 'lucide-react'
+import { AppAccountMenuTrigger } from '@/components/nav/app-account-menu-trigger'
 import { createClient } from '@/lib/supabase/client'
 import { signOutAndRedirectToLogin } from '@/lib/auth/sign-out'
 import { BrandLogoLockup } from '@/components/brand/popup-hub-logo'
@@ -196,15 +197,12 @@ export function AppNav({
                 ) : null}
               </Link>
 
-              <button
-                type="button"
-                className="app-tap-target flex min-h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-                aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((open) => !open)}
-              >
-                <Menu className="h-5 w-5 text-foreground" />
-              </button>
+              <AppAccountMenuTrigger
+                menuOpen={menuOpen}
+                onToggle={() => setMenuOpen((open) => !open)}
+                userId={profile.id}
+                profile={avatarProfile}
+              />
 
               <AppMenuSheet
                 open={menuOpen}

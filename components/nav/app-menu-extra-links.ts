@@ -15,10 +15,7 @@ export function buildAppMenuExtraLinks(
     ...trustLinks,
     { href: '/profile', label: 'Profile settings' },
     ...(profile.is_admin
-      ? [
-          { href: '/admin/feedback', label: 'Feature requests' },
-          { href: '/admin/feedback', label: '🛠️ Admin Console' },
-        ]
+      ? [{ href: '/admin/feedback', label: 'Admin console' }]
       : []),
   ]
 }

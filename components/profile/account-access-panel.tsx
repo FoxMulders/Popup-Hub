@@ -182,6 +182,16 @@ export function AccountAccessPanel({
           ))}
         </div>
       ) : null}
+
+      {isAdmin ? (
+        <div className="flex flex-wrap gap-2 border-t border-stone-100 pt-4">
+          <Link href="/admin/feedback">
+            <Button size="sm" variant="outline" className="h-8 text-xs">
+              Open admin console
+            </Button>
+          </Link>
+        </div>
+      ) : null}
     </div>
   )
 }
