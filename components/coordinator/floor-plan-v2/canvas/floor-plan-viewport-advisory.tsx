@@ -45,6 +45,9 @@ const FALLBACK_LAYOUT: FloorPlanViewportLayoutContextValue = {
   showLandscapeAdvisory: false,
 }
 
+export const FLOOR_PLAN_SMALL_SCREEN_REGRESSION_MESSAGE =
+  'The floor plan matrix is not optimized for small screens. Use a desktop-sized layout at least 1024px wide and 550px tall to edit HubGrid.'
+
 /** Viewport tier + iron-dome flags for the coordinator floor-plan canvas. */
 export function useFloorPlanViewportLayout(): FloorPlanViewportLayoutContextValue {
   return useContext(FloorPlanViewportLayoutContext) ?? FALLBACK_LAYOUT
@@ -79,7 +82,7 @@ export interface DesktopScreenRequiredOverlayProps {
   saveDraftLoading?: boolean
 }
 
-/** Full-screen gate — layout canvas unmounted on pocket-sized viewports. */
+/** Full-screen gate for pocket-sized viewports. */
 export function DesktopScreenRequiredOverlay({
   eventId: eventIdProp,
   onSaveDraft,
@@ -88,14 +91,9 @@ export function DesktopScreenRequiredOverlay({
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!showDesktopRequired) return
@@ -124,7 +122,7 @@ export function DesktopScreenRequiredOverlay({
     navigateAway()
   }, [navigateAway, onSaveDraft])
 
-  if (!showDesktopRequired || !mounted) return null
+  if (!showDesktopRequired || typeof document === 'undefined') return null
 
   const overlay = (
     <div
@@ -148,7 +146,12 @@ export function DesktopScreenRequiredOverlay({
 
         <p className="mt-2 text-sm leading-relaxed text-stone-300">
           The floor plan designer needs a tablet in landscape or a desktop monitor. Your market
-          details are safe — save a draft now and continue layout on a bigger screen.
+          details are safe
+          {onSaveDraft ? ' — save a draft now and continue' : ' — continue layout'} on a bigger
+          screen.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-amber-100">
+          {FLOOR_PLAN_SMALL_SCREEN_REGRESSION_MESSAGE}
         </p>
 
         <div className="mt-4 rounded-lg border border-stone-700 bg-stone-800/50 p-4 text-sm text-stone-400">
@@ -202,6 +205,9 @@ export function DesktopLayoutRequiredBanner({ className }: { className?: string 
       <p className="mt-1 text-amber-900/90">
         Open this market on a larger screen to design booths in HubGrid or the setup
         wizard layout step.
+      </p>
+      <p className="mt-2 text-amber-900/90">
+        {FLOOR_PLAN_SMALL_SCREEN_REGRESSION_MESSAGE}
       </p>
     </div>
   )
