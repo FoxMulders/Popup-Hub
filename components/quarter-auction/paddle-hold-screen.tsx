@@ -1,5 +1,8 @@
 'use client'
 
+import { PaddleChip } from '@/components/quarter-auction/paddle-chip'
+import { paddleChipTier } from '@/lib/quarter-auction/paddle-pool'
+
 interface PaddleHoldScreenProps {
   paddleNumbers: string[]
   itemTitle: string
@@ -17,18 +20,27 @@ export function PaddleHoldScreen({ paddleNumbers, itemTitle }: PaddleHoldScreenP
       <p className="text-sm font-semibold uppercase tracking-widest text-harvest-800/80 mb-4">
         Hold up your phone!
       </p>
-      <div className="space-y-4 w-full max-w-xs">
-        {paddleNumbers.map((num) => (
-          <div
-            key={num}
-            className="rounded-2xl border-4 border-white bg-white/95 py-8 shadow-2xl"
-          >
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Paddle</p>
-            <p className="font-mono text-6xl font-black text-forest tabular-nums">#{num}</p>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center justify-center gap-4 w-full max-w-sm">
+        {paddleNumbers.map((num) => {
+          const n = parseInt(num, 10)
+          const tier = Number.isFinite(n) ? paddleChipTier(n) : 'white'
+          return (
+            <div key={num} className="flex flex-col items-center gap-2">
+              <PaddleChip
+                number={num}
+                tier={tier}
+                state="owned"
+                size="xl"
+                presentation
+                spinLoop
+              />
+              <p className="font-mono text-lg font-bold text-harvest-900">#{num}</p>
+            </div>
+          )
+        })}
       </div>
       <p className="mt-6 text-sm text-harvest-800/90 max-w-xs">{itemTitle}</p>
+      <p className="mt-2 text-xs text-harvest-900/70">Screen locked until the winner is drawn</p>
     </div>
   )
 }

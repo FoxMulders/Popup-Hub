@@ -1,1 +1,1 @@
-feat: ship 3 session updates (Admin console desktop access; Split-story banner placement; Vendor & site UX polish batch)
+feat: ship 4 session updates (Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; Vendor & site UX polish batch)

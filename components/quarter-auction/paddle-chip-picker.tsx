@@ -1,6 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { playChipTapHaptic } from '@/lib/quarter-auction/celebration-effects'
 import { Loader2, ShoppingCart, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,6 +45,8 @@ export function PaddleChipPicker({
   const [loadingPool, setLoadingPool] = useState(true)
   const [checkingOut, setCheckingOut] = useState(false)
   const [celebrationNumbers, setCelebrationNumbers] = useState<string[] | null>(null)
+  const [spinKeys, setSpinKeys] = useState<Record<number, number>>({})
+  const supabase = createClient()
 
   const ownedNumbers = useMemo(
     () => new Set(ownedPaddles.map((p) => p.paddle_number)),
@@ -66,6 +70,26 @@ export function PaddleChipPicker({
     void refreshPool()
   }, [refreshPool])
 
+  useEffect(() => {
+    const channel = supabase
+      .channel(`qa-paddle-pool:${eventId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'event_paddles', filter: `event_id=eq.${eventId}` },
+        (payload) => {
+          const row = payload.new as { paddle_number?: string }
+          if (row.paddle_number) {
+            setTaken((prev) => new Set(prev).add(row.paddle_number!))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [eventId, supabase])
+
   const cartTotalCredits = cart.size * priceCredits
   const cartTotalCents = cartTotalCredits * 25
   const canAfford = walletBalanceCents >= cartTotalCents
@@ -73,6 +97,8 @@ export function PaddleChipPicker({
   function toggleCart(n: number) {
     const label = formatPaddleNumber(n, poolSize)
     if (taken.has(label) || ownedNumbers.has(label)) return
+    playChipTapHaptic()
+    setSpinKeys((prev) => ({ ...prev, [n]: (prev[n] ?? 0) + 1 }))
     setCart((prev) => {
       const next = new Set(prev)
       if (next.has(n)) next.delete(n)
@@ -150,13 +176,15 @@ export function PaddleChipPicker({
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 md:grid-cols-10">
         {list.map((n) => {
           const label = formatPaddleNumber(n, poolSize)
+          const selected = cart.has(n)
           return (
             <PaddleChip
-              key={label}
+              key={`${label}-${spinKeys[n] ?? 0}`}
               number={label}
               tier={paddleChipTier(n)}
               state={chipState(n)}
               size="lg"
+              spinning={selected}
               onClick={() => toggleCart(n)}
               disabled={loadingPool || checkingOut}
             />

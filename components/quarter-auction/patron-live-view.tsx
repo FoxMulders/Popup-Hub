@@ -22,7 +22,10 @@ import { PaddleChipPicker } from '@/components/quarter-auction/paddle-chip-picke
 import { PaddleChip } from '@/components/quarter-auction/paddle-chip'
 import { paddleChipTier } from '@/lib/quarter-auction/paddle-pool'
 import { PaddleHoldScreen } from '@/components/quarter-auction/paddle-hold-screen'
+import { BiddingClosedOverlay } from '@/components/quarter-auction/bidding-closed-overlay'
+import { WinnerRevealOverlay } from '@/components/quarter-auction/winner-reveal-overlay'
 import { WinCelebration } from '@/components/quarter-auction/win-celebration'
+import { playChipTapHaptic } from '@/lib/quarter-auction/celebration-effects'
 import {
   AuctionStartCountdown,
   useAuctionCanStart,
@@ -65,6 +68,8 @@ export function PatronQuarterAuctionLive({
     phone?: string | null
   } | null>(null)
   const [participated, setParticipated] = useState(false)
+  const [bidSpinKeys, setBidSpinKeys] = useState<Record<string, number>>({})
+  const [winnerRevealItem, setWinnerRevealItem] = useState<AuctionCatalogItem | null>(null)
 
   useEffect(() => {
     void fetch(`/api/quarter-auction/${eventId}/participate`)
@@ -73,15 +78,15 @@ export function PatronQuarterAuctionLive({
       .catch(() => setParticipated(false))
   }, [eventId])
 
-  const liveItem = useMemo(
+  const inProgressItem = useMemo(
     () =>
       items.find((i) =>
-        ['active_price_setting', 'bidding_open', 'bidding_closed', 'drawing', 'completed'].includes(
-          i.status
-        )
+        ['active_price_setting', 'bidding_open', 'bidding_closed', 'drawing'].includes(i.status)
       ) ?? null,
     [items]
   )
+
+  const liveItem = inProgressItem ?? winnerRevealItem
 
   const myEntries = useMemo(
     () => entries.filter((e) => e.user_id === userId),
@@ -105,6 +110,20 @@ export function PatronQuarterAuctionLive({
   }, [liveItem?.id, loadEntries])
 
   useEffect(() => {
+    if (!inProgressItem?.id) return
+    setEntries([])
+    setSelectedPaddleIds(new Set())
+    setShowWin(false)
+    setBidSpinKeys({})
+  }, [inProgressItem?.id])
+
+  useEffect(() => {
+    if (inProgressItem) {
+      setWinnerRevealItem(null)
+    }
+  }, [inProgressItem?.id, inProgressItem])
+
+  useEffect(() => {
     const channel = supabase
       .channel(`qa-patron:${eventId}`)
       .on(
@@ -112,13 +131,24 @@ export function PatronQuarterAuctionLive({
         { event: '*', schema: 'public', table: 'auction_catalog_items', filter: `event_id=eq.${eventId}` },
         (payload) => {
           const row = payload.new as AuctionCatalogItem
-          setItems((prev) => {
-            const idx = prev.findIndex((i) => i.id === row.id)
-            if (idx === -1) return [...prev, row]
-            const next = [...prev]
+          const prev = payload.old as Partial<AuctionCatalogItem> | undefined
+          setItems((prevItems) => {
+            const idx = prevItems.findIndex((i) => i.id === row.id)
+            if (idx === -1) return [...prevItems, row]
+            const next = [...prevItems]
             next[idx] = { ...next[idx], ...row }
             return next
           })
+          if (
+            row.status === 'completed' &&
+            row.winning_paddle_number &&
+            prev?.status !== 'completed'
+          ) {
+            setWinnerRevealItem(row)
+            window.setTimeout(() => {
+              setWinnerRevealItem((current) => (current?.id === row.id ? null : current))
+            }, 5500)
+          }
         }
       )
       .on(
@@ -212,10 +242,14 @@ export function PatronQuarterAuctionLive({
 
   const enteredPaddleIds = new Set(myEntries.map((e) => e.paddle_id))
   const availablePaddles = paddles.filter((p) => !enteredPaddleIds.has(p.id))
-  const showHoldScreen =
-    liveItem &&
-    myEntries.length > 0 &&
-    ['bidding_closed', 'drawing'].includes(liveItem.status)
+  const biddingFrozen =
+    liveItem != null && ['bidding_closed', 'drawing'].includes(liveItem.status)
+  const showHoldScreen = biddingFrozen && myEntries.length > 0
+  const showWinnerReveal =
+    !showWin &&
+    liveItem?.winning_paddle_number != null &&
+    (liveItem.status === 'completed' || winnerRevealItem?.id === liveItem.id)
+  const showBiddingClosedOverlay = biddingFrozen && !showHoldScreen && !showWinnerReveal
 
   const wonPaddle = liveItem?.winning_paddle_number
   const iWon =
@@ -355,13 +389,19 @@ export function PatronQuarterAuctionLive({
                         const selected = selectedPaddleIds.has(p.id)
                         return (
                           <PaddleChip
-                            key={p.id}
+                            key={`${p.id}-${bidSpinKeys[p.id] ?? 0}`}
                             number={p.paddle_number}
                             tier={tier}
                             state={selected ? 'selected' : 'owned'}
                             size="lg"
                             selectableOwned
+                            spinning={selected}
                             onClick={() => {
+                              playChipTapHaptic()
+                              setBidSpinKeys((prev) => ({
+                                ...prev,
+                                [p.id]: (prev[p.id] ?? 0) + 1,
+                              }))
                               setSelectedPaddleIds((prev) => {
                                 const next = new Set(prev)
                                 if (next.has(p.id)) next.delete(p.id)
@@ -380,7 +420,13 @@ export function PatronQuarterAuctionLive({
                   disabled={bidding || selectedPaddleIds.size === 0}
                   onClick={placeBid}
                 >
-                  {bidding ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Bid'}
+                  {bidding ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : selectedPaddleIds.size === 0 ? (
+                    'Select paddles to bid (optional)'
+                  ) : (
+                    `Pay & lock ${selectedPaddleIds.size} paddle${selectedPaddleIds.size === 1 ? '' : 's'} (${formatCredits((liveItem.entry_cost_credits ?? 0) * selectedPaddleIds.size)})`
+                  )}
                 </Button>
               </>
             )}
@@ -391,7 +437,7 @@ export function PatronQuarterAuctionLive({
               </p>
             )}
 
-            {liveItem.status === 'completed' && !iWon && (
+            {liveItem.status === 'completed' && !iWon && !showWinnerReveal && (
               <p className="text-center text-sm" role="status">
                 Winner: Paddle #{liveItem.winning_paddle_number ?? '—'}
               </p>
@@ -401,8 +447,20 @@ export function PatronQuarterAuctionLive({
         </>
       )}
 
+      {showBiddingClosedOverlay && liveItem && (
+        <BiddingClosedOverlay itemTitle={liveItem.title} hasEntries={myEntries.length > 0} />
+      )}
+
       {showHoldScreen && !showWin && (
         <PaddleHoldScreen paddleNumbers={myActivePaddleNumbers} itemTitle={liveItem!.title} />
+      )}
+
+      {showWinnerReveal && liveItem?.winning_paddle_number && (
+        <WinnerRevealOverlay
+          paddleNumber={liveItem.winning_paddle_number}
+          itemTitle={liveItem.title}
+          isWinner={iWon}
+        />
       )}
 
       <WinCelebration

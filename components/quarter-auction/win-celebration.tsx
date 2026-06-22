@@ -1,6 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { ConfettiBurst } from '@/components/charitable-impact/confetti-burst'
+import {
+  fireWinConfetti,
+  playWinAudio,
+  playWinHaptics,
+} from '@/lib/quarter-auction/celebration-effects'
 
 interface WinCelebrationProps {
   active: boolean
@@ -19,88 +25,72 @@ export function WinCelebration({
   vendorContact,
   onDismiss,
 }: WinCelebrationProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const stopAudioRef = useRef<(() => void) | null>(null)
   const [flash, setFlash] = useState(false)
 
   useEffect(() => {
     if (!active) return
 
     setFlash(true)
-    const flashTimer = setTimeout(() => setFlash(false), 1200)
+    const flashTimer = setTimeout(() => setFlash(false), 1400)
 
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200, 100, 400])
-    }
+    playWinHaptics()
+    stopAudioRef.current = playWinAudio()
+    void fireWinConfetti()
 
-    const audio = new Audio('/sounds/woo-hoo.mp3')
-    audioRef.current = audio
-    audio.play().catch(() => {
-      // Fallback beep via Web Audio if file missing
-      try {
-        const ctx = new AudioContext()
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.frequency.value = 880
-        gain.gain.value = 0.15
-        osc.start()
-        osc.stop(ctx.currentTime + 0.3)
-      } catch {
-        /* silent fallback */
-      }
-    })
-
-    const dismissTimer = setTimeout(onDismiss, 8000)
+    const dismissTimer = setTimeout(onDismiss, 9000)
 
     return () => {
       clearTimeout(flashTimer)
       clearTimeout(dismissTimer)
-      audio.pause()
+      stopAudioRef.current?.()
     }
   }, [active, onDismiss])
 
   if (!active) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="alertdialog"
-      aria-labelledby="win-title"
-      aria-describedby="win-desc"
-    >
+    <>
+      <ConfettiBurst active pieceCount={96} />
       <div
-        className={`absolute inset-0 transition-colors duration-300 ${
-          flash ? 'bg-yellow-300/90' : 'bg-black/70'
-        }`}
-        aria-hidden
-      />
-      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl animate-in zoom-in-95">
-        <p className="text-5xl mb-2" aria-hidden>
-          🎉
-        </p>
-        <h2 id="win-title" className="text-2xl font-bold text-forest">
-          WOO HOO! You won!
-        </h2>
-        <p id="win-desc" className="mt-2 text-lg font-mono font-bold">
-          Paddle #{paddleNumber}
-        </p>
-        <p className="mt-1 text-muted-foreground">{itemTitle}</p>
-        {vendorName && (
-          <div className="mt-4 rounded-lg bg-sage-50 p-4 text-left text-sm">
-            <p className="font-semibold">Pick up from {vendorName}</p>
-            {vendorContact?.email && <p>{vendorContact.email}</p>}
-            {vendorContact?.phone && <p>{vendorContact.phone}</p>}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="mt-6 w-full rounded-xl bg-forest py-3 font-semibold text-white"
-        >
-          Got it!
-        </button>
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="alertdialog"
+        aria-labelledby="win-title"
+        aria-describedby="win-desc"
+      >
+        <div
+          className={`absolute inset-0 transition-colors duration-300 ${
+            flash ? 'bg-yellow-300/90' : 'bg-black/75'
+          }`}
+          aria-hidden
+        />
+        <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl animate-in zoom-in-95">
+          <p className="text-5xl mb-2" aria-hidden>
+            🎉
+          </p>
+          <h2 id="win-title" className="text-2xl font-bold text-forest">
+            WOO HOO! You won!
+          </h2>
+          <p id="win-desc" className="mt-2 text-lg font-mono font-bold">
+            Paddle #{paddleNumber}
+          </p>
+          <p className="mt-1 text-muted-foreground">{itemTitle}</p>
+          {vendorName && (
+            <div className="mt-4 rounded-lg bg-sage-50 p-4 text-left text-sm">
+              <p className="font-semibold">Pick up from {vendorName}</p>
+              {vendorContact?.email && <p>{vendorContact.email}</p>}
+              {vendorContact?.phone && <p>{vendorContact.phone}</p>}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="mt-6 w-full rounded-xl bg-forest py-3 font-semibold text-white"
+          >
+            Got it!
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

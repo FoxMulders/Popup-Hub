@@ -11,3 +11,13 @@ export function buildAmazonCaAffiliateSearchUrl(
   const k = encodeURIComponent(searchTerm.trim())
   return `https://www.amazon.ca/s?k=${k}&tag=${tag}`
 }
+
+/** Append (or replace) the associate tag on any Amazon.ca URL. */
+export function appendAmazonAssociateTag(
+  url: string,
+  tag: string = AMAZON_ASSOCIATE_TAG
+): string {
+  const parsed = new URL(url.trim())
+  parsed.searchParams.set('tag', tag)
+  return parsed.toString()
+}

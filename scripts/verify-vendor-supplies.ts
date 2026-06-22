@@ -6,6 +6,7 @@
 
 import {
   AMAZON_ASSOCIATE_TAG,
+  appendAmazonAssociateTag,
   buildAmazonCaAffiliateSearchUrl,
 } from '../lib/affiliate/amazon'
 import {
@@ -37,7 +38,21 @@ assert(
     (item) =>
       item.affiliate_url.includes('amazon.ca') && item.affiliate_url.includes(`tag=${AMAZON_ASSOCIATE_TAG}`)
   ),
-  'Every suggestion uses affiliate search URL'
+  'Every suggestion uses affiliate URL with associate tag'
+)
+
+const squareReader = VENDOR_SUPPLY_SUGGESTIONS.find((item) => item.id === 'square-reader')
+assert(squareReader != null, 'Square Reader suggestion exists')
+assert(
+  squareReader?.affiliate_url.includes('stores/SquareInc') &&
+    squareReader.affiliate_url.includes(`tag=${AMAZON_ASSOCIATE_TAG}`),
+  'Square Reader uses affiliate brand-store URL'
+)
+assert(
+  appendAmazonAssociateTag('https://www.amazon.ca/dp/B0D7WF2KWW?ref=abc').includes(
+    `tag=${AMAZON_ASSOCIATE_TAG}`
+  ),
+  'Direct URL helper appends associate tag'
 )
 
 const boothOnly = filterVendorSupplies(VENDOR_SUPPLY_SUGGESTIONS, { category: 'booth' })
@@ -52,9 +67,10 @@ assert(
 const allView = filterVendorSupplies(VENDOR_SUPPLY_SUGGESTIONS, { category: 'all' })
 assert(
   allView.map((item) => item.id).join(',') ===
-    'canopy-tent,canopy-weights,folding-table,tablecloth,extension-cord,led-string-lights,gridwall-panel,acrylic-risers,jewelry-stand,chalkboard-sign,price-tags,card-reader-stand,cash-box,product-bags,tissue-paper',
+    'square-reader,canopy-tent,canopy-weights,folding-table,tablecloth,extension-cord,led-string-lights,gridwall-panel,acrylic-risers,jewelry-stand,chalkboard-sign,price-tags,card-reader-stand,cash-box,product-bags,tissue-paper',
   'All view follows booth setup phase order'
 )
+assert(allView[0]?.id === 'square-reader', 'Square Reader is first in All view')
 
 const filtered = filterVendorSupplies(VENDOR_SUPPLY_SUGGESTIONS, { query: 'canopy' })
 assert(filtered.some((item) => item.id === 'canopy-tent'), 'Text filter matches name/query')

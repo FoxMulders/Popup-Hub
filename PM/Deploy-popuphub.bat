@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 REM PopUp Hub - build, commit, sync push, Vercel prod, session handoff (single instance).
 REM Works when: double-clicked in Explorer, run from cmd/PowerShell, any current directory.
-REM Next commit (auto): feat: ship 3 session updates (Admin console desktop access; Split-story banner placement; Vendor  site UX polish batch)
+REM Next commit (auto): feat: ship 4 session updates (Quarter auction paddle purchase  bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; Vendor  site UX polish batch)
 REM
 REM Commit message is auto-generated from handoff Shipped / Active work sections,
 REM or "feat: ship local changes" when uncommitted work exists.

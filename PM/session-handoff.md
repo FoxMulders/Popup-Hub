@@ -2,7 +2,27 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Admin console desktop access (local, not deployed)
+## Active work — Quarter auction paddle purchase & bid flow (local, not deployed)
+- **Goal:** Patron-facing paddle chip purchase, multi-paddle bidding, room-wide winner reveal, and winner celebration per auction spec.
+- **Persona:** Patron · `/events/[id]/quarter-auction`
+- **Shipped locally:**
+  - **`paddle-chip-picker.tsx`:** Chip spin + haptic on tap; realtime `event_paddles` INSERT marks numbers taken for other patrons.
+  - **`patron-live-view.tsx`:** In-progress item priority (fixes completed item blocking next round); bid chip spin; pay-and-lock CTA with quarter total; full-screen lock on bidding close; winner reveal overlay (~5.5s) then unlock for next item.
+  - **`bidding-closed-overlay.tsx`**, **`winner-reveal-overlay.tsx`:** Room-wide draw wait + winning paddle on all screens.
+  - **`paddle-hold-screen.tsx`:** Spinning chip visuals for locked bid paddles.
+  - **`win-celebration.tsx`** + **`celebration-effects.ts`:** Haptics, woo-hoo audio/speech fallback, canvas-confetti + CSS confetti for winners only.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: buy chips → taken for others; bid paddles → wallet deduct; close bidding → lock; draw → all see winner #; winner vibrates/confetti; next item clears overlays.
+- **Next:** Add `public/sounds/woo-hoo.mp3` for richer audio; commit + deploy when user asks.
+
+## Active work — Square Reader affiliate on Market Supplies (local, not deployed)
+- **Goal:** Add Square Reader Amazon brand-store link (with associate tag) as the first curated pick on `/supplies` and `/vendor/supplies`.
+- **Shipped locally:**
+  - **`lib/affiliate/amazon.ts`:** `appendAmazonAssociateTag()` for direct product/store URLs.
+  - **`lib/vendor/supplies-catalog.ts`:** New **Square Reader** item (`setupOrder: 1`) with Square Inc store URL + `thetipsyfox08-20` tag; existing 15 picks renumbered 2–16.
+  - **`scripts/verify-vendor-supplies.ts`:** Asserts Square first + affiliate store URL.
+- **Verify:** `npx tsx scripts/verify-vendor-supplies.ts` — 14/14 PASS. Smoke `/supplies` → Square Reader is first card; Shop link opens Amazon.ca Square store with associate tag.
+- **Next:** Commit + deploy when user asks.
+
 - **Goal:** Restore navigation to `/admin/*` after hamburger was hidden on `md+` in the vendor UX polish batch.
 - **Shipped locally:**
   - **`app-account-menu-trigger.tsx`:** Mobile hamburger + desktop avatar both open the account menu sheet.
