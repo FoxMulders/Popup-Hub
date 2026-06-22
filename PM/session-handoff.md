@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (quarter auction win celebration)
+- **Goal:** Fix patron win modal disappearing when room-wide winner reveal overlay expires.
+- **Persona:** Patron · `/events/[id]/quarter-auction`
+- **Shipped locally (PR #24):**
+  - **`patron-live-view.tsx`:** Snapshot completed item into `wonItem` on win; drive celebration from snapshot until next round; reset on new `inProgressItem`.
+- **Trigger:** Commit `15a7cc5` / `57966df` review — `winnerRevealItem` cleared at 5.5s made `liveItem` null and `iWon` false while `showWin` stayed true.
+- **Verify:** Win as patron with slow vendor profile fetch → celebration stays after reveal overlay expires.
+- **Next:** Merge PR #24; deploy when user asks.
+
 ## Active work — Coordinator setup & admin queue polish (local, not deployed)
 - **Goal:** Eight coordinator/admin fixes — MLM caps, unified booth fee messaging, admin badges + email, Places false alarms, wizard CTA placement, vendor spot editing, quick-start floor cap, quarter auction visibility.
 - **Persona:** Coordinator · market setup wizard; Platform admin · `/admin/*`; Patron · quarter auction.
