@@ -2,6 +2,12 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — CI build fix (branch `cursor/fix-build-vitest-15d3`, not merged)
+- **Issue:** GitHub CI **TypeScript** step failed on `master` — `payment-deadline.test.ts` and `payment-reminder-schedule.test.ts` imported `vitest`, which is not in `package.json`.
+- **Fix:** Rewrote both tests to the existing `npx tsx` + `node:assert/strict` runner; wired them into `npm run test:unit`.
+- **Verify:** `npx tsc --noEmit` PASS; `npm run test:unit` PASS; `npm run build` PASS.
+- **Next:** Merge PR; deploy when user asks.
+
 ## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
 - **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
 - **Shipped locally:**
