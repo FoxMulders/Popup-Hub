@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { PageIntro } from '@/components/layout/page-intro'
+import { SitePageBand } from '@/components/layout/site-page-band'
 import Link from 'next/link'
 import { ArrowRight, Store, CheckCircle, Clock, AlertTriangle, CreditCard } from 'lucide-react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
@@ -142,19 +142,20 @@ export default async function VendorDashboard() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <PageIntro
+      <SitePageBand
+        tone="subtle"
         eyebrow="Vendor portal"
         title="Dashboard"
         description="Manage your passport, applications, and bookings"
-        actions={
-          <Link href="/vendor/events">
-            <Button size="pill">
-              Apply for open markets
-              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-            </Button>
-          </Link>
-        }
-      />
+        className="-mx-4 sm:-mx-6"
+      >
+        <Link href="/vendor/events">
+          <Button size="pill">
+            Apply for open markets
+            <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+          </Button>
+        </Link>
+      </SitePageBand>
 
       <VendorAlertOnboarding />
 

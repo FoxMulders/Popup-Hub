@@ -110,5 +110,8 @@ export function useInstallPrompt() {
     showIosOpenInSafariCoach,
     triggerInstall,
     dismiss,
+    isMobile,
+    isInstalled,
+    isDismissed,
   }
 }

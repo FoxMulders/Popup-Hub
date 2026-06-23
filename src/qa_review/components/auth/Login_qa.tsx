@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { buildOAuthCallbackUrl, getOAuthOrigin } from '@/lib/auth/oauth-callback-url'
+import { isEmailNotConfirmedAuthError } from '@/lib/auth/email-confirmation'
 import { resolvePostLoginPath } from '@/lib/auth/post-login-redirect'
 import {
   clearNedryLockoutState,
@@ -282,6 +283,14 @@ export function LoginQa({ embedded = false }: { embedded?: boolean }) {
     })
 
     if (signInError) {
+      if (isEmailNotConfirmedAuthError(signInError.message)) {
+        const confirmUrl = new URL('/confirm-email', window.location.origin)
+        confirmUrl.searchParams.set('email', trimmedEmail)
+        if (redirectTo) confirmUrl.searchParams.set('redirectTo', redirectTo)
+        router.push(`${confirmUrl.pathname}${confirmUrl.search}`)
+        setLoading(false)
+        return
+      }
       setError(signInError.message)
       registerFailedAttempt()
       setLoading(false)

@@ -1,1 +1,1 @@
-feat: ship 9 session updates (CI TypeScript fix; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)
+feat: ship 9 session updates (Popup Hub backlog implementation; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)

@@ -156,6 +156,7 @@ function SignupForm() {
       setLoading(false)
       return
     }
+    await supabase.auth.signOut()
     setSubmitted(true)
     setLoading(false)
   }

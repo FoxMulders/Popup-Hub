@@ -10,6 +10,9 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMarketAreaFilter } from '@/hooks/use-market-area-filter'
+import {
+  VENDOR_MARKET_RADIUS_STORAGE_KEY,
+} from '@/lib/markets/distance-radius'
 import { formatEventCapacitySummary, type EventCapacitySummary } from '@/lib/queries/event-capacity'
 import {
   getEventDisplayStatus,
@@ -153,7 +156,10 @@ export function VendorMarketGrid({
     showDeviceLocationPin,
     requestMyLocation,
     setOriginFromPlace,
-  } = useMarketAreaFilter()
+  } = useMarketAreaFilter({
+    defaultRadius: null,
+    storageKey: VENDOR_MARKET_RADIUS_STORAGE_KEY,
+  })
 
   const withDistance = useMemo(() => {
     const toMeta = (list: Event[]): EventWithMeta[] =>
@@ -178,6 +184,7 @@ export function VendorMarketGrid({
   return (
     <div className="space-y-4">
       <MarketAreaFilter
+        variant="vendor"
         radiusKm={radiusKm}
         onRadiusChange={setRadiusKm}
         locationLabel={locationLabel}
@@ -271,7 +278,7 @@ export function VendorMarketGrid({
             emptyMessage={
               search
                 ? 'No open markets match your search.'
-                : 'No active open markets within this distance.'
+                : 'No open markets match your filters.'
             }
             showDistance
           />

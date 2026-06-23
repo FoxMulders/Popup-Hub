@@ -6,8 +6,12 @@ import type {
   PaymentStatus,
 } from '@/types/database'
 import { sendPaymentDueReminderEmail } from '@/lib/email/payment-due-reminder'
+import { sendVendorApprovalEmail } from '@/lib/email/vendor-application-approved'
 import { dispatchNativePushToUsers } from '@/lib/mobile/push-dispatch'
+import { dispatchWebPushToUsers } from '@/lib/push/web-push-dispatch'
+import { buildEventCalendarPayload } from '@/lib/shopper/calendar-export'
 import { sendSms } from '@/lib/twilio'
+import type { Event } from '@/types/database'
 
 export type NotifyVendorApplicationStatusParams = {
   supabase: SupabaseClient
@@ -144,6 +148,43 @@ export async function notifyVendorApplicationStatus(
       }
     }
 
+    const isApprovedStatus =
+      params.status === 'approved' || params.status === 'pending_insurance'
+
+    if (isApprovedStatus && !needsPaymentEmail) {
+      const vendorEmail = params.vendorEmail?.trim() || profile?.email?.trim()
+      const vendorName =
+        params.vendorName?.trim() || profile?.full_name?.trim() || 'Vendor'
+      const eventLabel = params.eventName?.trim() || 'your market'
+
+      if (vendorEmail) {
+        const { data: eventRow } = await params.supabase
+          .from('events')
+          .select('*')
+          .eq('id', params.eventId)
+          .maybeSingle()
+
+        if (eventRow?.start_at && eventRow?.end_at) {
+          const calendar = buildEventCalendarPayload(eventRow as Event)
+          calendar.title = `Vendor booth — ${eventLabel}`
+          calendar.description = [
+            calendar.description,
+            'Your booth application was approved on Popup Hub.',
+          ]
+            .filter(Boolean)
+            .join('\n\n')
+
+          await sendVendorApprovalEmail({
+            vendorEmail,
+            vendorName,
+            marketName: eventLabel,
+            applicationId: params.applicationId,
+            calendar,
+          })
+        }
+      }
+    }
+
     void dispatchNativePushToUsers(params.supabase, {
       userIds: [params.vendorId],
       title:
@@ -152,6 +193,17 @@ export async function notifyVendorApplicationStatus(
       deepLink: '/vendor/applications',
     }).catch((err) => {
       console.error('[notify-vendor-application-status] native push failed:', err)
+    })
+
+    void dispatchWebPushToUsers(params.supabase, {
+      userIds: [params.vendorId],
+      title:
+        params.paymentStatus === 'payment_required' ? 'Payment due' : 'Application update',
+      body: message.length > 180 ? `${message.slice(0, 177)}…` : message,
+      url: '/vendor/applications',
+      tag: type,
+    }).catch((err) => {
+      console.error('[notify-vendor-application-status] web push failed:', err)
     })
   } catch (err) {
     console.error('[notify-vendor-application-status] outbound notify failed:', err)

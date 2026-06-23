@@ -15,8 +15,8 @@ export function PassportStoriesManager({ ownerId, role }: PassportStoriesManager
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 rounded-2xl border bg-white px-4 py-8 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+      <div className="flex items-center gap-2 rounded-2xl border border-stone-200/80 marketing-glass-card px-4 py-10 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin text-harvest-600" />
         Loading stories…
       </div>
     )

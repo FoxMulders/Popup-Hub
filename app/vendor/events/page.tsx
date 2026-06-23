@@ -1,4 +1,4 @@
-import { PageIntro } from '@/components/layout/page-intro'
+import { SitePageBand } from '@/components/layout/site-page-band'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -63,12 +63,14 @@ export default async function VendorEventsPage() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      <PageIntro
+      <SitePageBand
+        tone="subtle"
         eyebrow="Vendor portal"
         title="Apply for open markets"
-        description="Discover every published market and apply directly — no organizer pre-approval required."
-        className="mb-6"
+        description="All published markets — apply anytime. Browse every open listing or optionally narrow by distance."
+        className="-mx-4 mb-6 sm:-mx-6 lg:-mx-8 xl:-mx-16 px-0"
       />
+      <div className="px-0">
       <VendorCheckOrganizerCallout />
       <VendorAlertOnboarding />
       <Suspense
@@ -82,6 +84,7 @@ export default async function VendorEventsPage() {
       >
         <VendorMarkets userId={user.id} />
       </Suspense>
+      </div>
     </div>
   )
 }

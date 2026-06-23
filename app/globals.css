@@ -1197,18 +1197,18 @@
 
   @media (max-width: 767px) {
     .popup-hub-chrome-footer {
-      font-size: 0.67em;
+      font-size: 0.5em;
     }
 
     .popup-hub-chrome-footer > div {
-      gap: 0.25rem 0.67rem;
-      padding-top: 0.25rem;
-      padding-bottom: 0.25rem;
+      gap: 0.125rem 0.5rem;
+      padding-top: 0.125rem;
+      padding-bottom: 0.125rem;
     }
 
     .popup-hub-chrome-footer nav a {
-      min-height: 1rem;
-      font-size: 0.625rem;
+      min-height: 0.75rem;
+      font-size: 0.5rem;
     }
 
     body[data-mobile-bottom-nav='shopper'] .popup-hub-chrome-footer {

@@ -1,5 +1,5 @@
-import { ShopperShell } from '@/components/shopper/shopper-shell'
+import { HubGuardShell } from '@/components/check/hubguard-shell'
 
 export default function CheckLayout({ children }: { children: React.ReactNode }) {
-  return <ShopperShell>{children}</ShopperShell>
+  return <HubGuardShell>{children}</HubGuardShell>
 }

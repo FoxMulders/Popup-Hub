@@ -12,15 +12,15 @@ import { cn } from '@/lib/utils'
 
 const PATHWAYS = [
   {
-    id: 'organizer',
-    eyebrow: 'Organizers',
-    title: 'Run the whole market',
-    description: 'Applications, HubGrid layouts, check-in, and patron discovery.',
-    cta: 'Start hosting a market',
-    href: COORDINATOR_SIGNUP_HREF,
-    icon: CalendarDays,
-    kind: 'link' as const,
-    emphasized: true,
+    id: 'patron',
+    eyebrow: 'Patrons',
+    title: 'Plan your market day',
+    description: 'Browse dates, see confirmed vendors, and save favorites.',
+    cta: 'Browse markets',
+    href: '/discover',
+    icon: MapPin,
+    kind: 'browse' as const,
+    emphasized: false,
   },
   {
     id: 'vendor',
@@ -34,15 +34,15 @@ const PATHWAYS = [
     emphasized: false,
   },
   {
-    id: 'patron',
-    eyebrow: 'Patrons',
-    title: 'Plan your market day',
-    description: 'Browse dates, see confirmed vendors, and save favorites.',
-    cta: 'Browse markets',
-    href: '/discover',
-    icon: MapPin,
-    kind: 'browse' as const,
-    emphasized: false,
+    id: 'organizer',
+    eyebrow: 'Organizers',
+    title: 'Run the whole market',
+    description: 'Applications, HubGrid layouts, check-in, and patron discovery.',
+    cta: 'Start hosting a market',
+    href: COORDINATOR_SIGNUP_HREF,
+    icon: CalendarDays,
+    kind: 'link' as const,
+    emphasized: true,
   },
 ] as const
 
@@ -112,10 +112,7 @@ export function MarketingHeroPathways() {
             <PathwayCard key={path.id} {...path}>
               <Link
                 href={path.href}
-                className={cn(
-                  'marketing-pill inline-flex min-h-11 w-full gap-2 justify-center',
-                  path.emphasized ? 'marketing-pill--secondary' : 'marketing-pill--primary'
-                )}
+                className="marketing-pill marketing-pill--secondary inline-flex min-h-11 w-full gap-2 justify-center"
                 title={path.id === 'vendor' ? TRUST_DIRECTORY_LINKS.check.tagline : undefined}
               >
                 <path.icon className="h-4 w-4" aria-hidden />

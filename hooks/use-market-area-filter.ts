@@ -15,10 +15,18 @@ import {
 } from '@/lib/markets/user-location'
 import { DEFAULT_REGION, type LatLng } from '@/lib/shopper/geo'
 
-function readStoredRadius(): number | null {
-  if (typeof sessionStorage === 'undefined') return DEFAULT_DISTANCE_RADIUS_KM
+export type UseMarketAreaFilterOptions = {
+  defaultRadius?: DistanceRadiusKm
+  storageKey?: string
+}
+
+function readStoredRadius(
+  fallback: DistanceRadiusKm,
+  storageKey: string
+): DistanceRadiusKm {
+  if (typeof sessionStorage === 'undefined') return fallback
   try {
-    const raw = sessionStorage.getItem(MARKET_RADIUS_STORAGE_KEY)
+    const raw = sessionStorage.getItem(storageKey)
     if (raw === 'null') return null
     if (raw != null) {
       const parsed = Number(raw)
@@ -27,7 +35,7 @@ function readStoredRadius(): number | null {
   } catch {
     /* ignore */
   }
-  return DEFAULT_DISTANCE_RADIUS_KM
+  return fallback
 }
 
 function geolocationErrorMessage(code: number): string {
@@ -43,31 +51,37 @@ function geolocationErrorMessage(code: number): string {
   return 'Could not read your location. Try entering your home address instead.'
 }
 
-export function useMarketAreaFilter() {
+export function useMarketAreaFilter(options: UseMarketAreaFilterOptions = {}) {
+  const defaultRadius = options.defaultRadius ?? DEFAULT_DISTANCE_RADIUS_KM
+  const storageKey = options.storageKey ?? MARKET_RADIUS_STORAGE_KEY
+
   const [origin, setOrigin] = useState<LatLng>(DEFAULT_REGION)
-  const [radiusKm, setRadiusKmState] = useState<number | null>(DEFAULT_DISTANCE_RADIUS_KM)
+  const [radiusKm, setRadiusKmState] = useState<DistanceRadiusKm>(defaultRadius)
   const [locationLabel, setLocationLabel] = useState(DEFAULT_LOCATION_LABEL)
   const [locating, setLocating] = useState(false)
   const [showDeviceLocationPin, setShowDeviceLocationPin] = useState(false)
 
   useEffect(() => {
-    setRadiusKmState(readStoredRadius())
+    setRadiusKmState(readStoredRadius(defaultRadius, storageKey))
     const stored = readStoredUserLocation()
     if (stored) {
       setOrigin({ lat: stored.lat, lng: stored.lng })
       setLocationLabel(stored.label ?? NEAR_YOU_LABEL)
       setShowDeviceLocationPin(stored.label === NEAR_YOU_LABEL)
     }
-  }, [])
+  }, [defaultRadius, storageKey])
 
-  const setRadiusKm = useCallback((km: DistanceRadiusKm) => {
-    setRadiusKmState(km)
-    try {
-      sessionStorage.setItem(MARKET_RADIUS_STORAGE_KEY, km == null ? 'null' : String(km))
-    } catch {
-      /* ignore */
-    }
-  }, [])
+  const setRadiusKm = useCallback(
+    (km: DistanceRadiusKm) => {
+      setRadiusKmState(km)
+      try {
+        sessionStorage.setItem(storageKey, km == null ? 'null' : String(km))
+      } catch {
+        /* ignore */
+      }
+    },
+    [storageKey]
+  )
 
   const setOriginFromPlace = useCallback((lat: number, lng: number, label: string) => {
     const next = { lat, lng }

@@ -24,6 +24,10 @@ import {
   readAdminSessionToken,
 } from '@/lib/auth/require-admin'
 import { isPublicPath } from '@/lib/auth/public-paths'
+import {
+  isEmailConfirmed,
+  isUnconfirmedUserAllowedPath,
+} from '@/lib/auth/email-confirmation'
 import type { Role } from '@/types/database'
 
 /** Supabase may redirect to Site URL root with ?code= instead of /api/auth/callback. */
@@ -108,6 +112,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  if (user && !isEmailConfirmed(user) && !isPublicPathMatch && !isUnconfirmedUserAllowedPath(pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/confirm-email'
+    if (user.email) {
+      url.searchParams.set('email', user.email)
+    }
+    url.searchParams.set('redirectTo', pathname)
+    return NextResponse.redirect(url)
+  }
+
   let profileRole: Role | null = null
   let profileIsAdmin = false
 
@@ -144,7 +158,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  if (user && (pathname === '/login' || pathname === '/signup')) {
+  if (user && isEmailConfirmed(user) && (pathname === '/login' || pathname === '/signup')) {
     const role = profileRole ?? 'shopper'
     const activePortal = parseActivePortal(request.cookies.get(ACTIVE_PORTAL_COOKIE)?.value)
     const redirectTo = request.nextUrl.searchParams.get('redirectTo')

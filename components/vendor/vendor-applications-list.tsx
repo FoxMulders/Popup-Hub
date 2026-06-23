@@ -33,6 +33,7 @@ import { MarketInsuranceUpload } from '@/components/vendor/market-insurance-uplo
 import { ApplicationFollowUpDialog } from '@/components/vendor/application-follow-up-dialog'
 import { MarketOwnerLink, vendorApplicationStatusHref } from '@/components/vendor/market-owner-link'
 import { PassportQrButton } from '@/components/vendor/passport-qr-button'
+import { VendorAddToCalendarButton } from '@/components/vendor/vendor-add-to-calendar-button'
 import {
   filterVendorApplications,
   resolveVendorApplicationStatusUi,
@@ -392,6 +393,24 @@ export function VendorApplicationsList({
                         <CreditCard className="mr-1.5 h-3.5 w-3.5" />
                         Pay Now
                       </Button>
+                    ) : null}
+
+                    {(app.status === 'approved' || app.status === 'pending_insurance') &&
+                    !eventCancelled &&
+                    ev?.id &&
+                    ev.start_at &&
+                    ev.end_at ? (
+                      <VendorAddToCalendarButton
+                        event={{
+                          id: ev.id,
+                          name: ev.name ?? 'Market',
+                          description: null,
+                          location_name: ev.location_name ?? '',
+                          address: '',
+                          start_at: ev.start_at,
+                          end_at: ev.end_at,
+                        }}
+                      />
                     ) : null}
 
                     {isPassportQrEligible(app) &&

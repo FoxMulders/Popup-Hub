@@ -13,6 +13,8 @@ interface MarketAreaFilterProps {
   locating: boolean
   onUseMyLocation: () => void
   onAddressSelect: (lat: number, lng: number, label: string) => void
+  /** Vendor apply: distance filter is optional — collapsed by default. */
+  variant?: 'default' | 'vendor'
 }
 
 const QUICK_CITY_CENTERS = [
@@ -27,15 +29,29 @@ export function MarketAreaFilter({
   locating,
   onUseMyLocation,
   onAddressSelect,
+  variant = 'default',
 }: MarketAreaFilterProps) {
+  const distanceSection = (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {variant === 'vendor' ? 'Optional: filter by distance' : 'Distance'}
+      </p>
+      <DistanceRadiusPicker value={radiusKm} onChange={onRadiusChange} />
+    </div>
+  )
+
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Distance
-        </p>
-        <DistanceRadiusPicker value={radiusKm} onChange={onRadiusChange} />
-      </div>
+      {variant === 'vendor' ? (
+        <details className="rounded-xl border border-stone-200/80 bg-white/60 px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+            Narrow by distance (optional)
+          </summary>
+          <div className="mt-3 space-y-4">{distanceSection}</div>
+        </details>
+      ) : (
+        distanceSection
+      )}
 
       <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

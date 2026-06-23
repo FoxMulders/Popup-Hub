@@ -34,7 +34,7 @@ export function PushNotificationSettings() {
             Status: {permission === 'unsupported' ? 'Unavailable' : permission}
           </p>
           {subscription ? (
-            <p className="text-xs text-sage-700">Device registered — ready to sync with backend.</p>
+            <p className="text-xs text-sage-700">Device registered for push alerts.</p>
           ) : null}
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>

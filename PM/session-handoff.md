@@ -2,7 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — CI TypeScript fix (local, not deployed)
+## Active work — Popup Hub backlog implementation (local, not deployed)
+- **Goal:** Complete 13-item backlog plan (Waves 1–6): UI polish, vendor discovery, email confirmation, notifications, calendar, PWA, brand pass, passport redesign, UX/CRO doc.
+- **Shipped locally:**
+  - **Wave 1:** Hero pathway order (Patrons→Vendors→Organizers), all hero CTAs `marketing-pill--secondary`, mobile footer ~50% reduction, `HubGuardShell` replacing `ShopperShell` on `/check`, callout/tagline polish.
+  - **Wave 2:** Vendor apply defaults to Everywhere (`useMarketAreaFilter({ defaultRadius: null, storageKey })`), collapsed optional distance filter.
+  - **Wave 3:** `enable_confirmations = true`, SMTP env template in `config.toml`, `/confirm-email`, middleware + login guards, signup sign-out after register, unit + e2e smoke.
+  - **Wave 4:** Vendor approval email with calendar link, `VendorAddToCalendarButton`, `NotificationDeliverySettings` on `/notifications`.
+  - **Wave 5:** `push_subscriptions` migration + `/api/push/subscribe`, `web-push` dispatch, glass PWA icons (`process-logo.mjs`), `SitePageBand` on vendor/coordinator entry pages.
+  - **Wave 5b:** Passport stories redesign (public strip, viewer swipe/safe-area, uploader empty states).
+  - **Wave 6:** `docs/UX_CRO_REVIEW.md`.
+- **External before prod auth:** Supabase dashboard — enable confirmations + SMTP; VAPID keys in Vercel env; run migration **126**.
+- **Verify:** `npx tsx lib/auth/email-confirmation.test.ts`; `node scripts/process-logo.mjs`; smoke `/`, `/check`, `/vendor/events`, `/confirm-email`, `/notifications`.
+- **Next:** Commit + deploy when user asks.
+
 - **Goal:** Fix GitHub CI failure on `npx tsc --noEmit` caused by vitest imports in payment-chase unit tests.
 - **Shipped locally:**
   - **`payment-deadline.test.ts`**, **`payment-reminder-schedule.test.ts`:** Rewritten to `node:assert/strict` + `tsx` pattern (matches repo convention).

@@ -22,6 +22,9 @@ export const DEFAULT_DISTANCE_RADIUS_KM = 25
 /** sessionStorage key used to persist the user's last selected radius. */
 export const MARKET_RADIUS_STORAGE_KEY = 'popup-hub:market-radius-km'
 
+/** Vendor apply flow — separate from patron Discover so radius choices do not bleed. */
+export const VENDOR_MARKET_RADIUS_STORAGE_KEY = 'popup-hub:vendor-market-radius-km'
+
 /**
  * The DistanceRadiusKm type is `number | null` — `null` represents the
  * "show everywhere" / "no radius cap" sentinel returned by the secondary

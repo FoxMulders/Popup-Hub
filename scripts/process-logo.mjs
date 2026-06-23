@@ -334,6 +334,53 @@ async function transparentIcon(iconBuffer, size, paddingRatio = 0.1) {
     .toBuffer()
 }
 
+/** Frosted glass tile: soft cream gradient, subtle border, transparent corners. */
+async function glassIcon(iconBuffer, size, paddingRatio = 0.12) {
+  const innerPad = Math.round(size * paddingRatio)
+  const tileSize = size - innerPad * 2
+  const frosted = await sharp({
+    create: {
+      width: tileSize,
+      height: tileSize,
+      channels: 4,
+      background: { r: 250, g: 248, b: 245, alpha: 220 },
+    },
+  })
+    .png()
+    .toBuffer()
+
+  const gradientSvg = Buffer.from(`
+    <svg width="${tileSize}" height="${tileSize}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.55)"/>
+          <stop offset="100%" stop-color="rgba(45,90,39,0.08)"/>
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" rx="${Math.round(tileSize * 0.22)}" fill="url(#g)"/>
+      <rect x="1" y="1" width="${tileSize - 2}" height="${tileSize - 2}" rx="${Math.round(tileSize * 0.22)}"
+        fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2"/>
+    </svg>`)
+
+  const mark = await transparentIcon(iconBuffer, tileSize, 0.14)
+
+  return sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .composite([
+      { input: frosted, left: innerPad, top: innerPad },
+      { input: gradientSvg, left: innerPad, top: innerPad },
+      { input: mark, left: innerPad, top: innerPad },
+    ])
+    .png()
+    .toBuffer()
+}
+
 async function writeIcons(iconMark) {
   await mkdir(iconsDir, { recursive: true })
   await mkdir(appDir, { recursive: true })
@@ -345,11 +392,11 @@ async function writeIcons(iconMark) {
     console.log('Wrote icon:', out)
   }
 
-  const maskable512 = await iconOnBackground(iconMark, 512, CREAM, 0.14)
+  const maskable512 = await glassIcon(iconMark, 512, 0.1)
   await sharp(maskable512).toFile(path.join(iconsDir, 'icon-maskable-512x512.png'))
   console.log('Wrote maskable icon:', path.join(iconsDir, 'icon-maskable-512x512.png'))
 
-  const appleTouch = await iconOnBackground(iconMark, 180, CREAM, 0.12)
+  const appleTouch = await glassIcon(iconMark, 180, 0.1)
   await sharp(appleTouch).toFile(path.join(iconsDir, 'apple-touch-icon.png'))
   console.log('Wrote apple-touch-icon:', path.join(iconsDir, 'apple-touch-icon.png'))
 
@@ -368,12 +415,16 @@ async function writeIcons(iconMark) {
   await sharp(favicon32).toFile(path.join(root, 'public', 'favicon.ico'))
   console.log('Wrote favicon.ico')
 
-  const nextIcon = await iconOnBackground(iconMark, 512, CREAM, 0.12)
+  const nextIcon = await glassIcon(iconMark, 512, 0.1)
   await sharp(nextIcon).toFile(path.join(appDir, 'icon.png'))
   console.log('Wrote Next.js app icon:', path.join(appDir, 'icon.png'))
 
   await sharp(appleTouch).toFile(path.join(appDir, 'apple-icon.png'))
   console.log('Wrote Next.js apple icon:', path.join(appDir, 'apple-icon.png'))
+
+  const badge96 = await iconOnBackground(iconMark, 96, CREAM, 0.08)
+  await sharp(badge96).toFile(path.join(iconsDir, 'badge-96x96.png'))
+  console.log('Wrote badge icon:', path.join(iconsDir, 'badge-96x96.png'))
 }
 
 await makeTransparentLogo()

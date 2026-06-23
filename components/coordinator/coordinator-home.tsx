@@ -1,4 +1,4 @@
-import { PageIntro } from '@/components/layout/page-intro'
+import { SitePageBand } from '@/components/layout/site-page-band'
 import Link from 'next/link'
 import { CalendarDays, LayoutDashboard, Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
@@ -34,7 +34,8 @@ export function CoordinatorHome({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
-      <PageIntro
+      <SitePageBand
+        tone="subtle"
         eyebrow="Coordinator portal"
         title={greeting}
         description={
@@ -42,13 +43,13 @@ export function CoordinatorHome({
             ? `You have ${marketCount} market${marketCount === 1 ? '' : 's'}. Start a new one or browse them all.`
             : 'Create your first market or return here anytime to pick up where you left off.'
         }
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <PortalRoleBadge portal="coordinator" />
-            {marketCount > 0 ? <DemoMarketLauncher size="sm" variant="outline" /> : null}
-          </div>
-        }
-      />
+        className="-mx-4 sm:-mx-6"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <PortalRoleBadge portal="coordinator" />
+          {marketCount > 0 ? <DemoMarketLauncher size="sm" variant="outline" /> : null}
+        </div>
+      </SitePageBand>
 
       {marketCount === 0 ? <CoordinatorPortalWelcome /> : null}
 

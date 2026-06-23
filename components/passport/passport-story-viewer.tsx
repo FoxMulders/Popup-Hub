@@ -46,6 +46,8 @@ export function PassportStoryViewer({
   const story = stories[index]
   const logoUrl = useOwnerBrandLogo(story?.ownerId ?? stories[0]?.ownerId ?? '')
 
+  const touchStartX = useRef<number | null>(null)
+
   const goNext = useCallback(() => {
     setProgress(0)
     setIsLoading(true)
@@ -166,9 +168,9 @@ export function PassportStoryViewer({
     >
       <div className="absolute inset-x-0 top-0 z-20 flex gap-1 px-3 pt-3 safe-top">
         {stories.map((s, i) => (
-          <div key={s.id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30">
+          <div key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
             <div
-              className="h-full bg-white transition-[width] duration-100 ease-linear"
+              className="h-full bg-gradient-to-r from-harvest-300 via-white to-sage-200 transition-[width] duration-100 ease-linear"
               style={{
                 width:
                   i < index ? '100%' : i === index ? `${progress}%` : '0%',
@@ -230,8 +232,21 @@ export function PassportStoryViewer({
       </div>
 
       <div
-        className="relative flex flex-1 items-center justify-center"
+        className="relative flex flex-1 items-center justify-center pb-[max(1rem,env(safe-area-inset-bottom))]"
         onClick={(e) => handleTapZone(e.clientX, e.currentTarget.clientWidth)}
+        onTouchStart={(e) => {
+          touchStartX.current = e.changedTouches[0]?.clientX ?? null
+        }}
+        onTouchEnd={(e) => {
+          const start = touchStartX.current
+          const end = e.changedTouches[0]?.clientX
+          touchStartX.current = null
+          if (start == null || end == null) return
+          const delta = end - start
+          if (Math.abs(delta) < 48) return
+          if (delta < 0) goNext()
+          else goPrev()
+        }}
         onKeyDown={(e) => {
           if (e.key === 'ArrowLeft') goPrev()
           if (e.key === 'ArrowRight') goNext()
@@ -283,10 +298,14 @@ export function PassportStoryViewer({
       </div>
 
       {story.caption ? (
-        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 to-transparent px-4 pb-8 pt-12">
+        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-12">
           <p className="text-sm leading-relaxed text-white">{story.caption}</p>
         </div>
       ) : null}
+
+      <p className="pointer-events-none absolute inset-x-0 bottom-[max(3.5rem,env(safe-area-inset-bottom))] z-10 text-center text-[10px] font-medium uppercase tracking-widest text-white/40">
+        Swipe for next story
+      </p>
     </div>
   )
 }
@@ -316,10 +335,10 @@ export function PassportStoryCarousel({
 
   return (
     <>
-      <div className={cn('flex items-center gap-3 overflow-x-auto pb-1', className)}>
+      <div className={cn('flex items-center gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scroll-pl-1', className)}>
         <button
           type="button"
-          className="group flex shrink-0 flex-col items-center gap-1.5"
+          className="group flex shrink-0 snap-start flex-col items-center gap-2 touch-manipulation"
           onClick={() => {
             setStartIndex(0)
             setViewerOpen(true)
@@ -328,7 +347,7 @@ export function PassportStoryCarousel({
           <div
             className={cn(
               'rounded-full p-[3px]',
-              'bg-gradient-to-tr from-harvest-500 via-rose-400 to-amber-400'
+              'bg-gradient-to-tr from-forest via-harvest-400 to-amber-300 shadow-[0_4px_20px_rgb(45_90_39_/_0.25)]'
             )}
           >
             <div className="rounded-full bg-white p-[2px]">
@@ -337,16 +356,16 @@ export function PassportStoryCarousel({
                 <img
                   src={resolvedRingAvatar}
                   alt=""
-                  className="h-14 w-14 rounded-full object-cover sm:h-16 sm:w-16"
+                  className="h-16 w-16 rounded-full object-cover sm:h-[4.5rem] sm:w-[4.5rem]"
                 />
               ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-harvest-100 text-sm font-bold text-harvest-800 sm:h-16 sm:w-16">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-harvest-100 text-base font-bold text-harvest-800 sm:h-[4.5rem] sm:w-[4.5rem]">
                   {displayName.slice(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
           </div>
-          <span className="max-w-[72px] truncate text-[10px] font-medium text-muted-foreground group-hover:text-foreground">
+          <span className="max-w-[80px] truncate text-xs font-semibold text-foreground">
             Stories
           </span>
         </button>
@@ -359,13 +378,13 @@ export function PassportStoryCarousel({
           <button
             key={story.id}
             type="button"
-            className="group flex shrink-0 flex-col items-center gap-1.5"
+            className="group flex shrink-0 snap-start flex-col items-center gap-2 touch-manipulation"
             onClick={() => {
               setStartIndex(i)
               setViewerOpen(true)
             }}
           >
-            <div className="h-14 w-14 overflow-hidden rounded-full ring-2 ring-stone-200 transition group-hover:ring-harvest-400 sm:h-16 sm:w-16">
+            <div className="h-16 w-16 overflow-hidden rounded-full ring-2 ring-stone-200 transition group-hover:ring-harvest-400 group-active:scale-95 sm:h-[4.5rem] sm:w-[4.5rem]">
               {story.mediaType === 'video' ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -382,7 +401,7 @@ export function PassportStoryCarousel({
                 />
               ) : null}
             </div>
-            <span className="max-w-[72px] truncate text-[10px] text-muted-foreground">
+            <span className="max-w-[80px] truncate text-[11px] font-medium text-muted-foreground group-hover:text-foreground">
               {storyKindLabel(story.storyKind)}
             </span>
           </button>

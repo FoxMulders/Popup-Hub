@@ -26,6 +26,18 @@ function serializeSubscription(subscription: PushSubscription): PushSubscription
   }
 }
 
+async function persistPushSubscription(payload: PushSubscriptionPayload): Promise<void> {
+  try {
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch (err) {
+    console.error('[push] failed to persist subscription', err)
+  }
+}
+
 export function useNotifications() {
   const [permission, setPermission] = useState<PushPermissionState>('default')
   const [subscription, setSubscription] = useState<PushSubscriptionPayload | null>(null)
@@ -91,7 +103,7 @@ export function useNotifications() {
       if (pushSubscription) {
         const payload = serializeSubscription(pushSubscription)
         setSubscription(payload)
-        console.info('[push] subscription ready for backend wiring', payload)
+        await persistPushSubscription(payload)
         return payload
       }
 

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import type { Notification, Profile } from '@/types/database'
 import { NotificationList } from '@/components/notifications/notification-list'
 import { NotificationPageHeader } from '@/components/notifications/notification-page-header'
+import { NotificationDeliverySettings } from '@/components/notifications/notification-delivery-settings'
 import {
   ACTIVE_PORTAL_COOKIE,
   resolveActivePortal,
@@ -120,16 +121,18 @@ export default async function NotificationsPage() {
       <NotificationPageHeader userId={userId} activePortal={activePortal} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8">
-        {/* Main notification feed */}
         <NotificationList
           initialNotifications={initialNotifications}
           userId={userId}
           activePortal={activePortal}
         />
 
-        {/* Sidebar: key */}
-        <aside className="hidden xl:block">
-          <div className="rounded-2xl border bg-white p-6 sticky top-24">
+        <aside className="space-y-6">
+          <div className="xl:sticky xl:top-24">
+            <NotificationDeliverySettings />
+          </div>
+
+          <div className="rounded-2xl border bg-white p-6 hidden xl:block">
             <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
               Notification Types
             </h2>
@@ -160,8 +163,7 @@ export default async function NotificationsPage() {
               </li>
             </ul>
             <p className="mt-6 text-xs text-muted-foreground leading-relaxed">
-              Clicking a notification marks it as read. You can also receive SMS alerts — add your
-              phone number in Profile settings.
+              Clicking a notification marks it as read.
             </p>
           </div>
         </aside>

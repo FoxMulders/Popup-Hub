@@ -4,6 +4,7 @@ export function isPublicPath(pathname: string): boolean {
     '/',
     '/login',
     '/signup',
+    '/confirm-email',
     '/auth/callback',
     '/auth/confirm',
     '/api/auth/callback',

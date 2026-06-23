@@ -343,13 +343,14 @@ export function PassportStoryUploader({
       : null
 
   return (
-    <div className={cn('space-y-4 rounded-2xl border bg-white p-5', className)}>
+    <div className={cn('space-y-4 rounded-2xl border border-stone-200/80 marketing-glass-card p-5 shadow-[var(--shadow-market-md)]', className)}>
       <div>
-        <h3 className="font-semibold text-foreground">Passport stories</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-harvest-700">Passport stories</p>
+        <h3 className="mt-1 font-semibold text-foreground">Share clips & photos</h3>
+        <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
           Upload up to 30-second clips or photos — patrons see them on your public passport like
-          Instagram stories. You can pick several files at once
-          {role === 'vendor' ? ' and add a caption to each before publishing' : ''}.
+          Instagram stories. Drag files in or tap to browse
+          {role === 'vendor' ? '; add a caption to each before publishing' : ''}.
         </p>
       </div>
 
@@ -382,18 +383,20 @@ export function PassportStoryUploader({
           }}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            'flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 transition-colors',
+            'flex w-full min-h-[168px] flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-4 py-10 transition-colors touch-manipulation',
             dragOver
               ? 'border-harvest-400 bg-harvest-50/60'
-              : 'border-stone-200 hover:border-harvest-300 hover:bg-canvas',
+              : 'border-stone-200 hover:border-harvest-300 hover:bg-canvas/80',
             atLimit && 'cursor-not-allowed opacity-60'
           )}
         >
-          <Upload className="h-8 w-8 text-muted-foreground" aria-hidden />
-          <span className="text-sm font-medium text-foreground">
-            {atLimit ? 'Story limit reached' : 'Drop clips or tap to upload (multi-select OK)'}
+          <Upload className="h-10 w-10 text-harvest-600" aria-hidden />
+          <span className="text-sm font-semibold text-foreground">
+            {atLimit ? 'Story limit reached' : 'Drop media here or tap to upload'}
           </span>
-          <span className="text-xs text-muted-foreground">MP4/WebM or JPEG/PNG · max 30 seconds each</span>
+          <span className="max-w-xs text-center text-xs text-muted-foreground">
+            MP4/WebM or JPEG/PNG · max 30 seconds · multi-select supported
+          </span>
         </button>
       ) : (
         <div className="space-y-3 rounded-xl border bg-canvas p-4">
@@ -642,7 +645,12 @@ export function PassportStoryUploader({
           })}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">No stories published yet.</p>
+        <div className="rounded-xl border border-dashed border-stone-200 bg-canvas/60 px-4 py-8 text-center">
+          <p className="text-sm font-medium text-foreground">No stories yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your published clips and photos will appear here after you upload.
+          </p>
+        </div>
       )}
 
       <Dialog

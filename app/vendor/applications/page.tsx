@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Suspense } from 'react'
 import { VendorApplicationsList } from '@/components/vendor/vendor-applications-list'
 import { VendorApplicationStatusBanner } from '@/components/vendor/vendor-application-status-banner'
+import { SitePageBand } from '@/components/layout/site-page-band'
 import { fetchUnreadVendorApplicationStatusNotifications } from '@/lib/vendor/fetch-application-status-notifications'
 import type { VendorApplicationFilter } from '@/lib/vendor/application-status-ui'
 import type { BoothApplication } from '@/types/database'
@@ -84,13 +85,15 @@ export default async function VendorApplicationsPage({
   )
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="mb-6 space-y-1">
-        <h1 className="text-2xl font-bold text-foreground">My Applications</h1>
-        <p className="text-sm text-muted-foreground">
-          Track every market you applied to, see juried review status, and follow up with organizers.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl">
+      <SitePageBand
+        tone="subtle"
+        eyebrow="Vendor portal"
+        title="My applications"
+        description="Track every market you applied to, see juried review status, and follow up with organizers."
+        className="-mx-4 mb-6 sm:-mx-6"
+      />
+      <div className="px-4 sm:px-0 pb-8">
       <VendorApplicationStatusBanner notifications={statusNotifications} className="mb-6" />
       <Suspense
         fallback={
@@ -101,6 +104,7 @@ export default async function VendorApplicationsPage({
       >
         <ApplicationsList userId={user.id} initialFilter={initialFilter} />
       </Suspense>
+      </div>
     </div>
   )
 }
