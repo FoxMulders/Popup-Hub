@@ -4,6 +4,11 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { FloorPlanV2WizardQa } from '@/src/qa_review/components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import type { BoothLayout, Event } from '@/types/database'
@@ -29,7 +34,26 @@ export function SpatialLayoutEditor({
   existingLayout,
   applications = [],
 }: SpatialLayoutEditorProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <SpatialLayoutEditorInner
+        eventId={eventId}
+        event={event}
+        existingLayout={existingLayout}
+        applications={applications}
+      />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function SpatialLayoutEditorInner({
+  eventId,
+  event,
+  existingLayout,
+  applications = [],
+}: SpatialLayoutEditorProps) {
   const router = useRouter()
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const supabase = useMemo(() => createClient(), [])
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
 
@@ -109,56 +133,72 @@ export function SpatialLayoutEditor({
   const isDraft = event.status === 'draft'
 
   return (
-    <SpatialLayoutShell
-      toolbar={
-        <SpatialLayoutToolbar
-          eventId={eventId}
-          eventName={eventName}
-          coordinatorId={event.coordinator_id}
-          locationName={event.location_name}
-          address={event.address}
-          placedCount={placedCount}
-          layoutCapacity={layoutCapacity}
-          hasOverlap={hasOverlap}
-          isDraft={isDraft}
-          saving={saving}
-          savingDraft={savingDraft}
-          onSave={handleSave}
-          onSaveDraft={handleSaveDraft}
-          saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
-          getLayoutSnapshot={() => null}
-          onApplySavedLayout={() => {}}
-        />
-      }
-    >
-      <FloorPlanV2WizardQa
+    <>
+      <DesktopScreenRequiredOverlay
         eventId={eventId}
-        existingLayout={existingLayout}
-        layoutRooms={rooms}
-        layoutActiveRoomId={activeRoomId}
-        onLayoutRoomsChange={handleLayoutRoomsChange}
-        saveLayoutRef={saveLayoutRef}
-        eventCategoryNames={eventCategoryNames}
-        onAddRoom={handleAddRoom}
-        onRenameRoom={handleRenameRoom}
-        onDeleteRoom={handleDeleteRoom}
-        baselineTableLengthFt={baselineTableLengthFt}
-        onBaselineTableLengthChange={handleBaselineTableLengthChange}
-        layoutCapacity={layoutCapacity}
-        applications={applications}
-        onOverlapChange={setHasOverlap}
-        onPlacedCountChange={setPlacedCount}
-        onSaveMarket={handleSave}
         onSaveDraft={handleSaveDraft}
-        saveMarketDisabled={hasOverlap || saving || savingDraft}
-        saveMarketLoading={saving}
-        saveDraftDisabled={hasOverlap || saving || savingDraft}
         saveDraftLoading={savingDraft}
-        chrome="default"
-        preferServerLayout
-        debugGeometry={false}
-        className="h-full min-h-0"
       />
-    </SpatialLayoutShell>
+      <SpatialLayoutShell
+        toolbar={
+          <SpatialLayoutToolbar
+            eventId={eventId}
+            eventName={eventName}
+            coordinatorId={event.coordinator_id}
+            locationName={event.location_name}
+            address={event.address}
+            placedCount={placedCount}
+            layoutCapacity={layoutCapacity}
+            hasOverlap={hasOverlap}
+            isDraft={isDraft}
+            saving={saving}
+            savingDraft={savingDraft}
+            onSave={handleSave}
+            onSaveDraft={handleSaveDraft}
+            saveLabel={isDraft ? 'Save & deploy' : 'Save layout'}
+            getLayoutSnapshot={() => null}
+            onApplySavedLayout={() => {}}
+          />
+        }
+      >
+        {showDesktopRequired ? (
+          <div className="flex h-full min-h-[40vh] items-center justify-center p-6 text-center">
+            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+              Booth layout needs a tablet in landscape or a desktop monitor. Save your market and
+              continue designing on a larger screen.
+            </p>
+          </div>
+        ) : (
+          <FloorPlanV2WizardQa
+            eventId={eventId}
+            existingLayout={existingLayout}
+            layoutRooms={rooms}
+            layoutActiveRoomId={activeRoomId}
+            onLayoutRoomsChange={handleLayoutRoomsChange}
+            saveLayoutRef={saveLayoutRef}
+            eventCategoryNames={eventCategoryNames}
+            onAddRoom={handleAddRoom}
+            onRenameRoom={handleRenameRoom}
+            onDeleteRoom={handleDeleteRoom}
+            baselineTableLengthFt={baselineTableLengthFt}
+            onBaselineTableLengthChange={handleBaselineTableLengthChange}
+            layoutCapacity={layoutCapacity}
+            applications={applications}
+            onOverlapChange={setHasOverlap}
+            onPlacedCountChange={setPlacedCount}
+            onSaveMarket={handleSave}
+            onSaveDraft={handleSaveDraft}
+            saveMarketDisabled={hasOverlap || saving || savingDraft}
+            saveMarketLoading={saving}
+            saveDraftDisabled={hasOverlap || saving || savingDraft}
+            saveDraftLoading={savingDraft}
+            chrome="default"
+            preferServerLayout
+            debugGeometry={false}
+            className="h-full min-h-0"
+          />
+        )}
+      </SpatialLayoutShell>
+    </>
   )
 }
