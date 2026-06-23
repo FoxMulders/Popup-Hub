@@ -3,7 +3,7 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Active work — Blueprint Studio responsive matrix guard (local, not deployed)
-- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-938b`; HEAD `a22a3d8` (`feat: ship 10 session updates...`). No production deploy run in this scoped QA task.
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-938b`; implementation commit `8e52805` (`fix: guard blueprint studio matrix on small screens`) pushed to origin. No production deploy run in this scoped QA task.
 - **Goal:** Scan HubGrid/Blueprint Studio and dashboard layout views for small-screen defensive handling; add the designated floor-plan matrix warning anywhere the canvas or matrix could render below the recommended desktop breakpoint.
 - **Shipped locally:**
   - **`floor-plan-viewport-advisory.tsx`:** Shared `FloorPlanMatrixSmallScreenWarning` with copy: "Floor plan matrix is not optimized for small screens" and the 1024px x 550px recommended desktop breaker.
