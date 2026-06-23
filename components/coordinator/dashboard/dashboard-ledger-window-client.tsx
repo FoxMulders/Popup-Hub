@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import {
@@ -8,6 +8,11 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import {
+  FloorPlanMatrixSmallScreenWarning,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -36,6 +41,24 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DashboardLedgerWindowContent />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowContent() {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
+
+  if (showDesktopRequired) {
+    return <FloorPlanMatrixSmallScreenWarning />
+  }
+
+  return <DashboardLedgerWindowTable />
+}
+
+function DashboardLedgerWindowTable() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
@@ -43,7 +66,6 @@ export function DashboardLedgerWindowClient() {
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
 
   useEffect(() => {
@@ -68,12 +90,9 @@ export function DashboardLedgerWindowClient() {
     })
   }, [eventId])
 
-  useEffect(() => {
+  const selectionAnnouncement = useMemo(() => {
     const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
+    return row ? `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}` : ''
   }, [rows, selectedBoothId])
 
   useEffect(() => {

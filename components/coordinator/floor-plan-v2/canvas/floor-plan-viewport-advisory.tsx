@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react'
 import { useRouter } from 'next/navigation'
@@ -34,6 +35,12 @@ export interface FloorPlanViewportLayoutContextValue {
 
 const FloorPlanViewportLayoutContext =
   createContext<FloorPlanViewportLayoutContextValue | null>(null)
+
+const subscribeToHydration = () => () => undefined
+
+function useHydrated() {
+  return useSyncExternalStore(subscribeToHydration, () => true, () => false)
+}
 
 const FALLBACK_LAYOUT: FloorPlanViewportLayoutContextValue = {
   tier: 'desktop',
@@ -88,14 +95,10 @@ export function DesktopScreenRequiredOverlay({
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
+  const mounted = useHydrated()
   const [saving, setSaving] = useState(false)
 
   const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!showDesktopRequired) return
@@ -203,6 +206,39 @@ export function DesktopLayoutRequiredBanner({ className }: { className?: string 
         Open this market on a larger screen to design booths in HubGrid or the setup
         wizard layout step.
       </p>
+    </div>
+  )
+}
+
+export function FloorPlanMatrixSmallScreenWarning({
+  className,
+}: {
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex h-full min-h-[100dvh] items-center justify-center bg-stone-950 p-4 text-stone-50 sm:p-6',
+        className
+      )}
+      role="status"
+      data-testid="floor-plan-matrix-small-screen-warning"
+    >
+      <div className="w-full max-w-lg rounded-2xl border border-amber-300/40 bg-stone-900 p-6 shadow-xl sm:p-8">
+        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-300/15 text-amber-200">
+          <Monitor className="h-6 w-6" aria-hidden />
+        </div>
+        <h1 className="font-heading text-xl font-bold tracking-tight text-white sm:text-2xl">
+          The floor plan matrix is not optimized for small screens
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-stone-300">
+          Use a desktop-sized layout to review live booth assignments, vendor categories, and payment
+          status without truncating the matrix.
+        </p>
+        <p className="mt-4 rounded-lg border border-stone-700 bg-stone-800/60 p-4 text-sm text-stone-300">
+          Recommended layout: at least 1024px wide and 550px tall.
+        </p>
+      </div>
     </div>
   )
 }

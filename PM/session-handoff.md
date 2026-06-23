@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio small-screen matrix guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-23bf`; started from `135480c` (`docs: session handoff after deploy (9ba1a34)`). No production deploy in this QA pass.
+- **Persona/surface:** Coordinator · HubGrid / Blueprint Studio standalone booth matrix (`/coordinator/studio/ledger`).
+- **Goal:** Ensure Blueprint Studio dashboard/matrix views either use the existing desktop-size viewport guard or render the regression warning for floor-plan matrix screens below the recommended desktop breaker.
+- **Shipped locally:**
+  - **`floor-plan-viewport-advisory.tsx`:** Added reusable `FloorPlanMatrixSmallScreenWarning` with copy: "The floor plan matrix is not optimized for small screens" and the 1024px x 550px recommendation.
+  - **`dashboard-ledger-window-client.tsx`:** Wrapped the standalone presenter/wall-cast booth matrix in `FloorPlanViewportLayoutProvider`; undersized screens now render the warning instead of mounting the matrix. In-tab HubGrid/Ledger still uses the existing `MarketManagementProvider` + viewport guard, so live canvas -> matrix sync remains unchanged.
+  - **Cleanup:** Removed effect-derived selection announcement state and replaced the portal mount flag with a hydration-safe `useSyncExternalStore` helper to keep lint clean in touched files.
+- **Verify:**
+  - `npx eslint "components/coordinator/dashboard/dashboard-ledger-window-client.tsx" "components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory.tsx"` — PASS.
+  - Temp narrowed `npx tsc --noEmit` for the two touched TSX files — PASS.
+  - Full `npx tsc --noEmit --pretty false` — BLOCKED by pre-existing missing `vitest` module types in `lib/applications/payment-deadline.test.ts` and `lib/applications/payment-reminder-schedule.test.ts`.
+- **Next:** Add/restore Vitest typings dependency or exclude those test files from production typecheck so full-project `tsc` can pass.
+
 ## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
 - **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
 - **Shipped locally:**
