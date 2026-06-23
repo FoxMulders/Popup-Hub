@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio responsive matrix guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-938b`; implementation commit `8e52805` (`fix: guard blueprint studio matrix on small screens`) pushed to origin. No production deploy run in this scoped QA task.
+- **Goal:** Scan HubGrid/Blueprint Studio and dashboard layout views for small-screen defensive handling; add the designated floor-plan matrix warning anywhere the canvas or matrix could render below the recommended desktop breakpoint.
+- **Shipped locally:**
+  - **`floor-plan-viewport-advisory.tsx`:** Shared `FloorPlanMatrixSmallScreenWarning` with copy: "Floor plan matrix is not optimized for small screens" and the 1024px x 550px recommended desktop breaker.
+  - **`market-dashboard-client.tsx`:** Mobile HubGrid entry now renders the warning and a markets link instead of silently redirecting before users see the defensive UI.
+  - **`dashboard-ledger-window-client.tsx`:** Standalone Booth Matrix presenter/wall-cast windows now block pocket-sized viewports and show the shared warning instead of rendering the dense matrix.
+  - **`spatial-layout-editor.tsx`:** Legacy standalone layout editor is wrapped in `FloorPlanViewportLayoutProvider`; `FloorPlanV2` is not mounted on small screens and the shared warning/overlay is shown.
+- **Sync notes:** Desktop HubGrid still uses `MarketManagementProvider` + live `floorPlanStore`; ledger rows remain derived through `useBoothEntities`/matrix rows. No canvas mutation, clearance, category separation, or persistence flow changed.
+- **Verify:** `npx tsc --noEmit` PASS; focused `npx eslint` on the four touched TSX files PASS.
+- **Next:** Review responsive behavior on `/coordinator/studio`, `/coordinator/studio/ledger`, and `/coordinator/events/:id/layout` in browser/device QA before deployment.
+
 ## Active work — Homepage pathway dedupe (local, not deployed)
 - **Goal:** Remove duplicate patron/vendor/organizer pathway cards on the public homepage.
 - **Shipped locally:**
