@@ -1,5 +1,6 @@
 import { LegalDocument } from '@/components/legal/legal-document'
 import { LEGAL_CONTACT_EMAIL } from '@/lib/legal/contacts'
+import { LEGAL_ENTITY_NAME, PLATFORM_OPERATOR_LINE, PRODUCT_BRAND_NAME } from '@/lib/legal/entity'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
@@ -8,7 +9,7 @@ export const metadata = buildPublicMetadata({
   path: '/legal/terms',
 })
 
-const LAST_UPDATED = 'June 22, 2026'
+const LAST_UPDATED = 'June 23, 2026'
 
 export default function TermsOfServicePage() {
   return (
@@ -22,9 +23,10 @@ export default function TermsOfServicePage() {
 
       <h2>1. The Platform</h2>
       <p>
-        Popup Hub provides software that helps shoppers discover markets, vendors apply for booth space,
-        and coordinators publish and manage events. Popup Hub is a technology platform—not the organizer
-        of any in-person market unless explicitly stated in writing.
+        {PLATFORM_OPERATOR_LINE}. {PRODUCT_BRAND_NAME} provides software that helps shoppers discover
+        markets, vendors apply for booth space, and coordinators publish and manage events. Popup Hub is
+        a technology platform—not the organizer of any in-person market unless explicitly stated in
+        writing.
       </p>
 
       <h2>2. Accounts and eligibility</h2>
@@ -70,12 +72,12 @@ export default function TermsOfServicePage() {
       <p>
         The Platform, including all software, source code, object code, algorithms, user interfaces,
         designs, documentation, trade secrets, and the Popup Hub, HubGrid, HubGuard, and Vendor Passport
-        names and branding (collectively, &ldquo;Platform IP&rdquo;), is owned by Popup Hub and its
-        licensors and is protected by Canadian and international copyright, trademark, and other
+        names and branding (collectively, &ldquo;Platform IP&rdquo;), is owned by {LEGAL_ENTITY_NAME} and
+        its licensors and is protected by Canadian and international copyright, trademark, and other
         intellectual property laws.
       </p>
       <p>
-        Subject to these Terms, Popup Hub grants you a limited, non-exclusive, non-transferable,
+        Subject to these Terms, {LEGAL_ENTITY_NAME} grants you a limited, non-exclusive, non-transferable,
         revocable license to access and use the Platform solely for its intended purpose. This license
         does not permit you to copy, modify, distribute, sell, lease, sublicense, reverse engineer,
         decompile, disassemble, or create derivative works from any part of the Platform IP, except

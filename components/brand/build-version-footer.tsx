@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getBuildInfo } from '@/lib/build-info'
+import { COPYRIGHT_NOTICE, PRODUCT_BRAND_NAME } from '@/lib/legal/entity'
 import { LEGAL_LINKS } from '@/lib/legal/links'
 import { SITE_FOOTER_MARKETING_LINKS } from '@/lib/nav/site-footer-links'
 import { cn } from '@/lib/utils'
@@ -54,8 +55,10 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
           </ul>
         </nav>
 
-        <p className="m-0 shrink-0 text-xs text-muted-foreground sm:text-sm">
-          <span>© 2026 Popup Hub. All rights reserved.</span>
+        <p className="m-0 shrink-0 text-right text-xs text-muted-foreground sm:text-sm">
+          <span className="block sm:inline">{PRODUCT_BRAND_NAME}</span>
+          <span className="hidden sm:inline"> · </span>
+          <span className="block sm:inline">{COPYRIGHT_NOTICE}</span>
           <span
             className="sr-only font-mono"
             data-testid="build-version-footer"

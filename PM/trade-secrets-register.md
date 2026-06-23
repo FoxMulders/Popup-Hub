@@ -1,8 +1,8 @@
 # Popup Hub — Trade Secrets Register
 
 **Classification:** Internal — confidential  
-**Last updated:** June 22, 2026  
-**Owner:** Brad M. (pending assignment to Alberta corporation — see `PM/ip-entity-setup-checklist.md`)
+**Last updated:** June 23, 2026  
+**Owner:** Tipsy Fox Creations Inc. (Alberta — incorporation pending; see `PM/ip-entity-setup-checklist.md`)
 
 Trade secret protection requires that these assets remain **non-public**. Do not open-source, publish algorithm details in blog posts, or share source with anyone without NDA + IP assignment.
 
@@ -41,4 +41,4 @@ Trade secret protection requires that these assets remain **non-public**. Do not
 
 - Add new confidential modules to this table when created
 - Review quarterly: confirm modules remain server-side and repo stays private
-- After incorporation: assign register ownership to the corporation in the IP assignment deed
+- After incorporation: confirm register ownership in the IP assignment deed to **Tipsy Fox Creations Inc.**
