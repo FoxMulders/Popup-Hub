@@ -16,11 +16,18 @@ import { Button } from '@/components/ui/button'
 import { COORDINATOR_STUDIO_PATH } from '@/lib/coordinator/coordinator-routes'
 import { useOptionalMarketManagement } from '@/components/coordinator/dashboard/market-management-context'
 import {
+  FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX,
+  FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX,
   isPocketSizedViewport,
   useFloorPlanViewportDimensions,
   type FloorPlanViewportTier,
 } from '@/hooks/use-floor-plan-viewport-tier'
 import { cn } from '@/lib/utils'
+
+export const FLOOR_PLAN_MATRIX_SMALL_SCREEN_TITLE =
+  'Floor plan matrix is not optimized for small screens'
+export const FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE =
+  'Use HubGrid on a desktop-sized layout before editing booths, assignments, or the live allocation ledger.'
 
 export interface FloorPlanViewportLayoutContextValue {
   tier: FloorPlanViewportTier
@@ -88,14 +95,9 @@ export function DesktopScreenRequiredOverlay({
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!showDesktopRequired) return
@@ -124,7 +126,7 @@ export function DesktopScreenRequiredOverlay({
     navigateAway()
   }, [navigateAway, onSaveDraft])
 
-  if (!showDesktopRequired || !mounted) return null
+  if (!showDesktopRequired || typeof document === 'undefined') return null
 
   const overlay = (
     <div
@@ -143,16 +145,17 @@ export function DesktopScreenRequiredOverlay({
           id="pocket-viewport-title"
           className="font-heading text-xl font-bold tracking-tight text-stone-50 sm:text-2xl"
         >
-          Layout needs a larger screen
+          {FLOOR_PLAN_MATRIX_SMALL_SCREEN_TITLE}
         </h2>
 
         <p className="mt-2 text-sm leading-relaxed text-stone-300">
-          The floor plan designer needs a tablet in landscape or a desktop monitor. Your market
-          details are safe — save a draft now and continue layout on a bigger screen.
+          {FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE} Your market details are safe — save a draft
+          now and continue layout on a bigger screen.
         </p>
 
         <div className="mt-4 rounded-lg border border-stone-700 bg-stone-800/50 p-4 text-sm text-stone-400">
-          Minimum viewport: 1024px wide and 550px tall. Phones are blocked; most tablets in
+          Recommended layout desktop size breaker: {FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX}px wide and{' '}
+          {FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX}px tall. Phones are blocked; most tablets in
           landscape work fine.
         </div>
 
@@ -188,23 +191,42 @@ export function DesktopScreenRequiredOverlay({
   return createPortal(overlay, document.body)
 }
 
-/** Banner shown on event hub when redirected from mobile layout route. */
-export function DesktopLayoutRequiredBanner({ className }: { className?: string }) {
+export function FloorPlanMatrixSmallScreenWarning({
+  className,
+  tone = 'light',
+}: {
+  className?: string
+  tone?: 'light' | 'dark'
+}) {
+  const dark = tone === 'dark'
+
   return (
     <div
       className={cn(
-        'rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950',
+        'rounded-2xl border px-5 py-4 text-sm shadow-sm',
+        dark
+          ? 'border-stone-700 bg-stone-900 text-stone-100'
+          : 'border-amber-300/80 bg-amber-50 text-amber-950',
         className
       )}
       role="status"
+      data-testid="floor-plan-matrix-small-screen-warning"
     >
-      <p className="font-semibold">Floor plan layout requires a tablet or desktop</p>
-      <p className="mt-1 text-amber-900/90">
-        Open this market on a larger screen to design booths in HubGrid or the setup
-        wizard layout step.
+      <p className="font-semibold">{FLOOR_PLAN_MATRIX_SMALL_SCREEN_TITLE}</p>
+      <p className={cn('mt-1 leading-relaxed', dark ? 'text-stone-300' : 'text-amber-900/90')}>
+        {FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE}
+      </p>
+      <p className={cn('mt-2 text-xs', dark ? 'text-stone-400' : 'text-amber-900/80')}>
+        Recommended layout desktop size breaker: {FLOOR_PLAN_DESKTOP_MIN_WIDTH_PX}px wide and{' '}
+        {FLOOR_PLAN_DESKTOP_MIN_HEIGHT_PX}px tall.
       </p>
     </div>
   )
+}
+
+/** Banner shown on event hub when redirected from mobile layout route. */
+export function DesktopLayoutRequiredBanner({ className }: { className?: string }) {
+  return <FloorPlanMatrixSmallScreenWarning className={className} />
 }
 
 /** @deprecated Iron dome blocks all sub-desktop viewports — banner is no longer shown. */

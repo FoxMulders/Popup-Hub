@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useRef } from 'react'
 import type { LayoutSnapshotGetter } from './dashboard-saved-layout-toolbar'
 import { Plus } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
@@ -21,11 +21,9 @@ import { DashboardWorkspaceViewProvider } from './dashboard-workspace-view-conte
 import { FloorplanSyncBridge } from './floorplan-sync-bridge'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
-import {
-  DashboardSavedLayoutToolbar,
-  LayoutSnapshotRefProvider,
-} from './dashboard-saved-layout-toolbar'
+import { LayoutSnapshotRefProvider } from './dashboard-saved-layout-toolbar'
 import { CoordinatorVerificationBanner } from '@/components/coordinator/coordinator-verification-banner'
+import { FloorPlanMatrixSmallScreenWarning } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import type { CoordinatorVerificationStatus } from '@/types/database'
 
 export interface MarketDashboardClientProps {
@@ -47,16 +45,16 @@ export interface MarketDashboardClientProps {
   paymentTrustComplete?: boolean
 }
 
-function MobileMarketsRedirect() {
-  const router = useRouter()
-
-  useEffect(() => {
-    router.replace('/coordinator/markets')
-  }, [router])
-
+function MobileStudioLayoutNotice() {
   return (
-    <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-      Loading your markets…
+    <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-4 px-4 py-10 text-center">
+      <FloorPlanMatrixSmallScreenWarning className="text-left" />
+      <Link
+        href="/coordinator/markets"
+        className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}
+      >
+        Review markets instead
+      </Link>
     </div>
   )
 }
@@ -104,7 +102,7 @@ export function MarketDashboardClient({
   }
 
   if (useMobileOverview) {
-    return <MobileMarketsRedirect />
+    return <MobileStudioLayoutNotice />
   }
 
   return (
