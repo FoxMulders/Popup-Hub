@@ -2,7 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Popup Hub backlog implementation (local, not deployed)
+## Active work — Critical bug investigation (quarter-auction wallet safety)
+- **Branch:** `cursor/critical-bug-investigation-1784` @ `45d5120`
+- **Trigger:** Push to `master` @ `c9f6bb8` (session handoff after deploy)
+- **Finding:** Three high-severity quarter-auction bugs still on production master (prior fix branch `b9ba498` was never merged):
+  1. **Paddle purchase refund** — blind `wallet.balance` overwrite on insert failure could corrupt balance when concurrent wallet activity occurred.
+  2. **Bid placement race** — no re-check of `bidding_open` after deduct; failed refunds were not verified.
+  3. **Draw race** — `rollDraw` lacked atomic `bidding_closed → drawing` lock; concurrent draws possible.
+- **Shipped:** Optimistic `adjustWalletBalance` refunds, bidding re-check, draw lock, `scripts/verify-quarter-auction-wallet-safety.ts`.
+- **Verify:** `npx tsx scripts/verify-quarter-auction-wallet-safety.ts` (5/5 PASS); `npm run test:unit` PASS.
+- **Next:** Merge PR; smoke quarter-auction paddle purchase + bid + draw on staging.
+
 - **Goal:** Complete 13-item backlog plan (Waves 1–6): UI polish, vendor discovery, email confirmation, notifications, calendar, PWA, brand pass, passport redesign, UX/CRO doc.
 - **Shipped locally:**
   - **Wave 1:** Hero pathway order (Patrons→Vendors→Organizers), all hero CTAs `marketing-pill--secondary`, mobile footer ~50% reduction, `HubGuardShell` replacing `ShopperShell` on `/check`, callout/tagline polish.
