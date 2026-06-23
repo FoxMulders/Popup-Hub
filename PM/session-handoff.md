@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Payment chase release race fix (branch `cursor/critical-bug-investigation-9003`, not deployed)
+- **Goal:** Prevent vendor payment chase cron from cancelling applications after payment completes.
+- **Bug:** `releaseUnpaidApplication` UPDATE only checked `status != cancelled`; stale cron snapshot could cancel `payment_status = paid` rows.
+- **Fix:** `unpaidReleaseRowGuards()` conditional UPDATE + skip side effects when no row matches; `unpaid-release-guards.test.ts`.
+- **Verify:** `npx tsx lib/applications/unpaid-release-guards.test.ts` PASS.
+- **Next:** Merge PR #32; deploy when user asks.
+
 ## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
 - **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
 - **Shipped locally:**
@@ -1906,7 +1913,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `8daf676` (pushed to `origin/master`)
+- Branch: `cursor/critical-bug-investigation-9003` @ `6af1d41` (payment chase release race fix)
+- `master` @ `8daf676` (pushed to `origin/master`)
 - Last deploy commit: `8daf676` - feat: ship 8 session updates (Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; Discover quarter auction visibility fix; +4 more)
 - Production: https://popuphub.ca - **v1.118.0 build 1** | commit `135480c` (handoff updated 2026-06-23 10:59)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
