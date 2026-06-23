@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation: payment chase TOCTOU (PR open)
+- **Goal:** Prevent vendor payment chase cron from cancelling booths after payment clears.
+- **Branch:** `cursor/critical-bug-investigation-3697` @ `740bf14`
+- **Root cause:** `releaseUnpaidApplication` updated by application id only; stale cron snapshot could cancel after Square/Stripe/offline clearance.
+- **Fix:** Guard UPDATE with `payment_status = payment_required` (digital) or `application_payment_status = PENDING_REVIEW` (offline); skip booth cleanup when no row matches. Test: `lib/applications/payment-chase-release-guards.test.ts`.
+- **Verify:** `npx tsx lib/applications/payment-chase-release-guards.test.ts` PASS.
+- **Next:** Merge PR; deploy when user asks.
+
 ## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
 - **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
 - **Shipped locally:**
