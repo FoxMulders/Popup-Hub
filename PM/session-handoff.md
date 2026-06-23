@@ -1927,9 +1927,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `747dfc8` (pushed to `origin/master`)
-- Last deploy commit: `747dfc8` - feat: ship 9 session updates (CI TypeScript fix; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)
-- Production: https://popuphub.ca - **v1.119.0 build 1** | commit `6d75fb3` (handoff updated 2026-06-23 11:19)
+- Branch: `master` @ `b53d20f` (pushed to `origin/master`)
+- Last deploy commit: `b53d20f` - feat: ship 9 session updates (Popup Hub backlog implementation; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)
+- Production: https://popuphub.ca - **v1.120.0 build 1** | commit `8d6b63b` (handoff updated 2026-06-23 11:27)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2306,7 +2306,7 @@
 
 
 ## Last deploy
-- 2026-06-23 11:19 - Deploy via deploy-popuphub.ps1 - `feat: ship 9 session updates (CI TypeScript fix; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)` (747dfc8)
+- 2026-06-23 11:27 - Deploy via deploy-popuphub.ps1 - `feat: ship 9 session updates (Popup Hub backlog implementation; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)` (b53d20f)
 
 
 ## Goal
