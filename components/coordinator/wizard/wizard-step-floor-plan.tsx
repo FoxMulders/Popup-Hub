@@ -6,6 +6,7 @@ import { FloorPlanV2, type FloorPlanV2Props } from '@/components/coordinator/flo
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
 import {
   DesktopScreenRequiredOverlay,
+  FloorPlanMatrixSmallScreenWarning,
   FloorPlanViewportLayoutProvider,
   useFloorPlanViewportLayout,
 } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
@@ -339,10 +340,7 @@ function WizardStepFloorPlanInner({
     >
       {showDesktopRequired ? (
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-6 text-center">
-          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-            Booth layout needs a tablet or desktop. Save your market now and continue designing on a
-            larger screen.
-          </p>
+          <FloorPlanMatrixSmallScreenWarning className="max-w-md text-left" />
           {onSaveMarket ? (
             <button
               type="button"
@@ -355,28 +353,28 @@ function WizardStepFloorPlanInner({
           ) : null}
         </div>
       ) : (
-      <FloorPlanV2
-        key={layoutGeneration}
-        {...floorPlanProps}
-        eventId={eventId}
-        layoutRooms={layoutRooms}
-        layoutActiveRoomId={layoutActiveRoomId}
-        onLayoutRoomsChange={onLayoutRoomsChange}
-        onAddRoom={onAddRoom}
-        onRenameRoom={onRenameRoom}
-        onDeleteRoom={onDeleteRoom}
-        configuredCategorySlots={configuredCategorySlots}
-        layoutCapacity={layoutCapacity}
-        onPlacedCountChange={handlePlacedCountChange}
-        onSaveMarket={onSaveMarket}
-        saveMarketDisabled={saveMarketDisabled || layoutStepBlocked}
-        saveMarketLoading={saveMarketLoading}
-        saveLayoutRef={saveLayoutRef}
-        layoutSnapshotRef={layoutSnapshotRef}
-        onStoreReady={handleStoreReady}
-        chrome="embedded"
-        className="h-full min-h-0"
-      />
+        <FloorPlanV2
+          key={layoutGeneration}
+          {...floorPlanProps}
+          eventId={eventId}
+          layoutRooms={layoutRooms}
+          layoutActiveRoomId={layoutActiveRoomId}
+          onLayoutRoomsChange={onLayoutRoomsChange}
+          onAddRoom={onAddRoom}
+          onRenameRoom={onRenameRoom}
+          onDeleteRoom={onDeleteRoom}
+          configuredCategorySlots={configuredCategorySlots}
+          layoutCapacity={layoutCapacity}
+          onPlacedCountChange={handlePlacedCountChange}
+          onSaveMarket={onSaveMarket}
+          saveMarketDisabled={saveMarketDisabled || layoutStepBlocked}
+          saveMarketLoading={saveMarketLoading}
+          saveLayoutRef={saveLayoutRef}
+          layoutSnapshotRef={layoutSnapshotRef}
+          onStoreReady={handleStoreReady}
+          chrome="embedded"
+          className="h-full min-h-0"
+        />
       )}
     </LayoutPlannerShell>
   )

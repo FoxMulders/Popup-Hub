@@ -2,6 +2,25 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio small-screen matrix guard QA (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-fc5b`; HEAD `6d75fb3` (`docs: session handoff after deploy (8daf676)`). No commit or production deploy made in this pass.
+- **Goal:** Scan Blueprint Studio layout/dashboard views and ensure pocket-sized viewports either run the responsive desktop breaker or render the regression warning that the floor plan matrix is not optimized for small screens.
+- **Persona/surface:** Coordinator · HubGrid / Allocation Ledger / dual-screen booth matrix.
+- **Shipped locally:**
+  - **`floor-plan-viewport-advisory.tsx`:** Centralized floor-plan matrix small-screen warning copy, desktop breakpoint copy, reusable `FloorPlanMatrixSmallScreenWarning`, and updated the desktop-required overlay/banner to mention the matrix warning.
+  - **`spatial-layout-editor.tsx`:** Wrapped the direct event layout editor in `FloorPlanViewportLayoutProvider`, added `DesktopScreenRequiredOverlay`, and blocks `FloorPlanV2` below the desktop breaker with the matrix warning.
+  - **`dashboard-floor-plan.tsx`:** Added a local defensive canvas guard so the dashboard canvas host shows the matrix warning if reused without its parent mount gate.
+  - **`dashboard-allocation-ledger.tsx`:** Prefixes the allocation ledger with the matrix warning on pocket viewports.
+  - **`dashboard-ledger-window-client.tsx`:** Wraps standalone presenter/wall-cast ledger windows in the viewport provider and prefixes both modes with the warning on small screens.
+  - **`wizard-step-floor-plan.tsx`:** Reused the shared matrix warning in the existing wizard small-screen fallback.
+- **Zero-desync note:** Desktop canvas/ledger data flow is unchanged: canvas gestures still commit through `FloorPlanDocStore`, matrix rows still derive from `useBoothEntities` / `useBoothMatrixRows`, and save-to-server remains separate from live in-session ledger rendering.
+- **Verify:**
+  - `npm ci` completed with locked deps (npm audit reports 3 moderate vulnerabilities; not changed here).
+  - `npm run lint -- components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory.tsx components/coordinator/spatial-layout/spatial-layout-editor.tsx components/coordinator/dashboard/dashboard-allocation-ledger.tsx components/coordinator/dashboard/dashboard-ledger-window-client.tsx components/coordinator/dashboard/dashboard-floor-plan.tsx components/coordinator/wizard/wizard-step-floor-plan.tsx` — PASS, warnings only from existing lint rules/unused code in touched files.
+  - `git diff --check` — PASS.
+  - `npx tsc --noEmit --pretty false` — BLOCKED by pre-existing missing `vitest` types in `lib/applications/payment-deadline.test.ts` and `lib/applications/payment-reminder-schedule.test.ts`.
+- **Next:** If committing/deploying this batch, rerun targeted lint and either install/configure Vitest types or exclude those test files from the no-emit typecheck.
+
 ## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
 - **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
 - **Shipped locally:**

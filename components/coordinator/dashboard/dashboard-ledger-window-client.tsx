@@ -8,6 +8,10 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import {
+  FloorPlanMatrixSmallScreenWarning,
+  FloorPlanViewportLayoutProvider,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -36,6 +40,14 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DashboardLedgerWindowClientInner />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowClientInner() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
@@ -103,6 +115,7 @@ export function DashboardLedgerWindowClient() {
             </p>
           </div>
         </header>
+        <FloorPlanMatrixSmallScreenWarning className="m-3 shrink-0 border-amber-200 bg-amber-100 text-amber-950" />
 
         <p className="sr-only" aria-live="polite" aria-atomic="true">
           {selectionAnnouncement}
@@ -180,6 +193,7 @@ export function DashboardLedgerWindowClient() {
             : 'Waiting for canvas window…'}
         </p>
       </header>
+      <FloorPlanMatrixSmallScreenWarning className="m-3 shrink-0" />
 
       <p className="sr-only" aria-live="polite" aria-atomic="true">
         {selectionAnnouncement}

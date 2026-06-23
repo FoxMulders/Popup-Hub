@@ -20,6 +20,10 @@ import {
   resolveDesignerExitHref,
   resolveDesignerExitLabel,
 } from '@/components/coordinator/command-center-exit-link'
+import {
+  FloorPlanMatrixSmallScreenWarning,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { LayoutSnapshotRefContext } from './dashboard-saved-layout-toolbar'
 import { useMarketManagement } from './market-management-context'
 import { useBoothEntities } from './use-booth-entities'
@@ -45,6 +49,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     eventCategoryNames,
   } = useMarketManagement()
   const selectedEvent = events.find((event) => event.id === selectedEventId)
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
 
   const storeRef = useRef<FloorPlanDocStore | null>(null)
   const layoutSnapshotRef = useContext(LayoutSnapshotRefContext)
@@ -182,6 +187,14 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
             Create market
           </Link>
         </div>
+      </div>
+    )
+  }
+
+  if (showDesktopRequired) {
+    return (
+      <div className="flex h-full min-h-[40vh] items-center justify-center p-6">
+        <FloorPlanMatrixSmallScreenWarning className="max-w-xl" />
       </div>
     )
   }

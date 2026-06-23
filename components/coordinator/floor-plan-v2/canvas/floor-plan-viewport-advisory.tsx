@@ -22,6 +22,15 @@ import {
 } from '@/hooks/use-floor-plan-viewport-tier'
 import { cn } from '@/lib/utils'
 
+export const FLOOR_PLAN_MATRIX_SMALL_SCREEN_TITLE =
+  'Floor plan matrix is not optimized for small screens'
+
+export const FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING =
+  'Use a tablet in landscape or a desktop monitor for the recommended HubGrid layout.'
+
+export const FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY =
+  'Recommended layout breakpoint: at least 1024px wide and 550px tall.'
+
 export interface FloorPlanViewportLayoutContextValue {
   tier: FloorPlanViewportTier
   isMobile: boolean
@@ -147,13 +156,14 @@ export function DesktopScreenRequiredOverlay({
         </h2>
 
         <p className="mt-2 text-sm leading-relaxed text-stone-300">
-          The floor plan designer needs a tablet in landscape or a desktop monitor. Your market
-          details are safe — save a draft now and continue layout on a bigger screen.
+          The floor plan designer needs a tablet in landscape or a desktop monitor. The floor plan
+          matrix is not optimized for small screens. Your market details are safe — save a draft now
+          and continue layout on a bigger screen.
         </p>
 
         <div className="mt-4 rounded-lg border border-stone-700 bg-stone-800/50 p-4 text-sm text-stone-400">
-          Minimum viewport: 1024px wide and 550px tall. Phones are blocked; most tablets in
-          landscape work fine.
+          {FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY} Phones are blocked; most tablets in landscape work
+          fine.
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
@@ -188,6 +198,29 @@ export function DesktopScreenRequiredOverlay({
   return createPortal(overlay, document.body)
 }
 
+export function FloorPlanMatrixSmallScreenWarning({ className }: { className?: string }) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
+
+  if (!showDesktopRequired) return null
+
+  return (
+    <div
+      className={cn(
+        'rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950',
+        className
+      )}
+      role="status"
+      data-testid="floor-plan-matrix-small-screen-warning"
+    >
+      <p className="font-semibold">{FLOOR_PLAN_MATRIX_SMALL_SCREEN_TITLE}</p>
+      <p className="mt-1 text-amber-900/90">{FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING}</p>
+      <p className="mt-1 text-xs font-medium text-amber-900/80">
+        {FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY}
+      </p>
+    </div>
+  )
+}
+
 /** Banner shown on event hub when redirected from mobile layout route. */
 export function DesktopLayoutRequiredBanner({ className }: { className?: string }) {
   return (
@@ -200,8 +233,8 @@ export function DesktopLayoutRequiredBanner({ className }: { className?: string 
     >
       <p className="font-semibold">Floor plan layout requires a tablet or desktop</p>
       <p className="mt-1 text-amber-900/90">
-        Open this market on a larger screen to design booths in HubGrid or the setup
-        wizard layout step.
+        The floor plan matrix is not optimized for small screens. Open this market on a larger
+        screen to design booths in HubGrid or the setup wizard layout step.
       </p>
     </div>
   )
