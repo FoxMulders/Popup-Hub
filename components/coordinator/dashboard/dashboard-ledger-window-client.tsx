@@ -8,6 +8,11 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -36,15 +41,27 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DashboardLedgerWindowClientInner />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowClientInner() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
   const isWallCast = screenMode === 'wall-cast'
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const selectedRow = rows.find((row) => row.id === selectedBoothId)
+  const selectionAnnouncement = selectedRow
+    ? `Selected booth ${selectedRow.label}, ${selectedRow.statusLabel}, vendor ${selectedRow.vendor}`
+    : ''
 
   useEffect(() => {
     document.title = isWallCast
@@ -69,14 +86,6 @@ export function DashboardLedgerWindowClient() {
   }, [eventId])
 
   useEffect(() => {
-    const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
-  }, [rows, selectedBoothId])
-
-  useEffect(() => {
     if (!isWallCast || !selectedRowRef.current) return
     selectedRowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [isWallCast, selectedBoothId, rows.length])
@@ -86,6 +95,30 @@ export function DashboardLedgerWindowClient() {
     postFloorplanSync({ type: 'focus_booth', source: 'ledger', boothId })
     postFloorplanSync({ type: 'selection', source: 'ledger', boothId })
   }, [])
+
+  if (showDesktopRequired) {
+    return (
+      <>
+        <DesktopScreenRequiredOverlay
+          eventId={eventId}
+          title="Floor plan matrix needs a larger screen"
+          description={
+            <>
+              The floor plan matrix is not optimized for small screens. Use a desktop-sized
+              layout viewport to review booth assignments without clipped columns.
+            </>
+          }
+          minimumViewportCopy={
+            <>
+              Recommended desktop layout size: at least 1024px wide and 550px tall.
+            </>
+          }
+          exitLabel="Back to HubGrid"
+        />
+        <DashboardLedgerDesktopFallback isWallCast={isWallCast} />
+      </>
+    )
+  }
 
   if (isWallCast) {
     return (
@@ -247,6 +280,61 @@ export function DashboardLedgerWindowClient() {
             </tbody>
           </table>
         )}
+      </div>
+    </div>
+  )
+}
+
+function DashboardLedgerDesktopFallback({ isWallCast }: { isWallCast: boolean }) {
+  return (
+    <div
+      className={cn(
+        'dashboard-ledger-window flex h-full min-h-0 flex-col',
+        isWallCast
+          ? 'dashboard-ledger-window--wall-cast bg-stone-950 text-stone-50'
+          : 'dashboard-ledger-window--presenter bg-stone-50 text-stone-900'
+      )}
+      data-dual-screen-mode={isWallCast ? 'wall-cast' : 'presenter'}
+    >
+      <header
+        className={cn(
+          'shrink-0 border-b px-4 py-3',
+          isWallCast
+            ? 'border-stone-700 bg-stone-900'
+            : 'border-stone-200 bg-white'
+        )}
+      >
+        <h1
+          className={cn(
+            'font-heading font-semibold tracking-tight',
+            isWallCast ? 'text-xl text-white sm:text-2xl' : 'text-base text-stone-900'
+          )}
+        >
+          Booth Matrix
+        </h1>
+      </header>
+      <div className="flex min-h-0 flex-1 items-center justify-center p-6 text-center">
+        <div
+          className={cn(
+            'max-w-md rounded-2xl border p-5 text-sm shadow-sm',
+            isWallCast
+              ? 'border-stone-700 bg-stone-900 text-stone-300'
+              : 'border-amber-200 bg-amber-50 text-amber-950'
+          )}
+          role="status"
+          data-testid="floor-plan-matrix-desktop-required"
+        >
+          <p className="font-semibold">Floor plan matrix needs a larger screen</p>
+          <p
+            className={cn(
+              'mt-2 leading-relaxed',
+              isWallCast ? 'text-stone-400' : 'text-amber-900/90'
+            )}
+          >
+            The floor plan matrix is not optimized for small screens. Recommended desktop
+            layout size: at least 1024px wide and 550px tall.
+          </p>
+        </div>
       </div>
     </div>
   )

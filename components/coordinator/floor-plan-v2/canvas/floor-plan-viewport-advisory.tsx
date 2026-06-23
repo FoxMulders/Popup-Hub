@@ -77,6 +77,11 @@ export interface DesktopScreenRequiredOverlayProps {
   eventId?: string | null
   onSaveDraft?: () => void | Promise<void>
   saveDraftLoading?: boolean
+  title?: ReactNode
+  description?: ReactNode
+  minimumViewportCopy?: ReactNode
+  exitLabel?: string
+  testId?: string
 }
 
 /** Full-screen gate — layout canvas unmounted on pocket-sized viewports. */
@@ -84,18 +89,28 @@ export function DesktopScreenRequiredOverlay({
   eventId: eventIdProp,
   onSaveDraft,
   saveDraftLoading = false,
+  title = 'Layout needs a larger screen',
+  description = (
+    <>
+      The floor plan designer needs a tablet in landscape or a desktop monitor. Your market
+      details are safe — save a draft now and continue layout on a bigger screen.
+    </>
+  ),
+  minimumViewportCopy = (
+    <>
+      Minimum viewport: 1024px wide and 550px tall. Phones are blocked; most tablets in
+      landscape work fine.
+    </>
+  ),
+  exitLabel = 'Back to event',
+  testId = 'floor-plan-desktop-required',
 }: DesktopScreenRequiredOverlayProps = {}) {
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!showDesktopRequired) return
@@ -124,7 +139,7 @@ export function DesktopScreenRequiredOverlay({
     navigateAway()
   }, [navigateAway, onSaveDraft])
 
-  if (!showDesktopRequired || !mounted) return null
+  if (!showDesktopRequired || typeof document === 'undefined') return null
 
   const overlay = (
     <div
@@ -132,7 +147,7 @@ export function DesktopScreenRequiredOverlay({
       role="dialog"
       aria-modal="true"
       aria-labelledby="pocket-viewport-title"
-      data-testid="floor-plan-desktop-required"
+      data-testid={testId}
     >
       <div className="relative w-full max-w-lg rounded-2xl border border-stone-700 bg-stone-900 p-6 text-left shadow-xl sm:p-8">
         <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-forest/15 text-forest">
@@ -143,17 +158,15 @@ export function DesktopScreenRequiredOverlay({
           id="pocket-viewport-title"
           className="font-heading text-xl font-bold tracking-tight text-stone-50 sm:text-2xl"
         >
-          Layout needs a larger screen
+          {title}
         </h2>
 
         <p className="mt-2 text-sm leading-relaxed text-stone-300">
-          The floor plan designer needs a tablet in landscape or a desktop monitor. Your market
-          details are safe — save a draft now and continue layout on a bigger screen.
+          {description}
         </p>
 
         <div className="mt-4 rounded-lg border border-stone-700 bg-stone-800/50 p-4 text-sm text-stone-400">
-          Minimum viewport: 1024px wide and 550px tall. Phones are blocked; most tablets in
-          landscape work fine.
+          {minimumViewportCopy}
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
@@ -178,7 +191,7 @@ export function DesktopScreenRequiredOverlay({
             className="min-h-12 flex-1 touch-manipulation border-stone-600 text-stone-100 hover:bg-stone-800"
             data-testid="floor-plan-desktop-required-exit"
           >
-            {onSaveDraft ? 'Exit without saving' : 'Back to event'}
+            {onSaveDraft ? 'Exit without saving' : exitLabel}
           </Button>
         </div>
       </div>

@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint Studio responsive guard QA (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-8fdf`; HEAD `c9f6bb8` (`docs: session handoff after deploy (b53d20f)`). Production/build metadata unchanged; no deploy run in this scoped task.
+- **Persona / surface:** Coordinator - HubGrid / Blueprint Studio canvas, standalone spatial layout editor, and dual-screen Allocation Ledger matrix.
+- **Shipped locally:**
+  - **Shared viewport overlay:** `DesktopScreenRequiredOverlay` now accepts custom title/body/minimum-size/exit-copy props while preserving existing HubGrid and wizard defaults.
+  - **Dual-screen matrix guard:** `DashboardLedgerWindowClient` wraps itself in `FloorPlanViewportLayoutProvider`, blocks undersized viewports, and renders the regression copy: "The floor plan matrix is not optimized for small screens" with the recommended 1024px x 550px desktop layout size.
+  - **Standalone spatial editor guard:** `SpatialLayoutEditor` now wraps with the viewport provider, shows the existing desktop-required overlay, and unmounts `FloorPlanV2` behind an inline fallback while the viewport is below the 1024px x 550px breaker.
+  - **Included QA mirrors:** `src/qa_review` spatial and wizard floor-plan mirrors now use the same provider/overlay pattern. Root `qa_review/` archive remains untouched because `tsconfig.json` excludes it.
+- **Zero-desync note:** Main HubGrid canvas/ledger remains covered by the existing `DashboardBootstrapQa` provider; ledger rows still derive from live `MarketManagementProvider`/`useBoothEntities` in-session. The standalone ledger window still receives matrix rows over `FloorplanSyncBridge`/BroadcastChannel; the new small-screen guard only changes rendering on pocket-sized viewports.
+- **Legend adherence:** No clearance/category/door-egress logic changed. The change only gates layout/matrix presentation on undersized screens.
+- **Verify:** `npx eslint "components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory.tsx" "components/coordinator/dashboard/dashboard-ledger-window-client.tsx" "components/coordinator/spatial-layout/spatial-layout-editor.tsx" "src/qa_review/components/coordinator/spatial-layout/spatial-layout-editor_qa.tsx" "src/qa_review/components/coordinator/wizard/wizard-step-floor-plan_qa.tsx"` - PASS; `npx tsc --noEmit --pretty false` - PASS.
+- **Blockers:** None.
+- **Next:** Review PR and run a browser smoke-test at a narrow viewport if desired. No production deploy was run for this QA branch.
+
 ## Active work — Popup Hub backlog implementation (local, not deployed)
 - **Goal:** Complete 13-item backlog plan (Waves 1–6): UI polish, vendor discovery, email confirmation, notifications, calendar, PWA, brand pass, passport redesign, UX/CRO doc.
 - **Shipped locally:**
