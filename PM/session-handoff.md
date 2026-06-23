@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — CI TypeScript fix (local, not deployed)
+- **Goal:** Fix GitHub CI failure on `npx tsc --noEmit` caused by vitest imports in payment-chase unit tests.
+- **Shipped locally:**
+  - **`payment-deadline.test.ts`**, **`payment-reminder-schedule.test.ts`:** Rewritten to `node:assert/strict` + `tsx` pattern (matches repo convention).
+  - **`package.json`:** Both tests wired into `test:unit` script.
+- **Verify:** `npx tsc --noEmit` PASS; `npm run test:unit` PASS; `npm run build` PASS.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
 - **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
 - **Shipped locally:**
@@ -36,7 +44,7 @@
   - **Coordinator UI:** `EventPaymentDeadlineEditor`, `OutstandingPaymentsPanel`, wired `PendingEtransferPanel`, extend +24h/+48h in drawer and panel, overdue banner on event hub
   - **Vendor UI:** payment countdown on applications list, booking progress rail, urgent action banner on dashboard
   - **Tests:** `payment-deadline.test.ts`, `payment-reminder-schedule.test.ts`; script `scripts/verify-payment-chase-release.ts`
-- **Verify:** Apply migrations **124–125**; `npx vitest run lib/applications/payment-deadline.test.ts lib/applications/payment-reminder-schedule.test.ts`; `npx tsc --noEmit`
+- **Verify:** Apply migrations **124–125**; `npx tsx lib/applications/payment-deadline.test.ts`; `npx tsx lib/applications/payment-reminder-schedule.test.ts`; `npm run test:unit`; `npx tsc --noEmit`
 - **Next:** Commit + deploy when user asks
 
 ## Active work — Discover quarter auction visibility fix (local, not deployed)
