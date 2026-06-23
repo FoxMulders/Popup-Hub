@@ -1,7 +1,8 @@
 {
     "name": "popup-hub",
-    "version": "1.115.0",
+    "version": "1.117.0",
     "private": true,
+    "license": "UNLICENSED",
     "scripts": {
         "dev": "next dev",
         "dev:https": "next dev --experimental-https --experimental-https-key ./.cert/localhost-key.pem --experimental-https-cert ./.cert/localhost.pem",

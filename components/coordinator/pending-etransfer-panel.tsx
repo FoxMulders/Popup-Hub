@@ -9,6 +9,10 @@ import { formatDistanceToNow } from 'date-fns'
 import { CheckCircle2, Loader2, Timer } from 'lucide-react'
 import { formatCents } from '@/lib/square/client'
 import { formatEtransferExpiryCountdown } from '@/lib/applications/etransfer-reference'
+import {
+  formatPaymentDueAtDisplay,
+  paymentDueCountdownLabel,
+} from '@/lib/applications/payment-deadline'
 import type { BoothApplication } from '@/types/database'
 
 export type PendingEtransferApplication = BoothApplication & {
@@ -79,8 +83,13 @@ export function PendingEtransferPanel({ applications: initial }: PendingEtransfe
           const event = Array.isArray(app.event) ? app.event[0] : app.event
           const category = Array.isArray(app.category) ? app.category[0] : app.category
           const priceCents = app.booth_price_cents ?? 0
-          const countdown = app.etransfer_expires_at
-            ? formatEtransferExpiryCountdown(app.etransfer_expires_at)
+          const countdown = app.payment_due_at
+            ? paymentDueCountdownLabel(app.payment_due_at)
+            : app.etransfer_expires_at
+              ? formatEtransferExpiryCountdown(app.etransfer_expires_at)
+              : null
+          const dueDisplay = app.payment_due_at
+            ? formatPaymentDueAtDisplay(app.payment_due_at)
             : null
           const busy = isPending && pendingId === app.id
 
@@ -120,6 +129,7 @@ export function PendingEtransferPanel({ applications: initial }: PendingEtransfe
                     <p className="inline-flex items-center gap-1 text-[11px] font-medium text-terracotta-700">
                       <Timer className="h-3 w-3" aria-hidden />
                       {countdown}
+                      {dueDisplay ? ` · due ${dueDisplay}` : null}
                     </p>
                   ) : null}
                   <p className="text-[10px] text-muted-foreground">

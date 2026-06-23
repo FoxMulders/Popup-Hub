@@ -32,6 +32,8 @@ const VENDOR_TYPES = new Set<NotificationType>([
   'vendor_access_approved',
   'vendor_access_rejected',
   'payment_received',
+  'payment_due_reminder',
+  'payment_expired',
   'coordinator_announcement',
   'nearby_market_published',
   'hubguard_review_response',
@@ -46,6 +48,7 @@ const COORDINATOR_TYPES = new Set<NotificationType>([
   'coordinator_announcement',
   'event_cancelled',
   'payment_received',
+  'payment_overdue_released',
   'hubguard_vendor_review',
   ...PLATFORM_ADMIN_TYPES,
 ])

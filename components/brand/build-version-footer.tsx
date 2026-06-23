@@ -55,7 +55,7 @@ export function BuildVersionFooter({ className }: BuildVersionFooterProps) {
         </nav>
 
         <p className="m-0 shrink-0 text-xs text-muted-foreground sm:text-sm">
-          <span>Popup Hub</span>
+          <span>© 2026 Popup Hub. All rights reserved.</span>
           <span
             className="sr-only font-mono"
             data-testid="build-version-footer"

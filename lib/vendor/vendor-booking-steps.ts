@@ -3,6 +3,10 @@ import {
   needsDigitalCheckout,
   needsOfflineCoordinatorReview,
 } from '@/lib/applications/payment-fields'
+import {
+  formatPaymentDueAtDisplay,
+  paymentDueCountdownLabel,
+} from '@/lib/applications/payment-deadline'
 import type { ApplicationStatus, BoothApplication } from '@/types/database'
 
 export type VendorBookingStepKey = 'apply' | 'review' | 'booth' | 'payment'
@@ -96,9 +100,13 @@ export function buildVendorBookingSteps(app: BoothApplication): VendorBookingSte
     paymentDetail = paid ? 'Booth fee confirmed.' : 'No booth fee required for this market.'
   } else if (needsPay) {
     paymentState = 'current'
+    const dueSuffix =
+      app.payment_due_at != null
+        ? ` Pay by ${formatPaymentDueAtDisplay(app.payment_due_at)} (${paymentDueCountdownLabel(app.payment_due_at)}).`
+        : ''
     paymentDetail = needsDigitalCheckout(app)
-      ? 'Complete card payment to secure your booth.'
-      : 'Send e-transfer or confirm offline payment with the organizer.'
+      ? `Complete card payment to secure your booth.${dueSuffix}`
+      : `Send e-transfer or confirm offline payment with the organizer.${dueSuffix}`
   } else if (status === 'approved' || status === 'pending_insurance') {
     paymentState = hasBooth ? 'current' : 'upcoming'
   }

@@ -19,6 +19,7 @@ import { VendorMeetTheMakerPanel } from '@/components/market-feed/vendor-meet-th
 import { PassportStoriesManager } from '@/components/passport/passport-stories-manager'
 import { LiveAuctionBanner } from '@/components/auction/live-auction-banner'
 import { summarizeEventAuctions } from '@/lib/auction/event-auctions'
+import { isApplicationAwaitingBoothPayment } from '@/lib/applications/payment-fields'
 import type { Auction, BoothApplication } from '@/types/database'
 
 async function ApplicationsSection({ userId }: { userId: string }) {
@@ -68,7 +69,7 @@ export default async function VendorDashboard() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: passport }, { data: profile }, { count: approvedCount }, { count: pendingCount }, { count: pendingInsuranceCount }, { data: approvedApps }, { data: wallet }, { data: paymentDueApps }] =
+  const [{ data: passport }, { data: profile }, { count: approvedCount }, { count: pendingCount }, { count: pendingInsuranceCount }, { data: approvedApps }, { data: wallet }, { data: unpaidPaymentApps }] =
     await Promise.all([
       supabase
         .from('vendor_passports')
@@ -99,13 +100,25 @@ export default async function VendorDashboard() {
       supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
       supabase
         .from('booth_applications')
-        .select('id')
+        .select('id, status, payment_status, payment_method, application_payment_status, payment_due_at')
         .eq('vendor_id', user.id)
-        .eq('status', 'approved')
-        .eq('payment_status', 'payment_required'),
+        .in('status', ['approved', 'pending_insurance', 'pending']),
     ])
 
-  const paymentDueCount = paymentDueApps?.length ?? 0
+  const awaitingPaymentApps = (unpaidPaymentApps ?? []).filter((app) =>
+    isApplicationAwaitingBoothPayment(app)
+  )
+  const paymentDueCount = awaitingPaymentApps.length
+  const nowMs = Date.now()
+  const urgentPaymentCount = awaitingPaymentApps.filter(
+    (app) =>
+      app.payment_due_at != null &&
+      new Date(app.payment_due_at).getTime() - nowMs <= 24 * 60 * 60 * 1000
+  ).length
+  const nearestPaymentDueAt = awaitingPaymentApps
+    .map((app) => app.payment_due_at)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0] ?? null
   const awaitingReviewCount = (pendingCount ?? 0) + (pendingInsuranceCount ?? 0)
   const passportMeter = vendorPassportCompletionMeter(passport, profile?.full_name ?? null)
   const statusNotifications = await fetchUnreadVendorApplicationStatusNotifications(
@@ -153,6 +166,8 @@ export default async function VendorDashboard() {
       <VendorActionRequiredBanner
         pendingInsuranceCount={pendingInsuranceCount ?? 0}
         paymentDueCount={paymentDueCount}
+        nearestPaymentDueAt={nearestPaymentDueAt}
+        urgentPaymentCount={urgentPaymentCount}
       />
 
       <VendorApplicationStatusBanner notifications={statusNotifications} />

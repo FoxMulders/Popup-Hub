@@ -80,6 +80,9 @@ export type NotificationType =
   | 'coordinator_market_published'
   | 'hubguard_vendor_review'
   | 'hubguard_review_response'
+  | 'payment_due_reminder'
+  | 'payment_expired'
+  | 'payment_overdue_released'
 
 export type VendorAccessRequestStatus = 'pending' | 'approved' | 'rejected'
 
@@ -304,6 +307,7 @@ export interface Event {
   booth_contract_clauses?: BoothContractClause[]
   booth_contract_pdf_url?: string | null
   booth_contract_updated_at?: string | null
+  payment_due_at?: string | null
   coordinator?: Profile
   category_limits?: EventCategoryLimit[]
   event_days?: EventDay[]
@@ -361,6 +365,9 @@ export interface BoothApplication {
   application_payment_status: ApplicationPaymentStatus | null
   etransfer_reference_code: string | null
   etransfer_expires_at: string | null
+  payment_due_at: string | null
+  last_payment_reminder_at: string | null
+  payment_reminder_stage: number
   waitlist_position: number | null
   has_category_overflow: boolean
   overflow_category_names: string[]

@@ -19,7 +19,12 @@ import {
   isApplicationPaid,
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
+  isApplicationAwaitingBoothPayment,
 } from '@/lib/applications/payment-fields'
+import {
+  formatPaymentDueAtDisplay,
+  paymentDueCountdownLabel,
+} from '@/lib/applications/payment-deadline'
 import { isPassportQrEligible } from '@/lib/passport/passport-token'
 import type { BoothApplication, EventCancellationReason, PaymentStatus } from '@/types/database'
 import { CancellationDetails } from '@/components/vendor/cancellation-details'
@@ -59,6 +64,9 @@ function canSendFollowUp(app: BoothApplication): boolean {
 
 function followUpHint(app: BoothApplication): string {
   if (app.status === 'pending') {
+    if (isApplicationAwaitingBoothPayment(app)) {
+      return 'Awaiting your offline payment — organizer must confirm receipt'
+    }
     return 'Waiting on organizer review'
   }
   if (app.status === 'waitlisted') {
@@ -74,6 +82,11 @@ function followUpHint(app: BoothApplication): string {
     return 'Send e-transfer or confirm with organizer'
   }
   return VENDOR_APPLICATION_STATUS_UI[app.status]?.nextStep ?? ''
+}
+
+function paymentDueHint(app: BoothApplication): string | null {
+  if (!isApplicationAwaitingBoothPayment(app) || !app.payment_due_at) return null
+  return `Pay by ${formatPaymentDueAtDisplay(app.payment_due_at)} (${paymentDueCountdownLabel(app.payment_due_at)})`
 }
 
 export function VendorApplicationsList({
@@ -312,6 +325,11 @@ export function VendorApplicationsList({
                     {!eventCancelled ? (
                       <p className="text-xs leading-relaxed text-muted-foreground">
                         {followUpHint(app)}
+                        {paymentDueHint(app) ? (
+                          <span className="mt-1 block font-medium text-harvest-800">
+                            {paymentDueHint(app)}
+                          </span>
+                        ) : null}
                       </p>
                     ) : null}
 

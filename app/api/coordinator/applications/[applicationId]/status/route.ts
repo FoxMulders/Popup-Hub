@@ -6,6 +6,7 @@ import {
   ETRANSFER_PAYMENT_GATE_MESSAGE,
   resolvePaymentFieldsForPaidApplication,
 } from '@/lib/applications/payment-fields'
+import { resolvePaymentDueAt } from '@/lib/applications/payment-deadline'
 import {
   buildAuditStateFromUpdates,
   extractClientIp,
@@ -80,6 +81,8 @@ export async function POST(
         name,
         coordinator_id,
         status,
+        start_at,
+        payment_due_at,
         market_insurance_required,
         listing_type,
         booth_price_cents,
@@ -217,6 +220,16 @@ export async function POST(
         updates.payment_method = paymentFields.payment_method
         updates.payment_status = paymentFields.payment_status
         updates.application_payment_status = paymentFields.application_payment_status
+        if (paymentFields.payment_status === 'payment_required' && eventRow.start_at) {
+          const dueAt = resolvePaymentDueAt({
+            anchorAt: updates.approved_at ?? new Date().toISOString(),
+            eventStartAt: eventRow.start_at,
+            eventPaymentDueAt: (eventRow as { payment_due_at?: string | null }).payment_due_at,
+          })
+          updates.payment_due_at = dueAt
+          updates.payment_reminder_stage = 1
+          updates.last_payment_reminder_at = new Date().toISOString()
+        }
       }
     }
   }
@@ -262,6 +275,7 @@ export async function POST(
       paymentStatus: finalApplication?.payment_status ?? updates.payment_status,
       applicationPaymentStatus:
         finalApplication?.application_payment_status ?? updates.application_payment_status,
+      paymentDueAt: finalApplication?.payment_due_at ?? updates.payment_due_at ?? null,
     })
   }
 

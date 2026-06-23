@@ -16,6 +16,7 @@ import {
   coordinatorPaymentCollectionBlockReason,
 } from '@/lib/coordinator/verification'
 import { requireVenueVerified } from '@/lib/venues/require-venue-verified'
+import { PAYMENT_CHASE_CLEARED_FIELDS } from '@/lib/applications/payment-deadline'
 
 const COMPLETED_PAYMENT_STATUSES = new Set(['COMPLETED', 'APPROVED'])
 
@@ -190,7 +191,7 @@ export async function POST(request: Request) {
   if (checkout.baseBoothCents <= 0) {
     await supabase
       .from('booth_applications')
-      .update({ payment_status: 'paid', payment_processing_at: null })
+      .update({ payment_status: 'paid', payment_processing_at: null, ...PAYMENT_CHASE_CLEARED_FIELDS })
       .eq('id', applicationId)
       .eq('payment_status', 'payment_required')
     return NextResponse.json({ paymentId: null, free: true })

@@ -26,6 +26,10 @@ import { fetchCoordinatorEventApplications } from '@/lib/applications/fetch-coor
 import { buildCategoryNameMap } from '@/lib/applications/display-categories'
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import { EventHubLayoutNotice } from '@/components/coordinator/event-hub-layout-notice'
+import { EventPaymentDeadlineEditor } from '@/components/coordinator/event-payment-deadline-editor'
+import { OutstandingPaymentsPanel } from '@/components/coordinator/outstanding-payments-panel'
+import { PendingEtransferPanel } from '@/components/coordinator/pending-etransfer-panel'
+import { fetchEventOutstandingPayments } from '@/lib/applications/fetch-event-outstanding-payments'
 import { Suspense } from 'react'
 import type { Event, EventCancellationReason, EventScheduleItem } from '@/types/database'
 
@@ -140,6 +144,19 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
     : { data: [] }
 
   const categoryCapacityRows = buildCategoryCapacityRows(sortedCategoryLimits, applications ?? [])
+
+  const outstandingPayments = !isCancelled
+    ? await fetchEventOutstandingPayments(
+        supabase,
+        id,
+        sortedCategoryLimits,
+        {
+          listing_type: event.listing_type,
+          booth_price_cents: event.booth_price_cents,
+          multi_table_discount_percent: event.multi_table_discount_percent,
+        }
+      )
+    : { digital: [], offline: [], overdueCount: 0 }
 
   const { venues: savedVenues } = await listCoordinatorSavedVenues(supabase, event.coordinator_id)
   const venueAlreadySaved = savedVenues.some(
@@ -272,6 +289,25 @@ export default async function CoordinatorEventDetailPage({ params }: Props) {
         {categoryCapacityRows.length > 0 && (
           <CategoryCapacityMatrix rows={categoryCapacityRows} applications={applications ?? []} />
         )}
+
+        {!isCancelled ? (
+          <EventPaymentDeadlineEditor event={event as Event} disabled={isCancelled} />
+        ) : null}
+
+        {!isCancelled && outstandingPayments.overdueCount > 0 ? (
+          <div className="mt-4 rounded-lg border border-terracotta-200 bg-terracotta-50/80 px-4 py-3 text-sm text-terracotta-900">
+            <strong>{outstandingPayments.overdueCount}</strong> vendor
+            {outstandingPayments.overdueCount === 1 ? '' : 's'} past the payment deadline — booths
+            may auto-release on the next chase run unless you extend or confirm payment.
+          </div>
+        ) : null}
+
+        {!isCancelled ? (
+          <div className="mt-4 space-y-4">
+            <OutstandingPaymentsPanel applications={outstandingPayments.digital} />
+            <PendingEtransferPanel applications={outstandingPayments.offline} />
+          </div>
+        ) : null}
 
         {!isCancelled ? (
           <div className="mt-4">

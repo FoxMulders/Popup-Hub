@@ -1,20 +1,34 @@
 import Link from 'next/link'
-import { FileWarning, ShieldCheck } from 'lucide-react'
+import { FileWarning, ShieldCheck, Timer } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import {
+  formatPaymentDueAtDisplay,
+  paymentDueCountdownLabel,
+} from '@/lib/applications/payment-deadline'
 
 interface VendorActionRequiredBannerProps {
   pendingInsuranceCount: number
   paymentDueCount: number
+  /** Nearest payment deadline among unpaid applications (ISO). */
+  nearestPaymentDueAt?: string | null
+  urgentPaymentCount?: number
   className?: string
 }
 
 export function VendorActionRequiredBanner({
   pendingInsuranceCount,
   paymentDueCount,
+  nearestPaymentDueAt,
+  urgentPaymentCount = 0,
   className,
 }: VendorActionRequiredBannerProps) {
   if (pendingInsuranceCount === 0 && paymentDueCount === 0) return null
+
+  const paymentUrgent =
+    urgentPaymentCount > 0 ||
+    (nearestPaymentDueAt != null &&
+      new Date(nearestPaymentDueAt).getTime() - Date.now() <= 24 * 60 * 60 * 1000)
 
   return (
     <section
@@ -53,14 +67,30 @@ export function VendorActionRequiredBanner({
       ) : null}
 
       {paymentDueCount > 0 ? (
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-harvest-200/60 bg-white/80 px-3 py-3">
+        <div
+          className={cn(
+            'flex flex-wrap items-start justify-between gap-3 rounded-lg border px-3 py-3',
+            paymentUrgent
+              ? 'border-terracotta-300/80 bg-terracotta-50/80'
+              : 'border-harvest-200/60 bg-white/80'
+          )}
+        >
           <div className="min-w-0">
             <p className="font-medium text-foreground">
               {paymentDueCount} booth payment{paymentDueCount === 1 ? '' : 's'} due
             </p>
             <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-              Complete checkout to hold your booth — organizers see payment status in real time.
+              {paymentUrgent
+                ? 'Your payment deadline is approaching — unpaid booths may be released to the waitlist.'
+                : 'Complete checkout to hold your booth — organizers see payment status in real time.'}
             </p>
+            {nearestPaymentDueAt ? (
+              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-foreground">
+                <Timer className="h-3.5 w-3.5 text-harvest-700" aria-hidden />
+                {paymentDueCountdownLabel(nearestPaymentDueAt)} · due{' '}
+                {formatPaymentDueAtDisplay(nearestPaymentDueAt)}
+              </p>
+            ) : null}
           </div>
           <Link href="/vendor/applications" className={buttonVariants({ size: 'sm' })}>
             Pay now

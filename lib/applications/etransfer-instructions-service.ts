@@ -28,13 +28,12 @@ export async function dispatchEtransferInstructions(
   params: DispatchEtransferInstructionsParams
 ): Promise<{ ok: boolean; referenceCode?: string; expiresAt?: string; error?: string }> {
   const referenceCode = params.referenceCode?.trim() || generateEtransferReferenceCode()
-  const expiresAt = params.expiresAt ?? etransferHoldExpiresAt()
 
   const [{ data: application }, { data: event }, { data: vendorProfile }, { data: passport }] =
     await Promise.all([
       supabase
         .from('booth_applications')
-        .select('id, etransfer_reference_code, etransfer_expires_at')
+        .select('id, etransfer_reference_code, etransfer_expires_at, payment_due_at')
         .eq('id', params.applicationId)
         .single(),
       supabase
@@ -55,6 +54,12 @@ export async function dispatchEtransferInstructions(
   if (!application || !event) {
     return { ok: false, error: 'Application or event not found' }
   }
+
+  const expiresAt =
+    params.expiresAt ??
+    application.payment_due_at ??
+    application.etransfer_expires_at ??
+    etransferHoldExpiresAt()
 
   const storedReference = application.etransfer_reference_code ?? referenceCode
   const storedExpiry = application.etransfer_expires_at ?? expiresAt

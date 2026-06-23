@@ -36,11 +36,16 @@ import { formatCategoryOverflowLabel } from '@/lib/vendor/application-category-m
 import {
   ETRANSFER_PAYMENT_GATE_MESSAGE,
   formatApplicationPaymentLabel,
+  isApplicationAwaitingBoothPayment,
   isApplicationPaid,
   isEtransferAwaitingPayment,
   needsEtransferCoordinatorReview,
   needsSquareCheckout,
 } from '@/lib/applications/payment-fields'
+import {
+  formatPaymentDueAtDisplay,
+  paymentDueCountdownLabel,
+} from '@/lib/applications/payment-deadline'
 import { formatAttendanceDayLabels } from '@/lib/events/event-schedule-days'
 import { marketStatusBadge } from '@/lib/theme/market'
 import type { BoothApplication, EventCategoryLimit } from '@/types/database'
@@ -56,6 +61,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { FacebookIcon } from '@/components/icons/facebook-icon'
 import { TikTokIcon } from '@/components/icons/tiktok-icon'
 
@@ -117,6 +123,7 @@ export function VendorReviewDrawer({
   const [declineOpen, setDeclineOpen] = useState(false)
   const [declineMessage, setDeclineMessage] = useState('')
   const [, startNotesTransition] = useTransition()
+  const [extendPending, setExtendPending] = useState(false)
 
   useEffect(() => {
     if (!open || !app) {
@@ -224,6 +231,33 @@ export function VendorReviewDrawer({
       }
     })
   }
+
+  function extendPaymentDeadline(hours: 24 | 48) {
+    if (!app) return
+    setExtendPending(true)
+    startNotesTransition(async () => {
+      try {
+        const res = await fetch(
+          `/api/coordinator/applications/${app.id}/extend-payment-deadline`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hours }),
+          }
+        )
+        const data = (await res.json()) as { error?: string }
+        if (!res.ok) {
+          toast.error(data.error ?? 'Could not extend deadline')
+          return
+        }
+        toast.success(`Payment deadline extended ${hours} hours`)
+      } finally {
+        setExtendPending(false)
+      }
+    })
+  }
+
+  const awaitingPayment = isApplicationAwaitingBoothPayment(app)
 
   function handleDeclineConfirm() {
     onDecline(declineMessage.trim())
@@ -553,6 +587,38 @@ export function VendorReviewDrawer({
             </div>
 
             <div className="border-t bg-white px-6 py-4">
+              {!eventCancelled && awaitingPayment && app.payment_due_at ? (
+                <div className="mb-3 rounded-lg border border-harvest-200 bg-harvest-50 px-3 py-2 text-sm text-harvest-950">
+                  <p className="font-medium">
+                    Payment due {formatPaymentDueAtDisplay(app.payment_due_at)} (
+                    {paymentDueCountdownLabel(app.payment_due_at)})
+                  </p>
+                  <p className="mt-1 text-xs text-harvest-900/80">
+                    Unpaid booths auto-release when this deadline passes. Extend if you are chasing
+                    payment manually.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={extendPending || loading}
+                      onClick={() => extendPaymentDeadline(24)}
+                    >
+                      Extend +24h
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={extendPending || loading}
+                      onClick={() => extendPaymentDeadline(48)}
+                    >
+                      Extend +48h
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
               {etransferGateActive ? (
                 <div
                   className="mb-3 flex items-start gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900"

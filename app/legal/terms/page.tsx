@@ -1,4 +1,5 @@
 import { LegalDocument } from '@/components/legal/legal-document'
+import { LEGAL_CONTACT_EMAIL } from '@/lib/legal/contacts'
 import { buildPublicMetadata } from '@/lib/seo/public-metadata'
 
 export const metadata = buildPublicMetadata({
@@ -7,7 +8,7 @@ export const metadata = buildPublicMetadata({
   path: '/legal/terms',
 })
 
-const LAST_UPDATED = 'May 22, 2026'
+const LAST_UPDATED = 'June 22, 2026'
 
 export default function TermsOfServicePage() {
   return (
@@ -42,6 +43,12 @@ export default function TermsOfServicePage() {
         payment partners such as Square. Pricing displayed at checkout is authoritative. Refunds, when
         applicable, follow the coordinator&apos;s published policy and applicable payment-network rules.
       </p>
+      <p>
+        Coordinators and vendors must accurately record booth payments within the Platform dashboard.
+        Intentionally circumventing platform fee structures—such as failing to mark vendors as paid to
+        avoid applicable processing—violates these Terms and may result in reduced platform visibility,
+        account suspension, or other enforcement action.
+      </p>
 
       <h2>4. No partnership</h2>
       <p>
@@ -59,7 +66,66 @@ export default function TermsOfServicePage() {
         material, and not to interfere with Platform security or other users.
       </p>
 
-      <h2>6. Limitation of liability</h2>
+      <h2>6. Platform intellectual property</h2>
+      <p>
+        The Platform, including all software, source code, object code, algorithms, user interfaces,
+        designs, documentation, trade secrets, and the Popup Hub, HubGrid, HubGuard, and Vendor Passport
+        names and branding (collectively, &ldquo;Platform IP&rdquo;), is owned by Popup Hub and its
+        licensors and is protected by Canadian and international copyright, trademark, and other
+        intellectual property laws.
+      </p>
+      <p>
+        Subject to these Terms, Popup Hub grants you a limited, non-exclusive, non-transferable,
+        revocable license to access and use the Platform solely for its intended purpose. This license
+        does not permit you to copy, modify, distribute, sell, lease, sublicense, reverse engineer,
+        decompile, disassemble, or create derivative works from any part of the Platform IP, except
+        where applicable law expressly permits such activity and cannot be waived by contract.
+      </p>
+
+      <h2>7. Prohibited uses</h2>
+      <p>You agree not to, and not to assist others to:</p>
+      <ul>
+        <li>
+          Scrape, crawl, harvest, or bulk-extract data from the Platform using automated means (bots,
+          scripts, or similar tools) without our prior written consent.
+        </li>
+        <li>
+          Reverse engineer, decompile, or attempt to derive the source code, underlying algorithms, or
+          non-public APIs of the Platform.
+        </li>
+        <li>
+          Circumvent access controls, authentication, rate limits, or security measures.
+        </li>
+        <li>
+          Use Platform data, listings, or APIs to build or operate a competing marketplace or coordinator
+          service without authorization.
+        </li>
+        <li>
+          Remove, obscure, or alter copyright, trademark, or proprietary notices on the Platform.
+        </li>
+      </ul>
+
+      <h2>8. Copyright and infringement reports</h2>
+      <p>
+        If you believe content on the Platform infringes your copyright or other intellectual property
+        rights, send a written notice to{' '}
+        <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a> including:
+      </p>
+      <ul>
+        <li>Identification of the copyrighted work or rights claimed to be infringed.</li>
+        <li>Identification of the material on the Platform and its location (URL or description).</li>
+        <li>Your contact information and a statement of good-faith belief that use is not authorized.</li>
+        <li>
+          A statement, under penalty of perjury where applicable, that the information in the notice is
+          accurate and that you are authorized to act on behalf of the rights holder.
+        </li>
+      </ul>
+      <p>
+        We may remove or disable access to reported material and terminate repeat infringers where
+        appropriate under the Copyright Act (Canada) and these Terms.
+      </p>
+
+      <h2>9. Limitation of liability</h2>
       <p>
         To the fullest extent permitted by applicable law, Popup Hub and its officers, directors,
         employees, and affiliates will not be liable for any indirect, incidental, special, consequential,
@@ -80,14 +146,14 @@ export default function TermsOfServicePage() {
         limited to the minimum extent required by law.
       </p>
 
-      <h2>7. Disclaimers</h2>
+      <h2>10. Disclaimers</h2>
       <p>
         The Platform is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. Popup Hub
         does not guarantee uninterrupted service, error-free listings, or the quality, safety, or legality
         of any coordinator-run event or vendor offering.
       </p>
 
-      <h2>8. Governing law and jurisdiction</h2>
+      <h2>11. Governing law and jurisdiction</h2>
       <p>
         These Terms are governed by the laws of the Province of Alberta and the applicable federal laws
         of Canada, without regard to conflict-of-law principles.
@@ -98,17 +164,24 @@ export default function TermsOfServicePage() {
         or territory require a different forum.
       </p>
 
-      <h2>9. Changes</h2>
+      <h2>12. Survival</h2>
+      <p>
+        Sections relating to Platform intellectual property, prohibited uses, copyright reports, limitation
+        of liability, disclaimers, governing law, and survival itself continue in effect after your
+        account is closed or you stop using the Platform.
+      </p>
+
+      <h2>13. Changes</h2>
       <p>
         We may update these Terms from time to time. Material changes will be posted on this page with
         an updated &ldquo;Last updated&rdquo; date. Continued use after changes become effective constitutes
         acceptance of the revised Terms.
       </p>
 
-      <h2>10. Contact</h2>
+      <h2>14. Contact</h2>
       <p>
         For contractual notices or legal inquiries, contact{' '}
-        <a href="mailto:thetipsyfoxyeg@gmail.com">thetipsyfoxyeg@gmail.com</a>.
+        <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a>.
       </p>
     </LegalDocument>
   )

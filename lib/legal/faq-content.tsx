@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { LEGAL_CONTACT_EMAIL } from '@/lib/legal/contacts';
 
 export interface FaqItem {
   question: string;
@@ -135,6 +136,6 @@ export const PLATFORM_FAQ: FaqItem[] = [
   {
     question: 'How do I contact support?',
     answer:
-      'For policy or legal questions, email thetipsyfoxyeg@gmail.com. For product help, include your account email and a short description of the issue when contacting us.',
+      `For policy or legal questions, email ${LEGAL_CONTACT_EMAIL}. For product help, include your account email and a short description of the issue when contacting us.`,
   },
 ];

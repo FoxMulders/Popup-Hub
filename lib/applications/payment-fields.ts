@@ -98,6 +98,24 @@ export function isOfflineAwaitingPayment(
   )
 }
 
+/** True when booth fee is outstanding and the payment chase cron should act. */
+export function isApplicationAwaitingBoothPayment(
+  app: Pick<
+    BoothApplication,
+    'status' | 'payment_status' | 'payment_method' | 'application_payment_status'
+  >
+): boolean {
+  if (needsDigitalCheckout(app)) return true
+  if (
+    app.status === 'pending' &&
+    isOfflinePaymentMethod(app.payment_method) &&
+    app.application_payment_status === 'PENDING_REVIEW'
+  ) {
+    return true
+  }
+  return needsOfflineCoordinatorReview(app)
+}
+
 /** @deprecated Use isOfflineAwaitingPayment */
 export const isEtransferAwaitingPayment = isOfflineAwaitingPayment
 

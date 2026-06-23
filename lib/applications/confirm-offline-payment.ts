@@ -8,6 +8,7 @@ import {
 import { extractNestedPassport } from '@/lib/applications/extract-nested-passport'
 import { isOfflinePaymentMethod } from '@/lib/applications/payment-fields'
 import { resolvePostApprovalStatus } from '@/lib/applications/resolve-approval-status'
+import { PAYMENT_CHASE_CLEARED_FIELDS } from '@/lib/applications/payment-deadline'
 import { resolveVendorDisplayName } from '@/lib/email/application-received'
 import {
   buildEtransferConfirmedContext,
@@ -165,6 +166,7 @@ export async function confirmOfflinePayment(
     application_payment_status: 'COMPLETED',
     payment_status: 'paid',
     status: nextStatus,
+    ...PAYMENT_CHASE_CLEARED_FIELDS,
   }
 
   if (shouldAdvanceStatus) {

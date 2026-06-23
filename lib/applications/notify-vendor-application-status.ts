@@ -5,6 +5,8 @@ import type {
   NotificationType,
   PaymentStatus,
 } from '@/types/database'
+import { sendPaymentDueReminderEmail } from '@/lib/email/payment-due-reminder'
+import { dispatchNativePushToUsers } from '@/lib/mobile/push-dispatch'
 import { sendSms } from '@/lib/twilio'
 
 export type NotifyVendorApplicationStatusParams = {
@@ -19,6 +21,11 @@ export type NotifyVendorApplicationStatusParams = {
   applicationPaymentStatus?: ApplicationPaymentStatus | null
   /** When false, skips Twilio SMS (in-app notification still sent). Default true. */
   sendSms?: boolean
+  /** Vendor email for payment-due transactional email. */
+  vendorEmail?: string | null
+  vendorName?: string | null
+  paymentDueAt?: string | null
+  amountCents?: number | null
 }
 
 const NOTIFY_STATUSES = new Set<ApplicationStatus>([
@@ -106,15 +113,48 @@ export async function notifyVendorApplicationStatus(
   try {
     const { data: profile } = await params.supabase
       .from('profiles')
-      .select('phone')
+      .select('phone, email, full_name')
       .eq('id', params.vendorId)
       .single()
 
     if (profile?.phone) {
       await sendSms(profile.phone, message)
     }
+
+    const needsPaymentEmail =
+      params.paymentStatus === 'payment_required' ||
+      params.applicationPaymentStatus === 'PENDING_REVIEW'
+
+    if (needsPaymentEmail && params.paymentDueAt) {
+      const vendorEmail = params.vendorEmail?.trim() || profile?.email?.trim()
+      const vendorName =
+        params.vendorName?.trim() || profile?.full_name?.trim() || 'Vendor'
+      const eventLabel = params.eventName?.trim() || 'your market'
+
+      if (vendorEmail) {
+        await sendPaymentDueReminderEmail({
+          vendorEmail,
+          vendorName,
+          marketName: eventLabel,
+          paymentDueAt: params.paymentDueAt,
+          amountCents: params.amountCents,
+          stage: 1,
+          applicationId: params.applicationId,
+        })
+      }
+    }
+
+    void dispatchNativePushToUsers(params.supabase, {
+      userIds: [params.vendorId],
+      title:
+        params.paymentStatus === 'payment_required' ? 'Payment due' : 'Application update',
+      body: message.length > 180 ? `${message.slice(0, 177)}…` : message,
+      deepLink: '/vendor/applications',
+    }).catch((err) => {
+      console.error('[notify-vendor-application-status] native push failed:', err)
+    })
   } catch (err) {
-    console.error('[notify-vendor-application-status] SMS failed:', err)
+    console.error('[notify-vendor-application-status] outbound notify failed:', err)
   }
 }
 

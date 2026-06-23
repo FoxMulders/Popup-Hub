@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { LEGAL_CONTACT_EMAIL } from '@/lib/legal/contacts'
 
 interface LegalDocumentProps {
   title: string
@@ -32,10 +33,10 @@ export function LegalDocument({ title, lastUpdated, children }: LegalDocumentPro
             <p>
               Questions about these policies? Contact{' '}
               <a
-                href="mailto:thetipsyfoxyeg@gmail.com"
+                href={`mailto:${LEGAL_CONTACT_EMAIL}`}
                 className="font-medium text-forest hover:underline"
               >
-                thetipsyfoxyeg@gmail.com
+                {LEGAL_CONTACT_EMAIL}
               </a>
               .
             </p>

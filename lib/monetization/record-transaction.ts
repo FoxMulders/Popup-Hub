@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { PAYMENT_CHASE_CLEARED_FIELDS } from '@/lib/applications/payment-deadline'
 import type { PlatformFeeMode } from '@/types/database'
 import {
   distributeCoordinatorBoothPayout,
@@ -121,6 +122,7 @@ function buildApplicationPaymentUpdate(
     platform_transaction_id: platformTransactionId ?? undefined,
     payment_status: 'paid',
     payment_processing_at: null,
+    ...PAYMENT_CHASE_CLEARED_FIELDS,
   }
 
   if (processor === 'stripe') {

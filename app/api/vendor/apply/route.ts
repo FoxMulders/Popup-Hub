@@ -35,10 +35,8 @@ import {
   resolvePreferredDigitalPaymentMethod,
   resolvePaymentFieldsForPaidApplication,
 } from '@/lib/applications/payment-fields'
-import {
-  etransferHoldExpiresAt,
-  generateEtransferReferenceCode,
-} from '@/lib/applications/etransfer-reference'
+import { resolvePaymentDueAt } from '@/lib/applications/payment-deadline'
+import { generateEtransferReferenceCode } from '@/lib/applications/etransfer-reference'
 import { dispatchEtransferInstructions } from '@/lib/applications/etransfer-instructions-service'
 import {
   notifyVendorApplicationStatus,
@@ -581,8 +579,19 @@ export async function POST(request: Request) {
     paymentFields.application_payment_status === 'PENDING_REVIEW'
   const etransferReferenceCode =
     offlinePending && paymentMethod === 'ETRANSFER' ? generateEtransferReferenceCode() : null
+
+  const awaitingBoothPayment =
+    requiresPayment &&
+    (paymentFields.payment_status === 'payment_required' || offlinePending)
+  const paymentDueAt = awaitingBoothPayment
+    ? resolvePaymentDueAt({
+        anchorAt: now,
+        eventStartAt: event.start_at,
+        eventPaymentDueAt: (event as { payment_due_at?: string | null }).payment_due_at,
+      })
+    : null
   const etransferExpiresAt =
-    offlinePending && paymentMethod === 'ETRANSFER' ? etransferHoldExpiresAt() : null
+    offlinePending && paymentMethod === 'ETRANSFER' ? paymentDueAt : null
 
   async function insertApplication() {
     return supabase
@@ -597,6 +606,13 @@ export async function POST(request: Request) {
         application_payment_status: paymentFields.application_payment_status,
         etransfer_reference_code: etransferReferenceCode,
         etransfer_expires_at: etransferExpiresAt,
+        payment_due_at: paymentDueAt,
+        ...(paymentDueAt
+          ? {
+              payment_reminder_stage: 1,
+              last_payment_reminder_at: now,
+            }
+          : {}),
         neighbor_preference: neighborPreference?.trim() || null,
         waitlist_position: waitlistPosition,
         has_category_overflow: hasCategoryOverflow,
@@ -760,6 +776,8 @@ export async function POST(request: Request) {
       status: inserted.status as ApplicationStatus,
       paymentStatus: inserted.payment_status,
       applicationPaymentStatus: inserted.application_payment_status,
+      paymentDueAt,
+      amountCents: boothPrice > 0 ? boothPrice : null,
     })
   }
 

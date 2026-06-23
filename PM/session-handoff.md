@@ -2,6 +2,31 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — IP protection (local, not deployed)
+- **Goal:** Establish and assert Popup Hub ownership — copyright, Terms IP clauses, trade secrets register, access audit, legal contact.
+- **Shipped locally:**
+  - **`LICENSE`:** Proprietary all-rights-reserved notice; **`package.json`** `"license": "UNLICENSED"`.
+  - **Footer:** `© 2026 Popup Hub. All rights reserved.` in `build-version-footer.tsx`.
+  - **Terms (`/legal/terms`):** §6 Platform IP, §7 Prohibited uses, §8 Copyright reports, §12 Survival; payment circumvention in §3; `legal@popuphub.app` contact.
+  - **`lib/legal/contacts.ts`:** Centralized `LEGAL_CONTACT_EMAIL`, privacy, accessibility addresses.
+  - **PM checklists:** `ip-entity-setup-checklist.md`, `ip-trademark-filing-checklist.md`, `trade-secrets-register.md`, `ip-access-hardening.md`, `legal-email-setup-checklist.md`.
+- **Owner actions still pending (external):** Alberta incorporation + IP assignment deed; CIPO trademark filing; configure `legal@popuphub.app` inbox; confirm GitHub private + 2FA; Google Maps API referrer restrictions.
+- **Verify:** Smoke `/legal/terms` → new sections render; footer copyright visible; `legal@popuphub.app` links present.
+- **Next:** Lawyer review of Terms IP sections; commit + deploy when user asks.
+
+## Active work — Vendor payment chase (local, not deployed)
+- **Goal:** Automated vendor payment chase with multi-channel outreach (in-app, email, SMS, push), escalating reminders, auto-release, and coordinator tools.
+- **Persona:** Vendor · applications/dashboard; Coordinator · event hub
+- **Shipped locally:**
+  - **Migrations `124_payment_chase.sql`, `125_payment_chase_audit_actions.sql`**
+  - **Cron** `/api/cron/vendor-payment-chase` (10:00 + 22:00 UTC)
+  - **Multi-channel** `notify-vendor-payment-chase.ts` + approval email/SMS/push on first payment due
+  - **Coordinator UI:** `EventPaymentDeadlineEditor`, `OutstandingPaymentsPanel`, wired `PendingEtransferPanel`, extend +24h/+48h in drawer and panel, overdue banner on event hub
+  - **Vendor UI:** payment countdown on applications list, booking progress rail, urgent action banner on dashboard
+  - **Tests:** `payment-deadline.test.ts`, `payment-reminder-schedule.test.ts`; script `scripts/verify-payment-chase-release.ts`
+- **Verify:** Apply migrations **124–125**; `npx vitest run lib/applications/payment-deadline.test.ts lib/applications/payment-reminder-schedule.test.ts`; `npx tsc --noEmit`
+- **Next:** Commit + deploy when user asks
+
 ## Active work — Discover quarter auction visibility fix (local, not deployed)
 - **Goal:** Patrons can find quarter auction events on Discover when toggling **Quarter auctions**.
 - **Persona:** Patron · `/discover`
