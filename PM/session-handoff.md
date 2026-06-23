@@ -36,7 +36,7 @@
   - **Coordinator UI:** `EventPaymentDeadlineEditor`, `OutstandingPaymentsPanel`, wired `PendingEtransferPanel`, extend +24h/+48h in drawer and panel, overdue banner on event hub
   - **Vendor UI:** payment countdown on applications list, booking progress rail, urgent action banner on dashboard
   - **Tests:** `payment-deadline.test.ts`, `payment-reminder-schedule.test.ts`; script `scripts/verify-payment-chase-release.ts`
-- **Verify:** Apply migrations **124–125**; `npx vitest run lib/applications/payment-deadline.test.ts lib/applications/payment-reminder-schedule.test.ts`; `npx tsc --noEmit`
+- **Verify:** Apply migrations **124–125**; `npm run test:unit` (includes payment-deadline + payment-reminder-schedule); `npx tsc --noEmit`
 - **Next:** Commit + deploy when user asks
 
 ## Active work — Discover quarter auction visibility fix (local, not deployed)
