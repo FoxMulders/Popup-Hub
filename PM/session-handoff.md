@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Tipsy Fox Creations Inc. entity structure (local, not deployed)
+- **Goal:** Single Alberta corp owns The Tipsy Fox + Popup Hub IP; update legal copy and PM checklists.
+- **Shipped locally:**
+  - **`lib/legal/entity.ts`:** `LEGAL_ENTITY_NAME`, `PRODUCT_BRAND_NAME`, `COPYRIGHT_NOTICE`, `PLATFORM_OPERATOR_LINE`.
+  - **`LICENSE`:** Copyright Tipsy Fox Creations Inc.
+  - **Terms §1/§6:** Operated by / owned by Tipsy Fox Creations Inc.
+  - **Footer:** Popup Hub · © 2026 Tipsy Fox Creations Inc.
+  - **PM:** `ip-entity-setup-checklist.md` (Tipsy Fox path), `ip-contract-transfer-checklist.md`, updated trademark + trade-secrets registers.
+- **Owner actions pending:** NUANS/name search, incorporate, IP assignment deed, contract transfers, CIPO filing.
+- **Verify:** Smoke `/legal/terms` §1 operator line; footer shows corp name.
+- **Next:** Incorporate per checklist; commit + deploy when user asks.
+
 ## Active work — IP protection (local, not deployed)
 - **Goal:** Establish and assert Popup Hub ownership — copyright, Terms IP clauses, trade secrets register, access audit, legal contact.
 - **Shipped locally:**
@@ -1894,9 +1906,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `84dcb88` (pushed to `origin/master`)
-- Last deploy commit: `84dcb88` - feat: ship 5 session updates (Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)
-- Production: https://popuphub.ca - **v1.115.0 build 1** | commit `ac1f5bc` (handoff updated 2026-06-22 14:44)
+- Branch: `master` @ `9ba1a34` (pushed to `origin/master`)
+- Last deploy commit: `9ba1a34` - feat: ship 7 session updates (IP protection; Vendor payment chase; Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; +3 more)
+- Production: https://popuphub.ca - **v1.117.0 build 1** | commit `371f063` (handoff updated 2026-06-22 20:11)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2273,7 +2285,7 @@
 
 
 ## Last deploy
-- 2026-06-22 14:44 - Deploy via deploy-popuphub.ps1 - `feat: ship 5 session updates (Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; Square Reader affiliate on Market Supplies; Split-story banner placement; +1 more)` (84dcb88)
+- 2026-06-22 20:11 - Deploy via deploy-popuphub.ps1 - `feat: ship 7 session updates (IP protection; Vendor payment chase; Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; +3 more)` (9ba1a34)
 
 
 ## Goal
