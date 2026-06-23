@@ -1,1 +1,1 @@
-feat: ship 9 session updates (Popup Hub backlog implementation; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)
+feat: ship 10 session updates (Homepage pathway dedupe; Native mobile apps; Tipsy Fox Creations Inc. entity structure; IP protection; +6 more)

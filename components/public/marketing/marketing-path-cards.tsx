@@ -137,7 +137,7 @@ export function MarketingPathCards() {
   const router = useRouter()
 
   return (
-    <section className="bg-cream px-4 pb-16 pt-4 sm:pb-20">
+    <section className="bg-cream px-4 pb-16 pt-10 sm:pb-20 sm:pt-12">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">

@@ -2,7 +2,33 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Popup Hub backlog implementation (local, not deployed)
+## Active work — Homepage pathway dedupe (local, not deployed)
+- **Goal:** Remove duplicate patron/vendor/organizer pathway cards on the public homepage.
+- **Shipped locally:**
+  - **`marketing-hero.tsx`:** Hero keeps eyebrow + headline + subhead only; removed dark-green pathway cards and footer line; tighter bottom padding.
+  - **`marketing-path-cards.tsx`:** Sole pathway block (“Three ways into Popup Hub”); increased top padding after hero divider.
+  - **Deleted `marketing-hero-pathways.tsx`:** Removed unused `vendorTrustNote` / `footerLine` from `home-hero.ts`.
+- **Verify:** Smoke `/` — one pathway section on cream background after green hero; patron discover, vendor hub, organizer links work.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Native mobile apps (local, not deployed)
+- **Goal:** Finish Capacitor iOS/Android shells for internal testing now that Apple + Google developer accounts exist.
+- **Shipped locally:**
+  - **Cap sync:** All 6 plugins registered (app, geolocation, haptics, push, splash, status bar).
+  - **Android:** Brand launcher icons + splash; manifest permissions (location, camera, notifications); OAuth + App Links intent filters; `local.properties` auto-written; debug APK builds via `npm run mobile:android:debug`.
+  - **iOS:** Privacy strings (location, camera); `App.entitlements` (associated domains + push); version synced to 1.120.0.
+  - **Scripts:** `configure-store-links.ps1`, `build-android-debug.ps1`, `google-services.json.example`.
+  - **Docs:** `PM/mobile-store-setup.md` — consolidated TestFlight + Play internal testing checklist.
+  - **OAuth:** Native deep link handler in `capacitor-init.tsx` for `ca.popuphub.app://auth/callback`.
+- **Verify:** `npm run mobile:android:debug` → BUILD SUCCESSFUL → `android/app/build/outputs/apk/debug/app-debug.apk`.
+- **Manual (you):**
+  1. **Android:** Install APK on device/emulator; Play Console internal track when ready for signed `.aab`.
+  2. **iOS (Mac):** `npm run mobile:ios:open` → Archive → TestFlight.
+  3. **Supabase:** Add redirect `ca.popuphub.app://auth/callback`.
+  4. **Store links:** `npm run mobile:store-links` with `APPLE_TEAM_ID` + release SHA-256, then deploy.
+  5. **Push:** Firebase `google-services.json` + Vercel `FCM_SERVER_KEY`; APNs key for iOS.
+- **Next:** Commit + deploy when user asks (includes `.well-known` after team ID / SHA256 configured).
+
 - **Goal:** Complete 13-item backlog plan (Waves 1–6): UI polish, vendor discovery, email confirmation, notifications, calendar, PWA, brand pass, passport redesign, UX/CRO doc.
 - **Shipped locally:**
   - **Wave 1:** Hero pathway order (Patrons→Vendors→Organizers), all hero CTAs `marketing-pill--secondary`, mobile footer ~50% reduction, `HubGuardShell` replacing `ShopperShell` on `/check`, callout/tagline polish.
@@ -282,8 +308,8 @@
 ## Active work ? dual-audience hero + Canada positioning (local, not deployed)
 - **Goal:** CRO item #1 + broaden marketing beyond Alberta (Canada + origin proof).
 - **Shipped locally:**
-  - **`lib/marketing/home-hero.ts`:** Eyebrow *Built in Canada ? strong in Alberta today*; H1 *One hub for local makers markets*; national subhead; human footer line (no duplicate origin).
-  - **`marketing-hero-pathways.tsx`:** Three pathway cards (organizer / HubGuard / discover).
+  - **`lib/marketing/home-hero.ts`:** Eyebrow *Built in Canada · strong in Alberta today*; H1 *One hub for local makers markets*; national subhead.
+  - **`marketing-path-cards.tsx`:** Three pathway cards (patron / vendor / organizer) — sole homepage pathway block (hero duplicate removed).
   - **`marketing-testimonial.tsx`:** Canadian pop-up market attribution.
   - **`lib/seo/site-config.ts`:** Default description mentions Canada.
   - **`/check`:** Directory heading *Organizers in our directory (Alberta today, expanding)*; body copy still Edmonton-area honest.

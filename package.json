@@ -1,6 +1,6 @@
 {
     "name": "popup-hub",
-    "version": "1.120.0",
+    "version": "1.121.0",
     "private": true,
     "license": "UNLICENSED",
     "scripts": {
@@ -69,7 +69,9 @@
         "mobile:ios:add": "npx cap add ios",
         "mobile:android:add": "npx cap add android",
         "mobile:android:open": "npx cap open android",
-        "mobile:android:run": "npx cap run android"
+        "mobile:android:run": "npx cap run android",
+        "mobile:android:debug": "powershell -ExecutionPolicy Bypass -File ./scripts/mobile/build-android-debug.ps1",
+        "mobile:store-links": "powershell -ExecutionPolicy Bypass -File ./scripts/mobile/configure-store-links.ps1"
     },
     "dependencies": {
         "@base-ui/react": "^1.5.0",

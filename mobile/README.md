@@ -44,6 +44,17 @@ Full TestFlight checklist: **`PM/ios-testflight.md`**.
 
 **Emulator / device testing (Android + iOS):** **`PM/mobile-emulator-setup.md`**.
 
+**Store setup (developer accounts):** **`PM/mobile-store-setup.md`**.
+
+## Quick start (Windows — Android)
+
+```powershell
+npm install
+npm run mobile:android:debug    # sync + debug APK
+npm run mobile:android:open     # Android Studio
+adb install -r android\app\build\outputs\apk\debug\app-debug.apk
+```
+
 ## Local dev against staging
 
 Point the shell at a preview or local HTTPS dev server:

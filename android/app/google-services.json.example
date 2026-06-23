@@ -1,0 +1,32 @@
+{
+  "_comment": "Copy to google-services.json after creating a Firebase project for ca.popuphub.app.",
+  "_steps": [
+    "1. Firebase Console → Add Android app → package name ca.popuphub.app",
+    "2. Download google-services.json into android/app/",
+    "3. Firebase → Project settings → Cloud Messaging → copy Server key → Vercel FCM_SERVER_KEY",
+    "4. npm run mobile:sync && rebuild"
+  ],
+  "project_info": {
+    "project_number": "REPLACE",
+    "project_id": "popup-hub",
+    "storage_bucket": "popup-hub.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:REPLACE:android:REPLACE",
+        "android_client_info": {
+          "package_name": "ca.popuphub.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [{ "current_key": "REPLACE" }],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

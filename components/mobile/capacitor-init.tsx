@@ -39,6 +39,13 @@ export function CapacitorInit() {
         void App.addListener('appUrlOpen', (event) => {
           try {
             const url = new URL(event.url)
+            // OAuth return: ca.popuphub.app://auth/callback?code=...
+            if (url.host === 'auth' && url.pathname.startsWith('/callback')) {
+              const params = url.searchParams
+              const query = params.toString()
+              router.push(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
+              return
+            }
             const path = `${url.pathname}${url.search}${url.hash}`
             if (path.startsWith('/')) {
               router.push(path)
