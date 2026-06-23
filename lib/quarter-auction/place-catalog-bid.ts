@@ -101,6 +101,32 @@ export async function placeCatalogBidEntries(
     return { ok: false, error: deduct.error, status: 402 }
   }
 
+  const { data: freshItem } = await supabase
+    .from('auction_catalog_items')
+    .select('status')
+    .eq('id', catalogItemId)
+    .single()
+
+  if (freshItem?.status !== 'bidding_open') {
+    const refund = await adjustWalletBalance(supabase, {
+      walletId: wallet.id,
+      deltaCents: totalCents,
+    })
+    if (!refund.ok) {
+      console.error('[placeCatalogBidEntries] refund failed after bidding closed', {
+        catalogItemId,
+        userId,
+        refundError: refund.error,
+      })
+      return {
+        ok: false,
+        error: 'Bidding closed — refund pending, contact support if balance looks wrong',
+        status: 500,
+      }
+    }
+    return { ok: false, error: 'Bidding is not open', status: 422 }
+  }
+
   const rows = paddles.map((p) => ({
     catalog_item_id: catalogItemId,
     paddle_id: p.id,
@@ -115,10 +141,23 @@ export async function placeCatalogBidEntries(
     .select('*')
 
   if (error || !entries?.length) {
-    await adjustWalletBalance(supabase, {
+    const refund = await adjustWalletBalance(supabase, {
       walletId: wallet.id,
       deltaCents: totalCents,
     })
+    if (!refund.ok) {
+      console.error('[placeCatalogBidEntries] refund failed after bid insert error', {
+        catalogItemId,
+        userId,
+        refundError: refund.error,
+        insertError: error?.message,
+      })
+      return {
+        ok: false,
+        error: 'Could not record bid — refund pending, contact support if balance looks wrong',
+        status: 500,
+      }
+    }
     return {
       ok: false,
       error: error?.message ?? 'Could not record bid — quarters refunded',
