@@ -1906,9 +1906,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `9ba1a34` (pushed to `origin/master`)
-- Last deploy commit: `9ba1a34` - feat: ship 7 session updates (IP protection; Vendor payment chase; Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; +3 more)
-- Production: https://popuphub.ca - **v1.117.0 build 1** | commit `371f063` (handoff updated 2026-06-22 20:11)
+- Branch: `master` @ `8daf676` (pushed to `origin/master`)
+- Last deploy commit: `8daf676` - feat: ship 8 session updates (Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; Discover quarter auction visibility fix; +4 more)
+- Production: https://popuphub.ca - **v1.118.0 build 1** | commit `135480c` (handoff updated 2026-06-23 10:59)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2285,7 +2285,7 @@
 
 
 ## Last deploy
-- 2026-06-22 20:11 - Deploy via deploy-popuphub.ps1 - `feat: ship 7 session updates (IP protection; Vendor payment chase; Discover quarter auction visibility fix; Quarter auction paddle purchase & bid flow; +3 more)` (9ba1a34)
+- 2026-06-23 10:59 - Deploy via deploy-popuphub.ps1 - `feat: ship 8 session updates (Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; Discover quarter auction visibility fix; +4 more)` (8daf676)
 
 
 ## Goal
