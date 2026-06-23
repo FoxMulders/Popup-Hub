@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ApplicationPaymentStatus, ApplicationStatus, PaymentMethod, PaymentStatus } from '@/types/database'
-import { isOfflinePaymentMethod } from '@/lib/applications/payment-fields'
+import {
+  isApplicationAwaitingBoothPayment,
+  isOfflinePaymentMethod,
+} from '@/lib/applications/payment-fields'
 import {
   notifyCoordinatorPaymentReleased,
   notifyVendorPaymentChase,
@@ -115,14 +118,29 @@ export async function releaseUnpaidApplication(
     updates.application_payment_status = 'EXPIRED'
   }
 
-  const { error: updateError } = await supabase
+  // Atomic guard: only cancel if payment is still outstanding. Prevents a cron
+  // race where a vendor completes checkout after the chase query snapshot.
+  if (!isApplicationAwaitingBoothPayment(app)) {
+    return { released: false }
+  }
+
+  const { data: updated, error: updateError } = await supabase
     .from('booth_applications')
     .update(updates)
     .eq('id', app.id)
     .neq('status', 'cancelled')
+    .or(
+      'payment_status.eq.payment_required,and(application_payment_status.eq.PENDING_REVIEW,payment_method.in.(ETRANSFER,CASH))'
+    )
+    .select('id')
+    .maybeSingle()
 
   if (updateError) {
     console.error('[release-unpaid-application] update failed:', updateError)
+    return { released: false }
+  }
+
+  if (!updated) {
     return { released: false }
   }
 

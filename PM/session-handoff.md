@@ -2,7 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Homepage pathway dedupe (local, not deployed)
+## Active work — Critical bug investigation: payment chase race (local, not deployed)
+- **Goal:** Prevent vendor payment chase cron from cancelling applications after payment completes.
+- **Shipped locally:**
+  - **`release-unpaid-application.ts`:** Atomic update guard — only cancel when `payment_status = payment_required` or offline `PENDING_REVIEW`; skip release if row no longer matches (paid/processing race).
+  - **`release-unpaid-application.test.ts`:** Eligibility unit tests for paid/processing/awaiting states.
+- **Verify:** `npx tsx lib/applications/release-unpaid-application.test.ts` PASS.
+- **Next:** Merge PR `cursor/critical-bug-investigation-6ec5`; deploy when merged.
+
 - **Goal:** Remove duplicate patron/vendor/organizer pathway cards on the public homepage.
 - **Shipped locally:**
   - **`marketing-hero.tsx`:** Hero keeps eyebrow + headline + subhead only; removed dark-green pathway cards and footer line; tighter bottom padding.
