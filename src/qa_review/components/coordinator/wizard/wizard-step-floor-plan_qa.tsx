@@ -5,6 +5,13 @@ import {
   FloorPlanV2WizardQa,
   type FloorPlanV2Props,
 } from '@/src/qa_review/components/coordinator/floor-plan-v2/floor-plan-v2_wizard_qa'
+import {
+  DesktopScreenRequiredOverlay,
+  FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY,
+  FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import { LayoutPlannerHeader } from '@/components/coordinator/layout-planner/layout-planner-header'
 import { LayoutPlannerShellQa } from '@/src/qa_review/components/coordinator/layout-planner/layout-planner-shell_qa'
@@ -28,6 +35,18 @@ export interface WizardStepFloorPlanProps extends FloorPlanV2Props {
 }
 
 export function WizardStepFloorPlan({
+  eventId,
+  ...props
+}: WizardStepFloorPlanProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay eventId={eventId ?? undefined} />
+      <WizardStepFloorPlanInner eventId={eventId} {...props} />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function WizardStepFloorPlanInner({
   mode = 'wizard',
   layoutCapacity,
   eventDisplayName,
@@ -43,6 +62,7 @@ export function WizardStepFloorPlan({
   onDeleteRoom,
   ...floorPlanProps
 }: WizardStepFloorPlanProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const [placedCount, setPlacedCount] = useState(0)
 
   function handleSelectRoom(roomId: string) {
@@ -95,20 +115,28 @@ export function WizardStepFloorPlan({
         </div>
       }
     >
-      <FloorPlanV2WizardQa
-        {...floorPlanProps}
-        eventId={eventId}
-        layoutRooms={layoutRooms}
-        layoutActiveRoomId={layoutActiveRoomId}
-        onLayoutRoomsChange={onLayoutRoomsChange}
-        onAddRoom={onAddRoom}
-        onRenameRoom={onRenameRoom}
-        onDeleteRoom={onDeleteRoom}
-        layoutCapacity={layoutCapacity}
-        onPlacedCountChange={setPlacedCount}
-        chrome="embedded"
-        className="w-full flex-1"
-      />
+      {showDesktopRequired ? (
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center">
+          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+            {FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING} {FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY}
+          </p>
+        </div>
+      ) : (
+        <FloorPlanV2WizardQa
+          {...floorPlanProps}
+          eventId={eventId}
+          layoutRooms={layoutRooms}
+          layoutActiveRoomId={layoutActiveRoomId}
+          onLayoutRoomsChange={onLayoutRoomsChange}
+          onAddRoom={onAddRoom}
+          onRenameRoom={onRenameRoom}
+          onDeleteRoom={onDeleteRoom}
+          layoutCapacity={layoutCapacity}
+          onPlacedCountChange={setPlacedCount}
+          chrome="embedded"
+          className="w-full flex-1"
+        />
+      )}
     </LayoutPlannerShellQa>
   )
 }

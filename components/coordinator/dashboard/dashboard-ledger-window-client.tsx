@@ -4,6 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import {
+  DesktopScreenRequiredOverlay,
+  FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY,
+  FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
+import {
   postFloorplanSync,
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
@@ -38,8 +45,26 @@ const WALL_CAST_ROW_CLASS: Record<
 export function DashboardLedgerWindowClient() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
+
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay
+        eventId={eventId}
+        title="Booth matrix needs a larger screen"
+        description={`${FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING} Open the presenter or wall-cast matrix on a desktop-sized display so booth labels, vendors, categories, and payment status remain readable.`}
+        minimumViewportCopy={FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY}
+        exitLabel="Back to HubGrid"
+      />
+      <DashboardLedgerWindowContent eventId={eventId} />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowContent({ eventId }: { eventId: string | null }) {
+  const searchParams = useSearchParams()
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
   const isWallCast = screenMode === 'wall-cast'
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
@@ -53,6 +78,7 @@ export function DashboardLedgerWindowClient() {
   }, [isWallCast])
 
   useEffect(() => {
+    if (showDesktopRequired) return
     postFloorplanSync({ type: 'ledger_ready', source: 'ledger' })
     return subscribeFloorplanSync((message) => {
       if (message.source === 'ledger') return
@@ -66,7 +92,7 @@ export function DashboardLedgerWindowClient() {
         setSelectedBoothId(message.boothId)
       }
     })
-  }, [eventId])
+  }, [eventId, showDesktopRequired])
 
   useEffect(() => {
     const row = rows.find((r) => r.id === selectedBoothId)
@@ -86,6 +112,16 @@ export function DashboardLedgerWindowClient() {
     postFloorplanSync({ type: 'focus_booth', source: 'ledger', boothId })
     postFloorplanSync({ type: 'selection', source: 'ledger', boothId })
   }, [])
+
+  if (showDesktopRequired) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center bg-stone-950 p-6 text-center text-sm text-stone-300">
+        <p className="max-w-sm">
+          {FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING} {FLOOR_PLAN_DESKTOP_BREAKPOINT_COPY}
+        </p>
+      </div>
+    )
+  }
 
   if (isWallCast) {
     return (
