@@ -43,7 +43,8 @@ export function CapacitorInit() {
             if (url.host === 'auth' && url.pathname.startsWith('/callback')) {
               const params = url.searchParams
               const query = params.toString()
-              router.push(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
+              // Full navigation required — server exchanges PKCE code and sets session cookies.
+              window.location.replace(query ? `/api/auth/callback?${query}` : '/api/auth/callback')
               return
             }
             const path = `${url.pathname}${url.search}${url.hash}`

@@ -1,6 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ApplicationPaymentStatus, ApplicationStatus, PaymentMethod, PaymentStatus } from '@/types/database'
-import { isOfflinePaymentMethod } from '@/lib/applications/payment-fields'
+import {
+  isApplicationAwaitingBoothPayment,
+  isOfflinePaymentMethod,
+} from '@/lib/applications/payment-fields'
 import {
   notifyCoordinatorPaymentReleased,
   notifyVendorPaymentChase,
@@ -102,6 +105,10 @@ export async function releaseUnpaidApplication(
   const event = Array.isArray(app.event) ? app.event[0] : app.event
   const passport = Array.isArray(app.passport) ? app.passport[0] : app.passport
 
+  if (!isApplicationAwaitingBoothPayment(app)) {
+    return { released: false }
+  }
+
   const updates: Record<string, unknown> = {
     status: 'cancelled',
     booth_number: null,
@@ -115,14 +122,28 @@ export async function releaseUnpaidApplication(
     updates.application_payment_status = 'EXPIRED'
   }
 
-  const { error: updateError } = await supabase
+  // Guard the UPDATE so a concurrent payment (Square/Stripe/offline clearance)
+  // cannot be overwritten by a stale cron snapshot.
+  let releaseQuery = supabase
     .from('booth_applications')
     .update(updates)
     .eq('id', app.id)
     .neq('status', 'cancelled')
 
+  if (isOfflinePaymentMethod(app.payment_method)) {
+    releaseQuery = releaseQuery.eq('application_payment_status', 'PENDING_REVIEW')
+  } else {
+    releaseQuery = releaseQuery.eq('payment_status', 'payment_required')
+  }
+
+  const { data: releasedRow, error: updateError } = await releaseQuery.select('id').maybeSingle()
+
   if (updateError) {
     console.error('[release-unpaid-application] update failed:', updateError)
+    return { released: false }
+  }
+
+  if (!releasedRow) {
     return { released: false }
   }
 
