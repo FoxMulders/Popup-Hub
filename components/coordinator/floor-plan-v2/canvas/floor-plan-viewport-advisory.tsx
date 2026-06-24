@@ -22,6 +22,9 @@ import {
 } from '@/hooks/use-floor-plan-viewport-tier'
 import { cn } from '@/lib/utils'
 
+export const FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE =
+  'The floor plan matrix is not optimized for small screens. Recommended desktop layout breakpoint: 1024px wide by 550px tall.'
+
 export interface FloorPlanViewportLayoutContextValue {
   tier: FloorPlanViewportTier
   isMobile: boolean
@@ -88,14 +91,9 @@ export function DesktopScreenRequiredOverlay({
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!showDesktopRequired) return
@@ -124,7 +122,7 @@ export function DesktopScreenRequiredOverlay({
     navigateAway()
   }, [navigateAway, onSaveDraft])
 
-  if (!showDesktopRequired || !mounted) return null
+  if (!showDesktopRequired || typeof document === 'undefined') return null
 
   const overlay = (
     <div
@@ -149,6 +147,9 @@ export function DesktopScreenRequiredOverlay({
         <p className="mt-2 text-sm leading-relaxed text-stone-300">
           The floor plan designer needs a tablet in landscape or a desktop monitor. Your market
           details are safe — save a draft now and continue layout on a bigger screen.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-amber-100">
+          {FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE}
         </p>
 
         <div className="mt-4 rounded-lg border border-stone-700 bg-stone-800/50 p-4 text-sm text-stone-400">
@@ -188,6 +189,36 @@ export function DesktopScreenRequiredOverlay({
   return createPortal(overlay, document.body)
 }
 
+/** Inline placeholder used when the floor-plan canvas or matrix is intentionally unmounted. */
+export function FloorPlanDesktopRequiredInlineFallback({
+  className,
+}: {
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'flex h-full min-h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center',
+        className
+      )}
+      role="status"
+      data-testid="floor-plan-desktop-required-inline"
+    >
+      <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-forest/10 text-forest">
+        <Monitor className="h-6 w-6" aria-hidden />
+      </div>
+      <div>
+        <p className="font-heading text-lg font-semibold text-stone-900">
+          Floor plan matrix needs desktop space
+        </p>
+        <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+          {FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 /** Banner shown on event hub when redirected from mobile layout route. */
 export function DesktopLayoutRequiredBanner({ className }: { className?: string }) {
   return (
@@ -200,8 +231,8 @@ export function DesktopLayoutRequiredBanner({ className }: { className?: string 
     >
       <p className="font-semibold">Floor plan layout requires a tablet or desktop</p>
       <p className="mt-1 text-amber-900/90">
-        Open this market on a larger screen to design booths in HubGrid or the setup
-        wizard layout step.
+        {FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE} Open this market on a larger screen to
+        design booths in HubGrid or the setup wizard layout step.
       </p>
     </div>
   )
