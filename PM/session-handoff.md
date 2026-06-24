@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug: HubGrid Save & deploy false success (fix branch)
+- **Goal:** HubGrid header "Save & deploy" must publish draft markets, not only save layout + revalidate cache.
+- **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)
+- **Bug:** Commit `432cc36` wired header save CTAs but `handleSaveMarket` showed "Market layout saved and deployed" without calling publish — draft events stayed draft.
+- **Fix (branch `cursor/critical-bug-investigation-471f`, commit `5e04c25`):** `deployDraftMarketFromHubGrid` → `PATCH /api/coordinator/events/[id]` (venue verify, fee gates, alert hooks).
+- **Validation:** `npx tsx lib/coordinator/hub-grid-deploy-draft-market.test.ts` — 3/3 PASS.
+- **Next:** Merge PR; smoke draft market Save & deploy from HubGrid header.
+
 ## Active work — HubGrid canvas layout redesign (local, not deployed)
 - **Goal:** Maximize blueprint canvas vertical space — slim nav rail, unified header, vertical tool rail, floating dock, contextual size popover.
 - **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)
