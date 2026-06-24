@@ -167,10 +167,17 @@ export async function rollDraw(
     throw new Error('Close bidding before rolling the draw')
   }
 
-  await supabase
+  const { data: locked, error: lockError } = await supabase
     .from('auction_catalog_items')
     .update({ status: 'drawing', updated_at: new Date().toISOString() })
     .eq('id', itemId)
+    .eq('status', 'bidding_closed')
+    .select('*')
+    .maybeSingle()
+
+  if (lockError || !locked) {
+    throw new Error('Close bidding before rolling the draw, or draw already in progress')
+  }
 
   const { data: entries } = await supabase
     .from('auction_item_entries')
