@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint layout responsiveness QA (branch `cursor/blueprint-layout-responsiveness-6a24`, committed, not deployed)
+- **Goal:** Scan Blueprint Studio / coordinator layout-dashboard surfaces and ensure the floor-plan canvas or matrix either uses the desktop viewport guard or renders the regression warning for small screens.
+- **Baseline:** Code changes finalized at `0d3508a` (`chore: clean blueprint guard lint warnings`) after implementation commit `6a35db2`; production was not deployed in this automation run.
+- **Shipped on branch:**
+  - **Shared warning:** `floor-plan-viewport-advisory.tsx` exports `FLOOR_PLAN_MATRIX_SMALL_SCREEN_MESSAGE` with the designated copy: "The floor plan matrix is not optimized for small screens. Recommended desktop layout breakpoint: 1024px wide by 550px tall."
+  - **Defensive UI:** Added `FloorPlanDesktopRequiredInlineFallback` and included the warning in the full-screen `DesktopScreenRequiredOverlay` plus redirected event-hub banner copy.
+  - **Standalone layout:** `spatial-layout-editor.tsx` now wraps in `FloorPlanViewportLayoutProvider`, renders `DesktopScreenRequiredOverlay`, and unmounts `FloorPlanV2` below 1024px wide or 550px tall.
+  - **Dual-screen matrix:** `dashboard-ledger-window-client.tsx` now wraps the standalone presenter/wall-cast booth matrix in the same viewport provider and shows the desktop-required fallback instead of mounting the table on pocket-sized viewports.
+  - **Wizard / QA mirrors:** Production wizard inline fallback uses the shared warning; included `src/qa_review` spatial and wizard shells now match the production guard path.
+- **Sync path:** HubGrid dashboard remains on `MarketManagementProvider` -> live `floorPlanStore` -> `useBoothEntities` / ledger rows; this task did not change canvas mutation or save semantics.
+- **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; targeted `npm run lint -- --no-warn-ignored ...` PASS; `npx tsx scripts/verify-document-scroll-routes.ts` PASS (19/19); targeted `rg` scan confirms live direct canvas/matrix route mounts are provider-guarded. `npm ci` was required first because dependencies were absent.
+- **Blockers:** None for code. No browser smoke-test credentials were available; no production deploy requested/performed.
+- **Next:** Open/review PR; optional manual smoke at `/coordinator/events/{id}/layout`, `/coordinator/studio`, and `/coordinator/studio/ledger` using 1023px width and 1280x500 viewports to confirm `data-testid="floor-plan-desktop-required"` appears and canvas/matrix remains unmounted.
+
 ## Active work — Homepage pathway dedupe (local, not deployed)
 - **Goal:** Remove duplicate patron/vendor/organizer pathway cards on the public homepage.
 - **Shipped locally:**
