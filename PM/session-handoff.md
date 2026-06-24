@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (2026-06-24, branch `cursor/critical-bug-investigation-83a5`)
+- **Baseline:** `master` @ `689c3a1` (v1.122.0 deploy — version bump + mobile shell from `a22a3d8`).
+- **Found & fixed (commit `02f61dc`, PR pending):**
+  1. **Payment chase TOCTOU** — `releaseUnpaidApplication` could cancel paid booths; added `isApplicationAwaitingBoothPayment` guard + conditional UPDATE on `payment_required` / `PENDING_REVIEW`.
+  2. **Native OAuth broken** — `capacitor-init.tsx` used `router.push` for `ca.popuphub.app://auth/callback`; switched to `window.location.replace` (matches signup page PKCE flow).
+  3. **Quarter-auction wallet safety** — optimistic refunds in `purchase-paddles.ts`, re-check `bidding_open` + refund verification in `place-catalog-bid.ts`, atomic `bidding_closed→drawing` lock in `rollDraw`.
+- **Validation:** `npx tsx lib/applications/payment-chase-release-guards.test.ts` PASS; `npx tsx scripts/verify-quarter-auction-wallet-safety.ts` 5/5 PASS.
+- **Next:** Merge PR; deploy to prod.
+
 ## Active work — Homepage pathway dedupe (local, not deployed)
 - **Goal:** Remove duplicate patron/vendor/organizer pathway cards on the public homepage.
 - **Shipped locally:**
