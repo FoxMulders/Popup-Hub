@@ -2,6 +2,30 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — HubGrid canvas layout redesign (local, not deployed)
+- **Goal:** Maximize blueprint canvas vertical space — slim nav rail, unified header, vertical tool rail, floating dock, contextual size popover.
+- **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)
+- **Shipped locally:**
+  - **`hub-grid-nav-rail.tsx`**, **`hub-grid-chrome-mode.tsx`:** 48px icon rail; `html.hub-grid-focus-mode` hides global AppNav on blueprint (Ledger restores full nav).
+  - **`dashboard-command-center-header.tsx`**, **`hub-grid-header-save-actions.tsx`**, **`hub-grid-header-context.tsx`:** Unified header with event name, status badge, booth count, Save draft / Save & deploy.
+  - **`canvas-vertical-tool-rail.tsx`**, **`canvas-floating-dock.tsx`**, **`canvas-context-toolbar.tsx`:** Canvas-anchored tools; removed top toolbar strip + header toolbar portals in blueprint focus mode.
+  - **`floor-plan-v2.tsx`:** `hubGridFocusLayout` wires new chrome; legend/ledger default collapsed; `--canvas-area-ratio` on viewport resize.
+  - **`globals.css`:** Focus-mode + layout tokens (`--hub-grid-header-height`, `--canvas-tool-rail-width`, etc.).
+- **Verify:** Blueprint tab — slim left nav, single header row, vertical draw rail, bottom dock (zoom/undo/presenter), size popover when vendor/patron draw armed; Ledger tab restores AppNav; `npx tsc --noEmit` PASS.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Center/align toolbar placement (local, not deployed)
+- **Goal:** Move center/align controls beside (to the right of) patron and vendor table bars in HubGrid command center.
+- **Persona:** Coordinator · HubGrid canvas toolbar
+- **Shipped locally:**
+  - **`toolbar-static-layout.ts`:** `DASHBOARD_TOOLSTRIP_SECTION_IDS` order → vendor, patron, alignment-spacing, shapes; `view-align` on placement row after vendor; sidebar section order matches.
+  - **`canvas-command-bar-blocks.tsx`:** Default block order + static row groups place `view-align` after patron/vendor.
+  - **`canvas-toolbar-static.tsx`:** Top-bar alignment section uses horizontal panel layout like patron/vendor bars.
+  - **`toolbar-order.ts`:** Default drag-reorder baseline updated.
+  - **`globals.css`:** Alignment section row flex rules match patron/vendor bars.
+- **Verify:** Command center top toolbar — patron + vendor sections, then Alignment & Spacing (center/align), then Shapes; merged ribbon placement row shows align beside vendor.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Homepage pathway dedupe (local, not deployed)
 - **Goal:** Remove duplicate patron/vendor/organizer pathway cards on the public homepage.
 - **Shipped locally:**

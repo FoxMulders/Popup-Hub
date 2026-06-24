@@ -288,6 +288,23 @@
     display: none;
   }
 
+  /* HubGrid blueprint focus — slim nav rail replaces global AppNav */
+  html.hub-grid-focus-mode #site-app-nav,
+  html.hub-grid-focus-mode .build-version-strip {
+    display: none;
+  }
+
+  html.hub-grid-focus-mode .site-app-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+  }
+
+  html.hub-grid-focus-mode #site-main {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
   html.command-center-canvas-fullscreen .site-app-shell {
     height: 100dvh;
     max-height: 100dvh;
@@ -453,10 +470,26 @@
   .dashboard-app-shell {
     --dashboard-radius: 8px;
     --dashboard-toolbar-height: 1.75rem;
+    --hub-grid-header-height: 2.5rem;
+    --hub-grid-nav-rail-width: 3rem;
+    --canvas-tool-rail-width: 2.75rem;
+    --canvas-floating-dock-height: 2.5rem;
     --dashboard-panel-gap: 0.25rem;
     --dashboard-gutter: 0.5rem;
     --dashboard-split-blueprint: 65%;
     --dashboard-split-ledger: 35%;
+  }
+
+  .dashboard-command-center-header--focus {
+    min-height: var(--hub-grid-header-height);
+  }
+
+  .hub-grid-nav-rail {
+    width: var(--hub-grid-nav-rail-width);
+  }
+
+  .canvas-vertical-tool-rail {
+    width: var(--canvas-tool-rail-width);
   }
 
   .dashboard-split-workspace {
@@ -682,7 +715,8 @@
 
   .dashboard-toolbar-section[data-toolbar-section='shapes-booths'] > div:last-child,
   .dashboard-toolbar-section[data-toolbar-section='vendor-booths'] > div:last-child,
-  .dashboard-toolbar-section[data-toolbar-section='patron-tables'] > div:last-child {
+  .dashboard-toolbar-section[data-toolbar-section='patron-tables'] > div:last-child,
+  .dashboard-toolbar-section[data-toolbar-section='alignment-spacing'] > div:last-child {
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: center;

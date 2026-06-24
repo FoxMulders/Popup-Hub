@@ -1,13 +1,23 @@
 'use client'
 
-import { CommandCenterExitLink } from '@/components/coordinator/command-center-exit-link'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useCommandCenterFullscreen } from './command-center-fullscreen-context'
-import { DashboardHeaderToolbarPortalTarget } from './dashboard-toolbar-portal'
-import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { DashboardSavedLayoutToolbar } from './dashboard-saved-layout-toolbar'
+import { HubGridHeaderSaveActions } from './hub-grid-header-save-actions'
+import { useHubGridHeader } from './hub-grid-header-context'
 import { HubGridMarketSelect } from './hub-grid-market-picker'
+import { useDashboardWorkspaceView } from './dashboard-workspace-view-context'
 import { useMarketManagement } from './market-management-context'
+
+function statusLabel(status: string): string {
+  if (status === 'draft') return 'Draft'
+  if (status === 'published') return 'Published'
+  if (status === 'active') return 'Active'
+  if (status === 'completed') return 'Completed'
+  if (status === 'cancelled') return 'Cancelled'
+  return status
+}
 
 function WorkspaceTabs() {
   const { view, setView, isBlueprint, isLedger } = useDashboardWorkspaceView()
@@ -19,10 +29,7 @@ function WorkspaceTabs() {
     >
       <button
         type="button"
-        className={cn(
-          'dashboard-workspace-tab',
-          isBlueprint && 'is-active'
-        )}
+        className={cn('dashboard-workspace-tab', isBlueprint && 'is-active')}
         aria-current={isBlueprint ? 'page' : undefined}
         onClick={() => setView('blueprint')}
       >
@@ -30,10 +37,7 @@ function WorkspaceTabs() {
       </button>
       <button
         type="button"
-        className={cn(
-          'dashboard-workspace-tab',
-          isLedger && 'is-active'
-        )}
+        className={cn('dashboard-workspace-tab', isLedger && 'is-active')}
         aria-current={isLedger ? 'page' : undefined}
         onClick={() => setView('ledger')}
       >
@@ -60,10 +64,7 @@ function EditPreviewToggle() {
         Edit
       </span>
       <span
-        className={cn(
-          'dashboard-pill-toggle__track',
-          previewMode && 'is-preview'
-        )}
+        className={cn('dashboard-pill-toggle__track', previewMode && 'is-preview')}
       >
         <span className="dashboard-pill-toggle__thumb" />
       </span>
@@ -74,22 +75,25 @@ function EditPreviewToggle() {
   )
 }
 
-function EventSetupExitLink() {
+function BlueprintEventMeta() {
   const { selectedEventId, events } = useMarketManagement()
-  const { setFullscreen } = useCommandCenterFullscreen()
+  const { placedCount } = useHubGridHeader()
   const selectedEvent = events.find((event) => event.id === selectedEventId)
 
-  if (!selectedEventId) return null
+  if (!selectedEventId || !selectedEvent) return null
 
   return (
-    <CommandCenterExitLink
-      eventId={selectedEventId}
-      eventName={selectedEvent?.name}
-      eventStatus={selectedEvent?.status}
-      compact
-      prominent
-      onBeforeNavigate={() => setFullscreen(false)}
-    />
+    <div className="flex min-w-0 shrink items-center gap-2">
+      <span className="truncate text-sm font-semibold text-stone-900">
+        {selectedEvent.name}
+      </span>
+      <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px] font-semibold uppercase">
+        {statusLabel(selectedEvent.status)}
+      </Badge>
+      <span className="hidden shrink-0 rounded-md border border-stone-200 bg-white px-2 py-0.5 text-[11px] font-semibold tabular-nums text-stone-700 sm:inline">
+        {placedCount} placed
+      </span>
+    </div>
   )
 }
 
@@ -110,6 +114,36 @@ export function DashboardCommandCenterHeader({
     )
   }
 
+  if (isBlueprint) {
+    return (
+      <div className="dashboard-command-center-header dashboard-command-center-header--focus flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden px-3 py-1.5 sm:gap-3 sm:px-4">
+        <div className="flex min-w-0 shrink items-center gap-2">
+          {selectedEventId ? (
+            <>
+              <HubGridMarketSelect
+                events={events}
+                selectedEventId={selectedEventId}
+                onSelect={setSelectedEventId}
+                className="hidden shrink-0 lg:flex"
+              />
+              <BlueprintEventMeta />
+            </>
+          ) : null}
+        </div>
+        <WorkspaceTabs />
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {selectedEventId ? (
+            <>
+              <HubGridHeaderSaveActions />
+              <DashboardSavedLayoutToolbar coordinatorId={coordinatorId} />
+            </>
+          ) : null}
+          <EditPreviewToggle />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dashboard-command-center-header flex min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden px-3 py-1 sm:gap-2 sm:px-4">
       {selectedEventId ? (
@@ -120,22 +154,13 @@ export function DashboardCommandCenterHeader({
             onSelect={setSelectedEventId}
             className="hidden shrink-0 sm:flex"
           />
-          <EventSetupExitLink />
           <div className="h-4 w-px shrink-0 bg-stone-200" aria-hidden />
         </>
       ) : null}
       <WorkspaceTabs />
-      {isBlueprint ? (
-        <>
-          <DashboardHeaderToolbarPortalTarget className="flex min-w-0 flex-1 items-center overflow-hidden" />
-          <DashboardSavedLayoutToolbar coordinatorId={coordinatorId} />
-        </>
-      ) : null}
-      {isBlueprint ? (
-        <div className="ml-auto shrink-0">
-          <EditPreviewToggle />
-        </div>
-      ) : null}
+      <div className="ml-auto shrink-0">
+        <EditPreviewToggle />
+      </div>
     </div>
   )
 }

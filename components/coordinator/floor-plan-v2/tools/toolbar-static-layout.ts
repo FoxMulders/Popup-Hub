@@ -34,7 +34,7 @@ export const STATIC_ROW_SEGMENTS: Record<
   },
   placement: {
     left: ['patron'],
-    right: ['vendor'],
+    right: ['vendor', 'view-align'],
   },
 }
 
@@ -91,7 +91,7 @@ export const SIDEBAR_STATIC_ROW_SEGMENTS: Record<
   },
   placement: {
     left: ['patron'],
-    right: ['vendor'],
+    right: ['vendor', 'view-align'],
   },
 }
 
@@ -146,9 +146,31 @@ export const DASHBOARD_HEADER_SECTION_IDS: readonly SidebarSectionId[] = [
 export const DASHBOARD_TOOLSTRIP_SECTION_IDS: readonly SidebarSectionId[] = [
   'vendor-booths',
   'patron-tables',
-  'shapes-booths',
   'alignment-spacing',
+  'shapes-booths',
 ] as const
+
+/** HubGrid focus layout — vertical tool rail beside canvas. */
+export const CANVAS_VERTICAL_RAIL_BLOCKS = [
+  'room',
+  'primitives',
+  'patron',
+  'vendor',
+] as const satisfies readonly CanvasToolbarBlockId[]
+
+/** HubGrid focus layout — floating bottom dock on canvas. */
+export const CANVAS_FLOATING_DOCK_BLOCKS = [
+  'history-clipboard',
+  'utilities',
+  'dual-screen',
+] as const satisfies readonly CanvasToolbarBlockId[]
+
+/** HubGrid focus layout — contextual popover (sizes, alignment). */
+export const CANVAS_CONTEXT_BLOCKS = [
+  'vendor-sizes',
+  'view-align',
+  'optimize',
+] as const satisfies readonly CanvasToolbarBlockId[]
 
 export interface SidebarSectionDef {
   id: SidebarSectionId
@@ -213,12 +235,6 @@ export function getVisibleSidebarSections(
     })
   }
 
-  sections.push({
-    id: 'shapes-booths',
-    header: LAYOUT_EDITOR_SIDEBAR_HEADERS['shapes-booths'],
-    blocks: ['primitives'],
-  })
-
   const alignmentBlocks: CanvasToolbarBlockId[] = [
     'view-align',
     'optimize',
@@ -228,6 +244,12 @@ export function getVisibleSidebarSections(
     id: 'alignment-spacing',
     header: LAYOUT_EDITOR_SIDEBAR_HEADERS['alignment-spacing'],
     blocks: alignmentBlocks,
+  })
+
+  sections.push({
+    id: 'shapes-booths',
+    header: LAYOUT_EDITOR_SIDEBAR_HEADERS['shapes-booths'],
+    blocks: ['primitives'],
   })
 
   return applySidebarSectionsFilter(sections, filter)

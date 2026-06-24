@@ -7,6 +7,7 @@ import {
   AlignCenterVertical,
   AlignHorizontalDistributeCenter,
   AlignVerticalDistributeCenter,
+  Circle,
   ClipboardPaste,
   Copy,
   DoorOpen,
@@ -467,12 +468,22 @@ const CREATION_SHAPES: Array<{
   },
 ]
 
-function LayoutToolbarHelpTrigger({ compact }: { compact: boolean }) {
+function LayoutToolbarHelpTrigger({
+  compact,
+  iconOnly = false,
+}: {
+  compact: boolean
+  iconOnly?: boolean
+}) {
   return (
     <LayoutEditorHelpButton
-      variant="prominent"
+      variant={iconOnly ? 'icon' : 'prominent'}
       size="sm"
-      className={cn('shrink-0 shadow-sm', toolbarControlHeight(compact), 'px-2.5')}
+      className={cn(
+        'shrink-0 shadow-sm',
+        iconOnly ? 'h-8 w-8 p-0' : toolbarControlHeight(compact),
+        !iconOnly && 'px-2.5'
+      )}
     />
   )
 }
@@ -603,6 +614,12 @@ export interface CanvasCommandBarBlockContext {
   topBarLayout?: boolean
   /** Dashboard header row — view/setup + hall management. */
   headerBarLayout?: boolean
+  /** HubGrid focus — vertical tool rail beside canvas. */
+  verticalRailLayout?: boolean
+  /** HubGrid focus — floating bottom dock on canvas. */
+  floatingDockLayout?: boolean
+  /** Omit save draft/deploy from utilities block (header owns saves). */
+  hideSaveActions?: boolean
 }
 
 function proLayoutControlsEnabled(ctx: CanvasCommandBarBlockContext): boolean {
@@ -650,7 +667,9 @@ export function renderCanvasCommandBarBlock(
   const sidebarLayout = ctx.sidebarLayout ?? false
   const topBarLayout = ctx.topBarLayout ?? false
   const headerBarLayout = ctx.headerBarLayout ?? false
-  const dashboardStripLayout = topBarLayout || headerBarLayout
+  const verticalRailLayout = ctx.verticalRailLayout ?? false
+  const floatingDockLayout = ctx.floatingDockLayout ?? false
+  const dashboardStripLayout = topBarLayout || headerBarLayout || verticalRailLayout
   const rotateRoomId = ctx.selectedRoomId ?? ctx.activeRoomId ?? null
   const canRotateRoom = Boolean(rotateRoomId) && Boolean(ctx.onRotateRoomLeft)
   const rotateRoomHint = rotateRoomId
@@ -729,6 +748,44 @@ export function renderCanvasCommandBarBlock(
 
   switch (id) {
     case 'primitives':
+      if (verticalRailLayout) {
+        return (
+          <div
+            data-layout-help="draw-tools"
+            className="flex w-full min-w-0 flex-col items-center gap-0.5"
+            role="group"
+            aria-label="Designer tools"
+          >
+            <CommandButton
+              onClick={() => ctx.onToolChange('select')}
+              title="Select (V)"
+              active={ctx.toolState.tool === 'select'}
+            >
+              <MousePointer2 className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={() => ctx.onToolChange('hand')}
+              title="Hand (H)"
+              active={ctx.toolState.tool === 'hand'}
+            >
+              <Hand className="h-3.5 w-3.5" />
+            </CommandButton>
+            {CREATION_SHAPES.map((shape) => (
+              <CommandButton
+                key={shape.id}
+                onClick={() => activateDrawShape(shape.id)}
+                title={shape.label}
+                active={
+                  ctx.toolState.tool === 'draw' &&
+                  ctx.toolState.drawShape === shape.id
+                }
+              >
+                <shape.icon className="h-3.5 w-3.5" />
+              </CommandButton>
+            ))}
+          </div>
+        )
+      }
       if (sidebarLayout) {
         return (
           <div
@@ -910,6 +967,26 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'history-clipboard':
+      if (floatingDockLayout) {
+        return (
+          <div className="flex flex-row flex-nowrap items-center gap-0.5" role="group" aria-label="History">
+            <CommandButton
+              onClick={ctx.onUndo}
+              disabled={!ctx.canUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={ctx.onRedo}
+              disabled={!ctx.canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </CommandButton>
+          </div>
+        )
+      }
       if (sidebarLayout) {
         return (
           <div
@@ -1152,6 +1229,36 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'patron':
+      if (verticalRailLayout) {
+        return (
+          <div className="flex w-full flex-col items-center gap-0.5">
+            <CommandButton
+              onClick={() =>
+                activateTableSize(
+                  guestRoundTableSpec(resolveGuestTableFt(ctx.tableSizeFt, 'round'))
+                )
+              }
+              title="Draw patron round table"
+              active={isTablePlacementActive('guest-round')}
+            >
+              <Circle className="h-3.5 w-3.5" />
+            </CommandButton>
+            <CommandButton
+              onClick={() =>
+                activateTableSize(
+                  guestRectTableSpec(
+                    resolveGuestTableFt(ctx.tableSizeFt, 'rectangular')
+                  )
+                )
+              }
+              title="Draw patron rectangular table"
+              active={isTablePlacementActive('guest-rect')}
+            >
+              <RectangleHorizontal className="h-3.5 w-3.5" />
+            </CommandButton>
+          </div>
+        )
+      }
       if (sidebarLayout || dashboardStripLayout) {
         return (
           <div className="flex w-full min-w-0 flex-row flex-nowrap items-center gap-1.5">
@@ -1274,6 +1381,27 @@ export function renderCanvasCommandBarBlock(
       )
 
     case 'room':
+      if (verticalRailLayout) {
+        return ctx.onSelectRoom &&
+          ctx.onAddRoom &&
+          ctx.onRenameRoom &&
+          ctx.onDeleteRoom ? (
+          <LayoutRoomBar
+            rooms={ctx.rooms ?? []}
+            activeRoomId={ctx.activeRoomId ?? ctx.rooms?.[0]?.id ?? ''}
+            onSelectRoom={ctx.onSelectRoom}
+            onAddRoom={ctx.onAddRoom}
+            onRenameRoom={ctx.onRenameRoom}
+            onDeleteRoom={ctx.onDeleteRoom}
+            highlightedRoomMetrics={ctx.highlightedRoomMetrics}
+            highlightedRoomId={ctx.highlightedRoomId}
+            onPatchRoomDimensions={ctx.onPatchRoomDimensions}
+            embedded
+            compact
+            sidebar
+          />
+        ) : null
+      }
       if (sidebarLayout) {
         return (
           <>
@@ -1544,6 +1672,37 @@ export function renderCanvasCommandBarBlock(
 
     case 'dual-screen':
       if (!ctx.onLaunchDualScreen && !ctx.onToggleCanvasFullscreen) return null
+      if (floatingDockLayout) {
+        return (
+          <>
+            {ctx.onLaunchDualScreen ? (
+              <DualScreenLaunchButtons
+                onLaunchDualScreen={ctx.onLaunchDualScreen}
+                compact={compact}
+                variant="subtle"
+                iconOnly
+              />
+            ) : null}
+            {ctx.onToggleCanvasFullscreen ? (
+              <CommandButton
+                onClick={() => ctx.onToggleCanvasFullscreen?.()}
+                title={
+                  ctx.canvasFullscreen
+                    ? 'Exit Fullscreen (Esc)'
+                    : 'Expand canvas to fill the monitor'
+                }
+                active={ctx.canvasFullscreen}
+              >
+                {ctx.canvasFullscreen ? (
+                  <Minimize2 className="h-3.5 w-3.5" aria-hidden />
+                ) : (
+                  <Expand className="h-3.5 w-3.5" aria-hidden />
+                )}
+              </CommandButton>
+            ) : null}
+          </>
+        )
+      }
       return (
         <>
           {ctx.onLaunchDualScreen ? (
@@ -1591,6 +1750,56 @@ export function renderCanvasCommandBarBlock(
             />
           </>
         ) : null
+
+      if (floatingDockLayout) {
+        return (
+          <>
+            <div
+              className="inline-flex items-center overflow-hidden rounded-full border border-white/20"
+              role="group"
+              aria-label="Zoom"
+            >
+              <button
+                type="button"
+                onClick={ctx.onZoomOut}
+                title="Zoom out"
+                aria-label="Zoom out"
+                className="inline-flex h-8 w-8 items-center justify-center text-white/90 hover:bg-white/10"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomReset}
+                title="Reset zoom to 100%"
+                aria-label="Reset zoom"
+                className="inline-flex h-8 min-w-[2.75rem] items-center justify-center border-x border-white/20 px-1.5 text-[11px] font-semibold tabular-nums text-white/90 hover:bg-white/10"
+              >
+                {formatDiscreteZoomPercent(ctx.zoom, 0.25)}
+              </button>
+              <button
+                type="button"
+                onClick={ctx.onZoomIn}
+                title="Zoom in"
+                aria-label="Zoom in"
+                className="inline-flex h-8 w-8 items-center justify-center text-white/90 hover:bg-white/10"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {ctx.onShowLabelsChange ? (
+              <CommandButton
+                onClick={() => ctx.onShowLabelsChange?.(!ctx.showLabels)}
+                title={ctx.showLabels ? 'Hide booth labels' : 'Show booth labels'}
+                active={ctx.showLabels}
+              >
+                <Tag className="h-3.5 w-3.5" />
+              </CommandButton>
+            ) : null}
+            <LayoutToolbarHelpTrigger compact={compact} iconOnly />
+          </>
+        )
+      }
 
       if (headerBarLayout) {
         return (
@@ -1881,7 +2090,7 @@ export function renderCanvasCommandBarBlock(
               data-layout-help="save-actions"
               className="inline-flex shrink-0 items-center gap-0.5"
             >
-            {ctx.onSaveDraft ? (
+            {!ctx.hideSaveActions && ctx.onSaveDraft ? (
               <TooltipWrapper
                 text={
                   ctx.saveDraftLoading
@@ -1905,7 +2114,7 @@ export function renderCanvasCommandBarBlock(
                 </button>
               </TooltipWrapper>
             ) : null}
-            {ctx.onSaveMarket ? (
+            {!ctx.hideSaveActions && ctx.onSaveMarket ? (
               <TooltipWrapper
                 text={
                   ctx.saveMarketLoading
@@ -2360,8 +2569,9 @@ export function getVisibleToolbarBlockIds(ctx: {
   if ((ctx.showPatron || ctx.showVendor) && ctx.showOptimize) ids.push('optimize')
   if (ctx.showPatron) ids.push('patron')
   if (ctx.showVendor) ids.push('vendor')
+  ids.push('view-align')
   ids.push('utilities')
-  ids.push('primitives', 'history-clipboard', 'view-align')
+  ids.push('primitives', 'history-clipboard')
   return ids
 }
 
@@ -2381,7 +2591,7 @@ export function getStaticToolbarRowGroups(ctx: {
   const roomToolsRow: CanvasToolbarBlockId[] = []
   if (ctx.showRoom) roomToolsRow.push('room')
   if (!ctx.needsRoomFirst) {
-    roomToolsRow.push('primitives', 'history-clipboard', 'view-align', 'utilities')
+    roomToolsRow.push('primitives', 'history-clipboard', 'utilities')
   }
   if (roomToolsRow.length > 0) rows.push(roomToolsRow)
 
@@ -2389,6 +2599,7 @@ export function getStaticToolbarRowGroups(ctx: {
   if (ctx.showPatron || ctx.showVendor) placementRow.push('optimize')
   if (ctx.showPatron) placementRow.push('patron')
   if (ctx.showVendor) placementRow.push('vendor')
+  if (ctx.showPatron || ctx.showVendor) placementRow.push('view-align')
   if (placementRow.length > 0) rows.push(placementRow)
 
   return rows

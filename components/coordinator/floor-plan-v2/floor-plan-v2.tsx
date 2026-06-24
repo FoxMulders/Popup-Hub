@@ -77,6 +77,9 @@ import { serializeRooms } from './debug/format-geometry-log'
 import type { ViewportApi } from './canvas/use-viewport'
 import { PropertyInspector } from './inspector/property-inspector'
 import { CanvasCommandBar } from './tools/canvas-command-bar'
+import { CanvasContextToolbar, type CanvasContextMode } from './tools/canvas-context-toolbar'
+import { CanvasFloatingDock } from './tools/canvas-floating-dock'
+import { CanvasVerticalToolRail } from './tools/canvas-vertical-tool-rail'
 import {
   FairnessScenarioBar,
   FairnessScenarioCompareButton,
@@ -2716,13 +2719,39 @@ function FloorPlanV2Workspace({
   )
 
 
+  const patronRoundDrawActive =
+    tool === 'draw' &&
+    drawShape === 'booth' &&
+    tableSizePillValue?.purpose === 'guest' &&
+    tableSizePillValue.shape === 'round'
+
+  const patronRectDrawActive =
+    tool === 'draw' &&
+    drawShape === 'booth' &&
+    tableSizePillValue?.purpose === 'guest' &&
+    tableSizePillValue.shape === 'rectangular'
+
+  const contextToolbarMode = useMemo((): CanvasContextMode => {
+    if (selectedCount >= 2) return 'align'
+    if (tool === 'draw' && drawShape === 'booth') {
+      if (tableSizePillValue?.purpose === 'guest') return 'patron'
+      return 'vendor'
+    }
+    return null
+  }, [selectedCount, tool, drawShape, tableSizePillValue])
+
+  const hubGridFocusLayout =
+    isDashboard && !dashboardPreview && !dashboardImmersive
+
   const portalToolbarToTop =
     isDashboard &&
     !dashboardImmersive &&
+    !hubGridFocusLayout &&
     Boolean(toolbarPortal?.topBarActive && toolbarPortal.target)
 
   const portalHeaderToolbarToHeader =
     isDashboard &&
+    !hubGridFocusLayout &&
     Boolean(toolbarPortal?.headerBarActive && toolbarPortal.headerTarget)
 
   const resolvedDesignerExitHref =
@@ -3056,7 +3085,7 @@ function FloorPlanV2Workspace({
         className="min-h-0 min-w-0 flex-1"
       >
         <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden">
-        {isDashboard && !dashboardPreview ? (
+        {isDashboard && !dashboardPreview && !hubGridFocusLayout ? (
           <>
             {dashboardCommandBar && !portalToolbarToTop
               ? dashboardCommandBar
@@ -3084,11 +3113,31 @@ function FloorPlanV2Workspace({
                 {!dashboardPreview ? (
                   <CanvasLegend
                     variant="docked"
+                    defaultCollapsed={hubGridFocusLayout}
                     clearanceSummary={clearanceSummary}
                     showClearanceWarnings={showClearanceWarnings}
                   />
                 ) : null}
                 <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                {hubGridFocusLayout && !dashboardPreview ? (
+                  <>
+                    <CanvasVerticalToolRail {...dashboardCommandBarSharedProps} />
+                    <CanvasFloatingDock {...dashboardCommandBarSharedProps} />
+                    <CanvasContextToolbar
+                      mode={contextToolbarMode}
+                      tableSizeFt={tableSizePillValue}
+                      onTableSizeChange={handleTableSizeChange}
+                      onPrepareTableDraw={handlePrepareTableDraw}
+                      roundToolActive={patronRoundDrawActive}
+                      rectToolActive={patronRectDrawActive}
+                      selectedCount={selectedCount}
+                      onAlignVertical={handleAlignVertical}
+                      onAlignHorizontal={handleAlignHorizontal}
+                      onDistributeVertical={handleDistributeVertical}
+                      onDistributeHorizontal={handleDistributeHorizontal}
+                    />
+                  </>
+                ) : null}
                 <CanvasRootErrorBoundary
                   onReset={() => {
                     logState('Canvas error boundary: reset triggered')

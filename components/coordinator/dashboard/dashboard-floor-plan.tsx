@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useContext, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
@@ -8,6 +8,8 @@ import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/s
 import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/types'
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import { buttonVariants } from '@/components/ui/button'
+import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
+import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
@@ -21,6 +23,7 @@ import {
   resolveDesignerExitLabel,
 } from '@/components/coordinator/command-center-exit-link'
 import { LayoutSnapshotRefContext } from './dashboard-saved-layout-toolbar'
+import { useHubGridHeader } from './hub-grid-header-context'
 import { useMarketManagement } from './market-management-context'
 import { useBoothEntities } from './use-booth-entities'
 
@@ -44,6 +47,10 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     approvedPool,
     eventCategoryNames,
   } = useMarketManagement()
+  const { setPlacedCount, registerSaveHandlers } = useHubGridHeader()
+  const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
+  const [saveDraftLoading, setSaveDraftLoading] = useState(false)
+  const [saveMarketLoading, setSaveMarketLoading] = useState(false)
   const selectedEvent = events.find((event) => event.id === selectedEventId)
 
   const storeRef = useRef<FloorPlanDocStore | null>(null)
@@ -165,6 +172,68 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
     return map
   }, [boothEntities])
 
+  const handlePlacedCountChange = useCallback(
+    (count: number) => {
+      setPlacedCount(count)
+    },
+    [setPlacedCount]
+  )
+
+  const handleSaveDraft = useCallback(async () => {
+    setSaveDraftLoading(true)
+    try {
+      const saveFn = saveLayoutRef.current
+      if (!saveFn) {
+        toast.error('Layout editor is still loading — try again in a moment.')
+        return
+      }
+      const saved = await saveFn()
+      if (saved) toast.success('Layout draft saved')
+    } finally {
+      setSaveDraftLoading(false)
+    }
+  }, [])
+
+  const handleSaveMarket = useCallback(async () => {
+    setSaveMarketLoading(true)
+    try {
+      const saveFn = saveLayoutRef.current
+      if (saveFn) {
+        const saved = await saveFn()
+        if (!saved) return
+      }
+
+      if (selectedEvent?.status === 'draft') {
+        const publishBlock = await checkCoordinatorPublishGate()
+        if (publishBlock) {
+          toast.error(publishBlock)
+          return
+        }
+      }
+
+      await revalidateMarketsCacheClient()
+      toast.success('Market layout saved and deployed')
+    } finally {
+      setSaveMarketLoading(false)
+    }
+  }, [selectedEvent?.status])
+
+  useEffect(() => {
+    registerSaveHandlers({
+      onSaveDraft: handleSaveDraft,
+      onSaveMarket: handleSaveMarket,
+      saveDraftLoading,
+      saveMarketLoading,
+    })
+    return () => registerSaveHandlers(null)
+  }, [
+    handleSaveDraft,
+    handleSaveMarket,
+    registerSaveHandlers,
+    saveDraftLoading,
+    saveMarketLoading,
+  ])
+
   useEffect(() => {
     if (!selectedEventId) onInteractive?.()
   }, [selectedEventId, onInteractive])
@@ -222,7 +291,8 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
         onLayoutActionsReady={registerFloorPlanLayoutActions}
         onSelectionChange={handleSelectionChange}
         onVendorDrop={handleVendorDrop}
-        saveLayoutRef={undefined}
+        onPlacedCountChange={handlePlacedCountChange}
+        saveLayoutRef={saveLayoutRef}
         layoutSnapshotRef={localSnapshotRef}
         className="min-h-0 flex-1"
       />

@@ -166,15 +166,18 @@ function LeftCollapsibleLegendPanel({
 export function CanvasLegend({
   className,
   variant = 'floating',
+  defaultCollapsed = false,
   clearanceSummary = null,
   showClearanceWarnings = true,
 }: {
   className?: string
   variant?: 'floating' | 'sidebar' | 'docked'
+  /** Override initial collapsed state (HubGrid blueprint defaults to collapsed). */
+  defaultCollapsed?: boolean
   clearanceSummary?: DocClearanceSummary | null
   showClearanceWarnings?: boolean
 }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
   const isDocked = variant === 'docked'
   const isSidebar = variant === 'sidebar' || isDocked
   const isLeftPanel = isSidebar
@@ -184,10 +187,12 @@ export function CanvasLegend({
       if (typeof window === 'undefined') return
       const raw = window.localStorage.getItem(STORAGE_KEY)
       if (raw === '1') setCollapsed(true)
+      else if (raw === '0') setCollapsed(false)
+      else if (defaultCollapsed) setCollapsed(true)
     } catch {
       // Private mode / quota — fall back to expanded by default.
     }
-  }, [])
+  }, [defaultCollapsed])
 
   useEffect(() => {
     try {

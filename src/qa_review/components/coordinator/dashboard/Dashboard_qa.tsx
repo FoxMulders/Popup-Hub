@@ -105,6 +105,7 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
   const showBlueprint = false
   const mountCanvas = Boolean(selectedEventId && hasInitialRoom && !showDesktopRequired)
   const showMarketPicker = !selectedEventId && !showDesktopRequired
+  const showToolbarStrip = !isBlueprint
 
   return (
     <DashboardToolbarPortalProvider>
@@ -114,9 +115,11 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
       <DashboardAppShell
         header={header}
         toolbarStrip={
-          <DashboardTopToolbarStrip
-            hidden={previewMode || immersive || !isBlueprint || showMarketPicker}
-          />
+          showToolbarStrip ? (
+            <DashboardTopToolbarStrip
+              hidden={previewMode || immersive || !isBlueprint || showMarketPicker}
+            />
+          ) : null
         }
         immersive={immersive || previewMode}
         ariaBusy={ariaBusy}
@@ -171,7 +174,11 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
           </div>
         }
       />
-      {!showMarketPicker ? <LayoutEditorHelpHost showFloatingFab={isLedger} /> : null}
+      {!showMarketPicker && !isBlueprint ? (
+        <LayoutEditorHelpHost showFloatingFab={isLedger} />
+      ) : (
+        <LayoutEditorHelpHost showFloatingFab={false} />
+      )}
     </DashboardToolbarPortalProvider>
   )
 }

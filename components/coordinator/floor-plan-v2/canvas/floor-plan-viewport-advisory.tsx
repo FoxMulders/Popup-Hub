@@ -54,6 +54,17 @@ export function FloorPlanViewportLayoutProvider({ children }: { children: ReactN
   const { width, height } = useFloorPlanViewportDimensions()
   const pocketSized = isPocketSizedViewport(width, height)
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const canvasHost = document.querySelector('.floor-plan-canvas-host--dashboard')
+    if (!canvasHost) {
+      document.documentElement.style.removeProperty('--canvas-area-ratio')
+      return
+    }
+    const ratio = canvasHost.getBoundingClientRect().height / window.innerHeight
+    document.documentElement.style.setProperty('--canvas-area-ratio', ratio.toFixed(3))
+  }, [width, height])
+
   const value = useMemo<FloorPlanViewportLayoutContextValue>(() => {
     return {
       tier: pocketSized ? 'mobile' : 'desktop',

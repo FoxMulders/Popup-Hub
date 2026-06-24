@@ -31,6 +31,10 @@ interface CanvasCommandBarProps extends CanvasToolHostProps {
   topBarLayout?: boolean
   /** Dashboard header row — room/canvas controls beside Edit/Preview. */
   headerBarLayout?: boolean
+  /** HubGrid focus — vertical tool rail beside canvas. */
+  verticalRailLayout?: boolean
+  /** HubGrid focus — floating bottom dock on canvas. */
+  floatingDockLayout?: boolean
   className?: string
   rooms?: LayoutRoom[]
   activeRoomId?: string
@@ -110,6 +114,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
     sidebarLayout = false,
     topBarLayout = false,
     headerBarLayout = false,
+    verticalRailLayout = false,
+    floatingDockLayout = false,
     className,
     toolState,
     onToolChange,
@@ -321,6 +327,9 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       sidebarLayout,
       topBarLayout: topBarLayout || headerBarLayout,
       headerBarLayout,
+      verticalRailLayout,
+      floatingDockLayout,
+      hideSaveActions: verticalRailLayout || floatingDockLayout || headerBarLayout,
     }),
     [
       toolState,
@@ -416,6 +425,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
       sidebarLayout,
       topBarLayout,
       headerBarLayout,
+      verticalRailLayout,
+      floatingDockLayout,
     ]
   )
 
@@ -458,18 +469,26 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
         className={cn(
           'shrink-0 rounded-lg border border-stone-200 bg-white px-1.5 shadow-sm',
           staticLayout ? 'py-0.5' : 'py-1',
-          !staticLayout && !sidebarLayout && !topBarLayout && !headerBarLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
+          !staticLayout && !sidebarLayout && !topBarLayout && !headerBarLayout && !verticalRailLayout && !floatingDockLayout && 'flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto',
           !staticLayout &&
             !sidebarLayout &&
             !topBarLayout &&
             !headerBarLayout &&
+            !verticalRailLayout &&
+            !floatingDockLayout &&
             canvasFullscreen &&
             'max-h-[min(40vh,220px)] flex-wrap overflow-y-auto',
           staticLayout &&
             !sidebarLayout &&
             !topBarLayout &&
             !headerBarLayout &&
+            !verticalRailLayout &&
+            !floatingDockLayout &&
             'max-h-[min(36vh,180px)] overflow-x-auto overflow-y-auto',
+          verticalRailLayout &&
+            'max-h-none w-full min-w-0 shrink-0 overflow-visible border-0 bg-transparent px-0 py-0 shadow-none',
+          floatingDockLayout &&
+            'max-h-none w-auto min-w-0 shrink-0 overflow-visible border-0 bg-transparent px-0 py-0 shadow-none',
           sidebarLayout &&
             'min-h-0 w-full shrink-0 overflow-y-auto overflow-x-hidden border-0 bg-transparent px-0 shadow-none',
           topBarLayout &&
@@ -489,6 +508,8 @@ export function CanvasCommandBar(props: CanvasCommandBarProps) {
               sidebarLayout={sidebarLayout}
               topBarLayout={topBarLayout}
               headerBarLayout={headerBarLayout}
+              verticalRailLayout={verticalRailLayout}
+              floatingDockLayout={floatingDockLayout}
               sectionsFilter={
                 topBarLayout
                   ? { includeOnly: DASHBOARD_TOOLSTRIP_SECTION_IDS }

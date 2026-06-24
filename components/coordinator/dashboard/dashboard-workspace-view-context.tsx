@@ -34,11 +34,13 @@ function parseView(raw: string | null): DashboardWorkspaceView {
 }
 
 function loadLedgerPaneCollapsed(): boolean {
-  if (typeof window === 'undefined') return false
+  if (typeof window === 'undefined') return true
   try {
-    return window.localStorage.getItem(LEDGER_PANE_STORAGE_KEY) === '1'
+    const raw = window.localStorage.getItem(LEDGER_PANE_STORAGE_KEY)
+    if (raw === null) return true
+    return raw === '1'
   } catch {
-    return false
+    return true
   }
 }
 
@@ -46,7 +48,7 @@ export function DashboardWorkspaceViewProvider({ children }: { children: ReactNo
   const searchParams = useSearchParams()
   const urlView = parseView(searchParams.get('view'))
   const [view, setViewState] = useState<DashboardWorkspaceView>(urlView)
-  const [ledgerPaneCollapsed, setLedgerPaneCollapsedState] = useState(false)
+  const [ledgerPaneCollapsed, setLedgerPaneCollapsedState] = useState(true)
 
   useEffect(() => {
     setViewState(urlView)

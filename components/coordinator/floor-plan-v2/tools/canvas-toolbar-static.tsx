@@ -25,6 +25,8 @@ import {
   saveStaticRowCollapsed,
   STATIC_ROW_HEADERS,
   STATIC_ROW_LABELS,
+  CANVAS_FLOATING_DOCK_BLOCKS,
+  CANVAS_VERTICAL_RAIL_BLOCKS,
   type CanvasToolbarStaticRowId,
   type SidebarSectionDef,
   type StaticRowCollapsedState,
@@ -56,6 +58,10 @@ export interface CanvasToolbarStaticProps {
   topBarLayout?: boolean
   /** Dashboard header row — inline room/canvas controls beside Edit/Preview. */
   headerBarLayout?: boolean
+  /** HubGrid focus — vertical tool rail beside canvas. */
+  verticalRailLayout?: boolean
+  /** HubGrid focus — floating bottom dock on canvas. */
+  floatingDockLayout?: boolean
   /** Limit which sidebar sections render (top bar vs header split). */
   sectionsFilter?: SidebarSectionsFilter
   eventId?: string | null
@@ -251,6 +257,30 @@ function TopBarToolbarSection({
         reducedMotion={reducedMotion}
         tone="patron"
       />
+    )
+  }
+
+  if (section.id === 'alignment-spacing') {
+    return (
+      <section
+        className="dashboard-toolbar-section shrink-0"
+        data-toolbar-section={section.id}
+        aria-label={section.header}
+      >
+        <SectionHeader>{section.header}</SectionHeader>
+        <motion.div
+          className="toolbar-element-panel flex min-h-[var(--dashboard-toolbar-height)] min-w-0 flex-row flex-nowrap items-center gap-0.5"
+          variants={reducedMotion ? undefined : toolbarElementPanel}
+          initial={reducedMotion ? false : 'hidden'}
+          animate={reducedMotion ? undefined : 'visible'}
+        >
+          {section.blocks.map((blockId) => (
+            <div key={blockId} className="min-w-0 shrink-0">
+              {renderBlock(blockId)}
+            </div>
+          ))}
+        </motion.div>
+      </section>
     )
   }
 
@@ -487,6 +517,8 @@ export function CanvasToolbarStatic({
   sidebarLayout = false,
   topBarLayout = false,
   headerBarLayout = false,
+  verticalRailLayout = false,
+  floatingDockLayout = false,
   sectionsFilter,
   eventId,
 }: CanvasToolbarStaticProps) {
@@ -530,6 +562,30 @@ export function CanvasToolbarStatic({
     [sidebarLayout, topBarLayout, headerBarLayout, segmentCtx, sectionsFilter]
   )
   const reducedMotion = useReducedMotion()
+
+  if (verticalRailLayout) {
+    return (
+      <div className="flex w-full min-w-0 flex-col items-center gap-1">
+        {CANVAS_VERTICAL_RAIL_BLOCKS.map((blockId) => (
+          <div key={blockId} className="flex w-full min-w-0 flex-col items-center">
+            {renderBlock(blockId)}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (floatingDockLayout) {
+    return (
+      <div className="flex min-w-0 flex-nowrap items-center gap-1">
+        {CANVAS_FLOATING_DOCK_BLOCKS.map((blockId) => (
+          <div key={blockId} className="flex shrink-0 items-center">
+            {renderBlock(blockId)}
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   if (headerBarLayout) {
     if (sidebarSections.length === 0) return null

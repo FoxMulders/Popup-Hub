@@ -21,6 +21,9 @@ import { DashboardWorkspaceViewProvider } from './dashboard-workspace-view-conte
 import { FloorplanSyncBridge } from './floorplan-sync-bridge'
 import { DashboardBootstrapQa as DashboardBootstrap } from '@/src/qa_review/components/coordinator/dashboard/Dashboard_qa'
 import { DashboardCommandCenterHeader } from './dashboard-command-center-header'
+import { HubGridChromeModeProvider } from './hub-grid-chrome-mode'
+import { HubGridHeaderProvider } from './hub-grid-header-context'
+import { HubGridNavRail } from './hub-grid-nav-rail'
 import {
   DashboardSavedLayoutToolbar,
   LayoutSnapshotRefProvider,
@@ -124,6 +127,8 @@ export function MarketDashboardClient({
       <CommandCenterFullscreenProvider>
         <DashboardLayoutSaveProvider>
           <DashboardWorkspaceViewProvider>
+            <HubGridHeaderProvider>
+            <HubGridChromeModeProvider>
             <LayoutSnapshotRefProvider layoutSnapshotRef={layoutSnapshotRef}>
             <FloorplanSyncBridge />
             <div className="coordinator-dashboard-workspace flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -140,11 +145,18 @@ export function MarketDashboardClient({
                   />
                 )}
               </div>
-              <DashboardBootstrap
-                header={<DashboardCommandCenterHeader coordinatorId={coordinatorId} />}
-              />
+              <div className="flex min-h-0 flex-1 overflow-hidden">
+                <HubGridNavRail />
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                  <DashboardBootstrap
+                    header={<DashboardCommandCenterHeader coordinatorId={coordinatorId} />}
+                  />
+                </div>
+              </div>
             </div>
             </LayoutSnapshotRefProvider>
+            </HubGridChromeModeProvider>
+            </HubGridHeaderProvider>
           </DashboardWorkspaceViewProvider>
         </DashboardLayoutSaveProvider>
       </CommandCenterFullscreenProvider>

@@ -33,10 +33,10 @@ export const DEFAULT_CANVAS_TOOLBAR_ORDER: CanvasToolbarBlockId[] = [
   'room',
   'patron',
   'vendor',
+  'view-align',
   'utilities',
   'primitives',
   'history-clipboard',
-  'view-align',
   'dual-screen',
 ]
 
