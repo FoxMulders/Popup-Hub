@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio responsive guard QA (local, not deployed)
+- **Baseline:** branch `cursor/blueprint-layout-responsiveness-496a`; start HEAD `432cc36`; production deploy not run in this QA pass.
+- **Persona:** Coordinator · HubGrid / Blueprint Studio / Booth Matrix presenter.
+- **Goal:** Scan layout/dashboard Blueprint Studio surfaces and ensure small-screen defensive UI prevents unoptimized floor-plan matrix/canvas rendering.
+- **Shipped locally:**
+  - **`floor-plan-viewport-advisory.tsx`:** Centralized regression copy: "The floor plan matrix is not optimized for small screens." + recommended desktop breaker copy; overlay now supports route-specific title/body/exit labels.
+  - **`dashboard-ledger-window-client.tsx`:** Standalone presenter/wall-cast Booth Matrix now wraps in `FloorPlanViewportLayoutProvider`, shows the small-screen warning, and skips matrix sync/table render when below 1024px x 550px.
+  - **`spatial-layout-editor.tsx`:** Event layout editor now has the same client viewport guard in addition to the server mobile-UA redirect; `FloorPlanV2` does not mount on pocket-sized viewports.
+  - **QA mirrors:** `src/qa_review/...wizard-step-floor-plan_qa.tsx`, `src/qa_review/...spatial-layout-editor_qa.tsx`, and excluded recovery copy aligned with the guard/warning.
+- **Sync path:** HubGrid canvas and Allocation Ledger still derive from `MarketManagementProvider` / `floorPlanStore`; guard only blocks undersized viewport mounts and does not introduce parallel booth state.
+- **Verify:** `npx tsc --noEmit` PASS; `npm run lint` PASS; repository scan confirms the warning/viewport provider on live dashboard, standalone matrix, spatial editor, wizard, and QA mirrors.
+- **Next:** Commit/push for automation branch; no deploy unless release workflow is requested.
+
 ## Active work — HubGrid canvas layout redesign (local, not deployed)
 - **Goal:** Maximize blueprint canvas vertical space — slim nav rail, unified header, vertical tool rail, floating dock, contextual size popover.
 - **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)
