@@ -14,7 +14,18 @@
  *   not in placement code.
  */
 
+import type { VendorUnitType } from '@/lib/booth-planner/vendor-unit-types'
+import type { VenueProfile } from '@/types/database'
 import type { BoothTableCluster } from './table-cluster-types'
+import type { TablePurpose, TableShape } from '@/lib/booth-planner/table-shape'
+
+export type { VenueProfile }
+
+export type AmenityType =
+  | 'bouncy_castle'
+  | 'lost_and_found'
+  | 'seating'
+  | 'restroom'
 
 export type ObjectKind =
   | 'booth'
@@ -26,6 +37,10 @@ export type ObjectKind =
   | 'stage'
   /** Mobile concession unit — may sit on open canvas (parking lot) outside rooms. */
   | 'food_truck'
+  /** Fixed outdoor concession zone — maps to legacy `food_court`. */
+  | 'food_court'
+  /** Outdoor amenity stamp (bouncy castle, lost & found, seating, restroom). */
+  | 'amenity'
   /** Boolean-union result — one selectable path replacing merged shapes. */
   | 'merged_zone'
 
@@ -75,9 +90,9 @@ export interface BoothObject extends BasePlacedObject {
   /** Consolidated table length in feet (width on the 1′ grid). Round tables store diameter. */
   tableLengthFt?: number
   /** Vendor booth unit vs guest seating table. */
-  tablePurpose?: 'vendor' | 'guest'
-  /** Folding table (default) vs round banquet table footprint. */
-  tableShape?: 'rectangular' | 'round'
+  tablePurpose?: TablePurpose
+  /** Folding table, tent canopy, or round banquet table footprint. */
+  tableShape?: TableShape
   /** Tables requested for this vendor (used for multi-table cluster presets). */
   tableCount?: number
   /**
@@ -87,6 +102,8 @@ export interface BoothObject extends BasePlacedObject {
    * (`canvasGroupId`) and perimeter `joinGroupId` stay intact.
    */
   tableCluster?: BoothTableCluster
+  /** Table (default) or outdoor-only 10×10 tent footprint. */
+  vendorUnitType?: VendorUnitType
 }
 
 export interface WallObject extends BasePlacedObject {
@@ -143,6 +160,17 @@ export interface FoodTruckObject extends BasePlacedObject {
   kind: 'food_truck'
 }
 
+/** Food court / concessions zone — canvas-open on outdoor lots. */
+export interface FoodCourtObject extends BasePlacedObject {
+  kind: 'food_court'
+}
+
+/** Outdoor amenity fixture — bouncy castle, lost & found, seating, restroom. */
+export interface AmenityObject extends BasePlacedObject {
+  kind: 'amenity'
+  amenityType: AmenityType
+}
+
 /**
  * Single element produced by Merge (boolean union). `rings` are closed
  * loops in feet relative to `(x, y)` — the union AABB origin.
@@ -168,6 +196,8 @@ export type PlacedObject =
   | EmergencyExitObject
   | StageObject
   | FoodTruckObject
+  | FoodCourtObject
+  | AmenityObject
   | MergedZoneObject
 
 /**
@@ -233,6 +263,8 @@ export interface RoomFrame {
    * instead of the axis-aligned `originX/Y + widthFt/lengthFt` rect.
    */
   perimeterRing?: ReadonlyArray<readonly [number, number]>
+  /** Indoor hall (default) or outdoor lot. */
+  venueProfile?: VenueProfile
 }
 
 export interface FloorPlanDoc {

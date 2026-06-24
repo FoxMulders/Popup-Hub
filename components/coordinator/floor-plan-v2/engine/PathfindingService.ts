@@ -77,7 +77,14 @@ const CARDINAL = [
   { dc: 1, dr: 0 },
 ] as const
 
-const IMPASSABLE_KINDS = new Set<PlacedObject['kind']>(['booth', 'stage', 'wall'])
+const IMPASSABLE_KINDS = new Set<PlacedObject['kind']>([
+  'booth',
+  'stage',
+  'wall',
+  'food_court',
+  'amenity',
+  'food_truck',
+])
 const OFF_CANVAS_SENTINEL_X = -500
 
 function cellKey(col: number, row: number): string {

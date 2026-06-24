@@ -128,6 +128,8 @@ export interface FloorPlanCanvasProps {
   }) => void
   /** Notifies the host when a placement is rejected due to overlap. */
   onOverlapViolation?: () => void
+  /** Tent/outdoor gating and other draw rejections with a message. */
+  onDrawPlacementRejected?: (message: string) => void
   /** Fired when room drag/resize hits the 5× canvas dimension cap. */
   onRoomCanvasLimitBlocked?: () => void
   /** When false, hide architectural overlay labels on the canvas. */
@@ -227,6 +229,7 @@ export function FloorPlanCanvas({
   eventCategoryNames,
   onProximityViolation,
   onOverlapViolation,
+  onDrawPlacementRejected,
   onRoomCanvasLimitBlocked,
   showLabels = true,
   defaultBoothTableSpec,
@@ -524,6 +527,7 @@ export function FloorPlanCanvas({
     onRoomGeometryCommit,
     onProximityViolation,
     onOverlapViolation,
+    onDrawPlacementRejected,
     onRoomCanvasLimitBlocked,
     defaultBoothTableSpec,
     defaultBoothTableSpecRef,

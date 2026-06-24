@@ -3,12 +3,16 @@ import {
   type LayoutBaselineTableLengthFt,
 } from '@/lib/booth-planner/layout-table-size'
 import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
+import {
+  isTentVendor,
+  TENT_VENDOR_FOOTPRINT_FT,
+} from '@/lib/booth-planner/vendor-unit-types'
 
 /** Vendor folding tables vs guest seating (round or banquet rect). */
 export type TablePurpose = 'vendor' | 'guest'
 
-/** Market table footprint — folding tables vs banquet rounds. */
-export type TableShape = 'rectangular' | 'round'
+/** Market table footprint — folding tables, tent canopy, or banquet rounds. */
+export type TableShape = 'rectangular' | 'round' | 'tent'
 
 export const DEFAULT_TABLE_SHAPE: TableShape = 'rectangular'
 export const DEFAULT_TABLE_PURPOSE: TablePurpose = 'vendor'
@@ -46,6 +50,14 @@ export function guestRectTableSpec(ft: GuestTableLengthFt): TableSizeSpec {
   return { purpose: 'guest', shape: 'rectangular', ft }
 }
 
+export function tentVendorSpec(): TableSizeSpec {
+  return { purpose: 'vendor', shape: 'tent', ft: TENT_VENDOR_FOOTPRINT_FT }
+}
+
+export function isTentTableSpec(spec: TableSizeSpec): boolean {
+  return spec.purpose === 'vendor' && spec.shape === 'tent'
+}
+
 export function isGuestTableLengthFt(ft: number): ft is GuestTableLengthFt {
   return (GUEST_TABLE_LENGTHS_FT as readonly number[]).includes(ft)
 }
@@ -57,6 +69,22 @@ export function isRoundTableDiameterFt(ft: number): ft is GuestTableLengthFt {
 
 export function tableSizeSpecsEqual(a: TableSizeSpec, b: TableSizeSpec): boolean {
   return a.purpose === b.purpose && a.shape === b.shape && a.ft === b.ft
+}
+
+export function isTentBooth(input: {
+  vendorUnitType?: 'table' | 'tent' | null
+  tableShape?: TableShape | null
+  width?: number
+  height?: number
+}): boolean {
+  if (isTentVendor(input.vendorUnitType)) return true
+  if (input.tableShape === 'tent') return true
+  const w = input.width ?? 0
+  const h = input.height ?? 0
+  return (
+    Math.abs(w - TENT_VENDOR_FOOTPRINT_FT) < 0.05 &&
+    Math.abs(h - TENT_VENDOR_FOOTPRINT_FT) < 0.05
+  )
 }
 
 export function resolveTablePurpose(input: {
@@ -83,9 +111,14 @@ export function boothDimensionsForTable(input: {
   tableShape?: TableShape | null
   tablePurpose?: TablePurpose | null
 }): { width: number; height: number } {
-  const ft = Math.max(1, Math.round(input.tableLengthFt))
   const purpose = resolveTablePurpose(input)
   const shape = input.tableShape ?? DEFAULT_TABLE_SHAPE
+
+  if (purpose === 'vendor' && shape === 'tent') {
+    return { width: TENT_VENDOR_FOOTPRINT_FT, height: TENT_VENDOR_FOOTPRINT_FT }
+  }
+
+  const ft = Math.max(1, Math.round(input.tableLengthFt))
 
   if (purpose === 'guest' && shape === 'round') {
     return { width: ft, height: ft }
@@ -97,6 +130,7 @@ export function boothDimensionsForTable(input: {
 }
 
 export function formatTableSizeLabel(spec: TableSizeSpec): string {
+  if (isTentTableSpec(spec)) return 'Tent 10×10'
   if (spec.purpose === 'guest' && spec.shape === 'round') {
     return `${spec.ft}′ round`
   }
@@ -111,12 +145,15 @@ function dimensionsMatch(a: number, b: number, tolerance = 0.05): boolean {
 }
 
 export function tableSizeSpecFromBooth(input: {
+  vendorUnitType?: 'table' | 'tent' | null
   tableLengthFt?: number | null
   tableShape?: TableShape | null
   tablePurpose?: TablePurpose | null
   width: number
   height: number
 }): TableSizeSpec | null {
+  if (isTentBooth(input)) return tentVendorSpec()
+
   const purpose = resolveTablePurpose(input)
   const shape = input.tableShape ?? (purpose === 'guest' ? 'round' : 'rectangular')
 
@@ -174,6 +211,8 @@ export function normalizeTableSizeSpec(
   spec: TableSizeSpec,
   fallbackFt: LayoutBaselineTableLengthFt
 ): TableSizeSpec {
+  if (isTentTableSpec(spec)) return tentVendorSpec()
+
   if (spec.purpose === 'guest') {
     if (spec.shape === 'round' && isGuestTableLengthFt(spec.ft)) {
       return guestRoundTableSpec(spec.ft)

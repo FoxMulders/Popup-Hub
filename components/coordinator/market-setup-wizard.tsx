@@ -35,6 +35,8 @@ import {
 } from '@/lib/venues/platform-venue-submissions'
 import { isEdmontonVenueId } from '@/lib/booth-planner/edmonton-venue-registry'
 import type { VenuePresetId } from '@/lib/booth-planner/venue-presets'
+import type { VenueProfile } from '@/types/database'
+import { normalizeVenueProfile } from '@/lib/floor-plan/venue-profile'
 import { sortCategoriesByName } from '@/lib/categories'
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
 import { persistEventDraftViaApi, persistLayoutDraft } from '@/lib/wizard/wizard-autosave'
@@ -918,6 +920,14 @@ export function MarketSetupWizard({
     setRooms((prev) => updateRoomInList(prev, activeRoomId, { baseline_table_length_ft: ft }))
   }
 
+  function handleVenueProfileChange(profile: VenueProfile) {
+    setRooms((prev) =>
+      updateRoomInList(prev, activeRoomId, { venue_profile: profile })
+    )
+  }
+
+  const activeVenueProfile = normalizeVenueProfile(activeRoom.venue_profile)
+
   async function handleCoverFileSelected(file: File) {
     setCoverFile(file)
     setCoverImageUrl(URL.createObjectURL(file))
@@ -1425,6 +1435,8 @@ export function MarketSetupWizard({
                 onGlobalMlmCapChange={handleGlobalMlmCapChange}
                 baselineTableLengthFt={baselineTableLengthFt}
                 onBaselineTableLengthChange={handleBaselineTableLengthChange}
+                venueProfile={activeVenueProfile}
+                onVenueProfileChange={handleVenueProfileChange}
                 layoutCapacity={layoutCapacity}
                 venueElements={activeRoom.venue_elements}
                 entrance={activeRoom.entrance}

@@ -17,9 +17,11 @@ import {
 } from '@/lib/booth-planner/table-booth-consolidation'
 import {
   isGuestTableBooth,
+  isTentTableSpec,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
-import type { BoothObject, PlacedObject, RoomFrame } from '../state/types'
+import { TENT_OUTDOOR_ONLY_TOOLTIP } from '@/lib/booth-planner/indoor-shell'
+import type { AmenityType, BoothObject, PlacedObject, RoomFrame } from '../state/types'
 import { useDebugLog } from '../debug/debug-log-context'
 import { formatPlacementProbe } from '../debug/format-geometry-log'
 import {
@@ -27,6 +29,20 @@ import {
   isValidCanvasOpenPlacement,
   defaultFoodTruckFootprintFt,
 } from '@/lib/floor-plan/canvas-open-placement'
+import {
+  defaultAmenityFootprintFt,
+  defaultAmenityLabel,
+  nextAmenityLabel,
+} from '@/lib/floor-plan/amenity-placement'
+import {
+  defaultFoodCourtFootprintFt,
+  nextFoodCourtLabel,
+} from '@/lib/floor-plan/food-court-placement'
+import {
+  defaultStageFootprintFt,
+  nextStageLabel,
+} from '@/lib/floor-plan/stage-placement'
+import { isOutdoorVenueProfile, venueProfileForRoom } from '@/lib/floor-plan/venue-profile'
 import {
   isValidObjectPlacement,
   resolvePlacementRoomIdForObject,
@@ -173,6 +189,8 @@ interface UseCanvasPointerOptions {
   commandCenterViewport?: boolean
   /** When false, same-category proximity spacing is not enforced on draw/drag. */
   enforceCategorySeparation?: boolean
+  /** Surfaces placement rejections (e.g. tent on indoor lot). */
+  onDrawPlacementRejected?: (message: string) => void
 }
 
 type DrawDraft =
@@ -181,6 +199,7 @@ type DrawDraft =
       anchor: Point
       current: Point
       kind: PlacedObject['kind']
+      amenityType?: AmenityType
     }
 
 type DragState =
@@ -313,11 +332,14 @@ export function resolveDrawCommitRect(
   kind: PlacedObject['kind'],
   rect: Rect,
   snapFt: number,
-  defaultBoothTableSpec?: TableSizeSpec
+  defaultBoothTableSpec?: TableSizeSpec,
+  amenityType?: AmenityType
 ): Rect {
   const minSize = snapFt || 1
-  if (kind === 'food_truck') {
-    const { width, height } = defaultFoodTruckFootprintFt()
+  const centerStamp = (
+    width: number,
+    height: number
+  ): Rect => {
     const cx = rect.x + rect.width / 2
     const cy = rect.y + rect.height / 2
     return {
@@ -326,6 +348,22 @@ export function resolveDrawCommitRect(
       width,
       height,
     }
+  }
+  if (kind === 'food_truck') {
+    const { width, height } = defaultFoodTruckFootprintFt()
+    return centerStamp(width, height)
+  }
+  if (kind === 'stage') {
+    const { width, height } = defaultStageFootprintFt()
+    return centerStamp(width, height)
+  }
+  if (kind === 'food_court') {
+    const { width, height } = defaultFoodCourtFootprintFt()
+    return centerStamp(width, height)
+  }
+  if (kind === 'amenity' && amenityType) {
+    const { width, height } = defaultAmenityFootprintFt(amenityType)
+    return centerStamp(width, height)
   }
   if (kind === 'door' || kind === 'emergency_exit') {
     const drawnW = Math.max(minSize, rect.width)
@@ -480,6 +518,11 @@ export function useCanvasPointer(
   useEffect(() => {
     onOverlapViolationRef.current = onOverlapViolation
   }, [onOverlapViolation])
+  const onDrawPlacementRejected = options.onDrawPlacementRejected
+  const onDrawPlacementRejectedRef = useRef(onDrawPlacementRejected)
+  useEffect(() => {
+    onDrawPlacementRejectedRef.current = onDrawPlacementRejected
+  }, [onDrawPlacementRejected])
   const onLayoutCommit = options.onLayoutCommit
   const onLayoutCommitRef = useRef(onLayoutCommit)
   useEffect(() => {
@@ -755,6 +798,9 @@ export function useCanvasPointer(
           anchor: snapped,
           current: snapped,
           kind: activeTool.drawShape,
+          ...(activeTool.drawShape === 'amenity' && activeTool.amenityType
+            ? { amenityType: activeTool.amenityType }
+            : {}),
         })
         return true
       }
@@ -1750,7 +1796,9 @@ export function useCanvasPointer(
           onOverlapViolationRef.current,
           readDefaultBoothTableSpec(),
           (msg) => addLogRef.current(msg),
-          enforceCategorySeparationRef.current
+          enforceCategorySeparationRef.current,
+          activeDraft.amenityType,
+          onDrawPlacementRejectedRef.current
         )
         onAfterDrawCommit?.()
         onLayoutCommitRef.current?.()
@@ -1989,14 +2037,17 @@ function commitDraft(
   onOverlapViolation?: () => void,
   defaultBoothTableSpec?: TableSizeSpec,
   debugLog?: (message: string) => void,
-  enforceCategorySeparation = true
+  enforceCategorySeparation = true,
+  amenityType?: AmenityType,
+  onDrawPlacementRejected?: (message: string) => void
 ): void {
   const log = debugLog ?? (() => {})
   const resolved = resolveDrawCommitRect(
     kind,
     rect,
     store.doc.snapFt,
-    defaultBoothTableSpec
+    defaultBoothTableSpec,
+    amenityType
   )
   const id = `obj-${crypto.randomUUID()}`
   const base = {
@@ -2010,6 +2061,14 @@ function commitDraft(
   let obj: PlacedObject
   switch (kind) {
     case 'booth': {
+      if (
+        defaultBoothTableSpec != null &&
+        isTentTableSpec(defaultBoothTableSpec) &&
+        !isOutdoorVenueProfile(venueProfileForRoom(store.doc, roomId))
+      ) {
+        onDrawPlacementRejected?.(TENT_OUTDOOR_ONLY_TOOLTIP)
+        return
+      }
       const isGuestTable = defaultBoothTableSpec?.purpose === 'guest'
       // Vendor booths get a category seed for the proximity mix rule;
       // patron seating tables stay untagged.
@@ -2042,6 +2101,30 @@ function commitDraft(
     case 'food_truck':
       obj = { ...base, kind: 'food_truck', label: 'Food truck' }
       break
+    case 'stage':
+      obj = {
+        ...base,
+        kind: 'stage',
+        label: nextStageLabel(store.doc.objects),
+      }
+      break
+    case 'food_court':
+      obj = {
+        ...base,
+        kind: 'food_court',
+        label: nextFoodCourtLabel(store.doc.objects),
+      }
+      break
+    case 'amenity': {
+      const type = amenityType ?? 'bouncy_castle'
+      obj = {
+        ...base,
+        kind: 'amenity',
+        amenityType: type,
+        label: nextAmenityLabel(store.doc.objects, type),
+      }
+      break
+    }
     case 'door':
       obj = { ...base, kind: 'door', doorType: 'entrance' }
       break

@@ -1,4 +1,4 @@
-import type { ObjectKind } from '../state/types'
+import type { AmenityType, ObjectKind } from '../state/types'
 
 /**
  * Three top-level tool modes — modeled on Figma / Miro.
@@ -22,6 +22,8 @@ export type DrawShape = ObjectKind
 export interface ToolState {
   tool: ToolId
   drawShape: DrawShape
+  /** When `drawShape === 'amenity'`, which outdoor stamp to place. */
+  amenityType?: AmenityType
 }
 
 export const DEFAULT_TOOL_STATE: ToolState = {

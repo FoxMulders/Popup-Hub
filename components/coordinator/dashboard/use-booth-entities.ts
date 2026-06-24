@@ -8,7 +8,8 @@ import {
   type BoothClearanceBand,
 } from '@/lib/coordinator/booth-clearance-visual'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
-import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
+import { isGuestTableBooth, isTentBooth } from '@/lib/booth-planner/table-shape'
+import { vendorUnitLabel } from '@/lib/booth-planner/vendor-unit-types'
 import { useMarketManagement } from './market-management-context'
 
 /** Unified reactive booth ledger row — single source for canvas labels and Booth Matrix. */
@@ -26,6 +27,7 @@ export interface BoothEntity {
   statusLabel: string
   vendorId: string | null
   applicationId: string | null
+  unitLabel: string
 }
 
 export function useBoothEntities(): BoothEntity[] {
@@ -61,12 +63,24 @@ export function useBoothEntities(): BoothEntity[] {
           rooms,
           doc.objectRoom
         )
+        const unitLabel = vendorUnitLabel(
+          booth.vendorUnitType,
+          booth.tableLengthFt,
+          null,
+          booth.tableShape,
+          booth.tablePurpose
+        )
+        const baseLabel =
+          booth.label ||
+          `Booth at ${Math.round(booth.x)}′, ${Math.round(booth.y)}′`
+        const label =
+          isTentBooth(booth) && !baseLabel.toLowerCase().includes('tent')
+            ? `${baseLabel} · ${unitLabel}`
+            : baseLabel
 
         return {
           id: booth.id,
-          label:
-            booth.label ||
-            `Booth at ${Math.round(booth.x)}′, ${Math.round(booth.y)}′`,
+          label,
           width: booth.width,
           height: booth.height,
           x: Math.round(booth.x),
@@ -78,6 +92,7 @@ export function useBoothEntities(): BoothEntity[] {
           statusLabel: theme.label,
           vendorId: booth.vendorId ?? null,
           applicationId: app?.id ?? null,
+          unitLabel,
         }
       })
       .sort((a, b) => a.y - b.y || a.x - b.x)

@@ -18,6 +18,9 @@ export const DEFAULT_FOOD_TRUCK_LENGTH_FT = 20
 
 export const CANVAS_OPEN_PLACEMENT_KINDS: ReadonlySet<ObjectKind> = new Set<ObjectKind>([
   'food_truck',
+  'food_court',
+  'stage',
+  'amenity',
 ])
 
 export function isCanvasOpenPlacementKind(

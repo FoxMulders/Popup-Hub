@@ -19,6 +19,7 @@ import {
   guestRectTableSpec,
   guestRoundTableSpec,
   tableSizeSpecsEqual,
+  tentVendorSpec,
   vendorTableSpec,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
@@ -39,6 +40,8 @@ interface TableSizePillProps {
   roundPlacementActive?: boolean
   /** Patron rect draw tool armed. */
   rectPlacementActive?: boolean
+  /** Show 10×10 tent vendor chip (outdoor markets). */
+  allowTentVendors?: boolean
 }
 
 export interface PatronTableSizeRowsProps {
@@ -281,6 +284,7 @@ export function VendorSidebarSizeGrid({
   disabled = false,
   className,
   placementActive = false,
+  allowTentVendors = false,
 }: {
   value: TableSizeSpec
   onChange: (selection: TableSizeSpec) => void
@@ -289,6 +293,7 @@ export function VendorSidebarSizeGrid({
   className?: string
   /** When false, no size chip shows the selected/active fill. */
   placementActive?: boolean
+  allowTentVendors?: boolean
 }) {
   const { isTablet } = useFloorPlanViewportLayout()
   const [units, setUnits] = useTableSizeUnits()
@@ -324,6 +329,27 @@ export function VendorSidebarSizeGrid({
             </button>
           )
         })}
+        {allowTentVendors ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange(tentVendorSpec())}
+            aria-pressed={
+              placementActive && tableSizeSpecsEqual(value, tentVendorSpec())
+            }
+            title="Outdoor 10×10 vendor tent"
+            className={cn(
+              sizeButtonClass(
+                placementActive && tableSizeSpecsEqual(value, tentVendorSpec()),
+                disabled,
+                'vendor'
+              ),
+              boothTabletTouchClass(isTablet, 10)
+            )}
+          >
+            Tent
+          </button>
+        ) : null}
       </div>
       <div className="inline-flex h-8 overflow-hidden rounded-lg border border-stone-200">
         <TableSizeUnitsToggle units={units} onChange={setUnits} compact />
@@ -418,6 +444,7 @@ export function TableSizePill({
   vendorPlacementActive = false,
   roundPlacementActive = false,
   rectPlacementActive = false,
+  allowTentVendors = false,
 }: TableSizePillProps) {
   const { isTablet } = useFloorPlanViewportLayout()
   const [units, setUnits] = useTableSizeUnits()
@@ -489,6 +516,26 @@ export function TableSizePill({
                 </button>
               )
             })}
+            {allowTentVendors ? (
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onChange(tentVendorSpec())}
+                aria-pressed={
+                  vendorPlacementActive &&
+                  tableSizeSpecsEqual(value, tentVendorSpec())
+                }
+                title="Outdoor 10×10 vendor tent"
+                className={sizeButtonClass(
+                  vendorPlacementActive &&
+                    tableSizeSpecsEqual(value, tentVendorSpec()),
+                  disabled,
+                  'vendor'
+                )}
+              >
+                Tent
+              </button>
+            ) : null}
           </>
         ) : null}
         {showPatron ? (

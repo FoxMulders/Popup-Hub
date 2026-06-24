@@ -3,11 +3,13 @@ import { formatDimensionDisplay } from '@/lib/booth-planner/table-size-units'
 import { BOOTH_EQUIPMENT_DEPTH_FT } from '@/lib/booth-planner/table-space'
 import {
   GUEST_RECTANGULAR_TABLE_DEPTH_FT,
+  isTentBooth,
   resolveTablePurpose,
   type TableShape,
 } from '@/lib/booth-planner/table-shape'
 import { boothHasTableCluster } from '../state/table-cluster-layout'
 import type { BoothObject, PlacedObject } from '../state/types'
+import { TENT_VENDOR_FOOTPRINT_FT } from '@/lib/booth-planner/vendor-unit-types'
 import { objectCenter, rotatePointAround, snapToGrid, type Point } from './geometry'
 
 export type ObjectResizeHandle =
@@ -44,7 +46,10 @@ export function objectSupportsCanvasResize(obj: PlacedObject): boolean {
   if (obj.kind === 'merged_zone' || obj.kind === 'label' || obj.kind === 'door') {
     return false
   }
-  if (obj.kind === 'booth' && boothHasTableCluster(obj)) return false
+  if (obj.kind === 'booth') {
+    if (boothHasTableCluster(obj)) return false
+    if (isTentBooth(obj)) return false
+  }
   return true
 }
 
@@ -181,6 +186,23 @@ export function boothPatchFromResizeGeometry(
   booth: BoothObject,
   geom: ObjectGeometryPatch
 ): Partial<BoothObject> {
+  if (isTentBooth(booth)) {
+    const size = TENT_VENDOR_FOOTPRINT_FT
+    const cx = geom.x + geom.width / 2
+    const cy = geom.y + geom.height / 2
+    return {
+      x: cx - size / 2,
+      y: cy - size / 2,
+      width: size,
+      height: size,
+      vendorUnitType: 'tent',
+      tableShape: 'tent',
+      tablePurpose: 'vendor',
+      tableLengthFt: undefined,
+      tableCluster: undefined,
+    }
+  }
+
   const purpose = resolveTablePurpose(booth)
   const shape: TableShape = booth.tableShape ?? 'rectangular'
 

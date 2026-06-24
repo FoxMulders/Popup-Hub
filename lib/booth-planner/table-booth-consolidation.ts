@@ -13,6 +13,7 @@ import {
 import {
   boothDimensionsForTable,
   isGuestTableBooth,
+  isTentTableSpec,
   type TableShape,
   type TableSizeSpec,
 } from '@/lib/booth-planner/table-shape'
@@ -80,8 +81,22 @@ export function boothPatchForTableSize(
   | 'tablePurpose'
   | 'tableCount'
   | 'tableCluster'
+  | 'vendorUnitType'
 > {
   const { width: tableW, height: tableH } = boothDimensionsForTableSpec(spec)
+
+  if (isTentTableSpec(spec)) {
+    return {
+      width: tableW,
+      height: tableH,
+      tableLengthFt: undefined,
+      tableShape: 'tent',
+      tablePurpose: 'vendor',
+      tableCount: 1,
+      tableCluster: undefined,
+      vendorUnitType: 'tent',
+    }
+  }
 
   if (spec.purpose === 'guest') {
     return {
@@ -92,6 +107,7 @@ export function boothPatchForTableSize(
       tablePurpose: 'guest',
       tableCount: 1,
       tableCluster: undefined,
+      vendorUnitType: 'table',
     }
   }
 
@@ -109,6 +125,7 @@ export function boothPatchForTableSize(
       tablePurpose: 'vendor',
       tableCount: modular?.tableCount ?? 1,
       tableCluster: modular?.tableCluster,
+      vendorUnitType: 'table',
     }
   }
   return {
@@ -119,6 +136,7 @@ export function boothPatchForTableSize(
     tablePurpose: 'vendor',
     tableCount: modular?.tableCount ?? 1,
     tableCluster: modular?.tableCluster,
+    vendorUnitType: 'table',
   }
 }
 

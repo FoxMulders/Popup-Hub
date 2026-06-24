@@ -11,6 +11,7 @@ import {
   ClipboardPaste,
   Copy,
   DoorOpen,
+  Droplets,
   Expand,
   Hand,
   LayoutGrid,
@@ -37,6 +38,10 @@ import {
   EyeOff,
   Route,
   AlertTriangle,
+  Sparkles,
+  MapPin,
+  Utensils,
+  Music2,
 } from 'lucide-react'
 import { LayoutRoomBar } from '@/components/coordinator/layout-room-bar'
 import type { LayoutRoom } from '@/lib/booth-planner/layout-rooms'
@@ -55,11 +60,15 @@ import {
 } from '../engine/traffic-flow-prerequisites'
 import type { AutoArrangeMode } from '../engine/auto-arrange'
 import type { DrawShape, ToolState } from './types'
+import type { AmenityType } from '../state/types'
+import type { VenueProfile } from '@/types/database'
 import { TestSuitePopulateButton } from '@/components/coordinator/test-suite-populate-button'
 import { TooltipWrapper } from '@/components/coordinator/tooltip-wrapper'
 import { cn } from '@/lib/utils'
 import { VENDOR_BOOTH_TOOLBAR } from '@/components/coordinator/floor-plan-v2/canvas/placement-theme'
 import { formatDiscreteZoomPercent } from '@/lib/floor-plan/discrete-zoom'
+import { TENT_OUTDOOR_ONLY_TOOLTIP } from '@/lib/booth-planner/indoor-shell'
+import { isOutdoorVenueProfile } from '@/lib/floor-plan/venue-profile'
 import { BOOTH_MAP_LABEL_OPTIONS } from '@/lib/coordinator/booth-map-label'
 import {
   hubGridLayoutModeLabel,
@@ -468,6 +477,21 @@ const CREATION_SHAPES: Array<{
   },
 ]
 
+const OUTDOOR_FIXTURE_SHAPES: Array<{
+  shape: DrawShape
+  amenityType?: AmenityType
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}> = [
+  { shape: 'stage', label: 'Stage', icon: Music2 },
+  { shape: 'food_court', label: 'Food court', icon: Utensils },
+  { shape: 'amenity', amenityType: 'bouncy_castle', label: 'Bouncy castle', icon: Sparkles },
+  { shape: 'amenity', amenityType: 'lost_and_found', label: 'Lost & found', icon: MapPin },
+  { shape: 'food_truck', label: 'Food truck', icon: Truck },
+  { shape: 'amenity', amenityType: 'seating', label: 'Picnic seating', icon: LayoutGrid },
+  { shape: 'amenity', amenityType: 'restroom', label: 'Restroom / hand wash', icon: Droplets },
+]
+
 function LayoutToolbarHelpTrigger({
   compact,
   iconOnly = false,
@@ -620,6 +644,14 @@ export interface CanvasCommandBarBlockContext {
   floatingDockLayout?: boolean
   /** Omit save draft/deploy from utilities block (header owns saves). */
   hideSaveActions?: boolean
+  /** Active room indoor/outdoor profile. */
+  venueProfile?: VenueProfile
+  onVenueProfileChange?: (profile: VenueProfile) => void
+  /** Arm draw tool for outdoor fixture stamps. */
+  onPrepareOutdoorFixtureDraw?: (
+    shape: DrawShape,
+    amenityType?: AmenityType
+  ) => void
 }
 
 function proLayoutControlsEnabled(ctx: CanvasCommandBarBlockContext): boolean {
@@ -733,6 +765,8 @@ export function renderCanvasCommandBarBlock(
     activateTableSize(tableSpecForPlacementMode(mode))
   }
 
+  const allowTentVendors = isOutdoorVenueProfile(ctx.venueProfile)
+
   function activateTableSize(spec: TableSizeSpec) {
     if (ctx.onPrepareTableDraw) {
       ctx.onPrepareTableDraw(spec)
@@ -740,6 +774,17 @@ export function renderCanvasCommandBarBlock(
     }
     ctx.onTableSizeChange?.(spec)
     activateDrawShape('booth')
+  }
+
+  function activateOutdoorFixture(
+    shape: DrawShape,
+    amenityType?: AmenityType
+  ) {
+    if (ctx.onPrepareOutdoorFixtureDraw) {
+      ctx.onPrepareOutdoorFixtureDraw(shape, amenityType)
+      return
+    }
+    activateDrawShape(shape)
   }
 
   const vendorPlacementActive = isTablePlacementActive('vendor')
@@ -1110,6 +1155,7 @@ export function renderCanvasCommandBarBlock(
               compact={compact}
               className="min-w-0"
               placementActive={vendorPlacementActive}
+              allowTentVendors={allowTentVendors}
             />
             {ctx.onFillVendorTables ? (
               <FillRoomControl
@@ -1143,6 +1189,7 @@ export function renderCanvasCommandBarBlock(
             compact={compact}
             className="shrink-0"
             vendorPlacementActive={vendorPlacementActive}
+            allowTentVendors={allowTentVendors}
           />
           {ctx.onFillVendorTables ? (
             <>
@@ -1210,6 +1257,7 @@ export function renderCanvasCommandBarBlock(
                 compact={compact}
                 className="shrink-0"
                 vendorPlacementActive={vendorPlacementActive}
+                allowTentVendors={allowTentVendors}
               />
               {ctx.highlightedSelectionMetrics &&
               ctx.tableSizeFt.purpose !== 'guest' ? (
@@ -1396,6 +1444,8 @@ export function renderCanvasCommandBarBlock(
             highlightedRoomMetrics={ctx.highlightedRoomMetrics}
             highlightedRoomId={ctx.highlightedRoomId}
             onPatchRoomDimensions={ctx.onPatchRoomDimensions}
+            venueProfile={ctx.venueProfile}
+            onVenueProfileChange={ctx.onVenueProfileChange}
             embedded
             compact
             sidebar
@@ -1419,6 +1469,8 @@ export function renderCanvasCommandBarBlock(
                 highlightedRoomMetrics={ctx.highlightedRoomMetrics}
                 highlightedRoomId={ctx.highlightedRoomId}
                 onPatchRoomDimensions={ctx.onPatchRoomDimensions}
+                venueProfile={ctx.venueProfile}
+                onVenueProfileChange={ctx.onVenueProfileChange}
                 embedded
                 sidebar
               />
@@ -1512,6 +1564,8 @@ export function renderCanvasCommandBarBlock(
               highlightedRoomMetrics={ctx.highlightedRoomMetrics}
               highlightedRoomId={ctx.highlightedRoomId}
               onPatchRoomDimensions={ctx.onPatchRoomDimensions}
+              venueProfile={ctx.venueProfile}
+              onVenueProfileChange={ctx.onVenueProfileChange}
               embedded
               headerBar={headerBarLayout}
               sidebar={sidebarLayout}
@@ -1668,6 +1722,45 @@ export function renderCanvasCommandBarBlock(
             </CommandButton>
           </div>
         </>
+      )
+
+    case 'outdoor-fixtures':
+      if (!isOutdoorVenueProfile(ctx.venueProfile)) return null
+      return (
+        <div
+          data-layout-help="outdoor-fixtures"
+          className={cn(
+            'flex flex-nowrap items-center gap-0.5 overflow-x-auto',
+            verticalRailLayout && 'w-full min-w-0 flex-col items-center gap-0.5'
+          )}
+          role="group"
+          aria-label="Outdoor fixtures"
+        >
+          {OUTDOOR_FIXTURE_SHAPES.map((fixture) => {
+            const active =
+              ctx.toolState.tool === 'draw' &&
+              ctx.toolState.drawShape === fixture.shape &&
+              (fixture.shape !== 'amenity' ||
+                ctx.toolState.amenityType === fixture.amenityType)
+            return (
+              <CommandButton
+                key={`${fixture.shape}-${fixture.amenityType ?? 'default'}`}
+                onClick={() =>
+                  activateOutdoorFixture(fixture.shape, fixture.amenityType)
+                }
+                title={fixture.label}
+                active={active}
+                className={
+                  active
+                    ? 'bg-sky-200 text-sky-950 hover:bg-sky-200'
+                    : 'text-stone-700 hover:bg-sky-50'
+                }
+              >
+                <fixture.icon className="h-3.5 w-3.5" />
+              </CommandButton>
+            )
+          })}
+        </div>
       )
 
     case 'dual-screen':

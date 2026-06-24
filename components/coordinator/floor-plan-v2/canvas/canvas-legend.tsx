@@ -40,6 +40,16 @@ interface LegendItem {
 const ITEMS: LegendItem[] = [
   {
     swatchClass: VENDOR_BOOTH_LEGEND.tailwindSwatch,
+    label: 'Tent 10×10',
+    detail: 'Outdoor vendor tent — fixed 10×10 ft footprint; available when the room profile is Outdoor.',
+  },
+  {
+    swatchClass: 'bg-sky-100 ring-1 ring-sky-500',
+    label: 'Outdoor fixtures',
+    detail: 'Stage, food court, bouncy castle, lost & found, food trucks, and other stamped amenities.',
+  },
+  {
+    swatchClass: VENDOR_BOOTH_LEGEND.tailwindSwatch,
     label: 'Vendor',
     detail: 'Vendor booth footprint — assigned, unassigned, and open slots.',
   },

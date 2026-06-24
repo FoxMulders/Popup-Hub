@@ -28,7 +28,7 @@ import {
   type BoothPlacementStatus,
 } from '@/lib/coordinator/booth-placement-status'
 import { isJoinableObject } from '../state/room-joins'
-import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
+import { isGuestTableBooth, isTentBooth } from '@/lib/booth-planner/table-shape'
 import { fitTextInContainer, wrapTextInContainer } from './canvas-label-text'
 import {
   BOOTH_CLEARANCE_THEMES,
@@ -127,6 +127,10 @@ function fillForObject(
       return 'transparent'
     case 'food_truck':
       return '#fed7aa'
+    case 'food_court':
+      return '#fef3c7'
+    case 'amenity':
+      return '#e0e7ff'
     case 'door':
       return obj.doorType === 'entrance' ? '#22c55e' : '#ef4444'
     case 'emergency_exit':
@@ -136,6 +140,7 @@ function fillForObject(
     case 'merged_zone':
       return '#ccfbf1'
   }
+  return '#e7e5e4'
 }
 
 function strokeForObject(
@@ -172,6 +177,10 @@ function strokeForObject(
       return '#9d174d'
     case 'food_truck':
       return '#c2410c'
+    case 'food_court':
+      return '#b45309'
+    case 'amenity':
+      return '#4338ca'
     case 'door':
       return obj.doorType === 'entrance' ? '#15803d' : '#b91c1c'
     case 'emergency_exit':
@@ -181,6 +190,7 @@ function strokeForObject(
     case 'merged_zone':
       return '#0f766e'
   }
+  return '#57534e'
 }
 
 /** Default counter-depth (ft) when an open-wall doesn't specify one. */
@@ -617,6 +627,8 @@ function CanvasObjectsBase({
             ))
         const strokeWidth =
           isOverlapping || isPathfindingBottleneck ? 2.5 : isSelected ? 2.5 : isJoined ? 0 : 1.5
+        const isTentBoothUnit =
+          obj.kind === 'booth' && isTentBooth(obj as BoothObject)
         const isTableClusterBooth =
           obj.kind === 'booth' && boothHasTableCluster(obj as BoothObject)
         const isPatronTableBooth =
@@ -742,6 +754,27 @@ function CanvasObjectsBase({
                 pointerEvents="all"
                 shapeRendering="crispEdges"
               />
+            ) : isTentBoothUnit ? (
+              <>
+                <rect
+                  x={x}
+                  y={y}
+                  width={w}
+                  height={h}
+                  fill={displayFill}
+                  fillOpacity={displayFillOpacity}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                  pointerEvents="all"
+                />
+                <path
+                  d={`M ${x} ${y + h} L ${x + w / 2} ${y + h * 0.15} L ${x + w} ${y + h}`}
+                  fill="none"
+                  stroke={stroke}
+                  strokeWidth={Math.max(1.5, strokeWidth * 0.85)}
+                  pointerEvents="none"
+                />
+              </>
             ) : obj.kind === 'food_truck' ? (
               <rect
                 x={x}
@@ -768,6 +801,20 @@ function CanvasObjectsBase({
                 pointerEvents="all"
                 style={{ cursor: 'move' }}
                 shapeRendering="crispEdges"
+              />
+            ) : obj.kind === 'food_court' || obj.kind === 'amenity' ? (
+              <rect
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                rx={Math.min(4, w * 0.04, h * 0.08)}
+                fill={displayFill}
+                fillOpacity={displayFillOpacity ?? 0.9}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                strokeDasharray={obj.kind === 'amenity' ? '5 3' : undefined}
+                pointerEvents="all"
               />
             ) : (
               <rect
@@ -1178,6 +1225,10 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return (obj as StageObject).label || 'Stage'
     case 'food_truck':
       return obj.label || 'Food truck'
+    case 'food_court':
+      return obj.label || 'Food court'
+    case 'amenity':
+      return obj.label || 'Amenity'
     case 'door':
       return (obj as DoorObject).label
         ? (obj as DoorObject).label!
@@ -1190,6 +1241,10 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return ''
     case 'merged_zone':
       return (obj as MergedZoneObject).label || 'Merged'
+    default: {
+      const fallback = obj as PlacedObject
+      return fallback.label || fallback.kind
+    }
   }
 }
 

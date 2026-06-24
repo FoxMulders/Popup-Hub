@@ -53,6 +53,9 @@ interface LayoutRoomBarProps {
     roomId: string,
     patch: { widthFt: number; lengthFt: number }
   ) => void
+  /** Indoor hall vs outdoor lot for the highlighted room. */
+  venueProfile?: import('@/types/database').VenueProfile
+  onVenueProfileChange?: (profile: import('@/types/database').VenueProfile) => void
   /**
    * Slim toolbar mode: render as a thin horizontal ribbon designed
    * to stack directly under the canvas command bar instead of as a
@@ -294,6 +297,51 @@ function FirstRoomAddPanel({
   )
 }
 
+function VenueProfileToggle({
+  value,
+  onChange,
+  compact = false,
+}: {
+  value: import('@/types/database').VenueProfile
+  onChange: (profile: import('@/types/database').VenueProfile) => void
+  compact?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'inline-flex overflow-hidden rounded-md border border-stone-200 bg-white',
+        compact ? 'h-7' : 'h-8'
+      )}
+      role="group"
+      aria-label="Market setting"
+    >
+      {(
+        [
+          ['indoor', 'Indoor'],
+          ['outdoor', 'Outdoor'],
+        ] as const
+      ).map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          aria-pressed={value === id}
+          className={cn(
+            'px-2 text-[10px] font-semibold transition-colors',
+            value === id
+              ? id === 'outdoor'
+                ? 'bg-sky-600 text-white'
+                : 'bg-stone-800 text-white'
+              : 'text-stone-600 hover:bg-stone-50'
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function RoomDimensionFields({
   roomId,
   widthFt,
@@ -450,6 +498,8 @@ export function LayoutRoomBar({
   highlightedRoomMetrics = null,
   highlightedRoomId = null,
   onPatchRoomDimensions,
+  venueProfile = 'indoor',
+  onVenueProfileChange,
   slim = false,
   embedded = false,
   sidebar = false,
@@ -556,6 +606,13 @@ export function LayoutRoomBar({
           >
             {roomMetricsLabel}
           </span>
+        ) : null}
+        {onVenueProfileChange ? (
+          <VenueProfileToggle
+            value={venueProfile}
+            onChange={onVenueProfileChange}
+            compact={slim}
+          />
         ) : null}
         <RoomPresetPicker onAddRoom={onAddRoom} variant="panel" slim={slim} />
       </div>

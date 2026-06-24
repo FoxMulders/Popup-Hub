@@ -126,6 +126,10 @@ function previewFill(kind: ObjectKind): string {
       return '#fbcfe8'
     case 'food_truck':
       return '#fed7aa'
+    case 'food_court':
+      return '#fef3c7'
+    case 'amenity':
+      return '#e0e7ff'
     case 'door':
       return '#22c55e'
     case 'emergency_exit':
@@ -135,6 +139,7 @@ function previewFill(kind: ObjectKind): string {
     case 'merged_zone':
       return '#ccfbf1'
   }
+  return '#e7e5e4'
 }
 
 function previewStroke(kind: ObjectKind): string {
@@ -149,6 +154,10 @@ function previewStroke(kind: ObjectKind): string {
       return '#9d174d'
     case 'food_truck':
       return '#c2410c'
+    case 'food_court':
+      return '#b45309'
+    case 'amenity':
+      return '#4338ca'
     case 'door':
       return '#15803d'
     case 'emergency_exit':
@@ -158,6 +167,7 @@ function previewStroke(kind: ObjectKind): string {
     case 'merged_zone':
       return '#0f766e'
   }
+  return '#57534e'
 }
 
 interface SelectionOverlayProps {

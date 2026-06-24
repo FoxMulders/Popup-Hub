@@ -686,8 +686,8 @@ export interface BoothCell {
   tableLengthFt?: number | null
   /** Vendor booth unit vs guest seating table. */
   tablePurpose?: 'vendor' | 'guest' | null
-  /** Folding table (default) vs round banquet table footprint. */
-  tableShape?: 'rectangular' | 'round' | null
+  /** Folding table (default) vs round banquet table vs outdoor tent footprint. */
+  tableShape?: 'rectangular' | 'round' | 'tent' | null
   /** Manual table length axis; when unset, perimeter placement may auto-rotate. */
   tableOrientation?: 'horizontal' | 'vertical' | null
   /** Manual storefront direction toward wall or corner quadrant. */
@@ -730,6 +730,9 @@ export interface VenueElement {
   /** When true, fixture cannot be erased or overwritten while painting. */
   locked?: boolean
 }
+
+/** Indoor hall vs open-air lot — drives tent vendors and outdoor fixture tools. */
+export type VenueProfile = 'indoor' | 'outdoor'
 
 export interface LayoutRoom {
   id: string
@@ -783,6 +786,8 @@ export interface LayoutRoom {
    * `fairness_first` runs exposure-equity optimization.
    */
   vendor_layout_mode?: 'traffic_aware' | 'fairness_first' | null
+  /** Indoor hall (default) or outdoor lot — enables tent vendors and outdoor fixtures. */
+  venue_profile?: VenueProfile | null
 }
 
 export interface BoothLayout {

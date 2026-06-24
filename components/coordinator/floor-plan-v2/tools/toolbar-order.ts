@@ -6,6 +6,7 @@ export type CanvasToolbarBlockId =
   | 'test-suite'
   | 'optimize'
   | 'primitives'
+  | 'outdoor-fixtures'
   | 'history-clipboard'
   | 'view-align'
   | 'vendor'
@@ -19,6 +20,7 @@ export const CANVAS_TOOLBAR_BLOCK_IDS: readonly CanvasToolbarBlockId[] = [
   'test-suite',
   'optimize',
   'primitives',
+  'outdoor-fixtures',
   'history-clipboard',
   'view-align',
   'vendor',
@@ -33,6 +35,7 @@ export const DEFAULT_CANVAS_TOOLBAR_ORDER: CanvasToolbarBlockId[] = [
   'room',
   'patron',
   'vendor',
+  'outdoor-fixtures',
   'view-align',
   'utilities',
   'primitives',

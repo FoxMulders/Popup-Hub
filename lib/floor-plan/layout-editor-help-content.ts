@@ -325,6 +325,54 @@ export const LAYOUT_EDITOR_HELP_TOPICS: LayoutEditorHelpTopic[] = [
     ],
   },
   {
+    id: 'outdoor-market-profile',
+    category: 'rooms',
+    title: 'Outdoor market profile',
+    summary:
+      'Switch a room to Outdoor lot to unlock tent vendors and outdoor fixture stamps.',
+    steps: [
+      'In the room bar or market setup wizard, set Market setting to Outdoor lot.',
+      'Outdoor lots allow canvas-open placement for food trucks, stages, and amenities.',
+      'Indoor hall keeps table-based vendor booths only.',
+    ],
+    keywords: ['outdoor', 'lot', 'street fair', 'parking', 'profile', 'setting'],
+  },
+  {
+    id: 'outdoor-tent-vendors',
+    category: 'vendors',
+    title: 'Tent vendors (10×10)',
+    summary:
+      'Outdoor markets support fixed 10×10 ft tent footprints alongside table booths.',
+    steps: [
+      'Set the room profile to Outdoor lot.',
+      'Choose Tent in the vendor size picker, then draw on the canvas like a table booth.',
+      'Tents stay locked to 10×10 ft and appear in the Allocation Ledger with tent sizing.',
+    ],
+    keywords: ['tent', '10x10', '10×10', 'canopy', 'outdoor vendor'],
+  },
+  {
+    id: 'outdoor-fixtures',
+    category: 'tools',
+    title: 'Outdoor fixtures',
+    summary:
+      'Stamp stage, food court, bouncy castle, lost & found, and related amenities.',
+    steps: [
+      'With an Outdoor lot selected, open the Outdoor fixtures toolbar group.',
+      'Click a fixture icon, then click or drag on the canvas to place it.',
+      'Fixtures can sit anywhere on the open lot — they do not require perimeter walls.',
+    ],
+    keywords: [
+      'stage',
+      'food court',
+      'bouncy castle',
+      'lost and found',
+      'food truck',
+      'restroom',
+      'picnic',
+      'fixture',
+    ],
+  },
+  {
     id: 'patrons-tables',
     category: 'patrons',
     title: 'Patron tables (round and rectangular)',

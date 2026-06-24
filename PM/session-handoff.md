@@ -2,6 +2,26 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Outdoor markets (tent vendors + fixtures) (local, not deployed)
+- **Goal:** First-class outdoor market support in HubGrid — venue profile, 10×10 tent vendors, outdoor fixtures palette, legacy-bridge parity.
+- **Persona:** Coordinator · HubGrid canvas + Allocation Ledger
+- **Shipped locally:**
+  - **Venue profile:** `venue_profile` / `venueProfile` on `LayoutRoom`, `RoomFrame`, legacy bridge; Indoor/Outdoor toggle in market setup wizard (Step 2) and layout room bar; `lib/floor-plan/venue-profile.ts` helpers.
+  - **Tent vendors:** `vendorUnitType: 'tent'`, `tentVendorSpec()` / `isTentBooth()`; Tent chip in vendor table-size pill (outdoor-gated); locked 10×10 resize; peaked-roof canvas rendering; ledger unit label.
+  - **Legacy bridge:** Round-trip `vendorUnitType`, `tableShape`, tent footprint, outdoor profile; tests in `lib/floor-plan/legacy-bridge-tent.test.ts`.
+  - **Outdoor fixtures:** Toolbar block `outdoor-fixtures` (stage, food court, bouncy castle, lost & found, food truck, seating, restroom); `food_court` + `amenity` kinds; canvas-open placement; pathfinding impassable; bridge amenity sentinel labels.
+  - **Polish:** Canvas legend + layout help topics; `use-booth-entities` tent sub-label; QA canvas mirror updated.
+- **Verify:** Set room to Outdoor → draw Tent 10×10 → ledger shows tent footprint; stamp outdoor fixtures; save/reload preserves tent + profile; `npx tsc --noEmit` PASS; `npx tsx lib/floor-plan/legacy-bridge-tent.test.ts` PASS.
+- **Next:** Commit + deploy when user asks; optional follow-ups — outdoor test-suite populate demo, patron map tent badge on booth pins.
+
+- **Goal:** Fix oversized brand logo overlapping nav icons on the coordinator studio icon rail.
+- **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)
+- **Shipped locally:**
+  - **`popup-hub-logo.tsx`:** Added `rail` size token (`h-7 w-7`, no orphan `sm:` breakpoints).
+  - **`hub-grid-nav-rail.tsx`:** Logo uses `size="rail"` + `href` (Link shell, avoids `min-w-[7rem]` animation button); `overflow-hidden` on logo slot.
+- **Verify:** Blueprint tab — logo fits top of 48px rail; no overlap with Home/HubGrid icons at sm+ breakpoints.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — HubGrid canvas layout redesign (local, not deployed)
 - **Goal:** Maximize blueprint canvas vertical space — slim nav rail, unified header, vertical tool rail, floating dock, contextual size popover.
 - **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)

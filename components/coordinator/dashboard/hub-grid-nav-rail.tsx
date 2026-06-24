@@ -51,13 +51,11 @@ export function HubGridNavRail({ className }: { className?: string }) {
       )}
       aria-label="Coordinator navigation"
     >
-      <Link
+      <BrandLogoMark
+        size="rail"
         href={COORDINATOR_HOME_PATH}
-        className="mb-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg hover:bg-stone-100"
-        aria-label="Popup Hub home"
-      >
-        <BrandLogoMark size="nav" className="h-7 w-7" />
-      </Link>
+        className="mb-3 flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg hover:bg-stone-100"
+      />
 
       <ul className="flex flex-1 flex-col items-center gap-1" role="list">
         {RAIL_LINKS.map(({ href, label, icon: Icon }) => {

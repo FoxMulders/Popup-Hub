@@ -184,7 +184,7 @@ export function PopupHubIcon(props: PopupHubLogoProps) {
   return <PopupHubLogo {...props} />
 }
 
-type BrandLogoMarkSize = 'nav' | 'auth' | 'header'
+type BrandLogoMarkSize = 'nav' | 'auth' | 'header' | 'rail'
 
 const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
   /** Legacy marketing lockup — avoid in sticky app chrome. */
@@ -192,6 +192,8 @@ const MARK_HEIGHTS: Record<BrandLogoMarkSize, string> = {
   auth: 'h-14 w-auto sm:h-16',
   /** Single-row sticky header: logo beside portal tabs. */
   header: 'h-9 w-auto sm:h-10',
+  /** Slim icon rail (HubGrid nav dock). */
+  rail: 'h-7 w-7 min-h-0 min-w-7 sm:h-7',
 }
 
 interface BrandLogoMarkProps {

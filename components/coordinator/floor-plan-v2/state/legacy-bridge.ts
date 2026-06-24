@@ -33,8 +33,10 @@ import type {
   LayoutRoom,
   VenueElement,
   VenueElementType,
+  VenueProfile,
 } from '@/types/database'
 import type {
+  AmenityObject,
   BoothObject,
   DoorObject,
   FloorPlanDoc,
@@ -45,6 +47,14 @@ import { frameToRing } from './placement-surface'
 import { reconcileCanvasExtents } from './room-canvas'
 import { stripMacroPerimeterWallsFromDoc } from '../interactions/room-perimeter-sync'
 import { makeEmptyDoc } from './types'
+import { isTentVendor } from '@/lib/booth-planner/vendor-unit-types'
+import { isTentBooth } from '@/lib/booth-planner/table-shape'
+import {
+  buildAmenityLegacyLabel,
+  legacyVenueTypeForAmenity,
+  parseAmenityLegacyLabel,
+} from '@/lib/floor-plan/amenity-placement'
+import { normalizeVenueProfile } from '@/lib/floor-plan/venue-profile'
 
 const FT = 1
 const FAKE_VENDOR_ID_PREFIX = 'placeholder-'
@@ -75,8 +85,12 @@ function venueElementTypeForObject(
       return 'column'
     case 'stage':
       return 'stage'
+    case 'food_court':
+      return 'food_court'
     case 'food_truck':
       return 'custom_label'
+    case 'amenity':
+      return legacyVenueTypeForAmenity((obj as AmenityObject).amenityType)
     case 'label':
       return 'custom_label'
     case 'door':
@@ -166,6 +180,7 @@ export function legacyRoomFromDoc(
   for (const obj of doc.objects) {
     if (obj.kind === 'booth') {
       const booth = obj as BoothObject
+      const unitType = isTentBooth(booth) ? 'tent' : booth.vendorUnitType ?? 'table'
       cells.push({
         id: booth.id,
         col: ftToCell(booth.x),
@@ -177,8 +192,10 @@ export function legacyRoomFromDoc(
         categoryColor: booth.accentColor ?? '#94a3b8',
         boothNumber: boothNumber++,
         boothType: 'inside',
-        vendorUnitType: 'table',
-        tableLengthFt: null,
+        vendorUnitType: isTentVendor(unitType) ? 'tent' : 'table',
+        tableLengthFt: isTentVendor(unitType) ? null : booth.tableLengthFt ?? null,
+        tablePurpose: booth.tablePurpose ?? null,
+        tableShape: booth.tableShape ?? null,
         tableOrientation: null,
         facingTarget: null,
       })
@@ -202,6 +219,11 @@ export function legacyRoomFromDoc(
       projectedLabel = buildOpenWallLabel(obj.counterDepthFt, obj.label)
     } else if (obj.kind === 'food_truck') {
       projectedLabel = buildFoodTruckLabel(obj.label)
+    } else if (obj.kind === 'amenity') {
+      projectedLabel = buildAmenityLegacyLabel(
+        (obj as AmenityObject).amenityType,
+        obj.label
+      )
     } else {
       projectedLabel = obj.label
     }
@@ -231,6 +253,7 @@ export function legacyRoomFromDoc(
 }
 
 function objectFromBoothCell(cell: BoothCell): BoothObject {
+  const tent = isTentVendor(cell.vendorUnitType)
   return {
     id: cell.id,
     kind: 'booth',
@@ -243,6 +266,10 @@ function objectFromBoothCell(cell: BoothCell): BoothObject {
     vendorId: cell.id.startsWith(FAKE_VENDOR_ID_PREFIX) ? null : cell.id,
     categoryName: cell.categoryName || null,
     accentColor: cell.categoryColor || null,
+    vendorUnitType: tent ? 'tent' : 'table',
+    tableLengthFt: tent ? undefined : cell.tableLengthFt ?? undefined,
+    tablePurpose: cell.tablePurpose ?? (tent ? 'vendor' : undefined),
+    tableShape: tent ? 'tent' : cell.tableShape ?? undefined,
   }
 }
 
@@ -253,6 +280,8 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
     rawLabel.startsWith(EMERGENCY_EXIT_LABEL_PREFIX)
   const openWallParsed =
     typeof rawLabel === 'string' ? parseOpenWallLabel(rawLabel) : null
+  const amenityParsed =
+    typeof rawLabel === 'string' ? parseAmenityLegacyLabel(rawLabel) : null
   const isFoodTruckTagged =
     typeof rawLabel === 'string' && rawLabel.startsWith(FOOD_TRUCK_LABEL_PREFIX)
   const foodTruckLabel = isFoodTruckTagged
@@ -264,7 +293,9 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
       ? openWallParsed.label
       : isFoodTruckTagged
         ? foodTruckLabel
-        : rawLabel
+        : amenityParsed
+          ? amenityParsed.label
+          : rawLabel
 
   const base = {
     id: el.id,
@@ -293,7 +324,39 @@ function objectFromVenueElement(el: VenueElement): PlacedObject | null {
       return null
     case 'stage':
       return { ...base, kind: 'stage' }
+    case 'food_court':
+      return { ...base, kind: 'food_court', label: cleanedLabel }
+    case 'info_desk':
+    case 'seating':
+    case 'restroom':
+      if (amenityParsed) {
+        return {
+          ...base,
+          kind: 'amenity',
+          amenityType: amenityParsed.amenityType,
+          label: amenityParsed.label,
+        }
+      }
+      return {
+        ...base,
+        kind: 'amenity',
+        amenityType:
+          el.type === 'info_desk'
+            ? 'lost_and_found'
+            : el.type === 'seating'
+              ? 'seating'
+              : 'restroom',
+        label: cleanedLabel,
+      }
     case 'custom_label':
+      if (amenityParsed) {
+        return {
+          ...base,
+          kind: 'amenity',
+          amenityType: amenityParsed.amenityType,
+          label: amenityParsed.label,
+        }
+      }
       if (isFoodTruckTagged) {
         return { ...base, kind: 'food_truck', label: foodTruckLabel }
       }
@@ -366,6 +429,7 @@ export function frameListFromRooms(
       originY: Math.max(0, r.canvas_origin_y ?? 0),
       widthFt: r.venue_width || 50,
       lengthFt: r.venue_length || 50,
+      venueProfile: normalizeVenueProfile(r.venue_profile),
     }
     return { ...frame, perimeterRing: frameToRing(frame) }
   })
@@ -485,6 +549,7 @@ export function legacyRoomsFromDoc(
       ...projected,
       canvas_origin_x: ox,
       canvas_origin_y: oy,
+      venue_profile: normalizeVenueProfile(frame?.venueProfile ?? room.venue_profile),
       vendor_layout_mode:
         doc.vendorLayoutMode ?? room.vendor_layout_mode ?? 'traffic_aware',
     }

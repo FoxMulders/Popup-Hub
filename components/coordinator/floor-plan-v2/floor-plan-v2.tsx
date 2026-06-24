@@ -143,6 +143,7 @@ import { CanvasRootErrorBoundary } from './canvas/canvas-root-error-boundary'
 import { vendorTableMetaFromApplications } from '@/lib/booth-planner/table-booth-consolidation'
 import { planTableSizeChange } from './state/table-size-selection'
 import type {
+  AmenityType,
   BoothObject,
   FloorPlanDoc,
   PlacedObject,
@@ -161,7 +162,11 @@ import {
 } from './interactions/geometry'
 import { formatObjectDimensions } from './interactions/object-resize'
 import { useTableSizeUnits } from '@/lib/booth-planner/table-size-units'
-import type { LayoutRoom } from '@/types/database'
+import type { LayoutRoom, VenueProfile } from '@/types/database'
+import {
+  normalizeVenueProfile,
+  patchRoomVenueProfile,
+} from '@/lib/floor-plan/venue-profile'
 import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
 import {
@@ -467,6 +472,9 @@ function FloorPlanV2Workspace({
   const [drawShape, setDrawShape] = useState<DrawShape>(
     DEFAULT_TOOL_STATE.drawShape
   )
+  const [drawAmenityType, setDrawAmenityType] = useState<
+    AmenityType | undefined
+  >(undefined)
   const [autoArrangeMode, setAutoArrangeMode] =
     useState<AutoArrangeMode>(isDashboard ? 'perimeter-only' : 'grid')
   const [autoArrangeRunning, setAutoArrangeRunning] = useState(false)
@@ -606,6 +614,7 @@ function FloorPlanV2Workspace({
       originY: Math.max(0, r.canvas_origin_y ?? 0),
       widthFt: r.venue_width || 50,
       lengthFt: r.venue_length || 50,
+      venueProfile: normalizeVenueProfile(r.venue_profile),
     }))
     const docFrames = store.doc.rooms ?? []
     const docFrameById = new Map(docFrames.map((f) => [f.id, f]))
@@ -621,6 +630,7 @@ function FloorPlanV2Workspace({
       return {
         ...existing,
         name: wf.name,
+        venueProfile: wf.venueProfile,
       }
     })
 
@@ -984,7 +994,38 @@ function FloorPlanV2Workspace({
 
   const handleDrawShapeChange = useCallback((next: DrawShape) => {
     setDrawShape(next)
+    if (next !== 'amenity') setDrawAmenityType(undefined)
   }, [])
+
+  const handlePrepareOutdoorFixtureDraw = useCallback(
+    (shape: DrawShape, amenityType?: AmenityType) => {
+      setDrawShape(shape)
+      setDrawAmenityType(shape === 'amenity' ? amenityType : undefined)
+      setTool('draw')
+    },
+    []
+  )
+
+  const activeVenueProfile = useMemo((): VenueProfile => {
+    const room = layoutRooms.find((r) => r.id === activeRoomId)
+    if (room?.venue_profile) return normalizeVenueProfile(room.venue_profile)
+    const frame = store.doc.rooms?.find((f) => f.id === activeRoomId)
+    return normalizeVenueProfile(frame?.venueProfile)
+  }, [activeRoomId, layoutRooms, store.doc.rooms])
+
+  const handleVenueProfileChange = useCallback(
+    (profile: VenueProfile) => {
+      if (!activeRoomId) return
+      const nextRooms = layoutRooms.map((r) =>
+        r.id === activeRoomId ? { ...r, venue_profile: profile } : r
+      )
+      onLayoutRoomsChange(nextRooms, activeRoomId)
+      store.patchDoc({
+        rooms: patchRoomVenueProfile(store.doc.rooms ?? [], activeRoomId, profile),
+      })
+    },
+    [activeRoomId, layoutRooms, onLayoutRoomsChange, store]
+  )
 
   const handleClearAll = useCallback(() => {
     hardResetCanvas()
@@ -2796,7 +2837,7 @@ function FloorPlanV2Workspace({
 
   const dashboardCommandBarSharedProps = {
     staticLayout: true as const,
-    toolState: { tool, drawShape },
+    toolState: { tool, drawShape, amenityType: drawAmenityType },
     onToolChange: handleToolChange,
     onDrawShapeChange: handleDrawShapeChange,
     canUndo: store.canUndo,
@@ -2883,10 +2924,13 @@ function FloorPlanV2Workspace({
     importLayoutRoomWidthFt,
     importLayoutRoomLengthFt,
     importLayoutTableLengthFt: tableSizePillValue,
+    venueProfile: activeVenueProfile,
+    onVenueProfileChange: handleVenueProfileChange,
+    onPrepareOutdoorFixtureDraw: handlePrepareOutdoorFixtureDraw,
   }
 
   const wizardCommandBarSharedProps = {
-    toolState: { tool, drawShape },
+    toolState: { tool, drawShape, amenityType: drawAmenityType },
     onToolChange: handleToolChange,
     onDrawShapeChange: handleDrawShapeChange,
     canUndo: store.canUndo,
@@ -2966,6 +3010,9 @@ function FloorPlanV2Workspace({
     importLayoutRoomWidthFt,
     importLayoutRoomLengthFt,
     importLayoutTableLengthFt: tableSizePillValue,
+    venueProfile: activeVenueProfile,
+    onVenueProfileChange: handleVenueProfileChange,
+    onPrepareOutdoorFixtureDraw: handlePrepareOutdoorFixtureDraw,
   }
 
   const dashboardCommandBar = isDashboard ? (
@@ -3154,7 +3201,7 @@ function FloorPlanV2Workspace({
                     onLayoutCommit={isDashboard ? scheduleLayoutAutosave : undefined}
                     layoutSpringPoses={layoutSpringPoses}
                     store={store}
-                    toolState={{ tool, drawShape }}
+                    toolState={{ tool, drawShape, amenityType: drawAmenityType }}
                     defaultBoothTableSpec={defaultPlacementSpec}
                     defaultBoothTableSpecRef={defaultPlacementSpecRef}
                     tableSizeFt={tableSizePillValue}
@@ -3209,6 +3256,9 @@ function FloorPlanV2Workspace({
                         'Draw inside the room interior — booths cannot overlap fixtures or sit outside the walls.',
                         { duration: 2800 }
                       )
+                    }}
+                    onDrawPlacementRejected={(message) => {
+                      toast.error(message, { duration: 2800 })
                     }}
                     onRoomCanvasLimitBlocked={() => {
                       toast.message(
@@ -3302,7 +3352,7 @@ function FloorPlanV2Workspace({
                     scrollHost={!isEmbedded}
                     layoutSpringPoses={layoutSpringPoses}
                     store={store}
-                    toolState={{ tool, drawShape }}
+                    toolState={{ tool, drawShape, amenityType: drawAmenityType }}
                     defaultBoothTableSpec={defaultPlacementSpec}
                     defaultBoothTableSpecRef={defaultPlacementSpecRef}
                     tableSizeFt={tableSizePillValue}
@@ -3357,6 +3407,9 @@ function FloorPlanV2Workspace({
                         'Draw inside the room interior — booths cannot overlap fixtures or sit outside the walls.',
                         { duration: 2800 }
                       )
+                    }}
+                    onDrawPlacementRejected={(message) => {
+                      toast.error(message, { duration: 2800 })
                     }}
                     onRoomCanvasLimitBlocked={() => {
                       toast.message(

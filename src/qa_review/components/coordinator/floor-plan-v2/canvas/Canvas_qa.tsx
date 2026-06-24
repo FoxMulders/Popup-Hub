@@ -101,6 +101,10 @@ function fillForObject(
       return 'transparent'
     case 'food_truck':
       return '#fed7aa'
+    case 'food_court':
+      return '#fef3c7'
+    case 'amenity':
+      return '#e0e7ff'
     case 'door':
       return obj.doorType === 'entrance' ? '#22c55e' : '#ef4444'
     case 'emergency_exit':
@@ -109,6 +113,8 @@ function fillForObject(
       return 'transparent'
     case 'merged_zone':
       return '#ccfbf1'
+    default:
+      return '#f5f5f4'
   }
 }
 
@@ -136,6 +142,10 @@ function strokeForObject(
       return '#9d174d'
     case 'food_truck':
       return '#c2410c'
+    case 'food_court':
+      return '#b45309'
+    case 'amenity':
+      return '#4338ca'
     case 'door':
       return obj.doorType === 'entrance' ? '#15803d' : '#b91c1c'
     case 'emergency_exit':
@@ -144,6 +154,8 @@ function strokeForObject(
       return '#57534e'
     case 'merged_zone':
       return '#0f766e'
+    default:
+      return '#57534e'
   }
 }
 
@@ -991,6 +1003,10 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return (obj as StageObject).label || 'Stage'
     case 'food_truck':
       return obj.label || 'Food truck'
+    case 'food_court':
+      return obj.label || 'Food court'
+    case 'amenity':
+      return obj.label || 'Amenity'
     case 'door':
       return (obj as DoorObject).label
         ? (obj as DoorObject).label!
@@ -1003,6 +1019,10 @@ function objectFallbackLabel(obj: PlacedObject): string {
       return ''
     case 'merged_zone':
       return (obj as MergedZoneObject).label || 'Merged'
+    default: {
+      const fallback = obj as PlacedObject
+      return fallback.label || fallback.kind
+    }
   }
 }
 

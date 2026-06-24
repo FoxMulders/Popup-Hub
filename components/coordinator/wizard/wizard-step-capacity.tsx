@@ -15,7 +15,7 @@ import {
   buildQuarterAuctionVendorPreset,
   distributeQuarterAuctionTotalSpots,
 } from '@/lib/wizard/quarter-auction-vendor-presets'
-import type { Category, VenueElement } from '@/types/database'
+import type { Category, VenueElement, VenueProfile } from '@/types/database'
 import { MarketBoothPricingFields } from '@/components/coordinator/wizard/market-booth-pricing-fields'
 import { toast } from 'sonner'
 
@@ -51,6 +51,8 @@ export interface WizardStepCapacityProps {
   onCommunityLeagueDiscountPercentChange?: (percent: number) => void
   suggestCommunityLeagueDiscount?: boolean
   venueSubmissionPending?: boolean
+  venueProfile?: VenueProfile
+  onVenueProfileChange?: (profile: VenueProfile) => void
 }
 
 export function WizardStepCapacity({
@@ -85,6 +87,8 @@ export function WizardStepCapacity({
   onCommunityLeagueDiscountPercentChange,
   suggestCommunityLeagueDiscount = false,
   venueSubmissionPending = false,
+  venueProfile = 'indoor',
+  onVenueProfileChange,
 }: WizardStepCapacityProps) {
   const [totalSpotsInput, setTotalSpotsInput] = useState('')
 
@@ -249,6 +253,40 @@ export function WizardStepCapacity({
                   Total caps <strong className="text-foreground">{totalCaps || '—'}</strong>
                 </span>
               </div>
+              {onVenueProfileChange ? (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="font-medium text-muted-foreground">Market setting</span>
+                  <div
+                    className="inline-flex overflow-hidden rounded-md border border-stone-200 bg-white"
+                    role="group"
+                    aria-label="Market setting"
+                  >
+                    {(
+                      [
+                        ['indoor', 'Indoor hall'],
+                        ['outdoor', 'Outdoor lot'],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => onVenueProfileChange(id)}
+                        aria-pressed={venueProfile === id}
+                        className={
+                          venueProfile === id
+                            ? 'bg-sky-600 px-2.5 py-1 font-semibold text-white'
+                            : 'px-2.5 py-1 font-semibold text-stone-600 hover:bg-stone-50'
+                        }
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-muted-foreground">
+                    Outdoor enables tent vendors (10×10) and fixture stamps in HubGrid.
+                  </span>
+                </div>
+              ) : null}
             </>
           ) : (
             <p className="wizard-glass-inset px-3 py-2 text-xs text-muted-foreground">

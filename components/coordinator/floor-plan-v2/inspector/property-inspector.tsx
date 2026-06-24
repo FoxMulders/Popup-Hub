@@ -249,11 +249,16 @@ function prettyKindHint(kind: PlacedObject['kind']): string {
       return 'Performance area. Re-size to match the platform footprint.'
     case 'food_truck':
       return 'Mobile concession unit. Place on open canvas or parking areas — cannot overlap solid walls.'
+    case 'food_court':
+      return 'Fixed concessions zone for outdoor food courts.'
+    case 'amenity':
+      return 'Outdoor amenity stamp — bouncy castle, lost & found, seating, or restroom.'
     case 'label':
       return 'Free-form text annotation.'
     case 'merged_zone':
       return 'Boolean-merged shape. Unjoin by deleting and re-drawing, or undo.'
   }
+  return 'Canvas object.'
 }
 
 function PositionFields({

@@ -74,7 +74,7 @@ export function vendorUnitLabel(
   unitType?: VendorUnitType | null,
   tableLengthFt?: number | null,
   tableOrientation?: TableOrientation | null,
-  tableShape?: 'rectangular' | 'round' | null,
+  tableShape?: 'rectangular' | 'round' | 'tent' | null,
   tablePurpose?: 'vendor' | 'guest' | null
 ): string {
   if (isTentVendor(unitType)) return 'Tent 10×10'

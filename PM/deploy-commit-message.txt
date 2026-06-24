@@ -1,1 +1,1 @@
-feat: ship 12 session updates (HubGrid canvas layout redesign; Center/align toolbar placement; Homepage pathway dedupe; Native mobile apps; +8 more)
+feat: ship 13 session updates (Outdoor markets (tent vendors + fixtures); HubGrid canvas layout redesign; Center/align toolbar placement; Homepage pathway dedupe; +9 more)
