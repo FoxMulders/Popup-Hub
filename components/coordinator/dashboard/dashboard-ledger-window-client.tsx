@@ -8,6 +8,12 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanDesktopRequiredInlineFallback,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -36,6 +42,15 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DashboardLedgerWindowClientInner />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function DashboardLedgerWindowClientInner() {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
@@ -87,167 +102,184 @@ export function DashboardLedgerWindowClient() {
     postFloorplanSync({ type: 'selection', source: 'ledger', boothId })
   }, [])
 
+  if (showDesktopRequired) {
+    return (
+      <>
+        <DesktopScreenRequiredOverlay eventId={eventId} />
+        <div className="dashboard-ledger-window flex h-full min-h-0 flex-col bg-stone-50">
+          <FloorPlanDesktopRequiredInlineFallback />
+        </div>
+      </>
+    )
+  }
+
   if (isWallCast) {
     return (
-      <div
-        className="dashboard-ledger-window dashboard-ledger-window--wall-cast flex h-full min-h-0 flex-col bg-stone-950 text-stone-50"
-        data-dual-screen-mode="wall-cast"
-      >
-        <header className="shrink-0 border-b border-stone-700 bg-stone-900 px-4 py-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h1 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
-              Booth assignments
-            </h1>
-            <p className="text-sm font-medium text-stone-400">
-              {connected ? 'Live · read-only wall display' : 'Waiting for HubGrid…'}
-            </p>
+      <>
+        <DesktopScreenRequiredOverlay eventId={eventId} />
+        <div
+          className="dashboard-ledger-window dashboard-ledger-window--wall-cast flex h-full min-h-0 flex-col bg-stone-950 text-stone-50"
+          data-dual-screen-mode="wall-cast"
+        >
+          <header className="shrink-0 border-b border-stone-700 bg-stone-900 px-4 py-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h1 className="font-heading text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                Booth assignments
+              </h1>
+              <p className="text-sm font-medium text-stone-400">
+                {connected ? 'Live · read-only wall display' : 'Waiting for HubGrid…'}
+              </p>
+            </div>
+          </header>
+
+          <p className="sr-only" aria-live="polite" aria-atomic="true">
+            {selectionAnnouncement}
+          </p>
+
+          <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
+            {rows.length === 0 ? (
+              <p className="p-8 text-center text-lg text-stone-400">
+                No booths yet. Place booths on the canvas to populate this display.
+              </p>
+            ) : (
+              <table className="w-full table-fixed border-collapse text-left text-base sm:text-lg">
+                <caption className="sr-only">
+                  Floor plan booth assignments for wall display
+                </caption>
+                <thead className="sticky top-0 z-10">
+                  <tr className="border-b-2 border-stone-600 bg-stone-900 text-stone-300">
+                    <th scope="col" className="w-[18%] px-3 py-2 font-bold uppercase tracking-wide">
+                      Booth
+                    </th>
+                    <th scope="col" className="w-[34%] px-3 py-2 font-bold uppercase tracking-wide">
+                      Vendor
+                    </th>
+                    <th scope="col" className="w-[28%] px-3 py-2 font-bold uppercase tracking-wide">
+                      Category
+                    </th>
+                    <th scope="col" className="w-[20%] px-3 py-2 font-bold uppercase tracking-wide">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => {
+                    const selected = selectedBoothId === row.id
+                    return (
+                      <tr
+                        key={row.id}
+                        ref={selected ? selectedRowRef : undefined}
+                        className={cn(
+                          'border-b border-stone-800/80',
+                          WALL_CAST_ROW_CLASS[row.status],
+                          selected && 'ring-2 ring-inset ring-white/90'
+                        )}
+                        aria-current={selected ? 'true' : undefined}
+                      >
+                        <th scope="row" className="px-3 py-2.5 text-xl font-bold tabular-nums sm:text-2xl">
+                          {row.label}
+                        </th>
+                        <td className="truncate px-3 py-2.5 font-medium">{row.vendor}</td>
+                        <td className="truncate px-3 py-2.5">{row.category}</td>
+                        <td className="px-3 py-2.5 font-semibold">{row.statusLabel}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <DesktopScreenRequiredOverlay eventId={eventId} />
+      <div
+        className="dashboard-ledger-window dashboard-ledger-window--presenter flex h-full min-h-0 flex-col bg-stone-50"
+        data-dual-screen-mode="presenter"
+      >
+        <header className="shrink-0 border-b border-stone-200 bg-white px-3 py-2">
+          <h1 className="font-heading text-base font-semibold text-stone-900">
+            Booth Matrix — Presenter
+          </h1>
+          <p className="text-xs text-stone-600">
+            {connected
+              ? 'Click a booth to focus it on the HubGrid canvas'
+              : 'Waiting for canvas window…'}
+          </p>
         </header>
 
         <p className="sr-only" aria-live="polite" aria-atomic="true">
           {selectionAnnouncement}
         </p>
 
-        <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
+        <div className="min-h-0 flex-1 overflow-auto p-2">
           {rows.length === 0 ? (
-            <p className="p-8 text-center text-lg text-stone-400">
-              No booths yet. Place booths on the canvas to populate this display.
+            <p className="p-6 text-center text-sm text-stone-600">
+              No booths yet. Place booths on the canvas window to populate this ledger.
             </p>
           ) : (
-            <table className="w-full table-fixed border-collapse text-left text-base sm:text-lg">
+            <table className="w-full table-fixed border-collapse text-left text-sm">
               <caption className="sr-only">
-                Floor plan booth assignments for wall display
+                Floor plan booth assignments, categories, and payment status
               </caption>
               <thead className="sticky top-0 z-10">
-                <tr className="border-b-2 border-stone-600 bg-stone-900 text-stone-300">
-                  <th scope="col" className="w-[18%] px-3 py-2 font-bold uppercase tracking-wide">
+                <tr className="border-b border-stone-200 bg-stone-100/95">
+                  <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
                     Booth
                   </th>
-                  <th scope="col" className="w-[34%] px-3 py-2 font-bold uppercase tracking-wide">
+                  <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
                     Vendor
                   </th>
-                  <th scope="col" className="w-[28%] px-3 py-2 font-bold uppercase tracking-wide">
+                  <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
                     Category
                   </th>
-                  <th scope="col" className="w-[20%] px-3 py-2 font-bold uppercase tracking-wide">
+                  <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
                     Status
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
-                  const selected = selectedBoothId === row.id
-                  return (
-                    <tr
-                      key={row.id}
-                      ref={selected ? selectedRowRef : undefined}
-                      className={cn(
-                        'border-b border-stone-800/80',
-                        WALL_CAST_ROW_CLASS[row.status],
-                        selected && 'ring-2 ring-inset ring-white/90'
-                      )}
-                      aria-current={selected ? 'true' : undefined}
-                    >
-                      <th scope="row" className="px-3 py-2.5 text-xl font-bold tabular-nums sm:text-2xl">
+                {rows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className={cn(
+                      'border-b border-stone-100 hover:bg-emerald-50/50',
+                      selectedBoothId === row.id && 'bg-emerald-50/80'
+                    )}
+                    aria-current={selectedBoothId === row.id ? 'true' : undefined}
+                  >
+                    <th scope="row" className="px-2 py-1 font-medium">
+                      <button
+                        type="button"
+                        className="rounded text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                        onClick={() => handleFocusBooth(row.id)}
+                      >
                         {row.label}
-                      </th>
-                      <td className="truncate px-3 py-2.5 font-medium">{row.vendor}</td>
-                      <td className="truncate px-3 py-2.5">{row.category}</td>
-                      <td className="px-3 py-2.5 font-semibold">{row.statusLabel}</td>
-                    </tr>
-                  )
-                })}
+                      </button>
+                    </th>
+                    <td className="truncate px-2 py-1">{row.vendor}</td>
+                    <td className="truncate px-2 py-1">{row.category}</td>
+                    <td className="px-2 py-1">
+                      <span
+                        className={cn(
+                          'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold',
+                          STATUS_PILL_CLASS[row.status]
+                        )}
+                      >
+                        {row.statusLabel}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
         </div>
       </div>
-    )
-  }
-
-  return (
-    <div
-      className="dashboard-ledger-window dashboard-ledger-window--presenter flex h-full min-h-0 flex-col bg-stone-50"
-      data-dual-screen-mode="presenter"
-    >
-      <header className="shrink-0 border-b border-stone-200 bg-white px-3 py-2">
-        <h1 className="font-heading text-base font-semibold text-stone-900">
-          Booth Matrix — Presenter
-        </h1>
-        <p className="text-xs text-stone-600">
-          {connected
-            ? 'Click a booth to focus it on the HubGrid canvas'
-            : 'Waiting for canvas window…'}
-        </p>
-      </header>
-
-      <p className="sr-only" aria-live="polite" aria-atomic="true">
-        {selectionAnnouncement}
-      </p>
-
-      <div className="min-h-0 flex-1 overflow-auto p-2">
-        {rows.length === 0 ? (
-          <p className="p-6 text-center text-sm text-stone-600">
-            No booths yet. Place booths on the canvas window to populate this ledger.
-          </p>
-        ) : (
-          <table className="w-full table-fixed border-collapse text-left text-sm">
-            <caption className="sr-only">
-              Floor plan booth assignments, categories, and payment status
-            </caption>
-            <thead className="sticky top-0 z-10">
-              <tr className="border-b border-stone-200 bg-stone-100/95">
-                <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
-                  Booth
-                </th>
-                <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
-                  Vendor
-                </th>
-                <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
-                  Category
-                </th>
-                <th scope="col" className="w-1/4 px-2 py-1.5 font-semibold">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    'border-b border-stone-100 hover:bg-emerald-50/50',
-                    selectedBoothId === row.id && 'bg-emerald-50/80'
-                  )}
-                  aria-current={selectedBoothId === row.id ? 'true' : undefined}
-                >
-                  <th scope="row" className="px-2 py-1 font-medium">
-                    <button
-                      type="button"
-                      className="rounded text-left underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
-                      onClick={() => handleFocusBooth(row.id)}
-                    >
-                      {row.label}
-                    </button>
-                  </th>
-                  <td className="truncate px-2 py-1">{row.vendor}</td>
-                  <td className="truncate px-2 py-1">{row.category}</td>
-                  <td className="px-2 py-1">
-                    <span
-                      className={cn(
-                        'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold',
-                        STATUS_PILL_CLASS[row.status]
-                      )}
-                    >
-                      {row.statusLabel}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+    </>
   )
 }
