@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import {
@@ -58,8 +58,12 @@ function DashboardLedgerWindowClientInner() {
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const selectionAnnouncement = useMemo(() => {
+    const row = rows.find((r) => r.id === selectedBoothId)
+    if (!row) return ''
+    return `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
+  }, [rows, selectedBoothId])
 
   useEffect(() => {
     document.title = isWallCast
@@ -82,14 +86,6 @@ function DashboardLedgerWindowClientInner() {
       }
     })
   }, [eventId])
-
-  useEffect(() => {
-    const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
-  }, [rows, selectedBoothId])
 
   useEffect(() => {
     if (!isWallCast || !selectedRowRef.current) return

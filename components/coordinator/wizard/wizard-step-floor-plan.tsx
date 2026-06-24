@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { clearMultiRoomDraft } from '@/components/coordinator/floor-plan-v2/state/local-draft'
 import { FloorPlanV2, type FloorPlanV2Props } from '@/components/coordinator/floor-plan-v2/floor-plan-v2'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'

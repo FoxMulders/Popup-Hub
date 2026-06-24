@@ -91,14 +91,9 @@ export function DesktopScreenRequiredOverlay({
   const { showDesktopRequired } = useFloorPlanViewportLayout()
   const marketMgmt = useOptionalMarketManagement()
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const eventId = eventIdProp ?? marketMgmt?.selectedEventId ?? null
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!showDesktopRequired) return
@@ -127,7 +122,7 @@ export function DesktopScreenRequiredOverlay({
     navigateAway()
   }, [navigateAway, onSaveDraft])
 
-  if (!showDesktopRequired || !mounted) return null
+  if (!showDesktopRequired || typeof document === 'undefined') return null
 
   const overlay = (
     <div

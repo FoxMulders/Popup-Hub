@@ -173,7 +173,17 @@ function SpatialLayoutEditorInner({
     } finally {
       setSaving(false)
     }
-  }, [event.status, eventId, hasOverlap, router, supabase])
+  }, [
+    event.address,
+    event.latitude,
+    event.location_name,
+    event.longitude,
+    event.status,
+    eventId,
+    hasOverlap,
+    router,
+    supabase,
+  ])
 
   const eventName = event.name?.trim() ?? 'Untitled event'
   const isDraft = event.status === 'draft'
