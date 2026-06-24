@@ -2,6 +2,7 @@
 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
@@ -9,7 +10,7 @@ import type { BoothObject } from '@/components/coordinator/floor-plan-v2/state/t
 import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/interactions/geometry'
 import { buttonVariants } from '@/components/ui/button'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
-import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
+import { deployDraftMarketFromHubGrid } from '@/lib/coordinator/hub-grid-deploy-draft-market'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
@@ -33,6 +34,7 @@ export interface DashboardFloorPlanViewportProps {
 }
 
 export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlanViewportProps) {
+  const router = useRouter()
   const {
     events,
     selectedEventId,
@@ -195,6 +197,7 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
   }, [])
 
   const handleSaveMarket = useCallback(async () => {
+    if (!selectedEventId) return
     setSaveMarketLoading(true)
     try {
       const saveFn = saveLayoutRef.current
@@ -204,19 +207,23 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
       }
 
       if (selectedEvent?.status === 'draft') {
-        const publishBlock = await checkCoordinatorPublishGate()
-        if (publishBlock) {
-          toast.error(publishBlock)
+        const deploy = await deployDraftMarketFromHubGrid(selectedEventId)
+        if (!deploy.ok) {
+          toast.error(deploy.error)
           return
         }
+        await revalidateMarketsCacheClient()
+        toast.success('Market layout saved and deployed')
+        router.refresh()
+        return
       }
 
       await revalidateMarketsCacheClient()
-      toast.success('Market layout saved and deployed')
+      toast.success('Market layout saved')
     } finally {
       setSaveMarketLoading(false)
     }
-  }, [selectedEvent?.status])
+  }, [router, selectedEvent?.status, selectedEventId])
 
   useEffect(() => {
     registerSaveHandlers({
