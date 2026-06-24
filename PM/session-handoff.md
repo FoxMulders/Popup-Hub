@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Mobile login chrome dedupe (local, not deployed)
+- **Goal:** Remove redundant GuestNav on mobile login — duplicates large form logo; profile/menu irrelevant before sign-in.
+- **Shipped locally:**
+  - **`app/(auth)/login/page.tsx`:** `GuestNav` hidden below `md`; login content uses `safe-top` + mobile top padding.
+- **Verify:** `/login` on mobile — no sticky header; large logo + sign-in card only; desktop keeps GuestNav.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Outdoor markets (tent vendors + fixtures) (local, not deployed)
 - **Goal:** First-class outdoor market support in HubGrid — venue profile, 10×10 tent vendors, outdoor fixtures palette, legacy-bridge parity.
 - **Persona:** Coordinator · HubGrid canvas + Allocation Ledger
@@ -1997,9 +2004,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `b53d20f` (pushed to `origin/master`)
-- Last deploy commit: `b53d20f` - feat: ship 9 session updates (Popup Hub backlog implementation; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)
-- Production: https://popuphub.ca - **v1.120.0 build 1** | commit `8d6b63b` (handoff updated 2026-06-23 11:27)
+- Branch: `master` @ `da10eb2` (pushed to `origin/master`)
+- Last deploy commit: `da10eb2` - feat: ship 13 session updates (Outdoor markets (tent vendors + fixtures); HubGrid canvas layout redesign; Center/align toolbar placement; Homepage pathway dedupe; +9 more)
+- Production: https://popuphub.ca - **v1.125.0 build 1** | commit `432cc36` (handoff updated 2026-06-24 12:36)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2376,7 +2383,7 @@
 
 
 ## Last deploy
-- 2026-06-23 11:27 - Deploy via deploy-popuphub.ps1 - `feat: ship 9 session updates (Popup Hub backlog implementation; Tipsy Fox Creations Inc. entity structure; IP protection; Vendor payment chase; +5 more)` (b53d20f)
+- 2026-06-24 12:36 - Deploy via deploy-popuphub.ps1 - `feat: ship 13 session updates (Outdoor markets (tent vendors + fixtures); HubGrid canvas layout redesign; Center/align toolbar placement; Homepage pathway dedupe; +9 more)` (da10eb2)
 
 
 ## Goal
