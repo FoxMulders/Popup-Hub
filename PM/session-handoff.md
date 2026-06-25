@@ -2,7 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Vendor & patron floor map exposure (local, not deployed)
+## Active work — Critical bug investigation (2026-06-25)
+- **Goal:** Audit recent ship batch for high-severity correctness bugs; fix confirmed issues.
+- **Findings:** Two critical bugs in the vendor/patron floor map + wizard autosave batch.
+- **Shipped locally:**
+  - **`lib/wizard/wizard-autosave.ts`:** `parseDraftApiResponse` — 502/HTML infra errors no longer mislabeled as session expired (prevents new-market draft loss after false re-auth).
+  - **`lib/shopper/public-floorplan-modes.ts`:** Guest table detection aligned with HubGrid `isGuestTableBooth` (round seating no longer renders as vendor booths).
+  - **`lib/shopper/pathfinding.ts`:** Exposition routing uses same guest-table classifier.
+  - **Tests:** `lib/wizard/wizard-autosave.test.ts`, `lib/shopper/public-floorplan-modes.test.ts`.
+- **Verify:** `npx tsx lib/wizard/wizard-autosave.test.ts` PASS; `npx tsx lib/shopper/public-floorplan-modes.test.ts` PASS.
+- **Next:** PR review + deploy.
+
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
 - **Shipped locally:**
