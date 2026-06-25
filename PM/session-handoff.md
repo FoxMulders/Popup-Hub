@@ -2,6 +2,20 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint responsive layout guard QA (pushed, deploy blocked)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-18e4`; task-start HEAD `986c6a5` (`Updated deploy.yml`); implementation commit `9f19945` pushed to origin.
+- **Goal:** Ensure Blueprint Studio, Allocation Ledger, dual-screen Booth Matrix, and layout editor surfaces defensively handle pocket-sized viewports using the 1024px x 550px desktop breaker or a matrix-specific regression warning.
+- **Persona:** Coordinator · HubGrid Blueprint Studio / Allocation Ledger / dual-screen Booth Matrix.
+- **Shipped locally:**
+  - **`dashboard-ledger-viewport-guard.tsx`:** New client guard with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`, `data-testid="floor-plan-matrix-small-screen-warning"`, and the shared 1024px x 550px breakpoint.
+  - **`dashboard-ledger-window-client.tsx`:** Standalone presenter/wall-cast matrix now mounts rows and BroadcastChannel sync only after the viewport passes the desktop breaker.
+  - **`dashboard-allocation-ledger.tsx`:** Full-page Booth Matrix wrapped with the same guard for defensive embedded use.
+  - **`spatial-layout-editor.tsx`:** Alternate event layout editor now uses `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and avoids mounting `FloorPlanV2` on blocked viewports.
+  - **QA mirrors:** `src/qa_review` wizard/spatial files and the root recovery spatial snapshot aligned with the same defensive pattern.
+- **Verify:** Full-repo responsive-handler scan reviewed; `./node_modules/.bin/tsc --noEmit --pretty false` PASS; scoped `npm run lint -- ...` PASS.
+- **Blockers:** `npx vercel deploy --prod --yes` could not complete because the cloud environment has no Vercel credentials and entered device login (`No existing credentials found`). Layout save remains required for persistence; live HubGrid ledger sync still derives from `floorPlanStore` via existing context once the viewport is allowed.
+- **Next:** Complete Vercel authentication or deploy from an authenticated environment, then rerun `npx vercel deploy --prod --yes`.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
