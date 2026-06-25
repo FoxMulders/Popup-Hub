@@ -2,6 +2,7 @@
 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2'
 import type { FloorPlanDocStore } from '@/components/coordinator/floor-plan-v2/state/use-floor-plan-doc'
@@ -10,6 +11,7 @@ import { rectContainsPoint } from '@/components/coordinator/floor-plan-v2/intera
 import { buttonVariants } from '@/components/ui/button'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import { checkCoordinatorPublishGate } from '@/lib/coordinator/publish-gate-client'
+import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { setSuppressAutoMainHall } from '@/components/coordinator/floor-plan-v2/state/canvas-session-guards'
@@ -33,6 +35,7 @@ export interface DashboardFloorPlanViewportProps {
 }
 
 export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlanViewportProps) {
+  const router = useRouter()
   const {
     events,
     selectedEventId,
@@ -195,6 +198,8 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
   }, [])
 
   const handleSaveMarket = useCallback(async () => {
+    if (!selectedEventId) return
+
     setSaveMarketLoading(true)
     try {
       const saveFn = saveLayoutRef.current
@@ -209,14 +214,65 @@ export function DashboardFloorPlanViewport({ onInteractive }: DashboardFloorPlan
           toast.error(publishBlock)
           return
         }
+
+        const supabase = createClient()
+        const { data: eventRow, error: eventError } = await supabase
+          .from('events')
+          .select('id, latitude, longitude, address, location_name')
+          .eq('id', selectedEventId)
+          .single()
+
+        if (eventError || !eventRow) {
+          toast.error('Could not load market details for deploy')
+          return
+        }
+
+        const verifyRes = await fetch('/api/coordinator/venues/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: selectedEventId,
+            latitude: eventRow.latitude,
+            longitude: eventRow.longitude,
+            address: eventRow.address,
+            locationName: eventRow.location_name,
+            pinDropped: true,
+            persist: true,
+          }),
+        })
+        const verifyData = (await verifyRes.json()) as {
+          verified?: boolean
+          reason?: string
+        }
+        if (!verifyRes.ok || !verifyData.verified) {
+          toast.error(
+            verifyData.reason ??
+              'Venue must be verified before deploying the market.'
+          )
+          return
+        }
+
+        const { error } = await supabase
+          .from('events')
+          .update({ status: 'published' })
+          .eq('id', selectedEventId)
+        if (error) {
+          toast.error(`Deploy failed — ${error.message}`)
+          return
+        }
+
+        await revalidateMarketsCacheClient()
+        toast.success('Layout saved and market deployed')
+        router.refresh()
+        return
       }
 
       await revalidateMarketsCacheClient()
-      toast.success('Market layout saved and deployed')
+      toast.success('Layout saved')
     } finally {
       setSaveMarketLoading(false)
     }
-  }, [selectedEvent?.status])
+  }, [router, selectedEvent?.status, selectedEventId])
 
   useEffect(() => {
     registerSaveHandlers({
