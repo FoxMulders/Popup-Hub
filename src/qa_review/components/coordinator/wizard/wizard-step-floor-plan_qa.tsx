@@ -11,6 +11,11 @@ import { LayoutPlannerShellQa } from '@/src/qa_review/components/coordinator/lay
 import { LayoutPlannerStats } from '@/components/coordinator/layout-planner/layout-planner-stats'
 import { WizardNav } from '@/components/coordinator/wizard/wizard-nav'
 import type { SummaryVenueSelection } from '@/components/coordinator/wizard/wizard-summary-rail'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 
 export interface WizardStepFloorPlanProps extends FloorPlanV2Props {
   mode?: 'wizard' | 'standalone'
@@ -27,7 +32,16 @@ export interface WizardStepFloorPlanProps extends FloorPlanV2Props {
   plannerOverlap?: boolean
 }
 
-export function WizardStepFloorPlan({
+export function WizardStepFloorPlan(props: WizardStepFloorPlanProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay eventId={props.eventId ?? undefined} />
+      <WizardStepFloorPlanInner {...props} />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function WizardStepFloorPlanInner({
   mode = 'wizard',
   layoutCapacity,
   eventDisplayName,
@@ -43,6 +57,7 @@ export function WizardStepFloorPlan({
   onDeleteRoom,
   ...floorPlanProps
 }: WizardStepFloorPlanProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const [placedCount, setPlacedCount] = useState(0)
 
   function handleSelectRoom(roomId: string) {
@@ -95,20 +110,28 @@ export function WizardStepFloorPlan({
         </div>
       }
     >
-      <FloorPlanV2WizardQa
-        {...floorPlanProps}
-        eventId={eventId}
-        layoutRooms={layoutRooms}
-        layoutActiveRoomId={layoutActiveRoomId}
-        onLayoutRoomsChange={onLayoutRoomsChange}
-        onAddRoom={onAddRoom}
-        onRenameRoom={onRenameRoom}
-        onDeleteRoom={onDeleteRoom}
-        layoutCapacity={layoutCapacity}
-        onPlacedCountChange={setPlacedCount}
-        chrome="embedded"
-        className="w-full flex-1"
-      />
+      {showDesktopRequired ? (
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+            Booth layout needs a tablet or desktop. Continue designing on a larger screen.
+          </p>
+        </div>
+      ) : (
+        <FloorPlanV2WizardQa
+          {...floorPlanProps}
+          eventId={eventId}
+          layoutRooms={layoutRooms}
+          layoutActiveRoomId={layoutActiveRoomId}
+          onLayoutRoomsChange={onLayoutRoomsChange}
+          onAddRoom={onAddRoom}
+          onRenameRoom={onRenameRoom}
+          onDeleteRoom={onDeleteRoom}
+          layoutCapacity={layoutCapacity}
+          onPlacedCountChange={setPlacedCount}
+          chrome="embedded"
+          className="w-full flex-1"
+        />
+      )}
     </LayoutPlannerShellQa>
   )
 }
