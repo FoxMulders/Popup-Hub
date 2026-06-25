@@ -59,6 +59,12 @@ import { normalizeVenueProfile } from '@/lib/floor-plan/venue-profile'
 const FT = 1
 const FAKE_VENDOR_ID_PREFIX = 'placeholder-'
 
+function isPersistableVendorUserId(id: string | null | undefined): id is string {
+  if (!id) return false
+  if (id.startsWith('obj-') || id.startsWith(FAKE_VENDOR_ID_PREFIX)) return false
+  return true
+}
+
 function ftToCell(value: number): number {
   return Math.max(0, Math.round(value / FT))
 }
@@ -191,6 +197,7 @@ export function legacyRoomFromDoc(
         categoryName: booth.categoryName ?? '',
         categoryColor: booth.accentColor ?? '#94a3b8',
         boothNumber: boothNumber++,
+        assignedVendorId: isPersistableVendorUserId(booth.vendorId) ? booth.vendorId : null,
         boothType: 'inside',
         vendorUnitType: isTentVendor(unitType) ? 'tent' : 'table',
         tableLengthFt: isTentVendor(unitType) ? null : booth.tableLengthFt ?? null,
@@ -263,7 +270,7 @@ function objectFromBoothCell(cell: BoothCell): BoothObject {
     height: Math.max(1, cell.rowSpan),
     rotation: 0,
     label: cell.vendorName || undefined,
-    vendorId: cell.id.startsWith(FAKE_VENDOR_ID_PREFIX) ? null : cell.id,
+    vendorId: isPersistableVendorUserId(cell.assignedVendorId) ? cell.assignedVendorId : null,
     categoryName: cell.categoryName || null,
     accentColor: cell.categoryColor || null,
     vendorUnitType: tent ? 'tent' : 'table',
