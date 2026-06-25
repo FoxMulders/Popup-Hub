@@ -24,6 +24,7 @@ import { isPassportReadyForApplication } from '@/lib/vendor/passport-application
 import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { vendorCanVouchForCoordinator } from '@/lib/coordinator/vouch'
+import { vendorSetupMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
 import { MarketApplicationLayoutView } from '@/components/events/market-application-layout-view'
 import { VendorEventVenueMap } from '@/components/vendor/vendor-event-venue-map'
@@ -287,6 +288,20 @@ export default async function VendorEventDetailPage({ params }: Props) {
           address: eventRecord.address,
         }}
       />
+
+      {!isQuarterAuction && existingApp?.booth_number != null ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-forest/30 bg-forest/5 p-4">
+          <p className="text-sm font-medium text-foreground">
+            Booth #{existingApp.booth_number} is on the floor plan — use the setup map for load-in
+            directions from the entrance.
+          </p>
+          <Link href={vendorSetupMapUrl(id)}>
+            <Button size="sm" variant="outline" className="shrink-0">
+              Open setup map
+            </Button>
+          </Link>
+        </div>
+      ) : null}
 
       {!isQuarterAuction ? (
         <MarketApplicationLayoutView

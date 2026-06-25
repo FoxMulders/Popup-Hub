@@ -107,18 +107,42 @@ export async function persistEventDraftViaApi(
   dayRows: DayRowPayload[],
   scheduleType: 'single' | 'multi'
 ): Promise<{ eventId: string; error: Error | null }> {
-  const response = await fetch('/api/coordinator/events/draft', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({ eventId, draft, categoryLimits, dayRows, scheduleType }),
-  })
+  const SESSION_EXPIRED_MESSAGE =
+    'Your session expired — sign in again, then reopen this market to keep editing. Your details are still on screen.'
+
+  let response: Response
+  try {
+    response = await fetch('/api/coordinator/events/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ eventId, draft, categoryLimits, dayRows, scheduleType }),
+    })
+  } catch {
+    return {
+      eventId: eventId ?? '',
+      error: new Error('Network error while saving — check your connection and try again.'),
+    }
+  }
+
+  // An auth/permission failure redirects the request to an HTML page (login,
+  // confirm-email, etc). The fetch follows it and returns a 200 HTML body, so
+  // detect that here rather than misreporting it as a generic save failure.
+  const contentType = response.headers.get('content-type') ?? ''
+  const looksLikeJson = contentType.includes('application/json')
+  if (response.redirected || !looksLikeJson) {
+    return { eventId: eventId ?? '', error: new Error(SESSION_EXPIRED_MESSAGE) }
+  }
 
   let payload: { eventId?: string; error?: string } = {}
   try {
     payload = (await response.json()) as typeof payload
   } catch {
     payload = {}
+  }
+
+  if (response.status === 401) {
+    return { eventId: eventId ?? '', error: new Error(payload.error ?? SESSION_EXPIRED_MESSAGE) }
   }
 
   if (!response.ok) {
@@ -131,7 +155,7 @@ export async function persistEventDraftViaApi(
   if (!payload.eventId) {
     return {
       eventId: eventId ?? '',
-      error: new Error('Could not save market draft'),
+      error: new Error(payload.error ?? SESSION_EXPIRED_MESSAGE),
     }
   }
 

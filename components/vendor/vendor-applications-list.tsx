@@ -11,6 +11,7 @@ import {
   Calendar,
   CreditCard,
   ExternalLink,
+  Map,
   MapPin,
   MessageSquare,
 } from 'lucide-react'
@@ -43,6 +44,7 @@ import {
 import { isEventOpenForApplications } from '@/lib/queries/events'
 import { VendorBookingProgressRail } from '@/components/vendor/vendor-booking-progress-rail'
 import { vendorBookingStepsActive } from '@/lib/vendor/vendor-booking-steps'
+import { vendorSetupMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import { resetScrollToTop } from '@/lib/navigation/scroll-to-top'
 import type { Event } from '@/types/database'
 
@@ -393,6 +395,15 @@ export function VendorApplicationsList({
                         <CreditCard className="mr-1.5 h-3.5 w-3.5" />
                         Pay Now
                       </Button>
+                    ) : null}
+
+                    {app.booth_number != null && !eventCancelled && ev?.id ? (
+                      <Link href={vendorSetupMapUrl(ev.id)}>
+                        <Button size="sm" variant="outline" className="h-9 text-xs">
+                          <Map className="mr-1.5 h-3.5 w-3.5" />
+                          Find booth
+                        </Button>
+                      </Link>
                     ) : null}
 
                     {(app.status === 'approved' || app.status === 'pending_insurance') &&

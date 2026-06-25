@@ -16,10 +16,17 @@ import type { BoothApplication } from '@/types/database'
 
 interface VendorLineupProps {
   applications: BoothApplication[]
+  eventId: string
   onSelectVendor: (vendor: VendorLineupEntry) => void
+  onViewBoothOnMap?: (boothNumber: number) => void
 }
 
-export function VendorLineup({ applications, onSelectVendor }: VendorLineupProps) {
+export function VendorLineup({
+  applications,
+  eventId,
+  onSelectVendor,
+  onViewBoothOnMap,
+}: VendorLineupProps) {
   const [search, setSearch] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
 
@@ -74,7 +81,9 @@ export function VendorLineup({ applications, onSelectVendor }: VendorLineupProps
           <VendorLineupCard
             key={vendor.id}
             vendor={vendor}
+            eventId={eventId}
             onClick={() => onSelectVendor(vendor)}
+            onViewBoothOnMap={onViewBoothOnMap}
           />
         ))}
       </div>

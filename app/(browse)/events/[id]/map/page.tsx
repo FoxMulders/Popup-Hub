@@ -43,10 +43,14 @@ export default async function EventMapPage({ params, searchParams }: Props) {
         <ArrowLeft className="h-4 w-4" />
         Back to {event.name}
       </Link>
-      <h1 className="font-heading text-xl font-semibold">Floor plan</h1>
+      <h1 className="font-heading text-xl font-semibold">Venue map</h1>
+      <p className="text-sm text-muted-foreground">
+        Search vendors, tap a booth, or follow a route through the market.
+      </p>
       <PublicFloorplan
         layout={layoutRow as BoothLayout}
         highlightBoothNumber={Number.isFinite(highlightBooth) ? highlightBooth : null}
+        mode="patron"
       />
     </div>
   )

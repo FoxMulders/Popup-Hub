@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Map } from 'lucide-react'
 import { PublicFloorplan } from '@/components/shopper/public-floorplan'
 import { layoutHasDrawableGeometry } from '@/lib/booth-planner/layout-rooms'
+import { patronEventMapUrl, vendorSetupMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import type { BoothLayout, Event } from '@/types/database'
 
 export interface MarketApplicationLayoutViewProps {
@@ -29,6 +30,7 @@ export function MarketApplicationLayoutView({
   className,
 }: MarketApplicationLayoutViewProps) {
   const hasGeometry = layoutHasDrawableGeometry(layout)
+  const hasAssignedBooth = highlightBoothNumber != null
 
   if (!hasGeometry || !layout) {
     return (
@@ -49,6 +51,10 @@ export function MarketApplicationLayoutView({
     )
   }
 
+  const mapHref = hasAssignedBooth
+    ? vendorSetupMapUrl(eventData.id)
+    : patronEventMapUrl(eventData.id)
+
   return (
     <section
       className={className}
@@ -58,22 +64,28 @@ export function MarketApplicationLayoutView({
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 id="market-layout-heading" className="text-lg font-semibold text-foreground">
-          Venue layout
+          {hasAssignedBooth ? 'Your booth' : 'Venue layout'}
         </h2>
         <Link
-          href={`/events/${eventData.id}/map`}
+          href={mapHref}
           className="inline-flex min-h-9 items-center gap-1.5 text-sm font-medium text-forest hover:underline"
         >
           <Map className="h-4 w-4" aria-hidden />
-          Open full map
+          {hasAssignedBooth ? 'Open setup map' : 'Open full map'}
         </Link>
       </div>
       <p className="mb-3 text-sm text-muted-foreground">
-        Preview where booths sit at {eventData.name}. Your exact spot is assigned after the organizer
-        approves your application.
+        {hasAssignedBooth
+          ? `Booth #${highlightBoothNumber} is on the floor plan at ${eventData.name}. Use the setup map for load-in directions from the entrance.`
+          : `Preview where booths sit at ${eventData.name}. Your exact spot is assigned after the organizer approves your application.`}
       </p>
       <div className="overflow-hidden rounded-2xl border bg-white p-3 sm:p-4">
-        <PublicFloorplan layout={layout} highlightBoothNumber={highlightBoothNumber} />
+        <PublicFloorplan
+          layout={layout}
+          highlightBoothNumber={highlightBoothNumber}
+          mode={hasAssignedBooth ? 'vendor-setup' : 'patron'}
+          showRouteModePicker={!hasAssignedBooth}
+        />
       </div>
     </section>
   )

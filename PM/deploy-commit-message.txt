@@ -1,1 +1,1 @@
-feat: ship 14 session updates (Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); HubGrid canvas layout redesign; Center/align toolbar placement; +10 more)
+feat: ship 16 session updates (Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); +12 more)

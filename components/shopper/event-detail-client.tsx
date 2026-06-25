@@ -19,6 +19,7 @@ import { ProductSneakPeek } from '@/components/shopper/product-sneak-peek'
 import { EventSchedulePanel } from '@/components/shopper/event-schedule-panel'
 import { ReviewSection } from '@/components/shopper/review-section'
 import { VendorReviewsPanel } from '@/components/shopper/vendor-reviews-panel'
+import { patronEventMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import { buildScheduleLines } from '@/lib/shopper/events'
 import { buildVendorLineup, type VendorLineupEntry } from '@/lib/shopper/vendors'
 import { formatCents } from '@/lib/square/client'
@@ -83,6 +84,7 @@ export function EventDetailClient({
 }: EventDetailClientProps) {
   const [selectedVendor, setSelectedVendor] = useState<VendorLineupEntry | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [mapHighlightBooth, setMapHighlightBooth] = useState<number | null>(null)
   const searchParams = useSearchParams()
   const coordinator = Array.isArray(event.coordinator) ? event.coordinator[0] : event.coordinator
   const scheduleLines = buildScheduleLines(event)
@@ -92,6 +94,11 @@ export function EventDetailClient({
   function openVendor(v: VendorLineupEntry) {
     setSelectedVendor(v)
     setSheetOpen(true)
+  }
+
+  function focusBoothOnMap(boothNumber: number) {
+    setMapHighlightBooth(boothNumber)
+    document.getElementById('venue-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   useEffect(() => {
@@ -229,27 +236,47 @@ export function EventDetailClient({
         <EventSchedulePanel items={scheduleItems} eventLocation={event.location_name} />
 
         <section>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-foreground">Who&apos;s going</h2>
-            {layout && (
-              <Link
-                href={`/events/${event.id}/map`}
-                className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-forest hover:underline"
-              >
-                <Map className="h-4 w-4" />
-                Floor plan
-              </Link>
-            )}
+            {layout ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <a
+                  href="#venue-map"
+                  className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-forest hover:underline"
+                >
+                  <Map className="h-4 w-4" />
+                  Explore floor plan
+                </a>
+                <Link
+                  href={patronEventMapUrl(event.id)}
+                  className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground hover:underline"
+                >
+                  Full screen
+                </Link>
+              </div>
+            ) : null}
           </div>
-          <VendorLineup applications={applications} onSelectVendor={openVendor} />
+          <VendorLineup
+            applications={applications}
+            eventId={event.id}
+            onSelectVendor={openVendor}
+            onViewBoothOnMap={layout ? focusBoothOnMap : undefined}
+          />
         </section>
 
-        {layout && (
-          <section className="marketing-glass-card p-5">
+        {layout ? (
+          <section id="venue-map" className="marketing-glass-card scroll-mt-24 p-5">
             <h2 className="mb-4 text-lg font-bold text-foreground">Venue map</h2>
-            <PublicFloorplan layout={layout} />
+            <p className="mb-4 text-sm text-muted-foreground">
+              Search vendors, tap a booth, or follow a route through the market.
+            </p>
+            <PublicFloorplan
+              layout={layout}
+              highlightBoothNumber={mapHighlightBooth}
+              mode="patron"
+            />
           </section>
-        )}
+        ) : null}
 
         <ProductSneakPeek products={products} eventId={event.id} userId={userId} />
 
@@ -341,7 +368,6 @@ export function EventDetailClient({
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         eventId={event.id}
-        mapHref={`/events/${event.id}/map`}
         userId={userId}
         initialFollowing={
           selectedVendor ? followVendorIds.includes(selectedVendor.vendor_id) : false

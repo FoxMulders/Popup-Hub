@@ -30,6 +30,17 @@ import {
 } from '@/lib/auth/email-confirmation'
 import type { Role } from '@/types/database'
 
+/**
+ * API routes (called via `fetch`) must never be redirected to an HTML page on
+ * an auth/permission failure: the browser follows the 3xx and the caller then
+ * receives a 200 HTML login/confirm page, which JSON parsing turns into a
+ * misleading generic error (e.g. "Could not save market draft"). Return a
+ * machine-readable JSON status instead so callers surface the real reason.
+ */
+function apiAuthErrorResponse(status: number, error: string): NextResponse {
+  return NextResponse.json({ error }, { status })
+}
+
 /** Supabase may redirect to Site URL root with ?code= instead of /api/auth/callback. */
 function redirectOAuthCodeToCallback(request: NextRequest): NextResponse | null {
   const { pathname, searchParams } = request.nextUrl
@@ -80,6 +91,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
+  const isApiRequest = pathname.startsWith('/api/')
 
   const legacyShopperEvent = pathname.match(/^\/shopper\/events\/([^/]+)\/?$/)
   if (legacyShopperEvent) {
@@ -100,6 +112,9 @@ export async function updateSession(request: NextRequest) {
     (isDevMockAuthEnabled() && pathname.startsWith('/api/dev/mock-login'))
 
   if (!user && !isPublicPathMatch) {
+    if (isApiRequest) {
+      return apiAuthErrorResponse(401, 'Your session expired. Sign in again to continue.')
+    }
     const url = request.nextUrl.clone()
     if (pathname === '/coordinator/events/new') {
       url.pathname = '/signup'
@@ -113,6 +128,12 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && !isEmailConfirmed(user) && !isPublicPathMatch && !isUnconfirmedUserAllowedPath(pathname)) {
+    if (isApiRequest) {
+      return apiAuthErrorResponse(
+        403,
+        'Confirm your email address to continue. Check your inbox for the confirmation link.'
+      )
+    }
     const url = request.nextUrl.clone()
     url.pathname = '/confirm-email'
     if (user.email) {
@@ -143,6 +164,9 @@ export async function updateSession(request: NextRequest) {
       const hasAdminAccess =
         profileIsAdmin || isAdminSessionTokenValid(sessionToken)
       if (!hasAdminAccess) {
+        if (isApiRequest) {
+          return apiAuthErrorResponse(403, 'You do not have permission to perform this action.')
+        }
         const url = request.nextUrl.clone()
         url.pathname = accessDeniedRedirect(profileRole)
         url.search = ''
@@ -151,6 +175,9 @@ export async function updateSession(request: NextRequest) {
     }
 
     if (!isPathAccessAllowed(pathname, profileRole, profileIsAdmin)) {
+      if (isApiRequest) {
+        return apiAuthErrorResponse(403, 'You do not have permission to perform this action.')
+      }
       const url = request.nextUrl.clone()
       url.pathname = accessDeniedRedirect(profileRole)
       url.search = ''

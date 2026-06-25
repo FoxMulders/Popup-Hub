@@ -1,11 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { Check, Circle, CircleDot, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   buildVendorBookingSteps,
   type VendorBookingStep,
 } from '@/lib/vendor/vendor-booking-steps'
+import { vendorSetupMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import type { BoothApplication } from '@/types/database'
 
 interface VendorBookingProgressRailProps {
@@ -65,14 +67,25 @@ export function VendorBookingProgressRail({
               <StepIcon state={step.state} />
             </span>
             <span className="min-w-0 flex-1 sm:flex-none">
-              <span
-                className={cn(
-                  'block text-xs font-medium leading-snug',
-                  step.state === 'current' ? 'text-foreground' : 'text-muted-foreground'
-                )}
-              >
-                {step.label}
-              </span>
+              {step.key === 'booth' &&
+              step.state === 'complete' &&
+              application.booth_number != null ? (
+                <Link
+                  href={vendorSetupMapUrl(application.event_id)}
+                  className="block text-xs font-medium leading-snug text-forest hover:underline"
+                >
+                  {step.label}
+                </Link>
+              ) : (
+                <span
+                  className={cn(
+                    'block text-xs font-medium leading-snug',
+                    step.state === 'current' ? 'text-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  {step.label}
+                </span>
+              )}
               {!compact ? (
                 <span className="mt-0.5 block text-[10px] leading-relaxed text-muted-foreground">
                   {step.detail}

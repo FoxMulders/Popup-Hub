@@ -190,6 +190,7 @@ function vendorBoothCells(cells: BoothCell[]): BoothCell[] {
     (c) =>
       c.col >= 0 &&
       c.row >= 0 &&
+      c.tablePurpose !== 'guest' &&
       (c.vendorName?.trim().length ?? 0) > 0
   )
 }

@@ -1,18 +1,28 @@
 'use client'
 
+import Link from 'next/link'
+import { MapPin } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { CheckCircle } from 'lucide-react'
+import { patronEventMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import type { VendorLineupEntry } from '@/lib/shopper/vendors'
 import { getVendorLinks } from '@/lib/shopper/vendors'
 
 interface VendorLineupCardProps {
   vendor: VendorLineupEntry
+  eventId: string
   onClick: () => void
+  onViewBoothOnMap?: (boothNumber: number) => void
 }
 
-export function VendorLineupCard({ vendor, onClick }: VendorLineupCardProps) {
+export function VendorLineupCard({
+  vendor,
+  eventId,
+  onClick,
+  onViewBoothOnMap,
+}: VendorLineupCardProps) {
   const passport = vendor.passport
   const displayName = vendor.displayName
   const initials = displayName
@@ -58,9 +68,33 @@ export function VendorLineupCard({ vendor, onClick }: VendorLineupCardProps) {
                 {vendor.category.name}
               </Badge>
             )}
-            {vendor.booth_number != null && (
-              <p className="mt-1 text-[10px] text-muted-foreground">Booth #{vendor.booth_number}</p>
-            )}
+            {vendor.booth_number != null ? (
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-[10px] text-muted-foreground">Booth #{vendor.booth_number}</p>
+                {onViewBoothOnMap ? (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-0.5 text-[10px] font-medium text-forest hover:underline"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onViewBoothOnMap(vendor.booth_number!)
+                    }}
+                  >
+                    <MapPin className="h-3 w-3" aria-hidden />
+                    On map
+                  </button>
+                ) : (
+                  <Link
+                    href={patronEventMapUrl(eventId, vendor.booth_number)}
+                    className="inline-flex items-center gap-0.5 text-[10px] font-medium text-forest hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MapPin className="h-3 w-3" aria-hidden />
+                    Map
+                  </Link>
+                )}
+              </div>
+            ) : null}
             {links.length > 0 && (
               <p className="mt-1 text-[10px] text-forest">{links.map((l) => l.label).join(' · ')}</p>
             )}

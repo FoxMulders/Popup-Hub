@@ -12,6 +12,41 @@ interface FloorplanBoothPinProps {
   onSelect: (boothNumber: number) => void
 }
 
+export const FloorplanGuestTablePin = memo(function FloorplanGuestTablePin({
+  cell,
+  cellPx,
+}: {
+  cell: BoothCell
+  cellPx: number
+}) {
+  const label = cell.vendorName?.trim() || 'Seating'
+
+  return (
+    <div
+      className="absolute z-[1] flex flex-col items-center justify-center overflow-hidden rounded border border-violet-300/80 bg-violet-50/90 text-center pointer-events-none"
+      style={{
+        left: cell.col * cellPx,
+        top: cell.row * cellPx,
+        width: cell.colSpan * cellPx,
+        height: cell.rowSpan * cellPx,
+        minWidth: Math.max(cell.colSpan * cellPx, 32),
+        minHeight: Math.max(cell.rowSpan * cellPx, 32),
+        fontSize: Math.max(7, cellPx - 1),
+      }}
+      aria-hidden
+      title={label}
+    >
+      {cellPx >= 9 ? (
+        <span className="line-clamp-2 px-0.5 font-medium leading-tight text-violet-900">
+          {label}
+        </span>
+      ) : (
+        <span className="font-medium leading-none text-violet-900">Seat</span>
+      )}
+    </div>
+  )
+})
+
 export const FloorplanBoothPin = memo(function FloorplanBoothPin({
   cell,
   cellPx,

@@ -2,6 +2,30 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Vendor & patron floor map exposure (local, not deployed)
+- **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
+- **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
+- **Shipped locally:**
+  - **`lib/shopper/public-floorplan-modes.ts`:** Patron vs vendor-setup modes, cell filters, map URL helpers.
+  - **`components/shopper/public-floorplan.tsx`:** Mode props, guest-table pins, vendor-only search/routing, highlight → direct route.
+  - **`app/vendor/events/[id]/map/page.tsx`:** Auth-gated vendor setup map (approved/pending_insurance).
+  - **Entry points:** Find booth on applications list; booking rail booth step link; vendor event page banner; `MarketApplicationLayoutView` setup copy.
+  - **Patron:** Lineup card map links, `VendorSheet` `?booth=` deep links, embedded map highlight scroll, `/events/[id]/map` patron mode.
+  - **`lib/shopper/pathfinding.ts`:** Exposition tour excludes `tablePurpose === 'guest'`.
+- **Verify:** `npx tsc --noEmit` PASS. Smoke: vendor with booth → `/vendor/events/{id}/map`; patron → `/events/{id}/map?booth=N` highlights vendor + route.
+- **Next:** Commit + deploy when user asks.
+
+## Active work — Market draft save on venue select (local, not deployed)
+- **Goal:** Selecting any venue on create-market must save the draft; unrecognized venues queue for admin review without blocking save.
+- **Persona:** Coordinator · market setup wizard (Step 1 venue)
+- **Root cause:** Auth middleware redirected `POST /api/coordinator/events/draft` to HTML login/confirm pages; client parsed 200 HTML as empty JSON → generic "Could not save market draft".
+- **Shipped locally:**
+  - **`lib/supabase/middleware.ts`:** `/api/*` auth failures return JSON 401/403 instead of HTML redirects.
+  - **`lib/wizard/wizard-autosave.ts`:** Detect redirected/non-JSON responses; clear session-expired message.
+  - **`components/coordinator/market-setup-wizard.tsx`:** Platform venue submission wrapped in try/catch (non-blocking after draft persist).
+- **Verify:** Create market → pick any venue/park → draft saves (no toast error); session-expired case shows actionable message; `npx tsc --noEmit` PASS.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Mobile login chrome dedupe (local, not deployed)
 - **Goal:** Remove redundant GuestNav on mobile login — duplicates large form logo; profile/menu irrelevant before sign-in.
 - **Shipped locally:**

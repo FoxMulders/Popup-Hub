@@ -10,7 +10,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { VendorLogo } from '@/components/vendor/vendor-logo'
 import { Button } from '@/components/ui/button'
-import { CheckCircle, Globe, ShoppingBag, Camera, MapPin } from 'lucide-react'
+import { CheckCircle, MapPin, Globe, ShoppingBag, Camera } from 'lucide-react'
+import { patronEventMapUrl } from '@/lib/shopper/public-floorplan-modes'
 import { FacebookIcon } from '@/components/icons/facebook-icon'
 import { TikTokIcon } from '@/components/icons/tiktok-icon'
 import type { VendorLineupEntry } from '@/lib/shopper/vendors'
@@ -23,7 +24,6 @@ interface VendorSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   eventId: string
-  mapHref?: string
   userId: string | null
   initialFollowing?: boolean
 }
@@ -41,7 +41,6 @@ export function VendorSheet({
   open,
   onOpenChange,
   eventId,
-  mapHref,
   userId,
   initialFollowing = false,
 }: VendorSheetProps) {
@@ -50,6 +49,8 @@ export function VendorSheet({
   const passport = vendor.passport
   const displayName = vendor.displayName
   const links = getVendorLinks(passport)
+  const mapHref =
+    vendor.booth_number != null ? patronEventMapUrl(eventId, vendor.booth_number) : undefined
   const initials = displayName
     .split(' ')
     .map((n) => n[0])

@@ -664,27 +664,35 @@ export function MarketSetupWizard({
           window.history.replaceState(null, '', `/coordinator/events/${draftResult.eventId}/setup`)
         }
 
+        // Venue review is a side-effect: unrecognized venues are queued for
+        // admin approval, but this must NEVER block (or appear to block) the
+        // market from saving. The draft is already persisted above, so swallow
+        // any submission failure and keep the save successful.
         if (pinDropped && locationName.trim() && address.trim()) {
-          const shouldSubmit = await shouldSubmitPlatformVenue(supabase, coordinatorId, {
-            locationName,
-            address,
-            latitude: lat,
-            longitude: lng,
-            marketCity,
-          })
-          if (shouldSubmit) {
-            const { created, submissionId } = await submitPlatformVenue(supabase, coordinatorId, {
+          try {
+            const shouldSubmit = await shouldSubmitPlatformVenue(supabase, coordinatorId, {
               locationName,
               address,
               latitude: lat,
               longitude: lng,
               marketCity,
             })
-            if (created) {
-              setVenueSubmissionPending(true)
-              toast.message('New venue submitted for admin review')
-              if (submissionId) void alertAdminsOfVenueSubmission(submissionId)
+            if (shouldSubmit) {
+              const { created, submissionId } = await submitPlatformVenue(supabase, coordinatorId, {
+                locationName,
+                address,
+                latitude: lat,
+                longitude: lng,
+                marketCity,
+              })
+              if (created) {
+                setVenueSubmissionPending(true)
+                toast.message('New venue submitted for admin review')
+                if (submissionId) void alertAdminsOfVenueSubmission(submissionId)
+              }
             }
+          } catch (venueErr) {
+            console.error('[autosave] venue review submission failed (non-blocking)', venueErr)
           }
         }
 

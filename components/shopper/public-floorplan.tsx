@@ -13,6 +13,13 @@ import {
   responsiveCellPx,
   type ShopperRouteMode,
 } from '@/lib/shopper/layout'
+import {
+  defaultRouteModeForRoom,
+  filterGuestTableCells,
+  filterVendorBoothCells,
+  roomHasNamedVendorBooths,
+  type PublicFloorplanMode,
+} from '@/lib/shopper/public-floorplan-modes'
 import type { BoothLayout, VenueElementType } from '@/types/database'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +31,7 @@ import {
   collectOriginBoothCells,
   FloorplanBoothPin,
   FloorplanFixture,
+  FloorplanGuestTablePin,
   useStableBoothSelectHandler,
 } from '@/components/shopper/floorplan-booth-pin'
 import { Map, Route, Search, Store } from 'lucide-react'
@@ -58,21 +66,29 @@ const ROUTE_MODES: { id: ShopperRouteMode; label: string; hint: string }[] = [
 interface PublicFloorplanProps {
   layout: BoothLayout
   highlightBoothNumber?: number | null
+  mode?: PublicFloorplanMode
+  initialRouteMode?: ShopperRouteMode
+  showRouteModePicker?: boolean
+  showGuestTables?: boolean
 }
 
-export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorplanProps) {
+export function PublicFloorplan({
+  layout,
+  highlightBoothNumber = null,
+  mode = 'patron',
+  initialRouteMode,
+  showRouteModePicker,
+  showGuestTables,
+}: PublicFloorplanProps) {
   const rooms = useMemo(() => getLayoutRooms(layout), [layout])
   const [activeRoomId, setActiveRoomId] = useState(rooms[0]?.id ?? 'main')
   const [search, setSearch] = useState('')
   const [focusElementType, setFocusElementType] = useState<VenueElementType | null>(null)
   const [showPatronFlow, setShowPatronFlow] = useState(true)
-  const [routeMode, setRouteMode] = useState<ShopperRouteMode>(() => {
-    const firstRoom = rooms[0]
-    const hasVendors = (firstRoom?.cells ?? []).some(
-      (c) => c.col >= 0 && c.row >= 0 && (c.vendorName?.trim().length ?? 0) > 0
-    )
-    return hasVendors ? 'exposition' : 'baseline'
-  })
+  const firstRoom = rooms[0]
+  const [routeMode, setRouteMode] = useState<ShopperRouteMode>(() =>
+    initialRouteMode ?? defaultRouteModeForRoom(firstRoom, mode, highlightBoothNumber)
+  )
   const [selectedBoothNumber, setSelectedBoothNumber] = useState<number | null>(
     highlightBoothNumber ?? null
   )
@@ -80,6 +96,11 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
   const [activeTrace, setActiveTrace] = useState<PatronPathTrace | null>(null)
   const [routeComputing, setRouteComputing] = useState(false)
   const canvasRef = useRef<HTMLDivElement>(null)
+
+  const isVendorSetup = mode === 'vendor-setup'
+  const routePickerVisible = showRouteModePicker ?? !isVendorSetup
+  const guestTablesVisible =
+    showGuestTables ?? (mode === 'patron' && rooms.some((r) => filterGuestTableCells(r.cells ?? []).length > 0))
 
   const room = rooms.find((r) => r.id === activeRoomId) ?? rooms[0]
   const searchLower = search.trim().toLowerCase()
@@ -89,10 +110,20 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
     [room]
   )
 
+  const vendorCellsInRoom = useMemo(
+    () => filterVendorBoothCells(room?.cells ?? []),
+    [room?.cells]
+  )
+
+  const namedVendorCount = useMemo(
+    () => vendorCellsInRoom.filter((c) => (c.vendorName?.trim().length ?? 0) > 0).length,
+    [vendorCellsInRoom]
+  )
+
   const selectedBooth = useMemo(() => {
     if (selectedBoothNumber == null || !room) return null
-    return (room.cells ?? []).find((c) => c.boothNumber === selectedBoothNumber) ?? null
-  }, [room, selectedBoothNumber])
+    return vendorCellsInRoom.find((c) => c.boothNumber === selectedBoothNumber) ?? null
+  }, [room, selectedBoothNumber, vendorCellsInRoom])
 
   const deferredRoom = useDeferredValue(room)
   const deferredRouteMode = useDeferredValue(routeMode)
@@ -150,6 +181,8 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
   useEffect(() => {
     if (highlightBoothNumber != null) {
       setSelectedBoothNumber(highlightBoothNumber)
+      setRouteMode('vendor')
+      setShowPatronFlow(true)
     }
   }, [highlightBoothNumber])
 
@@ -160,25 +193,22 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
   }, [routeMode, selectedBooth])
 
   useEffect(() => {
-    if (!room) return
-    const vendorCount = (room.cells ?? []).filter(
-      (c) => c.col >= 0 && c.row >= 0 && (c.vendorName?.trim().length ?? 0) > 0
-    ).length
-    if (vendorCount === 0 && routeMode === 'exposition') {
+    if (!room || isVendorSetup) return
+    if (!roomHasNamedVendorBooths(room) && routeMode === 'exposition') {
       setRouteMode('baseline')
     }
-  }, [room, routeMode])
+  }, [room, routeMode, isVendorSetup])
 
   const matchingBooths = useMemo(() => {
     if (!room || !searchLower) return new Set<number>()
     const set = new Set<number>()
-    for (const cell of room.cells ?? []) {
+    for (const cell of vendorCellsInRoom) {
       if (cell.vendorName?.toLowerCase().includes(searchLower)) {
         set.add(cell.boothNumber)
       }
     }
     return set
-  }, [room, searchLower])
+  }, [room, searchLower, vendorCellsInRoom])
 
   const highlightSet = useMemo(() => {
     const s = new Set<number>()
@@ -193,16 +223,21 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
     setShowPatronFlow
   )
 
-  const originBooths = useMemo(
-    () => collectOriginBoothCells(room?.cells ?? []),
-    [room?.cells]
+  const originVendorBooths = useMemo(
+    () => collectOriginBoothCells(vendorCellsInRoom),
+    [vendorCellsInRoom]
+  )
+
+  const originGuestTables = useMemo(
+    () => (guestTablesVisible ? collectOriginBoothCells(filterGuestTableCells(room?.cells ?? [])) : []),
+    [guestTablesVisible, room?.cells]
   )
 
   const boothElements = useMemo(() => {
     if (!room) return null
-    return originBooths.map((cell) => (
+    return originVendorBooths.map((cell) => (
       <FloorplanBoothPin
-        key={`${cell.row}-${cell.col}`}
+        key={`vendor-${cell.row}-${cell.col}`}
         cell={cell}
         cellPx={cellPx}
         highlighted={highlightSet.has(cell.boothNumber)}
@@ -210,7 +245,14 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
         onSelect={toggleBoothSelection}
       />
     ))
-  }, [originBooths, cellPx, highlightSet, selectedBoothNumber, toggleBoothSelection, room])
+  }, [originVendorBooths, cellPx, highlightSet, selectedBoothNumber, toggleBoothSelection, room])
+
+  const guestTableElements = useMemo(() => {
+    if (!guestTablesVisible || originGuestTables.length === 0) return null
+    return originGuestTables.map((cell) => (
+      <FloorplanGuestTablePin key={`guest-${cell.row}-${cell.col}`} cell={cell} cellPx={cellPx} />
+    ))
+  }, [guestTablesVisible, originGuestTables, cellPx])
 
   const fixtureElements = useMemo(() => {
     if (!metrics) return null
@@ -250,14 +292,20 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
     )
   }
 
-  const { cols, canvasRows, hallRows, placedCells } = metrics
+  const { cols, canvasRows, hallRows } = metrics
 
   const routeHint =
     routeStale && showPatronFlow
       ? 'Calculating route…'
-      : routeMode === 'vendor' && !selectedBooth
-        ? 'Select a booth on the map to plot the quickest aisle path from the entrance.'
-        : routeModeMeta.hint
+      : isVendorSetup && highlightBoothNumber != null
+        ? 'Blue-to-green path is the shortest aisle route from the entrance to your booth.'
+        : routeMode === 'vendor' && !selectedBooth
+          ? 'Select a booth on the map to plot the quickest aisle path from the entrance.'
+          : routeModeMeta.hint
+
+  const visibleRouteModes = isVendorSetup
+    ? ROUTE_MODES.filter((m) => m.id === 'vendor' || m.id === 'baseline')
+    : ROUTE_MODES
 
   return (
     <div className="space-y-3">
@@ -273,22 +321,24 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
         </Tabs>
       )}
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Find a vendor on the map…"
-          className="min-h-11 pl-9"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      {!isVendorSetup ? (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Find a vendor on the map…"
+            className="min-h-11 pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      ) : null}
 
       <div className="space-y-2 rounded-xl border bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Route className="h-4 w-4 shrink-0 text-blue-600" aria-hidden />
             <Label htmlFor="show-patron-flow" className="text-sm font-medium cursor-pointer">
-              Show patron flow
+              {isVendorSetup ? 'Show route to booth' : 'Show patron flow'}
             </Label>
           </div>
           <Switch
@@ -300,55 +350,59 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
           />
         </div>
 
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Routing mode">
-          {ROUTE_MODES.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={routeMode === id}
-              onClick={() => {
-                setRouteMode(id)
-                setShowPatronFlow(true)
-              }}
-              className={cn(
-                'min-h-9 rounded-lg border px-2.5 text-xs font-medium transition-colors',
-                routeMode === id
-                  ? 'border-forest bg-forest/10 text-forest'
-                  : 'border-stone-200 bg-canvas text-muted-foreground hover:bg-white'
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {routePickerVisible ? (
+          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Routing mode">
+            {visibleRouteModes.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={routeMode === id}
+                onClick={() => {
+                  setRouteMode(id)
+                  setShowPatronFlow(true)
+                }}
+                className={cn(
+                  'min-h-9 rounded-lg border px-2.5 text-xs font-medium transition-colors',
+                  routeMode === id
+                    ? 'border-forest bg-forest/10 text-forest'
+                    : 'border-stone-200 bg-canvas text-muted-foreground hover:bg-white'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <p id="patron-flow-hint" className="text-xs text-muted-foreground leading-snug">
           {showPatronFlow ? routeHint : 'Enable the toggle to preview routing overlays on the map.'}
-          {placedCells.length > 0 && routeMode === 'exposition' ? (
+          {namedVendorCount > 0 && routeMode === 'exposition' && !isVendorSetup ? (
             <span className="block mt-0.5 tabular-nums">
-              Covers {placedCells.length} vendor{placedCells.length === 1 ? '' : 's'} in one continuous loop.
+              Covers {namedVendorCount} vendor{namedVendorCount === 1 ? '' : 's'} in one continuous loop.
             </span>
           ) : null}
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {ESSENTIAL_TYPES.map(({ type, label }) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setFocusElementType(focusElementType === type ? null : type)}
-          >
-            <Badge
-              variant={focusElementType === type ? 'default' : 'outline'}
-              className="min-h-8 cursor-pointer"
+      {!isVendorSetup ? (
+        <div className="flex flex-wrap gap-2">
+          {ESSENTIAL_TYPES.map(({ type, label }) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setFocusElementType(focusElementType === type ? null : type)}
             >
-              {label}
-            </Badge>
-          </button>
-        ))}
-      </div>
+              <Badge
+                variant={focusElementType === type ? 'default' : 'outline'}
+                className="min-h-8 cursor-pointer"
+              >
+                {label}
+              </Badge>
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div
         ref={canvasRef}
@@ -379,6 +433,7 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
             />
           ) : null}
           {fixtureElements}
+          {guestTableElements}
           {boothElements}
           {showPatronFlow && activeTrace && hasRoute && !routeStale ? (
             <PatronFlowOverlay
@@ -397,7 +452,8 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
         <div className="rounded-xl border border-forest/30 bg-forest/5 px-3 py-2.5 text-sm space-y-1">
           <p className="font-semibold text-forest flex items-center gap-1.5">
             <Store className="h-4 w-4 shrink-0" />
-            Booth #{selectedBooth.boothNumber} · {selectedBooth.vendorName}
+            {isVendorSetup ? 'Your booth' : 'Selected'} · #{selectedBooth.boothNumber}
+            {!isVendorSetup ? ` · ${selectedBooth.vendorName}` : null}
           </p>
           {showPatronFlow && routeMode === 'vendor' && hasRoute ? (
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -409,7 +465,9 @@ export function PublicFloorplan({ layout, highlightBoothNumber }: PublicFloorpla
       ) : null}
 
       <p className="text-xs text-muted-foreground">
-        Pinch or scroll to explore · Tap a booth to select · Choose a routing mode and toggle patron flow
+        {isVendorSetup
+          ? 'Pinch or scroll to explore · Your booth is highlighted when assigned'
+          : 'Pinch or scroll to explore · Tap a booth to select · Choose a routing mode and toggle patron flow'}
       </p>
     </div>
   )
