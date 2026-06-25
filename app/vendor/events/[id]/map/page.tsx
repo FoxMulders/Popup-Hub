@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { PublicFloorplan } from '@/components/shopper/public-floorplan'
 import { layoutHasDrawableGeometry } from '@/lib/booth-planner/layout-rooms'
+import {
+  resolveVendorBoothHighlightFromLayout,
+  vendorDisplayNamesForLayoutMatch,
+} from '@/lib/shopper/resolve-vendor-booth-from-layout'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import type { BoothLayout } from '@/types/database'
 
@@ -23,7 +27,8 @@ export default async function VendorEventMapPage({ params }: Props) {
     redirect(`/login?redirectTo=${encodeURIComponent(`/vendor/events/${eventId}/map`)}`)
   }
 
-  const [{ data: application }, { data: event }, { data: layoutRow }] = await Promise.all([
+  const [{ data: application }, { data: event }, { data: layoutRow }, { data: passport }, { data: profile }] =
+    await Promise.all([
     supabase
       .from('booth_applications')
       .select('id, status, booth_number')
@@ -33,13 +38,22 @@ export default async function VendorEventMapPage({ params }: Props) {
       .maybeSingle(),
     supabase.from('events').select('id, name, location_name').eq('id', eventId).maybeSingle(),
     supabase.from('booth_layouts').select('*').eq('event_id', eventId).maybeSingle(),
+    supabase.from('vendor_passports').select('business_name').eq('user_id', user.id).maybeSingle(),
+    supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
   ])
 
   if (!application || !event) notFound()
 
   const layout = (layoutRow as BoothLayout | null) ?? null
   const hasGeometry = layoutHasDrawableGeometry(layout)
-  const boothNumber = application.booth_number
+  const boothNumber =
+    layout != null
+      ? resolveVendorBoothHighlightFromLayout(layout, {
+          vendorUserId: user.id,
+          applicationBoothNumber: application.booth_number,
+          vendorDisplayNames: vendorDisplayNamesForLayoutMatch(passport, profile),
+        })
+      : application.booth_number
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 px-4 py-6 pb-28">

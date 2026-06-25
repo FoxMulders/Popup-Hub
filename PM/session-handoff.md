@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug automation: vendor setup map booth desync (branch `cursor/critical-bug-investigation-0bb2`, commit `1789858`)
+- **Goal:** Fix vendor setup map highlighting wrong/missing booth after HubGrid v2 layout saves.
+- **Persona:** Vendor portal (`/vendor/events/[id]/map`, vendor event detail layout preview)
+- **Bug:** New vendor map used stale `booth_applications.booth_number`; legacy bridge renumbered cells on save and dropped vendor user ids.
+- **Shipped:** `assignedVendorId` on `BoothCell` + legacy bridge round-trip; `resolveVendorBoothHighlightFromLayout`; vendor map + event pages use live layout truth; unit tests added.
+- **Verify:** `npx tsx lib/shopper/resolve-vendor-booth-from-layout.test.ts` PASS; `npx tsx lib/floor-plan/legacy-bridge-tent.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Merge PR; optional follow-up — sync `booth_applications.booth_number` on HubGrid assign; reorder publish vs venue verify in wizard (pre-existing).
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
