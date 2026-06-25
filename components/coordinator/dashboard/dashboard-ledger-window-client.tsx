@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import {
@@ -9,6 +9,7 @@ import {
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
 import { cn } from '@/lib/utils'
+import { DashboardLedgerViewportGuard } from './dashboard-ledger-viewport-guard'
 
 const STATUS_PILL_CLASS: Record<
   keyof typeof BOOTH_STATUS_THEME,
@@ -36,6 +37,14 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <DashboardLedgerViewportGuard>
+      <DashboardLedgerWindowContent />
+    </DashboardLedgerViewportGuard>
+  )
+}
+
+function DashboardLedgerWindowContent() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
@@ -43,8 +52,12 @@ export function DashboardLedgerWindowClient() {
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const selectionAnnouncement = useMemo(() => {
+    const row = rows.find((r) => r.id === selectedBoothId)
+    if (!row) return ''
+    return `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
+  }, [rows, selectedBoothId])
 
   useEffect(() => {
     document.title = isWallCast
@@ -67,14 +80,6 @@ export function DashboardLedgerWindowClient() {
       }
     })
   }, [eventId])
-
-  useEffect(() => {
-    const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
-  }, [rows, selectedBoothId])
 
   useEffect(() => {
     if (!isWallCast || !selectedRowRef.current) return
