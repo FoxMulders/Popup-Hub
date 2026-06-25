@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint layout responsive QA guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-989c`; pre-task HEAD `bcd6448` (`docs: session handoff after deploy (c0ad69a)`). Production not deployed from this task.
+- **Goal:** Ensure Blueprint Studio/layout dashboard surfaces either run the shared responsive viewport check or render the floor plan matrix small-screen regression warning.
+- **Persona:** Coordinator - HubGrid Blueprint Studio, Allocation Ledger, dual-screen Booth Matrix, full event layout editor.
+- **Shipped locally:**
+  - **`dashboard-ledger-viewport-guard.tsx`:** Added `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` plus the 1024px x 550px guard UI for standalone booth matrix windows.
+  - **`dashboard-ledger-window-client.tsx`:** Wrapped presenter/wall-cast ledger rendering so matrix subscriptions and rows only mount on desktop-sized viewports; selection live-region text is derived without effect state.
+  - **`spatial-layout-editor.tsx`:** Wrapped the full event layout editor in `FloorPlanViewportLayoutProvider` / `DesktopScreenRequiredOverlay`; FloorPlanV2 stays unmounted on pocket viewports with save-draft exit available.
+  - **QA mirrors:** Updated `src/qa_review` and excluded recovery QA spatial/wizard shells with the same defensive viewport pattern for static scan parity.
+- **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; targeted ESLint on changed TSX files PASS; `git diff --check` PASS.
+- **Blockers:** None.
+- **Next:** Commit, push, and open PR for review; deploy after approval/merge per release workflow.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
