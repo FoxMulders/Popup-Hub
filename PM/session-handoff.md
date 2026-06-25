@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (PR pending)
+- **Goal:** Fix high-severity correctness bugs found in recent master commits.
+- **Branch:** `cursor/critical-bug-investigation-ffd8` @ `e716bf7`
+- **Shipped locally:**
+  - **Payment-chase race:** `releaseUnpaidApplication` conditional UPDATE on `payment_status` / `application_payment_status` so cron cannot cancel paid applications.
+  - **Wizard layout loss:** `onLayoutCommit` syncs wizard canvas → rooms; step-3 autosave uses `saveLayoutRef` for live floor-plan doc.
+  - **HubGrid draft publish:** Save & deploy verifies venue and sets `events.status = published` for draft markets.
+- **Verify:** `npx tsx lib/applications/unpaid-release-guards.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Merge PR; deploy when user asks.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
@@ -2028,7 +2038,7 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `72428cd` (pushed to `origin/master`)
+- Branch: `cursor/critical-bug-investigation-ffd8` @ `e716bf7` (PR pending merge to `master`)
 - Last deploy commit: `72428cd` - feat: ship 16 session updates (Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); +12 more)
 - Production: https://popuphub.ca - **v1.131.0 build 1** | commit `bcd6448` (handoff updated 2026-06-25 13:34)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
