@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fixes (PR open, not deployed)
+- **Goal:** Fix three high-severity correctness bugs found in post-ship review of master `0e58f57`.
+- **Persona:** Coordinator · HubGrid + wizard · Vendor payment chase cron.
+- **Shipped locally (branch `cursor/critical-bug-investigation-1760`, commit `5665b5a`):**
+  1. **Payment-chase race:** `releaseUnpaidApplication` now requires `payment_status = payment_required` (or offline `PENDING_REVIEW`) on UPDATE so a vendor who pays at deadline is not cancelled by stale cron data.
+  2. **Wizard layout loss:** Step-3 autosave calls `saveLayoutRef` (live canvas projection) instead of stale `rooms` state; wizard canvas commits sync layout rooms via `syncWizardLayoutRooms`.
+  3. **HubGrid false deploy:** Save & deploy on draft markets now verifies venue, sets `events.status = published`, and only then shows success.
+- **Verify:** `npx tsx lib/applications/unpaid-release-guards.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Merge PR; deploy when user asks.
+
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
