@@ -12,8 +12,9 @@
   - **`spatial-layout-editor.tsx`:** Standalone event layout editor now uses `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; `FloorPlanV2` stays unmounted on small screens while save-draft remains available.
   - **QA mirrors:** Updated included `src/qa_review` wizard/spatial mirrors and excluded recovery spatial copy to keep repo-wide scans aligned.
 - **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; targeted scans confirm active HubGrid dashboard, wizard layout step, spatial editor, and dual-screen matrix are guarded. Desktop-sized HubGrid still updates ledger/matrix instantly through the live `MarketManagementProvider` sync path; save is still required for persistence.
-- **Blockers:** None.
-- **Next:** Review on a mobile-width viewport to confirm the matrix warning copy and spatial overlay render as expected; deploy when requested.
+- **Deploy:** `npx vercel deploy --prod --yes` attempted after commit `9a1406f`, but Vercel CLI had no credentials and stopped at the interactive device-login flow; no production URL or alias was produced.
+- **Blockers:** Production deploy requires authenticated Vercel CLI credentials in this environment.
+- **Next:** Review on a mobile-width viewport to confirm the matrix warning copy and spatial overlay render as expected; rerun production deploy after Vercel CLI authentication is available.
 
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
