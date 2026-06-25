@@ -1804,6 +1804,10 @@ function FloorPlanV2Workspace({
     [store, syncLayoutRoomsFromDoc]
   )
 
+  const syncWizardLayoutRooms = useCallback(() => {
+    syncLayoutRoomsFromDoc(store.readDoc())
+  }, [store, syncLayoutRoomsFromDoc])
+
   const handleRotateRoomLeft = useCallback(() => {
     if (!rotateTargetRoomId) {
       toast.message('Click the room perimeter on the canvas, then rotate.')
@@ -3198,7 +3202,13 @@ function FloorPlanV2Workspace({
                     className="absolute inset-0 min-h-0"
                     scrollHost={!isEmbedded}
                     commandCenterViewport
-                    onLayoutCommit={isDashboard ? scheduleLayoutAutosave : undefined}
+                    onLayoutCommit={
+                      isDashboard
+                        ? scheduleLayoutAutosave
+                        : variant === 'wizard'
+                          ? syncWizardLayoutRooms
+                          : undefined
+                    }
                     layoutSpringPoses={layoutSpringPoses}
                     store={store}
                     toolState={{ tool, drawShape, amenityType: drawAmenityType }}
