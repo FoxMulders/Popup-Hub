@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint small-screen defensive QA (committed, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-2282`; implementation commit `03a78fb` (`fix: guard blueprint layouts on small screens`) on top of pushed `master` trigger `a4a29a4`.
+- **Goal:** Repository QA scan for Blueprint Studio/layout/dashboard surfaces that mount floor-plan canvas or booth matrix views without a desktop-size viewport guard.
+- **Persona:** Coordinator · HubGrid Blueprint Studio / Allocation Ledger / standalone Booth Matrix presenter.
+- **Shipped locally:**
+  - **`dashboard-ledger-viewport-guard.tsx`:** Added `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` with the designated copy: "The floor plan matrix is not optimized for small screens. Recommended layout: desktop size." Blocks standalone matrix windows below 1024px x 550px before sync subscriptions mount.
+  - **`dashboard-ledger-window-client.tsx`:** Wrapped presenter and wall-cast modes in the matrix viewport guard.
+  - **`spatial-layout-editor.tsx`:** Wrapped event layout editor in `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; FloorPlanV2 now stays unmounted while the desktop-required overlay is active.
+  - **QA mirrors:** Aligned `src/qa_review` wizard/spatial mirrors and the excluded root recovery spatial mirror with the same viewport guard pattern.
+- **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; static scan confirmed active HubGrid dashboard, setup wizard, event layout editor, and standalone ledger entry points now have the guard/message path.
+- **Blockers:** Not deployed in this automation pass.
+- **Next:** Push branch and open/update PR; optionally add Playwright coverage for `/coordinator/studio/ledger` at phone-sized viewport.
+
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
