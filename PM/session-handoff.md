@@ -2,6 +2,21 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint Studio responsive matrix guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-fb5f`; pre-change HEAD `b0d5e80` (`Trying to get it pushed`). Production/deploy metadata not refreshed in this task.
+- **Goal:** Automated QA scan/fix for Blueprint Studio, Allocation Ledger, dual-screen Booth Matrix, and layout editor surfaces so unsupported small screens show defensive desktop-size messaging instead of mounting the floor plan matrix/canvas.
+- **Persona:** Coordinator - Blueprint Studio / Allocation Ledger / dual-screen Booth Matrix.
+- **Sync path:** Main HubGrid still gates canvas and ledger through `FloorPlanViewportLayoutProvider`; ledger rows continue to derive from `MarketManagementProvider` live floor-plan state when mounted.
+- **Shipped locally:**
+  - **`components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx`:** New measured viewport guard with `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` ("The floor plan matrix is not optimized for small screens.") and 1024px x 550px desktop-size breaker.
+  - **`dashboard-ledger-window-client.tsx`:** Presenter/wall-cast Booth Matrix now mounts subscriptions only after the guard confirms a desktop-size viewport.
+  - **`dashboard-allocation-ledger.tsx`:** Full Allocation Ledger matrix is wrapped in the new guard as a fallback beneath the existing HubGrid iron dome.
+  - **`spatial-layout-editor.tsx`:** Event layout editor now uses `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and does not mount `FloorPlanV2` on pocket-sized viewports.
+  - **QA mirrors:** `src/qa_review` wizard/spatial layout variants and excluded recovery spatial copy now include the same desktop-size floor-plan guard.
+- **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; `npm run lint` PASS with existing repository warnings only (505 warnings, 0 errors).
+- **Blockers:** None.
+- **Next:** Commit/push automation branch and open PR. If deployed later, run the deploy handoff updater so production build metadata refreshes.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
