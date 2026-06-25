@@ -1619,10 +1619,18 @@ function FloorPlanV2Workspace({
       }
 
       try {
-        const { data: limits } = await supabase
-          .from('event_category_limits')
-          .select('category_id, category:categories(name)')
-          .eq('event_id', eventId)
+        const [{ data: limits }, { data: applications }, { data: eventRow }] =
+          await Promise.all([
+            supabase
+              .from('event_category_limits')
+              .select('category_id, category:categories(name)')
+              .eq('event_id', eventId),
+            supabase
+              .from('booth_applications')
+              .select('id, vendor_id, booth_number')
+              .eq('event_id', eventId),
+            supabase.from('events').select('name').eq('id', eventId).maybeSingle(),
+          ])
         const categoryNameToId: Record<string, string> = {}
         for (const row of limits ?? []) {
           const category = Array.isArray(row.category) ? row.category[0] : row.category
@@ -1635,8 +1643,20 @@ function FloorPlanV2Workspace({
         )
         const { syncEventBoothSlots } = await import('@/lib/floor-plan/sync-booth-slots')
         await syncEventBoothSlots(supabase, { eventId, booths, categoryNameToId })
-      } catch {
-        // Booth slot sync is best-effort after layout save
+
+        const { syncBoothApplicationNumbers } = await import(
+          '@/lib/floor-plan/sync-booth-application-numbers'
+        )
+        await syncBoothApplicationNumbers(supabase, {
+          eventId,
+          projectedRooms,
+          vendorBooths: booths,
+          applications: applications ?? [],
+          eventName: eventRow?.name ?? undefined,
+        })
+      } catch (syncErr) {
+        console.error('[floor-plan-v2] post-save booth sync failed', syncErr)
+        // Booth slot / application sync is best-effort after layout save
       }
       // Server is now the source of truth — drop the unified
       // crash-recovery draft so a future refresh loads from Supabase.
