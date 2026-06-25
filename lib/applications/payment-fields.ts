@@ -116,6 +116,19 @@ export function isApplicationAwaitingBoothPayment(
   return needsOfflineCoordinatorReview(app)
 }
 
+/** Eq filters for the conditional release UPDATE — avoids cancelling paid/processing rows. */
+export function unpaidReleaseRowGuards(
+  app: Pick<
+    BoothApplication,
+    'payment_method' | 'payment_status' | 'application_payment_status'
+  >
+): { column: 'payment_status' | 'application_payment_status'; value: string } {
+  if (isOfflinePaymentMethod(app.payment_method)) {
+    return { column: 'application_payment_status', value: 'PENDING_REVIEW' }
+  }
+  return { column: 'payment_status', value: 'payment_required' }
+}
+
 /** @deprecated Use isOfflineAwaitingPayment */
 export const isEtransferAwaitingPayment = isOfflineAwaitingPayment
 

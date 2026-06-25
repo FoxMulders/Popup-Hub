@@ -680,6 +680,8 @@ export interface BoothCell {
   categoryName: string
   categoryColor: string
   boothNumber: number
+  /** Supabase auth user id when a vendor is assigned to this cell (HubGrid save). */
+  assignedVendorId?: string | null
   boothType?: 'inside' | 'wall' | 'power'
   /** Table (default) or outdoor-only tent footprint. */
   vendorUnitType?: 'table' | 'tent'
