@@ -2,6 +2,21 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint responsive QA sweep (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-924a`; start/HEAD baseline `7e6b3ab` (`feat: ship 16 session updates...`). No production build/deploy in this scoped QA pass.
+- **Goal:** Ensure Blueprint Studio / layout dashboard surfaces either block pocket-sized viewports or show the designated floor-plan matrix small-screen warning.
+- **Persona:** Coordinator - Blueprint Studio / HubGrid, standalone Booth Matrix, spatial layout editor.
+- **Shipped locally:**
+  - **`dashboard-ledger-viewport-guard.tsx`:** Added `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` plus a desktop-breakpoint guard that withholds standalone matrix children until the browser viewport is confirmed >= 1024x550.
+  - **`dashboard-ledger-window-client.tsx`:** Wrapped presenter/wall-cast Booth Matrix client with the guard before BroadcastChannel subscription/table rendering mounts.
+  - **`spatial-layout-editor.tsx`:** Wrapped standalone `FloorPlanV2` editor with `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; pocket-sized viewports render a safe larger-screen message and keep the canvas unmounted.
+  - **QA mirrors:** Updated `src/qa_review` wizard/spatial layout mirrors and recovery spatial editor mirror to follow the same defensive provider/conditional pattern for repository-wide scans.
+- **Sync path:** Supported desktop viewports keep the existing `MarketManagementProvider` / `FloorPlanDocStore` flow unchanged; ledger/matrix updates remain live via `useBoothEntities`/`useBoothMatrixRows` and dual-screen `BroadcastChannel`.
+- **Legend adherence:** No changes to clearance/category/door-egress calculations; this pass only gates viewport size before canvas/matrix rendering.
+- **Verify:** `npx eslint ...` on touched TSX files PASS; `npx tsc --noEmit --pretty false` PASS; `git diff --check` PASS.
+- **Blockers:** None.
+- **Next:** Commit/push or deploy when requested by release workflow.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
