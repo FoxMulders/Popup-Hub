@@ -14,8 +14,8 @@
   - **`spatial-layout-editor.tsx`:** Event layout editor now uses `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` and does not mount `FloorPlanV2` on pocket-sized viewports.
   - **QA mirrors:** `src/qa_review` wizard/spatial layout variants and excluded recovery spatial copy now include the same desktop-size floor-plan guard.
 - **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; `npm run lint` PASS with existing repository warnings only (505 warnings, 0 errors).
-- **Blockers:** None.
-- **Next:** Commit/push automation branch and open PR. If deployed later, run the deploy handoff updater so production build metadata refreshes.
+- **Blockers:** Production deploy could not complete from this cloud checkout: `npx vercel deploy --prod --yes` entered Vercel device-login flow because no CLI credentials/project link were available; waiting process was stopped.
+- **Next:** PR is open for review. If deployed later, authenticate/link Vercel (or use the repo deploy workflow) and run the deploy handoff updater so production build metadata refreshes.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
