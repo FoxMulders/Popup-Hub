@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint Studio small-screen matrix guard (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-7d66`, starting commit `0112454`; production deploy not run for this QA-only branch change.
+- **Goal:** QA Blueprint Studio/dashboard layout surfaces for defensive small-screen handling around floor plan matrix views.
+- **Persona:** Coordinator · Blueprint Studio (`/coordinator/studio`) and dual-screen Booth Matrix (`/coordinator/studio/ledger`).
+- **Sync path:** HubGrid remains on `MarketManagementProvider` -> live `floorPlanStore` -> `useBoothEntities` / `useBoothMatrixRows`; the standalone presenter subscribes only after desktop viewport confirmation.
+- **Shipped locally:**
+  - **`components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx`:** Added `DashboardLedgerViewportGuard` plus `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`, using the shared 1024px x 550px floor-plan viewport breaker.
+  - **`app/coordinator/studio/ledger/page.tsx`:** Wrapped `DashboardLedgerWindowClient` so presenter/wall-cast matrix views render the regression warning on pocket-sized screens instead of mounting the matrix.
+  - **Scan result:** Main HubGrid and QA dashboard bootstrap already use `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; wizard floor-plan remains guarded by the same overlay.
+- **Verify:** `npx tsc --noEmit --pretty false` PASS; `npm run lint` PASS with pre-existing warnings only (505 warnings, 0 errors); targeted `rg` scan confirms the sole `DashboardLedgerWindowClient` route entry is wrapped.
+- **Next:** Open PR for review; no blockers.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
