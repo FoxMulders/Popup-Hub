@@ -66,3 +66,65 @@ test('legacy bridge round-trips outdoor venue profile on rooms', () => {
   const roundTrip = legacyRoomsFromDoc(rooms, doc)
   assert.equal(roundTrip[0]?.venue_profile, 'outdoor')
 })
+
+test('legacy bridge round-trips assigned vendor user id on booth cells', () => {
+  const vendorUserId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  const rooms: LayoutRoom[] = [
+    {
+      ...baseRoom,
+      cells: [
+        {
+          id: 'obj-tent-1',
+          col: 4,
+          row: 6,
+          colSpan: 10,
+          rowSpan: 10,
+          vendorName: 'Assigned Vendor',
+          categoryName: 'Craft',
+          categoryColor: '#94a3b8',
+          boothNumber: 1,
+          vendorUnitType: 'tent',
+          assignedVendorId: vendorUserId,
+        },
+      ],
+    },
+  ]
+
+  const doc = docFromLegacyRooms(rooms)
+  const booth = doc.objects.find((o) => o.id === 'obj-tent-1')
+  assert.ok(booth && booth.kind === 'booth')
+  assert.equal((booth as { vendorId?: string | null }).vendorId, vendorUserId)
+
+  const saved = legacyRoomsFromDoc(rooms, doc)
+  assert.equal(saved[0]?.cells[0]?.assignedVendorId, vendorUserId)
+})
+
+test('legacy bridge writes assignedVendorId from booth vendorId on save', () => {
+  const vendorUserId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+  const rooms: LayoutRoom[] = [
+    {
+      ...baseRoom,
+      cells: [
+        {
+          id: 'obj-booth-1',
+          col: 2,
+          row: 2,
+          colSpan: 6,
+          rowSpan: 4,
+          vendorName: 'Vendor A',
+          categoryName: 'Craft',
+          categoryColor: '#94a3b8',
+          boothNumber: 1,
+        },
+      ],
+    },
+  ]
+
+  const doc = docFromLegacyRooms(rooms)
+  const booth = doc.objects.find((o) => o.kind === 'booth')
+  assert.ok(booth)
+  ;(booth as { vendorId?: string }).vendorId = vendorUserId
+
+  const saved = legacyRoomsFromDoc(rooms, doc)
+  assert.equal(saved[0]?.cells[0]?.assignedVendorId, vendorUserId)
+})

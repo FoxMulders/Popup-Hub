@@ -25,6 +25,10 @@ import { isQuarterAuctionListing } from '@/lib/events/listing-type'
 import { computeApplicationBoothPriceCents } from '@/lib/monetization/booth-pricing'
 import { vendorCanVouchForCoordinator } from '@/lib/coordinator/vouch'
 import { vendorSetupMapUrl } from '@/lib/shopper/public-floorplan-modes'
+import {
+  resolveVendorBoothHighlightFromLayout,
+  vendorDisplayNamesForLayoutMatch,
+} from '@/lib/shopper/resolve-vendor-booth-from-layout'
 import { MarketOwnerLink } from '@/components/vendor/market-owner-link'
 import { MarketApplicationLayoutView } from '@/components/events/market-application-layout-view'
 import { VendorEventVenueMap } from '@/components/vendor/vendor-event-venue-map'
@@ -49,6 +53,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
     { data: eventAuctions },
     { data: wallet },
     { data: passport },
+    { data: profile },
   ] = await Promise.all([
     supabase
       .from('events')
@@ -79,6 +84,7 @@ export default async function VendorEventDetailPage({ params }: Props) {
       )
       .eq('user_id', user.id)
       .maybeSingle(),
+    supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
   ])
 
   if (eventError) {
@@ -159,6 +165,16 @@ export default async function VendorEventDetailPage({ params }: Props) {
   const maxBoothFee = paidCategoryLimits.length
     ? Math.max(...paidCategoryLimits.map((cl) => cl.price_per_booth))
     : 0
+
+  const layout = (layoutRow as BoothLayout | null) ?? null
+  const highlightBoothNumber =
+    layout != null && existingApp
+      ? resolveVendorBoothHighlightFromLayout(layout, {
+          vendorUserId: user.id,
+          applicationBoothNumber: existingApp.booth_number,
+          vendorDisplayNames: vendorDisplayNamesForLayoutMatch(passport, profile),
+        })
+      : (existingApp?.booth_number ?? null)
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -289,10 +305,10 @@ export default async function VendorEventDetailPage({ params }: Props) {
         }}
       />
 
-      {!isQuarterAuction && existingApp?.booth_number != null ? (
+      {!isQuarterAuction && highlightBoothNumber != null ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-forest/30 bg-forest/5 p-4">
           <p className="text-sm font-medium text-foreground">
-            Booth #{existingApp.booth_number} is on the floor plan — use the setup map for load-in
+            Booth #{highlightBoothNumber} is on the floor plan — use the setup map for load-in
             directions from the entrance.
           </p>
           <Link href={vendorSetupMapUrl(id)}>
@@ -311,8 +327,8 @@ export default async function VendorEventDetailPage({ params }: Props) {
             status: eventRecord.status,
           }}
           layoutId={(layoutRow as BoothLayout | null)?.id ?? null}
-          layout={(layoutRow as BoothLayout | null) ?? null}
-          highlightBoothNumber={existingApp?.booth_number ?? null}
+          layout={layout}
+          highlightBoothNumber={highlightBoothNumber}
           className="rounded-2xl border bg-white p-6"
         />
       ) : null}
