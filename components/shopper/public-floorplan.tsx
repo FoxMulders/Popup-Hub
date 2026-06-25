@@ -97,6 +97,18 @@ export function PublicFloorplan({
   const [routeComputing, setRouteComputing] = useState(false)
   const canvasRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    if (highlightBoothNumber == null) return
+    const roomWithBooth = rooms.find((layoutRoom) =>
+      filterVendorBoothCells(layoutRoom.cells ?? []).some(
+        (cell) => cell.boothNumber === highlightBoothNumber
+      )
+    )
+    if (roomWithBooth && roomWithBooth.id !== activeRoomId) {
+      setActiveRoomId(roomWithBooth.id)
+    }
+  }, [activeRoomId, highlightBoothNumber, rooms])
+
   const isVendorSetup = mode === 'vendor-setup'
   const routePickerVisible = showRouteModePicker ?? !isVendorSetup
   const guestTablesVisible =

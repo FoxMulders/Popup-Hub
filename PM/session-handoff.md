@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — HubGrid v2 booth_number sync fix (local, not deployed)
+- **Goal:** Restore vendor setup map / Find booth after HubGrid v2 placement — canvas assigned vendors but `booth_applications.booth_number` stayed null.
+- **Persona:** Coordinator · HubGrid studio save · Vendor portal setup map.
+- **Root cause:** Legacy `booth-planner.tsx` synced `booth_number` on save; HubGrid v2 only persisted `booth_layouts` + booth slots.
+- **Shipped locally:**
+  - **`lib/floor-plan/sync-booth-application-numbers.ts`:** Project canvas placements → `booth_applications.booth_number`; clears stale numbers; notifies on first assign.
+  - **`floor-plan-v2.tsx`:** Calls sync after layout save (with booth slots).
+  - **`public-floorplan.tsx`:** Auto-switch room tab when `highlightBoothNumber` is in another room.
+  - **Tests:** `lib/floor-plan/sync-booth-application-numbers.test.ts` (4 cases).
+- **Verify:** `npx tsx lib/floor-plan/sync-booth-application-numbers.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
