@@ -7,7 +7,7 @@
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
 - **Shipped locally:**
   - **`ios/App/App.xcodeproj/project.pbxproj`:** App target stays manual signing; Release explicitly uses `Apple Distribution`, `PopupHub_TestFlight_Profile`, `App/App.entitlements`, and team `6ACBDTX7T7`.
-  - **Project Release defaults:** Manual signing + `Apple Distribution` + team `6ACBDTX7T7` so archive builds do not inherit the old `iPhone Developer` identity.
+  - **Project Release defaults:** Manual signing + `Apple Distribution` + team `6ACBDTX7T7` + `PopupHub_TestFlight_Profile` so archive builds do not inherit the old `iPhone Developer` identity or lose the distribution profile link.
 - **Verify:** Not run locally; requires GitHub Actions/macOS runner with installed distribution certificate and provisioning profile.
 - **Next:** Re-run the failing GitHub Actions workflow; commit + deploy when user asks.
 
