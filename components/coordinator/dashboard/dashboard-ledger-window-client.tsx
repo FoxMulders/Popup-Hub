@@ -9,6 +9,7 @@ import {
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
 import { cn } from '@/lib/utils'
+import { DashboardLedgerViewportGuard } from './dashboard-ledger-viewport-guard'
 
 const STATUS_PILL_CLASS: Record<
   keyof typeof BOOTH_STATUS_THEME,
@@ -40,6 +41,21 @@ export function DashboardLedgerWindowClient() {
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
   const isWallCast = screenMode === 'wall-cast'
+
+  return (
+    <DashboardLedgerViewportGuard tone={isWallCast ? 'dark' : 'light'}>
+      <DashboardLedgerWindowInner eventId={eventId} isWallCast={isWallCast} />
+    </DashboardLedgerViewportGuard>
+  )
+}
+
+function DashboardLedgerWindowInner({
+  eventId,
+  isWallCast,
+}: {
+  eventId: string | null
+  isWallCast: boolean
+}) {
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
