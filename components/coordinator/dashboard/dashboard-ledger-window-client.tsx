@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BOOTH_STATUS_THEME } from '@/lib/coordinator/booth-placement-status'
 import {
@@ -8,6 +8,7 @@ import {
   subscribeFloorplanSync,
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
+import { useFloorPlanViewportLayout } from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { cn } from '@/lib/utils'
 
 const STATUS_PILL_CLASS: Record<
@@ -37,14 +38,20 @@ const WALL_CAST_ROW_CLASS: Record<
  */
 export function DashboardLedgerWindowClient() {
   const searchParams = useSearchParams()
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
   const isWallCast = screenMode === 'wall-cast'
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const selectionAnnouncement = useMemo(() => {
+    if (showDesktopRequired) return ''
+    const row = rows.find((r) => r.id === selectedBoothId)
+    if (!row) return ''
+    return `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
+  }, [rows, selectedBoothId, showDesktopRequired])
 
   useEffect(() => {
     document.title = isWallCast
@@ -53,6 +60,7 @@ export function DashboardLedgerWindowClient() {
   }, [isWallCast])
 
   useEffect(() => {
+    if (showDesktopRequired) return
     postFloorplanSync({ type: 'ledger_ready', source: 'ledger' })
     return subscribeFloorplanSync((message) => {
       if (message.source === 'ledger') return
@@ -66,26 +74,23 @@ export function DashboardLedgerWindowClient() {
         setSelectedBoothId(message.boothId)
       }
     })
-  }, [eventId])
+  }, [eventId, showDesktopRequired])
 
   useEffect(() => {
-    const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
-  }, [rows, selectedBoothId])
-
-  useEffect(() => {
+    if (showDesktopRequired) return
     if (!isWallCast || !selectedRowRef.current) return
     selectedRowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-  }, [isWallCast, selectedBoothId, rows.length])
+  }, [isWallCast, selectedBoothId, rows.length, showDesktopRequired])
 
   const handleFocusBooth = useCallback((boothId: string) => {
     setSelectedBoothId(boothId)
     postFloorplanSync({ type: 'focus_booth', source: 'ledger', boothId })
     postFloorplanSync({ type: 'selection', source: 'ledger', boothId })
   }, [])
+
+  if (showDesktopRequired) {
+    return <div className="h-full min-h-0 bg-stone-950" aria-hidden />
+  }
 
   if (isWallCast) {
     return (
