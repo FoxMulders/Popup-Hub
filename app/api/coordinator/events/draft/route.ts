@@ -13,6 +13,11 @@ import {
   type DayRowPayload,
   type EventDraftPayloadInput,
 } from '@/lib/wizard/wizard-autosave'
+import {
+  assertDraftCategoryFeesForPublish,
+  assertDraftVenueForPublish,
+} from '@/lib/wizard/draft-publish-gates'
+import { persistEventVenueVerification } from '@/lib/venues/persist-event-venue-verification'
 import type { CategoryLimit } from '@/components/coordinator/category-limit-editor'
 
 type DraftRequestBody = {
@@ -89,6 +94,16 @@ export async function POST(request: Request) {
     if (publishBlock) {
       return NextResponse.json({ error: publishBlock }, { status: 403 })
     }
+
+    const feeGate = assertDraftCategoryFeesForPublish(body.categoryLimits ?? [])
+    if (!feeGate.ok) {
+      return NextResponse.json({ error: feeGate.reason }, { status: 400 })
+    }
+
+    const venueGate = await assertDraftVenueForPublish(admin, body.draft)
+    if (!venueGate.ok) {
+      return NextResponse.json({ error: venueGate.reason }, { status: 400 })
+    }
   }
 
   if (eventId) {
@@ -128,6 +143,16 @@ export async function POST(request: Request) {
       { error: isRls ? RLS_DENIED_MESSAGE : message },
       { status: isRls ? 403 : 500 }
     )
+  }
+
+  if (publishing && result.eventId) {
+    await persistEventVenueVerification(admin, result.eventId, {
+      latitude: body.draft.latitude,
+      longitude: body.draft.longitude,
+      address: body.draft.address,
+      locationName: body.draft.locationName,
+      pinDropped: true,
+    })
   }
 
   if (publishing && result.eventId) {
