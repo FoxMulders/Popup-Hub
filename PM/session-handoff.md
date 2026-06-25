@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — HubGrid Save & deploy false success (PR open)
+- **Goal:** Critical bug investigation on `28716d1` — HubGrid “Save & deploy” must actually publish draft markets.
+- **Persona:** Coordinator · HubGrid blueprint (`/coordinator/studio`)
+- **Bug:** `dashboard-floor-plan.tsx` `handleSaveMarket` saved layout + showed “Market layout saved and deployed” without setting `events.status = 'published'` or running venue verify.
+- **Fix (branch `cursor/critical-bug-investigation-d48b`, commit `4d2101c`):** Align with `spatial-layout-editor.tsx` — publish gate, venue verify API, status update, `router.refresh()`; non-draft markets get “Layout saved” only.
+- **Verify:** Draft market in HubGrid → Save & deploy → status becomes Published; published market → Save & deploy → layout saved, status unchanged.
+- **Next:** Merge PR; deploy when promoted.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
