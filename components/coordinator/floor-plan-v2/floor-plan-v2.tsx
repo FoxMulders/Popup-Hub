@@ -166,6 +166,7 @@ import type { LayoutRoom, VenueProfile } from '@/types/database'
 import {
   normalizeVenueProfile,
   patchRoomVenueProfile,
+  roomFrameWizardFieldsMatch,
 } from '@/lib/floor-plan/venue-profile'
 import type { FloorPlanDocStore } from './state/use-floor-plan-doc'
 import type { BoothPlacementStatus } from '@/lib/coordinator/booth-placement-status'
@@ -640,11 +641,7 @@ function FloorPlanV2Workspace({
         const d = docFrameById.get(m.id)
         return (
           d &&
-          d.name === m.name &&
-          d.widthFt === m.widthFt &&
-          d.lengthFt === m.lengthFt &&
-          d.originX === m.originX &&
-          d.originY === m.originY
+          roomFrameWizardFieldsMatch(d, m)
         )
       })
 

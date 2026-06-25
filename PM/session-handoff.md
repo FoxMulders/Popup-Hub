@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (2026-06-25)
+- **Goal:** Fix high-severity correctness bugs found in recent outdoor markets + publish flow.
+- **Persona:** Coordinator · market setup wizard + HubGrid canvas
+- **Shipped locally:**
+  - **Outdoor venue profile desync:** `sameFrames` in `floor-plan-v2.tsx` now compares `venueProfile` via `roomFrameWizardFieldsMatch` — toggling Indoor→Outdoor on Step 2 syncs canvas (tent chip, outdoor fixtures) without requiring room-bar re-toggle.
+  - **Publish-before-verify:** `market-setup-wizard.tsx` verifies venue coordinates **before** persisting `status: 'published'`; post-publish verify persists fields non-blocking.
+  - **Tests:** `lib/floor-plan/venue-profile-sync.test.ts` locks profile comparison.
+- **Verify:** `npx tsx lib/floor-plan/venue-profile-sync.test.ts` PASS; outdoor Step 2 → Step 3 shows Tent chip; publish with bad pin blocked before DB publish.
+- **Next:** Merge PR + deploy.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)

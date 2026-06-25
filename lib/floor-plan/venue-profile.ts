@@ -34,3 +34,25 @@ export function patchRoomVenueProfile(
     f.id === roomId ? { ...f, venueProfile: profile } : f
   )
 }
+
+/** Whether wizard room frames match doc frames for layout sync (geometry + profile). */
+export function roomFrameWizardFieldsMatch(
+  docFrame: Pick<
+    RoomFrame,
+    'name' | 'widthFt' | 'lengthFt' | 'originX' | 'originY' | 'venueProfile'
+  >,
+  mergedFrame: Pick<
+    RoomFrame,
+    'name' | 'widthFt' | 'lengthFt' | 'originX' | 'originY' | 'venueProfile'
+  >
+): boolean {
+  return (
+    docFrame.name === mergedFrame.name &&
+    docFrame.widthFt === mergedFrame.widthFt &&
+    docFrame.lengthFt === mergedFrame.lengthFt &&
+    docFrame.originX === mergedFrame.originX &&
+    docFrame.originY === mergedFrame.originY &&
+    normalizeVenueProfile(docFrame.venueProfile) ===
+      normalizeVenueProfile(mergedFrame.venueProfile)
+  )
+}

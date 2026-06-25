@@ -614,6 +614,34 @@ export function MarketSetupWizard({
 
       setAutosaveStatus('saving')
       try {
+        if (opts?.publish) {
+          const preVerifyRes = await fetch('/api/coordinator/venues/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId: eventId ?? undefined,
+              latitude: lat,
+              longitude: lng,
+              address,
+              locationName,
+              pinDropped,
+              persist: false,
+            }),
+          })
+          const preVerifyData = (await preVerifyRes.json().catch(() => ({}))) as {
+            verified?: boolean
+            reason?: string
+          }
+          if (!preVerifyRes.ok || !preVerifyData.verified) {
+            setAutosaveStatus('error')
+            toast.error(
+              preVerifyData.reason ??
+                'Venue must be verified on the map with a complete address before publishing.'
+            )
+            return { ok: false as const, reason: 'venue' as const }
+          }
+        }
+
         let coverUrl = coverImageUrl || null
         if (coverFile && eventId) {
           coverUrl = await uploadCoverIfNeeded(eventId)
@@ -699,7 +727,7 @@ export function MarketSetupWizard({
         const resolvedId = draftResult.eventId || eventId
 
         if (opts?.publish && resolvedId) {
-          const verifyRes = await fetch('/api/coordinator/venues/verify', {
+          void fetch('/api/coordinator/venues/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -711,15 +739,9 @@ export function MarketSetupWizard({
               pinDropped,
               persist: true,
             }),
+          }).catch((verifyErr) => {
+            console.error('[publish] venue verification persist failed (non-blocking)', verifyErr)
           })
-          const verifyData = await verifyRes.json()
-          if (!verifyRes.ok || !verifyData.verified) {
-            toast.error(
-              verifyData.reason ??
-                'Venue must be verified on the map with a complete address before publishing.'
-            )
-            return { ok: false as const, reason: 'venue' as const }
-          }
         }
 
         // Step 1 already captures venue dimensions (combined Event & Venue
