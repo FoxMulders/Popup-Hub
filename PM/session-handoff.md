@@ -2028,9 +2028,9 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `c0ad69a` (pushed to `origin/master`)
-- Last deploy commit: `c0ad69a` - feat: ship 16 session updates (Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); +12 more)
-- Production: https://popuphub.ca - **v1.130.0 build 1** | commit `0208ec0` (handoff updated 2026-06-25 13:19)
+- Branch: `master` @ `72428cd` (pushed to `origin/master`)
+- Last deploy commit: `72428cd` - feat: ship 16 session updates (Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); +12 more)
+- Production: https://popuphub.ca - **v1.131.0 build 1** | commit `bcd6448` (handoff updated 2026-06-25 13:34)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
 
@@ -2407,7 +2407,7 @@
 
 
 ## Last deploy
-- 2026-06-25 13:19 - Deploy via deploy-popuphub.ps1 - `feat: ship 16 session updates (Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); +12 more)` (c0ad69a)
+- 2026-06-25 13:34 - Deploy via deploy-popuphub.ps1 - `feat: ship 16 session updates (Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); +12 more)` (72428cd)
 
 
 ## Goal
