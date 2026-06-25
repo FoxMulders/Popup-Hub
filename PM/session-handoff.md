@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (PR open, not deployed)
+- **Goal:** Deep review of recent `master` commits for high-severity correctness bugs.
+- **Branch:** `cursor/critical-bug-investigation-b6af` @ `0a33f75`
+- **Bugs fixed (3):**
+  1. **Payment chase race** — `releaseUnpaidApplication` could cancel booth applications after vendor checkout; cron row only checked `status != cancelled`. Added conditional UPDATE guards on `payment_status` / `application_payment_status` (`unpaidReleaseRowGuards`).
+  2. **Wizard floor-plan data loss** — Step 3 autosave on tab switch used stale `rooms` state instead of live canvas doc. Wizard `onLayoutCommit` now syncs rooms; step-3 autosave calls `saveLayoutRef`.
+  3. **Publish before venue verify** — Wizard persisted `status: published` before coordinate verification; server draft API lacked venue/fee gates. Verify + gates now run before publish persist; server mirrors checks.
+- **Tests:** `npx tsx lib/applications/unpaid-release-guards.test.ts` PASS; `npx tsx --test lib/wizard/draft-publish-gates.test.ts` PASS.
+- **Next:** Merge PR; deploy; smoke payment chase cron + wizard step-3 tab switch + publish with unverified pin.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
@@ -2028,7 +2038,8 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `c0ad69a` (pushed to `origin/master`)
+- Branch: `cursor/critical-bug-investigation-b6af` @ `0a33f75` (PR pending merge to `master`)
+- `master` @ `bcd6448` (pushed to `origin/master`)
 - Last deploy commit: `c0ad69a` - feat: ship 16 session updates (Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; Outdoor markets (tent vendors + fixtures); +12 more)
 - Production: https://popuphub.ca - **v1.130.0 build 1** | commit `0208ec0` (handoff updated 2026-06-25 13:19)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)

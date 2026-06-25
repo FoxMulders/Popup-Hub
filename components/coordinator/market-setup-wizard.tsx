@@ -621,6 +621,30 @@ export function MarketSetupWizard({
           setCoverFile(null)
         }
 
+        if (opts?.publish) {
+          const verifyRes = await fetch('/api/coordinator/venues/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              eventId: eventId ?? undefined,
+              latitude: lat,
+              longitude: lng,
+              address,
+              locationName,
+              pinDropped,
+              persist: Boolean(eventId),
+            }),
+          })
+          const verifyData = await verifyRes.json()
+          if (!verifyRes.ok || !verifyData.verified) {
+            toast.error(
+              verifyData.reason ??
+                'Venue must be verified on the map with a complete address before publishing.'
+            )
+            return { ok: false as const, reason: 'venue' as const }
+          }
+        }
+
         const draftResult = await persistEventDraftViaApi(
           eventId,
           {
@@ -698,7 +722,7 @@ export function MarketSetupWizard({
 
         const resolvedId = draftResult.eventId || eventId
 
-        if (opts?.publish && resolvedId) {
+        if (opts?.publish && resolvedId && !eventId) {
           const verifyRes = await fetch('/api/coordinator/venues/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -726,9 +750,16 @@ export function MarketSetupWizard({
         // step), so the layout payload is meaningful from the very first
         // autosave onward as long as the coordinator hasn't opted out.
         if (resolvedId && !skipVenueLayout) {
-          const layoutPayload = layoutPayloadFromRooms(resolvedId, rooms, activeRoomId)
-          const layoutResult = await persistLayoutDraft(supabase, resolvedId, layoutPayload)
-          if (layoutResult.error) throw layoutResult.error
+          if (currentStep === 3 && saveLayoutRef.current) {
+            const saved = await saveLayoutRef.current()
+            if (!saved) {
+              throw new Error('Could not save floor plan')
+            }
+          } else {
+            const layoutPayload = layoutPayloadFromRooms(resolvedId, rooms, activeRoomId)
+            const layoutResult = await persistLayoutDraft(supabase, resolvedId, layoutPayload)
+            if (layoutResult.error) throw layoutResult.error
+          }
         }
 
         if (coverFile && resolvedId && !coverUrl) {
@@ -775,6 +806,7 @@ export function MarketSetupWizard({
       marketInsuranceRequired,
       marketCity,
       rooms,
+      saveLayoutRef,
       scheduleType,
       skipVenueLayout,
       startDate,
