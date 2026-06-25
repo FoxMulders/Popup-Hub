@@ -9,6 +9,7 @@ import {
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
 import { cn } from '@/lib/utils'
+import { DashboardLedgerViewportGuard } from './dashboard-ledger-viewport-guard'
 
 const STATUS_PILL_CLASS: Record<
   keyof typeof BOOTH_STATUS_THEME,
@@ -36,6 +37,14 @@ const WALL_CAST_ROW_CLASS: Record<
  * Wall cast — read-only, high-contrast layout for projection on a second display.
  */
 export function DashboardLedgerWindowClient() {
+  return (
+    <DashboardLedgerViewportGuard>
+      <DashboardLedgerWindowInner />
+    </DashboardLedgerViewportGuard>
+  )
+}
+
+function DashboardLedgerWindowInner() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
   const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
