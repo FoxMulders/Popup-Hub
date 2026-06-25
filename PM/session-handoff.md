@@ -2,8 +2,8 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work - Blueprint Studio matrix small-screen guard (local, not deployed)
-- **Branch/baseline:** `cursor/blueprint-layout-responsiveness-6508` at `9d02e27` (`docs: session handoff after deploy (40a1541)`).
+## Active work - Blueprint Studio matrix small-screen guard (pushed, deploy blocked)
+- **Branch/baseline:** `cursor/blueprint-layout-responsiveness-6508`; baseline `9d02e27` (`docs: session handoff after deploy (40a1541)`); code commit `f3ffc99` (`fix: guard booth matrix on small screens`) pushed to origin.
 - **Goal:** QA Blueprint Studio/dashboard layout surfaces for the floor-plan responsive guard; ensure the standalone booth matrix warns on pocket-sized viewports instead of rendering an unusable matrix.
 - **Persona/surface:** Coordinator - Blueprint Studio (`/coordinator/studio`) and dual-screen Booth Matrix (`/coordinator/studio/ledger`).
 - **Shipped locally:**
@@ -13,8 +13,9 @@
   - **`dashboard-ledger-window-client.tsx`:** Reads `showDesktopRequired`; skips BroadcastChannel sync, selection scrolling, and table rendering while the desktop-size breaker is active.
 - **QA scan result:** `/coordinator/studio` inherits the existing provider/overlay through `DashboardBootstrapQa`; `/coordinator/studio/ledger` was the missing defensive UI handler and is now guarded.
 - **Verify:** `npx eslint app/coordinator/studio/ledger/page.tsx components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx components/coordinator/dashboard/dashboard-ledger-window-client.tsx components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory.tsx` PASS; `npx tsc --noEmit --pretty false` PASS; `npx next build --webpack` PASS.
-- **Blockers:** None.
-- **Next:** Commit, push, and open/update PR for this automation task; deploy only if release workflow is requested/triggered separately.
+- **Deploy:** `npx vercel deploy --prod --yes` attempted after push, but Vercel CLI had no credentials and opened an interactive device-login flow; blocked process was stopped.
+- **Blockers:** Production deploy requires non-interactive Vercel credentials/session in this environment.
+- **Next:** Open/update PR for this automation task; rerun production deploy after Vercel CLI authentication is available.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
