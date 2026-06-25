@@ -12,8 +12,8 @@
   - **`spatial-layout-editor.tsx`:** Wrapped event layout editor in `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; FloorPlanV2 now stays unmounted while the desktop-required overlay is active.
   - **QA mirrors:** Aligned `src/qa_review` wizard/spatial mirrors and the excluded root recovery spatial mirror with the same viewport guard pattern.
 - **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; static scan confirmed active HubGrid dashboard, setup wizard, event layout editor, and standalone ledger entry points now have the guard/message path.
-- **Blockers:** Not deployed in this automation pass.
-- **Next:** Push branch and open/update PR; optionally add Playwright coverage for `/coordinator/studio/ledger` at phone-sized viewport.
+- **Blockers:** Production deploy blocked: `npx vercel deploy --prod --yes` entered device-login flow because no Vercel CLI credentials were available in the cloud environment.
+- **Next:** Run production deploy from an authenticated Vercel CLI/session; optionally add Playwright coverage for `/coordinator/studio/ledger` at phone-sized viewport.
 
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
