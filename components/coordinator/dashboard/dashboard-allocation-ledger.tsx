@@ -1,6 +1,7 @@
 'use client'
 
 import { BoothMatrixPanel } from './booth-matrix-panel'
+import { DashboardLedgerResponsiveWarning } from './dashboard-ledger-viewport-guard'
 
 /**
  * Page 2 — Allocation Ledger: full-width booth matrix for financial and assignment auditing.
@@ -8,6 +9,7 @@ import { BoothMatrixPanel } from './booth-matrix-panel'
 export function DashboardAllocationLedger() {
   return (
     <div className="dashboard-allocation-ledger flex min-h-0 flex-1 flex-col overflow-hidden">
+      <DashboardLedgerResponsiveWarning className="mx-3 mt-3 shrink-0" />
       <div className="min-h-0 flex-1 overflow-hidden">
         <BoothMatrixPanel variant="ledger" defaultOpen />
       </div>

@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint responsive guard QA (local, not deployed)
+- **Goal:** Ensure Blueprint Studio/layout/dashboard floor-plan matrix surfaces either block pocket-sized viewports or render the designated small-screen regression warning.
+- **Persona:** Coordinator · HubGrid / Blueprint Studio / Allocation Ledger / spatial layout editor.
+- **Shipped locally:**
+  - **`dashboard-ledger-viewport-guard.tsx`:** Added `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING`, `data-testid="floor-plan-matrix-small-screen-warning"`, a responsive warning banner, and a standalone ledger guard for viewports below 1024px x 550px.
+  - **`dashboard-ledger-window-client.tsx`:** Wrapped presenter/wall-cast dual-screen matrix content before live sync subscription mounts.
+  - **`dashboard-allocation-ledger.tsx`:** Prefixes embedded ledger matrix with the responsive warning when a small viewport still reaches the view.
+  - **`spatial-layout-editor.tsx` + QA mirrors:** Added `FloorPlanViewportLayoutProvider` / `DesktopScreenRequiredOverlay` and canvas fallbacks so resized small viewports do not mount the floor-plan workspace.
+- **Verify:** `./node_modules/.bin/tsc --noEmit --pretty false` PASS; `npm run lint` PASS (warnings remain only in pre-existing unrelated files).
+- **Next:** Commit + deploy when release workflow is requested; optional browser smoke at `/coordinator/studio/ledger?screen=presenter` under 1024px width to confirm the regression warning.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)

@@ -9,6 +9,7 @@ import {
   type FloorplanMatrixSyncRow,
 } from '@/lib/coordinator/floorplan-sync'
 import { cn } from '@/lib/utils'
+import { DashboardLedgerViewportGuard } from './dashboard-ledger-viewport-guard'
 
 const STATUS_PILL_CLASS: Record<
   keyof typeof BOOTH_STATUS_THEME,
@@ -38,13 +39,34 @@ const WALL_CAST_ROW_CLASS: Record<
 export function DashboardLedgerWindowClient() {
   const searchParams = useSearchParams()
   const eventId = searchParams.get('event')
-  const screenMode = searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
+  const screenMode: DashboardLedgerScreenMode =
+    searchParams.get('screen') === 'wall-cast' ? 'wall-cast' : 'presenter'
+
+  return (
+    <DashboardLedgerViewportGuard mode={screenMode}>
+      <DashboardLedgerWindowContent eventId={eventId} screenMode={screenMode} />
+    </DashboardLedgerViewportGuard>
+  )
+}
+
+type DashboardLedgerScreenMode = 'presenter' | 'wall-cast'
+
+function DashboardLedgerWindowContent({
+  eventId,
+  screenMode,
+}: {
+  eventId: string | null
+  screenMode: DashboardLedgerScreenMode
+}) {
   const isWallCast = screenMode === 'wall-cast'
   const [rows, setRows] = useState<FloorplanMatrixSyncRow[]>([])
   const [selectedBoothId, setSelectedBoothId] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
-  const [selectionAnnouncement, setSelectionAnnouncement] = useState('')
   const selectedRowRef = useRef<HTMLTableRowElement>(null)
+  const selectedRow = rows.find((row) => row.id === selectedBoothId)
+  const selectionAnnouncement = selectedRow
+    ? `Selected booth ${selectedRow.label}, ${selectedRow.statusLabel}, vendor ${selectedRow.vendor}`
+    : ''
 
   useEffect(() => {
     document.title = isWallCast
@@ -67,14 +89,6 @@ export function DashboardLedgerWindowClient() {
       }
     })
   }, [eventId])
-
-  useEffect(() => {
-    const row = rows.find((r) => r.id === selectedBoothId)
-    if (!row) return
-    setSelectionAnnouncement(
-      `Selected booth ${row.label}, ${row.statusLabel}, vendor ${row.vendor}`
-    )
-  }, [rows, selectedBoothId])
 
   useEffect(() => {
     if (!isWallCast || !selectedRowRef.current) return
