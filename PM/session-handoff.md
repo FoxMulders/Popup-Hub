@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS TestFlight signing fix (local, not deployed)
+- **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
+- **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
+- **Shipped locally:**
+  - **`ios/App/App.xcodeproj/project.pbxproj`:** App target stays manual signing; Release explicitly uses `Apple Distribution`, `PopupHub_TestFlight_Profile`, `App/App.entitlements`, and team `6ACBDTX7T7`.
+  - **Project Release defaults:** Manual signing + `Apple Distribution` + team `6ACBDTX7T7` so archive builds do not inherit the old `iPhone Developer` identity.
+- **Verify:** Not run locally; requires GitHub Actions/macOS runner with installed distribution certificate and provisioning profile.
+- **Next:** Re-run the failing GitHub Actions workflow; commit + deploy when user asks.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
