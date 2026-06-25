@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Blueprint responsive QA guards (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-af9e`, HEAD `986c6a5`; no production deploy in this task.
+- **Goal:** Ensure Blueprint Studio/layout and dashboard matrix entry points either enforce the desktop viewport breaker or render the floor-plan matrix small-screen regression warning.
+- **Persona:** Coordinator · Blueprint Studio / HubGrid canvas, Allocation Ledger, dual-screen Booth Matrix.
+- **Shipped locally:**
+  - **`dashboard-ledger-viewport-guard.tsx`:** Added `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` and a 1024px × 550px viewport guard for standalone Booth Matrix windows.
+  - **`app/coordinator/studio/ledger/page.tsx`:** Wrapped `DashboardLedgerWindowClient` so presenter/wall-cast subscriptions mount only after desktop viewport confirmation.
+  - **`spatial-layout-editor.tsx`:** Restored `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay` around the full layout editor and blocked `FloorPlanV2` mounting on pocket-sized viewports.
+  - **QA mirrors:** Updated covered `src/qa_review` wizard/spatial fixtures and the excluded recovery copy with the same responsive guard pattern.
+- **Verify:** `npx eslint` on changed files PASS; `npx tsc --noEmit --pretty false` PASS. Static scan shows live Blueprint Studio dashboard/canvas paths use `FloorPlanViewportLayoutProvider`/`DesktopScreenRequiredOverlay`, and standalone matrix uses `DashboardLedgerViewportGuard`.
+- **Next:** Commit + deploy when workflow/user asks.
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
