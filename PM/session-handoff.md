@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (session 17 ship review)
+- **Goal:** Fix high-severity correctness bugs still on production after `master` @ `a4a29a4` (iOS TestFlight signing bump).
+- **Persona:** Coordinator (HubGrid, wizard) · Vendor portal (setup map) · Cron (payment chase)
+- **Shipped locally (branch `cursor/critical-bug-investigation-c196`):**
+  1. **Payment-chase race:** `unpaidReleaseRowGuards` on `releaseUnpaidApplication` UPDATE — cron cannot cancel after checkout completes.
+  2. **Wizard floor-plan loss:** Step 3 autosave uses live `saveLayoutRef`; canvas commits sync rooms via `syncWizardLayoutRooms`.
+  3. **Wizard publish ordering:** Venue verify runs before draft persist with `status: published`.
+  4. **HubGrid Save & deploy false success:** Draft markets now verify venue + set `events.status = published`.
+  5. **Vendor setup map booth desync:** Persist `assignedVendorId` on layout cells; resolve highlight from live layout (vendor id → name → fallback).
+- **Verify:** `unpaid-release-guards.test.ts`, `resolve-vendor-booth-from-layout.test.ts`, `legacy-bridge-tent.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Merge PR; deploy when user asks.
+
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
