@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ApplicationPaymentStatus, ApplicationStatus, PaymentMethod, PaymentStatus } from '@/types/database'
-import { isOfflinePaymentMethod } from '@/lib/applications/payment-fields'
+import { isOfflinePaymentMethod, unpaidReleaseRowGuards } from '@/lib/applications/payment-fields'
 import {
   notifyCoordinatorPaymentReleased,
   notifyVendorPaymentChase,
@@ -115,14 +115,22 @@ export async function releaseUnpaidApplication(
     updates.application_payment_status = 'EXPIRED'
   }
 
-  const { error: updateError } = await supabase
+  const guard = unpaidReleaseRowGuards(app)
+  const { data: releasedRow, error: updateError } = await supabase
     .from('booth_applications')
     .update(updates)
     .eq('id', app.id)
     .neq('status', 'cancelled')
+    .eq(guard.column, guard.value)
+    .select('id')
+    .maybeSingle()
 
   if (updateError) {
     console.error('[release-unpaid-application] update failed:', updateError)
+    return { released: false }
+  }
+
+  if (!releasedRow) {
     return { released: false }
   }
 
