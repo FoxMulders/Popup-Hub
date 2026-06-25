@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-5907`, not deployed)
+- **Goal:** Deep review of recent `master` commits for high-severity correctness bugs.
+- **Persona:** Coordinator · market setup wizard / HubGrid floor plan
+- **Findings fixed (PR open):**
+  1. **Publish before venue verify:** `POST /api/coordinator/events/draft` accepted `status: 'published'` before venue gates, firing publish alerts on unverified venues. Server now enforces fee + venue + pending-venue gates; client verifies before publish persist.
+  2. **Wizard step-switch layout loss:** Step 3 canvas edits lived only in `store.doc`; `goToStep` autosave wrote stale `rooms` and overwrote Supabase layout. Step 3 autosave now routes through `saveLayoutRef`; wizard canvas commits sync parent `rooms`.
+- **Other reviewed areas (no fix in PR):** Vendor/patron map auth OK; middleware JSON change is a fix not a regression; booth-number desync on v2 save remains a follow-up for vendor map accuracy.
+- **Baseline:** branch `cursor/critical-bug-investigation-5907` @ `c286ed2`; `npx tsc --noEmit` PASS; `npx tsx lib/wizard/draft-publish-gates.test.ts` PASS.
+- **Next:** Merge PR; smoke wizard publish with unverified venue (should block); smoke step 3 draw → step 2 stepper click → return to step 3 (layout preserved).
+
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
 - **Persona:** Vendor portal (`/vendor/events/[id]/map`) · Patron event detail (`/events/[id]`, `/events/[id]/map`)
