@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (PR open)
+- **Goal:** Surface and fix high-severity correctness bugs in recent commits.
+- **Branch:** `cursor/critical-bug-investigation-bb5d` · commit `a36fdb4`
+- **Shipped (PR, not deployed):**
+  - **Payment-chase race:** `unpaidReleaseRowGuards` prevents cron from cancelling paid/processing applications.
+  - **Wizard layout loss:** Step 3 autosave + `onLayoutCommit` sync canvas doc → rooms before persist.
+  - **HubGrid draft publish:** Save & deploy verifies venue and sets `events.status = published`.
+- **Verify:** `npx tsx lib/applications/unpaid-release-guards.test.ts` PASS; `tsc --noEmit` PASS.
+- **Next:** Merge PR; deploy when user asks.
+
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
