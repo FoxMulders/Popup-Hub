@@ -40,7 +40,9 @@
 - **Attempt #52 result:** Workflow failed instantly with no job steps because the Python heredoc content was not indented as YAML block content.
 - **Attempt #53 fix — `deploy.yml`:** Replaced the heredoc with a single-line `python3 -c` plistlib command so GitHub Actions parses the workflow.
 - **Attempt #53 result:** Workflow parsed and ran, but failed in **Install Apple Certificate & Distribution Profile** before archive. GitHub log download requires auth (403), so exact line unavailable from local CLI.
-- **Attempt #54 fix — `deploy.yml`:** Removed custom SHA1 cert/profile fingerprint gate entirely. The workflow still decodes/installs the App Store profile and pins manual distribution signing; any cert/profile mismatch now surfaces directly in the Xcode archive step, where the failure logs are actionable.
+- **Attempt #54 result:** Install step passed; archive failed (run #58). Manual distribution signing reaches Xcode but archive still rejects the profile/cert pairing.
+- **Attempt #55 fix — `deploy.yml`:** Archive pins both `PROVISIONING_PROFILE` (UUID) and `PROVISIONING_PROFILE_SPECIFIER` (name) for manual signing.
+- **Next:** If archive still fails, paste the **Build and Archive Xcode Project** log from run #58+ — likely `BUILD_PROVISION_PROFILE_BASE64` must be re-exported as an App Store profile including the current Apple Distribution cert in `BUILD_CERTIFICATE_BASE64`. Device registration helps automatic Development profiles but does not replace a Distribution profile for TestFlight.
 - **Verify:** Commit pushed to `master` → **Deploy to TestFlight** Action. Expect `** ARCHIVE SUCCEEDED **` then export/upload.
 - **Fallbacks if #48 still fails:** (1) `profile doesn't include com.apple.developer.associated-domains` → temporarily remove associated-domains entitlement; (2) paste Action logs for next iteration.
 - **Next:** Monitor GitHub Action run #52+; paste archive/export logs if failure persists.
