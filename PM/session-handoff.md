@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (branch `cursor/critical-bug-investigation-0794`, not merged)
+- **Goal:** Deep review of recent `master` pushes (`d5ca0a5` deploy.yml + `d20b79e` Three Operational Vectors).
+- **Bugs fixed locally:**
+  1. **CI:** `deploy.yml` duplicated keychain create/import (TestFlight workflow fails on second `security create-keychain`).
+  2. **Offline ops data loss:** `CoordinatorOpsSnapshotSeed` saved stale SSR applications over IndexedDB cache before offline hydrate on refresh.
+  3. **Ops sync correctness:** Vendor `reliability_score` / late-arrival updates dropped because coordinator session cannot update vendor `profiles` under RLS; now applied via service role after authz. Payment mutations whitelisted; unsupported `floor_plan_doc_patch` stays queued.
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-snapshot-init.test.ts` PASS; `npx tsx lib/coordinator/ops-sync-mutations.test.ts` PASS.
+- **Next:** Merge PR → re-run TestFlight workflow; smoke offline check-in refresh + late load-in sync.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
