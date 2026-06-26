@@ -12,13 +12,14 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
+- **Goal:** Fix GitHub Actions `xcodebuild` archive failure — distribution cert not found on runner (keychain search list + removed `CODE_SIGN_IDENTITY` override).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
 - **Shipped locally:**
+  - **`.github/workflows/deploy.yml`:** Removed `CODE_SIGN_IDENTITY` CLI override (inherits `Apple Distribution` from project). Hardened cert-install step: transient `app-signing.keychain-db`, `-A -t cert -f pkcs12` import, `security list-keychains -d user -s` to keep cert visible during `xcodebuild`.
   - **`ios/App/App.xcodeproj/project.pbxproj`:** App target stays manual signing; Release explicitly uses `Apple Distribution`, `PopupHub_TestFlight_Profile`, `App/App.entitlements`, and team `6ACBDTX7T7`.
   - **Project Release defaults:** Manual signing + `Apple Distribution` + team `6ACBDTX7T7` + `PopupHub_TestFlight_Profile` so archive builds do not inherit the old `iPhone Developer` identity or lose the distribution profile link.
 - **Verify:** Not run locally; requires GitHub Actions/macOS runner with installed distribution certificate and provisioning profile.
-- **Next:** Re-run the failing GitHub Actions workflow; commit + deploy when user asks.
+- **Next:** Commit + push to `master` to trigger TestFlight workflow; confirm archive + export succeed.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
