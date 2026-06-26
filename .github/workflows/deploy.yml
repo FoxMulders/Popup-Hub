@@ -31,7 +31,10 @@ jobs:
           security create-keychain -p "" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "" $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH
+          # No keys exist yet (cloud signing mints the private key during archive), so a
+          # partition-list set here would fail with "item could not be found". Tolerate it;
+          # the keychain is unlocked with no timeout so codesign can use the minted key.
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH 2>/dev/null || true
           security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
 
