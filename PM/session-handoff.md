@@ -39,6 +39,8 @@
 - **Attempt #52 fix — `deploy.yml`:** Profile cert fingerprint validation now uses Python `plistlib` over the actual `DeveloperCertificates` DER bytes and accepts any embedded cert matching the `.p12` SHA1. This keeps the fail-fast cert/profile mismatch check without breaking on plist data formatting.
 - **Attempt #52 result:** Workflow failed instantly with no job steps because the Python heredoc content was not indented as YAML block content.
 - **Attempt #53 fix — `deploy.yml`:** Replaced the heredoc with a single-line `python3 -c` plistlib command so GitHub Actions parses the workflow.
+- **Attempt #53 result:** Workflow parsed and ran, but failed in **Install Apple Certificate & Distribution Profile** before archive. GitHub log download requires auth (403), so exact line unavailable from local CLI.
+- **Attempt #54 fix — `deploy.yml`:** Removed custom SHA1 cert/profile fingerprint gate entirely. The workflow still decodes/installs the App Store profile and pins manual distribution signing; any cert/profile mismatch now surfaces directly in the Xcode archive step, where the failure logs are actionable.
 - **Verify:** Commit pushed to `master` → **Deploy to TestFlight** Action. Expect `** ARCHIVE SUCCEEDED **` then export/upload.
 - **Fallbacks if #48 still fails:** (1) `profile doesn't include com.apple.developer.associated-domains` → temporarily remove associated-domains entitlement; (2) paste Action logs for next iteration.
 - **Next:** Monitor GitHub Action run #52+; paste archive/export logs if failure persists.
