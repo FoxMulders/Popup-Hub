@@ -37,7 +37,10 @@ export function useCoordinatorOpsSync(eventId: string) {
   useEffect(() => {
     function handleOnline() {
       setIsOnline(true)
-      void flushNow()
+      setSyncing(true)
+      void flushCoordinatorOpsQueue(eventId)
+        .then(() => refreshPendingCount())
+        .finally(() => setSyncing(false))
     }
     function handleOffline() {
       setIsOnline(false)
@@ -48,7 +51,7 @@ export function useCoordinatorOpsSync(eventId: string) {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [flushNow])
+  }, [eventId, refreshPendingCount])
 
   useEffect(() => {
     if (!isOnline) return

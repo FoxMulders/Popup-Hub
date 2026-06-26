@@ -52,12 +52,12 @@ export function VendorCheckin({ eventId, eventName, applications: initial }: Ven
       prev.map((a) => (a.id === appId ? { ...a, checked_in: newValue } : a))
     )
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'check_in', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'check_in', {
       applicationId: appId,
       checked_in: newValue,
     })
 
-    if (!synced && queued) {
+    if (!synced && offline) {
       toast.message('Saved offline — will sync when connected')
     } else if (!synced) {
       const { error } = await supabase

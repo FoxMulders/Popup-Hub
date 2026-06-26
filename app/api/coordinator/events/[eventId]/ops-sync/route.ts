@@ -79,49 +79,57 @@ async function applyMutation(
 
   switch (type) {
     case 'check_in': {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('booth_applications')
         .update({ checked_in: Boolean(payload.checked_in) })
         .eq('id', applicationId)
         .eq('event_id', eventId)
-      return !error
+        .select('id')
+      return !error && (data?.length ?? 0) > 0
     }
     case 'payment_status': {
       const updates = (payload.updates ?? {}) as Record<string, unknown>
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('booth_applications')
         .update(updates)
         .eq('id', applicationId)
         .eq('event_id', eventId)
-      return !error
+        .select('id')
+      return !error && (data?.length ?? 0) > 0
     }
     case 'load_in_status': {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('booth_applications')
         .update({ load_in_status: (payload.load_in_status as string | null) ?? null })
         .eq('id', applicationId)
         .eq('event_id', eventId)
-      if (error) return false
+        .select('id')
+      if (error || (data?.length ?? 0) === 0) return false
 
       const vendorId = payload.vendorId as string | undefined
       const reliabilityPatch = payload.reliabilityPatch as
         | { late_arrival_count?: number; reliability_score?: number }
         | undefined
       if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(reliabilityPatch)
+          .eq('id', vendorId)
+        if (profileError) return false
       }
       return true
     }
     case 'raffle_donation': {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('booth_applications')
         .update({ raffle_donation_received: Boolean(payload.raffle_donation_received) })
         .eq('id', applicationId)
         .eq('event_id', eventId)
-      return !error
+        .select('id')
+      return !error && (data?.length ?? 0) > 0
     }
     case 'early_exit': {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('booth_applications')
         .update({
           left_early: true,
@@ -129,20 +137,25 @@ async function applyMutation(
         })
         .eq('id', applicationId)
         .eq('event_id', eventId)
-      if (error) return false
+        .select('id')
+      if (error || (data?.length ?? 0) === 0) return false
 
       const vendorId = payload.vendorId as string | undefined
       const reliabilityPatch = payload.reliabilityPatch as
         | { left_early_count?: number; reliability_score?: number }
         | undefined
       if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(reliabilityPatch)
+          .eq('id', vendorId)
+        if (profileError) return false
       }
       return true
     }
     case 'floor_plan_doc_patch':
-      // Layout persistence requires full room payload — queued for a future pass.
-      return true
+      // Layout persistence requires full room payload — not yet implemented.
+      return false
     default:
       return false
   }
