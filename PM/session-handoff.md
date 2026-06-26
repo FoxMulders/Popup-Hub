@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Coordinator ops sync false-positive fix (local, not deployed)
+- **Goal:** Fix Market Day offline ops reporting success when the current mutation did not sync.
+- **Persona:** Coordinator · Market Day check-in / live ops
+- **Root cause:** `commitCoordinatorMutation` returned `synced: true` when *any* queued mutation applied, not the one just submitted; reconnect handler used stale `isOnline` closure and skipped immediate flush.
+- **Shipped locally:**
+  - **`lib/pwa/coordinator-ops-offline.ts`:** Per-mutation sync status via `coordinatorMutationSyncStatus`; `flushCoordinatorOpsQueue` returns `appliedIds`.
+  - **`lib/coordinator/use-coordinator-ops-sync.ts`:** Reconnect flushes queue directly (no stale closure).
+  - **`app/api/coordinator/events/[id]/ops-sync/route.ts`:** Require row match on update; fail profile reliability side-effects; `floor_plan_doc_patch` returns false until implemented.
+  - **UI:** Check-in + ops panels distinguish offline queue vs online failure fallback.
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS.
+- **Next:** Commit + deploy when user asks.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
