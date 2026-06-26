@@ -2,7 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — Three Operational Vectors (local, not deployed)
+## Active work — ops-sync vendor reliability silent data loss (fix in PR)
+- **Goal:** Critical bug investigation automation — vendor reliability scores never persisted on offline ops sync.
+- **Persona:** Coordinator · Market Day live ops (`/api/coordinator/events/[id]/ops-sync`)
+- **Root cause:** `load_in_status` / `early_exit` mutations updated `booth_applications` then attempted `profiles` writes with the coordinator session client. RLS (`profiles: users update own`) blocks cross-user profile updates; route returned success anyway and cleared the offline queue.
+- **Fix:** Server-side reliability strikes via `createAdminClient()` in `lib/coordinator/ops-sync-vendor-reliability.ts`; transition guards prevent double-count on replay; payment_status whitelisted to payment fields only; `floor_plan_doc_patch` returns false until implemented.
+- **Verify:** `npx tsx lib/coordinator/ops-sync-vendor-reliability.test.ts` PASS.
+- **Next:** Merge PR; smoke late-arrival + early-exit on Market Day ops panel → vendor `reliability_score` persists after reload.
+
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
 - **Shipped locally:**
