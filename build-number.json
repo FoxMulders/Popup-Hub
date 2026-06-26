@@ -1,8 +1,8 @@
 {
-  "version": "1.159.0",
+  "version": "1.160.0",
   "major": 1,
-  "minor": 159,
+  "minor": 160,
   "patch": 0,
   "build": 1,
-  "commit": "6737377"
+  "commit": "a4f2ad6"
 }
