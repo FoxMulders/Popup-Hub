@@ -12,12 +12,11 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions `xcodebuild` archive failure — distribution cert not found on runner (keychain search list + removed `CODE_SIGN_IDENTITY` override).
+- **Goal:** Fix GitHub Actions `xcodebuild` archive failure — "iOS Distribution" name-matching collision on the runner.
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
 - **Shipped locally:**
-  - **`.github/workflows/deploy.yml`:** Removed `CODE_SIGN_IDENTITY` CLI override (inherits `Apple Distribution` from project). Hardened cert-install step: transient `app-signing.keychain-db`, `-A -t cert -f pkcs12` import, `security list-keychains -d user -s` to keep cert visible during `xcodebuild`.
+  - **`.github/workflows/deploy.yml`:** Archive step now passes `CODE_SIGN_IDENTITY="Apple Distribution"` explicitly alongside manual signing flags so xcodebuild maps the profile specifier to the runner's installed distribution cert format (matches `ExportOptions.plist` and Release project settings).
   - **`ios/App/App.xcodeproj/project.pbxproj`:** App target stays manual signing; Release explicitly uses `Apple Distribution`, `PopupHub_TestFlight_Profile`, `App/App.entitlements`, and team `6ACBDTX7T7`.
-  - **Project Release defaults:** Manual signing + `Apple Distribution` + team `6ACBDTX7T7` + `PopupHub_TestFlight_Profile` so archive builds do not inherit the old `iPhone Developer` identity or lose the distribution profile link.
 - **Verify:** Not run locally; requires GitHub Actions/macOS runner with installed distribution certificate and provisioning profile.
 - **Next:** Commit + push to `master` to trigger TestFlight workflow; confirm archive + export succeed.
 
