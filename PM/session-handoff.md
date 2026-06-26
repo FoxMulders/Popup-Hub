@@ -2,6 +2,19 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work - Blueprint Studio responsive guard QA (local, not deployed)
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-b02e`; starting HEAD `d20b79e`; no production deploy run in this QA iteration.
+- **Goal:** Automated QA scan/fix for Blueprint Studio, dashboard ledger, and layout editor responsive defenses so small screens either block the canvas or render the designated floor plan matrix warning.
+- **Persona:** Coordinator - Blueprint Studio / HubGrid canvas + Allocation Ledger / dual-screen matrix.
+- **Shipped locally:**
+  - **Matrix guard:** Added `DashboardLedgerViewportGuard` + `FLOOR_PLAN_MATRIX_SMALL_SCREEN_WARNING` in `components/coordinator/dashboard/dashboard-ledger-viewport-guard.tsx`; warning copy includes "The floor plan matrix is not optimized for small screens" and desktop breakpoint guidance (1024px x 550px).
+  - **Ledger surfaces:** Wrapped `DashboardAllocationLedger`; split `DashboardLedgerWindowClient` into guarded shell + inner subscriber so matrix rows/BroadcastChannel subscriptions do not mount before viewport approval.
+  - **Layout editors:** Wrapped standalone `SpatialLayoutEditor` and QA mirrors with `FloorPlanViewportLayoutProvider` + `DesktopScreenRequiredOverlay`; `FloorPlanV2` is skipped while `showDesktopRequired` is true.
+  - **QA scan:** Added `scripts/verify-blueprint-responsive-guards.ts` to assert the Blueprint/HubGrid, spatial editor, QA mirror, and ledger guard patterns.
+- **Verify:** `npx tsx scripts/verify-blueprint-responsive-guards.ts` PASS (33/33); `npx tsc --noEmit --pretty false` PASS; `npm run lint` PASS with existing warnings only (0 errors, 509 warnings).
+- **Blockers:** Installed Next package does not include `node_modules/next/dist/docs/`; dependency install succeeded and local repo patterns were used.
+- **Next:** Commit/push this branch; optional manual smoke on `/coordinator/studio` and `/coordinator/studio/ledger` at <1024px or <550px viewport to confirm overlay/warning render.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)

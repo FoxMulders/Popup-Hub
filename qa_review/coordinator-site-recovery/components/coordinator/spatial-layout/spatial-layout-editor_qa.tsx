@@ -4,6 +4,11 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { FloorPlanV2 } from '@/components/coordinator/floor-plan-v2/floor-plan-v2'
+import {
+  DesktopScreenRequiredOverlay,
+  FloorPlanViewportLayoutProvider,
+  useFloorPlanViewportLayout,
+} from '@/components/coordinator/floor-plan-v2/canvas/floor-plan-viewport-advisory'
 import { createClient } from '@/lib/supabase/client'
 import { revalidateMarketsCacheClient } from '@/lib/cache/revalidate-markets-client'
 import type { BoothLayout, Event } from '@/types/database'
@@ -23,12 +28,22 @@ export interface SpatialLayoutEditorProps {
   }>
 }
 
-export function SpatialLayoutEditor({
+export function SpatialLayoutEditor(props: SpatialLayoutEditorProps) {
+  return (
+    <FloorPlanViewportLayoutProvider>
+      <DesktopScreenRequiredOverlay eventId={props.eventId} />
+      <SpatialLayoutEditorInner {...props} />
+    </FloorPlanViewportLayoutProvider>
+  )
+}
+
+function SpatialLayoutEditorInner({
   eventId,
   event,
   existingLayout,
   applications = [],
 }: SpatialLayoutEditorProps) {
+  const { showDesktopRequired } = useFloorPlanViewportLayout()
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const saveLayoutRef = useRef<(() => Promise<boolean>) | null>(null)
@@ -102,30 +117,42 @@ export function SpatialLayoutEditor({
         />
       }
     >
-      <FloorPlanV2
-        eventId={eventId}
-        layoutRooms={rooms}
-        layoutActiveRoomId={activeRoomId}
-        onLayoutRoomsChange={handleLayoutRoomsChange}
-        saveLayoutRef={saveLayoutRef}
-        eventCategoryNames={eventCategoryNames}
-        onAddRoom={handleAddRoom}
-        onRenameRoom={handleRenameRoom}
-        onDeleteRoom={handleDeleteRoom}
-        baselineTableLengthFt={baselineTableLengthFt}
-        onBaselineTableLengthChange={handleBaselineTableLengthChange}
-        layoutCapacity={layoutCapacity}
-        applications={applications}
-        onOverlapChange={setHasOverlap}
-        onPlacedCountChange={setPlacedCount}
-        onSaveMarket={handleSave}
-        saveMarketDisabled={hasOverlap || saving}
-        saveMarketLoading={saving}
-        chrome="default"
-        preferServerLayout
-        debugGeometry={false}
-        className="h-full min-h-0"
-      />
+      {showDesktopRequired ? (
+        <div
+          className="flex h-full min-h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center"
+          aria-hidden
+        >
+          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+            Floor plan layout needs a tablet in landscape or a desktop monitor. Continue booth
+            placement on a larger screen.
+          </p>
+        </div>
+      ) : (
+        <FloorPlanV2
+          eventId={eventId}
+          layoutRooms={rooms}
+          layoutActiveRoomId={activeRoomId}
+          onLayoutRoomsChange={handleLayoutRoomsChange}
+          saveLayoutRef={saveLayoutRef}
+          eventCategoryNames={eventCategoryNames}
+          onAddRoom={handleAddRoom}
+          onRenameRoom={handleRenameRoom}
+          onDeleteRoom={handleDeleteRoom}
+          baselineTableLengthFt={baselineTableLengthFt}
+          onBaselineTableLengthChange={handleBaselineTableLengthChange}
+          layoutCapacity={layoutCapacity}
+          applications={applications}
+          onOverlapChange={setHasOverlap}
+          onPlacedCountChange={setPlacedCount}
+          onSaveMarket={handleSave}
+          saveMarketDisabled={hasOverlap || saving}
+          saveMarketLoading={saving}
+          chrome="default"
+          preferServerLayout
+          debugGeometry={false}
+          className="h-full min-h-0"
+        />
+      )}
     </SpatialLayoutShell>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { DashboardLedgerViewportGuard } from './dashboard-ledger-viewport-guard'
 import { BoothMatrixPanel } from './booth-matrix-panel'
 
 /**
@@ -7,10 +8,10 @@ import { BoothMatrixPanel } from './booth-matrix-panel'
  */
 export function DashboardAllocationLedger() {
   return (
-    <div className="dashboard-allocation-ledger flex min-h-0 flex-1 flex-col overflow-hidden">
+    <DashboardLedgerViewportGuard className="dashboard-allocation-ledger flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-hidden">
         <BoothMatrixPanel variant="ledger" defaultOpen />
       </div>
-    </div>
+    </DashboardLedgerViewportGuard>
   )
 }
