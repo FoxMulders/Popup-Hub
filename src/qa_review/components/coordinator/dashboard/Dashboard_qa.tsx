@@ -137,37 +137,36 @@ function DashboardBootstrapQaInner({ header }: DashboardBootstrapQaProps) {
                 />
               ) : showMarketPicker ? (
                 <HubGridMarketPicker events={events} onSelect={setSelectedEventId} />
-              ) : isLedger ? (
-                <>
-                  <DashboardAllocationLedger />
-                  {mountCanvas ? (
-                    <div className="sr-only" aria-hidden inert>
-                      <DashboardSplitWorkspace
-                        blueprint={
-                          <DashboardCanvasColumn
-                            showBlueprint={showBlueprint}
-                            mountCanvas={mountCanvas}
-                            reducedMotion={reducedMotion}
-                            onCanvasInteractive={handleCanvasInteractive}
-                          />
-                        }
-                      />
-                    </div>
-                  ) : null}
-                </>
               ) : showNoRoomEmpty ? (
                 <DashboardNoRoomEmptyState onConfirm={handleInitialRoomConfirm} />
               ) : (
-                <DashboardSplitWorkspace
-                  blueprint={
-                    <DashboardCanvasColumn
-                      showBlueprint={showBlueprint}
-                      mountCanvas={mountCanvas}
-                      reducedMotion={reducedMotion}
-                      onCanvasInteractive={handleCanvasInteractive}
+                <>
+                  {/*
+                    Keep one canvas instance mounted across Blueprint ↔ Ledger.
+                    Remounting with preferServerLayout replaced floorPlanStore with
+                    the server snapshot and dropped unsaved in-session edits.
+                  */}
+                  <div
+                    className={cn(
+                      'flex min-h-0 flex-1 flex-col overflow-hidden',
+                      isLedger &&
+                        'pointer-events-none fixed -left-[9999px] top-0 h-px w-px overflow-hidden opacity-0'
+                    )}
+                    aria-hidden={isLedger ? true : undefined}
+                  >
+                    <DashboardSplitWorkspace
+                      blueprint={
+                        <DashboardCanvasColumn
+                          showBlueprint={showBlueprint}
+                          mountCanvas={mountCanvas}
+                          reducedMotion={reducedMotion}
+                          onCanvasInteractive={handleCanvasInteractive}
+                        />
+                      }
                     />
-                  }
-                />
+                  </div>
+                  {isLedger ? <DashboardAllocationLedger /> : null}
+                </>
               )}
             </div>
             <DashboardWorkspaceFooter />
