@@ -2,11 +2,14 @@
 
 import { useEffect } from 'react'
 import { flushPassportScanQueue } from '@/lib/pwa/passport-offline-queue'
-import { flushCoordinatorOpsQueue } from '@/lib/pwa/coordinator-ops-offline'
+import {
+  flushCoordinatorOpsQueue,
+  listAllPendingCoordinatorEventIds,
+} from '@/lib/pwa/coordinator-ops-offline'
 
 async function flushAllCoordinatorOpsQueues(): Promise<void> {
-  const eventIds = new Set<string>()
-  // Best-effort: flush queues for events with open coordinator tabs.
+  const eventIds = new Set<string>(await listAllPendingCoordinatorEventIds())
+  // Also flush the active event tab when the pathname includes an event id.
   if (typeof window !== 'undefined') {
     const match = window.location.pathname.match(/\/coordinator\/events\/([^/]+)/)
     if (match?.[1]) eventIds.add(match[1])

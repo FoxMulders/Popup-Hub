@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ import {
 import { CheckinQR } from '@/components/vendor/checkin-qr'
 import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { CoordinatorOpsSnapshotSeed } from '@/components/coordinator/coordinator-ops-snapshot-seed'
+import { useCoordinatorOpsApplications } from '@/lib/coordinator/use-coordinator-ops-applications'
 import { commitCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
 import { toast } from 'sonner'
 import { CheckCircle2, Undo2, QrCode } from 'lucide-react'
@@ -35,12 +36,8 @@ interface VendorCheckinProps {
 
 export function VendorCheckin({ eventId, eventName, applications: initial }: VendorCheckinProps) {
   const supabase = createClient()
-  const [apps, setApps] = useState(initial)
+  const [apps, setApps] = useCoordinatorOpsApplications(eventId, initial)
   const [loading, setLoading] = useState<string | null>(null)
-
-  useEffect(() => {
-    setApps(initial)
-  }, [initial])
 
   const checkedInCount = apps.filter((a) => a.checked_in).length
   const totalCount = apps.length

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ import {
 } from '@/lib/vendor-reliability'
 import { isApplicationPaid } from '@/lib/applications/payment-fields'
 import { CoordinatorOpsSnapshotSeed } from '@/components/coordinator/coordinator-ops-snapshot-seed'
+import { useCoordinatorOpsApplications } from '@/lib/coordinator/use-coordinator-ops-applications'
 import { commitCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
 import type { BoothApplication, PaymentStatus, Profile, VendorPassport } from '@/types/database'
 
@@ -69,11 +70,7 @@ export function MarketOpsPanel({
   raffleDonationRequirement,
 }: MarketOpsPanelProps) {
   const supabase = createClient()
-  const [apps, setApps] = useState<OpsApplication[]>(initial)
-
-  useEffect(() => {
-    setApps(initial)
-  }, [initial])
+  const [apps, setApps] = useCoordinatorOpsApplications(eventId, initial)
   const [vendorMetrics, setVendorMetrics] = useState<Record<string, VendorReliabilityInputs>>(() =>
     Object.fromEntries(
       initial.map((a) => [

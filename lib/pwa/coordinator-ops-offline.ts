@@ -116,6 +116,38 @@ export async function listPendingCoordinatorMutations(
   return rows.sort((a, b) => a.clientTimestamp - b.clientTimestamp)
 }
 
+export async function listAllPendingCoordinatorEventIds(): Promise<string[]> {
+  const db = await openDb()
+  const eventIds = await new Promise<string[]>((resolve, reject) => {
+    const tx = db.transaction(MUTATION_STORE, 'readonly')
+    const request = tx.objectStore(MUTATION_STORE).getAll()
+    request.onsuccess = () => {
+      const rows = (request.result ?? []) as PendingCoordinatorMutation[]
+      resolve([...new Set(rows.map((row) => row.eventId))])
+    }
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB read failed'))
+  })
+  db.close()
+  return eventIds
+}
+
+export async function registerCoordinatorOpsBackgroundSync(): Promise<void> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('SyncManager' in window)) {
+    return
+  }
+  try {
+    const registration = await navigator.serviceWorker.ready
+    const syncManager = (
+      registration as ServiceWorkerRegistration & {
+        sync?: { register: (tag: string) => Promise<void> }
+      }
+    ).sync
+    await syncManager?.register('coordinator-ops-sync')
+  } catch {
+    // Background sync is best-effort; online flush handles the happy path.
+  }
+}
+
 export async function removePendingCoordinatorMutation(id: string): Promise<void> {
   const db = await openDb()
   await new Promise<void>((resolve, reject) => {
@@ -164,14 +196,18 @@ export async function commitCoordinatorMutation(
   eventId: string,
   type: CoordinatorMutationType,
   payload: Record<string, unknown>
-): Promise<{ queued: boolean; synced: boolean }> {
-  await queueCoordinatorMutation(eventId, type, payload)
+): Promise<{ queued: boolean; synced: boolean; mutationId: string }> {
+  const mutation = await queueCoordinatorMutation(eventId, type, payload)
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { queued: true, synced: false }
+    await registerCoordinatorOpsBackgroundSync()
+    return { queued: true, synced: false, mutationId: mutation.id }
   }
   const result = await flushCoordinatorOpsQueue(eventId)
+  const pending = await listPendingCoordinatorMutations(eventId)
+  const synced = !pending.some((row) => row.id === mutation.id)
   return {
     queued: result.remaining > 0,
-    synced: result.synced > 0,
+    synced,
+    mutationId: mutation.id,
   }
 }
