@@ -3,6 +3,26 @@ const DB_VERSION = 1
 const SNAPSHOT_STORE = 'snapshots'
 const MUTATION_STORE = 'pending-mutations'
 
+/** Serialize flushes per event so overlapping POSTs cannot replay stale mutations. */
+export function createEventFlushSerializer() {
+  const chains = new Map<string, Promise<unknown>>()
+
+  return function withEventFlushLock<T>(eventId: string, work: () => Promise<T>): Promise<T> {
+    const previous = chains.get(eventId) ?? Promise.resolve()
+    const run = previous.catch(() => undefined).then(work)
+    chains.set(
+      eventId,
+      run.then(
+        () => undefined,
+        () => undefined
+      )
+    )
+    return run
+  }
+}
+
+const withEventFlushLock = createEventFlushSerializer()
+
 export type CoordinatorMutationType =
   | 'check_in'
   | 'payment_status'
@@ -127,12 +147,19 @@ export async function removePendingCoordinatorMutation(id: string): Promise<void
   db.close()
 }
 
-export async function flushCoordinatorOpsQueue(
+export interface CoordinatorOpsFlushResult {
+  synced: number
+  failed: number
+  remaining: number
+  appliedIds: string[]
+}
+
+async function flushCoordinatorOpsQueueUnlocked(
   eventId: string
-): Promise<{ synced: number; failed: number; remaining: number }> {
+): Promise<CoordinatorOpsFlushResult> {
   const pending = await listPendingCoordinatorMutations(eventId)
   if (pending.length === 0) {
-    return { synced: 0, failed: 0, remaining: 0 }
+    return { synced: 0, failed: 0, remaining: 0, appliedIds: [] }
   }
 
   try {
@@ -142,10 +169,16 @@ export async function flushCoordinatorOpsQueue(
       body: JSON.stringify({ mutations: pending }),
     })
     if (!res.ok) {
-      return { synced: 0, failed: pending.length, remaining: pending.length }
+      return {
+        synced: 0,
+        failed: pending.length,
+        remaining: pending.length,
+        appliedIds: [],
+      }
     }
     const body = (await res.json()) as { appliedIds?: string[] }
-    const applied = new Set(body.appliedIds ?? [])
+    const appliedIds = body.appliedIds ?? []
+    const applied = new Set(appliedIds)
     let synced = 0
     for (const row of pending) {
       if (applied.has(row.id)) {
@@ -154,24 +187,45 @@ export async function flushCoordinatorOpsQueue(
       }
     }
     const remaining = pending.length - synced
-    return { synced, failed: remaining, remaining }
+    return { synced, failed: remaining, remaining, appliedIds }
   } catch {
-    return { synced: 0, failed: pending.length, remaining: pending.length }
+    return {
+      synced: 0,
+      failed: pending.length,
+      remaining: pending.length,
+      appliedIds: [],
+    }
   }
+}
+
+export async function flushCoordinatorOpsQueue(
+  eventId: string
+): Promise<CoordinatorOpsFlushResult> {
+  return withEventFlushLock(eventId, () => flushCoordinatorOpsQueueUnlocked(eventId))
+}
+
+export interface CoordinatorMutationCommitResult {
+  mutationId: string
+  /** True when the mutation is still waiting to reach the server. */
+  queued: boolean
+  /** True when this specific mutation was applied in the flush attempt. */
+  applied: boolean
 }
 
 export async function commitCoordinatorMutation(
   eventId: string,
   type: CoordinatorMutationType,
   payload: Record<string, unknown>
-): Promise<{ queued: boolean; synced: boolean }> {
-  await queueCoordinatorMutation(eventId, type, payload)
+): Promise<CoordinatorMutationCommitResult> {
+  const entry = await queueCoordinatorMutation(eventId, type, payload)
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { queued: true, synced: false }
+    return { mutationId: entry.id, queued: true, applied: false }
   }
   const result = await flushCoordinatorOpsQueue(eventId)
+  const applied = result.appliedIds.includes(entry.id)
   return {
-    queued: result.remaining > 0,
-    synced: result.synced > 0,
+    mutationId: entry.id,
+    queued: !applied,
+    applied,
   }
 }
