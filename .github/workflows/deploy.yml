@@ -42,10 +42,19 @@ jobs:
 
           # Import certificate to keychain
           security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
+
+          # Import Apple WWDR intermediate so the leaf cert chains to a trusted root
+          curl -fSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o $RUNNER_TEMP/wwdr.cer
+          security import $RUNNER_TEMP/wwdr.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security
+
           security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH
 
-          # Set explicitly on user search list
+          # Set explicitly on user search list and as default keychain
           security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
+          security default-keychain -s $KEYCHAIN_PATH
+
+          echo "== Valid code-signing identities in transient keychain =="
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
 
           # Apply provisioning profile to local path
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
