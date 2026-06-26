@@ -3,6 +3,9 @@ import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
+import { computeVendorReliabilityScore } from '@/lib/vendor-reliability'
+
+const PAYMENT_STATUS_UPDATE_KEYS = new Set(['payment_status', 'application_payment_status'])
 
 export async function POST(
   request: Request,
@@ -87,7 +90,11 @@ async function applyMutation(
       return !error
     }
     case 'payment_status': {
-      const updates = (payload.updates ?? {}) as Record<string, unknown>
+      const raw = (payload.updates ?? {}) as Record<string, unknown>
+      const updates = Object.fromEntries(
+        Object.entries(raw).filter(([key]) => PAYMENT_STATUS_UPDATE_KEYS.has(key))
+      )
+      if (Object.keys(updates).length === 0) return false
       const { error } = await supabase
         .from('booth_applications')
         .update(updates)
@@ -96,19 +103,17 @@ async function applyMutation(
       return !error
     }
     case 'load_in_status': {
+      const loadInStatus = (payload.load_in_status as string | null) ?? null
       const { error } = await supabase
         .from('booth_applications')
-        .update({ load_in_status: (payload.load_in_status as string | null) ?? null })
+        .update({ load_in_status: loadInStatus })
         .eq('id', applicationId)
         .eq('event_id', eventId)
       if (error) return false
 
       const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { late_arrival_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+      if (vendorId && loadInStatus === 'late') {
+        await applyLateArrivalReliabilityPatch(supabase, vendorId)
       }
       return true
     }
@@ -132,18 +137,63 @@ async function applyMutation(
       if (error) return false
 
       const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { left_early_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
+      if (vendorId) {
+        await applyEarlyExitReliabilityPatch(supabase, vendorId)
       }
       return true
     }
     case 'floor_plan_doc_patch':
-      // Layout persistence requires full room payload — queued for a future pass.
-      return true
+      // Layout persistence requires full room payload — not yet supported via ops-sync.
+      return false
     default:
       return false
   }
+}
+
+async function applyLateArrivalReliabilityPatch(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  vendorId: string
+): Promise<void> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('late_arrival_count, no_show_count, left_early_count, poor_cleanup_strike_count')
+    .eq('id', vendorId)
+    .single()
+  if (!profile) return
+
+  const lateArrivalCount = (profile.late_arrival_count ?? 0) + 1
+  const reliabilityScore = computeVendorReliabilityScore({
+    no_show_count: profile.no_show_count,
+    left_early_count: profile.left_early_count,
+    late_arrival_count: lateArrivalCount,
+    poor_cleanup_strike_count: profile.poor_cleanup_strike_count,
+  })
+  await supabase
+    .from('profiles')
+    .update({ late_arrival_count: lateArrivalCount, reliability_score: reliabilityScore })
+    .eq('id', vendorId)
+}
+
+async function applyEarlyExitReliabilityPatch(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  vendorId: string
+): Promise<void> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('late_arrival_count, no_show_count, left_early_count, poor_cleanup_strike_count')
+    .eq('id', vendorId)
+    .single()
+  if (!profile) return
+
+  const leftEarlyCount = (profile.left_early_count ?? 0) + 1
+  const reliabilityScore = computeVendorReliabilityScore({
+    no_show_count: profile.no_show_count,
+    left_early_count: leftEarlyCount,
+    late_arrival_count: profile.late_arrival_count,
+    poor_cleanup_strike_count: profile.poor_cleanup_strike_count,
+  })
+  await supabase
+    .from('profiles')
+    .update({ left_early_count: leftEarlyCount, reliability_score: reliabilityScore })
+    .eq('id', vendorId)
 }
