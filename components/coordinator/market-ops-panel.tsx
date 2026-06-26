@@ -112,12 +112,12 @@ export function MarketOpsPanel({
         : { payment_status: (nextPaid ? 'paid' : 'unpaid') as PaymentStatus }
 
     patchApp(app.id, updates)
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'payment_status', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'payment_status', {
       applicationId: app.id,
       updates,
     })
 
-    if (!synced && queued) {
+    if (offline) {
       toast.message('Saved offline — will sync when connected')
     } else if (!synced) {
       const { error } = await supabase
@@ -169,14 +169,14 @@ export function MarketOpsPanel({
       }
     }
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'load_in_status', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'load_in_status', {
       applicationId: app.id,
       load_in_status: next,
       vendorId: app.vendor_id,
       reliabilityPatch,
     })
 
-    if (!synced && queued) {
+    if (offline) {
       toast.message('Saved offline — will sync when connected')
       setBusyFor(app.id, false)
       return
@@ -204,11 +204,11 @@ export function MarketOpsPanel({
     setBusyFor(app.id + '-raffle', true)
     const next = !app.raffle_donation_received
     patchApp(app.id, { raffle_donation_received: next })
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'raffle_donation', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'raffle_donation', {
       applicationId: app.id,
       raffle_donation_received: next,
     })
-    if (!synced && queued) {
+    if (offline) {
       toast.message('Saved offline — will sync when connected')
     } else if (!synced) {
       const { error } = await supabase
@@ -254,14 +254,14 @@ export function MarketOpsPanel({
       }))
     }
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'early_exit', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'early_exit', {
       applicationId: app.id,
       early_departure_notes: notes || null,
       vendorId: app.vendor_id,
       reliabilityPatch,
     })
 
-    if (!synced && queued) {
+    if (offline) {
       toast.message('Saved offline — will sync when connected')
     } else if (!synced) {
       const { error } = await supabase
