@@ -52,14 +52,14 @@ export function VendorCheckin({ eventId, eventName, applications: initial }: Ven
       prev.map((a) => (a.id === appId ? { ...a, checked_in: newValue } : a))
     )
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'check_in', {
+    const { queued, applied } = await commitCoordinatorMutation(eventId, 'check_in', {
       applicationId: appId,
       checked_in: newValue,
     })
 
-    if (!synced && queued) {
+    if (!applied && queued) {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else if (!applied) {
       const { error } = await supabase
         .from('booth_applications')
         .update({ checked_in: newValue })
