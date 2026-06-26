@@ -12,7 +12,7 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions TestFlight pipeline — archive fails because profile/cert mismatch (attempt #42). WWDR cert step now passes (attempt #41 fixed).
+- **Goal:** Fix GitHub Actions TestFlight pipeline — archive/export to TestFlight via automatic signing + ASC API key (attempt #44 applied locally).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
 - **Attempt #41 (DONE):** Redundant `security import` of WWDR aborted cert step on duplicate. Fixed — import is idempotent (tolerate "already exists"). Confirmed in logs: reached archive step.
 - **Attempt #42 root cause:** `error: Provisioning profile "PopupHub_TestFlight_Profile" doesn't include signing certificate "Apple Distribution: Brad Mulders (6ACBDTX7T7)"`. The `BUILD_PROVISION_PROFILE_BASE64` secret was built against a different distribution cert than the re-exported `.p12`.
@@ -22,8 +22,10 @@
   - Xcode now mints a profile matching the keychain cert via the API key — `BUILD_PROVISION_PROFILE_BASE64` no longer needs to be in sync.
 - **Attempt #43 root cause:** `error: App has conflicting provisioning settings. App is automatically signed, but provisioning profile PopupHub_TestFlight_Profile has been manually specified.` The `project.pbxproj` still hardcoded manual signing while CLI forced Automatic.
 - **Attempt #43 fix — `ios/App/App.xcodeproj/project.pbxproj`:** `ProvisioningStyle` Manual → Automatic; all `CODE_SIGN_STYLE` Manual → Automatic (3); `PROVISIONING_PROFILE_SPECIFIER` cleared to `""` (2). Project now coherent with automatic signing + matches documented local Xcode workflow.
-- **Verify:** Push to `master` → re-run **Deploy to TestFlight**. Archive should sign via auto profile (no conflict); export uploads to TestFlight. API key (`APP_STORE_CONNECT_*` secrets) needs App Manager/Admin role to create profiles.
-- **Next:** User re-runs workflow; paste logs if archive/export fails (e.g. API key lacks profile-create permission).
+- **Attempt #44 root cause:** `error: App has conflicting provisioning settings. App is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified.` Archive reached `GatherProvisioningInputs` then failed (exit 65). `project.pbxproj` still hardcoded `CODE_SIGN_IDENTITY = "Apple Distribution"` (plain + `[sdk=iphoneos*]`) in both project-level and App target Release configs while `CODE_SIGN_STYLE = Automatic`.
+- **Attempt #44 fix — `ios/App/App.xcodeproj/project.pbxproj`:** Removed all 4 `CODE_SIGN_IDENTITY` override lines from Release blocks (project + target). Left `CODE_SIGN_STYLE = Automatic`, `DEVELOPMENT_TEAM = 6ACBDTX7T7`, `PROVISIONING_PROFILE_SPECIFIER = ""`. Automatic signing picks identity at archive; distribution signing at export via `ExportOptions.plist` (`method=app-store`).
+- **Verify:** User commits + pushes to `master` → **Deploy to TestFlight** Action runs. Expect `** ARCHIVE SUCCEEDED **` then export/upload. API key (`APP_STORE_CONNECT_*` secrets) needs App Manager/Admin role to create profiles.
+- **Next:** User triggers commit/push; paste Action logs if archive/export fails (e.g. API key lacks profile-create permission, export signing error).
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
