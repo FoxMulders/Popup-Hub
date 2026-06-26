@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   getCoordinatorOpsSnapshot,
   saveCoordinatorOpsSnapshot,
@@ -19,22 +19,40 @@ export function CoordinatorOpsSnapshotSeed<T>({
   applications,
   onHydrate,
 }: CoordinatorOpsSnapshotSeedProps<T>) {
-  useEffect(() => {
-    void saveCoordinatorOpsSnapshot({
-      eventId,
-      eventName,
-      applications,
-      updatedAt: Date.now(),
-    })
-  }, [applications, eventId, eventName])
+  const hydratedFromCacheRef = useRef(false)
 
   useEffect(() => {
-    if (typeof navigator === 'undefined' || navigator.onLine) return
-    void getCoordinatorOpsSnapshot(eventId).then((snapshot) => {
-      const cached = snapshot?.applications as T[] | undefined
-      if (cached?.length && onHydrate) onHydrate(cached)
-    })
-  }, [eventId, onHydrate])
+    let cancelled = false
+
+    async function syncSnapshot() {
+      const offline = typeof navigator !== 'undefined' && !navigator.onLine
+
+      if (offline && !hydratedFromCacheRef.current) {
+        const snapshot = await getCoordinatorOpsSnapshot(eventId)
+        const cached = snapshot?.applications as T[] | undefined
+        if (!cancelled && cached?.length) {
+          hydratedFromCacheRef.current = true
+          onHydrate?.(cached)
+          return
+        }
+      }
+
+      if (cancelled) return
+
+      await saveCoordinatorOpsSnapshot({
+        eventId,
+        eventName,
+        applications,
+        updatedAt: Date.now(),
+      })
+    }
+
+    void syncSnapshot()
+
+    return () => {
+      cancelled = true
+    }
+  }, [applications, eventId, eventName, onHydrate])
 
   return null
 }
