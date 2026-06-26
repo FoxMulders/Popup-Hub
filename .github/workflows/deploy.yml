@@ -95,6 +95,19 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision
 
+          # Fail fast if the profile was built for a different distribution cert than the .p12
+          CERT_FP=$(openssl pkcs12 -in "$CERTIFICATE_PATH" -passin pass:"$P12_PASSWORD" -nokeys -clcerts 2>/dev/null \
+            | openssl x509 -noout -fingerprint -sha1 | sed 's/.*=//;s/://g' | tr '[:lower:]' '[:upper:]')
+          PROFILE_FP=$(/usr/libexec/PlistBuddy -c "Print :DeveloperCertificates:0" "$PROFILE_PLIST" \
+            | openssl base64 -d -A | openssl x509 -inform DER -noout -fingerprint -sha1 \
+            | sed 's/.*=//;s/://g' | tr '[:lower:]' '[:upper:]')
+          echo "Distribution cert SHA1: $CERT_FP"
+          echo "Profile embedded cert SHA1: $PROFILE_FP"
+          if [ "$CERT_FP" != "$PROFILE_FP" ]; then
+            echo "::error::BUILD_PROVISION_PROFILE_BASE64 does not include the Apple Distribution cert from BUILD_CERTIFICATE_BASE64. Re-export an App Store profile for ca.popuphub.app that includes the current distribution identity, then update the secret." >&2
+            exit 1
+          fi
+
           echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
           echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
 
