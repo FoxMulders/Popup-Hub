@@ -39,9 +39,15 @@ jobs:
           security create-keychain -p "" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "" $KEYCHAIN_PATH
-
-          # Import certificate to keychain
-          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
+       - name: Install Apple Certificate & Provisioning Profile
+          run: |
+            # 1. Delete the item if it already exists to prevent the collision
+            security delete-certificate -c "Apple Distribution: Brad Mulders (6ACBDTX7T7)" || true
+            
+            # 2. Now import it
+            security import distribution.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+                  # Import certificate to keychain
+                  security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
 
           # Import Apple WWDR intermediate so the leaf cert chains to a trusted root
           curl -fSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o $RUNNER_TEMP/wwdr.cer
