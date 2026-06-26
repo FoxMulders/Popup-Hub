@@ -1,5 +1,6 @@
 import { cellKey } from '@/lib/booth-planner/venue-elements'
 import { BOOTH_SAFETY_BUFFER_CELLS } from '@/lib/booth-planner/layout-clearance-constants'
+import { isGuestTableBooth } from '@/lib/booth-planner/table-shape'
 import {
   computeInteriorBounds,
 } from '@/lib/booth-planner/indoor-corridor-layout'
@@ -190,7 +191,7 @@ function vendorBoothCells(cells: BoothCell[]): BoothCell[] {
     (c) =>
       c.col >= 0 &&
       c.row >= 0 &&
-      c.tablePurpose !== 'guest' &&
+      !isGuestTableBooth({ tablePurpose: c.tablePurpose, tableShape: c.tableShape }) &&
       (c.vendorName?.trim().length ?? 0) > 0
   )
 }

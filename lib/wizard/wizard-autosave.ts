@@ -100,6 +100,60 @@ export async function resolveCoordinatorIdForPersist(
 
 export type EventDraftPayloadInput = Omit<EventDraftPayload, 'coordinatorId'>
 
+export const DRAFT_SESSION_EXPIRED_MESSAGE =
+  'Your session expired — sign in again, then reopen this market to keep editing. Your details are still on screen.'
+
+export type DraftApiResponseInput = {
+  status: number
+  redirected: boolean
+  contentType: string
+  payload: { eventId?: string; error?: string }
+}
+
+/** Pure parser for draft API responses — keeps session vs server failure messaging accurate. */
+export function parseDraftApiResponse(
+  input: DraftApiResponseInput
+): { eventId?: string; error: Error | null } {
+  const { status, redirected, contentType, payload } = input
+  const looksLikeJson = contentType.includes('application/json')
+
+  // Legacy middleware followed redirects to HTML login/confirm pages (200 + text/html).
+  if (redirected && !looksLikeJson) {
+    return { error: new Error(DRAFT_SESSION_EXPIRED_MESSAGE) }
+  }
+
+  if (!looksLikeJson) {
+    if (status === 401) {
+      return { error: new Error(DRAFT_SESSION_EXPIRED_MESSAGE) }
+    }
+    return {
+      error: new Error(
+        status >= 500
+          ? 'Server error while saving — wait a moment and try again.'
+          : 'Could not save market draft — check your connection and try again.'
+      ),
+    }
+  }
+
+  if (status === 401) {
+    return { error: new Error(payload.error ?? DRAFT_SESSION_EXPIRED_MESSAGE) }
+  }
+
+  if (!status || status >= 400) {
+    return {
+      error: new Error(payload.error ?? 'Could not save market draft'),
+    }
+  }
+
+  if (!payload.eventId) {
+    return {
+      error: new Error(payload.error ?? 'Could not save market draft'),
+    }
+  }
+
+  return { eventId: payload.eventId, error: null }
+}
+
 export async function persistEventDraftViaApi(
   eventId: string | null,
   draft: EventDraftPayloadInput,
@@ -107,9 +161,6 @@ export async function persistEventDraftViaApi(
   dayRows: DayRowPayload[],
   scheduleType: 'single' | 'multi'
 ): Promise<{ eventId: string; error: Error | null }> {
-  const SESSION_EXPIRED_MESSAGE =
-    'Your session expired — sign in again, then reopen this market to keep editing. Your details are still on screen.'
-
   let response: Response
   try {
     response = await fetch('/api/coordinator/events/draft', {
@@ -125,41 +176,28 @@ export async function persistEventDraftViaApi(
     }
   }
 
-  // An auth/permission failure redirects the request to an HTML page (login,
-  // confirm-email, etc). The fetch follows it and returns a 200 HTML body, so
-  // detect that here rather than misreporting it as a generic save failure.
   const contentType = response.headers.get('content-type') ?? ''
-  const looksLikeJson = contentType.includes('application/json')
-  if (response.redirected || !looksLikeJson) {
-    return { eventId: eventId ?? '', error: new Error(SESSION_EXPIRED_MESSAGE) }
-  }
-
   let payload: { eventId?: string; error?: string } = {}
-  try {
-    payload = (await response.json()) as typeof payload
-  } catch {
-    payload = {}
-  }
-
-  if (response.status === 401) {
-    return { eventId: eventId ?? '', error: new Error(payload.error ?? SESSION_EXPIRED_MESSAGE) }
-  }
-
-  if (!response.ok) {
-    return {
-      eventId: eventId ?? '',
-      error: new Error(payload.error ?? 'Could not save market draft'),
+  if (contentType.includes('application/json')) {
+    try {
+      payload = (await response.json()) as typeof payload
+    } catch {
+      payload = {}
     }
   }
 
-  if (!payload.eventId) {
-    return {
-      eventId: eventId ?? '',
-      error: new Error(payload.error ?? SESSION_EXPIRED_MESSAGE),
-    }
+  const parsed = parseDraftApiResponse({
+    status: response.status,
+    redirected: response.redirected,
+    contentType,
+    payload,
+  })
+
+  if (parsed.error) {
+    return { eventId: eventId ?? '', error: parsed.error }
   }
 
-  return { eventId: payload.eventId, error: null }
+  return { eventId: parsed.eventId ?? eventId ?? '', error: null }
 }
 
 export async function persistEventVenueFields(
