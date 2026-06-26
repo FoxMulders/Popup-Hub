@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (PR pending)
+- **Goal:** Deep bug scan on push `4c217b6` — offline ops data loss, ops-sync security, committed signing keys.
+- **Branch:** `cursor/critical-bug-investigation-1ac5` @ `19cc912`
+- **Shipped in PR:**
+  - Removed committed `ios.key`, `distribution.cer`, `popuphub-dist.p12`, `.certSigningRequest` from repo; gitignore signing artifacts.
+  - `CoordinatorOpsSnapshotSeed`: hydrate IndexedDB before persisting SSR props when offline (prevents wiping check-in state on reload).
+  - `resolveCommitSyncStatus`: synced only when current mutation id applied (no false-positive success).
+  - `ops-sync`: whitelist `payment_status` fields; server-side reliability increments; `floor_plan_doc_patch` returns false until implemented.
+  - Tests: `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS.
+- **Blocker:** Exposed RSA private key must be **rotated/revoked** in Apple Developer — removing from git does not invalidate the leaked key.
+- **Next:** Merge PR; rotate Apple distribution cert; smoke offline check-in → reload → state preserved.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
