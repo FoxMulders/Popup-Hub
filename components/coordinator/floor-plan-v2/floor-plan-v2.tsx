@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils'
 import { openDualScreenWindow, type DualScreenMode } from '@/lib/coordinator/floorplan-sync'
 import type { BoothMapLabelMode } from '@/lib/coordinator/booth-map-label'
 import { summarizeDocClearanceIssues } from '@/lib/coordinator/booth-clearance-summary'
+import { summarizeDocLayoutAlerts } from '@/lib/floor-plan/layout-guardrails/summarize-doc-layout-alerts'
 import {
   runWizardInitialLayout,
   shouldRunWizardInitialLayout,
@@ -531,6 +532,10 @@ function FloorPlanV2Workspace({
   }, [boothMapLabelMode, isDashboard])
   const clearanceSummary = useMemo(
     () => summarizeDocClearanceIssues(store.doc),
+    [store.doc]
+  )
+  const layoutAlertsSummary = useMemo(
+    () => summarizeDocLayoutAlerts(store.doc),
     [store.doc]
   )
 
@@ -3162,6 +3167,7 @@ function FloorPlanV2Workspace({
                     variant="docked"
                     defaultCollapsed={hubGridFocusLayout}
                     clearanceSummary={clearanceSummary}
+                    layoutAlertsSummary={layoutAlertsSummary}
                     showClearanceWarnings={showClearanceWarnings}
                   />
                 ) : null}
@@ -3430,6 +3436,7 @@ function FloorPlanV2Workspace({
                   <CanvasLegend
                     variant="floating"
                     clearanceSummary={clearanceSummary}
+                    layoutAlertsSummary={layoutAlertsSummary}
                     showClearanceWarnings={showClearanceWarnings}
                   />
                 ) : null}

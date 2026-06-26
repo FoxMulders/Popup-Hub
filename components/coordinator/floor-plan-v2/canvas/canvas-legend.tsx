@@ -11,7 +11,10 @@ import {
 } from './placement-theme'
 import { BOOTH_CLEARANCE_THEMES } from '@/lib/coordinator/booth-clearance-visual'
 import { BoothClearanceWarningPanel } from '@/components/coordinator/booth-clearance-warning-panel'
+import { LayoutGuardrailsPanel } from '@/components/coordinator/layout-guardrails-panel'
 import type { DocClearanceSummary } from '@/lib/coordinator/booth-clearance-summary'
+import type { DocLayoutAlertsSummary } from '@/lib/floor-plan/layout-guardrails/summarize-doc-layout-alerts'
+import { MELT_ZONE_THEME } from '@/lib/floor-plan/layout-guardrails/melt-zone-rules'
 
 /**
  * Persistent canvas allocation legend.
@@ -86,15 +89,25 @@ const ITEMS: LegendItem[] = [
     swatchFill: BOOTH_CLEARANCE_THEMES.good.fill,
     swatchStroke: BOOTH_CLEARANCE_THEMES.good.stroke,
   },
+  {
+    swatchClass: 'bg-orange-200 ring-1 ring-orange-600',
+    label: 'Melt-zone warning',
+    detail:
+      'Melt-sensitive vendor near heat, or vendor booth on the open outdoor lot. Prefer indoor/covered placement when possible. Advisory only.',
+    swatchFill: MELT_ZONE_THEME.fill,
+    swatchStroke: MELT_ZONE_THEME.stroke,
+  },
 ]
 
 function LegendItemsList({
   docked,
   clearanceSummary,
+  layoutAlertsSummary,
   showClearanceWarnings,
 }: {
   docked?: boolean
   clearanceSummary?: DocClearanceSummary | null
+  layoutAlertsSummary?: DocLayoutAlertsSummary | null
   showClearanceWarnings?: boolean
 }) {
   return (
@@ -130,6 +143,9 @@ function LegendItemsList({
     {showClearanceWarnings && clearanceSummary ? (
       <BoothClearanceWarningPanel summary={clearanceSummary} docked={docked} />
     ) : null}
+    {layoutAlertsSummary ? (
+      <LayoutGuardrailsPanel summary={layoutAlertsSummary} docked={docked} />
+    ) : null}
     </>
   )
 }
@@ -140,6 +156,7 @@ function LeftCollapsibleLegendPanel({
   docked,
   className,
   clearanceSummary,
+  layoutAlertsSummary,
   showClearanceWarnings,
 }: {
   collapsed: boolean
@@ -147,6 +164,7 @@ function LeftCollapsibleLegendPanel({
   docked?: boolean
   className?: string
   clearanceSummary?: DocClearanceSummary | null
+  layoutAlertsSummary?: DocLayoutAlertsSummary | null
   showClearanceWarnings?: boolean
 }) {
   return (
@@ -167,6 +185,7 @@ function LeftCollapsibleLegendPanel({
       <LegendItemsList
         docked={docked}
         clearanceSummary={clearanceSummary}
+        layoutAlertsSummary={layoutAlertsSummary}
         showClearanceWarnings={showClearanceWarnings}
       />
     </CanvasSideRail>
@@ -178,6 +197,7 @@ export function CanvasLegend({
   variant = 'floating',
   defaultCollapsed = false,
   clearanceSummary = null,
+  layoutAlertsSummary = null,
   showClearanceWarnings = true,
 }: {
   className?: string
@@ -185,6 +205,7 @@ export function CanvasLegend({
   /** Override initial collapsed state (HubGrid blueprint defaults to collapsed). */
   defaultCollapsed?: boolean
   clearanceSummary?: DocClearanceSummary | null
+  layoutAlertsSummary?: DocLayoutAlertsSummary | null
   showClearanceWarnings?: boolean
 }) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
@@ -221,6 +242,7 @@ export function CanvasLegend({
         docked={isDocked}
         className={className}
         clearanceSummary={clearanceSummary}
+        layoutAlertsSummary={layoutAlertsSummary}
         showClearanceWarnings={showClearanceWarnings}
       />
     )
@@ -295,6 +317,7 @@ export function CanvasLegend({
       </div>
       <LegendItemsList
         clearanceSummary={clearanceSummary}
+        layoutAlertsSummary={layoutAlertsSummary}
         showClearanceWarnings={showClearanceWarnings}
       />
     </div>

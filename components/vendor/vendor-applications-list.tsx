@@ -34,6 +34,8 @@ import { MarketInsuranceUpload } from '@/components/vendor/market-insurance-uplo
 import { ApplicationFollowUpDialog } from '@/components/vendor/application-follow-up-dialog'
 import { MarketOwnerLink, vendorApplicationStatusHref } from '@/components/vendor/market-owner-link'
 import { PassportQrButton } from '@/components/vendor/passport-qr-button'
+import { BoothSignButton } from '@/components/vendor/booth-sign-button'
+import { isBoothSignEligible } from '@/lib/vendor/booth-sign'
 import { VendorAddToCalendarButton } from '@/components/vendor/vendor-add-to-calendar-button'
 import {
   filterVendorApplications,
@@ -433,6 +435,13 @@ export function VendorApplicationsList({
                         vendorId={userId}
                         eventName={ev.name ?? 'Market'}
                       />
+                    ) : null}
+
+                    {isBoothSignEligible(app) &&
+                    ev?.id &&
+                    ev.status &&
+                    ['published', 'active'].includes(ev.status) ? (
+                      <BoothSignButton eventId={ev.id} />
                     ) : null}
 
                     {showFollowUp ? (

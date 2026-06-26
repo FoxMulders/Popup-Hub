@@ -2,7 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
-## Active work — iOS TestFlight signing fix (local, not deployed)
+## Active work — Three Operational Vectors (local, not deployed)
+- **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
+- **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
+- **Shipped locally:**
+  - **Layout guardrails:** `lib/floor-plan/layout-guardrails/` — heat-proximity melt zones, category cluster alerts, **outdoor open-lot exposure** (vendor booths outside room polygons on outdoor venues advised to move inside). HubGrid legend panel, orange tint, heat-source overlays, auto-arrange soft penalty.
+  - **Booth sign:** `/events/[id]/vendors/[vendorId]` public profile page; `/vendor/events/[id]/booth-sign` print page; `VendorBoothSignPoster` + vendor applications entry point. Stable HTTPS QR (no expiry). Stamp QR unchanged.
+  - **Offline ops:** `lib/pwa/coordinator-ops-offline.ts` IndexedDB snapshot + mutation queue; `POST /api/coordinator/events/[id]/ops-sync`; `useCoordinatorOpsSync` + Market Day offline banner; check-in + live ops wired through queue; SW `coordinator-ops-sync` background flush tag.
+- **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
+
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
 - **Shipped locally:**

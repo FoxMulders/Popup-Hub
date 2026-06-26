@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dialog'
 import { CheckinQR } from '@/components/vendor/checkin-qr'
 import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
+import { CoordinatorOpsSnapshotSeed } from '@/components/coordinator/coordinator-ops-snapshot-seed'
+import { commitCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
 import { toast } from 'sonner'
 import { CheckCircle2, Undo2, QrCode } from 'lucide-react'
 
@@ -27,13 +29,18 @@ interface CheckinApplication {
 
 interface VendorCheckinProps {
   eventId: string
+  eventName?: string | null
   applications: CheckinApplication[]
 }
 
-export function VendorCheckin({ eventId, applications: initial }: VendorCheckinProps) {
+export function VendorCheckin({ eventId, eventName, applications: initial }: VendorCheckinProps) {
   const supabase = createClient()
   const [apps, setApps] = useState(initial)
   const [loading, setLoading] = useState<string | null>(null)
+
+  useEffect(() => {
+    setApps(initial)
+  }, [initial])
 
   const checkedInCount = apps.filter((a) => a.checked_in).length
   const totalCount = apps.length
@@ -41,19 +48,33 @@ export function VendorCheckin({ eventId, applications: initial }: VendorCheckinP
   async function toggleCheckin(appId: string, currentValue: boolean) {
     setLoading(appId)
     const newValue = !currentValue
-    const { error } = await supabase
-      .from('booth_applications')
-      .update({ checked_in: newValue })
-      .eq('id', appId)
-      .eq('event_id', eventId)
+    setApps((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, checked_in: newValue } : a))
+    )
 
-    if (error) {
-      toast.error('Failed to update check-in status')
-    } else {
-      setApps((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, checked_in: newValue } : a))
-      )
-      if (newValue) toast.success('Vendor checked in ✓')
+    const { queued, synced } = await commitCoordinatorMutation(eventId, 'check_in', {
+      applicationId: appId,
+      checked_in: newValue,
+    })
+
+    if (!synced && queued) {
+      toast.message('Saved offline — will sync when connected')
+    } else if (!synced) {
+      const { error } = await supabase
+        .from('booth_applications')
+        .update({ checked_in: newValue })
+        .eq('id', appId)
+        .eq('event_id', eventId)
+      if (error) {
+        setApps((prev) =>
+          prev.map((a) => (a.id === appId ? { ...a, checked_in: currentValue } : a))
+        )
+        toast.error('Failed to update check-in status')
+      } else if (newValue) {
+        toast.success('Vendor checked in ✓')
+      }
+    } else if (newValue) {
+      toast.success('Vendor checked in ✓')
     }
     setLoading(null)
   }
@@ -67,6 +88,12 @@ export function VendorCheckin({ eventId, applications: initial }: VendorCheckinP
 
   return (
     <div className="space-y-4">
+      <CoordinatorOpsSnapshotSeed
+        eventId={eventId}
+        eventName={eventName}
+        applications={apps}
+        onHydrate={setApps}
+      />
       {/* Live counter */}
       <div className="sticky top-0 z-10 market-panel p-4">
         <div className="flex items-center justify-between">

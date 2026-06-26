@@ -85,5 +85,5 @@ export function getVendorLinks(passport: {
 }
 
 export function buildVendorProfileHref(eventId: string, vendorId: string): string {
-  return `/events/${eventId}?vendor=${vendorId}`
+  return `/events/${eventId}/vendors/${vendorId}`
 }

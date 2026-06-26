@@ -28,7 +28,7 @@ export interface MarketFeedCommentView {
 }
 
 export function buildVendorProfileHref(eventId: string, vendorId: string): string {
-  return `/events/${eventId}?vendor=${vendorId}`
+  return `/events/${eventId}/vendors/${vendorId}`
 }
 
 export async function assertFeedReader(

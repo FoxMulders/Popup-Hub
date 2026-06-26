@@ -34,6 +34,7 @@ import {
   BOOTH_CLEARANCE_THEMES,
   type BoothClearanceBand,
 } from '@/lib/coordinator/booth-clearance-visual'
+import { MELT_ZONE_THEME } from '@/lib/floor-plan/layout-guardrails/melt-zone-rules'
 import { isVendorBoothObject } from '../interactions/vendor-booth-placement'
 import type { FloorPlanDoc } from '../state/types'
 import type { LayoutSpringPose } from '../hooks/use-layout-spring'
@@ -79,6 +80,8 @@ interface CanvasObjectsProps {
   emphasizeClearance?: boolean
   /** Precomputed vendor booth clearance bands (deferred by the host for INP). */
   boothClearanceBandByObjectId?: ReadonlyMap<string, BoothClearanceBand>
+  /** Melt-zone advisory tint for heat-sensitive booths near food sources. */
+  boothMeltZoneByObjectId?: ReadonlyMap<string, boolean>
   /** When false, vendor booths use payment/status fill instead of aisle bands. */
   showClearanceWarnings?: boolean
   /** Stage ids whose inner wall is dissolved into a room union perimeter. */
@@ -491,6 +494,7 @@ function CanvasObjectsBase({
   objectRoom,
   emphasizeClearance: _emphasizeClearance = false,
   boothClearanceBandByObjectId,
+  boothMeltZoneByObjectId,
   showClearanceWarnings = true,
   dissolvedStageIds,
   renderLayer = 'all',
@@ -591,7 +595,11 @@ function CanvasObjectsBase({
           !isOverlapping
         ) {
           const band = boothClearanceBandByObjectId?.get(obj.id) ?? 'good'
-          const theme = BOOTH_CLEARANCE_THEMES[band]
+          const inMeltZone = boothMeltZoneByObjectId?.get(obj.id) ?? false
+          const theme =
+            inMeltZone && band === 'good'
+              ? MELT_ZONE_THEME
+              : BOOTH_CLEARANCE_THEMES[band]
           fill = theme.fill
           clearanceStroke = theme.stroke
           clearanceFillOpacity = theme.fillOpacity

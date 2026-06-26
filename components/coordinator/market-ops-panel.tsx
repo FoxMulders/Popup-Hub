@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,8 @@ import {
   type VendorReliabilityInputs,
 } from '@/lib/vendor-reliability'
 import { isApplicationPaid } from '@/lib/applications/payment-fields'
+import { CoordinatorOpsSnapshotSeed } from '@/components/coordinator/coordinator-ops-snapshot-seed'
+import { commitCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
 import type { BoothApplication, PaymentStatus, Profile, VendorPassport } from '@/types/database'
 
 type OpsApplication = Omit<BoothApplication, 'vendor' | 'passport' | 'category'> & {
@@ -32,6 +34,7 @@ type LoadInStatus = 'on_time' | 'late' | 'missed'
 
 interface MarketOpsPanelProps {
   eventId: string
+  eventName?: string | null
   applications: OpsApplication[]
   raffleDonationRequirement?: string | null
 }
@@ -61,11 +64,16 @@ function boothTypeBadge(type: string | null | undefined) {
 
 export function MarketOpsPanel({
   eventId,
+  eventName,
   applications: initial,
   raffleDonationRequirement,
 }: MarketOpsPanelProps) {
   const supabase = createClient()
   const [apps, setApps] = useState<OpsApplication[]>(initial)
+
+  useEffect(() => {
+    setApps(initial)
+  }, [initial])
   const [vendorMetrics, setVendorMetrics] = useState<Record<string, VendorReliabilityInputs>>(() =>
     Object.fromEntries(
       initial.map((a) => [
@@ -102,15 +110,31 @@ export function MarketOpsPanel({
             payment_status: (nextPaid ? 'paid' : 'pending') as PaymentStatus,
           }
         : { payment_status: (nextPaid ? 'paid' : 'unpaid') as PaymentStatus }
-    const { error } = await supabase
-      .from('booth_applications')
-      .update(updates)
-      .eq('id', app.id)
-      .eq('event_id', eventId)
-    if (error) {
-      toast.error('Failed to update payment status')
+
+    patchApp(app.id, updates)
+    const { queued, synced } = await commitCoordinatorMutation(eventId, 'payment_status', {
+      applicationId: app.id,
+      updates,
+    })
+
+    if (!synced && queued) {
+      toast.message('Saved offline — will sync when connected')
+    } else if (!synced) {
+      const { error } = await supabase
+        .from('booth_applications')
+        .update(updates)
+        .eq('id', app.id)
+        .eq('event_id', eventId)
+      if (error) {
+        patchApp(app.id, {
+          payment_status: app.payment_status,
+          application_payment_status: app.application_payment_status,
+        })
+        toast.error('Failed to update payment status')
+      } else {
+        toast.success(nextPaid ? 'Marked as paid ✓' : 'Marked as unpaid')
+      }
     } else {
-      patchApp(app.id, updates)
       toast.success(nextPaid ? 'Marked as paid ✓' : 'Marked as unpaid')
     }
     setBusyFor(app.id, false)
@@ -118,17 +142,9 @@ export function MarketOpsPanel({
 
   async function updateLoadInStatus(app: OpsApplication, status: LoadInStatus) {
     const next = app.load_in_status === status ? null : status
-    const { error } = await supabase
-      .from('booth_applications')
-      .update({ load_in_status: next })
-      .eq('id', app.id)
-      .eq('event_id', eventId)
-    if (error) {
-      toast.error('Failed to update load-in status')
-      return
-    }
     patchApp(app.id, { load_in_status: next })
 
+    let reliabilityPatch: Record<string, unknown> | undefined
     if (next === 'late' || next === 'missed') {
       const { data: profile } = await supabase
         .from('profiles')
@@ -145,33 +161,65 @@ export function MarketOpsPanel({
           poor_cleanup_strike_count: profile.poor_cleanup_strike_count,
         }
         const newScore = computeVendorReliabilityScore(metrics)
-        await supabase
-          .from('profiles')
-          .update({
-            late_arrival_count: lateCount,
-            reliability_score: newScore,
-          })
-          .eq('id', app.vendor_id)
+        reliabilityPatch = { late_arrival_count: lateCount, reliability_score: newScore }
         setVendorMetrics((prev) => ({
           ...prev,
           [app.vendor_id]: { ...metrics, reliability_score: newScore },
         }))
       }
     }
+
+    const { queued, synced } = await commitCoordinatorMutation(eventId, 'load_in_status', {
+      applicationId: app.id,
+      load_in_status: next,
+      vendorId: app.vendor_id,
+      reliabilityPatch,
+    })
+
+    if (!synced && queued) {
+      toast.message('Saved offline — will sync when connected')
+      setBusyFor(app.id, false)
+      return
+    }
+    if (!synced) {
+      const { error } = await supabase
+        .from('booth_applications')
+        .update({ load_in_status: next })
+        .eq('id', app.id)
+        .eq('event_id', eventId)
+      if (error) {
+        patchApp(app.id, { load_in_status: app.load_in_status })
+        toast.error('Failed to update load-in status')
+        setBusyFor(app.id, false)
+        return
+      }
+      if (reliabilityPatch) {
+        await supabase.from('profiles').update(reliabilityPatch).eq('id', app.vendor_id)
+      }
+    }
+    setBusyFor(app.id, false)
   }
 
   async function toggleRaffle(app: OpsApplication) {
     setBusyFor(app.id + '-raffle', true)
     const next = !app.raffle_donation_received
-    const { error } = await supabase
-      .from('booth_applications')
-      .update({ raffle_donation_received: next })
-      .eq('id', app.id)
-      .eq('event_id', eventId)
-    if (error) {
-      toast.error('Failed to update raffle donation')
-    } else {
-      patchApp(app.id, { raffle_donation_received: next })
+    patchApp(app.id, { raffle_donation_received: next })
+    const { queued, synced } = await commitCoordinatorMutation(eventId, 'raffle_donation', {
+      applicationId: app.id,
+      raffle_donation_received: next,
+    })
+    if (!synced && queued) {
+      toast.message('Saved offline — will sync when connected')
+    } else if (!synced) {
+      const { error } = await supabase
+        .from('booth_applications')
+        .update({ raffle_donation_received: next })
+        .eq('id', app.id)
+        .eq('event_id', eventId)
+      if (error) {
+        patchApp(app.id, { raffle_donation_received: app.raffle_donation_received })
+        toast.error('Failed to update raffle donation')
+      }
     }
     setBusyFor(app.id + '-raffle', false)
   }
@@ -181,19 +229,9 @@ export function MarketOpsPanel({
     if (!app || app.left_early) return
 
     setBusyFor(app.id + '-early', true)
-    const { error } = await supabase
-      .from('booth_applications')
-      .update({ left_early: true, early_departure_notes: notes || null })
-      .eq('id', app.id)
-      .eq('event_id', eventId)
-
-    if (error) {
-      toast.error('Failed to update')
-      setBusyFor(app.id + '-early', false)
-      return
-    }
     patchApp(app.id, { left_early: true, early_departure_notes: notes || null })
 
+    let reliabilityPatch: Record<string, unknown> | undefined
     const { data: profile } = await supabase
       .from('profiles')
       .select('left_early_count, no_show_count, late_arrival_count, poor_cleanup_strike_count')
@@ -209,14 +247,41 @@ export function MarketOpsPanel({
         poor_cleanup_strike_count: profile.poor_cleanup_strike_count,
       }
       const newScore = computeVendorReliabilityScore(metrics)
-      await supabase
-        .from('profiles')
-        .update({ left_early_count: newLeftEarlyCount, reliability_score: newScore })
-        .eq('id', app.vendor_id)
+      reliabilityPatch = { left_early_count: newLeftEarlyCount, reliability_score: newScore }
       setVendorMetrics((prev) => ({
         ...prev,
         [app.vendor_id]: { ...metrics, reliability_score: newScore },
       }))
+    }
+
+    const { queued, synced } = await commitCoordinatorMutation(eventId, 'early_exit', {
+      applicationId: app.id,
+      early_departure_notes: notes || null,
+      vendorId: app.vendor_id,
+      reliabilityPatch,
+    })
+
+    if (!synced && queued) {
+      toast.message('Saved offline — will sync when connected')
+    } else if (!synced) {
+      const { error } = await supabase
+        .from('booth_applications')
+        .update({ left_early: true, early_departure_notes: notes || null })
+        .eq('id', app.id)
+        .eq('event_id', eventId)
+      if (error) {
+        patchApp(app.id, {
+          left_early: app.left_early,
+          early_departure_notes: app.early_departure_notes,
+        })
+        toast.error('Failed to update')
+        setBusyFor(app.id + '-early', false)
+        setEarlyDepartureApp(null)
+        return
+      }
+      if (reliabilityPatch) {
+        await supabase.from('profiles').update(reliabilityPatch).eq('id', app.vendor_id)
+      }
     }
 
     toast.warning('Vendor marked as left early')
@@ -230,6 +295,12 @@ export function MarketOpsPanel({
 
   return (
     <div className="space-y-4">
+      <CoordinatorOpsSnapshotSeed
+        eventId={eventId}
+        eventName={eventName}
+        applications={apps}
+        onHydrate={setApps}
+      />
       {raffleDonationRequirement && (
         <div className="market-card border-harvest-200/80 bg-harvest-50/50 px-4 py-3 text-sm text-harvest-800">
           <p className="font-semibold text-harvest-800">Raffle donation required</p>

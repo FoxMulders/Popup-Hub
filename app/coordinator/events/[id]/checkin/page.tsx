@@ -54,7 +54,7 @@ export default async function CheckinPage({ params }: Props) {
   return (
     <MarketDayShell eventId={id} eventName={event.name} activeSection="checkin">
       <div className="mx-auto max-w-2xl">
-        <VendorCheckin eventId={id} applications={checkinApps} />
+        <VendorCheckin eventId={id} eventName={event.name} applications={checkinApps} />
       </div>
     </MarketDayShell>
   )

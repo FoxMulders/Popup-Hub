@@ -167,6 +167,9 @@ CONSTRAINTS:
 - Maintain ≥ ${Math.max(input.aisleWidthFt, IDEAL_PEDESTRIAN_AISLE_FT)}' clear walkways between rows and around clusters.
 - Maximize vendor visibility from the primary traffic loop; patrons should see booth fronts without weaving through dead-ends.
 - Same-category vendors should cluster when space allows but never violate aisle width.
+- Keep melt-sensitive vendors (candles, wax, chocolate) at least 8′ from food trucks, bakeries, and hot food stations.
+- On outdoor markets, prefer placing vendor booths inside covered/indoor room polygons rather than the open lot.
+- Avoid clustering more than 2 same-category booths in a tight 6-column × 3-row neighborhood when alternatives exist.
 - Return EXACTLY one placement per item id; coordinates are top-left corner in feet; rotation in degrees.
 
 Respond with JSON only:

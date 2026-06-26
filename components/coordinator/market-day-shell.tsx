@@ -6,6 +6,7 @@ import { ArrowLeft, ClipboardList, LayoutDashboard, ListOrdered, CheckSquare, Qr
 import { buttonVariants } from '@/components/ui/button'
 import { isMobileDevice } from '@/lib/pwa/platform'
 import { cn } from '@/lib/utils'
+import { CoordinatorOfflineBanner } from '@/components/coordinator/coordinator-offline-banner'
 
 interface MarketDayShellProps {
   eventId: string
@@ -85,7 +86,10 @@ export function MarketDayShell({
           </div>
         </div>
       </header>
-      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6">{children}</main>
+      <main className="mx-auto flex-1 w-full max-w-7xl px-4 py-6">
+        <CoordinatorOfflineBanner eventId={eventId} />
+        {children}
+      </main>
     </div>
   )
 }

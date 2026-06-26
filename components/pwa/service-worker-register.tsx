@@ -2,6 +2,19 @@
 
 import { useEffect } from 'react'
 import { flushPassportScanQueue } from '@/lib/pwa/passport-offline-queue'
+import { flushCoordinatorOpsQueue } from '@/lib/pwa/coordinator-ops-offline'
+
+async function flushAllCoordinatorOpsQueues(): Promise<void> {
+  const eventIds = new Set<string>()
+  // Best-effort: flush queues for events with open coordinator tabs.
+  if (typeof window !== 'undefined') {
+    const match = window.location.pathname.match(/\/coordinator\/events\/([^/]+)/)
+    if (match?.[1]) eventIds.add(match[1])
+  }
+  for (const eventId of eventIds) {
+    await flushCoordinatorOpsQueue(eventId)
+  }
+}
 
 export function ServiceWorkerRegister() {
   useEffect(() => {
@@ -15,10 +28,14 @@ export function ServiceWorkerRegister() {
       if (event.data?.type === 'PASSPORT_SCAN_FLUSH') {
         void flushPassportScanQueue()
       }
+      if (event.data?.type === 'COORDINATOR_OPS_FLUSH') {
+        void flushAllCoordinatorOpsQueues()
+      }
     }
 
     navigator.serviceWorker.addEventListener('message', onMessage)
     void flushPassportScanQueue()
+    void flushAllCoordinatorOpsQueues()
 
     return () => {
       navigator.serviceWorker.removeEventListener('message', onMessage)

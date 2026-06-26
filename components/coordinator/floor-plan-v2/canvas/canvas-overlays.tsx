@@ -4,6 +4,11 @@ import type { ObjectKind, PlacedObject } from '../state/types'
 import { rotatedAabb, type Rect } from '../interactions/geometry'
 import { PLACEMENT_AVAILABLE, PLACEMENT_VIOLATION } from './placement-theme'
 import type { BoothClearanceTheme } from '@/lib/coordinator/booth-clearance-visual'
+import {
+  isHeatSourceObject,
+  meltZoneRect,
+  MELT_ZONE_THEME,
+} from '@/lib/floor-plan/layout-guardrails/melt-zone-rules'
 
 interface DraftPreviewProps {
   rect: Rect | null
@@ -464,6 +469,37 @@ export function UnifiedLayoutFlowOverlay({
           aria-hidden="true"
         />
       ) : null}
+    </g>
+  )
+}
+
+export function MeltZoneHeatOverlay({
+  objects,
+  pxPerFt,
+}: {
+  objects: ReadonlyArray<PlacedObject>
+  pxPerFt: number
+}) {
+  const zones = objects.filter(isHeatSourceObject).map((source) => meltZoneRect(source))
+
+  if (zones.length === 0) return null
+
+  return (
+    <g aria-hidden="true" pointerEvents="none">
+      {zones.map((zone, index) => (
+        <rect
+          key={`melt-zone-${index}`}
+          x={zone.x * pxPerFt}
+          y={zone.y * pxPerFt}
+          width={zone.width * pxPerFt}
+          height={zone.height * pxPerFt}
+          fill={MELT_ZONE_THEME.fill}
+          fillOpacity={0.18}
+          stroke={MELT_ZONE_THEME.stroke}
+          strokeWidth={1.5}
+          strokeDasharray="6 4"
+        />
+      ))}
     </g>
   )
 }

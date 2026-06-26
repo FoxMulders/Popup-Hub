@@ -34,6 +34,8 @@ import {
   PROXIMITY_MIN_COLUMNS,
   PROXIMITY_MIN_ROWS,
 } from '../interactions/category-rules'
+import { slotOverlapsMeltZone } from '@/lib/floor-plan/layout-guardrails/melt-zone-rules'
+import { findOutdoorExposureIssue } from '@/lib/floor-plan/layout-guardrails/outdoor-exposure-rules'
 import {
   DEFAULT_LAYOUT_BASELINE_TABLE_LENGTH_FT,
   type LayoutBaselineTableLengthFt,
@@ -437,6 +439,23 @@ function placeBoothsAtSlots(
     return false
   }
 
+  function slotHasLayoutAdvisoryPenalty(rect: Rect, category: string | null): boolean {
+    if (!overlapDoc) return false
+    if (slotOverlapsMeltZone(rect, overlapDoc, category)) return true
+    const probe: BoothObject = {
+      id: '__slot_probe__',
+      kind: 'booth',
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      rotation: 0,
+      categoryName: category,
+      tablePurpose: 'vendor',
+    }
+    return findOutdoorExposureIssue(overlapDoc, probe) !== null
+  }
+
   function pickCategoryForSlot(rect: Rect): {
     category: string | null
     advanceBy: number
@@ -448,6 +467,9 @@ function placeBoothsAtSlots(
       candidates.push({ name: eventCategoryNames![idx]!, rotorIdx: i })
     }
     candidates.sort((a, b) => {
+      const penaltyA = slotHasLayoutAdvisoryPenalty(rect, a.name) ? 1 : 0
+      const penaltyB = slotHasLayoutAdvisoryPenalty(rect, b.name) ? 1 : 0
+      if (penaltyA !== penaltyB) return penaltyA - penaltyB
       const ua = categoryUseCount.get(a.name) ?? 0
       const ub = categoryUseCount.get(b.name) ?? 0
       if (ua !== ub) return ua - ub

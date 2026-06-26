@@ -15,6 +15,7 @@ import { CanvasObjects } from './canvas-objects'
 import {
   DraftPreview,
   MarqueePreview,
+  MeltZoneHeatOverlay,
   PatronTrafficPathOverlay,
   PatronAisleOverlay,
   UnifiedLayoutFlowOverlay,
@@ -62,6 +63,10 @@ import {
   vendorBoothClearanceBandsByObjectId,
   vendorBoothClearanceThemeForProbe,
 } from '@/lib/coordinator/booth-clearance-visual'
+import {
+  meltZoneThemeForProbe,
+  vendorBoothMeltZoneByObjectId,
+} from '@/lib/floor-plan/layout-guardrails/melt-zone-rules'
 import type { BoothObject } from '../state/types'
 import {
   editableRingForFrame,
@@ -577,6 +582,11 @@ export function FloorPlanCanvas({
     [deferredObjectRoom, deferredObjects, deferredRooms]
   )
 
+  const boothMeltZoneByObjectId = useMemo(
+    () => vendorBoothMeltZoneByObjectId(store.doc),
+    [store.doc]
+  )
+
   const dissolvedStageIds = useMemo(
     () => dissolvedStageIdsForDoc(store.doc),
     [store.doc]
@@ -694,6 +704,8 @@ export function FloorPlanCanvas({
     if (!showClearanceWarnings) return null
     if (!draftPreviewProbe || draftOverlaps) return null
     if (defaultBoothTableSpec?.purpose === 'guest') return null
+    const meltTheme = meltZoneThemeForProbe(draftPreviewProbe, store.doc)
+    if (meltTheme) return meltTheme
     const previewRoomId = activeRoomId ?? deferredRooms?.[0]?.id ?? null
     return vendorBoothClearanceThemeForProbe(
       draftPreviewProbe,
@@ -711,6 +723,7 @@ export function FloorPlanCanvas({
     deferredRooms,
     draftOverlaps,
     draftPreviewProbe,
+    store.doc,
   ])
 
   const draftPreviewRect = useMemo(() => {
@@ -1083,6 +1096,7 @@ export function FloorPlanCanvas({
             boothMapLabelMode={boothMapLabelMode}
             boothMapLabelByObjectId={boothMapLabelByObjectId}
             boothClearanceBandByObjectId={boothClearanceBandByObjectId}
+            boothMeltZoneByObjectId={boothMeltZoneByObjectId}
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }
@@ -1116,6 +1130,7 @@ export function FloorPlanCanvas({
             boothMapLabelMode={boothMapLabelMode}
             boothMapLabelByObjectId={boothMapLabelByObjectId}
             boothClearanceBandByObjectId={boothClearanceBandByObjectId}
+            boothMeltZoneByObjectId={boothMeltZoneByObjectId}
             emphasizeClearance={
               pointer.objectGestureActive || pointer.boothLayoutGestureActive
             }
@@ -1179,6 +1194,9 @@ export function FloorPlanCanvas({
           ) : null}
           {!viewOnly ? <MarqueePreview rect={pointer.marqueeRect} pxPerFt={pxPerFt} /> : null}
           <PatronAisleOverlay corridors={patronAisleCorridors} pxPerFt={pxPerFt} />
+          {showClearanceWarnings ? (
+            <MeltZoneHeatOverlay objects={store.doc.objects} pxPerFt={pxPerFt} />
+          ) : null}
           <PatronTrafficPathOverlay
             path={patronTrafficPath}
             pathSegments={patronTrafficPathSegments}

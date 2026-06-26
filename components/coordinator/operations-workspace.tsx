@@ -96,6 +96,7 @@ export function OperationsWorkspace({
         <article aria-label="Live operations grid">
           <MarketOpsPanel
             eventId={eventId}
+            eventName={eventName}
             applications={applications}
             raffleDonationRequirement={raffleDonationRequirement}
           />
