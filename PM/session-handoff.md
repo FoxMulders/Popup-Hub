@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fix: coordinator offline ops sync (local, not deployed)
+- **Goal:** Prevent silent data loss when coordinator market-day mutations sync after offline queue.
+- **Persona:** Coordinator · Market Day / live ops panel
+- **Bug:** `POST /api/coordinator/events/[id]/ops-sync` treated zero-row `booth_applications` updates as success → client dropped queued mutations from IndexedDB without persisting check-in/payment/load-in changes. `floor_plan_doc_patch` was acknowledged but not implemented. Reconnect flush skipped due to stale `isOnline` closure.
+- **Fix:**
+  - **`lib/coordinator/ops-sync-apply.ts`:** Require `.select('id').maybeSingle()` after booth updates; profile reliability patch errors fail mutation; `floor_plan_doc_patch` returns false until implemented.
+  - **`lib/coordinator/use-coordinator-ops-sync.ts`:** `flushNow` checks `navigator.onLine` at call time.
+  - **`lib/coordinator/ops-sync-apply.test.ts`:** Unit tests for zero-row rejection and unimplemented patch type.
+- **Verify:** `npx tsx lib/coordinator/ops-sync-apply.test.ts` PASS.
+- **Next:** Merge PR → deploy → smoke airplane-mode check-in → reconnect → confirm DB row updated and queue drains.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
