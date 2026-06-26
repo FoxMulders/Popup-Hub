@@ -109,6 +109,7 @@ Avoid describing the app as “just a website wrapper.” Emphasize coordinator/
 | “Untrusted Developer” on device | Settings → General → VPN & Device Management → trust developer cert (dev builds only) |
 | Archive fails signing | Xcode → Settings → Accounts → Download Manual Profiles; select correct Team |
 | GitHub Actions: `No signing certificate "iOS Distribution" found` | `BUILD_CERTIFICATE_BASE64` is missing the private key. On Mac: Keychain Access → My Certificates → expand `Apple Distribution: … (6ACBDTX7T7)` — must show a **private key** beneath. Right-click the identity → Export `.p12` (not the portal `.cer`). `base64 -i dist.p12 | pbcopy` → update repo secrets `BUILD_CERTIFICATE_BASE64` + `P12_PASSWORD`. Confirm `BUILD_PROVISION_PROFILE_BASE64` is an App Store profile for `ca.popuphub.app` on team `6ACBDTX7T7`. Re-run **Deploy to TestFlight**. |
+| GitHub Actions: `Your team has no devices` / `No profiles for 'ca.popuphub.app' were found` / `iOS App Development provisioning profiles` during **Release** archive | `App.entitlements` has `aps-environment` set to `development`. That forces automatic signing to resolve a **Development** profile (which requires registered devices). For TestFlight/App Store builds, remove `aps-environment` until push is configured, or set it to `production` once Push Notifications is enabled on the App ID. |
 | TestFlight build missing | Check email for Apple processing errors; verify bundle id matches App Store Connect |
 
 ## Next after first internal build

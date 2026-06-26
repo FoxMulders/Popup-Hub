@@ -12,7 +12,7 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions TestFlight pipeline — archive/export to TestFlight via automatic signing + ASC API key (attempt #44 applied locally).
+- **Goal:** Fix GitHub Actions TestFlight pipeline — archive/export to TestFlight via automatic signing + ASC API key (attempt #46 applied locally).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
 - **Attempt #41 (DONE):** Redundant `security import` of WWDR aborted cert step on duplicate. Fixed — import is idempotent (tolerate "already exists"). Confirmed in logs: reached archive step.
 - **Attempt #42 root cause:** `error: Provisioning profile "PopupHub_TestFlight_Profile" doesn't include signing certificate "Apple Distribution: Brad Mulders (6ACBDTX7T7)"`. The `BUILD_PROVISION_PROFILE_BASE64` secret was built against a different distribution cert than the re-exported `.p12`.
@@ -24,8 +24,11 @@
 - **Attempt #43 fix — `ios/App/App.xcodeproj/project.pbxproj`:** `ProvisioningStyle` Manual → Automatic; all `CODE_SIGN_STYLE` Manual → Automatic (3); `PROVISIONING_PROFILE_SPECIFIER` cleared to `""` (2). Project now coherent with automatic signing + matches documented local Xcode workflow.
 - **Attempt #44 root cause:** `error: App has conflicting provisioning settings. App is automatically signed for development, but a conflicting code signing identity Apple Distribution has been manually specified.` Archive reached `GatherProvisioningInputs` then failed (exit 65). `project.pbxproj` still hardcoded `CODE_SIGN_IDENTITY = "Apple Distribution"` (plain + `[sdk=iphoneos*]`) in both project-level and App target Release configs while `CODE_SIGN_STYLE = Automatic`.
 - **Attempt #44 fix — `ios/App/App.xcodeproj/project.pbxproj`:** Removed all 4 `CODE_SIGN_IDENTITY` override lines from Release blocks (project + target). Left `CODE_SIGN_STYLE = Automatic`, `DEVELOPMENT_TEAM = 6ACBDTX7T7`, `PROVISIONING_PROFILE_SPECIFIER = ""`. Automatic signing picks identity at archive; distribution signing at export via `ExportOptions.plist` (`method=app-store`).
+- **Attempt #45 root cause:** `error: Your team has no devices from which to generate a provisioning profile` + `No profiles for 'ca.popuphub.app' were found` / `iOS App Development provisioning profiles`. Automatic signing resolved to a **Development** profile because `ios/App/App/App.entitlements` had `aps-environment = development` (only satisfiable by a Development profile, which requires registered devices).
+- **Attempt #46 fix — `ios/App/App/App.entitlements`:** Removed `aps-environment` key (push deferred for first TestFlight). Kept `com.apple.developer.associated-domains` for universal links. Release archive should now resolve to Apple Distribution + App Store profile (no devices required).
 - **Verify:** User commits + pushes to `master` → **Deploy to TestFlight** Action runs. Expect `** ARCHIVE SUCCEEDED **` then export/upload. API key (`APP_STORE_CONNECT_*` secrets) needs App Manager/Admin role to create profiles.
-- **Next:** User triggers commit/push; paste Action logs if archive/export fails (e.g. API key lacks profile-create permission, export signing error).
+- **Fallbacks if #46 still fails:** (1) `profile doesn't include com.apple.developer.associated-domains` → temporarily remove associated-domains entitlement; (2) still wants Development profile → add `CODE_SIGN_IDENTITY = "Apple Distribution"` to both Release blocks in `project.pbxproj`.
+- **Next:** User triggers commit/push; paste Action logs if archive/export fails.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
@@ -2053,7 +2056,7 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `605d278` (pushed to `origin/master`)
+- Branch: `master` @ `1a02b33` (local; attempt #46 entitlement fix uncommitted)
 - Last deploy commit: `605d278` - feat: ship 17 session updates (Three Operational Vectors; Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; +13 more)
 - Production: https://popuphub.ca - **v1.154.0 build 1** | commit `58ca881` (handoff updated 2026-06-26 08:56)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
