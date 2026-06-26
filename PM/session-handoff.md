@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug fixes (local, not deployed)
+- **Goal:** Repair data-integrity and offline-ops regressions from Three Operational Vectors ship.
+- **Persona:** Coordinator (Market Day ops) · Patron/vendor floor maps · Market setup wizard.
+- **Shipped locally:**
+  - **`ops-sync`:** Vendor reliability patches (`late_arrival_count`, `left_early_count`, `reliability_score`) now persist via service-role after application/vendor verification; payment_status updates allowlisted; sync fails if profile patch fails.
+  - **`coordinator-ops-snapshot-seed`:** Offline reload hydrates IndexedDB cache before saving stale SSR props (prevents wiping check-in/ops state).
+  - **Public floor map:** Guest table detection aligned with HubGrid `isGuestTableBooth` (round tables with null `tablePurpose`).
+  - **Wizard autosave:** `parseDraftApiResponse` — 502/HTML infra errors no longer mislabeled as session expired.
+- **Verify:** `npx tsx lib/shopper/public-floorplan-modes.test.ts` PASS; `npx tsx lib/wizard/wizard-autosave.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Merge PR → deploy when user asks. Smoke: mark vendor late on Market Day → reload → reliability persists; offline check-ins → refresh offline → state restored.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
