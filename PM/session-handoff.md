@@ -2,6 +2,11 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — iOS routing coverage GeoJSON (local, not deployed)
+- **Goal:** App Store Connect geographic coverage file for location-based market discovery.
+- **Shipped locally:** `mobile/ios/routing-app-coverage.geojson` — single `MultiPolygon` bounding Canada for national coverage; upload instructions in `PM/ios-testflight.md` §6.
+- **Next:** Upload to App Store Connect → App Information → Routing App Coverage File.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
@@ -66,7 +71,8 @@
   - **ITMS-90023 (missing 167×167 iPad Pro icon):** `AppIcon-167.png` (167×167, present) was mis-declared in `Contents.json` as `idiom=iphone, size=84x84`. Rewrote `Contents.json` with a complete, correct iPhone + **iPad** idiom set incl. `ipad / 83.5x83.5 / 2x → AppIcon-167.png`. Validated all 18 entries: filenames exist, dimensions match size×scale, no alpha.
   - **ITMS-90725 (built with iOS 18.5 SDK):** Added **Select Xcode 26 (iOS 26 SDK)** step (`maxim-lobanov/setup-xcode@v1`, `latest-stable`) + a **Verify iOS SDK ≥ 26** fail-fast guard to `.github/workflows/deploy.yml` so archives use the iOS 26 SDK.
   - **Build bump:** `CURRENT_PROJECT_VERSION` 1 → 2 (both Debug/Release) in `project.pbxproj` so the re-upload isn't rejected as a duplicate build number. `MARKETING_VERSION` unchanged (1.120.0).
-- **Next:** Commit + push to `master` → triggers TestFlight pipeline (Xcode 26 archive + fixed icons + build 2) → confirm ASC processing passes with no ITMS-900xx errors.
+  - **ITMS-90683 (missing `NSLocationAlwaysAndWhenInUseUsageDescription`):** Added purpose string to `ios/App/App/Info.plist` alongside existing `NSLocationWhenInUseUsageDescription`. Required because `@capacitor/geolocation` references CoreLocation always-auth APIs in its iOS binary even though the app only requests when-in-use location.
+- **Next:** Commit + push to `master` → triggers TestFlight pipeline (Xcode 26 archive + fixed icons + build 2 + location purpose string) → confirm ASC processing passes with no ITMS-900xx errors.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.

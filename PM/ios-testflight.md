@@ -85,7 +85,23 @@ Processing in App Store Connect usually takes 5–30 minutes.
 
 File issues with device model + iOS version + build number.
 
-## 6. App Store review notes (when promoting beyond internal)
+## 6. Routing App Coverage File (GeoJSON)
+
+App Store Connect may require a **Routing App Coverage File** when location is used for market discovery. Upload the file from:
+
+```
+mobile/ios/routing-app-coverage.geojson
+```
+
+| Field | Value |
+|-------|-------|
+| Format | GeoJSON with a single `MultiPolygon` |
+| Region | Canada (national market discovery coverage) |
+| Upload | App Store Connect → your app → **App Information** → **Routing App Coverage File** |
+
+Coordinates are `[longitude, latitude]` per the GeoJSON spec. The polygon is a simplified Canada-wide bounding box for App Store Connect routing coverage.
+
+## 7. App Store review notes (when promoting beyond internal)
 
 Apple Guideline **4.7** allows apps that run web content if they use standard WebKit and add native value. Draft review notes:
 
@@ -93,14 +109,14 @@ Apple Guideline **4.7** allows apps that run web content if they use standard We
 
 Avoid describing the app as “just a website wrapper.” Emphasize coordinator/vendor tooling and authenticated workflows.
 
-## 7. Known limitations (v1)
+## 8. Known limitations (v1)
 
 - **Remote URL:** Updates ship with web deploys; offline mode is limited to the fallback page in `mobile/www/`.
 - **Capacitor plugins:** Splash, status bar, app URL open, geolocation, push token registration.
 - **Universal links:** `public/.well-known/apple-app-site-association` — replace `TEAM_ID` before production; deploy to popuphub.ca.
 - **Windows CI:** Cannot archive iOS builds; use Mac locally or macOS CI (e.g. GitHub Actions + `macos-latest` + `fastlane` later).
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|

@@ -61,6 +61,9 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Popup Hub uses your location to show nearby markets and optional vendor market alerts.</string>
 
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Popup Hub uses your location to show nearby markets and optional vendor market alerts.</string>
+
 	<key>NSCameraUsageDescription</key>
 	<string>Popup Hub uses the camera to scan QR codes at markets and coordinator check-in.</string>
 </dict>
