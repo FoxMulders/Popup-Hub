@@ -12,13 +12,13 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions `xcodebuild` archive failure — "iOS Distribution" name-matching collision on the runner.
+- **Goal:** Fix GitHub Actions `xcodebuild` archive failure — "No signing certificate 'iOS Distribution' found" (keychain/certificate availability, not identity string mismatch).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
-- **Shipped locally:**
-  - **`.github/workflows/deploy.yml`:** Archive step now passes `CODE_SIGN_IDENTITY="Apple Distribution"` explicitly alongside manual signing flags so xcodebuild maps the profile specifier to the runner's installed distribution cert format (matches `ExportOptions.plist` and Release project settings).
-  - **`ios/App/App.xcodeproj/project.pbxproj`:** App target stays manual signing; Release explicitly uses `Apple Distribution`, `PopupHub_TestFlight_Profile`, `App/App.entitlements`, and team `6ACBDTX7T7`.
-- **Verify:** Not run locally; requires GitHub Actions/macOS runner with installed distribution certificate and provisioning profile.
-- **Next:** Commit + push to `master` to trigger TestFlight workflow; confirm archive + export succeed.
+- **Shipped locally (commit `da0698a`, pushed to `origin/master`):**
+  - **`.github/workflows/deploy.yml`:** Hardened transient keychain — import Apple WWDR intermediate (`AppleWWDRCAG3.cer`), set keychain as default (`security default-keychain -s`), keep user search list prepend, and print `security find-identity -v -p codesigning` diagnostic before archive. Archive step still passes `CODE_SIGN_IDENTITY="Apple Distribution"` explicitly.
+  - **`ios/App/App.xcodeproj/project.pbxproj`:** Unchanged — Release already uses `Apple Distribution` (no legacy `iPhone Distribution` / `iOS Distribution` strings).
+- **Verify:** GitHub Actions `Deploy to TestFlight` workflow triggered on push; inspect Install step for `Apple Distribution: ... (6ACBDTX7T7)` in find-identity output, then confirm archive + export succeed.
+- **Next:** If diagnostic shows `0 valid identities found`, regenerate/re-export `BUILD_CERTIFICATE_BASE64` `.p12` (distribution cert + private key).
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
@@ -2046,7 +2046,7 @@
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
 ## Baseline
-- Branch: `master` @ `d88878b` (pushed to `origin/master`)
+- Branch: `master` @ `da0698a` (pushed to `origin/master`)
 - Last deploy commit: `d88878b` - feat: ship 17 session updates (Three Operational Vectors; Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; +13 more)
 - Production: https://popuphub.ca - **v1.142.0 build 1** | commit `1bc6996` (handoff updated 2026-06-25 19:02)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
