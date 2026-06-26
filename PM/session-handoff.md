@@ -11,7 +11,7 @@
   - **Public floor map:** Guest table detection aligned with HubGrid `isGuestTableBooth` (round tables with null `tablePurpose`).
   - **Wizard autosave:** `parseDraftApiResponse` — 502/HTML infra errors no longer mislabeled as session expired.
 - **Verify:** `npx tsx lib/shopper/public-floorplan-modes.test.ts` PASS; `npx tsx lib/wizard/wizard-autosave.test.ts` PASS; `npx tsc --noEmit` PASS.
-- **Next:** Merge PR → deploy when user asks. Smoke: mark vendor late on Market Day → reload → reliability persists; offline check-ins → refresh offline → state restored.
+- **Next:** PR open for review → merge + deploy. Smoke: mark vendor late on Market Day → reload → reliability persists; offline check-ins → refresh offline → state restored.
 
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
