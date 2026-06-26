@@ -3,7 +3,7 @@
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
 ## Active work — Blueprint/HubGrid responsive guard QA (local, not deployed)
-- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-5d06`, starting HEAD `99861eb` (`docs: session handoff after deploy (0e58f57)`). Production/build metadata was not changed by this task.
+- **Baseline:** Branch `cursor/blueprint-layout-responsiveness-5d06`, implementation commit `c8a5bd3` (`fix: guard blueprint matrix on small screens`), PR #63. Production/build metadata was not changed by this task.
 - **Goal:** Scan Blueprint Studio, dashboard, layout editor, and QA mirror floor-plan surfaces for small-screen defensive UI; add the desktop-required guard or matrix regression warning where missing.
 - **Persona:** Coordinator · HubGrid / Blueprint Studio, Allocation Ledger, standalone booth matrix, spatial layout editor.
 - **Sync path:** No booth mutation path changed. HubGrid still gates canvas mount through `showDesktopRequired`; ledger/matrix rows still derive from `MarketManagementProvider` live doc via `useBoothEntities` / `useBoothMatrixRows` when mounted.
@@ -15,7 +15,7 @@
   - **QA mirrors:** Updated `src/qa_review` wizard/spatial editor mirrors and excluded recovery spatial copy with matching responsive guard markers.
 - **Verify:** `npx tsc --noEmit --pretty false` PASS; targeted `npx eslint` on modified TSX files PASS; final `rg` scan shows guard/warning markers across Blueprint/dashboard/layout QA surfaces.
 - **Blockers:** None. Manual browser smoke with coordinator auth still recommended for `/coordinator/studio`, `/coordinator/studio/ledger`, and `/coordinator/events/{id}/layout` at phone-size and desktop-size viewports.
-- **Next:** Commit/push automation branch and open PR.
+- **Next:** Manual browser smoke with coordinator auth, then review/merge PR #63 when ready.
 
 ## Active work — iOS TestFlight signing fix (local, not deployed)
 - **Goal:** Fix GitHub Actions `xcodebuild` archive failure where the Capacitor iOS project fell back to an iOS Development certificate while CI installs an Apple Distribution profile.
