@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Critical bug automation — offline ops snapshot overwrite (2026-06-26)
+- **Branch:** `cursor/critical-bug-investigation-b91e` · commit `352b12f`
+- **Bug:** Market Day check-in/ops refreshed while offline replaced SSR-fresh application state with a stale IndexedDB snapshot even when all mutations had synced.
+- **Fix:** `CoordinatorOpsSnapshotSeed` only hydrates from local snapshot when `listPendingCoordinatorMutations` is non-empty; added `shouldHydrateCoordinatorOpsFromSnapshot` + unit test.
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS.
+- **Next:** Merge PR; smoke: sync check-ins online → airplane mode → hard refresh → checked-in state preserved.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
