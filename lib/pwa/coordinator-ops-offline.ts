@@ -160,18 +160,24 @@ export async function flushCoordinatorOpsQueue(
   }
 }
 
+export function interpretMutationCommitResult(
+  mutationId: string,
+  pendingAfterFlush: ReadonlyArray<Pick<PendingCoordinatorMutation, 'id'>>
+): { queued: boolean; synced: boolean } {
+  const queued = pendingAfterFlush.some((row) => row.id === mutationId)
+  return { queued, synced: !queued }
+}
+
 export async function commitCoordinatorMutation(
   eventId: string,
   type: CoordinatorMutationType,
   payload: Record<string, unknown>
 ): Promise<{ queued: boolean; synced: boolean }> {
-  await queueCoordinatorMutation(eventId, type, payload)
+  const entry = await queueCoordinatorMutation(eventId, type, payload)
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return { queued: true, synced: false }
   }
-  const result = await flushCoordinatorOpsQueue(eventId)
-  return {
-    queued: result.remaining > 0,
-    synced: result.synced > 0,
-  }
+  await flushCoordinatorOpsQueue(eventId)
+  const pendingAfterFlush = await listPendingCoordinatorMutations(eventId)
+  return interpretMutationCommitResult(entry.id, pendingAfterFlush)
 }
