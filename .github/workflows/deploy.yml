@@ -98,21 +98,7 @@ jobs:
           # Fail fast if the profile was built for a different distribution cert than the .p12
           CERT_FP=$(openssl pkcs12 -in "$CERTIFICATE_PATH" -passin pass:"$P12_PASSWORD" -nokeys -clcerts 2>/dev/null \
             | openssl x509 -noout -fingerprint -sha1 | sed 's/.*=//;s/://g' | tr '[:lower:]' '[:upper:]')
-          PROFILE_FPS=$(python3 - "$PROFILE_PLIST" <<'PY'
-import hashlib
-import plistlib
-import sys
-
-with open(sys.argv[1], "rb") as fh:
-    profile = plistlib.load(fh)
-
-certs = profile.get("DeveloperCertificates") or []
-if not certs:
-    raise SystemExit("profile has no DeveloperCertificates entries")
-
-print(",".join(hashlib.sha1(bytes(cert)).hexdigest().upper() for cert in certs))
-PY
-          )
+          PROFILE_FPS=$(python3 -c 'import hashlib, plistlib, sys; profile = plistlib.load(open(sys.argv[1], "rb")); certs = profile.get("DeveloperCertificates") or []; assert certs, "profile has no DeveloperCertificates entries"; print(",".join(hashlib.sha1(bytes(cert)).hexdigest().upper() for cert in certs))' "$PROFILE_PLIST")
           echo "Distribution cert SHA1: $CERT_FP"
           echo "Profile embedded cert SHA1(s): $PROFILE_FPS"
           if ! echo ",$PROFILE_FPS," | grep -q ",$CERT_FP,"; then
