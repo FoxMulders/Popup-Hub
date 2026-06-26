@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (offline ops sync)
+- **Goal:** Deep review of recent commits for high-severity correctness bugs.
+- **Found & fixed (987f087 on `cursor/critical-bug-investigation-c52f`):** `commitCoordinatorMutation` reported `synced: true` when *any* queued mutation flushed, not the mutation the caller just enqueued. With a non-empty offline queue, a failed current action (check-in, payment toggle, load-in) could show success if an older mutation applied in the same batch — coordinator UI diverges from server truth.
+- **Fix:** `flushCoordinatorOpsQueue` returns `appliedIds`; `coordinatorMutationWasApplied()` gates `synced` on the caller's mutation id. Test: `npx tsx lib/pwa/coordinator-ops-offline.test.ts`.
+- **Reviewed, no fix:** Latest `master` push (d1a614d) is iOS TestFlight CI only. No new runtime regressions in that diff.
+- **Next:** Merge PR; smoke Market Day ops with stale queue + new action while online.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
