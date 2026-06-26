@@ -160,18 +160,32 @@ export async function flushCoordinatorOpsQueue(
   }
 }
 
+export type CoordinatorOpsPersistPlan = 'synced' | 'offline-queued' | 'direct-fallback'
+
+/** How callers should persist after `commitCoordinatorMutation`. */
+export function coordinatorOpsPersistPlan(input: {
+  offline: boolean
+  synced: boolean
+}): CoordinatorOpsPersistPlan {
+  if (input.offline) return 'offline-queued'
+  if (!input.synced) return 'direct-fallback'
+  return 'synced'
+}
+
 export async function commitCoordinatorMutation(
   eventId: string,
   type: CoordinatorMutationType,
   payload: Record<string, unknown>
-): Promise<{ queued: boolean; synced: boolean }> {
+): Promise<{ queued: boolean; synced: boolean; offline: boolean }> {
   await queueCoordinatorMutation(eventId, type, payload)
-  if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return { queued: true, synced: false }
+  const offline = typeof navigator !== 'undefined' && !navigator.onLine
+  if (offline) {
+    return { queued: true, synced: false, offline: true }
   }
   const result = await flushCoordinatorOpsQueue(eventId)
   return {
     queued: result.remaining > 0,
     synced: result.synced > 0,
+    offline: false,
   }
 }

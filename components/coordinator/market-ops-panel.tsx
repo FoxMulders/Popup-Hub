@@ -21,7 +21,10 @@ import {
 } from '@/lib/vendor-reliability'
 import { isApplicationPaid } from '@/lib/applications/payment-fields'
 import { CoordinatorOpsSnapshotSeed } from '@/components/coordinator/coordinator-ops-snapshot-seed'
-import { commitCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
+import {
+  commitCoordinatorMutation,
+  coordinatorOpsPersistPlan,
+} from '@/lib/pwa/coordinator-ops-offline'
 import type { BoothApplication, PaymentStatus, Profile, VendorPassport } from '@/types/database'
 
 type OpsApplication = Omit<BoothApplication, 'vendor' | 'passport' | 'category'> & {
@@ -112,14 +115,16 @@ export function MarketOpsPanel({
         : { payment_status: (nextPaid ? 'paid' : 'unpaid') as PaymentStatus }
 
     patchApp(app.id, updates)
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'payment_status', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'payment_status', {
       applicationId: app.id,
       updates,
     })
 
-    if (!synced && queued) {
+    const paymentPlan = coordinatorOpsPersistPlan({ offline, synced })
+
+    if (paymentPlan === 'offline-queued') {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else if (paymentPlan === 'direct-fallback') {
       const { error } = await supabase
         .from('booth_applications')
         .update(updates)
@@ -169,19 +174,21 @@ export function MarketOpsPanel({
       }
     }
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'load_in_status', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'load_in_status', {
       applicationId: app.id,
       load_in_status: next,
       vendorId: app.vendor_id,
       reliabilityPatch,
     })
 
-    if (!synced && queued) {
+    const loadInPlan = coordinatorOpsPersistPlan({ offline, synced })
+
+    if (loadInPlan === 'offline-queued') {
       toast.message('Saved offline — will sync when connected')
       setBusyFor(app.id, false)
       return
     }
-    if (!synced) {
+    if (loadInPlan === 'direct-fallback') {
       const { error } = await supabase
         .from('booth_applications')
         .update({ load_in_status: next })
@@ -204,13 +211,14 @@ export function MarketOpsPanel({
     setBusyFor(app.id + '-raffle', true)
     const next = !app.raffle_donation_received
     patchApp(app.id, { raffle_donation_received: next })
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'raffle_donation', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'raffle_donation', {
       applicationId: app.id,
       raffle_donation_received: next,
     })
-    if (!synced && queued) {
+    const rafflePlan = coordinatorOpsPersistPlan({ offline, synced })
+    if (rafflePlan === 'offline-queued') {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else if (rafflePlan === 'direct-fallback') {
       const { error } = await supabase
         .from('booth_applications')
         .update({ raffle_donation_received: next })
@@ -254,16 +262,18 @@ export function MarketOpsPanel({
       }))
     }
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'early_exit', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'early_exit', {
       applicationId: app.id,
       early_departure_notes: notes || null,
       vendorId: app.vendor_id,
       reliabilityPatch,
     })
 
-    if (!synced && queued) {
+    const earlyExitPlan = coordinatorOpsPersistPlan({ offline, synced })
+
+    if (earlyExitPlan === 'offline-queued') {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else if (earlyExitPlan === 'direct-fallback') {
       const { error } = await supabase
         .from('booth_applications')
         .update({ left_early: true, early_departure_notes: notes || null })

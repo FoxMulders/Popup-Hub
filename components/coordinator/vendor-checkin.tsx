@@ -14,7 +14,7 @@ import {
 import { CheckinQR } from '@/components/vendor/checkin-qr'
 import { VendorRecruitmentCallout } from '@/components/coordinator/vendor-recruitment-callout'
 import { CoordinatorOpsSnapshotSeed } from '@/components/coordinator/coordinator-ops-snapshot-seed'
-import { commitCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
+import { commitCoordinatorMutation, coordinatorOpsPersistPlan } from '@/lib/pwa/coordinator-ops-offline'
 import { toast } from 'sonner'
 import { CheckCircle2, Undo2, QrCode } from 'lucide-react'
 
@@ -52,14 +52,16 @@ export function VendorCheckin({ eventId, eventName, applications: initial }: Ven
       prev.map((a) => (a.id === appId ? { ...a, checked_in: newValue } : a))
     )
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'check_in', {
+    const { synced, offline } = await commitCoordinatorMutation(eventId, 'check_in', {
       applicationId: appId,
       checked_in: newValue,
     })
 
-    if (!synced && queued) {
+    const plan = coordinatorOpsPersistPlan({ offline, synced })
+
+    if (plan === 'offline-queued') {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else if (plan === 'direct-fallback') {
       const { error } = await supabase
         .from('booth_applications')
         .update({ checked_in: newValue })
