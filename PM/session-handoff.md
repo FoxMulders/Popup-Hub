@@ -12,14 +12,16 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions TestFlight pipeline — WWDR intermediate import aborts cert step with "Item already exists" (attempt #41).
+- **Goal:** Fix GitHub Actions TestFlight pipeline — archive fails because profile/cert mismatch (attempt #42). WWDR cert step now passes (attempt #41 fixed).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
-- **Root cause (attempt #41):** P12 import succeeds; redundant `security import` of `AppleWWDRCAG3.cer` fails because the `.p12` chain already includes WWDR. `security import` exits 1 on duplicate; `set -e` kills the step.
-- **Shipped locally:**
-  - **`.github/workflows/deploy.yml`:** WWDR import is idempotent — capture output, tolerate "already exists", continue; `find-identity` gate unchanged.
-  - Prior fixes retained: transient keychain, `KEYCHAIN_PATH` in `$GITHUB_ENV`, `OTHER_CODE_SIGN_FLAGS`, P12 fail-fast messaging.
-- **Verify:** Push to `master` → re-run **Deploy to TestFlight**. Cert step should log "WWDR intermediate already present" and list `Apple Distribution: … (6ACBDTX7T7)`; then archive + export.
-- **Next:** User re-runs workflow and pastes logs if archive or TestFlight upload fails.
+- **Attempt #41 (DONE):** Redundant `security import` of WWDR aborted cert step on duplicate. Fixed — import is idempotent (tolerate "already exists"). Confirmed in logs: reached archive step.
+- **Attempt #42 root cause:** `error: Provisioning profile "PopupHub_TestFlight_Profile" doesn't include signing certificate "Apple Distribution: Brad Mulders (6ACBDTX7T7)"`. The `BUILD_PROVISION_PROFILE_BASE64` secret was built against a different distribution cert than the re-exported `.p12`.
+- **Fix (Option B — automatic signing, self-healing):**
+  - **`.github/workflows/deploy.yml`:** New **Prepare App Store Connect API key** step writes `.p8` + exports `ASC_KEY_PATH`/`ASC_KEY_ID`/`ASC_ISSUER_ID`. Archive switched to `CODE_SIGN_STYLE=Automatic` + `-allowProvisioningUpdates` + `-authenticationKey*` flags (dropped manual `CODE_SIGN_IDENTITY`/`PROVISIONING_PROFILE_SPECIFIER`). Export step uses same auth-key flags (replaced `-apiKey`/`-apiIssuer` + inline key write).
+  - **`ios/App/App/ExportOptions.plist`:** `signingStyle` manual → automatic; removed `provisioningProfiles` + `signingCertificate` pins.
+  - Xcode now mints a profile matching the keychain cert via the API key — `BUILD_PROVISION_PROFILE_BASE64` no longer needs to be in sync.
+- **Verify:** Push to `master` → re-run **Deploy to TestFlight**. Archive should sign via auto profile; export uploads to TestFlight. The API key (`APP_STORE_CONNECT_*` secrets) must have App Manager/Admin role to create profiles.
+- **Next:** User re-runs workflow; paste logs if archive/export fails (e.g. API key lacks profile-create permission).
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
