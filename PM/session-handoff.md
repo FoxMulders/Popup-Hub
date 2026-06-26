@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (2026-06-26)
+- **Goal:** Audit recent `master` pushes for high-severity correctness/security issues.
+- **Findings fixed (PR pending):**
+  1. **Security:** `ios.key` RSA private key + `.certSigningRequest` were committed in `7fad14a`. Removed from repo; added `ios.key`, `*.key`, `.certSigningRequest` to `.gitignore`. **User action:** rotate/revoke the exposed key in Apple Developer and regenerate `.p12` for CI.
+  2. **Offline ops data corruption:** `CoordinatorOpsSnapshotSeed` saved stale SSR props over IndexedDB cache on offline reload before hydration, so coordinators could see wrong payment/check-in state and queue conflicting mutations. Fixed — hydrate from cache first when offline, then persist.
+- **Verify:** `npx tsc --noEmit` PASS on fix branch.
+- **Next:** Merge PR; user rotates Apple signing key; smoke offline market-day reload after check-in/payment toggles.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
