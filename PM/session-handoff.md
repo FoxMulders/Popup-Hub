@@ -2,6 +2,15 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (offline ops sync)
+- **Goal:** Fix false-positive sync success in coordinator offline ops queue that could drop check-ins/payment updates.
+- **Shipped locally:**
+  - **`lib/pwa/coordinator-ops-offline.ts`:** `resolveCommitSyncStatus` — `synced` now requires the current mutation id in `appliedIds` (not any queue flush).
+  - **`app/api/coordinator/events/[eventId]/ops-sync/route.ts`:** Whitelist payment fields; server-side reliability increments; `floor_plan_doc_patch` no longer falsely acks.
+  - **Security:** Removed `ios.key`, `popuphub-dist.p12`, `distribution.cer` from git; added to `.gitignore` (keys remain in history — rotate Apple Distribution cert).
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS.
+- **Next:** Merge PR; rotate distribution cert if repo was ever public; smoke offline check-in with stale queue item.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
