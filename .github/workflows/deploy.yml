@@ -39,38 +39,35 @@ jobs:
           security create-keychain -p "" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "" $KEYCHAIN_PATH
-       - name: Install Apple Certificate & Provisioning Profile
-          run: |
-            # 1. Delete the item if it already exists to prevent the collision
-            security delete-certificate -c "Apple Distribution: Brad Mulders (6ACBDTX7T7)" || true
-            
-            # 2. Now import it
-            security import distribution.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
-                  # Import certificate to keychain
-                  security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
 
-          # Import Apple WWDR intermediate so the leaf cert chains to a trusted root
+          # 1. Delete the item if it already exists to prevent collision
+          security delete-certificate -c "Apple Distribution: Brad Mulders (6ACBDTX7T7)" || true
+          
+          # 2. Import certificate to keychain
+          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
+
+          # Import Apple WWDR intermediate
           curl -fSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o $RUNNER_TEMP/wwdr.cer
           security import $RUNNER_TEMP/wwdr.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security
 
+          # Set partition list
           security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH
 
-          # Set explicitly on user search list and as default keychain
+          # Set default keychain
           security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
-          echo "== Valid code-signing identities in transient keychain =="
+          # Verify identity
           IDENTITIES=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")
           echo "$IDENTITIES"
           if ! echo "$IDENTITIES" | grep -q "Apple Distribution"; then
-            echo "::error::No 'Apple Distribution' identity with a private key in keychain. Re-export BUILD_CERTIFICATE_BASE64 as a .p12 of the Apple Distribution *identity* (cert + private key), not the portal .cer." >&2
+            echo "::error::No 'Apple Distribution' identity found." >&2
             exit 1
           fi
-          echo "$IDENTITIES" | grep -q "6ACBDTX7T7" || echo "::warning::Distribution identity present but not for team 6ACBDTX7T7 — verify the certificate's team."
 
-          # Apply provisioning profile to local path
+          # Apply provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
@@ -100,11 +97,8 @@ jobs:
           API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
         run: |
-          # Write the API Key file temporarily for the upload tool
           mkdir -p ~/.appstoreconnect/private_keys
           echo "$API_KEY_CONTENT" > ~/.appstoreconnect/private_keys/AuthKey_$API_KEY_ID.p8
-
-          # Export the archive to an .ipa file and upload to Apple
           xcodebuild -exportArchive \
                      -archivePath $RUNNER_TEMP/App.xcarchive \
                      -exportPath $RUNNER_TEMP/exported \
