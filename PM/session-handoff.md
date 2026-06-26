@@ -2,6 +2,11 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug scan (2026-06-26)
+- **Goal:** Deep review of recent `master` pushes for high-severity correctness/security issues.
+- **Finding (FIX PR open):** Apple Distribution private key (`ios.key`) and distribution cert (`popuphub-dist.p12`) were accidentally committed in `7fad14a6` / `ef1cd142` during TestFlight signing debug. PR removes from HEAD + extends `.gitignore`. **User action:** revoke/rotate exposed cert+key in Apple Developer; consider history purge (`git filter-repo`).
+- **Reviewed, no PR:** Offline ops sync, vendor/patron floor maps, middleware JSON auth — no additional critical bugs with concrete triggers in latest push diff (`2335ac71..51696222` was metadata-only).
+
 ## Active work — iOS routing coverage GeoJSON (local, not deployed)
 - **Goal:** App Store Connect geographic coverage file for location-based market discovery.
 - **Shipped locally:** `mobile/ios/routing-app-coverage.geojson` — single `MultiPolygon` bounding Canada for national coverage; upload instructions in `PM/ios-testflight.md` §6.
