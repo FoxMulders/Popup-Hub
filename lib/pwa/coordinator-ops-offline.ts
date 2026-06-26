@@ -127,12 +127,30 @@ export async function removePendingCoordinatorMutation(id: string): Promise<void
   db.close()
 }
 
+export interface CoordinatorOpsFlushResult {
+  synced: number
+  failed: number
+  remaining: number
+  appliedIds: string[]
+}
+
+/** Resolve whether the mutation just committed was persisted (not another queued row). */
+export function resolveCoordinatorMutationCommitStatus(
+  mutationId: string,
+  flush: Pick<CoordinatorOpsFlushResult, 'appliedIds'>,
+  options?: { offline?: boolean }
+): { queued: boolean; synced: boolean } {
+  const synced = flush.appliedIds.includes(mutationId)
+  if (synced) return { synced: true, queued: false }
+  return { synced: false, queued: options?.offline ?? false }
+}
+
 export async function flushCoordinatorOpsQueue(
   eventId: string
-): Promise<{ synced: number; failed: number; remaining: number }> {
+): Promise<CoordinatorOpsFlushResult> {
   const pending = await listPendingCoordinatorMutations(eventId)
   if (pending.length === 0) {
-    return { synced: 0, failed: 0, remaining: 0 }
+    return { synced: 0, failed: 0, remaining: 0, appliedIds: [] }
   }
 
   try {
@@ -142,21 +160,33 @@ export async function flushCoordinatorOpsQueue(
       body: JSON.stringify({ mutations: pending }),
     })
     if (!res.ok) {
-      return { synced: 0, failed: pending.length, remaining: pending.length }
+      return {
+        synced: 0,
+        failed: pending.length,
+        remaining: pending.length,
+        appliedIds: [],
+      }
     }
     const body = (await res.json()) as { appliedIds?: string[] }
     const applied = new Set(body.appliedIds ?? [])
+    const appliedIds: string[] = []
     let synced = 0
     for (const row of pending) {
       if (applied.has(row.id)) {
         await removePendingCoordinatorMutation(row.id)
+        appliedIds.push(row.id)
         synced += 1
       }
     }
     const remaining = pending.length - synced
-    return { synced, failed: remaining, remaining }
+    return { synced, failed: remaining, remaining, appliedIds }
   } catch {
-    return { synced: 0, failed: pending.length, remaining: pending.length }
+    return {
+      synced: 0,
+      failed: pending.length,
+      remaining: pending.length,
+      appliedIds: [],
+    }
   }
 }
 
@@ -165,13 +195,10 @@ export async function commitCoordinatorMutation(
   type: CoordinatorMutationType,
   payload: Record<string, unknown>
 ): Promise<{ queued: boolean; synced: boolean }> {
-  await queueCoordinatorMutation(eventId, type, payload)
+  const entry = await queueCoordinatorMutation(eventId, type, payload)
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return { queued: true, synced: false }
   }
   const result = await flushCoordinatorOpsQueue(eventId)
-  return {
-    queued: result.remaining > 0,
-    synced: result.synced > 0,
-  }
+  return resolveCoordinatorMutationCommitStatus(entry.id, result, { offline: false })
 }
