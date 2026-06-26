@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug automation (coordinator ops sync)
+- **Goal:** Fix false-positive sync success in offline coordinator ops queue.
+- **Persona:** Coordinator · Market Day check-in / live ops.
+- **Bug:** `commitCoordinatorMutation` returned `synced: true` when *any* queued mutation flushed, so a new check-in/payment could show success while still pending if an older queue item applied in the same batch.
+- **Fix:** `resolveMutationSyncResult` tracks the specific mutation id; `flushCoordinatorOpsQueue` returns `appliedIds`.
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS.
+- **Next:** Merge PR; smoke Market Day toggle with stale queue item + new action.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
