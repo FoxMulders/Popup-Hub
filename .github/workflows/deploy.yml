@@ -20,20 +20,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Apple Certificate & Distribution Profile
+      - name: Install Apple Distribution Certificate
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
         run: |
           # Create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          PP_PATH=$RUNNER_TEMP/PopupHub_AppStore_Profile.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # Import certificate + App Store distribution profile from secrets
+          # Import Apple Distribution identity from secret. The matching App Store
+          # provisioning profile is minted/refreshed by Xcode via the ASC API key
+          # (-allowProvisioningUpdates) so we never depend on a hand-exported profile
+          # secret staying in sync with the certificate.
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
           # Create transient keychain (delete any stale one first so re-runs are idempotent)
           security delete-keychain $KEYCHAIN_PATH 2>/dev/null || true
@@ -76,28 +76,6 @@ jobs:
           fi
           echo "$IDENTITIES" | grep -q "6ACBDTX7T7" || echo "::warning::Distribution identity present but not for team 6ACBDTX7T7 — verify the certificate's team."
 
-          # TestFlight requires a DISTRIBUTION profile. On headless CI (no registered devices)
-          # automatic signing resolves an iOS App Development profile during archive and fails,
-          # so we sign the archive MANUALLY with the App Store distribution profile from secrets.
-          PROFILE_PLIST=$RUNNER_TEMP/profile.plist
-          security cms -D -i "$PP_PATH" -o "$PROFILE_PLIST"
-          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$PROFILE_PLIST")
-          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" "$PROFILE_PLIST")
-          echo "Distribution profile: $PROFILE_NAME ($PROFILE_UUID)"
-
-          # Sanity: the profile must be an App Store profile (no ProvisionedDevices key) and
-          # must embed the distribution cert we just imported. Warn loudly if it looks like a
-          # Development profile so the failure mode is obvious in logs.
-          if /usr/libexec/PlistBuddy -c "Print :ProvisionedDevices" "$PROFILE_PLIST" >/dev/null 2>&1; then
-            echo "::warning::BUILD_PROVISION_PROFILE_BASE64 contains a device-limited (Development/Ad Hoc) profile. TestFlight needs an App Store distribution profile for ca.popuphub.app."
-          fi
-
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision
-
-          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
-          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
-
       - name: Prepare App Store Connect API key
         env:
           API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -122,9 +100,10 @@ jobs:
 
       - name: Build and Archive Xcode Project
         run: |
-          # Manual distribution signing. TestFlight needs an App Store distribution profile;
-          # pinning CODE_SIGN_IDENTITY=Apple Distribution + the decoded profile keeps archive
-          # from ever falling back to an iOS App Development profile (which CI has no devices for).
+          # Automatic signing for a Release archive. With the ASC API key + -allowProvisioningUpdates,
+          # Xcode mints/refreshes an App Store DISTRIBUTION profile that matches the Apple Distribution
+          # identity in the keychain. Entitlements are empty (no aps-environment), so signing no longer
+          # gets pulled toward an iOS App Development profile.
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -sdk iphoneos \
@@ -132,11 +111,12 @@ jobs:
                      -destination 'generic/platform=iOS' \
                      -archivePath $RUNNER_TEMP/App.xcarchive \
                      archive \
+                     -allowProvisioningUpdates \
+                     -authenticationKeyPath "$ASC_KEY_PATH" \
+                     -authenticationKeyID "$ASC_KEY_ID" \
+                     -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
                      DEVELOPMENT_TEAM=6ACBDTX7T7 \
-                     CODE_SIGN_STYLE=Manual \
-                     CODE_SIGN_IDENTITY="Apple Distribution" \
-                     PROVISIONING_PROFILE="$PROFILE_UUID" \
-                     PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+                     CODE_SIGN_STYLE=Automatic \
                      OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
                      COMPILER_INDEX_STORE_ENABLE=NO
 
