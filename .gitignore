@@ -23,6 +23,10 @@
 # misc
 .DS_Store
 *.pem
+*.p12
+ios.key
+distribution.cer
+.certSigningRequest
 
 # playwright
 /test-results/

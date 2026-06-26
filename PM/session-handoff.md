@@ -2,6 +2,13 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Critical bug investigation (2026-06-26) — PR #89 open, not merged
+- **Branch:** `cursor/critical-bug-investigation-603a` @ `9297470`
+- **Found on master (`6737377`):** (1) committed `ios.key`/`popuphub-dist.p12` — rotate Apple distribution cert after merge; (2) offline snapshot overwrite race in `CoordinatorOpsSnapshotSeed`; (3) false-positive `commitCoordinatorMutation` sync; (4) ops-sync `payment_status` mass assignment + client `reliabilityPatch`.
+- **Fix:** whitelist payment fields, server-side reliability, `resolveCommitSyncStatus`, hydrate-before-save offline seed, remove signing artifacts + gitignore.
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS.
+- **Next:** Merge PR #89; rotate distribution cert; update `BUILD_CERTIFICATE_BASE64` secret.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
