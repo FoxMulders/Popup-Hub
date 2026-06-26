@@ -2,6 +2,16 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug investigation (local, not deployed)
+- **Goal:** Deep review of recent master commits for high-severity correctness bugs.
+- **Persona:** Coordinator · HubGrid Blueprint / Allocation Ledger
+- **Found & fixed locally (branch `cursor/critical-bug-investigation-e24b`, commit 79b9f19):**
+  - **HubGrid tab switch data loss:** Switching Blueprint → Allocation Ledger remounted `FloorPlanV2` with `preferServerLayout`, replacing `floorPlanStore` with the server snapshot and dropping unsaved booth edits. Fix: keep one canvas instance mounted across tab switches (hidden off-screen on Ledger).
+  - **Ops-sync hardening:** `payment_status` mutations now allowlist only `payment_status` / `application_payment_status`; `floor_plan_doc_patch` no longer acks as applied (prevents silent drop).
+- **Reviewed, not fixed (lower confidence / product policy):** stale offline `reliabilityPatch` overwrites; wizard concurrent-tab last-write-wins; vendor map draft-event layout exposure.
+- **Verify:** `npx tsx lib/coordinator/ops-sync-mutations.test.ts` PASS.
+- **Next:** Merge PR; smoke Blueprint edit → Ledger tab → edits still visible in matrix.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
