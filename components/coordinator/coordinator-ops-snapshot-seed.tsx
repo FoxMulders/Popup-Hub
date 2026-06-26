@@ -3,7 +3,9 @@
 import { useEffect } from 'react'
 import {
   getCoordinatorOpsSnapshot,
+  listPendingCoordinatorMutations,
   saveCoordinatorOpsSnapshot,
+  shouldHydrateCoordinatorOpsFromSnapshot,
 } from '@/lib/pwa/coordinator-ops-offline'
 
 interface CoordinatorOpsSnapshotSeedProps<T> {
@@ -29,10 +31,12 @@ export function CoordinatorOpsSnapshotSeed<T>({
   }, [applications, eventId, eventName])
 
   useEffect(() => {
-    if (typeof navigator === 'undefined' || navigator.onLine) return
-    void getCoordinatorOpsSnapshot(eventId).then((snapshot) => {
+    if (typeof navigator === 'undefined' || navigator.onLine || !onHydrate) return
+    void listPendingCoordinatorMutations(eventId).then(async (pending) => {
+      if (!shouldHydrateCoordinatorOpsFromSnapshot(pending.length)) return
+      const snapshot = await getCoordinatorOpsSnapshot(eventId)
       const cached = snapshot?.applications as T[] | undefined
-      if (cached?.length && onHydrate) onHydrate(cached)
+      if (cached?.length) onHydrate(cached)
     })
   }, [eventId, onHydrate])
 

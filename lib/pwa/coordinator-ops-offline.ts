@@ -160,6 +160,15 @@ export async function flushCoordinatorOpsQueue(
   }
 }
 
+/**
+ * Offline snapshot hydration must not overwrite SSR-fresh server data when the
+ * mutation queue is empty — only replay cached optimistic state while unsynced
+ * writes are still pending.
+ */
+export function shouldHydrateCoordinatorOpsFromSnapshot(pendingMutationCount: number): boolean {
+  return pendingMutationCount > 0
+}
+
 export async function commitCoordinatorMutation(
   eventId: string,
   type: CoordinatorMutationType,
