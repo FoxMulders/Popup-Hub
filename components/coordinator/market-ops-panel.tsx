@@ -72,6 +72,7 @@ export function MarketOpsPanel({
   const [apps, setApps] = useState<OpsApplication[]>(initial)
 
   useEffect(() => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return
     setApps(initial)
   }, [initial])
   const [vendorMetrics, setVendorMetrics] = useState<Record<string, VendorReliabilityInputs>>(() =>

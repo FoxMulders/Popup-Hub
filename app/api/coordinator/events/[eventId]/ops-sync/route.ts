@@ -141,8 +141,8 @@ async function applyMutation(
       return true
     }
     case 'floor_plan_doc_patch':
-      // Layout persistence requires full room payload — queued for a future pass.
-      return true
+      // Not implemented yet — keep mutations in the queue instead of dropping them.
+      return false
     default:
       return false
   }

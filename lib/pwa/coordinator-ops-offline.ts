@@ -116,6 +116,79 @@ export async function listPendingCoordinatorMutations(
   return rows.sort((a, b) => a.clientTimestamp - b.clientTimestamp)
 }
 
+/** Replay queued offline mutations onto application rows (last write per field wins). */
+export function applyPendingMutationsToApplications<T extends { id: string }>(
+  applications: T[],
+  mutations: PendingCoordinatorMutation[]
+): T[] {
+  const byId = new Map(applications.map((row) => [row.id, { ...row }]))
+
+  for (const mutation of mutations) {
+    const applicationId = String(mutation.payload.applicationId ?? '')
+    const current = byId.get(applicationId)
+    if (!current) continue
+
+    switch (mutation.type) {
+      case 'check_in':
+        byId.set(applicationId, {
+          ...current,
+          checked_in: Boolean(mutation.payload.checked_in),
+        })
+        break
+      case 'payment_status': {
+        const updates = (mutation.payload.updates ?? {}) as Record<string, unknown>
+        byId.set(applicationId, { ...current, ...updates })
+        break
+      }
+      case 'load_in_status':
+        byId.set(applicationId, {
+          ...current,
+          load_in_status: (mutation.payload.load_in_status as string | null) ?? null,
+        })
+        break
+      case 'raffle_donation':
+        byId.set(applicationId, {
+          ...current,
+          raffle_donation_received: Boolean(mutation.payload.raffle_donation_received),
+        })
+        break
+      case 'early_exit':
+        byId.set(applicationId, {
+          ...current,
+          left_early: true,
+          early_departure_notes: (mutation.payload.early_departure_notes as string | null) ?? null,
+        })
+        break
+      default:
+        break
+    }
+  }
+
+  return applications.map((row) => byId.get(row.id) ?? row)
+}
+
+/**
+ * Reconstruct coordinator ops UI state from the local snapshot + pending mutation queue.
+ * Returns null when there is nothing local to restore.
+ */
+export async function hydrateCoordinatorOpsApplications<T extends { id: string }>(
+  eventId: string,
+  serverApplications: T[]
+): Promise<T[] | null> {
+  const [snapshot, pending] = await Promise.all([
+    getCoordinatorOpsSnapshot(eventId),
+    listPendingCoordinatorMutations(eventId),
+  ])
+
+  const cached = snapshot?.applications as T[] | undefined
+  const hasCached = Boolean(cached?.length)
+  const hasPending = pending.length > 0
+  if (!hasCached && !hasPending) return null
+
+  const base = hasCached ? cached! : serverApplications
+  return hasPending ? applyPendingMutationsToApplications(base, pending) : base
+}
+
 export async function removePendingCoordinatorMutation(id: string): Promise<void> {
   const db = await openDb()
   await new Promise<void>((resolve, reject) => {
