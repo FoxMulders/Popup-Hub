@@ -19,7 +19,9 @@ export function useCoordinatorOpsSync(eventId: string) {
   }, [eventId])
 
   const flushNow = useCallback(async () => {
-    if (!isOnline) return { synced: 0, failed: 0, remaining: pendingCount }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return { synced: 0, failed: 0, remaining: pendingCount }
+    }
     setSyncing(true)
     try {
       const result = await flushCoordinatorOpsQueue(eventId)
@@ -28,7 +30,7 @@ export function useCoordinatorOpsSync(eventId: string) {
     } finally {
       setSyncing(false)
     }
-  }, [eventId, isOnline, pendingCount, refreshPendingCount])
+  }, [eventId, pendingCount, refreshPendingCount])
 
   useEffect(() => {
     void refreshPendingCount()
