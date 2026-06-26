@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
+import { pickPaymentStatusUpdates } from '@/lib/coordinator/ops-sync-payment-updates'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
@@ -87,7 +88,8 @@ async function applyMutation(
       return !error
     }
     case 'payment_status': {
-      const updates = (payload.updates ?? {}) as Record<string, unknown>
+      const updates = pickPaymentStatusUpdates((payload.updates ?? {}) as Record<string, unknown>)
+      if (Object.keys(updates).length === 0) return false
       const { error } = await supabase
         .from('booth_applications')
         .update(updates)
@@ -141,8 +143,8 @@ async function applyMutation(
       return true
     }
     case 'floor_plan_doc_patch':
-      // Layout persistence requires full room payload — queued for a future pass.
-      return true
+      // Layout persistence requires full room payload — keep queued until implemented.
+      return false
     default:
       return false
   }
