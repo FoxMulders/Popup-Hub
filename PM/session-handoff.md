@@ -2093,9 +2093,15 @@
 - **`floor-plan-v2.tsx`:** Wired hook after auto-layout; path stays in sync with doc edits while enabled.
 - **Verify:** `npx tsx scripts/verify-layout-pathfind.ts` ? PackBooths + path visits all booths.
 
+## Critical bug investigation (2026-06-26, PR #92)
+- **Trigger:** Push `2335ac7` to `master` (iOS CI/icons; session 17 app code unchanged).
+- **Found 3 critical bugs** in coordinator offline ops (`d20b79e`): false-positive sync success, offline snapshot overwrite on reload, vendor reliability strikes dropped by RLS.
+- **Fix branch:** `cursor/critical-bug-investigation-e873` @ `8e7bb94` — PR #92 open; unit tests PASS.
+- **Next:** Merge PR #92; smoke offline check-in → reload → reconnect sync.
+
 ## Baseline
-- Branch: `master` @ `afca6e5` (pushed to `origin/master`)
-- Last deploy commit: `afca6e5` - feat: ship 17 session updates (Three Operational Vectors; Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; +13 more)
+- Branch: `master` @ `2335ac7` (pushed to `origin/master`)
+- Last deploy commit: `2335ac7` - feat: ship 17 session updates (Three Operational Vectors; Vendor & patron floor map exposure; Market draft save on venue select; Mobile login chrome dedupe; +13 more)
 - Production: https://popuphub.ca - **v1.158.0 build 1** | commit `ef1cd14` (handoff updated 2026-06-26 14:11)
 - **Deploy script:** `PM/Deploy-popuphub.bat` [commit message] -> `scripts/deploy-popuphub.ps1` (build, commit, sync push, Vercel prod, handoff)
 - **Stashed (not shipped):** `git stash` entry `loader WIP` - brand loader scene / `ship.ps1` tweaks on `feature/step-2-fix` (verify with `git stash list`)
