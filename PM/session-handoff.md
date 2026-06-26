@@ -2,6 +2,18 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug: coordinator ops false sync success (local, not deployed)
+- **Goal:** Fix Market Day offline queue reporting success when the current mutation did not persist.
+- **Persona:** Coordinator · Market Day check-in / live ops panel
+- **Root cause:** `commitCoordinatorMutation` set `synced=true` when *any* queued mutation flushed, not the one just committed; online flush failures used the offline toast path and skipped direct Supabase fallback.
+- **Shipped locally:**
+  - **`lib/pwa/coordinator-ops-offline.ts`:** Per-mutation `coordinatorMutationCommitResult`; `flushCoordinatorOpsQueue` returns `appliedIds`.
+  - **`vendor-checkin.tsx`**, **`market-ops-panel.tsx`:** Branch on `offline` vs `synced` for toast vs live fallback.
+  - **`lib/pwa/coordinator-ops-offline.test.ts`:** Unit checks for commit semantics.
+- **Branch:** `cursor/critical-bug-investigation-4e6d` @ `ba9c117`
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS
+- **Next:** Merge PR; smoke: queue stale mutation + new check-in while online → no false success toast; online ops-sync 500 → direct Supabase fallback runs.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
