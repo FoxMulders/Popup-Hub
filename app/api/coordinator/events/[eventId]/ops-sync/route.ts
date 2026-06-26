@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
+import {
+  applyEarlyExitReliability,
+  applyLateLoadInReliability,
+  createVendorReliabilityAdminClient,
+} from '@/lib/coordinator/vendor-reliability-ops'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
 import { createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
@@ -46,6 +51,7 @@ export async function POST(
 
   const appliedIds: string[] = []
   const conflicts: Array<{ id: string; reason: string }> = []
+  const reliabilityAdmin = createVendorReliabilityAdminClient()
 
   for (const mutation of mutations) {
     if (mutation.eventId !== eventId) {
@@ -54,7 +60,7 @@ export async function POST(
     }
 
     try {
-      const applied = await applyMutation(supabase, eventId, mutation)
+      const applied = await applyMutation(supabase, reliabilityAdmin, eventId, mutation)
       if (applied) appliedIds.push(mutation.id)
       else conflicts.push({ id: mutation.id, reason: 'apply_failed' })
     } catch {
@@ -69,8 +75,25 @@ export async function POST(
   })
 }
 
+async function resolveVendorId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string,
+  applicationId: string,
+  payloadVendorId: unknown
+): Promise<string | null> {
+  if (typeof payloadVendorId === 'string' && payloadVendorId) return payloadVendorId
+  const { data: application } = await supabase
+    .from('booth_applications')
+    .select('vendor_id')
+    .eq('id', applicationId)
+    .eq('event_id', eventId)
+    .maybeSingle()
+  return application?.vendor_id ?? null
+}
+
 async function applyMutation(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  reliabilityAdmin: ReturnType<typeof createVendorReliabilityAdminClient>,
   eventId: string,
   mutation: PendingCoordinatorMutation
 ): Promise<boolean> {
@@ -96,21 +119,24 @@ async function applyMutation(
       return !error
     }
     case 'load_in_status': {
+      const loadInStatus = (payload.load_in_status as string | null) ?? null
       const { error } = await supabase
         .from('booth_applications')
-        .update({ load_in_status: (payload.load_in_status as string | null) ?? null })
+        .update({ load_in_status: loadInStatus })
         .eq('id', applicationId)
         .eq('event_id', eventId)
       if (error) return false
 
-      const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { late_arrival_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
-      }
-      return true
+      if (loadInStatus !== 'late') return true
+
+      const vendorId = await resolveVendorId(
+        supabase,
+        eventId,
+        applicationId,
+        payload.vendorId
+      )
+      if (!vendorId) return false
+      return applyLateLoadInReliability(reliabilityAdmin, vendorId)
     }
     case 'raffle_donation': {
       const { error } = await supabase
@@ -131,18 +157,18 @@ async function applyMutation(
         .eq('event_id', eventId)
       if (error) return false
 
-      const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { left_early_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
-      }
-      return true
+      const vendorId = await resolveVendorId(
+        supabase,
+        eventId,
+        applicationId,
+        payload.vendorId
+      )
+      if (!vendorId) return false
+      return applyEarlyExitReliability(reliabilityAdmin, vendorId)
     }
     case 'floor_plan_doc_patch':
-      // Layout persistence requires full room payload — queued for a future pass.
-      return true
+      // Not implemented yet — keep queued until server-side layout patch lands.
+      return false
     default:
       return false
   }
