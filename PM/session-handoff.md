@@ -12,16 +12,14 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions `xcodebuild` archive failure — transient keychain has no Apple Distribution identity with a private key (not an identity-string mismatch in `project.pbxproj`).
+- **Goal:** Fix GitHub Actions TestFlight pipeline — WWDR intermediate import aborts cert step with "Item already exists" (attempt #41).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
-- **Root cause:** Archive fails at `GatherProvisioningInputs` with `No signing certificate "iOS Distribution" found` even though xcodebuild accepts `CODE_SIGN_IDENTITY=Apple Distribution`. The `BUILD_CERTIFICATE_BASE64` secret was likely exported from the portal `.cer` (public cert only) instead of a Keychain identity (cert + private key).
+- **Root cause (attempt #41):** P12 import succeeds; redundant `security import` of `AppleWWDRCAG3.cer` fails because the `.p12` chain already includes WWDR. `security import` exits 1 on duplicate; `set -e` kills the step.
 - **Shipped locally:**
-  - **`.github/workflows/deploy.yml`:** Persist `KEYCHAIN_PATH` to `$GITHUB_ENV`; fail-fast after `security find-identity` if no `Apple Distribution` identity; archive step passes `OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"`.
-  - **`PM/ios-testflight.md`:** CI signing troubleshooting row for `.p12` re-export + secret update.
-  - **`ios/App/App.xcodeproj/project.pbxproj`:** Unchanged — Release already uses `Apple Distribution`.
-- **Manual before CI passes:** On a Mac, export `Apple Distribution: … (6ACBDTX7T7)` identity (with private key) as `.p12` → update GitHub secrets `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`; verify `BUILD_PROVISION_PROFILE_BASE64` matches cert/team.
-- **Verify:** Re-run **Deploy to TestFlight** after secrets update. Install step should list `Apple Distribution: … (6ACBDTX7T7)` or fail immediately with the actionable `::error::` message; then archive + export should succeed.
-- **Next:** Update secrets on GitHub → push or re-run workflow → confirm TestFlight upload.
+  - **`.github/workflows/deploy.yml`:** WWDR import is idempotent — capture output, tolerate "already exists", continue; `find-identity` gate unchanged.
+  - Prior fixes retained: transient keychain, `KEYCHAIN_PATH` in `$GITHUB_ENV`, `OTHER_CODE_SIGN_FLAGS`, P12 fail-fast messaging.
+- **Verify:** Push to `master` → re-run **Deploy to TestFlight**. Cert step should log "WWDR intermediate already present" and list `Apple Distribution: … (6ACBDTX7T7)`; then archive + export.
+- **Next:** User re-runs workflow and pastes logs if archive or TestFlight upload fails.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.

@@ -44,9 +44,18 @@ jobs:
           # Import certificate to keychain (must be a .p12/.pfx that includes the private key)
           security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
 
-          # Import Apple WWDR intermediate so the leaf cert chains to a trusted root
+          # Import Apple WWDR intermediate so the leaf cert chains to a trusted root.
+          # The .p12 usually already bundles WWDR, so "already exists" is expected and non-fatal.
           curl -fSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o $RUNNER_TEMP/wwdr.cer
-          security import $RUNNER_TEMP/wwdr.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security
+          WWDR_OUT=$(security import $RUNNER_TEMP/wwdr.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security 2>&1) || true
+          echo "$WWDR_OUT"
+          if echo "$WWDR_OUT" | grep -qi "already exists"; then
+            echo "WWDR intermediate already present in keychain - continuing."
+          elif echo "$WWDR_OUT" | grep -qi "1 certificate imported"; then
+            echo "WWDR intermediate imported."
+          else
+            echo "::warning::Unexpected WWDR import result (continuing): $WWDR_OUT"
+          fi
 
           # Allow codesign to use the key without an interactive prompt
           security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH
