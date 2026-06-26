@@ -45,12 +45,21 @@
 - **Attempt #55 result (DEFINITIVE root cause):** Archive log: `Provisioning profile "PopupHub_TestFlight_Profile" doesn't include signing certificate "Apple Distribution: Brad Mulders (6ACBDTX7T7)"`. The `BUILD_PROVISION_PROFILE_BASE64` secret was built against a different distribution cert than `BUILD_CERTIFICATE_BASE64` (the recurring #42 mismatch). Manual signing can never succeed while the secret is stale.
 - **Attempt #56 fix (pivot to self-healing) — `deploy.yml` + `project.pbxproj`:** Dropped the profile secret entirely. Archive now uses **automatic signing** + `-allowProvisioningUpdates` + ASC API key so Xcode mints/refreshes an App Store **distribution** profile matching the keychain's Apple Distribution cert. Cert step is cert-only (`Install Apple Distribution Certificate`, no profile decode/install). pbxproj reverted to Automatic everywhere (`ProvisioningStyle=Automatic`, all Release `CODE_SIGN_STYLE=Automatic`, removed manual `CODE_SIGN_IDENTITY`). Entitlements remain empty (no `aps-environment`), so signing won't drift toward a Development profile. Export already uses API key + `signingStyle=automatic`; `ExportOptions.plist` `destination=upload`.
 - **Why this should work now vs #42–46:** Back then automatic signing resolved a Development profile because `App.entitlements` had `aps-environment=development` (needs registered devices). That entitlement was removed in #49, so a Release archive resolves a Distribution profile.
-- **Attempt #56 result:** Workflow correct, but run #60 now fails at **Install Apple Distribution Certificate** (cert import/identity check) — a step whose logic is unchanged from passing runs #58/#59. Root cause is external: `BUILD_CERTIFICATE_BASE64`/`P12_PASSWORD` no longer match (user is rotating the distribution cert; `.certSigningRequest` + `ios.key` present in repo root, untracked).
-- **BLOCKER (user action required):** Finish creating the Apple Distribution certificate, export the **identity** (cert + private key) as `.p12`, then update GitHub secrets `BUILD_CERTIFICATE_BASE64` (`base64 -i dist.p12`) and `P12_PASSWORD`. Then re-run the Action. The pipeline (automatic signing + ASC API key) will mint a matching App Store distribution profile and archive/upload.
-- **Security note:** `ios.key` (private key) is untracked in repo root — keep it out of git; consider deleting/relocating after building the `.p12`.
-- **Verify:** Commit pushed to `master` → **Deploy to TestFlight** Action. Expect `** ARCHIVE SUCCEEDED **` then export/upload.
-- **Fallbacks if #48 still fails:** (1) `profile doesn't include com.apple.developer.associated-domains` → temporarily remove associated-domains entitlement; (2) paste Action logs for next iteration.
-- **Next:** Monitor GitHub Action run #52+; paste archive/export logs if failure persists.
+- **Attempt #56 result:** Workflow correct, but run #60 failed at **Install Apple Distribution Certificate** (stale `BUILD_CERTIFICATE_BASE64`/`P12_PASSWORD`). Run #61+ reached archive but export failed: `Cloud signing permission error` + `No profiles for 'ca.popuphub.app' were found` — root cause: export with `signingStyle=automatic` requires **cloud-managed distribution certificate** access, which only an **Admin-role** ASC API key can grant (App Manager/Developer keys can mint profiles for archive but not cloud distribution certs at export).
+- **Attempt #57 fix (Path A — pure cloud-managed signing) — `.github/workflows/deploy.yml`:**
+  - **Removed** entire `Install Apple Distribution Certificate` step — no `BUILD_CERTIFICATE_BASE64` / `P12_PASSWORD` dependency.
+  - **Added** `Prepare signing keychain for cloud-managed distribution`: transient unlocked keychain only (no cert import); cloud-minted distribution private key lands here during archive/export.
+  - Archive + export unchanged: `-allowProvisioningUpdates` + ASC API key auth flags; `OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"`.
+  - **iOS config verified unchanged:** `ExportOptions.plist` (`automatic` / `app-store` / `upload` / team `6ACBDTX7T7`), empty `App.entitlements`, pbxproj Release `CODE_SIGN_STYLE=Automatic`.
+- **BLOCKER (user action required before next run):**
+  1. App Store Connect → Users and Access → Integrations → App Store Connect API → generate **Admin**-role key (roles cannot be upgraded in place).
+  2. Update GitHub secrets: `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, `APP_STORE_CONNECT_API_KEY` (full `.p8` contents).
+  3. Commit + push workflow change to `master` (local edit ready, not committed).
+  4. Re-run **Deploy to TestFlight** — expect `** ARCHIVE SUCCEEDED **` then `** EXPORT SUCCEEDED **` + TestFlight upload.
+- **Secrets no longer needed by CI:** `BUILD_CERTIFICATE_BASE64`, `P12_PASSWORD`, `BUILD_PROVISION_PROFILE_BASE64` (can leave in repo settings or remove).
+- **Fallbacks if export still fails:** (1) `Cloud signing permission error` → key is not Admin or secrets stale; (2) `No profiles` at archive → key inactive or lacks Certificates/Profiles access; (3) upload rejected → version/build conflict or missing App Store Connect app record for `ca.popuphub.app`.
+- **Verify:** Push to `master` → watch GitHub Action. Paste archive/export logs if failure persists.
+- **Next:** User updates Admin ASC API key secrets → commit/push when ready → monitor run #62+.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.

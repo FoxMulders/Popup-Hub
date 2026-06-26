@@ -20,61 +20,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Apple Distribution Certificate
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      - name: Prepare signing keychain for cloud-managed distribution
         run: |
-          # Create variables
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          # Pure cloud-managed signing via Admin ASC API key + -allowProvisioningUpdates.
+          # No local .p12 import — Xcode mints the distribution cert/profile in the cloud and
+          # stores the generated private key in this transient, unlocked keychain.
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # Import Apple Distribution identity from secret. The matching App Store
-          # provisioning profile is minted/refreshed by Xcode via the ASC API key
-          # (-allowProvisioningUpdates) so we never depend on a hand-exported profile
-          # secret staying in sync with the certificate.
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-
-          # Create transient keychain (delete any stale one first so re-runs are idempotent)
           security delete-keychain $KEYCHAIN_PATH 2>/dev/null || true
           security create-keychain -p "" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "" $KEYCHAIN_PATH
-
-          # Import certificate to keychain (must be a .p12/.pfx that includes the private key)
-          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
-
-          # Import Apple WWDR intermediate so the leaf cert chains to a trusted root.
-          # The .p12 usually already bundles WWDR, so "already exists" is expected and non-fatal.
-          curl -fSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o $RUNNER_TEMP/wwdr.cer
-          WWDR_OUT=$(security import $RUNNER_TEMP/wwdr.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security 2>&1) || true
-          echo "$WWDR_OUT"
-          if echo "$WWDR_OUT" | grep -qi "already exists"; then
-            echo "WWDR intermediate already present in keychain - continuing."
-          elif echo "$WWDR_OUT" | grep -qi "1 certificate imported"; then
-            echo "WWDR intermediate imported."
-          else
-            echo "::warning::Unexpected WWDR import result (continuing): $WWDR_OUT"
-          fi
-
-          # Allow codesign to use the key without an interactive prompt
           security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH
-
-          # Set explicitly on user search list and as default keychain
           security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
-
-          # Verify a usable Apple Distribution identity is present
-          echo "== Valid code-signing identities in transient keychain =="
-          IDENTITIES=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")
-          echo "$IDENTITIES"
-          if ! echo "$IDENTITIES" | grep -q "Apple Distribution"; then
-            echo "::error::No 'Apple Distribution' identity with a private key in keychain. Re-export BUILD_CERTIFICATE_BASE64 as a .p12/.pfx of the Apple Distribution *identity* (cert + private key), not the public .cer, and make sure P12_PASSWORD matches the export password." >&2
-            exit 1
-          fi
-          echo "$IDENTITIES" | grep -q "6ACBDTX7T7" || echo "::warning::Distribution identity present but not for team 6ACBDTX7T7 — verify the certificate's team."
 
       - name: Prepare App Store Connect API key
         env:
@@ -100,10 +61,9 @@ jobs:
 
       - name: Build and Archive Xcode Project
         run: |
-          # Automatic signing for a Release archive. With the ASC API key + -allowProvisioningUpdates,
-          # Xcode mints/refreshes an App Store DISTRIBUTION profile that matches the Apple Distribution
-          # identity in the keychain. Entitlements are empty (no aps-environment), so signing no longer
-          # gets pulled toward an iOS App Development profile.
+          # Cloud-managed automatic signing for a Release archive. Admin ASC API key +
+          # -allowProvisioningUpdates mints distribution cert + App Store profile. Entitlements
+          # are empty (no aps-environment), so signing won't drift toward Development.
           xcodebuild -workspace ios/App/App.xcworkspace \
                      -scheme App \
                      -sdk iphoneos \
