@@ -20,20 +20,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Apple Certificate & Provisioning Profile
+      - name: Install Apple Certificate
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
         run: |
           # Create variables
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          PP_PATH=$RUNNER_TEMP/PopupHub_TestFlight_Profile.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # Import certificate and profile from secrets
+          # Import certificate from secrets
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
           # Create transient keychain (delete any stale one first so re-runs are idempotent)
           security delete-keychain $KEYCHAIN_PATH 2>/dev/null || true
@@ -76,9 +73,9 @@ jobs:
           fi
           echo "$IDENTITIES" | grep -q "6ACBDTX7T7" || echo "::warning::Distribution identity present but not for team 6ACBDTX7T7 — verify the certificate's team."
 
-          # Apply provisioning profile to local path
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          # Automatic signing + ASC API key mints/refreshes App Store profiles.
+          # Do not copy BUILD_PROVISION_PROFILE_BASE64 into ~/Library/MobileDevice/Provisioning Profiles —
+          # a stale or Development profile there can make archive resolve iOS App Development signing.
 
       - name: Prepare App Store Connect API key
         env:
@@ -111,6 +108,7 @@ jobs:
                      -scheme App \
                      -sdk iphoneos \
                      -configuration Release \
+                     -destination 'generic/platform=iOS' \
                      -archivePath $RUNNER_TEMP/App.xcarchive \
                      archive \
                      -allowProvisioningUpdates \

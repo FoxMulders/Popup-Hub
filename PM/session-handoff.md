@@ -12,7 +12,7 @@
 - **Verify:** `npx tsx lib/floor-plan/layout-guardrails/layout-guardrails.test.ts` PASS; `npx tsc --noEmit` PASS.
 - **Next:** Commit + deploy when user asks. Smoke: outdoor market booth on open lot → orange advisory; airplane mode check-in → reconnect sync; vendor print sign → scan opens vendor profile.
 
-- **Goal:** Fix GitHub Actions TestFlight pipeline — archive/export to TestFlight via automatic signing + ASC API key (attempt #46 applied locally).
+- **Goal:** Fix GitHub Actions TestFlight pipeline — archive/export to TestFlight via automatic signing + ASC API key (attempt #47 pushed).
 - **Persona:** Native mobile release pipeline · GitHub Actions/TestFlight.
 - **Attempt #41 (DONE):** Redundant `security import` of WWDR aborted cert step on duplicate. Fixed — import is idempotent (tolerate "already exists"). Confirmed in logs: reached archive step.
 - **Attempt #42 root cause:** `error: Provisioning profile "PopupHub_TestFlight_Profile" doesn't include signing certificate "Apple Distribution: Brad Mulders (6ACBDTX7T7)"`. The `BUILD_PROVISION_PROFILE_BASE64` secret was built against a different distribution cert than the re-exported `.p12`.
@@ -26,9 +26,13 @@
 - **Attempt #44 fix — `ios/App/App.xcodeproj/project.pbxproj`:** Removed all 4 `CODE_SIGN_IDENTITY` override lines from Release blocks (project + target). Left `CODE_SIGN_STYLE = Automatic`, `DEVELOPMENT_TEAM = 6ACBDTX7T7`, `PROVISIONING_PROFILE_SPECIFIER = ""`. Automatic signing picks identity at archive; distribution signing at export via `ExportOptions.plist` (`method=app-store`).
 - **Attempt #45 root cause:** `error: Your team has no devices from which to generate a provisioning profile` + `No profiles for 'ca.popuphub.app' were found` / `iOS App Development provisioning profiles`. Automatic signing resolved to a **Development** profile because `ios/App/App/App.entitlements` had `aps-environment = development` (only satisfiable by a Development profile, which requires registered devices).
 - **Attempt #46 fix — `ios/App/App/App.entitlements`:** Removed `aps-environment` key (push deferred for first TestFlight). Kept `com.apple.developer.associated-domains` for universal links. Release archive should now resolve to Apple Distribution + App Store profile (no devices required).
-- **Verify:** User commits + pushes to `master` → **Deploy to TestFlight** Action runs. Expect `** ARCHIVE SUCCEEDED **` then export/upload. API key (`APP_STORE_CONNECT_*` secrets) needs App Manager/Admin role to create profiles.
-- **Fallbacks if #46 still fails:** (1) `profile doesn't include com.apple.developer.associated-domains` → temporarily remove associated-domains entitlement; (2) still wants Development profile → add `CODE_SIGN_IDENTITY = "Apple Distribution"` to both Release blocks in `project.pbxproj`.
-- **Next:** User triggers commit/push; paste Action logs if archive/export fails.
+- **Attempt #46 result:** Archive still failed — automatic signing still resolved **iOS App Development** profile (`no devices` / `No profiles for 'ca.popuphub.app'`). Root cause: Release blocks had no `CODE_SIGN_IDENTITY`, so Xcode defaulted to Apple Development.
+- **Attempt #47 fix — `ios/App/App.xcodeproj/project.pbxproj` + `.github/workflows/deploy.yml`:** Added `CODE_SIGN_IDENTITY = "Apple Distribution"` to both Release blocks (project + App target) and to archive `xcodebuild` CLI. Keeps `CODE_SIGN_STYLE = Automatic` + `DEVELOPMENT_TEAM = 6ACBDTX7T7` + `-allowProvisioningUpdates` + ASC API key.
+- **Attempt #47 result:** Archive still failed (run #51). Likely #44-style conflict (Automatic development + manual Apple Distribution in pbxproj) and/or stale `BUILD_PROVISION_PROFILE_BASE64` copied into `~/Library/MobileDevice/Provisioning Profiles` steering signing toward Development.
+- **Attempt #48 fix — `deploy.yml` + `project.pbxproj`:** Removed `CODE_SIGN_IDENTITY` from pbxproj Release blocks (CLI-only `CODE_SIGN_IDENTITY="Apple Distribution"`); added `-destination 'generic/platform=iOS'`; stopped decoding/copying manual provisioning profile (cert keychain + ASC API key only).
+- **Verify:** Commit pushed to `master` → **Deploy to TestFlight** Action. Expect `** ARCHIVE SUCCEEDED **` then export/upload.
+- **Fallbacks if #48 still fails:** (1) `profile doesn't include com.apple.developer.associated-domains` → temporarily remove associated-domains entitlement; (2) paste Action logs for next iteration.
+- **Next:** Monitor GitHub Action run #52+; paste archive/export logs if failure persists.
 
 ## Active work — Vendor & patron floor map exposure (local, not deployed)
 - **Goal:** Vendors find assigned booth for setup; patrons browse vendor map with search, routes, and booth deep links.
