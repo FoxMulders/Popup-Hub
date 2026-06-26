@@ -2,6 +2,17 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug: coordinator ops flush race (PR open, not deployed)
+- **Goal:** Prevent concurrent offline-queue flushes from replaying stale coordinator mutations and reverting market-day ops state.
+- **Persona:** Coordinator · Market Day check-in / live ops panel
+- **Root cause:** `flushCoordinatorOpsQueue` had no per-event serialization. Overlapping callers (user `commitCoordinatorMutation`, 30s `useCoordinatorOpsSync` interval, service worker flush) could POST the same pending batch while a slower stale request completed later and re-applied older payment/check-in mutations.
+- **Shipped locally (branch `cursor/critical-bug-investigation-1745`, commit `404c273`):**
+  - **`lib/pwa/coordinator-ops-offline.ts`:** Per-event flush lock; `commitCoordinatorMutation` returns `applied` for the specific mutation (not `synced > 0` heuristic).
+  - **Callers:** `vendor-checkin.tsx`, `market-ops-panel.tsx` use `applied` for success/fallback.
+  - **Test:** `lib/pwa/coordinator-ops-offline.test.ts` — flush serialization PASS.
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS.
+- **Next:** Merge PR; deploy when user asks. Smoke: rapid payment toggles on Market Day ops while background sync runs — final server state matches last UI action.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
