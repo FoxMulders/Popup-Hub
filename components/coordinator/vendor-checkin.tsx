@@ -39,6 +39,7 @@ export function VendorCheckin({ eventId, eventName, applications: initial }: Ven
   const [loading, setLoading] = useState<string | null>(null)
 
   useEffect(() => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return
     setApps(initial)
   }, [initial])
 
