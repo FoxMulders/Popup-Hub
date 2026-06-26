@@ -2,6 +2,14 @@
 
 **Agent rule:** Update this file at the end of every scoped task (baseline, active work, blockers, next actions). Run `.\scripts\update-session-handoff.ps1` after deploys. Do not leave handoff stale.
 
+## Active work — Critical bug: coordinator ops stale flush replay (PR #77, not deployed)
+- **Goal:** Prevent concurrent offline ops flushes from replaying stale check-in/payment mutations on the server.
+- **Persona:** Coordinator · Market Day check-in / live ops (offline queue)
+- **Bug:** `flushCoordinatorOpsQueue` had no per-event lock; overlapping POSTs from user actions, 30s interval, and service worker could let a slower stale batch overwrite newer server state.
+- **Fix:** Per-event flush serializer; `commitCoordinatorMutation` returns `applied` for the specific mutation; callers use `applied` not `synced > 0`.
+- **Verify:** `npx tsx lib/pwa/coordinator-ops-offline.test.ts` PASS; `npx tsc --noEmit` PASS.
+- **Next:** Merge PR #77; smoke concurrent check-in + payment toggles on market day with flaky network.
+
 ## Active work — Three Operational Vectors (local, not deployed)
 - **Goal:** Offline coordinator market-day ops, vendor printable booth-sign QR, and advisory layout guardrails (melt-zone + clustering + outdoor lot exposure).
 - **Personas:** Coordinator (Market Day / HubGrid) · Vendor (booth sign) · Patron (vendor profile scan)
