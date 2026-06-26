@@ -31,6 +31,22 @@ jobs:
           PP_PATH=$RUNNER_TEMP/PopupHub_TestFlight_Profile.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
+          # Import files
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+
+          # Create and unlock keychain
+          security create-keychain -p "" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "" $KEYCHAIN_PATH
+
+          # IMPROVED CLEANUP: List identities and delete if found, 
+          # but don't fail the build if it's not there.
+          echo "Cleaning up keychain..."
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
+          
+          # Import certificate. Use -A to allow access for all apps
+          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
           # Import certificate and profile from secrets
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
