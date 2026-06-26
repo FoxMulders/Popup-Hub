@@ -112,14 +112,16 @@ export function MarketOpsPanel({
         : { payment_status: (nextPaid ? 'paid' : 'unpaid') as PaymentStatus }
 
     patchApp(app.id, updates)
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'payment_status', {
+    const { applied, offlineQueued } = await commitCoordinatorMutation(eventId, 'payment_status', {
       applicationId: app.id,
       updates,
     })
 
-    if (!synced && queued) {
+    if (applied) {
+      toast.success(nextPaid ? 'Marked as paid ✓' : 'Marked as unpaid')
+    } else if (offlineQueued) {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else {
       const { error } = await supabase
         .from('booth_applications')
         .update(updates)
@@ -134,8 +136,6 @@ export function MarketOpsPanel({
       } else {
         toast.success(nextPaid ? 'Marked as paid ✓' : 'Marked as unpaid')
       }
-    } else {
-      toast.success(nextPaid ? 'Marked as paid ✓' : 'Marked as unpaid')
     }
     setBusyFor(app.id, false)
   }
@@ -169,33 +169,35 @@ export function MarketOpsPanel({
       }
     }
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'load_in_status', {
+    const { applied, offlineQueued } = await commitCoordinatorMutation(eventId, 'load_in_status', {
       applicationId: app.id,
       load_in_status: next,
       vendorId: app.vendor_id,
       reliabilityPatch,
     })
 
-    if (!synced && queued) {
+    if (applied) {
+      setBusyFor(app.id, false)
+      return
+    }
+    if (offlineQueued) {
       toast.message('Saved offline — will sync when connected')
       setBusyFor(app.id, false)
       return
     }
-    if (!synced) {
-      const { error } = await supabase
-        .from('booth_applications')
-        .update({ load_in_status: next })
-        .eq('id', app.id)
-        .eq('event_id', eventId)
-      if (error) {
-        patchApp(app.id, { load_in_status: app.load_in_status })
-        toast.error('Failed to update load-in status')
-        setBusyFor(app.id, false)
-        return
-      }
-      if (reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', app.vendor_id)
-      }
+    const { error } = await supabase
+      .from('booth_applications')
+      .update({ load_in_status: next })
+      .eq('id', app.id)
+      .eq('event_id', eventId)
+    if (error) {
+      patchApp(app.id, { load_in_status: app.load_in_status })
+      toast.error('Failed to update load-in status')
+      setBusyFor(app.id, false)
+      return
+    }
+    if (reliabilityPatch) {
+      await supabase.from('profiles').update(reliabilityPatch).eq('id', app.vendor_id)
     }
     setBusyFor(app.id, false)
   }
@@ -204,13 +206,13 @@ export function MarketOpsPanel({
     setBusyFor(app.id + '-raffle', true)
     const next = !app.raffle_donation_received
     patchApp(app.id, { raffle_donation_received: next })
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'raffle_donation', {
+    const { applied, offlineQueued } = await commitCoordinatorMutation(eventId, 'raffle_donation', {
       applicationId: app.id,
       raffle_donation_received: next,
     })
-    if (!synced && queued) {
+    if (offlineQueued) {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else if (!applied) {
       const { error } = await supabase
         .from('booth_applications')
         .update({ raffle_donation_received: next })
@@ -254,16 +256,18 @@ export function MarketOpsPanel({
       }))
     }
 
-    const { queued, synced } = await commitCoordinatorMutation(eventId, 'early_exit', {
+    const { applied, offlineQueued } = await commitCoordinatorMutation(eventId, 'early_exit', {
       applicationId: app.id,
       early_departure_notes: notes || null,
       vendorId: app.vendor_id,
       reliabilityPatch,
     })
 
-    if (!synced && queued) {
+    if (applied) {
+      toast.warning('Vendor marked as left early')
+    } else if (offlineQueued) {
       toast.message('Saved offline — will sync when connected')
-    } else if (!synced) {
+    } else {
       const { error } = await supabase
         .from('booth_applications')
         .update({ left_early: true, early_departure_notes: notes || null })
@@ -282,9 +286,9 @@ export function MarketOpsPanel({
       if (reliabilityPatch) {
         await supabase.from('profiles').update(reliabilityPatch).eq('id', app.vendor_id)
       }
+      toast.warning('Vendor marked as left early')
     }
 
-    toast.warning('Vendor marked as left early')
     setBusyFor(app.id + '-early', false)
     setEarlyDepartureApp(null)
   }
