@@ -11,6 +11,26 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Select Xcode 26 (iOS 26 SDK)
+        # App Store Connect requires builds made with the iOS 26 SDK (Xcode 26+).
+        # Pin the newest stable Xcode on the runner, then fail fast if it is older
+        # than 26 so we never silently re-upload an iOS 18.x-SDK binary (ITMS-90725).
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Verify iOS SDK is 26 or later
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "iphoneos SDK version: $SDK_VERSION"
+          MAJOR=${SDK_VERSION%%.*}
+          if [ "$MAJOR" -lt 26 ]; then
+            echo "::error::iOS SDK $SDK_VERSION is older than 26. App Store Connect rejects these builds (ITMS-90725). Ensure Xcode 26+ is available on the runner."
+            exit 1
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
