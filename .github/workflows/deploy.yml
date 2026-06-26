@@ -53,8 +53,16 @@ jobs:
           security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
 
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
           echo "== Valid code-signing identities in transient keychain =="
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
+          IDENTITIES=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")
+          echo "$IDENTITIES"
+          if ! echo "$IDENTITIES" | grep -q "Apple Distribution"; then
+            echo "::error::No 'Apple Distribution' identity with a private key in keychain. Re-export BUILD_CERTIFICATE_BASE64 as a .p12 of the Apple Distribution *identity* (cert + private key), not the portal .cer." >&2
+            exit 1
+          fi
+          echo "$IDENTITIES" | grep -q "6ACBDTX7T7" || echo "::warning::Distribution identity present but not for team 6ACBDTX7T7 — verify the certificate's team."
 
           # Apply provisioning profile to local path
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
@@ -77,6 +85,7 @@ jobs:
                      CODE_SIGN_STYLE=Manual \
                      CODE_SIGN_IDENTITY="Apple Distribution" \
                      PROVISIONING_PROFILE_SPECIFIER="PopupHub_TestFlight_Profile" \
+                     OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
                      COMPILER_INDEX_STORE_ENABLE=NO
 
       - name: Upload Build to TestFlight
