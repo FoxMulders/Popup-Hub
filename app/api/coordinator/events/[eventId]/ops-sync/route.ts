@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
+import { applyCoordinatorOpsMutation } from '@/lib/coordinator/ops-sync-mutations'
 import { canActAsCoordinator } from '@/lib/auth/rbac'
 import { applyCoordinatorEventScope, getCoordinatorScope } from '@/lib/events/coordinator-event-query'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { PendingCoordinatorMutation } from '@/lib/pwa/coordinator-ops-offline'
 
 export async function POST(
@@ -44,6 +45,7 @@ export async function POST(
     (a, b) => a.clientTimestamp - b.clientTimestamp
   )
 
+  const adminSupabase = createAdminClient()
   const appliedIds: string[] = []
   const conflicts: Array<{ id: string; reason: string }> = []
 
@@ -54,7 +56,12 @@ export async function POST(
     }
 
     try {
-      const applied = await applyMutation(supabase, eventId, mutation)
+      const applied = await applyCoordinatorOpsMutation(
+        supabase,
+        adminSupabase,
+        eventId,
+        mutation
+      )
       if (applied) appliedIds.push(mutation.id)
       else conflicts.push({ id: mutation.id, reason: 'apply_failed' })
     } catch {
@@ -67,83 +74,4 @@ export async function POST(
     appliedIds,
     conflicts,
   })
-}
-
-async function applyMutation(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  eventId: string,
-  mutation: PendingCoordinatorMutation
-): Promise<boolean> {
-  const { type, payload } = mutation
-  const applicationId = String(payload.applicationId ?? '')
-
-  switch (type) {
-    case 'check_in': {
-      const { error } = await supabase
-        .from('booth_applications')
-        .update({ checked_in: Boolean(payload.checked_in) })
-        .eq('id', applicationId)
-        .eq('event_id', eventId)
-      return !error
-    }
-    case 'payment_status': {
-      const updates = (payload.updates ?? {}) as Record<string, unknown>
-      const { error } = await supabase
-        .from('booth_applications')
-        .update(updates)
-        .eq('id', applicationId)
-        .eq('event_id', eventId)
-      return !error
-    }
-    case 'load_in_status': {
-      const { error } = await supabase
-        .from('booth_applications')
-        .update({ load_in_status: (payload.load_in_status as string | null) ?? null })
-        .eq('id', applicationId)
-        .eq('event_id', eventId)
-      if (error) return false
-
-      const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { late_arrival_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
-      }
-      return true
-    }
-    case 'raffle_donation': {
-      const { error } = await supabase
-        .from('booth_applications')
-        .update({ raffle_donation_received: Boolean(payload.raffle_donation_received) })
-        .eq('id', applicationId)
-        .eq('event_id', eventId)
-      return !error
-    }
-    case 'early_exit': {
-      const { error } = await supabase
-        .from('booth_applications')
-        .update({
-          left_early: true,
-          early_departure_notes: (payload.early_departure_notes as string | null) ?? null,
-        })
-        .eq('id', applicationId)
-        .eq('event_id', eventId)
-      if (error) return false
-
-      const vendorId = payload.vendorId as string | undefined
-      const reliabilityPatch = payload.reliabilityPatch as
-        | { left_early_count?: number; reliability_score?: number }
-        | undefined
-      if (vendorId && reliabilityPatch) {
-        await supabase.from('profiles').update(reliabilityPatch).eq('id', vendorId)
-      }
-      return true
-    }
-    case 'floor_plan_doc_patch':
-      // Layout persistence requires full room payload — queued for a future pass.
-      return true
-    default:
-      return false
-  }
 }
