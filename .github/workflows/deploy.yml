@@ -31,59 +31,43 @@ jobs:
           PP_PATH=$RUNNER_TEMP/PopupHub_TestFlight_Profile.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # Import files
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
-
-          # Create and unlock keychain
-          security create-keychain -p "" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "" $KEYCHAIN_PATH
-
-          # IMPROVED CLEANUP: List identities and delete if found, 
-          # but don't fail the build if it's not there.
-          echo "Cleaning up keychain..."
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH" || true
-          
-          # Import certificate. Use -A to allow access for all apps
-          security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
           # Import certificate and profile from secrets
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
-          # Create transient keychain
+          # Create transient keychain (delete any stale one first so re-runs are idempotent)
+          security delete-keychain $KEYCHAIN_PATH 2>/dev/null || true
           security create-keychain -p "" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "" $KEYCHAIN_PATH
 
-          # 1. Delete the item if it already exists to prevent collision
-          security delete-certificate -c "Apple Distribution: Brad Mulders (6ACBDTX7T7)" || true
-          
-          # 2. Import certificate to keychain
+          # Import certificate to keychain (must be a .p12/.pfx that includes the private key)
           security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12
 
-          # Import Apple WWDR intermediate
+          # Import Apple WWDR intermediate so the leaf cert chains to a trusted root
           curl -fSL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o $RUNNER_TEMP/wwdr.cer
           security import $RUNNER_TEMP/wwdr.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign -T /usr/bin/security
 
-          # Set partition list
+          # Allow codesign to use the key without an interactive prompt
           security set-key-partition-list -S apple-tool:,apple: -s -k "" $KEYCHAIN_PATH
 
-          # Set default keychain
+          # Set explicitly on user search list and as default keychain
           security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
           security default-keychain -s $KEYCHAIN_PATH
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
 
-          # Verify identity
+          # Verify a usable Apple Distribution identity is present
+          echo "== Valid code-signing identities in transient keychain =="
           IDENTITIES=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")
           echo "$IDENTITIES"
           if ! echo "$IDENTITIES" | grep -q "Apple Distribution"; then
-            echo "::error::No 'Apple Distribution' identity found." >&2
+            echo "::error::No 'Apple Distribution' identity with a private key in keychain. Re-export BUILD_CERTIFICATE_BASE64 as a .p12/.pfx of the Apple Distribution *identity* (cert + private key), not the public .cer, and make sure P12_PASSWORD matches the export password." >&2
             exit 1
           fi
+          echo "$IDENTITIES" | grep -q "6ACBDTX7T7" || echo "::warning::Distribution identity present but not for team 6ACBDTX7T7 — verify the certificate's team."
 
-          # Apply provisioning profile
+          # Apply provisioning profile to local path
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
