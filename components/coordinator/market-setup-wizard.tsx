@@ -726,9 +726,16 @@ export function MarketSetupWizard({
         // step), so the layout payload is meaningful from the very first
         // autosave onward as long as the coordinator hasn't opted out.
         if (resolvedId && !skipVenueLayout) {
-          const layoutPayload = layoutPayloadFromRooms(resolvedId, rooms, activeRoomId)
-          const layoutResult = await persistLayoutDraft(supabase, resolvedId, layoutPayload)
-          if (layoutResult.error) throw layoutResult.error
+          if (currentStep === 3 && saveLayoutRef.current) {
+            const saved = await saveLayoutRef.current()
+            if (!saved) {
+              throw new Error('Could not save floor plan')
+            }
+          } else {
+            const layoutPayload = layoutPayloadFromRooms(resolvedId, rooms, activeRoomId)
+            const layoutResult = await persistLayoutDraft(supabase, resolvedId, layoutPayload)
+            if (layoutResult.error) throw layoutResult.error
+          }
         }
 
         if (coverFile && resolvedId && !coverUrl) {
@@ -775,6 +782,7 @@ export function MarketSetupWizard({
       marketInsuranceRequired,
       marketCity,
       rooms,
+      saveLayoutRef,
       scheduleType,
       skipVenueLayout,
       startDate,
